@@ -22,6 +22,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
 | [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
+| [Oracle-verb audit — the `damage`, `return_to_hand`, `untap` and `scry` classes](#oracle-verb-audit--the-damage-return_to_hand-untap-and-scry-classes) | open | 30 |
 | [Oracle-verb audit — the `gain_life` and `search_library` classes](#oracle-verb-audit--the-gain_life-and-search_library-classes) | open | 55 |
 | [Oracle-verb audit — the `draw` and `counters` classes](#oracle-verb-audit--the-draw-and-counters-classes) | open | 60 |
 | [Oracle-verb audit — the `search_library`, `destroy` and `draw` classes](#oracle-verb-audit--the-search_library-destroy-and-draw-classes) | open | 76 |
@@ -701,10 +702,40 @@ Filed, with the reason:
   counter-removal costs, manifest, a full state restore, "for each opponent who
   can't", wish, mulligan-time exile).
 
+## Oracle-verb audit — the `damage`, `return_to_hand`, `untap` and `scry` classes
+
+**Thirteen rows, the last four classes nobody had read: nine fixed with a
+test apiece, one false, three filed.** Every fix used a primitive that
+already existed — the notable ones are `from_hand` + `discard_self_cost`
+(the channel shape) for Trumpeting Carnosaur, `Selector::
+CreaturesThatSaddledSource` for Rambling Possum, `AtNextEndStep` inside an
+`on_dies` for The Locust God, and `MayPayLife` for Corpses of the Lost.
+
+| Card | What the tree shipped | Fix |
+|---|---|---|
+| Corpses of the Lost | an end-step **1/1 Skeleton the card never prints** | "if you descended, you may pay 1 life; if you do, return this to hand" |
+| Biotech Specialist | the Lander only | "whenever you sacrifice an artifact, 2 damage to target opponent" |
+| Skirk Marauder | morph only | "when turned face up, 2 damage to any target" |
+| Spitting Spider | reach only | "Sacrifice a land: 1 damage to each creature with flying" (`sac_other_filter`) |
+| Trumpeting Carnosaur | discover only | "{2}{R}, Discard this card: 3 damage to target creature or planeswalker" |
+| Intimidation Campaign | the ETB only | "whenever you commit a crime, you may return this to hand" |
+| Rambling Possum | the +1/+2 only | "then you may return the creatures that saddled it to hand" (all or none) |
+| The Locust God | no death trigger | "when it dies, return it to hand at the beginning of the next end step" |
+| Glimpse the Sun God | the taps only | + scry 1 |
+
+**False:** Bronze Bombshell — `sacrifice_and_burn_when_stolen: Some(7)` is a
+bespoke field. **Filed:** Takklemaggot's whole death-return half (returns
+attached to a chosen creature, or as a non-Aura enchantment that pings its
+last host's controller each upkeep — a primitive of its own); All-Out
+Assault and Breath of Fury are the rows the `untap` class already carried
+(a `DelayedKind` that does not exist, and a resolver-internal untap).
+
 ## Oracle-verb audit — the `gain_life` and `search_library` classes
 
-**`gain_life` 12 -> 1, `search_library` 10 -> 9; twenty-two rows read
-against the oracle, twelve fixed with a test apiece, one false, nine filed.**
+**`gain_life` 12 -> 2, `search_library` 10 -> 9, the whole table 106 -> 70;
+twenty-two rows read against the oracle, twelve fixed with a test apiece,
+one false, nine filed.** (The two `gain_life` survivors are Fasting, false,
+and Search for Glory's {S} rider, filed.)
 Every fix used a primitive that already existed but three: a
 `CounterType::Corruption`, `MillThenToHand` leaving its pick on
 `Selector::LastMoved` (the way `Mill`, `ExileUpToNFromGraveyards` and

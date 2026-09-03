@@ -508,16 +508,20 @@ pub fn glimpse_the_sun_god() -> CardDefinition {
         "Glimpse the Sun God",
         cost(&[x(), w()]),
         CardType::Instant,
-        Effect::CapTargetsAtX {
-            body: Box::new(Effect::ApplyToTargets {
-                max_targets: 8,
-                min_targets: 1,
-                filter: R::Creature,
-                effect: Box::new(Effect::Tap {
-                    what: Selector::Target(0),
+        // "Tap X target creatures. Scry 1." — the scry shipped missing.
+        Effect::Seq(vec![
+            Effect::CapTargetsAtX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 1,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::Tap {
+                        what: Selector::Target(0),
+                    }),
                 }),
-            }),
-        },
+            },
+            Effect::Scry { who: PlayerRef::You, amount: crate::effect::Value::ONE },
+        ]),
     )
 }
 

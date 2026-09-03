@@ -229,15 +229,24 @@ fn nullify_counters_creature_spells() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
 }
 
-/// Glimpse the Sun God taps X creatures.
+/// Glimpse the Sun God taps X creatures, then scries 1 (the scry shipped
+/// missing — oracle-verb audit, `scry` class).
 #[test]
 fn glimpse_the_sun_god_taps_x() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = main_phase();
     let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    let top = g.add_card_to_library(0, catalog::forest());
+    let next = g.add_card_to_library(0, catalog::island());
     let spell = g.add_card_to_hand(0, catalog::glimpse_the_sun_god());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
+        kept_top: vec![],
+        bottom: vec![top],
+    }]));
     g.perform_action(GameAction::CastSpell {
         card_id: spell,
         target: Some(Target::Permanent(a)),
@@ -248,6 +257,8 @@ fn glimpse_the_sun_god_taps_x() {
     .expect("cast for X=2");
     drain_stack(&mut g);
     assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped);
+    assert_eq!(g.players[0].library[0].id, next, "scry 1 bottomed the top card");
+    assert_eq!(g.players[0].library.last().unwrap().id, top);
 }
 
 /// Marshmist Titan's devotion discount pays for its generic pips.

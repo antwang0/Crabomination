@@ -2378,6 +2378,32 @@ fn corpses_of_the_lost_lords_and_makes_token() {
     assert!(cp.keywords().contains(&Keyword::Haste), "haste from lord");
 }
 
+/// "At the beginning of your end step, if you descended this turn, you may
+/// pay 1 life. If you do, return this enchantment to its owner's hand." It
+/// shipped minting an invented 1/1 Skeleton instead (oracle-verb audit,
+/// `return_to_hand` class).
+#[test]
+fn corpses_of_the_lost_returns_to_hand_after_descending() {
+    let mut g = two_player_game();
+    let enc = g.add_card_to_battlefield(0, catalog::corpses_of_the_lost());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    let life = g.players[0].life;
+    // No descend yet: the end step asks nothing and the enchantment stays.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(enc).is_some(), "no descend, no return");
+    // A permanent card into the graveyard is a descend.
+    g.remove_to_graveyard_with_triggers(bear);
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == enc), "paid 1 life, back to hand");
+    assert_eq!(g.players[0].life, life - 1, "the life was paid");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Skeleton"), "no invented token");
+}
+
 /// Malamet War Scribe pumps your team +2/+1 on ETB.
 #[test]
 fn malamet_war_scribe_team_pump() {

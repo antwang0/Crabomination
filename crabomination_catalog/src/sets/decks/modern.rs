@@ -30601,6 +30601,18 @@ pub fn skirk_marauder() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Morph(cost(&[generic(2), r()]))],
+        // "When this creature is turned face up, it deals 2 damage to any
+        // target." (CR 708.8)
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::effect::EventSpec::new(
+                crate::effect::EventKind::TurnedFaceUp,
+                crate::effect::EventScope::SelfSource,
+            ),
+            effect: Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: Value::Const(2),
+            },
+        }],
         ..Default::default()
     }
 }

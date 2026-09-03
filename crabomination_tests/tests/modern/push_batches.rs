@@ -1137,6 +1137,30 @@ fn tamiyo_static_blocks_opponent_forced_discard() {
         "Tamiyo's static blocks the forced discard");
 }
 
+/// Skirk Marauder: "When this creature is turned face up, it deals 2 damage
+/// to any target" — the trigger it shipped without (oracle-verb audit,
+/// `damage` class). Manifested, then turned up for its morph cost.
+#[test]
+fn skirk_marauder_burns_when_turned_face_up() {
+    let mut g = two_player_game();
+    let top = g.next_id();
+    g.players[0].library.insert(0, crabomination::card::CardInstance::new(top, catalog::skirk_marauder(), 0));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(top, 0, None);
+    let mut events = vec![];
+    g.manifest_card(top, 0, &ctx, &mut events);
+    assert!(g.battlefield_find(top).unwrap().face_down, "face down");
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::TurnFaceUp { card_id: top }).expect("turn face up for {2}{R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(top).unwrap().face_down, "face up");
+    assert_eq!(g.players[1].life, life1 - 2, "2 damage at the opponent's face");
+}
+
 /// Geyadrone Dihada +1: "Each opponent loses 2 life and you gain 2 life. Put
 /// a corruption counter on up to one other target creature or planeswalker."
 /// The card shipped a lose-1 / draw / loyalty-reset body it never printed

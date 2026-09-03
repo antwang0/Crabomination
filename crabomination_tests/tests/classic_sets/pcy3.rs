@@ -51,6 +51,23 @@ fn activate(g: &mut GameState, seat: usize, card_id: CardId, index: usize, targe
 }
 
 /// The printed-keyword bodies.
+/// Spitting Spider: "Sacrifice a land: This creature deals 1 damage to each
+/// creature with flying" — the ability it shipped without (oracle-verb
+/// audit, `damage` class).
+#[test]
+fn spitting_spider_sacrifices_a_land_to_spit_at_fliers() {
+    let mut g = main_phase();
+    let spider = g.add_card_to_battlefield(0, catalog::spitting_spider());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let flier = g.add_card_to_battlefield(1, catalog::vampire_interloper()); // 2/1 flying
+    let walker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, 0, spider, 0, None);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(land).is_none(), "a land was sacrificed");
+    assert!(g.battlefield_find(flier).is_none(), "the 2/1 flier took 1 and died");
+    assert!(g.battlefield_find(walker).is_some(), "the ground creature is untouched");
+}
+
 #[test]
 fn pcy3_keyword_bodies_carry_their_printed_keywords() {
     let cases: &[(fn() -> CardDefinition, &[Keyword])] = &[

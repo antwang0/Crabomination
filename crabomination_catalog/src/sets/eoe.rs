@@ -697,11 +697,31 @@ pub fn biotech_specialist() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: Box::new(lander_token()),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(lander_token()),
+            }),
+            // "Whenever you sacrifice an artifact, this creature deals 2
+            // damage to target opponent."
+            crate::card::TriggeredAbility {
+                event: crate::effect::EventSpec::new(
+                    crate::effect::EventKind::PermanentSacrificed,
+                    crate::effect::EventScope::YourControl,
+                )
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: crate::card::SelectionRequirement::Artifact,
+                }),
+                effect: Effect::DealDamage {
+                    to: crate::effect::shortcut::target_filtered(
+                        crate::card::SelectionRequirement::OpponentPlayer,
+                    ),
+                    amount: Value::Const(2),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

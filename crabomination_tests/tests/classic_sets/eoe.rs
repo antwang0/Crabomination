@@ -2597,6 +2597,31 @@ fn the_seriema_tutors_a_legendary_to_hand() {
         "legendary creature tutored to hand");
 }
 
+/// "Whenever you sacrifice an artifact, this creature deals 2 damage to
+/// target opponent" — the trigger Biotech Specialist shipped without
+/// (oracle-verb audit, `damage` class). Its own Lander is the artifact.
+#[test]
+fn biotech_specialist_pings_when_you_sacrifice_an_artifact() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.move_card_to_battlefield_for_test(0, catalog::biotech_specialist());
+    drain_stack(&mut g);
+    let lander = g.battlefield.iter().find(|c| c.definition.name == "Lander").map(|c| c.id).expect("Lander token");
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    let life1 = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lander, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("crack the Lander");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lander).is_none(), "Lander sacrificed");
+    assert_eq!(g.players[1].life, life1 - 2, "2 damage to the opponent");
+}
+
 /// Survey Mechan's {10}, Sac ability deals 3 to a target, draws three and
 /// gains 3 (the lifegain was dropped — oracle-verb audit, `gain_life`
 /// class); each land you control shaves {1} off the activation.

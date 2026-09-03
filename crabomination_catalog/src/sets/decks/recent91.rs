@@ -136,14 +136,24 @@ pub fn the_locust_god() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(insect_token()),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(insect_token()),
+                },
             },
-        }],
+            // "When The Locust God dies, return it to its owner's hand at the
+            // beginning of the next end step."
+            crate::effect::shortcut::on_dies(Effect::AtNextEndStep {
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                }),
+            }),
+        ],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u(), r()]),
             effect: Effect::Seq(vec![

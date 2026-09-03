@@ -921,9 +921,30 @@ mod recent66 {
     fn rambling_possum_pumps_when_saddled_attacks() {
         let mut g = two_player_game();
         let possum = g.add_card_to_battlefield(0, catalog::rambling_possum());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
         attack_saddled(&mut g, possum);
         let cp = g.computed_permanent(possum).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 5), "+1/+2 while saddled");
+    }
+
+    /// "Then you may return any number of creatures that saddled it this turn
+    /// to their owner's hand" — the rider it shipped without (oracle-verb
+    /// audit, `return_to_hand` class); all-or-none here.
+    #[test]
+    fn rambling_possum_bounces_its_saddlers() {
+        let mut g = two_player_game();
+        let possum = g.add_card_to_battlefield(0, catalog::rambling_possum());
+        let rider = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(possum);
+        g.clear_sickness(rider);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::Saddle { mount: possum, creatures: vec![rider] }).expect("saddle");
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        attack_saddled(&mut g, possum);
+        assert!(g.players[0].hand.iter().any(|c| c.id == rider), "the saddler went back to hand");
+        assert_eq!(g.computed_permanent(possum).unwrap().power, 4, "still pumped");
     }
 }
 

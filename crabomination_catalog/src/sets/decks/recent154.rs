@@ -94,20 +94,37 @@ pub fn intimidation_campaign() -> CardDefinition {
         name: "Intimidation Campaign",
         cost: cost(&[generic(1), u(), b()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::ONE,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+            ])),
+            // "Whenever you commit a crime, you may return this enchantment
+            // to its owner's hand."
+            crate::card::TriggeredAbility {
+                event: crate::effect::EventSpec::new(
+                    crate::effect::EventKind::CommittedCrime,
+                    crate::effect::EventScope::YourControl,
+                ),
+                effect: Effect::MayDo {
+                    description: "return Intimidation Campaign to your hand".into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                    }),
+                },
             },
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::ONE,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::ONE,
-            },
-        ]))],
+        ],
         ..Default::default()
     }
 }

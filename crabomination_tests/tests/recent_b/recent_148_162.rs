@@ -748,6 +748,20 @@ mod recent154 {
         assert_eq!(g.players[0].hand.len(), hand + 1, "you drew a card");
     }
 
+    /// "Whenever you commit a crime, you may return this enchantment to its
+    /// owner's hand" — the trigger it shipped without (oracle-verb audit,
+    /// `return_to_hand` class).
+    #[test]
+    fn intimidation_campaign_returns_to_hand_on_a_crime() {
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        let mut g = two_player_game();
+        let enc = g.add_card_to_battlefield(0, catalog::intimidation_campaign());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        g.dispatch_triggers_for_events(&[GameEvent::CommittedCrime { player: 0 }]);
+        drain_stack(&mut g);
+        assert!(g.players[0].hand.iter().any(|c| c.id == enc), "returned to hand");
+    }
+
     /// Eddymurk Crab's ETB taps up to two creatures.
     #[test]
     fn eddymurk_crab_taps_on_etb() {

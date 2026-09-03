@@ -376,8 +376,20 @@ pub fn rib_cage_spider() -> CardDefinition {
 
 /// Spitting Spider — {3}{G}{G} 3/5 reach.
 pub fn spitting_spider() -> CardDefinition {
+    use crate::card::{ActivatedAbility, SelectionRequirement as R};
+    use crate::effect::{Effect, Selector, Value};
     CardDefinition {
         keywords: vec![Keyword::Reach],
+        // "Sacrifice a land: This creature deals 1 damage to each creature
+        // with flying."
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Land, 1)),
+            effect: Effect::DealDamage {
+                to: Selector::EachPermanent(R::Creature.and(R::HasKeyword(Keyword::Flying))),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
         ..creature("Spitting Spider", cost(&[generic(3), g(), g()]), vec![CreatureType::Spider], 3, 5)
     }
 }

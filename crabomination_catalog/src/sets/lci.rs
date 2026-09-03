@@ -60,6 +60,20 @@ pub fn trumpeting_carnosaur() -> CardDefinition {
             n: Value::Const(5),
             filter: None,
         })],
+        // "{2}{R}, Discard this card: It deals 3 damage to target creature
+        // or planeswalker." — the channel shape.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -4880,18 +4894,14 @@ pub fn corpses_of_the_lost() -> CardDefinition {
                 .and(SelectionRequirement::ControlledByYou),
         )
     };
-    let skeleton = |power, name: &'static str| TokenDefinition {
-        name: name.into(),
-        power,
-        toughness: if power == 2 { 2 } else { 1 },
+    let skeleton_pirate = TokenDefinition {
+        name: "Skeleton Pirate".into(),
+        power: 2,
+        toughness: 2,
         colors: vec![Color::Black],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: if power == 2 {
-                vec![CreatureType::Skeleton, CreatureType::Pirate]
-            } else {
-                vec![CreatureType::Skeleton]
-            },
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Pirate],
             ..Default::default()
         },
         ..Default::default()
@@ -4921,8 +4931,11 @@ pub fn corpses_of_the_lost() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(skeleton(2, "Skeleton Pirate")),
+                definition: Box::new(skeleton_pirate),
             }),
+            // "At the beginning of your end step, if you descended this turn,
+            // you may pay 1 life. If you do, return this enchantment to its
+            // owner's hand." It shipped minting an invented 1/1 Skeleton.
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::End),
@@ -4932,10 +4945,15 @@ pub fn corpses_of_the_lost() -> CardDefinition {
                     cond: Predicate::DescendedThisTurn {
                         who: PlayerRef::You,
                     },
-                    then: Box::new(Effect::CreateToken {
-                        who: PlayerRef::You,
-                        count: Value::Const(1),
-                        definition: Box::new(skeleton(1, "Skeleton")),
+                    then: Box::new(Effect::MayPayLife {
+                        description: "pay 1 life to return Corpses of the Lost to your hand"
+                            .into(),
+                        amount: Value::ONE,
+                        body: Box::new(Effect::Move {
+                            what: Selector::This,
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        }),
+                        else_: None,
                     }),
                     else_: Box::new(Effect::Noop),
                 },

@@ -364,6 +364,29 @@ fn trumpeting_carnosaur_discovers_five() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "discover 5 → declined to hand");
 }
 
+/// "{2}{R}, Discard this card: It deals 3 damage to target creature or
+/// planeswalker" — the channel ability Trumpeting Carnosaur shipped without
+/// (oracle-verb audit, `damage` class).
+#[test]
+fn trumpeting_carnosaur_discards_itself_to_burn_a_creature() {
+    let mut g = two_player_game();
+    let carno = g.add_card_to_hand(0, catalog::trumpeting_carnosaur());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: carno, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("activate from hand");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "the 2/2 took 3");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == carno), "discarded as the cost");
+}
+
 // ── More MKM cards ───────────────────────────────────────────────────────────
 
 /// Cold Case Cracker investigates when it dies.

@@ -275,12 +275,23 @@ pub fn rambling_possum() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Saddle(1)],
-        triggered_abilities: vec![attack_while_saddled(Effect::PumpPT {
-            what: Selector::This,
-            power: Value::ONE,
-            toughness: Value::Const(2),
-            duration: Duration::EndOfTurn,
-        })],
+        // "Then you may return any number of creatures that saddled it this
+        // turn to their owner's hand." — all or none.
+        triggered_abilities: vec![attack_while_saddled(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::MayDo {
+                description: "return the creatures that saddled it to hand".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::CreaturesThatSaddledSource,
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        ]))],
         ..Default::default()
     }
 }

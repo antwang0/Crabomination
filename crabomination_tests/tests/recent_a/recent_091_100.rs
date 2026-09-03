@@ -70,6 +70,21 @@ mod recent91 {
         );
     }
 
+    /// "When The Locust God dies, return it to its owner's hand at the
+    /// beginning of the next end step" — the trigger it shipped without
+    /// (oracle-verb audit, `return_to_hand` class).
+    #[test]
+    fn locust_god_returns_to_hand_at_the_next_end_step() {
+        let mut g = two_player_game();
+        let god = g.add_card_to_battlefield(0, catalog::the_locust_god());
+        g.remove_to_graveyard_with_triggers(god);
+        drain_stack(&mut g);
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == god), "in the graveyard until the end step");
+        g.fire_step_triggers(crabomination::game::TurnStep::End);
+        drain_stack(&mut g);
+        assert!(g.players[0].hand.iter().any(|c| c.id == god), "back in hand at the next end step");
+    }
+
     #[test]
     fn veyran_pumps_on_instant_cast() {
         let mut g = two_player_game();
