@@ -11611,6 +11611,46 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-198)` TAKEN — a per-definition printed mana summary, one memo word, is the auto-tapper's source row: `fixed` -0.854 % / `sealed` -0.658 % / `cube` -0.488 %
+
+```text
+  pool    base (-197)       (-198)          delta
+  fixed     820,223,094     813,220,278   **-0.854 %**
+  cube    2,247,464,551   2,236,499,052   **-0.488 %**
+  sealed  2,251,720,321   2,236,898,811   **-0.658 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  effective_mana_abilities_into  84,220 calls -> 48,516
+                effect_produced_colors         59,616 -> 32,754
+                mana_summary::unpack   +35,704 x 30 Ir;  mana_summary_of
+                (the misses) 1,384 x 86.5 Ir
+                mana_source_table inclusive  7.17 M -> 6.85 M self-ish;
+                the table's whole cost 47.4 M -> ~40 M
+```
+
+`mana_source_table_inner` built one row per untapped permanent per
+auto-tap by walking `effective_mana_abilities_into` (the printed list,
+the grant list, the intrinsic list, a layer read behind a gate) and then
+`effect_produced_colors` per ability — 8,678 tables, 84,220 rows, 5,463
+Ir a table. Under the two gates the slow path already asks — no
+land-type rewriter in scope (`scan.land_types_rewritten == Some(false)`,
+so the computed type line is the printed one) and `grants_nothing`
+(the ten length loads `granted_abilities_of` opens with, now one
+predicate both callers share) — the row is a pure function of the
+definition: the first printed mana ability's index and cost rank, the
+producible colours, and the first index that makes each. That packs
+into 43 bits; `CardMemo`'s fourth word holds it, `CardData::mana_summary`
+hands it back with the same recompute-on-hit `debug_assert!` as the
+other words, and the slow path stays as the oracle.
+
+42 % of the rows took the memo on `cube` (35,704 of 84,220); the rest
+fail `grants_nothing` — a permanent carrying a static or a counter — or
+sit on a board with a rewriter. `fixed` moved most because its boards
+are lands and vanilla creatures. The two other consumers of the printed
+list (`available_mana`'s probes, `effective_mana_abilities_of`) are
+unchanged and are where `granted_abilities_of_inner`'s 96,734 calls
+still come from.
+
 ### `(-197)` TAKEN — a mana-static lane in front of the three walks every land tap made: `cube` -0.684 % / `fixed` -0.568 % / `sealed` -0.562 %
 
 ```text

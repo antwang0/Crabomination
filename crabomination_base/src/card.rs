@@ -6997,6 +6997,9 @@ pub struct CardMemo(
     std::sync::atomic::AtomicU64,
     std::sync::atomic::AtomicU64,
     std::sync::atomic::AtomicU64,
+    /// The auto-tapper's printed mana summary ([`CardData::mana_summary`]),
+    /// valid flag at bit 63; the packing is the engine's.
+    std::sync::atomic::AtomicU64,
 );
 
 impl CardMemo {
@@ -7148,12 +7151,27 @@ impl CardMemo {
         self.2.store(fold | Self::KINDS_VALID, std::sync::atomic::Ordering::Relaxed);
     }
 
+    /// On the *fourth* word; see the type doc.
+    const MANA_VALID: u64 = 1 << 63;
+
+    #[inline]
+    fn get_mana(&self) -> Option<u64> {
+        let v = self.3.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::MANA_VALID != 0).then_some(v & !Self::MANA_VALID)
+    }
+
+    #[inline]
+    fn set_mana(&self, word: u64) {
+        self.3.store(word | Self::MANA_VALID, std::sync::atomic::Ordering::Relaxed);
+    }
+
     /// The invalidation, called from [`CardInstance`]'s `DerefMut`.
     #[inline]
     fn clear(&self) {
         self.0.store(0, std::sync::atomic::Ordering::Relaxed);
         self.1.store(0, std::sync::atomic::Ordering::Relaxed);
         self.2.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.3.store(0, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
@@ -7169,6 +7187,9 @@ impl Clone for CardMemo {
             ),
             std::sync::atomic::AtomicU64::new(
                 self.2.load(std::sync::atomic::Ordering::Relaxed),
+            ),
+            std::sync::atomic::AtomicU64::new(
+                self.3.load(std::sync::atomic::Ordering::Relaxed),
             ),
         )
     }
@@ -7886,6 +7907,28 @@ impl CardData {
         let bits = self.definition.dispatch_scan_bits();
         self.definition.memo.set_dispatch(bits);
         bits
+    }
+
+    /// The auto-tapper's printed mana summary for this object, memoized on
+    /// the fourth word — `compute` packs it (bit 63 is the memo's), and
+    /// `None` from it means "not packable, do not memoize" (an ability
+    /// index past 63). Pure in the definition by the caller's contract:
+    /// the engine asks only when nothing in scope can grant, strip or
+    /// retype, which is what makes the printed answer the live one.
+    #[inline]
+    pub fn mana_summary(&self, compute: impl Fn(&CardDefinition) -> Option<u64>) -> Option<u64> {
+        if let Some(w) = self.definition.memo.get_mana() {
+            debug_assert_eq!(
+                Some(w),
+                compute(&self.definition),
+                "mana-summary memo is stale: a definition rewrite did not clear it",
+            );
+            return Some(w);
+        }
+        let w = compute(&self.definition)?;
+        debug_assert_eq!(w & CardMemo::MANA_VALID, 0, "mana summary packs into bit 63");
+        self.definition.memo.set_mana(w);
+        Some(w)
     }
 
     /// [`CardDefinition::trigger_kind_fold`] for this object, memoized on the

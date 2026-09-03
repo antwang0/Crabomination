@@ -427,6 +427,92 @@ struct ManaSourceInfo {
     color_idx: [usize; 5],
 }
 
+/// The printed mana summary a definition packs into one memo word for
+/// `mana_source_table_inner` (PERF `(-198)`): bit 62 "has a printed mana
+/// ability", bits 0-4 the producible colours, 5-6 the cost rank, 7-12 the
+/// first mana ability's index, 13-42 the five per-colour ability indices
+/// (6 bits each). Bit 63 belongs to the memo. Indices past 63 do not pack,
+/// and `pack` answers `None` so the card takes the slow path unmemoized.
+mod mana_summary {
+    use super::ManaSourceInfo;
+    use crate::card::CardId;
+
+    const HAS: u64 = 1 << 62;
+    const IDX_BITS: u64 = 0x3f;
+
+    pub(super) fn pack(
+        has: bool,
+        colors: crate::mana::ColorSet,
+        rank: u8,
+        first_idx: usize,
+        color_idx: &[usize; 5],
+    ) -> Option<u64> {
+        if first_idx > 63 || color_idx.iter().any(|&i| i > 63) {
+            return None;
+        }
+        let mut w = u64::from(colors.0 & 0x1f) | (u64::from(rank & 0x3) << 5) | ((first_idx as u64) << 7);
+        for (k, &i) in color_idx.iter().enumerate() {
+            w |= (i as u64) << (13 + 6 * k);
+        }
+        Some(if has { w | HAS } else { w })
+    }
+
+    /// The row, minus the instance's `id` and `bf_idx`; `None` for a
+    /// definition with no printed mana ability.
+    pub(super) fn unpack(w: u64) -> Option<ManaSourceInfo> {
+        if w & HAS == 0 {
+            return None;
+        }
+        let mut color_idx = [0usize; 5];
+        for (k, slot) in color_idx.iter_mut().enumerate() {
+            *slot = ((w >> (13 + 6 * k)) & IDX_BITS) as usize;
+        }
+        Some(ManaSourceInfo {
+            id: CardId(0),
+            bf_idx: 0,
+            first_idx: ((w >> 7) & IDX_BITS) as usize,
+            rank: ((w >> 5) & 0x3) as u8,
+            colors: crate::mana::ColorSet((w & 0x1f) as u8),
+            color_idx,
+        })
+    }
+}
+
+/// [`mana_summary`]'s compute: the printed mana abilities of `def`, walked
+/// exactly as `mana_source_table_inner`'s slow path walks
+/// `effective_mana_abilities_into`'s printed list — the first mana ability
+/// is the row's `first_idx` and rank, and each colour is claimed by the
+/// first ability that makes it.
+fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
+    let mut first: Option<(usize, &crate::effect::ActivatedAbility)> = None;
+    let mut colors = crate::mana::ColorSet::empty();
+    let mut color_idx = [0usize; 5];
+    for (i, a) in def.activated_abilities.iter().enumerate() {
+        if !is_mana_ability(&a.effect) {
+            continue;
+        }
+        if first.is_none() {
+            first = Some((i, a));
+        }
+        for col in effect_produced_colors(&a.effect).iter() {
+            if !colors.contains(col) {
+                colors.insert(col);
+                color_idx[color_index(col)] = i;
+            }
+        }
+    }
+    match first {
+        Some((first_idx, a)) => mana_summary::pack(
+            true,
+            colors,
+            GameState::mana_source_cost_rank(a),
+            first_idx,
+            &color_idx,
+        ),
+        None => mana_summary::pack(false, colors, 0, 0, &color_idx),
+    }
+}
+
 impl ManaSourceInfo {
     /// How replaceable this source is among `others`: for each colour it
     /// makes, how many *other* listed sources also make that colour,
@@ -12919,6 +13005,14 @@ impl GameState {
         // capturing `self` — PERF's `call_mut` census, ranked by captures.
         // The loop is the same walk, same order, with none.
         let mut out = Vec::new();
+        // With no land-type rewriter in scope the computed type line is the
+        // printed one (`effective_mana_abilities_into`'s gate), and with
+        // nothing granted to a permanent (`grants_nothing`) its mana
+        // abilities are its printed ones — so the row this loop builds for
+        // it is a pure function of its definition, memoized on `CardMemo`'s
+        // fourth word (PERF `(-198)`). The slow path below is the oracle the
+        // memo's `debug_assert!` recomputes against.
+        let printed_only = scan.land_types_rewritten == Some(false);
         for (bf_idx, c) in self.battlefield.iter().enumerate() {
             if c.controller != player || c.tapped {
                 continue;
@@ -12927,6 +13021,20 @@ impl GameState {
                 continue;
             }
             if only.is_some_and(|set| !set.contains(&c.id)) {
+                continue;
+            }
+            if printed_only
+                && self.grants_nothing(c, &scan)
+                && let Some(w) = c.mana_summary(mana_summary_of)
+            {
+                if let Some(mut row) = mana_summary::unpack(w) {
+                    row.id = c.id;
+                    row.bf_idx = bf_idx;
+                    if out.is_empty() {
+                        out.reserve(16);
+                    }
+                    out.push(row);
+                }
                 continue;
             }
             self.effective_mana_abilities_into(c, &scan, &mut abilities);
@@ -13951,17 +14059,7 @@ impl GameState {
         // `main_phase_action_with`), so the question is asked per permanent
         // per sweep. The counts this was sized on are in PERF's Baseline,
         // under the ninety-second pass.
-        if scan.statics.is_empty()
-            && scan.equipment.is_empty()
-            && scan.soulbond.is_empty()
-            && scan.graveyard.is_empty()
-            && me.definition.static_abilities.is_empty()
-            && me.granted_activated_abilities.is_empty()
-            && me.granted_activated_eot.is_empty()
-            && me.counters.is_empty()
-            && me.definition.station.is_empty()
-            && !self.deploy_creatures
-        {
+        if self.grants_nothing(me, scan) {
             debug_assert!(
                 self.granted_abilities_of_inner(me, scan).is_empty(),
                 "the grants-nothing gate missed a source: a new `out.push` in \
@@ -13971,6 +14069,26 @@ impl GameState {
             return Vec::new();
         }
         self.granted_abilities_of_inner(me, scan)
+    }
+
+    /// The grants-nothing gate of
+    /// [`granted_abilities_of`](Self::granted_abilities_of): ten length
+    /// loads that rule out every source its body draws from. Shared with
+    /// the auto-tapper's memo path (`mana_source_table_inner`), which may
+    /// read a permanent's *printed* mana summary only when this says nothing
+    /// is granted — one predicate, so the two cannot drift.
+    #[inline]
+    pub(crate) fn grants_nothing(&self, me: &CardInstance, scan: &GrantScan<'_>) -> bool {
+        scan.statics.is_empty()
+            && scan.equipment.is_empty()
+            && scan.soulbond.is_empty()
+            && scan.graveyard.is_empty()
+            && me.definition.static_abilities.is_empty()
+            && me.granted_activated_abilities.is_empty()
+            && me.granted_activated_eot.is_empty()
+            && me.counters.is_empty()
+            && me.definition.station.is_empty()
+            && !self.deploy_creatures
     }
 
     /// The body of [`granted_abilities_of`](Self::granted_abilities_of),
