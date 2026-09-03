@@ -8653,6 +8653,66 @@ impl CardInstance {
         }
     }
 
+    /// CR 400.7 — the "until end of turn" *effects* on this card end as it
+    /// leaves the battlefield, not at the next cleanup: a bounced creature
+    /// recast this turn is not still pumped, hasted or unable to block. Same
+    /// list as [`eot_wear_off`], minus the per-turn **history** fields —
+    /// `damaged_by_this_turn` and its siblings are last-known information
+    /// that the death and leave triggers read off the graveyard card when no
+    /// snapshot was taken (Scythe of the Wretched), so they wear off at
+    /// cleanup only. Guarded like the cleanup clear, so a clean card pays no
+    /// CoW unshare. (Found by the `(-190)` audit: a Coral Eel bounced with
+    /// "can't block" and recast still could not block.)
+    pub fn clear_effects_on_zone_change(&mut self) {
+        macro_rules! probe {
+            (empty damaged_by_this_turn) => {};
+            (empty damage_by_source_name_this_turn) => {};
+            (empty damage_by_source_this_turn) => {};
+            (scalar dealt_deathtouch_damage, $v:expr) => {};
+            (scalar dealt_damage_this_turn, $v:expr) => {};
+            (scalar damage_dealt_to_this_turn, $v:expr) => {};
+            (scalar $f:ident, $v:expr) => {
+                if self.$f != $v {
+                    return self.clear_effects_on_zone_change_slow();
+                }
+            };
+            (empty $f:ident) => {
+                if !self.$f.is_empty() {
+                    return self.clear_effects_on_zone_change_slow();
+                }
+            };
+            (none $f:ident) => {
+                if self.$f.is_some() {
+                    return self.clear_effects_on_zone_change_slow();
+                }
+            };
+        }
+        eot_wear_off!(probe);
+    }
+
+    /// The write half of [`Self::clear_effects_on_zone_change`], reached
+    /// only once its probe found a field set.
+    fn clear_effects_on_zone_change_slow(&mut self) {
+        macro_rules! reset {
+            (empty damaged_by_this_turn) => {};
+            (empty damage_by_source_name_this_turn) => {};
+            (empty damage_by_source_this_turn) => {};
+            (scalar dealt_deathtouch_damage, $v:expr) => {};
+            (scalar dealt_damage_this_turn, $v:expr) => {};
+            (scalar damage_dealt_to_this_turn, $v:expr) => {};
+            (scalar $f:ident, $v:expr) => {
+                self.$f = $v;
+            };
+            (empty $f:ident) => {
+                self.$f.clear();
+            };
+            (none $f:ident) => {
+                self.$f = None;
+            };
+        }
+        eot_wear_off!(reset);
+    }
+
     /// CR 514.2 — the Cleanup wear-off. The set is [`eot_wear_off`]; see
     /// [`Self::end_of_turn_effects_are_clear`] for why the guard exists and
     /// why it is generated from the same list.

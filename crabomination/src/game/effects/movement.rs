@@ -2042,6 +2042,13 @@ impl GameState {
             card.reset_room_doors();
             // MKM — a Case's solved designation is battlefield-only.
             card.reset_case();
+            // CR 400.7 — the card is a new object in its next zone, so every
+            // "until end of turn" effect on it ends here rather than at the
+            // next cleanup: a bounced creature recast this turn is not still
+            // pumped, hasted or unable to block. The per-turn history stays
+            // (it is LKI for the death triggers); guarded, so a clean card
+            // pays no CoW unshare.
+            card.clear_effects_on_zone_change();
             // CR 716.2 — a Class's level is battlefield-only.
             card.reset_class_level();
             // CR 707 — a temporary copy reverts as it leaves.

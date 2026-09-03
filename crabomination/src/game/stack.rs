@@ -6721,6 +6721,9 @@ impl GameState {
         card.reset_room_doors();
         // MKM — a Case's solved designation is battlefield-only.
         card.reset_case();
+        // CR 400.7 — "until end of turn" effects end with the object; see
+        // `move_card_to`'s twin.
+        card.clear_effects_on_zone_change();
         // CR 707 — a temporary copy reverts as it leaves.
         self.revert_copy_on_leave(&mut card);
         // CR 717.6 — an Astrotorium-backed Attraction card bound for anywhere

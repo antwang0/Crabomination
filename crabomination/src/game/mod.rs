@@ -9263,7 +9263,12 @@ impl GameState {
                 || !self.battlefield.iter().any(|c| {
                     !c.granted_keywords_eot.is_empty() || !c.keyword_counters.is_empty()
                 }),
-            "board_instance_keywords is clear, but a permanent carries an eot grant or keyword counter"
+            "board_instance_keywords is clear, but a permanent carries an eot grant or keyword counter: {:?}",
+            self.battlefield
+                .iter()
+                .filter(|c| !c.granted_keywords_eot.is_empty() || !c.keyword_counters.is_empty())
+                .map(|c| (c.definition.name, c.id, c.granted_keywords_eot.clone(), c.keyword_counters.clone(), self.turn_number, self.step))
+                .collect::<Vec<_>>()
         );
         let hit = (printed || instance)
             && self.battlefield.iter().any(|c| {
