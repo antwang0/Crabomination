@@ -11599,10 +11599,14 @@ reads. **Not adopted:** for a training engine a real (if tiny) strength leak
 is not worth 1.3-1.8 %; kept as a documented, opt-in pilot like
 `atk-race` / `atk-life`, with the census as the reusable instrument. The
 default profile stays byte-identical (`--bench` 195,806 / 27.49 / 611.9 / 0
-stalls, unmoved; golden traces unmoved). **Open follow-up:** gating the skip
-on `greedy.len() >= 2` would drop the lone-attacker divergences (all the
-observed misses were single Goblin Guide / Llanowar Elves boards) and might
-make it strength-neutral — one more ladder settles it.
+stalls, unmoved; golden traces unmoved). **A `greedy.len() >= 2` gate is
+refuted off the level-2 dump with no build spent:** of 60 creatureless
+non-greedy declarations on the bench, 18 have 2+ attackers, and those carry
+the biggest swings (`chose 1` at 31 vs greedy 21 — dropping a Goblin Guide,
++10 from not carding the opponent). The divergence is an attack-trigger
+downside, which is card-specific, not an attacker count, so no cheap gate
+makes the skip strength-neutral. The open-board sub-question of `(-21)` is
+closed.
 
 ### `d98c4212` — a rules price, not a candidate: CR 400.7 clears "until end of turn" effects as a permanent leaves — `fixed` +0.070 % / `sealed` +0.070 % / `cube` +0.062 %
 
@@ -22427,10 +22431,11 @@ and greedy wins 94-100 % of those, so the open-board skip saves 1.3-1.8 %
 on cube/sealed — but it overrides the sim's correct hold-back of an
 attack-trigger creature and leans -0.1 pt on a 96 k-game sealed ladder.
 Filed as an opt-in pilot (`atk-open`), NOT adopted; the reusable half is
-the instrument and the open follow-up (gate the skip on `greedy.len()>=2`
-to drop the lone-attacker divergences, one ladder to confirm). The Ir
-lead that is left is still the `profiling-lines` read of
-`computed_permanent_hinted`'s 150 Ir/call memo-hit path.**
+the instrument, and a `greedy.len()>=2` gate is refuted off the dump (18 of
+60 bench divergences are 2+ attackers and the biggest swings — a Goblin
+Guide held back to not card the opponent). The Ir lead that is left is
+still the `profiling-lines` read of `computed_permanent_hinted`'s 150
+Ir/call memo-hit path.**
 
 **RE-READ AT `a198daf3` (the `(-192)` engine + CR 400.7 + the mill/token
 card fixes) — three fresh dumps, the map agrees with `(-90)`/`(-92)`, and

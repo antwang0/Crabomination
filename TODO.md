@@ -36,12 +36,14 @@ sixty-seventh pass, so don't re-take that.
    0 stalls, byte-identical to `df27df7e`** (default engine unchanged — only opt-in code landed),
    determinism ok. Grid NOT re-run: byte-identical default => `df27df7e`'s `--wide` (301,600
    games, cap 4 = Beacon) still describes it. Audits all clean (PERF Baseline).
-3. **This run took `(-21)`'s never-read half** (Log `e725e5c2`). `CRAB_ATTACK_CENSUS` reads what
-   the attack sim chooses; the `atk-open` pilot skips it on a blockerless board: -1.3/-1.8 %
-   cube/sealed Ir but -0.1 pt on a 96 k sealed ladder (it overrides a correct hold-back). Opt-in,
-   NOT adopted. ⚠ **NEXT PERF MOVE, one ladder:** gate the skip on `greedy.len() >= 2` — every
-   divergence was a single attacker, so a 2+ gate may make it strength-neutral and keep the win.
-4. **Other perf leads:** `profiling-lines` read of `computed_permanent_hinted`'s 150 Ir/call
+3. **This run took `(-21)`'s never-read half and CLOSED the open-board sub-question** (Log
+   `e725e5c2`). `CRAB_ATTACK_CENSUS` reads what the attack sim chooses; the `atk-open` pilot skips
+   it on a blockerless board: -1.3/-1.8 % cube/sealed Ir but -0.1 pt on a 96 k sealed ladder (it
+   overrides a correct hold-back). Opt-in, NOT adopted. ⚠ **Do NOT re-try a `greedy.len() >= 2`
+   gate** — the level-2 dump shows 18 of 60 bench divergences have 2+ attackers and they are the
+   biggest swings (drop a Goblin Guide, +10 pts from not carding the opponent). The real signal is
+   an attack-trigger downside, which is card-specific, not attacker count. The device is done.
+4. **Perf leads left:** `profiling-lines` read of `computed_permanent_hinted`'s 150 Ir/call
    memo-hit path (2.4 %, never read by line). The `a198daf3` re-read (candidates, top) stands: no
    row prices at a build without a device. Sized, leave: `apply_as_enters_effect` / Mimeoplasm,
    the empty-stack `PassPriority` sweep, `activate_ability_inner` (2.0 %, no hot line).
