@@ -934,6 +934,11 @@ impl GameState {
         if any_static_grant {
             self.freeze_layers_push();
         }
+        // Not gated on `CardData::trigger_kind_fold`: the per-trigger kind
+        // compare inlines to a tag test, and a board's one or two printed
+        // triggers per card cost what the memo read does — PERF `(-196)`
+        // measured the gate here at +0.2 M on `cube`, a wash, and took it
+        // back out.
         for c in self.battlefield.iter() {
             // Printed triggers plus statics-granted ones (Kataki's "All
             // artifacts have '…upkeep…'"), both firing off `c`. Filter on the

@@ -2921,6 +2921,22 @@ impl EventKind {
         debug_assert!(tag < 128, "EventKind has outgrown a u128 kind mask");
         1u128 << tag
     }
+
+    /// [`bit`](Self::bit) folded to one word — kinds `i` and `i + 64` share
+    /// a bit. A fold is sound as a *skip* (a clear bit means "no kind of
+    /// this tag or its twin"), which is all a definition-level memo of "the
+    /// kinds this card's printed triggers listen to" needs, and it fits the
+    /// one spare word on [`crate::card::CardMemo`].
+    #[inline]
+    pub const fn fold(&self) -> u64 {
+        Self::fold_bits(self.bit())
+    }
+
+    /// The fold of a [`bit`](Self::bit) mask, for a mask already in hand.
+    #[inline]
+    pub const fn fold_bits(bits: u128) -> u64 {
+        (bits as u64) | ((bits >> 64) as u64)
+    }
 }
 
 /// Whose events does this trigger listen for?

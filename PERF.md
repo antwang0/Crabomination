@@ -11557,6 +11557,39 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-196)` TAKEN — a per-card fold of its printed triggers' kinds, one memo word, gates the dispatcher's permanent walk: `sealed` -1.669 % / `cube` -1.270 % / `fixed` -0.977 %
+
+```text
+  pool    base (-195)       (-196)          delta
+  fixed     833,044,474     824,906,185   **-0.977 %**
+  cube    2,292,051,013   2,262,935,469   **-1.270 %**
+  sealed  2,302,880,506   2,264,448,217   **-1.669 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  dispatch_triggers_for_events self  118.7 M -> 89.3 M
+                (824.9 -> 620.9 Ir a call over 143,834)
+                CardDefinition::trigger_kind_fold  1,988 calls (the memo misses)
+```
+
+`(-195)` gated the *pair*; this gates the *permanent*. `CardMemo` grew a
+third word — the `EventKind::fold` (the u128 bit folded to 64, kinds `i`
+and `i + 64` sharing a bit, sound as a skip) of every printed trigger's
+kind, memoized per object like the dispatch bits and cleared with them —
+and under `no_grants` a permanent whose fold misses the batch's has
+nothing to walk: no `stripped_ids` lookup, no `SmallVec::new` for the
+grant list, no chained iterator, no pair loop. The lane already narrows
+the walk to trigger-carrying permanents; this narrows it to permanents
+whose triggers this batch can reach, which on `cube` is one in several.
+
+**Measured and taken back out: the same gate in `fire_step_triggers`**
+(battlefield and graveyard walks), `cube` +0.2 M on its self row. The
+per-trigger `t.event.kind == kind` there inlines to a tag compare, and a
+card's one or two printed triggers cost what the memo load does. The
+rule is `(-116)`'s: a gate is priced against what it skips, and a loop
+over one element is not worth a word. The 8 bytes on `CardData` read
+`Arc::clone_from_ref_in` 475.4 -> 476.5 Ir a call — inside the noise of
+the size class.
+
 ### `(-195)` TAKEN — a batch kind mask in front of the trigger dispatcher's pair loop: `sealed` -1.339 % / `cube` -1.096 % / `fixed` -0.251 %
 
 ```text

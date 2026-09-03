@@ -5692,6 +5692,13 @@ impl CardDefinition {
     /// [`dispatch_bits`]. Pure function of the definition; `CardData`
     /// memoizes it (`CardData::dispatch_scan_bits`), which is what keeps the
     /// per-permanent `static_abilities` walk off the dispatch path.
+    /// The [`EventKind::fold`] of every printed triggered ability's kind — a
+    /// card whose fold misses a batch's carries no printed trigger any event
+    /// in it can reach. Memoized per object by [`CardData::trigger_kind_fold`].
+    pub fn trigger_kind_fold(&self) -> u64 {
+        self.triggered_abilities.iter().fold(0u64, |m, t| m | t.event.kind.fold())
+    }
+
     pub fn dispatch_scan_bits(&self) -> u64 {
         use crate::effect::{
             StaticEffect, static_effect_strips_abilities, static_grants_triggered_ability,
@@ -6957,8 +6964,12 @@ pub mod dispatch_bits {
 /// A second word holds the layer gather's [`gather_spec`] mask (bits 0-51)
 /// with its valid flag at bit 63 — 52 bits do not fit beside the first
 /// word's tenants, and a second atom is 8 bytes on a `CardData` that is
-/// already hundreds. Both words are cleared together in [`Self::clear`], so
-/// a slot added to either cannot outlive a definition rewrite.
+/// already hundreds. A third holds [`CardDefinition::trigger_kind_fold`]
+/// — the [`EventKind::fold`] of every printed trigger's kind, valid flag
+/// at bit 63 (a kind whose fold lands on bit 63 always passes the gate,
+/// which is the sound direction). All words are cleared together in
+/// [`Self::clear`], so a slot added to any cannot outlive a definition
+/// rewrite.
 /// Atomic rather than a `Cell` because `CardData` sits behind an `Arc` that
 /// has to stay `Send`; the halves are written with a plain load-modify-store
 /// because [`Self::clear`] only ever runs on a *uniquely owned* `CardData`
@@ -6966,7 +6977,11 @@ pub mod dispatch_bits {
 /// writers are two setters storing pure functions of the same definition and
 /// a lost update costs a recompute.
 #[derive(Debug, Default)]
-pub struct CardMemo(std::sync::atomic::AtomicU64, std::sync::atomic::AtomicU64);
+pub struct CardMemo(
+    std::sync::atomic::AtomicU64,
+    std::sync::atomic::AtomicU64,
+    std::sync::atomic::AtomicU64,
+);
 
 impl CardMemo {
     const COLOR_MASK: u64 = 0x1f;
@@ -7103,11 +7118,26 @@ impl CardMemo {
         self.1.store(bits | Self::GATHER_VALID, std::sync::atomic::Ordering::Relaxed);
     }
 
+    /// On the *third* word; see the type doc.
+    const KINDS_VALID: u64 = 1 << 63;
+
+    #[inline]
+    fn get_kinds(&self) -> Option<u64> {
+        let v = self.2.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::KINDS_VALID != 0).then_some(v)
+    }
+
+    #[inline]
+    fn set_kinds(&self, fold: u64) {
+        self.2.store(fold | Self::KINDS_VALID, std::sync::atomic::Ordering::Relaxed);
+    }
+
     /// The invalidation, called from [`CardInstance`]'s `DerefMut`.
     #[inline]
     fn clear(&self) {
         self.0.store(0, std::sync::atomic::Ordering::Relaxed);
         self.1.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.2.store(0, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
@@ -7120,6 +7150,9 @@ impl Clone for CardMemo {
             ),
             std::sync::atomic::AtomicU64::new(
                 self.1.load(std::sync::atomic::Ordering::Relaxed),
+            ),
+            std::sync::atomic::AtomicU64::new(
+                self.2.load(std::sync::atomic::Ordering::Relaxed),
             ),
         )
     }
@@ -7837,6 +7870,24 @@ impl CardData {
         let bits = self.definition.dispatch_scan_bits();
         self.definition.memo.set_dispatch(bits);
         bits
+    }
+
+    /// [`CardDefinition::trigger_kind_fold`] for this object, memoized on the
+    /// third word. The valid flag rides along in bit 63, which only ever
+    /// makes the gate *keep* a card.
+    #[inline]
+    pub fn trigger_kind_fold(&self) -> u64 {
+        if let Some(fold) = self.definition.memo.get_kinds() {
+            debug_assert_eq!(
+                fold & !CardMemo::KINDS_VALID,
+                self.definition.trigger_kind_fold() & !CardMemo::KINDS_VALID,
+                "trigger-kind memo is stale: a definition rewrite did not clear it",
+            );
+            return fold;
+        }
+        let fold = self.definition.trigger_kind_fold();
+        self.definition.memo.set_kinds(fold);
+        fold | CardMemo::KINDS_VALID
     }
 }
 

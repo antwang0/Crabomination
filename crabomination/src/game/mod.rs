@@ -18608,6 +18608,10 @@ impl GameState {
         let batch_bits = events
             .iter()
             .fold(0u128, |m, ev| m | crate::game::effects::events::event_kind_bits(ev));
+        // The same mask folded to one word, against each permanent's memoized
+        // printed-trigger fold (PERF `(-196)`): with no grant in play, a
+        // permanent whose fold misses the batch's has no trigger to walk.
+        let batch_fold = crate::effect::EventKind::fold_bits(batch_bits);
         // CR 702.95 — Soulbond pairing. When a creature enters, attempt to pair
         // it (auto-resolved "may"). Done before trigger dispatch so a paired
         // creature's bonus is live for any subsequent ETB-trigger evaluation.
@@ -18963,6 +18967,15 @@ impl GameState {
                 if !carries {
                     continue;
                 }
+            }
+            // Under `no_grants` the only triggers this permanent can carry
+            // are its printed ones and a Station band's; the fold answers the
+            // printed half without building the lists below (`(-196)`).
+            if no_grants
+                && card.definition.station.is_empty()
+                && card.trigger_kind_fold() & batch_fold == 0
+            {
+                continue;
             }
             let stripped = stripped_ids.contains(&card.id);
             // Walk printed triggered abilities AND any transient
