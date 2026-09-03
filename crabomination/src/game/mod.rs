@@ -14564,7 +14564,6 @@ impl GameState {
             .then(|| def.cost.clone())
     }
 
-    /// Allocate a new monotonically-increasing timestamp.
     /// Grant `kw` to a battlefield permanent until end of turn, stamping
     /// the grant's layer timestamp (CR 613.7) so it orders correctly
     /// against RemoveKeyword / RemoveAllAbilities effects. Always records —
@@ -14579,6 +14578,7 @@ impl GameState {
         }
     }
 
+    /// Allocate a new monotonically-increasing timestamp.
     pub fn next_timestamp(&mut self) -> u64 {
         let ts = self.next_effect_timestamp;
         self.next_effect_timestamp += 1;

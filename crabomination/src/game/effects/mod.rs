@@ -3486,9 +3486,7 @@ impl GameState {
                 }
                 let gained = self.players[defender].mana_pool.total().saturating_sub(before);
                 self.players[defender].mana_pool.empty();
-                if let Some(c) = self.battlefield_find_mut(source) {
-                    c.granted_keywords_eot.push(crate::card::Keyword::DealsNoCombatDamage);
-                }
+                self.grant_keyword_eot(source, crate::card::Keyword::DealsNoCombatDamage);
                 if gained > 0 {
                     self.run_effect(
                         &Effect::AddManaAtNextMainPhase {
@@ -8579,8 +8577,8 @@ impl GameState {
                     &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
                     events,
                 );
-                if *haste && let Some(c) = self.battlefield_find_mut(cid) {
-                    c.granted_keywords_eot.push(crate::card::Keyword::Haste);
+                if *haste {
+                    self.grant_keyword_eot(cid, crate::card::Keyword::Haste);
                 }
                 if *sacrifice_at_next_end_step {
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
@@ -23076,8 +23074,8 @@ impl GameState {
                         self.attacking.push(Attack { attacker: id, target });
                         if let Some(c) = self.battlefield_find_mut(id) {
                             c.attacked_this_turn = true;
-                            c.granted_keywords_eot.push(crate::card::Keyword::Indestructible);
                         }
+                        self.grant_keyword_eot(id, crate::card::Keyword::Indestructible);
                         events.push(GameEvent::AttackerDeclared(id));
                     }
                 }
