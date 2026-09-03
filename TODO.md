@@ -34,8 +34,9 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at `df27df7e`:** suite 19,237 / 0 / 5, golden traces unmoved, clippy `--all-targets`
    clean, release-fast typecheck gate clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
    byte-identical**, determinism ok. `robustness_grid.sh` at `df27df7e`: ladder 30 cells /
-   33,120 games + actor 3 seeds, **0 failures**. `--pilots` / `--wide` last ran at the `(-185)`
-   engine. Structural audits 0 / 0; the oracle-verb table 70, all filed.
+   33,120 games + actor 3 seeds + pilots 45 / 45, **0 failures**; `--wide` 52 cells / 301,600
+   games, cap 4 = the Beacon board (ENGINE_BACKLOG, closed), unchanged (PERF Baseline).
+   Structural audits 0 / 0; the oracle-verb table 70, all filed.
 3. **This run: no perf leg — the queue is mined out at this tip, and PERF's candidates section
    opens with the re-read that says so** (three fresh dumps at `a198daf3`, within 0.07 % of
    `(-192)`; `affected_includes_gated`'s reach mask refuted by arithmetic; `make_mut_slow`,

@@ -2544,8 +2544,17 @@ release the release-fast typecheck gate (debug-assertions off)   clean
 grid    `scripts/robustness_grid.sh` at `df27df7e`: ladder **30 cells /
         33,120 games, 0 failures**, cap 0 / stuck 0 / draw 0; actor leg
         3 seeds x 600 games clean (99-126 games/s under `overflow` +
-        `debug-assertions`, 7 assertion strings in the binary).
-        `--pilots` / `--wide` last ran at the `(-185)` engine.
+        `debug-assertions`, 7 assertion strings in the binary); **pilots
+        45 / 45 clean** at the same tip (`--no-build --no-actor --pilots`).
+        `--wide` (`--no-build --no-actor`) at `df27df7e`: ladder **52 cells /
+        301,600 games, 0 panic / 0 assertion / 0 overflow**, cap 4 / stuck 0
+        / draw 12 — the four caps are seeds 53 and 73 on `all`, twin
+        `i32::MAX` life totals at turns 2,159 and 2,490 (`CRAB_CAP_DIAG=1`),
+        the Beacon board ENGINE_BACKLOG closes, unchanged from `094b361a`;
+        pilots 45 / 45 clean again. The script's `failures=1` is that cap
+        count. Wide actor leg (`--no-build --actor-only --wide`): **2 x
+        30,000 games clean at 129.7 / 129.6 games/s** under `overflow` +
+        `debug-assertions`, 231 s each.
 audits  `audit_incomplete --structural-only` 21,795 cards / 0 to review
         (Elite Interceptor reviewed); `audit_stubs` 0 flagged;
         `audit_oracle_verbs.py` 106 -> **70** rows, every one filed.

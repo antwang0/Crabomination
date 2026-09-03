@@ -775,6 +775,11 @@ lives inside `StaticEffect::ControllerMaySkipDrawStepForLife`'s handler.
 * **Search for Glory**'s "gain 1 life for each {S} spent" — the pool does
   not remember which mana came from a snow source.
 * **Survey Mechan**'s "differently named lands" — counted as lands.
+* **`if_paid: None` grepped, as the token section asked (161 sites, 7 with
+  an "if they do / don't" clause in the oracle):** every one of the seven
+  is the *don't* shape (Shrouded Serpent, Crush Dissent, Primordial Ooze,
+  Pillar Tombs of Aku, Forbidden Ritual, Smothering Tithe, Gravestorm),
+  which the `then` branch carries. Nothing to fix; nobody re-greps.
 * **The auditor's blind spot, six rows, all bespoke and correct:** Doomsday
   (`Effect::Doomsday`), Isperia the Inscrutable (`IsperiaReveal`), Natural
   Balance and Scholarship Sponsor (`CatchUpBasicLands`), Parallel Thoughts
