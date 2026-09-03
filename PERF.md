@@ -22437,6 +22437,16 @@ Guide held back to not card the opponent). The Ir lead that is left is
 still the `profiling-lines` read of `computed_permanent_hinted`'s 150
 Ir/call memo-hit path.**
 
+**Engine thread scaling — no global contention (measured `e725e5c2`,
+`profiling-fast`).** 1,200 `fixed` games (gang mirror, seed 7): 16.5 s at
+1 thread, 4.4 s at 4 = **3.75x on 4 cores (~94 % efficiency)**, repeatable
+(16.1/16.8 s across two 1-thread runs). The paired loop is independent
+seed-fixed jobs and the engine holds no cross-thread mutable state, so the
+"find contention if sublinear" candidate is a negative on the engine loop.
+What that does **not** cover is the actor's learner/actor shared replay
+buffer and net — the selfplay-specific contention `(-52)` measures, which
+`bot_ladder` never exercises. Not re-run this pass.
+
 **RE-READ AT `a198daf3` (the `(-192)` engine + CR 400.7 + the mill/token
 card fixes) — three fresh dumps, the map agrees with `(-90)`/`(-92)`, and
 no row prices at a build.** `profiling-fast`, `--no-default-features`,
