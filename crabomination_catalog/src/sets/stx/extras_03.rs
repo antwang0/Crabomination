@@ -1163,21 +1163,41 @@ pub fn lecturing_loxodon() -> CardDefinition {
 /// `sequence_engine_tutors_an_instant_to_hand`,
 /// `sequence_engine_is_a_four_mana_lorehold_sorcery`.
 pub fn sequence_engine() -> CardDefinition {
-    use crate::effect::RevealMissDest;
     CardDefinition {
         name: "Sequence Engine",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Artifact],
-        effect: Effect::RevealUntilFind {
-            who: PlayerRef::You,
-            find: SelectionRequirement::HasCardType(CardType::Instant)
-                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-            to: ZoneDest::Hand(PlayerRef::You),
-            // 0 means reveal until found (no cap).
-            cap: Value::Const(0),
-            life_per_revealed: 0,
-            miss_dest: RevealMissDest::BottomRandom,
-        },
+        // "{X}, {T}: Exile target creature card with mana value X from a
+        // graveyard. Create a 0/0 green and blue Fractal creature token. Put
+        // X +1/+1 counters on it. Activate only as a sorcery." (Shipped as
+        // a reveal-until-instant body — a different card — until the
+        // oracle-verb audit.)
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[crate::mana::x()]),
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::InGraveyard)
+                            .and(SelectionRequirement::ManaValueExactlyXFromCost),
+                    ),
+                    to: ZoneDest::Exile,
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Box::new(crabomination_base::tokens::fractal_token()),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::XFromCost,
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

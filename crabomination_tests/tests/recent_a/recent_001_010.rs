@@ -10928,6 +10928,27 @@ mod recent9 {
         assert!(g.exile.iter().any(|c| c.id == victim), "airbent the opposing creature");
     }
 
+    /// Aang's other two abilities were absent (oracle-verb audit, `token`):
+    /// a creature of yours leaving without dying is an experience counter,
+    /// and your upkeep makes an Ally per counter.
+    #[test]
+    fn aang_experience_and_upkeep_allies() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::aang_airbending_master());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let evs = g.remove_from_battlefield_to_hand(bear);
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].experience, 1, "a bounce is an experience counter");
+
+        g.players[0].experience = 2;
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        let allies = g.battlefield.iter().filter(|c| c.definition.name == "Ally").count();
+        assert_eq!(allies, 2, "one Ally per experience counter at upkeep");
+    }
+
     /// Sinister Gnarlbark draws and blights at the end step.
     #[test]
     fn sinister_gnarlbark_end_step() {

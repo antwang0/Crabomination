@@ -3158,6 +3158,32 @@ fn devourer_of_memory_pumps_and_evades_when_you_mill() {
     assert!(cp.keywords().contains(&Keyword::Unblockable), "can't be blocked this turn");
 }
 
+/// Oracle-verb audit (`token`): shipped as a reveal-until-instant body, a
+/// different card. Printed: {X}, {T}: exile a creature card with mana value
+/// X from a graveyard, make a 0/0 Fractal with X +1/+1 counters.
+#[test]
+fn sequence_engine_exiles_a_graveyard_creature_and_grows_a_fractal() {
+    let mut g = two_player_game();
+    let engine = g.add_card_to_battlefield(0, catalog::sequence_engine());
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: engine,
+        ability_index: 0,
+        target: Some(crabomination::game::types::Target::Permanent(corpse)),
+        additional_targets: vec![],
+        x_value: Some(2),
+        mode: None,
+    }).expect("X=2 activation on a two-drop corpse");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == corpse), "the corpse is exiled");
+    let fractal = g.battlefield.iter().find(|c| c.definition.name == "Fractal").expect("a Fractal token");
+    let cp = g.computed_permanent(fractal.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "0/0 with two +1/+1 counters");
+}
+
 // ── Mavinda's Verdict (modern_decks push) ──────────────────────────────────
 
 #[test]

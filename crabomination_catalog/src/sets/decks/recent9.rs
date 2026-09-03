@@ -152,11 +152,44 @@ pub fn aang_airbending_master() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::Airbend {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
-            ),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::Airbend {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                ),
+            }),
+            // "Whenever one or more creatures you control leave the battlefield
+            // without dying, you get an experience counter" — per creature
+            // here (no per-event batching), so a mass bounce over-counts.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CreatureLeavesBattlefieldNotDying,
+                    EventScope::YourControl,
+                ),
+                effect: Effect::AddExperience(Value::ONE),
+            },
+            // "At the beginning of your upkeep, create a 1/1 white Ally
+            // creature token for each experience counter you have."
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ControllerExperience,
+                    definition: Box::new(crate::card::TokenDefinition {
+                        name: "Ally".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Ally],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
