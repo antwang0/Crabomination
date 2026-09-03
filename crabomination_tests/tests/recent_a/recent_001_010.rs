@@ -10831,6 +10831,25 @@ mod recent8 {
         assert_eq!(g.players[0].life, life + 1, "gained 1 life on tap");
     }
 
+    /// Master Pakku's tap trigger mills X, X = Lesson cards in your graveyard
+    /// (the trigger was absent — oracle-verb audit, `mill`).
+    #[test]
+    fn master_pakku_mills_lessons_when_tapped() {
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            g.add_card_to_library(1, catalog::forest());
+        }
+        g.add_card_to_graveyard(0, catalog::combustion_technique());
+        g.add_card_to_graveyard(0, catalog::combustion_technique());
+        g.add_card_to_graveyard(0, catalog::forest());
+        let pakku = g.add_card_to_battlefield(0, catalog::master_pakku());
+        let opp_gy = g.players[1].graveyard.len();
+        g.battlefield_find_mut(pakku).unwrap().tapped = true;
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: pakku, actor: None, as_attacker: false }]);
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].graveyard.len(), opp_gy + 2, "milled two: two Lessons in the graveyard");
+    }
+
     /// Fire Nation Soldier is a 3/2 with haste.
     #[test]
     fn fire_nation_soldier_has_haste() {

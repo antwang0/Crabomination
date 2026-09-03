@@ -605,6 +605,18 @@ pub fn aether_syphon() -> CardDefinition {
             },
             ..Default::default()
         }],
+        // Max speed — whenever you draw a card, each opponent mills two.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                then: Box::new(Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
         ..Default::default()
     }
 }

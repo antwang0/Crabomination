@@ -3132,29 +3132,30 @@ fn pillardrop_warden_etb_may_pay_returns_creature_card() {
 
 // ── Devourer of Memory (modern_decks push) ─────────────────────────────────
 
+/// Oracle-verb audit (`mill`): shipped as a magecraft +1/+0 draw body, a
+/// different card. Printed: "{1}{U}{B}: Mill a card" and "whenever one or
+/// more cards are put into your graveyard from your library, +1/+1 and
+/// can't be blocked this turn".
 #[test]
-fn devourer_of_memory_magecraft_pumps_self() {
+fn devourer_of_memory_pumps_and_evades_when_you_mill() {
     let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
     let id = g.add_card_to_battlefield(0, catalog::devourer_of_memory());
     g.clear_sickness(id);
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let gy = g.players[0].graveyard.len();
 
-    g.players[0].mana_pool.add(Color::Red, 1);
-
-    // Cast Lightning Bolt at opp; Magecraft pumps Devourer +1/+0 EOT.
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(crabomination::game::types::Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    }).expect("Bolt castable");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("mill ability");
     drain_stack(&mut g);
 
-    let cp = g.compute_battlefield().iter()
-        .find(|c| c.id == id).cloned()
-        .expect("devourer on bf");
-    assert_eq!(cp.power, 3, "Devourer pumped to 3 power");
+    assert_eq!(g.players[0].graveyard.len(), gy + 1, "milled one card");
+    let cp = g.computed_permanent(id).expect("devourer on bf");
+    assert_eq!((cp.power, cp.toughness), (3, 2), "+1/+1 off the mill");
+    assert!(cp.keywords().contains(&Keyword::Unblockable), "can't be blocked this turn");
 }
 
 // ── Mavinda's Verdict (modern_decks push) ──────────────────────────────────
@@ -4210,23 +4211,33 @@ fn doomskar_foretell_then_cast_next_turn() {
 
 // ── Mind Drain ─────────────────────────────────────────────────────────────
 
+/// Oracle-verb audit (`mill`): the mill, the drain and the gain were absent,
+/// and "target opponent" was every opponent.
 #[test]
-fn mind_drain_makes_each_opp_discard_two() {
+fn mind_drain_discards_mills_and_drains_target_opponent() {
     let mut g = two_player_game();
     g.add_card_to_hand(1, catalog::island());
     g.add_card_to_hand(1, catalog::island());
     g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::mind_drain());
     g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(1);
     let opp_hand_before = g.players[1].hand.len();
+    let opp_gy_before = g.players[1].graveyard.len();
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
     }).expect("Mind Drain castable");
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].hand.len(), opp_hand_before - 2, "opp discarded 2");
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 3, "two discards and one milled card");
+    assert_eq!(g.players[1].life, theirs - 1, "opp lost 1");
+    assert_eq!(g.players[0].life, mine + 1, "you gained 1");
 }
 
 // ── Hindering Light ────────────────────────────────────────────────────────

@@ -4085,20 +4085,38 @@ mod recent30 {
         assert_eq!(g.players[0].hand.len(), hand + 1, "took a creature from the milled cards");
     }
 
-    /// Aether Syphon taps for a card.
+    /// Aether Syphon taps for a card; at max speed each draw mills each
+    /// opponent two (the trigger was absent — oracle-verb audit, `mill`).
     #[test]
     fn aether_syphon_draws() {
         let mut g = two_player_game();
         g.add_card_to_library(0, catalog::grizzly_bears());
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        for _ in 0..4 {
+            g.add_card_to_library(1, catalog::forest());
+        }
         let asy = g.add_card_to_battlefield(0, catalog::aether_syphon());
         ready(&mut g);
         let hand = g.players[0].hand.len();
+        let opp_gy = g.players[1].graveyard.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: asy, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("draw ability");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+        assert_eq!(g.players[1].graveyard.len(), opp_gy, "below max speed: no mill");
+
+        g.players[0].speed = 4;
+        g.battlefield_find_mut(asy).unwrap().tapped = false;
+        ready(&mut g);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: asy, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+        .expect("draw ability again");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + 2, "drew again");
+        assert_eq!(g.players[1].graveyard.len(), opp_gy + 2, "max speed: the draw milled the opponent two");
     }
 
     /// Alacrian Armory is an anthem: +0/+1 and vigilance for your creatures.

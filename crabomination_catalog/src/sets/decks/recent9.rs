@@ -358,6 +358,20 @@ pub fn master_pakku() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Prowess],
+        // "Whenever Master Pakku becomes tapped, target player mills X cards,
+        // where X is the number of Lesson cards in your graveyard."
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::Mill {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasSpellSubtype(
+                        crate::card::SpellSubtype::Lesson,
+                    ),
+                },
+            },
+        }],
         ..Default::default()
     }
 }

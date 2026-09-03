@@ -303,26 +303,35 @@ pub fn devourer_of_memory() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(1),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::If {
-                cond: Predicate::ValueAtLeast(
-                    Value::PowerOf(Box::new(Selector::This)),
-                    Value::Const(4),
-                ),
-                then: Box::new(Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                }),
-                else_: Box::new(Effect::Noop),
-            },
-        ]))],
+        // "Whenever one or more cards are put into your graveyard from your
+        // library, this creature gets +1/+1 until end of turn and can't be
+        // blocked this turn." `CardMilled` fires per card, so a mill of
+        // three pumps three times where the printed "one or more" pumps
+        // once — the engine has no per-event batching; the shape is right,
+        // the size over-counts. (Shipped as a magecraft +1/+0 draw body —
+        // a different card entirely — until the oracle-verb audit.)
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardMilled, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        // {1}{U}{B}: Mill a card.
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u(), b()]),
+            effect: Effect::Mill { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1785,14 +1794,18 @@ pub fn mind_drain() -> CardDefinition {
         name: "Mind Drain",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ForEach {
-            selector: Selector::Player(PlayerRef::EachOpponent),
-            body: Box::new(Effect::Discard {
-                who: Selector::Player(PlayerRef::Triggerer),
+        // "Target opponent discards two cards, mills a card, and loses 1
+        // life. You gain 1 life."
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
                 random: false,
-            }),
-        },
+            },
+            Effect::Mill { who: Selector::Target(0), amount: Value::ONE },
+            Effect::LoseLife { who: Selector::Target(0), amount: Value::ONE },
+            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        ]),
         ..Default::default()
     }
 }
