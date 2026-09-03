@@ -24,8 +24,221 @@ use crate::game::{GameEvent, GameState};
 /// `#[inline]` on an Ir number is about *adding* one to a callee that the
 /// shipped LTO build would inline anyway; this one is putting back what
 /// lifting the function out took away.
+///
+/// Two halves, one table. The *variant* half is [`event_kind_bits`] — which
+/// kinds an event variant can reach at all — and the *payload* half is the
+/// match below it, reached only when the variant half passed. The dispatcher
+/// ORs the variant half over a batch once and asks it per (permanent,
+/// trigger) pair, so the 93 % of pairs no event in the batch can reach
+/// (`ems_census`, PERF `(-129)`) never enter the event loop; because this
+/// exact check reads the same table, the gate and the match cannot drift.
 #[inline]
 pub(crate) fn event_kind_matches(
+    state: &GameState,
+    event: &GameEvent,
+    spec: &EventSpec,
+    source: Option<&CardInstance>,
+) -> bool {
+    if event_kind_bits(event) & spec.kind.bit() == 0 {
+        return false;
+    }
+    event_payload_matches(state, event, spec, source)
+}
+
+/// The kinds `event`'s variant can reach, as a mask of [`EventKind::bit`]s.
+/// A kind absent here never matches this event; a kind present still has its
+/// payload checked by [`event_payload_matches`]. `_ => 0` is the event
+/// variants no printed trigger listens to through this dispatcher.
+pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
+    use EventKind as K;
+    use GameEvent as E;
+    macro_rules! bits {
+        ($($k:expr),+ $(,)?) => { 0u128 $(| const { $k.bit() })+ };
+    }
+    match event {
+        E::PermanentEntered { .. } => bits!(K::EntersBattlefield),
+        E::CreatureDied { .. } => bits!(K::CreatureDied, K::PermanentLeavesBattlefield),
+        E::PermanentDied { .. } => bits!(K::CreatureOrArtifactDied, K::PermanentDied),
+        E::CreatureSacrificed { .. } => bits!(K::CreatureSacrificed),
+        E::PermanentSacrificed { .. } => bits!(K::PermanentSacrificed),
+        E::CreatureLeftWithoutDying { .. } => bits!(K::CreatureLeavesBattlefieldNotDying),
+        E::MonarchChanged { .. } => bits!(K::BecameMonarch),
+        E::CardDrawn { .. } => bits!(K::CardDrawn),
+        E::FirstCardDrawnThisTurn { .. } => bits!(K::FirstCardDrawnThisTurn),
+        E::CardDiscarded { .. } => bits!(K::CardDiscarded),
+        E::LandPlayed { .. } => bits!(K::LandPlayed),
+        E::SpellCast { .. } => bits!(K::SpellCast),
+        E::SpellsCopied { .. } => bits!(K::SpellCopied),
+        E::AttackerDeclared(_) => bits!(K::Attacks),
+        E::BlockerDeclared { .. } => bits!(
+            K::Blocks,
+            K::BecomesBlocked,
+            K::BlocksNOrMore(0),
+            K::BecomesBlockedByNOrMore(0),
+        ),
+        E::AttackerWentUnblocked { .. } => bits!(K::AttacksAndIsntBlocked),
+        E::Regenerated { .. } => bits!(K::Regenerated),
+        E::DamageDealt { .. } => bits!(
+            K::DealtDamage,
+            K::DealtCombatDamage,
+            K::PlayerDealtNoncombatDamage,
+            K::YourSourceDealtNoncombatDamageEqualToToughness,
+            K::PlayerDamaged,
+        ),
+        E::LifeGained { .. } => bits!(K::LifeGained),
+        E::ScriedOrSurveiled { .. } => bits!(K::ScriedOrSurveiled),
+        E::OpponentCausedYouToDiscard { .. } => bits!(K::OpponentCausedYouToDiscard),
+        E::DungeonCompleted { .. } => bits!(K::DungeonCompleted),
+        E::Proliferated { .. } => bits!(K::Proliferated),
+        E::Foraged { .. } => bits!(K::Foraged),
+        E::EvidenceCollected { .. } => bits!(K::EvidenceCollected),
+        E::GiftGiven { .. } => bits!(K::GiftGiven),
+        E::ClassLevelReached { .. } => bits!(K::ClassLevelReached),
+        E::PoisonAdded { .. } => bits!(K::PoisonAdded),
+        E::RingTempted { .. } => bits!(K::RingTempted),
+        E::LifeLost { .. } => bits!(K::LifeLost),
+        E::StepChanged(_) => bits!(K::StepBegins(crate::TurnStep::Untap)),
+        E::TurnStarted { .. } => bits!(K::TurnBegins),
+        E::CounterAdded { .. } => bits!(
+            K::CounterAdded(crate::card::CounterType::PlusOnePlusOne),
+            K::AnyCounterAdded,
+        ),
+        E::CounterRemoved { .. } => {
+            bits!(K::CounterRemoved(crate::card::CounterType::PlusOnePlusOne))
+        }
+        E::AbilityActivated { .. } => bits!(
+            K::AbilityActivated,
+            K::ExhaustAbilityActivated,
+            K::AdaptAbilityActivated,
+        ),
+        E::CardLeftGraveyard { .. } => bits!(K::CardLeftGraveyard),
+        E::CardPutIntoGraveyard { .. } => bits!(K::LandPutIntoGraveyard, K::PutIntoGraveyard),
+        E::CardMilled { .. } => bits!(K::PutIntoGraveyard, K::CardMilled),
+        E::CardPutIntoHandFromGraveyard { .. } => bits!(K::PutIntoHandFromGraveyard),
+        E::PermanentExiled { .. } => bits!(K::CardExiled),
+        E::CardExiledFromPlayOrGraveyard { .. } => bits!(K::CardExiledFromPlayOrGraveyard),
+        E::BecameTarget { .. } => bits!(K::BecameTarget),
+        E::ChoseTargets { .. } => bits!(K::ChoseTargets),
+        E::CardCycled { .. } => bits!(K::CardCycled),
+        E::PermanentDestroyedByEffect { .. } => bits!(K::PermanentDestroyedByEffect),
+        E::ManifestedDread { .. } => bits!(K::ManifestedDread),
+        E::PermanentUntapped { .. } => bits!(K::BecomesUntapped),
+        E::PermanentTapped { .. } => bits!(K::Tapped),
+        E::PaidLife { .. } => bits!(K::PaidLife),
+        E::VehicleCrewed { .. } | E::MountSaddled { .. } => bits!(K::CrewsOrSaddles),
+        E::RoomFullyUnlocked { .. } => bits!(K::RoomFullyUnlocked),
+        E::CaseSolved { .. } => bits!(K::CaseSolved),
+        E::PermanentPhasedIn { .. } => bits!(K::PhasesIn),
+        E::PermanentPhasedOut { .. } => bits!(K::PhasesOut),
+        E::CumulativeUpkeepUnpaid { .. } => bits!(K::CumulativeUpkeepUnpaid),
+        E::ControlChanged { .. } => bits!(K::GainedControlOfThis, K::LostControlOfThis),
+        E::Explored { .. } => bits!(K::Explored),
+        E::Discovered { .. } => bits!(K::Discovered),
+        E::BecameMonstrous { .. } => bits!(K::BecameMonstrous),
+        E::Transformed { .. } => bits!(K::Transformed),
+        E::AttractionVisited { .. } => bits!(K::VisitedAttraction),
+        E::Mutated { .. } => bits!(K::Mutated),
+        E::TurnedFaceUp { .. } => bits!(K::TurnedFaceUp),
+        E::TokenCreated { .. } => bits!(K::TokenCreated),
+        E::PermanentReturnedToHand { .. } => bits!(K::PermanentReturnedToHand),
+        E::SpellCountered { .. } => bits!(K::SpellCountered),
+        E::EnergyGained { .. } => bits!(K::EnergyGained),
+        E::DiscardedBatch { .. } => bits!(K::DiscardedOneOrMore),
+        E::Expended { .. } => bits!(K::Expend),
+        E::CommittedCrime { .. } => bits!(K::CommittedCrime),
+        E::PlayerSearchedLibrary { .. } => bits!(K::PlayerSearchedLibrary),
+        E::LibraryShuffled { .. } => bits!(K::LibraryShuffled),
+        E::TappedForMana { .. } => bits!(K::TappedForMana),
+        E::CoinFlipWon { .. } => bits!(K::WonCoinFlip),
+        E::VotingFinished => bits!(K::VotingFinished),
+        E::CoinFlipLost { .. } => bits!(K::LostCoinFlip),
+        E::DiceRolled { .. } => bits!(K::RolledDice),
+        E::AuraAttached { .. } => bits!(K::AuraAttached, K::AuraAttachedToAny),
+        E::AttachmentMoved { .. } => bits!(K::BecameAttached),
+        E::DayNightChanged { .. } => bits!(K::DayNightChanged),
+        _ => 0,
+    }
+}
+
+/// The payload half of [`event_kind_matches`]: the arms whose match is not
+/// settled by the variant pair alone. Every pair [`event_kind_bits`] admits
+/// and this does not name is a match.
+#[inline]
+fn event_payload_matches(
+    state: &GameState,
+    event: &GameEvent,
+    spec: &EventSpec,
+    source: Option<&CardInstance>,
+) -> bool {
+    match (&spec.kind, event) {
+        (
+            EventKind::CreatureOrArtifactDied,
+            GameEvent::PermanentDied { is_creature, is_artifact, .. },
+        ) => *is_creature || *is_artifact,
+        // Enrage (CR 702.130): keyed on the damaged permanent, so we only
+        // match `DamageDealt` events that hit a card (not a player).
+        (EventKind::DealtDamage, GameEvent::DamageDealt { to_card, .. }) => to_card.is_some(),
+        // Souls of the Faultless — keyed on the damaged permanent, combat only.
+        (EventKind::DealtCombatDamage, GameEvent::DamageDealt { to_card, combat, .. }) => {
+            to_card.is_some() && *combat
+        }
+        // Chandra's Spitfire — keyed on a player dealt *noncombat* damage.
+        (
+            EventKind::PlayerDealtNoncombatDamage,
+            GameEvent::DamageDealt { to_player, combat, .. },
+        ) => to_player.is_some() && !*combat,
+        // Taii Wakeen — a source the watcher controls dealt exactly lethal
+        // noncombat damage to a creature (CR 120: measured against the
+        // creature's computed toughness at damage time). Out of line: the
+        // only `call` in this match, see the helper's doc comment.
+        (
+            EventKind::YourSourceDealtNoncombatDamageEqualToToughness,
+            GameEvent::DamageDealt { .. },
+        ) => lethal_noncombat_from_your_source(state, event, source),
+        // Any damage to a player, combat or not (Quest for Pure Flame).
+        (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player, .. }) => to_player.is_some(),
+        (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
+        (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => {
+            counter_type == k
+        }
+        (EventKind::CounterRemoved(k), GameEvent::CounterRemoved { counter_type, .. }) => {
+            counter_type == k
+        }
+        (EventKind::ExhaustAbilityActivated, GameEvent::AbilityActivated { exhaust, .. }) => {
+            *exhaust
+        }
+        (EventKind::AdaptAbilityActivated, GameEvent::AbilityActivated { adapt, .. }) => *adapt,
+        (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land, .. }) => {
+            *is_land
+        }
+        (EventKind::BecameAttached, GameEvent::AttachmentMoved { attached_to, .. }) => {
+            attached_to.is_some()
+        }
+        // CR 800.4 — the trigger's controller must be the seat that just
+        // gained control (Risky Move fires for the new controller only).
+        (EventKind::GainedControlOfThis, GameEvent::ControlChanged { card_id, to, .. }) => {
+            source.is_none_or(|src| *card_id == src.id && *to == src.controller)
+        }
+        // CR 800.4 — the losing half. `from != to` is guaranteed by the
+        // emitter; `dispatch_triggers_for_events` re-points the trigger's
+        // controller at `from`, which is no longer the source's controller.
+        (EventKind::LostControlOfThis, GameEvent::ControlChanged { card_id, from, to }) => {
+            source.is_none_or(|src| *card_id == src.id) && from != to
+        }
+        (EventKind::DayNightChanged, GameEvent::DayNightChanged { was_transition, .. }) => {
+            *was_transition
+        }
+        _ => true,
+    }
+}
+
+/// The one-table form this split replaced, kept verbatim as the test oracle
+/// for [`event_kind_matches`]: `variant_and_payload_halves_agree_with_the_
+/// reference_table` walks one sample per `GameEvent` variant against one
+/// per `EventKind` variant. Add a row to both halves *and* here when a kind
+/// or an event grows.
+#[cfg(test)]
+fn reference_event_kind_matches(
     state: &GameState,
     event: &GameEvent,
     spec: &EventSpec,
@@ -1209,5 +1422,345 @@ mod tests {
         // Negative control: a battlefield-resident kind is not in the family,
         // so the dispatcher's graveyard walk must not admit it.
         assert!(!is_graveyard_self_source_kind(&EventKind::CreatureDied));
+    }
+
+    /// **The split matcher agrees with the one-table form it replaced.**
+    /// [`event_kind_bits`] (the variant half) and [`event_payload_matches`]
+    /// (the payload half) are checked against [`reference_event_kind_matches`]
+    /// over one sample per `GameEvent` variant — several for the variants a
+    /// payload arm reads — against one per `EventKind` variant, with and
+    /// without a source. A kind that reaches an event in one form and not the
+    /// other is a trigger that fires in one build and not the other.
+    #[test]
+    fn variant_and_payload_halves_agree_with_the_reference_table() {
+        use crate::card::CounterType;
+        use crate::game::types::{AttackTarget, CastFace, DayNight, Target};
+        use crate::TurnStep;
+        use EventKind as K;
+        use GameEvent as E;
+        let _ = AttackTarget::Player(0);
+
+        let mut g = crate::game::two_player_game();
+        let mine = g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        let source = g.players[0].hand.iter().find(|c| c.id == mine).unwrap().clone();
+        let c = CardId(4_242);
+        let events: Vec<E> = vec![
+            E::StepChanged(TurnStep::Untap),
+            E::StepChanged(TurnStep::Upkeep),
+            E::TurnStarted { player: 0, turn: 3 },
+            E::CardDrawn { player: 0, card_id: c },
+            E::FirstCardDrawnThisTurn { player: 0, card_id: c },
+            E::CardDiscarded { player: 0, card_id: c },
+            E::OpponentCausedYouToDiscard { player: 0, card_id: c },
+            E::DiscardedBatch { player: 0, count: 2 },
+            E::LandPlayed { player: 0, card_id: c, played: true },
+            E::SpellCast { player: 0, card_id: c, face: CastFace::Front },
+            E::SpellTargetChanged { card_id: c, new_target: Target::Player(1) },
+            E::AbilityActivated { source: c, exhaust: false, adapt: false, tap_cost: false },
+            E::AbilityActivated { source: c, exhaust: true, adapt: false, tap_cost: true },
+            E::AbilityActivated { source: c, exhaust: false, adapt: true, tap_cost: false },
+            E::ManaAdded { player: 0, color: crate::mana::Color::Green, source: Some(c) },
+            E::ColorlessManaAdded { player: 0, source: None },
+            E::PermanentEntered { card_id: c },
+            E::PermanentExiled { card_id: c },
+            E::RolledToVisitAttractions { player: 0, result: 3 },
+            E::AttractionVisited { card_id: c },
+            E::CardExiledFromPlayOrGraveyard { card_id: c },
+            E::DamageDealt {
+                amount: 2,
+                to_player: Some(1),
+                to_card: None,
+                combat: true,
+                from_controller: Some(0),
+                from_card: Some(mine),
+            },
+            E::DamageDealt {
+                amount: 2,
+                to_player: Some(1),
+                to_card: None,
+                combat: false,
+                from_controller: Some(0),
+                from_card: Some(mine),
+            },
+            E::DamageDealt {
+                amount: 2,
+                to_player: None,
+                to_card: Some(c),
+                combat: true,
+                from_controller: Some(0),
+                from_card: Some(mine),
+            },
+            E::DamageDealt {
+                amount: 2,
+                to_player: None,
+                to_card: Some(c),
+                combat: false,
+                from_controller: Some(0),
+                from_card: None,
+            },
+            E::DamageDealt {
+                amount: 2,
+                to_player: None,
+                to_card: Some(c),
+                combat: false,
+                from_controller: None,
+                from_card: None,
+            },
+            E::DamagePrevented { amount: 1, to_player: Some(0), to_card: None },
+            E::LifeLost { player: 0, amount: 1 },
+            E::LifeGained { player: 0, amount: 1 },
+            E::PaidLife { player: 0, amount: 1 },
+            E::ScriedOrSurveiled { player: 0, surveil: false },
+            E::Proliferated { player: 0 },
+            E::Foraged { player: 0 },
+            E::EvidenceCollected { player: 0 },
+            E::GiftGiven { player: 0 },
+            E::ClassLevelReached { source: c, player: 0, level: 2 },
+            E::Expended { player: 0, total: 4 },
+            E::EnergyGained { player: 0, amount: 1 },
+            E::CommittedCrime { player: 0 },
+            E::PlayerSearchedLibrary { player: 0 },
+            E::LibraryShuffled { player: 0 },
+            E::TappedForMana { card_id: c, player: 0 },
+            E::Voted { player: 0, choice: "x".into() },
+            E::VotingFinished,
+            E::CoinFlipWon { player: 0 },
+            E::DungeonRoomEntered { player: 0, dungeon: "d".into(), room: "r".into() },
+            E::DungeonCompleted { player: 0 },
+            E::CoinFlipLost { player: 0 },
+            E::DiceRolled { player: 0, count: 1, high: 6 },
+            E::CreatureDied { card_id: c },
+            E::PermanentDied { card_id: c, controller: 0, is_creature: true, is_artifact: false },
+            E::PermanentDied { card_id: c, controller: 0, is_creature: false, is_artifact: true },
+            E::PermanentDied { card_id: c, controller: 0, is_creature: false, is_artifact: false },
+            E::CreatureSacrificed { card_id: c, who: 0 },
+            E::PermanentSacrificed { card_id: c, who: 0 },
+            E::CreatureLeftWithoutDying { card_id: c, controller: 0 },
+            E::PumpApplied { card_id: c, power: 1, toughness: 1 },
+            E::CounterAdded { card_id: c, counter_type: CounterType::PlusOnePlusOne, count: 1 },
+            E::CounterAdded { card_id: c, counter_type: CounterType::MinusOneMinusOne, count: 1 },
+            E::KeywordCounterAdded {
+                card_id: c,
+                keyword: crate::card::Keyword::Vigilance,
+                count: 1,
+            },
+            E::CounterRemoved { card_id: c, counter_type: CounterType::PlusOnePlusOne, count: 1 },
+            E::CounterRemoved {
+                card_id: c,
+                counter_type: CounterType::MinusOneMinusOne,
+                count: 1,
+            },
+            E::PermanentTapped { card_id: c, actor: None, as_attacker: false },
+            E::PermanentUntapped { card_id: c },
+            E::MountSaddled { mount: c, riders: vec![mine] },
+            E::PermanentPhasedOut { card_id: c },
+            E::PermanentPhasedIn { card_id: c },
+            E::CumulativeUpkeepUnpaid { card_id: c, player: 0 },
+            E::ControlChanged { card_id: mine, from: 1, to: 0 },
+            E::ControlChanged { card_id: mine, from: 0, to: 1 },
+            E::ControlChanged { card_id: c, from: 1, to: 0 },
+            E::ControlChanged { card_id: mine, from: 0, to: 0 },
+            E::Explored { card_id: c, controller: 0, explored_land: true },
+            E::Discovered { player: 0, value: 3 },
+            E::BecameMonstrous { card_id: c, n: 2 },
+            E::Transformed { card_id: c },
+            E::Flipped { card_id: c },
+            E::Mutated { card_id: c },
+            E::TurnedFaceUp { card_id: c },
+            E::TokenCreated { card_id: c },
+            E::PermanentReturnedToHand { card_id: c, player: 0 },
+            E::SpellCountered { card_id: c, player: 0 },
+            E::CardMilled { player: 0, card_id: c },
+            E::PermanentDestroyedByEffect {
+                card_id: c,
+                controller: 0,
+                destroyer: 1,
+                is_creature: true,
+            },
+            E::ManifestedDread { player: 0, milled: c },
+            E::ScryPerformed { player: 0, looked_at: 1, bottomed: 0 },
+            E::AttackerDeclared(c),
+            E::BlockerDeclared { blocker: c, attacker: mine },
+            E::AttackerWentUnblocked { attacker: c },
+            E::CombatResolved,
+            E::FirstStrikeDamageResolved,
+            E::TopCardRevealed { player: 0, card_name: "x", is_land: false },
+            E::AttachmentMoved { attachment: c, attached_to: Some(mine) },
+            E::AttachmentMoved { attachment: c, attached_to: None },
+            E::AuraAttached { aura: c, attached_to: mine },
+            E::VehicleCrewed { vehicle: c, crew: vec![mine] },
+            E::RoomFullyUnlocked { room: c, controller: 0 },
+            E::CaseSolved { case: c, controller: 0 },
+            E::PoisonAdded { player: 0, amount: 1 },
+            E::MonarchChanged { player: 0 },
+            E::InitiativeTaken { player: 0 },
+            E::CityBlessingGained { player: 0 },
+            E::RingTempted { player: 0, level: 1, bearer: None },
+            E::DayNightChanged { day_night: DayNight::Day, was_transition: true },
+            E::DayNightChanged { day_night: DayNight::Night, was_transition: false },
+            E::LoyaltyAbilityActivated { planeswalker: c, loyalty_change: 1 },
+            E::LoyaltyChanged { card_id: c, new_loyalty: 3 },
+            E::PlaneswalkerDied { card_id: c },
+            E::SpellsCopied { original: c, count: 1, controller: 0 },
+            E::SurveilPerformed { player: 0, looked_at: 1, graveyarded: 1 },
+            E::CardLeftGraveyard { player: 0, card_id: c },
+            E::CardPutIntoGraveyard { player: 0, card_id: c, is_land: true },
+            E::CardPutIntoGraveyard { player: 0, card_id: c, is_land: false },
+            E::CardPutIntoHandFromGraveyard { player: 0, card_id: c },
+            E::BecameTarget { target: c, caster: 0, by: None },
+            E::ChoseTargets { chooser: 0, object: c },
+            E::Regenerated { card_id: c },
+            E::CardCycled { player: 0, card_id: c, x: 0 },
+            E::PlayerConceded { player: 0 },
+            E::GameOver { winner: None },
+            E::GameRestarted { starter: 0 },
+        ];
+        let kinds: Vec<K> = vec![
+            K::EntersBattlefield,
+            K::CreatureDied,
+            K::CreatureOrArtifactDied,
+            K::PermanentDied,
+            K::CreatureSacrificed,
+            K::PermanentSacrificed,
+            K::PermanentLeavesBattlefield,
+            K::PermanentDestroyedByEffect,
+            K::CreatureLeavesBattlefieldNotDying,
+            K::CardDrawn,
+            K::FirstCardDrawnThisTurn,
+            K::CardDiscarded,
+            K::OpponentCausedYouToDiscard,
+            K::LandPlayed,
+            K::SpellCast,
+            K::SpellCopied,
+            K::Attacks,
+            K::YouAttack,
+            K::Blocks,
+            K::BecomesBlocked,
+            K::BlocksNOrMore(2),
+            K::BecomesBlockedByNOrMore(2),
+            K::Regenerated,
+            K::AttacksAndIsntBlocked,
+            K::DealsCombatDamageToPlayer,
+            K::DealsDamageToPlayer,
+            K::DealsCombatDamageToPlaneswalker,
+            K::ControllerDealtCombatDamage,
+            K::DealsCombatDamageToCreature,
+            K::DealsDamageToCreature,
+            K::DealsCombatDamage,
+            K::DealsDamage,
+            K::DealtDamage,
+            K::DealtCombatDamage,
+            K::PlayerDealtNoncombatDamage,
+            K::YourSourceDealtNoncombatDamageEqualToToughness,
+            K::PlayerDamaged,
+            K::YourInstantOrSorceryDealtDamage,
+            K::YourInstantOrSorceryDealtDamageToPlayer,
+            K::LifeGained,
+            K::PaidLife,
+            K::ScriedOrSurveiled,
+            K::DungeonCompleted,
+            K::Proliferated,
+            K::Foraged,
+            K::EvidenceCollected,
+            K::GiftGiven,
+            K::PoisonAdded,
+            K::RingTempted,
+            K::Expend,
+            K::ClassLevelReached,
+            K::LifeLost,
+            K::StepBegins(TurnStep::Untap),
+            K::StepBegins(TurnStep::Upkeep),
+            K::SetInMotion,
+            K::ChaosEnsues,
+            K::PlaneswalkedAwayFrom,
+            K::Encountered,
+            K::TurnBegins,
+            K::CounterAdded(CounterType::PlusOnePlusOne),
+            K::CounterAdded(CounterType::MinusOneMinusOne),
+            K::CounterRemoved(CounterType::PlusOnePlusOne),
+            K::CounterRemoved(CounterType::MinusOneMinusOne),
+            K::AnyCounterAdded,
+            K::AbilityActivated,
+            K::ExhaustAbilityActivated,
+            K::AdaptAbilityActivated,
+            K::CardLeftGraveyard,
+            K::CardExiled,
+            K::CardExiledFromPlayOrGraveyard,
+            K::BecameTarget,
+            K::ChoseTargets,
+            K::CardCycled,
+            K::CardMilled,
+            K::ManifestedDread,
+            K::BecomesUntapped,
+            K::Tapped,
+            K::CrewsOrSaddles,
+            K::PhasesIn,
+            K::PhasesOut,
+            K::CumulativeUpkeepUnpaid,
+            K::GainedControlOfThis,
+            K::LostControlOfThis,
+            K::Explored,
+            K::Discovered,
+            K::BecameMonstrous,
+            K::EnergyGained,
+            K::WonCoinFlip,
+            K::LostCoinFlip,
+            K::VotingFinished,
+            K::RolledDice,
+            K::DiscardedOneOrMore,
+            K::AuraAttached,
+            K::AuraAttachedToAny,
+            K::BecameAttached,
+            K::Transformed,
+            K::VisitedAttraction,
+            K::Mutated,
+            K::TurnedFaceUp,
+            K::TokenCreated,
+            K::DoorUnlocked,
+            K::RoomFullyUnlocked,
+            K::CaseSolved,
+            K::LandPutIntoGraveyard,
+            K::PutIntoGraveyard,
+            K::PutIntoHandFromGraveyard,
+            K::DayNightChanged,
+            K::CommittedCrime,
+            K::BecomesPlotted,
+            K::PlayerSearchedLibrary,
+            K::LibraryShuffled,
+            K::PermanentReturnedToHand,
+            K::TappedForMana,
+            K::SpellCountered,
+            K::BecameMonarch,
+        ];
+        // Every variant owns one bit, and a payload does not move it.
+        let mut seen = std::collections::HashMap::new();
+        for k in &kinds {
+            let bit = k.bit();
+            assert_eq!(bit.count_ones(), 1, "{k:?}");
+            if let Some(prev) = seen.insert(bit, std::mem::discriminant(k)) {
+                assert_eq!(prev, std::mem::discriminant(k), "{k:?} shares a bit");
+            }
+        }
+        assert_eq!(K::StepBegins(TurnStep::Untap).bit(), K::StepBegins(TurnStep::Draw).bit());
+
+        let mut matched = 0usize;
+        for ev in &events {
+            for k in &kinds {
+                let spec = EventSpec::new(k.clone(), EventScope::AnyPlayer);
+                for src in [None, Some(&source)] {
+                    let got = event_kind_matches(&g, ev, &spec, src);
+                    let want = reference_event_kind_matches(&g, ev, &spec, src);
+                    assert_eq!(got, want, "{k:?} vs {ev:?} (source {})", src.is_some());
+                    matched += usize::from(got);
+                    // The gate the dispatcher asks is implied by the match.
+                    if got {
+                        assert_ne!(event_kind_bits(ev) & k.bit(), 0, "{k:?} vs {ev:?}");
+                    }
+                }
+            }
+        }
+        // The sample is wide enough to have exercised the table, not a
+        // vacuous all-false walk.
+        assert!(matched > 100, "{matched}");
     }
 }

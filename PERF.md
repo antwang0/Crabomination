@@ -11557,6 +11557,53 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-195)` TAKEN — a batch kind mask in front of the trigger dispatcher's pair loop: `sealed` -1.339 % / `cube` -1.096 % / `fixed` -0.251 %
+
+```text
+  pool    base (-194)       (-195)          delta
+  fixed     835,139,701     833,044,474   **-0.251 %**
+  cube    2,317,457,135   2,292,051,013   **-1.096 %**
+  sealed  2,334,128,670   2,302,880,506   **-1.339 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  event_matches_spec  1,044,732 calls -> 99,716  (-90.5 %)
+                dispatch_triggers_for_events self  134.5 M -> 118.7 M
+                event_kind_bits  +357,672 calls x 12.1 Ir = 4.3 M (new)
+```
+
+`(-129)`'s census had the number and drew the wrong line under it: 93 % of
+(permanent, trigger) pairs are ones no event in the batch can reach, and
+the entry closed with "a per-pair gate in front of the event loop *is* the
+event loop — a dead pair has to scan the whole batch to learn it is dead".
+It does not, if the batch is scanned **once**: OR the kinds each event's
+*variant* can reach into a `u128` (`event_kind_bits`, one jump-table read
+per event, 3.3 events a dispatch), and a pair is dead when its kind's bit
+is clear — one load, one shift, one AND, before the `FromYourGraveyard`
+and once-per-turn guards and the `fanout` match it used to pay to reach
+the loop.
+
+**The device is the table's shape, not the mask.** `event_kind_matches`
+was one `match (kind, event)` of ~110 arms. It is now two halves of one
+table: `event_kind_bits(event)` is the variant half (which kinds an event
+variant can reach), `event_payload_matches` the sixteen arms that read a
+payload (`StepBegins(s)`, `CounterAdded(k)`, the five `DamageDealt`
+shapes, the two control-change halves, …), and the exact check opens with
+the same `bits & kind.bit()` the gate asks — so an omission in the table
+is a trigger that never fires in *both* forms, never a gate that skips a
+match. `EventKind` is `#[repr(u8)]` so `bit()` is the tag byte shifted
+(RFC 2195), `const`, and folds a `bits!(…)` arm to a constant. The
+one-table form is kept as `reference_event_kind_matches` under
+`#[cfg(test)]`, and `variant_and_payload_halves_agree_with_the_reference_
+table` walks one sample per `GameEvent` variant (several for the payload
+ones) against one per `EventKind` variant, with and without a source.
+
+The two grant pre-filters test the mask before their exact `any()`, so
+their answers are unchanged and their dead loops are gone. The
+`trig-census` pair census moved ahead of the gate so it still counts every
+pair. `fixed` moves least because its walk is 0.96 pairs a dispatch (the
+member lane already skips its lands and vanilla creatures); `sealed` most,
+at 4.70.
+
 ### `(-194)` TAKEN — the block planner reads the views it already holds: `cube` -0.787 % / `sealed` -0.504 % / `fixed` -0.313 %
 
 ```text
@@ -26670,8 +26717,11 @@ ninety-sixth pass's two commits. The self table:
 them:** a batch event-kind mask in front of `dispatch_triggers_for_events`'
 inner loop (`event_matches_spec` is 820,738 calls over 74,798 dispatches =
 **11 per dispatch**, so the inner fan-out is not the cost and a mask can only
-reach 0.86 %); and four freeze scopes to widen, all of which turn out to be
-one gather per distinct game state (see the Log's context table).
+reach 0.86 %) — **taken after all as `(-195)`, and it read `cube` -1.10 % /
+`sealed` -1.34 %: the 0.86 % ceiling priced the calls, and the per-pair
+gate also skips the guards and the `fanout` match ahead of the loop**; and
+four freeze scopes to widen, all of which turn out to be one gather per
+distinct game state (see the Log's context table).
 
 
 **(-89) HALF TAKEN AT THE NINETY-EIGHTH PASS: three of the cascade's rows now

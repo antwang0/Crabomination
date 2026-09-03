@@ -2395,7 +2395,12 @@ pub enum ManaPayload {
 
 /// Kinds of game events a trigger can watch for. Mirrors the `GameEvent`
 /// stream in [`GameEvent`].
+///
+/// `#[repr(u8)]` so [`EventKind::bit`] can read the variant tag as the first
+/// byte (RFC 2195) — the trigger dispatcher masks a batch's reachable kinds
+/// into a `u128` and asks it per (permanent, trigger) pair.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[repr(u8)]
 pub enum EventKind {
     /// A permanent entered the battlefield.
     EntersBattlefield,
@@ -2900,6 +2905,22 @@ pub enum EventKind {
     /// new monarch, so `EventScope::OpponentControl` reads "an opponent
     /// becomes the monarch" (Knights of the Black Rose).
     BecameMonarch,
+}
+
+impl EventKind {
+    /// This kind's bit in a kind mask: `1 << tag`, the variant's position.
+    /// One byte load and a shift, and `const` so a table of them folds to
+    /// constants. Payload variants (`StepBegins(s)`, `CounterAdded(k)`, …)
+    /// share one bit — a mask answers "could this kind match", never the
+    /// payload half.
+    #[inline]
+    pub const fn bit(&self) -> u128 {
+        // SAFETY: `#[repr(u8)]` lays every variant out as a `u8` tag followed
+        // by its fields (RFC 2195), so the first byte is the discriminant.
+        let tag = unsafe { *(self as *const EventKind as *const u8) };
+        debug_assert!(tag < 128, "EventKind has outgrown a u128 kind mask");
+        1u128 << tag
+    }
 }
 
 /// Whose events does this trigger listen for?

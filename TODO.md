@@ -94,7 +94,10 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    top contexts are one gather per distinct game state, and Ir/call says
    "gather" and is wrong about all of them), and a batch event-kind mask in
    front of `dispatch_triggers_for_events` (11 `event_matches_spec` calls a
-   dispatch, so the inner fan-out is not the cost).
+   dispatch, so the inner fan-out is not the cost) — **that last one is
+   TAKEN as `(-195)` in the per-pair form** (cube -1.10 %, sealed -1.34 %):
+   the fan-out is small per dispatch but the mask also skips the per-pair
+   setup ahead of the loop.
    **Read `(-90)` before pulling anything else off this queue.**
    **Open, in order:**
    **`(-82)` IS NOW CLOSED — its `available_mana` half is refuted off the

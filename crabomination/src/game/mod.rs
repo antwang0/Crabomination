@@ -18599,6 +18599,15 @@ impl GameState {
         if events.is_empty() {
             return;
         }
+        // The kinds this batch can reach at all, ORed once (PERF `(-195)`).
+        // `ems_census` reads 93 % of (permanent, trigger) pairs as ones no
+        // event in the batch can match; the per-pair gate below answers that
+        // with one AND instead of one `event_matches_spec` per event, and
+        // the grant pre-filters ask it before their exact loop. Sound by
+        // construction: `event_kind_matches` itself opens with this test.
+        let batch_bits = events
+            .iter()
+            .fold(0u128, |m, ev| m | crate::game::effects::events::event_kind_bits(ev));
         // CR 702.95 — Soulbond pairing. When a creature enters, attempt to pair
         // it (auto-resolved "may"). Done before trigger dispatch so a paired
         // creature's bonus is live for any subsequent ETB-trigger evaluation.
@@ -18742,14 +18751,15 @@ impl GameState {
         let mut trigger_grants = scan.trigger_grants;
         if !trigger_grants.is_empty() {
             trigger_grants.retain(|g| {
-                events.iter().any(|ev| {
-                    crate::game::effects::events::event_kind_matches(
-                        self,
-                        ev,
-                        &g.ability.event,
-                        None,
-                    )
-                })
+                batch_bits & g.ability.event.kind.bit() != 0
+                    && events.iter().any(|ev| {
+                        crate::game::effects::events::event_kind_matches(
+                            self,
+                            ev,
+                            &g.ability.event,
+                            None,
+                        )
+                    })
             });
         }
         // The same question, on the gate that holds the dispatcher's member
@@ -18766,9 +18776,12 @@ impl GameState {
         if !equip_grants.is_empty() {
             equip_grants.retain(|(_, abilities)| {
                 abilities.iter().any(|ab| {
-                    events.iter().any(|ev| {
-                        crate::game::effects::events::event_kind_matches(self, ev, &ab.event, None)
-                    })
+                    batch_bits & ab.event.kind.bit() != 0
+                        && events.iter().any(|ev| {
+                            crate::game::effects::events::event_kind_matches(
+                                self, ev, &ab.event, None,
+                            )
+                        })
                 })
             });
         }
@@ -19002,6 +19015,33 @@ impl GameState {
                 .chain(static_granted.iter().map(|t| (usize::MAX, *t)))
                 .chain(equip_granted.iter().map(|t| (usize::MAX, t)));
             for (trig_idx, ta) in all_triggers {
+                // PERF `(-129)`'s census: is this pair's whole event loop
+                // dead? The `source: None` over-approximation is the same one
+                // the two grant pre-filters above use, so a "dead" here is a
+                // pair the exact check below rejects on every event. Ahead of
+                // the gate so it still counts every pair.
+                #[cfg(feature = "trig-census")]
+                if crate::zone::trig_census::on() {
+                    let d = std::mem::discriminant(&ta.event.kind);
+                    if !census_kinds.contains(&d) {
+                        census_kinds.push(d);
+                    }
+                    let dead = !events.iter().any(|ev| {
+                        crate::game::effects::events::event_kind_matches(
+                            self,
+                            ev,
+                            &ta.event,
+                            None,
+                        )
+                    });
+                    crate::zone::ems_census::pair(events.len() as u64, dead);
+                }
+                // PERF `(-195)`: no event in this batch can reach this kind,
+                // so every `event_matches_spec` below would say no. One AND
+                // against the batch mask instead of the loop.
+                if batch_bits & ta.event.kind.bit() == 0 {
+                    continue;
+                }
                 // A `FromYourGraveyard`-scoped trigger functions ONLY while
                 // its card is in a graveyard (CR 603.3d zone-scoping —
                 // Bloodghast, Voidwing Hybrid); the graveyard walk below
@@ -19077,26 +19117,6 @@ impl GameState {
                 // partner set via `Selector::BlockedAttacker` /
                 // `BlockingCreatures`, so one trigger instance still covers all.
                 block_sides_seen.clear();
-                // PERF `(-129)`: is this pair's whole event loop dead? The
-                // `source: None` over-approximation is the same one the two
-                // grant pre-filters above use, so a "dead" here is a pair the
-                // exact check below rejects on every event.
-                #[cfg(feature = "trig-census")]
-                if crate::zone::trig_census::on() {
-                    let d = std::mem::discriminant(&ta.event.kind);
-                    if !census_kinds.contains(&d) {
-                        census_kinds.push(d);
-                    }
-                    let dead = !events.iter().any(|ev| {
-                        crate::game::effects::events::event_kind_matches(
-                            self,
-                            ev,
-                            &ta.event,
-                            None,
-                        )
-                    });
-                    crate::zone::ems_census::pair(events.len() as u64, dead);
-                }
                 for ev in events {
                     // **The kind test goes first and the three exclusions
                     // after it, and that ordering is the measurement.** All
