@@ -9715,15 +9715,20 @@ impl GameState {
     }
 
     /// The battlefield leg of
-    /// [`keyword_grant_in_scope`](Self::keyword_grant_in_scope), with the
-    /// zone's grant lane in front of it.
+    /// [`keyword_grant_in_scope`](Self::keyword_grant_in_scope), on the
+    /// zone's grant **member list**.
     ///
     /// The walk visits every permanent to load one `grant_scan_bits` word and
     /// answers "no" on a board with no lord, anthem or aura — and it is asked
     /// once per `card_keyword_possible`, 26,810 / 74,938 / 74,686 times over a
-    /// six-game run of the three pools. The lane holds that answer until
-    /// membership or a definition moves; it is filled from this walk, which
-    /// was loading the same word anyway, so a miss costs nothing extra.
+    /// six-game run of the three pools. The list holds *which* permanents
+    /// carry the word until membership or a definition moves, so a hit tests
+    /// the caller's predicate on the one or two granters and nothing else
+    /// (PERF `(-189)`: the presence bit this used to be read `PRESENT` on
+    /// 47 % of `fixed`'s asks, each of which then walked the board). A miss
+    /// fills it from the walk it was making anyway — the whole walk, since a
+    /// partial list is not a list, so the first match stops the predicate
+    /// but not the bit loads.
     ///
     /// **The `synth` path is deliberately outside the lane.** It reads
     /// `card.suspected`, an instance field, so no definition-keyed lane can
@@ -9733,29 +9738,37 @@ impl GameState {
         if synth {
             return self.battlefield.iter().any(|c| card_can_grant_keyword(c, pred, synth));
         }
-        let lane = self.battlefield.grant_lane();
-        if lane == Ok(false) {
-            return false;
-        }
-        let mut any_bits = false;
-        for c in self.battlefield.iter() {
+        let epoch = match self.battlefield.grant_members() {
+            Ok(mut bits) => {
+                while bits != 0 {
+                    let i = bits.trailing_zeros() as usize;
+                    bits &= bits - 1;
+                    if self.battlefield[i].definition.can_grant_keyword(pred) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            Err(epoch) => epoch,
+        };
+        let listable = self.battlefield.len() <= 64;
+        let mut bits = 0u64;
+        let mut found = false;
+        for (i, c) in self.battlefield.iter().enumerate() {
             if c.grant_scan_bits() & gb::ANY_GRANT == 0 {
                 continue;
             }
-            any_bits = true;
-            if c.definition.can_grant_keyword(pred) {
-                // Reaching here proves the lane's own predicate, so the early
-                // return can still fill it.
-                if let Err(epoch) = lane {
-                    self.battlefield.store_grant(epoch, true);
-                }
-                return true;
+            if listable {
+                bits |= 1 << i;
+            } else if found {
+                break;
             }
+            found = found || c.definition.can_grant_keyword(pred);
         }
-        if let Err(epoch) = lane {
-            self.battlefield.store_grant(epoch, any_bits);
+        if listable {
+            self.battlefield.store_grant_members(epoch, bits);
         }
-        false
+        found
     }
 
     /// True when the battlefield permanent `id`'s *computed* keyword set could

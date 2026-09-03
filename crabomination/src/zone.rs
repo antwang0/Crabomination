@@ -84,6 +84,7 @@ impl Graveyard {
     /// whole suite — and any `-C debug-assertions=yes` ladder run, which deals
     /// far more interesting graveyards than 18,793 tests do — into a check
     /// that no write path ever reached the cards without clearing it.
+    #[inline]
     pub fn has_anthem(&self) -> bool {
         self.lane(GY_LANE_ANTHEM, card_has_anthem, "anthem")
     }
@@ -476,6 +477,20 @@ pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
 /// it stands in for have to be the same question or the list is unsound.
 pub(crate) fn card_is_triggerer(c: &CardInstance) -> bool {
     !c.definition.triggered_abilities.is_empty() || !c.definition.station.is_empty()
+}
+
+/// [`card_has_any_grant_bits`] over a whole board as an index mask — the
+/// grant member list's audit, recomputed by
+/// [`Battlefield::grant_members`]' `debug_assert!`. `0` past 64 cards.
+fn grant_bits(cards: &[CardInstance]) -> u64 {
+    if cards.len() > 64 {
+        return 0;
+    }
+    cards
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| card_has_any_grant_bits(c))
+        .fold(0u64, |bits, (i, _)| bits | (1 << i))
 }
 
 /// [`card_is_triggerer`] over a whole board as an index mask — the member
@@ -880,6 +895,9 @@ pub struct Battlefield {
     /// each. Read only while [`LANE_TRIGGERER`] says the list is computed, so
     /// it inherits the lanes' invalidation whole and needs none of its own.
     trig_members: std::sync::atomic::AtomicU64,
+    /// Which indices satisfy [`card_has_any_grant_bits`], on the same
+    /// contract under [`LANE_GRANT`].
+    grant_members: std::sync::atomic::AtomicU64,
 }
 
 impl Battlefield {
@@ -1202,23 +1220,45 @@ impl Battlefield {
         self.store_lane(LANE_DISPATCH, epoch, found);
     }
 
-    /// The keyword-grant lane, same caller-filled contract as
-    /// [`dispatch_lane`](Self::dispatch_lane): `Ok(present)` is the memo,
-    /// `Err(epoch)` means "walk, then hand that epoch to
-    /// [`store_grant`](Self::store_grant)".
+    /// The keyword-grant lane's **member list**: `Ok(bits)` names the
+    /// battlefield indices whose definition can grant a keyword at all
+    /// ([`card_has_any_grant_bits`]), `Err(epoch)` means "unknown — walk,
+    /// then hand that same epoch to
+    /// [`store_grant_members`](Self::store_grant_members)".
     ///
-    /// Split rather than closure form because `keyword_grant_in_scope`'s walk
-    /// is *not* the lane's predicate — it evaluates a caller-supplied
-    /// `Fn(&Keyword)` per card on top of the bit — so a closure lane would
-    /// walk twice on every miss. The walk already loads `grant_scan_bits` per
-    /// card, so filling this from it is free.
-    pub fn grant_lane(&self) -> Result<bool, u64> {
-        self.split_lane(LANE_GRANT, card_has_any_grant_bits, "grant")
+    /// A presence bit was what this lane held until PERF `(-189)`, and it
+    /// answered the wrong question: `keyword_grant_in_scope` asks about *one*
+    /// keyword, and a board with any lord, aura or equipment on it reads
+    /// `PRESENT` — 47 % of the asks on `fixed` — so the caller walked all ~23
+    /// permanents to find the one or two granters and test them. The list
+    /// names them, so a hit visits only those. Same shape as
+    /// [`trigger_members`](Self::trigger_members), same invalidation, and a
+    /// board wider than 64 has no list and keeps walking.
+    pub fn grant_members(&self) -> Result<u64, u64> {
+        let epoch = crate::card::definition_epoch();
+        let known = self.def_epoch.load(Ordering::Relaxed) == epoch
+            && (self.type_gates.load(Ordering::Relaxed) >> LANE_GRANT) & LANE_MASK
+                == PRESENT as u32;
+        if !known {
+            return Err(epoch);
+        }
+        let bits = self.grant_members.load(Ordering::Relaxed);
+        debug_assert!(
+            bits == grant_bits(&self.cards),
+            "battlefield grant memo is stale: a write reached the cards without clearing it",
+        );
+        Ok(bits)
     }
 
-    /// Record what the caller's own walk found in the keyword-grant lane.
-    pub fn store_grant(&self, epoch: u64, found: bool) {
-        self.store_lane(LANE_GRANT, epoch, found);
+    /// Record the member list a caller's own full walk built, stamped at the
+    /// `epoch` [`grant_members`](Self::grant_members) handed out. A board
+    /// wider than 64 has no list, so the lane stays unknown there.
+    pub fn store_grant_members(&self, epoch: u64, bits: u64) {
+        if self.cards.len() > 64 {
+            return;
+        }
+        self.grant_members.store(bits, Ordering::Relaxed);
+        self.store_lane(LANE_GRANT, epoch, true);
     }
 
     /// The combat-damage listener lane, same caller-filled contract as
@@ -1334,6 +1374,9 @@ impl Clone for Battlefield {
             trig_members: std::sync::atomic::AtomicU64::new(
                 self.trig_members.load(Ordering::Relaxed),
             ),
+            grant_members: std::sync::atomic::AtomicU64::new(
+                self.grant_members.load(Ordering::Relaxed),
+            ),
         }
     }
 }
@@ -1367,6 +1410,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
             def_epoch: std::sync::atomic::AtomicU64::new(0),
             find_hints: std::array::from_fn(|_| std::sync::atomic::AtomicU32::new(0)),
             trig_members: std::sync::atomic::AtomicU64::new(0),
+            grant_members: std::sync::atomic::AtomicU64::new(0),
         }
     }
 }
@@ -1823,6 +1867,39 @@ mod tests {
 
         b.pop();
         assert!(b.trigger_members().is_err(), "DerefMut invalidated");
+    }
+
+    /// The grant member list (PERF `(-189)`) is read *instead of* the
+    /// per-card bit test, so a stale one silently misses a lord; it has to
+    /// fall over exactly where the trigger list does.
+    #[test]
+    fn grant_member_list_is_filled_and_invalidated() {
+        let mut b = bf(vec![
+            crate::catalog::grizzly_bears(),
+            crate::catalog::goblin_king(),
+            crate::catalog::grizzly_bears(),
+        ]);
+        assert_eq!(grant_bits(&b), 0b010, "only the lord can grant a keyword");
+        let Err(epoch) = b.grant_members() else { panic!("unknown until filled") };
+        b.store_grant_members(epoch, grant_bits(&b));
+        assert_eq!(b.grant_members(), Ok(0b010));
+
+        b.iter_mut().for_each(|c| c.tapped = true);
+        assert_eq!(b.grant_members(), Ok(0b010), "an element write is not a membership change");
+
+        b.push(CardInstance::new(CardId(9), crate::catalog::grizzly_bears(), 0));
+        assert!(b.grant_members().is_err(), "push invalidated");
+        let Err(epoch) = b.grant_members() else { unreachable!() };
+        b.store_grant_members(epoch, grant_bits(&b));
+        assert_eq!(b.grant_members(), Ok(0b010), "and refills at the new membership");
+
+        b.pop();
+        assert!(b.grant_members().is_err(), "DerefMut invalidated");
+
+        let wide = bf((0..65).map(|_| crate::catalog::grizzly_bears()).collect());
+        let Err(epoch) = wide.grant_members() else { panic!("unknown until filled") };
+        wide.store_grant_members(epoch, 0);
+        assert!(wide.grant_members().is_err(), "a 65-card board has no member list");
     }
 
     /// Sixty-five permanents have no member list, so the lane stays unknown
