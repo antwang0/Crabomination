@@ -14851,7 +14851,6 @@ impl GameState {
         chosen_mode: Option<usize>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        self.check_free_activation_loop(card_id, ability_index)?;
         // Mana produced by a *creature* is marked as such (CR 106.12
         // restrictions). Whether the source is one is a layer read, and
         // `_inner` already computes that permanent for the ability lookup —
@@ -14907,8 +14906,20 @@ impl GameState {
             && chosen_mode.is_none()
             && let Some(out) = self.activate_plain_land_tap(card_id, ability_index, p, x_value)
         {
+            // The CR 732.3 watch below is not asked (PERF `(-219)`): a plain
+            // land tap flips its source's `tapped` bit and grows a pool, both
+            // in the fingerprint, so its own key can never repeat on an
+            // unmoved state — and it can only ever *reset* the watch, which
+            // is what the initial state is.
+            if self.free_activation_watch.1.is_some() {
+                self.free_activation_watch = (0, None, 0);
+            }
             return out;
         }
+        // CR 732.3 — before any cost is paid, so a rejected announcement
+        // leaves no trace. After the fast path, whose activation never needs
+        // the ~900-Ir board fingerprint this takes.
+        self.check_free_activation_loop(card_id, ability_index)?;
 
         // CR 801.6 — a player can't activate abilities of an object outside
         // their range of influence.
