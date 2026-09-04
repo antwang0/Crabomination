@@ -24253,7 +24253,7 @@ fn card_can_change_card_types(card: &CardInstance) -> bool {
 /// definition-only superset a battlefield lane may hold (`Battlefield::
 /// iter_mut` does not clear the word, so a lane predicate reads no instance
 /// field). `false` here means the exact predicate is `false` for the card.
-fn card_can_change_card_types_def(card: &CardInstance) -> bool {
+pub(crate) fn card_can_change_card_types_def(card: &CardInstance) -> bool {
     card.type_scan_bits() & crate::card::type_bits::ALL != 0
 }
 
@@ -24389,7 +24389,7 @@ fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool
 /// read has to run — and it costs the layer read only on a board holding an
 /// *unattached* toughness-lowering Equipment or an unpaired negative Soulbond
 /// creature. PERF `(-153)`.
-fn card_can_reduce_toughness(card: &CardInstance) -> bool {
+pub(crate) fn card_can_reduce_toughness(card: &CardInstance) -> bool {
     let def = &card.definition;
     // 7a: a characteristic-defining formula, a level band or a Station band
     // sets base P/T outright, so the result can be under the instance value.
@@ -24424,7 +24424,7 @@ fn card_can_reduce_toughness(card: &CardInstance) -> bool {
 /// permanent's printed shape scale a damage event? Definition-only, so the
 /// battlefield zone can memoize the whole walk over it.
 #[inline]
-fn card_can_scale_damage(card: &CardInstance) -> bool {
+pub(crate) fn card_can_scale_damage(card: &CardInstance) -> bool {
     card.definition
         .static_abilities
         .iter()
@@ -24436,7 +24436,7 @@ fn card_can_scale_damage(card: &CardInstance) -> bool {
 /// `controller` conditions. An over-approximation, which is the sound
 /// direction — a `false` here means the walk would have found nothing.
 #[inline]
-fn card_can_prevent_outgoing_damage(card: &CardInstance) -> bool {
+pub(crate) fn card_can_prevent_outgoing_damage(card: &CardInstance) -> bool {
     use crate::effect::StaticEffect as SE;
     card.definition.static_abilities.iter().any(|sa| {
         matches!(
@@ -24452,7 +24452,7 @@ fn card_can_prevent_outgoing_damage(card: &CardInstance) -> bool {
 /// The incoming twin of [`card_can_prevent_outgoing_damage`], for
 /// [`GameState::combat_damage_prevented_to_self`]'s board walk.
 #[inline]
-fn card_can_prevent_incoming_damage(card: &CardInstance) -> bool {
+pub(crate) fn card_can_prevent_incoming_damage(card: &CardInstance) -> bool {
     use crate::effect::StaticEffect as SE;
     card.definition.static_abilities.iter().any(|sa| {
         matches!(
@@ -24477,7 +24477,7 @@ fn card_can_prevent_incoming_damage(card: &CardInstance) -> bool {
 ///
 /// [`zone::Battlefield::has_damage_shield`]: crate::zone::Battlefield::has_damage_shield
 #[inline]
-fn card_can_shield_damage(card: &CardInstance) -> bool {
+pub(crate) fn card_can_shield_damage(card: &CardInstance) -> bool {
     card.definition.static_abilities.iter().any(|sa| static_effect_shields_damage(&sa.effect))
 }
 
@@ -24574,7 +24574,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
 /// the two lanes are not asked in the same invalidation epoch, so a fused
 /// walk removed 3 % of the walks and cost 82 % more per walk.
 #[inline]
-fn card_can_change_land_types(card: &CardInstance) -> bool {
+pub(crate) fn card_can_change_land_types(card: &CardInstance) -> bool {
     card.layer4_scan_bits() & crate::card::layer4_bits::LAND != 0
 }
 
@@ -24587,7 +24587,7 @@ fn card_can_change_land_types(card: &CardInstance) -> bool {
 /// as [`card_can_change_land_types`] — see its comment for what the widened
 /// attachment route costs.
 #[inline]
-fn card_can_change_creature_types(card: &CardInstance) -> bool {
+pub(crate) fn card_can_change_creature_types(card: &CardInstance) -> bool {
     card.layer4_scan_bits() & crate::card::layer4_bits::CREATURE != 0
 }
 

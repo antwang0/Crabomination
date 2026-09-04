@@ -444,11 +444,44 @@ const LANE_CARD_TYPE: u32 = 32;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
-/// Bit 1 of every lane field — set exactly on the `PRESENT` lanes.
-const LANE_PRESENT_BITS: u64 = 0xAAAA_AAAA_AAAA_AAAA;
 /// The two lanes whose `PRESENT` means "the member list beside me is
 /// computed" — indices, which any membership change shifts.
 const LANE_MEMBER_MASK: u64 = (LANE_MASK << LANE_GRANT) | (LANE_MASK << LANE_TRIGGERER);
+/// The lane count the predicate table below covers (shift 0 ..= 32).
+const LANE_COUNT: usize = 17;
+
+/// Every presence lane's predicate, indexed by lane shift / 2, so a
+/// membership write can answer a lane off the **one card it moved**
+/// (PERF `(-213)`): a push leaves an `ABSENT` lane `ABSENT` when the new
+/// card fails its predicate and makes it `PRESENT` when it passes; a
+/// removal leaves a `PRESENT` lane `PRESENT` when the removed card fails
+/// it (the witness is elsewhere) and drops it to `UNKNOWN` when it passes.
+/// `None` on the two member-list lanes. **Each entry must be the very
+/// predicate that lane's callers hand to [`Battlefield::lane`]** — the
+/// lane audits recompute against the handed one on every read, so an
+/// entry that drifts fails the suite.
+/// A lane's definition-only predicate.
+type LanePredicate = fn(&CardInstance) -> bool;
+
+const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
+    Some(crate::game::card_can_change_land_types),       // LANE_LAND
+    Some(crate::game::card_can_change_creature_types),   // LANE_CREATURE
+    Some(crate::game::card_can_scale_damage),            // LANE_DAMAGE_SCALE
+    Some(crate::game::card_can_prevent_outgoing_damage), // LANE_OUTGOING_PREVENT
+    Some(crate::game::card_can_prevent_incoming_damage), // LANE_INCOMING_PREVENT
+    Some(card_has_dispatch_bits),                        // LANE_DISPATCH
+    Some(crate::game::card_can_shield_damage),           // LANE_SHIELD
+    None,                                                // LANE_GRANT (member list)
+    Some(card_has_listener_bits),                        // LANE_LISTENER
+    Some(card_has_activated_grant),                      // LANE_ACT_GRANT
+    None,                                                // LANE_TRIGGERER (member list)
+    Some(crate::game::card_can_reduce_toughness),        // LANE_PT_REDUCE
+    Some(card_has_gate_keyword),                         // LANE_GATE_KEYWORD
+    Some(card_has_mana_static),                          // LANE_MANA_STATIC
+    Some(crate::game::actions::card_grants_to_countered),// LANE_COUNTER_GRANT
+    Some(crate::game::actions::card_redirects_deaths),   // LANE_DEATH_REDIRECT
+    Some(crate::game::card_can_change_card_types_def),   // LANE_CARD_TYPE
+];
 
 /// Does this permanent contribute anything to
 /// [`GameState::dispatch_board_scan`](crate::game::GameState::dispatch_board_scan)?
@@ -1426,25 +1459,28 @@ impl Battlefield {
     /// room for the card (PERF `(-76)`). Inherent, so it shadows the `Deref`'d
     /// `Vec::push`.
     ///
-    /// **An addition can only turn a lane `PRESENT`** — every lane is "does
-    /// some permanent's definition satisfy P", so a lane reading `PRESENT`
-    /// is still right with one more card on the board. Only `ABSENT` lanes
-    /// drop to `UNKNOWN`; the two member-list lanes clear whole, their
-    /// indices being what they hold (PERF `(-212)`).
+    /// **An addition can only turn a lane `PRESENT`**, and whether it does
+    /// is a question about the new card alone: every `PRESENT` lane stays,
+    /// every `ABSENT` lane is re-answered off the card by its registered
+    /// predicate ([`LANE_PREDICATES`]), and the two member-list lanes clear,
+    /// their indices being what they hold (PERF `(-212)`, `(-213)`).
     pub fn push(&mut self, card: CardInstance) {
         note_battlefield_reach();
-        self.demote_lanes(LANE_PRESENT_BITS);
+        self.lanes_after_push(&card);
         self.cards.push(card);
     }
 
     /// `Vec::remove`, shadowed: **a removal can only turn a lane `ABSENT`**,
-    /// so `ABSENT` lanes stay and `PRESENT` ones drop to `UNKNOWN` (PERF
-    /// `(-212)`). Every removal route on the death path goes through here
-    /// or [`take_by_id`](Self::take_by_id).
+    /// and only if the removed card was a witness — every `ABSENT` lane
+    /// stays, a `PRESENT` lane stays when the card fails its predicate and
+    /// drops to `UNKNOWN` when it passes (PERF `(-212)`, `(-213)`). Every
+    /// removal route on the death path goes through here or
+    /// [`take_by_id`](Self::take_by_id).
     pub fn remove(&mut self, index: usize) -> CardInstance {
         note_battlefield_reach();
-        self.demote_lanes(LANE_ABSENT_BITS);
-        self.cards.remove(index)
+        let card = self.cards.remove(index);
+        self.lanes_after_removal(Some(&card));
+        card
     }
 
     /// The card with `id`, taken off the battlefield — `remove` by id, with
@@ -1454,30 +1490,76 @@ impl Battlefield {
         Some(self.remove(pos))
     }
 
-    /// `Vec::retain`, shadowed: removal-only, so the lanes demote as
-    /// [`remove`](Self::remove)'s do.
+    /// `Vec::retain`, shadowed: removal-only, but of cards the zone does not
+    /// see go, so every `PRESENT` lane drops and every `ABSENT` one stays.
     pub fn retain(&mut self, f: impl FnMut(&CardInstance) -> bool) {
         note_battlefield_reach();
-        self.demote_lanes(LANE_ABSENT_BITS);
+        self.lanes_after_removal(None);
         self.cards.retain(f);
     }
 
     /// `Vec::pop`, shadowed, on the removal contract.
     pub fn pop(&mut self) -> Option<CardInstance> {
         note_battlefield_reach();
-        self.demote_lanes(LANE_ABSENT_BITS);
-        self.cards.pop()
+        let card = self.cards.pop();
+        self.lanes_after_removal(card.as_ref());
+        card
     }
 
-    /// Keep only the lane states `keep` selects (`LANE_PRESENT_BITS` on an
-    /// addition, `LANE_ABSENT_BITS` on a removal), dropping every other lane
-    /// to `UNKNOWN`, and clear the member-list lanes whatever happened. Sound
-    /// because a lane's predicate reads only definitions and asks "any":
-    /// the state it keeps is implied by the state before the write.
-    #[inline]
-    fn demote_lanes(&self, keep: u64) {
+    /// The lane word after `card` joined: `ABSENT` lanes re-answered off
+    /// the card, `PRESENT` lanes kept, member lists cleared. A word stamped
+    /// at another definition epoch is dead already and is cleared whole.
+    #[inline(never)]
+    fn lanes_after_push(&self, card: &CardInstance) {
         let w = self.type_gates.load(Ordering::Relaxed);
-        self.type_gates.store(w & keep & !LANE_MEMBER_MASK, Ordering::Relaxed);
+        if w == 0 {
+            return;
+        }
+        if self.def_epoch.load(Ordering::Relaxed) != crate::card::definition_epoch() {
+            self.type_gates.store(0, Ordering::Relaxed);
+            return;
+        }
+        let mut out = w & !LANE_MEMBER_MASK;
+        for (i, pred) in LANE_PREDICATES.iter().enumerate() {
+            let shift = 2 * i as u32;
+            if (w >> shift) & LANE_MASK != ABSENT as u64 {
+                continue;
+            }
+            match pred {
+                Some(p) if !p(card) => {}
+                Some(_) => out = (out & !(LANE_MASK << shift)) | ((PRESENT as u64) << shift),
+                None => out &= !(LANE_MASK << shift),
+            }
+        }
+        self.type_gates.store(out, Ordering::Relaxed);
+    }
+
+    /// The lane word after a removal: `ABSENT` lanes kept, `PRESENT` lanes
+    /// kept when `card` (the one that left) fails their predicate and dropped
+    /// otherwise — dropped whole when the leaver is unknown (`retain`) —
+    /// member lists cleared.
+    #[inline(never)]
+    fn lanes_after_removal(&self, card: Option<&CardInstance>) {
+        let w = self.type_gates.load(Ordering::Relaxed);
+        if w == 0 {
+            return;
+        }
+        if self.def_epoch.load(Ordering::Relaxed) != crate::card::definition_epoch() {
+            self.type_gates.store(0, Ordering::Relaxed);
+            return;
+        }
+        let mut out = w & LANE_ABSENT_BITS;
+        if let Some(card) = card {
+            for (i, pred) in LANE_PREDICATES.iter().enumerate() {
+                let shift = 2 * i as u32;
+                if (w >> shift) & LANE_MASK == PRESENT as u64
+                    && pred.is_some_and(|p| !p(card))
+                {
+                    out |= (PRESENT as u64) << shift;
+                }
+            }
+        }
+        self.type_gates.store(out & !LANE_MEMBER_MASK, Ordering::Relaxed);
     }
 
     /// True when both handles still share one allocation — the [`CowBox`]
@@ -1876,10 +1958,11 @@ mod tests {
     /// neither.
     #[test]
     fn battlefield_writes_invalidate_and_reads_do_not() {
-        let never = |_: &CardInstance| false;
+        let land = crate::game::card_can_change_land_types;
+        let creature = crate::game::card_can_change_creature_types;
         let mut b = bf(vec![crate::catalog::grizzly_bears()]);
-        assert!(!b.has_land_type_changer(never));
-        assert!(!b.has_creature_type_changer(never));
+        assert!(!b.has_land_type_changer(land));
+        assert!(!b.has_creature_type_changer(creature));
         assert_eq!(b.memo(LANE_LAND), Some(false));
         assert_eq!(b.memo(LANE_CREATURE), Some(false));
 
@@ -1887,27 +1970,29 @@ mod tests {
         assert_eq!((&b).into_iter().count(), 1);
         assert_eq!(b.memo(LANE_LAND), Some(false), "a read does not invalidate");
 
+        // A push answers each ABSENT lane off the new card (PERF `(-213)`).
         b.push(CardInstance::new(CardId(99), crate::catalog::blood_moon(), 0));
-        assert_eq!(b.memo(LANE_LAND), None, "push invalidated");
-        assert_eq!(b.memo(LANE_CREATURE), None, "both lanes, one store");
+        assert_eq!(b.memo(LANE_LAND), Some(true), "Blood Moon rewrites land types");
+        assert_eq!(b.memo(LANE_CREATURE), Some(false), "and not creature types");
+        assert!(b.has_land_type_changer(land), "the kept answer audits clean");
 
         // Element writes do NOT invalidate — that is the whole split.
-        assert!(!b.has_land_type_changer(never));
         for c in &mut b {
             c.tapped = true;
         }
-        assert_eq!(b.memo(LANE_LAND), Some(false), "&mut iteration is an element write");
+        assert_eq!(b.memo(LANE_LAND), Some(true), "&mut iteration is an element write");
         b.iter_mut().for_each(|c| c.tapped = false);
-        assert_eq!(b.memo(LANE_LAND), Some(false), "so is iter_mut");
+        assert_eq!(b.memo(LANE_LAND), Some(true), "so is iter_mut");
         assert!(b.get_mut(0).is_some());
-        assert_eq!(b.memo(LANE_LAND), Some(false), "so is get_mut");
+        assert_eq!(b.memo(LANE_LAND), Some(true), "so is get_mut");
 
-        // Membership does — a removal keeps an `ABSENT` lane (PERF `(-212)`)
-        // and any other route through `DerefMut` clears whole.
+        // Membership does: a removal drops a PRESENT lane whose witness left
+        // (PERF `(-212)`), and any other route through `DerefMut` clears whole.
         b.pop();
-        assert_eq!(b.memo(LANE_LAND), Some(false), "pop keeps ABSENT");
+        assert_eq!(b.memo(LANE_LAND), None, "the Moon was the witness");
+        assert_eq!(b.memo(LANE_CREATURE), Some(false), "an ABSENT lane survives a removal");
         b.insert(0, CardInstance::new(CardId(7), crate::catalog::grizzly_bears(), 0));
-        assert_eq!(b.memo(LANE_LAND), None, "DerefMut invalidated");
+        assert_eq!(b.memo(LANE_CREATURE), None, "DerefMut invalidated");
     }
 
     /// A definition rewrite reaches the cards two derefs below anything the
@@ -1939,16 +2024,16 @@ mod tests {
     /// snapshot it describes.
     #[test]
     fn battlefield_clone_shares_and_carries_the_memo() {
-        let never = |_: &CardInstance| false;
+        let land = crate::game::card_can_change_land_types;
         let mut a = bf(vec![crate::catalog::grizzly_bears()]);
-        assert!(!a.has_land_type_changer(never));
+        assert!(!a.has_land_type_changer(land));
         let b = a.clone();
         assert!(a.shares_with(&b), "clone is a refcount bump");
         assert_eq!(b.memo(LANE_LAND), Some(false), "the memo describes the same cards");
-        a.push(CardInstance::new(CardId(7), crate::catalog::grizzly_bears(), 0));
+        a.push(CardInstance::new(CardId(7), crate::catalog::blood_moon(), 0));
         assert!(!a.shares_with(&b), "the write unshared");
         assert_eq!(b.memo(LANE_LAND), Some(false), "the snapshot's answer is still right");
-        assert_eq!(a.memo(LANE_LAND), None, "a push demotes the ABSENT lane");
+        assert_eq!(a.memo(LANE_LAND), Some(true), "and the writer's moved with its card");
     }
 
     /// The dispatch lane is filled by its caller, so its contract is the pair:
@@ -1967,8 +2052,14 @@ mod tests {
         // Element writes keep it; membership does not.
         b.iter_mut().for_each(|c| c.tapped = true);
         assert_eq!(b.dispatch_lane(), Ok(false), "an element write is not a membership change");
+        b.push(CardInstance::new(CardId(98), crate::catalog::grave_titan(), 0));
+        assert_eq!(b.dispatch_lane(), Ok(false), "a push answers off the new card: a printed trigger is no board-scan bit");
         b.push(CardInstance::new(CardId(99), crate::catalog::blood_moon(), 0));
-        assert!(b.dispatch_lane().is_err(), "push invalidated");
+        assert_eq!(b.dispatch_lane(), Ok(true), "Blood Moon strips (CR 305.7): PRESENT off the new card");
+        b.remove(1);
+        assert_eq!(b.dispatch_lane(), Ok(true), "the Titan was not the witness");
+        b.retain(|c| c.id != CardId(99));
+        assert!(b.dispatch_lane().is_err(), "retain drops a PRESENT lane");
     }
 
     /// A card that does carry dispatch bits stores `PRESENT`, and the lane
@@ -1992,31 +2083,36 @@ mod tests {
     /// every read, so a kept state that was wrong would fail here.
     #[test]
     fn membership_writes_demote_only_the_lanes_they_can_change() {
-        let never = |_: &CardInstance| false;
-        let bears = |c: &CardInstance| c.definition.name == "Grizzly Bears";
+        let land = crate::game::card_can_change_land_types;
+        let creature = crate::game::card_can_change_creature_types;
         let mut b = bf(vec![crate::catalog::grizzly_bears(), crate::catalog::blood_moon()]);
-        assert!(!b.has_land_type_changer(never));
-        assert!(b.has_creature_type_changer(bears));
-        assert_eq!(b.memo(LANE_LAND), Some(false));
-        assert_eq!(b.memo(LANE_CREATURE), Some(true));
+        assert!(b.has_land_type_changer(land));
+        assert!(!b.has_creature_type_changer(creature));
+        assert_eq!(b.memo(LANE_LAND), Some(true));
+        assert_eq!(b.memo(LANE_CREATURE), Some(false));
 
+        // A push keeps PRESENT lanes and answers ABSENT ones off the card.
         b.push(CardInstance::new(CardId(9), crate::catalog::grizzly_bears(), 0));
-        assert_eq!(b.memo(LANE_LAND), None, "push demoted the ABSENT lane");
-        assert_eq!(b.memo(LANE_CREATURE), Some(true), "and kept the PRESENT one");
+        assert_eq!(b.memo(LANE_LAND), Some(true), "kept");
+        assert_eq!(b.memo(LANE_CREATURE), Some(false), "the bear changes no creature type");
 
-        assert!(!b.has_land_type_changer(never));
+        // A removal keeps ABSENT lanes, and PRESENT ones whose witness stayed.
         assert!(b.take_by_id(CardId(9)).is_some());
-        assert_eq!(b.memo(LANE_LAND), Some(false), "a removal kept the ABSENT lane");
-        assert_eq!(b.memo(LANE_CREATURE), None, "and demoted the PRESENT one");
-        assert!(b.has_creature_type_changer(bears), "refilled: one bear is left");
+        assert_eq!(b.memo(LANE_LAND), Some(true), "the bear was not the witness");
+        assert_eq!(b.memo(LANE_CREATURE), Some(false), "ABSENT survives a removal");
+        assert!(b.take_by_id(CardId(1)).is_some(), "the Moon leaves");
+        assert_eq!(b.memo(LANE_LAND), None, "the witness left");
+        assert_eq!(b.memo(LANE_CREATURE), Some(false));
+        assert!(!b.has_land_type_changer(land), "refilled: no changer left");
 
-        b.retain(|c| c.definition.name != "Grizzly Bears");
-        assert_eq!(b.memo(LANE_CREATURE), None, "retain is a removal");
-        assert_eq!(b.memo(LANE_LAND), Some(false));
-        assert!(!b.has_creature_type_changer(bears), "no bears left");
+        // `retain` cannot name what it dropped: PRESENT lanes fall, ABSENT stay.
+        b.push(CardInstance::new(CardId(5), crate::catalog::blood_moon(), 0));
+        assert_eq!(b.memo(LANE_LAND), Some(true));
+        b.retain(|c| c.id != CardId(5));
+        assert_eq!(b.memo(LANE_LAND), None, "retain drops PRESENT");
+        assert_eq!(b.memo(LANE_CREATURE), Some(false), "and keeps ABSENT");
         assert!(b.pop().is_some());
-        assert_eq!(b.memo(LANE_LAND), Some(false), "pop is a removal");
-        assert_eq!(b.memo(LANE_CREATURE), Some(false), "an ABSENT lane survives it");
+        assert_eq!(b.memo(LANE_CREATURE), Some(false), "pop is a removal too");
 
         // The member lists hold indices: any membership change clears them.
         let mut b = bf(vec![crate::catalog::grizzly_bears(), crate::catalog::grave_titan()]);

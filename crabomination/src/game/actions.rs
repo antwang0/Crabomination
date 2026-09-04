@@ -93,7 +93,7 @@ impl GrantScan<'_> {
 /// The counter-grant lane's predicate: the definition carries Agatha's Soul
 /// Cauldron's static, read off the mana-summary memo word (`None`, an
 /// unpackable summary, answers `true` — the sound direction).
-fn card_grants_to_countered(c: &CardInstance) -> bool {
+pub(crate) fn card_grants_to_countered(c: &CardInstance) -> bool {
     c.mana_summary(mana_summary_of)
         .is_none_or(|w| w & mana_summary::COUNTER_GRANT != 0)
 }
@@ -659,7 +659,7 @@ pub(crate) fn card_has_mana_static(c: &CardInstance) -> bool {
 /// The death-redirect lane's predicate: the definition carries one of the
 /// four graveyard-redirecting statics, read off the memo word (`None`, an
 /// unpackable summary, answers `true`).
-fn card_redirects_deaths(c: &CardInstance) -> bool {
+pub(crate) fn card_redirects_deaths(c: &CardInstance) -> bool {
     c.mana_summary(mana_summary_of)
         .is_none_or(|w| w & mana_summary::DEATH_REDIRECT != 0)
 }
