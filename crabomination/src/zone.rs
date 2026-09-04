@@ -1533,7 +1533,8 @@ impl Battlefield {
     /// `definition.triggered_abilities` / `station` — the combat
     /// declaration's two whole-board trigger walks (PERF `(-222)`) and the
     /// combat-damage-to-player listener walk (`(-224)`) and the step-trigger
-    /// walk when no static grant is live (`(-228)`).
+    /// walk when no static grant is live (`(-228)`), and the cast-trigger
+    /// walk on the same condition (`(-231)`).
     #[inline]
     pub fn for_each_triggerer(&self, mut f: impl FnMut(&CardInstance)) {
         match self.trigger_members() {

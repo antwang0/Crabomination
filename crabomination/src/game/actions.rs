@@ -12063,9 +12063,9 @@ impl GameState {
         if freeze {
             self.freeze_layers_push();
         }
-        for c in self.battlefield.iter() {
+        let mut visit = |c: &crate::card::CardInstance| {
             if stripped.contains(&c.id) {
-                continue;
+                return;
             }
             let (cid, c_controller) = (c.id, c.controller);
             for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
@@ -12095,9 +12095,16 @@ impl GameState {
                     ));
                 }
             }
-        }
+        };
+        // A live grant can hand a cast trigger to any permanent, so that
+        // board is walked whole; otherwise only a printed trigger or a
+        // Station band can contribute — the trigger member list (PERF
+        // `(-231)`, the `(-228)` shape on the per-cast walk).
         if freeze {
+            self.battlefield.iter().for_each(&mut visit);
             self.freeze_layers_pop();
+        } else {
+            self.battlefield.for_each_triggerer(&mut visit);
         }
         // CR 902.5 — a Vanguard avatar's cast trigger fires from the command
         // zone (Serra Angel Avatar's "whenever you cast a spell, gain 2 life").
@@ -12121,22 +12128,19 @@ impl GameState {
         // from your graveyard to your hand" (the Dissension Eidolon cycle):
         // a `FromYourGraveyard`-scoped SpellCast trigger fires from its owner's
         // graveyard when that owner is the caster.
-        let gy_casters: Vec<(CardId, usize)> = self
-            .players
-            .iter()
-            .enumerate()
-            .flat_map(|(owner, pl)| pl.graveyard.iter().map(move |c| (c.id, owner)))
-            .filter(|&(_, owner)| owner == controller)
-            .collect();
-        for (cid, owner) in gy_casters {
-            let Some(c) = self.players[owner].graveyard.iter().find(|c| c.id == cid) else {
-                continue;
-            };
-            for t in &c.definition.triggered_abilities {
-                if t.event.kind == EventKind::SpellCast
-                    && matches!(t.event.scope, EventScope::FromYourGraveyard)
-                {
-                    candidates.push((cid, owner, t.effect.clone(), t.event.filter.clone(), usize::MAX, false));
+        // The caster's graveyard only (the old form collected every
+        // graveyard's ids, filtered to the caster's, and re-found each by id
+        // — a quadratic walk per cast), and behind the zone's lane (PERF
+        // `(-231)`): its predicate covers the `FromYourGraveyard` scope.
+        let gy = &self.players[controller].graveyard;
+        if gy.has_graveyard_trigger() {
+            for c in gy.iter() {
+                for t in &c.definition.triggered_abilities {
+                    if t.event.kind == EventKind::SpellCast
+                        && matches!(t.event.scope, EventScope::FromYourGraveyard)
+                    {
+                        candidates.push((c.id, controller, t.effect.clone(), t.event.filter.clone(), usize::MAX, false));
+                    }
                 }
             }
         }
