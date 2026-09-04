@@ -25,8 +25,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-211)` is the last claimed,
-   `(-212)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-212)` is the last claimed,
+   `(-213)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.6 min cold / 3.2 min warm, test build ~5.5 min + suite
    1.5 min, `nextest` needs installing; callgrind `--games 6` on the three pools in parallel
    ~1 min. ⚠ Disk: a run of A/B builds fills it — `rm -rf target/debug/incremental` and
@@ -35,16 +35,17 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the `(-211)` tip:** PERF Baseline — suite 19,253 / 0 / 5, clippy, release-fast
    typecheck, `--bench` byte-identical to `2003d1cf` at every leg, golden traces 7/7 unmoved,
    three-pool stdout identical at every leg; grid not re-run (no encoder/pool change).
-3. **This run (Log `(-204)`..`(-211)`): `cube` -2.91 % / `fixed` -2.95 % / `sealed` -2.79 %
+3. **This run (Log `(-204)`..`(-212)`): `cube` -3.37 % / `fixed` -3.38 % / `sealed` -3.12 %
    cumulative, one rules fix (CR 305.7, `(-206)`), one refutation (`(-209)`).** The land tap
    settled by inspection (`(-204)`, the run's half); the lane word widened to 64 bits and a
    card-type lane (`(-207)`, 2.5x its priced ceiling because the walk was inlined into four
    callers — **price a small function by every caller that inlined it**); a graveyard lane in
    front of the combat-damage dispatch (`(-210)`); `ContinuousEffects` with a family fold
-   (`(-208)`). **A lane asked less often than the board changes loses to its own fills**
+   (`(-208)`); membership writes demote only the lanes they can change (`(-212)`, a third of
+   the fills). **A lane asked less often than the board changes loses to its own fills**
    (`(-209)`) — census the miss rate before the next lane.
-4. **Perf leads (candidates, top):** a batch fill of the memo-word lanes (`walk_and_store`
-   1.05 % of `cube`, eleven monomorphs); `fire_combat_damage_triggers`' 1.4 % self (98 % of
+4. **Perf leads (candidates, top):** a per-board definition epoch (the other half of the lane
+   fills, `walk_and_store` 0.7 % of `cube`); `fire_combat_damage_triggers`' 1.4 % self (98 % of
    calls push nothing — a `profiling-lines` read first); the resolver under the fast tap
    (~650 Ir, diffuse); the tap's CoW unshare (structural). Everything else read this run is
    closed in candidates with its numbers.
