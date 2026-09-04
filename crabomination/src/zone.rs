@@ -502,11 +502,15 @@ const LANE_HAND_SIZE_STATIC: u32 = 44;
 /// match, per resolving permanent spell and per entering creature (PERF
 /// `(-239)`). See [`card_has_etb_counter_static`].
 const LANE_ETB_COUNTER_STATIC: u32 = 46;
+/// Any permanent's definition carries a damage-prevention static —
+/// `prevent_static_scan`'s twelve, folded into a mask by a board walk on every
+/// damage event (PERF `(-240)`). See [`card_has_prevent_static`].
+const LANE_PREVENT_STATIC: u32 = 48;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 24;
+const LANE_COUNT: usize = 25;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -546,6 +550,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_any_color_static),                  // LANE_ANY_COLOR_STATIC
     Some(card_has_hand_size_static),                  // LANE_HAND_SIZE_STATIC
     Some(card_has_etb_counter_static),                   // LANE_ETB_COUNTER_STATIC
+    Some(card_has_prevent_static),                       // LANE_PREVENT_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -738,6 +743,32 @@ fn card_has_etb_counter_static(c: &CardInstance) -> bool {
                 | S::MatchingEntersWithExtraCounters { .. }
                 | S::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
                 | S::ExtraEtbCountersForCreatureCasts { .. }
+        )
+    })
+}
+
+/// Does this permanent's definition carry one of the twelve damage-
+/// prevention statics `prevent_static_scan` folds? The
+/// [`LANE_PREVENT_STATIC`] predicate — the same arm list, so a clear lane is
+/// exactly a zero mask. Definition-only.
+fn card_has_prevent_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as S;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            S::DamageCantBePrevented
+                | S::CombatDamageCantBePrevented
+                | S::ControllerCreaturesCombatDamageCantBePrevented
+                | S::SourceDamageCantBePrevented
+                | S::PreventTargetingDamageWhileYouControlAnotherCreature
+                | S::PreventAllDamageToThisFromBlocked
+                | S::PreventCombatDamageToThisFromMatching { .. }
+                | S::ReduceDamageToControllerFromSource { .. }
+                | S::PreventSmallDamageToThis { .. }
+                | S::PreventDamageToAttachedPerPermanent { .. }
+                | S::PreventDamageByRemovingCounters { .. }
+                | S::PreventDamageToThisRedirect
+                | S::PreventAllDamageToControllerFromOthersSources
         )
     })
 }
@@ -1432,6 +1463,14 @@ impl Battlefield {
     #[inline]
     pub fn has_etb_counter_static(&self) -> bool {
         self.lane(LANE_ETB_COUNTER_STATIC, card_has_etb_counter_static)
+    }
+
+    /// Does any permanent here carry a damage-prevention static
+    /// ([`card_has_prevent_static`])? Read once per damage event by
+    /// `prevent_static_scan` (PERF `(-240)`).
+    #[inline]
+    pub fn has_prevent_static(&self) -> bool {
+        self.lane(LANE_PREVENT_STATIC, card_has_prevent_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

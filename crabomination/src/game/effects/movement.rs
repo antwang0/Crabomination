@@ -67,6 +67,12 @@ pub(crate) mod prevent_static {
 /// reading every gated site is equivalent to.
 pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
     use crate::effect::StaticEffect as SE;
+    // The lane's predicate is this match's own arm list, so a clear lane is
+    // a zero mask without the walk (PERF `(-240)`); a board with any of the
+    // twelve walks as before.
+    if !state.battlefield.has_prevent_static() {
+        return 0;
+    }
     let mut m = 0u32;
     for card in state.battlefield.iter() {
         for sa in &card.definition.static_abilities {
