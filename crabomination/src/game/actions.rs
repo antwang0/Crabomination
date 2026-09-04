@@ -11353,7 +11353,29 @@ impl GameState {
         // a freeze scope that is a whole-game gather apiece — for the same
         // card at the same game state. `None` (not a battlefield permanent)
         // is the `false` the per-keyword helper returned.
-        let cp = self.computed_permanent(*cid);
+        //
+        // Presence-gated (PERF `(-216)`): the bot's auto-targeting asks this
+        // of most permanents on the board and almost none can carry any of
+        // the three keywords, so the view — a whole-board gather when the
+        // scope this opened is the outermost — is only taken when the target
+        // could. `false` is authoritative; the gate is skipped once the
+        // scope's gather has already happened, when the view is a memo read.
+        let asked = |k: &Keyword| match k {
+            Keyword::Shroud | Keyword::Hexproof => true,
+            Keyword::CantBeTargetedByAbilitiesFromMatching(_) => source_card_id.is_some(),
+            _ => false,
+        };
+        let cp = if !self.layers_memoized() && !self.card_keyword_possible_on(card, asked) {
+            debug_assert!(
+                !self
+                    .computed_permanent(*cid)
+                    .is_some_and(|cp| cp.keywords().iter().any(asked)),
+                "card_keyword_possible_on missed a granted Shroud / Hexproof / ability ward",
+            );
+            None
+        } else {
+            self.computed_permanent(*cid)
+        };
         let has_kw = |k: &Keyword| cp.as_ref().is_some_and(|c| c.keywords().contains(k));
         if has_kw(&Keyword::Shroud) && !self.shroud_waivers.contains(&(*cid, caster)) {
             return Err(GameError::TargetHasShroud(*cid));
