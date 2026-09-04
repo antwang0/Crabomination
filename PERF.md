@@ -2520,18 +2520,18 @@ a box whose state moves.
 
 ## Baseline
 
-### The land-tap, lane-word and lane-write legs — closing state at the `(-214)` tip
+### The land-tap, lane-word and lane-write legs — closing state at the `(-215)` tip
 
-Eleven engine commits on top of `(-203)`: nine perf legs, each
+Twelve engine commits on top of `(-203)`: ten perf legs, each
 behaviour-preserving (three-pool stdout identical, `--bench`
 byte-identical, golden traces unmoved), one rules fix priced as a cost
 (`(-206)`), one refutation reverted in the same hour (`(-209)`).
 
 ```text
-  pool     base 62a4e20b     tip (-214)        delta
-  fixed      801,539,915      763,686,383   **-4.723 %**
-  cube     2,200,107,698    2,104,414,486   **-4.350 %**
-  sealed   2,211,363,961    2,120,264,238   **-4.120 %**
+  pool     base 62a4e20b     tip (-215)        delta
+  fixed      801,539,915      763,711,694   **-4.719 %**
+  cube     2,200,107,698    2,090,149,281   **-4.998 %**
+  sealed   2,211,363,961    2,120,419,985   **-4.113 %**
 
   leg      fixed      cube      sealed    what
   (-204)  -1.496 %  -1.509 %  -1.623 %   the printed land tap settled by inspection
@@ -2545,6 +2545,7 @@ byte-identical, golden traces unmoved), one rules fix priced as a cost
   (-212)  -0.440 %  -0.469 %  -0.334 %   membership writes demote only the lanes they can change
   (-213)  -1.158 %  -0.847 %  -0.887 %   a membership write answers each lane off the one card it moved
   (-214)  -0.235 %  -0.171 %  -0.148 %   the member lists kept exact through membership writes
+  (-215)  +0.003 %  -0.678 %  +0.007 %   the dispatch scan visits its member list
 ```
 
 ```text
@@ -11730,6 +11731,33 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-215)` TAKEN — the dispatch scan visits its member list: `cube` -0.678 % / `fixed` +0.003 % / `sealed` +0.007 %
+
+```text
+  pool    base (-214)       (-215)          delta
+  fixed     763,686,383     763,711,694   **+0.003 %**  (noise: no contributor on those boards)
+  cube    2,104,414,486   2,090,149,281   **-0.678 %**
+  sealed  2,120,264,238   2,120,419,985   **+0.007 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  dispatch_board_scan self   16.35 M -> 6.92 M
+              trigger_grant_sources self 12.28 M -> 3.66 M
+              dispatch_scan_card                 +2.25 M (the per-contributor body, out of line)
+              lanes_after_push            4.00 M -> 3.80 M
+```
+
+`(-189)`'s device on the dispatch lane, made affordable by `(-214)`:
+the lane's presence bit becomes a **member list** of the permanents
+whose definition carries a `BOARD_SCAN` bit, kept exact through
+membership writes like the other two, and both walkers that filled the
+lane — `dispatch_board_scan` (82,718 calls, once per dispatch) and
+`trigger_grant_sources` — visit only the members on a hit. A `cube`
+board keeps an Equipment, a Blood Moon or a grant-trigger static out
+most of the game, which is why the presence lane read `PRESENT` and
+every dispatch walked the board; `fixed` and `sealed` never had a
+contributor, so their lanes read empty before and after and the leg is
+flat there to the noise. `dispatch_lane()` is now `members != 0`, so
+`ability_strip_possible` reads the same answer it did.
 
 ### `(-214)` TAKEN — the member lists kept exact through membership writes: `fixed` -0.235 % / `cube` -0.171 % / `sealed` -0.148 %
 
@@ -23492,10 +23520,10 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at the `(-214)` tip (`(-204)`..`(-214)`, three-pool Ir against
-the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 -> 763,686,383
-(-4.723 %), `cube` 2,200,107,698 -> 2,104,414,486 (-4.350 %), `sealed`
-2,211,363,961 -> 2,120,264,238 (-4.120 %).** Before it, `(-199)`..
+**State at the `(-215)` tip (`(-204)`..`(-215)`, three-pool Ir against
+the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 -> 763,711,694
+(-4.719 %), `cube` 2,200,107,698 -> 2,090,149,281 (-4.998 %), `sealed`
+2,211,363,961 -> 2,120,419,985 (-4.113 %).** Before it, `(-199)`..
 `(-203)` against `2003d1cf`: `fixed` -1.437 %, `cube` -1.627 %, `sealed`
 -1.141 %; and `(-194)`..`(-198)` against
 `0e9bdaa4`: `fixed` -2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The
