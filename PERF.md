@@ -2529,34 +2529,36 @@ a box whose state moves.
 
 ## Baseline
 
-### The consumer-read legs — closing state at the `(-247)` tip
+### The consumer-read legs — closing state at the `(-248)` tip
 
-Three engine commits on top of the concurrent session's `(-244)` tip
+Four engine commits on top of the concurrent session's `(-244)` tip
 `e44e9d90`, each behaviour-preserving (three-pool outcomes identical
 to the `(-242)` base at every leg, `--bench` counters identical, golden
-traces unmoved). The three legs were measured as a chain off the
+traces unmoved). The first three legs were measured as a chain off the
 `(-242)` tip `e6b58ca4` before `(-243)` and `(-244)` landed and were
 rebased over them twice (no shared line; `(-244)` and `(-247)` both
-touch `game/mod.rs`); the tip row below is one fresh reading of the
-rebased tree against the `(-244)` closing state's numbers.
+touch `game/mod.rs`); `(-248)` was measured on the rebased tree. The
+tip row below is the rebased tree against the `(-244)` closing state's
+numbers.
 
 ```text
-  pool     base (-244)      tip (-247)       delta
-  cube     1,928,746,090    1,888,198,355   **-2.102 %**
-  fixed      690,547,383      682,953,228   **-1.100 %**
-  sealed   1,992,138,486    1,971,796,448   **-1.021 %**
+  pool     base (-244)      tip (-248)       delta
+  cube     1,928,746,090    1,883,972,930   **-2.321 %**
+  fixed      690,547,383      681,813,326   **-1.265 %**
+  sealed   1,992,138,486    1,967,055,576   **-1.259 %**
 
   leg      cube      fixed     sealed    what (each against the leg before it, off e6b58ca4)
   (-245)  -0.278 %  -0.205 %  -0.196 %   pick_attacks_inner's computed CantBlock read behind board_keyword_in_scope
   (-246)  -1.470 %  -0.843 %  -0.831 %   declare_blockers' Flanking/Bushido/Rampage scope behind board_keyword_matching
   (-247)  -0.421 %  -0.044 %  -0.025 %   permanent_is_creature's printed line behind card_type_change_in_scope
-  chain   -2.158 %  -1.090 %  -1.050 %   product of the three, off e6b58ca4
+  (-248)  -0.224 %  -0.167 %  -0.240 %   the two targeting-time keyword reads behind card_keyword_possible (on the rebased tree)
+  chain   -2.377 %  -1.255 %  -1.288 %   product of the four
 
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,255 / 0 / 5 at the (-246) tree (pre-rebase) and at the rebased tip; golden traces in it
+suite   19,255 / 0 / 5 at the (-246) tree (pre-rebase), at the rebased (-247) tip and at (-248); golden traces in it
 clippy  --workspace --exclude crabomination_client --all-targets   clean at the tip
 release the release-fast typecheck gate (debug-assertions off): clean at the tip
---bench profiling-fast at the (-246) tree and at the rebased tip: **195,806 decisions / 27.49
+--bench profiling-fast at the (-246) tree, the rebased (-247) tip and (-248): **195,806 decisions / 27.49
         turns / 611.9 per game / 0 stalls** — counters identical to 2003d1cf;
         determinism ok (all pairs split); peak_rss 21.3 / 21.6 MiB
 sweep   fresh seeds on the debug-assertions overflow build (target-audit, this run):
@@ -7602,6 +7604,38 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-248)` TAKEN — the two targeting-time keyword reads behind `card_keyword_possible`: `sealed` -0.240 % / `cube` -0.224 % / `fixed` -0.167 %
+
+```text
+  pool    base (-247)       (-248)          delta
+  cube    1,888,198,355   1,883,972,930   **-0.224 %**
+  fixed     682,953,228     681,813,326   **-0.167 %**
+  sealed  1,971,796,448   1,967,055,576   **-0.240 %**
+  three-pool outcomes identical; --bench counters identical
+  cube:  push_first_targeting_counter's view   884 asks / 2.7 M  ->  4 asks (the gate: can_grant_keyword 1,024 / 75 k, card_has_anthem 484 / 7 k)
+         has_hostile_ward's view             6,494 asks / 1.7 M  ->  5,438 (the memo hits stay; the 1,056 out-of-scope gathers go)
+```
+
+The `(-245)` re-read's `push_ward_triggers_for_targets` row (884 asks
+at ~3,000 Ir — gathers, out of any scope). The Ward read itself was
+already behind `card_keyword_possible` (`(-216)`'s shape); the row was
+`push_first_targeting_counter` one line above it, asking a whole view
+of every targeted permanent on every cast for the Glasskite cycle's
+`CounterFirstTargetingEachTurn`, which four printings carry. Same gate.
+`has_hostile_ward` — the bot's auto-target ranking, 6,494 asks — is the
+other reader that consumes one keyword; it takes the gate behind
+`layers_memoized`, as `check_target_legality_inner` does, so a scope
+that has already gathered keeps its 124-Ir memo hit and one that has
+not skips the gather. Every pool moves the same ~0.2 %: every pool
+casts targeted spells, and the probes cast them through the same path.
+
+**When a gate is on one of two sibling reads, the other is the row.**
+The Ward push was gated at `(-216)` and its ungated sibling sat one
+call above it in the same function for thirty passes; the by-caller
+table charged the asks to the enclosing function, which read as "the
+gated one", and only the callee table (`cg_edges.py --callees`) said
+which of the two lines was still asking.
 
 ### `(-247)` TAKEN — `permanent_is_creature` reads the printed type line behind the card-type presence gate: `cube` -0.421 % / `fixed` -0.044 % / `sealed` -0.025 %
 
@@ -20404,12 +20438,11 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at the `(-247)` tip (`(-245)`..`(-247)`, three-pool Ir against
-the `(-242)` tip `e6b58ca4`, measured before the concurrent `(-243)`
-landed): `cube` 1,941,531,739 -> 1,899,633,344 (-2.158 %), `fixed`
-696,705,944 -> 689,113,878 (-1.090 %), `sealed` 2,007,370,975 ->
-1,986,301,307 (-1.050 %). The rebased tip's reading against `(-243)`
-is in the Baseline.**
+**State at the `(-248)` tip (`(-245)`..`(-248)` on top of the concurrent
+`(-243)`/`(-244)`, three-pool Ir against the `(-244)` tip `e44e9d90`):
+`cube` 1,928,746,090 -> 1,883,972,930 (-2.321 %), `fixed` 690,547,383 ->
+681,813,326 (-1.265 %), `sealed` 1,992,138,486 -> 1,967,055,576
+(-1.259 %). Per-leg rows in the Baseline.**
 
 **RE-READ AT the `(-245)` tip — `computed_permanent_hinted`'s 284,812
 asks by caller (218.6 M inclusive, 11.26 % of `cube`), which is where
@@ -20427,20 +20460,26 @@ both legs came from. What each row is, so nobody re-reads it:**
    1,410    5.9 M     permanent_is_creature <- from_iter <- SBA sweep       ~4,200 Ir an ask: out-of-scope misses; TAKEN (-247), the helper gated
    6,130    5.3 M     blocker_can_block_attacker (by id)                    all under pick_attacks_inner's legality collect; the pair check itself is 1.8 M of it
      666    3.3 M     intrinsic_land_mana_abilities <- activate_ability     ~5,000 Ir an ask: the want_extra branch's scope; rare
-     884    2.7 M     push_ward_triggers_for_targets <- finalize_cast       ~3,000 Ir an ask; rare
+     884    2.7 M     push_ward_triggers_for_targets <- finalize_cast       the ungated sibling read; TAKEN (-248)
 ```
 
 * **TAKEN as `(-247)` — `permanent_is_creature` under the SBA sweep:
   2,156 asks / 8.0 M, ~4,200 Ir each** (the CR 704.5n equipment-link
   check, out of any scope). The helper reads the printed line behind
   `card_type_change_in_scope`; `cube` -0.421 %, the other pools flat.
-* **Lead — the same read over the remaining out-of-scope askers.**
-  `permanent_is_creature` was one helper; the `(-245)` table's
-  `check_target_legality_with_source` (11,132 asks / 7.9 M, ~710 Ir —
-  mostly hits, so the scope exists) and `push_ward_triggers_for_targets`
-  (884 / 2.7 M, ~3,000 Ir — misses) are the next two rows whose consumer
-  may be one fact. Read what each reads off the view before pricing;
-  ceiling ~0.3 % of `cube` between them.
+* **TAKEN as `(-248)` — `push_ward_triggers_for_targets`' 884 out-of-
+  scope asks** were `push_first_targeting_counter`'s, the Ward gate's
+  ungated sibling; `has_hostile_ward` took the same gate. Every pool
+  ~-0.2 %.
+* **Read and closed — `check_target_legality_with_source` (11,132 asks
+  / 7.9 M, ~710 Ir):** its Shroud / Hexproof read is gated since
+  `(-216)`, and the rest are in-scope hits whose consumers read
+  keywords *and* colours *and* the controller (the hexproof-from-colour
+  and ability-hexproof arms). Not one fact; a floor.
+* **What is left in that table consumes the whole view**: the block
+  planner's per-blocker and per-attacker facts, the material eval, the
+  declaration's subset pass. The freeze design's floor — the next
+  device is a gather version, which is structural.
 * **Priced and not built — `pick_blocks_inner`'s gang / requirement /
   top-up passes ask the pair gate by id** (`blocker_can_block_attacker`
   re-finds both cards and re-asks both memos): 28 calls a six-game

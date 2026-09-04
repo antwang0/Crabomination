@@ -28,34 +28,35 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-247)` is the last claimed,
-   `(-248)` is next (this run's numbers collided with concurrent pushes twice and were
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-248)` is the last claimed,
+   `(-249)` is next (this run's numbers collided with concurrent pushes twice and were
    renumbered at push time — `git fetch` before naming a leg in a commit). Container gotchas in
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast` ~10 min
    warm on a loaded box, suite ~85 s after a ~5.5 min test build, `nextest` needs installing;
    callgrind `--games 6` on the three pools in parallel ~1 min. ⚠ `pkill -f` kills your own
    shell when the pattern is in its command line — kill by pid. Disk fills: delete binaries/dumps.
-2. **Gates at the `(-247)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
+2. **Gates at the `(-248)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
    release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
    three-pool outcomes identical at every leg; a **fresh-seed robustness sweep** (20 primes
    > 101 the `--wide` grid never ran, `all` + `cube`, 400 games, debug-assertions overflow
    build): 0 panics / 0 stuck / 0 assertion fires; every cap is the Beacon of Immortality
    class (ENGINE_BACKLOG's closed stall lead, now with its per-game cost recorded there).
-3. **This run, `(-245)`..`(-247)` (`cube` -2.16 % / `fixed` -1.09 % / `sealed` -1.05 % on top
-   of the concurrent `(-243)`/`(-244)`):** one read paid three times — rank `computed_permanent_hinted`'s
+3. **This run, `(-245)`..`(-248)` (`cube` -2.32 % / `fixed` -1.27 % / `sealed` -1.26 % on top
+   of the concurrent `(-243)`/`(-244)`):** one read paid four times — rank `computed_permanent_hinted`'s
    asks by caller (PERF candidates, "RE-READ AT the `(-245)` tip") and ask what each caller
-   *consumes* of the view; one keyword / three keywords / one card type each went behind a
-   presence gate (`board_keyword_in_scope`, `board_keyword_matching`, `card_type_change_in_scope`)
-   with no view at all. A keyword put behind the lane joins `card_has_gate_keyword`'s union or
+   *consumes* of the view; one keyword / three keywords / one card type / two sibling keyword
+   reads each went behind a presence gate (`board_keyword_in_scope`, `board_keyword_matching`,
+   `card_type_change_in_scope`, `card_keyword_possible`) with no view at all. When a gate is on
+   one of two sibling reads, the other is the row — `cg_edges.py --callees` names the line. A keyword put behind the lane joins `card_has_gate_keyword`'s union or
    the printed leg answers a wrong `false` (the gate's debug audit catches it). Price a scope by
    its `with_frozen_layers` row, not the memo's asks — the first miss pays the gather too.
    History: `(-216)`..`(-244)` are in PERF's Baseline closing states; the device list is there,
    and `(-244)`'s **line annotation of the ordinary `profiling-fast` dump** (PERF "How to
    measure", no lines build) is the instrument that read the top self rows down to floors.
-4. **Perf leads (PERF candidates, top):** the remaining out-of-scope askers in that table —
-   `check_target_legality_with_source` (7.9 M, mostly hits) and `push_ward_triggers_for_targets`
-   (2.7 M, misses) — read what each consumes first; the rest of the table is the freeze
-   design's floor. `blocker_pair_block`, the selector collect and the by-id block-planner
+4. **Perf leads (PERF candidates, top):** the by-caller table is read down to floors — every
+   row left consumes the whole view, so the next device is structural (a gather version, or the
+   probe design); a fresh `--separate-callers=3` re-read of the plain self table at `(-248)` is
+   the way to replenish, not another pass over that table. `blocker_pair_block`, the selector collect and the by-id block-planner
    gates are priced and closed, and so are the top self rows (`(-244)`'s line read: the
    selector collect, `sba_board_scan`, `PrintedList::push`); both grep sweeps are done — do not
    re-run them. What is left beyond those two rows is structural: the gather-version memo and
