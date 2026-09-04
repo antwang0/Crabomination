@@ -11684,6 +11684,36 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-211)` TAKEN, below the bar — two standing-rule reorders in `fire_combat_damage_triggers`: `cube` -0.031 % / `fixed` -0.026 % / `sealed` -0.015 %
+
+```text
+  pool    base (-210)       (-211)          delta
+  fixed     778,079,531     777,877,362   **-0.026 %**
+  cube    2,136,721,312   2,136,059,209   **-0.031 %**
+  sealed  2,149,902,704   2,149,580,101   **-0.015 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  SmallVec::extend under the dispatch  20,560 calls / 1.77 M -> gone
+              fire_combat_damage_triggers self     27.93 M -> 29.04 M (the loop
+                                                   it absorbed; net -0.66 M)
+```
+
+The dealer walk read `c.definition.soulbond_bonus` — a pointer chase
+into the definition — on every permanent before the instance's
+`soulbond_partner`, which is `None` on nearly all of them (`(-116)`'s
+order); and the `by_kind` buckets were a `collect()` into a `SmallVec`,
+whose `Extend` is external iteration (the `(-97)` rule). Both are the
+shape the Standing rules prescribe and both measured, so they stay —
+and the reading is that the definition deref was not the cost: the
+`Arc` is hot. **What is left is diffuse across the function's own
+walks** — the dealer pass, the listener pass behind a lane that a
+`cube` board with any `YourControl` trigger keeps `PRESENT`, the
+cipher walk over exile, `slot()`'s linear search per trigger — 1,400 Ir
+a call over 20,560 calls, 98 % of which push nothing. An early-out
+would have to answer "nothing attached to the dealer" without the walk
+that answers it, and `attached_to` is instance state a battlefield lane
+may not hold; a line profile (`profiling-lines`) is the instrument
+before anything else here.
+
 ### `(-210)` TAKEN — a graveyard lane in front of the combat-damage dispatch's per-kind graveyard walk: `fixed` -0.618 % / `cube` -0.468 % / `sealed` -0.430 %
 
 ```text
@@ -23385,22 +23415,45 @@ Open, priced, largest first:
     death sweep and the requirement walker, whose rows the caller table
     never showed). The lane word is an `AtomicU64` now — fifteen lanes
     free.
-  * **A strip lane — the top open entry (~0.15 % of `cube`).**
-    `ability_strip_in_scope`'s battlefield half is
-    `any(card_can_strip_abilities)`, a memo-bit read per permanent with
-    an attachment gate; `(-206)`'s fast path put it behind the
-    *dispatch* lane, which is a superset (`BOARD_SCAN`) and `PRESENT`
-    on 29 % of `cube` taps, and each of those pays the full walk at
-    516 Ir (6,596 x 516 = 3.4 M). `LANE_STRIP` with predicate
-    `dispatch bits & (STRIP | STRIP_ATTACHED)` is the `(-207)` shape
-    exactly: `ABSENT` settles it, `PRESENT` runs the exact walk. Put it
-    under `ability_strip_in_scope` itself, so the generic activation
-    path (every non-land activation) and the SBA's strip census take
-    it too; `ability_strip_possible` then folds back into it.
+  * **A strip lane — REFUTED as `(-209)`** (`cube` -0.088 % but `fixed`
+    +0.101 % / `sealed` +0.073 %): a lane asked once per activation
+    pays more fills than it saves on the pools whose walk was cheap.
+    `ability_strip_possible` (the dispatch-lane pre-gate) stands.
   * **The `continuous_effects` kind fold — TAKEN as `(-208)`** (small:
-    the list is empty on most bot boards). What it did not take: nothing
-    of size; the freeze-scope `frozen_effects` walks are a separate
-    population and stay.
+    the list is empty on most bot boards).
+  * **The lanes' own fills — `walk_and_store` 22.4 M, 1.05 % of `cube`,
+    72,464 walks across eleven monomorphs, none above 0.18 %** (the
+    `--demangle=no` read at the `(-208)` tip: the death-redirect lane
+    3.9 M under `remove_from_battlefield_to_graveyard_raw` and
+    `graveyard_exile_redirects`, a lane under `dying_snapshot` 3.6 M,
+    the card-type lane 2.8 M — 48 % of its asks miss). Every lane
+    refills on its own first ask after any membership change or
+    definition-epoch bump, so one board change is up to eighteen walks.
+    **The device is a batch fill grouped by memo word**: the lanes
+    whose predicate is `memo word & mask` (dispatch bits feed three,
+    `layer4_scan_bits` two, `type_scan_bits` one, the mana-summary word
+    three) could fill together for one word load per card. It needs a
+    registered table of `(word getter, mask, shift)` in `zone.rs`
+    instead of caller-handed predicates — a structural change to the
+    lane contract, and the `debug_assert!` audit has to survive it.
+    Ceiling ~0.5 %; the `(-209)` lesson says the fills are the cost to
+    beat, so census the per-lane miss rate first.
+  * **`fire_combat_damage_triggers` — 29 M self after `(-210)`/`(-211)`,
+    1,400 Ir a call, 98 % of calls push nothing.** Diffuse across its
+    own walks (Log `(-211)`); a `profiling-lines` read is the
+    instrument.
+  * **`LocalKey::with` 16 M self — READ, not a lead:** 171,042 of its
+    220,720 calls are `computed_permanent_hinted`'s memo-hit lookup
+    inside the thread-local's closure, i.e. the `(-194)` hit path
+    charged to the accessor, not thread-local overhead.
+  * **Gathers — 58,426 a `cube` run, ~137 M inclusive (6.4 %):** 39,206
+    under freeze scopes (`fx_pool::alloc_with`), 11,200 under
+    `compute_permanents`' `&mut` callers, 7,260 under
+    `computed_permanent_hinted`. `(-90)` read them as one per distinct
+    state; a cross-scope memo would need a version over every layer
+    input (counters, attachments, emblems, graveyard counts, life,
+    phase …), which is the dirty-flag design ENGINE_BACKLOG rejected.
+    Not a lead without that.
   * `card_keyword_possible_on(CantActivateTapAbilities)` 22,476 x 223 =
     5.0 M (0.23 %): the definition and instance legs are cheap, the cost
     is `keyword_grant_in_scope`'s `board_grants_keyword` walk — a
