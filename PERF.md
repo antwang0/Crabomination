@@ -7495,6 +7495,25 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-236)` TAKEN — a land-play static lane in front of `can_player_play_land`'s three walks: `fixed` -0.388 % / `sealed` -0.192 % / `cube` -0.172 %
+
+```text
+  pool    base (-235)       (-236)          delta
+  fixed     707,597,733     704,849,254   **-0.388 %**
+  cube    1,970,174,350   1,966,779,439   **-0.172 %**
+  sealed  2,033,517,838   2,029,609,917   **-0.192 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  can_player_play_land 8,198 calls (cube): the Aggressive Mining walk, damping_engine_locks' walk, extra_land_plays_per_turn's walk
+```
+
+The bot asks `can_player_play_land` once per land-play candidate — 8,198
+times a six-game `cube` run — and each ask was three board walks
+(Aggressive Mining / "you can't play lands", Damping Engine, the
+extra-land count). One lane over the four statics; the two helpers gate
+themselves (they have callers of their own) and the walker reads it once.
+`fixed` gains most: its archetypes play a land nearly every turn and the
+bot re-asks on every main-phase decision.
+
 ### `(-235)` TAKEN — a damage-replacement static lane in front of six per-damage-event walks: `fixed` -0.192 % / `sealed` -0.173 % / `cube` -0.165 %
 
 ```text
