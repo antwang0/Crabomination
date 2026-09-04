@@ -2575,8 +2575,10 @@ grid    robustness_grid.sh --pilots on the (-220) tree (the loop guard's
         failures, 24m39s. Re-run on the (-231) tree (the graveyard
         lane's widened predicate, audited by its debug_assert on every
         read, and the member-list walks): ladder 30 / 33,120 games, 0
-        failures; actor 3, 0; pilots 45, 0; 26m22s. No encoder or pool
-        change, no serialized shape change.
+        failures; actor 3, 0; pilots 45, 0; 26m22s. Re-run on the (-238)
+        tree (six presence lanes, each audited by the lane debug_assert
+        on every read): ladder 30 / 33,120, 0; actor 3, 0; pilots 45, 0;
+        25m14s. No encoder or pool change, no serialized shape change.
 wall    not re-taken: -0.68 % Ir is inside bench_ab.py's noise band
         (the standing rule); the Ir is the number.
 ```
@@ -7508,6 +7510,28 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-239)` TAKEN — an ETB-counter static lane in front of `chosen_type_etb_counter_specs` and the cast-rider walk: `fixed` -0.198 % / `sealed` -0.183 % / `cube` -0.156 %
+
+```text
+  pool    base (-238)       (-239)          delta
+  fixed     699,633,465     698,244,755   **-0.198 %**
+  cube    1,953,713,803   1,950,673,721   **-0.156 %**
+  sealed  2,016,346,658   2,012,653,333   **-0.183 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  chosen_type_etb_counter_specs 4,918 calls (cube), the ExtraEtbCountersForCreatureCasts walk per resolving creature spell
+```
+
+The seventh presence lane, over eight `StaticEffect`s (Metallic Mimic,
+Oath of Gideon, Arlinn, Giada, Master Biomancer, Muzzio's Preparations,
+the two type-keyed enters-with-counter forms, and the cast rider). The
+walker reaches `all_static_sources` — the battlefield plus the active
+command-zone cards — so its gate is the lane **and** "no active
+command-zone card", the second term being a walk of two usually-empty
+lists; on a clear board the function returns only the turn-scoped
+Combine Guildmage grant and skips its `creature_types` clone. **A lane
+gates a walk over the zone it memoizes; a walker over two zones needs
+a term per zone.**
 
 ### `(-238)` TAKEN — a hand-size static lane in front of `effective_max_hand_size`'s four walks: `fixed` -0.257 % / `cube` -0.140 % / `sealed` -0.134 %
 
