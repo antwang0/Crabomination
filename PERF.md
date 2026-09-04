@@ -11684,6 +11684,45 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-206)` RULES FIX, priced — a stripped permanent's printed mana ability no longer activates (CR 305.7 / 613.1f): `cube` +0.197 % / `sealed` +0.054 % / `fixed` +0.048 %
+
+```text
+  pool    base (-205)       (-206)          delta
+  fixed     789,290,614     789,673,260   **+0.048 %**
+  cube    2,163,533,978   2,167,790,574   **+0.197 %**
+  sealed  2,172,992,444   2,174,162,818   **+0.054 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube by row:  ability_strip_possible   +22,476 calls x 187 Ir = 4.20 M (new)
+                  of which ability_strip_in_scope  2,872 x 428 = 1.23 M (the
+                  dispatch lane PRESENT or unknown — the full walk)
+                  and 19,604 x 151 = 2.97 M: the lane read plus
+                  ability_strip_off_battlefield's continuous_effects walk
+```
+
+Not a perf change — the `(-204)` audit found `activate_ability_inner`'s
+printed-index gate was `stripped && !is_mana_ability(..)` ("no catalog
+card stripping abilities has a mana ability of interest"), so a
+Blood-Mooned Temple of Epiphany tapped for `{U}` by direct activation
+while the auto-tapper's source table refused it. The gate now refuses
+on `stripped` for the printed leg; the granted and intrinsic legs are
+unchanged, which is exactly the tapper's rule (ENGINE_BACKLOG has the
+entry; `modern::decks_16_17_misc` the two regression tests). The bot
+never took that path, so no trace moved.
+
+**The cost is the fast path's, and it is priced so the next leg can
+take it back.** `activate_plain_land_tap`'s board half needs "no strip
+in scope" now, and the generic path's `ability_strip_in_scope` is a
+428-Ir walk. `ability_strip_possible` puts the battlefield half behind
+the dispatch lane (`BOARD_SCAN` carries both strip bits, so `ABSENT`
+settles it) and pays only `ability_strip_off_battlefield` on 87 % of
+taps — and that is still 151 Ir, because it walks `continuous_effects`
+for a `RemoveAllAbilities` on every ask. The same walk sits inside
+`card_type_change_unscoped` (350 Ir a tap, `(-204)`'s table),
+`land_type_change_in_scope`, `creature_type_change_in_scope`,
+`keyword_grant_in_scope` and `pt_reduction_in_scope`: **a fold of the
+effect list's modification kinds, held beside the list and recomputed
+after a write, is one device for all six** — candidates, top.
+
 ### `(-205)` TAKEN — the `AddMana` arm's Contamination / Pulse walk behind the mana-static lane: `cube` -0.156 % / `sealed` -0.114 % / `fixed` -0.032 %
 
 ```text

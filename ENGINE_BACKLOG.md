@@ -932,25 +932,23 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   carries a `SelfSource` trigger on a kind nothing admits, with the fifteen
   kinds dispatched by a *push* site listed with their sites.
 
-- 🔴 **A stripped permanent's *printed* mana ability still activates
-  (CR 113.10b / 613.1f).** `activate_ability_inner`'s printed-index gate is
-  `stripped && !is_mana_ability(..)`, with the comment "no catalog card
-  stripping abilities has a mana ability of interest right now" — Blood Moon
-  on a Temple of Epiphany (printed `{T}: Add {U}`) and Turn to Frog on a
-  Llanowar Elves are both in the catalog. Only the *intrinsic* basic-land
-  ability is meant to survive a strip (CR 305.7 gives a Mountain its own),
-  and that one lives at an index past `printed_count`. The auto-tapper's
-  source table gets it right (`lost_all_abilities` drops the printed
-  list, the `modern::decks_16_17_misc` Blood Moon tests pin it), so the
-  bot never exploits it; the direct `GameAction::ActivateAbility` path
-  (UI seat, scripted tests) does. Found by the `(-204)` audit
-  (`core_rules::land_tap_fast_path`, the "blood moon + temple" board —
-  both paths agree, which is the point of that test, and both are wrong).
-  Fix: drop the `!is_mana_ability` carve-out for the printed and granted
-  legs (keep the intrinsic leg), add `ability_strip_in_scope` to
-  `activate_plain_land_tap`'s board reads so the fast path declines a
-  stripped land, re-bless golden traces only if one moves, and price the
-  extra presence read in PERF.
+- ✅ **A stripped permanent's *printed* mana ability still activated
+  (CR 305.7 / 613.1f) — FIXED at `(-206)`.** `activate_ability_inner`'s
+  printed-index gate was `stripped && !is_mana_ability(..)`, with the
+  comment "no catalog card stripping abilities has a mana ability of
+  interest right now" — Blood Moon on a Temple of Epiphany and Turn to Frog
+  on a Llanowar Elves are both in the catalog. The auto-tapper's source
+  table already dropped the printed list on `lost_all_abilities` (and keeps
+  granted mana abilities), so the bot never exploited it; the direct
+  `GameAction::ActivateAbility` path (UI seat, scripted tests) did. Found
+  by the `(-204)` audit (`core_rules::land_tap_fast_path`'s Blood Moon
+  board, on which both paths agreed and both were wrong). The printed leg
+  now refuses on `stripped` outright; the granted and intrinsic legs are
+  unchanged, matching the tapper. Regression tests:
+  `modern::decks_16_17_misc::blood_moon_refuses_a_nonbasics_printed_mana_
+  ability_on_activation` and `::turn_to_frog_takes_a_mana_dorks_mana_
+  ability`. The land-tap fast path gained `ability_strip_possible` (the
+  strip presence read behind the dispatch lane); PERF prices it.
 
 **P2 has no other open correctness entries.**
 
