@@ -44,7 +44,9 @@ sixty-seventh pass, so don't re-take that.
    (`(-208)`); membership writes demote only the lanes they can change (`(-212)`) and then answer them off
    the one card they moved (`(-213)`, the fills down 87 %); the member lists kept exact through
    them (`(-214)`), and the dispatch scan visiting only its members (`(-215)`, `cube` only). **A lane asked less often than the board changes loses to its own fills**
-   (`(-209)`) — census the miss rate before the next lane.
+   (`(-209)`) — census the miss rate before the next lane. ⚠ **The suite never builds a 64-card
+   board: a list/lane change is done only after `robustness_grid.sh` (the closing grid found
+   `(-214)`'s shift-by-64 in two default cells).**
 4. **Perf leads (candidates, top):** the lane fills are at their floor (1.9 M; the epoch is
    0-6 rewrites a game, not the 8 k `card.rs` says); `fire_combat_damage_triggers`' 1.4 % self (98 % of
    calls push nothing — a `profiling-lines` read first); the resolver under the fast tap

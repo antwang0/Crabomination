@@ -2528,10 +2528,10 @@ byte-identical, golden traces unmoved), one rules fix priced as a cost
 (`(-206)`), one refutation reverted in the same hour (`(-209)`).
 
 ```text
-  pool     base 62a4e20b     tip (-215)        delta
-  fixed      801,539,915      763,711,694   **-4.719 %**
-  cube     2,200,107,698    2,090,149,281   **-4.998 %**
-  sealed   2,211,363,961    2,120,419,985   **-4.113 %**
+  pool     base 62a4e20b     tip (-215)+fix    delta
+  fixed      801,539,915      763,717,868   **-4.718 %**
+  cube     2,200,107,698    2,090,168,791   **-4.997 %**
+  sealed   2,211,363,961    2,120,435,808   **-4.112 %**
 
   leg      fixed      cube      sealed    what
   (-204)  -1.496 %  -1.509 %  -1.623 %   the printed land tap settled by inspection
@@ -2546,6 +2546,7 @@ byte-identical, golden traces unmoved), one rules fix priced as a cost
   (-213)  -1.158 %  -0.847 %  -0.887 %   a membership write answers each lane off the one card it moved
   (-214)  -0.235 %  -0.171 %  -0.148 %   the member lists kept exact through membership writes
   (-215)  +0.003 %  -0.678 %  +0.007 %   the dispatch scan visits its member list
+  fix     +0.001 %  +0.001 %  +0.001 %   (-214)'s index-63 removal shift (the closing grid's find)
 ```
 
 ```text
@@ -2566,13 +2567,20 @@ grid    robustness_grid.sh --wide --pilots, built between the (-211) and
         2 cells, 0 failures; pilots 45 cells, 0 failures. Every lane
         audit, the fold audit and the fast path's debug tally ran under
         debug-assertions across it. The default-size grid with --pilots
-        re-run on the (-215) tree: see below. No encoder or pool change;
-        ContinuousEffects and the lane word are not serialized.
+        on the (-215) tree found (-214)'s index-63 shift in two cells
+        (cube 23, sos 11); re-run on the fixed tree: ladder 30 cells /
+        33,120 games, 0 failures, cap 0 / stuck 0 / draw 0; actor 3
+        cells, 0 failures; pilots 45 cells, 0 failures. No encoder or
+        pool change; ContinuousEffects and the lane word are not
+        serialized.
 wall    bench_ab.py, 24 pairs, the 62a4e20b binary (rebuilt in a worktree)
-        vs the (-211) tip, profiling-fast, fixed: **+1.87 % median
-        games/s** (mean +2.02 %, per-pair sd 3.57; A median 317.2, B
-        325.5) for -2.95 % Ir — the (-198) ratio again (+1.89 % for
-        -2.93 %).
+        vs the tip, profiling-fast, fixed. At the (-211) tip: **+1.87 %
+        median games/s** (mean +2.02 %, per-pair sd 3.57; A 317.2, B
+        325.5) for -2.95 % Ir — the (-198) ratio again. At the (-215)
+        tip: **+5.16 % median games/s** (mean +5.23 %, per-pair sd 6.20;
+        A median 380.2, B 399.7) for -4.72 % Ir — the lane-write legs
+        (-212)..(-215) read above their Ir share, which fits a device
+        that removes cache-missing board walks rather than arithmetic.
 ```
 
 ### The cheap-clone, held-views and death-lane legs — closing state at `5b50323f`
@@ -11792,6 +11800,18 @@ predicate each list's audit recomputes with (`card_has_any_grant_bits`,
 this saves were inline in the dispatcher (its self row moved) and in
 `board_grants_keyword`; smaller than `(-213)` because the lists were
 only ever asked by two callers.
+
+**Fixed after the closing grid found it:** the removal shift was
+`(bits >> (index + 1)) << index`, which for the card at index 63 of a
+64-card board shifts a `u64` by 64 — a panic under overflow checks and
+a silently wrong list in release. Two default-size grid cells (`cube`
+seed 23, `sos` seed 11) hit it inside `remove_from_battlefield_to_
+graveyard_raw`; the suite never builds a 64-card board, and the
+three-pool runs never reached one. `checked_shr(..).unwrap_or(0)` is
+the fix and `zone::tests::membership_writes_demote_only_the_lanes_they_
+can_change` now removes index 63 of a full list. **A grid cell is the
+only audit a 64-card board gets — run the grid before calling a lane
+change done.**
 
 ### `(-213)` TAKEN — a membership write answers each lane off the one card it moved: `fixed` -1.158 % / `sealed` -0.887 % / `cube` -0.847 %
 
@@ -23527,10 +23547,10 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at the `(-215)` tip (`(-204)`..`(-215)`, three-pool Ir against
-the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 -> 763,711,694
-(-4.719 %), `cube` 2,200,107,698 -> 2,090,149,281 (-4.998 %), `sealed`
-2,211,363,961 -> 2,120,419,985 (-4.113 %).** Before it, `(-199)`..
+**State at the `(-215)` tip plus its fix (`(-204)`..`(-215)`, three-pool
+Ir against the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 ->
+763,717,868 (-4.718 %), `cube` 2,200,107,698 -> 2,090,168,791
+(-4.997 %), `sealed` 2,211,363,961 -> 2,120,435,808 (-4.112 %).** Before it, `(-199)`..
 `(-203)` against `2003d1cf`: `fixed` -1.437 %, `cube` -1.627 %, `sealed`
 -1.141 %; and `(-194)`..`(-198)` against
 `0e9bdaa4`: `fixed` -2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The
