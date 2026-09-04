@@ -7281,7 +7281,8 @@ impl std::ops::Deref for Definition {
 /// built on one thread and played on another, and a per-thread counter would
 /// then compare against a sequence the memo was never stamped from. A rewrite
 /// on another thread only ever costs an extra recompute, never a wrong answer,
-/// and at ~8 k rewrites a six-game run the over-invalidation is noise.
+/// and a rewrite is rare — a census at PERF `(-213)` counted 0-6 per whole
+/// bot game — so the over-invalidation is noise.
 static DEFINITION_EPOCH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 /// The current value of [`DEFINITION_EPOCH`]. A memo stamped with this value

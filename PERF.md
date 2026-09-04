@@ -2556,11 +2556,18 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
         at every leg
 release the release-fast typecheck gate (debug-assertions off): every
         leg's profiling-fast build is that profile, all clean
---bench profiling-fast at the (-211) tip: **195,806 decisions / 27.49
-        turns / 611.9 per game / 0 stalls** — byte-identical to 2003d1cf;
-        determinism ok (all pairs split); peak_rss 20.2 MiB
-grid    not re-run: no encoder or pool change. ContinuousEffects and the
-        lane word are #[serde]-transparent / not serialized.
+--bench profiling-fast at the (-215) tip: **195,806 decisions / 27.49
+        turns / 611.9 per game / 0 stalls** — byte-identical to 2003d1cf
+        at every leg; determinism ok (all pairs split); peak_rss 20.6 MiB
+grid    robustness_grid.sh --wide --pilots, built between the (-211) and
+        (-213) edits: ladder 52 cells / 301,600 games, 0 cell failures,
+        undecided cap 4 (the Beacon of Immortality board, seeds 53/73 —
+        ENGINE_BACKLOG's closed stall lead) / stuck 0 / draw 12; actor
+        2 cells, 0 failures; pilots 45 cells, 0 failures. Every lane
+        audit, the fold audit and the fast path's debug tally ran under
+        debug-assertions across it. The default-size grid with --pilots
+        re-run on the (-215) tree: see below. No encoder or pool change;
+        ContinuousEffects and the lane word are not serialized.
 wall    bench_ab.py, 24 pairs, the 62a4e20b binary (rebuilt in a worktree)
         vs the (-211) tip, profiling-fast, fixed: **+1.87 % median
         games/s** (mean +2.02 %, per-pair sd 3.57; A median 317.2, B
@@ -23642,17 +23649,25 @@ Open, priced, largest first:
     5.0 M (0.23 %): the definition and instance legs are cheap, the cost
     is `keyword_grant_in_scope`'s `board_grants_keyword` walk — a
     per-board "can anything grant a keyword" bit is the same lane shape.
-  * `board_has_mana_static` 25,166 x 106 = 2.7 M: a lane *hit* should
-    be a word load — read `mana_static_lane` for why it is not.
+  * `board_has_mana_static` 25,166 x 106 = 2.7 M — the 106 were its
+    inline fills after every membership change; `(-213)` took them
+    (4.0 M -> 1.5 M at 47 k asks).
   * `find_by_id_mut` 24,388 x 220 = 5.4 M — the probe clone's CoW
     unshare of the tapped permanent; structural.
   * The two event pushes 4.2 M — the first push's allocation; a
     `with_capacity` moves it, nothing removes it.
-* **The generic path lets a stripped permanent's printed mana ability
-  through** (`stripped && !is_mana_ability`, CR 113.10b) — a rules
-  gap the `(-204)` audit found; TODO carries it. The fix adds
-  `ability_strip_in_scope` (a presence walk) to the fast path's board
-  half; price it when it lands.
+* **The stripped printed mana ability — FIXED as `(-206)`** (CR 305.7
+  / 613.1f; the fast path's strip read is `ability_strip_possible`,
+  priced there and in the `(-209)` refutation).
+* **The dispatch scan's walk — TAKEN as `(-215)`** (`cube` -0.678 %,
+  flat elsewhere: the lane is a member list now). **`sba_board_scan`
+  25 M (1.17 % of `cube`), READ and left:** one walk per SBA sweep,
+  but half of what it folds is *instance* state (`flipped`,
+  `controller != owner`, `attached_to`, `bestowed`, `soulbond_partner`,
+  `sector`, the counter bag) that no definition-only lane may hold, so
+  the walk stays and a member list would only skip the memo-word read
+  on the cards that carry no `sba_scan_bits` — a fraction of ~1,200 Ir
+  a sweep. Not a lane.
 * **`mana_source_table`'s other 58 % of rows — TAKEN as `(-199)`** (Log:
   `cube` -0.644 % / `fixed` -0.561 % / `sealed` -0.354 %). The reason
   they missed was a grant static, an Equipment or a Soulbond pair
