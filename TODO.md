@@ -25,8 +25,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-219)` is the last claimed,
-   `(-220)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-220)` is the last claimed,
+   `(-221)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
    suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
    the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
@@ -38,7 +38,10 @@ sixty-seventh pass, so don't re-take that.
    — the target's presence gate, the per-death registries out of the cold group (first cut
    refuted: **an unshare is paid by the first cold write of the action, not by the field**),
    two walkers behind existing/new zone lanes, and the CR 732.3 watch behind the land-tap fast
-   path (**price every caller-side wrapper of what a fast path shortcuts**).
+   path (**price every caller-side wrapper of what a fast path shortcuts**). Then `(-220)`, the
+   same watch's other half from a concurrent session: the fingerprint deferred to the key
+   repeat that reads it (`cube` -0.16 % on top of `(-219)`; -1.13 % on its own — **price a memo
+   by what compares against it, not by what computes it**). `--pilots` grid re-run on it: see 2.
 4. **Perf leads (candidates, "RE-READ AT the (-219) tip"):** thin. `fire_combat_damage_triggers`'
    1,400 Ir a call wants a `profiling-lines` read first; `computed_permanent_hinted`'s hit-path
    scan (~10 M, marginal); everything else read is a floor or the bot's search count.

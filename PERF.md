@@ -11810,6 +11810,44 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-220)` TAKEN — the CR 732.3 announcement watch fingerprints only on a key repeat: `cube` -0.163 % / `sealed` -0.076 % / `fixed` -0.019 %
+
+```text
+  pool    base (-219)       (-220)          delta
+  fixed     745,162,383     745,019,299   **-0.019 %**
+  cube    2,035,552,660   2,032,242,422   **-0.163 %**
+  sealed  2,085,024,159   2,083,448,867   **-0.076 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  fingerprint <- activate_ability   cube 3,232 -> 62   sealed 2,192 -> 362   fixed 122 -> 8
+  the resolve-side watch (3,488 / 808 / 7,384 calls) untouched
+  census, (-217) tip, six games, consecutive same-key announcements / all announcements:
+              cube 220 / 26,000 (0.85 %)   fixed 198 / 8,000 (2.5 %)   sealed 520 / 28,000 (1.9 %)
+```
+
+The other half of the `(-219)` row, built concurrently against the
+`(-217)` tip where it read **`cube` -1.130 % / `sealed` -0.974 % /
+`fixed` -0.919 %** on its own — `(-219)` landed first and took the
+land-tap share, so this is what is left of the announcement side. The
+watch compares a fingerprint against the previous announcement's *only
+when that one was the same ability*, and a census says the key repeats on
+0.9-2.5 % of announcements: a different key now stores the key with
+`n == 0` ("pending") and no fingerprint, and the first repeat computes
+one and counts the pending announcement as unchanged. A genuine loop is
+refused at the same announcement as before (the 50-then-refuse test is
+byte-for-byte); the one case that moves is a repeat whose first two
+announcements saw different states, refused one announcement earlier.
+Same serde shape; the `(-219)` reset is the initial state.
+
+**The rule: price a memo by what compares against it, not by what
+computes it.** The fingerprint was computed on every announcement and
+read on one in fifty; the candidates entry priced the walk (900 Ir a
+call, "no device seen") and refuted a cheaper *policy*, when the device
+was to defer the computation to the read. What is left of `fingerprint`
+is the CR 104.4b resolution watch — 3.2 M on `cube`, 5.8 M on `sealed`
+(0.28 %) — which compares every trigger resolution against the previous
+one, so consecutive trigger resolutions are the common case there and
+the same deferral does not apply.
+
 ### `(-219)` TAKEN — the CR 732.3 announcement watch behind the land-tap fast path: `cube` -1.004 % / `fixed` -0.951 % / `sealed` -0.938 %
 
 ```text
@@ -23836,9 +23874,11 @@ was not taken, so nobody re-prices it:**
   (534 Ir a call with the act-grant lane already in front of its
   battlefield leg) and `grants_nothing_slow` 36,752 / 4.2 M are the
   `(-199)` device at its floor.
-* **`fingerprint` — 6,720 calls / 6.4 M left** after `(-219)`: 3,488
-  under `resolve_top_of_stack` (the CR 104.4b watch, one per trigger
-  resolution) and the non-land activations. Floor.
+* **`fingerprint` — 3,550 calls / 3.2 M left** after `(-219)` + `(-220)`
+  (the non-land activations went with `(-220)`, deferred to the key
+  repeat that reads them): all but 62 under `resolve_top_of_stack`, the
+  CR 104.4b watch, one per trigger resolution against the previous one —
+  consecutive by nature, so no deferral. Floor.
 * **The CoW unshares are closed as a class after `(-217)`:** no
   `make_mut_slow` caller above 2,000 Ir a call has more than 732 calls;
   the ~900-Ir ones are `PlayerData` / zone unshares, the probe design.
@@ -24067,13 +24107,11 @@ Open, priced, largest first:
   `damage_prevented_by_protection` calls (5.0 M) inside scopes that
   already hold `computed_of`; `protection_prevents_views` is the form.
   The SBA lethal-damage walk's 5,896 (3.1 M) are the same shape.
-* **`fingerprint` — 29,196 calls x 900 Ir (26.3 M, 1.16 %),** 23,666 of
-  them the CR 732.3 announcement watch under `activate_ability`. The
-  per-permanent cost is one `mix` plus four loads; `CounterBag` is a
-  `Vec`, so its `values().sum()` is already cheap on empty. No device
-  seen; a cheaper *policy* (watch only activations whose cost cannot
-  change the digest) is refuted by the `{T}: untap` loop, which the
-  watch catches through the tapped bit across two announcements.
+* **`fingerprint` — TAKEN as `(-219)` + `(-220)`** (the land taps
+  behind the fast path, then the rest deferred to the key repeat that
+  reads it; together `cube` -1.17 % / `fixed` -0.97 % / `sealed`
+  -1.01 %). Read at the `(-219)` tip above: what is left is the CR
+  104.4b resolution watch. Closed.
 
 Refuted this run, no build spent or one: the kind-fold gate in
 `fire_step_triggers` (`(-196)`, +0.2 M on `cube` — a one-element loop
