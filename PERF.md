@@ -287,6 +287,15 @@ RUST_MIN_STACK=33554432 valgrind --tool=callgrind --dump-instr=yes \
 python3 scripts/cg_alloc_sites.py cg.lines.out \
   target-lines/profiling-lines/bot_ladder declare_blockers
 #
+# BUT A FUNCTION'S OWN LINES NEED NO LINES BUILD. `profiling-fast` has
+# `debug = true`, so the ordinary three-pool dump already annotates the
+# outermost frame's source: `callgrind_annotate --auto=yes --context=0
+# cg.cube.<tag>.out crabomination/src/game/mod.rs` prints every costed line
+# (self on plain lines, inclusive on the `=>` call edges), and a 20-line
+# parser ranking them inside a line range (the scratchpad's `annlines.py`,
+# `(-244)`) is the whole instrument. What it cannot do is name an *inlined*
+# callee's line — that cost sits on the callee's file (`vec/mod.rs:*`), and
+# only the packed-DWARF build above resolves it (`(-158)`, `(-243)`).
 # ⚠ AND SPLIT THE GROWTHS BY ALLOCATOR ENTRY BEFORE PICKING A TOOL.
 # `--separate-callers=2` puts `malloc` vs `realloc` beside each grow context:
 # a `realloc` row is a growth *ladder* and a `reserve` flattens it; a `malloc`
@@ -2520,9 +2529,9 @@ a box whose state moves.
 
 ## Baseline
 
-### The watch-deferral, member-list, block-tax, event-buffer and presence-lane legs — closing state at the `(-243)` tip
+### The watch-deferral, member-list, block-tax, event-buffer and presence-lane legs — closing state at the `(-244)` tip
 
-Twenty engine commits on top of the `(-219)` tip `52b9a743`, each
+Twenty-one engine commits on top of the `(-219)` tip `52b9a743`, each
 behaviour-preserving (three-pool outcomes identical, `--bench` counters
 identical, golden traces unmoved), from the second of two concurrent
 sessions; the other session's `(-221)` refutation sits between them, and
@@ -2531,10 +2540,10 @@ in the hour they were built. (At the `(-241)` tip, where the wall row
 below was taken: `fixed` -6.503 %, `cube` -4.619 %, `sealed` -3.730 %.)
 
 ```text
-  pool     base (-219)      tip (-243)       delta
-  fixed      745,162,383      694,512,156   **-6.797 %**
-  cube     2,035,552,660    1,935,264,256   **-4.927 %**
-  sealed   2,085,024,159    2,000,872,501   **-4.036 %**
+  pool     base (-219)      tip (-244)       delta
+  fixed      745,162,383      690,547,383   **-7.329 %**
+  cube     2,035,552,660    1,928,746,090   **-5.247 %**
+  sealed   2,085,024,159    1,992,138,486   **-4.455 %**
 
   leg      fixed      cube      sealed    what
   (-220)  -0.019 %  -0.163 %  -0.076 %   the CR 732.3 watch fingerprints only on a key repeat
@@ -2561,6 +2570,7 @@ below was taken: `fixed` -6.503 %, `cube` -4.619 %, `sealed` -3.730 %.)
   (-241)  -0.086 %  -0.154 %  -0.089 %   a block-tax lane in front of block_tax_for's per-blocker walk
   (-242)  +1.449 %  +0.711 %  +1.160 %   the dispatcher's grant list inline (SmallVec) with a borrowed filter — REFUTED, reverted
   (-243)  -0.315 %  -0.323 %  -0.318 %   the auto-tapper's activations write into its event buffer instead of returning a Vec each
+  (-244)  -0.571 %  -0.337 %  -0.437 %   the dispatcher's empty batch skips the trigger push, the empty drain and their Vec drops
 ```
 
 ```text
@@ -2584,7 +2594,12 @@ grid    robustness_grid.sh --pilots on the (-220) tree (the loop guard's
         failures; actor 3, 0; pilots 45, 0; 26m22s. Re-run on the (-238)
         tree (six presence lanes, each audited by the lane debug_assert
         on every read): ladder 30 / 33,120, 0; actor 3, 0; pilots 45, 0;
-        25m14s. No encoder or pool change, no serialized shape change.
+        25m14s. Re-run on the (-243) tree (the activation path's
+        into-form, whose Err path truncates to a mark): ladder 30 /
+        33,120, 0; actor 3, 0; pilots 45, 0 (cold build, ~65 min with
+        two A/B builds beside it). (-244) reorders an empty-batch tail
+        and is covered by the suite, the traces and the outcome diff.
+        No encoder or pool change, no serialized shape change.
 wall    bench_ab.py, 24 pairs, the 52b9a743 binary (rebuilt in a
         worktree, 17 min cold) vs the (-241) tip, both profiling-fast
         with default features (mimalloc; 294 `mi_` symbols in each), load
@@ -7530,6 +7545,41 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-244)` TAKEN — the dispatcher's empty batch skips the trigger push, the empty drain and their `Vec` drops: `fixed` -0.571 % / `sealed` -0.437 % / `cube` -0.337 %
+
+```text
+  pool    base (-243)       (-244)          delta
+  fixed     694,512,156     690,547,383   **-0.571 %**
+  cube    1,935,264,256   1,928,746,090   **-0.337 %**
+  sealed  2,000,872,501   1,992,138,486   **-0.437 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  push_ordered_trigger_candidates 77,126 calls / 12.4 M inclusive (cube) carrying 806 candidates in all;
+    per empty call: its own 60 Ir, drain_trigger_queue 34 Ir + an out-of-line Vec::drop 14 Ir, the slice drop 13 Ir
+  cube self deltas: push_ordered_trigger_candidates -4.45 M  drain_trigger_queue -1.83 M
+                    drop_in_place<[TriggerCandidate]> -0.99 M  dispatch_triggers_for_events +0.76 M
+  first reading, #[inline] on the flag-flip helper: cube -0.265 % / fixed -0.450 % / sealed -0.340 % — the
+    helper stayed out of line, 77 k x 18 Ir = 1.41 M; #[inline(always)] removed the row whole (+16 k inlined)
+```
+
+Found without a build: `profiling-fast` carries line tables, so
+`callgrind_annotate --auto=yes <dump> mod.rs` (the scratchpad's
+`annlines.py` ranks the result by line) puts 12.4 M on the dispatcher's
+one `push_ordered_trigger_candidates` call, and that function's callee
+table shows 806 `Effect::clone`s under 77,126 calls — **97.5 % of the
+calls carried nothing and paid the function's prologue, an empty drain
+and two `Vec` drops, ~120 Ir each.** The dispatcher's own comment said
+the call was kept on the empty batch for the two per-batch jobs the
+function owns (the life-gain flag flip, the `died_card_snapshots`
+clear). Those are now a shared `#[inline(always)]` helper and the
+`clear`, run in the dispatcher on the empty path, in the same order as
+the full path (flags, drain, clear) minus the drain that had nothing to
+drain. `fixed` gains most: more dispatches per Ir. **When a function's
+callee table shows N calls and its work rows show N/100, the N are its
+prologue — count the candidates against the calls before calling a row
+a floor.** The second reading is the `(-229)` rule again: a helper whose
+body is one `is_empty` behind a cold group's `Deref` is a coin the
+inliner flipped tails; `inline(always)` pins it.
 
 ### `(-243)` TAKEN — the auto-tapper's activations write into its event buffer instead of returning a `Vec` each: `cube` -0.323 % / `sealed` -0.318 % / `fixed` -0.315 %
 
@@ -20332,6 +20382,18 @@ with their ceilings, then the floors, so nobody re-reads them.**
   to build over 227 k views, against ≤ 9 M saved — net ≤ 0.2 % `cube`
   and nothing on `fixed`. Not taken; a floor unless the planner's pair
   count grows.
+* **TAKEN as `(-244)` — not from these tables but from the line
+  annotation of the (-243) dump:** the dispatcher's one
+  `push_ordered_trigger_candidates` call, 77,126 times for 806
+  candidates, ~120 Ir of prologue, empty drain and `Vec` drops per empty
+  batch (`fixed` -0.571 %, `cube` -0.337 %). The same read on the other
+  top self rows: `dispatch_triggers_for_events`' 27 M own-line self is
+  spread over 200 lines with nothing above 1.3 M (`match ev`), and
+  `gather_continuous_effects_inner`'s largest own edge is the attached
+  bonus scale count (`equipped_bonus.scale`, a board walk with a
+  requirement per card, 9.6 M on `cube`) — per gather by nature, the
+  gather-version memo again. `dispatch_board_scan` is 103 Ir a dispatch,
+  `push_ordered_trigger_candidates`' non-empty remainder 0.19 M.
 * **Floors, so nobody re-prices them:** the allocator's ~195 M (10 %) is
   the sum of the contexts above, most of it the probe design — a
   `GameState::clone` per probe (24,764; 13.8 M self) followed by the

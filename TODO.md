@@ -28,17 +28,17 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-243)` is the last claimed,
-   `(-244)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-244)` is the last claimed,
+   `(-245)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
    suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
    the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
    point) — `rm -rf target/debug/incremental`, delete superseded binaries and dumps as you go.
-2. **Gates at the `(-243)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
+2. **Gates at the `(-244)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
    release-fast typecheck, `--bench` counters identical to `2003d1cf` at every leg (release,
-   `CRAB_THREAD_CHECK=1` at `(-243)`), golden traces 7/7, three-pool outcomes identical at every
-   leg, `--pilots` grid green on the `(-238)` tree; a grid on the `(-243)` tree was started at
-   the end of the run — its result is in PERF's closing state if it finished, else re-run it.
+   `CRAB_THREAD_CHECK=1` at `(-243)`/`(-244)`), golden traces 7/7, three-pool outcomes identical
+   at every leg, `--pilots` grid green on the `(-238)` and `(-243)` trees (see PERF's closing
+   state for the `(-243)` grid's figures; `(-244)` only reorders an empty-batch tail).
 3. **Two sessions ran concurrently (Log `(-216)`..`(-241)`; `(-221)`, `(-227)`, `(-232)`
    refuted): session A `cube` -2.61 % / `fixed` -2.43 % / `sealed` -1.67 %, session B on top of
    it `fixed` -6.50 % / `cube` -4.62 % / `sealed` -3.73 %.** Rules per leg in PERF's newest
