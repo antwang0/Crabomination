@@ -2624,6 +2624,9 @@ impl crate::game::GameState {
     /// so two Explorations stack to "three lands per turn."
     pub fn extra_land_plays_per_turn(&self, player: usize) -> u32 {
         use crate::effect::StaticEffect;
+        if !self.battlefield.has_land_play_static() {
+            return 0;
+        }
         self.battlefield
             .iter()
             .filter(|c| c.controller == player)
@@ -2649,8 +2652,11 @@ impl crate::game::GameState {
     /// turn. Compares lands already played to the active per-turn cap
     /// (which honors `ExtraLandPerTurn` static effects).
     pub fn can_player_play_land(&self, player: usize) -> bool {
+        // The lane in front of this walk and the two in the helpers below
+        // (PERF `(-236)`): asked per land-play candidate by the bot.
+        let land_statics = self.battlefield.has_land_play_static();
         // CR 305.1 — "You can't play lands" (Aggressive Mining) is absolute.
-        if self.battlefield.iter().any(|c| {
+        if land_statics && self.battlefield.iter().any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::NoPlayerCanPlayLands)
                     || (c.controller == player
@@ -2681,13 +2687,14 @@ impl crate::game::GameState {
         // walks and the Engine is on no board in a normal game, so asking
         // "who is ahead" before "is there an Engine" pays for a question
         // with no consumer. `&&` is pure on both sides; same answer.
-        let engine = self.battlefield.iter().any(|c| {
-            c.definition
-                .static_abilities
-                .iter()
-                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::MostPermanentsCantPlay))
-                && !self.players[player].statics_ignored_this_turn.contains(&c.id)
-        });
+        let engine = self.battlefield.has_land_play_static()
+            && self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::MostPermanentsCantPlay))
+                    && !self.players[player].statics_ignored_this_turn.contains(&c.id)
+            });
         if !engine {
             return false;
         }

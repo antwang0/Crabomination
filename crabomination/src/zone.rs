@@ -484,11 +484,16 @@ const LANE_ETB_STATIC: u32 = 36;
 /// `damage_redirect_target` walk the board for on every damage event (PERF
 /// `(-235)`). See [`card_has_damage_replacement_static`].
 const LANE_DAMAGE_STATIC: u32 = 38;
+/// Any permanent's definition carries a static that locks or extends land
+/// plays — the four `StaticEffect`s `can_player_play_land` and its helpers
+/// walk the board for per land-play question (PERF `(-236)`). See
+/// [`card_has_land_play_static`].
+const LANE_LAND_PLAY_STATIC: u32 = 40;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 20;
+const LANE_COUNT: usize = 21;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -524,6 +529,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_draw_static),                          // LANE_DRAW_STATIC
     Some(card_has_etb_static),                           // LANE_ETB_STATIC
     Some(card_has_damage_replacement_static),         // LANE_DAMAGE_STATIC
+    Some(card_has_land_play_static),                  // LANE_LAND_PLAY_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -646,6 +652,22 @@ fn card_has_damage_replacement_static(c: &CardInstance) -> bool {
                 | S::ReplaceDamageToYouWithGraveyardExile
                 | S::RedirectControllerDamageToEquippedCreature
                 | S::RedirectDamageToSelf
+        )
+    })
+}
+
+/// Does this permanent's definition carry a static that locks or extends
+/// land plays — Aggressive Mining, Damping Engine, an extra-land-per-turn
+/// grant? The [`LANE_LAND_PLAY_STATIC`] predicate; definition-only.
+fn card_has_land_play_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as S;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            S::NoPlayerCanPlayLands
+                | S::ControllerCantPlayLands
+                | S::MostPermanentsCantPlay
+                | S::ExtraLandPerTurn
         )
     })
 }
@@ -1307,6 +1329,14 @@ impl Battlefield {
     #[inline]
     pub fn has_damage_replacement_static(&self) -> bool {
         self.lane(LANE_DAMAGE_STATIC, card_has_damage_replacement_static)
+    }
+
+    /// Does any permanent here carry a land-play lock or extension
+    /// ([`card_has_land_play_static`])? Read by `can_player_play_land`,
+    /// `extra_land_plays_per_turn` and `damping_engine_locks` (PERF `(-236)`).
+    #[inline]
+    pub fn has_land_play_static(&self) -> bool {
+        self.lane(LANE_LAND_PLAY_STATIC, card_has_land_play_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board
