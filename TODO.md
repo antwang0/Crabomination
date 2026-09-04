@@ -25,8 +25,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-202)` is the last claimed,
-   `(-203)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-203)` is the last claimed,
+   `(-204)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` **10.6 min cold / 3.2 min warm** (a `crabomination_base`
    edit re-fingerprints the catalog: ~14 min — keep a device engine-only when it can be),
    test build ~5.5 min + suite 2.7 min; `nextest` needs installing (CLAUDE.md). Callgrind
@@ -34,17 +34,19 @@ sixty-seventh pass, so don't re-take that.
    builds can pull a concurrent CATALOG commit: `git log --stat <base>..HEAD --
    crabomination_catalog` after any rebase (PERF Standing rules, top). ⚠ `diff` two
    `bot_ladder` stdouts with the `decided ... in N.Ns` line excluded — it carries wall clock.
-2. **Gates at `966289ae` (this run):** PERF Baseline has them — suite 19,240 / 0 / 5,
+2. **Gates at `5b50323f` (this run):** PERF Baseline has them — suite 19,240 / 0 / 5,
    clippy, release-fast typecheck, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
    byte-identical to `2003d1cf`** at every leg, golden traces 7/7 unmoved, three-pool stdout
    identical at every leg; grid not re-run (no encoder/pool change; `OftenEmpty` is
    `#[serde(transparent)]`).
-3. **This run: four devices, `cube` -1.174 % / `fixed` -1.140 % / `sealed` -0.876 %
-   cumulative** (Log `(-199)`..`(-202)`): the grants-nothing gate asks per permanent (an
+3. **This run: five devices, `cube` -1.627 % / `fixed` -1.437 % / `sealed` -1.141 %
+   cumulative** (Log `(-199)`..`(-203)`): the grants-nothing gate asks per permanent (an
    Equipment / Soulbond link, a grant static's selector reach, memo bits, a lazy lane — three
    builds: **keep the old loads inline as the fast accept, put the growth out of line**);
    `OftenEmpty<T>` (base, `#[serde(transparent)]`) on `CardData`'s and `PlayerData`'s lists +
-   `GameState::clone` guards; `resolve_combat`'s protection asks over its held views. **Both
+   `GameState::clone` guards; `resolve_combat`'s protection asks over its held views; a
+   death-redirect lane (lane 30, **the word's last**) in front of the death path's four board
+   walks, found by re-profiling at the `(-202)` tip and reading three bodies by eye. **Both
    clone legs found their priced row was inlined elsewhere and the out-of-line `Vec::clone`
    row belonged to another owner** — the `--demangle=no` read (How to measure) is the
    instrument that names a monomorph's owner; the family is now at its floor (candidates).
@@ -55,11 +57,14 @@ sixty-seventh pass, so don't re-take that.
    attachment-legality protection asks (5,896 x ~530 Ir = 0.14 % of `cube`, a presence-gate
    board walk under `&mut self` — a lane question); `grants_nothing_slow` is at its floor
    (one printed-filter test per permanent x grant static, asked once per scan). **Re-profiled
-   at the tip (candidates, "RE-READ AT `966289ae`"):** the new lead is **the death path**
-   (10,116 deaths x ~4,800 Ir = 2.2 % of `cube`, three ~1,100-Ir bodies — a `profiling-lines`
-   read is the instrument); the SBA sweep is 10.5 % inclusive and its post-combat sweeps
-   cost 17-89 k Ir each; `compute_permanent_pass`'s extend, the dispatcher under the attack
-   search, and `fire_combat_damage_triggers` are read and closed as floors.
+   at `966289ae` (candidates, "RE-READ AT"):** the death path's four walks were taken as
+   `(-203)`; what is left of it is three ~1,100-Ir bodies per death (`place_card_at_resolved_
+   zone`'s revert chain, `on_left_battlefield`'s cross-zone find + four list walks, the raw
+   self) — a `profiling-lines` read is the instrument, ~3,000 Ir x 10 k deaths = 1.4 % of
+   `cube` is the ceiling; the SBA sweep is 10.5 % inclusive and its post-combat sweeps cost
+   17-89 k Ir each; `compute_permanent_pass`'s extend, the dispatcher under the attack
+   search, and `fire_combat_damage_triggers` are read and closed as floors. ⚠ The battlefield
+   lane word is full (16 lanes); the next lane needs a second word or a freed slot.
 5. **Cards/rules (leftover only):** primitives unblocking several filed rows — a per-turn
    cast-name memory (Sift Through Sands + Kamigawa "cast X this turn"; `spell_ids_cast_this_turn`
    is the raw material, `Predicate::CastSpellNamedThisTurn` the missing arm), a per-turn

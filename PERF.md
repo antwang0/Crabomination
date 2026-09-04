@@ -2520,23 +2520,26 @@ a box whose state moves.
 
 ## Baseline
 
-### The cheap-clone and held-views legs — closing state at `966289ae`
+### The cheap-clone, held-views and death-lane legs — closing state at `5b50323f`
 
-Three more engine commits on top of `(-199)`, each behaviour-preserving
+Four more engine commits on top of `(-199)`, each behaviour-preserving
 (three-pool stdout identical, `--bench` byte-identical, golden traces
 unmoved). Two of them found their priced row belonged to someone else and
-said so (Log); the third is the `(-194)` shape again.
+said so (Log); the third is the `(-194)` shape again; the fourth came off
+the re-profile at `966289ae` and is the `(-197)` lane shape on the death
+path.
 
 ```text
-  pool     base 4bd4fc1b     tip (-202)        delta       run (from 2003d1cf)
-  fixed      808,660,509      803,947,481   **-0.583 %**   **-1.140 %**
-  cube     2,222,094,501    2,210,248,706   **-0.533 %**   **-1.174 %**
-  sealed   2,228,991,395    2,217,299,276   **-0.525 %**   **-0.876 %**
+  pool     base 4bd4fc1b     tip (-203)        delta       run (from 2003d1cf)
+  fixed      808,660,509      801,539,784   **-0.881 %**   **-1.437 %**
+  cube     2,222,094,501    2,200,107,512   **-0.989 %**   **-1.627 %**
+  sealed   2,228,991,395    2,211,369,741   **-0.791 %**   **-1.141 %**
 
   leg      fixed      cube      sealed    what
   (-200)  -0.360 %  -0.294 %  -0.346 %   OftenEmpty on CardData/CounterBag, GameState::clone guards
   (-201)  -0.154 %  -0.113 %  -0.143 %   OftenEmpty on PlayerData's seven lists
   (-202)  -0.070 %  -0.127 %  -0.037 %   resolve_combat's protection asks over held views
+  (-203)  -0.299 %  -0.459 %  -0.268 %   death-redirect lane in front of the death path's four walks
 ```
 
 ```text
@@ -2544,9 +2547,9 @@ rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 suite   19,240 / 0 / 5 (+1: oftenempty's unit test); golden traces in
         it and unmoved at every leg
 clippy  --workspace --exclude crabomination_client --all-targets   clean
-        at (-201); the engine lib re-checked clean at (-202)
+        at (-201); the engine lib re-checked clean at (-202) and (-203)
 release the release-fast typecheck gate (debug-assertions off)   clean
-        at the (-202) tip
+        at the (-202) and (-203) tips
 --bench profiling-fast at every leg: **195,806 decisions / 27.49 turns /
         611.9 per game / 0 stalls** — byte-identical to 2003d1cf;
         determinism ok; thread_determinism ok; peak_rss 21.3-21.4 MiB
@@ -11680,6 +11683,54 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-203)` TAKEN — a death-redirect lane in front of the death path's four board walks: `cube` -0.459 % / `fixed` -0.299 % / `sealed` -0.268 %
+
+```text
+  pool    base (-202)       (-203)          delta
+  fixed     803,947,410     801,539,784   **-0.299 %**
+  cube    2,210,248,307   2,200,107,512   **-0.459 %**
+  sealed  2,217,304,432   2,211,369,741   **-0.268 %**
+  (base re-taken from the committed tip via stash: within 0.0001 % of
+  the (-202) readings)
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  remove_from_battlefield_to_graveyard_raw  10.8 M -> 4.9 M self
+                graveyard_exile_redirects                 5.0 M -> 0.6 M
+                Vec::from_iter (the hand-redirect collect) -4.2 M
+                walk_and_store                            +3.9 M (the lane's
+                                                          misses, see below)
+```
+
+The re-read at `966289ae` priced the death path at ~4,800 Ir a death and
+said "line profile"; reading the three bodies by eye was enough. Four
+whole-board `static_abilities` walks ran on every death — Valentin's
+`ExileDyingOpponentCreatures`, `DiesToLibraryTopInstead`,
+`DiesToOwnersHandInstead` (which also `collect`ed a `Vec` of filters to
+evaluate) in `remove_from_battlefield_to_graveyard_raw`, and
+`ExileCardsBoundForGraveyard` in `graveyard_exile_redirects`, which
+`route_to_graveyard` asks at every graveyard placement (mills and
+discards included). One definition bit answers all four:
+`mana_summary::DEATH_REDIRECT` on the engine's definition-fold word
+(bit 59, computed by `mana_summary_of` like `(-199)`'s two), and
+`Battlefield::has_death_redirect` — `LANE_DEATH_REDIRECT`, lane 30, **the
+word's last free lane** — holds the board's answer. The dying card's
+*own* statics are still read (it is already off the battlefield when the
+walks ask); the walks over everything else run only behind the lane.
+
+**The miss is structural and priced:** `take_card` moves the dying card
+out before the ask, so the first ask after every death is a membership
+miss and walks the board once at ~390 Ir (a memo-word read per
+permanent) — the +3.9 M. Asking before `take_card` does not help: the
+placement's own ask comes after it either way, so it is one walk a death
+whichever side asks first. What is left of the death path on `cube`:
+`place_card_at_resolved_zone` ~1,260 Ir (the revert chain: face, flip,
+transform, prototype, rooms, cases, `clear_effects_on_zone_change`),
+`on_left_battlefield` ~1,080 Ir (`find_card_anywhere_mut` across zones
+for a card that just moved, the `phased_out` / `temporary_control` /
+`continuous_effects` / `delayed_triggers` walks) and the raw self ~480
+(`remove_effects_from_source`, `remove_from_combat`,
+`collect_leaver_counters`) — each a line read, none a lane.
 
 ### `(-202)` TAKEN — `resolve_combat`'s protection asks over the views it holds: `cube` -0.127 % / `fixed` -0.070 % / `sealed` -0.037 %
 
@@ -22910,10 +22961,10 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at `966289ae` (`(-199)`..`(-202)`, three-pool Ir against
-`2003d1cf`): `fixed` 813,222,102 -> 803,947,481 (-1.140 %), `cube`
-2,236,502,758 -> 2,210,248,706 (-1.174 %), `sealed` 2,236,900,247 ->
-2,217,299,276 (-0.876 %).** Before it, `(-194)`..`(-198)` against
+**State at `5b50323f` (`(-199)`..`(-203)`, three-pool Ir against
+`2003d1cf`): `fixed` 813,222,102 -> 801,539,784 (-1.437 %), `cube`
+2,236,502,758 -> 2,200,107,512 (-1.627 %), `sealed` 2,236,900,247 ->
+2,211,369,741 (-1.141 %).** Before it, `(-194)`..`(-198)` against
 `0e9bdaa4`: `fixed` -2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The
 `cube` self table at `(-196)`, top rows:
 `dispatch_triggers_for_events` 3.95 % (was 5.80 %), `gather_continuous_
@@ -22928,13 +22979,14 @@ re-reads them.**
 
 * **The death path — 10,116 `remove_from_battlefield_to_graveyard_raw`
   calls x ~4,800 Ir = 48.5 M (2.2 % of `cube`), under the SBA sweep
-  (9,096 of them).** Three ~1,100-Ir bodies per death — the function's
-  own self (10.8 M), `place_card_at_resolved_zone` (12.8 M) and
-  `on_left_battlefield` (10.9 M) — plus `remove_from_combat` 2.3 M,
-  `note_creature_death` 7.3 M and `dying_snapshot` 4.9 M beside it in
-  the sweep. Nothing in the callee table names a single cost; the
-  instrument is a `profiling-lines` read of the three bodies (How to
-  measure), not a caller ranking. Not read this run.
+  (9,096 of them). The four board walks in it are TAKEN as `(-203)`**
+  (`cube` -0.459 %; a source read found them, no line profile needed).
+  What is left per death: `place_card_at_resolved_zone` ~1,260 Ir (the
+  revert chain), `on_left_battlefield` ~1,080 (`find_card_anywhere_mut`
+  across zones for a card that just moved, four list walks) and the raw
+  self ~480, plus `note_creature_death` 7.3 M and `dying_snapshot` 4.9 M
+  beside it in the sweep — each a line read (`profiling-lines`), none a
+  lane. The lane's own misses are one walk a death (~390 Ir), structural.
 * **The SBA sweep is 10.5 % of the program inclusive (21,222 calls,
   232 M)** and its cost is *which* sweep: `resolve_combat`'s 4,286
   post-damage sweeps cost 17,760 Ir each (76 M) and the 562 under the
