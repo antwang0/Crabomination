@@ -2945,6 +2945,22 @@ impl TempCopy {
 /// derive — we round-trip through `DeciderKind`. Custom deciders not
 /// modeled by the kind enum collapse to `AutoDecider` on clone, which
 /// is fine for the dry-run use case (we discard the clone immediately).
+/// `Vec::clone` behind a length test: the six lists and maps below are
+/// empty on most of the 23 k probe clones a six-game `cube` run makes, and
+/// the out-of-line clone cost ~37 Ir apiece to copy nothing (PERF `(-200)`).
+#[inline(always)]
+fn clone_list<T: Clone>(v: &[T]) -> Vec<T> {
+    if v.is_empty() { Vec::new() } else { v.to_vec() }
+}
+
+/// The [`clone_list`] guard for an [`IdMap`](crate::game::types::IdMap).
+#[inline(always)]
+fn clone_map<K: Clone, V: Clone>(
+    m: &crate::game::types::IdMap<K, V>,
+) -> crate::game::types::IdMap<K, V> {
+    if m.is_empty() { Default::default() } else { m.clone() }
+}
+
 impl Clone for GameState {
     fn clone(&self) -> Self {
         Self {
@@ -2965,13 +2981,13 @@ impl Clone for GameState {
             rng: self.rng.clone(),
             priority: self.priority.clone(),
             continuous_effects: self.continuous_effects.clone(),
-            attacking: self.attacking.clone(),
-            block_map: self.block_map.clone(),
-            combat_damage_order: self.combat_damage_order.clone(),
-            combat_damage_assignment: self.combat_damage_assignment.clone(),
+            attacking: clone_list(&self.attacking),
+            block_map: clone_map(&self.block_map),
+            combat_damage_order: clone_map(&self.combat_damage_order),
+            combat_damage_assignment: clone_map(&self.combat_damage_assignment),
             blocked_attackers: self.blocked_attackers.clone(),
             blocks_declared_this_turn: self.blocks_declared_this_turn.clone(),
-            delayed_triggers: self.delayed_triggers.clone(),
+            delayed_triggers: clone_list(&self.delayed_triggers),
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
@@ -2979,8 +2995,8 @@ impl Clone for GameState {
             layer_freeze: LayerFreeze::default(),
             event_scratch: Vec::new(),
             controlled_by: self.controlled_by.clone(),
-            died_card_snapshots: self.died_card_snapshots.clone(),
-            leaves_bf_lki: self.leaves_bf_lki.clone(),
+            died_card_snapshots: clone_map(&self.died_card_snapshots),
+            leaves_bf_lki: clone_map(&self.leaves_bf_lki),
             scratch: self.scratch.clone(),
             cold: self.cold.clone(),
             attack_option: self.attack_option,

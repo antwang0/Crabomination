@@ -1047,8 +1047,18 @@ pub struct MayPlayPermission {
 /// measured half — `CardData` is deep-copied ~1.09 M times per six bench games
 /// by the CoW unshare, and an empty `Vec` clone allocates nothing where an
 /// empty `hashbrown` table clone still walks its control bytes.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct CounterBag(Vec<(CounterType, u32)>);
+
+/// The bag is empty on most permanents and cloned on every CoW unshare of
+/// the card, so the length test comes before the out-of-line `Vec::clone`
+/// (PERF `(-200)`, the `OftenEmpty` device on this crate's own type).
+impl Clone for CounterBag {
+    #[inline]
+    fn clone(&self) -> Self {
+        if self.0.is_empty() { Self(Vec::new()) } else { Self(self.0.clone()) }
+    }
+}
 
 impl CounterBag {
     pub fn get(&self, ct: &CounterType) -> Option<&u32> {
@@ -7308,15 +7318,19 @@ pub struct CardData {
     /// "When a creature dealt damage by this creature this turn dies"
     /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
     /// Reset at cleanup; in-memory only.
-    pub damaged_by_this_turn: Vec<CardId>,
+    ///
+    /// The four lists are [`OftenEmpty`](crate::oftenempty::OftenEmpty):
+    /// empty on nearly every permanent and cloned on every CoW unshare, so
+    /// their `Clone` tests the length first (PERF `(-200)`).
+    pub damaged_by_this_turn: crate::oftenempty::OftenEmpty<CardId>,
     /// Seats this permanent has dealt damage to this *game*, and the
     /// planeswalkers likewise (The Fallen). Never reset per turn.
-    pub damaged_players_this_game: Vec<usize>,
-    pub damaged_permanents_this_game: Vec<CardId>,
+    pub damaged_players_this_game: crate::oftenempty::OftenEmpty<usize>,
+    pub damaged_permanents_this_game: crate::oftenempty::OftenEmpty<CardId>,
     /// Damage dealt to this permanent this turn, tallied per damaging
     /// source's *name* (Blazing Effigy's "other sources named Blazing
     /// Effigy"). Reset at cleanup; in-memory only.
-    pub damage_by_source_name_this_turn: Vec<(&'static str, u32)>,
+    pub damage_by_source_name_this_turn: crate::oftenempty::OftenEmpty<(&'static str, u32)>,
     /// The rarely-written tail — see [`CardCold`].
     pub cold: crate::cow::CowBox<CardCold>,
     pub id: CardId,
@@ -8110,10 +8124,10 @@ impl CardInstance {
             perm_power_bonus: 0,
             perm_toughness_bonus: 0,
             counters,
-            damaged_by_this_turn: Vec::new(),
-            damaged_players_this_game: Vec::new(),
-            damaged_permanents_this_game: Vec::new(),
-            damage_by_source_name_this_turn: Vec::new(),
+            damaged_by_this_turn: Default::default(),
+            damaged_players_this_game: Default::default(),
+            damaged_permanents_this_game: Default::default(),
+            damage_by_source_name_this_turn: Default::default(),
             attached_to: None,
             attached_to_player: None,
             soulbond_partner: None,
