@@ -2570,6 +2570,17 @@ impl GameState {
     }
 
     pub fn resolve_first_strike_damage(&mut self) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = Vec::new();
+        self.resolve_first_strike_damage_into(&mut events)?;
+        Ok(events)
+    }
+
+    /// [`resolve_first_strike_damage`](Self::resolve_first_strike_damage)
+    /// into the caller's buffer — `advance_step`'s recycled one (PERF `(-225)`).
+    pub fn resolve_first_strike_damage_into(
+        &mut self,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         let computed = self.combat_damage_computed();
         // CR 510.4: in the first-strike combat damage step, only creatures
         // with first strike or double strike deal combat damage. The same
@@ -2578,18 +2589,27 @@ impl GameState {
         let fs_or_ds = |kws: &[Keyword]| {
             kws.has_kw(&Keyword::FirstStrike) || kws.has_kw(&Keyword::DoubleStrike)
         };
-        let mut events = self.resolve_combat_damage_with_filter(&computed, fs_or_ds, fs_or_ds)?;
+        self.resolve_combat_damage_with_filter(&computed, fs_or_ds, fs_or_ds, events)?;
         // Suspended on a `wants_ui` player's combat-damage choice — no damage
         // has been dealt yet; `submit_decision` re-enters this step.
         if self.pending_decision.is_some() {
-            return Ok(events);
+            return Ok(());
         }
-        self.check_state_based_actions_into(&mut events);
+        self.check_state_based_actions_into(events);
         events.push(GameEvent::FirstStrikeDamageResolved);
-        Ok(events)
+        Ok(())
     }
 
     pub fn resolve_combat(&mut self) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = Vec::new();
+        self.resolve_combat_into(&mut events)?;
+        Ok(events)
+    }
+
+    /// [`resolve_combat`](Self::resolve_combat) into the caller's buffer —
+    /// `advance_step`'s recycled one (PERF `(-225)`), so the damage step's
+    /// `reserve(32)` lands on capacity the scratch already has.
+    pub fn resolve_combat_into(&mut self, events: &mut Vec<GameEvent>) -> Result<(), GameError> {
         let computed = self.combat_damage_computed();
         // CR 510.5: in the regular combat damage step, every attacking and
         // blocking creature that didn't deal damage in the first-strike step
@@ -2598,16 +2618,15 @@ impl GameState {
         let regular_or_ds = |kws: &[Keyword]| {
             !kws.has_kw(&Keyword::FirstStrike) || kws.has_kw(&Keyword::DoubleStrike)
         };
-        let mut events =
-            self.resolve_combat_damage_with_filter(&computed, regular_or_ds, regular_or_ds)?;
+        self.resolve_combat_damage_with_filter(&computed, regular_or_ds, regular_or_ds, events)?;
 
         // Suspended on a `wants_ui` player's combat-damage choice — no damage
         // dealt yet; combat is not torn down. `submit_decision` re-enters.
         if self.pending_decision.is_some() {
-            return Ok(events);
+            return Ok(());
         }
 
-        self.check_state_based_actions_into(&mut events);
+        self.check_state_based_actions_into(events);
 
         self.attacking.clear();
         // Dropped, not cleared — a cleared `HashMap` keeps its table and
@@ -2636,7 +2655,7 @@ impl GameState {
         }
 
         events.push(GameEvent::CombatResolved);
-        Ok(events)
+        Ok(())
     }
 
     /// CR 702.15 — does `defender` control a land with the given land type?
@@ -3325,13 +3344,17 @@ impl GameState {
     /// Core combat damage resolver. Each attacker has its own defending
     /// player or planeswalker (`Attack::target`); damage routing is
     /// per-attacker.
+    /// Writes into `events`, the caller's buffer (PERF `(-225)`): the step
+    /// used to build its own `Vec`, `reserve(32)` it and hand it back for the
+    /// caller to `append` and free — one allocation and one copy per damage
+    /// step, when `advance_step` already holds the recycled scratch buffer.
     fn resolve_combat_damage_with_filter(
         &mut self,
         computed: &[ComputedPermanent],
         attacker_filter: impl Fn(&[Keyword]) -> bool,
         blocker_filter: impl Fn(&[Keyword]) -> bool,
-    ) -> Result<Vec<GameEvent>, GameError> {
-        let mut events = vec![];
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         // Each call is one combat-damage batch (first-strike and regular
         // damage are separate sub-steps): reset the "one or more creatures
         // you control deal combat damage" graveyard-trigger dedupe.
@@ -3403,7 +3426,7 @@ impl GameState {
         // `combat_damage_order` / `combat_damage_assignment` and read in the
         // apply phase below.
         if self.gather_combat_damage_decisions(&attacker_infos, computed, &blocker_filter) {
-            return Ok(vec![]);
+            return Ok(());
         }
         // Past the early returns, this batch always emits at least one event
         // (`resolve_combat` appends `CombatResolved` unconditionally), and the
@@ -3503,7 +3526,7 @@ impl GameState {
                         crate::game::effects::EntityRef::Permanent(victim),
                         raw,
                         Some(atk.id),
-                        &mut events,
+                        events,
                     );
                     continue;
                 }
@@ -3515,7 +3538,7 @@ impl GameState {
                     crate::game::effects::EntityRef::Player(seat),
                     raw,
                     Some(atk.id),
-                    &mut events,
+                    events,
                 );
                 continue;
             }
@@ -3541,10 +3564,10 @@ impl GameState {
                     atk.target,
                     self.scale_combat_damage(Some(atk.id), atk.target, raw),
                     Some(atk.id),
-                    &mut events,
+                    events,
                 );
                 if amount > 0 {
-                    self.deal_combat_damage_to_target(atk, amount, &mut events);
+                    self.deal_combat_damage_to_target(atk, amount, events);
                     if atk.has_lifelink {
                         let a = self.active_player_idx;
                         let applied = self.adjust_life_applied(a, amount as i32);
@@ -3663,12 +3686,12 @@ impl GameState {
                         crate::game::effects::EntityRef::Permanent(blocker_id),
                         scaled,
                         Some(atk.id),
-                        &mut events,
+                        events,
                     ) as i32;
                     // Ironscale Hydra replaces the damage with a +1/+1 counter
                     // (and so the attacker's lifelink scales off 0).
                     let dealt =
-                        self.ironscale_replace(blocker_id, redirect_to, dealt, &mut events);
+                        self.ironscale_replace(blocker_id, redirect_to, dealt, events);
                     // CR 615 — a blocker that prevents all damage to itself
                     // (Wall of Denial) takes none, and grants no lifelink.
                     let dealt = if self_prevented { 0 } else { dealt };
@@ -3726,11 +3749,11 @@ impl GameState {
                         atk.target,
                         self.scale_combat_damage(Some(atk.id), atk.target, trample_leftover),
                         Some(atk.id),
-                        &mut events,
+                        events,
                     );
                     lifelink_dealt += amount as i32;
                     if amount > 0 {
-                        self.deal_combat_damage_to_target(atk, amount, &mut events);
+                        self.deal_combat_damage_to_target(atk, amount, events);
                     }
                 }
 
@@ -3849,12 +3872,12 @@ impl GameState {
                             crate::game::effects::EntityRef::Permanent(atk.id),
                             scaled,
                             Some(bid),
-                            &mut events,
+                            events,
                         );
                         // Ironscale Hydra replaces the blocker's strike-back
                         // with a +1/+1 counter (blocker's lifelink sees 0).
                         let dmg = self
-                            .ironscale_replace(atk.id, redirect_to, dmg as i32, &mut events)
+                            .ironscale_replace(atk.id, redirect_to, dmg as i32, events)
                             as u32;
                         // CR 615 — an attacker that prevents all damage to itself,
                         // or specifically damage from its blockers (Armored
@@ -3986,7 +4009,7 @@ impl GameState {
             self.fire_combat_damage_to_creature_triggers(source, damaged, amount, &granted);
         }
 
-        Ok(events)
+        Ok(())
     }
 
     /// CR 506.2 — whether `id` carries a computed `Keyword::CantBeAttacked`,

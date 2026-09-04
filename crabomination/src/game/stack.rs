@@ -681,8 +681,7 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::FirstStrikeDamage => {
-                let mut fs_events = self.resolve_first_strike_damage()?;
-                events.append(&mut fs_events);
+                self.resolve_first_strike_damage_into(&mut events)?;
                 // Combat damage may suspend on a `wants_ui` player's ordering /
                 // assignment choice; leave priority alone until it's answered.
                 if self.pending_decision.is_none() {
@@ -690,8 +689,7 @@ impl GameState {
                 }
             }
             TurnStep::CombatDamage => {
-                let mut combat_events = self.resolve_combat()?;
-                events.append(&mut combat_events);
+                self.resolve_combat_into(&mut events)?;
                 if self.pending_decision.is_none() {
                     self.give_priority_to_active();
                 }
