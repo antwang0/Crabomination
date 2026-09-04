@@ -135,9 +135,13 @@ impl GameState {
             EntityRef::Permanent(c) => Some(c),
             _ => None,
         };
+        // One lane read for the two static walks (PERF `(-235)`); the
+        // turn-scoped redirects above and below are state, not statics.
+        let damage_statics = self.battlefield.has_damage_replacement_static();
         // Pariah's Shield — a player's damage is dealt to the equipped
         // creature instead. Only player-directed damage redirects.
-        if let EntityRef::Player(p) = ent
+        if damage_statics
+            && let EntityRef::Player(p) = ent
             && let Some(cid) = self.battlefield.iter().find_map(|c| {
                 (c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| {
@@ -152,15 +156,17 @@ impl GameState {
         {
             return Some(cid);
         }
-        if let Some(cid) = self.battlefield.iter().find_map(|c| {
-            (c.controller == protected
-                && Some(c.id) != aimed_at
-                && c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::RedirectDamageToSelf)))
-            .then_some(c.id)
-        }) {
+        if damage_statics
+            && let Some(cid) = self.battlefield.iter().find_map(|c| {
+                (c.controller == protected
+                    && Some(c.id) != aimed_at
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::RedirectDamageToSelf)))
+                .then_some(c.id)
+            })
+        {
             return Some(cid);
         }
         // Gideon's Sacrifice — a one-shot "all damage to you and your
@@ -1360,10 +1366,15 @@ impl GameState {
                         self.players[p].creatures_that_damaged_me_this_turn.push(src);
                     }
                 }
+                // One lane read in front of the four player-damage
+                // replacement walks below (PERF `(-235)`): every static they
+                // match is in the lane's predicate.
+                let damage_statics = self.battlefield.has_damage_replacement_static();
                 // The Mindskinner — "if a source you control would deal damage
                 // to an opponent, prevent that damage and each opponent mills
                 // that many cards."
-                if amount > 0
+                if damage_statics
+                    && amount > 0
                     && let Some(src) = source
                     && let Some(dealer) = self.battlefield_find(src).map(|c| c.controller)
                     && !self.same_team(dealer, p)
@@ -1396,14 +1407,16 @@ impl GameState {
                 }
                 // CR 614.1b — Crumbling Sanctuary: damage to a player becomes
                 // exiling that many cards off their library instead.
-                if self.battlefield.iter().any(|c| {
-                    c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::PlayerDamageBecomesExileFromLibrary
-                        )
+                if damage_statics
+                    && self.battlefield.iter().any(|c| {
+                        c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::PlayerDamageBecomesExileFromLibrary
+                            )
+                        })
                     })
-                }) {
+                {
                     for _ in 0..amount {
                         let Some(card) = self.players[p].library.pop() else { break };
                         let cid = card.id;
@@ -1414,7 +1427,8 @@ impl GameState {
                 }
                 // CR 614 — Delaying Shield: damage to its controller becomes
                 // delay counters on the enchantment instead.
-                if let Some(shield) = self.battlefield.iter().find_map(|c| {
+                if damage_statics
+                    && let Some(shield) = self.battlefield.iter().find_map(|c| {
                     (c.controller == p).then(|| {
                         c.definition.static_abilities.iter().find_map(|sa| {
                             match &sa.effect {
@@ -1439,16 +1453,18 @@ impl GameState {
                 }
                 // CR 614 — Nefarious Lich: damage to its controller exiles
                 // that many graveyard cards instead; failing that, they lose.
-                if self.battlefield.iter().any(|c| {
-                    c.controller == p
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::
-                                    ReplaceDamageToYouWithGraveyardExile
-                            )
-                        })
-                }) {
+                if damage_statics
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && c.definition.static_abilities.iter().any(|sa| {
+                                matches!(
+                                    sa.effect,
+                                    crate::effect::StaticEffect::
+                                        ReplaceDamageToYouWithGraveyardExile
+                                )
+                            })
+                    })
+                {
                     if (self.players[p].graveyard.len() as u32) < amount {
                         self.players[p].eliminated = true;
                     } else {

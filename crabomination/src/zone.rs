@@ -479,11 +479,16 @@ const LANE_DRAW_STATIC: u32 = 34;
 /// or lands-enter-untapped static — the walks every entering permanent
 /// makes (PERF `(-234)`). See [`card_has_etb_static`].
 const LANE_ETB_STATIC: u32 = 36;
+/// Any permanent's definition carries a static that replaces or redirects
+/// damage to a player — the six `StaticEffect`s `deal_damage_to_from` and
+/// `damage_redirect_target` walk the board for on every damage event (PERF
+/// `(-235)`). See [`card_has_damage_replacement_static`].
+const LANE_DAMAGE_STATIC: u32 = 38;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 19;
+const LANE_COUNT: usize = 20;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -518,6 +523,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(crate::game::card_can_change_card_types_def),   // LANE_CARD_TYPE
     Some(card_has_draw_static),                          // LANE_DRAW_STATIC
     Some(card_has_etb_static),                           // LANE_ETB_STATIC
+    Some(card_has_damage_replacement_static),         // LANE_DAMAGE_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -621,6 +627,25 @@ fn card_has_etb_static(c: &CardInstance) -> bool {
                 | S::DoubleControllerEtbTriggers
                 | S::EntersTapped { .. }
                 | S::LandsEnterUntapped
+        )
+    })
+}
+
+/// Does this permanent's definition carry a static that replaces or
+/// redirects damage dealt to a player — The Mindskinner, Crumbling Sanctuary,
+/// Delaying Shield, Nefarious Lich, Pariah's Shield, Palisade Giant? The
+/// [`LANE_DAMAGE_STATIC`] predicate; definition-only.
+fn card_has_damage_replacement_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as S;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            S::YourDamageToOpponentsBecomesMill
+                | S::PlayerDamageBecomesExileFromLibrary
+                | S::ReplaceDamageToYouWithCountersOnSource { .. }
+                | S::ReplaceDamageToYouWithGraveyardExile
+                | S::RedirectControllerDamageToEquippedCreature
+                | S::RedirectDamageToSelf
         )
     })
 }
@@ -1274,6 +1299,14 @@ impl Battlefield {
     #[inline]
     pub fn has_etb_static(&self) -> bool {
         self.lane(LANE_ETB_STATIC, card_has_etb_static)
+    }
+
+    /// Does any permanent here carry a damage-replacing or -redirecting static
+    /// ([`card_has_damage_replacement_static`])? Read once per damage event by
+    /// `deal_damage_to_from` and `damage_redirect_target` (PERF `(-235)`).
+    #[inline]
+    pub fn has_damage_replacement_static(&self) -> bool {
+        self.lane(LANE_DAMAGE_STATIC, card_has_damage_replacement_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board
