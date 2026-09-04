@@ -7475,6 +7475,40 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-225)` TAKEN — the combat damage step writes into the caller's event buffer: `sealed` -0.136 % / `fixed` -0.118 % / `cube` -0.070 %
+
+```text
+  pool    base (-224)       (-225)          delta
+  fixed     740,581,398     739,706,759   **-0.118 %**
+  cube    2,021,695,434   2,020,284,063   **-0.070 %**
+  sealed  2,073,037,291   2,070,228,163   **-0.136 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  do_reserve_and_handle <- resolve_combat(_into)   cube 4,848 / 5.13 M -> 4,524 / 5.79 M
+                                                    fixed 2,878 / 3.15 M -> 2,688 / 3.64 M
+                                                    sealed 6,632 / 7.21 M -> 6,276 / 8.46 M
+```
+
+`resolve_combat_damage_with_filter` built its own `Vec`, `reserve(32)`'d
+it (the `(-80)`-era fix for a 0->4->8->16->32 ladder) and handed it back
+for `advance_step` to `append` into the recycled scratch buffer and free —
+an allocation, a copy and a free per damage step. Both damage-step entry
+points now have an `_into` form that writes into the caller's buffer, and
+`advance_step` passes its scratch; the `()` forms stay as wrappers for the
+139 suite call sites and `submit_decision`.
+
+**What it did not remove, and why the row grew per call:** 4,524 of the
+4,848 reserves are still there, at 1,279 Ir instead of 1,057. Most combat
+damage steps run inside the bot's probe clones, and a clone's scratch is
+`Vec::new()` — so the step's buffer arrives holding only `StepChanged` in
+a 4-slot allocation, and `reserve(32)` is a `realloc` of it rather than
+a fresh `malloc`. The win is the append and the free; the allocation
+moved rather than vanished, exactly as the recycle-list rules say a
+reserve does. **A buffer recycled per state is not recycled across
+probe clones** — the next device, if any, is a `reserve(32)` in
+`advance_step` before its first push on the two damage steps, merging the
+4-slot allocation and the realloc into one (~1.4 M on `cube`, priced, not
+built).
+
 ### `(-224)` TAKEN — the combat-damage-to-player listener walk visits the trigger member list: `fixed` -0.096 % / `cube` -0.069 % / `sealed` -0.057 %
 
 ```text
