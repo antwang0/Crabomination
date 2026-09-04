@@ -13509,22 +13509,20 @@ impl GameState {
                 // the right answer.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
-                let result = self.activate_ability(id, idx, None, Vec::new(), None, None);
+                // One allocation for the batch instead of the 0->4->8->16
+                // ladder the pushes walk up: this row is 1.72 reserve-growths
+                // a call on `cube` and 1.93 on the actor (PERF (-108)), both
+                // above (-103)'s threshold. Guarded on emptiness so a payment
+                // that taps nothing still allocates nothing. Ahead of the
+                // activation since `(-243)`, which writes into `events`
+                // directly instead of returning a `Vec` to append.
+                if events.is_empty() {
+                    events.reserve(16);
+                }
+                let _ = self.activate_ability_into(id, idx, None, Vec::new(), None, None, &mut events);
                 crate::game::pay_census::record_tap(3, 1);
                 scripted_slot = Some(std::mem::replace(&mut self.decider, prev_decider));
                 self.players[player].wants_ui = prev_wants_ui;
-                if let Ok(mut evs) = result {
-                    // One allocation for the batch instead of the
-                    // 0->4->8->16 ladder `append` walks up: this row is 1.72
-                    // reserve-growths a call on `cube` and 1.93 on the actor
-                    // (PERF (-108)), both above (-103)'s threshold. Guarded on
-                    // emptiness so a payment that taps nothing still allocates
-                    // nothing.
-                    if events.is_empty() {
-                        events.reserve(16);
-                    }
-                    events.append(&mut evs);
-                }
             }
         }
 
@@ -13572,6 +13570,11 @@ impl GameState {
                 .min_by_key(|&(stale, rank, keep, ..)| (stale, rank, keep))
                 .map(|(_, _, _, id, idx, fresh)| (id, idx, fresh));
             let Some((id, idx, fresh)) = source else { break };
+            // Same reserve as the colored loop above; the two share
+            // `events` and either can be the first to write.
+            if events.is_empty() {
+                events.reserve(16);
+            }
             let result = if let Some(color) = fresh {
                 covered[color_index(color)] = true;
                 // Same one-color-decider device as the colored-pip loop:
@@ -13584,21 +13587,15 @@ impl GameState {
                 let prev_decider = std::mem::replace(&mut self.decider, b);
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
-                let r = self.activate_ability(id, idx, None, Vec::new(), None, None);
+                let r = self.activate_ability_into(id, idx, None, Vec::new(), None, None, &mut events);
                 scripted_slot = Some(std::mem::replace(&mut self.decider, prev_decider));
                 self.players[player].wants_ui = prev_wants_ui;
                 r
             } else {
-                self.activate_ability(id, idx, None, Vec::new(), None, None)
+                self.activate_ability_into(id, idx, None, Vec::new(), None, None, &mut events)
             };
-            if let Ok(mut evs) = result {
+            if result.is_ok() {
                 crate::game::pay_census::record_tap(3, 1);
-                // Same reserve as the colored loop above; the two share
-                // `events` and either can be the first to append.
-                if events.is_empty() {
-                    events.reserve(16);
-                }
-                events.append(&mut evs);
             } else {
                 break;
             }
@@ -14782,7 +14779,8 @@ impl GameState {
         ability_index: usize,
         p: usize,
         x_value: Option<u32>,
-    ) -> Option<Result<Vec<GameEvent>, GameError>> {
+        events: &mut Vec<GameEvent>,
+    ) -> Option<Result<(), GameError>> {
         if FORCE_GENERIC_ACTIVATION.load(std::sync::atomic::Ordering::Relaxed)
             || self.limited_range()
         {
@@ -14825,7 +14823,6 @@ impl GameState {
             return Some(Err(GameError::CardNotOnBattlefield(card_id)));
         };
         perm.tapped = true;
-        let mut events = Vec::new();
         events.push(GameEvent::PermanentTapped { card_id, actor: None, as_attacker: false });
         events.push(GameEvent::TappedForMana { card_id, player: p });
         if !self.players[p].tapped_land_for_mana_this_turn {
@@ -14855,7 +14852,7 @@ impl GameState {
             effect,
             None,
             x_value.unwrap_or(0),
-            &mut events,
+            events,
         );
         self.mana_production_multiplier = 1;
         if let Err(e) = resolved {
@@ -14866,7 +14863,7 @@ impl GameState {
         if !extra.is_empty() {
             events.splice(mark..mark, extra);
         }
-        Some(Ok(events))
+        Some(Ok(()))
     }
 
     pub(crate) fn activate_ability(
@@ -14878,7 +14875,37 @@ impl GameState {
         x_value: Option<u32>,
         chosen_mode: Option<usize>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = Vec::new();
+        self.activate_ability_into(
+            card_id,
+            ability_index,
+            target,
+            additional_targets,
+            x_value,
+            chosen_mode,
+            &mut events,
+        )?;
+        Ok(events)
+    }
+
+    /// [`activate_ability`](Self::activate_ability) appending into the
+    /// caller's buffer — the auto-tapper's form (PERF `(-243)`): one
+    /// activation per mana source paid, each of which returned a fresh
+    /// two-event `Vec` to be appended and freed. On `Err` nothing this call
+    /// pushed survives, exactly as the owning form's dropped `Vec`.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn activate_ability_into(
+        &mut self,
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        x_value: Option<u32>,
+        chosen_mode: Option<usize>,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         let p = self.priority.player_with_priority;
+        let mark = events.len();
         // Mana produced by a *creature* is marked as such (CR 106.12
         // restrictions). Whether the source is one is a layer read, and
         // `_inner` already computes that permanent for the ability lookup —
@@ -14894,7 +14921,11 @@ impl GameState {
             x_value,
             chosen_mode,
             &mut before,
+            events,
         );
+        if out.is_err() {
+            events.truncate(mark);
+        }
         if let Some(before) = before {
             let pool = &mut self.players[p].mana_pool;
             for c in ManaColor::ALL {
@@ -14923,7 +14954,14 @@ impl GameState {
         // Out: the caller's pre-activation mana pool, filled only when the
         // source is a creature — see `activate_ability`.
         creature_mana_before: &mut Option<crate::mana::ManaPool>,
-    ) -> Result<Vec<GameEvent>, GameError> {
+        // Out: this activation's events, appended in order. The caller's
+        // buffer rather than a fresh `Vec` per activation: the auto-tapper
+        // activates ~24 k mana abilities a six-game `cube` run, each of
+        // which allocated a two-event `Vec` to append and free it (PERF
+        // `(-243)`, the `(-225)` shape). On `Err` the caller truncates back
+        // to its mark, so a rolled-back activation still announces nothing.
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         let p = self.priority.player_with_priority;
 
         // The printed land tap, settled by inspection (PERF `(-204)`). Every
@@ -14932,7 +14970,8 @@ impl GameState {
         if target.is_none()
             && additional_targets.is_empty()
             && chosen_mode.is_none()
-            && let Some(out) = self.activate_plain_land_tap(card_id, ability_index, p, x_value)
+            && let Some(out) =
+                self.activate_plain_land_tap(card_id, ability_index, p, x_value, events)
         {
             // The CR 732.3 watch below is not asked (PERF `(-219)`): a plain
             // land tap flips its source's `tapped` bit and grows a pool, both
@@ -15258,7 +15297,7 @@ impl GameState {
                     kind: crate::game::types::AbilityCostChoice::XValue,
                 },
             }));
-            return Ok(vec![]);
+            return Ok(());
         }
 
         // Spend context for restricted mana: an ArtifactOnly pool entry
@@ -15706,7 +15745,7 @@ impl GameState {
                     }),
                 },
             }));
-            return Ok(vec![]);
+            return Ok(());
         }
 
         // Reject the activation if the chosen target has hexproof / shroud /
@@ -15856,7 +15895,7 @@ impl GameState {
                         kind: crate::game::types::AbilityCostChoice::GraveyardTarget,
                     },
                 }));
-                return Ok(vec![]);
+                return Ok(());
             }
             // Auto-pick the highest-MV candidate (reanimation-style effects
             // want the biggest card back).
@@ -16003,7 +16042,7 @@ impl GameState {
                         kind: crate::game::types::AbilityCostChoice::ExileOther,
                     },
                 }));
-                return Ok(vec![]);
+                return Ok(());
             } else {
                 self.auto_pick_lowest_cmc_gy(p, &candidates, count)
             }
@@ -16158,7 +16197,7 @@ impl GameState {
                         kind: crate::game::types::AbilityCostChoice::SacOther,
                     },
                 }));
-                return Ok(vec![]);
+                return Ok(());
             } else {
                 self.auto_pick_lowest_power(&candidates, count)
             }
@@ -16219,7 +16258,7 @@ impl GameState {
                             kind: crate::game::types::AbilityCostChoice::SacAnyNumber,
                         },
                     }));
-                    return Ok(vec![]);
+                    return Ok(());
                 }
                 None => sac_other_picks.extend(candidates),
             }
@@ -16332,7 +16371,7 @@ impl GameState {
                         kind: crate::game::types::AbilityCostChoice::TapOther,
                     },
                 }));
-                return Ok(vec![]);
+                return Ok(());
             } else {
                 auto_tap_pick(self, &candidates)
             }
@@ -16955,7 +16994,7 @@ impl GameState {
                     }),
                 },
             }));
-            return Ok(vec![]);
+            return Ok(());
         }
 
         // Snapshot pristine state before applying tap-cost so a failed mana
@@ -17088,7 +17127,7 @@ impl GameState {
             auto_mana_events.append(&mut ev);
         }
 
-        let mut events = auto_mana_events;
+        events.append(&mut auto_mana_events);
         // The paid tap-cost is a "becomes tapped" event (Vampire Envoy,
         // Vorinclex's opponent-land lock). Emitted after the mana payment
         // succeeded so a rolled-back activation never announces a tap.
@@ -17257,7 +17296,7 @@ impl GameState {
                 .find_by_id(granter)
                 .map(|c| c.controller)
                 .unwrap_or(self.active_player_idx);
-            self.sacrifice_one(granter, controller, &mut events);
+            self.sacrifice_one(granter, controller, events);
         }
         // "Return N [filter] you control to their owner's hand" as a cost
         // (Floodbringer). Bounce the cheapest matches so a bot doesn't throw
@@ -17287,7 +17326,7 @@ impl GameState {
                     id,
                     &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
                     &ctx,
-                    &mut events,
+                    events,
                 );
             }
         }
@@ -17413,7 +17452,7 @@ impl GameState {
                 card_id,
                 &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(owner)),
                 &ctx,
-                &mut events,
+                events,
             );
         }
 
@@ -17426,7 +17465,7 @@ impl GameState {
                 cid,
                 &crate::effect::ZoneDest::Exile,
                 &crate::game::effects::EffectContext::for_ability(card_id, p, None),
-                &mut events,
+                events,
             );
             if mv.is_some() {
                 self.exiled_for_cost_mana_value = mv;
@@ -17595,7 +17634,7 @@ impl GameState {
                     break;
                 }
                 let card = self.players[p].library.remove(0);
-                self.place_card_in_dest(card, p, &crate::effect::ZoneDest::Exile, &mut events);
+                self.place_card_in_dest(card, p, &crate::effect::ZoneDest::Exile, events);
             }
         }
 
@@ -17680,7 +17719,7 @@ impl GameState {
                 .iter()
                 .find(|c| c.id == cid)
                 .map(|c| c.definition.cost.cmc());
-            if self.discard_card(p, cid, &mut events) {
+            if self.discard_card(p, cid, events) {
                 discarded_for_cost += 1;
             }
             discarded_for_cost_mv = discarded_for_cost_mv.max(mv);
@@ -17699,7 +17738,7 @@ impl GameState {
         // owners' graveyards (CR 614.6 hate redirects still apply).
         for cid in process_picks {
             if let Some(card) = Self::take_card(&mut self.exile, cid) {
-                self.route_to_graveyard(card, &mut events);
+                self.route_to_graveyard(card, events);
             }
         }
 
@@ -17708,7 +17747,7 @@ impl GameState {
             let hand: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();
             let mut dumped = 0u32;
             for cid in hand {
-                if self.discard_card(p, cid, &mut events) {
+                if self.discard_card(p, cid, events) {
                     dumped += 1;
                 }
             }
@@ -17771,7 +17810,7 @@ impl GameState {
                 other_cid,
                 &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
                 &crate::game::effects::EffectContext::for_ability(card_id, p, None),
-                &mut events,
+                events,
             );
         }
 
@@ -17795,7 +17834,7 @@ impl GameState {
                     other_cid,
                     &crate::effect::ZoneDest::Exile,
                     &crate::game::effects::EffectContext::for_ability(card_id, p, None),
-                    &mut events,
+                    events,
                 );
             }
         }
@@ -17886,7 +17925,7 @@ impl GameState {
             && let Some(owner) = self.battlefield_find(card_id).map(|c| c.owner)
         {
             let ctx = crate::game::effects::EffectContext::for_spell(owner, None, 0, 0);
-            self.move_card_to(card_id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+            self.move_card_to(card_id, &crate::effect::ZoneDest::Exile, &ctx, events);
         }
 
         // Put-a-card-on-top-as-cost: the pre-flight pick leaves the hand once
@@ -17903,7 +17942,7 @@ impl GameState {
         // payments succeed but before the effect resolves.
         if ability.discard_self_cost && source_in_hand {
             let owner = source_owner;
-            self.discard_card(owner, card_id, &mut events);
+            self.discard_card(owner, card_id, events);
         }
 
         // Mana abilities resolve immediately (no stack, no priority reset).
@@ -17951,7 +17990,7 @@ impl GameState {
                 effect,
                 target.clone(),
                 x_value.unwrap_or(0),
-                &mut events,
+                events,
             );
             self.mana_production_multiplier = 1;
             resolved?;
@@ -18057,7 +18096,7 @@ impl GameState {
         // reached 49,941 copies of one ability on the stack) runs in
         // `perform_action_inner` after this activation's events dispatch,
         // for every cost-paying action.
-        Ok(events)
+        Ok(())
     }
 }
 
