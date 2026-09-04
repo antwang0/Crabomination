@@ -7495,6 +7495,27 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-237)` TAKEN — an any-colour-spend static lane in front of the payment relaxation's walk: `cube` -0.525 % / `sealed` -0.520 % / `fixed` -0.485 %
+
+```text
+  pool    base (-236)       (-237)          delta
+  fixed     704,849,254     701,432,933   **-0.485 %**
+  cube    1,966,779,439   1,956,461,572   **-0.525 %**
+  sealed  2,029,609,917   2,019,051,137   **-0.520 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  spend_mana_as_any_color_for_spell 8,886 calls (cube) — once per payment, from relax_cost_colors_for_spell
+```
+
+Every payment — spell, ability, tax — opens with `relax_cost_colors_for_
+spell`, which asks whether any permanent lets mana be spent as any colour
+(Mycosynth Lattice, Unexpected Potential, Emissary's Ploy) with a
+board walk that runs a three-arm `match` per static. One lane over the
+three; the walk stays behind it and the seat-agnostic sibling
+`spend_mana_as_any_color_active_for` reads the same lane. The largest of
+the four `(-235)`..`(-238)` lanes because a payment is the commonest event
+of the four and the walk's per-static body was the dearest — the same
+ranking the `static_abilities` grep's self-cost column gave it.
+
 ### `(-236)` TAKEN — a land-play static lane in front of `can_player_play_land`'s three walks: `fixed` -0.388 % / `sealed` -0.192 % / `cube` -0.172 %
 
 ```text
