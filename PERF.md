@@ -20394,6 +20394,26 @@ with their ceilings, then the floors, so nobody re-reads them.**
   requirement per card, 9.6 M on `cube`) — per gather by nature, the
   gather-version memo again. `dispatch_board_scan` is 103 Ir a dispatch,
   `push_ordered_trigger_candidates`' non-empty remainder 0.19 M.
+* **The same line read on the other top self rows at the `(-244)` tip
+  (`cube`), so nobody repeats it:** `sba_board_scan`'s 16.5 M own-line
+  self is seven instance-field reads per card per sweep (`flipped`,
+  `controller != owner`, `attached_to`, `bestowed`, `sector`,
+  `soulbond_partner`, `counters`), 2.2 M a line — instance fields
+  written from dozens of sites, so neither a lane nor a per-card memo
+  can hold them; floor. `fire_combat_damage_triggers`' 7.2 M own-line
+  self is one board walk per call finding the source and OR-ing
+  `soulbond_partner` (2.6 M) and the `LISTENER` bits walk (1.8 M); the
+  rest is spread. `compute_permanent_pass`' 24.8 M own-line self is 39
+  lines of 0.3–3.9 M over 276 k passes (the `ComputedPermanent` build
+  3.9 M, prologue 3.6 M); its `PrintedList::push` edge is 47,780 *first*
+  materializations (316 deallocs under `push`, so second pushes are
+  0.7 %) at 222 Ir — 85 of them the allocation, 11 the `into_boxed_
+  slice`, and 32,624 out-of-line `Keyword::clone`s for the payload
+  keywords — so neither headroom nor a `SmallVec` override pays.
+  `perform_action_inner`'s 16 M own-line self is the `match` and the
+  `PassPriority` arm (8.6 M); `check_state_based_actions_into`'s 7.2 M
+  own-line self is spread over 227 lines; `declare_blockers`' own lines
+  are 1.6 M — everything else in it is the three layer passes.
 * **Floors, so nobody re-prices them:** the allocator's ~195 M (10 %) is
   the sum of the contexts above, most of it the probe design — a
   `GameState::clone` per probe (24,764; 13.8 M self) followed by the

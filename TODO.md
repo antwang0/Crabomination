@@ -54,10 +54,13 @@ sixty-seventh pass, so don't re-take that.
    candidates, "RE-READ AT the `(-241)` tip", by-context allocation / growth / unshare /
    collect tables):** `dispatch_board_scan`'s fresh grant `Vec` as a `SmallVec` is **refuted
    `(-242)`** (+0.7..1.4 %: inline storage in a by-value struct is a memcpy per call); the
-   auto-tapper's per-activation event `Vec` is **taken `(-243)`** (-0.32 % every pool); left:
-   the selector collect under `evaluate_predicate` (~0.2 %, wide diff); `blocker_pair_block`
-   14 M self, unread. Both grep sweeps (`static_abilities`, `keywords`) are done and recorded
-   there — do not re-run them. Floors are listed too.
+   auto-tapper's per-activation event `Vec` is **taken `(-243)`** (-0.32 % every pool); the
+   dispatcher's empty-batch tail is **taken `(-244)`** (-0.34..-0.57 %), found by the **line
+   annotation of the ordinary `profiling-fast` dump** (PERF "How to measure", no lines build);
+   the same read on every other top self row is recorded as floors there (the selector
+   collect, `blocker_pair_block`, `sba_board_scan`'s instance fields, `PrintedList::push`'s
+   first materializations). Both grep sweeps are done — do not re-run them. What is left is
+   structural: the gather-version memo and the probe design.
    `PERF.md` ~20.7 k lines after the candidates tail moved to `PERF_ARCHIVE.md` (verbatim).
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
