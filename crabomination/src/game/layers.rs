@@ -167,6 +167,153 @@ pub enum Modification {
 
 // ── Continuous effect ─────────────────────────────────────────────────────────
 
+/// The [`Modification`] families the engine's presence gates ask the stored
+/// effect list about, one bit each — see [`ContinuousEffects::families`].
+pub mod mod_families {
+    /// `AddCardType` / `RemoveCardType` / `SetCardTypes` (layer 4).
+    pub const CARD_TYPE: u32 = 1 << 0;
+    /// `AddLandType` / `SetLandTypes` / `ReplaceBasicLandType`.
+    pub const LAND_TYPE: u32 = 1 << 1;
+    /// `AddCreatureType` / `SetCreatureTypes`.
+    pub const CREATURE_TYPE: u32 = 1 << 2;
+    /// `AddColor` / `SetColors` / `LoseAllColors` (layer 5).
+    pub const COLOR: u32 = 1 << 3;
+    /// `AddKeyword` (layer 6).
+    pub const KEYWORD: u32 = 1 << 4;
+    /// `RemoveAllAbilities` (layer 6).
+    pub const STRIP: u32 = 1 << 5;
+    /// A layer-7 modification that can lower toughness
+    /// (`modification_reduces_toughness`).
+    pub const TOUGHNESS_REDUCE: u32 = 1 << 6;
+    /// The fold is computed; bit 31, so a zero word is "unknown".
+    pub(super) const VALID: u32 = 1 << 31;
+}
+
+/// The [`mod_families`] `m` belongs to.
+pub fn modification_families(m: &Modification) -> u32 {
+    use Modification as M;
+    use mod_families as F;
+    let kind = match m {
+        M::AddCardType(_) | M::RemoveCardType(_) | M::SetCardTypes(_) => F::CARD_TYPE,
+        M::AddLandType(_) | M::SetLandTypes(_) | M::ReplaceBasicLandType(..) => F::LAND_TYPE,
+        M::AddCreatureType(_) | M::SetCreatureTypes(_) => F::CREATURE_TYPE,
+        M::AddColor(_) | M::SetColors(_) | M::LoseAllColors => F::COLOR,
+        M::AddKeyword(_) => F::KEYWORD,
+        M::RemoveAllAbilities => F::STRIP,
+        _ => 0,
+    };
+    let pt = if crate::game::modification_reduces_toughness(m) { F::TOUGHNESS_REDUCE } else { 0 };
+    kind | pt
+}
+
+/// The resolved continuous effects a game holds (`GameState::continuous_
+/// effects`), behind the same `CowBox` as before, with a fold of the
+/// [`mod_families`] present in it held beside the list (PERF `(-208)`).
+///
+/// Seven presence gates walked the list on every ask for one modification
+/// kind — every SBA sweep, every land tap, every type-flavoured predicate.
+/// Reads go through `Deref`; every `&mut` route (`DerefMut`, [`push`](Self::push))
+/// clears the fold, and the first ask after a write recomputes it. The list
+/// is written a few times a turn and asked hundreds of times in between.
+/// Atomics rather than a `Cell` so `GameState` stays `Sync`; the same
+/// load-modify-store contract as `Battlefield`'s lanes.
+#[derive(Debug, Default)]
+pub struct ContinuousEffects {
+    list: crate::cow::CowBox<Vec<ContinuousEffect>>,
+    /// `mod_families::VALID | families`, or 0 while unknown.
+    fold: std::sync::atomic::AtomicU32,
+}
+
+impl ContinuousEffects {
+    /// The families present in the list — [`modification_families`] OR'd
+    /// over every entry. A word load on a hit; audited against the walk on
+    /// every hit under debug assertions.
+    #[inline]
+    pub fn families(&self) -> u32 {
+        use std::sync::atomic::Ordering::Relaxed;
+        let w = self.fold.load(Relaxed);
+        if w & mod_families::VALID != 0 {
+            debug_assert_eq!(
+                w & !mod_families::VALID,
+                self.compute_families(),
+                "continuous-effects fold is stale: a write reached the list without clearing it",
+            );
+            return w & !mod_families::VALID;
+        }
+        self.fill()
+    }
+
+    /// Is any entry of `family` in the list?
+    #[inline]
+    pub fn has_family(&self, family: u32) -> bool {
+        self.families() & family != 0
+    }
+
+    #[inline(never)]
+    fn fill(&self) -> u32 {
+        let f = self.compute_families();
+        self.fold.store(f | mod_families::VALID, std::sync::atomic::Ordering::Relaxed);
+        f
+    }
+
+    fn compute_families(&self) -> u32 {
+        self.list.iter().fold(0, |m, e| m | modification_families(&e.modification))
+    }
+
+    /// `Vec::push` through the `CowBox`'s unshare-aware push, clearing the fold.
+    #[inline]
+    pub fn push(&mut self, effect: ContinuousEffect) {
+        self.fold.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.list.push(effect);
+    }
+}
+
+impl std::ops::Deref for ContinuousEffects {
+    type Target = Vec<ContinuousEffect>;
+    #[inline]
+    fn deref(&self) -> &Vec<ContinuousEffect> {
+        &self.list
+    }
+}
+
+impl std::ops::DerefMut for ContinuousEffects {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Vec<ContinuousEffect> {
+        self.fold.store(0, std::sync::atomic::Ordering::Relaxed);
+        &mut self.list
+    }
+}
+
+impl Clone for ContinuousEffects {
+    fn clone(&self) -> Self {
+        Self {
+            list: self.list.clone(),
+            fold: std::sync::atomic::AtomicU32::new(
+                self.fold.load(std::sync::atomic::Ordering::Relaxed),
+            ),
+        }
+    }
+}
+
+impl From<Vec<ContinuousEffect>> for ContinuousEffects {
+    fn from(list: Vec<ContinuousEffect>) -> Self {
+        Self { list: list.into(), fold: std::sync::atomic::AtomicU32::new(0) }
+    }
+}
+
+impl Serialize for ContinuousEffects {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.list.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ContinuousEffects {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        crate::cow::CowBox::<Vec<ContinuousEffect>>::deserialize(deserializer)
+            .map(|list| Self { list, fold: std::sync::atomic::AtomicU32::new(0) })
+    }
+}
+
 /// A single continuous effect active in the game.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContinuousEffect {

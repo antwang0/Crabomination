@@ -210,7 +210,7 @@ pub use crate::effect::Effect;
 pub use crate::game::effects::EffectContext;
 use crate::game::layers::{
     AffectedPermanents, ComputedPermanent, ContinuousEffect, EffectDuration, Layer, Modification,
-    PtSublayer,
+    PtSublayer, mod_families,
 };
 use crate::card::gather_spec;
 use crate::cow::CowBox;
@@ -371,13 +371,11 @@ struct LayerFreezeState {
 #[derive(Clone, Copy)]
 pub(crate) enum PresenceGate {
     Card = 0,
-    Creature = 1,
-    Land = 2,
-    BlockEvenMv = 3,
+    BlockEvenMv = 1,
 }
 
 impl PresenceGate {
-    const COUNT: usize = 4;
+    const COUNT: usize = 2;
 }
 
 impl LayerFreeze {
@@ -1618,7 +1616,7 @@ pub struct GameState {
     /// Priority state — tracks who can act and when the stack resolves.
     pub priority: PriorityState,
     /// Active continuous effects from resolved spells, abilities, and static abilities.
-    pub continuous_effects: CowBox<Vec<ContinuousEffect>>,
+    pub continuous_effects: crate::game::layers::ContinuousEffects,
     pub(crate) next_effect_timestamp: u64,
     pub(crate) next_id: u32,
     /// Attackers declared this combat, each with the player or planeswalker
@@ -3207,7 +3205,7 @@ impl GameState {
             mandatory_loop_watch: (0, 0),
             free_activation_watch: (0, None, 0),
             priority: PriorityState::new(0),
-            continuous_effects: CowBox::default(),
+            continuous_effects: Default::default(),
             next_effect_timestamp: 1,
             next_id: 1,
             attacking: Vec::new(),
@@ -9455,11 +9453,7 @@ impl GameState {
     /// debug-only cross-check in `permanents_with_abilities_removed` re-runs
     /// the gather whenever this says `false`, so the whole suite audits it.
     fn ability_strip_off_battlefield(&self) -> bool {
-        if self
-            .continuous_effects
-            .iter()
-            .any(|e| matches!(e.modification, Modification::RemoveAllAbilities))
-        {
+        if self.continuous_effects.has_family(mod_families::STRIP) {
             return true;
         }
         // Every remaining route needs a card in a command zone or an emblem,
@@ -9535,16 +9529,11 @@ impl GameState {
         // The battlefield half behind its lane (PERF `(-207)`): the lane's
         // predicate is the definition-only superset, so `ABSENT` means the
         // exact walk would find nothing, and `PRESENT` runs it as before —
-        // the answer is the same, the common board pays a word load.
-        self.continuous_effects.iter().any(|e| {
-            matches!(
-                e.modification,
-                Modification::AddCardType(_)
-                    | Modification::RemoveCardType(_)
-                    | Modification::SetCardTypes(_)
-            )
-        }) || (self.battlefield.has_card_type_changer(card_can_change_card_types_def)
-            && self.battlefield.iter().any(card_can_change_card_types))
+        // the answer is the same, the common board pays a word load. The
+        // effect-list half is the same shape one level down (`(-208)`).
+        self.continuous_effects.has_family(mod_families::CARD_TYPE)
+            || (self.battlefield.has_card_type_changer(card_can_change_card_types_def)
+                && self.battlefield.iter().any(card_can_change_card_types))
     }
 
     /// The layer-5 twin of
@@ -9566,14 +9555,8 @@ impl GameState {
     /// call rate here to pay for it. If a hot caller ever appears, give it its
     /// own valid flag rather than folding it into `type_bits`.
     pub(crate) fn card_color_change_unscoped(&self) -> bool {
-        self.continuous_effects.iter().any(|e| {
-            matches!(
-                e.modification,
-                Modification::AddColor(_)
-                    | Modification::SetColors(_)
-                    | Modification::LoseAllColors
-            )
-        }) || self.battlefield.iter().any(card_can_change_colors)
+        self.continuous_effects.has_family(mod_families::COLOR)
+            || self.battlefield.iter().any(card_can_change_colors)
     }
 
     /// CR 602.5g/h — is `card_id`'s `{T}`/`{Q}` ability barred right now
@@ -9683,17 +9666,10 @@ impl GameState {
         // it is the one the zone memoizes, so a hit answers the whole
         // question for a word load. The `continuous_effects` half keeps the
         // freeze-scope slot, which is where its own walk is cached.
+        // The `continuous_effects` half is the list's own fold now
+        // (`(-208)`), which subsumes the freeze-scope slot it used to hold.
         self.battlefield.has_land_type_changer(card_can_change_land_types)
-            || self.presence_gate(PresenceGate::Land, || {
-                self.continuous_effects.iter().any(|e| {
-                    matches!(
-                        e.modification,
-                        Modification::AddLandType(_)
-                            | Modification::SetLandTypes(_)
-                            | Modification::ReplaceBasicLandType(..)
-                    )
-                })
-            })
+            || self.continuous_effects.has_family(mod_families::LAND_TYPE)
     }
 
     /// The same device for the layer-4 *creature*-type family: a cheap
@@ -9712,14 +9688,7 @@ impl GameState {
     pub(crate) fn creature_type_change_in_scope(&self) -> bool {
         // Same shape as the land gate above, and for the same reason.
         self.battlefield.has_creature_type_changer(card_can_change_creature_types)
-            || self.presence_gate(PresenceGate::Creature, || {
-                self.continuous_effects.iter().any(|e| {
-                    matches!(
-                        e.modification,
-                        Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
-                    )
-                })
-            })
+            || self.continuous_effects.has_family(mod_families::CREATURE_TYPE)
     }
 
     /// Does any battlefield permanent carry Void Winnower's block half
@@ -9784,9 +9753,11 @@ impl GameState {
             offboard || !self.offboard_keyword_grants_now(),
             "offboard_keyword_grants is clear, but a command-zone card or emblem can grant a keyword"
         );
-        self.continuous_effects
-            .iter()
-            .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k)))
+        (self.continuous_effects.has_family(mod_families::KEYWORD)
+            && self
+                .continuous_effects
+                .iter()
+                .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k))))
             || self.board_grants_keyword(&pred, synth)
             || self.players.iter().any(|p| {
                 (offboard
@@ -9944,9 +9915,7 @@ impl GameState {
     /// nothing. `gather_continuous_effects` `debug_assert!`s the implication
     /// in the sound direction, so the whole suite audits the enumeration.
     pub(crate) fn pt_reduction_in_scope(&self) -> bool {
-        self.continuous_effects
-            .iter()
-            .any(|e| modification_reduces_toughness(&e.modification))
+        self.continuous_effects.has_family(mod_families::TOUGHNESS_REDUCE)
             || self.battlefield.has_toughness_reducer(card_can_reduce_toughness)
     }
 

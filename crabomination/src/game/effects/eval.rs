@@ -45,16 +45,9 @@ impl PrintedGates {
         if let Some(v) = self.creature.get() {
             return v;
         }
-        let v = g.battlefield.has_creature_type_changer(crate::game::card_can_change_creature_types)
-            || g.presence_gate(PresenceGate::Creature, || {
-                g.continuous_effects.iter().any(|e| {
-                    matches!(
-                        e.modification,
-                        crate::game::Modification::AddCreatureType(_)
-                            | crate::game::Modification::SetCreatureTypes(_)
-                    )
-                })
-            });
+        // The engine's one gate for the family (its lane plus the effect
+        // list's fold, PERF `(-208)`), not a second copy of its walk.
+        let v = g.creature_type_change_in_scope();
         self.creature.set(Some(v));
         v
     }
@@ -63,17 +56,7 @@ impl PrintedGates {
         if let Some(v) = self.land.get() {
             return v;
         }
-        let v = g.battlefield.has_land_type_changer(crate::game::card_can_change_land_types)
-            || g.presence_gate(PresenceGate::Land, || {
-                g.continuous_effects.iter().any(|e| {
-                    matches!(
-                        e.modification,
-                        crate::game::Modification::AddLandType(_)
-                            | crate::game::Modification::SetLandTypes(_)
-                            | crate::game::Modification::ReplaceBasicLandType(..)
-                    )
-                })
-            });
+        let v = g.land_type_change_in_scope();
         self.land.set(Some(v));
         v
     }
