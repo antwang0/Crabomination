@@ -19,7 +19,8 @@ sixty-seventh pass, so don't re-take that.
   The client **does** build here after four apt packages; that file's header
   has the command and the disk caveat.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
-  baseline, log, profile of record, candidates.
+  baseline, log, profile of record, candidates. `PERF_ARCHIVE.md` holds the
+  Baseline's closing states from the eighty-ninth pass and older, verbatim.
 
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
@@ -45,7 +46,8 @@ sixty-seventh pass, so don't re-take that.
 4. **Perf leads (candidates, "RE-READ AT the (-219) tip"):** thin. `fire_combat_damage_triggers`'
    1,400 Ir a call wants a `profiling-lines` read first; `computed_permanent_hinted`'s hit-path
    scan (~10 M, marginal); everything else read is a floor or the bot's search count.
-   `PERF.md` is at ~34.7 k lines — fold the oldest closing-state tables before adding one.
+   `PERF.md` is at ~30.3 k lines after the eighty-ninth-and-older closing states moved to
+   `PERF_ARCHIVE.md` (verbatim); the candidates section's old "RE-READ AT" blocks are the next fold.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
