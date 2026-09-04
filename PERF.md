@@ -11747,6 +11747,41 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-219)` TAKEN — the CR 732.3 announcement watch behind the land-tap fast path: `cube` -1.004 % / `fixed` -0.951 % / `sealed` -0.938 %
+
+```text
+  pool    base (-218)       (-219)          delta
+  fixed     752,320,968     745,162,927   **-0.951 %**
+  cube    2,056,208,537   2,035,554,686   **-1.004 %**
+  sealed  2,104,769,657   2,085,022,232   **-0.938 %**
+  three-pool stdout identical; --bench counters identical; golden traces 7/7 unmoved
+  fingerprint (self)   fixed   9,636 calls / 7.53 M  ->    930 / 0.63 M
+                       cube   29,196 calls / 26.28 M -> 6,720 / 6.40 M
+                       sealed 35,598 calls / 26.41 M -> 9,576 / 7.46 M
+```
+
+Read off the `(-217)` tip's self table: `fingerprint` was 1.0-1.3 % of
+every pool, and its caller table said 23,666 of `cube`'s 29,196 calls
+came from `activate_ability` — the CR 732.3 announcement watch, taken
+*before* `activate_ability_inner` and so before the `(-204)` fast path,
+on every printed land tap. A plain land tap cannot trip the watch: it
+flips its source's `tapped` bit and grows a mana pool, both in the
+digest, so its own key can never repeat on an unmoved state; and since
+the watch only compares against the *immediately previous* activation,
+the one thing a land tap ever did to it was reset it. The fast path now
+resets the watch to its initial `(0, None, 0)` and the check runs after
+the fast path for every other activation — still before any cost is
+paid. Outcome-identical in every reachable sequence (the count can
+differ by one only when the same land is re-tapped on a byte-identical
+digest, which needs a step boundary and an untap trigger between the
+two, i.e. at most a handful a turn against a cap of 50); the both-ways
+test names the field and checks each side's value.
+
+**The rule this adds to the fast-path device: price every *caller-side*
+wrapper of the function the fast path shortcuts.** `(-204)` settled
+`activate_ability_inner` and was measured through `activate_ability`,
+whose own prologue kept paying 900 Ir a tap for three passes.
+
 ### `(-218)` TAKEN — the step and combat-damage walkers behind zone lanes, the intervening-if filter in place: `fixed` -0.344 % / `sealed` -0.208 % / `cube` -0.158 %
 
 ```text
