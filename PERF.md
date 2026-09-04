@@ -7423,6 +7423,36 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-222)` TAKEN — the attack declaration's two printed-trigger walks visit the trigger member list: `cube` -0.134 % / `fixed` -0.126 % / `sealed` -0.073 %
+
+```text
+  pool    base (-220)       (-222)          delta
+  fixed     745,019,299     744,080,362   **-0.126 %**
+  cube    2,032,242,422   2,029,520,828   **-0.134 %**
+  sealed  2,083,448,867   2,081,933,562   **-0.073 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  declare_attackers_banded self   cube 27.62 M -> 22.37 M   fixed 10.35 M -> 8.81 M   sealed 26.95 M -> 22.46 M
+```
+
+The `(-219)` re-read priced `declare_attackers_banded`'s 4,086-Ir self as
+"the validation body — a dozen `attacks.iter().any(..)` scans" and left
+it; two of the walks in that body are not scans of the batch but of the
+*board*: the CR 508.1g `ControllerAttackedByOpponent` listeners (one
+whole-battlefield walk per attacker, into every permanent's printed
+`triggered_abilities`) and the CR 508 "whenever you attack" walk (one
+per declaration). Both read printed triggers only, which is exactly the
+question `Battlefield::trigger_members` already holds the answer to —
+kept exact through membership writes since `(-214)`, filled by every
+dispatch, so it is warm at every declaration. `for_each_triggerer` walks
+the list on a hit and the board on a miss (it never fills; the
+dispatcher does). Self came down 19 % on `cube` for ~5 lines.
+
+**The rule: a "validation body" is worth reading for the walks that are
+not over the batch.** A dozen `any` over two attackers is nothing; the
+two loops over twenty-three permanents' definitions beside them were a
+fifth of the function, and the member list that removes them was
+already there.
+
 ### `(-221)` REFUTED — the combat-damage walker's listener walk fused into its dealer walk (built against the `(-219)` tip, concurrently with `(-220)`): `fixed` +0.131 % / `cube` +0.174 % / `sealed` +0.131 %, reverted
 
 ```text
@@ -19507,7 +19537,12 @@ was not taken, so nobody re-prices it:**
   2.1 M, `board_keyword_in_scope` 6,758 / 2.0 M. The self is the
   validation body — a dozen `attacks.iter().any(..)` scans and the
   requirement loops, each already a `for` — and the call count is the
-  attack search's. Not an engine lead; the count is `(-21)`.
+  attack search's. **Two of those walks were over the board, not the
+  batch, and are TAKEN as `(-222)`** (the trigger member list; self
+  27.6 M -> 22.4 M). What is left: the `groups` static walk (~230 Ir,
+  no lane holds `AttackTogether`), the per-attacker `attacker_grants`
+  build (three `Vec<TriggeredAbility>` an attacker, cheap on empty) and
+  the batch scans. The count is `(-21)`.
 * **`computed_permanent_hinted` — 42.6 M self over ~343 k asks (124 Ir
   each):** 168,044 memo hits (`LocalKey::with` 21.3 M — the lock and
   the `perms` scan) and 175,304 per-scope misses (`compute_permanent_
