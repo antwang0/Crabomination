@@ -634,7 +634,15 @@ impl GameState {
         if c.controller == actor {
             return false;
         }
-        let cp = self.computed_permanent(cid);
+        // Presence-gated like `check_target_legality_inner`'s keyword read:
+        // the view is a memo hit once the scope has gathered, and a gather
+        // otherwise — skip the gate in the first case, the view in the second.
+        if !self.layers_memoized()
+            && !self.card_keyword_possible_on(c, |k| matches!(k, Keyword::Ward(_)))
+        {
+            return false;
+        }
+        let cp = self.computed_permanent_on(c);
         let kws: &[Keyword] = match &cp {
             Some(cp) => cp.keywords(),
             None => &c.definition.keywords,

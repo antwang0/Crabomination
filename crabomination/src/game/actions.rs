@@ -9282,15 +9282,23 @@ impl GameState {
         if self.triggered_once_per_turn_used.contains(&key) {
             return;
         }
-        let Some(controller) = self.battlefield_find(perm_id).map(|c| c.controller) else {
+        let Some(card) = self.battlefield_find(perm_id) else {
             return;
         };
-        let cp = self.computed_permanent(perm_id);
+        let controller = card.controller;
+        // The same gate the Ward push one call up uses: this ran a whole-game
+        // gather per targeted permanent, outside any scope, for a keyword
+        // four printings carry (884 asks / 2.7 M Ir on six `cube` games at
+        // the `(-247)` tip). `false` is authoritative.
+        if !self.card_keyword_possible_on(card, |k| {
+            matches!(k, Keyword::CounterFirstTargetingEachTurn)
+        }) {
+            return;
+        }
+        let cp = self.computed_permanent_on(card);
         let has = match &cp {
             Some(cp) => cp.keywords().has_kw(&Keyword::CounterFirstTargetingEachTurn),
-            None => self.battlefield_find(perm_id).is_some_and(|c| {
-                c.definition.keywords.has_kw(&Keyword::CounterFirstTargetingEachTurn)
-            }),
+            None => card.definition.keywords.has_kw(&Keyword::CounterFirstTargetingEachTurn),
         };
         if !has {
             return;
