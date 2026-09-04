@@ -25,31 +25,32 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-198)` is the last claimed,
-   `(-199)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
-   rules"**. Cold here: `profiling-fast` **~17 min cold / ~5 min warm** (a `crabomination_base`
-   edit re-fingerprints the catalog: ~14 min), test build+suite ~4 min; `nextest` needs
-   installing (CLAUDE.md). Callgrind `--games 6` ~25 s/pool. ⚠ A rebase between an A/B's two
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-199)` is the last claimed,
+   `(-200)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   rules"**. Here: `profiling-fast` **10.6 min cold / 3.2 min warm** (a `crabomination_base`
+   edit re-fingerprints the catalog: ~14 min — keep a device engine-only when it can be),
+   test build ~5.5 min + suite 2.7 min; `nextest` needs installing (CLAUDE.md). Callgrind
+   `--games 6` ~25 s/pool, the three pools in parallel ~1 min. ⚠ A rebase between an A/B's two
    builds can pull a concurrent CATALOG commit: `git log --stat <base>..HEAD --
    crabomination_catalog` after any rebase (PERF Standing rules, top). ⚠ `diff` two
    `bot_ladder` stdouts with the `decided ... in N.Ns` line excluded — it carries wall clock.
-2. **Gates at `2003d1cf` (this run):** PERF Baseline has them — suite, clippy, release-fast
-   typecheck, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to `df27df7e`**,
-   golden traces 7/7 unmoved, three-pool stdout identical at every step, `--no-actor` grid.
-3. **This run: five engine devices, `cube` -4.25 % / `sealed` -4.65 % / `fixed` -2.93 %
-   cumulative** (Log `(-194)`..`(-198)`): the block planner reads the views it holds; a batch
-   kind mask (`EventKind::bit`, `event_kind_bits`) gates the dispatcher's pair loop; a per-card
-   printed-trigger kind fold on `CardMemo`'s third word gates its permanent walk; a mana-static
-   lane gates the three board walks every land tap made; a per-definition mana summary on the
-   fourth memo word is the auto-tapper's source row. **The method that found all five:
-   `cg_contexts.py` on a `--separate-callers=3` dump, ranking a hot row's *callers* — not a
-   line profile of its body.** `bench_ab.py` 16 pairs at `(-196)`: +0.67 % median, in noise.
-4. **Perf leads left (candidates, top, priced):** the auto-tapper is still ~8 % of `cube` —
-   a printed-mana-ability fast path in `activate_ability_inner` (ceiling ~3 %, a 2,000-line
-   read to do exactly; `(-197)`'s Log entry prices each piece of a tap), the 58 % of source
-   rows `grants_nothing` refuses (a static or a counter on the permanent); then the
-   cheap-on-empty clone (~0.7 %) and `resolve_combat`'s protection asks (0.2 %). Refuted:
-   the kind-fold gate in `fire_step_triggers` (+0.2 M — an inlined tag compare beats a load).
+2. **Gates at `4bd4fc1b` (this run):** PERF Baseline has them — suite 19,239 / 0 / 5, clippy,
+   release-fast typecheck, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to
+   `2003d1cf`**, golden traces 7/7 unmoved, three-pool stdout identical; grid not re-run (no
+   encoder/pool change).
+3. **This run: `(-199)`, `cube` -0.644 % / `fixed` -0.561 % / `sealed` -0.354 %** — the
+   grants-nothing gate asks per permanent (an Equipment / Soulbond link, a grant static's
+   selector reach, the `SELF_GRANT` / `COUNTER_GRANT` bits on the mana-summary word, a lazy
+   counter-grant lane). Three builds: an eager lane read lost on `fixed`, a one-body gate lost
+   its inlining — **keep the old loads inline as the fast accept, put the growth out of line**
+   (Log). `(-198)`'s "the rest carry a static or a counter" was wrong about the reason: a
+   static *elsewhere* refused them; `cg_edges.py --callers` on the base dump said so first.
+4. **Perf leads left (candidates, top, priced):** the printed-mana-ability fast path in
+   `activate_ability_inner` (ceiling ~3 % of `cube`; the whole 3,100-line body was read this
+   run — every unconditional write on it is a plain `GameState` field, so there is no single
+   waste, only the sum of ~100 gates + the digest + the generic resolver); a per-scan
+   `EachPermanent` reach mask (`grants_nothing_slow` 100 k x 99 Ir = 0.45 % of `cube`); then
+   the cheap-on-empty clone (~0.7 %) and `resolve_combat`'s protection asks (0.2 %).
 5. **Cards/rules (leftover only):** primitives unblocking several filed rows — a per-turn
    cast-name memory (Sift Through Sands + Kamigawa "cast X this turn"; `spell_ids_cast_this_turn`
    is the raw material, `Predicate::CastSpellNamedThisTurn` the missing arm), a per-turn

@@ -2520,6 +2520,38 @@ a box whose state moves.
 
 ## Baseline
 
+### The grants-nothing pass — closing state at `4bd4fc1b`
+
+One engine commit, behaviour-preserving (three-pool stdout identical,
+`--bench` byte-identical, golden traces unmoved), from the base dumps'
+*caller* tables again: `granted_abilities_of_inner`'s 96,734 calls were
+one `cg_edges.py --callers` away from "the gate refuses rows for a grant
+aimed at something else".
+
+```text
+  pool     base 2003d1cf     tip 4bd4fc1b      delta
+  fixed      813,222,102      808,660,509   **-0.561 %**
+  cube     2,236,502,758    2,222,094,501   **-0.644 %**
+  sealed   2,236,900,247    2,228,991,395   **-0.354 %**
+
+  (base re-taken this run: within 0.0003 % of the 2003d1cf readings)
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,239 / 0 / 5; golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast typecheck gate (debug-assertions off)   clean
+--bench profiling-fast at 4bd4fc1b: **195,806 decisions / 27.49 turns /
+        611.9 per game / 0 stalls** — byte-identical to 2003d1cf;
+        determinism ok (all pairs split); thread_determinism ok (3 vs 1
+        threads identical); peak_rss 21.3 MiB, bin 219,701,352 B
+        (`--no-default-features`)
+grid    not re-run: no encoder or pool change; the widened gate is audited
+        by `granted_abilities_of`'s `debug_assert!` on every accept, which
+        the suite runs with debug-assertions on.
+```
+
 ### The dispatcher-mask pass — closing state at `2003d1cf`
 
 Five engine commits, each behaviour-preserving (three-pool stdout
@@ -11614,6 +11646,66 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-199)` TAKEN — the grants-nothing gate asks its questions of the permanent, not the board: `cube` -0.644 % / `fixed` -0.561 % / `sealed` -0.354 %
+
+```text
+  pool    base 2003d1cf     (-199)          delta
+  fixed     813,222,102     808,660,509   **-0.561 %**
+  cube    2,236,502,758   2,222,094,501   **-0.644 %**
+  sealed  2,236,900,247   2,228,991,395   **-0.354 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  granted_abilities_of_inner   96,734 calls -> 10,446 (16.4 M -> 2.1 M self)
+                effective_mana_abilities_into 48,516 -> 16,278 (36,016 -> 3,778 of
+                                             them the auto-tapper's sweep, which now
+                                             takes the (-198) memo row instead)
+                grants_nothing_slow          +100,318 x 99 Ir = 9.9 M (new)
+                PrintedGrantFilter::test     +1.6 M (out of line now); the
+                counter-grant lane's misses  walk_and_store +0.8 M
+```
+
+`grants_nothing` was ten length loads, and four of them were about the
+*board*: any live `GrantActivatedAbility` static, any attached Equipment,
+any Soulbond pair anywhere refused every permanent in the sweep. On `cube`
+that was 42 k of 78 k rows (`(-198)`'s "the rest carry a static or a
+counter" was wrong about the reason: a static *elsewhere* was the reason),
+and each refusal was `effective_mana_abilities_into` +
+`granted_abilities_of_inner` for a row the memo already held. The
+per-permanent form (`grants_nothing_slow`) asks the same questions of
+`me`: an Equipment or a Soulbond pair grants only along its link (id
+compares), a grant static only where its selector reaches — `This` and
+`AttachedTo(This)` by id, `EachPermanent` by the scan's printed filter
+answering `Some(false)`, anything it cannot settle refusing as before.
+The definition's own statics matter only through the six
+`HasActivatedAbilitiesOf*` markers and a Station band, folded into the
+mana-summary word as `SELF_GRANT` (bit 61); the counter bag only on a
+board with Agatha's Soul Cauldron, a new zone lane (`LANE_COUNTER_GRANT`,
+predicate = `COUNTER_GRANT`, bit 60 of the same word) read lazily when a
+countered permanent gets that far. `granted_abilities_of`'s
+`debug_assert!` still recomputes the body on every accept, so the suite
+audits the widened gate.
+
+Three builds to the shape, and the shape is the lesson:
+
+* **v1** — the memo bit and an *eager* lane read per scan, with the lane
+  predicate a `static_abilities` walk: `fixed` **+0.144 %**, `cube`
+  +0.002 %, `sealed` -0.257 %. The lane missed on every membership change
+  and walked the board (`walk_and_store` +1.6 M on `cube`), the memo read
+  stopped inlining once it had four callers (+0.4 M / +0.7 M), and the
+  rows it admitted were 3 k of the 42 k — the wrong population.
+* **v2** — the per-permanent questions, as one `#[inline]` body: `cube`
+  -0.465 %, `fixed` -0.107 %, `sealed` **-0.061 %**. Right population,
+  but the body passed the inlining threshold and every row paid an
+  out-of-line gate (`sealed`: `granted_abilities_of` +6.8 M,
+  `grants_nothing` +2.9 M, `Iter::all` +3.3 M — 13 M of overhead against
+  a 16 M win).
+* **v3 (taken)** — the base's ten loads inline, verbatim, `||` an
+  `#[inline(never)]` slow half. The loads answer the common row at the
+  base's cost and only the refused rows pay the call. `(-116)`'s rule with
+  an inlining twist: **when a gate grows past what its callers will
+  inline, keep the old body as the fast accept and put the growth behind
+  it, out of line.**
 
 ### `(-198)` TAKEN — a per-definition printed mana summary, one memo word, is the auto-tapper's source row: `fixed` -0.854 % / `sealed` -0.658 % / `cube` -0.488 %
 
@@ -22699,10 +22791,12 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at `2003d1cf` (`(-194)`..`(-198)`, three-pool Ir against
-`0e9bdaa4`): `fixed` 837,759,772 -> 813,220,278 (-2.929 %), `cube`
-2,335,851,736 -> 2,236,499,052 (-4.253 %), `sealed` 2,345,940,541 ->
-2,236,898,811 (-4.648 %).** The `cube` self table at `(-196)`, top rows:
+**State at `4bd4fc1b` (`(-199)`, three-pool Ir against `2003d1cf`):
+`fixed` 813,222,102 -> 808,660,509 (-0.561 %), `cube` 2,236,502,758 ->
+2,222,094,501 (-0.644 %), `sealed` 2,236,900,247 -> 2,228,991,395
+(-0.354 %).** Before it, `(-194)`..`(-198)` against `0e9bdaa4`: `fixed`
+-2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The `cube` self table at
+`(-196)`, top rows:
 `dispatch_triggers_for_events` 3.95 % (was 5.80 %), `gather_continuous_
 effects_inner` 3.65 %, `compute_permanent_pass` 3.17 %, `Vec::from_iter`
 2.99 %, `Arc::clone_from_ref_in` 2.60 %, `memcpy` 2.51 %, SBA 2.33 %,
@@ -22726,14 +22820,17 @@ Open, priced, largest first:
   three-pool stdout identity and the golden traces are the check that
   can see a slip, and every cast in the suite exercises it. Not
   attempted this run.
-* **`mana_source_table`'s other 58 % of rows** — `(-198)` memoized the
-  42 % that pass `grants_nothing`; the rest carry a static or a counter
-  (the gate's third-largest miss, per its own comment) and still walk
-  `effective_mana_abilities_into` + `granted_abilities_of_inner` (96,734
-  x 170 Ir, 0.73 % of `cube`, also from `available_mana`'s probes). A
-  memo keyed on the definition alone cannot serve them; a gate that
-  reads *which* static / counter kinds actually grant abilities could
-  admit most.
+* **`mana_source_table`'s other 58 % of rows — TAKEN as `(-199)`** (Log:
+  `cube` -0.644 % / `fixed` -0.561 % / `sealed` -0.354 %). The reason
+  they missed was a grant static, an Equipment or a Soulbond pair
+  *elsewhere on the board*, not the permanent's own static or counter;
+  the gate now asks per permanent. What is left of the family on `cube`:
+  `grants_nothing_slow` 100 k calls x 99 Ir (0.45 %), most of it the
+  `EachPermanent` filter test per (permanent x grant static) — a
+  per-scan "which permanents does this grant reach" mask would be the
+  device, priced against `PrintedGrantFilter::test`'s 1.6 M; and the
+  counter-grant lane's misses (`walk_and_store` +0.8 M, a memo-word read
+  per permanent per membership change — below the bar on its own).
 
 * **Cheap-on-empty clones — ceiling ~0.7 % of `cube`.** `Vec::clone` is
   471,251 calls / 33.6 M inclusive (1.44 %) and only 29,494 of them reach
