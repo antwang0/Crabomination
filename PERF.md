@@ -7489,6 +7489,40 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-230)` TAKEN — the event dispatcher's graveyard leg behind the graveyard lane, the lane's predicate widened to both graveyard-firing families: `fixed` -0.784 % / `sealed` -0.428 % / `cube` -0.350 %
+
+```text
+  pool    base (-228)       (-230)          delta
+  fixed     733,633,503     727,884,518   **-0.784 %**
+  cube    2,010,133,057   2,003,093,203   **-0.350 %**
+  sealed  2,068,205,261   2,059,349,123   **-0.428 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  dispatch_triggers_for_events self   fixed 43.98 M -> 38.39 M   cube 86.71 M -> 79.54 M   sealed 117.26 M -> 108.30 M
+```
+
+`dispatch_triggers_for_events` — 143,852 calls a six-game `cube` run —
+walked **both players' whole graveyards** into every card's printed
+`triggered_abilities` on every dispatch, for the `FromYourGraveyard`
+scope and the graveyard-resident `SelfSource` kinds (cycling, milling,
+discard, "from anywhere"). The `(-210)` lane already held "does any card
+here carry a `FromYourGraveyard` trigger" for the combat-damage and step
+walkers; its predicate now covers both families (`is_graveyard_self_
+source_kind` is the one list, so the lane and the walk cannot drift),
+which is wider — the sound direction — for its two older readers, and
+the dispatcher's leg skips a graveyard whose lane reads `ABSENT`. A
+graveyard grows all game; the cost was a definition deref per graveyard
+card per dispatch on a zone that holds such a card in a few games out of
+six.
+
+**Found by grepping for the read, not by the profile**: every
+`definition.triggered_abilities` site in the engine was listed after
+`(-228)` and each asked "is this a whole-zone walk, and is the zone
+memoized". This one had sat inside the dispatcher's 4-6 % self row —
+which the line profile at `(-115)` called "the per-event bookkeeping" —
+for the whole history of the lane that could gate it. **A self row's
+line profile names where the instructions are; the grep names which of
+them a memo already answers.**
+
 ### `(-228)` TAKEN — the step-trigger walk visits the trigger member list when no static grant is live: `fixed` -0.421 % / `cube` -0.127 % / `sealed` -0.052 %
 
 ```text
