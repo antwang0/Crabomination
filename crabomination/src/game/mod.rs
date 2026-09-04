@@ -19925,18 +19925,44 @@ impl GameState {
         // (CR 603.3b) — the resume path re-enters
         // `push_ordered_trigger_candidates` with the finished order. Nothing
         // survived phase 1 on ~97.5 % of dispatches, and an empty run has no
-        // order to ask about. `push_ordered_trigger_candidates` is still
-        // called: it owns the life-gain flag flip and the `died_card_snapshots`
-        // clear, which are per-batch, not per-candidate.
-        let candidates = if candidates.is_empty() {
-            candidates
-        } else {
-            let Some(ordered) = self.continue_trigger_ordering(Vec::new(), candidates) else {
-                return;
-            };
-            ordered
+        // order to ask about — nor a queue to drain: the empty batch does
+        // the two per-batch jobs `push_ordered_trigger_candidates` owns
+        // (the life-gain flag flip, the `died_card_snapshots` clear) here
+        // and skips the call, the empty drain and their `Vec` drops, which
+        // were ~110 Ir on 77 k of a `cube` run's 118 k dispatches (PERF
+        // `(-244)`). Same order as the full path: flags, (drain), clear.
+        if candidates.is_empty() {
+            self.flip_pending_life_gain_flags();
+            self.died_card_snapshots.clear();
+            return;
+        }
+        let Some(ordered) = self.continue_trigger_ordering(Vec::new(), candidates) else {
+            return;
         };
-        self.push_ordered_trigger_candidates(candidates);
+        self.push_ordered_trigger_candidates(ordered);
+    }
+
+    /// Flip the queued "gained life earlier this turn" flags (Leech
+    /// Collector's "first time each turn" gate) once a batch's filter
+    /// evaluation is done. Guarded: `life_gain_flag_pending` is a `ColdState`
+    /// field, so the `take` reaches it through `GameState::deref_mut` and
+    /// deep-copies the whole cold group — once per trigger dispatch, on a
+    /// list that is empty unless someone gained life this batch. The
+    /// `PlayerCold` rule (PERF, twenty-ninth pass): a `clear`/`take` on a
+    /// periodic path needs an `is_empty` read in front of it.
+    ///
+    /// `inline(always)`: with plain `#[inline]` the first `(-244)` reading
+    /// left this out of line on both callers — 77 k calls at ~18 Ir on
+    /// `cube` for an `is_empty` read behind the cold group's `Deref`.
+    #[inline(always)]
+    fn flip_pending_life_gain_flags(&mut self) {
+        if !self.life_gain_flag_pending.is_empty() {
+            for p in std::mem::take(&mut self.life_gain_flag_pending) {
+                if let Some(pl) = self.players.get_mut(p) {
+                    pl.gained_life_earlier_this_turn = true;
+                }
+            }
+        }
     }
 
     /// Phase 2 of trigger dispatch: enforce each candidate's
@@ -20114,21 +20140,9 @@ impl GameState {
             }
         }
         // Filter evaluation for this batch is done — flip the queued
-        // "gained life earlier this turn" flags (Leech Collector's
-        // "first time each turn" gate).
-        // Guarded: `life_gain_flag_pending` is a `ColdState` field, so the
-        // `take` reaches it through `GameState::deref_mut` and deep-copies
-        // the whole cold group — once per trigger dispatch, on a list that
-        // is empty unless someone gained life this batch. The `PlayerCold`
-        // rule (PERF, twenty-ninth pass): a `clear`/`take` on a periodic
-        // path needs an `is_empty` read in front of it.
-        if !self.life_gain_flag_pending.is_empty() {
-            for p in std::mem::take(&mut self.life_gain_flag_pending) {
-                if let Some(pl) = self.players.get_mut(p) {
-                    pl.gained_life_earlier_this_turn = true;
-                }
-            }
-        }
+        // "gained life earlier this turn" flags. The dispatcher's empty
+        // batch runs this same tail without the drain (PERF `(-244)`).
+        self.flip_pending_life_gain_flags();
         self.drain_trigger_queue(queue);
         // Clear the per-die-event snapshot cache
         // after the dispatcher finishes with this event batch. Any
