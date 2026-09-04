@@ -1080,8 +1080,19 @@ fn compute_permanent_pass(
         // is empty on almost every card, and `Chain::next` pays its "which
         // side" branch on **every element of the first side** whether or not
         // the second has any.
-        sorted.extend(effects.iter().filter(|e| affects(e, card, gate_power, gate_types)));
-        sorted.extend(eot_grants.iter());
+        // Plain loops, not `extend` (PERF `(-229)`): `SmallVec::extend` over
+        // a `Filter` is a generic the inliner takes or leaves per build, and
+        // the two outcomes differ by ~47 M Ir a six-game `cube` run (420,672
+        // calls at ~137 Ir out of line, against ~0 inlined). A `push` loop is
+        // the inlined shape written down, so a later build cannot flip it.
+        for e in effects.iter() {
+            if affects(e, card, gate_power, gate_types) {
+                sorted.push(e);
+            }
+        }
+        for e in eot_grants.iter() {
+            sorted.push(e);
+        }
         sorted.sort_by(|a, b| {
             a.layer.cmp(&b.layer)
                 .then(a.sublayer.cmp(&b.sublayer))
