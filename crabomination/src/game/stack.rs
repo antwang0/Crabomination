@@ -3685,39 +3685,49 @@ impl GameState {
         // such permanent its controller didn't already untap above (Stun
         // counters still interpose). Summoning sickness is untouched — it only
         // clears on the controller's own turn boundary.
-        for card in &mut self.battlefield {
-            if untappers.contains(&card.controller) {
-                continue;
-            }
-            if !card
-                .definition
-                .static_abilities
-                .iter()
-                .any(|sa| matches!(sa.effect, StaticEffect::UntapSelfEachUntapStep))
-            {
-                continue;
-            }
-            if card.counter_count(CounterType::Stun) > 0 {
-                card.remove_counters(CounterType::Stun, 1);
-            } else if card.tapped {
-                untapped_now.push(card.id);
-                card.tapped = false;
+        // Behind `any_static`, like the six walks above it (PERF `(-226)`):
+        // both this loop and the aura walk below read `static_abilities`
+        // only, and a static-free board — most untap steps — walked the whole
+        // battlefield twice more for nothing. The `&mut` iteration is not a
+        // second unshare (the untap loop above already took it), just the walk.
+        if any_static {
+            for card in &mut self.battlefield {
+                if untappers.contains(&card.controller) {
+                    continue;
+                }
+                if !card
+                    .definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::UntapSelfEachUntapStep))
+                {
+                    continue;
+                }
+                if card.counter_count(CounterType::Stun) > 0 {
+                    card.remove_counters(CounterType::Stun, 1);
+                } else if card.tapped {
+                    untapped_now.push(card.id);
+                    card.tapped = false;
+                }
             }
         }
         // CR 502.3 — an Aura's "Enchanted land untaps during each other
         // player's untap step" (Urban Burgeoning). Collect the hosts whose
         // aura carries the static and whose controller isn't the untapper.
-        let untap_hosts: Vec<CardId> = self
-            .battlefield
-            .iter()
-            .filter(|src| {
-                !untappers.contains(&src.controller)
-                    && src.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, StaticEffect::UntapAttachedEachUntapStep)
-                    })
-            })
-            .filter_map(|src| src.attached_to)
-            .collect();
+        let untap_hosts: Vec<CardId> = if !any_static {
+            Vec::new()
+        } else {
+            self.battlefield
+                .iter()
+                .filter(|src| {
+                    !untappers.contains(&src.controller)
+                        && src.definition.static_abilities.iter().any(|sa| {
+                            matches!(sa.effect, StaticEffect::UntapAttachedEachUntapStep)
+                        })
+                })
+                .filter_map(|src| src.attached_to)
+                .collect()
+        };
         for host in untap_hosts {
             if let Some(card) = self.battlefield_find_mut(host) {
                 if card.counter_count(CounterType::Stun) > 0 {
