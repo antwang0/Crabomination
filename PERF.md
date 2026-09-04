@@ -11684,6 +11684,51 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-207)` TAKEN — a card-type lane (the lane word widened to 64 bits) in front of `card_type_change_unscoped`'s battlefield walk: `cube` -0.912 % / `fixed` -0.764 % / `sealed` -0.622 %
+
+```text
+  pool    base (-206)       (-207)          delta
+  fixed     789,673,260     783,637,902   **-0.764 %**
+  cube    2,167,790,574   2,148,010,997   **-0.912 %**
+  sealed  2,174,162,818   2,160,644,386   **-0.622 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube self rows:  check_state_based_actions_into     -6.63 M  (the death sweep's
+                                                               inlined copy)
+                   card_type_change_unscoped          -5.28 M  (the out-of-line row:
+                                                               7.89 M -> 2.60 M)
+                   evaluate_requirement_static_hinted -5.22 M  (the presence-gate
+                                                               copy, inlined)
+                   fold_printed_grant_filter          -2.89 M
+                   tap_ability_summoning_sick         -1.62 M
+                   presence_gate                      -0.64 M
+                   walk_and_store                     +2.71 M  (the lane's misses)
+  fixed:           check_state_based_actions_into -3.04 M, evaluate_requirement_
+                   static_hinted -2.36 M, card_type_change_unscoped -1.75 M,
+                   walk_and_store +1.24 M
+```
+
+`(-204)` priced this at 0.36 % off the one row it could see and it came
+in at 0.9 %: **the function is inlined into four of its eight callers**,
+so the caller table (22,534 calls, all `activate_ability_inner`) named
+a fifth of its cost. The SBA death sweep asks it once per sweep
+(21 k), the requirement walker once per type-flavoured predicate, the
+summoning-sickness gate once per tap — each a `continuous_effects`
+walk plus a memo-bit read per permanent. The Standing rule the first
+line of this entry restates: **price a small function by every caller
+that inlined it, not by its row.**
+
+The device is the `(-87)` lane, one entry further: `LANE_CARD_TYPE`
+(shift 32) holds `type_bits::ALL` over the board — the definition-only
+superset of `card_can_change_card_types`, whose attachment gate reads an
+instance field a lane may not — and the function runs its exact walk
+only when the lane says `PRESENT`, so its answer is unchanged on every
+board. The word was full at sixteen lanes; `type_gates` is now an
+`AtomicU64`, thirty-two lanes, `LANE_MASK` a `u64` and the three state
+constants cast to match — a mechanical widening, +4 bytes on
+`Battlefield` where the `AtomicU64` epoch beside it already fixed the
+alignment. The `continuous_effects` half of the walk stays, and is the
+next entry.
+
 ### `(-206)` RULES FIX, priced — a stripped permanent's printed mana ability no longer activates (CR 305.7 / 613.1f): `cube` +0.197 % / `sealed` +0.054 % / `fixed` +0.048 %
 
 ```text
@@ -23215,11 +23260,30 @@ Open, priced, largest first:
     `EffectContext` build and drop, `resolve_player`, the source
     `battlefield_find` (a memo hit), the `is_basic` read the turn-scoped
     replacements need, and the lane read itself — ~650 Ir, diffuse.
-  * `card_type_change_unscoped` 22,534 x 350 Ir = 7.9 M (0.36 %): the
-    `continuous_effects` walk plus a memo bit per permanent, asked once
-    per fast tap (and the generic path asked it too). The battlefield
-    half is a lane question; **the lane word is full** (16 lanes), so
-    this is the entry that pays for a second word in `zone::Battlefield`.
+  * `card_type_change_unscoped`'s battlefield walk — **TAKEN as
+    `(-207)`** (`cube` -0.912 % / `fixed` -0.764 % / `sealed` -0.622 %,
+    2.5x the priced ceiling: the function was inlined into the SBA
+    death sweep and the requirement walker, whose rows the caller table
+    never showed). The lane word is an `AtomicU64` now — fifteen lanes
+    free.
+  * **The `continuous_effects` kind fold — the top open entry.** Six
+    presence gates walk the effect list on every ask for one
+    `Modification` kind: `card_type_change_unscoped` (its other half,
+    ~150 Ir a tap after `(-207)`), `ability_strip_off_battlefield`
+    (`RemoveAllAbilities`, 151 Ir a fast tap — `(-206)`'s whole cost),
+    `land_type_change_in_scope` / `creature_type_change_in_scope`
+    (behind a freeze-scope slot only), `keyword_grant_in_scope`
+    (`AddKeyword`), `pt_reduction_in_scope`, `card_color_change_unscoped`.
+    The list is a `CowBox<Vec<ContinuousEffect>>` with **ten** mutation
+    sites in the engine (`stack.rs` 5, `movement.rs` 2, `mod.rs` 2,
+    `snapshot.rs` 1): the `Battlefield` newtype shape — `Deref` for
+    reads, every `&mut` route clears a fold word, the fold recomputed
+    lazily on the first ask after a write — makes each gate's walk a
+    word load. Fold by `Modification` discriminant (a 64-bit hash of
+    it, collisions only ever say "walk"); the freeze-scope `frozen_
+    effects` walks are a separate population and stay. Reads per
+    invalidation is the ratio to census first: the list is written a
+    few times a turn and asked on every sweep, tap and predicate.
   * `card_keyword_possible_on(CantActivateTapAbilities)` 22,476 x 223 =
     5.0 M (0.23 %): the definition and instance legs are cheap, the cost
     is `keyword_grant_in_scope`'s `board_grants_keyword` walk — a
