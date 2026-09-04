@@ -7475,6 +7475,33 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-227)` REFUTED — a `reserve(32)` in `advance_step` ahead of the damage steps' first push: `sealed` +0.298 % / `fixed` +0.241 % / `cube` +0.220 %, reverted
+
+```text
+  pool    base (-226)       (-227)          delta
+  fixed     738,014,635     739,793,304   **+0.241 %**
+  cube    2,019,586,479   2,024,029,917   **+0.220 %**
+  sealed  2,069,367,315   2,075,533,702   **+0.298 %**
+  do_reserve_and_handle (cube)   <- advance_step         0 -> 4,862 / 7.36 M  (1,514 Ir each)
+                                 <- resolve_combat_into  4,524 / 5.79 M -> 4,524 / 3.46 M  (still there)
+```
+
+`(-225)`'s priced follow-up, built as filed and wrong on the arithmetic:
+**`Vec::reserve(n)` reserves `n` slots *beyond `len`*, not a capacity of
+`n`.** `advance_step` reserved 32, pushed `StepChanged`, and the damage
+step's own `reserve(32)` then asked for 33 and reallocated the fresh
+32-slot buffer to 64 — two large allocations where the tree had a 4-slot
+first push plus one realloc. The per-call price says the rest: a 32-slot
+`GameEvent` buffer costs ~1,300-1,500 Ir to obtain from the system
+allocator whether by `malloc` or by `realloc`, so a caller-side
+`reserve(33)` would at best trade the 4-slot `malloc` for nothing and
+move the big allocation one frame up. **The cost is the size of the
+buffer, not the number of allocations, and the damage step's batch is
+genuinely that size** (the `(-80)`-era ladder climbed to 32 and past it).
+What would remove it is a scratch that survives probe clones, which is a
+thread-local pool — the `(-166)` recycle-list device — and that is a
+separate entry to price, not this one.
+
 ### `(-226)` TAKEN — `do_untap`'s two remaining static-driven walks behind `any_static`: `fixed` -0.229 % / `sealed` -0.042 % / `cube` -0.035 %
 
 ```text
