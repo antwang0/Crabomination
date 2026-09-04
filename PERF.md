@@ -2520,18 +2520,18 @@ a box whose state moves.
 
 ## Baseline
 
-### The land-tap, lane-word and graveyard-lane legs — closing state at the `(-212)` tip
+### The land-tap, lane-word and lane-write legs — closing state at the `(-213)` tip
 
-Nine engine commits on top of `(-203)`: seven perf legs, each
+Ten engine commits on top of `(-203)`: eight perf legs, each
 behaviour-preserving (three-pool stdout identical, `--bench`
 byte-identical, golden traces unmoved), one rules fix priced as a cost
 (`(-206)`), one refutation reverted in the same hour (`(-209)`).
 
 ```text
-  pool     base 62a4e20b     tip (-212)        delta
-  fixed      801,539,915      774,454,748   **-3.379 %**
-  cube     2,200,107,698    2,126,041,074   **-3.367 %**
-  sealed   2,211,363,961    2,142,409,640   **-3.118 %**
+  pool     base 62a4e20b     tip (-213)        delta
+  fixed      801,539,915      765,488,207   **-4.498 %**
+  cube     2,200,107,698    2,108,026,790   **-4.185 %**
+  sealed   2,211,363,961    2,123,403,116   **-3.978 %**
 
   leg      fixed      cube      sealed    what
   (-204)  -1.496 %  -1.509 %  -1.623 %   the printed land tap settled by inspection
@@ -2543,6 +2543,7 @@ byte-identical, golden traces unmoved), one rules fix priced as a cost
   (-210)  -0.618 %  -0.468 %  -0.430 %   graveyard lane in front of the combat-damage dispatch
   (-211)  -0.026 %  -0.031 %  -0.015 %   two standing-rule reorders in the same dispatch
   (-212)  -0.440 %  -0.469 %  -0.334 %   membership writes demote only the lanes they can change
+  (-213)  -1.158 %  -0.847 %  -0.887 %   a membership write answers each lane off the one card it moved
 ```
 
 ```text
@@ -11728,6 +11729,48 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-213)` TAKEN — a membership write answers each lane off the one card it moved: `fixed` -1.158 % / `sealed` -0.887 % / `cube` -0.847 %
+
+```text
+  pool    base (-212)       (-213)          delta
+  fixed     774,454,748     765,488,207   **-1.158 %**
+  cube    2,126,041,074   2,108,026,790   **-0.847 %**
+  sealed  2,142,409,640   2,123,403,116   **-0.887 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  walk_and_store          14.96 M -> 1.94 M  (50,576 walks -> ~6,600)
+              lanes_after_push                 +3.29 M  (new: the per-card answers)
+              lanes_after_removal              +1.24 M  (new)
+              board_has_mana_static    4.01 M -> 1.51 M  (its inline fill)
+              dispatch_board_scan     16.40 M -> 16.35 M
+```
+
+`(-212)` kept the lanes a write could not change; this answers the
+ones it could, **off the one card that moved**. Every lane is "does
+some permanent's definition satisfy P", so after a push an `ABSENT`
+lane is `PRESENT` iff P(new card), and after a removal a `PRESENT` lane
+is still `PRESENT` if the leaver fails P (its witness is elsewhere) —
+one predicate call per lane per write, against a whole-board walk per
+lane per ask. The zone now holds every lane's predicate in
+`LANE_PREDICATES` (indexed by lane; `None` on the two member-list
+lanes, which clear on any change), the eight engine-side predicates
+went `pub(crate)`, and `push` / `remove` / `pop` / `take_by_id` update
+through it; `retain` cannot name what it dropped, so it demotes
+`PRESENT` lanes as `(-212)` did. **The table entry and the predicate a
+lane's callers hand to `lane()` must be the same function**, and the
+lane audits — recomputing against the handed one on every read under
+debug assertions — are what enforce it; the three zone tests that used
+a foreign predicate to stand in for a lane's own were rewritten
+against the real ones, and one of them found that Blood Moon carries
+`STRIP` (CR 305.7) and so sets the dispatch lane, which the old test's
+`never` had been hiding.
+
+The `definition_epoch` half is settled by a census, not a build: a
+throwaway test counted **0, 2 and 6** rewrites over three whole bot
+games (a `fixed`-shaped one and two `cube` pairings), so the "~8 k a
+run" that `card.rs`'s epoch note quotes is wrong by two orders and the
+epoch is not where the fills were. The 1.9 M of walks left are the
+first asks on fresh boards and the `retain` demotions.
 
 ### `(-212)` TAKEN — membership writes demote only the lanes they can change: `cube` -0.469 % / `fixed` -0.440 % / `sealed` -0.334 %
 
@@ -23421,10 +23464,10 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at the `(-211)` tip (`(-204)`..`(-211)`, three-pool Ir against
-the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 -> 777,877,362
-(-2.952 %), `cube` 2,200,107,698 -> 2,136,059,209 (-2.911 %), `sealed`
-2,211,363,961 -> 2,149,580,101 (-2.794 %).** Before it, `(-199)`..
+**State at the `(-213)` tip (`(-204)`..`(-213)`, three-pool Ir against
+the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 -> 765,488,207
+(-4.498 %), `cube` 2,200,107,698 -> 2,108,026,790 (-4.185 %), `sealed`
+2,211,363,961 -> 2,123,403,116 (-3.978 %).** Before it, `(-199)`..
 `(-203)` against `2003d1cf`: `fixed` -1.437 %, `cube` -1.627 %, `sealed`
 -1.141 %; and `(-194)`..`(-198)` against
 `0e9bdaa4`: `fixed` -2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The
@@ -23514,21 +23557,15 @@ Open, priced, largest first:
     `ability_strip_possible` (the dispatch-lane pre-gate) stands.
   * **The `continuous_effects` kind fold — TAKEN as `(-208)`** (small:
     the list is empty on most bot boards).
-  * **The lanes' own fills — half TAKEN as `(-212)`** (`walk_and_store`
-    22.4 M -> 15.0 M on `cube`: membership writes demote only the lanes
-    they can change, so a death no longer throws away the `ABSENT`
-    answers the death path is about to ask for). **What is left, 15 M
-    (0.7 %), is mostly the definition epoch:** one `definition_epoch`
-    bump — a face-down flip, a "loses all abilities" rewrite, ~8 k a
-    `cube` run — invalidates every lane on every board, including the
-    probe clones that never see the rewritten card. A per-*board*
-    epoch (bump only the `Battlefield` whose card was rewritten, which
-    `CardData::definition_mut` reaches through a handle that could
-    carry the zone's counter) would keep every other board's lanes; the
-    global counter exists because a rewrite happens two derefs below
-    the zone. The batch fill by memo word (the lanes on one memo word
-    filling together) is the other half, worth ~20 % of a fill on
-    paper — refuted on that arithmetic, not built.
+  * **The lanes' own fills — TAKEN as `(-212)` + `(-213)`**
+    (`walk_and_store` 22.4 M -> 1.9 M on `cube`; a membership write
+    keeps the lanes it cannot change and answers the rest off the one
+    card it moved). The definition epoch was not the cost: a census
+    counted 0-6 rewrites a game (`(-213)`'s Log). What is left: the
+    first asks on a fresh board, `retain`'s demotions (it cannot name
+    what it dropped), and `lanes_after_push`'s 3.3 M of per-card
+    predicate calls — a floor unless the predicates get cheaper. The
+    batch fill by memo word is moot now.
   * **`fire_combat_damage_triggers` — 29 M self after `(-210)`/`(-211)`,
     1,400 Ir a call, 98 % of calls push nothing.** Diffuse across its
     own walks (Log `(-211)`); a `profiling-lines` read is the
