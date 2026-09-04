@@ -5556,10 +5556,20 @@ impl GameState {
     /// its printed type line isn't, so its death is a creature dying (CR 700.4).
     /// Falls back to the printed types mid-layer-recompute.
     pub(crate) fn permanent_is_creature(&self, cid: crate::card::CardId) -> bool {
-        if let Some(cp) = self.computed_permanent(cid) {
+        let Some(c) = self.battlefield_find(cid) else { return false };
+        // `compute_permanent_pass` seeds the type line from the definition,
+        // the CR 702.103d bestowed rewrite, and the layer-4 card-type
+        // modifications — nothing else writes it — so with no such source in
+        // scope the printed line is the computed one. Most asks were the SBA
+        // sweep's CR 704.5n check, outside any scope: a gather plus a layer
+        // pass, ~4,200 Ir, for one type-line read (PERF `(-247)`).
+        if !c.bestowed && !self.card_type_change_in_scope() {
+            return c.definition.is_creature();
+        }
+        if let Some(cp) = self.computed_permanent_on(c) {
             return cp.card_types().contains(&crate::card::CardType::Creature);
         }
-        self.battlefield_find(cid).is_some_and(|c| c.definition.is_creature())
+        c.definition.is_creature()
     }
 
     /// How many creatures `seat` controls right now (layer-aware, so animated
