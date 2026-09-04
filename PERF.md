@@ -23712,10 +23712,12 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at the `(-215)` tip plus its fix (`(-204)`..`(-215)`, three-pool
-Ir against the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 ->
-763,717,868 (-4.718 %), `cube` 2,200,107,698 -> 2,090,168,791
-(-4.997 %), `sealed` 2,211,363,961 -> 2,120,435,808 (-4.112 %).** Before it, `(-199)`..
+**State at the `(-219)` tip (`(-216)`..`(-219)`, three-pool Ir against
+the `(-215)`+fix tip `999da717`): `fixed` 763,717,868 -> 745,162,927
+(-2.430 %), `cube` 2,090,168,791 -> 2,035,554,686 (-2.613 %), `sealed`
+2,120,435,808 -> 2,085,022,232 (-1.670 %).** Before it, `(-204)`..
+`(-215)` against `62a4e20b`: `fixed` -4.718 %, `cube` -4.997 %, `sealed`
+-4.112 %; `(-199)`..
 `(-203)` against `2003d1cf`: `fixed` -1.437 %, `cube` -1.627 %, `sealed`
 -1.141 %; and `(-194)`..`(-198)` against
 `0e9bdaa4`: `fixed` -2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The
@@ -23724,6 +23726,66 @@ Ir against the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 ->
 effects_inner` 3.65 %, `compute_permanent_pass` 3.17 %, `Vec::from_iter`
 2.99 %, `Arc::clone_from_ref_in` 2.60 %, `memcpy` 2.51 %, SBA 2.33 %,
 `activate_ability_inner` 2.05 %, `computed_permanent_hinted` 1.96 %.
+
+**RE-READ AT the `(-219)` tip — the plain `cube` self table (no
+separate-callers dump this time) and the caller/callee tables of every
+row above 1 % that was not already a floor. What was priced and why it
+was not taken, so nobody re-prices it:**
+
+```text
+  cube self at (-219), 2,035,554,686 Ir
+    86.7 M  4.26 %  dispatch_triggers_for_events      floor ((-21)'s search count)
+    81.1 M  3.98 %  compute_permanent_pass            the layer pass (+10 M is the (-217) build's inlining of SmallVec::extend)
+    78.4 M  3.85 %  gather_continuous_effects_inner   58 k gathers; needs a version
+    60.6 M  2.98 %  Vec::from_iter                    collects; the SBA views and pick_by_outcome, read at (-215)
+    46.1 M  2.27 %  check_state_based_actions_into    the sweep
+    42.6 M  2.09 %  computed_permanent_hinted         see below
+    38.5 M  1.89 %  perform_action_inner              306 Ir an action over 125,666: the match, a floor
+    28.6 M  1.40 %  fire_combat_damage_triggers       ~1,400 Ir a call, diffuse walks; profiling-lines is the instrument
+    27.6 M  1.36 %  declare_attackers_banded          see below
+    26.8 M  1.31 %  affected_includes_gated           544,626 calls under the layer pass: 49 Ir each, a floor
+    25.4 M  1.25 %  declare_blockers
+    25.0 M  1.23 %  sba_board_scan                    21,392 sweeps x 1,170 Ir: instance fields, cannot be laned
+    24.3 M  1.20 %  resolve_combat
+    18.3 M  0.90 %  bot::available_mana               see below
+```
+
+* **`declare_attackers_banded` — 6,758 calls / 102 M inclusive (5.0 %),
+  27.6 M self (4,086 Ir a call).** By callee: `compute_permanents`
+  22.5 M (one layer pass per declaration, `&mut self`, the shape the
+  `(-215)` re-read already closed), a `Vec::from_iter` 12,412 / 8.3 M,
+  `auto_target_for_effect_avoiding_set_x` 716 / 4.7 M, `push_mut`
+  26,862 / 3.8 M, `IdSet::insert` 26,460 / 2.6 M, `iter_mut` 13,230 /
+  2.1 M, `board_keyword_in_scope` 6,758 / 2.0 M. The self is the
+  validation body — a dozen `attacks.iter().any(..)` scans and the
+  requirement loops, each already a `for` — and the call count is the
+  attack search's. Not an engine lead; the count is `(-21)`.
+* **`computed_permanent_hinted` — 42.6 M self over ~343 k asks (124 Ir
+  each):** 168,044 memo hits (`LocalKey::with` 21.3 M — the lock and
+  the `perms` scan) and 175,304 per-scope misses (`compute_permanent_
+  pass` 72 M). The hit path is a linear `perms.iter().find` over a
+  scope's ~10 entries of `(CardId, Arc)`; an index would save ~30 Ir an
+  ask, ~10 M, against a `LayerFreezeState` byte budget `(-165)` already
+  priced at ~6,800 Ir a byte. Marginal; not taken.
+* **`bot::available_mana` — 12,518 calls / 35.2 M inclusive (1.7 %),
+  18.3 M self, already once per decision behind a `OnceCell`:** the
+  self is the per-untapped-source ability walk; `grant_scan` 6.7 M
+  (534 Ir a call with the act-grant lane already in front of its
+  battlefield leg) and `grants_nothing_slow` 36,752 / 4.2 M are the
+  `(-199)` device at its floor.
+* **`fingerprint` — 6,720 calls / 6.4 M left** after `(-219)`: 3,488
+  under `resolve_top_of_stack` (the CR 104.4b watch, one per trigger
+  resolution) and the non-land activations. Floor.
+* **The CoW unshares are closed as a class after `(-217)`:** no
+  `make_mut_slow` caller above 2,000 Ir a call has more than 732 calls;
+  the ~900-Ir ones are `PlayerData` / zone unshares, the probe design.
+* **Not priced, and the next thing to price:** `fire_combat_damage_
+  triggers`' remaining 1,400 Ir a call needs a `profiling-lines` build
+  (9 min cold) to say which of its five walks carries it — the listener
+  walk on a `cube` board (usually `PRESENT`) is the guess; and the
+  `Vec::from_iter <- check_state_based_actions_into` row (15 M at the
+  `(-215)` re-read) is the death sweep's view collect, which is the
+  layer pass's cost in a different coat.
 
 **RE-READ AT the `(-215)` tip plus its fix — a `--separate-callers=3`
 `cube` dump, the context tables of the largest remaining rows. Leads
