@@ -2520,19 +2520,20 @@ a box whose state moves.
 
 ## Baseline
 
-### The watch-deferral, member-list, block-tax, event-buffer and zone-lane legs — closing state at the `(-231)` tip
+### The watch-deferral, member-list, block-tax, event-buffer and presence-lane legs — closing state at the `(-238)` tip
 
-Ten engine commits on top of the `(-219)` tip `52b9a743`, each
+Sixteen engine commits on top of the `(-219)` tip `52b9a743`, each
 behaviour-preserving (three-pool outcomes identical, `--bench` counters
 identical, golden traces unmoved), from the second of two concurrent
 sessions; the other session's `(-221)` refutation sits between them, and
-one of this session's own (`(-227)`) was reverted in the same hour.
+two of this session's own (`(-227)`, `(-232)`) were reverted in the hour
+they were built.
 
 ```text
-  pool     base (-219)      tip (-231)       delta
-  fixed      745,162,383      718,286,239   **-3.607 %**
-  cube     2,035,552,660    1,996,255,268   **-1.931 %**
-  sealed   2,085,024,159    2,049,218,164   **-1.717 %**
+  pool     base (-219)      tip (-238)       delta
+  fixed      745,162,383      699,633,465   **-6.110 %**
+  cube     2,035,552,660    1,953,713,803   **-4.020 %**
+  sealed   2,085,024,159    2,016,346,658   **-3.294 %**
 
   leg      fixed      cube      sealed    what
   (-220)  -0.019 %  -0.163 %  -0.076 %   the CR 732.3 watch fingerprints only on a key repeat
@@ -2547,16 +2548,23 @@ one of this session's own (`(-227)`) was reverted in the same hour.
   (-228)  -0.421 %  -0.127 %  -0.052 %   the step-trigger walk over the member list when no static grant is live
   (-230)  -0.784 %  -0.350 %  -0.428 %   the event dispatcher's graveyard leg behind the (widened) graveyard lane
   (-231)  -1.319 %  -0.341 %  -0.492 %   the cast-trigger walker's two zone walks behind their memos (one was quadratic)
+  (-232)  +0.077 %  -0.005 %  +0.049 %   the walkers' closures by value — REFUTED, reverted (the shim was not the cost)
+  (-233)  -0.911 %  -0.773 %  -0.478 %   a draw-replacement static lane in front of draw_one's eleven walks
+  (-234)  -0.391 %  -0.373 %  -0.116 %   an ETB-static lane in front of the ETB multiplier and enters-tapped walks
+  (-235)  -0.192 %  -0.165 %  -0.173 %   a damage-replacement static lane in front of six per-damage-event walks
+  (-236)  -0.388 %  -0.172 %  -0.192 %   a land-play static lane in front of can_player_play_land's three walks
+  (-237)  -0.485 %  -0.525 %  -0.520 %   an any-colour-spend lane in front of the payment relaxation's walk
+  (-238)  -0.257 %  -0.140 %  -0.134 %   a hand-size static lane in front of effective_max_hand_size's four walks
 ```
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
 suite   19,255 / 0 / 5; golden traces in it and unmoved at every leg
 clippy  --workspace --exclude crabomination_client --all-targets   clean
-        at the (-224) tip
+        at the (-229) and (-238) tips; -p crabomination at every leg
 release the release-fast typecheck gate (debug-assertions off): every
         leg's profiling-fast build is that profile, all clean
---bench profiling-fast at the (-224) tip: **195,806 decisions / 27.49
+--bench profiling-fast at every leg through (-238): **195,806 decisions / 27.49
         turns / 611.9 per game / 0 stalls** — counters identical to
         2003d1cf at every leg; determinism ok (all pairs split);
         peak_rss 21.5 MiB
@@ -2590,7 +2598,13 @@ device's rows, diff the two self tables** (`(-229)`, found through
 `(-228)`'s first reading); **a self row's line profile names where the
 instructions are; a grep of the read sites names which of them a memo
 already answers** (`(-230)`/`(-231)`: three whole-zone walks with the
-lane beside them, found by listing every `triggered_abilities` read).
+lane beside them, found by listing every `triggered_abilities` read);
+**when a function asks one zone N presence questions, the lane's
+predicate is the union** (`(-233)`: twelve `matches!` arms, one lane,
+eleven walks; `(-234)`..`(-238)` the same shape five more times, from a
+grep of the `static_abilities` reads ranked by the enclosing function's
+self cost); **a `call_mut` shim on a closure whose body is a dozen loads
+is not `(-98)`'s 18.8 M** (`(-232)`, reverted).
 
 ### The target gate, cold-group, walker-lane and watch legs — closing state at the `(-219)` tip
 
@@ -7494,6 +7508,33 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-238)` TAKEN — a hand-size static lane in front of `effective_max_hand_size`'s four walks: `fixed` -0.257 % / `cube` -0.140 % / `sealed` -0.134 %
+
+```text
+  pool    base (-237)       (-238)          delta
+  fixed     701,432,933     699,633,465   **-0.257 %**
+  cube    1,956,461,572   1,953,713,803   **-0.140 %**
+  sealed  2,019,051,137   2,016,346,658   **-0.134 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  effective_max_hand_size 2,878 calls (cube): four walks a call — no-max, the two reductions, set-to, increase
+```
+
+The last of the four lanes filed with `(-233)`: `effective_max_hand_size`
+(cleanup and the bot's discard planning) made four board walks per call
+for six `StaticEffect`s. One lane; a clear lane returns the seat's
+printed maximum, which is what the four walks compute on such a board.
+
+**The `(-233)`..`(-238)` legs together: `fixed` -2.94 % / `cube` -2.29 % /
+`sealed` -1.60 %, six lanes over 35 `StaticEffect` variants, each
+priced off one grep of the `static_abilities` read sites ranked by the
+enclosing function's self cost.** Thirteen lanes were free on the
+64-bit word before, seven now. The rest of that list is below the bar
+(`empty_mana_pools` already gates on pool emptiness; `chosen_type_etb_
+counter_specs` walks `all_static_sources`, which reaches the command
+zone, so a battlefield lane alone cannot gate it; `apply_prevention_
+shields_with` and `prevent_static_scan` are the fold-word shape noted in
+`(-235)`).
 
 ### `(-237)` TAKEN — an any-colour-spend static lane in front of the payment relaxation's walk: `cube` -0.525 % / `sealed` -0.520 % / `fixed` -0.485 %
 
@@ -19972,11 +20013,11 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at the `(-231)` tip (`(-220)`, `(-222)`..`(-231)` less the two
+**State at the `(-238)` tip (`(-220)`, `(-222)`..`(-238)` less the three
 refutations, three-pool Ir against the `(-219)` tip `52b9a743`): `fixed`
-745,162,383 -> 718,286,239 (-3.607 %), `cube` 2,035,552,660 ->
-1,996,255,268 (-1.931 %), `sealed` 2,085,024,159 -> 2,049,218,164
-(-1.717 %).**
+745,162,383 -> 699,633,465 (-6.110 %), `cube` 2,035,552,660 ->
+1,953,713,803 (-4.020 %), `sealed` 2,085,024,159 -> 2,016,346,658
+(-3.294 %).**
 Before it:
 **State at the `(-219)` tip (`(-216)`..`(-219)`, three-pool Ir against
 the `(-215)`+fix tip `999da717`): `fixed` 763,717,868 -> 745,162,927
