@@ -2520,6 +2520,40 @@ a box whose state moves.
 
 ## Baseline
 
+### The cheap-clone and held-views legs — closing state at `966289ae`
+
+Three more engine commits on top of `(-199)`, each behaviour-preserving
+(three-pool stdout identical, `--bench` byte-identical, golden traces
+unmoved). Two of them found their priced row belonged to someone else and
+said so (Log); the third is the `(-194)` shape again.
+
+```text
+  pool     base 4bd4fc1b     tip (-202)        delta       run (from 2003d1cf)
+  fixed      808,660,509      803,947,481   **-0.583 %**   **-1.140 %**
+  cube     2,222,094,501    2,210,248,706   **-0.533 %**   **-1.174 %**
+  sealed   2,228,991,395    2,217,299,276   **-0.525 %**   **-0.876 %**
+
+  leg      fixed      cube      sealed    what
+  (-200)  -0.360 %  -0.294 %  -0.346 %   OftenEmpty on CardData/CounterBag, GameState::clone guards
+  (-201)  -0.154 %  -0.113 %  -0.143 %   OftenEmpty on PlayerData's seven lists
+  (-202)  -0.070 %  -0.127 %  -0.037 %   resolve_combat's protection asks over held views
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,240 / 0 / 5 (+1: oftenempty's unit test); golden traces in
+        it and unmoved at every leg
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+        at (-201); the engine lib re-checked clean at (-202)
+release the release-fast typecheck gate (debug-assertions off)   clean
+        at the (-202) tip
+--bench profiling-fast at every leg: **195,806 decisions / 27.49 turns /
+        611.9 per game / 0 stalls** — byte-identical to 2003d1cf;
+        determinism ok; thread_determinism ok; peak_rss 21.3-21.4 MiB
+grid    not re-run: no encoder or pool change. `OftenEmpty` is
+        `#[serde(transparent)]`, so the wire format is unchanged.
+```
+
 ### The grants-nothing pass — closing state at `4bd4fc1b`
 
 One engine commit, behaviour-preserving (three-pool stdout identical,
@@ -11646,6 +11680,91 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-202)` TAKEN — `resolve_combat`'s protection asks over the views it holds: `cube` -0.127 % / `fixed` -0.070 % / `sealed` -0.037 %
+
+```text
+  pool    base (-201)       (-202)          delta
+  fixed     804,508,935     803,947,481   **-0.070 %**
+  cube    2,213,055,780   2,210,248,706   **-0.127 %**
+  sealed  2,218,115,166   2,217,299,276   **-0.037 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  damage_prevented_by_protection  4.92 M -> 2.20 M self
+                can_grant_keyword               5.49 M -> 4.67 M
+                protection_prevents_views       2.68 M -> 3.24 M (+13 k calls)
+                resolve_combat self             +1.3 M (the closure inlined
+                                                differently; net -2.8 M)
+```
+
+The `(-194)` shape, third application: the per-pair damage loop in
+`resolve_combat` already holds the batch's `computed` slice
+(`computed_of`, a slice find) and a freeze scope, and still asked
+`damage_prevented_by_protection` twice per (attacker, blocker) — a nested
+scope, a memo-hit `computed_permanent` of each side and, on the misses,
+the presence gate's board walk. Both sites now call
+`protection_prevents_views` over `computed_of(target)` /
+`computed_of(source)`. The remaining 5,896 calls are the SBA's
+attachment-legality sweep (CR 704.5m, Auras and Equipment via
+`is_protected_from`), a different shape: under `&mut self`, no scope, and
+the presence gate's `can_grant_keyword` walk is its cost — a lane
+question, not a views one.
+
+### `(-201)` TAKEN — `OftenEmpty` on `PlayerData`'s seven lists: `fixed` -0.154 % / `sealed` -0.143 % / `cube` -0.113 %
+
+```text
+  pool    base (-200)       (-201)          delta
+  fixed     805,746,838     804,508,935   **-0.154 %**
+  cube    2,215,563,492   2,213,055,780   **-0.113 %**
+  sealed  2,221,285,766   2,218,115,166   **-0.143 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  fixed by row:  Arc::clone_from_ref_in self 25.65 M -> 24.41 M (-1.24 M)
+                 Vec::clone under it   118,704 calls, unchanged
+```
+
+The seven plain `Vec` fields on `PlayerData` take the `(-200)` newtype;
+engine-only, three sites gained an `.into()` (two tests, and
+`creatures_entered_last_turn = mem::take(..)` needed nothing). A sixth of
+the priced ceiling, for the same reason as `(-200)`: the seat's lists
+were **inlined** into `clone_from_ref_in` too, so the guard's whole win
+is that row's self cost. **The 118,704 out-of-line `Vec::clone` calls
+under `make_mut_slow` (8.75 M, 1.09 % of `fixed`) still do not move** —
+they are a third CoW'd owner. Read next with `--demangle=no` (How to
+measure): 26,488 of them allocate and 8,900 `memcpy`, so ~80 % copy
+nothing at ~45 Ir.
+
+### `(-200)` TAKEN — cheap-on-empty clones on `CardData`, `CounterBag` and `GameState::clone`: `fixed` -0.360 % / `sealed` -0.346 % / `cube` -0.294 %
+
+```text
+  pool    base (-199)       (-200)          delta
+  fixed     808,660,509     805,746,838   **-0.360 %**
+  cube    2,222,094,501   2,215,563,492   **-0.294 %**
+  sealed  2,228,991,395   2,221,285,766   **-0.346 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  Vec::clone           471,251 calls -> 334,757 (24.1 M -> 19.7 M):
+                                     GameState::clone's 139,412 are gone
+                GameState::clone     self +0.5 M (the inlined guards + to_vec)
+                Arc::clone_from_ref_in self 59.0 M -> 56.4 M (-2.55 M): the
+                                     five CardData lists' guards
+```
+
+`OftenEmpty<T>` (`crabomination_base::oftenempty`): a `Vec` newtype whose
+`Clone` tests `is_empty()` first, `Deref`/`DerefMut`/`From`/`IntoIterator`
+/`PartialEq<Vec<T>>` so its 46 call sites did not change, same size as the
+`Vec`. On `CardData`'s four damage lists; `CounterBag` (already its own
+type) takes the same `Clone` by hand; `GameState::clone` guards its two
+lists and five `IdMap`s through `clone_list` / `clone_map`.
+
+**What the row said that the candidate did not.** The 260,894 `Vec::clone`
+calls under `Arc::clone_from_ref_in` (20.4 M, 0.92 % of `cube`) are
+**unchanged** by this — `CardData`'s five lists were already *inlined*
+into `clone_from_ref_in` (their whole cost was the -2.55 M off its self
+row), so the out-of-line clones belong to another CoW'd owner:
+`PlayerData` (`player.rs`), which carries seven plain `Vec` fields and is
+unshared on every probe write to a seat. **Candidates, top: the same
+device on `PlayerData`, engine-only.**
 
 ### `(-199)` TAKEN — the grants-nothing gate asks its questions of the permanent, not the board: `cube` -0.644 % / `fixed` -0.561 % / `sealed` -0.354 %
 
@@ -22791,12 +22910,12 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at `4bd4fc1b` (`(-199)`, three-pool Ir against `2003d1cf`):
-`fixed` 813,222,102 -> 808,660,509 (-0.561 %), `cube` 2,236,502,758 ->
-2,222,094,501 (-0.644 %), `sealed` 2,236,900,247 -> 2,228,991,395
-(-0.354 %).** Before it, `(-194)`..`(-198)` against `0e9bdaa4`: `fixed`
--2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The `cube` self table at
-`(-196)`, top rows:
+**State at `966289ae` (`(-199)`..`(-202)`, three-pool Ir against
+`2003d1cf`): `fixed` 813,222,102 -> 803,947,481 (-1.140 %), `cube`
+2,236,502,758 -> 2,210,248,706 (-1.174 %), `sealed` 2,236,900,247 ->
+2,217,299,276 (-0.876 %).** Before it, `(-194)`..`(-198)` against
+`0e9bdaa4`: `fixed` -2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The
+`cube` self table at `(-196)`, top rows:
 `dispatch_triggers_for_events` 3.95 % (was 5.80 %), `gather_continuous_
 effects_inner` 3.65 %, `compute_permanent_pass` 3.17 %, `Vec::from_iter`
 2.99 %, `Arc::clone_from_ref_in` 2.60 %, `memcpy` 2.51 %, SBA 2.33 %,
@@ -22832,21 +22951,21 @@ Open, priced, largest first:
   counter-grant lane's misses (`walk_and_store` +0.8 M, a memo-word read
   per permanent per membership change — below the bar on its own).
 
-* **Cheap-on-empty clones — ceiling ~0.7 % of `cube`.** `Vec::clone` is
-  471,251 calls / 33.6 M inclusive (1.44 %) and only 29,494 of them reach
-  `memcpy`: the rest copy nothing and still pay `with_capacity`'s checks
-  and a call, ~45 Ir. `CardData` carries five such lists (`counters`,
-  `damaged_by_this_turn`, `damaged_players_this_game`,
-  `damaged_permanents_this_game`, `damage_by_source_name_this_turn`) and
-  is deep-copied under `Arc::make_mut` on every CoW unshare;
-  `GameState`'s manual `Clone` copies `attacking` / `delayed_triggers` and
-  four maps (`RawTable::clone` 61,730 calls, ~25 Ir on an empty table).
-  The device is a `#[serde(transparent)]` `Deref` newtype whose `Clone`
-  tests `is_empty()` first (`CounterBag` can take a manual `Clone`
-  directly), and `clone_vec` guards in `GameState::clone`. Price it
-  against `(-165)`: no inline buffer, no owner growth. Largest context
-  is `make_mut_slow <- cast_spell_with_convoke` (106,518 clones, 43 Ir
-  each — those are real zone-buffer copies, not the empties).
+* **Cheap-on-empty clones — CLOSED at `(-201)`, the family is at its
+  floor.** `(-200)` (`CardData`, `CounterBag`, `GameState::clone`) and
+  `(-201)` (`PlayerData`'s seven lists) took `fixed` -0.51 % / `sealed`
+  -0.49 % / `cube` -0.41 % between them, and both found their lists were
+  *inlined* into `clone_from_ref_in` — the win was that row's self cost,
+  not the `Vec::clone` row the candidate was priced on. The
+  `--demangle=no` read of the rest (`fixed` at `(-201)`, 118,704
+  out-of-line `Vec::clone` calls / 8.75 M): the largest monomorph is
+  the zone buffer (`Vec<CardInstance>`, 14,692 real copies under the
+  `CowBox` unshare, 3.4 M — refcount bumps, not empties); the two big
+  `clone_from_ref_in` rows are `PlayerData` (11,182 unshares x 633 Ir)
+  and `CardData` (13,626 x 431 Ir), i.e. the inlined field copies the
+  size-class rules already price; what is left of the empties is ~1 M
+  spread over a dozen small owners (the largest 9,492 unshares x three
+  `Vec`s at ~32 Ir). Nothing there prices at a build.
 * **`resolve_combat`'s protection asks — 0.2 %.** 13,164
   `damage_prevented_by_protection` calls (5.0 M) inside scopes that
   already hold `computed_of`; `protection_prevents_views` is the form.

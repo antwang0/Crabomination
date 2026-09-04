@@ -25,8 +25,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-199)` is the last claimed,
-   `(-200)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-202)` is the last claimed,
+   `(-203)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` **10.6 min cold / 3.2 min warm** (a `crabomination_base`
    edit re-fingerprints the catalog: ~14 min — keep a device engine-only when it can be),
    test build ~5.5 min + suite 2.7 min; `nextest` needs installing (CLAUDE.md). Callgrind
@@ -34,23 +34,29 @@ sixty-seventh pass, so don't re-take that.
    builds can pull a concurrent CATALOG commit: `git log --stat <base>..HEAD --
    crabomination_catalog` after any rebase (PERF Standing rules, top). ⚠ `diff` two
    `bot_ladder` stdouts with the `decided ... in N.Ns` line excluded — it carries wall clock.
-2. **Gates at `4bd4fc1b` (this run):** PERF Baseline has them — suite 19,239 / 0 / 5, clippy,
-   release-fast typecheck, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to
-   `2003d1cf`**, golden traces 7/7 unmoved, three-pool stdout identical; grid not re-run (no
-   encoder/pool change).
-3. **This run: `(-199)`, `cube` -0.644 % / `fixed` -0.561 % / `sealed` -0.354 %** — the
-   grants-nothing gate asks per permanent (an Equipment / Soulbond link, a grant static's
-   selector reach, the `SELF_GRANT` / `COUNTER_GRANT` bits on the mana-summary word, a lazy
-   counter-grant lane). Three builds: an eager lane read lost on `fixed`, a one-body gate lost
-   its inlining — **keep the old loads inline as the fast accept, put the growth out of line**
-   (Log). `(-198)`'s "the rest carry a static or a counter" was wrong about the reason: a
-   static *elsewhere* refused them; `cg_edges.py --callers` on the base dump said so first.
+2. **Gates at `966289ae` (this run):** PERF Baseline has them — suite 19,240 / 0 / 5,
+   clippy, release-fast typecheck, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
+   byte-identical to `2003d1cf`** at every leg, golden traces 7/7 unmoved, three-pool stdout
+   identical at every leg; grid not re-run (no encoder/pool change; `OftenEmpty` is
+   `#[serde(transparent)]`).
+3. **This run: four devices, `cube` -1.174 % / `fixed` -1.140 % / `sealed` -0.876 %
+   cumulative** (Log `(-199)`..`(-202)`): the grants-nothing gate asks per permanent (an
+   Equipment / Soulbond link, a grant static's selector reach, memo bits, a lazy lane — three
+   builds: **keep the old loads inline as the fast accept, put the growth out of line**);
+   `OftenEmpty<T>` (base, `#[serde(transparent)]`) on `CardData`'s and `PlayerData`'s lists +
+   `GameState::clone` guards; `resolve_combat`'s protection asks over its held views. **Both
+   clone legs found their priced row was inlined elsewhere and the out-of-line `Vec::clone`
+   row belonged to another owner** — the `--demangle=no` read (How to measure) is the
+   instrument that names a monomorph's owner; the family is now at its floor (candidates).
 4. **Perf leads left (candidates, top, priced):** the printed-mana-ability fast path in
    `activate_ability_inner` (ceiling ~3 % of `cube`; the whole 3,100-line body was read this
    run — every unconditional write on it is a plain `GameState` field, so there is no single
-   waste, only the sum of ~100 gates + the digest + the generic resolver); a per-scan
-   `EachPermanent` reach mask (`grants_nothing_slow` 100 k x 99 Ir = 0.45 % of `cube`); then
-   the cheap-on-empty clone (~0.7 %) and `resolve_combat`'s protection asks (0.2 %).
+   waste, only the sum of ~100 gates + the digest + the generic resolver); the SBA's
+   attachment-legality protection asks (5,896 x ~530 Ir = 0.14 % of `cube`, a presence-gate
+   board walk under `&mut self` — a lane question); `grants_nothing_slow` is at its floor
+   (one printed-filter test per permanent x grant static, asked once per scan). **The list
+   is thin: the next run should re-profile (`--separate-callers=3`, `cg_contexts.py`) at the
+   tip before pulling anything.**
 5. **Cards/rules (leftover only):** primitives unblocking several filed rows — a per-turn
    cast-name memory (Sift Through Sands + Kamigawa "cast X this turn"; `spell_ids_cast_this_turn`
    is the raw material, `Predicate::CastSpellNamedThisTurn` the missing arm), a per-turn
