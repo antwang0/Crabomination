@@ -444,9 +444,6 @@ const LANE_CARD_TYPE: u32 = 32;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
-/// The two lanes whose `PRESENT` means "the member list beside me is
-/// computed" — indices, which any membership change shifts.
-const LANE_MEMBER_MASK: u64 = (LANE_MASK << LANE_GRANT) | (LANE_MASK << LANE_TRIGGERER);
 /// The lane count the predicate table below covers (shift 0 ..= 32).
 const LANE_COUNT: usize = 17;
 
@@ -1479,7 +1476,7 @@ impl Battlefield {
     pub fn remove(&mut self, index: usize) -> CardInstance {
         note_battlefield_reach();
         let card = self.cards.remove(index);
-        self.lanes_after_removal(Some(&card));
+        self.lanes_after_removal(Some((index, &card)));
         card
     }
 
@@ -1491,7 +1488,8 @@ impl Battlefield {
     }
 
     /// `Vec::retain`, shadowed: removal-only, but of cards the zone does not
-    /// see go, so every `PRESENT` lane drops and every `ABSENT` one stays.
+    /// see go, so every `PRESENT` lane and member list drops and every
+    /// `ABSENT` lane stays.
     pub fn retain(&mut self, f: impl FnMut(&CardInstance) -> bool) {
         note_battlefield_reach();
         self.lanes_after_removal(None);
@@ -1502,13 +1500,26 @@ impl Battlefield {
     pub fn pop(&mut self) -> Option<CardInstance> {
         note_battlefield_reach();
         let card = self.cards.pop();
-        self.lanes_after_removal(card.as_ref());
+        self.lanes_after_removal(card.as_ref().map(|c| (self.cards.len(), c)));
         card
     }
 
+    /// The member-list lanes as `(lane, predicate, list)`, for the membership
+    /// writes to keep each list exact (PERF `(-214)`): a push appends bit
+    /// `len` when the new card qualifies, a removal at `i` shifts the bits
+    /// above `i` down one. The predicate is the one the list's audit
+    /// recomputes with.
+    fn member_lanes(&self) -> [(u32, LanePredicate, &std::sync::atomic::AtomicU64); 2] {
+        [
+            (LANE_GRANT, card_has_any_grant_bits, &self.grant_members),
+            (LANE_TRIGGERER, card_is_triggerer, &self.trig_members),
+        ]
+    }
+
     /// The lane word after `card` joined: `ABSENT` lanes re-answered off
-    /// the card, `PRESENT` lanes kept, member lists cleared. A word stamped
-    /// at another definition epoch is dead already and is cleared whole.
+    /// the card, `PRESENT` lanes kept, member lists extended by the card's
+    /// bit (or dropped past 64 cards). A word stamped at another definition
+    /// epoch is dead already and is cleared whole.
     #[inline(never)]
     fn lanes_after_push(&self, card: &CardInstance) {
         let w = self.type_gates.load(Ordering::Relaxed);
@@ -1519,16 +1530,27 @@ impl Battlefield {
             self.type_gates.store(0, Ordering::Relaxed);
             return;
         }
-        let mut out = w & !LANE_MEMBER_MASK;
+        let mut out = w;
+        let index = self.cards.len();
+        for (shift, pred, list) in self.member_lanes() {
+            if (w >> shift) & LANE_MASK != PRESENT as u64 {
+                continue;
+            }
+            if index >= 64 {
+                out &= !(LANE_MASK << shift);
+            } else if pred(card) {
+                list.store(list.load(Ordering::Relaxed) | (1 << index), Ordering::Relaxed);
+            }
+        }
         for (i, pred) in LANE_PREDICATES.iter().enumerate() {
             let shift = 2 * i as u32;
             if (w >> shift) & LANE_MASK != ABSENT as u64 {
                 continue;
             }
-            match pred {
-                Some(p) if !p(card) => {}
-                Some(_) => out = (out & !(LANE_MASK << shift)) | ((PRESENT as u64) << shift),
-                None => out &= !(LANE_MASK << shift),
+            if let Some(p) = pred
+                && p(card)
+            {
+                out = (out & !(LANE_MASK << shift)) | ((PRESENT as u64) << shift);
             }
         }
         self.type_gates.store(out, Ordering::Relaxed);
@@ -1536,10 +1558,10 @@ impl Battlefield {
 
     /// The lane word after a removal: `ABSENT` lanes kept, `PRESENT` lanes
     /// kept when `card` (the one that left) fails their predicate and dropped
-    /// otherwise — dropped whole when the leaver is unknown (`retain`) —
-    /// member lists cleared.
+    /// otherwise, member lists shifted down past `index` — all three dropped
+    /// whole when the leaver is unknown (`retain`).
     #[inline(never)]
-    fn lanes_after_removal(&self, card: Option<&CardInstance>) {
+    fn lanes_after_removal(&self, removed: Option<(usize, &CardInstance)>) {
         let w = self.type_gates.load(Ordering::Relaxed);
         if w == 0 {
             return;
@@ -1548,18 +1570,26 @@ impl Battlefield {
             self.type_gates.store(0, Ordering::Relaxed);
             return;
         }
+        // Bit 0 of a field is exactly `ABSENT`; member lanes never hold it.
         let mut out = w & LANE_ABSENT_BITS;
-        if let Some(card) = card {
+        if let Some((index, card)) = removed {
+            for (shift, _, list) in self.member_lanes() {
+                if (w >> shift) & LANE_MASK == PRESENT as u64 {
+                    let bits = list.load(Ordering::Relaxed);
+                    let low = bits & ((1u64 << index) - 1);
+                    let high = (bits >> (index + 1)) << index;
+                    list.store(low | high, Ordering::Relaxed);
+                    out |= (PRESENT as u64) << shift;
+                }
+            }
             for (i, pred) in LANE_PREDICATES.iter().enumerate() {
                 let shift = 2 * i as u32;
-                if (w >> shift) & LANE_MASK == PRESENT as u64
-                    && pred.is_some_and(|p| !p(card))
-                {
+                if (w >> shift) & LANE_MASK == PRESENT as u64 && pred.is_some_and(|p| !p(card)) {
                     out |= (PRESENT as u64) << shift;
                 }
             }
         }
-        self.type_gates.store(out & !LANE_MEMBER_MASK, Ordering::Relaxed);
+        self.type_gates.store(out, Ordering::Relaxed);
     }
 
     /// True when both handles still share one allocation — the [`CowBox`]
@@ -2114,17 +2144,20 @@ mod tests {
         assert!(b.pop().is_some());
         assert_eq!(b.memo(LANE_CREATURE), Some(false), "pop is a removal too");
 
-        // The member lists hold indices: any membership change clears them.
+        // The member lists are kept exact through both directions; a board
+        // that grows past 64 cards loses its list.
         let mut b = bf(vec![crate::catalog::grizzly_bears(), crate::catalog::grave_titan()]);
         let Err(epoch) = b.trigger_members() else { panic!("unknown until filled") };
         b.store_trigger_members(epoch, triggerer_bits(&b));
         assert_eq!(b.trigger_members(), Ok(0b10));
         b.push(CardInstance::new(CardId(9), crate::catalog::grizzly_bears(), 0));
-        assert!(b.trigger_members().is_err(), "push cleared the member list");
-        let Err(epoch) = b.trigger_members() else { unreachable!() };
-        b.store_trigger_members(epoch, triggerer_bits(&b));
+        assert_eq!(b.trigger_members(), Ok(0b10), "push kept the list");
         b.remove(0);
-        assert!(b.trigger_members().is_err(), "a removal cleared it too");
+        assert_eq!(b.trigger_members(), Ok(0b01), "a removal shifted it");
+        for i in 0..64 {
+            b.push(CardInstance::new(CardId(100 + i), crate::catalog::grizzly_bears(), 0));
+        }
+        assert!(b.trigger_members().is_err(), "the 65th card drops the list");
     }
 
     /// `(-115)`'s lane is a *positional* answer where the others are a
@@ -2146,14 +2179,21 @@ mod tests {
         b.iter_mut().for_each(|c| c.tapped = true);
         assert_eq!(b.trigger_members(), Ok(0b010), "an element write is not a membership change");
 
+        // Membership writes keep the list exact (PERF `(-214)`): a push
+        // appends the new card's bit, a removal shifts the bits above it down.
         b.push(CardInstance::new(CardId(9), crate::catalog::grizzly_bears(), 0));
-        assert!(b.trigger_members().is_err(), "push invalidated");
-        let Err(epoch) = b.trigger_members() else { unreachable!() };
-        b.store_trigger_members(epoch, triggerer_bits(&b));
-        assert_eq!(b.trigger_members(), Ok(0b010), "and refills at the new membership");
-
+        assert_eq!(b.trigger_members(), Ok(0b0010), "a bear adds no bit");
+        b.push(CardInstance::new(CardId(8), crate::catalog::grave_titan(), 0));
+        assert_eq!(b.trigger_members(), Ok(0b10010), "a second Titan adds bit 4");
+        b.remove(0);
+        assert_eq!(b.trigger_members(), Ok(0b1001), "the bits above index 0 shifted down");
+        b.remove(0);
+        assert_eq!(b.trigger_members(), Ok(0b100), "the first Titan left: its bit went with it");
+        assert_eq!(b.trigger_members(), Ok(triggerer_bits(&b)), "and the audit agrees");
         b.pop();
-        assert!(b.trigger_members().is_err(), "DerefMut invalidated");
+        assert_eq!(b.trigger_members(), Ok(0b000), "pop dropped the last Titan's bit");
+        b.retain(|c| c.id != CardId(9));
+        assert!(b.trigger_members().is_err(), "retain cannot name what it dropped");
     }
 
     /// The grant member list (PERF `(-189)`) is read *instead of* the
@@ -2174,14 +2214,15 @@ mod tests {
         b.iter_mut().for_each(|c| c.tapped = true);
         assert_eq!(b.grant_members(), Ok(0b010), "an element write is not a membership change");
 
-        b.push(CardInstance::new(CardId(9), crate::catalog::grizzly_bears(), 0));
-        assert!(b.grant_members().is_err(), "push invalidated");
-        let Err(epoch) = b.grant_members() else { unreachable!() };
-        b.store_grant_members(epoch, grant_bits(&b));
-        assert_eq!(b.grant_members(), Ok(0b010), "and refills at the new membership");
-
+        b.push(CardInstance::new(CardId(9), crate::catalog::goblin_king(), 0));
+        assert_eq!(b.grant_members(), Ok(0b1010), "a second lord adds bit 3");
+        b.remove(1);
+        assert_eq!(b.grant_members(), Ok(0b100), "the first lord left, the second shifted down");
+        assert_eq!(b.grant_members(), Ok(grant_bits(&b)), "and the audit agrees");
         b.pop();
-        assert!(b.grant_members().is_err(), "DerefMut invalidated");
+        assert_eq!(b.grant_members(), Ok(0b000));
+        b.retain(|c| c.id != CardId(0));
+        assert!(b.grant_members().is_err(), "retain drops the list");
 
         let wide = bf((0..65).map(|_| crate::catalog::grizzly_bears()).collect());
         let Err(epoch) = wide.grant_members() else { panic!("unknown until filled") };
