@@ -17062,10 +17062,17 @@ impl GameState {
         {
             return self.draw_one(thief, events);
         }
+        // One lane read in front of the eleven board walks below (PERF
+        // `(-233)`): every static any of them matches is in the lane's
+        // predicate, so a clear lane answers all of them at once, and a
+        // board without a draw replacement — nearly every board — pays one
+        // word load per draw instead of eleven walks.
+        let draw_statics = self.battlefield.has_draw_static();
         let global_static = |want: &crate::effect::StaticEffect| {
-            self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| sa.effect == *want)
-            })
+            draw_statics
+                && self.battlefield.iter().any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| sa.effect == *want)
+                })
         };
         if global_static(&crate::effect::StaticEffect::PlayersSkipDraws) {
             return false;
@@ -17073,7 +17080,7 @@ impl GameState {
         // CR 121.2a — Obstinate Familiar: "you may skip that draw instead."
         // Controller-scoped and optional; the auto policy takes the skip only
         // when the library is empty, i.e. when drawing would lose the game.
-        if self.controller_may_skip_draws(p) {
+        if draw_statics && self.controller_may_skip_draws(p) {
             use crate::decision::{Decision, DecisionAnswer};
             let empty = self.players[p].library.is_empty();
             let yes = empty
@@ -17155,6 +17162,11 @@ impl GameState {
         // A declined optional pick drops out and the choice is made again.
         let mut declined: Vec<DrawDig> = Vec::new();
         loop {
+            // Four controller-scoped walks; with no draw static on the board
+            // `applicable` stays empty and the choice below is `None`.
+            if !draw_statics {
+                break;
+            }
             let mut applicable: Vec<DrawDig> = Vec::new();
             if self.source_exile_draw_pile_for(p).is_some_and(|src| {
                 self.exile.iter().any(|c| c.exiled_with == Some(src))
@@ -17181,7 +17193,8 @@ impl GameState {
         // draw-step draw becomes "discard a card; if you do, draw a card,
         // otherwise mill a card". CR 614.5 — the draw it hands back isn't
         // replaced again.
-        if !self.in_turn_based_draw
+        if draw_statics
+            && !self.in_turn_based_draw
             && !self.in_chains_replacement
             && self.battlefield.iter().any(|c| {
                 c.definition
@@ -17218,7 +17231,8 @@ impl GameState {
         }
         // CR 614 — Notion Thief: redirect an opponent's draw (except the
         // turn-based first draw of their draw step) to the thief's controller.
-        if !self.in_turn_based_draw
+        if draw_statics
+            && !self.in_turn_based_draw
             && !self.in_draw_redirect
             && let Some(thief) = self.notion_thief_for_draw(p)
         {
@@ -17230,7 +17244,9 @@ impl GameState {
         // CR 121.2a — empty-hand draw replacement (Blood Scrivener). Snapshot
         // the bonus before the draw (the hand must be empty at draw time) and
         // apply the extra draws + life loss after, guarded against recursion.
-        let empty_hand_bonus = (!self.in_draw_double && self.players[p].hand.is_empty())
+        let empty_hand_bonus = (draw_statics
+            && !self.in_draw_double
+            && self.players[p].hand.is_empty())
             .then(|| {
                 self.battlefield.iter().find_map(|c| {
                     (c.controller == p).then(|| {
@@ -17273,6 +17289,7 @@ impl GameState {
         // CR 121.2a — Breathstealer's Crypt: the drawn card is revealed, and a
         // matching one is discarded unless its drawer pays the toll.
         if drew
+            && draw_statics
             && let Some((filter, life)) = self.battlefield.iter().find_map(|c| {
                 c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
                     crate::effect::StaticEffect::DrawsRevealedTaxed { filter, life } => {

@@ -470,11 +470,15 @@ const LANE_DEATH_REDIRECT: u32 = 30;
 /// battlefield walk, which every land tap and every SBA death sweep asks
 /// (PERF `(-207)`).
 const LANE_CARD_TYPE: u32 = 32;
+/// Any permanent's definition carries a draw-replacement static — the twelve
+/// `StaticEffect`s `draw_one` walks the board for, up to eleven walks a draw
+/// (PERF `(-233)`). See [`card_has_draw_static`].
+const LANE_DRAW_STATIC: u32 = 34;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 17;
+const LANE_COUNT: usize = 18;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -507,6 +511,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(crate::game::actions::card_grants_to_countered),// LANE_COUNTER_GRANT
     Some(crate::game::actions::card_redirects_deaths),   // LANE_DEATH_REDIRECT
     Some(crate::game::card_can_change_card_types_def),   // LANE_CARD_TYPE
+    Some(card_has_draw_static),                          // LANE_DRAW_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -587,6 +592,32 @@ pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
 /// it stands in for have to be the same question or the list is unsound.
 pub(crate) fn card_is_triggerer(c: &CardInstance) -> bool {
     !c.definition.triggered_abilities.is_empty() || !c.definition.station.is_empty()
+}
+
+/// Does this permanent's definition carry a static that can replace, skip,
+/// redirect or tax a draw? The [`LANE_DRAW_STATIC`] predicate — the union of
+/// every `StaticEffect` `draw_one` and its helpers match on, so a clear lane
+/// is authoritative for all of them. Definition-only; the per-instance
+/// `active_static` gates inside those helpers only narrow it.
+fn card_has_draw_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as S;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            S::PlayersSkipDraws
+                | S::SharedFate
+                | S::PlayersDrawExiledPlayable
+                | S::ControllerMaySkipDraws
+                | S::MayReplaceDrawWithTutor
+                | S::MayDrawFromSourceExilePile
+                | S::MayReplaceDrawWithRevealUntilKind
+                | S::ReplaceDrawWithLookN { .. }
+                | S::ChainsOfMephistopheles
+                | S::EmptyHandDrawBonus { .. }
+                | S::DrawsRevealedTaxed { .. }
+                | S::OpponentExtraDrawsRedirected
+        )
+    })
 }
 
 /// [`card_has_any_grant_bits`] over a whole board as an index mask — the
@@ -1200,6 +1231,14 @@ impl Battlefield {
     #[inline]
     pub fn has_gate_keyword(&self) -> bool {
         self.lane(LANE_GATE_KEYWORD, card_has_gate_keyword)
+    }
+
+    /// Does any permanent here carry a draw-replacement static
+    /// ([`card_has_draw_static`])? Read once per draw by `draw_one`, in
+    /// front of its eleven board walks (PERF `(-233)`).
+    #[inline]
+    pub fn has_draw_static(&self) -> bool {
+        self.lane(LANE_DRAW_STATIC, card_has_draw_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board
