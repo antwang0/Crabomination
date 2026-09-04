@@ -2582,8 +2582,14 @@ grid    robustness_grid.sh --pilots on the (-220) tree (the loop guard's
         tree (six presence lanes, each audited by the lane debug_assert
         on every read): ladder 30 / 33,120, 0; actor 3, 0; pilots 45, 0;
         25m14s. No encoder or pool change, no serialized shape change.
-wall    not re-taken: -0.68 % Ir is inside bench_ab.py's noise band
-        (the standing rule); the Ir is the number.
+wall    bench_ab.py, 24 pairs, the 52b9a743 binary (rebuilt in a
+        worktree, 17 min cold) vs the (-241) tip, both profiling-fast
+        with default features (mimalloc; 294 `mi_` symbols in each), load
+        2.1 at the start: **+9.29 % median games/s** (mean +9.43 %,
+        per-pair sd 9.90; A median 452.1, B 493.6) for -6.50 / -4.62 /
+        -3.73 % Ir. The lane-write pattern of the (-215) sitting again:
+        a device that removes cache-missing board walks reads above its
+        Ir share on wall clock.
 ```
 
 The rules this closing state adds, each from its leg's Log entry:
