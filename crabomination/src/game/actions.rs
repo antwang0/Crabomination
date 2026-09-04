@@ -463,12 +463,28 @@ struct ManaSourceInfo {
 /// and `pack` answers `None` so the card takes the slow path unmemoized.
 /// Bit 61 ([`SELF_GRANT`](mana_summary::SELF_GRANT)) rides along for the
 /// grants-nothing gate: the definition's own statics or Station bands can
-/// hand it activated abilities (PERF `(-199)`).
+/// hand it activated abilities (PERF `(-199)`). Bits 43-48
+/// ([`PLAIN_TAP`](mana_summary::PLAIN_TAP)) and 49
+/// ([`PLAIN_LAND`](mana_summary::PLAIN_LAND)) are the land-tap fast path's
+/// (PERF `(-204)`).
 mod mana_summary {
     use super::ManaSourceInfo;
     use crate::card::CardId;
 
     const HAS: u64 = 1 << 62;
+    /// Bit `PLAIN_TAP << i` — printed ability `i` is a bare `{T}: Add …`
+    /// (`plain_tap_mana`), for the first [`PLAIN_TAP_SLOTS`] indices.
+    pub(super) const PLAIN_TAP: u64 = 1 << 43;
+    pub(super) const PLAIN_TAP_SLOTS: usize = 6;
+    /// The definition is a land and nothing the activation gates ask about
+    /// (not a creature, artifact or enchantment on its printed type line).
+    pub(super) const PLAIN_LAND: u64 = 1 << 49;
+
+    /// Is printed ability `i` a bare `{T}: Add …` on this word?
+    #[inline]
+    pub(super) fn plain_tap(w: u64, i: usize) -> bool {
+        i < PLAIN_TAP_SLOTS && w & (PLAIN_TAP << i) != 0
+    }
     /// The definition carries one of the six `HasActivatedAbilitiesOf*`
     /// markers `granted_abilities_of_inner` reads off its own statics, or a
     /// Station band — the two definition-only reasons it can be granted
@@ -562,6 +578,14 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
     // `While*` peel), plus the Station bands it reads.
     use crate::effect::StaticEffect as SE;
     let mut flags = if def.station.is_empty() { 0 } else { mana_summary::SELF_GRANT };
+    for (i, a) in def.activated_abilities.iter().take(mana_summary::PLAIN_TAP_SLOTS).enumerate() {
+        if plain_tap_mana(a) {
+            flags |= mana_summary::PLAIN_TAP << i;
+        }
+    }
+    if def.is_land() && !def.is_creature() && !def.is_artifact() && !def.is_enchantment() {
+        flags |= mana_summary::PLAIN_LAND;
+    }
     for sa in &def.static_abilities {
         match sa.effect {
             SE::HasActivatedAbilitiesOfExiledWithSelf
@@ -581,6 +605,35 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
         }
     }
     packed.map(|w| w | flags)
+}
+
+/// Test switch: `true` sends every activation down the generic path, so a
+/// test can play the same action both ways and compare the states. One
+/// relaxed load per activation; never set outside a test.
+pub static FORCE_GENERIC_ACTIVATION: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Debug-only tally of activations the land-tap fast path took, so the
+/// equivalence test can tell an accepted board from a declined one. Not
+/// compiled into an optimized build.
+#[cfg(debug_assertions)]
+pub static PLAIN_LAND_TAPS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// A bare `{T}: Add …` — the tap is the whole cost line, the body is one
+/// `AddMana` for the activator, and every other field sits at its default,
+/// so nothing `activate_ability_inner` gates on the *ability* can fire.
+/// `is_free`'s probe compare, with the two fields the shape sets masked.
+fn plain_tap_mana(a: &crate::effect::ActivatedAbility) -> bool {
+    use crate::effect::{ActivatedAbility, PlayerRef};
+    a.tap_cost
+        && matches!(a.effect, Effect::AddMana { who: PlayerRef::You, .. })
+        && is_mana_ability(&a.effect)
+        && {
+            let mut probe = a.clone();
+            probe.tap_cost = false;
+            probe.effect = ActivatedAbility::default().effect;
+            probe == ActivatedAbility::default()
+        }
 }
 
 /// The death-redirect lane's predicate: the definition carries one of the
@@ -14639,6 +14692,113 @@ impl GameState {
     /// "spend only mana produced by creatures" cost (Myr Superion) can find
     /// it. Tagging the pool delta here catches printed, granted (Cryptolith
     /// Rite) and intrinsic mana abilities in one place.
+    /// The printed land tap without the generic gate walk (PERF `(-204)`).
+    ///
+    /// `activate_ability_inner` asks ~100 questions of every activation, and
+    /// nearly every activation on the bot path is a land tapping for mana.
+    /// When the definition word says ability `ability_index` is a bare
+    /// `{T}: Add …` on a plain land (`mana_summary::PLAIN_TAP` /
+    /// `PLAIN_LAND`) and the board says nothing in scope can reach it — no
+    /// card-type or land-type rewrite, no `CantActivateTapAbilities` grant,
+    /// no mana static, not detained, not bestowed, untapped and yours —
+    /// every gate on the generic path is settled by inspection, and this
+    /// performs the same mutations in the same order: the pending-pick
+    /// takes, the tap, the two events, the per-turn land flag, the
+    /// cost-scratch resets, the multiplier around the generic resolver, the
+    /// CR 605.1b extra mana. `None` hands the activation to the generic path
+    /// untouched. `core_rules::land_tap_fast_path` compares the two paths'
+    /// whole states and event lists; `FORCE_GENERIC_ACTIVATION` is its switch.
+    fn activate_plain_land_tap(
+        &mut self,
+        card_id: CardId,
+        ability_index: usize,
+        p: usize,
+        x_value: Option<u32>,
+    ) -> Option<Result<Vec<GameEvent>, GameError>> {
+        if FORCE_GENERIC_ACTIVATION.load(std::sync::atomic::Ordering::Relaxed)
+            || self.limited_range()
+        {
+            return None;
+        }
+        let src = self.battlefield.find_by_id(card_id)?;
+        if src.controller != p || src.tapped || src.bestowed || src.detained_by.is_some() {
+            return None;
+        }
+        let w = src.mana_summary(mana_summary_of)?;
+        if w & mana_summary::PLAIN_LAND == 0 || !mana_summary::plain_tap(w, ability_index) {
+            return None;
+        }
+        // Layer 4 could make it a creature (CR 106.12, CR 602.5g); a
+        // land-type rewrite could take a basic's intrinsic ability away
+        // (CR 305.6); a granted `CantActivateTapAbilities` bars it
+        // (CR 602.5); a mana static changes what the tap makes or costs.
+        if self.card_type_change_unscoped()
+            || (self.land_type_change_in_scope()
+                && Self::printed_land_mana_basic(src, ability_index).is_some())
+            || self.card_keyword_possible_on(src, |k| *k == Keyword::CantActivateTapAbilities)
+            || self.board_has_mana_static()
+        {
+            return None;
+        }
+        let def = std::sync::Arc::clone(&src.definition);
+        #[cfg(debug_assertions)]
+        PLAIN_LAND_TAPS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // The generic path consumes any pending cost picks up front, so a
+        // stale one cannot leak onto a later activation.
+        let _ = self.pending_ability_sac_other.take();
+        let _ = self.pending_ability_tap_other.take();
+        let _ = take_opt_scratch!(self.pending_ability_exile_other);
+        let _ = take_opt_scratch!(self.pending_ability_sac_any);
+        let _ = self.pending_cast_spend_float.take();
+
+        let Some(perm) = self.battlefield.find_by_id_mut(card_id) else {
+            return Some(Err(GameError::CardNotOnBattlefield(card_id)));
+        };
+        perm.tapped = true;
+        let mut events = Vec::new();
+        events.push(GameEvent::PermanentTapped { card_id, actor: None, as_attacker: false });
+        events.push(GameEvent::TappedForMana { card_id, player: p });
+        if !self.players[p].tapped_land_for_mana_this_turn {
+            self.players[p].tapped_land_for_mana_this_turn = true;
+        }
+        // The cost scratch the generic path resets on every activation.
+        self.exiled_for_cost_mana_value = None;
+        self.sacrificed_count = 0;
+        self.sacrificed_total_power = 0;
+        if !self.scratch.cost_sacrificed_batch.is_empty() {
+            self.scratch.cost_sacrificed_batch = Vec::new();
+        }
+        self.counters_removed_as_cost = 0;
+        if !self.tapped_for_cost.is_empty() {
+            self.tapped_for_cost = Vec::new();
+        }
+        self.cost_discarded_mana_value = None;
+        clear_cold!(self.cost_exiled_cards);
+
+        // The generic mana branch, verbatim.
+        let effect = &def.activated_abilities[ability_index].effect;
+        self.mana_production_multiplier = self.mana_production_multiplier_for(p);
+        let mark = events.len();
+        let resolved = self.continue_ability_resolution_x_into(
+            card_id,
+            p,
+            effect,
+            None,
+            x_value.unwrap_or(0),
+            &mut events,
+        );
+        self.mana_production_multiplier = 1;
+        if let Err(e) = resolved {
+            return Some(Err(e));
+        }
+        let mut extra = Vec::new();
+        self.resolve_extra_mana_on_land_tap(card_id, p, &events[mark..], &mut extra);
+        if !extra.is_empty() {
+            events.splice(mark..mark, extra);
+        }
+        Some(Ok(events))
+    }
+
     pub(crate) fn activate_ability(
         &mut self,
         card_id: CardId,
@@ -14696,6 +14856,17 @@ impl GameState {
         creature_mana_before: &mut Option<crate::mana::ManaPool>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+
+        // The printed land tap, settled by inspection (PERF `(-204)`). Every
+        // gate below is answered `no` for it by the definition word and five
+        // board reads; `None` means "not that shape, or not on this board".
+        if target.is_none()
+            && additional_targets.is_empty()
+            && chosen_mode.is_none()
+            && let Some(out) = self.activate_plain_land_tap(card_id, ability_index, p, x_value)
+        {
+            return out;
+        }
 
         // CR 801.6 — a player can't activate abilities of an object outside
         // their range of influence.

@@ -19,6 +19,7 @@ mod format;
 mod freerunning;
 mod game;
 mod golden_trace;
+mod land_tap_fast_path;
 mod structural_audit;
 mod jewel;
 mod lci_craft;
