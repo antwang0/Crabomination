@@ -7495,6 +7495,31 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-235)` TAKEN — a damage-replacement static lane in front of six per-damage-event walks: `fixed` -0.192 % / `sealed` -0.173 % / `cube` -0.165 %
+
+```text
+  pool    base (-234)       (-235)          delta
+  fixed     708,958,856     707,597,733   **-0.192 %**
+  cube    1,973,436,802   1,970,174,350   **-0.165 %**
+  sealed  2,037,047,943   2,033,517,838   **-0.173 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  damage_redirect_target 7,428 calls (two walks); deal_damage_to_from's player arm, four walks per player-damage event
+```
+
+`(-233)`'s device on the damage path: every damage event to a player
+walked the board for The Mindskinner, Crumbling Sanctuary, Delaying
+Shield and Nefarious Lich in turn, and `damage_redirect_target` walked
+it twice more (Pariah's Shield, Palisade Giant) for every damage event
+at all. One lane, six `StaticEffect`s in its predicate, both functions
+read it once. Smaller than the draw and ETB lanes because the walks
+were already cheap — a `matches!` per static on a list that is empty on
+most permanents — and the prevention machinery beside them
+(`prevent_static_scan`'s per-event mask, `apply_prevention_shields_with`)
+is untouched: the scan is a definition-only fold of twelve statics
+computed by a board walk on every damage event, and it is the same shape
+as a lane holding a *word* rather than a bit — the next device on this
+path if one is wanted (~280 Ir an event over ~13 k events on `cube`).
+
 ### `(-234)` TAKEN — an ETB-static lane in front of `etb_trigger_multiplier` and `apply_enters_tapped_replacement`: `fixed` -0.391 % / `cube` -0.373 % / `sealed` -0.116 %
 
 ```text
