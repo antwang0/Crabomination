@@ -466,7 +466,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(crate::game::card_can_scale_damage),            // LANE_DAMAGE_SCALE
     Some(crate::game::card_can_prevent_outgoing_damage), // LANE_OUTGOING_PREVENT
     Some(crate::game::card_can_prevent_incoming_damage), // LANE_INCOMING_PREVENT
-    Some(card_has_dispatch_bits),                        // LANE_DISPATCH
+    None,                                                // LANE_DISPATCH (member list)
     Some(crate::game::card_can_shield_damage),           // LANE_SHIELD
     None,                                                // LANE_GRANT (member list)
     Some(card_has_listener_bits),                        // LANE_LISTENER
@@ -585,6 +585,21 @@ fn triggerer_bits(cards: &[CardInstance]) -> u64 {
     let mut bits = 0u64;
     for (i, c) in cards.iter().enumerate() {
         if card_is_triggerer(c) {
+            bits |= 1u64 << i;
+        }
+    }
+    bits
+}
+
+/// [`card_has_dispatch_bits`] over a whole board as an index mask — the
+/// dispatch member list's audit. `0` past 64 cards.
+fn dispatch_bits(cards: &[CardInstance]) -> u64 {
+    if cards.len() > 64 {
+        return 0;
+    }
+    let mut bits = 0u64;
+    for (i, c) in cards.iter().enumerate() {
+        if card_has_dispatch_bits(c) {
             bits |= 1u64 << i;
         }
     }
@@ -976,6 +991,10 @@ pub struct Battlefield {
     /// each. Read only while [`LANE_TRIGGERER`] says the list is computed, so
     /// it inherits the lanes' invalidation whole and needs none of its own.
     trig_members: std::sync::atomic::AtomicU64,
+    /// The dispatch scan's member list (PERF `(-215)`): the indices whose
+    /// definition carries a `BOARD_SCAN` bit, valid while [`LANE_DISPATCH`]
+    /// reads `PRESENT`. Same contract as `trig_members`.
+    dispatch_members: std::sync::atomic::AtomicU64,
     /// Which indices satisfy [`card_has_any_grant_bits`], on the same
     /// contract under [`LANE_GRANT`].
     grant_members: std::sync::atomic::AtomicU64,
@@ -1302,14 +1321,40 @@ impl Battlefield {
     /// doubled miss breaks even. Splitting the read from the store makes the
     /// miss cost the walk the caller was making anyway and nothing else.
     pub fn dispatch_lane(&self) -> Result<bool, u64> {
-        self.split_lane(LANE_DISPATCH, card_has_dispatch_bits, "dispatch")
+        self.dispatch_members().map(|bits| bits != 0)
     }
 
-    /// Record what the caller's own walk found in the dispatch lane. `epoch`
-    /// is the one [`dispatch_lane`](Self::dispatch_lane) handed out, i.e. read
-    /// before the walk.
-    pub fn store_dispatch(&self, epoch: u64, found: bool) {
-        self.store_lane(LANE_DISPATCH, epoch, found);
+    /// The dispatch scan's **member list** (PERF `(-215)`): `Ok(bits)`
+    /// names the battlefield indices whose definition carries a
+    /// `BOARD_SCAN` bit ([`card_has_dispatch_bits`]), so a scan visits only
+    /// those; `Err(epoch)` means "unknown — walk, then hand that same epoch
+    /// to [`store_dispatch_members`](Self::store_dispatch_members)". Kept
+    /// exact through membership writes like the other two lists.
+    pub fn dispatch_members(&self) -> Result<u64, u64> {
+        let epoch = crate::card::definition_epoch();
+        let known = self.def_epoch.load(Ordering::Relaxed) == epoch
+            && (self.type_gates.load(Ordering::Relaxed) >> LANE_DISPATCH) & LANE_MASK
+                == PRESENT as u64;
+        if !known {
+            return Err(epoch);
+        }
+        let bits = self.dispatch_members.load(Ordering::Relaxed);
+        debug_assert!(
+            bits == dispatch_bits(&self.cards),
+            "battlefield dispatch memo is stale: a write reached the cards without clearing it",
+        );
+        Ok(bits)
+    }
+
+    /// Record the member list a caller's own full walk built, stamped at the
+    /// `epoch` [`dispatch_members`](Self::dispatch_members) handed out. A
+    /// board wider than 64 has no list, so the lane stays unknown there.
+    pub fn store_dispatch_members(&self, epoch: u64, bits: u64) {
+        if self.cards.len() > 64 {
+            return;
+        }
+        self.dispatch_members.store(bits, Ordering::Relaxed);
+        self.store_lane(LANE_DISPATCH, epoch, true);
     }
 
     /// The keyword-grant lane's **member list**: `Ok(bits)` names the
@@ -1509,10 +1554,11 @@ impl Battlefield {
     /// `len` when the new card qualifies, a removal at `i` shifts the bits
     /// above `i` down one. The predicate is the one the list's audit
     /// recomputes with.
-    fn member_lanes(&self) -> [(u32, LanePredicate, &std::sync::atomic::AtomicU64); 2] {
+    fn member_lanes(&self) -> [(u32, LanePredicate, &std::sync::atomic::AtomicU64); 3] {
         [
             (LANE_GRANT, card_has_any_grant_bits, &self.grant_members),
             (LANE_TRIGGERER, card_is_triggerer, &self.trig_members),
+            (LANE_DISPATCH, card_has_dispatch_bits, &self.dispatch_members),
         ]
     }
 
@@ -1628,6 +1674,9 @@ impl Clone for Battlefield {
             trig_members: std::sync::atomic::AtomicU64::new(
                 self.trig_members.load(Ordering::Relaxed),
             ),
+            dispatch_members: std::sync::atomic::AtomicU64::new(
+                self.dispatch_members.load(Ordering::Relaxed),
+            ),
             grant_members: std::sync::atomic::AtomicU64::new(
                 self.grant_members.load(Ordering::Relaxed),
             ),
@@ -1664,6 +1713,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
             def_epoch: std::sync::atomic::AtomicU64::new(0),
             find_hints: std::array::from_fn(|_| std::sync::atomic::AtomicU32::new(0)),
             trig_members: std::sync::atomic::AtomicU64::new(0),
+            dispatch_members: std::sync::atomic::AtomicU64::new(0),
             grant_members: std::sync::atomic::AtomicU64::new(0),
         }
     }
@@ -2073,9 +2123,8 @@ mod tests {
     fn dispatch_lane_round_trips_through_its_caller() {
         let mut b = bf(vec![crate::catalog::grizzly_bears()]);
         let Err(epoch) = b.dispatch_lane() else { panic!("a fresh zone is unknown") };
-        let found = b.iter().any(card_has_dispatch_bits);
-        assert!(!found, "Grizzly Bears contributes nothing to the dispatch scan");
-        b.store_dispatch(epoch, found);
+        assert_eq!(dispatch_bits(&b), 0, "Grizzly Bears contributes nothing to the dispatch scan");
+        b.store_dispatch_members(epoch, dispatch_bits(&b));
         assert_eq!(b.dispatch_lane(), Ok(false));
         assert_eq!(b.memo(LANE_LAND), None, "the other lanes are untouched");
 
@@ -2101,8 +2150,9 @@ mod tests {
         assert!(b.iter().any(card_has_dispatch_bits), "Humility strips abilities");
         assert!(!b.has_land_type_changer(never));
         let Err(epoch) = b.dispatch_lane() else { panic!("unknown until filled") };
-        b.store_dispatch(epoch, true);
+        b.store_dispatch_members(epoch, dispatch_bits(&b));
         assert_eq!(b.dispatch_lane(), Ok(true));
+        assert_ne!(b.dispatch_members(), Ok(0), "and the list names the contributor");
         assert_eq!(b.memo(LANE_LAND), Some(false), "the land lane survived the store");
     }
 

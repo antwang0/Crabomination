@@ -3664,19 +3664,31 @@ impl GameState {
         // fills it, because it is already loading the same word per card —
         // the two walks feed each other's hit rate. See
         // `zone::Battlefield::dispatch_lane`.
-        let lane = self.battlefield.dispatch_lane();
-        if lane != Ok(false) {
-            let mut any_bits = false;
-            for src in self.battlefield.iter() {
-                let bits = src.dispatch_scan_bits();
-                any_bits |= bits & db::BOARD_SCAN != 0;
-                if bits & db::GRANT_TRIGGER == 0 {
-                    continue;
+        // The lane holds a member list now (PERF `(-215)`): a hit visits
+        // only the contributors, a miss walks once and stores the list.
+        match self.battlefield.dispatch_members() {
+            Ok(mut members) => {
+                while members != 0 {
+                    let i = members.trailing_zeros() as usize;
+                    members &= members - 1;
+                    let src = &self.battlefield[i];
+                    if src.dispatch_scan_bits() & db::GRANT_TRIGGER != 0 {
+                        self.push_trigger_grants(src, &mut out);
+                    }
                 }
-                self.push_trigger_grants(src, &mut out);
             }
-            if let Err(epoch) = lane {
-                self.battlefield.store_dispatch(epoch, any_bits);
+            Err(epoch) => {
+                let mut members = 0u64;
+                for (i, src) in self.battlefield.iter().enumerate() {
+                    let bits = src.dispatch_scan_bits();
+                    if bits & db::BOARD_SCAN != 0 && i < 64 {
+                        members |= 1 << i;
+                    }
+                    if bits & db::GRANT_TRIGGER != 0 {
+                        self.push_trigger_grants(src, &mut out);
+                    }
+                }
+                self.battlefield.store_dispatch_members(epoch, members);
             }
         }
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
@@ -3880,6 +3892,43 @@ impl GameState {
         out
     }
 
+    /// One contributor's share of [`dispatch_board_scan`](Self::dispatch_board_scan):
+    /// `card` carries at least one `BOARD_SCAN` bit.
+    fn dispatch_scan_card<'a>(&'a self, card: &'a CardInstance, scan: &mut DispatchScan<'a>) {
+        use crate::card::dispatch_bits as db;
+        use crate::effect::StaticEffect;
+        let bits = card.dispatch_scan_bits();
+        scan.dies_suppressed |= bits & db::DIES_SUPPRESS != 0;
+        scan.strip_on_battlefield |= bits & db::STRIP != 0;
+        if let Some(host) = card.attached_to
+            && bits & (db::EQUIP_TRIGGER_GRANT | db::STRIP_ATTACHED) != 0
+            && let Some(bonus) = card.definition.equipped_bonus.as_ref()
+        {
+            // An attachment with no triggered abilities is not a grant. The
+            // `STRIP_ATTACHED` half of the gate above lets one in for its
+            // `remove_abilities`, so the emptiness has to be re-asked here —
+            // see `EQUIP_TRIGGER_GRANT`'s doc and PERF `(-120)`.
+            if !bonus.triggers_on_equipment && !bonus.triggered_abilities.is_empty() {
+                scan.equip_grants.push((host, bonus.triggered_abilities.as_slice()));
+            }
+            scan.strip_on_battlefield |= bonus.remove_abilities;
+        }
+        if bits & db::GRANT_TRIGGER != 0 {
+            for sa in &card.definition.static_abilities {
+                if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
+                    self.active_static(&sa.effect, card)
+                {
+                    scan.trigger_grants.push(TriggerGrant {
+                        filter: filter.resolve_named_by_source(card.named_card.as_deref()),
+                        ability,
+                        controller: card.controller,
+                        source: card.id,
+                    });
+                }
+            }
+        }
+    }
+
     /// The four board-level facts [`dispatch_triggers_for_events`] asks for on
     /// every dispatch, gathered in one pass over the battlefield instead of
     /// four. Same device as `stack.rs`'s `SbaBoardScan`; the debug cross-check
@@ -3906,48 +3955,28 @@ impl GameState {
         // own, so a miss costs nothing beyond the walk that was happening
         // anyway (see `zone::Battlefield::dispatch_lane`).
         use crate::card::dispatch_bits as db;
-        let lane = self.battlefield.dispatch_lane();
-        if lane != Ok(false) {
-            let mut any_bits = false;
-            for card in self.battlefield.iter() {
-                let bits = card.dispatch_scan_bits();
-                if bits & db::BOARD_SCAN == 0 {
-                    continue;
-                }
-                any_bits = true;
-                scan.dies_suppressed |= bits & db::DIES_SUPPRESS != 0;
-                scan.strip_on_battlefield |= bits & db::STRIP != 0;
-                if let Some(host) = card.attached_to
-                    && bits & (db::EQUIP_TRIGGER_GRANT | db::STRIP_ATTACHED) != 0
-                    && let Some(bonus) = card.definition.equipped_bonus.as_ref()
-                {
-                    // An attachment with no triggered abilities is not a
-                    // grant. The `STRIP_ATTACHED` half of the gate above lets
-                    // one in for its `remove_abilities`, so the emptiness has
-                    // to be re-asked here — see `EQUIP_TRIGGER_GRANT`'s doc
-                    // and PERF `(-120)`.
-                    if !bonus.triggers_on_equipment && !bonus.triggered_abilities.is_empty() {
-                        scan.equip_grants.push((host, bonus.triggered_abilities.as_slice()));
-                    }
-                    scan.strip_on_battlefield |= bonus.remove_abilities;
-                }
-                if bits & db::GRANT_TRIGGER != 0 {
-                    for sa in &card.definition.static_abilities {
-                        if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
-                            self.active_static(&sa.effect, card)
-                        {
-                            scan.trigger_grants.push(TriggerGrant {
-                                filter: filter.resolve_named_by_source(card.named_card.as_deref()),
-                                ability,
-                                controller: card.controller,
-                                source: card.id,
-                            });
-                        }
-                    }
+        // The lane holds a member list now (PERF `(-215)`): a hit visits
+        // only the contributors, a miss walks once and stores the list.
+        match self.battlefield.dispatch_members() {
+            Ok(mut members) => {
+                while members != 0 {
+                    let i = members.trailing_zeros() as usize;
+                    members &= members - 1;
+                    self.dispatch_scan_card(&self.battlefield[i], &mut scan);
                 }
             }
-            if let Err(epoch) = lane {
-                self.battlefield.store_dispatch(epoch, any_bits);
+            Err(epoch) => {
+                let mut members = 0u64;
+                for (i, card) in self.battlefield.iter().enumerate() {
+                    if card.dispatch_scan_bits() & db::BOARD_SCAN == 0 {
+                        continue;
+                    }
+                    if i < 64 {
+                        members |= 1 << i;
+                    }
+                    self.dispatch_scan_card(card, &mut scan);
+                }
+                self.battlefield.store_dispatch_members(epoch, members);
             }
         }
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
