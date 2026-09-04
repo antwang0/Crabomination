@@ -11684,6 +11684,45 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-205)` TAKEN — the `AddMana` arm's Contamination / Pulse walk behind the mana-static lane: `cube` -0.156 % / `sealed` -0.114 % / `fixed` -0.032 %
+
+```text
+  pool    base (-204)       (-205)          delta
+  fixed     789,546,300     789,290,614   **-0.032 %**
+  cube    2,166,909,379   2,163,533,978   **-0.156 %**
+  sealed  2,175,477,317   2,172,992,444   **-0.114 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube by row:  run_effect self            12.51 M -> 7.94 M (-4.57 M)
+                board_has_mana_static      25,166 calls -> 47,844 (2.68 M -> 4.23 M)
+                is_basic                   24,278 calls, unchanged (the source read
+                                           stays: the turn-scoped replacements need it)
+```
+
+`(-204)` left the resolver alone and priced its `AddMana` arm: a
+whole-board `static_abilities` walk for `LandsProduceColorInstead` /
+`YourBasicLandsProduceChosenColorInstead` on every land source, which
+is every land tap. Engine-only: the two statics fold into the `(-198)`
+memo word as `mana_summary::LAND_MANA_REPLACER` (bit 50), the lane's
+predicate is now one `pub(crate) fn card_has_mana_static` — the four
+`MANA_STATIC` dispatch bits *or* that memo bit — shared by the lane's
+fill and its `debug_assert!` audit, and the walk runs only behind
+`board_has_mana_static`. The lane is a superset for its other three
+consumers, as it already was; a Contamination board now takes the
+generic activation path (the fast path's board half reads the same
+lane), which `core_rules::land_tap_fast_path`'s Contamination board
+now pins as a decline. `fixed` moved least because its boards carry
+almost no statics, so the walk it lost was over empty lists.
+
+**What the new lane reads cost, and why it is a candidate:** the extra
+22,678 `board_has_mana_static` asks are 68 Ir each, and the lane's
+*hit* is a handful of loads — the average is the misses, filled inline
+by `board_has_mana_static`'s own walk (two memo-word reads per
+permanent under the widened predicate) after every membership change
+and every definition rewrite, since `definition_epoch` is global and
+one bump throws every lane on every board away. Both halves are
+structural to the lane design; the epoch's over-invalidation is the
+half worth a census (how many lane misses follow an epoch bump alone).
+
 ### `(-204)` TAKEN — the printed land tap settled by inspection, ahead of `activate_ability_inner`'s gate walk: `sealed` -1.623 % / `cube` -1.509 % / `fixed` -1.496 %
 
 ```text
@@ -23129,16 +23168,14 @@ Open, priced, largest first:
   is gone for 91-99 % of land taps; the resolver was deliberately left
   alone. **What is left of the tap, per `cube` tap, priced at the
   `(-204)` tip** — the next devices, in order:
-  * `run_effect`'s `AddMana` arm walks every permanent's
-    `static_abilities` for Contamination / Pulse of Llanowar on every
-    **land** source (24,278 `is_basic` calls, the False Dawn `find`
-    22,702): fold `LandsProduceColorInstead` and
-    `YourBasicLandsProduceChosenColorInstead` into
-    `dispatch_bits::MANA_STATIC` and put the walk behind
-    `board_has_mana_static` — the lane is already a superset. The whole
-    resolver is 897 Ir a tap (21.7 M, 1.0 % of `cube`); the walk is the
-    part a lane can take, ~0.3 %. `resolve_effect_into`'s 238-Ir self is
-    the ~30 scratch resets, plain stores — a floor.
+  * `run_effect`'s `AddMana` arm's Contamination / Pulse walk — **TAKEN
+    as `(-205)`** (`cube` -0.156 %, `sealed` -0.114 %, `fixed`
+    -0.032 %; `run_effect` self -4.57 M against +1.55 M of lane reads).
+    What is left of the resolver per tap: `resolve_effect_into`'s
+    238-Ir self (the ~30 scratch resets, plain stores — a floor), the
+    `EffectContext` build and drop, `resolve_player`, the source
+    `battlefield_find` (a memo hit), the `is_basic` read the turn-scoped
+    replacements need, and the lane read itself — ~650 Ir, diffuse.
   * `card_type_change_unscoped` 22,534 x 350 Ir = 7.9 M (0.36 %): the
     `continuous_effects` walk plus a memo bit per permanent, asked once
     per fast tap (and the generic path asked it too). The battlefield
