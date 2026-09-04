@@ -7511,6 +7511,27 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-240)` TAKEN — a prevention-static lane in front of `prevent_static_scan`'s per-damage-event mask walk: `cube` -0.315 % / `sealed` -0.179 % / `fixed` -0.134 %
+
+```text
+  pool    base (-239)       (-240)          delta
+  fixed     698,244,755     697,307,501   **-0.134 %**
+  cube    1,950,673,721   1,944,519,629   **-0.315 %**
+  sealed  2,012,653,333   2,009,041,879   **-0.179 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  apply_prevention_shields_with 21,812 calls (cube), each opening with the scan
+```
+
+`prevent_static_scan` folds twelve prevention statics into a mask with a
+board walk, and `apply_prevention_shields_with` runs it on every damage
+event — 21,812 a six-game `cube` run. The `(-235)` entry priced a
+*word* lane (the mask kept through membership writes); the presence form
+is enough: the lane's predicate is the scan's own arm list, so a clear
+lane is a zero mask, and a board carrying any of the twelve walks as
+before. `cube` gains most — more damage events per game — and its
+boards still carry a prevention static rarely enough for the lane to
+read clear on most of them.
+
 ### `(-239)` TAKEN — an ETB-counter static lane in front of `chosen_type_etb_counter_specs` and the cast-rider walk: `fixed` -0.198 % / `sealed` -0.183 % / `cube` -0.156 %
 
 ```text
