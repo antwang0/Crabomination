@@ -47,8 +47,10 @@ sixty-seventh pass, so don't re-take that.
    (`(-209)`) — census the miss rate before the next lane. ⚠ **The suite never builds a 64-card
    board: a list/lane change is done only after `robustness_grid.sh` (the closing grid found
    `(-214)`'s shift-by-64 in two default cells).**
-4. **Perf leads (candidates, top):** the lane fills are at their floor (1.9 M; the epoch is
-   0-6 rewrites a game, not the 8 k `card.rs` says); `fire_combat_damage_triggers`' 1.4 % self (98 % of
+4. **Perf leads (candidates, "RE-READ AT the (-215) tip", top):** `check_target_legality`
+   gathers on 3,848 of 19,380 calls (8.7 M) — the `(-204)` presence gate aimed at the target,
+   ceiling ~1 % of `cube`; `note_creature_death`'s 3,600-Ir unshares; the lane fills are at
+   their floor (1.9 M; the epoch is 0-6 rewrites a game, not the 8 k `card.rs` said); `fire_combat_damage_triggers`' 1.4 % self (98 % of
    calls push nothing — a `profiling-lines` read first); the resolver under the fast tap
    (~650 Ir, diffuse); the tap's CoW unshare (structural). Everything else read this run is
    closed in candidates with its numbers.

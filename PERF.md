@@ -23560,6 +23560,64 @@ effects_inner` 3.65 %, `compute_permanent_pass` 3.17 %, `Vec::from_iter`
 2.99 %, `Arc::clone_from_ref_in` 2.60 %, `memcpy` 2.51 %, SBA 2.33 %,
 `activate_ability_inner` 2.05 %, `computed_permanent_hinted` 1.96 %.
 
+**RE-READ AT the `(-215)` tip plus its fix — a `--separate-callers=3`
+`cube` dump, the context tables of the largest remaining rows. Leads
+first, then floors, so nobody re-reads them.**
+
+* **`check_target_legality` — 19,380 calls / 26.9 M inclusive
+  (1.29 %), and 3,848 of them gather** (`fx_pool::alloc_with <-
+  computed_permanent_hinted <- check_target_legality`, 8.7 M): the
+  check opens its own freeze scope and reads the target's computed
+  view for Shroud / Hexproof / Protection / Ward, so every call that
+  is not nested in an outer scope gathers the whole board. Its callers
+  are the bot's `cast_candidates` auto-targeting (7,338 calls) and a
+  target-enumeration collect (5,406). **The device is the fast path's
+  presence gate, aimed at the target:** `card_keyword_possible_on`
+  for the four keyword families (printed, `granted_keywords_eot`,
+  keyword counters, a grant in scope) answers `false` on most targets
+  without a view; only a `true` takes the scope. Ceiling ~1 % of
+  `cube`; the audit is the same equality test `(-204)` used.
+* **`compute_permanents <- combat_damage_computed` — 5,896 calls /
+  32.5 M (1.56 %)**, one gather + id-subset pass per combat-damage
+  computation, under `&mut self`. And `declare_blockers`' 4,612 /
+  18.2 M, `declare_attackers_banded`'s 4,272 / 10.4 M — the same shape.
+  Layer inputs move between the declare and damage steps (damage,
+  deaths, counters), so the views cannot be carried across; what could
+  be carried is the *gather* when nothing that feeds it moved — the
+  cross-scope memo the gathers entry below rejects for want of a
+  version. Not a lead until one exists.
+* **The SBA sweep by caller — 21,222 sweeps / 199 M (9.5 %):**
+  `resolve_combat <- advance_step` 4,286 x 15,846 Ir; **`resolve_combat
+  <- submit_decision` 562 x 74,738 Ir** (the block declaration's damage
+  step, a sweep with several deaths); `resolve_top_of_stack_inner`
+  9,038 x 5,780. The death path is ~3,000 Ir a death after `(-203)`
+  and `(-212)`/`(-213)` (its lane asks stopped refilling); the rest of a
+  post-combat sweep is the per-sweep view collection (`Vec::from_iter
+  <- check_state_based_actions_into` 6,020 / 15 M) and `sba_board_scan`
+  (read above, instance-gated).
+* **The CoW unshares by context — `make_mut_slow` 123,494 / 105 M
+  (5.0 %):** `cast_spell_with_convoke` 34,800 / 30.0 M (a probe cast
+  touches ~7 CoW'd owners: hand, stack, the payer's `PlayerData`, the
+  battlefield through the first land's `find_by_id_mut`, the scratch
+  and cold groups), `resolve_top_of_stack_inner` 10,458 / 10.5 M,
+  `note_creature_death` 1,666 / 6.0 M (3,600 Ir each — the largest per
+  unshare; read what it copies), `declare_blockers` 8,586 / 5.1 M,
+  `find_by_id_mut` 8,156 / 4.5 M. The per-owner sizes are the
+  `(-200)`/`(-201)` floor; the count is the probe design.
+* `computed_permanent_hinted` 289,096 asks / 242.8 M inclusive
+  (11.6 %): the `(-194)` census unchanged — `legal_blockers <-
+  pick_blocks_inner` 49,768 / 38.7 M and `permanent_value_with <-
+  eval_material_inner` 29,602 / 28.8 M are misses inherent to the
+  freeze design, the next two are a `SmallVec::extend` and a
+  `Vec::from_iter` under the block planner (22.8 M + 21.5 M, the
+  planner's own passes). Floor.
+* `dispatch_triggers_for_events` 143,852 / 147.8 M (7.1 %): 61,874 of
+  them under the attack search's `sim_step` (60.8 M) — `(-21)`'s
+  search-count decision, still not a dispatcher cost.
+* `Vec::from_iter <- pick_by_outcome` 588 calls / 117.8 M (5.6 %) is
+  the bot's outcome evaluation *inside* a collect, i.e. the search
+  itself charged to the adapter; not an allocation lead.
+
 **RE-READ AT `966289ae` (the `(-202)` tip) — a fresh `cube` self table
 and a `--separate-callers=3` dump, ranked by caller. Rows and what they
 say; the first two are leads, the rest are floors read so nobody
