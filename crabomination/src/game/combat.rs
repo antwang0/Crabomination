@@ -4635,6 +4635,11 @@ impl GameState {
     /// that does not price it loses the block step rather than a blocker.
     pub(crate) fn block_tax_for(&self, blocker: CardId) -> (u32, u32) {
         let (mut mana, mut life) = (self.block_tax_this_turn, 0u32);
+        // The walk matches one static, and the lane holds whether any
+        // permanent prints it (PERF `(-241)`): asked per declared blocker.
+        if !self.battlefield.has_block_tax_static() {
+            return (mana, life);
+        }
         for c in &self.battlefield {
             for sa in &c.definition.static_abilities {
                 if let crate::effect::StaticEffect::BlockTaxToController {
@@ -4674,15 +4679,8 @@ impl GameState {
     /// so [`block_tax_for`](Self::block_tax_for)'s per-blocker walk is only
     /// paid on the boards that have one.
     pub(crate) fn block_tax_present(&self) -> bool {
-        self.block_tax_this_turn > 0
-            || self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        sa.effect,
-                        crate::effect::StaticEffect::BlockTaxToController { .. }
-                    )
-                })
-            })
+        // The lane's predicate is the walk this used to make (PERF `(-241)`).
+        self.block_tax_this_turn > 0 || self.battlefield.has_block_tax_static()
     }
 
     /// CR 509.1a/b — everything that bars `blocker` from blocking *at all*,

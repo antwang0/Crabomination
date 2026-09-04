@@ -506,11 +506,15 @@ const LANE_ETB_COUNTER_STATIC: u32 = 46;
 /// `prevent_static_scan`'s twelve, folded into a mask by a board walk on every
 /// damage event (PERF `(-240)`). See [`card_has_prevent_static`].
 const LANE_PREVENT_STATIC: u32 = 48;
+/// Any permanent's definition charges a block tax — `BlockTaxToController`,
+/// the static `block_tax_for` walks the board for per declared blocker (PERF
+/// `(-241)`). See [`card_has_block_tax_static`].
+const LANE_BLOCK_TAX_STATIC: u32 = 50;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 25;
+const LANE_COUNT: usize = 26;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -551,6 +555,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_hand_size_static),                  // LANE_HAND_SIZE_STATIC
     Some(card_has_etb_counter_static),                   // LANE_ETB_COUNTER_STATIC
     Some(card_has_prevent_static),                       // LANE_PREVENT_STATIC
+    Some(card_has_block_tax_static),                     // LANE_BLOCK_TAX_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -771,6 +776,16 @@ fn card_has_prevent_static(c: &CardInstance) -> bool {
                 | S::PreventAllDamageToControllerFromOthersSources
         )
     })
+}
+
+/// Does this permanent's definition charge a block tax (Archangel of
+/// Tithes, Heat Wave)? The [`LANE_BLOCK_TAX_STATIC`] predicate;
+/// definition-only.
+fn card_has_block_tax_static(c: &CardInstance) -> bool {
+    c.definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::BlockTaxToController { .. }))
 }
 
 fn card_has_draw_static(c: &CardInstance) -> bool {
@@ -1471,6 +1486,14 @@ impl Battlefield {
     #[inline]
     pub fn has_prevent_static(&self) -> bool {
         self.lane(LANE_PREVENT_STATIC, card_has_prevent_static)
+    }
+
+    /// Does any permanent here charge a block tax
+    /// ([`card_has_block_tax_static`])? Read per declared blocker by
+    /// `block_tax_for` and by the bot's `block_tax_present` (PERF `(-241)`).
+    #[inline]
+    pub fn has_block_tax_static(&self) -> bool {
+        self.lane(LANE_BLOCK_TAX_STATIC, card_has_block_tax_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board
