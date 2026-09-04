@@ -4082,7 +4082,7 @@ impl GameState {
                     .collect();
                 let n = owned.len();
                 for cid in owned {
-                    if let Some(mut card) = Self::take_card(&mut self.battlefield, cid) {
+                    if let Some(mut card) = self.battlefield.take_by_id(cid) {
                         self.remove_effects_from_source(cid);
                         self.remove_from_combat(cid);
                         self.on_left_battlefield(cid, events);
@@ -14343,7 +14343,7 @@ impl GameState {
                 // then stash them inside the new melded object.
                 let mut parts = Vec::new();
                 for id in [source, partner_id] {
-                    let Some(card) = Self::take_card(&mut self.battlefield, id) else {
+                    let Some(card) = self.battlefield.take_by_id(id) else {
                         continue;
                     };
                     self.remove_effects_from_source(id);
@@ -30573,7 +30573,7 @@ impl GameState {
                 // up)" — the reset half of the FIN Dominant flip cycle. A
                 // permanent already on its front face just blinks.
                 let Some(id) = ctx.source else { return Ok(()); };
-                let Some(mut card) = Self::take_card(&mut self.battlefield, id) else {
+                let Some(mut card) = self.battlefield.take_by_id(id) else {
                     return Ok(());
                 };
                 events.push(GameEvent::PermanentExiled { card_id: id });
@@ -30609,7 +30609,7 @@ impl GameState {
                     return Ok(());
                 }
                 let taken = if on_bf {
-                    let c = Self::take_card(&mut self.battlefield, id);
+                    let c = self.battlefield.take_by_id(id);
                     if c.is_some() {
                         events.push(GameEvent::PermanentExiled { card_id: id });
                     }

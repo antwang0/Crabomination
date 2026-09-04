@@ -6421,7 +6421,7 @@ impl GameState {
     /// arms should use `remove_to_graveyard_with_triggers` or
     /// `sacrifice_one` instead (audit P3: death-funnel bypass family).
     pub fn remove_from_battlefield_to_graveyard_raw(&mut self, id: CardId) {
-        if let Some(mut card) = Self::take_card(&mut self.battlefield, id) {
+        if let Some(mut card) = self.battlefield.take_by_id(id) {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             self.collect_leaver_counters(&card);
@@ -6603,7 +6603,7 @@ impl GameState {
     /// the source (`ActivatedAbility::bounce_self_cost` — Magosi).
     pub fn remove_from_battlefield_to_hand(&mut self, id: CardId) -> Vec<GameEvent> {
         let mut events = Vec::new();
-        let Some(mut card) = Self::take_card(&mut self.battlefield, id) else {
+        let Some(mut card) = self.battlefield.take_by_id(id) else {
             return events;
         };
         self.remove_effects_from_source(id);
@@ -6633,7 +6633,7 @@ impl GameState {
     }
 
     pub fn remove_from_battlefield_to_exile(&mut self, id: CardId) {
-        if let Some(card) = Self::take_card(&mut self.battlefield, id) {
+        if let Some(card) = self.battlefield.take_by_id(id) {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             self.collect_leaver_counters(&card);
