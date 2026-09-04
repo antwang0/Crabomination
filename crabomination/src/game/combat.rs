@@ -2045,6 +2045,14 @@ impl GameState {
                     self.attack_block_keyword_tax(blocker_id, kws_of(blocker_id), false);
             }
             for (seat, amount) in owed {
+                // Nothing owed is nothing to pay — the attack side's
+                // `total_tax > 0` gate. A `{0}` auto-tap payment is a
+                // payment snapshot of the seat's board and an auto-tap pass
+                // for nothing, once per blocking seat per declaration
+                // (PERF `(-223)`).
+                if amount == 0 {
+                    continue;
+                }
                 let tax = crate::mana::cost(&[crate::mana::generic(amount)]);
                 if self.try_pay_with_auto_tap(seat, &tax).is_err() {
                     return Err(block_reject(line!(), GameError::CannotBlock(assignments[0].0)));
