@@ -7423,6 +7423,40 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-221)` REFUTED — the combat-damage walker's listener walk fused into its dealer walk (built against the `(-219)` tip, concurrently with `(-220)`): `fixed` +0.131 % / `cube` +0.174 % / `sealed` +0.131 %, reverted
+
+```text
+  pool    base (-219)       (-221)          delta
+  fixed     745,162,927     746,135,663   **+0.131 %**
+  cube    2,035,554,686   2,039,094,144   **+0.174 %**
+  sealed  2,085,022,232   2,087,761,970   **+0.131 %**
+  cube:   fire_combat_damage_triggers self 28.57 M -> 32.68 M (+4.1 M); nothing else moved
+  three-pool stdout identical; --bench counters identical (the fold changed no push)
+```
+
+The `profiling-lines` read the `(-219)` re-read asked for (a 10-minute
+cold build, `cg_lines.py --in fire_combat_damage_triggers`): 29.0 M
+grouped, and the top rows were `CardId::eq` 5.17 M (`card.rs:13`), the
+listener walk's memo-word test 2.44 M (`combat.rs:5613`), slice
+stepping 1.95 M, `NonNull` / `mut_ptr` 3.0 M, the atomic load 1.34 M —
+i.e. the two full battlefield walks (dealer, listener), each an `Arc`
+deref and a compare per permanent. The obvious fold — collect the
+listeners into a `SmallVec<[&CardInstance; 16]>` on the dealer walk and
+process them where the second walk ran, every push in the same bucket
+in the same order — **cost 4.1 M more than the walk it removed.** The
+second walk over a slice whose `CardData` lines are already hot is a
+tight loop of one word load and one branch per card; the fold added a
+`scan_listeners` test and a `SmallVec` push (length check, spill
+check, store) to the dealer loop's body on every card, and then
+re-walked the hits through an indirection. **A line profile's `Arc`
+deref and `CardId::eq` rows are instruction counts, not cache misses:
+a second walk over a hot slice is priced by its own loop body, and
+fusing it buys nothing unless the fused body is smaller than the two
+it replaces.** Reverted; `fire_combat_damage_triggers` stays at
+~1,400 Ir a call, and its call count (20,480 on `cube`: one per
+attacker per damage event, from `resolve_combat`) is the lever, which
+is the attack search's.
+
 ### `(-220)` TAKEN — the CR 732.3 announcement watch fingerprints only on a key repeat: `cube` -0.163 % / `sealed` -0.076 % / `fixed` -0.019 %
 
 ```text
