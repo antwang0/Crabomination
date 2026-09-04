@@ -5164,11 +5164,13 @@ impl GameState {
         // damaged player controls). Risona sheds an indestructible counter.
         // Plain loops: a whole-board walk per damage event, and `FlatMap::next`
         // costs ~20 Ir a permanent before the filter sees a single ability
-        // (PERF (-78)).
+        // (PERF (-78)). Over the trigger member list, not the board (PERF
+        // `(-224)`, the `(-222)` device): the body reads printed triggers
+        // only.
         let mut listeners: Vec<(CardId, Effect, usize)> = Vec::new();
-        for c in self.battlefield.iter() {
+        self.battlefield.for_each_triggerer(|c| {
             if c.controller != damaged_player {
-                continue;
+                return;
             }
             for ta in &c.definition.triggered_abilities {
                 if ta.event.kind == EventKind::ControllerDealtCombatDamage
@@ -5177,7 +5179,7 @@ impl GameState {
                     listeners.push((c.id, ta.effect.clone(), c.controller));
                 }
             }
-        }
+        });
         for (listener, effect, controller) in listeners {
             let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
             // Bind the creature that dealt the damage as `Selector::TriggerSource`

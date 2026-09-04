@@ -1523,7 +1523,8 @@ impl Battlefield {
     /// the whole board on a miss (the dispatcher fills the list; this never
     /// does). For a walker whose per-card body reads only
     /// `definition.triggered_abilities` / `station` — the combat
-    /// declaration's two whole-board trigger walks (PERF `(-222)`).
+    /// declaration's two whole-board trigger walks (PERF `(-222)`) and the
+    /// combat-damage-to-player listener walk (`(-224)`).
     #[inline]
     pub fn for_each_triggerer(&self, mut f: impl FnMut(&CardInstance)) {
         match self.trigger_members() {
