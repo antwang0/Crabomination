@@ -7520,6 +7520,49 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-242)` REFUTED — the dispatcher's grant list inline (`SmallVec<[TriggerGrant; 2]>`) with the filter borrowed (`Cow`): `fixed` +1.449 % / `sealed` +1.160 % / `cube` +0.711 %, reverted
+
+```text
+  pool    base (-241)       (-242)          delta
+  fixed     696,705,741     706,802,793   **+1.449 %**
+  cube    1,941,530,315   1,955,337,247   **+0.711 %**
+  sealed  2,007,247,937   2,030,531,687   **+1.160 %**
+  three-pool outcomes identical (only the wall-time line differs)
+  cube self deltas:  memcpy +12.02 M   dispatch_triggers_for_events +3.73 M   SmallVec::drop +2.86 M
+                     SmallVec::retain +1.20 M / Vec::retain closure +0.63 M against Vec::retain -1.53 M
+                     allocator side -4.1 M (_int_free -0.98, malloc -0.85, finish_grow -0.74, free -0.72,
+                       grow_one -0.44, __rdl_alloc -0.17, drop Vec<TriggerGrant> -0.19)
+                     the Cow half: mentions_named_by_source +0.49, resolve_named_by_source_cow +0.49,
+                       resolve_named_by_source -0.49, SelectionRequirement::clone -0.44, its drop -0.31 = -0.27 M
+                     event_matches_spec -3.60 / event_kind_matches +3.04: an inliner flip, a wash
+```
+
+The `(-241)` re-read's first lead: `dispatch_board_scan` builds a fresh
+`Vec<TriggerGrant>` per dispatch and a third of `cube`'s dispatches
+carry a grant (23,576 heap lists), and each grant's filter was cloned by
+`resolve_named_by_source` whether or not it had a `NamedBySource` leaf
+to concretize. Both halves as priced: the list inline for two
+(`DispatchScan.trigger_grants` and `trigger_grant_sources`'s return),
+the filter a `Cow<'a, SelectionRequirement>` borrowed from the
+definition unless the leaf is present. The allocator gave back the
+4.9 M the table promised and the change cost 14 M more than that.
+
+**Inline storage in a struct returned by value is a memcpy per call,
+not per allocation.** `DispatchScan` went from ~56 bytes to ~220 (two
+`TriggerGrant`s of a `Cow<SelectionRequirement>` plus three words each),
+and every dispatch — the ~70 k that carry no grant included — moved it
+out of `dispatch_board_scan`, destructured it, and ran `SmallVec`'s
+out-of-line destructor on both lists: 12 M of `memcpy` and 2.9 M of
+`drop` against an allocation saved on a third of them. The `Vec` form
+is three words, `#[may_dangle]` (no explicit `drop` before the `&mut
+self` phase — `SmallVec`'s destructor has none, so the consumers needed
+a `drop(trigger_grants)` and a destructuring `let` to compile at all),
+and its allocation is the cheaper side of that trade. The Cow half on
+its own is -0.27 M, noise; the `mentions_named_by_source` walk costs
+what the clone cost. Reverted whole. What would make the list free is
+storage that is neither moved nor dropped per dispatch, and the grant
+borrows the board, so that storage cannot live on the state.
+
 ### `(-241)` TAKEN — a block-tax lane in front of `block_tax_for`'s per-blocker walk: `cube` -0.154 % / `sealed` -0.089 % / `fixed` -0.086 %
 
 ```text
@@ -20191,16 +20234,15 @@ with their ceilings, then the floors, so nobody re-reads them.**
     30,652   1.5 M  from_iter <- cast_spell_with_convoke
 ```
 
-* **Lead — `dispatch_board_scan`'s grant list: a fresh `Vec<TriggerGrant>`
-  per dispatch, 23,576 allocations / ~3.5 M (0.18 %).** `DispatchScan`
-  borrows `&self`, so a buffer on the state cannot hold it; the device is
-  a `SmallVec<[TriggerGrant; 2]>` (one or two grants is the whole
-  population), *and* `TriggerGrant.filter` is a `SelectionRequirement` by
-  value that `resolve_named_by_source` clones on every dispatch — borrow
-  the filter and resolve only in the match that reads it. Ceiling ~0.2 %
-  `cube`; a `SmallVec` of a fat element costs a move per push, so the
-  A/B must read both halves separately (the `(-227)` lesson: price the
-  form, not the idea).
+* **REFUTED as `(-242)` — `dispatch_board_scan`'s grant list: a fresh
+  `Vec<TriggerGrant>` per dispatch, 23,576 allocations / ~3.5 M
+  (0.18 %).** Priced as a `SmallVec<[TriggerGrant; 2]>` with the filter
+  a `Cow`: `cube` +0.711 %, `fixed` +1.449 %. The allocator gave back
+  4.9 M and the by-value `DispatchScan` cost 12 M of `memcpy` plus
+  2.9 M of `SmallVec::drop` on every dispatch, grant or not. **Inline
+  storage in a struct returned by value is a memcpy per call, not per
+  allocation.** The Cow half alone is -0.27 M, noise. Do not rebuild;
+  the Log entry has the self-table diff.
 * **Lead — a `Vec::push` from empty inside `activate_ability_inner`,
   24,182 allocations / 2.9 M, all of them under the bot's
   `auto_tap_for_cost_inner`:** one allocation per mana ability the
