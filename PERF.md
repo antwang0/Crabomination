@@ -2564,10 +2564,11 @@ grid    robustness_grid.sh --pilots on the (-220) tree (the loop guard's
         own audit — `abilarms` on `cube` is the cell that found the
         guard's two defects): ladder 30 cells / 33,120 games, 0
         failures; actor 3 cells, 0 failures; pilots 45 cells, 0
-        failures, 24m39s. (-222)..(-224) read the trigger member list
-        (audited by its debug_assert on every read) and gate a payment;
-        no lane written, no encoder or pool change, no serialized shape
-        change.
+        failures, 24m39s. Re-run on the (-231) tree (the graveyard
+        lane's widened predicate, audited by its debug_assert on every
+        read, and the member-list walks): ladder 30 / 33,120 games, 0
+        failures; actor 3, 0; pilots 45, 0; 26m22s. No encoder or pool
+        change, no serialized shape change.
 wall    not re-taken: -0.68 % Ir is inside bench_ab.py's noise band
         (the standing rule); the Ir is the number.
 ```
@@ -7493,6 +7494,70 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-233)` TAKEN — a draw-replacement static lane in front of `draw_one`'s eleven board walks: `fixed` -0.911 % / `cube` -0.773 % / `sealed` -0.478 %
+
+```text
+  pool    base (-231)       (-233)          delta
+  fixed     718,286,239     711,743,769   **-0.911 %**
+  cube    1,996,255,268   1,980,826,495   **-0.773 %**
+  sealed  2,049,218,164   2,039,413,384   **-0.478 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  draw_one inclusive (cube)   <- advance_step 2,822 / 14.16 M -> 5.84 M;  <- run_effect 1,406 / 10.03 M -> 3.00 M
+  the 340 recursive draws (redirects) are 340 on both sides; the 486 "draw_one -> draw_one" calls that
+  went were the global_static closure's own symbol
+```
+
+`draw_one` — 5,072 calls a six-game `cube` run, once per card drawn,
+including every draw inside a bot probe — walked the whole battlefield's
+`static_abilities` up to **eleven** times per draw: three global
+replacement statics (Uba Mask, Shared Fate, "players skip draws"), four
+controller-scoped dig replacements (Abundance, Tomorrow, Parallel
+Thoughts, Archmage Ascension), Obstinate Familiar's skip, Chains of
+Mephistopheles, Notion Thief, Blood Scrivener and Breathstealer's Crypt.
+Each walk is ~250-500 Ir (the dig ones run `active_static` per static)
+and each matches a different `StaticEffect`. One battlefield lane whose
+predicate is the **union** of all twelve (`card_has_draw_static`) answers
+every walk at once: a clear lane — nearly every board — is one word load
+per draw, and the eleven walks stay exactly as written behind it. The
+predicate is definition-only, so the lane holds across taps, damage and
+counters, and the per-instance `active_static` gates inside the helpers
+only narrow what it over-approximates.
+
+**The rule: when a function asks the same zone N different presence
+questions, the lane's predicate is the union, not one question.** Twelve
+`matches!` arms in one predicate is what makes one lane serve eleven
+walks; a lane per question would have been eleven lanes and eleven
+reads. Found by the `static_abilities` grep NEXT filed after `(-231)`,
+ranked by the enclosing functions' self cost: `draw_one` was the top row
+at 8.9 M self, and the same list has `etb_trigger_multiplier` /
+`apply_enters_tapped_replacement` (7.5 M + 3.7 M, the next lane),
+`spend_mana_as_any_color_for_spell` (3.3 M, once per payment),
+`effective_max_hand_size`, `empty_mana_pools`, `can_player_play_land`.
+
+### `(-232)` REFUTED — the step and cast walkers' closures handed to `for_each_triggerer` by value instead of `&mut`: `cube` -0.005 % / `sealed` +0.049 % / `fixed` +0.077 %, reverted
+
+```text
+  pool    base (-231)       (-232)          delta
+  fixed     718,286,239     718,837,316   **+0.077 %**
+  cube    1,996,255,268   1,996,148,610   **-0.005 %**
+  sealed  2,049,218,164   2,050,212,788   **+0.049 %**
+  FnMut for &mut F::call_mut <- fire_step_triggers 73,194 / 4.19 M and <- finalize_cast 53,340 / 13.06 M: both rows gone
+  fire_step_triggers self (cube) 10.72 M -> 10.74 M
+```
+
+`(-228)` and `(-231)` pass their per-card closure as `&mut visit` so one
+body serves two branches (whole board under a live grant, the member
+list otherwise), and the `(-98)` rule says `&mut F: FnMut` routes each
+card through a `call_mut` shim the inliner declines — the dump showed the
+shim on 126,534 calls. A `for_each_triggerer_or_all(all, f)` entry point
+takes the closure by value, the shim rows vanish, and the totals do not
+move: **the shim is a `call` and a frame, ~20 Ir, and the by-value form
+pays it back by monomorphizing the closure body into both branches** —
+the per-card body is what the walk costs, not how it is reached.
+`(-98)`'s 18.8 M was a *predicate* called per card inside `any` over the
+whole board; a closure whose body is a dozen loads is not that. Reverted:
+the `&mut` form is fewer lines.
 
 ### `(-231)` TAKEN — the cast-trigger walker's two zone walks behind their memos: `fixed` -1.319 % / `sealed` -0.492 % / `cube` -0.341 %
 
