@@ -937,12 +937,12 @@ impl GameState {
         // triggers per card cost what the memo read does — PERF `(-196)`
         // measured the gate here at +0.2 M on `cube`, a wash, and took it
         // back out.
-        for c in self.battlefield.iter() {
-            // Printed triggers plus statics-granted ones (Kataki's "All
-            // artifacts have '…upkeep…'"), both firing off `c`. Filter on the
-            // borrowed ability and clone only the survivors: this runs on every
-            // step of every turn and a `TriggeredAbility` clone is an `Effect`
-            // tree plus the event's filter predicate.
+        // Printed triggers plus statics-granted ones (Kataki's "All
+        // artifacts have '…upkeep…'"), both firing off `c`. Filter on the
+        // borrowed ability and clone only the survivors: this runs on every
+        // step of every turn and a `TriggeredAbility` clone is an `Effect`
+        // tree plus the event's filter predicate.
+        let mut visit = |c: &crate::card::CardInstance| {
             for t in c.definition.triggered_abilities.iter() {
                 if t.event.kind == kind && scope_matches(&t.event.scope, c.controller) {
                     candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
@@ -955,9 +955,17 @@ impl GameState {
                     }
                 }
             }
-        }
+        };
+        // A live static grant can hand a trigger to any permanent, so that
+        // board is walked whole; without one only a permanent with a printed
+        // trigger or a Station band can contribute, which is exactly the
+        // trigger member list (PERF `(-228)`, the `(-222)` device on the walk
+        // every step of every turn makes).
         if any_static_grant {
+            self.battlefield.iter().for_each(&mut visit);
             self.freeze_layers_pop();
+        } else {
+            self.battlefield.for_each_triggerer(&mut visit);
         }
         // CR 702.6e / 303.4 — step triggers granted to a permanent by an
         // attached Aura/Equipment's `equipped_bonus` fire as though printed on
