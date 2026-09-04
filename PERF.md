@@ -22987,6 +22987,14 @@ re-reads them.**
   self ~480, plus `note_creature_death` 7.3 M and `dying_snapshot` 4.9 M
   beside it in the sweep — each a line read (`profiling-lines`), none a
   lane. The lane's own misses are one walk a death (~390 Ir), structural.
+  Read after `(-203)`, no build spent: the revert chain in
+  `place_card_at_resolved_zone` (`turn_face_up`, `revert_flip`,
+  `revert_transform`, `revert_prototype`, `reset_room_doors`,
+  `reset_case`, `clear_effects_on_zone_change`'s `probe!`,
+  `revert_copy_on_leave`) is already read-first at every step, so the
+  ~1,260 Ir there is `send_to_graveyard`'s CoW unshare of the graveyard
+  buffer (a real `Vec<CardInstance>` copy on a probe-cloned state) plus
+  the gates themselves — a floor, not a device.
 * **The SBA sweep is 10.5 % of the program inclusive (21,222 calls,
   232 M)** and its cost is *which* sweep: `resolve_combat`'s 4,286
   post-damage sweeps cost 17,760 Ir each (76 M) and the 562 under the
