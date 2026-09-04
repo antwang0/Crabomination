@@ -25,8 +25,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-215)` is the last claimed,
-   `(-216)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-217)` is the last claimed,
+   `(-218)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.6 min cold / 3.2 min warm, test build ~5.5 min + suite
    1.5 min, `nextest` needs installing; callgrind `--games 6` on the three pools in parallel
    ~1 min. ⚠ Disk: a run of A/B builds fills it — `rm -rf target/debug/incremental` and
