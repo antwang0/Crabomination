@@ -2561,6 +2561,10 @@ release the release-fast typecheck gate (debug-assertions off): clean at the tip
 --bench profiling-fast at the (-246) tree, the rebased (-247) tip and (-248): **195,806 decisions / 27.49
         turns / 611.9 per game / 0 stalls** — counters identical to 2003d1cf;
         determinism ok (all pairs split); peak_rss 21.3 / 21.6 MiB
+grid    robustness_grid.sh --no-actor --pilots on the (-248) tree (the widened gate-keyword
+        lane and the three new gates, audited by board_keyword_matching's whole-board
+        debug_assert on every `false`): ladder 30 cells / 33,120 games, 0 failures,
+        cap 0 / stuck 0 / draw 0; pilots 45 cells, 0 failures.
 sweep   fresh seeds on the debug-assertions overflow build (target-audit, this run):
         20 primes 103..199 x --decks all x 400 games (136,000 games) and the same 20 x
         --decks cube x 400 (64,000): 200,000 games, 0 panics, 0 assertion fires, 0 stuck,
@@ -20443,6 +20447,33 @@ goes thin or stale.
 `cube` 1,928,746,090 -> 1,883,972,930 (-2.321 %), `fixed` 690,547,383 ->
 681,813,326 (-1.265 %), `sealed` 1,992,138,486 -> 1,967,055,576
 (-1.259 %). Per-leg rows in the Baseline.**
+
+**RE-READ AT the `(-248)` tip — the same three context tables on a
+`--separate-callers=3` `cube` dump (1,883,973,787 Ir), so nobody
+re-takes it.** `computed_permanent_hinted` 256,508 asks / 179.5 M
+(9.53 %): the top rows are the `(-245)` table's floors unchanged
+(`legal_blockers` 49,768 / 34.0 M, `permanent_value_with` 29,602 +
+8,376 + 2,668 / 38.1 M, the block planner's `attacker_info` collect
+13,262 / 20.2 M, the declaration's subset pass 7,882 / 16.3 M,
+`pick_attacks_inner`'s own-side asks 6,986 + 6,378 + 2,166 / 19.5 M —
+all consumed whole). The one row not in that table,
+`intrinsic_land_mana_abilities <- activate_ability_inner` (666 asks /
+3.3 M, ~5,000 Ir), is the `want_extra` branch's scope, whose gather
+`granted_abilities_for` needs anyway; gating the land-type read alone
+is the layer pass, ~0.7 M / 0.04 %. Not taken. `with_frozen_layers`
+146,428 scopes / 222.2 M (11.8 %): `simulate_attack_outcome_once`
+32,790 / 113.0 M (6.0 %) and `simulate_through_combat` 2,262 + 1,130 /
+58.8 M are the probe design; the declaration's two scopes are 5,688 +
+3,688 / 19.0 M after `(-246)`. `gather_continuous_effects_inner` 49,444
+gathers / 117.8 M (6.25 %; 58 k at `(-241)`): `compute_permanents`
+9,732 + 6,316 + 2,622 (the combat-damage and SBA views, one gather per
+distinct state), `permanent_value_with` 7,212, the planner's collect
+4,506, `pick_attacks_inner` 4,178 — one gather per scope per distinct
+state, which is the freeze design. **Nothing in the three tables is a
+consumer-read lead; the next device is structural** (a gather version
+cannot come from CoW pointer identity — a uniquely-owned `Arc` mutates
+in place — and holding the `Arc` to force a copy is the checkpoint's
+`(-200)`/`(-201)` cost).
 
 **RE-READ AT the `(-245)` tip — `computed_permanent_hinted`'s 284,812
 asks by caller (218.6 M inclusive, 11.26 % of `cube`), which is where

@@ -37,7 +37,8 @@ sixty-seventh pass, so don't re-take that.
    shell when the pattern is in its command line — kill by pid. Disk fills: delete binaries/dumps.
 2. **Gates at the `(-248)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
    release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
-   three-pool outcomes identical at every leg; a **fresh-seed robustness sweep** (20 primes
+   three-pool outcomes identical at every leg, `robustness_grid.sh --pilots` green on the `(-248)`
+   tree (ladder 30 / 33,120 games, pilots 45, 0 failures); a **fresh-seed robustness sweep** (20 primes
    > 101 the `--wide` grid never ran, `all` + `cube`, 400 games, debug-assertions overflow
    build): 0 panics / 0 stuck / 0 assertion fires; every cap is the Beacon of Immortality
    class (ENGINE_BACKLOG's closed stall lead, now with its per-game cost recorded there).
