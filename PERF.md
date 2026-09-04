@@ -7423,6 +7423,36 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-223)` TAKEN — the block declaration stops paying a `{0}` block tax: `fixed` -0.375 % / `sealed` -0.371 % / `cube` -0.316 %
+
+```text
+  pool    base (-222)       (-223)          delta
+  fixed     744,080,362     741,293,309   **-0.375 %**
+  cube    2,029,520,828   2,023,099,539   **-0.316 %**
+  sealed  2,081,933,562   2,074,212,577   **-0.371 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  try_pay_after_snapshot_mode <- declare_blockers   cube 2,828 / 5.50 M   fixed 1,528 / 2.81 M   sealed 3,680 / 6.65 M   -> 0
+  declare_blockers inclusive (cube)   136.5 M -> 130.3 M
+```
+
+Read off `declare_blockers`' callee table at the `(-220)` tip: the CR
+509.1b "can't block unless its controller pays {N}" leg summed the tax
+per blocking seat and then paid it through `try_pay_with_auto_tap` **for
+every seat in the map, zero included** — a payment snapshot of the seat's
+whole board (`Vec` of `(id, tapped)`), a pool clone, the colour
+relaxation, an auto-tap pass that finds nothing to tap, and a `{0}`
+`pay_for_spell`, once per blocking seat per declaration, on a board that
+carries the keyword on no card. The attack side's twin (`total_tax > 0`,
+in `declare_attackers_banded`) has had the gate for its whole life; this
+side never did. A `{0}` payment moves nothing (the snapshot is restored
+only on failure, and it cannot fail), so the gate is outcome-identical,
+which the three pools, `--bench` and the traces confirm.
+
+**The rule: when two sides of one mechanic are written twice, diff the
+gates, not the bodies.** `attack_block_keyword_tax` is shared; the two
+call sites were not, and the one without `> 0` cost a third of a percent
+of every pool for as long as the block tax has existed.
+
 ### `(-222)` TAKEN — the attack declaration's two printed-trigger walks visit the trigger member list: `cube` -0.134 % / `fixed` -0.126 % / `sealed` -0.073 %
 
 ```text
@@ -19522,7 +19552,7 @@ was not taken, so nobody re-prices it:**
     28.6 M  1.40 %  fire_combat_damage_triggers       ~1,400 Ir a call, diffuse walks; profiling-lines is the instrument
     27.6 M  1.36 %  declare_attackers_banded          see below
     26.8 M  1.31 %  affected_includes_gated           544,626 calls under the layer pass: 49 Ir each, a floor
-    25.4 M  1.25 %  declare_blockers
+    25.4 M  1.25 %  declare_blockers                  its {0} block-tax payment TAKEN as (-223); block_tax_for's per-blocker static walk (8,018 x 437 Ir) is what is left
     25.0 M  1.23 %  sba_board_scan                    21,392 sweeps x 1,170 Ir: instance fields, cannot be laned
     24.3 M  1.20 %  resolve_combat
     18.3 M  0.90 %  bot::available_mana               see below

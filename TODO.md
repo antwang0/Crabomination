@@ -26,8 +26,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-222)` is the last claimed,
-   `(-223)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-223)` is the last claimed,
+   `(-224)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
    suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
    the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
@@ -48,7 +48,9 @@ sixty-seventh pass, so don't re-take that.
    own loop body, not its derefs**); `computed_permanent_hinted`'s hit-path scan (~10 M,
    marginal). `(-222)`: `declare_attackers_banded`'s two board walks over printed triggers now
    visit the trigger member list (-0.13 % `cube`/`fixed`) — **read a "validation body" for the
-   walks that are not over the batch**; `declare_blockers`' {0} block-tax payment is next.
+   walks that are not over the batch**. `(-223)`: `declare_blockers` paid a `{0}` block tax through the
+   auto-tapper once per blocking seat (-0.32..-0.38 % on every pool) — **diff the gates of a mechanic's
+   two sides, not the bodies**.
    `PERF.md` is at ~30.3 k lines after the eighty-ninth-and-older closing states moved to
    `PERF_ARCHIVE.md` (verbatim); the candidates section's old "RE-READ AT" blocks are the next fold.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
