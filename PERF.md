@@ -2520,9 +2520,9 @@ a box whose state moves.
 
 ## Baseline
 
-### The watch-deferral, member-list, block-tax, event-buffer and presence-lane legs — closing state at the `(-238)` tip
+### The watch-deferral, member-list, block-tax, event-buffer and presence-lane legs — closing state at the `(-241)` tip
 
-Sixteen engine commits on top of the `(-219)` tip `52b9a743`, each
+Nineteen engine commits on top of the `(-219)` tip `52b9a743`, each
 behaviour-preserving (three-pool outcomes identical, `--bench` counters
 identical, golden traces unmoved), from the second of two concurrent
 sessions; the other session's `(-221)` refutation sits between them, and
@@ -2530,10 +2530,10 @@ two of this session's own (`(-227)`, `(-232)`) were reverted in the hour
 they were built.
 
 ```text
-  pool     base (-219)      tip (-238)       delta
-  fixed      745,162,383      699,633,465   **-6.110 %**
-  cube     2,035,552,660    1,953,713,803   **-4.020 %**
-  sealed   2,085,024,159    2,016,346,658   **-3.294 %**
+  pool     base (-219)      tip (-241)       delta
+  fixed      745,162,383      696,705,741   **-6.503 %**
+  cube     2,035,552,660    1,941,530,315   **-4.619 %**
+  sealed   2,085,024,159    2,007,247,937   **-3.730 %**
 
   leg      fixed      cube      sealed    what
   (-220)  -0.019 %  -0.163 %  -0.076 %   the CR 732.3 watch fingerprints only on a key repeat
@@ -2555,16 +2555,19 @@ they were built.
   (-236)  -0.388 %  -0.172 %  -0.192 %   a land-play static lane in front of can_player_play_land's three walks
   (-237)  -0.485 %  -0.525 %  -0.520 %   an any-colour-spend lane in front of the payment relaxation's walk
   (-238)  -0.257 %  -0.140 %  -0.134 %   a hand-size static lane in front of effective_max_hand_size's four walks
+  (-239)  -0.198 %  -0.156 %  -0.183 %   an ETB-counter static lane (plus a command-zone term) in front of the two enters-with-counters walkers
+  (-240)  -0.134 %  -0.315 %  -0.179 %   a prevention-static lane in front of prevent_static_scan's per-damage-event mask walk
+  (-241)  -0.086 %  -0.154 %  -0.089 %   a block-tax lane in front of block_tax_for's per-blocker walk
 ```
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
 suite   19,255 / 0 / 5; golden traces in it and unmoved at every leg
 clippy  --workspace --exclude crabomination_client --all-targets   clean
-        at the (-229) and (-238) tips; -p crabomination at every leg
+        at the (-229), (-238) and (-241) tips; -p crabomination at every leg
 release the release-fast typecheck gate (debug-assertions off): every
         leg's profiling-fast build is that profile, all clean
---bench profiling-fast at every leg through (-238): **195,806 decisions / 27.49
+--bench profiling-fast at every leg through (-241): **195,806 decisions / 27.49
         turns / 611.9 per game / 0 stalls** — counters identical to
         2003d1cf at every leg; determinism ok (all pairs split);
         peak_rss 21.5 MiB
@@ -7510,6 +7513,30 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-241)` TAKEN — a block-tax lane in front of `block_tax_for`'s per-blocker walk: `cube` -0.154 % / `sealed` -0.089 % / `fixed` -0.086 %
+
+```text
+  pool    base (-240)       (-241)          delta
+  fixed     697,307,501     696,705,741   **-0.086 %**
+  cube    1,944,519,629   1,941,530,315   **-0.154 %**
+  sealed  2,009,041,879   2,007,247,937   **-0.089 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  block_tax_for 8,018 calls x 437 Ir (cube) at the (-231) re-read; block_tax_present is the lane read now
+```
+
+The ninth presence lane, and the last of the walks the `(-231)` grep
+ranked above ~3 M: `block_tax_for` walked the board's statics once per
+declared blocker for `BlockTaxToController`, and the bot's
+`block_tax_present` gate made the same walk. One lane; `block_tax_
+present` *is* the lane read now (its walk was the lane's predicate),
+and `block_tax_for` returns the turn-scoped tax alone on a clear lane.
+Below the bar on `fixed`/`sealed` — it was 0.18 % of `cube` when priced
+and the lane read costs a little of that back per blocker.
+
+**The `(-233)`..`(-241)` lanes together: `fixed` -3.35 % / `cube`
+-2.90 % / `sealed` -2.05 %, nine lanes over 61 `StaticEffect` variants.
+Six lanes free on the word.**
 
 ### `(-240)` TAKEN — a prevention-static lane in front of `prevent_static_scan`'s per-damage-event mask walk: `cube` -0.315 % / `sealed` -0.179 % / `fixed` -0.134 %
 
@@ -20058,11 +20085,11 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at the `(-238)` tip (`(-220)`, `(-222)`..`(-238)` less the three
+**State at the `(-241)` tip (`(-220)`, `(-222)`..`(-241)` less the three
 refutations, three-pool Ir against the `(-219)` tip `52b9a743`): `fixed`
-745,162,383 -> 699,633,465 (-6.110 %), `cube` 2,035,552,660 ->
-1,953,713,803 (-4.020 %), `sealed` 2,085,024,159 -> 2,016,346,658
-(-3.294 %).**
+745,162,383 -> 696,705,741 (-6.503 %), `cube` 2,035,552,660 ->
+1,941,530,315 (-4.619 %), `sealed` 2,085,024,159 -> 2,007,247,937
+(-3.730 %).**
 Before it:
 **State at the `(-219)` tip (`(-216)`..`(-219)`, three-pool Ir against
 the `(-215)`+fix tip `999da717`): `fixed` 763,717,868 -> 745,162,927

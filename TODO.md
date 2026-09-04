@@ -26,32 +26,33 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-240)` is the last claimed,
-   `(-241)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-241)` is the last claimed,
+   `(-242)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
    suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
    the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
    point) — `rm -rf target/debug/incremental`, delete superseded binaries and dumps as you go.
-2. **Gates at the `(-238)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
+2. **Gates at the `(-241)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
    release-fast typecheck, `--bench` counters identical to `2003d1cf` at every leg, golden
    traces 7/7, three-pool outcomes identical at every leg, `--pilots` grid green on the `(-238)`
-   tree (the six presence lanes' audits ran under it; `(-239)`+ are the same shape).
-3. **Two sessions ran concurrently (Log `(-216)`..`(-238)`; `(-221)`, `(-227)`, `(-232)`
+   tree (`(-239)`..`(-241)` are three more lanes of the same shape, audited the same way).
+3. **Two sessions ran concurrently (Log `(-216)`..`(-241)`; `(-221)`, `(-227)`, `(-232)`
    refuted): session A `cube` -2.61 % / `fixed` -2.43 % / `sealed` -1.67 %, session B on top of
-   it `fixed` -6.11 % / `cube` -4.02 % / `sealed` -3.29 %.** Rules per leg in PERF's newest
+   it `fixed` -6.50 % / `cube` -4.62 % / `sealed` -3.73 %.** Rules per leg in PERF's newest
    Baseline closing state. The devices that paid: `Battlefield::for_each_triggerer` (printed-
    trigger walks over the member list, `(-222)`/`(-224)`/`(-228)`/`(-231)`); the graveyard lane
-   widened and put in front of the dispatcher and the cast walker (`(-230)`/`(-231)`); **six
+   widened and put in front of the dispatcher and the cast walker (`(-230)`/`(-231)`); **nine
    presence lanes whose predicate is the union of every static a walker matches** (`(-233)`..
-   `(-238)`, 35 variants, found by grepping `static_abilities` reads and ranking the enclosing
-   functions by self cost); "diff the gates of a mechanic's two sides" (`(-223)`); and **when a
-   total contradicts the device's rows, diff the two self tables** (`(-229)`).
-4. **Perf leads:** the fold-word lane (`prevent_static_scan`'s twelve-static mask per damage
-   event, ~280 Ir x ~13 k on `cube`); `chosen_type_etb_counter_specs` (3.8 M, walks
-   `all_static_sources` so needs a command-zone term beside a lane); `block_tax_for`'s
-   per-blocker walk; `declare_attackers_banded`'s `groups` walk; the probe clones' fresh event
-   buffer (`(-227)`); `computed_permanent_hinted`'s hit-path scan (~10 M). Seven lanes free.
-   `PERF.md` ~30.9 k lines; the candidates section's old "RE-READ AT" blocks are the next fold.
+   `(-241)`, 61 variants, found by grepping `static_abilities` reads and ranking the enclosing
+   functions by self cost — six lanes free on the word); "diff the gates of a mechanic's two
+   sides" (`(-223)`); and **when a total contradicts the device's rows, diff the two self
+   tables** (`(-229)`).
+4. **Perf leads:** thin again. The `static_abilities` grep's residue is all below ~2 M a pool
+   (`empty_mana_pools` gates on pool emptiness already; `advance_step`'s draw-skip walk is once
+   a turn); `declare_attackers_banded`'s `groups` walk (~230 Ir x 6.8 k); the probe clones'
+   fresh event buffer (`(-227)`); `computed_permanent_hinted`'s hit-path scan (~10 M). The
+   same grep for `keywords` reads (`definition.keywords.iter().any`) is the next sweep to run.
+   `PERF.md` ~31.1 k lines; the candidates section's old "RE-READ AT" blocks are the next fold.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
