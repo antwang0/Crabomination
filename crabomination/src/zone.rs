@@ -409,6 +409,10 @@ const LANE_GATE_KEYWORD: u32 = 24;
 /// — the presence question three per-activation walks on the mana path ask
 /// (PERF `(-197)`).
 const LANE_MANA_STATIC: u32 = 26;
+/// Any permanent's definition grants activated abilities to *countered*
+/// creatures (Agatha's Soul Cauldron) — the one reason a permanent's counter
+/// bag matters to the grants-nothing gate (PERF `(-199)`).
+const LANE_COUNTER_GRANT: u32 = 28;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -424,6 +428,7 @@ fn card_has_dispatch_bits(c: &CardInstance) -> bool {
 fn card_has_mana_static(c: &CardInstance) -> bool {
     c.dispatch_scan_bits() & crate::card::dispatch_bits::MANA_STATIC != 0
 }
+
 
 /// Can this permanent grant a keyword to anything, whatever the predicate
 /// asks? The [`LANE_GRANT`] predicate, and the one that lane's
@@ -1295,6 +1300,16 @@ impl Battlefield {
     /// Record what the caller's own walk found in the mana-static lane.
     pub fn store_mana_static(&self, epoch: u64, found: bool) {
         self.store_lane(LANE_MANA_STATIC, epoch, found);
+    }
+
+    /// Does any permanent's definition grant activated abilities to countered
+    /// creatures (Agatha's Soul Cauldron)? `walk` is the engine's memo-word
+    /// read (`actions::card_grants_to_countered`), asked lazily by the
+    /// grants-nothing gate for a permanent that carries counters, so a board
+    /// without one never reads its counter bags (PERF `(-199)`).
+    #[inline]
+    pub fn has_counter_granter(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
+        self.lane(LANE_COUNTER_GRANT, walk)
     }
 
     /// The activated-grant lane, same caller-filled contract as

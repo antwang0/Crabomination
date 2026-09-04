@@ -68,6 +68,34 @@ pub(crate) struct GrantScan<'a> {
     /// it lives, so the gather it was built against is the gather every
     /// reader of it sees.
     land_types_rewritten: Option<bool>,
+    /// Does any permanent grant activated abilities to countered creatures
+    /// (Agatha's Soul Cauldron)? Off the zone's lane, read lazily — only the
+    /// first time the grants-nothing gate meets a permanent with counters —
+    /// so a scan over a counter-free board never asks (PERF `(-199)`).
+    cauldron: std::cell::Cell<Option<bool>>,
+}
+
+impl GrantScan<'_> {
+    /// [`GrantScan::cauldron`], filled on first use.
+    #[inline]
+    fn cauldron(&self, g: &GameState) -> bool {
+        match self.cauldron.get() {
+            Some(b) => b,
+            None => {
+                let b = g.battlefield.has_counter_granter(card_grants_to_countered);
+                self.cauldron.set(Some(b));
+                b
+            }
+        }
+    }
+}
+
+/// The counter-grant lane's predicate: the definition carries Agatha's Soul
+/// Cauldron's static, read off the mana-summary memo word (`None`, an
+/// unpackable summary, answers `true` — the sound direction).
+fn card_grants_to_countered(c: &CardInstance) -> bool {
+    c.mana_summary(mana_summary_of)
+        .is_none_or(|w| w & mana_summary::COUNTER_GRANT != 0)
 }
 
 /// A `GrantActivatedAbility` filter reduced to the printed-line tests the
@@ -433,11 +461,23 @@ struct ManaSourceInfo {
 /// first mana ability's index, 13-42 the five per-colour ability indices
 /// (6 bits each). Bit 63 belongs to the memo. Indices past 63 do not pack,
 /// and `pack` answers `None` so the card takes the slow path unmemoized.
+/// Bit 61 ([`SELF_GRANT`](mana_summary::SELF_GRANT)) rides along for the
+/// grants-nothing gate: the definition's own statics or Station bands can
+/// hand it activated abilities (PERF `(-199)`).
 mod mana_summary {
     use super::ManaSourceInfo;
     use crate::card::CardId;
 
     const HAS: u64 = 1 << 62;
+    /// The definition carries one of the six `HasActivatedAbilitiesOf*`
+    /// markers `granted_abilities_of_inner` reads off its own statics, or a
+    /// Station band — the two definition-only reasons it can be granted
+    /// something. Set by `mana_summary_of`, never read by `unpack`.
+    pub(super) const SELF_GRANT: u64 = 1 << 61;
+    /// The definition carries Agatha's Soul Cauldron's
+    /// `CounteredCreaturesHaveAbilitiesOfExiledWithSource` — the
+    /// counter-grant lane's predicate reads it here.
+    pub(super) const COUNTER_GRANT: u64 = 1 << 60;
     const IDX_BITS: u64 = 0x3f;
 
     pub(super) fn pack(
@@ -501,7 +541,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             }
         }
     }
-    match first {
+    let packed = match first {
         Some((first_idx, a)) => mana_summary::pack(
             true,
             colors,
@@ -510,7 +550,27 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             &color_idx,
         ),
         None => mana_summary::pack(false, colors, 0, 0, &color_idx),
+    };
+    // The same six markers `granted_abilities_of_inner` matches on the
+    // definition's statics, unwrapped exactly as it matches them (bare, no
+    // `While*` peel), plus the Station bands it reads.
+    use crate::effect::StaticEffect as SE;
+    let mut flags = if def.station.is_empty() { 0 } else { mana_summary::SELF_GRANT };
+    for sa in &def.static_abilities {
+        match sa.effect {
+            SE::HasActivatedAbilitiesOfExiledWithSelf
+            | SE::HasActivatedAbilitiesOfGraveyardCreatures
+            | SE::HasActivatedAbilitiesOfOtherNamedControlledCreatures
+            | SE::HasActivatedAbilitiesOfCounteredCreatures
+            | SE::HasActivatedAbilitiesOfGraveyardLands
+            | SE::HasActivatedAbilitiesOfLibraryTop { .. } => flags |= mana_summary::SELF_GRANT,
+            SE::CounteredCreaturesHaveAbilitiesOfExiledWithSource => {
+                flags |= mana_summary::COUNTER_GRANT
+            }
+            _ => {}
+        }
     }
+    packed.map(|w| w | flags)
 }
 
 impl ManaSourceInfo {
@@ -14045,14 +14105,14 @@ impl GameState {
         // re-read come from, so an empty one rules out that whole half at
         // once. With all ten empty the body can only return `Vec::new()`.
         //
-        // **`me.counters.is_empty()` costs this gate a third of its
-        // population and moving it to the board does not pay** — a
-        // `GrantScan::cauldron` bit read off `grant_scan`'s existing walk was
-        // built and measured at the ninety-third pass: `sealed` -0.124 % /
-        // `cube` -0.038 % / `fixed` **+0.006 %**, and the `fixed` sign is the
-        // wider `GrantScan` (built per sweep), not the walk — those
-        // archetypes carry no `static_abilities` at all, so the extra
-        // `matches!` never runs there. See PERF's Baseline. Do not rebuild it.
+        // **`me.counters.is_empty()` cost this gate a third of its
+        // population**, and a `GrantScan::cauldron` bit read off
+        // `grant_scan`'s walk was built and refuted at the ninety-third pass
+        // (`sealed` -0.124 % / `cube` -0.038 % / `fixed` +0.006 %: the walk
+        // ran per sweep on boards that carry no `static_abilities`). PERF
+        // `(-199)` takes the same bit off the zone's counter-grant *lane*
+        // instead — no walk per sweep — and moves the definition's own
+        // statics behind the mana-summary word's `SELF_GRANT` bit.
         //
         // Worth gating because the three callers are whole-battlefield
         // sweeps (`available_mana`, `effective_mana_abilities_into`,
@@ -14072,14 +14132,23 @@ impl GameState {
     }
 
     /// The grants-nothing gate of
-    /// [`granted_abilities_of`](Self::granted_abilities_of): ten length
-    /// loads that rule out every source its body draws from. Shared with
-    /// the auto-tapper's memo path (`mana_source_table_inner`), which may
-    /// read a permanent's *printed* mana summary only when this says nothing
-    /// is granted — one predicate, so the two cannot drift.
+    /// [`granted_abilities_of`](Self::granted_abilities_of): seven length
+    /// loads and a memo bit that rule out every source its body draws from.
+    /// Shared with the auto-tapper's memo path (`mana_source_table_inner`),
+    /// which may read a permanent's *printed* mana summary only when this
+    /// says nothing is granted — one predicate, so the two cannot drift.
+    ///
+    /// Ten length loads inline, exactly the form every caller inlined before
+    /// PERF `(-199)`; a row they refuse goes to
+    /// [`grants_nothing_slow`](Self::grants_nothing_slow), which asks the
+    /// same questions of *this* permanent instead of the board. Two
+    /// functions rather than one because the per-permanent form is past the
+    /// inlining threshold: as one body it cost every row an out-of-line call
+    /// (`fixed` 1.55 M self + 1.8 M in its closures) for a question the
+    /// loads answer on most of them.
     #[inline]
     pub(crate) fn grants_nothing(&self, me: &CardInstance, scan: &GrantScan<'_>) -> bool {
-        scan.statics.is_empty()
+        (scan.statics.is_empty()
             && scan.equipment.is_empty()
             && scan.soulbond.is_empty()
             && scan.graveyard.is_empty()
@@ -14088,7 +14157,66 @@ impl GameState {
             && me.granted_activated_eot.is_empty()
             && me.counters.is_empty()
             && me.definition.station.is_empty()
-            && !self.deploy_creatures
+            && !self.deploy_creatures)
+            || self.grants_nothing_slow(me, scan)
+    }
+
+    /// The per-permanent half of [`grants_nothing`](Self::grants_nothing)
+    /// (PERF `(-199)`; the loads alone refused 42 k of 78 k rows on a six-game
+    /// `cube` run, nearly all for a grant aimed at something else): an
+    /// Equipment or a Soulbond pair grants only along its link, a grant
+    /// static only where its selector reaches — `This` and
+    /// `AttachedTo(This)` by id, `EachPermanent` by the printed filter's
+    /// `Some(false)`, and anything the filter cannot settle refuses as
+    /// before. The counter bag matters only on a board with a Cauldron (the
+    /// zone's counter-grant lane, read lazily), and the definition's own
+    /// statics only through the `SELF_GRANT` bit of its mana-summary word.
+    #[inline(never)]
+    fn grants_nothing_slow(&self, me: &CardInstance, scan: &GrantScan<'_>) -> bool {
+        use crate::effect::Selector;
+        if !scan.graveyard.is_empty()
+            || !me.granted_activated_abilities.is_empty()
+            || !me.granted_activated_eot.is_empty()
+            || self.deploy_creatures
+        {
+            return false;
+        }
+        if !me.counters.is_empty() && scan.cauldron(self) {
+            return false;
+        }
+        if (!me.definition.static_abilities.is_empty() || !me.definition.station.is_empty())
+            && me
+                .mana_summary(mana_summary_of)
+                .is_none_or(|w| w & mana_summary::SELF_GRANT != 0)
+        {
+            return false;
+        }
+        for eq in &scan.equipment {
+            if eq.attached_to == Some(me.id) {
+                return false;
+            }
+        }
+        for (src, partner, _) in &scan.soulbond {
+            if *src == me.id || *partner == me.id {
+                return false;
+            }
+        }
+        for (applies_to, _, src, fast) in &scan.statics {
+            let reaches = match applies_to {
+                Selector::EachPermanent(_) => {
+                    fast.and_then(|f| f.test(me, src.controller)) != Some(false)
+                }
+                Selector::AttachedTo(inner) if matches!(**inner, Selector::This) => {
+                    src.attached_to == Some(me.id)
+                }
+                Selector::This => src.id == me.id,
+                _ => false,
+            };
+            if reaches {
+                return false;
+            }
+        }
+        true
     }
 
     /// The body of [`granted_abilities_of`](Self::granted_abilities_of),
