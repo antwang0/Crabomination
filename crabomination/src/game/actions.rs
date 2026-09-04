@@ -2711,6 +2711,11 @@ impl crate::game::GameState {
     /// discard entirely).
     pub fn effective_max_hand_size(&self, player: usize) -> Option<usize> {
         use crate::effect::StaticEffect;
+        // One lane read in front of the four walks (PERF `(-238)`); a clear
+        // lane is the printed default and nothing else.
+        if !self.battlefield.has_hand_size_static() {
+            return self.players[player].max_hand_size;
+        }
         let no_max = self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition

@@ -493,11 +493,15 @@ const LANE_LAND_PLAY_STATIC: u32 = 40;
 /// colour — the three `StaticEffect`s the payment relaxation walks the board
 /// for on every payment (PERF `(-237)`). See [`card_has_any_color_static`].
 const LANE_ANY_COLOR_STATIC: u32 = 42;
+/// Any permanent's definition changes a maximum hand size — the six
+/// `StaticEffect`s `effective_max_hand_size` walks the board for, four walks
+/// a call (PERF `(-238)`). See [`card_has_hand_size_static`].
+const LANE_HAND_SIZE_STATIC: u32 = 44;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 22;
+const LANE_COUNT: usize = 23;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -535,6 +539,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_damage_replacement_static),         // LANE_DAMAGE_STATIC
     Some(card_has_land_play_static),                  // LANE_LAND_PLAY_STATIC
     Some(card_has_any_color_static),                  // LANE_ANY_COLOR_STATIC
+    Some(card_has_hand_size_static),                  // LANE_HAND_SIZE_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -688,6 +693,24 @@ fn card_has_any_color_static(c: &CardInstance) -> bool {
             S::PlayersMaySpendManaAsAnyColor
                 | S::MaySpendManaAsAnyColorForNamedSpells
                 | S::MaySpendManaAsAnyColorForCreaturesWithChosenMv
+        )
+    })
+}
+
+/// Does this permanent's definition change a maximum hand size — Reliquary
+/// Tower, Jin-Gitaxias, Thought Nibbler, Necrodominance, Cursed Rack, Minamo
+/// Scrollkeeper? The [`LANE_HAND_SIZE_STATIC`] predicate; definition-only.
+fn card_has_hand_size_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as S;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            S::NoMaximumHandSize
+                | S::OpponentsMaxHandSizeReduced(_)
+                | S::ControllerMaxHandSizeReduced(_)
+                | S::ControllerMaxHandSize(_)
+                | S::ChosenPlayerMaxHandSize(_)
+                | S::ControllerMaxHandSizeIncreased(_)
         )
     })
 }
@@ -1365,6 +1388,14 @@ impl Battlefield {
     #[inline]
     pub fn has_any_color_static(&self) -> bool {
         self.lane(LANE_ANY_COLOR_STATIC, card_has_any_color_static)
+    }
+
+    /// Does any permanent here change a maximum hand size
+    /// ([`card_has_hand_size_static`])? Read once per `effective_max_hand_size`
+    /// call, in front of its four walks (PERF `(-238)`).
+    #[inline]
+    pub fn has_hand_size_static(&self) -> bool {
+        self.lane(LANE_HAND_SIZE_STATIC, card_has_hand_size_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board
