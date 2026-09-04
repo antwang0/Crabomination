@@ -2112,6 +2112,13 @@ pub fn etb_trigger_multiplier(
     entering: Option<CardId>,
 ) -> usize {
     use crate::effect::StaticEffect;
+    // Every branch below counts or matches a static the lane's predicate
+    // covers, so a clear lane is exactly "one fire, nothing suppressed"
+    // (PERF `(-234)`): two board finds and three board walks per entering
+    // permanent, on boards that carry none of the five statics.
+    if !state.battlefield.has_etb_static() {
+        return 1;
+    }
     // Torpor Orb / Tocatli Honor Guard (CR 614): an entering *creature*
     // causes no triggered abilities to trigger while a suppressor is in play.
     if let Some(id) = entering
@@ -3645,7 +3652,12 @@ impl GameState {
                 _ => {}
             }
         }
-        for src in &self.battlefield {
+        // Both cross-permanent walks below match statics the lane's
+        // predicate covers (PERF `(-234)`); an empty slice skips them on a
+        // board without one, which is nearly every board.
+        let etb_scan: &[crate::card::CardInstance] =
+            if self.battlefield.has_etb_static() { &self.battlefield } else { &[] };
+        for src in etb_scan {
             if src.id == card_id {
                 continue;
             }
@@ -3681,7 +3693,7 @@ impl GameState {
         // enters-tapped effects for lands the static-source's controller owns.
         if should_tap && self.battlefield[idx].definition.is_land() {
             let entrant_controller = self.battlefield[idx].controller;
-            let overridden = self.battlefield.iter().any(|src| {
+            let overridden = etb_scan.iter().any(|src| {
                 src.controller == entrant_controller
                     && src
                         .definition

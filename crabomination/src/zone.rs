@@ -474,11 +474,16 @@ const LANE_CARD_TYPE: u32 = 32;
 /// `StaticEffect`s `draw_one` walks the board for, up to eleven walks a draw
 /// (PERF `(-233)`). See [`card_has_draw_static`].
 const LANE_DRAW_STATIC: u32 = 34;
+/// Any permanent's definition carries a static that changes how *another*
+/// permanent enters — an ETB-trigger suppressor / doubler, an enters-tapped
+/// or lands-enter-untapped static — the walks every entering permanent
+/// makes (PERF `(-234)`). See [`card_has_etb_static`].
+const LANE_ETB_STATIC: u32 = 36;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 18;
+const LANE_COUNT: usize = 19;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -512,6 +517,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(crate::game::actions::card_redirects_deaths),   // LANE_DEATH_REDIRECT
     Some(crate::game::card_can_change_card_types_def),   // LANE_CARD_TYPE
     Some(card_has_draw_static),                          // LANE_DRAW_STATIC
+    Some(card_has_etb_static),                           // LANE_ETB_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -599,6 +605,26 @@ pub(crate) fn card_is_triggerer(c: &CardInstance) -> bool {
 /// every `StaticEffect` `draw_one` and its helpers match on, so a clear lane
 /// is authoritative for all of them. Definition-only; the per-instance
 /// `active_static` gates inside those helpers only narrow it.
+/// Does this permanent's definition carry a static that changes how a
+/// permanent enters the battlefield — the ETB-trigger suppressors and
+/// doublers `etb_trigger_multiplier` counts, the cross-permanent
+/// `EntersTapped` statics and the `LandsEnterUntapped` override
+/// `apply_enters_tapped_replacement` walks for? The [`LANE_ETB_STATIC`]
+/// predicate; definition-only.
+fn card_has_etb_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as S;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            S::SuppressCreatureEtbTriggers { .. }
+                | S::EtbTriggerSpotlight
+                | S::DoubleControllerEtbTriggers
+                | S::EntersTapped { .. }
+                | S::LandsEnterUntapped
+        )
+    })
+}
+
 fn card_has_draw_static(c: &CardInstance) -> bool {
     use crate::effect::StaticEffect as S;
     c.definition.static_abilities.iter().any(|sa| {
@@ -1239,6 +1265,15 @@ impl Battlefield {
     #[inline]
     pub fn has_draw_static(&self) -> bool {
         self.lane(LANE_DRAW_STATIC, card_has_draw_static)
+    }
+
+    /// Does any permanent here carry a static that changes how another
+    /// permanent enters ([`card_has_etb_static`])? Read once per entering
+    /// permanent by `etb_trigger_multiplier` and
+    /// `apply_enters_tapped_replacement` (PERF `(-234)`).
+    #[inline]
+    pub fn has_etb_static(&self) -> bool {
+        self.lane(LANE_ETB_STATIC, card_has_etb_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board
