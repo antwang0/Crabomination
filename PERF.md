@@ -11684,6 +11684,41 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-210)` TAKEN — a graveyard lane in front of the combat-damage dispatch's per-kind graveyard walk: `fixed` -0.618 % / `cube` -0.468 % / `sealed` -0.430 %
+
+```text
+  pool    base (-208)       (-210)          delta
+  fixed     782,919,572     778,079,531   **-0.618 %**
+  cube    2,146,764,044   2,136,721,312   **-0.468 %**
+  sealed  2,159,178,810   2,149,902,704   **-0.430 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  fire_combat_damage_triggers self  38.75 M -> 27.93 M (1.81 % -> 1.31 %)
+              card_has_graveyard_trigger        20,990 calls / 260 k Ir (the lane's fills)
+  fixed:      fire_combat_damage_triggers self  12.71 M -> 7.33 M (1.62 % -> 0.94 %)
+```
+
+Read off the `(-208)` self table with the `(-207)` lesson in hand: a
+1.8 % self row at ~1,900 Ir over 20,560 outer calls is walks, and the
+function's phase 2 walked the dealer's controller's **whole graveyard
+once per event kind** — a `contains` on the dedupe list and a
+definition deref per card per kind — for a `FromYourGraveyard` trigger
+that 44 cards in the catalog print and almost no graveyard holds. The
+`Graveyard` zone had one lane slot left (`GY_LANE_COMBAT_TRIGGER`,
+shift 6); its predicate is the definition-only scope test, and the
+whole phase now sits behind `has_graveyard_trigger()`. `fixed` moved
+most: its graveyards fill with the vanilla creatures it trades.
+
+**What is left in the function (27.9 M self, 1,360 Ir a call), and
+that only 420 of the 20,560 calls push anything:** the dealer walk —
+one pass over the battlefield that finds the dealer, any attachment
+and any soulbond pair, and reads `c.definition.soulbond_bonus` (a
+definition deref) on every permanent *before* the instance's
+`soulbond_partner`, which is `None` on nearly all of them (the `(-116)`
+order, next); the listener walk behind the listener lane, which a
+`cube` board with any `YourControl` trigger keeps `PRESENT`; the cipher
+walk over exile for a `DealsCombatDamageToPlayer` kind; the `by_kind`
+buckets' build and drop (3.2 M).
+
 ### `(-209)` REFUTED, one build — a strip lane under `ability_strip_in_scope`: `cube` -0.088 % but `fixed` +0.101 % / `sealed` +0.073 %
 
 ```text
