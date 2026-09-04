@@ -5670,7 +5670,13 @@ impl GameState {
         // This is the one walk that stays per-kind: the dedupe set is read and
         // written between kinds, so a merged walk would let one graveyard card
         // fire for two kinds of the same damage event.
-        if let Some(atk_controller) = attacker_controller {
+        // Behind the pile's own lane: a graveyard with no such card — nearly
+        // every graveyard, 44 cards in the catalog print the scope — answers
+        // for a word load instead of a definition deref per card per kind
+        // (PERF `(-210)`).
+        if let Some(atk_controller) = attacker_controller
+            && self.players[atk_controller].graveyard.has_graveyard_trigger()
+        {
             for (i, kind) in kinds.iter().enumerate() {
                 let mut fired: Vec<CardId> = Vec::new();
                 for player in &self.players {
