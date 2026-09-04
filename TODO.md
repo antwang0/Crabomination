@@ -27,33 +27,22 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
    tracker prose; ⚠ claim a candidate number at PUSH time — `(-219)` is the last claimed,
    `(-220)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
-   rules"**. Here: `profiling-fast` 10.6 min cold / 3.2 min warm, test build ~5.5 min + suite
-   1.5 min, `nextest` needs installing; callgrind `--games 6` on the three pools in parallel
-   ~1 min. ⚠ Disk: a run of A/B builds fills it — `rm -rf target/debug/incremental` and
-   delete superseded scratchpad binaries as you go (CLAUDE.md). ⚠ `pkill -f` with a pattern
-   that appears in your own command line kills your own shell.
-2. **Gates at the `(-211)` tip:** PERF Baseline — suite 19,253 / 0 / 5, clippy, release-fast
-   typecheck, `--bench` byte-identical to `2003d1cf` at every leg, golden traces 7/7 unmoved,
-   three-pool stdout identical at every leg; grid not re-run (no encoder/pool change).
-3. **This run (Log `(-204)`..`(-215)`): `cube` -5.00 % / `fixed` -4.72 % / `sealed` -4.11 %
-   cumulative, one rules fix (CR 305.7, `(-206)`), one refutation (`(-209)`).** The land tap
-   settled by inspection (`(-204)`, the run's half); the lane word widened to 64 bits and a
-   card-type lane (`(-207)`, 2.5x its priced ceiling because the walk was inlined into four
-   callers — **price a small function by every caller that inlined it**); a graveyard lane in
-   front of the combat-damage dispatch (`(-210)`); `ContinuousEffects` with a family fold
-   (`(-208)`); membership writes demote only the lanes they can change (`(-212)`) and then answer them off
-   the one card they moved (`(-213)`, the fills down 87 %); the member lists kept exact through
-   them (`(-214)`), and the dispatch scan visiting only its members (`(-215)`, `cube` only). **A lane asked less often than the board changes loses to its own fills**
-   (`(-209)`) — census the miss rate before the next lane. ⚠ **The suite never builds a 64-card
-   board: a list/lane change is done only after `robustness_grid.sh` (the closing grid found
-   `(-214)`'s shift-by-64 in two default cells).**
-4. **Perf leads (candidates, "RE-READ AT the (-215) tip", top):** `check_target_legality`
-   gathers on 3,848 of 19,380 calls (8.7 M) — the `(-204)` presence gate aimed at the target,
-   ceiling ~1 % of `cube`; `note_creature_death`'s 3,600-Ir unshares; the lane fills are at
-   their floor (1.9 M; the epoch is 0-6 rewrites a game, not the 8 k `card.rs` said); `fire_combat_damage_triggers`' 1.4 % self (98 % of
-   calls push nothing — a `profiling-lines` read first); the resolver under the fast tap
-   (~650 Ir, diffuse); the tap's CoW unshare (structural). Everything else read this run is
-   closed in candidates with its numbers.
+   rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
+   suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
+   the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
+   point) — `rm -rf target/debug/incremental`, delete superseded binaries and dumps as you go.
+2. **Gates at the `(-219)` tip:** PERF Baseline — suite 19,255 / 0 / 5, clippy (engine and
+   client), release-fast typecheck, `--bench` counters identical to `2003d1cf` at every leg,
+   golden traces 7/7, three-pool stdout identical at every leg, closing `--pilots` grid green.
+3. **This run (Log `(-216)`..`(-219)`): `cube` -2.61 % / `fixed` -2.43 % / `sealed` -1.67 %**
+   — the target's presence gate, the per-death registries out of the cold group (first cut
+   refuted: **an unshare is paid by the first cold write of the action, not by the field**),
+   two walkers behind existing/new zone lanes, and the CR 732.3 watch behind the land-tap fast
+   path (**price every caller-side wrapper of what a fast path shortcuts**).
+4. **Perf leads (candidates, "RE-READ AT the (-219) tip"):** thin. `fire_combat_damage_triggers`'
+   1,400 Ir a call wants a `profiling-lines` read first; `computed_permanent_hinted`'s hit-path
+   scan (~10 M, marginal); everything else read is a floor or the bot's search count.
+   `PERF.md` is at ~34.7 k lines — fold the oldest closing-state tables before adding one.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).

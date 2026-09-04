@@ -2520,6 +2520,69 @@ a box whose state moves.
 
 ## Baseline
 
+### The target gate, cold-group, walker-lane and watch legs — closing state at the `(-219)` tip
+
+Four engine commits on top of the `(-215)`+fix tip `999da717`, each
+behaviour-preserving (three-pool stdout identical, `--bench` counters
+identical, golden traces unmoved), one refutation reverted in the same
+hour (`(-217)`'s first cut), plus a client fix (the Corruption counter's
+two missing match arms; `cargo clippy -p crabomination_client` clean
+again).
+
+```text
+  pool     base 999da717     tip (-219)       delta
+  fixed      763,717,868      745,162,927   **-2.430 %**
+  cube     2,090,168,791    2,035,554,686   **-2.613 %**
+  sealed   2,120,435,808    2,085,022,232   **-1.670 %**
+
+  leg      fixed      cube      sealed    what
+  (-216)  -0.324 %  -0.245 %  -0.181 %   a presence gate on the target in check_target_legality
+  (-217)  -0.832 %  -1.228 %  -0.351 %   the two per-death registries leave the cold group
+                                         (the device is -0.30 / -0.25 / -0.20 %; the rest is the build's inlining shift)
+  (-218)  -0.344 %  -0.158 %  -0.208 %   step / combat-damage walkers behind zone lanes, the filter in place
+  (-219)  -0.951 %  -1.004 %  -0.938 %   the CR 732.3 watch behind the land-tap fast path
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,255 / 0 / 5 (+1 zone::tests::pile_encoded_lane_follows_the_
+        instance_flag); golden traces in it and unmoved at every leg
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+        at every leg; -p crabomination_client clean after the fix
+release the release-fast typecheck gate (debug-assertions off): every
+        leg's profiling-fast build is that profile, all clean
+--bench profiling-fast at the (-219) tip: **195,806 decisions / 27.49
+        turns / 611.9 per game / 0 stalls** — counters identical to
+        2003d1cf at every leg; determinism ok (all pairs split);
+        peak_rss 20.6-21.4 MiB across sittings (it moves 0.5 MiB run
+        to run on one binary; not a byte-identity column)
+grid    robustness_grid.sh --pilots on the (-219) tree: ladder 30 cells
+        / 33,120 games, 0 failures; actor 3 cells, 0 failures; pilots
+        45 cells, 0 failures. The (-216) gate's debug_assert (a view
+        recomputed on every gated miss), the (-218) pile lane's audit
+        and every earlier lane audit ran under debug-assertions across
+        it. No encoder or pool change; the serialized shape is
+        unchanged (TurnDeaths is flattened where its two fields were).
+wall    bench_ab.py, 24 pairs, the 999da717 binary (rebuilt in a
+        worktree, 16m50s cold) vs the tip, profiling-fast, fixed. Two
+        sittings, quoted both: **+0.16 % median / -0.30 % mean** (sd
+        3.64; taken with the grid's tail still on the box, load 4.5)
+        and **+1.65 % median / +2.15 % mean** (sd 4.59; load 2.1) for
+        -2.43 % Ir. Inside the instrument's noise band either way —
+        the standing rule says quote Ir for these, and the Ir is the
+        number.
+```
+
+The rules this closing state adds, each from its leg's Log entry:
+**an unshare is paid by the first cold write of the action, not by the
+field** (`(-217)`, whose first cut only moved the unshare one insert
+down the path); **quote a device at its own rows when the build moved
+the inliner** (`(-217)`, two to five times its rows); **a zone lane's
+predicate is the scope, not the caller** (`(-218)` reused `(-210)`'s
+lane for a second walker); and **price every caller-side wrapper of
+the function a fast path shortcuts** (`(-219)`: `(-204)` was measured
+through a prologue that kept paying 900 Ir a tap).
+
 ### The land-tap, lane-word and lane-write legs — closing state at the `(-215)` tip
 
 Twelve engine commits on top of `(-203)`: ten perf legs, each
