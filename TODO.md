@@ -19,8 +19,10 @@ sixty-seventh pass, so don't re-take that.
   The client **does** build here after four apt packages; that file's header
   has the command and the disk caveat.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
-  baseline, log, profile of record, candidates. `PERF_ARCHIVE.md` holds the
-  Baseline's closing states from the eighty-ninth pass and older, verbatim.
+  baseline, log, profile of record, candidates. `PERF_ARCHIVE.md` holds,
+  verbatim, the Baseline's closing states from the eighty-ninth pass and
+  older and the candidates section's entries from `(-192)` down (the
+  `(-90)`/`(-92)` maps and `(-174)`'s open half among them).
 
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
@@ -52,7 +54,7 @@ sixty-seventh pass, so don't re-take that.
    a turn); `declare_attackers_banded`'s `groups` walk (~230 Ir x 6.8 k); the probe clones'
    fresh event buffer (`(-227)`); `computed_permanent_hinted`'s hit-path scan (~10 M). The
    same grep for `keywords` reads (`definition.keywords.iter().any`) is the next sweep to run.
-   `PERF.md` ~31.1 k lines; the candidates section's old "RE-READ AT" blocks are the next fold.
+   `PERF.md` ~20.5 k lines after the candidates tail moved to `PERF_ARCHIVE.md` (verbatim).
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
