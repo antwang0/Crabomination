@@ -7475,6 +7475,30 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-226)` TAKEN — `do_untap`'s two remaining static-driven walks behind `any_static`: `fixed` -0.229 % / `sealed` -0.042 % / `cube` -0.035 %
+
+```text
+  pool    base (-225)       (-226)          delta
+  fixed     739,706,759     738,014,635   **-0.229 %**
+  cube    2,020,284,063   2,019,586,479   **-0.035 %**
+  sealed  2,070,228,163   2,069,367,315   **-0.042 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  do_untap inclusive   fixed 1,896 / 11.92 M -> 10.22 M   cube 2,834 / 24.76 -> 24.07 M   sealed 3,658 / 26.94 -> 26.09 M
+```
+
+`do_untap` answers "does any permanent or command-zone card carry a
+static at all" once (`any_static`) and six of its walks already sit
+behind it; two did not — the Thousand Moons Infantry "untap this during
+each other player's untap step" `&mut` loop and the Urban Burgeoning
+aura-host collect, both of which read `static_abilities` only. On
+`fixed`, whose four archetypes carry few statics, the gate answers `false`
+on most untap steps and the two walks (~900 Ir a step between them) go;
+`cube`/`sealed` boards usually have a static somewhere, so the gate
+answers `true` and only the gate's own cost shows. Read off the callee
+table's `Vec::from_iter` row (4.4 collects an untap step, 367 Ir each —
+the walk runs *inside* `from_iter`, so a collect over a filter is charged
+to the adapter, not to the function).
+
 ### `(-225)` TAKEN — the combat damage step writes into the caller's event buffer: `sealed` -0.136 % / `fixed` -0.118 % / `cube` -0.070 %
 
 ```text
