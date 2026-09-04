@@ -479,6 +479,12 @@ mod mana_summary {
     /// The definition is a land and nothing the activation gates ask about
     /// (not a creature, artifact or enchantment on its printed type line).
     pub(super) const PLAIN_LAND: u64 = 1 << 49;
+    /// The definition carries a static that replaces what a land produces
+    /// when tapped for mana (`LandsProduceColorInstead`,
+    /// `YourBasicLandsProduceChosenColorInstead`) — the `AddMana` arm's
+    /// per-land-tap board walk, now behind the mana-static lane (PERF
+    /// `(-205)`).
+    pub(super) const LAND_MANA_REPLACER: u64 = 1 << 50;
 
     /// Is printed ability `i` a bare `{T}: Add …` on this word?
     #[inline]
@@ -601,6 +607,9 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             | SE::DiesToLibraryTopInstead { .. }
             | SE::DiesToOwnersHandInstead { .. }
             | SE::ExileCardsBoundForGraveyard { .. } => flags |= mana_summary::DEATH_REDIRECT,
+            SE::LandsProduceColorInstead(_) | SE::YourBasicLandsProduceChosenColorInstead => {
+                flags |= mana_summary::LAND_MANA_REPLACER
+            }
             _ => {}
         }
     }
@@ -634,6 +643,17 @@ fn plain_tap_mana(a: &crate::effect::ActivatedAbility) -> bool {
             probe.effect = ActivatedAbility::default().effect;
             probe == ActivatedAbility::default()
         }
+}
+
+/// The mana-static lane's predicate: the definition carries a static the
+/// mana-ability path reads on every activation — the four `MANA_STATIC`
+/// dispatch bits (PERF `(-197)`), or a land-mana replacer read off the
+/// memo word (`None`, an unpackable summary, answers `true`; PERF `(-205)`).
+/// One function for the lane's fill and its audit, so the two cannot drift.
+pub(crate) fn card_has_mana_static(c: &CardInstance) -> bool {
+    c.dispatch_scan_bits() & crate::card::dispatch_bits::MANA_STATIC != 0
+        || c.mana_summary(mana_summary_of)
+            .is_none_or(|w| w & mana_summary::LAND_MANA_REPLACER != 0)
 }
 
 /// The death-redirect lane's predicate: the definition carries one of the
@@ -2796,9 +2816,7 @@ impl crate::game::GameState {
         match self.battlefield.mana_static_lane() {
             Ok(found) => found,
             Err(epoch) => {
-                let found = self.battlefield.iter().any(|c| {
-                    c.dispatch_scan_bits() & crate::card::dispatch_bits::MANA_STATIC != 0
-                });
+                let found = self.battlefield.iter().any(card_has_mana_static);
                 self.battlefield.store_mana_static(epoch, found);
                 found
             }

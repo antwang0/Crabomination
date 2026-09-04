@@ -428,9 +428,10 @@ fn card_has_dispatch_bits(c: &CardInstance) -> bool {
 }
 
 /// Does this permanent's definition carry a static the mana-ability path
-/// reads per activation? The [`LANE_MANA_STATIC`] predicate.
+/// reads per activation? The [`LANE_MANA_STATIC`] predicate — the engine's
+/// one definition of it, shared with the lane's fill.
 fn card_has_mana_static(c: &CardInstance) -> bool {
-    c.dispatch_scan_bits() & crate::card::dispatch_bits::MANA_STATIC != 0
+    crate::game::actions::card_has_mana_static(c)
 }
 
 

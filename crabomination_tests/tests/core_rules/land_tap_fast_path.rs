@@ -128,11 +128,12 @@ fn animated_land_declines() {
     });
 }
 
-/// Contamination is a resolver-side replacement, not an activation gate:
-/// the fast path accepts and the tap makes {B} either way.
+/// Contamination is a resolver-side replacement; it sets the mana-static
+/// lane (PERF `(-205)`), so the fast path declines and the tap makes {B}
+/// either way.
 #[test]
-fn contamination_accepted() {
-    both_ways("contamination", true, || {
+fn contamination_declines_and_replaces() {
+    both_ways("contamination", false, || {
         let mut g = two_player_game();
         g.add_card_to_battlefield(1, catalog::contamination());
         let id = land(&mut g, 0, catalog::forest());

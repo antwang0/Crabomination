@@ -10157,13 +10157,16 @@ impl GameState {
                 // them then took a whole-board `static_abilities` walk for a
                 // static almost no board has: 8,810,292 Ir / 0.51 % over
                 // 37,140 walks, two per land tap. One lookup and one fused
-                // walk now, and the walk only happens for a land source.
+                // walk now, and the walk only happens for a land source on
+                // a board the mana-static lane says carries a replacer
+                // (`LAND_MANA_REPLACER` is folded into that lane's
+                // predicate; PERF `(-205)`).
                 let (src_is_land, src_is_basic) =
                     match ctx.source.and_then(|s| self.battlefield_find(s)) {
                         Some(c) => (c.definition.is_land(), c.definition.is_basic()),
                         None => (false, false),
                     };
-                let (contaminate, pulse) = if src_is_land {
+                let (contaminate, pulse) = if src_is_land && self.board_has_mana_static() {
                     let (mut contaminate, mut pulse) = (None, None);
                     for c in self.battlefield.iter() {
                         for sa in &c.definition.static_abilities {
