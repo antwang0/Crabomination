@@ -7520,6 +7520,43 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-243)` TAKEN — the auto-tapper's activations write into its event buffer instead of returning a `Vec` each: `cube` -0.323 % / `sealed` -0.318 % / `fixed` -0.315 %
+
+```text
+  pool    base (-241)       (-243)          delta
+  fixed     696,705,741     694,512,156   **-0.315 %**
+  cube    1,941,530,315   1,935,264,256   **-0.323 %**
+  sealed  2,007,247,937   2,000,872,501   **-0.318 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  push_mut <- activate_ability_inner <- activate_ability <- auto_tap_for_cost_inner: 48,592 pushes, 24,182 grow_one (cube)
+  cube self deltas: _int_free -1.28 M  malloc -1.15 M  finish_grow -0.93 M  free -0.92 M  activate_ability -0.84 M
+                    memcpy -0.66 M  grow_one -0.55 M  auto_tap_for_cost_inner -0.54 M  _int_malloc -0.45 M  __rdl_alloc -0.21 M
+                    activate_ability_into +1.37 M (the body that was activate_ability's, plus the mark)
+```
+
+The `(-241)` re-read's second lead, found without a line profile: the
+dump's `push_mut` edge under `activate_ability_inner` sat inside an
+inlined `Vec::push` (its call site reads `vec/mod.rs:*`), so the pair of
+pushes was found by reading the activation body for a two-event `Vec`
+— `PermanentTapped` then `TappedForMana`, on both the `(-204)` plain
+land tap and the generic mana branch. Every activation returned that
+`Vec` to `auto_tap_for_cost_inner`, which appended it into its own
+buffer and freed it: one allocation, one growth, one free, one 32-byte
+copy per mana source paid, 24,182 times on a `cube` run because the
+probes pay their casts through the auto-tapper.
+
+The `(-225)` shape: `activate_ability_inner` and `activate_plain_land_
+tap` take `events: &mut Vec<GameEvent>` and return `()`, the
+eight `return Ok(vec![])`s become `Ok(())`, the nested payment's
+`auto_mana_events` is appended at the point it used to *become* the
+list; `activate_ability_into` is the new entry point (it records a mark
+and truncates back to it on `Err`, which is what dropping the owned
+`Vec` did), and `activate_ability` is that with a fresh `Vec`, so its
+eight other callers do not move. The auto-tapper's two loops call the
+`_into` form, with their `reserve(16)` ahead of the activation instead
+of ahead of the append. The whole win is the allocator's rows — every
+pool the same 0.32 %, since every pool casts through the auto-tapper.
+
 ### `(-242)` REFUTED — the dispatcher's grant list inline (`SmallVec<[TriggerGrant; 2]>`) with the filter borrowed (`Cow`): `fixed` +1.449 % / `sealed` +1.160 % / `cube` +0.711 %, reverted
 
 ```text
@@ -20243,13 +20280,14 @@ with their ceilings, then the floors, so nobody re-reads them.**
   storage in a struct returned by value is a memcpy per call, not per
   allocation.** The Cow half alone is -0.27 M, noise. Do not rebuild;
   the Log entry has the self-table diff.
-* **Lead — a `Vec::push` from empty inside `activate_ability_inner`,
-  24,182 allocations / 2.9 M, all of them under the bot's
-  `auto_tap_for_cost_inner`:** one allocation per mana ability the
-  auto-tapper activates in a probe. Which `Vec` is a `profiling-lines`
-  question, or a read of the push sites below the `(Vec::new(),
-  Vec::new())` at the printed-index branch; the fix is a `SmallVec` or a
-  capacity from the count the caller already knows. Ceiling 0.15 %.
+* **TAKEN as `(-243)` — a `Vec::push` from empty inside
+  `activate_ability_inner`, 24,182 allocations / 2.9 M, all of them
+  under the bot's `auto_tap_for_cost_inner`:** the activation's own
+  two-event return `Vec`; now written into the auto-tapper's buffer
+  (`cube` -0.323 %, every pool the same). Found by reading the body for
+  a two-push `Vec`, no line profile: an inlined `Vec::push` leaves the
+  dump's call-site position at `vec/mod.rs:*`, so the edge names the
+  function but not the line.
 * **Lead — the selector collect under `evaluate_predicate`: 42,300
   collects / 4.1 M plus the 69,802 requirement evaluations inside them
   (3.6 M).** `resolve_selector` returns a `Vec<EntityRef>`; the `Value`
@@ -20267,10 +20305,20 @@ with their ceilings, then the floors, so nobody re-reads them.**
   `ComputedPermanent` byte cost already priced at +0.04 % / +0.058 % for
   eight bytes; count the seconds before pricing — probably half of the
   grants are a lone keyword and the answer is "no".
-* **`blocker_pair_block` — 14.1 M self, ~49 k calls under
-  `pick_blocks_inner` (34,602 + 14,474) plus 5,220 under
-  `declare_blockers`, ~250 Ir a pair.** Not read this pass; it is the
-  planner's per-pair legality check and the next self row to open.
+* **`blocker_pair_block` — 14.1 M self over 64,882 pairs (217 Ir each),
+  ~49 k of them under `pick_blocks_inner`, plus `can_block_attacker_
+  computed` 62,966 / 5.2 M beside it.** Read after `(-243)`: the self
+  is nine short keyword-list scans per pair (`has_kw` on the blocker's
+  computed keywords four times, `any` over the attacker's three times,
+  `block_barred_by_protection_filter` and `blocker_matching_restriction_
+  bars` inlined) plus `cant_block_pairs.contains` on a usually-empty
+  `Vec`; `effective_ring_bearer` returns on `ring_bearer?` before its
+  board walk. No walk, no gather: the one device is an evasion-family
+  bitmask on `ComputedPermanent` folding the nine scans into two `&`
+  tests, +2 bytes a view (they may fit in padding) and ~10 Ir per view
+  to build over 227 k views, against ≤ 9 M saved — net ≤ 0.2 % `cube`
+  and nothing on `fixed`. Not taken; a floor unless the planner's pair
+  count grows.
 * **Floors, so nobody re-prices them:** the allocator's ~195 M (10 %) is
   the sum of the contexts above, most of it the probe design — a
   `GameState::clone` per probe (24,764; 13.8 M self) followed by the

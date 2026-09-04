@@ -28,8 +28,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-242)` is the last claimed
-   (refuted), `(-243)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-243)` is the last claimed,
+   `(-244)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
    suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
    the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
@@ -52,8 +52,8 @@ sixty-seventh pass, so don't re-take that.
 4. **Perf leads — replenished from a `--separate-callers=3` `cube` dump at `(-241)` (PERF
    candidates, "RE-READ AT the `(-241)` tip", by-context allocation / growth / unshare /
    collect tables):** `dispatch_board_scan`'s fresh grant `Vec` as a `SmallVec` is **refuted
-   `(-242)`** (+0.7..1.4 %: inline storage in a by-value struct is a memcpy per call); left:
-   a push-from-empty in `activate_ability_inner` under the auto-tapper (24 k allocs, 0.15 %);
+   `(-242)`** (+0.7..1.4 %: inline storage in a by-value struct is a memcpy per call); the
+   auto-tapper's per-activation event `Vec` is **taken `(-243)`** (-0.32 % every pool); left:
    the selector collect under `evaluate_predicate` (~0.2 %, wide diff); `blocker_pair_block`
    14 M self, unread. Both grep sweeps (`static_abilities`, `keywords`) are done and recorded
    there — do not re-run them. Floors are listed too.
