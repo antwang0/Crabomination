@@ -27,51 +27,30 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
    tracker prose; ⚠ claim a candidate number at PUSH time — `(-211)` is the last claimed,
    `(-212)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
-   rules"**. Here: `profiling-fast` **10.6 min cold / 3.2 min warm** (a `crabomination_base`
-   edit re-fingerprints the catalog: ~14 min — keep a device engine-only when it can be),
-   test build ~5.5 min + suite 2.7 min; `nextest` needs installing (CLAUDE.md). Callgrind
-   `--games 6` ~25 s/pool, the three pools in parallel ~1 min. ⚠ A rebase between an A/B's two
-   builds can pull a concurrent CATALOG commit: `git log --stat <base>..HEAD --
-   crabomination_catalog` after any rebase (PERF Standing rules, top). ⚠ `diff` two
-   `bot_ladder` stdouts with the `decided ... in N.Ns` line excluded — it carries wall clock.
-2. **Gates at `5b50323f` (this run):** PERF Baseline has them — suite 19,240 / 0 / 5,
-   clippy, release-fast typecheck, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
-   byte-identical to `2003d1cf`** at every leg, golden traces 7/7 unmoved, three-pool stdout
-   identical at every leg; grid not re-run (no encoder/pool change; `OftenEmpty` is
-   `#[serde(transparent)]`).
-3. **This run: five devices, `cube` -1.627 % / `fixed` -1.437 % / `sealed` -1.141 %
-   cumulative** (Log `(-199)`..`(-203)`): the grants-nothing gate asks per permanent (an
-   Equipment / Soulbond link, a grant static's selector reach, memo bits, a lazy lane — three
-   builds: **keep the old loads inline as the fast accept, put the growth out of line**);
-   `OftenEmpty<T>` (base, `#[serde(transparent)]`) on `CardData`'s and `PlayerData`'s lists +
-   `GameState::clone` guards; `resolve_combat`'s protection asks over its held views; a
-   death-redirect lane (lane 30, **the word's last**) in front of the death path's four board
-   walks, found by re-profiling at the `(-202)` tip and reading three bodies by eye. **Both
-   clone legs found their priced row was inlined elsewhere and the out-of-line `Vec::clone`
-   row belonged to another owner** — the `--demangle=no` read (How to measure) is the
-   instrument that names a monomorph's owner; the family is now at its floor (candidates).
-4. **Perf leads left (candidates, top, priced):** the printed-mana-ability fast path in
-   `activate_ability_inner` (ceiling ~3 % of `cube`; the whole 3,100-line body was read this
-   run — every unconditional write on it is a plain `GameState` field, so there is no single
-   waste, only the sum of ~100 gates + the digest + the generic resolver); the SBA's
-   attachment-legality protection asks (5,896 x ~530 Ir = 0.14 % of `cube`, a presence-gate
-   board walk under `&mut self` — a lane question); `grants_nothing_slow` is at its floor
-   (one printed-filter test per permanent x grant static, asked once per scan). **Re-profiled
-   at `966289ae` (candidates, "RE-READ AT"):** the death path's four walks were taken as
-   `(-203)`; what is left of it is three ~1,100-Ir bodies per death (`place_card_at_resolved_
-   zone`'s revert chain, `on_left_battlefield`'s cross-zone find + four list walks, the raw
-   self) — a `profiling-lines` read is the instrument, ~3,000 Ir x 10 k deaths = 1.4 % of
-   `cube` is the ceiling; the SBA sweep is 10.5 % inclusive and its post-combat sweeps cost
-   17-89 k Ir each; `compute_permanent_pass`'s extend, the dispatcher under the attack
-   search, and `fire_combat_damage_triggers` are read and closed as floors. ⚠ The battlefield
-   lane word is full (16 lanes); the next lane needs a second word or a freed slot.
-5. **Cards/rules (leftover only):** primitives unblocking several filed rows — a per-turn
-   cast-name memory (Sift Through Sands + Kamigawa "cast X this turn"; `spell_ids_cast_this_turn`
-   is the raw material, `Predicate::CastSpellNamedThisTurn` the missing arm), a per-turn
-   `modes_chosen` sibling (Monument to Endurance), a `DelayedKind` "when you next attack this
-   turn" (All-Out Assault); then the printed-clause ratchets (CARD_BACKLOG). ⚠ A python auditor's
-   zero is suspect — read the body. 2 dead primitives (`AddRadCounters`,
-   `GrantCastBackFromGraveyard`): implemented, nothing builds them.
+   rules"**. Here: `profiling-fast` 10.6 min cold / 3.2 min warm, test build ~5.5 min + suite
+   1.5 min, `nextest` needs installing; callgrind `--games 6` on the three pools in parallel
+   ~1 min. ⚠ Disk: a run of A/B builds fills it — `rm -rf target/debug/incremental` and
+   delete superseded scratchpad binaries as you go (CLAUDE.md). ⚠ `pkill -f` with a pattern
+   that appears in your own command line kills your own shell.
+2. **Gates at the `(-211)` tip:** PERF Baseline — suite 19,253 / 0 / 5, clippy, release-fast
+   typecheck, `--bench` byte-identical to `2003d1cf` at every leg, golden traces 7/7 unmoved,
+   three-pool stdout identical at every leg; grid not re-run (no encoder/pool change).
+3. **This run (Log `(-204)`..`(-211)`): `cube` -2.91 % / `fixed` -2.95 % / `sealed` -2.79 %
+   cumulative, one rules fix (CR 305.7, `(-206)`), one refutation (`(-209)`).** The land tap
+   settled by inspection (`(-204)`, the run's half); the lane word widened to 64 bits and a
+   card-type lane (`(-207)`, 2.5x its priced ceiling because the walk was inlined into four
+   callers — **price a small function by every caller that inlined it**); a graveyard lane in
+   front of the combat-damage dispatch (`(-210)`); `ContinuousEffects` with a family fold
+   (`(-208)`). **A lane asked less often than the board changes loses to its own fills**
+   (`(-209)`) — census the miss rate before the next lane.
+4. **Perf leads (candidates, top):** a batch fill of the memo-word lanes (`walk_and_store`
+   1.05 % of `cube`, eleven monomorphs); `fire_combat_damage_triggers`' 1.4 % self (98 % of
+   calls push nothing — a `profiling-lines` read first); the resolver under the fast tap
+   (~650 Ir, diffuse); the tap's CoW unshare (structural). Everything else read this run is
+   closed in candidates with its numbers.
+5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
+   `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
+   printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

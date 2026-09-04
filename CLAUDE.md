@@ -59,6 +59,9 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   task log) rather than fail loudly. `rm -rf target/debug/incremental`
   costs one non-incremental engine rebuild (~4 min) and returns the space;
   delete superseded A/B binaries and dumps from the scratchpad as you go.
+- **`pkill -f <pattern>` kills your own shell when the pattern appears in
+  the command line that runs it** (a background `cargo nextest` chain
+  named in the same `bash -c`). Kill by pid.
 
 ## Performance
 

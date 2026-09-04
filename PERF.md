@@ -2520,6 +2520,50 @@ a box whose state moves.
 
 ## Baseline
 
+### The land-tap, lane-word and graveyard-lane legs — closing state at the `(-211)` tip
+
+Eight engine commits on top of `(-203)`: six perf legs, each
+behaviour-preserving (three-pool stdout identical, `--bench`
+byte-identical, golden traces unmoved), one rules fix priced as a cost
+(`(-206)`), one refutation reverted in the same hour (`(-209)`).
+
+```text
+  pool     base 62a4e20b     tip (-211)        delta
+  fixed      801,539,915      777,877,362   **-2.952 %**
+  cube     2,200,107,698    2,136,059,209   **-2.911 %**
+  sealed   2,211,363,961    2,149,580,101   **-2.794 %**
+
+  leg      fixed      cube      sealed    what
+  (-204)  -1.496 %  -1.509 %  -1.623 %   the printed land tap settled by inspection
+  (-205)  -0.032 %  -0.156 %  -0.114 %   the AddMana arm's Contamination walk behind the lane
+  (-206)  +0.048 %  +0.197 %  +0.054 %   CR 305.7 fix: stripped printed mana abilities refuse
+  (-207)  -0.764 %  -0.912 %  -0.622 %   card-type lane; the lane word widened to 64 bits
+  (-208)  -0.092 %  -0.058 %  -0.068 %   ContinuousEffects, a fold of modification families
+  (-209)  +0.101 %  -0.088 %  +0.073 %   strip lane — REFUTED, reverted
+  (-210)  -0.618 %  -0.468 %  -0.430 %   graveyard lane in front of the combat-damage dispatch
+  (-211)  -0.026 %  -0.031 %  -0.015 %   two standing-rule reorders in the same dispatch
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,253 / 0 / 5 (+11 core_rules::land_tap_fast_path, +2 modern
+        CR 305.7 regressions); golden traces in it and unmoved at every leg
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+        at every leg
+release the release-fast typecheck gate (debug-assertions off): every
+        leg's profiling-fast build is that profile, all clean
+--bench profiling-fast at the (-211) tip: **195,806 decisions / 27.49
+        turns / 611.9 per game / 0 stalls** — byte-identical to 2003d1cf;
+        determinism ok (all pairs split); peak_rss 20.2 MiB
+grid    not re-run: no encoder or pool change. ContinuousEffects and the
+        lane word are #[serde]-transparent / not serialized.
+wall    bench_ab.py, 24 pairs, the 62a4e20b binary (rebuilt in a worktree)
+        vs the (-211) tip, profiling-fast, fixed: **+1.87 % median
+        games/s** (mean +2.02 %, per-pair sd 3.57; A median 319.5, B
+        325.5) for -2.95 % Ir — the (-198) ratio again (+1.89 % for
+        -2.93 %).
+```
+
 ### The cheap-clone, held-views and death-lane legs — closing state at `5b50323f`
 
 Four more engine commits on top of `(-199)`, each behaviour-preserving
@@ -23330,10 +23374,12 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at `5b50323f` (`(-199)`..`(-203)`, three-pool Ir against
-`2003d1cf`): `fixed` 813,222,102 -> 801,539,784 (-1.437 %), `cube`
-2,236,502,758 -> 2,200,107,512 (-1.627 %), `sealed` 2,236,900,247 ->
-2,211,369,741 (-1.141 %).** Before it, `(-194)`..`(-198)` against
+**State at the `(-211)` tip (`(-204)`..`(-211)`, three-pool Ir against
+the `(-203)` tip `62a4e20b`): `fixed` 801,539,915 -> 777,877,362
+(-2.952 %), `cube` 2,200,107,698 -> 2,136,059,209 (-2.911 %), `sealed`
+2,211,363,961 -> 2,149,580,101 (-2.794 %).** Before it, `(-199)`..
+`(-203)` against `2003d1cf`: `fixed` -1.437 %, `cube` -1.627 %, `sealed`
+-1.141 %; and `(-194)`..`(-198)` against
 `0e9bdaa4`: `fixed` -2.929 %, `cube` -4.253 %, `sealed` -4.648 %. The
 `cube` self table at `(-196)`, top rows:
 `dispatch_triggers_for_events` 3.95 % (was 5.80 %), `gather_continuous_
