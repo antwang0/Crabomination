@@ -7977,6 +7977,14 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     // `raw_attackers` above.
     let mut opp_blockers: smallvec::SmallVec<[&crate::card::CardInstance; 16]> =
         smallvec::SmallVec::new();
+    // The computed `CantBlock` read below was a layer-memo *miss* per
+    // untapped opposing creature on every attack pick — this scope's first
+    // question about each of them, and most of them are asked nothing else
+    // here (the legality gate short-circuits on the first blocker that can
+    // block). The presence gate's `false` is authoritative for every
+    // computed keyword set, so on the ordinary board the loop reads two
+    // instance fields per permanent and no view at all.
+    let cant_block_in_scope = state.board_keyword_in_scope(&[Keyword::CantBlock]);
     for c in state.battlefield.iter() {
         // A creature that's tapped, not a creature, or has a
         // computed `CantBlock` (Sandstorm Verge, pacifism-
@@ -7984,9 +7992,10 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         // attackers back for a blocker that can't legally block.
         if c.controller == opp_seat
             && c.can_block()
-            && !state
-                .computed_permanent_on(c)
-                .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBlock))
+            && !(cant_block_in_scope
+                && state
+                    .computed_permanent_on(c)
+                    .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBlock)))
         {
             opp_blockers.push(c);
         }
