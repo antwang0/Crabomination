@@ -11747,6 +11747,52 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-218)` TAKEN — the step and combat-damage walkers behind zone lanes, the intervening-if filter in place: `fixed` -0.344 % / `sealed` -0.208 % / `cube` -0.158 %
+
+```text
+  pool    base (-217)       (-218)          delta
+  fixed     754,914,487     752,320,968   **-0.344 %**
+  cube    2,059,454,483   2,056,208,537   **-0.158 %**
+  sealed  2,109,167,085   2,104,769,657   **-0.208 %**
+  three-pool stdout identical; --bench counters identical; golden traces 7/7 unmoved
+  rows (self)                        fixed                cube                 sealed
+  fire_step_triggers            12.18 -> 10.89 M    18.06 -> 16.79 M    21.23 -> 19.74 M
+  from_iter_in_place             1.27 ->  0.50 M     2.10 ->  0.94 M     2.58 ->  1.09 M
+  fire_combat_damage_triggers    7.47 ->  7.31 M    28.84 -> 28.57 M    25.31 -> 25.01 M
+```
+
+Three small gates on the two trigger walkers, priced off the `(-217)`
+tip's self table (`fire_step_triggers` 0.9-1.6 % of a pool at ~700 Ir
+a call over 24,216 `cube` calls; `fire_combat_damage_triggers` 1.4 %):
+
+* **`fire_step_triggers` walked the active player's graveyard on every
+  step** — a definition deref per graveyard card for a
+  `FromYourGraveyard` step trigger 44 printings carry. The `(-210)`
+  lane's predicate is the scope, not the kind, so
+  `has_graveyard_trigger()` already held the answer; the walk now sits
+  behind it. Most of the leg on every pool.
+* **The intervening-if pass was `into_iter().filter().collect()` on a
+  list that is empty on most steps**, and the in-place collect
+  machinery runs whether or not there is anything to filter. A guarded
+  `retain` (the emptiness test is there because `retain` is an
+  out-of-line generic that cost `fixed` +0.08 % on an empty list the
+  last time it was tried bare).
+* **The Cipher walk of exile** in `fire_combat_damage_triggers` read
+  `encoded_on` behind every exiled card's `Arc` on every damage event
+  to a player. `CardPile` grew a second lane, `has_encoded()` — an
+  *instance* predicate, which a pile lane may hold because every `&mut`
+  route into a pile (`push`, `DerefMut`) clears the whole word, unlike
+  the battlefield's `iter_mut`; `zone::tests::pile_encoded_lane_follows_
+  the_instance_flag` pins that. The smallest of the three, as priced:
+  exile is short on these pools.
+
+What is left in `fire_step_triggers` (~690 Ir a call on `cube`) is the
+battlefield walk's tag test per printed trigger, the equipment walk and
+the command-zone / emblem walks; `(-196)` measured the per-card kind
+fold as a wash there, and a board-level fold of it would read PRESENT on
+most `cube` boards (`StepBegins` is one tag for every step, and upkeep
+triggers are common). Not a lead.
+
 ### `(-217)` TAKEN — the two per-death registries leave the cold group: `cube` -1.228 % / `fixed` -0.832 % / `sealed` -0.351 %
 
 ```text
