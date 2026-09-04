@@ -6441,7 +6441,16 @@ impl GameState {
             // `ExileDyingOpponentCreatures` static controlled by an opponent of
             // the dying creature, redirect to exile, and capture its reflexive
             // "when you do" effect to fire after placement.
-            let valentin_redirect: Option<(CardId, usize, Option<Effect>)> = if card.definition.is_creature()
+            //
+            // The three board walks below (this one, the library-top and the
+            // hand redirect) run only when the death-redirect lane says a
+            // permanent carries one of the statics they look for — nearly
+            // never. The dying card's own statics are read regardless: it
+            // is already off the battlefield here (PERF `(-203)`).
+            let redirects = self.board_redirects_deaths();
+            let board_walk = if redirects { usize::MAX } else { 0 };
+            let valentin_redirect: Option<(CardId, usize, Option<Effect>)> = if redirects
+                && card.definition.is_creature()
                 && !card.is_token
             {
                 self.battlefield.iter().find_map(|src| {
@@ -6469,6 +6478,7 @@ impl GameState {
             let library_top_redirect = self
                 .battlefield
                 .iter()
+                .take(board_walk)
                 .map(|src| (&src.definition, src.controller))
                 .chain(self_statics)
                 .any(|(def, ctrl)| {
@@ -6483,6 +6493,7 @@ impl GameState {
             let hand_redirect = self
                 .battlefield
                 .iter()
+                .take(board_walk)
                 .filter_map(|src| {
                     src.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
                         crate::effect::StaticEffect::DiesToOwnersHandInstead { filter } => {

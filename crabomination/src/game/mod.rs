@@ -7652,7 +7652,10 @@ impl GameState {
             .is_some_and(|pl| pl.graveyard_bound_exiled_this_turn);
         let mut void = false;
         let mut stamped_by = None;
-        for c in &self.battlefield {
+        // Behind the death-redirect lane: asked at every graveyard placement
+        // and almost no board carries the static (PERF `(-203)`).
+        let board_walk = if self.board_redirects_deaths() { usize::MAX } else { 0 };
+        for c in self.battlefield.iter().take(board_walk) {
             for sa in &c.definition.static_abilities {
                 if let StaticEffect::ExileCardsBoundForGraveyard {
                     opponents_only,

@@ -478,6 +478,12 @@ mod mana_summary {
     /// `CounteredCreaturesHaveAbilitiesOfExiledWithSource` — the
     /// counter-grant lane's predicate reads it here.
     pub(super) const COUNTER_GRANT: u64 = 1 << 60;
+    /// The definition carries a static that can redirect a permanent's
+    /// trip to the graveyard (`ExileDyingOpponentCreatures`,
+    /// `DiesToLibraryTopInstead`, `DiesToOwnersHandInstead`,
+    /// `ExileCardsBoundForGraveyard`) — the death-redirect lane's predicate
+    /// (PERF `(-203)`).
+    pub(super) const DEATH_REDIRECT: u64 = 1 << 59;
     const IDX_BITS: u64 = 0x3f;
 
     pub(super) fn pack(
@@ -567,10 +573,22 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             SE::CounteredCreaturesHaveAbilitiesOfExiledWithSource => {
                 flags |= mana_summary::COUNTER_GRANT
             }
+            SE::ExileDyingOpponentCreatures { .. }
+            | SE::DiesToLibraryTopInstead { .. }
+            | SE::DiesToOwnersHandInstead { .. }
+            | SE::ExileCardsBoundForGraveyard { .. } => flags |= mana_summary::DEATH_REDIRECT,
             _ => {}
         }
     }
     packed.map(|w| w | flags)
+}
+
+/// The death-redirect lane's predicate: the definition carries one of the
+/// four graveyard-redirecting statics, read off the memo word (`None`, an
+/// unpackable summary, answers `true`).
+fn card_redirects_deaths(c: &CardInstance) -> bool {
+    c.mana_summary(mana_summary_of)
+        .is_none_or(|w| w & mana_summary::DEATH_REDIRECT != 0)
 }
 
 impl ManaSourceInfo {
@@ -2710,6 +2728,17 @@ impl crate::game::GameState {
     /// and fills the lane. Every land tap asked all three as whole-board
     /// `static_abilities` walks — ~780 Ir a tap over 24,232 taps on a
     /// six-game `cube` run (PERF `(-197)`).
+    /// Does any battlefield permanent's definition carry a static that can
+    /// redirect a card bound for a graveyard (`mana_summary::DEATH_REDIRECT`)?
+    /// One lane read on a hit; the four per-death `static_abilities` walks
+    /// in the death path and `graveyard_exile_redirects` run only when it
+    /// says so (PERF `(-203)`). The dying card is already off the
+    /// battlefield when those ask, so its *own* statics are read separately.
+    #[inline]
+    pub(crate) fn board_redirects_deaths(&self) -> bool {
+        self.battlefield.has_death_redirect(card_redirects_deaths)
+    }
+
     pub(crate) fn board_has_mana_static(&self) -> bool {
         match self.battlefield.mana_static_lane() {
             Ok(found) => found,

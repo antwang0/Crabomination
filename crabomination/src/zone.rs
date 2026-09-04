@@ -413,6 +413,10 @@ const LANE_MANA_STATIC: u32 = 26;
 /// creatures (Agatha's Soul Cauldron) — the one reason a permanent's counter
 /// bag matters to the grants-nothing gate (PERF `(-199)`).
 const LANE_COUNTER_GRANT: u32 = 28;
+/// Any permanent's definition carries a static that redirects a card bound
+/// for a graveyard — the question four per-death walks ask (PERF `(-203)`).
+/// The word's last lane.
+const LANE_DEATH_REDIRECT: u32 = 30;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -1310,6 +1314,14 @@ impl Battlefield {
     #[inline]
     pub fn has_counter_granter(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
         self.lane(LANE_COUNTER_GRANT, walk)
+    }
+
+    /// Does any permanent's definition carry a graveyard-redirecting static?
+    /// `walk` is the engine's memo-word read (`actions::card_redirects_deaths`);
+    /// asked once per death and per graveyard placement (PERF `(-203)`).
+    #[inline]
+    pub fn has_death_redirect(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
+        self.lane(LANE_DEATH_REDIRECT, walk)
     }
 
     /// The activated-grant lane, same caller-filled contract as
