@@ -11684,6 +11684,103 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-204)` TAKEN — the printed land tap settled by inspection, ahead of `activate_ability_inner`'s gate walk: `sealed` -1.623 % / `cube` -1.509 % / `fixed` -1.496 %
+
+```text
+  pool    base (-203)       (-204)          delta
+  fixed     801,539,915     789,546,300   **-1.496 %**
+  cube    2,200,107,698   2,166,909,379   **-1.509 %**
+  sealed  2,211,363,961   2,175,477,317   **-1.623 %**
+  (base re-taken from the committed tip: within 0.00001 % of the (-203)
+  readings)
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  activate_ability_inner self  46.02 M -> 12.83 M (2.09 % -> 0.59 %)
+                its callee table 751,274 calls -> 384,322 — the gate walk's
+                helpers: Keyword::eq 77,766 -> 10,256, ManaCost::has_x
+                76,040 -> 8,612, battlefield_find 57,104 -> 6,516,
+                ability_spend_kind 25,708 -> 3,232, prefers_graveyard_target
+                24,882 -> 2,438, tap_ability_summoning_sick 24,540 -> 0,
+                requires_target 24,382 -> 0, its own closures 51,018 -> 6,066
+                CardData::mana_summary  +24,718 asks (176 k Ir); the fast
+                path took 22,534 of them (91 %)
+  fixed by row: activate_ability_inner self  16.61 M -> 2.77 M (2.07 % -> 0.35 %);
+                8,706 of 8,770 asks taken
+  sealed:       activate_ability_inner self  49.68 M -> 11.26 M (2.25 % -> 0.52 %);
+                26,022 of 26,714 asks taken
+```
+
+`(-197)`'s "two-thousand-line read" was done, and the device fell out of
+it: nearly every one of the ~100 gates in `activate_ability_inner` is a
+question about the *ability's cost line* or the *source's printed type
+line*, both pure in the definition, and the rest are five board presence
+reads the generic path already pays. `activate_plain_land_tap` runs ahead
+of the gate walk when the definition word says so and the board does not
+object, and performs the generic path's mutations verbatim, in its order.
+
+* **The definition half is two new families on the `(-198)` memo word**
+  (bits 43-49, computed by `mana_summary_of` beside the others).
+  `PLAIN_TAP << i`: printed ability `i` is a bare `{T}: Add …` for the
+  activator — `plain_tap_mana`, which is `is_free`'s probe compare with
+  `tap_cost` and the `AddMana` body masked, so every cost field, cap,
+  gate, zone flag and reduction sits at its default. `PLAIN_LAND`: a land
+  whose printed type line is neither creature, artifact nor enchantment —
+  the three types the Karn / Abolisher / Cursed Totem / CR 106.12 gates
+  key on. The first six indices pack; a seventh takes the generic path.
+* **The board half is what the generic path reads for the same
+  activation anyway**, minus the ones it reads and then ignores for a
+  mana ability: yours, untapped, not detained, not bestowed;
+  `card_type_change_unscoped` (layer 4 could make it a creature — CR
+  106.12 and CR 602.5g both hang off that), `land_type_change_in_scope`
+  only when `printed_land_mana_basic` is `Some` (CR 305.6),
+  `card_keyword_possible_on(CantActivateTapAbilities)` (CR 602.5),
+  `board_has_mana_static` (the Skyseer tax, the multiplier and the CR
+  605.1b grant all sit behind it — a board with one goes generic rather
+  than reproduce three walks), and `limited_range` (CR 801.6). Any
+  `true` hands the activation back untouched.
+* **The mutations are the generic path's, in its order, including the
+  ones it makes for nothing**: the five pending-pick takes, the tap, the
+  two events, `tapped_land_for_mana_this_turn`, the six cost-scratch
+  resets (`exiled_for_cost_mana_value`, `sacrificed_count`,
+  `sacrificed_total_power`, `counters_removed_as_cost`,
+  `cost_discarded_mana_value`, `cost_exiled_cards`, plus the gated
+  `cost_sacrificed_batch` / `tapped_for_cost` assignments), the
+  multiplier around `continue_ability_resolution_x_into` and the extra
+  mana splice. The resolver is untouched — Contamination, Pulse, the
+  turn-scoped replacements and Bubbling Muck all resolve through the same
+  code — so the win is the gate walk alone.
+* **`core_rules::land_tap_fast_path` is the audit**: fourteen boards
+  built twice, tapped once down each path (`FORCE_GENERIC_ACTIVATION`
+  is the switch, one relaxed load an activation), the returned events
+  and the whole serialized `GameState` compared; a debug-only tally says
+  which path was taken so an "accept" board cannot pass by declining;
+  and a 4,000-action bot game traced both ways. It found one wrong
+  *expectation*, not one wrong answer: a Blood-Mooned Temple's printed
+  `{T}: Add {U}` is accepted by both paths — only a basic's *intrinsic*
+  ability is CR 305.6-gated, and the generic path lets a stripped
+  permanent's printed mana ability through (`stripped &&
+  !is_mana_ability`). That is a rules gap in the generic path (CR
+  113.10b: "loses all abilities" loses mana abilities too; the
+  auto-tapper's source table already gets it right), filed in TODO —
+  a fix there adds `ability_strip_in_scope` to the fast path's board
+  half, one presence read.
+
+**What is left of the tap, priced off the candidate's callee table
+(`cube`, 22,534 fast taps):** `continue_ability_resolution_x_into`
+24,252 x 897 Ir = 21.7 M (1.0 %) — `resolve_effect_into`'s self is 238
+a call (the ~30 resolution-scratch resets), and `run_effect`'s `AddMana`
+arm walks every permanent's `static_abilities` for Contamination / Pulse
+of Llanowar on **every land source** (`is_basic` 24,278 calls, the False
+Dawn `find` 22,702) — a lane question, the two statics are not in
+`MANA_STATIC`; `card_type_change_unscoped` 22,534 x 350 = 7.9 M (0.36 %,
+the `continuous_effects` walk plus a memo bit per permanent — a lane,
+and the lane word is full); `find_by_id_mut` 24,388 x 220 = 5.4 M (the
+probe clone's CoW unshare, structural); `card_keyword_possible_on`
+22,476 x 223 = 5.0 M (`keyword_grant_in_scope`'s board walk);
+`board_has_mana_static` 25,166 x 106 = 2.7 M (a lane *hit* should not
+cost 106 — read `mana_static_lane`); the two event pushes 4.2 M (the
+first push's allocation). Candidates carries them.
+
 ### `(-203)` TAKEN — a death-redirect lane in front of the death path's four board walks: `cube` -0.459 % / `fixed` -0.299 % / `sealed` -0.268 %
 
 ```text
@@ -23027,22 +23124,41 @@ re-reads them.**
 
 Open, priced, largest first:
 
-* **A printed-mana-ability fast path in `activate_ability_inner` —
-  ceiling ~3 % of `cube`.** `auto_tap_for_cost_inner` is 9.65 % of
-  `cube` inclusive and 22,330 of its calls are `activate_ability` on a
-  land at ~6,000 Ir each (`(-197)`'s Log entry prices the tap: 1,945 self
-  of ~100 cheap gates plus the zone-position scan, ~900 for one
-  `AddMana` through `EffectContext` + the generic resolver, ~900 for the
-  CR 732.3 digest, 220 for the probe clone's unshare). A fast path for
-  "printed index, `{T}` only, `AddMana` of fixed colours, non-creature
-  non-artifact non-enchantment source, no grant/strip/type-rewrite
-  static in scope" that emits `PermanentTapped` + `TappedForMana` + the
-  resolver's `ManaAdded` in the same order and keeps the digest is the
-  device. It is exact only if it reproduces every side effect the
-  generic path has between line ~14391 and ~17500 of `actions.rs`;
-  three-pool stdout identity and the golden traces are the check that
-  can see a slip, and every cast in the suite exercises it. Not
-  attempted this run.
+* **The printed-mana-ability fast path — TAKEN as `(-204)`** (Log:
+  `sealed` -1.623 % / `cube` -1.509 % / `fixed` -1.496 %): the gate walk
+  is gone for 91-99 % of land taps; the resolver was deliberately left
+  alone. **What is left of the tap, per `cube` tap, priced at the
+  `(-204)` tip** — the next devices, in order:
+  * `run_effect`'s `AddMana` arm walks every permanent's
+    `static_abilities` for Contamination / Pulse of Llanowar on every
+    **land** source (24,278 `is_basic` calls, the False Dawn `find`
+    22,702): fold `LandsProduceColorInstead` and
+    `YourBasicLandsProduceChosenColorInstead` into
+    `dispatch_bits::MANA_STATIC` and put the walk behind
+    `board_has_mana_static` — the lane is already a superset. The whole
+    resolver is 897 Ir a tap (21.7 M, 1.0 % of `cube`); the walk is the
+    part a lane can take, ~0.3 %. `resolve_effect_into`'s 238-Ir self is
+    the ~30 scratch resets, plain stores — a floor.
+  * `card_type_change_unscoped` 22,534 x 350 Ir = 7.9 M (0.36 %): the
+    `continuous_effects` walk plus a memo bit per permanent, asked once
+    per fast tap (and the generic path asked it too). The battlefield
+    half is a lane question; **the lane word is full** (16 lanes), so
+    this is the entry that pays for a second word in `zone::Battlefield`.
+  * `card_keyword_possible_on(CantActivateTapAbilities)` 22,476 x 223 =
+    5.0 M (0.23 %): the definition and instance legs are cheap, the cost
+    is `keyword_grant_in_scope`'s `board_grants_keyword` walk — a
+    per-board "can anything grant a keyword" bit is the same lane shape.
+  * `board_has_mana_static` 25,166 x 106 = 2.7 M: a lane *hit* should
+    be a word load — read `mana_static_lane` for why it is not.
+  * `find_by_id_mut` 24,388 x 220 = 5.4 M — the probe clone's CoW
+    unshare of the tapped permanent; structural.
+  * The two event pushes 4.2 M — the first push's allocation; a
+    `with_capacity` moves it, nothing removes it.
+* **The generic path lets a stripped permanent's printed mana ability
+  through** (`stripped && !is_mana_ability`, CR 113.10b) — a rules
+  gap the `(-204)` audit found; TODO carries it. The fix adds
+  `ability_strip_in_scope` (a presence walk) to the fast path's board
+  half; price it when it lands.
 * **`mana_source_table`'s other 58 % of rows — TAKEN as `(-199)`** (Log:
   `cube` -0.644 % / `fixed` -0.561 % / `sealed` -0.354 %). The reason
   they missed was a grant static, an Equipment or a Soulbond pair
