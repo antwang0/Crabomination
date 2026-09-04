@@ -981,7 +981,13 @@ impl GameState {
         }
         // Walk the active player's graveyard for `FromYourGraveyard`
         // step triggers (Ichorid's "at the beginning of your upkeep").
-        if let Some(player) = self.players.get(active) {
+        // Behind the zone's lane (the `(-210)` one; its predicate is the
+        // scope, whatever the kind): a graveyard grows all game and this
+        // fires on every step, so the walk was a definition deref per
+        // graveyard card per step for a card 44 printings carry (PERF `(-218)`).
+        if let Some(player) = self.players.get(active)
+            && player.graveyard.has_graveyard_trigger()
+        {
             for c in &player.graveyard {
                 for t in &c.definition.triggered_abilities {
                     if t.event.kind == kind
@@ -1054,17 +1060,18 @@ impl GameState {
         // triggers whose intervening-if predicate is false right now (the
         // trigger-time check), and preserve the predicate on the survivors
         // so the resolver can re-check at resolution time.
-        let triggers_with_filter: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> =
-            candidates
-                .into_iter()
-                .filter(|(src, _eff, ctrl, filter)| {
-                    let Some(pred) = filter else { return true };
-                    let ctx = crate::game::effects::EffectContext::for_trigger(
-                        *src, *ctrl, None, 0,
-                    );
-                    self.evaluate_predicate(pred, &ctx)
-                })
-                .collect();
+        // In place, and only when there is something to filter: the
+        // `into_iter().filter().collect()` this was ran the in-place collect
+        // machinery on an empty list on most steps (PERF `(-218)`), and
+        // `retain` is an out-of-line generic that costs on an empty list too.
+        let mut triggers_with_filter = candidates;
+        if !triggers_with_filter.is_empty() {
+            triggers_with_filter.retain(|(src, _eff, ctrl, filter)| {
+                let Some(pred) = filter else { return true };
+                let ctx = crate::game::effects::EffectContext::for_trigger(*src, *ctrl, None, 0);
+                self.evaluate_predicate(pred, &ctx)
+            });
+        }
 
         // Drain matching delayed triggers off the queue and queue them up
         // alongside the regular battlefield triggers. Fires-once triggers

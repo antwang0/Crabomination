@@ -23,7 +23,8 @@ const GY_LANE_ACT_GRANT: u32 = 2;
 const GY_LANE_TOKEN: u32 = 4;
 /// A card here carries a `FromYourGraveyard` trigger — the question every
 /// combat-damage dispatch asks of the dealer's controller's graveyard, per
-/// event kind, with a definition deref per card (PERF `(-210)`).
+/// event kind, with a definition deref per card (PERF `(-210)`), and every
+/// step's `fire_step_triggers` asks of the active player's (`(-218)`).
 const GY_LANE_COMBAT_TRIGGER: u32 = 6;
 
 /// The [`GY_LANE_COMBAT_TRIGGER`] predicate: definition-only, as every lane
@@ -122,8 +123,9 @@ impl Graveyard {
     /// One lane's answer: a word load and two mask tests on a hit, the zone
     /// walk plus one store on a miss. `what` names the lane in the audit.
     #[inline]
-    /// Does any card here carry a `FromYourGraveyard` trigger? Memoized; a
-    /// miss walks the zone once. Read by `fire_combat_damage_triggers`.
+    /// Does any card here carry a `FromYourGraveyard` trigger of any kind?
+    /// Memoized; a miss walks the zone once. Read by
+    /// `fire_combat_damage_triggers` and `fire_step_triggers`.
     pub fn has_graveyard_trigger(&self) -> bool {
         self.lane(GY_LANE_COMBAT_TRIGGER, card_has_graveyard_trigger, "graveyard-trigger")
     }
@@ -256,28 +258,47 @@ pub struct CardPile {
     lanes: AtomicU8,
 }
 
-/// The pile's only lane.
+/// CR 704.5d — a token is here.
 const PILE_LANE_TOKEN: u32 = 0;
+/// CR 702.49 — a card here is encoded on a creature (Cipher). An *instance*
+/// predicate, which a pile lane may hold: every `&mut` route into the cards
+/// (`push`, `DerefMut`) clears the whole word, unlike the battlefield's.
+const PILE_LANE_ENCODED: u32 = 2;
 
 impl CardPile {
-    /// CR 704.5d — does this pile hold a token? Memoized; a miss walks the
-    /// pile once.
-    pub fn has_token(&self) -> bool {
-        let cur = (self.lanes.load(Ordering::Relaxed) >> PILE_LANE_TOKEN) & 0b11;
+    /// One lane's answer: a word load and two mask tests on a hit, the pile
+    /// walk plus one store on a miss. Lanes clear together, so a miss stores
+    /// only its own lane and the others go back to unknown.
+    #[inline]
+    fn lane(&self, shift: u32, walk: fn(&CardInstance) -> bool, what: &str) -> bool {
+        let cur = (self.lanes.load(Ordering::Relaxed) >> shift) & 0b11;
         debug_assert!(
-            cur == UNKNOWN || (cur == PRESENT) == self.cards.iter().any(card_is_token),
-            "card-pile token memo is stale: a write reached the cards without clearing it",
+            cur == UNKNOWN || (cur == PRESENT) == self.cards.iter().any(walk),
+            "card-pile {what} memo is stale: a write reached the cards without clearing it",
         );
         match cur {
             ABSENT => false,
             PRESENT => true,
             _ => {
-                let found = self.cards.iter().any(card_is_token);
+                let found = self.cards.iter().any(walk);
                 let bits = if found { PRESENT } else { ABSENT };
-                self.lanes.store(bits << PILE_LANE_TOKEN, Ordering::Relaxed);
+                self.lanes.store(bits << shift, Ordering::Relaxed);
                 found
             }
         }
+    }
+
+    /// CR 704.5d — does this pile hold a token? Memoized; a miss walks the
+    /// pile once.
+    pub fn has_token(&self) -> bool {
+        self.lane(PILE_LANE_TOKEN, card_is_token, "token")
+    }
+
+    /// CR 702.49 — is any card here encoded on a creature? Memoized; read by
+    /// `fire_combat_damage_triggers` in front of its Cipher walk of exile
+    /// (PERF `(-218)`).
+    pub fn has_encoded(&self) -> bool {
+        self.lane(PILE_LANE_ENCODED, |c| c.encoded_on.is_some(), "encoded")
     }
 
     /// Append through [`CowBox::push`] so the unshare materializes with room
@@ -1913,6 +1934,24 @@ mod tests {
 
         p.retain(|c| !c.is_token);
         assert!(!p.has_token(), "DerefMut invalidated and the answer moved");
+    }
+
+    /// The encoded lane holds an instance fact, so every `&mut` route must
+    /// clear it — including an in-place edit of the flag through `DerefMut`.
+    #[test]
+    fn pile_encoded_lane_follows_the_instance_flag() {
+        let mut p = pile(0, 2);
+        assert!(!p.has_encoded());
+        assert!(!p.has_token(), "the two lanes share one word");
+        p[0].encoded_on = Some(CardId(9));
+        assert!(p.has_encoded(), "DerefMut cleared the lane and the walk sees the flag");
+        assert!(!p.has_token(), "the other lane refilled to the same answer");
+        p[0].encoded_on = None;
+        assert!(!p.has_encoded());
+        let mut q = p.clone();
+        q.push(CardInstance::new_token(CardId(7), crate::catalog::shivan_dragon(), 0));
+        assert!(!q.has_encoded(), "push cleared and the new card is not encoded");
+        assert!(q.has_token());
     }
 
     /// The CoW contract survives the pile wrapper too.

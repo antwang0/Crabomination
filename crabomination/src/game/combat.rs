@@ -5727,9 +5727,14 @@ impl GameState {
         if let Some(i) = slot(&EventKind::DealsCombatDamageToPlayer)
             && let Some(atk_ctrl) = attacker_controller
         {
-            for enc in &self.exile {
-                if enc.encoded_on == Some(source) {
-                    by_kind[i].push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None, false));
+            // Behind the pile's lane: `encoded_on` sits behind each exiled
+            // card's `Arc`, so the walk was a pointer chase per exiled card
+            // per damage event on a zone that only grows (PERF `(-218)`).
+            if self.exile.has_encoded() {
+                for enc in &self.exile {
+                    if enc.encoded_on == Some(source) {
+                        by_kind[i].push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None, false));
+                    }
                 }
             }
             // CR 701.54c (level 4+) — "Whenever your Ring-bearer deals combat
