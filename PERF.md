@@ -2520,18 +2520,19 @@ a box whose state moves.
 
 ## Baseline
 
-### The watch-deferral, member-list and block-tax legs — closing state at the `(-224)` tip
+### The watch-deferral, member-list, block-tax and event-buffer legs — closing state at the `(-229)` tip
 
-Four engine commits on top of the `(-219)` tip `52b9a743`, each
+Eight engine commits on top of the `(-219)` tip `52b9a743`, each
 behaviour-preserving (three-pool outcomes identical, `--bench` counters
 identical, golden traces unmoved), from the second of two concurrent
-sessions; the other session's `(-221)` refutation sits between them.
+sessions; the other session's `(-221)` refutation sits between them, and
+one of this session's own (`(-227)`) was reverted in the same hour.
 
 ```text
-  pool     base (-219)      tip (-224)       delta
-  fixed      745,162,383      740,581,398   **-0.615 %**
-  cube     2,035,552,660    2,021,695,434   **-0.681 %**
-  sealed   2,085,024,159    2,073,037,291   **-0.575 %**
+  pool     base (-219)      tip (-229)       delta
+  fixed      745,162,383      733,633,503   **-1.547 %**
+  cube     2,035,552,660    2,010,133,057   **-1.249 %**
+  sealed   2,085,024,159    2,068,205,261   **-0.807 %**
 
   leg      fixed      cube      sealed    what
   (-220)  -0.019 %  -0.163 %  -0.076 %   the CR 732.3 watch fingerprints only on a key repeat
@@ -2539,6 +2540,11 @@ sessions; the other session's `(-221)` refutation sits between them.
   (-222)  -0.126 %  -0.134 %  -0.073 %   declare_attackers_banded's two printed-trigger walks over the member list
   (-223)  -0.375 %  -0.316 %  -0.371 %   declare_blockers stops paying a {0} block tax
   (-224)  -0.096 %  -0.069 %  -0.057 %   the combat-damage-to-player listener walk over the member list
+  (-225)  -0.118 %  -0.070 %  -0.136 %   the combat damage step writes into the caller's event buffer
+  (-226)  -0.229 %  -0.035 %  -0.042 %   do_untap's two remaining static-driven walks behind any_static
+  (-227)  +0.241 %  +0.220 %  +0.298 %   a caller-side reserve ahead of the damage step — REFUTED, reverted
+  (-229)  -0.174 %  -0.341 %  -0.004 %   the layer pass's effect list by push loops (pins the inliner's coin)
+  (-228)  -0.421 %  -0.127 %  -0.052 %   the step-trigger walk over the member list when no static grant is live
 ```
 
 ```text
@@ -2570,7 +2576,15 @@ The rules this closing state adds, each from its leg's Log entry:
 a "validation body" for the walks that are not over the batch**
 (`(-222)`: two board walks priced as batch scans); **when two sides of
 one mechanic are written twice, diff the gates, not the bodies**
-(`(-223)`: the attack side had `> 0`, the block side never did).
+(`(-223)`: the attack side had `> 0`, the block side never did); **a
+buffer recycled per state is not recycled across probe clones**
+(`(-225)`: the reserve stayed, the append and free went); **`Vec::
+reserve(n)` is `n` beyond `len`, and a 32-slot event buffer costs the
+same ~1,400 Ir to obtain by `malloc` or `realloc`** (`(-227)`); **a
+generic adapter on a 400 k-call path is a coin the inliner flips per
+build — write the inlined shape down, and when a total contradicts the
+device's rows, diff the two self tables** (`(-229)`, found through
+`(-228)`'s first reading).
 
 ### The target gate, cold-group, walker-lane and watch legs — closing state at the `(-219)` tip
 
@@ -7474,6 +7488,63 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-228)` TAKEN — the step-trigger walk visits the trigger member list when no static grant is live: `fixed` -0.421 % / `cube` -0.127 % / `sealed` -0.052 %
+
+```text
+  pool    base (-229)       (-228)          delta
+  fixed     736,733,907     733,633,503   **-0.421 %**
+  cube    2,012,692,074   2,010,133,057   **-0.127 %**
+  sealed  2,069,285,360   2,068,205,261   **-0.052 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  fire_step_triggers self   fixed 10.89 M -> 6.95 M   cube 16.79 M -> 10.94 M   sealed 19.74 M -> 13.72 M
+  compute_permanent_pass self (cube) 74.22 -> 73.67 M — the (-229) shape held across the build
+```
+
+`fire_step_triggers` runs on every step of every turn (24,216 calls a
+six-game `cube` run) and walked every permanent's printed
+`triggered_abilities` for the step's kind. A live static grant can hand a
+trigger to any permanent, so that board is still walked whole (under the
+freeze scope it already took); without one only a permanent with a
+printed trigger or a Station band can contribute — `card_is_triggerer`,
+the trigger member list's own predicate — so the walk is
+`for_each_triggerer`. The `(-196)` refutation in this function was a
+*per-card* fold gate (a memo load against a one-element tag loop, a
+wash); this skips the cards, not the compare.
+
+**Measured twice, and the first reading is the reason `(-229)` exists:**
+against the `(-226)` tip this read `cube` **+0.86 %** with its own rows
+at -8 M, because the build flipped the layer pass's `extend` out of
+line. **When a total contradicts the device's rows, diff the two self
+tables before believing either** — the confound was two rows the edit
+never touched, and pinning them was worth more than the device.
+
+### `(-229)` TAKEN — the layer pass fills its effect list with push loops, not `SmallVec::extend`: `cube` -0.341 % / `fixed` -0.174 % / `sealed` -0.004 %
+
+```text
+  pool    base (-226)       (-229)          delta
+  fixed     738,014,635     736,733,907   **-0.174 %**
+  cube    2,019,586,479   2,012,692,074   **-0.341 %**
+  sealed  2,069,367,315   2,069,285,360   **-0.004 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  compute_permanent_pass self (cube)   81.09 M -> 74.22 M;  SmallVec::extend <- compute_permanent_pass: gone (was inlined at (-226), out of line at (-228)'s first build)
+```
+
+Found by the confound, not by a profile: `(-228)`'s first build (a
+stack.rs-only edit) read `cube` **+0.86 %** with the device's own rows
+at -8 M, and the self-table diff put the whole difference in two rows the
+edit never touched — `SmallVec::extend` +27.6 M and `compute_permanent_
+pass` -10.2 M. `compute_permanent_pass` built its per-permanent effect
+list with two `extend`s, one over a `Filter`; whether that generic
+inlines is decided per build, and out of line it is 420,672 calls at
+~137 Ir on `cube` against ~0 inlined. **A generic adapter on a
+400 k-call path is a coin the inliner flips on every build; write the
+inlined shape down.** Two `push` loops are that shape. The `(-156)` rule
+("a std-adapter rewrite is worth ~10 % of the adapter's self") is about a
+row that *is* inlined; this one is about keeping it so, and the loop form
+also reads below the previously-inlined build (-6.9 M self on `cube`).
+`sealed` is flat because its layer pass is dominated by boards where the
+list is longer and the loop body, not the frame, is the cost.
 
 ### `(-227)` REFUTED — a `reserve(32)` in `advance_step` ahead of the damage steps' first push: `sealed` +0.298 % / `fixed` +0.241 % / `cube` +0.220 %, reverted
 
