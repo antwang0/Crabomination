@@ -243,10 +243,10 @@ pub struct PlayerData {
     /// `creatures_entered_last_turn` at end of turn — Ephara, God of the
     /// Polis reads the previous turn's entries at each upkeep.
     #[serde(default)]
-    pub creatures_entered_this_turn: Vec<crate::card::CardId>,
+    pub creatures_entered_this_turn: crate::oftenempty::OftenEmpty<crate::card::CardId>,
     /// Last turn's `creatures_entered_this_turn` (see above).
     #[serde(default)]
-    pub creatures_entered_last_turn: Vec<crate::card::CardId>,
+    pub creatures_entered_last_turn: crate::oftenempty::OftenEmpty<crate::card::CardId>,
     /// CR 309 — the dungeon this player is currently in: (name, room index).
     /// `None` between dungeons; venturing with `None` enters a new dungeon.
     #[serde(default)]
@@ -258,7 +258,7 @@ pub struct PlayerData {
     /// the same creature); the list clears at cleanup so an unused rider
     /// expires with the turn. `#[serde(default)]`.
     #[serde(default)]
-    pub pending_creature_etb_counters: Vec<(crate::card::CounterType, u32)>,
+    pub pending_creature_etb_counters: crate::oftenempty::OftenEmpty<(crate::card::CounterType, u32)>,
     /// Card ids of creatures that have dealt damage to this player so far
     /// this turn (combat or non-combat). Reset for all players at the
     /// active player's `do_untap`. Powers "destroy target creature that
@@ -266,13 +266,13 @@ pub struct PlayerData {
     /// `SelectionRequirement::DealtDamageToControllerThisTurn`). Defaults
     /// empty for snapshot back-compat.
     #[serde(default)]
-    pub creatures_that_damaged_me_this_turn: Vec<crate::card::CardId>,
+    pub creatures_that_damaged_me_this_turn: crate::oftenempty::OftenEmpty<crate::card::CardId>,
     /// Creature types among this player's creatures that dealt combat damage
     /// to a player this turn (CR 702.76 Prowl). Stamped at the combat-damage
     /// funnels, cleared at the turn boundary. `#[serde(default)]` for
     /// snapshot back-compat.
     #[serde(default)]
-    pub prowl_types_this_turn: Vec<crate::card::CreatureType>,
+    pub prowl_types_this_turn: crate::oftenempty::OftenEmpty<crate::card::CreatureType>,
     /// Ids of the cards that reached this graveyard from anywhere this turn.
     /// Backs `SelectionRequirement::PutIntoGraveyardThisTurn` (Reenact the
     /// Crime).
@@ -284,11 +284,11 @@ pub struct PlayerData {
     /// time; the discount applies only while the tally still equals it.
     /// Cleared each turn alongside the tally.
     #[serde(default)]
-    pub pending_is_discounts: Vec<(u32, u32)>,
+    pub pending_is_discounts: crate::oftenempty::OftenEmpty<(u32, u32)>,
     /// Like `pending_is_discounts` but for *any* next spell this turn
     /// (Mutated Cultist): `(amount, spells_cast_this_turn at grant)`.
     #[serde(default)]
-    pub pending_spell_discounts: Vec<(u32, u32)>,
+    pub pending_spell_discounts: crate::oftenempty::OftenEmpty<(u32, u32)>,
     /// CR 500.4 exception — mana added by an effect that says "you don't lose
     /// this mana as steps and phases end" (Savage Ventmaw's attack trigger).
     /// Re-seeded into the pool by `empty_mana_pools` on every step/phase empty
@@ -1161,8 +1161,8 @@ impl Player {
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
             zuberas_died_this_turn: 0,
-            creatures_entered_this_turn: Vec::new(),
-            creatures_entered_last_turn: Vec::new(),
+            creatures_entered_this_turn: Default::default(),
+            creatures_entered_last_turn: Default::default(),
             artifacts_entered_this_turn: 0,
             planeswalkers_entered_this_turn: 0,
             nonland_permanents_entered_this_turn: 0,
@@ -1172,7 +1172,7 @@ impl Player {
             channel_life_for_mana: false,
             dungeon: None,
             dungeons_completed: 0,
-            pending_creature_etb_counters: Vec::new(),
+            pending_creature_etb_counters: Default::default(),
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             damage_taken_this_turn: 0,
@@ -1182,11 +1182,11 @@ impl Player {
             play_from_top_this_turn: false,
             cast_from_library_top_this_turn: false,
             life_lost_this_turn: 0,
-            creatures_that_damaged_me_this_turn: Vec::new(),
+            creatures_that_damaged_me_this_turn: Default::default(),
             lands_entered_this_turn: 0,
             creature_spell_countered_by_opponent_this_turn: false,
             noncreature_destroyed_by_opponent_this_turn: false,
-            prowl_types_this_turn: Vec::new(),
+            prowl_types_this_turn: Default::default(),
             prowl_any_type_this_turn: false,
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
@@ -1211,8 +1211,8 @@ impl Player {
             spells_cast_from_hand_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
             extra_etb_p1p1_counters_this_turn: 0,
-            pending_is_discounts: Vec::new(),
-            pending_spell_discounts: Vec::new(),
+            pending_is_discounts: Default::default(),
+            pending_spell_discounts: Default::default(),
             face_down_discount_this_turn: 0,
             cards_discarded_this_turn: 0,
             permanents_sacrificed_this_turn: 0,

@@ -1840,12 +1840,12 @@ fn ephara_draws_after_a_creature_turn() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "no entry last turn — no draw");
     // A bear entered this turn; only Ephara herself doesn't count.
-    g.players[0].creatures_entered_last_turn = vec![eph];
+    g.players[0].creatures_entered_last_turn = vec![eph].into();
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "Ephara alone doesn't count");
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].creatures_entered_last_turn = vec![bear];
+    g.players[0].creatures_entered_last_turn = vec![bear].into();
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "draws after a creature turn");

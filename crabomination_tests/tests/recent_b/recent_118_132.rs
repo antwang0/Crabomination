@@ -2109,7 +2109,7 @@ mod recent131 {
             "gains trample + indestructible",
         );
         // The elk's own arrival must not satisfy the self-excluding predicate.
-        g.players[0].creatures_entered_this_turn = vec![elk];
+        g.players[0].creatures_entered_this_turn = vec![elk].into();
         let cp = g.computed_permanent(elk).unwrap();
         assert!(!cp.keywords().contains(&Keyword::Trample), "own arrival doesn't count");
     }

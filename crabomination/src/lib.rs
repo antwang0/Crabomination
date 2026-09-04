@@ -24,6 +24,7 @@ pub mod audit;
 
 /// `CopyVec` — a `SmallVec` whose `Clone` is a memcpy; see the module.
 pub use crabomination_base::copyvec;
+pub use crabomination_base::oftenempty;
 pub mod cow;
 pub mod crossplay;
 pub mod cube;
