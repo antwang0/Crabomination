@@ -1518,6 +1518,28 @@ impl Battlefield {
         self.store_lane(LANE_TRIGGERER, epoch, true);
     }
 
+    /// Visit every permanent that can carry a printed trigger or a Station
+    /// band: the [`trigger_members`](Self::trigger_members) list on a hit,
+    /// the whole board on a miss (the dispatcher fills the list; this never
+    /// does). For a walker whose per-card body reads only
+    /// `definition.triggered_abilities` / `station` — the combat
+    /// declaration's two whole-board trigger walks (PERF `(-222)`).
+    #[inline]
+    pub fn for_each_triggerer(&self, mut f: impl FnMut(&CardInstance)) {
+        match self.trigger_members() {
+            Ok(mut bits) => {
+                while bits != 0 {
+                    let i = bits.trailing_zeros() as usize;
+                    bits &= bits - 1;
+                    if let Some(c) = self.cards.get(i) {
+                        f(c);
+                    }
+                }
+            }
+            Err(_) => self.cards.iter().for_each(f),
+        }
+    }
+
     /// Append, through [`CowBox`]'s own `push` so an unshare materializes with
     /// room for the card (PERF `(-76)`). Inherent, so it shadows the `Deref`'d
     /// `Vec::push`.

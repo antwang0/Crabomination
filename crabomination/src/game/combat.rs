@@ -1634,11 +1634,14 @@ impl GameState {
                     matches!(atk.target, crate::game::types::AttackTarget::Planeswalker(_));
                 // Plain loops, same reason as `groups` above: a whole-board
                 // walk per attacker, and the `flat_map` was ~20 Ir a
-                // permanent before the filter saw a single trigger.
+                // permanent before the filter saw a single trigger. Over the
+                // trigger member list, not the board (PERF `(-222)`): the
+                // body reads printed triggers only, and most of a board
+                // carries none.
                 let mut listeners: Vec<(CardId, Effect)> = Vec::new();
-                for c in self.battlefield.iter() {
+                self.battlefield.for_each_triggerer(|c| {
                     if c.controller != defender {
-                        continue;
+                        return;
                     }
                     for t in &c.definition.triggered_abilities {
                         if t.event.kind == EventKind::Attacks
@@ -1651,7 +1654,7 @@ impl GameState {
                             listeners.push((c.id, t.effect.clone()));
                         }
                     }
-                }
+                });
                 for (src, effect) in listeners {
                     self.stack.push(
                         TriggerPush::new(src, defender, effect)
@@ -1757,10 +1760,11 @@ impl GameState {
         if any_attackers {
             let ap = self.active_player_idx;
             #[allow(clippy::type_complexity)]
-            // Plain loops, same reason as `groups` and `listeners` above.
+            // Plain loops, same reason as `groups` and `listeners` above, and
+            // over the trigger member list for the same reason as `listeners`.
             let mut you_attack: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> =
                 Vec::new();
-            for c in self.battlefield.iter() {
+            self.battlefield.for_each_triggerer(|c| {
                 let ctrl = c.controller;
                 for t in &c.definition.triggered_abilities {
                     if t.event.kind == EventKind::YouAttack
@@ -1770,7 +1774,7 @@ impl GameState {
                         you_attack.push((c.id, ctrl, t.effect.clone(), t.event.filter.clone()));
                     }
                 }
-            }
+            });
             for (src, ctrl, effect, filter) in you_attack {
                 // CR 603.2 — the "whenever you attack with …" rider is a
                 // trigger-time gate read off the finished attack declaration.
