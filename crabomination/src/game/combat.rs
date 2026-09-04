@@ -5413,8 +5413,12 @@ impl GameState {
         // fires — 6,480 / 20,022 / 22,134 allocations over six bench games.
         // The inner buckets stay `Vec`, and `Vec::new()` does not allocate
         // until something is pushed into it, which on most boards is never.
-        let mut by_kind: SmallVec<[Vec<DamageTrigger>; 4]> =
-            kinds.iter().map(|_| Vec::new()).collect();
+        // A loop, not a `collect`: `SmallVec`'s `Extend` is external
+        // iteration (PERF's standing rule, `(-211)`).
+        let mut by_kind: SmallVec<[Vec<DamageTrigger>; 4]> = SmallVec::new();
+        for _ in kinds {
+            by_kind.push(Vec::new());
+        }
 
         // One lookup of the dealer, not two: the controller Phase 1b onward
         // needs is a field of the card Phase 1 walks the battlefield to find.
@@ -5433,9 +5437,12 @@ impl GameState {
                 dealer = Some(c);
             }
             any_attached |= c.attached_to == Some(source);
-            soulbond_pair |= c.definition.soulbond_bonus.is_some()
-                && c.soulbond_partner.is_some()
-                && (c.id == source || c.soulbond_partner == Some(source));
+            // Instance fields first, the definition deref last: `soulbond_
+            // partner` is `None` on nearly every permanent, and the bonus
+            // read is a pointer chase into the definition (PERF `(-211)`).
+            soulbond_pair |= c.soulbond_partner.is_some()
+                && (c.id == source || c.soulbond_partner == Some(source))
+                && c.definition.soulbond_bonus.is_some();
         }
         if let Some(c) = dealer {
             attacker_controller = Some(c.controller);
