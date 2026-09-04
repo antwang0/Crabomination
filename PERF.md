@@ -20114,6 +20114,136 @@ keyword presence questions went behind lanes at `(-188)`..`(-192)` and
 `(-204)`.** The next grep, if any, is `triggered_abilities` reads under
 `players.iter()` (hand / library / command walks per event), which the
 dispatcher already gates by event kind.
+
+**RE-READ AT the `(-241)` tip — the plain `cube` self table and a
+`--separate-callers=3` `cube` dump (1,941,531,669 Ir), read as
+allocation, growth, unshare and collect tables *by context*. Leads first
+with their ceilings, then the floors, so nobody re-reads them.**
+
+```text
+  cube self at (-241), 1,941,530,315 Ir
+    79.5 M  4.10 %  dispatch_triggers_for_events      floor ((-21)'s search count; 86.7 M at (-219))
+    78.4 M  4.04 %  gather_continuous_effects_inner   58 k gathers; needs a version
+    74.2 M  3.82 %  compute_permanent_pass            the layer pass (81.1 M at (-219); (-229)'s push loops)
+    59.4 M  3.06 %  _int_free                         the allocator: with malloc 45.3 M, _int_malloc 43.0 M,
+                                                      free 37.0 M and arena free 10.4 M, ~195 M / 10.0 %
+    59.3 M  3.05 %  Vec::from_iter                    collects; the table below
+    56.3 M  2.90 %  memcpy                            the unshares' and probe clones' element copies
+    50.8 M  2.62 %  Arc::clone_from_ref_in            the CoW unshares' element clones
+    46.1 M  2.38 %  check_state_based_actions_into    the sweep
+    42.6 M  2.19 %  computed_permanent_hinted         read at (-219): a memo index is marginal
+    38.5 M  1.98 %  perform_action_inner              floor
+    28.5 M  1.47 %  fire_combat_damage_triggers       unchanged; still wants profiling-lines
+    26.8 M  1.38 %  affected_includes_gated           floor
+    25.2 M  1.30 %  declare_blockers                  after (-223)
+    25.0 M  1.29 %  sba_board_scan                    instance-gated, floor
+    23.6 M  1.22 %  FnMut::call_mut                   closure bodies under collects; (-232) showed the shim itself is nothing
+    22.4 M  1.15 %  declare_attackers_banded          after (-222)
+    19.2 M  0.99 %  resolve_combat_into               after (-225)
+    18.2 M  0.94 %  bot::available_mana               floor ((-199) device)
+    18.2 M  0.94 %  Vec::clone                        the unshared owners' Vec fields
+    14.1 M  0.73 %  blocker_pair_block                49 k pair checks under pick_blocks_inner; not yet read
+```
+
+```text
+  __rust_alloc by context (calls / Ir inclusive of the callee)
+   213,799  14.4 M  grow_one                       every Vec growing from empty or doubling
+   151,960  20.7 M  clone_from_ref_in <- make_mut_slow   the CoW unshares, all owners
+    47,780   3.8 M  PrintedList::push <- compute_permanent_pass
+    40,252   2.5 M  Vec::clone <- clone_from_ref_in      the unshared owners' Vec fields
+    33,625   4.0 M  RawVecInner::reserve
+    24,764   1.4 M  GameState::clone <- accept_on <- pay_census::in_probe   the probes
+    23,576   1.3 M  dispatch_scan_card <- dispatch_board_scan
+
+  grow_one by context (grow calls / Ir)
+    48,364   1.4 M  push_mut <- activate_ability_inner   24,156 of them under auto_tap_for_cost_inner (2.9 M)
+    47,152   1.3 M  dispatch_scan_card <- dispatch_board_scan   (+2.1 M under dispatch_triggers_for_events)
+    19,760   1.1 M  IdSet::insert <- declare_attackers_banded
+    19,396   0.5 M  affected_from_requirement <- selector_to_affected
+    16,504   0.6 M  deal_combat_damage_to_target
+    14,890   0.4 M  advance_step
+    14,672   0.4 M  push_trigger_grants <- trigger_grant_sources
+    13,816   0.8 M  resolve_combat_into
+    13,316   2.5 M  push_mut <- declare_attackers_banded
+    12,736   1.1 M  declare_blockers
+
+  make_mut_slow by context (element clones under it / Ir)
+   273,896  13.9 M  cast_spell_with_convoke        34,756 unshares / 29.9 M: ~7.9 owners a probe cast, 860 Ir each
+    97,998   6.3 M  resolve_top_of_stack_inner
+    45,788   1.8 M  declare_blockers
+    41,912   2.1 M  on_left_battlefield <- remove_from_battlefield_to_graveyard_raw
+    32,624   4.2 M  Battlefield::find_by_id_mut <- activate_ability_inner   the probe's first land tap unshares the board
+    27,648   0.9 M  CardInstance::clear_end_of_turn_effects <- cleanup_wear_off   already behind end_of_turn_effects_are_clear
+    27,004   0.6 M  declare_attackers_banded
+    19,298   0.4 M  adjust_life <- deal_combat_damage_to_target
+    18,540   1.2 M  run_effect;  18,054 / 1.0 M cleanup_wear_off;  17,920 / 0.7 M dispatch_triggers_for_events
+
+  Vec::from_iter by context (collects / Ir inclusive)
+   132,434  26.4 M  call_mut <- from_iter <- pick_blocks_inner <- with_frozen_layers   30,092 / 18.2 M of it is computed_permanent_hinted
+    52,124  21.4 M  from_iter <- compute_permanents <- combat_damage_computed <- resolve_combat_into
+    34,852  23.3 M  from_iter <- pick_blocks_inner <- with_frozen_layers <- simulate_attack_outcome_once
+    34,184  11.0 M  from_iter <- check_state_based_actions_into <- resolve_top_of_stack_inner   the sweep's view collect
+    32,700  11.9 M  from_iter <- compute_permanents <- declare_blockers
+    69,802   3.6 M  printed_requirement_impl <- from_iter <- resolve_selector_inner
+    42,300   4.1 M  from_iter <- resolve_selector_inner <- resolve_selector <- evaluate_predicate
+    39,690   4.4 M  Map::fold <- from_iter <- declare_attackers_banded
+    33,932   1.1 M  Chain::fold <- from_iter <- dispatch_triggers_for_events
+    30,652   1.5 M  from_iter <- cast_spell_with_convoke
+```
+
+* **Lead — `dispatch_board_scan`'s grant list: a fresh `Vec<TriggerGrant>`
+  per dispatch, 23,576 allocations / ~3.5 M (0.18 %).** `DispatchScan`
+  borrows `&self`, so a buffer on the state cannot hold it; the device is
+  a `SmallVec<[TriggerGrant; 2]>` (one or two grants is the whole
+  population), *and* `TriggerGrant.filter` is a `SelectionRequirement` by
+  value that `resolve_named_by_source` clones on every dispatch — borrow
+  the filter and resolve only in the match that reads it. Ceiling ~0.2 %
+  `cube`; a `SmallVec` of a fat element costs a move per push, so the
+  A/B must read both halves separately (the `(-227)` lesson: price the
+  form, not the idea).
+* **Lead — a `Vec::push` from empty inside `activate_ability_inner`,
+  24,182 allocations / 2.9 M, all of them under the bot's
+  `auto_tap_for_cost_inner`:** one allocation per mana ability the
+  auto-tapper activates in a probe. Which `Vec` is a `profiling-lines`
+  question, or a read of the push sites below the `(Vec::new(),
+  Vec::new())` at the printed-index branch; the fix is a `SmallVec` or a
+  capacity from the count the caller already knows. Ceiling 0.15 %.
+* **Lead — the selector collect under `evaluate_predicate`: 42,300
+  collects / 4.1 M plus the 69,802 requirement evaluations inside them
+  (3.6 M).** `resolve_selector` returns a `Vec<EntityRef>`; the `Value`
+  arms in `evaluate_value` take `.len()`, a `filter_map(..).sum()`, or a
+  `find_map` of it. A visitor form (`for_each_selected`) drops the
+  allocation and the copy but not the requirement evaluation, so the
+  ceiling is ~0.2 % for a diff across every `Value` arm — bundle it with
+  a selector change that is needed anyway, not alone.
+* **`PrintedList::push` — 47,780 pushes / 10.8 M inclusive (226 Ir each),
+  every one under `compute_permanent_pass`, one allocation each already
+  (`Box<[T]>`, the eighty-fourth pass).** What is not counted: a *second*
+  push on the same list re-materializes the whole slice (`Box<[T]>` has
+  no headroom by design). If a large share of the 47,780 are seconds, a
+  `SmallVec<[Keyword; 4]>` override with headroom saves them at the
+  `ComputedPermanent` byte cost already priced at +0.04 % / +0.058 % for
+  eight bytes; count the seconds before pricing — probably half of the
+  grants are a lone keyword and the answer is "no".
+* **`blocker_pair_block` — 14.1 M self, ~49 k calls under
+  `pick_blocks_inner` (34,602 + 14,474) plus 5,220 under
+  `declare_blockers`, ~250 Ir a pair.** Not read this pass; it is the
+  planner's per-pair legality check and the next self row to open.
+* **Floors, so nobody re-prices them:** the allocator's ~195 M (10 %) is
+  the sum of the contexts above, most of it the probe design — a
+  `GameState::clone` per probe (24,764; 13.8 M self) followed by the
+  ~7.9 unshares a probe cast makes (`cast_spell_with_convoke` 29.9 M)
+  and the board unshare on its first land tap (`find_by_id_mut` 4.2 M),
+  all of them the `(-200)`/`(-201)` per-owner floor. The
+  `compute_permanents` collects under `combat_damage_computed`
+  (21.4 M), `declare_blockers` (11.9 M) and the SBA sweep (11.0 M) are
+  the gather-version memo the gathers entry rejects for want of a
+  version; `pick_blocks_inner`'s two collects (26.4 M + 23.3 M) are the
+  planner's own passes, the `(-194)` census. `clear_end_of_turn_effects`
+  is already behind its emptiness gate; the 27,648 clones under it are
+  the survivors' CoW'd groups. `IdSet::insert` and the `push_mut` under
+  `declare_attackers_banded` (1.1 M + 2.5 M) are the attack search's
+  per-declaration sets, `(-21)`'s count.
 Before it:
 **State at the `(-219)` tip (`(-216)`..`(-219)`, three-pool Ir against
 the `(-215)`+fix tip `999da717`): `fixed` 763,717,868 -> 745,162,927

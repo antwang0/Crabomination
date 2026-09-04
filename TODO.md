@@ -49,12 +49,14 @@ sixty-seventh pass, so don't re-take that.
    functions by self cost — six lanes free on the word); "diff the gates of a mechanic's two
    sides" (`(-223)`); and **when a total contradicts the device's rows, diff the two self
    tables** (`(-229)`).
-4. **Perf leads:** thin again. The `static_abilities` grep's residue is all below ~2 M a pool
-   (`empty_mana_pools` gates on pool emptiness already; `advance_step`'s draw-skip walk is once
-   a turn); `declare_attackers_banded`'s `groups` walk (~230 Ir x 6.8 k); the probe clones'
-   fresh event buffer (`(-227)`); `computed_permanent_hinted`'s hit-path scan (~10 M). The
-   same grep for `keywords` reads (`definition.keywords.iter().any`) is the next sweep to run.
-   `PERF.md` ~20.5 k lines after the candidates tail moved to `PERF_ARCHIVE.md` (verbatim).
+4. **Perf leads — replenished from a `--separate-callers=3` `cube` dump at `(-241)` (PERF
+   candidates, "RE-READ AT the `(-241)` tip", by-context allocation / growth / unshare /
+   collect tables):** `dispatch_board_scan`'s fresh grant `Vec` + the per-dispatch filter
+   clone (23.6 k allocs, ~0.2 %); a push-from-empty in `activate_ability_inner` under the
+   auto-tapper (24 k allocs, 0.15 %); the selector collect under `evaluate_predicate` (~0.2 %,
+   wide diff); `blocker_pair_block` 14 M self, unread. Both grep sweeps (`static_abilities`,
+   `keywords`) are done and recorded there — do not re-run them. Floors are listed too.
+   `PERF.md` ~20.7 k lines after the candidates tail moved to `PERF_ARCHIVE.md` (verbatim).
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
