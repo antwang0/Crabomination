@@ -489,11 +489,15 @@ const LANE_DAMAGE_STATIC: u32 = 38;
 /// walk the board for per land-play question (PERF `(-236)`). See
 /// [`card_has_land_play_static`].
 const LANE_LAND_PLAY_STATIC: u32 = 40;
+/// Any permanent's definition lets mana be spent as though it were any
+/// colour — the three `StaticEffect`s the payment relaxation walks the board
+/// for on every payment (PERF `(-237)`). See [`card_has_any_color_static`].
+const LANE_ANY_COLOR_STATIC: u32 = 42;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 21;
+const LANE_COUNT: usize = 22;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -530,6 +534,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_etb_static),                           // LANE_ETB_STATIC
     Some(card_has_damage_replacement_static),         // LANE_DAMAGE_STATIC
     Some(card_has_land_play_static),                  // LANE_LAND_PLAY_STATIC
+    Some(card_has_any_color_static),                  // LANE_ANY_COLOR_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -668,6 +673,21 @@ fn card_has_land_play_static(c: &CardInstance) -> bool {
                 | S::ControllerCantPlayLands
                 | S::MostPermanentsCantPlay
                 | S::ExtraLandPerTurn
+        )
+    })
+}
+
+/// Does this permanent's definition let mana be spent as any colour —
+/// Mycosynth Lattice, Unexpected Potential, Emissary's Ploy? The
+/// [`LANE_ANY_COLOR_STATIC`] predicate; definition-only.
+fn card_has_any_color_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as S;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            S::PlayersMaySpendManaAsAnyColor
+                | S::MaySpendManaAsAnyColorForNamedSpells
+                | S::MaySpendManaAsAnyColorForCreaturesWithChosenMv
         )
     })
 }
@@ -1337,6 +1357,14 @@ impl Battlefield {
     #[inline]
     pub fn has_land_play_static(&self) -> bool {
         self.lane(LANE_LAND_PLAY_STATIC, card_has_land_play_static)
+    }
+
+    /// Does any permanent here let mana be spent as any colour
+    /// ([`card_has_any_color_static`])? Read once per payment by the cost
+    /// relaxation (PERF `(-237)`).
+    #[inline]
+    pub fn has_any_color_static(&self) -> bool {
+        self.lane(LANE_ANY_COLOR_STATIC, card_has_any_color_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

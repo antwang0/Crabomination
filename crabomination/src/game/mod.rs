@@ -8628,12 +8628,13 @@ impl GameState {
         if !self.colored_mana_becomes_this_turn.is_empty() {
             return true;
         }
-        self.battlefield.iter().any(|src| {
-            src.definition
-                .static_abilities
-                .iter()
-                .any(|sa| matches!(sa.effect, StaticEffect::PlayersMaySpendManaAsAnyColor))
-        })
+        self.battlefield.has_any_color_static()
+            && self.battlefield.iter().any(|src| {
+                src.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::PlayersMaySpendManaAsAnyColor))
+            })
     }
 
     /// The spell-aware form: also true when `seat` controls a face-up source
@@ -8675,7 +8676,10 @@ impl GameState {
         // One walk of each permanent's static list, not two: the seat-agnostic
         // `PlayersMaySpendManaAsAnyColor` arm and the two seat-scoped ones
         // read the same `Vec`, and this runs once per payment.
-        let board = self.battlefield.iter().any(|c| {
+        // Behind the lane (PERF `(-237)`): this is once per payment and the
+        // three statics are on no ordinary board.
+        let board = self.battlefield.has_any_color_static()
+            && self.battlefield.iter().any(|c| {
             let mine = seat.is_some_and(|s| c.controller == s && !c.face_down);
             c.definition.static_abilities.iter().any(|sa| match sa.effect {
                 StaticEffect::PlayersMaySpendManaAsAnyColor => true,
