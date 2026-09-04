@@ -621,6 +621,9 @@ pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
                 | CantBeBlockedUnlessAllBlock
                 | CantBeBlockedByMoreThanOne
                 | CantBlock
+                | Flanking
+                | Bushido(_)
+                | Rampage(_)
                 | Phasing
                 | CumulativeUpkeep(_)
                 | DoesntUntapWhileCounter(_)

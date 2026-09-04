@@ -2316,15 +2316,31 @@ impl GameState {
                 ids.push(a);
             }
         }
-        let computed: SmallVec<[(CardId, Vec<Keyword>); 8]> = self.with_frozen_layers(|g| {
-            ids.iter()
-                .map(|&id| {
-                    let kws =
-                        g.computed_permanent(id).map(|c| c.keywords().to_vec()).unwrap_or_default();
-                    (id, kws)
-                })
-                .collect()
-        });
+        //
+        // And only when some permanent can carry one of the three at all:
+        // this scope was a fresh gather plus a layer-pass miss per
+        // participant on every declaration (14,554 asks / 21.3 M Ir, 1.10 %
+        // of a six-game `cube` run at the `(-245)` tip), read for three
+        // keywords no bench board prints. `false` is authoritative for
+        // every computed keyword set (see `board_keyword_in_scope`), so an
+        // empty list here reads exactly as the views would have.
+        let pt_keyword_in_scope = self
+            .board_keyword_matching(|k| matches!(k, Keyword::Flanking | Keyword::Bushido(_) | Keyword::Rampage(_)));
+        let computed: SmallVec<[(CardId, Vec<Keyword>); 8]> = if pt_keyword_in_scope {
+            self.with_frozen_layers(|g| {
+                ids.iter()
+                    .map(|&id| {
+                        let kws = g
+                            .computed_permanent(id)
+                            .map(|c| c.keywords().to_vec())
+                            .unwrap_or_default();
+                        (id, kws)
+                    })
+                    .collect()
+            })
+        } else {
+            SmallVec::new()
+        };
         let kws_for = |id: CardId| -> &[Keyword] {
             computed.iter().find(|(i, _)| *i == id).map_or(&[][..], |(_, k)| k)
         };
