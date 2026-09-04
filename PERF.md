@@ -22921,6 +22921,50 @@ effects_inner` 3.65 %, `compute_permanent_pass` 3.17 %, `Vec::from_iter`
 2.99 %, `Arc::clone_from_ref_in` 2.60 %, `memcpy` 2.51 %, SBA 2.33 %,
 `activate_ability_inner` 2.05 %, `computed_permanent_hinted` 1.96 %.
 
+**RE-READ AT `966289ae` (the `(-202)` tip) — a fresh `cube` self table
+and a `--separate-callers=3` dump, ranked by caller. Rows and what they
+say; the first two are leads, the rest are floors read so nobody
+re-reads them.**
+
+* **The death path — 10,116 `remove_from_battlefield_to_graveyard_raw`
+  calls x ~4,800 Ir = 48.5 M (2.2 % of `cube`), under the SBA sweep
+  (9,096 of them).** Three ~1,100-Ir bodies per death — the function's
+  own self (10.8 M), `place_card_at_resolved_zone` (12.8 M) and
+  `on_left_battlefield` (10.9 M) — plus `remove_from_combat` 2.3 M,
+  `note_creature_death` 7.3 M and `dying_snapshot` 4.9 M beside it in
+  the sweep. Nothing in the callee table names a single cost; the
+  instrument is a `profiling-lines` read of the three bodies (How to
+  measure), not a caller ranking. Not read this run.
+* **The SBA sweep is 10.5 % of the program inclusive (21,222 calls,
+  232 M)** and its cost is *which* sweep: `resolve_combat`'s 4,286
+  post-damage sweeps cost 17,760 Ir each (76 M) and the 562 under the
+  bot's `submit_decision` 89 k each (50 M), against 7,000 for the 9,038
+  after a stack resolution. The death path above is most of the
+  difference; the rest is the per-sweep view collection (`Vec::from_iter`
+  24,286 calls / 38.8 M — `compute_permanents` on the id subset the
+  lethal-damage walk needs) and `sba_board_scan` at 1,231 Ir a sweep
+  (26.3 M). The sweep's own self is 2,480 Ir a call (52.7 M): the
+  per-permanent legality checks, diffuse — a line read if ever.
+* **`compute_permanent_pass`'s `SmallVec::extend` — 399,380 calls /
+  54.2 M (2.5 %) — is the layer filter loop itself and at its floor.**
+  Line ~147: `sorted.extend(effects.iter().filter(affects))`, one pass per
+  (scope, permanent) — `computed_permanent_hinted` memoizes the rest —
+  and `(-156)`'s rule prices a hand loop at ~10 % of the adapter row. The
+  `affected_includes_gated` inside it (26.9 M) was already refuted above.
+* **`dispatch_triggers_for_events` 143,852 calls / 157 M inclusive
+  (7.1 %): 42 % of it (61,874 calls, 65.8 M) is `perform_action_inner <-
+  sim_step <- simulate_attack_outcome_once`** — the attack search's own
+  sim steps at 1,063 Ir a dispatch. That is `(-21)`'s search-count
+  decision, not a dispatcher cost; the dispatcher's self (89 M, 4.0 %)
+  is the per-event bookkeeping the Standing rules already describe.
+* `fire_combat_damage_triggers`: 73,534 calls / 45 M inclusive, 52,974
+  of them the function calling itself (a per-event recursion at ~25 Ir —
+  cheap); the 20,560 outer calls carry the cost at ~2,000 Ir, mostly the
+  `by_kind: SmallVec<[Vec<DamageTrigger>; 4]>` build + `Flatten` drop
+  per batch. A line read before anything; 0.4 % at most.
+* `perform_action_inner` self 38.5 M over 125,666 calls (306 Ir): the
+  checkpoint plus the action dispatch. Read by line if ever; diffuse.
+
 Open, priced, largest first:
 
 * **A printed-mana-ability fast path in `activate_ability_inner` —

@@ -54,9 +54,12 @@ sixty-seventh pass, so don't re-take that.
    waste, only the sum of ~100 gates + the digest + the generic resolver); the SBA's
    attachment-legality protection asks (5,896 x ~530 Ir = 0.14 % of `cube`, a presence-gate
    board walk under `&mut self` — a lane question); `grants_nothing_slow` is at its floor
-   (one printed-filter test per permanent x grant static, asked once per scan). **The list
-   is thin: the next run should re-profile (`--separate-callers=3`, `cg_contexts.py`) at the
-   tip before pulling anything.**
+   (one printed-filter test per permanent x grant static, asked once per scan). **Re-profiled
+   at the tip (candidates, "RE-READ AT `966289ae`"):** the new lead is **the death path**
+   (10,116 deaths x ~4,800 Ir = 2.2 % of `cube`, three ~1,100-Ir bodies — a `profiling-lines`
+   read is the instrument); the SBA sweep is 10.5 % inclusive and its post-combat sweeps
+   cost 17-89 k Ir each; `compute_permanent_pass`'s extend, the dispatcher under the attack
+   search, and `fire_combat_damage_triggers` are read and closed as floors.
 5. **Cards/rules (leftover only):** primitives unblocking several filed rows — a per-turn
    cast-name memory (Sift Through Sands + Kamigawa "cast X this turn"; `spell_ids_cast_this_turn`
    is the raw material, `Predicate::CastSpellNamedThisTurn` the missing arm), a per-turn
