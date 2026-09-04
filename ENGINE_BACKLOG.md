@@ -242,7 +242,24 @@ A `--games 400 --decks all` sweep over 27 seeds (183,600 games at `22a79dcc`)
 found **no panic, no hang, 4 capped, 22 draws**. Both leads are closed as
 *printed cards working correctly*. **Do not re-open them.**
 
-**Re-run three times since and both leads reproduce verbatim, which is the
+**A fourth re-run, on twenty seeds no sweep or grid had carried (primes
+103..199, 2026-09-04, the `(-247)` tip's tree, debug-assertions overflow
+build): 200,000 games — 20 x `--decks all` x 400 and 20 x `--decks cube` x
+400 — 0 panics, 0 assertion fires, 0 stuck, 26 caps, 24 draws.** Every cap
+is seed 149 or 193 (6 + 8 on `all`, 6 + 6 on `cube`, the same pairing in
+both pools) and every one is fingerprint (a) below — twin `i32::MAX` life
+totals, a library of one card, turn ~2,200 — on Orzhov and Azorius boards
+that differ from the recorded ones only in what else is on them. **What is
+new is the price, not the board:** a capped Beacon game runs ~50,000
+actions on a 40-permanent board and costs ~100 s of a thread on the
+overflow build, so seed 193's `all` cell took 892 s against ~85 s for its
+neighbours and its `cube` cell 488 s against ~40 s. At 14 caps in 136,000
+`all` games that is a ~2 % rate of cells carrying a 10x tail; an actor run
+on a pool with the card pays it too. The action cap is the engine's clock
+and lowering it is a harness decision (a legitimate Scute Swarm game
+decided at 9,223 actions), so this is recorded, not changed.
+
+**Re-run three times before that and both leads reproduce verbatim, which is the
 point of recording their fingerprints here**: 81,600 games / 12 seeds at
 `bd42107c` (cap 2 / stuck 0 / draw 14), again at `d825411f` after seven card
 rewrites (cap 2 / stuck 0 / draw 18), and **68,000 games / 10 seeds after

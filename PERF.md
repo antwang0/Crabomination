@@ -2529,6 +2529,63 @@ a box whose state moves.
 
 ## Baseline
 
+### The consumer-read legs — closing state at the `(-247)` tip
+
+Three engine commits on top of the concurrent session's `(-244)` tip
+`e44e9d90`, each behaviour-preserving (three-pool outcomes identical
+to the `(-242)` base at every leg, `--bench` counters identical, golden
+traces unmoved). The three legs were measured as a chain off the
+`(-242)` tip `e6b58ca4` before `(-243)` and `(-244)` landed and were
+rebased over them twice (no shared line; `(-244)` and `(-247)` both
+touch `game/mod.rs`); the tip row below is one fresh reading of the
+rebased tree against the `(-244)` closing state's numbers.
+
+```text
+  pool     base (-244)      tip (-247)       delta
+  cube     1,928,746,090    1,888,198,355   **-2.102 %**
+  fixed      690,547,383      682,953,228   **-1.100 %**
+  sealed   1,992,138,486    1,971,796,448   **-1.021 %**
+
+  leg      cube      fixed     sealed    what (each against the leg before it, off e6b58ca4)
+  (-245)  -0.278 %  -0.205 %  -0.196 %   pick_attacks_inner's computed CantBlock read behind board_keyword_in_scope
+  (-246)  -1.470 %  -0.843 %  -0.831 %   declare_blockers' Flanking/Bushido/Rampage scope behind board_keyword_matching
+  (-247)  -0.421 %  -0.044 %  -0.025 %   permanent_is_creature's printed line behind card_type_change_in_scope
+  chain   -2.158 %  -1.090 %  -1.050 %   product of the three, off e6b58ca4
+
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,255 / 0 / 5 at the (-246) tree (pre-rebase) and at the rebased tip; golden traces in it
+clippy  --workspace --exclude crabomination_client --all-targets   clean at the tip
+release the release-fast typecheck gate (debug-assertions off): clean at the tip
+--bench profiling-fast at the (-246) tree and at the rebased tip: **195,806 decisions / 27.49
+        turns / 611.9 per game / 0 stalls** — counters identical to 2003d1cf;
+        determinism ok (all pairs split); peak_rss 21.3 / 21.6 MiB
+sweep   fresh seeds on the debug-assertions overflow build (target-audit, this run):
+        20 primes 103..199 x --decks all x 400 games (136,000 games) and the same 20 x
+        --decks cube x 400 (64,000): 200,000 games, 0 panics, 0 assertion fires, 0 stuck,
+        26 caps / 24 draws. Every cap is seed 149 or 193 in either pool, and every one
+        reads twin i32::MAX life totals with a library of one — the Beacon of
+        Immortality class in ENGINE_BACKLOG's closed stall lead (the card is in the
+        cube pool); draws are rules outcomes. ⚠ A Beacon cap costs ~100 s of a thread
+        on the overflow build (seed 193: 892 s for the `all` cell against ~85 s, 488 s
+        for the `cube` cell against ~40 s), so a pool that carries the card has a
+        wall-clock tail an actor run sees; the cap is the clock, and lowering it is a
+        harness decision, not a rules one (ENGINE_BACKLOG has the numbers).
+```
+
+**The device: rank a memo's asks by caller, then read what the caller
+CONSUMES of the view.** `computed_permanent_hinted`'s 284,812 asks
+(11.3 % of `cube`) were ranked by caller on the `(-242)` dump; the
+rows whose consumer was one keyword (`(-245)`), three keywords
+(`(-246)`) or one card type (`(-247)`) went behind the presence gate
+that answers that fact without a view, and the rows whose consumer is
+the whole view are the freeze design's floor. Two rules fell out: **a
+keyword put behind the lane joins `card_has_gate_keyword`'s union** or
+the printed leg answers a wrong `false` (the gate's own debug audit is
+what catches it), and **price a scope by its `with_frozen_layers` row,
+not by the memo's asks** — a scope whose first question is a miss pays
+the gather too, and `(-246)`'s ask row said 21.3 M where the scope said
+25.5 M.
+
 ### The watch-deferral, member-list, block-tax, event-buffer and presence-lane legs — closing state at the `(-244)` tip
 
 Twenty-one engine commits on top of the `(-219)` tip `52b9a743`, each
@@ -7545,6 +7602,121 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-247)` TAKEN — `permanent_is_creature` reads the printed type line behind the card-type presence gate: `cube` -0.421 % / `fixed` -0.044 % / `sealed` -0.025 %
+
+```text
+  pool    base (-246)       (-247)          delta
+  cube    1,907,672,245   1,899,633,344   **-0.421 %**
+  fixed     689,420,559     689,113,878   **-0.044 %**
+  sealed  1,986,793,457   1,986,301,307   **-0.025 %**
+  three-pool outcomes identical
+  permanent_is_creature, cube:  computed_permanent_hinted  2,156 asks / 7.96 M  ->  card_type_change_unscoped  2,144 reads / 0.08 M
+  its callers:                  the SBA sweep's CR 704.5n collect 1,174 + a second collect 236, destroy_permanent 464,
+                                activate_ability_inner 154, sacrifice_one 128
+```
+
+The `(-245)` re-read's `permanent_is_creature` row: 2,156 asks at
+~4,200 Ir each, i.e. every one a whole gather plus a layer pass,
+because the caller is the SBA sweep (`&mut self`, no scope) checking
+whether each attached Equipment's host is still a creature (CR
+704.5n). `compute_permanent_pass` seeds the type line from three
+things — the definition, the CR 702.103d bestowed rewrite, and the
+layer-4 `AddCardType` / `RemoveCardType` / `SetCardTypes`
+modifications — and `card_type_change_in_scope` is the presence gate
+for the third, so `!bestowed && !gate` makes the printed line the
+computed one. The same device `activate_ability_inner` already uses
+for its `is_creature` read (`(-204)`'s leg), applied at the helper so
+its five callers get it at once. `fixed` and `sealed` are flat: the
+asks are attached Equipment, which those pools rarely put on the board.
+
+**Three legs, one read.** `(-245)`, `(-246)` and this one all came off
+ranking `computed_permanent_hinted`'s asks by caller and asking what
+each caller *consumed* of the view: one keyword, three keywords, one
+card type. A presence gate answers each without a view. The rows left
+in that table consume the whole view (the block planner's per-blocker
+and per-attacker facts, the material eval) and are the freeze design's
+floor.
+
+### `(-246)` TAKEN — `declare_blockers`' Flanking / Bushido / Rampage keyword views behind the keyword presence gate: `cube` -1.470 % / `fixed` -0.843 % / `sealed` -0.831 %
+
+```text
+  pool    base (-245)       (-246)          delta
+  cube    1,936,134,211   1,907,672,245   **-1.470 %**
+  fixed     695,281,092     689,420,559   **-0.843 %**
+  sealed  2,003,446,075   1,986,793,457   **-0.831 %**
+  three-pool outcomes identical
+  under declare_blockers, cube:  with_frozen_layers        10,072 -> 5,036 calls   45.29 M -> 19.81 M
+                                 board_keyword_matching         0 -> 5,036 calls    0     ->  0.98 M
+                                 compute_permanents (scope 1)  5,036 unchanged      30.28 M -> 30.25 M
+  program-wide:                  gather_continuous_effects_inner  55,700 -> 52,872 gathers
+```
+
+The `(-245)` re-read's fourth row: `computed_permanent_hinted` under
+`Map::next <- SmallVec::extend <- with_frozen_layers`, 14,554 asks /
+21.3 M, unattributed at three callers deep and `declare_blockers <-
+perform_action_inner` at five. It is the declaration's CR 702.25 /
+702.45 / 702.23 P/T-delta pass: after the block taxes are paid it
+opened a **second** freeze scope and asked a view of every declared
+blocker and attacker — a fresh gather and a layer-pass miss per
+participant, ~5,060 Ir a declaration — to read three keywords off the
+computed sets. No bench archetype prints one, and the cube pool prints
+Flanking on 5 files, Bushido on 37 and Rampage on 13 of a 22 k-card
+catalog. `board_keyword_matching(Flanking | Bushido(_) | Rampage(_))`
+in front of the scope; `false` is authoritative for every computed
+keyword set, so the empty list reads exactly as the views would have.
+The three join `card_has_gate_keyword`'s union.
+
+**Gated, not reused.** The declaration's first scope already computes
+those same participants (`(-215)`'s subset pass) and the obvious
+change is to read `kws_of` there — but the block-tax payments sit
+between the two scopes, and the second reads the *post-payment* state,
+which is the state the CR 702 triggers resolve on. A gate keeps that
+reading; a reuse would have moved it, on a board nobody has, and the
+rule is behaviour-preserving by default.
+
+**The scope was the cost, not the asks.** The ask row said 21.3 M; the
+scope's `with_frozen_layers` row said 25.5 M and the gather count fell
+by 2,828 — a scope whose first question is a miss pays the gather too,
+and a table keyed on the memo's asks does not show it. Price a scope
+by its `with_frozen_layers` row.
+
+### `(-245)` TAKEN — `pick_attacks_inner`'s computed `CantBlock` read behind the keyword presence gate: `cube` -0.278 % / `fixed` -0.205 % / `sealed` -0.196 %
+
+```text
+  pool    base (-242)       (-245)          delta
+  cube    1,941,531,739   1,936,134,211   **-0.278 %**
+  fixed     696,705,944     695,281,092   **-0.205 %**
+  sealed  2,007,370,975   2,003,446,075   **-0.196 %**
+  three-pool outcomes identical
+  under pick_attacks_inner, cube:  computed_permanent_hinted  24,918 -> 15,530 asks   26.34 M -> 19.46 M
+                                   board_keyword_in_scope      4,688 ->  9,376 calls    0.63 M ->  1.34 M
+                                   the legality collect (from_iter)                    10.00 M -> 11.37 M  (asks moved, not removed)
+```
+
+Found by ranking `computed_permanent_hinted`'s 284,812 asks by caller
+on the `(-242)` base dump: `legal_blockers` 51,056 / 34.2 M and
+`permanent_value_with` 44,874 / 43.3 M are the `(-194)` freeze-design
+misses, and the third row was `pick_attacks_inner` at 24,918 / 26.3 M
+— 5.3 asks a pick, ~1,060 Ir each, i.e. nearly all of them scope-first
+misses. The `opp_blockers` walk asked a view of every untapped opposing
+creature to test the *computed* set for `CantBlock`, and the pair
+legality gate that follows short-circuits on the first blocker that
+can block, so most of those views were asked nothing else in the scope.
+`board_keyword_in_scope(&[CantBlock])` once per pick, `false`
+authoritative, and the loop reads two instance fields per permanent.
+`CantBlock` joins `card_has_gate_keyword`'s union, which is the lane's
+printed leg; a keyword missing from that list gets a wrong `false`
+there, and the gate's own `debug_assert!` (the whole-board recompute)
+is the audit — 119 catalog files print `CantBlock`, so the lane is set
+on more boards than before and the per-ask printed scan then runs; the
+gate's +0.7 M is that price, paid on both pools.
+
+**The transferable half: rank a memo's asks by caller and read the
+caller's *consumer*, not the ask.** Three of the top four rows are
+asks whose views are consumed whole; this one consumed a single
+keyword, which is what a presence gate answers without a view. The
+same read found `(-246)` one row further down.
 
 ### `(-244)` TAKEN — the dispatcher's empty batch skips the trigger push, the empty drain and their `Vec` drops: `fixed` -0.571 % / `sealed` -0.437 % / `cube` -0.337 %
 
@@ -20232,6 +20404,58 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**State at the `(-247)` tip (`(-245)`..`(-247)`, three-pool Ir against
+the `(-242)` tip `e6b58ca4`, measured before the concurrent `(-243)`
+landed): `cube` 1,941,531,739 -> 1,899,633,344 (-2.158 %), `fixed`
+696,705,944 -> 689,113,878 (-1.090 %), `sealed` 2,007,370,975 ->
+1,986,301,307 (-1.050 %). The rebased tip's reading against `(-243)`
+is in the Baseline.**
+
+**RE-READ AT the `(-245)` tip — `computed_permanent_hinted`'s 284,812
+asks by caller (218.6 M inclusive, 11.26 % of `cube`), which is where
+both legs came from. What each row is, so nobody re-reads it:**
+
+```text
+  asks     incl Ir    caller <- context                                    what
+  49,768   34.1 M     legal_blockers <- pick_blocks_inner                   (-194): scope-first misses, views consumed whole; floor
+  29,602   26.4 M     permanent_value_with <- eval_material_inner           same; floor
+  14,554   21.3 M     declare_blockers' second scope                        TAKEN (-246): three keywords, gated
+  24,918   26.3 M     pick_attacks_inner (own attackers + opp CantBlock)    TAKEN (-245) for the opp half; the own half feeds may_declare_attacker, needed
+  12,550   19.8 M     call_mut <- from_iter <- pick_blocks_inner            attacker_info's per-attacker views, consumed whole (pair gate, keywords); floor
+   7,882   16.3 M     with_frozen_layers <- declare_blockers                the first scope's subset pass ((-215)); floor
+  11,132    7.9 M     check_target_legality_with_source                     ~710 Ir an ask, mostly hits; not read
+   1,410    5.9 M     permanent_is_creature <- from_iter <- SBA sweep       ~4,200 Ir an ask: out-of-scope misses; TAKEN (-247), the helper gated
+   6,130    5.3 M     blocker_can_block_attacker (by id)                    all under pick_attacks_inner's legality collect; the pair check itself is 1.8 M of it
+     666    3.3 M     intrinsic_land_mana_abilities <- activate_ability     ~5,000 Ir an ask: the want_extra branch's scope; rare
+     884    2.7 M     push_ward_triggers_for_targets <- finalize_cast       ~3,000 Ir an ask; rare
+```
+
+* **TAKEN as `(-247)` — `permanent_is_creature` under the SBA sweep:
+  2,156 asks / 8.0 M, ~4,200 Ir each** (the CR 704.5n equipment-link
+  check, out of any scope). The helper reads the printed line behind
+  `card_type_change_in_scope`; `cube` -0.421 %, the other pools flat.
+* **Lead — the same read over the remaining out-of-scope askers.**
+  `permanent_is_creature` was one helper; the `(-245)` table's
+  `check_target_legality_with_source` (11,132 asks / 7.9 M, ~710 Ir —
+  mostly hits, so the scope exists) and `push_ward_triggers_for_targets`
+  (884 / 2.7 M, ~3,000 Ir — misses) are the next two rows whose consumer
+  may be one fact. Read what each reads off the view before pricing;
+  ceiling ~0.3 % of `cube` between them.
+* **Priced and not built — `pick_blocks_inner`'s gang / requirement /
+  top-up passes ask the pair gate by id** (`blocker_can_block_attacker`
+  re-finds both cards and re-asks both memos): 28 calls a six-game
+  `cube` run. The 6,130-call row above is `pick_attacks_inner`'s
+  legality collect, where the views are *not* in hand and the `all()`
+  short-circuits on the first blocker that can block, so a pre-resolved
+  blocker list would ask more views than it saves on the common board.
+  Neither is a lead.
+* **`blocker_pair_block` read: ~250 Ir a pair is a chain of keyword
+  scans over two ~3-entry lists** (sector lock, three `has_kw`s, the
+  attacker-keyword loop, `cant_block_pairs`, the pure gate) with an
+  early-return per gate. Nothing to hoist; the count is the planner's.
+  Floor.
+
+Before it:
 **State at the `(-241)` tip (`(-220)`, `(-222)`..`(-241)` less the three
 refutations, three-pool Ir against the `(-219)` tip `52b9a743`): `fixed`
 745,162,383 -> 696,705,741 (-6.503 %), `cube` 2,035,552,660 ->

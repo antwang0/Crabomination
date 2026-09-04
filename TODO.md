@@ -28,40 +28,38 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-244)` is the last claimed,
-   `(-245)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
-   rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
-   suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
-   the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
-   point) — `rm -rf target/debug/incremental`, delete superseded binaries and dumps as you go.
-2. **Gates at the `(-244)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
-   release-fast typecheck, `--bench` counters identical to `2003d1cf` at every leg (release,
-   `CRAB_THREAD_CHECK=1` at `(-243)`/`(-244)`), golden traces 7/7, three-pool outcomes identical
-   at every leg, `--pilots` grid green on the `(-238)` and `(-243)` trees (see PERF's closing
-   state for the `(-243)` grid's figures; `(-244)` only reorders an empty-batch tail).
-3. **Two sessions ran concurrently (Log `(-216)`..`(-241)`; `(-221)`, `(-227)`, `(-232)`
-   refuted): session A `cube` -2.61 % / `fixed` -2.43 % / `sealed` -1.67 %, session B on top of
-   it `fixed` -6.50 % / `cube` -4.62 % / `sealed` -3.73 %.** Rules per leg in PERF's newest
-   Baseline closing state. The devices that paid: `Battlefield::for_each_triggerer` (printed-
-   trigger walks over the member list, `(-222)`/`(-224)`/`(-228)`/`(-231)`); the graveyard lane
-   widened and put in front of the dispatcher and the cast walker (`(-230)`/`(-231)`); **nine
-   presence lanes whose predicate is the union of every static a walker matches** (`(-233)`..
-   `(-241)`, 61 variants, found by grepping `static_abilities` reads and ranking the enclosing
-   functions by self cost — six lanes free on the word); "diff the gates of a mechanic's two
-   sides" (`(-223)`); and **when a total contradicts the device's rows, diff the two self
-   tables** (`(-229)`).
-4. **Perf leads — replenished from a `--separate-callers=3` `cube` dump at `(-241)` (PERF
-   candidates, "RE-READ AT the `(-241)` tip", by-context allocation / growth / unshare /
-   collect tables):** `dispatch_board_scan`'s fresh grant `Vec` as a `SmallVec` is **refuted
-   `(-242)`** (+0.7..1.4 %: inline storage in a by-value struct is a memcpy per call); the
-   auto-tapper's per-activation event `Vec` is **taken `(-243)`** (-0.32 % every pool); the
-   dispatcher's empty-batch tail is **taken `(-244)`** (-0.34..-0.57 %), found by the **line
-   annotation of the ordinary `profiling-fast` dump** (PERF "How to measure", no lines build);
-   the same read on every other top self row is recorded as floors there (the selector
-   collect, `blocker_pair_block`, `sba_board_scan`'s instance fields, `PrintedList::push`'s
-   first materializations). Both grep sweeps are done — do not re-run them. What is left is
-   structural: the gather-version memo and the probe design.
-   `PERF.md` ~20.7 k lines after the candidates tail moved to `PERF_ARCHIVE.md` (verbatim).
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-247)` is the last claimed,
+   `(-248)` is next (this run's numbers collided with concurrent pushes twice and were
+   renumbered at push time — `git fetch` before naming a leg in a commit). Container gotchas in
+   **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast` ~10 min
+   warm on a loaded box, suite ~85 s after a ~5.5 min test build, `nextest` needs installing;
+   callgrind `--games 6` on the three pools in parallel ~1 min. ⚠ `pkill -f` kills your own
+   shell when the pattern is in its command line — kill by pid. Disk fills: delete binaries/dumps.
+2. **Gates at the `(-247)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
+   release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
+   three-pool outcomes identical at every leg; a **fresh-seed robustness sweep** (20 primes
+   > 101 the `--wide` grid never ran, `all` + `cube`, 400 games, debug-assertions overflow
+   build): 0 panics / 0 stuck / 0 assertion fires; every cap is the Beacon of Immortality
+   class (ENGINE_BACKLOG's closed stall lead, now with its per-game cost recorded there).
+3. **This run, `(-245)`..`(-247)` (`cube` -2.16 % / `fixed` -1.09 % / `sealed` -1.05 % on top
+   of the concurrent `(-243)`/`(-244)`):** one read paid three times — rank `computed_permanent_hinted`'s
+   asks by caller (PERF candidates, "RE-READ AT the `(-245)` tip") and ask what each caller
+   *consumes* of the view; one keyword / three keywords / one card type each went behind a
+   presence gate (`board_keyword_in_scope`, `board_keyword_matching`, `card_type_change_in_scope`)
+   with no view at all. A keyword put behind the lane joins `card_has_gate_keyword`'s union or
+   the printed leg answers a wrong `false` (the gate's debug audit catches it). Price a scope by
+   its `with_frozen_layers` row, not the memo's asks — the first miss pays the gather too.
+   History: `(-216)`..`(-244)` are in PERF's Baseline closing states; the device list is there,
+   and `(-244)`'s **line annotation of the ordinary `profiling-fast` dump** (PERF "How to
+   measure", no lines build) is the instrument that read the top self rows down to floors.
+4. **Perf leads (PERF candidates, top):** the remaining out-of-scope askers in that table —
+   `check_target_legality_with_source` (7.9 M, mostly hits) and `push_ward_triggers_for_targets`
+   (2.7 M, misses) — read what each consumes first; the rest of the table is the freeze
+   design's floor. `blocker_pair_block`, the selector collect and the by-id block-planner
+   gates are priced and closed, and so are the top self rows (`(-244)`'s line read: the
+   selector collect, `sba_board_scan`, `PrintedList::push`); both grep sweeps are done — do not
+   re-run them. What is left beyond those two rows is structural: the gather-version memo and
+   the probe design.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
