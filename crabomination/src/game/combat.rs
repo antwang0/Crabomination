@@ -3613,8 +3613,13 @@ impl GameState {
                             || g.all_damage_to_creature_token_prevented(blocker_id)
                             || g.all_damage_to_your_creature_prevented(blocker_id)
                             // CR 702.16e — protection from the attacker's color
-                            // prevents its combat damage to the blocker.
-                            || g.damage_prevented_by_protection(atk.id, blocker_id)
+                            // prevents its combat damage to the blocker. Over the
+                            // batch's views this frame already holds, not a
+                            // nested scope plus two memo lookups per pair (PERF
+                            // `(-202)`, the `(-194)` shape).
+                            || computed_of(blocker_id).is_some_and(|bc| {
+                                g.protection_prevents_views(atk.id, computed_of(atk.id), bc)
+                            })
                             // CR 615 — Light of Sanction: your source → your
                             // creature.
                             || g.damage_from_your_source_to_your_creature_prevented(
@@ -3761,8 +3766,11 @@ impl GameState {
                                 // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
                                 || g.combat_damage_prevented_for_dealer(bid)
                                 // CR 702.16e — a blocker whose color the attacker has
-                                // protection from deals no combat damage to it.
-                                || g.damage_prevented_by_protection(bid, atk.id)
+                                // protection from deals no combat damage to it. Same
+                                // held views as the attacker's side (PERF `(-202)`).
+                                || computed_of(atk.id).is_some_and(|ac| {
+                                    g.protection_prevents_views(bid, computed_of(bid), ac)
+                                })
                                 // CR 615 — Light of Sanction: your source → your creature.
                                 || g.damage_from_your_source_to_your_creature_prevented(
                                     bid, atk.id,
