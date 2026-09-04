@@ -2559,7 +2559,7 @@ grid    not re-run: no encoder or pool change. ContinuousEffects and the
         lane word are #[serde]-transparent / not serialized.
 wall    bench_ab.py, 24 pairs, the 62a4e20b binary (rebuilt in a worktree)
         vs the (-211) tip, profiling-fast, fixed: **+1.87 % median
-        games/s** (mean +2.02 %, per-pair sd 3.57; A median 319.5, B
+        games/s** (mean +2.02 %, per-pair sd 3.57; A median 317.2, B
         325.5) for -2.95 % Ir — the (-198) ratio again (+1.89 % for
         -2.93 %).
 ```
