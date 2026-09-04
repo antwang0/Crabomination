@@ -1617,7 +1617,9 @@ pub struct GameState {
     /// last activated for free, and how many times that pair has been
     /// activated without the fingerprint moving. Past
     /// `FREE_ACTIVATION_REPEAT_CAP` the repeat is rejected, forcing a
-    /// different game choice instead of an endless loop.
+    /// different game choice instead of an endless loop. A count of `0` with
+    /// a key means the fingerprint is pending: it is computed on the first
+    /// repeat of the key, not on the announcement that set it (PERF `(-220)`).
     #[serde(default)]
     pub free_activation_watch: (u64, Option<(CardId, usize)>, u32),
     /// Priority state — tracks who can act and when the stack resolves.

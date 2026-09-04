@@ -1683,21 +1683,39 @@ impl GameState {
     ///   to sacrifice, for ever"): 49,427 copies. The printed cost is not the
     ///   question; whether the state moved is.
     ///
+    /// **The fingerprint is computed only when the key repeats** (PERF
+    /// `(-220)`). A different ability resets the watch, and a reset compares
+    /// its fingerprint against nothing, so it stores `n == 0` — "pending" —
+    /// instead of walking the board. Consecutive same-key announcements are
+    /// 0.9-2.5 % of all announcements over a six-game run of the three
+    /// pools, and the walk was 1.1 % of `cube`. The pending announcement
+    /// counts as unchanged when the key does repeat, so a loop is refused at
+    /// the same announcement as before; the one case that moves is a repeat
+    /// whose *first* two announcements saw different states, which the cap
+    /// now refuses one announcement earlier — still ~50 identical repeats.
+    ///
     /// [`activation_fingerprint`]: Self::activation_fingerprint
     pub(crate) fn check_free_activation_loop(
         &mut self,
         card_id: CardId,
         ability_index: usize,
     ) -> Result<(), GameError> {
-        let fp = self.activation_fingerprint();
         let key = Some((card_id, ability_index));
-        if self.free_activation_watch.0 == fp && self.free_activation_watch.1 == key {
-            if self.free_activation_watch.2 >= Self::FREE_ACTIVATION_REPEAT_CAP {
+        let (fp, prev_key, n) = self.free_activation_watch;
+        if prev_key != key {
+            self.free_activation_watch = (0, key, 0);
+            return Ok(());
+        }
+        let now = self.activation_fingerprint();
+        if n == 0 {
+            self.free_activation_watch = (now, key, 2);
+        } else if fp == now {
+            if n >= Self::FREE_ACTIVATION_REPEAT_CAP {
                 return Err(GameError::LoopMustBeBroken);
             }
-            self.free_activation_watch.2 += 1;
+            self.free_activation_watch.2 = n + 1;
         } else {
-            self.free_activation_watch = (fp, key, 1);
+            self.free_activation_watch = (now, key, 1);
         }
         Ok(())
     }
