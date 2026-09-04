@@ -11684,6 +11684,51 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-208)` TAKEN — `ContinuousEffects`, the stored effect list with a fold of its modification families: `fixed` -0.092 % / `sealed` -0.068 % / `cube` -0.058 %
+
+```text
+  pool    base (-207)       (-208)          delta
+  fixed     783,637,902     782,919,572   **-0.092 %**
+  cube    2,148,010,997   2,146,764,044   **-0.058 %**
+  sealed  2,160,644,386   2,159,178,810   **-0.068 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  ContinuousEffects::fill   5,966 calls / 69 k Ir (the refills:
+                                        2,878 under process_cumulative_upkeep,
+                                        2,866 under dispatch_triggers_for_events,
+                                        192 under the SBA sweep)
+              card_type_change_unscoped self 2.60 M -> 2.51 M
+```
+
+Seven presence gates walked `GameState::continuous_effects` on every
+ask for one `Modification` family — `card_type_change_unscoped`'s
+other half, `card_color_change_unscoped`, `land_type_change_in_scope`
+and `creature_type_change_in_scope` (behind a freeze-scope slot each),
+`keyword_grant_in_scope`'s `AddKeyword` leg, `ability_strip_off_
+battlefield`, `pt_reduction_in_scope` — and `eval.rs`'s `PrintedGates`
+carried a second hand-written copy of the land and creature walks. The
+list is a `CowBox<Vec<ContinuousEffect>>` with ten mutation sites, all
+already behind an `iter().any` pre-check or once a turn, so
+`layers::ContinuousEffects` is the `Battlefield` shape one level down:
+`Deref` for every read, every `&mut` route (`DerefMut`, `push`) clears
+an `AtomicU32` fold word, and the first ask after a write recomputes
+`modification_families` over the list (`mod_families`: seven bits,
+`TOUGHNESS_REDUCE` from the same `modification_reduces_toughness` the
+gate used, so each gate's answer is exact by construction). The two
+`PresenceGate` slots (`Land`, `Creature`) the fold subsumes are gone;
+`PrintedGates` calls the engine's one gate per family.
+
+**Why it is small, and why it stays.** The walks were over a list that
+is empty on most boards in bot play — a six-game `cube` run refills the
+fold under six thousand times, so the gates were paying a length load
+and a branch, not a walk. The device's value is the other board: a
+client game or a long combat with a dozen until-end-of-turn effects
+scaled every one of these gates by the list's length, and now none
+does. It also closed a parallel-walker pair (`eval.rs`) — the class
+`ENGINE_BACKLOG` keeps closing. Measured, positive on all three pools,
+kept as the structural change it is; the `(-206)` cost it was built to
+take back turned out to live in `ability_strip_in_scope`'s battlefield
+walk instead (that entry is corrected), which is the next lane.
+
 ### `(-207)` TAKEN — a card-type lane (the lane word widened to 64 bits) in front of `card_type_change_unscoped`'s battlefield walk: `cube` -0.912 % / `fixed` -0.764 % / `sealed` -0.622 %
 
 ```text
@@ -11757,16 +11802,19 @@ never took that path, so no trace moved.
 **The cost is the fast path's, and it is priced so the next leg can
 take it back.** `activate_plain_land_tap`'s board half needs "no strip
 in scope" now, and the generic path's `ability_strip_in_scope` is a
-428-Ir walk. `ability_strip_possible` puts the battlefield half behind
+~500-Ir walk. `ability_strip_possible` puts the battlefield half behind
 the dispatch lane (`BOARD_SCAN` carries both strip bits, so `ABSENT`
-settles it) and pays only `ability_strip_off_battlefield` on 87 % of
-taps — and that is still 151 Ir, because it walks `continuous_effects`
-for a `RemoveAllAbilities` on every ask. The same walk sits inside
-`card_type_change_unscoped` (350 Ir a tap, `(-204)`'s table),
-`land_type_change_in_scope`, `creature_type_change_in_scope`,
-`keyword_grant_in_scope` and `pt_reduction_in_scope`: **a fold of the
-effect list's modification kinds, held beside the list and recomputed
-after a write, is one device for all six** — candidates, top.
+settles it). **Corrected at `(-208)`, off its callee table:** the 4.2 M
+is 80 % `ability_strip_in_scope` — the dispatch lane is `PRESENT` or
+unknown on 29 % of taps (6,596 of 22,476: an Equipment with a trigger
+grant, a dies-suppressor, a grant-trigger static all set `BOARD_SCAN`
+bits that are not strip bits), and each of those pays the full walk at
+516 Ir. The `continuous_effects` walk in `ability_strip_off_battlefield`
+that this entry first blamed is nearly free in bot play (the list is
+empty most of the time; `(-208)` measured it). **A dedicated strip lane
+— predicate `STRIP | STRIP_ATTACHED`, the definition-only superset of
+`card_can_strip_abilities` — is the device**, and `ability_strip_in_
+scope` itself takes it too: candidates, top.
 
 ### `(-205)` TAKEN — the `AddMana` arm's Contamination / Pulse walk behind the mana-static lane: `cube` -0.156 % / `sealed` -0.114 % / `fixed` -0.032 %
 
@@ -23266,24 +23314,22 @@ Open, priced, largest first:
     death sweep and the requirement walker, whose rows the caller table
     never showed). The lane word is an `AtomicU64` now — fifteen lanes
     free.
-  * **The `continuous_effects` kind fold — the top open entry.** Six
-    presence gates walk the effect list on every ask for one
-    `Modification` kind: `card_type_change_unscoped` (its other half,
-    ~150 Ir a tap after `(-207)`), `ability_strip_off_battlefield`
-    (`RemoveAllAbilities`, 151 Ir a fast tap — `(-206)`'s whole cost),
-    `land_type_change_in_scope` / `creature_type_change_in_scope`
-    (behind a freeze-scope slot only), `keyword_grant_in_scope`
-    (`AddKeyword`), `pt_reduction_in_scope`, `card_color_change_unscoped`.
-    The list is a `CowBox<Vec<ContinuousEffect>>` with **ten** mutation
-    sites in the engine (`stack.rs` 5, `movement.rs` 2, `mod.rs` 2,
-    `snapshot.rs` 1): the `Battlefield` newtype shape — `Deref` for
-    reads, every `&mut` route clears a fold word, the fold recomputed
-    lazily on the first ask after a write — makes each gate's walk a
-    word load. Fold by `Modification` discriminant (a 64-bit hash of
-    it, collisions only ever say "walk"); the freeze-scope `frozen_
-    effects` walks are a separate population and stay. Reads per
-    invalidation is the ratio to census first: the list is written a
-    few times a turn and asked on every sweep, tap and predicate.
+  * **A strip lane — the top open entry (~0.15 % of `cube`).**
+    `ability_strip_in_scope`'s battlefield half is
+    `any(card_can_strip_abilities)`, a memo-bit read per permanent with
+    an attachment gate; `(-206)`'s fast path put it behind the
+    *dispatch* lane, which is a superset (`BOARD_SCAN`) and `PRESENT`
+    on 29 % of `cube` taps, and each of those pays the full walk at
+    516 Ir (6,596 x 516 = 3.4 M). `LANE_STRIP` with predicate
+    `dispatch bits & (STRIP | STRIP_ATTACHED)` is the `(-207)` shape
+    exactly: `ABSENT` settles it, `PRESENT` runs the exact walk. Put it
+    under `ability_strip_in_scope` itself, so the generic activation
+    path (every non-land activation) and the SBA's strip census take
+    it too; `ability_strip_possible` then folds back into it.
+  * **The `continuous_effects` kind fold — TAKEN as `(-208)`** (small:
+    the list is empty on most bot boards). What it did not take: nothing
+    of size; the freeze-scope `frozen_effects` walks are a separate
+    population and stay.
   * `card_keyword_possible_on(CantActivateTapAbilities)` 22,476 x 223 =
     5.0 M (0.23 %): the definition and instance legs are cheap, the cost
     is `keyword_grant_in_scope`'s `board_grants_keyword` walk — a
