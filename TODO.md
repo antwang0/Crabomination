@@ -25,8 +25,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-208)` is the last claimed,
-   `(-209)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-209)` is the last claimed,
+   `(-210)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` **10.6 min cold / 3.2 min warm** (a `crabomination_base`
    edit re-fingerprints the catalog: ~14 min — keep a device engine-only when it can be),
    test build ~5.5 min + suite 2.7 min; `nextest` needs installing (CLAUDE.md). Callgrind

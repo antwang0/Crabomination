@@ -11684,6 +11684,42 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-209)` REFUTED, one build — a strip lane under `ability_strip_in_scope`: `cube` -0.088 % but `fixed` +0.101 % / `sealed` +0.073 %
+
+```text
+  pool    base (-208)       strip lane      delta
+  fixed     782,919,572     783,708,459   **+0.101 %**
+  cube    2,146,764,044   2,144,879,802   **-0.088 %**
+  sealed  2,159,178,810   2,160,760,531   **+0.073 %**
+  three-pool stdout identical
+  cube rows:  ability_strip_in_scope self  4.62 M -> 1.64 M   (-2.98 M, the walks)
+              walk_and_store              22.44 M -> 24.34 M  (+1.90 M, the fills)
+```
+
+The `(-207)` shape a third time (`LANE_STRIP`, predicate `STRIP |
+STRIP_ATTACHED`, the exact walk behind `PRESENT`), under
+`ability_strip_in_scope` itself so every activation and the fast path's
+new read took it. It lost on two pools and the table says why: **a lane
+is filled by its own whole-board walk after every membership change and
+every definition-epoch bump, and a lane that is asked less often than
+the board changes pays more fills than it saves.** `card_type_change_
+unscoped` won 0.9 % because the SBA sweep asks it after every action;
+the strip question is asked once per activation, the dispatch lane the
+fast path was already reading is filled by the SBA's `dispatch_board_
+scan` for free, and on `fixed` / `sealed` the walk it replaced was over
+boards with almost no statics. Reverted; `(-206)`'s `ability_strip_
+possible` (the dispatch-lane pre-gate) stands.
+
+**What would make a new lane free is the device this refutes toward:
+one walk that fills every definition-only lane at once.** Eighteen
+lanes each walk the board on their own miss, so a membership change is
+up to eighteen walks; every lane predicate is a memo-word read per
+permanent, so one pass could fill them all for ~18 loads a card. The
+predicates live in `mod.rs` / `actions.rs` and are handed in by the
+caller (that is what keeps a lane's `debug_assert!` honest), so the
+batch fill needs a registered table of them in `zone.rs` — a
+structural change, filed in candidates, not a lane.
+
 ### `(-208)` TAKEN — `ContinuousEffects`, the stored effect list with a fold of its modification families: `fixed` -0.092 % / `sealed` -0.068 % / `cube` -0.058 %
 
 ```text
