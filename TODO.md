@@ -25,8 +25,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-213)` is the last claimed,
-   `(-214)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-214)` is the last claimed,
+   `(-215)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.6 min cold / 3.2 min warm, test build ~5.5 min + suite
    1.5 min, `nextest` needs installing; callgrind `--games 6` on the three pools in parallel
    ~1 min. ⚠ Disk: a run of A/B builds fills it — `rm -rf target/debug/incremental` and
@@ -35,14 +35,15 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the `(-211)` tip:** PERF Baseline — suite 19,253 / 0 / 5, clippy, release-fast
    typecheck, `--bench` byte-identical to `2003d1cf` at every leg, golden traces 7/7 unmoved,
    three-pool stdout identical at every leg; grid not re-run (no encoder/pool change).
-3. **This run (Log `(-204)`..`(-213)`): `cube` -4.19 % / `fixed` -4.50 % / `sealed` -3.98 %
+3. **This run (Log `(-204)`..`(-214)`): `cube` -4.35 % / `fixed` -4.72 % / `sealed` -4.12 %
    cumulative, one rules fix (CR 305.7, `(-206)`), one refutation (`(-209)`).** The land tap
    settled by inspection (`(-204)`, the run's half); the lane word widened to 64 bits and a
    card-type lane (`(-207)`, 2.5x its priced ceiling because the walk was inlined into four
    callers — **price a small function by every caller that inlined it**); a graveyard lane in
    front of the combat-damage dispatch (`(-210)`); `ContinuousEffects` with a family fold
    (`(-208)`); membership writes demote only the lanes they can change (`(-212)`) and then answer them off
-   the one card they moved (`(-213)`, the fills down 87 %). **A lane asked less often than the board changes loses to its own fills**
+   the one card they moved (`(-213)`, the fills down 87 %); the member lists kept exact through
+   them (`(-214)`). **A lane asked less often than the board changes loses to its own fills**
    (`(-209)`) — census the miss rate before the next lane.
 4. **Perf leads (candidates, top):** the lane fills are at their floor (1.9 M; the epoch is
    0-6 rewrites a game, not the 8 k `card.rs` says); `fire_combat_damage_triggers`' 1.4 % self (98 % of
