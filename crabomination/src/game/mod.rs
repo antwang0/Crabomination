@@ -756,6 +756,24 @@ pub(crate) fn seat_mask(seats: usize) -> u64 {
     if seats >= 64 { u64::MAX } else { (1u64 << seats) - 1 }
 }
 
+/// The two per-turn registries every death writes, split out of
+/// [`ColdState`] (PERF `(-217)`): a death was the cold group's one hot-path
+/// write, and each paid the group's ~3,700-Ir unshare for an insert into a
+/// list that is empty most of the turn. Both clear at untap.
+#[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct TurnDeaths {
+    /// Cards put into a graveyard **from the battlefield** this turn (CR —
+    /// Second Sunrise's restore set).
+    #[serde(default)]
+    pub graveyard_from_battlefield_this_turn: crate::game::types::IdSet<CardId>,
+    /// Death-time snapshots of every creature that died this turn, in death
+    /// order. The typed sibling of `Player.creatures_died_this_turn`, which
+    /// is only a tally; read by `Predicate::CreatureDiedThisTurnMatching`
+    /// (Undead Sprinter's "if a non-Zombie creature died this turn").
+    #[serde(default)]
+    pub(crate) creature_deaths_this_turn: Vec<CardInstance>,
+}
+
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
     /// CR 801.2c — the range matrix, recomputed as each turn begins so a
@@ -779,10 +797,6 @@ pub struct ColdState {
     #[serde(with = "crate::static_str_serde::map_u32", default)]
     pub cycled_count_by_name:
         crate::fxhash::HashMap<crate::static_str_serde::StaticStr, u32>,
-    /// Cards put into a graveyard **from the battlefield** this turn (CR —
-    /// Second Sunrise's restore set). Cleared at cleanup.
-    #[serde(default)]
-    pub graveyard_from_battlefield_this_turn: crate::game::types::IdSet<CardId>,
     /// Cards that entered the battlefield from a graveyard — or were cast
     /// from one — this turn. Stamped at the gy→battlefield move funnel and
     /// at every cast-from-graveyard site; read by
@@ -796,13 +810,6 @@ pub struct ColdState {
     /// you control enters from exile"). Cleared at each turn's untap step.
     #[serde(default)]
     pub(crate) entered_from_exile_this_turn: crate::game::types::IdSet<CardId>,
-    /// Death-time snapshots of every creature that died this turn, in death
-    /// order. The typed sibling of `Player.creatures_died_this_turn`, which
-    /// is only a tally; read by `Predicate::CreatureDiedThisTurnMatching`
-    /// (Undead Sprinter's "if a non-Zombie creature died this turn").
-    /// Cleared at each turn's untap step.
-    #[serde(default)]
-    pub(crate) creature_deaths_this_turn: Vec<CardInstance>,
     /// Tokens minted by `Effect::CreateTokenAttacking` with a non-`None`
     /// cleanup (Mobilize sacrifice / Myriad exile). Drained when the combat
     /// phase ends (CR 511.3).
@@ -2461,6 +2468,9 @@ pub struct GameState {
     /// of deep-copying 29 mostly-empty containers.
     #[serde(flatten)]
     pub scratch: CowBox<ResolutionScratch>,
+    /// The per-death registries — see [`TurnDeaths`].
+    #[serde(flatten)]
+    pub(crate) deaths: CowBox<TurnDeaths>,
     /// The rarely-written tail of the state: per-turn and end-of-turn
     /// registries, format bookkeeping, and cost/vote scratch. Held behind
     /// one CoW handle so a checkpoint clone bumps a refcount instead of
@@ -2996,6 +3006,7 @@ impl Clone for GameState {
             died_card_snapshots: clone_map(&self.died_card_snapshots),
             leaves_bf_lki: clone_map(&self.leaves_bf_lki),
             scratch: self.scratch.clone(),
+            deaths: self.deaths.clone(),
             cold: self.cold.clone(),
             attack_option: self.attack_option,
             range_of_influence: self.range_of_influence,
@@ -3356,6 +3367,7 @@ impl GameState {
             sector_block_lock_turn: None,
             chosen_sector: None,
             scratch: CowBox::default(),
+            deaths: CowBox::default(),
             cold: CowBox::new(ColdState { teams, ..Default::default() }),
         }
     }
@@ -8319,7 +8331,7 @@ impl GameState {
     /// death funnels while the permanent is still on the battlefield.
     pub(crate) fn note_creature_death(&mut self, id: CardId) {
         if let Some(c) = self.battlefield.find_by_id(id).cloned() {
-            self.creature_deaths_this_turn.push(c);
+            self.deaths.creature_deaths_this_turn.push(c);
         }
     }
 

@@ -215,7 +215,7 @@ impl GameState {
                 .flat_map(|p| p.graveyard.iter())
                 .filter(|c| {
                     c.definition.is_artifact()
-                        && self.graveyard_from_battlefield_this_turn.contains(&c.id)
+                        && self.deaths.graveyard_from_battlefield_this_turn.contains(&c.id)
                 })
                 .count() as i32,
             Value::GreatestManaValueInExile => self
@@ -2129,6 +2129,7 @@ impl GameState {
                     .unwrap_or(false)
             }
             Predicate::CreatureDiedThisTurnMatching { filter } => self
+                .deaths
                 .creature_deaths_this_turn
                 .iter()
                 .any(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller)),
@@ -4060,7 +4061,7 @@ impl GameState {
                         o.attached_to == Some(*cid) && o.definition.is_enchantment()
                     }),
                     R::PutIntoGraveyardFromBattlefieldThisTurn => {
-                        self.graveyard_from_battlefield_this_turn.contains(cid)
+                        self.deaths.graveyard_from_battlefield_this_turn.contains(cid)
                     }
                     // CR 301.5 — "equipped" = an Equipment is attached.
                     R::IsEquipped => self.attached_equipment_count(*cid) > 0,
@@ -4737,7 +4738,7 @@ impl GameState {
             R::ControlledByActivePlayer => card.controller == self.active_player_idx,
             R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
             R::PutIntoGraveyardFromBattlefieldThisTurn => {
-                self.graveyard_from_battlefield_this_turn.contains(&card.id)
+                self.deaths.graveyard_from_battlefield_this_turn.contains(&card.id)
             }
             R::PutIntoGraveyardThisTurn => {
                 self.players.iter().any(|p| p.graveyard_ids_this_turn.contains(&card.id))

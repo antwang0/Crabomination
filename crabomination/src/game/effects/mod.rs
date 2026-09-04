@@ -12477,7 +12477,7 @@ impl GameState {
                         pl.graveyard
                             .iter()
                             .filter(|c| {
-                                self.graveyard_from_battlefield_this_turn.contains(&c.id)
+                                self.deaths.graveyard_from_battlefield_this_turn.contains(&c.id)
                                     && c.definition.card_types.iter().any(|t| {
                                         matches!(
                                             t,

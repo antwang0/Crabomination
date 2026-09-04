@@ -2072,7 +2072,7 @@ impl GameState {
             }
             // Second Sunrise's restore set — battlefield → graveyard moves.
             if matches!(resolved_dest, ZoneDest::Graveyard) {
-                self.graveyard_from_battlefield_this_turn.insert(cid);
+                self.deaths.graveyard_from_battlefield_this_turn.insert(cid);
             }
             // CR 400.7 — "put into exile from the battlefield" (Ketramose).
             if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {

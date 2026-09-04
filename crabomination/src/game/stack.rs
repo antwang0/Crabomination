@@ -3917,7 +3917,9 @@ impl GameState {
             // turn" end-step payoffs (Essenceknit Scholar).
             me.creatures_died_this_turn = 0;
         }
-        clear_cold!(self.creature_deaths_this_turn);
+        if !self.deaths.creature_deaths_this_turn.is_empty() {
+            self.deaths.creature_deaths_this_turn.clear();
+        }
         self.players[p].zuberas_died_this_turn = 0;
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
         // your control this turn" flag for the active player.
@@ -4190,7 +4192,9 @@ impl GameState {
         self.end_steps_this_turn = 0;
         self.additional_upkeep_steps = 0;
         self.upkeep_steps_this_turn = 0;
-        clear_cold!(self.graveyard_from_battlefield_this_turn);
+        if !self.deaths.graveyard_from_battlefield_this_turn.is_empty() {
+            self.deaths.graveyard_from_battlefield_this_turn.clear();
+        }
         // CR 514.2 — all damage marked on permanents is removed, phased-out
         // ones included (they're treated as nonexistent, not as gone). Decided
         // from a shared borrow: `iter_mut` unshares both zone vectors and the
@@ -6542,7 +6546,7 @@ impl GameState {
             if resolved == crate::card::Zone::Graveyard {
                 self.permanents_to_graveyard_this_turn =
                     self.permanents_to_graveyard_this_turn.saturating_add(1);
-                self.graveyard_from_battlefield_this_turn.insert(id);
+                self.deaths.graveyard_from_battlefield_this_turn.insert(id);
                 // CR 700.4 — record the death for the batched `PermanentDied`
                 // synthesis (dispatch drains this into "creature or artifact
                 // you control dies" triggers). CreatureDied already covers
