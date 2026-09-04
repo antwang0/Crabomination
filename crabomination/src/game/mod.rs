@@ -5905,6 +5905,22 @@ impl GameState {
         let Some(ec) = self.battlefield.find_by_id(entering) else {
             return vec![];
         };
+        // Every static the two walks below match is in the lane's predicate,
+        // and the walks reach the battlefield plus the active command-zone
+        // cards — so a clear lane on a board with no such card leaves only
+        // the turn-scoped Combine Guildmage grant (PERF `(-239)`).
+        if !self.battlefield.has_etb_counter_static()
+            && !self.players.iter().any(|p| p.command.iter().any(|c| c.command_zone_abilities_active()))
+        {
+            let mut specs = vec![];
+            if ec.definition.is_creature() {
+                let extra = self.players[controller].extra_etb_p1p1_counters_this_turn;
+                if extra > 0 {
+                    specs.push((crate::card::CounterType::PlusOnePlusOne, extra));
+                }
+            }
+            return specs;
+        }
         // Oath of Gideon's loyalty rider is the one spec that applies to a
         // non-creature entrant, so it's collected before the creature gate.
         let mut pw_specs = vec![];

@@ -497,11 +497,16 @@ const LANE_ANY_COLOR_STATIC: u32 = 42;
 /// `StaticEffect`s `effective_max_hand_size` walks the board for, four walks
 /// a call (PERF `(-238)`). See [`card_has_hand_size_static`].
 const LANE_HAND_SIZE_STATIC: u32 = 44;
+/// Any permanent's definition puts counters on *another* permanent as it
+/// enters — the eight `StaticEffect`s the two enters-with-counters walkers
+/// match, per resolving permanent spell and per entering creature (PERF
+/// `(-239)`). See [`card_has_etb_counter_static`].
+const LANE_ETB_COUNTER_STATIC: u32 = 46;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 23;
+const LANE_COUNT: usize = 24;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -540,6 +545,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_land_play_static),                  // LANE_LAND_PLAY_STATIC
     Some(card_has_any_color_static),                  // LANE_ANY_COLOR_STATIC
     Some(card_has_hand_size_static),                  // LANE_HAND_SIZE_STATIC
+    Some(card_has_etb_counter_static),                   // LANE_ETB_COUNTER_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -711,6 +717,27 @@ fn card_has_hand_size_static(c: &CardInstance) -> bool {
                 | S::ControllerMaxHandSize(_)
                 | S::ChosenPlayerMaxHandSize(_)
                 | S::ControllerMaxHandSizeIncreased(_)
+        )
+    })
+}
+
+/// Does this permanent's definition put counters on another permanent as
+/// it enters — Metallic Mimic, Oath of Gideon, Arlinn, Master Biomancer,
+/// Muzzio's Preparations, Giada, Hardened Scales-style cast riders? The
+/// [`LANE_ETB_COUNTER_STATIC`] predicate; definition-only.
+fn card_has_etb_counter_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as S;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            S::PlaneswalkersEnterWithExtraLoyalty { .. }
+                | S::ChosenTypeEntersWithCounter { .. }
+                | S::TypeEntersWithCounter { .. }
+                | S::TypeEntersWithCountersPerControlled { .. }
+                | S::TypedCreaturesEnterWithExtraCounter { .. }
+                | S::MatchingEntersWithExtraCounters { .. }
+                | S::OtherCreaturesEnterWithCountersEqualToSourcePower { .. }
+                | S::ExtraEtbCountersForCreatureCasts { .. }
         )
     })
 }
@@ -1396,6 +1423,15 @@ impl Battlefield {
     #[inline]
     pub fn has_hand_size_static(&self) -> bool {
         self.lane(LANE_HAND_SIZE_STATIC, card_has_hand_size_static)
+    }
+
+    /// Does any permanent here put counters on another permanent as it
+    /// enters ([`card_has_etb_counter_static`])? Read per resolving permanent
+    /// spell and per entering creature (PERF `(-239)`); the command-zone term
+    /// beside it is the caller's.
+    #[inline]
+    pub fn has_etb_counter_static(&self) -> bool {
+        self.lane(LANE_ETB_COUNTER_STATIC, card_has_etb_counter_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

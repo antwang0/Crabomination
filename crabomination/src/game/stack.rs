@@ -2124,7 +2124,7 @@ impl GameState {
                     if let Some(spec) = enters_spec {
                         counter_specs.push(spec);
                     }
-                    if is_creature_resolve {
+                    if is_creature_resolve && self.battlefield.has_etb_counter_static() {
                         for src in &self.battlefield {
                             if src.controller != caster {
                                 continue;
