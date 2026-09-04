@@ -7495,6 +7495,30 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-234)` TAKEN — an ETB-static lane in front of `etb_trigger_multiplier` and `apply_enters_tapped_replacement`: `fixed` -0.391 % / `cube` -0.373 % / `sealed` -0.116 %
+
+```text
+  pool    base (-233)       (-234)          delta
+  fixed     711,743,769     708,958,856   **-0.391 %**
+  cube    1,980,826,495   1,973,436,802   **-0.373 %**
+  sealed  2,039,413,384   2,037,047,943   **-0.116 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  etb_trigger_multiplier 7,916 calls / apply_enters_tapped_replacement 7,758 (cube), both once per entering permanent
+```
+
+`(-233)`'s device on the ETB path: every permanent entering the
+battlefield paid `etb_trigger_multiplier` (two `battlefield_find`s and
+three board walks — Torpor Orb, Doorkeeper Thrull, Elesh Norn /
+Panharmonicon) and `apply_enters_tapped_replacement` (one cross-permanent
+`EntersTapped` walk with a selector match per static, and a
+`LandsEnterUntapped` walk for lands), ~1,400 Ir between them on a board
+that carries none of the five statics. One lane whose predicate is the
+union of the five; the multiplier returns `1` on a clear lane (exact:
+every other return is behind one of those statics) and the enters-tapped
+walks read an empty slice. `sealed` is the smallest because its boards
+carry an enters-tapped static (an Aura or a tapped-land lord) more often
+— the lane reads `PRESENT` and the walks run as before.
+
 ### `(-233)` TAKEN — a draw-replacement static lane in front of `draw_one`'s eleven board walks: `fixed` -0.911 % / `cube` -0.773 % / `sealed` -0.478 %
 
 ```text
