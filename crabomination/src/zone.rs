@@ -357,8 +357,8 @@ impl<'de> serde::Deserialize<'de> for CardPile {
 
 /// Packed two-bit memo lanes for [`Battlefield`], so one store on the write
 /// path clears every lane. Each lane holds the same `UNKNOWN` / `ABSENT` /
-/// `PRESENT` triple the graveyard's memo uses, and a `u32` word takes
-/// sixteen of them.
+/// `PRESENT` triple the graveyard's memo uses, and a `u64` word takes
+/// thirty-two of them (a `u32` until PERF `(-207)` filled its sixteen).
 ///
 /// **A lane has exactly one predicate**, however many callers ask through it
 /// ([`LANE_SHIELD`] has nine). Nothing enforces that structurally; what
@@ -415,9 +415,14 @@ const LANE_MANA_STATIC: u32 = 26;
 const LANE_COUNTER_GRANT: u32 = 28;
 /// Any permanent's definition carries a static that redirects a card bound
 /// for a graveyard — the question four per-death walks ask (PERF `(-203)`).
-/// The word's last lane.
 const LANE_DEATH_REDIRECT: u32 = 30;
-const LANE_MASK: u32 = 0b11;
+/// Any permanent's *definition* can change a card type — `type_bits::ALL`,
+/// the attachment-gated half over-approximated (a lane predicate reads no
+/// instance field). `ABSENT` settles `card_type_change_unscoped`'s
+/// battlefield walk, which every land tap and every SBA death sweep asks
+/// (PERF `(-207)`).
+const LANE_CARD_TYPE: u32 = 32;
+const LANE_MASK: u64 = 0b11;
 
 /// Does this permanent contribute anything to
 /// [`GameState::dispatch_board_scan`](crate::game::GameState::dispatch_board_scan)?
@@ -903,7 +908,7 @@ const fn hint_slot(id: crate::card::CardId) -> usize {
 pub struct Battlefield {
     cards: CowBox<Vec<CardInstance>>,
     /// Two-bit lanes; see the `LANE_*` constants.
-    type_gates: std::sync::atomic::AtomicU32,
+    type_gates: std::sync::atomic::AtomicU64,
     /// The `definition_epoch` the lanes were computed at. A lane is valid only
     /// while this still matches.
     def_epoch: std::sync::atomic::AtomicU64,
@@ -1005,6 +1010,17 @@ impl Battlefield {
         self.cards_unchecked_mut().get_mut(i)
     }
 
+    /// True when some permanent's definition satisfies `walk` — the layer-4
+    /// card-type contributor test, definition half. Memoized; a miss walks
+    /// the board once.
+    #[inline]
+    pub fn has_card_type_changer(
+        &self,
+        walk: impl Fn(&CardInstance) -> bool + Copy,
+    ) -> bool {
+        self.lane(LANE_CARD_TYPE, walk)
+    }
+
     /// True when some permanent here satisfies `walk` — the layer-4 land-type
     /// contributor test. Memoized; a miss walks the board once.
     #[inline]
@@ -1103,17 +1119,17 @@ impl Battlefield {
         let stale = self.def_epoch.load(Ordering::Relaxed)
             != crate::card::definition_epoch();
         let cur = if stale {
-            UNKNOWN as u32
+            UNKNOWN as u64
         } else {
             (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK
         };
         debug_assert!(
-            cur == UNKNOWN as u32 || (cur == PRESENT as u32) == self.cards.iter().any(walk),
+            cur == UNKNOWN as u64 || (cur == PRESENT as u64) == self.cards.iter().any(walk),
             "battlefield type-gate memo is stale: a write reached the cards without clearing it",
         );
         match cur {
-            c if c == ABSENT as u32 => false,
-            c if c == PRESENT as u32 => true,
+            c if c == ABSENT as u64 => false,
+            c if c == PRESENT as u64 => true,
             _ => self.walk_and_store(shift, walk),
         }
     }
@@ -1168,7 +1184,7 @@ impl Battlefield {
     /// Write one lane with what a walk found, stamped at the `epoch` that walk
     /// started from.
     fn store_lane(&self, shift: u32, epoch: u64, found: bool) {
-        let lane = if found { PRESENT as u32 } else { ABSENT as u32 };
+        let lane = if found { PRESENT as u64 } else { ABSENT as u64 };
         let word = if self.def_epoch.swap(epoch, Ordering::Relaxed) == epoch {
             self.type_gates.load(Ordering::Relaxed)
         } else {
@@ -1202,17 +1218,17 @@ impl Battlefield {
     ) -> Result<bool, u64> {
         let epoch = crate::card::definition_epoch();
         let cur = if self.def_epoch.load(Ordering::Relaxed) != epoch {
-            UNKNOWN as u32
+            UNKNOWN as u64
         } else {
             (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK
         };
         debug_assert!(
-            cur == UNKNOWN as u32 || (cur == PRESENT as u32) == self.cards.iter().any(audit),
+            cur == UNKNOWN as u64 || (cur == PRESENT as u64) == self.cards.iter().any(audit),
             "battlefield {what} memo is stale: a write reached the cards without clearing it",
         );
         match cur {
-            c if c == ABSENT as u32 => Ok(false),
-            c if c == PRESENT as u32 => Ok(true),
+            c if c == ABSENT as u64 => Ok(false),
+            c if c == PRESENT as u64 => Ok(true),
             _ => Err(epoch),
         }
     }
@@ -1258,7 +1274,7 @@ impl Battlefield {
         let epoch = crate::card::definition_epoch();
         let known = self.def_epoch.load(Ordering::Relaxed) == epoch
             && (self.type_gates.load(Ordering::Relaxed) >> LANE_GRANT) & LANE_MASK
-                == PRESENT as u32;
+                == PRESENT as u64;
         if !known {
             return Err(epoch);
         }
@@ -1356,7 +1372,7 @@ impl Battlefield {
         let epoch = crate::card::definition_epoch();
         let known = self.def_epoch.load(Ordering::Relaxed) == epoch
             && (self.type_gates.load(Ordering::Relaxed) >> LANE_TRIGGERER) & LANE_MASK
-                == PRESENT as u32;
+                == PRESENT as u64;
         if !known {
             return Err(epoch);
         }
@@ -1400,8 +1416,8 @@ impl Battlefield {
     #[cfg(test)]
     fn memo(&self, shift: u32) -> Option<bool> {
         match (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK {
-            c if c == ABSENT as u32 => Some(false),
-            c if c == PRESENT as u32 => Some(true),
+            c if c == ABSENT as u64 => Some(false),
+            c if c == PRESENT as u64 => Some(true),
             _ => None,
         }
     }
@@ -1413,7 +1429,7 @@ impl Clone for Battlefield {
     fn clone(&self) -> Self {
         Self {
             cards: self.cards.clone(),
-            type_gates: std::sync::atomic::AtomicU32::new(
+            type_gates: std::sync::atomic::AtomicU64::new(
                 self.type_gates.load(Ordering::Relaxed),
             ),
             def_epoch: std::sync::atomic::AtomicU64::new(
@@ -1457,7 +1473,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
     fn from(cards: CowBox<Vec<CardInstance>>) -> Self {
         Self {
             cards,
-            type_gates: std::sync::atomic::AtomicU32::new(0),
+            type_gates: std::sync::atomic::AtomicU64::new(0),
             def_epoch: std::sync::atomic::AtomicU64::new(0),
             find_hints: std::array::from_fn(|_| std::sync::atomic::AtomicU32::new(0)),
             trig_members: std::sync::atomic::AtomicU64::new(0),

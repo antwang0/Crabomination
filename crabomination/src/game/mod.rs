@@ -9532,6 +9532,10 @@ impl GameState {
     /// no `&mut self` call can happen inside one. Skips the lock and the memo
     /// slot, which such a caller can never read and never fills.
     pub(crate) fn card_type_change_unscoped(&self) -> bool {
+        // The battlefield half behind its lane (PERF `(-207)`): the lane's
+        // predicate is the definition-only superset, so `ABSENT` means the
+        // exact walk would find nothing, and `PRESENT` runs it as before —
+        // the answer is the same, the common board pays a word load.
         self.continuous_effects.iter().any(|e| {
             matches!(
                 e.modification,
@@ -9539,7 +9543,8 @@ impl GameState {
                     | Modification::RemoveCardType(_)
                     | Modification::SetCardTypes(_)
             )
-        }) || self.battlefield.iter().any(card_can_change_card_types)
+        }) || (self.battlefield.has_card_type_changer(card_can_change_card_types_def)
+            && self.battlefield.iter().any(card_can_change_card_types))
     }
 
     /// The layer-5 twin of
@@ -24273,6 +24278,14 @@ fn card_can_change_card_types(card: &CardInstance) -> bool {
     let bits = card.type_scan_bits();
     (card.attached_to.is_some() && bits & crate::card::type_bits::ATTACHED != 0)
         || bits & crate::card::type_bits::ALWAYS != 0
+}
+
+/// [`card_can_change_card_types`] with the attachment gate dropped — the
+/// definition-only superset a battlefield lane may hold (`Battlefield::
+/// iter_mut` does not clear the word, so a lane predicate reads no instance
+/// field). `false` here means the exact predicate is `false` for the card.
+fn card_can_change_card_types_def(card: &CardInstance) -> bool {
+    card.type_scan_bits() & crate::card::type_bits::ALL != 0
 }
 
 /// True when `card`'s printed shape can contribute a layer-5 colour change to
