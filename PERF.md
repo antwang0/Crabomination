@@ -2520,19 +2520,19 @@ a box whose state moves.
 
 ## Baseline
 
-### The watch-deferral, member-list, block-tax and event-buffer legs — closing state at the `(-229)` tip
+### The watch-deferral, member-list, block-tax, event-buffer and zone-lane legs — closing state at the `(-231)` tip
 
-Eight engine commits on top of the `(-219)` tip `52b9a743`, each
+Ten engine commits on top of the `(-219)` tip `52b9a743`, each
 behaviour-preserving (three-pool outcomes identical, `--bench` counters
 identical, golden traces unmoved), from the second of two concurrent
 sessions; the other session's `(-221)` refutation sits between them, and
 one of this session's own (`(-227)`) was reverted in the same hour.
 
 ```text
-  pool     base (-219)      tip (-229)       delta
-  fixed      745,162,383      733,633,503   **-1.547 %**
-  cube     2,035,552,660    2,010,133,057   **-1.249 %**
-  sealed   2,085,024,159    2,068,205,261   **-0.807 %**
+  pool     base (-219)      tip (-231)       delta
+  fixed      745,162,383      718,286,239   **-3.607 %**
+  cube     2,035,552,660    1,996,255,268   **-1.931 %**
+  sealed   2,085,024,159    2,049,218,164   **-1.717 %**
 
   leg      fixed      cube      sealed    what
   (-220)  -0.019 %  -0.163 %  -0.076 %   the CR 732.3 watch fingerprints only on a key repeat
@@ -2545,6 +2545,8 @@ one of this session's own (`(-227)`) was reverted in the same hour.
   (-227)  +0.241 %  +0.220 %  +0.298 %   a caller-side reserve ahead of the damage step — REFUTED, reverted
   (-229)  -0.174 %  -0.341 %  -0.004 %   the layer pass's effect list by push loops (pins the inliner's coin)
   (-228)  -0.421 %  -0.127 %  -0.052 %   the step-trigger walk over the member list when no static grant is live
+  (-230)  -0.784 %  -0.350 %  -0.428 %   the event dispatcher's graveyard leg behind the (widened) graveyard lane
+  (-231)  -1.319 %  -0.341 %  -0.492 %   the cast-trigger walker's two zone walks behind their memos (one was quadratic)
 ```
 
 ```text
@@ -2584,7 +2586,10 @@ same ~1,400 Ir to obtain by `malloc` or `realloc`** (`(-227)`); **a
 generic adapter on a 400 k-call path is a coin the inliner flips per
 build — write the inlined shape down, and when a total contradicts the
 device's rows, diff the two self tables** (`(-229)`, found through
-`(-228)`'s first reading).
+`(-228)`'s first reading); **a self row's line profile names where the
+instructions are; a grep of the read sites names which of them a memo
+already answers** (`(-230)`/`(-231)`: three whole-zone walks with the
+lane beside them, found by listing every `triggered_abilities` read).
 
 ### The target gate, cold-group, walker-lane and watch legs — closing state at the `(-219)` tip
 
@@ -7488,6 +7493,37 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-231)` TAKEN — the cast-trigger walker's two zone walks behind their memos: `fixed` -1.319 % / `sealed` -0.492 % / `cube` -0.341 %
+
+```text
+  pool    base (-230)       (-231)          delta
+  fixed     727,884,518     718,286,239   **-1.319 %**
+  cube    2,003,093,203   1,996,255,268   **-0.341 %**
+  sealed  2,059,349,123   2,049,218,164   **-0.492 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  finalize_cast self (fire_spell_cast_triggers is inlined into it)   fixed 9.56 M -> 3.74 M   sealed 17.61 M -> below the 0.5 % cut   cube 16.04 M -> below the cut
+```
+
+`fire_spell_cast_triggers` runs once per cast and made two zone walks
+into printed `triggered_abilities`: the whole battlefield for `SpellCast`
+triggers (now the trigger member list when no static or equipment grant
+is live — `(-228)`'s shape), and **every player's graveyard collected as
+`(id, owner)` pairs, filtered to the caster, then each id re-found by a
+linear search of the graveyard it came from** — a quadratic walk per cast
+for the Dissension Eidolons' "whenever you cast a multicolored spell,
+return this from your graveyard". The caster's graveyard is the only one
+the filter ever kept, so it is now walked directly, behind the `(-230)`
+lane. `fixed`'s -1.3 % is the quadratic half: its four archetypes cast
+often and their graveyards are long by mid-game.
+
+**The grep after `(-228)` found this too** (every `definition.
+triggered_abilities` site in the engine, asked "which zone, and is it
+memoized"). Three of the twenty sites were whole-zone walks with a memo
+already beside them — `(-228)`, `(-230)`, `(-231)` — and the grep cost
+nothing. The dispatcher's remaining zone legs (exile behind an event-kind
+gate, command zones and hands behind presence gates) were read and are
+gated.
 
 ### `(-230)` TAKEN — the event dispatcher's graveyard leg behind the graveyard lane, the lane's predicate widened to both graveyard-firing families: `fixed` -0.784 % / `sealed` -0.428 % / `cube` -0.350 %
 
@@ -19782,10 +19818,11 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at the `(-224)` tip (`(-220)`, `(-222)`..`(-224)`, three-pool
-Ir against the `(-219)` tip `52b9a743`): `fixed` 745,162,383 ->
-740,581,398 (-0.615 %), `cube` 2,035,552,660 -> 2,021,695,434
-(-0.681 %), `sealed` 2,085,024,159 -> 2,073,037,291 (-0.575 %).**
+**State at the `(-231)` tip (`(-220)`, `(-222)`..`(-231)` less the two
+refutations, three-pool Ir against the `(-219)` tip `52b9a743`): `fixed`
+745,162,383 -> 718,286,239 (-3.607 %), `cube` 2,035,552,660 ->
+1,996,255,268 (-1.931 %), `sealed` 2,085,024,159 -> 2,049,218,164
+(-1.717 %).**
 Before it:
 **State at the `(-219)` tip (`(-216)`..`(-219)`, three-pool Ir against
 the `(-215)`+fix tip `999da717`): `fixed` 763,717,868 -> 745,162,927

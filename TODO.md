@@ -26,29 +26,32 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-230)` is the last claimed,
-   `(-231)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-231)` is the last claimed,
+   `(-232)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
    suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
    the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
    point) — `rm -rf target/debug/incremental`, delete superseded binaries and dumps as you go.
-2. **Gates at the `(-229)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
-   release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
-   three-pool outcomes identical at every leg, `--pilots` grid green on the `(-220)` tree.
-3. **Two sessions ran concurrently (Log `(-216)`..`(-229)`; `(-221)`, `(-227)` refuted): session
-   A `cube` -2.61 % / `fixed` -2.43 % / `sealed` -1.67 %, session B on top of it `fixed` -1.55 %
-   / `cube` -1.25 % / `sealed` -0.81 %.** The rules each leg added are in PERF's newest Baseline
-   closing state; the reusable devices are `Battlefield::for_each_triggerer` (a printed-trigger
-   walk over the member list — four walks taken, `(-222)`/`(-224)`/`(-228)`), "diff the gates
-   of a mechanic's two sides" (`(-223)`), and **when a total contradicts the device's own rows,
-   diff the two self tables** (`(-229)`: a `SmallVec::extend` the inliner flipped per build,
-   ~2.3 % of `cube` between the two outcomes — now a push loop).
-4. **Perf leads:** thin. `block_tax_for`'s per-blocker static walk (8,018 x 437 Ir, `cube`;
-   `block_tax_present` is the gate the bot already uses); `declare_attackers_banded`'s `groups`
-   static walk (~230 Ir, no lane); the probe clones' fresh event buffer (a thread-local pool,
-   `(-166)`'s device — priced in `(-227)`); `computed_permanent_hinted`'s hit-path scan (~10 M).
-   `PERF.md` ~30.5 k lines (Baseline states older than the ninetieth pass are in
-   `PERF_ARCHIVE.md`); the candidates section's old "RE-READ AT" blocks are the next fold.
+2. **Gates at the `(-231)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy (at
+   `(-229)`; engine-crate clippy since), release-fast typecheck, `--bench` counters identical to
+   `2003d1cf`, golden traces 7/7, three-pool outcomes identical at every leg, `--pilots` grid
+   green on the `(-220)` tree (the graveyard lane's widened predicate is audited by its
+   `debug_assert` on every read; a `--pilots` grid at this tip is the next closing gate).
+3. **Two sessions ran concurrently (Log `(-216)`..`(-231)`; `(-221)`, `(-227)` refuted): session
+   A `cube` -2.61 % / `fixed` -2.43 % / `sealed` -1.67 %, session B on top of it `fixed` -3.61 %
+   / `cube` -1.93 % / `sealed` -1.72 %.** Rules per leg in PERF's newest Baseline closing state.
+   The devices that paid: `Battlefield::for_each_triggerer` (a printed-trigger walk over the
+   member list — five walks, `(-222)`/`(-224)`/`(-228)`/`(-231)`); the graveyard lane's
+   predicate widened to both graveyard-firing families and put in front of the dispatcher and
+   the cast walker (`(-230)`/`(-231)`, found by **grepping every `triggered_abilities` read for
+   a whole-zone walk with a memo beside it**); "diff the gates of a mechanic's two sides"
+   (`(-223)`); and **when a total contradicts the device's own rows, diff the two self tables**
+   (`(-229)`: a `SmallVec::extend` the inliner flipped per build, ~2.3 % of `cube` — now a loop).
+4. **Perf leads:** the same grep for `static_abilities` reads (the `any_static` / lane shape —
+   `(-226)` was one); `block_tax_for`'s per-blocker static walk (8,018 x 437 Ir, `cube`);
+   `declare_attackers_banded`'s `groups` static walk; the probe clones' fresh event buffer (a
+   thread-local pool, priced in `(-227)`); `computed_permanent_hinted`'s hit-path scan (~10 M).
+   `PERF.md` ~30.6 k lines; the candidates section's old "RE-READ AT" blocks are the next fold.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
