@@ -19486,7 +19486,15 @@ impl GameState {
         // SelfSource cycle triggers ("When you cycle this card") also
         // fire here — the cycled card is in graveyard at dispatch
         // time, and the trigger's source matches the cycled card by id.
+        // Behind the zone's lane (PERF `(-230)`): its predicate is exactly
+        // the two families this walk keeps, and a graveyard grows all game
+        // while this runs on every dispatch — a definition deref per
+        // graveyard card per dispatch on a zone that holds one such card in
+        // a few games out of six.
         for player in &self.players {
+            if !player.graveyard.has_graveyard_trigger() {
+                continue;
+            }
             for card in &player.graveyard {
                 for ta in &card.definition.triggered_abilities {
                     let from_gy_scope = matches!(

@@ -21,19 +21,26 @@ const PRESENT: u8 = 2;
 const GY_LANE_ANTHEM: u32 = 0;
 const GY_LANE_ACT_GRANT: u32 = 2;
 const GY_LANE_TOKEN: u32 = 4;
-/// A card here carries a `FromYourGraveyard` trigger — the question every
-/// combat-damage dispatch asks of the dealer's controller's graveyard, per
-/// event kind, with a definition deref per card (PERF `(-210)`), and every
-/// step's `fire_step_triggers` asks of the active player's (`(-218)`).
-const GY_LANE_COMBAT_TRIGGER: u32 = 6;
+/// A card here carries a trigger that can fire from the graveyard — the
+/// question every combat-damage dispatch asks of the dealer's controller's
+/// graveyard (PERF `(-210)`), every step's `fire_step_triggers` asks of the
+/// active player's (`(-218)`), and every event dispatch asks of both
+/// (`(-230)`), each with a definition deref per card without it.
+const GY_LANE_TRIGGER: u32 = 6;
 
-/// The [`GY_LANE_COMBAT_TRIGGER`] predicate: definition-only, as every lane
-/// predicate must be.
+/// The [`GY_LANE_TRIGGER`] predicate: definition-only, as every lane
+/// predicate must be. Both graveyard-firing families — the
+/// `FromYourGraveyard` scope and the `SelfSource` kinds the dispatcher fires
+/// from here (cycling, milling, discard, "put into a graveyard from
+/// anywhere"; `is_graveyard_self_source_kind` is the one list). Wider than
+/// the two combat/step walkers need, which is the sound direction for them.
 fn card_has_graveyard_trigger(c: &CardInstance) -> bool {
-    c.definition
-        .triggered_abilities
-        .iter()
-        .any(|t| matches!(t.event.scope, crate::effect::EventScope::FromYourGraveyard))
+    use crate::effect::EventScope;
+    c.definition.triggered_abilities.iter().any(|t| match t.event.scope {
+        EventScope::FromYourGraveyard => true,
+        EventScope::SelfSource => crate::game::effects::is_graveyard_self_source_kind(&t.event.kind),
+        _ => false,
+    })
 }
 
 /// A player's graveyard: the CoW card list, plus the whole-zone questions hot
@@ -123,11 +130,12 @@ impl Graveyard {
     /// One lane's answer: a word load and two mask tests on a hit, the zone
     /// walk plus one store on a miss. `what` names the lane in the audit.
     #[inline]
-    /// Does any card here carry a `FromYourGraveyard` trigger of any kind?
-    /// Memoized; a miss walks the zone once. Read by
-    /// `fire_combat_damage_triggers` and `fire_step_triggers`.
+    /// Does any card here carry a trigger that can fire from the graveyard
+    /// (`card_has_graveyard_trigger`)? Memoized; a miss walks the zone once.
+    /// Read by `fire_combat_damage_triggers`, `fire_step_triggers` and
+    /// `dispatch_triggers_for_events`.
     pub fn has_graveyard_trigger(&self) -> bool {
-        self.lane(GY_LANE_COMBAT_TRIGGER, card_has_graveyard_trigger, "graveyard-trigger")
+        self.lane(GY_LANE_TRIGGER, card_has_graveyard_trigger, "graveyard-trigger")
     }
 
     fn lane(&self, shift: u32, walk: fn(&CardInstance) -> bool, what: &str) -> bool {
