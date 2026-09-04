@@ -2520,6 +2520,58 @@ a box whose state moves.
 
 ## Baseline
 
+### The watch-deferral, member-list and block-tax legs — closing state at the `(-224)` tip
+
+Four engine commits on top of the `(-219)` tip `52b9a743`, each
+behaviour-preserving (three-pool outcomes identical, `--bench` counters
+identical, golden traces unmoved), from the second of two concurrent
+sessions; the other session's `(-221)` refutation sits between them.
+
+```text
+  pool     base (-219)      tip (-224)       delta
+  fixed      745,162,383      740,581,398   **-0.615 %**
+  cube     2,035,552,660    2,021,695,434   **-0.681 %**
+  sealed   2,085,024,159    2,073,037,291   **-0.575 %**
+
+  leg      fixed      cube      sealed    what
+  (-220)  -0.019 %  -0.163 %  -0.076 %   the CR 732.3 watch fingerprints only on a key repeat
+                                         (-0.919 / -1.130 / -0.974 % on its own before (-219) took the land taps)
+  (-222)  -0.126 %  -0.134 %  -0.073 %   declare_attackers_banded's two printed-trigger walks over the member list
+  (-223)  -0.375 %  -0.316 %  -0.371 %   declare_blockers stops paying a {0} block tax
+  (-224)  -0.096 %  -0.069 %  -0.057 %   the combat-damage-to-player listener walk over the member list
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,255 / 0 / 5; golden traces in it and unmoved at every leg
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+        at the (-224) tip
+release the release-fast typecheck gate (debug-assertions off): every
+        leg's profiling-fast build is that profile, all clean
+--bench profiling-fast at the (-224) tip: **195,806 decisions / 27.49
+        turns / 611.9 per game / 0 stalls** — counters identical to
+        2003d1cf at every leg; determinism ok (all pairs split);
+        peak_rss 21.5 MiB
+grid    robustness_grid.sh --pilots on the (-220) tree (the loop guard's
+        own audit — `abilarms` on `cube` is the cell that found the
+        guard's two defects): ladder 30 cells / 33,120 games, 0
+        failures; actor 3 cells, 0 failures; pilots 45 cells, 0
+        failures, 24m39s. (-222)..(-224) read the trigger member list
+        (audited by its debug_assert on every read) and gate a payment;
+        no lane written, no encoder or pool change, no serialized shape
+        change.
+wall    not re-taken: -0.68 % Ir is inside bench_ab.py's noise band
+        (the standing rule); the Ir is the number.
+```
+
+The rules this closing state adds, each from its leg's Log entry:
+**price a memo by what compares against it, not by what computes it**
+(`(-220)`: computed on every announcement, read on one in fifty); **read
+a "validation body" for the walks that are not over the batch**
+(`(-222)`: two board walks priced as batch scans); **when two sides of
+one mechanic are written twice, diff the gates, not the bodies**
+(`(-223)`: the attack side had `> 0`, the block side never did).
+
 ### The target gate, cold-group, walker-lane and watch legs — closing state at the `(-219)` tip
 
 Four engine commits on top of the `(-215)`+fix tip `999da717`, each
@@ -7422,6 +7474,26 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-224)` TAKEN — the combat-damage-to-player listener walk visits the trigger member list: `fixed` -0.096 % / `cube` -0.069 % / `sealed` -0.057 %
+
+```text
+  pool    base (-223)       (-224)          delta
+  fixed     741,293,309     740,581,398   **-0.096 %**
+  cube    2,023,099,539   2,021,695,434   **-0.069 %**
+  sealed  2,074,212,577   2,073,037,291   **-0.057 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  fire_combat_damage_to_player_triggers inclusive   cube 7,128 / 18.35 M -> 16.93 M   fixed 3,266 / 6.65 -> 5.99 M   sealed 9,450 / 21.02 -> 19.79 M
+```
+
+`(-222)`'s device on its third walk: the CR 510 "whenever combat damage
+is dealt to you" listeners (Risona, Teysa) were a whole-battlefield walk
+into printed `triggered_abilities` per combat-damage event, once per
+attacker that connects. `for_each_triggerer` again. ~200 Ir an event;
+priced at the bar and taken because the change is one line and the list
+is already warm. The remaining printed-trigger walks in `combat.rs` are
+inside `fire_combat_damage_triggers`, whose listener leg is gated by the
+`LISTENER` dispatch bit (and whose fold `(-221)` refuted).
 
 ### `(-223)` TAKEN — the block declaration stops paying a `{0}` block tax: `fixed` -0.375 % / `sealed` -0.371 % / `cube` -0.316 %
 
@@ -19520,6 +19592,11 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**State at the `(-224)` tip (`(-220)`, `(-222)`..`(-224)`, three-pool
+Ir against the `(-219)` tip `52b9a743`): `fixed` 745,162,383 ->
+740,581,398 (-0.615 %), `cube` 2,035,552,660 -> 2,021,695,434
+(-0.681 %), `sealed` 2,085,024,159 -> 2,073,037,291 (-0.575 %).**
+Before it:
 **State at the `(-219)` tip (`(-216)`..`(-219)`, three-pool Ir against
 the `(-215)`+fix tip `999da717`): `fixed` 763,717,868 -> 745,162,927
 (-2.430 %), `cube` 2,090,168,791 -> 2,035,554,686 (-2.613 %), `sealed`

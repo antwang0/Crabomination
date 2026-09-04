@@ -26,33 +26,26 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-223)` is the last claimed,
-   `(-224)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-224)` is the last claimed,
+   `(-225)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Here: `profiling-fast` 10.8 min cold / 3.8 min warm (16.9 min in a worktree),
    suite ~75 s after a ~5 min test build, `nextest` needs installing; callgrind `--games 6` on
    the three pools in parallel ~1 min. ⚠ Disk: a run of A/B builds fills it (1.2 GB free at one
    point) — `rm -rf target/debug/incremental`, delete superseded binaries and dumps as you go.
-2. **Gates at the `(-219)` tip:** PERF Baseline — suite 19,255 / 0 / 5, clippy (engine and
-   client), release-fast typecheck, `--bench` counters identical to `2003d1cf` at every leg,
-   golden traces 7/7, three-pool stdout identical at every leg, closing `--pilots` grid green.
-3. **This run (Log `(-216)`..`(-219)`): `cube` -2.61 % / `fixed` -2.43 % / `sealed` -1.67 %**
-   — the target's presence gate, the per-death registries out of the cold group (first cut
-   refuted: **an unshare is paid by the first cold write of the action, not by the field**),
-   two walkers behind existing/new zone lanes, and the CR 732.3 watch behind the land-tap fast
-   path (**price every caller-side wrapper of what a fast path shortcuts**). Then `(-220)`, the
-   same watch's other half from a concurrent session: the fingerprint deferred to the key
-   repeat that reads it (`cube` -0.16 % on top of `(-219)`; -1.13 % on its own — **price a memo
-   by what compares against it, not by what computes it**). `--pilots` grid re-run on it: see 2.
-4. **Perf leads (candidates, "RE-READ AT the (-219) tip"):** thin. `fire_combat_damage_triggers`
-   was line-read and its walk fold refuted (`(-221)`: **a second walk over a hot slice costs its
-   own loop body, not its derefs**); `computed_permanent_hinted`'s hit-path scan (~10 M,
-   marginal). `(-222)`: `declare_attackers_banded`'s two board walks over printed triggers now
-   visit the trigger member list (-0.13 % `cube`/`fixed`) — **read a "validation body" for the
-   walks that are not over the batch**. `(-223)`: `declare_blockers` paid a `{0}` block tax through the
-   auto-tapper once per blocking seat (-0.32..-0.38 % on every pool) — **diff the gates of a mechanic's
-   two sides, not the bodies**.
-   `PERF.md` is at ~30.3 k lines after the eighty-ninth-and-older closing states moved to
-   `PERF_ARCHIVE.md` (verbatim); the candidates section's old "RE-READ AT" blocks are the next fold.
+2. **Gates at the `(-224)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
+   release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
+   three-pool outcomes identical at every leg, `--pilots` grid green on the `(-220)` tree.
+3. **Two sessions ran concurrently (Log `(-216)`..`(-224)`, `(-221)` refuted): session A
+   `cube` -2.61 % / `fixed` -2.43 % / `sealed` -1.67 %, session B on top of it -0.68 / -0.62 /
+   -0.58 %.** The rules each leg added are in PERF's two newest Baseline closing states; the
+   reusable devices are `Battlefield::for_each_triggerer` (a printed-trigger walk over the
+   member list — three walks taken, `(-222)`/`(-224)`) and "diff the gates of a mechanic's two
+   sides" (`(-223)`: the block side paid a `{0}` tax the attack side never did).
+4. **Perf leads:** thin. `block_tax_for`'s per-blocker static walk (8,018 x 437 Ir, `cube`;
+   `block_tax_present` is the gate the bot already uses); `declare_attackers_banded`'s `groups`
+   static walk (~230 Ir, no lane); `computed_permanent_hinted`'s hit-path scan (~10 M, marginal).
+   `PERF.md` ~30.4 k lines (Baseline states older than the ninetieth pass are in
+   `PERF_ARCHIVE.md`); the candidates section's old "RE-READ AT" blocks are the next fold.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
