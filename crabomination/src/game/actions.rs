@@ -14748,11 +14748,13 @@ impl GameState {
         }
         // Layer 4 could make it a creature (CR 106.12, CR 602.5g); a
         // land-type rewrite could take a basic's intrinsic ability away
-        // (CR 305.6); a granted `CantActivateTapAbilities` bars it
+        // (CR 305.6); a strip could take the printed ability away (CR
+        // 305.7 / 613.1f); a granted `CantActivateTapAbilities` bars it
         // (CR 602.5); a mana static changes what the tap makes or costs.
         if self.card_type_change_unscoped()
             || (self.land_type_change_in_scope()
                 && Self::printed_land_mana_basic(src, ability_index).is_some())
+            || self.ability_strip_possible()
             || self.card_keyword_possible_on(src, |k| *k == Keyword::CantActivateTapAbilities)
             || self.board_has_mana_static()
         {
@@ -15040,10 +15042,11 @@ impl GameState {
         } else {
             let pos = bf_pos.ok_or(GameError::CardNotOnBattlefield(card_id))?;
             // CR 113.10b — a permanent with all abilities stripped (Turn to
-            // Frog / Mercurial Transformation) can't have its printed
-            // activated abilities used. We allow mana abilities through (no
-            // catalog card stripping abilities has a mana ability of
-            // interest right now) by detecting them via `is_mana_ability`.
+            // Frog / Mercurial Transformation / Blood Moon) can't have its
+            // printed activated abilities used, mana abilities included; the
+            // intrinsic basic-land ability of its computed type survives
+            // (CR 305.7), and granted mana abilities stay, matching the
+            // auto-tapper's source table.
             // `StaticEffect::GrantActivatedAbility` (Galazeth Prismari,
             // Cryptolith Rite, …): surface granted abilities as virtual
             // activated abilities at indices ≥ printed_count, so standard
@@ -15125,7 +15128,13 @@ impl GameState {
                 // copy of an `Effect` and every cost field — 18,386 of them
                 // per six games, nearly all a land tapping for mana.
                 let def = std::sync::Arc::clone(&self.battlefield[pos].definition);
-                if stripped && !is_mana_ability(&def.activated_abilities[ability_index].effect) {
+                // CR 305.7 / 613.1f — "loses all abilities" loses the printed
+                // mana abilities too: a Blood-Mooned Temple has no `{T}: Add
+                // {U}`, only its new type's intrinsic ability (the leg below).
+                // This used to carve mana abilities out, so the direct
+                // activation path disagreed with the auto-tapper's source
+                // table, which drops the printed list on `lost_all_abilities`.
+                if stripped {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
                 // CR 305.6 / 612 — a basic's intrinsic mana ability follows its

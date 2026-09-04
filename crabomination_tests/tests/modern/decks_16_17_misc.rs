@@ -454,6 +454,63 @@ fn blood_moon_strips_an_untyped_lands_mana_abilities() {
     assert_eq!(g.players[1].mana_pool.amount(Color::Red), 1, "red, from the Mountain type");
 }
 
+/// **CR 305.7 / 613.1f — a stripped permanent's printed mana ability can't
+/// be activated either.** `activate_ability_inner` carved mana abilities out
+/// of its `lost_all_abilities` gate ("no catalog card stripping abilities has
+/// a mana ability of interest"), so a Blood-Mooned Temple of Epiphany tapped
+/// for {U} through `GameAction::ActivateAbility` while the auto-tapper's
+/// source table correctly refused it. Found by `core_rules::land_tap_fast_
+/// path`, whose Blood Moon board agreed on both paths — and both were wrong.
+/// The intrinsic Mountain ability (CR 305.7's "gains the appropriate mana
+/// ability") is the one that works.
+#[test]
+fn blood_moon_refuses_a_nonbasics_printed_mana_ability_on_activation() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::blood_moon());
+    let temple = g.add_card_to_battlefield(0, catalog::temple_of_epiphany());
+    g.battlefield_find_mut(temple).unwrap().tapped = false;
+    let tap = |g: &mut GameState, idx: usize| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: temple, ability_index: idx, target: None, additional_targets: vec![], x_value: None, mode: None,
+        })
+    };
+    assert!(tap(&mut g, 0).is_err(), "printed {{T}}: Add {{U}} is gone");
+    assert!(!g.battlefield_find(temple).unwrap().tapped, "a refused activation taps nothing");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 0);
+    // The intrinsic ability sits past the printed list.
+    let intrinsic = g.effective_mana_abilities(temple).last().map(|(i, _)| *i).expect("a Mountain ability");
+    assert!(intrinsic >= 2, "past the two printed abilities: {intrinsic}");
+    tap(&mut g, intrinsic).expect("taps as a Mountain");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+}
+
+/// The same rule off a resolved "loses all abilities" (Turn to Frog), with no
+/// land-type rewrite anywhere: the stripped Elves can't tap for {G} by direct
+/// activation, and the auto-tapper doesn't count them either.
+#[test]
+fn turn_to_frog_takes_a_mana_dorks_mana_ability() {
+    let mut g = two_player_game();
+    let elves = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.battlefield_find_mut(elves).unwrap().summoning_sick = false;
+    let frog = g.add_card_to_hand(0, catalog::turn_to_frog());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: frog, target: Some(Target::Permanent(elves)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Turn to Frog");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(elves).unwrap().lost_all_abilities, "the Elves are a vanilla Frog");
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: elves, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    });
+    assert!(r.is_err(), "no printed mana ability to activate: {r:?}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0);
+    g.auto_tap_for_cost(0, &crabomination::mana::cost(&[crabomination::mana::g()]));
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0, "the tapper agrees");
+    assert!(!g.battlefield_find(elves).unwrap().tapped);
+}
+
 /// Urborg: every land is a Swamp in addition — it taps for black, keeping
 /// its other types.
 #[test]

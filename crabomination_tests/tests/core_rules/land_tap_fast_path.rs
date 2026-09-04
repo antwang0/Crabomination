@@ -202,9 +202,9 @@ fn land_type_rewrite() {
         let id = land(&mut g, 0, catalog::wastes());
         (g, id, 0)
     });
-    // A printed mana ability is real rules text: only a basic's intrinsic one
-    // is CR 305.6-gated in `activate_ability_inner`, so both paths accept.
-    both_ways("blood moon + temple", true, || {
+    // A Blood-Mooned Temple has lost its printed `{T}: Add {U}` (CR 305.7):
+    // the strip is in scope, so the fast path declines and both paths refuse.
+    both_ways("blood moon + temple", false, || {
         let mut g = two_player_game();
         g.add_card_to_battlefield(1, catalog::blood_moon());
         let id = land(&mut g, 0, catalog::temple_of_epiphany());

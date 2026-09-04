@@ -9645,6 +9645,19 @@ impl GameState {
             || self.ability_strip_off_battlefield()
     }
 
+    /// [`ability_strip_in_scope`](Self::ability_strip_in_scope) with the
+    /// battlefield walk behind the dispatch lane: `BOARD_SCAN` carries both
+    /// strip bits [`card_can_strip_abilities`] reads, so a lane that says
+    /// `ABSENT` settles that half for a word load. Same contract — `false`
+    /// is authoritative, `true` means the gather has to run. Asked once per
+    /// fast land tap (PERF `(-206)`).
+    pub(crate) fn ability_strip_possible(&self) -> bool {
+        match self.battlefield.dispatch_lane() {
+            Ok(false) => self.ability_strip_off_battlefield(),
+            _ => self.ability_strip_in_scope(),
+        }
+    }
+
     /// The same device for the layer-4 *land-type* family: a cheap
     /// over-approximation of "the gathered effect set can contain an
     /// `AddLandType` / `SetLandTypes` / `ReplaceBasicLandType`", answered
