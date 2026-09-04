@@ -20413,7 +20413,18 @@ with their ceilings, then the floors, so nobody re-reads them.**
   `perform_action_inner`'s 16 M own-line self is the `match` and the
   `PassPriority` arm (8.6 M); `check_state_based_actions_into`'s 7.2 M
   own-line self is spread over 227 lines; `declare_blockers`' own lines
-  are 1.6 M — everything else in it is the three layer passes.
+  are 1.6 M — everything else in it is the three layer passes. On the
+  bot's side, `cast_candidates`' 60.6 M is `can_afford_in_state_with`
+  over 33,758 candidates: 38.3 M of it the `available_mana` `OnceCell`
+  fill (24,256 fills at 1,577 Ir, the `(-199)` floor) and ~600 Ir a
+  candidate in the cost adjusters — `cost_reduction_for_spell_full_over`
+  294 Ir (a walk of the precomputed source list's statics plus ~15
+  `self_cost_reduction_*` definition-field checks), `can_afford_from`
+  126, `extra_cost_for_spell_over` 94, the colour tax 52 — each spread
+  over dozens of 2–3 Ir checks; a "has any self cost reduction"
+  definition bit would fold ~1 M. `pick_blocks_inner`'s 42.7 M is
+  `legal_blockers` (4,688 x 9.1 k Ir: the views and the pair checks read
+  above).
 * **Floors, so nobody re-prices them:** the allocator's ~195 M (10 %) is
   the sum of the contexts above, most of it the probe design — a
   `GameState::clone` per probe (24,764; 13.8 M self) followed by the
