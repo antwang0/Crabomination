@@ -11747,6 +11747,90 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-217)` TAKEN — the two per-death registries leave the cold group: `cube` -1.228 % / `fixed` -0.832 % / `sealed` -0.351 %
+
+```text
+  pool    base (-216)       (-217)          delta
+  fixed     761,244,306     754,914,487   **-0.832 %**
+  cube    2,085,050,322   2,059,454,483   **-1.228 %**
+  sealed  2,116,592,411   2,109,167,085   **-0.351 %**
+  three-pool stdout identical; --bench counters identical; golden traces 7/7 unmoved
+  the device, priced by make_mut_slow's inclusive row:
+              cube    106.10 M -> 100.94 M   -5.16 M  (-0.25 %)
+              fixed    48.17 M ->  45.89 M   -2.28 M  (-0.30 %)
+              sealed  123.68 M -> 119.42 M   -4.26 M  (-0.20 %)
+              note_creature_death's unshares 1,900 / 7.06 M -> 2,450 / 0.53 M (cube)
+  the rest is a codegen shift that came with the build (cube):
+              SmallVec::extend        37.76 M -> 10.18 M
+              compute_permanent_pass  70.86 M -> 81.09 M
+              FilterMap::next          6.28 M ->  0.34 M;  FnMut::call_mut  9.69 M -> 14.37 M
+```
+
+`creature_deaths_this_turn` and `graveyard_from_battlefield_this_turn`
+were `ColdState` fields and a death writes both, so every death that
+was the first cold write after a clone paid the group's ~3,700-Ir
+unshare — 1,900 of `cube`'s 9,074 deaths under `note_creature_death`
+and the rest under `remove_from_battlefield_to_graveyard_raw`'s insert.
+They now share a `CowBox<TurnDeaths>` of their own, flattened into the
+same serde shape (`ColdState`'s doc said this move was the remedy for a
+field written on the hot path; it was). **Quote the device at its own
+rows, not the total:** the three-pool total is two to five times the
+unshare saving because the inliner moved the layer pass's `SmallVec::
+extend` into `compute_permanent_pass` in the same build (the "LTO
+confound" in the anchors section, seen from the winning side); real
+for this binary, and not to be re-counted when a later build moves it
+back.
+
+**The first cut was refuted (+0.103 % / +0.068 % / +0.078 %):** it
+moved `creature_deaths_this_turn` alone, to its own `CowBox<Vec<..>>`,
+and `make_mut_slow`'s caller table showed the 1,900 unshares had simply
+walked down the path to `remove_from_battlefield_to_graveyard_raw`
+(1,768 -> 3,668) — the graveyard-set insert was the next cold write of
+the same action — while the extra handle cost +1.4 M. **An unshare is
+paid by the first cold write of the action, not by the field that
+happens to be first; move a field out of the cold group only with every
+other cold write on that path** (the cold-write census that found the
+second one is a grep of `self.<cold field>` writes over the path's
+functions, and the remaining ones — `temporary_control`,
+`auras_at_death`, the trigger-use maps — are all guarded or rare).
+
+### `(-216)` TAKEN — a presence gate on the target in `check_target_legality`: `fixed` -0.324 % / `cube` -0.245 % / `sealed` -0.181 %
+
+```text
+  pool    base (-215)+fix   (-216)          delta
+  fixed     763,717,868     761,244,306   **-0.324 %**
+  cube    2,090,168,791   2,085,050,322   **-0.245 %**
+  sealed  2,120,435,808   2,116,592,411   **-0.181 %**
+  three-pool stdout identical; --bench counters identical; golden traces 7/7 unmoved
+  computed_permanent_hinted <- check_target_legality_with_source:
+              cube   15,416 calls / 21.28 M  ->  11,132 / 8.87 M
+              fixed   4,286 calls /  5.63 M  ->   2,196 / 1.48 M
+  the gate's own rows (cube): Mutex::lock 15,416 / 0.40 M (`layers_memoized`),
+              can_grant_keyword 2,166 / 0.17 M, card_has_anthem 496 / 0.01 M
+```
+
+The candidates block's top lead, taken as written: the check opened its
+own freeze scope and read the target's computed view for Shroud,
+Hexproof and the ability ward, so every call that was not nested in an
+outer scope gathered the whole board to ask three questions almost no
+target answers `yes` to. `card_keyword_possible_on` — the `(-204)` fast
+path's device, aimed at the target — answers "none of the three can be
+on this permanent" off its printed keywords, EOT grants, keyword
+counters and the grant member list without a view; only a `true` takes
+the view. Two details carry the win: the gate skips itself when the
+scope's gather is already memoized (`layers_memoized`, the same pairing
+`damage_from_source_prevented_by_keyword` uses — a memo read is cheaper
+than the gate), and the ability-ward family is asked only when a
+`source_card_id` is present, since the check does not read it otherwise.
+A `debug_assert!` recomputes the view on every gated miss, so the suite
+audits the four-seed claim on every targeting decision it makes.
+
+The 11,132 views that remain on `cube` are the memoized ones: the
+gate's `can_grant_keyword` row (2,166 calls) says a granter was on the
+board and asked in only a seventh of them. **What is left in this
+function is the scope itself** — `Unfreeze::drop` 17,458 / 0.32 M and
+`Mutex::lock` — about 0.04 % of `cube`; not a lead.
+
 ### `(-215)` TAKEN — the dispatch scan visits its member list: `cube` -0.678 % / `fixed` +0.003 % / `sealed` +0.007 %
 
 ```text
