@@ -1621,9 +1621,12 @@ impl Battlefield {
         if let Some((index, card)) = removed {
             for (shift, _, list) in self.member_lanes() {
                 if (w >> shift) & LANE_MASK == PRESENT as u64 {
+                    // `index` is at most 63 (a list exists only up to 64
+                    // cards); the bits above index 63 are none, and a shift
+                    // by 64 is the overflow the closing grid found.
                     let bits = list.load(Ordering::Relaxed);
                     let low = bits & ((1u64 << index) - 1);
-                    let high = (bits >> (index + 1)) << index;
+                    let high = bits.checked_shr(index as u32 + 1).unwrap_or(0) << index;
                     list.store(low | high, Ordering::Relaxed);
                     out |= (PRESENT as u64) << shift;
                 }
@@ -2204,9 +2207,19 @@ mod tests {
         assert_eq!(b.trigger_members(), Ok(0b10), "push kept the list");
         b.remove(0);
         assert_eq!(b.trigger_members(), Ok(0b01), "a removal shifted it");
-        for i in 0..64 {
+        for i in 0..61 {
             b.push(CardInstance::new(CardId(100 + i), crate::catalog::grizzly_bears(), 0));
         }
+        b.push(CardInstance::new(CardId(200), crate::catalog::grave_titan(), 0));
+        assert_eq!(b.len(), 64);
+        assert_eq!(b.trigger_members(), Ok(1 | (1 << 63)), "the 64th card is bit 63");
+        // Removing the last index of a full list shifts nothing above it —
+        // the shift-by-64 the closing grid found (PERF `(-214)`'s fix).
+        assert!(b.remove(63).definition.name == "Grave Titan");
+        assert_eq!(b.trigger_members(), Ok(1), "index 63 left, nothing above it to shift");
+        b.push(CardInstance::new(CardId(201), crate::catalog::grave_titan(), 0));
+        assert_eq!(b.trigger_members(), Ok(1 | (1 << 63)));
+        b.push(CardInstance::new(CardId(202), crate::catalog::grizzly_bears(), 0));
         assert!(b.trigger_members().is_err(), "the 65th card drops the list");
     }
 
