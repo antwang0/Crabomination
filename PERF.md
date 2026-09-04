@@ -2520,20 +2520,21 @@ a box whose state moves.
 
 ## Baseline
 
-### The watch-deferral, member-list, block-tax, event-buffer and presence-lane legs — closing state at the `(-241)` tip
+### The watch-deferral, member-list, block-tax, event-buffer and presence-lane legs — closing state at the `(-243)` tip
 
-Nineteen engine commits on top of the `(-219)` tip `52b9a743`, each
+Twenty engine commits on top of the `(-219)` tip `52b9a743`, each
 behaviour-preserving (three-pool outcomes identical, `--bench` counters
 identical, golden traces unmoved), from the second of two concurrent
 sessions; the other session's `(-221)` refutation sits between them, and
-two of this session's own (`(-227)`, `(-232)`) were reverted in the hour
-they were built.
+three of this session's own (`(-227)`, `(-232)`, `(-242)`) were reverted
+in the hour they were built. (At the `(-241)` tip, where the wall row
+below was taken: `fixed` -6.503 %, `cube` -4.619 %, `sealed` -3.730 %.)
 
 ```text
-  pool     base (-219)      tip (-241)       delta
-  fixed      745,162,383      696,705,741   **-6.503 %**
-  cube     2,035,552,660    1,941,530,315   **-4.619 %**
-  sealed   2,085,024,159    2,007,247,937   **-3.730 %**
+  pool     base (-219)      tip (-243)       delta
+  fixed      745,162,383      694,512,156   **-6.797 %**
+  cube     2,035,552,660    1,935,264,256   **-4.927 %**
+  sealed   2,085,024,159    2,000,872,501   **-4.036 %**
 
   leg      fixed      cube      sealed    what
   (-220)  -0.019 %  -0.163 %  -0.076 %   the CR 732.3 watch fingerprints only on a key repeat
@@ -2558,19 +2559,21 @@ they were built.
   (-239)  -0.198 %  -0.156 %  -0.183 %   an ETB-counter static lane (plus a command-zone term) in front of the two enters-with-counters walkers
   (-240)  -0.134 %  -0.315 %  -0.179 %   a prevention-static lane in front of prevent_static_scan's per-damage-event mask walk
   (-241)  -0.086 %  -0.154 %  -0.089 %   a block-tax lane in front of block_tax_for's per-blocker walk
+  (-242)  +1.449 %  +0.711 %  +1.160 %   the dispatcher's grant list inline (SmallVec) with a borrowed filter — REFUTED, reverted
+  (-243)  -0.315 %  -0.323 %  -0.318 %   the auto-tapper's activations write into its event buffer instead of returning a Vec each
 ```
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
 suite   19,255 / 0 / 5; golden traces in it and unmoved at every leg
 clippy  --workspace --exclude crabomination_client --all-targets   clean
-        at the (-229), (-238) and (-241) tips; -p crabomination at every leg
+        at the (-229), (-238), (-241) and (-243) tips; -p crabomination at every leg
 release the release-fast typecheck gate (debug-assertions off): every
         leg's profiling-fast build is that profile, all clean
---bench profiling-fast at every leg through (-241): **195,806 decisions / 27.49
-        turns / 611.9 per game / 0 stalls** — counters identical to
-        2003d1cf at every leg; determinism ok (all pairs split);
-        peak_rss 21.5 MiB
+--bench profiling-fast at every leg through (-241), release at (-243)
+        under CRAB_THREAD_CHECK=1: **195,806 decisions / 27.49 turns /
+        611.9 per game / 0 stalls** — counters identical to 2003d1cf at
+        every leg; determinism ok (all pairs split); peak_rss 21.5 MiB
 grid    robustness_grid.sh --pilots on the (-220) tree (the loop guard's
         own audit — `abilarms` on `cube` is the cell that found the
         guard's two defects): ladder 30 cells / 33,120 games, 0
@@ -2615,7 +2618,15 @@ predicate is the union** (`(-233)`: twelve `matches!` arms, one lane,
 eleven walks; `(-234)`..`(-238)` the same shape five more times, from a
 grep of the `static_abilities` reads ranked by the enclosing function's
 self cost); **a `call_mut` shim on a closure whose body is a dozen loads
-is not `(-98)`'s 18.8 M** (`(-232)`, reverted).
+is not `(-98)`'s 18.8 M** (`(-232)`, reverted); **inline storage in a
+struct returned by value is a memcpy per call, not per allocation**
+(`(-242)`, reverted: 12 M of `memcpy` on every dispatch against 4.9 M of
+allocator on a third of them); **an inlined `Vec::push` leaves the
+dump's call-site position at `vec/mod.rs:*`, so a `push_mut` edge names
+the function and the body has to be read for the two-push `Vec`**
+(`(-243)`); **rank a collect row by its `__rust_alloc` count, not its
+inclusive Ir — the Ir is the iterator's body** (the selector collect,
+priced at 4.1 M and worth 0.2 M).
 
 ### The target gate, cold-group, walker-lane and watch legs — closing state at the `(-219)` tip
 
@@ -20288,14 +20299,16 @@ with their ceilings, then the floors, so nobody re-reads them.**
   a two-push `Vec`, no line profile: an inlined `Vec::push` leaves the
   dump's call-site position at `vec/mod.rs:*`, so the edge names the
   function but not the line.
-* **Lead — the selector collect under `evaluate_predicate`: 42,300
-  collects / 4.1 M plus the 69,802 requirement evaluations inside them
-  (3.6 M).** `resolve_selector` returns a `Vec<EntityRef>`; the `Value`
-  arms in `evaluate_value` take `.len()`, a `filter_map(..).sum()`, or a
-  `find_map` of it. A visitor form (`for_each_selected`) drops the
-  allocation and the copy but not the requirement evaluation, so the
-  ceiling is ~0.2 % for a diff across every `Value` arm — bundle it with
-  a selector change that is needed anyway, not alone.
+* **Floor, re-read after `(-243)` — the selector collect under
+  `evaluate_predicate`: 42,300 collects / 4.1 M plus the 69,802
+  requirement evaluations inside them (3.6 M).** The table's "collects"
+  are the `from_iter` *contexts* — the walk over the board with the
+  requirement evaluated per card is charged to the collect; the
+  allocation itself is 1,960 `__rust_alloc` calls (0.2 M) because an
+  empty answer allocates nothing, and `resolve_selector` +
+  `resolve_selector_inner` self are 0.9 M together. A visitor form
+  would save under 0.05 %. **Rank a collect row by its `__rust_alloc`
+  count, not its inclusive Ir — the Ir is the iterator's body.**
 * **`PrintedList::push` — 47,780 pushes / 10.8 M inclusive (226 Ir each),
   every one under `compute_permanent_pass`, one allocation each already
   (`Box<[T]>`, the eighty-fourth pass).** What is not counted: a *second*
