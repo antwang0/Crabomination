@@ -2571,6 +2571,9 @@ grid    robustness_grid.sh --no-actor on the (-250) tree — the audit binary no
         assertion strings 9 in the audit binary. --pilots last ran on (-248).
 cache   cachegrind, release-fast, cube: Ir -3.47 %, I1 misses -5.45 %, D1 -2.15 %,
         mispredicts flat; rows in the Log entry.
+actor   selfplay_train builds under release-fast (+abort; candle and rayon included) and a
+        smoke run (--actors 2 --games 60 --steps 1 --seed 7) is rc 0: 60 games, 5,793 rows,
+        0 stalls, `actors:` 106.6 games/s beside a compile (not a throughput number).
 ```
 
 **The device: the cachegrind axis named the lever.** The I1-miss table
@@ -7698,6 +7701,32 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-251)` REFUTED — `opt-level = 2` on `release-fast`: paired wall clock **-8.13 %**, Ir +5.0 %, I1 misses +9.0 %
+
+```text
+  wall clock, scripts/bench_ab.py, release-fast (+abort) vs the same at opt-level 2, 16 pairs
+    A median 532.01   B median 493.05   paired B/A median -8.13 %  mean -7.76 %  sd 2.70
+  cachegrind, cube (mimalloc on both sides)
+    Ir            1,692,599,315 -> 1,777,484,725   +5.01 %
+    I1 misses        70,175,391 ->    76,493,739   +9.00 %
+    D1 misses        35,218,791 ->    35,480,323   +0.74 %
+    mispredicts      34,470,805 ->    35,260,148   +2.29 %
+    bin_bytes       125,179,032 ->   135,886,408   +8.6 %  (larger, not smaller)
+  --bench counters identical; determinism ok
+```
+
+The obvious follow-up to `(-250)`'s "front-end-bound, so layout is the
+lever": if level 3's inlining and unrolling buy width the core does not
+use, level 2 should be smaller and miss less. It is neither — the
+binary is 8.6 % *larger* and misses L1i 9 % more, because what level 3
+removes here is not width but *calls*: the engine's hot paths are short
+generic adapters and accessors that level 3 inlines and level 2 leaves
+as call-return pairs, each a jump the front end has to fetch through.
+One build, one bench, reverted. **Do not rebuild**; the direction that
+is still open is the opposite one — more inlining where a hot small
+callee is left out of line (`cg_frames.py` names them) — and PGO, which
+is the same lever with a profile behind it.
 
 ### `(-250)` TAKEN — `panic = "abort"` on every optimized profile: paired wall clock **+4.45 % / +5.51 %**, Ir `sealed` -3.753 % / `fixed` -3.686 % / `cube` -3.142 %
 
@@ -20690,7 +20719,9 @@ against these; nothing in the tables below was re-read on the new base
 
 **Build levers now pulled, so nobody re-pulls them:** mimalloc (+22 %),
 PGO (-24 %, opt-in), `panic = "abort"` (`(-250)`, +4.5-5.5 %); refuted:
-`target-cpu=native` (flat). Not tried, with the reason: fat LTO on
+`target-cpu=native` (flat), **`opt-level = 2` (`(-251)`: -8.1 % wall
+clock, Ir +5.0 %, I1 misses +9.0 %, binary +8.6 % — level 3's win here
+is the calls it inlines, not width)**. Not tried, with the reason: fat LTO on
 `release` (the single-codegen-unit engine already peaks at ~5.9 GB in
 this container — `profiling` cannot build here; fat LTO is worse);
 `opt-level = 3` on the dev deps is already on. **`-C force-frame-

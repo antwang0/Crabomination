@@ -85,6 +85,7 @@ lto = false
 inherits = "release-fast"
 debug = true
 split-debuginfo = "unpacked"
+
 # `profiling-fast` plus thin LTO: the instrument that isolates **cross-crate
 # inlining** from `release`'s other change (codegen-units 1). Needed because
 # `profiling` cannot be built here — rustc peaks at ~5.9 GB of RSS on the

@@ -28,8 +28,8 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-250)` is the last claimed,
-   `(-251)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-251)` is the last claimed,
+   `(-252)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold: `profiling-fast`
    9m48s, the test build ~12 min, suite 114 s, `nextest` needs installing, the audit
    (`overflow` + debug-assertions) build 8m36s; warm engine rebuild 3m13s; callgrind
@@ -55,7 +55,9 @@ sixty-seventh pass, so don't re-take that.
    `IntoIter::drop` spread). Nothing under 1 % is left unread; the next device is structural —
    the probe design (`simulate_attack_outcome_once`: 32,790 scopes / 6 % of `cube`) or a gather
    version — or the wall-clock axis: a `bench_ab.py` A/B of a layout change (the `(-200)` unshare
-   direction) that Ir under-prices. **Serde feature-gating (build time) was scoped, not
+   direction) that Ir under-prices. Build levers: `opt-level = 2` is REFUTED (`(-251)`, -8.1 %
+   wall clock — level 3's win is the calls it inlines); the open direction is the opposite one
+   (`cg_frames.py` names hot small callees left out of line) and PGO, opt-in by policy. **Serde feature-gating (build time) was scoped, not
    attempted:** 86 derives in `crabomination_base` and 23 engine files use serde, `snapshot.rs`
    / `net.rs` / `cow.rs` among them, so the gate would have to thread the engine crate's own
    modules; not a one-run job.
