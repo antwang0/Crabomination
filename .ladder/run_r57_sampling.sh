@@ -21,8 +21,18 @@
 # `--attn --lambda 0.7 --games 250000 --steps 200000 --window 500000
 #  --lr 1e-4 --lr-cosine 60000 --relabel-mode new --stop-after-stale 12`,
 # arm adds `--sample-temp 120 --sample-turns 6`. Four training seeds
-# paired within seed (the r41+ house rule); ~35 min a run at the r55
-# default's throughput, eight runs.
+# paired within seed (the r41+ house rule).
+#
+# REGIME MATCH. Round 23 generated at 182 games/s on 22 actors and its
+# learner consumed 0.58 of the rows pushed (14.1 M of 24.4 M) — learner-
+# bound, but seeing most of the data. This machine's default runs the same
+# flags at 1 245 games/s (first r57 attempt, 2026-09-05), which would leave
+# the learner a ~0.2 pass and end generation in ~200 s: a different
+# training regime, not a faster copy of the recorded one. `--actors 3`
+# (~170 games/s here) restores round 23's rate; the flag is a throttle,
+# nothing else changes. With 3 actors a run leaves the machine idle, so
+# the seed halves run as two concurrent drivers (SEEDS="43 151" and
+# SEEDS="97 199"), each with its own GPU learner.
 #
 # GATE. Each trained net pilots `net-bchain` (det1 + attack chain + block
 # chain, the scored pilot the client's shape reduces to) against `dflt`
@@ -52,6 +62,7 @@ TRAIN=${TRAIN:-./target/release/selfplay_train}
 LADDER=${LADDER:-./target/release-fast/bot_ladder}
 SEEDS=${SEEDS:-"43 97 151 199"}
 GAMES=${GAMES:-1000}
+ACTORS=${ACTORS:-3}
 
 [ -x "$TRAIN" ] || { echo "build it: cargo build --release -p crabomination_ml --features cuda --bin selfplay_train" >&2; exit 1; }
 [ -x "$LADDER" ] || { echo "build it: cargo build --profile release-fast -p crabomination --bin bot_ladder" >&2; exit 1; }
@@ -68,6 +79,7 @@ for tseed in $SEEDS; do
     [ "$arm" = "samp" ] && extra="--sample-temp 120 --sample-turns 6"
     # shellcheck disable=SC2086
     $TRAIN --attn --lambda 0.7 --seed "$tseed" --games 250000 --steps 200000 \
+        --actors "$ACTORS" \
         --window 500000 --lr 1e-4 --lr-cosine 60000 \
         --relabel-mode new --stop-after-stale 12 \
         $extra \
