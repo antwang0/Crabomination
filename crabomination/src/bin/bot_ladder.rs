@@ -282,6 +282,9 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "pairs-empty" => Some(Pilot::Scored(EvalWeights::attack_pairs_empty_only_on())),
         "pairs-lazy" => Some(Pilot::Scored(EvalWeights::attack_pairs_lazy_on())),
         "pairs-both" => Some(Pilot::Scored(EvalWeights::attack_pairs_both_on())),
+        // Round 59: the empty-greedy chain behind the blocker gate. Gate as
+        // A against `dflt` for *no loss* (.ladder/run_r59_emptygate.sh).
+        "empty-gate" => Some(Pilot::Scored(EvalWeights::attack_empty_gate_on())),
         // The open-board shortcut: no opposing creature / planeswalker /
         // battle, so the attack search takes greedy without a sim. A
         // throughput device; gate as A against `gang` for *no loss*.
@@ -1672,7 +1675,7 @@ fn main() {
     // What the attack search (PERF (-21), ~60 % of `cube`) decides. Off
     // unless `CRAB_ATTACK_CENSUS` is set.
     if crabomination::server::bot::attack_census::on() {
-        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty] =
+        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty, e_new, e_won, gate, gate_won] =
             crabomination::server::bot::attack_census::snapshot();
         let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
         println!(
@@ -1681,7 +1684,8 @@ fn main() {
              tied the winner; defender creatureless {empty} ({:.1} %), greedy won there \
              {empty_greedy}; chain proposed a new set {chain_new} ({:.1} %), won {chain_won} \
              ({:.1} %); chain sims {chain_sims} ({:.2}/search), start reused {chain_reuse}, \
-             from empty greedy {chain_empty}",
+             from empty greedy {chain_empty} (proposed {e_new}, won {e_won}; blocker gate covers \
+             {gate}, chain won there {gate_won})",
             if calls == 0 { 0.0 } else { cands as f64 / calls as f64 },
             pct(greedy, calls),
             pct(none, calls),

@@ -2557,6 +2557,27 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-255)` and round 59 — closing state at the `(-255)` tip
+
+One engine commit on top of the round-58 tip, behaviour-preserving
+(outcomes identical, golden traces unmoved): the attack chain's pool
+resolved ahead of the sims, an empty-greedy menu with nothing eligible
+returned without one. Round 59's blocker gate measured and not adopted
+(its flag stays as the `empty-gate` control).
+
+```text
+  sealed default (dflt) mirror, callgrind --games 6 --threads 1 --seed 1:  3,453,977,308 -> 3,379,132,442 Ir  (-2.167 %)
+  paired wall clock, sealed 200 x 12, 7 reps:                                0.984 median / 0.982 mean
+  Ir base for the three-pool gate: unchanged from (-250) — the `gang` path is untouched
+suite   19,230 / 0 / 5; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast typecheck gate: clean
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok
+census  CRAB_ATTACK_CENSUS on the default, sealed 100 x 12, seed 43: 16,060 searched (25,384 before),
+        3.32 candidates/search, chain sims 3.41/search, from an empty greedy 1,876 (proposed 452, won 452)
+ladder  round 59, empty-gate vs dflt, four seeds: 49.9 / 50.0 / 50.2 / 50.4 (pooled 50.12), wall 1.000 — not adopted
+```
+
 ### Round 58 and `(-254)` — closing state at the round-58 tip
 
 Two engine commits on the bot's chain path and one adoption: the wide
@@ -3295,6 +3316,38 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-255)` TAKEN — the attack chain's pool resolved ahead of the sims, and an empty-greedy menu with nothing eligible returned without one: sealed default Ir **-2.167 %**, paired wall clock **0.984**
+
+```text
+  binary pair          sealed --games 6 --threads 1 --seed 1, dflt mirror (mimalloc totals)
+  base (e4babdbd+r59)  3,453,977,308 Ir
+  (-255)               3,379,132,442 Ir   **-2.167 %**
+  wall clock           0.984 median / 0.982 mean over 7 paired reps (sealed 200 x 12, one host, arms alternated)
+  searched declarations at 100 x 12   25,384 -> 16,060  (-9,324 full turn-cycle sims of "nobody", 7.9 % of all attack sims)
+  outcomes + census otherwise identical; --bench (gang) counters identical; golden traces 7/7 unmoved
+```
+
+Round 59's census (ML_NOTES) found it: under the wide flag an empty
+greedy is a one-candidate menu that `pick_attacks_scored` simulated
+before the chain could say its pool was empty, and on 18,754 of 22,192
+such searches (2,400 games) it was — every creature summoning-sick,
+tapped or barred. `attack_chain_pool` is the chain's own pool walk
+(`may_declare_attacker` per own untapped creature, one freeze scope),
+now run once in the picker and handed in; the `(-254)` shape on the
+attack side. The chain that remains from an empty greedy runs on 1,876
+searches per 1,200 games and wins 452 — leave it alone.
+
+### Round 59 REFUTED — the empty-greedy blocker gate (`empty-gate`): paired wall clock **1.000**, ladder 50.12 pooled, not adopted
+
+Skips the empty-greedy chain when the defender's untapped blockers are
+at least as many as our untapped creatures. Census on the r58 default:
+covers 3,316 of 22,192 empty-greedy searches and 752 of the chain's 886
+wins there; wall clock flat because the searches it prunes are a sliver
+once `(-255)` is seen. Strength-neutral on four seeds (49.9 / 50.0 /
+50.2 / 50.4), so the chain's argmax wins on those boards are not ladder
+wins either. Kept off as the ladder control; its walk runs only under
+the flag or the census.
 
 ### Round 58 ADOPTED — the wide chain's pair move only from an empty greedy and only after the singles tie: sealed default wall clock **-14.9 %** at no strength loss
 
@@ -6986,6 +7039,9 @@ greedy and only after the singles tie, `pairs-both` 0.851 of the r56
 default's wall clock at no loss (four cells, every interval touching
 50), adopted — the default is now ~1.8× `gang`.** `(-254)` (Log): the
 bare block menu's sim skipped when the chain cannot run, Ir -0.195 %.
+**`(-255)` (Log): the empty-greedy menu with nothing eligible returned
+without its full-turn sim, Ir -2.17 % / wall 0.984** — 84 % of the
+"chains from an empty greedy" the r56 census counted never had a pool.
 The `--bench` profile is `gang`, so the committed Baseline is untouched
 — every actor and every `dflt`-piloted tool pays the ratio above.
 Census on the adopted default (`CRAB_ATTACK_CENSUS=1`, sealed, 1 200
@@ -6993,10 +7049,13 @@ games, seed 43): the attack chain runs 2.16 sims per searched declaration
 (25 384 searched, 44 % from an empty greedy under the wide flag), the
 block chain 4.50 per block search that reaches it (7 484, 98.8 % of
 searches). In order:
-(1) the empty-greedy chain runs on 11 200 of 25 384 searches and greedy's
-refusal is usually right there — a pre-filter that skips the chain when
-no remaining creature can connect or trade (the sim's own "tie") is the
-next candidate, gated for no loss like round 58; (2) `attack_skip_open`
+(1) ~~the empty-greedy chain's pre-filter~~ CLOSED by round 59: the
+chain that actually runs from an empty greedy is 1 876 searches per
+1 200 games and wins 452 of them; the blocker gate was flat on wall
+clock and strength-neutral. What is left of the attack search's cost is
+the menu proper (2.47 candidates a search, `pick_attacks_scored` ~60 %
+of `cube`) and the chain's singles (2.16 sims a search) — read the
+per-search sim count by board class before gating either; (2) `attack_skip_open`
 (`atk-open`, gated for no loss at r50 and refuted by -0.1) is worth
 re-reading now that 30 % of searched declarations face no creature and
 the chain prices them; (3) the block chain's gang move builds one

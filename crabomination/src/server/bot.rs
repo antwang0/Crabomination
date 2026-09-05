@@ -324,6 +324,15 @@ pub struct EvalWeights {
     /// throughput device; needs `attack_chain_wide`. **Adopted 2026-09-05
     /// (round 58)**, see `default_const`.
     pub attack_pairs_lazy: bool,
+    /// Skip the empty-greedy chain when the defender's untapped blockers
+    /// are at least as many as this seat's untapped creatures: greedy held
+    /// every creature behind a blocker that dominates it, and with one
+    /// blocker per attacker there is no overload for the chain to find.
+    /// A throughput device; needs `attack_chain_wide`. **REFUTED 2026-09-05
+    /// (round 59)** off its own census: the boards it covers hold 85 % of
+    /// the empty-greedy chain's wins (752 of 886) and 15 % of its
+    /// searches; kept off as the `empty-gate` control.
+    pub attack_empty_gate: bool,
     /// Search the block assignment instead of taking the greedy one:
     /// simulate each candidate through combat damage and keep the best (see
     /// [`pick_blocks_scored`]). 0 disables it; higher values allow more
@@ -740,6 +749,7 @@ impl EvalWeights {
             attack_chain_wide: false,
             attack_pairs_empty_only: false,
             attack_pairs_lazy: false,
+            attack_empty_gate: false,
             block_search: 0,
             block_chain: 0,
             legacy_pretap: false,
@@ -823,6 +833,7 @@ impl EvalWeights {
             attack_chain_wide: false,
             attack_pairs_empty_only: false,
             attack_pairs_lazy: false,
+            attack_empty_gate: false,
             block_search: 0,
             block_chain: 0,
             legacy_pretap: false,
@@ -889,6 +900,7 @@ impl EvalWeights {
             attack_chain_wide: false,
             attack_pairs_empty_only: false,
             attack_pairs_lazy: false,
+            attack_empty_gate: false,
             block_search: 0,
             block_chain: 0,
             legacy_pretap: false,
@@ -1908,6 +1920,13 @@ impl EvalWeights {
     /// `dflt56`.
     pub const fn attack_pairs_both_on() -> Self {
         Self { attack_pairs_empty_only: true, attack_pairs_lazy: true, ..Self::round56_default() }
+    }
+
+    /// The empty-greedy blocker gate on the round-58 default: ladder
+    /// `empty-gate` as A against `dflt`, gated for no loss. See
+    /// [`attack_empty_gate`](Self::attack_empty_gate).
+    pub const fn attack_empty_gate_on() -> Self {
+        Self { attack_empty_gate: true, ..Self::default_const() }
     }
 }
 
@@ -8902,37 +8921,22 @@ fn attack_set_key(c: &[Attack]) -> Vec<u32> {
     ids
 }
 
-/// The attack chain (see [`EvalWeights::attack_chain`]): grow a
-/// declaration from the obliged-only set one creature at a time, keeping
-/// an addition only when its simulated turn cycle scores strictly above
-/// finalizing the set so far. Returns the finished set and its score, or
-/// `None` when the start set could not be scored.
-///
-/// The pool is every creature the engine will accept as an attacker —
-/// `may_declare_attacker`, the greedy picker's own gate — not the greedy
-/// set, so a creature the greedy filters refused is on offer and priced by
-/// the sim rather than by the rule that refused it. Attackers keep the
-/// target greedy gave them; the rest aim at the default face.
-///
-/// `menu` / `menu_scores` are the declarations [`pick_attacks_scored`] has
-/// already simulated (index 0 greedy): the chain's start set is the menu's
-/// repaired "all home" whenever that survived dedupe, so its score is
-/// reused instead of re-simulated. `from_empty` says greedy declared
-/// nobody, which is what [`EvalWeights::attack_pairs_empty_only`] gates on.
-fn attack_chain_candidate(
-    state: &GameState,
-    seat: usize,
-    w: &EvalWeights,
-    menu: &[Vec<Attack>],
-    menu_scores: &[(usize, i32)],
-    from_empty: bool,
-) -> Option<(Vec<Attack>, i32)> {
-    let greedy: &[Attack] = menu.first().map(Vec::as_slice).unwrap_or(&[]);
+/// The attack chain's pool: every creature the engine will accept as an
+/// attacker — `may_declare_attacker`, the greedy picker's own gate — not
+/// the greedy set, so a creature the greedy filters refused is on offer
+/// and priced by the sim rather than by the rule that refused it.
+/// Attackers keep the target greedy gave them; the rest aim at the
+/// default face. Resolved by [`pick_attacks_scored`] ahead of the sims:
+/// an empty pool under an empty greedy is a one-candidate menu with
+/// nothing to add, and it used to pay one full turn-cycle sim of "nobody"
+/// to feed an argmax of one (18.7 k of 22.2 k empty-greedy searches,
+/// sealed, 2,400 games, round 59's census).
+fn attack_chain_pool(state: &GameState, seat: usize, greedy: &[Attack]) -> Vec<Attack> {
     let face_player = attack_target_player(state, seat);
     let face = AttackTarget::Player(face_player);
     let statics = crate::game::combat::attack_static_scan(state);
     let power_caps = state.attack_power_caps(statics);
-    let pool: Vec<Attack> = state.with_frozen_layers(|st| {
+    state.with_frozen_layers(|st| {
         st.battlefield
             .iter()
             .filter(|c| {
@@ -8956,7 +8960,32 @@ fn attack_chain_candidate(
                     .unwrap_or(face),
             })
             .collect()
-    });
+    })
+}
+
+/// The attack chain (see [`EvalWeights::attack_chain`]): grow a
+/// declaration from the obliged-only set one creature at a time, keeping
+/// an addition only when its simulated turn cycle scores strictly above
+/// finalizing the set so far. Returns the finished set and its score, or
+/// `None` when the start set could not be scored.
+///
+/// `pool` is [`attack_chain_pool`]'s; `None` when it is empty.
+///
+/// `menu` / `menu_scores` are the declarations [`pick_attacks_scored`] has
+/// already simulated (index 0 greedy): the chain's start set is the menu's
+/// repaired "all home" whenever that survived dedupe, so its score is
+/// reused instead of re-simulated. `from_empty` says greedy declared
+/// nobody, which is what [`EvalWeights::attack_pairs_empty_only`] gates on.
+fn attack_chain_candidate(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    menu: &[Vec<Attack>],
+    menu_scores: &[(usize, i32)],
+    from_empty: bool,
+    pool: Vec<Attack>,
+) -> Option<(Vec<Attack>, i32)> {
+    let greedy: &[Attack] = menu.first().map(Vec::as_slice).unwrap_or(&[]);
     if pool.is_empty() {
         return None;
     }
@@ -9112,8 +9141,31 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     if candidates.len() == 1 && !chain_from_empty {
         return candidates.swap_remove(0);
     }
+    // The chain's pool, ahead of the sims: an empty greedy with nothing
+    // eligible to attack (every creature sick, tapped or barred) is a
+    // one-candidate menu the chain cannot extend, so it is returned as it
+    // stands rather than simulated for an argmax of one.
+    let pool = if w.attack_chain > 0 {
+        attack_chain_pool(state, seat, candidates.first().map(Vec::as_slice).unwrap_or(&[]))
+    } else {
+        Vec::new()
+    };
+    if chain_from_empty && pool.is_empty() {
+        return candidates.swap_remove(0);
+    }
+    // The blocker gate (`EvalWeights::attack_empty_gate`, REFUTED in
+    // round 59 and kept as the ladder's control): one untapped defender
+    // per untapped creature of ours. Its walk is paid only when the flag
+    // or the census asks.
+    let gate_covers = chain_from_empty
+        && (w.attack_empty_gate || attack_census::on())
+        && empty_greedy_gate_covers(state, seat);
     if chain_from_empty {
         attack_census::add(12, 1);
+        if gate_covers && w.attack_empty_gate {
+            attack_census::add(15, 1);
+            return candidates.swap_remove(0);
+        }
     }
 
     // First-wins-ties in `choose_scored`: index 0 is greedy, so equal
@@ -9129,7 +9181,7 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     let menu_len = candidates.len();
     if w.attack_chain > 0
         && let Some((chain, score)) =
-            attack_chain_candidate(state, seat, w, &candidates, &scored, chain_from_empty)
+            attack_chain_candidate(state, seat, w, &candidates, &scored, chain_from_empty, pool)
         && !candidates.iter().any(|c| attack_set_key(c) == attack_set_key(&chain))
     {
         candidates.push(chain);
@@ -9137,9 +9189,50 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     }
     let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
     if attack_census::on() {
-        attack_census::tick(state, seat, menu_len, chosen, &scored, candidates.len() > menu_len);
+        attack_census::tick(
+            state,
+            seat,
+            menu_len,
+            chosen,
+            &scored,
+            attack_census::Chain {
+                novel: candidates.len() > menu_len,
+                from_empty: chain_from_empty,
+                gate_covers,
+            },
+        );
     }
     candidates.swap_remove(chosen)
+}
+
+/// [`EvalWeights::attack_empty_gate`]'s board test: the defending seats'
+/// untapped creatures that may block, against this seat's untapped
+/// creatures — instance reads only, plus the computed `CantBlock` read the
+/// greedy picker makes behind the same presence gate. `true` says every
+/// attacker the chain could offer can be met by its own blocker.
+fn empty_greedy_gate_covers(state: &GameState, seat: usize) -> bool {
+    use crate::card::Keyword;
+    let cant_block_in_scope = state.board_keyword_in_scope(&[Keyword::CantBlock]);
+    let mut ours = 0usize;
+    let mut theirs = 0usize;
+    for c in state.battlefield.iter() {
+        if !c.definition.is_creature() || c.tapped {
+            continue;
+        }
+        if c.controller == seat {
+            ours += 1;
+        } else if state.players[c.controller].is_alive()
+            && !state.same_team(seat, c.controller)
+            && c.can_block()
+            && !(cant_block_in_scope
+                && state
+                    .computed_permanent_on(c)
+                    .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBlock)))
+        {
+            theirs += 1;
+        }
+    }
+    ours > 0 && theirs >= ours
 }
 
 /// `CRAB_ATTACK_CENSUS` — what the attack search decides, counted.
@@ -9164,8 +9257,11 @@ pub mod attack_census {
     /// the winner, defender had no creature, ... and greedy won there,
     /// the attack chain proposed a set the menu lacked, ... and it won,
     /// sims the chain ran, chain start scores reused from the menu, chains
-    /// run from an empty greedy (the wide flag)]`.
-    pub static N: [AtomicU64; 13] = [const { AtomicU64::new(0) }; 13];
+    /// run from an empty greedy (the wide flag), ... of which the chain
+    /// proposed a set, ... and it won, empty-greedy searches the blocker
+    /// gate covers (`attack_empty_gate`, counted whether or not it is on),
+    /// ... of which the chain won]`.
+    pub static N: [AtomicU64; 17] = [const { AtomicU64::new(0) }; 17];
 
     /// Bump counter `i` by `n` when the census is on.
     pub fn add(i: usize, n: u64) {
@@ -9189,6 +9285,17 @@ pub mod attack_census {
         level() > 0
     }
 
+    /// What the chain did on one search, for [`tick`].
+    #[derive(Clone, Copy, Default)]
+    pub(super) struct Chain {
+        /// The chain proposed a set the menu lacked.
+        pub novel: bool,
+        /// Greedy declared nobody (the wide flag's board).
+        pub from_empty: bool,
+        /// The round-59 blocker gate covered the board.
+        pub gate_covers: bool,
+    }
+
     /// `candidates` is the menu size; `chosen >= candidates` is the chain's
     /// appended set, counted in N[9] rather than as a holdback.
     pub(super) fn tick(
@@ -9197,17 +9304,30 @@ pub mod attack_census {
         candidates: usize,
         chosen: usize,
         scored: &[(usize, i32)],
-        chain_novel: bool,
+        chain: Chain,
     ) {
+        let Chain { novel: chain_novel, from_empty, gate_covers } = chain;
         N[0].fetch_add(1, Relaxed);
         N[1].fetch_add(candidates as u64, Relaxed);
         if chosen >= candidates {
             N[9].fetch_add(1, Relaxed);
+            if from_empty {
+                N[14].fetch_add(1, Relaxed);
+            }
+            if gate_covers {
+                N[16].fetch_add(1, Relaxed);
+            }
         } else {
             N[2 + chosen.min(2)].fetch_add(1, Relaxed);
         }
         if chain_novel {
             N[8].fetch_add(1, Relaxed);
+            if from_empty {
+                N[13].fetch_add(1, Relaxed);
+            }
+        }
+        if gate_covers {
+            N[15].fetch_add(1, Relaxed);
         }
         if let Some(&(_, best)) = scored.iter().find(|(i, _)| *i == chosen) {
             let tied = scored.iter().filter(|(i, s)| *i != chosen && *s == best).count();
@@ -9251,7 +9371,7 @@ pub mod attack_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 13] {
+    pub fn snapshot() -> [u64; 17] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -16730,7 +16850,7 @@ mod tests {
         }
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false).expect("the start set scores");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false, attack_chain_pool(&g, 0, &menu[0])).expect("the start set scores");
         assert!(chain.iter().any(|a| a.attacker == must), "the chain keeps the must-attacker: {chain:?}");
         g.clone().declare_attackers(chain).expect("the chained declaration is legal");
         let picked = pick_attacks_scored(&g, 0, &w);
@@ -16757,7 +16877,7 @@ mod tests {
         }
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false, attack_chain_pool(&g, 0, &menu[0])).expect("scored");
         assert_eq!(chain.iter().map(|a| a.attacker).collect::<Vec<_>>(), vec![bear], "{chain:?}");
     }
 
@@ -16785,7 +16905,7 @@ mod tests {
         }
         let w = EvalWeights { attack_chain: 1, ..EvalWeights::attack_chain_on() };
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false, attack_chain_pool(&g, 0, &menu[0])).expect("scored");
         assert_eq!(chain.len(), 1, "one addition allowed: {chain:?}");
         let picked = pick_attacks_scored(&g, 0, &w);
         assert_eq!(picked.len(), 3, "three free bears: the alpha strike wins the argmax: {picked:?}");
@@ -16827,7 +16947,7 @@ mod tests {
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
         assert_eq!(menu[0].len(), 2, "greedy sees the lethal swing: {menu:?}");
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false, attack_chain_pool(&g, 0, &menu[0])).expect("scored");
         assert!(chain.is_empty(), "each bear alone is a dead bear: {chain:?}");
         let picked = pick_attacks_scored(&g, 0, &w);
         assert_eq!(picked.len(), 2, "the menu still finds lethal: {picked:?}");

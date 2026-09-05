@@ -3848,3 +3848,51 @@ pre-filter for the empty-greedy chain — skip it when no remaining
 creature can connect or trade (the sim says "tie" on those) — is the next
 candidate, gated the same way; then `attack_skip_open` re-read on this
 default.
+
+## Round 59 — the empty-greedy blocker gate: strength-neutral, cost-flat, NOT adopted; the census found the real waste (2026-09-05)
+
+The candidate round 58 left at the top: the wide chain runs from an
+empty greedy on 44 % of searched declarations and greedy's refusal is
+usually right there. `attack_empty_gate` (profile `empty-gate`,
+`.ladder/run_r59_emptygate.sh`, pre-registered) skips that chain when
+the defender's untapped creatures that may block are at least as many as
+this seat's untapped creatures — one blocker per attacker, nothing to
+overload.
+
+**Step 0 refuted it before the cells ran, twice.** Census on the r58
+default (sealed, 2 400 games): 22 192 empty-greedy searches, the chain
+proposed a set the menu lacked on 886 of them and won all 886; the gate
+covers 3 316 of the searches — and **752 of the 886 wins**. It skips 15 %
+of the chain's work and 85 % of what the chain finds. Paired wall clock
+(5 reps, 200 × 12): **1.000 median**. The cells then read
+
+| `empty-gate` vs `dflt` | 43 | 97 | 151 | 199 | pooled |
+|---|---|---|---|---|---|
+| | 49.9 [49.7, 50.2] | 50.0 [49.8, 50.3] | 50.2 [50.0, 50.5] | 50.4 [50.1, 50.6] | +0.12 |
+
+— strength-neutral (so "the chain's argmax wins" on those boards are
+not ladder wins; the sim's preference there is noise-level), and a
+throughput device that buys no throughput is not adopted. The flag
+stays off as the `empty-gate` control.
+
+**What the census actually said.** `start reused` counts chains that
+reached their start, and it was 32 014 against 50 768 searches: the
+other 18 754 searches never built a chain at all, because the chain's
+pool — every creature `may_declare_attacker` accepts — was **empty**.
+An empty greedy under the wide flag is a one-candidate menu that the
+r56 code sends to the sim before the chain says it has nothing to add,
+and on 84 % of those boards every creature is summoning-sick, tapped or
+barred. Each paid one full turn-cycle sim of "nobody" to feed an argmax
+of one. Fixed as PERF `(-255)`: the pool is resolved ahead of the sims
+(`attack_chain_pool`) and the empty case returns the menu as it stands.
+Sealed, 1 200 games: searched declarations 25 384 → 16 060, outcomes
+identical; callgrind −2.17 % Ir on the default, paired wall clock
+0.984 median over 7 reps. The empty-greedy chain that remains runs on
+1 876 searches per 1 200 games and wins 452 of them — the most
+productive search in the bot per sim spent, which is the opposite of
+what this round set out to prune.
+
+**Rule that fell out.** Read a chain's `start reused` against its
+`searched` before gating what the chain *decides*: the gap is the
+searches that never reached a decision, and that is where the sims were
+going.

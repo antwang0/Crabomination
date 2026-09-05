@@ -29,22 +29,22 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-254)` is the last claimed,
-   `(-255)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-255)` is the last claimed,
+   `(-256)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold: `release-fast`
    bot_ladder 8m46s (2m15s warm), the core_rules test binary ~11 min, suite ~100 s, `nextest`
    needs installing; a 12 000-game sealed ladder cell ~60-80 s on 4 threads; callgrind
-   `--games 6` sealed `dflt56` ~2 min. ⚠ `pkill -f` kills your own shell — kill by pid.
-2. **Gates at the round-58 tip (PERF Baseline):** suite green, workspace clippy, release-fast
+   `--games 6` sealed `dflt` ~2 min. ⚠ `pkill -f` kills your own shell — kill by pid.
+2. **Gates at the `(-255)` tip (PERF Baseline):** suite green, workspace clippy, release-fast
    typecheck, `--bench` counters identical to `2003d1cf` (the `gang` profile carries no chain),
-   golden traces re-blessed under the new default (round 58 moved the declarations).
-3. **This run:** round 58 ADOPTED (`pairs-both`: the wide chain's pair move only from an empty
-   greedy and only after the singles tie, -14.9 % sealed default wall clock, no loss over four
-   seeds); `(-254)` TAKEN (bare block menu returns without a sim when the chain cannot run,
-   Ir -0.195 %); r56's "65 % start reuse" candidate CLOSED as a census denominator.
-4. **Perf leads (PERF candidates, top):** the empty-greedy attack chain's pre-filter (11 180 of
-   25 414 searched declarations, greedy usually right there), then `atk-open` re-read on this
-   default, then the block chain's gang-move `Vec` churn; all gated for no loss on sealed.
+   golden traces 7/7 (re-blessed once this run, for round 58's adoption).
+3. **This run:** round 58 ADOPTED (`pairs-both`, -14.9 % sealed default wall clock, no loss);
+   `(-254)` TAKEN (bare block menu, Ir -0.195 %); `(-255)` TAKEN (empty-greedy menu with no
+   eligible attacker returned without its full-turn sim, Ir -2.17 %, wall 0.984); round 59's
+   blocker gate REFUTED (flat, neutral); r56's "65 % start reuse" CLOSED as a denominator.
+4. **Perf leads (PERF candidates, top):** the attack menu proper and the chain's singles by
+   board class (read `start reused` against `searched` first — the rule round 59 yielded), then
+   `atk-open` re-read on this default, then the block chain's gang-move `Vec` churn.
 5. **Cards/rules (leftover only):** unchanged — per-turn cast-name memory, `modes_chosen`,
    the "when you next attack" `DelayedKind`, CARD_BACKLOG's printed-clause ratchets.
 
