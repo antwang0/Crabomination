@@ -1454,9 +1454,11 @@ impl EvalWeights {
         Self { block_chain: 4, ..Self::net_attack_chain_on() }
     }
 
-    /// The client's adopted net pilot, composed from the ladder references
-    /// rather than folded into them so `net-det1` / `net-guard` stay the
-    /// flagless controls every recorded net number was read against:
+    /// The client's net pilot through round 63 (the lobby switched to the
+    /// net-free `mcts-dflt-256` in round 64; ladder `mcts-client` keeps this
+    /// shape), composed from the ladder references rather than folded into
+    /// them so `net-det1` / `net-guard` stay the flagless controls every
+    /// recorded net number was read against:
     /// [`net_eval_det1`](Self::net_eval_det1) plus the saturation fallback
     /// (round 54, client-adopted on replay evidence) plus the attack chain
     /// (round 55, 51.2 / 51.0 over `net-det1` on seeds 43/97) plus the

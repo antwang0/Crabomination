@@ -4102,7 +4102,7 @@ its own turn, so instant-speed play is dead" story (`main_phase_action_with`'s
 the shapes were not.
 
 
-## Round 64 — the lean wide chain: no loss at −16 % wall clock, a replication of the concurrent round 58, folded into it; sim-priced counterspells null; search depth pending (2026-09-05)
+## Round 64 — search depth on the material leaf: 64 / 128 / 256 = 52.35 / 54.75 / 55.25 and the lobby goes net-free at 256; the lean wide chain no loss at −16 % (a replication of the concurrent round 58, folded into it); sim-priced counterspells null (2026-09-05)
 
 Three cells from the round-62/63 findings, one build
 (`.ladder/run_r64_depth_lean_counter.sh`, base `dflt63` = the frozen
@@ -4137,5 +4137,30 @@ straddling — null, off. The last rule-shaped instant-speed window; at
 0.1 casts a game it could never have been worth more than removal's
 quarter point, and it is not.
 
-**A. Search depth on the material leaf** — cells running; see the
-addendum below.
+**A. Search depth on the material leaf** (`mcts-dflt-128` /
+`mcts-dflt-256` vs `dflt`, 500 games × 12 decks a cell, ±0.95; the
+64-iteration reference is round 62's `mcts-dflt`):
+
+| iterations | seed 43 | seed 97 | pooled | over 64 | cell wall-clock |
+|---|---|---|---|---|---|
+| 64 (r62) | 53.6 | 51.1 | 52.35 | — | ~700 s |
+| 128 | 55.5 [54.6, 56.5] | 54.0 [53.1, 55.0] | **54.75** | +2.4 | 1 345 / 989 s |
+| 256 | 56.2 [55.2, 57.1] | 54.3 [53.4, 55.3] | **55.25** | +2.9 | 2 700 / 1 964 s |
+
+Doubling 64 → 128 buys +2.4, the same figure round 42 read on the net
+leaf; 128 → 256 buys +0.5 more, consistent on both seeds but inside each
+cell's interval — the budget is flattening at horizon 3. Per searched
+decision, single-threaded, 256 is roughly half a second (2 700 s × 23
+threads over 6 000 games, ~15 searched main-phase decisions a game).
+
+**The lobby pilot (item 3): net-free search at 256.** `lobby.rs` now
+builds `MctsBot { iterations: 256, horizon_turns: 3, weights: default }`
+unconditionally — the pre-registered "256 clearly above 64" reading —
+and stops reading the net. Against the round-63 default that is 55.25
+where the round-54 lobby (`mcts-net-deep` on the net, no chains) reads
+48.6 (r62 arm B): about +6.5 for the lobby in two days, all of it the
+chains and the depth, none of it the net. The server still loads the
+champion for the `net-*` ladder family and the belief redeal; `mcts-client`
+keeps the old shape on the ladder. What is left on the search side is
+horizon (3 turns) and the r29 knobs, all measured null on the net leaf and
+never re-read on the material one.

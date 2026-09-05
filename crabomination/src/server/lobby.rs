@@ -27,38 +27,33 @@ use crate::game::GameState;
 use crate::net::{ClientMsg, LobbyFormat, LobbyInfo, ServerMsg, SpectatableInfo};
 
 use super::{
-    run_match_reconnectable_spectatable, MatchOutcome, MctsBot, MctsConfig, HeuristicBot,
+    run_match_reconnectable_spectatable, MatchOutcome, MctsBot, MctsConfig,
     SeatChannel, SeatOccupant,
 };
 
-/// The bot a lobby seat gets: the strongest adopted pilot the process can
-/// support. With a value net loaded (the server boots
-/// `nets/champion.safetensors` into SLOT_BEST when present), that is
-/// net-evaluated MCTS at the round-26 adopted strength — the first
-/// profile to beat the plain net pilot (53.4/52.5 % head-to-head;
-/// 56.1/54.4 % vs gang) — with honest, determinized rollouts. Without a
-/// net, the heuristic default plays; nothing about a bare checkout
-/// changes.
+/// The bot a lobby seat gets: the strongest adopted pilot, which since
+/// round 64 (2026-09-05) needs no net. Round 62 read the champion value
+/// net at +0.05 as a scored pilot and +0.25 as the search leaf on top of
+/// the chained heuristic; the search itself is the margin, and round 64
+/// priced its depth on the material leaf against the default: 64
+/// iterations 52.35, 128 **54.75**, 256 **55.25** (seeds 43/97, 500 games
+/// × 12 decks each). 256 is the pre-registered reading ("clearly above
+/// 64"), at roughly half a second a searched decision single-threaded —
+/// the client's latency budget. The ladder name is `mcts-dflt-256`. The
+/// net is still loaded by the server for the belief redeal and the
+/// `net-*` reference family; nothing here reads it.
+///
+/// Before round 64 this was `mcts-net-deep` on `client_pilot()` (det1 +
+/// the saturation fallback + the chains) behind a loaded net, with the
+/// heuristic as the no-net fallback; `mcts-client` keeps that shape on
+/// the ladder.
 fn default_bot() -> Box<dyn super::Bot> {
-    if super::net_eval::slot_loaded(super::net_eval::SLOT_BEST) {
-        Box::new(MctsBot::new(MctsConfig {
-            iterations: 64,
-            horizon_turns: 3,
-            // `net_eval_det1` plus the saturation fallback (round 54):
-            // outcome-neutral on the ladder at ±0.06 — mirrors saturate
-            // together, so the ladder is structurally blind to it — and
-            // adopted for the client on the replay evidence (2026-08-30
-            // game 5: a flying 5/5 the human could not block, held for
-            // two turns of a lost race). The determinized-search shape:
-            // a client default the ladder cannot price. Plus the attack
-            // chain (round 55: 51.2 / 51.0 over `net-det1`). Ladder
-            // control profiles stay flagless; `client_pilot` composes.
-            weights: super::EvalWeights::client_pilot(),
-            ..MctsConfig::default()
-        }))
-    } else {
-        Box::new(HeuristicBot::new())
-    }
+    Box::new(MctsBot::new(MctsConfig {
+        iterations: 256,
+        horizon_turns: 3,
+        weights: super::EvalWeights::default(),
+        ..MctsConfig::default()
+    }))
 }
 
 /// Callback invoked when a lobby-started match finishes, with its gamemode,
