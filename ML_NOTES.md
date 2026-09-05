@@ -3730,3 +3730,64 @@ launched this session) — the training-side half. (2) Re-read the standing
 references (champion + mcts-net-deep vs `atk-sim` / `gang`) on the new
 default. (3) A backward chain from greedy beyond minus-one, and the
 block-side release chain. (4) The client replays with both chains live.
+
+## Round 57 — softmax sampling re-run with micro-step exploration: NULL again (2026-09-05)
+
+The training-side half of the round-55 proposal. Round 23 measured
+actor-side softmax sampling (`--sample-temp 120 --sample-turns 6`) as a
+null (51.7 / 53.7 vs the control's 51.8 / 54.4) when the flag only ever
+perturbed a decision's final argmax. Since rounds 55–56 the default pilot
+grows its attack declaration and its block plan through chains whose
+finalize-or-add step goes through the same `choose_scored`, so the same
+flag now samples at every micro-step of both declarations — the coverage
+argument round 23 lacked (partial declarations the argmax pilot never
+visits get rows; a pair that only pays together can be found by the
+outcome label). `.ladder/run_r57_sampling.sh`, pre-registered.
+
+**Recipe**: round 23's, verbatim, on the round-56 default (heuristic
+actors, no net pilot): `--attn --lambda 0.7 --games 250000 --steps 200000
+--window 500000 --lr 1e-4 --lr-cosine 60000 --relabel-mode new
+--stop-after-stale 12`; the arm adds `--sample-temp 120 --sample-turns 6`.
+Four training seeds, paired within seed. **Regime**: the verbatim flags
+generate at 1 245 games/s on this machine (7× round 23's 182, first
+attempt killed at 86 k games), so actors were throttled to 3 and the seed
+halves ran as two concurrent drivers, each with its own GPU learner:
+217–240 games/s, 23–25 k learner steps, 5.9–6.5 M of ~24 M rows consumed
+(a 0.25 pass; round 23's was 0.58 at 55 k steps — two learners sharing
+one 4090 halve each one's rate). Both arms share it exactly; the
+comparison is within seed. One asymmetry recorded: driver B's first two
+gate cells ran on 23 threads while driver A was still training seed
+151's control; B was stopped and its gates re-run after all training.
+
+**Gate**: each net pilots `net-bchain` (det1 + attack chain + block chain,
+the scored pilot the client's shape reduces to) vs `dflt` (the round-56
+default), ladder seeds 43/97, 1 000 games × 12 sealed decks, paired.
+
+| training seed | ctrl AUC | samp AUC | ctrl (g43 / g97) | samp (g43 / g97) | samp − ctrl |
+|---|---|---|---|---|---|
+| 43 | 0.8209 | 0.8178 | 50.0 / 50.2 | 50.6 / 49.8 | **+0.10** |
+| 97 | 0.8116 | 0.8215 | 49.6 / 49.9 | 50.0 / 50.4 | **+0.45** |
+| 151 | 0.7758 | 0.7996 | 50.1 / 50.0 | 49.6 / 49.3 | **−0.60** |
+| 199 | 0.8434 | 0.8327 | 49.6 / 49.9 | 49.5 / 49.8 | **−0.10** |
+
+**Pooled −0.04 over four seeds (sd 0.38), every cell ±0.6.** The
+pre-registered reading: null again — sampling at the chains' micro-steps
+is not the missing exploration, and the recorded remaining arm is
+sampling under a NET-piloted generator, where the argmax fixed point is
+the net's own. The AUC column is not comparable across arms (round 23's
+caveat: the sampled arm's validation games contain exploration moves)
+and swings 0.78–0.84 across seeds within an arm, the [[auc-seed-variance]]
+band.
+
+**Two things the run says beyond its own question.** (1) A net trained
+on the round-56 default's self-play pilots the round-56 heuristic to
+**exactly 50** as a scored pilot with both chains (eight control cells
+49.6–50.2) — the standing "better predictor, not a better pilot" result,
+now on a much stronger heuristic; the chains raised the floor the net has
+to beat by ~8 points in two days without moving what the net adds on
+top. The mcts-net-deep system reference (55.2 / 53.65) has still not been
+re-read on this default. (2) Eight 250 k-game runs cost 2.5 hours
+wall-clock on this machine with the machine mostly idle; the learner, not
+generation, is the budget here, which inverts ML_PIPELINE's "generation
+is the bottleneck by design" and is worth knowing before the next
+training round is sized.
