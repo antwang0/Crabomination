@@ -107,6 +107,18 @@ scripts/pgo_build.sh selfplay_train  # any other bin, with PGO_TRAIN set
 cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
   --no-default-features
 #
+# THE CACHE AND BRANCH AXIS — what Ir cannot see. Same binary, same recipe;
+# deterministic, so it A/Bs like Ir. Read by function with `cg_cache.py`
+# (one column; `--rate` for the badly-predicted small function). The
+# (-248) reading is in "Profile of record": I1 misses 4.03 % of Ir, the CoW
+# unshare's clone at one per 8.6 instructions, mispredicts 11.4 %. Not part
+# of the three-pool gate; run it on a leg that touches a hot `match` or a
+# clone path, and let `bench_ab.py` arbitrate.
+valgrind --tool=cachegrind --cache-sim=yes --branch-sim=yes \
+  --cachegrind-out-file=cache.out target/profiling-fast/bot_ladder \
+  --a gang --b gang --games 6 --threads 1 --seed 1 --decks cube
+python3 scripts/cg_cache.py cache.out Bcm        # or I1mr, D1mr, ...; N rows; --rate
+#
 # ⚠ CALLGRIND MERGES MONOMORPHIZATIONS. It demangles the symbol and keys the
 # function by the demangled name, so all eleven instances of
 # `Arc::clone_from_ref_in` land in ONE row and the question "which T is being
@@ -2528,6 +2540,45 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### The untap-static lane — closing state at the `(-249)` tip
+
+One engine commit on top of the `(-248)` tip `b7285f4e`, behaviour-
+preserving (three-pool outcomes identical, `--bench` counters identical,
+golden traces unmoved). The run's other product is an instrument: the
+first cachegrind reading (Profile of record, "THE CACHE AND BRANCH AXIS")
+and `scripts/cg_cache.py`.
+
+```text
+  pool     base (-248)      tip (-249)       delta
+  cube     1,883,973,537    1,876,460,069   **-0.399 %**
+  fixed      681,812,730      681,439,653   **-0.055 %**
+  sealed   1,967,054,280    1,959,940,755   **-0.362 %**
+
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,255 / 0 / 5 at the tip (113.9 s under nextest); golden traces 7/7 in it
+clippy  --workspace --exclude crabomination_client --all-targets   clean at the tip
+release the release-fast typecheck gate (debug-assertions off): clean at the tip
+--bench profiling-fast at the tip: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls** — counters identical to 2003d1cf; determinism ok (all pairs split);
+        peak_rss 21.4 MiB; games_per_s 325 at host_calib_ms 74 (not a committed number)
+grid    robustness_grid.sh --no-actor on the (-249) tree (the new lane and its
+        debug_assert audit, string verified in the audit binary): ladder 30 cells /
+        33,120 games, 0 failures, cap 0 / stuck 0 / draw 0. --pilots not re-run: the
+        change is one presence gate on a step every pilot reaches through the same
+        `advance_step`, and the (-248) pilots grid covers the tree it sits on.
+cache   cachegrind, cube, same recipe as the Ir baseline: I1 misses 76,094,636
+        (4.03 % of Ir), D1 misses 34,108,069 (3.8 %), LL misses 148,725,
+        mispredicts 36,771,576 (11.4 %; 31.8 % of indirect). A/B this axis with
+        `python3 scripts/cg_cache.py <dump> <col>`; deterministic like Ir.
+```
+
+**The device: a step that reads as once a turn is once a turn on every
+simulation clone**, and its cost rides the probe count, not the turn
+count — `do_untap` was 2,834 calls a six-game `cube` run against ~160
+real turns and had never been on a table. When a gate is "any static
+at all", ask whether the pool's boards ever read it clear; on `cube`
+they did not, and the walks it guarded ran on nearly every call.
 
 ### The consumer-read legs — closing state at the `(-248)` tip
 
@@ -7608,6 +7659,43 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-249)` TAKEN — an untap-static lane in front of `do_untap`'s eight static walks: `cube` -0.399 % / `sealed` -0.362 % / `fixed` -0.055 %
+
+```text
+  pool    base (-248)       (-249)          delta
+  cube    1,883,973,537   1,876,460,069   **-0.399 %**
+  fixed     681,812,730     681,439,653   **-0.055 %**
+  sealed  1,967,054,280   1,959,940,755   **-0.362 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  do_untap (cube)   2,834 calls  23,708,407 -> 16,362,427 Ir inclusive  (8,366 -> 5,773 a call)
+  do_untap (fixed)  1,896 calls   9,918,205 ->  9,514,657               (5,231 -> 5,018)
+```
+
+The tenth presence lane, off this run's fresh `--separate-callers=3`
+re-read of the plain `cube` self table at the `(-248)` tip: `do_untap`
+had never been on any table (11.7 M self, 0.62 %; 23.7 M inclusive),
+because the untap step reads as once a turn — and it *is* once a turn on
+every simulation clone too, 2,834 times a six-game `cube` run against
+~160 real turns. `(-226)` had put six of its walks behind `any_static`,
+"any permanent carries a static ability at all", which is `true` on
+nearly every `cube` board (a cube creature usually prints one) and so
+walked all of them anyway; the question the walks actually ask is
+whether any static is one of the eleven untap `StaticEffect`s, and that
+is a definition-only predicate the lane device already covers.
+`card_has_untap_static` peels the five `While*` wrappers
+unconditionally where the consumers' `active_static` peels them by
+condition — the sound direction — and a `debug_assert!` in `do_untap`
+recomputes the consumers' arm list through `active_static` on every
+clear gate, so the suite and the robustness grid audit the enumeration.
+The command-zone half stays a walk of two usually-empty lists, as
+`(-239)`'s did. `fixed` was already clear under the old gate on most
+boards, so it moves only by the walk that asked it.
+
+**What the step still costs with the gate clear, on `fixed`: ~5,000 Ir
+a call** — `do_phasing`, the untap loop's per-card empty-set lookups,
+the lock fold, the `MayChooseNotToUntap` walk, the flag-reset walk and
+one `vec![p]` a call (1,896 allocations, ~0.03 %); nothing above 1 M.
 
 ### `(-248)` TAKEN — the two targeting-time keyword reads behind `card_keyword_possible`: `sealed` -0.240 % / `cube` -0.224 % / `fixed` -0.167 %
 
@@ -18725,6 +18813,75 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE CACHE AND BRANCH AXIS AT THE `(-248)` TIP — the first cachegrind reading; Ir has been the only column for 248 legs
+
+`valgrind --tool=cachegrind --cache-sim=yes --branch-sim=yes` on the
+same `cube` six-game recipe and binary as the callgrind baseline
+(`profiling-fast`, `--no-default-features`), read by function with the
+new `scripts/cg_cache.py`. Deterministic like Ir, so it A/Bs the same
+way; **what it adds is the two costs a superscalar core pays that an
+instruction count cannot see**.
+
+```text
+  I  refs      1,886,902,605
+  I1 misses       76,094,636   4.03 %   <- one L1i miss per 25 instructions
+  D1 misses       34,108,069   3.8 %    (22.6 M rd / 11.5 M wr)
+  LL misses          148,725   0.0 %    the working set fits LL; nothing is DRAM-bound
+  Branches       321,176,359   (306.1 M cond / 15.1 M ind)
+  Mispredicts     36,771,576   11.4 %   (10.4 % cond / 31.8 % indirect)
+
+  I1mr by function (share of 76.1 M)          Bcm by function (share of 32.0 M cond)
+   5.92 M  7.8 %  Arc::clone_from_ref_in        1.37 M  4.3 %  dispatch_triggers_for_events
+   4.88 M  6.4 %  gather_continuous_effects_i.  1.31 M  4.1 %  Vec::from_iter
+   4.50 M  5.9 %  dispatch_triggers_for_events  1.08 M  3.4 %  _int_malloc
+   3.00 M  3.9 %  check_state_based_actions_i.  1.07 M  3.4 %  __memcpy
+   2.24 M  2.9 %  perform_action_inner          1.01 M  3.2 %  check_state_based_actions_into
+   1.73 M  2.3 %  Vec::from_iter                0.79 M  2.5 %  declare_blockers
+   1.58 M  2.1 %  GameState::clone              0.77 M  2.4 %  gather_continuous_effects_inner
+   1.41 M  1.9 %  compute_permanent_pass        0.68 M  2.1 %  declare_attackers_banded
+   1.33 M  1.8 %  _int_malloc                   0.58 M  1.8 %  computed_permanent_hinted
+   1.25 M  1.6 %  cast_spell_with_convoke       0.57 M  1.8 %  bot::cast_candidates
+                                                0.45 M  1.4 %  do_untap  (1 per 26 Ir; (-249) took a third of its Ir)
+```
+
+**Three things this says, none of which an Ir table could.**
+
+* **`Arc::clone_from_ref_in` — the CoW unshare's element clone — misses
+  L1i once every 8.6 instructions** (5.9 M misses on 50.8 M Ir; the
+  program averages one per 25). It is the cold, wide code the record
+  has priced by Ir alone for a hundred passes: every `CardInstance`
+  clone inlines every field's clone, the monomorphizations are many
+  (the hundred-and-first pass counted eleven), and each runs briefly
+  and leaves the cache. **Its wall-clock share is larger than its
+  2.7 % Ir share says**, which is one more reason `(-200)`/`(-201)`'s
+  "one unshare a probe" direction is the right one — and why PGO, which
+  lays hot paths contiguously, reads -24 % where `-C target-cpu=native`
+  reads flat (TODO's item 0): the program is front-end-bound, and
+  layout is the lever the Ir ledger cannot see.
+* **The mispredict rate is 11.4 % overall and 31.8 % on indirect
+  branches** — 4.8 M indirect mispredicts, which is `match` over
+  `Effect` / `StaticEffect` / `GameEvent` dispatched through jump
+  tables plus the `dyn Decider` calls. At ~15-20 cycles each, 36.8 M
+  mispredicts are of the same order as the Ir count in cycles; a
+  -0.3 % Ir leg on a well-predicted path may be worth less wall-clock
+  than a branch it leaves alone, and `bench_ab.py` (which resolves
+  ~2 %) is the only instrument here that arbitrates. **The rate-ranked
+  table (`cg_cache.py <dump> Bcm --rate`) names no large row**: the
+  worst-predicted functions with ≥ 20 k branches are 30-48 % and all
+  under 40 k mispredicts each (`pick_prepare_response`,
+  `pick_stack_response`, `cast_spell`); the count is spread over the
+  same ten wide functions the Ir table names. Not a lead on its own.
+* **LL misses are nil**, so nothing here is memory-bandwidth-bound; the
+  `__memcpy` row is L1/L2 traffic, and the "byte added to `GameState`"
+  rule (~6,800 Ir a byte) is an instruction-count rule, not a cache
+  one. `D1` misses are 3.8 % and spread.
+
+**How to use it:** run it beside callgrind on a candidate whose Ir
+reading is small but whose shape touches a hot `match` or a clone path;
+a leg that moves `I1mr` or `Bcm` by more than its Ir share is one to
+confirm with `bench_ab.py`. It is one more reading a run has to make,
+so it is not part of the three-pool gate.
+
 ### THE ACTOR RE-READ AT `b13f5ccd` — the printed-filter pass reaches the training path: -5.6 % since `ec1bb132`, and the requirement walker has left the table
 
 Same recipe (`profiling-fast -p crabomination_ml --no-default-features`,
@@ -20442,6 +20599,39 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**State at the `(-249)` tip (one leg on top of `(-248)`, three-pool Ir
+against the `(-248)` tip `b7285f4e`): `cube` 1,883,973,537 ->
+1,876,460,069 (-0.399 %), `fixed` 681,812,730 -> 681,439,653
+(-0.055 %), `sealed` 1,967,054,280 -> 1,959,940,755 (-0.362 %). The
+Log row has `do_untap`'s before/after.**
+
+**RE-READ AT the `(-248)` tip — the plain `cube` self table, top forty
+rows, against the `(-241)` table below, so nobody re-takes it.** Every
+row the `(-241)` read priced is where it was, minus the legs since; the
+rows that had **never been on a table** were read this run:
+
+```text
+  self Ir   share   row                          what
+   14.8 M   0.78 %  LocalKey<T>::with            the freeze memo's lock: 146,008 asks from computed_permanent_hinted (18.2 M incl., ~124 Ir — the `perms` linear scan, "a memo index is marginal" at (-219)) + 66,904 Unfreeze::drop (6.0 M, ~90 Ir); floor
+   12.2 M   0.65 %  grant_scan                   33,372 builds, ~500 Ir: 12,518 from available_mana, 8,678 mana_source_table, 4,252 main_phase_action_with — the lane is PRESENT on most cube boards; the walk is the cost. Read; a per-scope memo is the (-82) shape (0.98 builds a call); floor
+   11.7 M   0.62 %  do_untap                     TAKEN (-249): 2,834 calls, 8,366 -> 5,773 Ir each; the residue is the untap loop + do_phasing + the flag-reset walk
+   10.9 M   0.58 %  advance_step                 the step machine; not read
+   10.7 M   0.57 %  fire_step_triggers           24,216 calls, ~440 Ir self: trigger_grant_sources + retain, the triggerer walk, the equipped_bonus walk (per-card `attached_to` test), the graveyard lane; three IntoIter drops a call (the candidate/grant Vecs). Read, nothing above 1 M; floor
+   10.0 M   0.53 %  grants_nothing_slow          204,606 calls, ~49 Ir: 104 k recursive, 36.7 k available_mana, 35.8 k mana_source_table, 13.6 k effective_mana_abilities_into; the per-card grant test the (-199) device left; floor
+    9.6 M   0.51 %  SmallVec::extend             133,272 calls: blockers_of 24.6 k, GameState drop 23.2 k, gather 18.3 k, declare_blockers 15.4 k, SBA 9.0 k / 4.6 M, resolve_combat 7.6 k / 6.0 M — the "fill a SmallVec with a loop" rule's remaining collects; each under 0.3 %
+    9.4 M   0.50 %  blocker_self_block           65,204 calls: 51,056 under bot::legal_blockers (5.8 M), 8,018 declare_blockers, 6,130 blocker_can_block_attacker; the planner's pair count, as blocker_pair_block's is; floor
+    9.1 M   0.48 %  IntoIter::drop               367,830 calls, ~25 Ir: fire_step_triggers 72.6 k, declare_attackers_banded 57.9 k, SBA 51.5 k, the three combat-damage trigger walks 62.7 k — every `for x in vec` over a short candidate Vec; the shape (-244) priced, spread over forty sites
+```
+
+**The cache/branch axis (Profile of record, "THE CACHE AND BRANCH AXIS")
+is the new instrument, not a lead:** I1 misses 4.03 % of Ir with
+`Arc::clone_from_ref_in` at one per 8.6 instructions, mispredicts
+11.4 % (31.8 % indirect); nothing rate-ranked is large. It says the
+`(-200)`/`(-201)` unshare direction and PGO are worth more wall-clock
+than their Ir share, and that `bench_ab.py` is the arbiter for a leg
+that touches a `match` or a clone path.
+
+Before it:
 **State at the `(-248)` tip (`(-245)`..`(-248)` on top of the concurrent
 `(-243)`/`(-244)`, three-pool Ir against the `(-244)` tip `e44e9d90`):
 `cube` 1,928,746,090 -> 1,883,972,930 (-2.321 %), `fixed` 690,547,383 ->

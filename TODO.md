@@ -28,40 +28,35 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-248)` is the last claimed,
-   `(-249)` is next (this run's numbers collided with concurrent pushes twice and were
-   renumbered at push time — `git fetch` before naming a leg in a commit). Container gotchas in
-   **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast` ~10 min
-   warm on a loaded box, suite ~85 s after a ~5.5 min test build, `nextest` needs installing;
-   callgrind `--games 6` on the three pools in parallel ~1 min. ⚠ `pkill -f` kills your own
-   shell when the pattern is in its command line — kill by pid. Disk fills: delete binaries/dumps.
-2. **Gates at the `(-248)` tip:** PERF Baseline — suite 19,255 / 0 / 5, workspace clippy,
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-249)` is the last claimed,
+   `(-250)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
+   **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold: `profiling-fast`
+   9m48s, the test build ~12 min, suite 114 s, `nextest` needs installing, the audit
+   (`overflow` + debug-assertions) build 8m36s; warm engine rebuild 3m13s; callgrind
+   `--games 6` x three pools in parallel ~1 min. ⚠ `pkill -f` kills your own shell — kill by pid.
+2. **Gates at the `(-249)` tip (PERF Baseline):** suite 19,255 / 0 / 5, workspace clippy,
    release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
-   three-pool outcomes identical at every leg, `robustness_grid.sh --pilots` green on the `(-248)`
-   tree (ladder 30 / 33,120 games, pilots 45, 0 failures); a **fresh-seed robustness sweep** (20 primes
-   > 101 the `--wide` grid never ran, `all` + `cube`, 400 games, debug-assertions overflow
-   build): 0 panics / 0 stuck / 0 assertion fires; every cap is the Beacon of Immortality
-   class (ENGINE_BACKLOG's closed stall lead, now with its per-game cost recorded there).
-3. **This run, `(-245)`..`(-248)` (`cube` -2.32 % / `fixed` -1.27 % / `sealed` -1.26 % on top
-   of the concurrent `(-243)`/`(-244)`):** one read paid four times — rank `computed_permanent_hinted`'s
-   asks by caller (PERF candidates, "RE-READ AT the `(-245)` tip") and ask what each caller
-   *consumes* of the view; one keyword / three keywords / one card type / two sibling keyword
-   reads each went behind a presence gate (`board_keyword_in_scope`, `board_keyword_matching`,
-   `card_type_change_in_scope`, `card_keyword_possible`) with no view at all. When a gate is on
-   one of two sibling reads, the other is the row — `cg_edges.py --callees` names the line. A keyword put behind the lane joins `card_has_gate_keyword`'s union or
-   the printed leg answers a wrong `false` (the gate's debug audit catches it). Price a scope by
-   its `with_frozen_layers` row, not the memo's asks — the first miss pays the gather too.
-   History: `(-216)`..`(-244)` are in PERF's Baseline closing states; the device list is there,
-   and `(-244)`'s **line annotation of the ordinary `profiling-fast` dump** (PERF "How to
-   measure", no lines build) is the instrument that read the top self rows down to floors.
-4. **Perf leads (PERF candidates, top):** the by-caller table is read down to floors — every
-   row left consumes the whole view, so the next device is structural (a gather version, or the
-   probe design); a fresh `--separate-callers=3` re-read of the plain self table at `(-248)` is
-   the way to replenish, not another pass over that table. `blocker_pair_block`, the selector collect and the by-id block-planner
-   gates are priced and closed, and so are the top self rows (`(-244)`'s line read: the
-   selector collect, `sba_board_scan`, `PrintedList::push`); both grep sweeps are done — do not
-   re-run them. What is left beyond those two rows is structural: the gather-version memo and
-   the probe design.
+   three-pool outcomes identical, `robustness_grid.sh --no-actor` green on the `(-249)` tree
+   (30 cells / 33,120 games, 0 failures); `--pilots` last ran on `(-248)`. The fresh-seed sweep
+   (20 primes > 101, `all` + `cube`) is at `(-248)`: 0 panics / 0 stuck, every cap Beacon-class.
+3. **This run:** `(-249)`, an untap-static lane in front of `do_untap` (`cube` -0.399 % /
+   `sealed` -0.362 % / `fixed` -0.055 %) — a step that reads as once a turn runs once a turn on
+   every simulation clone (2,834 calls a six-game `cube` run), and "any static at all" read
+   `true` on nearly every `cube` board. Plus the first **cachegrind** reading (PERF Profile of
+   record, "THE CACHE AND BRANCH AXIS"; `scripts/cg_cache.py`): I1 misses 4.03 % of Ir with the
+   CoW unshare's element clone missing once per 8.6 instructions, mispredicts 11.4 %. It is a
+   second deterministic axis to A/B on, and it says PGO and the `(-200)`/`(-201)` unshare
+   direction are worth more wall-clock than their Ir share.
+4. **Perf leads (PERF candidates, top):** the plain `cube` self table at `(-248)` is re-read to
+   forty rows and every fresh row is priced (floors: the freeze memo's `perms` scan,
+   `grant_scan`, `fire_step_triggers`, `grants_nothing_slow`, `blocker_self_block`, the
+   `IntoIter::drop` spread). Nothing under 1 % is left unread; the next device is structural —
+   the probe design (`simulate_attack_outcome_once`: 32,790 scopes / 6 % of `cube`) or a gather
+   version — or the wall-clock axis: a `bench_ab.py` A/B of a layout change (the `(-200)` unshare
+   direction) that Ir under-prices. **Serde feature-gating (build time) was scoped, not
+   attempted:** 86 derives in `crabomination_base` and 23 engine files use serde, `snapshot.rs`
+   / `net.rs` / `cow.rs` among them, so the gate would have to thread the engine crate's own
+   modules; not a one-run job.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
    printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
