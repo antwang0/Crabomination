@@ -37,8 +37,8 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the `(-250)` tip (PERF Baseline):** suite 19,255 / 0 / 5, workspace clippy,
    release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
    three-pool outcomes identical, `robustness_grid.sh --no-actor` green on both the `(-249)`
-   and `(-250)` trees (30 cells / 33,120 games, 0 failures each); `--pilots` last ran on
-   `(-248)`. The fresh-seed sweep (20 primes > 101, `all` + `cube`) is at `(-248)`: 0 panics /
+   and `(-250)` trees (30 cells / 33,120 games, 0 failures each) and `--pilots` green on
+   `(-250)` (45 cells, 0 failures). The fresh-seed sweep (20 primes > 101, `all` + `cube`) is at `(-248)`: 0 panics /
    0 stuck, every cap Beacon-class. ⚠ **THE IR BASE MOVED AT `(-250)`** — A/B only against
    `(-250)`-or-later numbers (`cube` 1,817,493,748 / `fixed` 656,319,384 / `sealed` 1,886,392,273).
 3. **This run:** `(-250)`, `panic = "abort"` on every optimized profile — paired wall clock

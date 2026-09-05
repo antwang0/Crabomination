@@ -2568,7 +2568,8 @@ release the release-fast typecheck gate: clean at (-249); the profile change is 
 grid    robustness_grid.sh --no-actor on the (-250) tree — the audit binary now aborts on a
         fired debug_assert! (exit 134) and the script's rc check reads that as FAIL:
         ladder 30 cells / 33,120 games, 0 failures, cap 0 / stuck 0 / draw 0;
-        assertion strings 9 in the audit binary. --pilots last ran on (-248).
+        assertion strings 9 in the audit binary. Then --no-build --no-actor --pilots on the
+        same binary: ladder 30 cells ok again, **pilots 45 cells, 0 failures**.
 cache   cachegrind, release-fast, cube: Ir -3.47 %, I1 misses -5.45 %, D1 -2.15 %,
         mispredicts flat; rows in the Log entry.
 actor   selfplay_train builds under release-fast (+abort; candle and rayon included) and a
