@@ -510,11 +510,17 @@ const LANE_PREVENT_STATIC: u32 = 48;
 /// the static `block_tax_for` walks the board for per declared blocker (PERF
 /// `(-241)`). See [`card_has_block_tax_static`].
 const LANE_BLOCK_TAX_STATIC: u32 = 50;
+/// Any permanent's definition carries a static the untap step reads — the
+/// eleven `StaticEffect`s `do_untap`'s walks match (Mist of Stagnation,
+/// Seedborn Muse, the prevention and cap families, the off-turn untappers),
+/// once per untap step, real or simulated (PERF `(-249)`). See
+/// [`card_has_untap_static`].
+const LANE_UNTAP_STATIC: u32 = 52;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
-/// The lane count the predicate table below covers (shift 0 ..= 32).
-const LANE_COUNT: usize = 26;
+/// The lane count the predicate table below covers (shift 0 ..= 52).
+const LANE_COUNT: usize = 27;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -556,6 +562,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_etb_counter_static),                   // LANE_ETB_COUNTER_STATIC
     Some(card_has_prevent_static),                       // LANE_PREVENT_STATIC
     Some(card_has_block_tax_static),                     // LANE_BLOCK_TAX_STATIC
+    Some(card_has_untap_static),                         // LANE_UNTAP_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -790,6 +797,37 @@ fn card_has_block_tax_static(c: &CardInstance) -> bool {
         .static_abilities
         .iter()
         .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::BlockTaxToController { .. }))
+}
+
+/// Does this permanent's definition carry a static the untap step reads —
+/// one of the eleven `do_untap` walks for, under any of the `While*`
+/// wrappers `active_static` peels (peeled unconditionally here, the sound
+/// direction)? The [`LANE_UNTAP_STATIC`] predicate; definition-only.
+pub(crate) fn card_has_untap_static(c: &CardInstance) -> bool {
+    c.definition.static_abilities.iter().any(|sa| static_effect_touches_untap(&sa.effect))
+}
+
+fn static_effect_touches_untap(e: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as S;
+    match e {
+        S::WhileClassLevelAtLeast { inner, .. }
+        | S::WhileYourTurn { inner }
+        | S::WhileNotYourTurn { inner }
+        | S::WhileCountersAtLeast { inner, .. }
+        | S::WhileCondition { inner, .. } => static_effect_touches_untap(inner),
+        S::PermanentsDontUntap
+        | S::UntapAllYoursEachUntapStep
+        | S::UntapYoursEachUntapStepFiltered(_)
+        | S::UntapSelfEachOtherUntapStep
+        | S::UntapOnlyChosenTypeWhileUntapped
+        | S::PreventUntap { .. }
+        | S::PreventUntapGlobal { .. }
+        | S::MaxOneUntapPerStep { .. }
+        | S::MaxUntapsPerStep { .. }
+        | S::UntapSelfEachUntapStep
+        | S::UntapAttachedEachUntapStep => true,
+        _ => false,
+    }
 }
 
 fn card_has_draw_static(c: &CardInstance) -> bool {
@@ -1498,6 +1536,14 @@ impl Battlefield {
     #[inline]
     pub fn has_block_tax_static(&self) -> bool {
         self.lane(LANE_BLOCK_TAX_STATIC, card_has_block_tax_static)
+    }
+
+    /// Does any permanent here carry a static the untap step reads
+    /// ([`card_has_untap_static`])? Read once per `do_untap`, which is once
+    /// per turn on every simulation clone too (PERF `(-249)`).
+    #[inline]
+    pub fn has_untap_static(&self) -> bool {
+        self.lane(LANE_UNTAP_STATIC, card_has_untap_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

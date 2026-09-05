@@ -3178,20 +3178,46 @@ impl GameState {
             } else {
                 false
             };
-        // Six blocks below — Mist of Stagnation, the Seedborn untapper list, the
-        // filtered/Endbringer set, Storage Matrix, the prevention set's static
-        // walk and the untap caps — are each driven by a battlefield or
+        // Eight blocks below — Mist of Stagnation, the Seedborn untapper list,
+        // the filtered/Endbringer set, Storage Matrix, the prevention set's
+        // static walk, the untap caps, the off-turn self-untappers and the
+        // Urban Burgeoning hosts — are each driven by a battlefield or
         // command-zone *static ability*, and each is its own walk of the same
-        // list. One walk says whether any of them can produce anything: every
-        // producing path in all six goes through `c.definition.static_abilities`,
-        // so with no card carrying one they are all empty and the step is the
-        // flip plus the two player-scoped skips (which are `Player` counters,
-        // not statics, and stay outside the gate).
-        let any_static = self
-            .battlefield
-            .iter()
-            .chain(self.command_zone_sources())
-            .any(|c| !c.definition.static_abilities.is_empty());
+        // list. One question says whether any of them can produce anything:
+        // every producing path in all eight matches one of the eleven
+        // `StaticEffect`s `card_has_untap_static` names, so a board carrying
+        // none of them makes them all empty and the step is the flip plus the
+        // two player-scoped skips (which are `Player` counters, not statics,
+        // and stay outside the gate). The battlefield half is a lane — "any
+        // static at all" was `true` on most `cube` boards and walked all eight
+        // (PERF `(-249)`); the command-zone half is a walk of two usually-empty
+        // lists.
+        let any_static = self.battlefield.has_untap_static()
+            || self.command_zone_sources().any(crate::zone::card_has_untap_static);
+        debug_assert!(
+            any_static
+                || !self.battlefield.iter().chain(self.command_zone_sources()).any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            self.active_static(&sa.effect, c),
+                            Some(
+                                StaticEffect::PermanentsDontUntap
+                                    | StaticEffect::UntapAllYoursEachUntapStep
+                                    | StaticEffect::UntapYoursEachUntapStepFiltered(_)
+                                    | StaticEffect::UntapSelfEachOtherUntapStep
+                                    | StaticEffect::UntapOnlyChosenTypeWhileUntapped
+                                    | StaticEffect::PreventUntap { .. }
+                                    | StaticEffect::PreventUntapGlobal { .. }
+                                    | StaticEffect::MaxOneUntapPerStep { .. }
+                                    | StaticEffect::MaxUntapsPerStep { .. }
+                                    | StaticEffect::UntapSelfEachUntapStep
+                                    | StaticEffect::UntapAttachedEachUntapStep
+                            )
+                        )
+                    })
+                }),
+            "card_has_untap_static missed a static do_untap reads: a lane that reads clear would skip it",
+        );
         // CR 502.4 — Mist of Stagnation: nothing untaps during any untap step.
         if any_static && self.battlefield.iter().chain(self.command_zone_sources()).any(|c| {
             c.definition
