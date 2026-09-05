@@ -7204,12 +7204,17 @@ dry run (20.5 k Ir, 7.9 %) and the redeal (now once a decision,
 `(-256)`); a full-turn sim is ~13 passes at 6 k plus 0.7 casts at 35 k.
 (3) The sim's casts (`attack_sim_spells`, 9.3 %) are the fidelity that
 adopted the flag; pricing them down means a cheaper cast path in the
-engine, not a bot change. (4) The SBA sweep after combat damage (11 k Ir,
-3.8 %) recomputes every permanent's view for the lethal-damage walk on
-a board `combat_damage_computed` just computed; damage marks are not a
-layer input, but the freeze design forbids a scope across a write, so
-this is a "views survive a damage write" device, not a scope — price
-it by the 12,268 calls x the compute_permanents share before building.
+engine, not a bot change. (4) The SBA sweep after combat damage (11 k Ir a sweep,
+3.8 %) is **deaths, not views**: its callees are
+`remove_from_battlefield_to_graveyard_raw` 10,832 calls / 43.7 M,
+`place_card_at_resolved_zone` 11.7 M, `on_left_battlefield` 10.0 M,
+`take_by_id` 6.2 M — ~6.6 k Ir per creature death end to end — against
+`sba_board_scan` 13.6 M and `compute_permanents` 13.2 M (0.37 %; the
+lethal-damage walk's views are not the cost). A death is a `take_by_id`
+(a battlefield unshare + remove), a graveyard push, the left-battlefield
+walk and the death registries; the sims kill ~0.8 creatures a sim. Price
+the move path by `--callees remove_from_battlefield_to_graveyard_raw`
+before touching it; the last leg there was `(-217)`.
 (5) The `gang`-era rows (the dispatcher mask, the presence lanes, the
 gathers' floors) hold their shape here; nothing in this table is a new
 1 %+ self row that the earlier maps did not already price.
