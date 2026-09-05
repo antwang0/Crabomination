@@ -275,6 +275,13 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // moves, priced by the block sim). Gate each as A against `dflt55`.
         "atk-chain-wide" => Some(Pilot::Scored(EvalWeights::attack_chain_wide_on())),
         "blk-chain" => Some(Pilot::Scored(EvalWeights::block_chain_on())),
+        // The frozen round-56 default, and round 58's throughput
+        // restrictions on the wide chain's pair move. Gate each as A
+        // against `dflt56` for *no loss* (.ladder/run_r58_pairs.sh).
+        "dflt56" => Some(Pilot::Scored(EvalWeights::round56_default())),
+        "pairs-empty" => Some(Pilot::Scored(EvalWeights::attack_pairs_empty_only_on())),
+        "pairs-lazy" => Some(Pilot::Scored(EvalWeights::attack_pairs_lazy_on())),
+        "pairs-both" => Some(Pilot::Scored(EvalWeights::attack_pairs_both_on())),
         // The open-board shortcut: no opposing creature / planeswalker /
         // battle, so the attack search takes greedy without a sim. A
         // throughput device; gate as A against `gang` for *no loss*.
@@ -719,10 +726,12 @@ fn host_cpu_model() -> String {
 /// deck *content*, not just shuffles), a fixed seed, paired play, and a
 /// mirror of one profile against itself.
 ///
-/// `gang` is `EvalWeights::default()` — the profile the bot actually
-/// plays, and therefore the one self-play training pays for. Benching
-/// `baseline` would measure a code path (no attack search, no combat
-/// sims, no gang-block search) that no real run takes.
+/// `gang` was `EvalWeights::default()` when the baseline was frozen and
+/// stays the bench profile so every committed reading is comparable; the
+/// adopted default has since grown the combat chains (rounds 55-56) and
+/// runs at ~1.8x its wall clock — PERF's candidates carry that ratio.
+/// Benching `baseline` would measure a code path (no attack search, no
+/// combat sims, no gang-block search) that no real run takes.
 const BENCH_SEED: u64 = 20250808;
 const BENCH_GAMES: usize = 80;
 const BENCH_PROFILE: &str = "gang";
@@ -1682,16 +1691,18 @@ fn main() {
             pct(chain_won, calls),
             if calls == 0 { 0.0 } else { chain_sims as f64 / calls as f64 },
         );
-        let [bcalls, bcands, bsims, bnew, bwon, breuse] =
+        let [bcalls, bcands, bsims, bnew, bwon, breuse, bran] =
             crabomination::server::bot::block_census::snapshot();
         println!(
             "  block_census {bcalls} searched, {bcands} candidates ({:.2}/search); chain sims \
              {bsims} ({:.2}/search), proposed a new plan {bnew} ({:.1} %), won {bwon} ({:.1} %), \
-             start reused {breuse}",
+             chain ran {bran} ({:.1} %), start reused {breuse} ({:.1} % of runs)",
             if bcalls == 0 { 0.0 } else { bcands as f64 / bcalls as f64 },
             if bcalls == 0 { 0.0 } else { bsims as f64 / bcalls as f64 },
             pct(bnew, bcalls),
             pct(bwon, bcalls),
+            pct(bran, bcalls),
+            pct(breuse, bran),
         );
     }
     // PERF (-88): how many state-based-action sweeps re-sweep a state the

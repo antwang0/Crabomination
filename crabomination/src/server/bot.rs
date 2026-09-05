@@ -309,6 +309,18 @@ pub struct EvalWeights {
     /// / 50.4 / 50.4 vs the r55 default, every interval clear of 50; the
     /// net leg straddled (50.2 / 50.7). See `default_const`.
     pub attack_chain_wide: bool,
+    /// The wide chain's pair move only when greedy declared *nobody* —
+    /// the board it was built for. Off, the `C(n, 2)` pairs are priced at
+    /// every chain's first step, including the 55 % that start beside a
+    /// non-empty greedy declaration the menu already prices. A throughput
+    /// device; needs `attack_chain_wide`.
+    pub attack_pairs_empty_only: bool,
+    /// The wide chain's pair move only after the singles step ties: the
+    /// overload it exists to find is exactly the board where every single
+    /// addition is a trade with staying home, so the pairs are priced only
+    /// when single growth would have stopped the chain at nobody. A
+    /// throughput device; needs `attack_chain_wide`.
+    pub attack_pairs_lazy: bool,
     /// Search the block assignment instead of taking the greedy one:
     /// simulate each candidate through combat damage and keep the best (see
     /// [`pick_blocks_scored`]). 0 disables it; higher values allow more
@@ -723,6 +735,8 @@ impl EvalWeights {
             attack_search: 0,
             attack_chain: 0,
             attack_chain_wide: false,
+            attack_pairs_empty_only: false,
+            attack_pairs_lazy: false,
             block_search: 0,
             block_chain: 0,
             legacy_pretap: false,
@@ -804,6 +818,8 @@ impl EvalWeights {
             attack_search: 0,
             attack_chain: 0,
             attack_chain_wide: false,
+            attack_pairs_empty_only: false,
+            attack_pairs_lazy: false,
             block_search: 0,
             block_chain: 0,
             legacy_pretap: false,
@@ -868,6 +884,8 @@ impl EvalWeights {
             attack_search: 0,
             attack_chain: 0,
             attack_chain_wide: false,
+            attack_pairs_empty_only: false,
+            attack_pairs_lazy: false,
             block_search: 0,
             block_chain: 0,
             legacy_pretap: false,
@@ -1850,7 +1868,34 @@ impl EvalWeights {
     /// r50 replicated-small rule) and 50.2 / 50.7 under the net, one cell
     /// straddling — adopted here, not in [`client_pilot`](Self::client_pilot).
     pub const fn default_const() -> Self {
+        Self::round56_default()
+    }
+
+    /// The default as it stood after round 56 (the round-55 default plus
+    /// the wide attack chain and the block chain), frozen as the base the
+    /// pair-move throughput gates read on (`dflt56`).
+    pub const fn round56_default() -> Self {
         Self { attack_chain_wide: true, block_chain: 4, ..Self::round55_default() }
+    }
+
+    /// The wide chain's pair move on the empty-greedy board only: ladder
+    /// `pairs-empty` as A against `dflt56`, gated for no loss. See
+    /// [`attack_pairs_empty_only`](Self::attack_pairs_empty_only).
+    pub const fn attack_pairs_empty_only_on() -> Self {
+        Self { attack_pairs_empty_only: true, ..Self::round56_default() }
+    }
+
+    /// The wide chain's pair move only after the singles tie: ladder
+    /// `pairs-lazy` as A against `dflt56`, gated for no loss. See
+    /// [`attack_pairs_lazy`](Self::attack_pairs_lazy).
+    pub const fn attack_pairs_lazy_on() -> Self {
+        Self { attack_pairs_lazy: true, ..Self::round56_default() }
+    }
+
+    /// Both pair-move restrictions: ladder `pairs-both` as A against
+    /// `dflt56`.
+    pub const fn attack_pairs_both_on() -> Self {
+        Self { attack_pairs_empty_only: true, attack_pairs_lazy: true, ..Self::round56_default() }
     }
 }
 
@@ -8860,13 +8905,15 @@ fn attack_set_key(c: &[Attack]) -> Vec<u32> {
 /// `menu` / `menu_scores` are the declarations [`pick_attacks_scored`] has
 /// already simulated (index 0 greedy): the chain's start set is the menu's
 /// repaired "all home" whenever that survived dedupe, so its score is
-/// reused instead of re-simulated.
+/// reused instead of re-simulated. `from_empty` says greedy declared
+/// nobody, which is what [`EvalWeights::attack_pairs_empty_only`] gates on.
 fn attack_chain_candidate(
     state: &GameState,
     seat: usize,
     w: &EvalWeights,
     menu: &[Vec<Attack>],
     menu_scores: &[(usize, i32)],
+    from_empty: bool,
 ) -> Option<(Vec<Attack>, i32)> {
     let greedy: &[Attack] = menu.first().map(Vec::as_slice).unwrap_or(&[]);
     let face_player = attack_target_player(state, seat);
@@ -8919,33 +8966,20 @@ fn attack_chain_candidate(
     let mut remaining: Vec<Attack> =
         pool.into_iter().filter(|a| !current.iter().any(|c| c.attacker == a.attacker)).collect();
     let mut sims = 0u64;
-    for step in 0..w.attack_chain {
-        if remaining.is_empty() {
-            break;
-        }
-        // Candidate 0 is "finalize": the set so far, at its known score.
-        // First-wins-ties in `choose_scored` makes a tie stop the chain.
-        let mut cands: Vec<Vec<Attack>> = Vec::with_capacity(remaining.len() + 1);
-        cands.push(current.clone());
-        for a in &remaining {
-            let mut c = current.clone();
-            c.push(*a);
-            cands.push(c);
-        }
-        // The wide chain's first step also offers every pair: two
-        // attackers into one blocker connect where each alone is blocked
-        // and traded, so a single step ties and the chain would stop.
-        if step == 0 && w.attack_chain_wide && remaining.len() >= 2 {
-            for i in 0..remaining.len() {
-                for j in (i + 1)..remaining.len() {
-                    let mut c = current.clone();
-                    c.push(remaining[i]);
-                    c.push(remaining[j]);
-                    cands.push(c);
-                }
+    // Candidate 0 is always "finalize": the set so far, at its known score.
+    // First-wins-ties in `choose_scored` makes a tie stop the chain.
+    let push_pairs = |cands: &mut Vec<Vec<Attack>>, current: &[Attack], remaining: &[Attack]| {
+        for i in 0..remaining.len() {
+            for j in (i + 1)..remaining.len() {
+                let mut c = current.to_vec();
+                c.push(remaining[i]);
+                c.push(remaining[j]);
+                cands.push(c);
             }
         }
-        repair_attack_subsets(state, seat, greedy, &mut cands);
+    };
+    let mut price = |cands: &mut Vec<Vec<Attack>>, current_score: i32| -> (usize, Vec<(usize, i32)>) {
+        repair_attack_subsets(state, seat, greedy, cands);
         let mut scored: Vec<(usize, i32)> = vec![(0, current_score)];
         for (i, c) in cands.iter().enumerate().skip(1) {
             sims += 1;
@@ -8953,7 +8987,38 @@ fn attack_chain_candidate(
                 scored.push((i, s));
             }
         }
-        let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+        (choose_scored(state.turn_number, &scored).unwrap_or(0), scored)
+    };
+    for step in 0..w.attack_chain {
+        if remaining.is_empty() {
+            break;
+        }
+        // The wide chain's first step also offers every pair: two
+        // attackers into one blocker connect where each alone is blocked
+        // and traded, so a single step ties and the chain would stop.
+        // `attack_pairs_empty_only` keeps that to the empty-greedy board it
+        // was built for; `attack_pairs_lazy` prices the pairs only once the
+        // singles have tied.
+        let pairs = step == 0
+            && w.attack_chain_wide
+            && remaining.len() >= 2
+            && (from_empty || !w.attack_pairs_empty_only);
+        let mut cands: Vec<Vec<Attack>> = Vec::with_capacity(remaining.len() + 1);
+        cands.push(current.clone());
+        for a in &remaining {
+            let mut c = current.clone();
+            c.push(*a);
+            cands.push(c);
+        }
+        if pairs && !w.attack_pairs_lazy {
+            push_pairs(&mut cands, &current, &remaining);
+        }
+        let (mut chosen, mut scored) = price(&mut cands, current_score);
+        if chosen == 0 && pairs && w.attack_pairs_lazy {
+            cands = vec![current.clone()];
+            push_pairs(&mut cands, &current, &remaining);
+            (chosen, scored) = price(&mut cands, current_score);
+        }
         if chosen == 0 {
             break;
         }
@@ -9051,7 +9116,8 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     // 0 and every tie, and skipped when the menu already holds that set.
     let menu_len = candidates.len();
     if w.attack_chain > 0
-        && let Some((chain, score)) = attack_chain_candidate(state, seat, w, &candidates, &scored)
+        && let Some((chain, score)) =
+            attack_chain_candidate(state, seat, w, &candidates, &scored, chain_from_empty)
         && !candidates.iter().any(|c| attack_set_key(c) == attack_set_key(&chain))
     {
         candidates.push(chain);
@@ -9184,8 +9250,10 @@ pub mod block_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 
     /// `[calls, menu candidates, sims the chain ran, the chain proposed a
-    /// plan the menu lacked, ... and it won, chain start scores reused]`.
-    pub static N: [AtomicU64; 6] = [const { AtomicU64::new(0) }; 6];
+    /// plan the menu lacked, ... and it won, chain start scores reused,
+    /// chains that reached their start (the reuse denominator: a search
+    /// with no free blocker or no legal pair returns before it)]`.
+    pub static N: [AtomicU64; 7] = [const { AtomicU64::new(0) }; 7];
 
     pub fn on() -> bool {
         super::attack_census::on()
@@ -9208,7 +9276,7 @@ pub mod block_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 6] {
+    pub fn snapshot() -> [u64; 7] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -10036,6 +10104,7 @@ fn block_chain_candidate(
     repair_block_plans(state, seat, &mut start);
     let mut current = start.swap_remove(0);
     let start_key = block_set_key(&current);
+    block_census::add(6, 1);
     let mut current_score = match menu_scores
         .iter()
         .find(|(i, _)| menu.get(*i).is_some_and(|c| block_set_key(c) == start_key))
@@ -16195,6 +16264,16 @@ mod tests {
         let wide = pick_attacks_scored(&g, 0, &EvalWeights::attack_chain_wide_on());
         assert_eq!(wide.len(), 2, "the pair move overloads the blocker: {wide:?}");
         g.clone().declare_attackers(wide).expect("legal");
+        // The pair-move throughput restrictions keep exactly this board:
+        // greedy declared nobody and every single addition ties.
+        for (name, w) in [
+            ("pairs-empty", EvalWeights::attack_pairs_empty_only_on()),
+            ("pairs-lazy", EvalWeights::attack_pairs_lazy_on()),
+            ("pairs-both", EvalWeights::attack_pairs_both_on()),
+        ] {
+            let picked = pick_attacks_scored(&g, 0, &w);
+            assert_eq!(picked.len(), 2, "{name} still overloads the blocker: {picked:?}");
+        }
     }
 
     /// CR 509.1a — `CantBlock` is enforced from the *computed* set, so a
@@ -16612,7 +16691,7 @@ mod tests {
         }
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[]).expect("the start set scores");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false).expect("the start set scores");
         assert!(chain.iter().any(|a| a.attacker == must), "the chain keeps the must-attacker: {chain:?}");
         g.clone().declare_attackers(chain).expect("the chained declaration is legal");
         let picked = pick_attacks_scored(&g, 0, &w);
@@ -16639,7 +16718,7 @@ mod tests {
         }
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[]).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false).expect("scored");
         assert_eq!(chain.iter().map(|a| a.attacker).collect::<Vec<_>>(), vec![bear], "{chain:?}");
     }
 
@@ -16667,7 +16746,7 @@ mod tests {
         }
         let w = EvalWeights { attack_chain: 1, ..EvalWeights::attack_chain_on() };
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[]).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false).expect("scored");
         assert_eq!(chain.len(), 1, "one addition allowed: {chain:?}");
         let picked = pick_attacks_scored(&g, 0, &w);
         assert_eq!(picked.len(), 3, "three free bears: the alpha strike wins the argmax: {picked:?}");
@@ -16709,7 +16788,7 @@ mod tests {
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
         assert_eq!(menu[0].len(), 2, "greedy sees the lethal swing: {menu:?}");
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[]).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false).expect("scored");
         assert!(chain.is_empty(), "each bear alone is a dead bear: {chain:?}");
         let picked = pick_attacks_scored(&g, 0, &w);
         assert_eq!(picked.len(), 2, "the menu still finds lethal: {picked:?}");
