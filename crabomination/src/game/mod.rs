@@ -18329,6 +18329,12 @@ impl GameState {
     ///
     /// [`dispatch_triggers_for_events`]: Self::dispatch_triggers_for_events
     fn fire_delayed_event_watchers(&mut self, events: &[GameEvent]) {
+        // Every leg below fires a watcher off `delayed_triggers`; with none
+        // registered there is nothing to fire, and the two ungated collects
+        // further down ran on every dispatch (PERF `(-258)`).
+        if self.delayed_triggers.is_empty() {
+            return;
+        }
         // Event-keyed delayed triggers ("when [card] dies this turn, …").
         // Fire any `WhenCardDies(cid)` whose watched card appears in a
         // `CreatureDied` event in this batch, with its captured target.
@@ -18497,16 +18503,25 @@ impl GameState {
         // entering creature controlled by the trigger's controller; the
         // entering creature is the trigger source. These persist (not
         // fires_once) until cleanup.
-        let entered_creatures: Vec<(CardId, usize)> = events
+        // Ask the batch first, as the death and attack legs above do: the
+        // collect is a `Vec::from_iter` call even when it builds nothing.
+        let entered_creatures: Vec<(CardId, usize)> = if !events
             .iter()
-            .filter_map(|e| match e {
-                GameEvent::PermanentEntered { card_id } => self
-                    .battlefield_find(*card_id)
-                    .filter(|c| c.definition.is_creature())
-                    .map(|c| (*card_id, c.controller)),
-                _ => None,
-            })
-            .collect();
+            .any(|e| matches!(e, GameEvent::PermanentEntered { .. }))
+        {
+            Vec::new()
+        } else {
+            events
+                .iter()
+                .filter_map(|e| match e {
+                    GameEvent::PermanentEntered { card_id } => self
+                        .battlefield_find(*card_id)
+                        .filter(|c| c.definition.is_creature())
+                        .map(|c| (*card_id, c.controller)),
+                    _ => None,
+                })
+                .collect()
+        };
         if !entered_creatures.is_empty() {
             use crate::game::types::DelayedKind;
             let watchers: Vec<crate::game::types::DelayedTrigger> = self
@@ -18535,16 +18550,20 @@ impl GameState {
         // died under the trigger's controller (read from the death LKI
         // snapshot); the dead creature is the trigger source. These persist
         // until cleanup.
-        let died_creatures: Vec<(CardId, usize)> = events
-            .iter()
-            .filter_map(|e| match e {
-                GameEvent::CreatureDied { card_id } => self
-                    .died_card_snapshots
-                    .get(card_id)
-                    .map(|snap| (*card_id, snap.controller)),
-                _ => None,
-            })
-            .collect();
+        let died_creatures: Vec<(CardId, usize)> = if !any_death {
+            Vec::new()
+        } else {
+            events
+                .iter()
+                .filter_map(|e| match e {
+                    GameEvent::CreatureDied { card_id } => self
+                        .died_card_snapshots
+                        .get(card_id)
+                        .map(|snap| (*card_id, snap.controller)),
+                    _ => None,
+                })
+                .collect()
+        };
         if !died_creatures.is_empty() {
             use crate::game::types::DelayedKind;
             let watchers: Vec<crate::game::types::DelayedTrigger> = self

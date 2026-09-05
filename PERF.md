@@ -3358,6 +3358,23 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-258)` TAKEN — `fire_delayed_event_watchers` returns on an empty watcher list, its two ungated collects ask the batch first: sealed default Ir **-0.114 %** / cube **-0.010 %**
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast, system allocator), against the (-257) tip
+  sealed            3,515,088,115 -> 3,511,084,325 Ir   **-0.114 %**
+  cube              2,583,811,909 -> 2,583,556,668 Ir   **-0.010 %**
+  outcomes identical
+  fire_delayed_event_watchers, 56,270 calls: 20.3 M -> 16.3 M inclusive; Vec::from_iter under it 113,768 -> 32,306 calls
+```
+
+Every leg of the function fires a watcher off `delayed_triggers`, so
+an empty list is an early return; and the `entered_creatures` /
+`died_creatures` collects ran on every dispatch where the death and
+attack legs beside them already asked the batch first. Small, and the
+remaining 32 k collects are the batches that do carry an ETB or a
+death — the floor for this shape.
+
 ### `(-257)` TAKEN — `fire_step_triggers`' delayed-trigger rebuild behind a read-only match: sealed default Ir **-0.903 %** / cube **-0.085 %**
 
 ```text
