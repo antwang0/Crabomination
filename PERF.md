@@ -2541,6 +2541,45 @@ a box whose state moves.
 
 ## Baseline
 
+### `panic = "abort"` — closing state at the `(-250)` tip, THE NEW IR BASE
+
+One build-profile commit on top of `(-249)`, behaviour-preserving
+(three-pool outcomes identical, `--bench` counters identical, golden
+traces unmoved, the suite untouched because test harnesses always
+unwind). **Every Ir number after this line is on the new base; a
+reading against a `(-249)`-or-older number is not an A/B.**
+
+```text
+  pool     base (-249)      tip (-250)       delta
+  cube     1,876,460,069    1,817,493,748   **-3.142 %**
+  fixed      681,439,653      656,319,384   **-3.686 %**
+  sealed   1,959,940,755    1,886,392,273   **-3.753 %**
+  wall     paired --bench, release-fast, two 16-pair runs: **+4.45 % / +5.51 %** median games/s
+
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,255 / 0 / 5 at the tip (156 s under nextest beside the grid's build); golden traces 7/7
+clippy  --workspace --exclude crabomination_client --all-targets   clean at (-249); the
+        change since is Cargo.toml's release profile and prose
+release the release-fast typecheck gate: clean at (-249); the profile change is not code
+--bench profiling-fast at the tip: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls** — counters identical to 2003d1cf; determinism ok (all pairs split);
+        thread_determinism ok (3 vs 1 threads identical); peak_rss 20.7 MiB;
+        bin_bytes 183,143,512 (was 219,672,984)
+grid    robustness_grid.sh --no-actor on the (-250) tree — the audit binary now aborts on a
+        fired debug_assert! (exit 134) and the script's rc check reads that as FAIL:
+        ladder 30 cells / 33,120 games, 0 failures, cap 0 / stuck 0 / draw 0;
+        assertion strings 9 in the audit binary. --pilots last ran on (-248).
+cache   cachegrind, release-fast, cube: Ir -3.47 %, I1 misses -5.45 %, D1 -2.15 %,
+        mispredicts flat; rows in the Log entry.
+```
+
+**The device: the cachegrind axis named the lever.** The I1-miss table
+said the program is front-end-bound and that layout, not width, is what
+moves it (which is also what PGO's -24 % against `target-cpu`'s flat had
+been saying for a hundred passes); the cheapest layout change in the
+toolchain is to stop emitting unwind cleanup, and it was worth more than
+the last twelve source legs together.
+
 ### The untap-static lane — closing state at the `(-249)` tip
 
 One engine commit on top of the `(-248)` tip `b7285f4e`, behaviour-
@@ -7659,6 +7698,48 @@ are all in the Log. Read the archive before re-deriving a pass from that
 range; it is the same text, one file over.
 
 ## Log
+
+### `(-250)` TAKEN — `panic = "abort"` on every optimized profile: paired wall clock **+4.45 % / +5.51 %**, Ir `sealed` -3.753 % / `fixed` -3.686 % / `cube` -3.142 %
+
+```text
+  wall clock, scripts/bench_ab.py, release-fast bot_ladder (mimalloc), two independent 16-pair runs
+    run 1   A median 490.37   B median 517.78   paired B/A median +4.45 %  mean +4.78 %  sd 4.36
+    run 2   A median 490.59   B median 518.84   paired B/A median +5.51 %  mean +4.55 %  sd 3.61
+  cachegrind, release-fast bot_ladder, cube (a relative read — mimalloc on both sides)
+    Ir            1,753,456,679 -> 1,692,598,374   -3.47 %
+    I1 misses        74,217,599 ->    70,175,409   -5.45 %
+    D1 misses        35,977,779 ->    35,205,205   -2.15 %
+    mispredicts      34,403,011 ->    34,470,898   +0.20 %  (flat)
+    bin_bytes       144,142,368 ->   125,179,032  -13.2 %
+  Ir, profiling-fast --no-default-features, three pools against the (-249) tip
+    cube    1,876,460,069 -> 1,817,493,748   **-3.142 %**
+    fixed     681,439,653 ->   656,319,384   **-3.686 %**
+    sealed  1,959,940,755 -> 1,886,392,273   **-3.753 %**
+  three-pool outcomes identical; --bench counters identical (195,806 / 27.49 / 611.9 / 0);
+  determinism ok; thread_determinism ok (3 vs 1); suite untouched (test harnesses always unwind)
+  where the Ir went (cachegrind by function, cube): __memcpy -15.1 M, perform_action_inner -11.2 M,
+    dispatch_triggers_for_events -9.2 M, IntoIter::drop -7.1 M, Vec::clone -4.9 M, Vec::push_mut
+    -3.6 M (gone), clone_from_ref_in -3.0 M; a few drop-glue and closure rows rise (inlining moved)
+```
+
+The one build lever nobody had pulled. TODO's item 0 says "THE BUILD IS
+THE LEVER" and lists PGO (-24 %), LTO (0.917) and `target-cpu=native`
+(flat); unwinding was never on the list. Nothing in the tree calls
+`catch_unwind` and no worker's `join` recovers a panicked thread, so a
+panic already ended a run — with `abort` it ends it after printing the
+same message, exit 134 instead of 101, which the robustness grid's
+`rc` check reads as the same failure. What goes away is real code on
+the hot path, not just cold landing pads: every call LLVM could not
+mark `nounwind` kept its cleanup edge, drop flags and the copies that
+feed them, which is why `__memcpy` and `IntoIter::drop` are the largest
+movers and why Ir moves 3.5 % where the landing pads themselves never
+executed. **Found off the cachegrind axis**: the I1-miss table said the
+program is front-end-bound and layout is the lever, and the cheapest
+layout change in the toolchain is deleting the unwind tables.
+
+**The new Ir base.** Every three-pool number from here is against the
+`(-250)` binaries; the `(-249)` closing state is the last on the old
+base, and a reading across the boundary is not an A/B.
 
 ### `(-249)` TAKEN — an untap-static lane in front of `do_untap`'s eight static walks: `cube` -0.399 % / `sealed` -0.362 % / `fixed` -0.055 %
 
@@ -20598,6 +20679,23 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**State at the `(-250)` tip — THE IR BASE MOVED (`panic = "abort"` on
+every optimized profile, three-pool Ir against the `(-249)` tip):
+`cube` 1,876,460,069 -> 1,817,493,748 (-3.142 %), `fixed` 681,439,653
+-> 656,319,384 (-3.686 %), `sealed` 1,959,940,755 -> 1,886,392,273
+(-3.753 %); paired wall clock +4.45 % / +5.51 %. Every A/B from here is
+against these; nothing in the tables below was re-read on the new base
+(the shares shift by ~3 %, the ranking does not).**
+
+**Build levers now pulled, so nobody re-pulls them:** mimalloc (+22 %),
+PGO (-24 %, opt-in), `panic = "abort"` (`(-250)`, +4.5-5.5 %); refuted:
+`target-cpu=native` (flat). Not tried, with the reason: fat LTO on
+`release` (the single-codegen-unit engine already peaks at ~5.9 GB in
+this container — `profiling` cannot build here; fat LTO is worse);
+`opt-level = 3` on the dev deps is already on. **`-C force-frame-
+pointers=no` is the default; `debug = false` on `release` already.**
+BOLT is blocked (no `llvm-bolt`, no `perf`).
 
 **State at the `(-249)` tip (one leg on top of `(-248)`, three-pool Ir
 against the `(-248)` tip `b7285f4e`): `cube` 1,883,973,537 ->

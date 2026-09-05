@@ -28,25 +28,27 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-249)` is the last claimed,
-   `(-250)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-250)` is the last claimed,
+   `(-251)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold: `profiling-fast`
    9m48s, the test build ~12 min, suite 114 s, `nextest` needs installing, the audit
    (`overflow` + debug-assertions) build 8m36s; warm engine rebuild 3m13s; callgrind
    `--games 6` x three pools in parallel ~1 min. ⚠ `pkill -f` kills your own shell — kill by pid.
-2. **Gates at the `(-249)` tip (PERF Baseline):** suite 19,255 / 0 / 5, workspace clippy,
+2. **Gates at the `(-250)` tip (PERF Baseline):** suite 19,255 / 0 / 5, workspace clippy,
    release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
-   three-pool outcomes identical, `robustness_grid.sh --no-actor` green on the `(-249)` tree
-   (30 cells / 33,120 games, 0 failures); `--pilots` last ran on `(-248)`. The fresh-seed sweep
-   (20 primes > 101, `all` + `cube`) is at `(-248)`: 0 panics / 0 stuck, every cap Beacon-class.
-3. **This run:** `(-249)`, an untap-static lane in front of `do_untap` (`cube` -0.399 % /
-   `sealed` -0.362 % / `fixed` -0.055 %) — a step that reads as once a turn runs once a turn on
-   every simulation clone (2,834 calls a six-game `cube` run), and "any static at all" read
-   `true` on nearly every `cube` board. Plus the first **cachegrind** reading (PERF Profile of
-   record, "THE CACHE AND BRANCH AXIS"; `scripts/cg_cache.py`): I1 misses 4.03 % of Ir with the
-   CoW unshare's element clone missing once per 8.6 instructions, mispredicts 11.4 %. It is a
-   second deterministic axis to A/B on, and it says PGO and the `(-200)`/`(-201)` unshare
-   direction are worth more wall-clock than their Ir share.
+   three-pool outcomes identical, `robustness_grid.sh --no-actor` green on both the `(-249)`
+   and `(-250)` trees (30 cells / 33,120 games, 0 failures each); `--pilots` last ran on
+   `(-248)`. The fresh-seed sweep (20 primes > 101, `all` + `cube`) is at `(-248)`: 0 panics /
+   0 stuck, every cap Beacon-class. ⚠ **THE IR BASE MOVED AT `(-250)`** — A/B only against
+   `(-250)`-or-later numbers (`cube` 1,817,493,748 / `fixed` 656,319,384 / `sealed` 1,886,392,273).
+3. **This run:** `(-250)`, `panic = "abort"` on every optimized profile — paired wall clock
+   **+4.45 % / +5.51 %** (two 16-pair `bench_ab.py` runs), Ir -3.1..-3.8 % on all three pools,
+   binary -13 %; found off the first **cachegrind** reading (PERF Profile of record, "THE CACHE
+   AND BRANCH AXIS"; `scripts/cg_cache.py`): I1 misses 4.03 % of Ir, the CoW unshare's clone
+   missing once per 8.6 instructions — front-end-bound, so layout is the lever. And `(-249)`,
+   an untap-static lane in front of `do_untap` (`cube` -0.399 % / `sealed` -0.362 %): a step
+   that reads as once a turn runs once a turn on every simulation clone, and "any static at all"
+   read `true` on nearly every `cube` board.
 4. **Perf leads (PERF candidates, top):** the plain `cube` self table at `(-248)` is re-read to
    forty rows and every fresh row is priced (floors: the freeze memo's `perms` scan,
    `grant_scan`, `fire_step_triggers`, `grants_nothing_slow`, `blocker_self_block`, the
@@ -66,7 +68,10 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
 0. **THE BUILD IS THE LEVER, NOT THE SOURCE.** PGO is a ~24 % win on both
    pools and `-C target-cpu=native` is flat — width buys nothing here, layout
-   buys everything. **And the profile this file measures on is 8.3 % slower
+   buys everything. **`panic = "abort"` is landed on every optimized profile
+   (`(-250)`: +4.5-5.5 % paired wall clock, -3.1..-3.8 % Ir on all three
+   pools, found off the cachegrind I1-miss table)** — CLAUDE.md carries the
+   one consequence (exit 134, tests still unwind). **And the profile this file measures on is 8.3 % slower
    than `release`, which nobody had priced.** Ladder against it: LTO 0.917,
    `release-fast`+PGO 0.762, `release`+PGO **0.724** — they stack. **A profile
    must be raised under the profile it is consumed under**, or it is partially
