@@ -7161,6 +7161,59 @@ does not carry them. Round 56's second candidate (the 65 % start-score
 reuse) is CLOSED: it was the share of searches the chain runs on, reuse
 is 100 % of runs (`block_census` now prints both).
 
+**THE ACTOR-PATH MAP — `--separate-callers=3` on `--decks sealed --a dflt
+--b dflt --games 6 --threads 1 --seed 1` at the `(-256)` tip
+(`profiling-fast`, system allocator, 3,547,287,352 Ir; the dump is
+`cg.sc.sym.out` in a scratchpad, re-take it with the recipe in "How to
+measure"). The first context map ever taken under the default the
+actors run; every earlier map is a `gang` dump.** Read this before
+pulling anything below off the queue.
+
+```text
+  calls     incl Ir        share   context (innermost first)
+  179,340   1,077,894,292  30.39 %  perform_action_inner <- sim_step <- simulate_attack_outcome_once       the sim's priority passes, ~6.0 k Ir each, 13.2 a sim
+    9,460     330,158,120   9.31 %  perform_action_inner <- accept_on <- sim_spell_action_inner (attack sim)  the sim's own casts, ~35 k Ir each, 0.7 a sim
+   13,622     279,652,692   7.89 %  perform_action_inner <- simulate_attack_outcome_once (the DeclareAttackers dry run)  ~20.5 k Ir a declaration
+   34,406     146,623,189   4.13 %  perform_action_inner <- perform_action <- play_one_game_traced           THE REAL GAME: 4.1 % of the run
+    6,558     136,812,770   3.86 %  perform_action_inner <- accept_on <- main_phase_action_with              the real main-phase probes
+    9,396     123,220,627   3.47 %  perform_action_inner <- evaluate_action_sequence <- pick_by_outcome
+   18,974     120,853,683   3.41 %  perform_action_inner <- perform_action <- simulate_through_combat <- main_phase_action_with
+    8,304     132,013,000   3.72 %  perform_action_inner <- sim_step / _once <- simulate_block_outcome_once  the block sims, all contexts
+  inside the sim's pass:  pass_priority 743,984,247 (20.97 %) = advance_step 461 M (62,376 calls, 7.4 k each) + resolve_top_of_stack 261 M (20,442, 12.8 k each);
+                          dispatch_triggers_for_events 154 M (4.35 %, 860 Ir a pass, 11 event_matches_spec + 1.2 event_kind_bits each)
+  SBA by context:         resolve_combat_into <- advance_step 12,268 calls / 135.8 M (3.83 %, 11 k a sweep — compute_permanents for the lethal-damage walk);
+                          resolve_top_of_stack_inner 24,918 / 87.1 M (2.46 %, 3.5 k); resolve_combat <- submit_decision 1,558 / 54.2 M (1.53 %, the damage-order decision's own sweep)
+  gathers by context:     118,802 calls / 127 M (3.58 %): frozen_effects <- compute_permanents 25,624 / 26.0 M; combat_damage_computed <- resolve_combat_into 17,574 / 20.3 M;
+                          permanent_value_with 13,750 / 13.8 M; pick_attacks_inner 8,332 / 8.9 M (the sim's greedy declarations)
+  collects (from_iter):   945,942 calls / 305 M (8.61 %): pick_blocks_inner <- with_frozen_layers <- simulate_attack_outcome_once 12,904 / 35.9 M (1.01 %);
+                          compute_permanents <- combat_damage_computed 17,574 / 33.4 M; compute_permanents <- declare_blockers 14,032 / 20.8 M;
+                          pick_attacks_inner <- simulate_attack_outcome_once 10,008 / 15.9 M; fire_delayed_event_watchers 113,768 / 8.8 M
+  CoW unshares:           make_mut_slow 267,552 calls / 202 M (5.70 %): cast_spell_with_convoke 72,782 / 58.6 M (1.65 %, ~2.6 zones a cast);
+                          resolve_top_of_stack_inner 13,050 / 12.5 M; find_by_id_mut <- activate_ability_inner 15,814 / 8.5 M; determinize_hidden 10,630 / 6.9 M (after (-256))
+  allocator (glibc):      _int_free 116.5 M (3.28 %) + _int_malloc 69.7 M + realloc 26.8 M + Arc::drop_slow free 26.7 M + finish_grow malloc 20.2 M ~ 7.3 %;
+                          6,181,581 __rust_alloc calls: finish_grow 345,657 / 38.7 M, Arc::clone_from_ref_in <- make_mut_slow 257,396 / 33.1 M (the unshare copies)
+```
+
+What it says. (1) **The real game is 4 % of the run; 96 % is the bot's
+probes, and 71 % of everything is `perform_action_inner`** — the engine
+under the sims, not the bot's own logic; the bot's non-engine overhead
+(`cast_candidates` 23.7 M self, `available_mana` 28.0 M, the block
+planner's collects 35.9 M, `permanent_value_with`'s gathers 13.8 M) is
+~4-5 % all told. (2) The two per-sim fixed costs are the declaration's
+dry run (20.5 k Ir, 7.9 %) and the redeal (now once a decision,
+`(-256)`); a full-turn sim is ~13 passes at 6 k plus 0.7 casts at 35 k.
+(3) The sim's casts (`attack_sim_spells`, 9.3 %) are the fidelity that
+adopted the flag; pricing them down means a cheaper cast path in the
+engine, not a bot change. (4) The SBA sweep after combat damage (11 k Ir,
+3.8 %) recomputes every permanent's view for the lethal-damage walk on
+a board `combat_damage_computed` just computed; damage marks are not a
+layer input, but the freeze design forbids a scope across a write, so
+this is a "views survive a damage write" device, not a scope — price
+it by the 12,268 calls x the compute_permanents share before building.
+(5) The `gang`-era rows (the dispatcher mask, the presence lanes, the
+gathers' floors) hold their shape here; nothing in this table is a new
+1 %+ self row that the earlier maps did not already price.
+
 **State at the `(-250)` tip — THE IR BASE MOVED (`panic = "abort"` on
 every optimized profile, three-pool Ir against the `(-249)` tip):
 `cube` 1,876,460,069 -> 1,817,493,748 (-3.142 %), `fixed` 681,439,653

@@ -46,9 +46,10 @@ sixty-seventh pass, so don't re-take that.
    Ir -1.54 % / -2.56 % cube, wall 0.991). The default is ~0.79 (sealed) / ~0.68 (cube) of the r56
    default's wall clock, ~1.7x `gang`; `dflt56` / `dflt58` are the frozen controls. Sweep on the
    adopted default clean (24,000 games); scaling 96 % linear at 4 threads.
-4. **Perf leads (PERF candidates, top):** the attack sim's body (65.5 % of the sealed default's
-   Ir; ~50 priority passes a sim — read it by `--separate-callers=3` under `dflt`, not `gang`),
-   the menu and chain singles by board class, the block search's open-board twin (no census yet).
+4. **Perf leads (PERF candidates, "THE ACTOR-PATH MAP", taken this run under `dflt`):** the
+   real game is 4 % of the run and the engine under the sims 71 %; leads in order — the SBA sweep
+   after combat damage (11 k Ir x 12,268, recomputes views a damage write cannot change), the
+   declaration dry run's 20.5 k Ir a sim, the sim casts' unshares (2.6 zones a cast).
 5. **Cards/rules (leftover only):** unchanged — per-turn cast-name memory, `modes_chosen`,
    the "when you next attack" `DelayedKind`, CARD_BACKLOG's printed-clause ratchets.
 
