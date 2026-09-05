@@ -7173,7 +7173,9 @@ pulling anything below off the queue.
   calls     incl Ir        share   context (innermost first)
   179,340   1,077,894,292  30.39 %  perform_action_inner <- sim_step <- simulate_attack_outcome_once       the sim's priority passes, ~6.0 k Ir each, 13.2 a sim
     9,460     330,158,120   9.31 %  perform_action_inner <- accept_on <- sim_spell_action_inner (attack sim)  the sim's own casts, ~35 k Ir each, 0.7 a sim
-   13,622     279,652,692   7.89 %  perform_action_inner <- simulate_attack_outcome_once (the DeclareAttackers dry run)  ~20.5 k Ir a declaration
+   13,622     279,652,692   7.89 %  perform_action_inner <- simulate_attack_outcome_once = 8,230 decision submissions (submit_decision 217 M, 26 k each: the
+                                     resumed resolution work, resolve_combat <- submit_decision 54 M of it) + 5,392 DeclareAttackers dry runs (~79 M, ~14.6 k each:
+                                     SBA 19.4 M, compute_permanents 9.5 M, the banded declaration's collects and one battlefield unshare)
    34,406     146,623,189   4.13 %  perform_action_inner <- perform_action <- play_one_game_traced           THE REAL GAME: 4.1 % of the run
     6,558     136,812,770   3.86 %  perform_action_inner <- accept_on <- main_phase_action_with              the real main-phase probes
     9,396     123,220,627   3.47 %  perform_action_inner <- evaluate_action_sequence <- pick_by_outcome
@@ -7199,9 +7201,11 @@ probes, and 71 % of everything is `perform_action_inner`** — the engine
 under the sims, not the bot's own logic; the bot's non-engine overhead
 (`cast_candidates` 23.7 M self, `available_mana` 28.0 M, the block
 planner's collects 35.9 M, `permanent_value_with`'s gathers 13.8 M) is
-~4-5 % all told. (2) The two per-sim fixed costs are the declaration's
-dry run (20.5 k Ir, 7.9 %) and the redeal (now once a decision,
-`(-256)`); a full-turn sim is ~13 passes at 6 k plus 0.7 casts at 35 k.
+~4-5 % all told. (2) The per-sim fixed costs are the declaration's dry run
+(~14.6 k Ir, 2.2 %) and the redeal (now once a decision, `(-256)`); a
+full-turn sim is ~13 passes at 6 k, 0.6 decision submissions at 26 k
+(the resumed resolution, mostly combat damage after a damage-order
+answer) and 0.7 casts at 35 k.
 (3) The sim's casts (`attack_sim_spells`, 9.3 %) are the fidelity that
 adopted the flag; pricing them down means a cheaper cast path in the
 engine, not a bot change. (4) The SBA sweep after combat damage (11 k Ir a sweep,

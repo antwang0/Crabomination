@@ -47,9 +47,9 @@ sixty-seventh pass, so don't re-take that.
    default's wall clock, ~1.7x `gang`; `dflt56` / `dflt58` are the frozen controls. Sweep on the
    adopted default clean (24,000 games); scaling 96 % linear at 4 threads.
 4. **Perf leads (PERF candidates, "THE ACTOR-PATH MAP", taken this run under `dflt`):** the
-   real game is 4 % of the run and the engine under the sims 71 %; leads in order — the
-   declaration dry run's 20.5 k Ir a sim (7.9 %), the sim casts (35 k each, 9.3 %, 2.6 unshares
-   a cast), the creature-death move path (~6.6 k Ir a death, 10,832 deaths under the sims' SBA).
+   real game is 4 % of the run and the engine under the sims 71 %; leads in order — the sim
+   casts (35 k Ir each, 9.3 %, 2.6 unshares a cast), the decision submissions' resumed work
+   (26 k each, 6.1 %), the creature-death move path (~6.6 k a death, 10,832 under the sims' SBA).
 5. **Cards/rules (leftover only):** unchanged — per-turn cast-name memory, `modes_chosen`,
    the "when you next attack" `DelayedKind`, CARD_BACKLOG's printed-clause ratchets.
 
