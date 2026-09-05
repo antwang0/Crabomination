@@ -288,10 +288,9 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // moves, priced by the block sim). Gate each as A against `dflt55`.
         "atk-chain-wide" => Some(Pilot::Scored(EvalWeights::attack_chain_wide_on())),
         "blk-chain" => Some(Pilot::Scored(EvalWeights::block_chain_on())),
-        // The frozen round-56 default, and round 58's throughput
-        // restrictions on the wide chain's pair move. Gate each as A
-        // against `dflt56` for *no loss* (.ladder/run_r58_pairs.sh).
-        "dflt56" => Some(Pilot::Scored(EvalWeights::round56_default())),
+        // Round 58's throughput restrictions on the wide chain's pair move,
+        // and its frozen default. Gate each as A against `dflt56` (above)
+        // for *no loss* (.ladder/run_r58_pairs.sh).
         "dflt58" => Some(Pilot::Scored(EvalWeights::round58_default())),
         "pairs-empty" => Some(Pilot::Scored(EvalWeights::attack_pairs_empty_only_on())),
         "pairs-lazy" => Some(Pilot::Scored(EvalWeights::attack_pairs_lazy_on())),
