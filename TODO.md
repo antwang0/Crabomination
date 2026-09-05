@@ -28,24 +28,20 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`.
-   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-256)` is
-   the last claimed, `(-257)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**.
-   Here, cold: `release-fast` bot_ladder 8m46s (2m15s warm), core_rules test binary ~11 min, suite ~100 s,
-   `nextest` needs installing; a 12 000-game sealed ladder cell 60-80 s; callgrind sealed `dflt` ~2 min.
-2. **Gates at the round-61 tip (PERF Baseline):** suite 19,230 / 0 / 5, workspace clippy, release-fast
-   typecheck, `--bench` counters identical to `2003d1cf` (`gang` carries no chain), golden traces 7/7
-   (re-blessed for rounds 58 and 60), fresh-seed sweep on the ADOPTED default 24,000 games clean.
-3. **This run:** r58 ADOPTED (pair move restricted, sealed wall 0.851), `(-254)`, `(-255)` (Ir -2.2 %),
-   r60 ADOPTED (`attack_skip_open`, 0.959), `(-256)` (one redeal a decision, Ir -1.5 / -2.6 %); r59 and
-   r61 REFUTED (flat); the actor-path map taken under `dflt`; Outcaster Trailblazer fixed. The default
-   is ~0.79 (sealed) / ~0.68 (cube) of the r56 default's wall clock; `dflt56` / `dflt58` are the controls.
-4. **Perf leads (PERF candidates, "THE ACTOR-PATH MAP"):** the real game is 4 % of the run, the engine
-   under the sims 71 %; in order — the sim casts (35 k Ir each, 9.3 %), the decision submissions'
-   resumed work (26 k each, 6.1 %), the creature-death move path (~6.6 k a death). Cards: leftover only.
-5. **Rounds 62-64 (an ML session, rebased in 2026-09-05; numbers in ML_NOTES):** the net adds nothing on the chained
-   heuristic (r62); `removal_sim` ADOPTED on the default (r63, +0.25; its wall clock vs the r61 default is UNREAD); depth
-   on the material leaf 64/128/256 = 52.35/54.75/55.25 → the lobby is the net-free `MctsBot` at 256 (r64); the lean
-   chain = r58's `pairs-empty`, folded in. Gates at this tip: suite 19,234 / 0 / 5, golden 7/7 unchanged, release-fast typecheck.
+   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-260)` is
+   the last claimed, `(-261)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold:
+   `profiling-fast` bot_ladder ~10 min (a `crabomination_base` edit adds the catalog, ~15 min), debug test build 4m19s, `nextest` needs installing; callgrind sealed `dflt` ~2.5 min.
+2. **Gates:** the `(-260)` tip (PERF Baseline) suite 19,230 / 0 / 5, clippy, release-fast, `--bench` counters identical
+   to `2003d1cf`, golden 7/7 unmoved; the r62-64 tip (ML session, rebased in the same day) suite 19,234 / 0 / 5, golden 7/7.
+3. **Perf this run:** four engine legs off the actor-path map's libc/std rows read BY CALLER — `(-257)` step-trigger
+   delayed rebuild -0.903 %, `(-258)` watcher collects -0.114 %, `(-259)` one-pass P/T -0.548 %, `(-260)` legend-leg
+   count gate -0.246 % (sealed `dflt` Ir; cumulative sealed -1.80 %, cube -0.54 %); the death path's unshares CLOSED.
+4. **Rounds 62-64 (ML session; numbers in ML_NOTES):** the net adds nothing on the chained heuristic (r62); `removal_sim`
+   ADOPTED on the default (r63, +0.25; **its wall clock vs the r61 default is UNREAD** — read it first); leaf depth 64/128/256 =
+   52.35/54.75/55.25 → the lobby is the net-free `MctsBot` at 256 (r64); the lean chain = r58's `pairs-empty`, folded in.
+5. **Perf leads (PERF candidates, the block under the map):** prompt text for headless seats (~0.35 %, needs a state
+   flag), `cast_from_*` flags onto the `CardInstance` handle (~0.2 %, serde-visible), the map's big three untouched
+   (sim casts 9.3 %, decision submissions 6.1 %, the death move path 4 k a death). Cards: leftover only.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

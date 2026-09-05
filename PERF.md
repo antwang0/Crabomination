@@ -2557,6 +2557,33 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-257)`..`(-260)` — closing state at the `(-260)` tip
+
+Four behaviour-preserving engine commits on top of `(-256)` (outcomes
+identical on both dumps, `--bench` counters and golden traces
+unmoved), each read off the actor-path map's libc/std rows by caller.
+The dumps here are `profiling-fast` with the **system allocator**
+(`--no-default-features`), so the totals sit above the `(-256)` row's
+mimalloc figures; the base was retaken at this tip and matches the map's
+total to 0.004 %.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,547,131,260 -> 3,483,259,284 Ir  (-1.801 %)
+        (-257) -0.903 %  (-258) -0.114 %  (-259) -0.548 %  (-260) -0.246 %
+  cube   dflt, same recipe:                               2,585,999,842 -> 2,572,001,381 Ir  (-0.541 %)
+        (-257) -0.085 %  (-258) -0.010 %  (-259) -0.337 %  (-260) -0.111 %
+  Ir base for the three-pool gate: unchanged from (-250) — the `gang` bench path pays the same legs, not remeasured
+suite   19,230 / 0 / 5 (97 s); golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast build of bot_ladder (the typecheck gate and more): clean
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; thread_determinism ok (3 vs 1 threads identical)
+sweep   fresh seeds on the ADOPTED DEFAULT (release-fast): 211, 223 x {sealed, cube} x --games 120 --threads 2 =
+        4 cells / 4,800 games, 0 undecided, 0 panics, every rc 0
+audits  audit_panics.py: 78 sites off the bin/test paths, 67 guarded, 11 lock-poison, 0 bare
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+```
+
 ### `(-256)` — closing state at the `(-256)` tip
 
 One behaviour-preserving engine commit on top of round 60 (outcomes,

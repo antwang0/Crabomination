@@ -1118,7 +1118,7 @@ impl GameState {
         // `DelayedTrigger` each — on every step of every turn, and a step on
         // which nothing matches (nearly all of them) leaves the list as it
         // was. PERF `(-257)`.
-        if self.delayed_triggers.iter().any(|dt| delayed_matches(dt)) {
+        if self.delayed_triggers.iter().any(&delayed_matches) {
             let mut keep: Vec<DelayedTrigger> = Vec::new();
             for dt in std::mem::take(&mut self.delayed_triggers) {
                 if delayed_matches(&dt) {
