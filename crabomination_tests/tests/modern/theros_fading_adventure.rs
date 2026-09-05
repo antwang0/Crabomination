@@ -778,27 +778,47 @@ fn slickshot_show_off_pumps_and_draws_on_noncreature() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "drew a card");
 }
 
-/// Outcaster Trailblazer draws + makes a Treasure when you cast a 5+ MV spell,
-/// and can be plotted for {2}{G}.
+/// Outcaster Trailblazer: its ETB adds one mana of any color, and another
+/// creature you control with power 4 or greater entering draws a card —
+/// a bear does not, and the Trailblazer's own entry does not (it is not
+/// "another"). Plot {2}{G} is on the definition. Re-pinned 2026-09-05: it
+/// had shipped as a "cast a 5-drop: draw and make a Treasure" card.
 #[test]
-fn outcaster_trailblazer_pays_off_big_spells() {
+fn outcaster_trailblazer_etb_mana_and_power_four_draw() {
     let mut g = two_player_game();
-    let trail = g.add_card_to_battlefield(0, catalog::outcaster_trailblazer());
-    let _ = trail;
-    g.add_card_to_library(0, catalog::mountain());
-    // A 5-MV spell: Carnage Tyrant is {4}{G}{G} (MV 6).
-    let big = g.add_card_to_hand(0, catalog::charging_monstrosaur()); // {3}{R}{R} MV5
+    stock_libraries(&mut g, 5);
+    let trail = g.add_card_to_hand(0, catalog::outcaster_trailblazer());
+    assert!(catalog::outcaster_trailblazer().plot_cost.is_some(), "plots for {{2}}{{G}}");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: trail, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Trailblazer");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "the ETB added one mana");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "its own entry draws nothing");
+    g.players[0].mana_pool = Default::default();
+    // A bear enters: power 2, no draw.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "a power-2 creature draws nothing");
+    // A power-4 creature enters: draw.
+    let big = g.add_card_to_hand(0, catalog::charging_monstrosaur()); // 5/5
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(3);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast a 5-drop");
+    }).expect("cast a power-4 creature");
     drain_stack(&mut g);
-    // -1 (the 5-drop leaves hand) +1 (draw) = net same.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "drew off the big spell");
-    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
-        && c.definition.name == "Treasure").count(), 1, "made a Treasure");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "drew for the power-4 entry");
 }
 
 // ── Burn & utility additions ─────────────────────────────────────────────────

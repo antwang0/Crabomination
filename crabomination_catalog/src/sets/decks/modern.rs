@@ -18335,11 +18335,8 @@ pub fn mai_scornful_striker() -> CardDefinition {
     }
 }
 
-/// Tempest Angler — {2}{U} Creature — Merfolk Wizard. 2/2 Flying.
-/// "When this creature enters, scry 2."
-///
-/// Synthesised body for the ⏳ cube row. A flying scry tempo creature
-/// in U shells.
+/// Tempest Angler — {1}{U/R}{U/R} Creature — Otter Wizard 2/2. "Whenever
+/// you cast a noncreature spell, put a +1/+1 counter on this creature."
 pub fn tempest_angler() -> CardDefinition {
     CardDefinition {
         name: "Tempest Angler",
@@ -22452,9 +22449,12 @@ pub fn merfolk_secretkeeper() -> CardDefinition {
     }
 }
 
-/// Outcaster Trailblazer — {2}{G} Creature — Elf Druid Scout 4/2, Reach.
-/// Whenever you cast a spell with mana value 5 or greater, draw a card and
-/// create a Treasure token. Plot {2}{G} (CR 702.170).
+/// Outcaster Trailblazer — {2}{G} Creature — Human Druid 4/2. "When this
+/// creature enters, add one mana of any color. Whenever another creature
+/// you control with power 4 or greater enters, draw a card." Plot {2}{G}
+/// (CR 702.170). It shipped as a "cast a spell with mana value 5 or
+/// greater: draw and make a Treasure" Elf with reach — a different card,
+/// the second of the two wrong-shape finds behind `audit_oracle_verbs.py`.
 pub fn outcaster_trailblazer() -> CardDefinition {
     use crate::card::Predicate;
     CardDefinition {
@@ -22467,24 +22467,28 @@ pub fn outcaster_trailblazer() -> CardDefinition {
         },
         power: 4,
         toughness: 2,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
-            effect: Effect::If {
-                cond: Predicate::CastSpellManaSpentAtLeast(5),
-                then: Box::new(Effect::Seq(vec![
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::CreateToken {
-                        who: PlayerRef::You,
-                        count: Value::Const(1),
-                        definition: Box::new(crate::game::effects::treasure_token()),
-                    },
-                ])),
-                else_: Box::new(Effect::Noop),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::PowerAtLeast(4))
+                            .and(SelectionRequirement::OtherThanSource),
+                    }),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
         plot_cost: Some(cost(&[generic(2), g()])),
         ..Default::default()
     }

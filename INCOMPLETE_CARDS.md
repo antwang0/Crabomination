@@ -429,13 +429,17 @@ granted vigilance). Closing that residue is shape work on the filter.
 
 **And the stat columns are now clean while the EFFECT trees have never been
 cross-referenced at all.** Two of the eleven turned up cards whose printed
-*text* does not match either — Tempest Angler prints "whenever you cast a
-noncreature spell, put a +1/+1 counter on this creature" and ships an ETB
-scry 2; Outcaster Trailblazer prints an ETB mana, a power-4 draw trigger and
-plot {2}{G}, and ships a "cast a spell with mana value 5+" draw-and-token.
+*text* does not match either — Tempest Angler printed "whenever you cast a
+noncreature spell, put a +1/+1 counter on this creature" and shipped an ETB
+scry 2; Outcaster Trailblazer printed an ETB mana, a power-4 draw trigger and
+plot {2}{G}, and shipped a "cast a spell with mana value 5+" draw-and-token.
 **Neither is visible to any column this audit has**, and both were found only
-because a keyword row pointed at the card. That is the next audit: the oracle
-text against the effect tree.
+because a keyword row pointed at the card. ~~That is the next audit~~ — both
+are FIXED (Tempest Angler earlier; **Outcaster Trailblazer 2026-09-05**: ETB
+`AddMana AnyOneColor`, the `EntersBattlefield`/`YourControl` draw filtered on
+`Creature ∧ PowerAtLeast(4) ∧ OtherThanSource`, plot kept; test
+`modern::theros_fading_adventure::outcaster_trailblazer_etb_mana_and_power_four_draw`).
+The oracle-text-against-effect-tree audit is `scripts/audit_oracle_verbs.py`.
 
 **The reusable half is what it cost to make those columns believable.** Four
 distinct reading bugs came out of getting there and three were already wrong
