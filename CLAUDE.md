@@ -18,6 +18,12 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   whether LTO already inlines a callee, and `profiling-lines` (cold) when it
   is per-source-line attribution; PERF's "How to measure" has all four and
   when each is the right instrument.
+- **Every optimized profile aborts on panic** (`panic = "abort"` on
+  `release`, PERF `(-250)`: +4.5-5.5 % wall clock, -3.5 % Ir). A panic
+  still prints its message; the process then exits 134, not 101. Tests
+  always unwind (cargo forces it for test harnesses), so `should_panic`
+  and `catch_unwind` work there as before — but no optimized binary can
+  catch a panic, and none tries to.
 - **`scripts/pgo_build.sh` is opt-in and must stay opt-in.** A PGO build
   carries its profile's name but is 24-28 % faster, so it is the one binary
   that can be filed as a baseline reading by mistake. Quote a PGO number only

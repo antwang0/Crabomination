@@ -39,6 +39,17 @@ codegen-units = 1
 # Do a second optimization pass over the entire program, including dependencies.
 # Slows compile times, marginal improvements.
 lto = "thin"
+# No unwinding in any optimized profile (every one below inherits this).
+# Nothing in the tree calls `catch_unwind`, so a panic already ended a run;
+# what this removes is the landing-pad and drop-flag code the unwinder never
+# ran, and the calls LLVM could not mark `nounwind`. PERF `(-250)`, measured
+# on `release-fast` `bot_ladder`: paired `--bench` wall clock **+4.45 % /
+# +5.51 %** median over two 16-pair runs, cachegrind Ir -3.47 %, I1 misses
+# -5.4 %, binary 144.1 -> 125.2 MB, `--bench` counters identical. Tests are
+# untouched — cargo always builds test harnesses with unwinding — and the
+# robustness grid reads the exit code, so an aborted `debug_assert!` still
+# prints its message and still counts as a failure (rc 134 instead of 101).
+panic = "abort"
 
 # Release speed with frame pointers and full DWARF, so perf/samply/flamegraph
 # resolve engine frames instead of printing `??`. Benchmarks and profiles run
@@ -74,7 +85,6 @@ lto = false
 inherits = "release-fast"
 debug = true
 split-debuginfo = "unpacked"
-
 # `profiling-fast` plus thin LTO: the instrument that isolates **cross-crate
 # inlining** from `release`'s other change (codegen-units 1). Needed because
 # `profiling` cannot be built here — rustc peaks at ~5.9 GB of RSS on the
