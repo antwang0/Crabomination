@@ -268,6 +268,31 @@ pub struct EvalWeights {
     /// whether restraint is worth the tempo is a ladder question, not an
     /// argument, so this is a flag rather than a rewrite.
     pub attack_search: u8,
+    /// Grow the attack declaration one creature at a time instead of only
+    /// trimming the greedy one (see [`attack_chain_candidate`]). 0
+    /// disables it; higher values cap how many attackers the chain may
+    /// add. Each step simulates "the set so far plus one more eligible
+    /// creature" for every remaining creature, with "finalize" — the set
+    /// so far — as candidate 0 so a tie stops the chain; the finished set
+    /// then joins [`attack_candidates_for_mcts`]'s menu for the one argmax
+    /// [`pick_attacks_scored`] already takes, where greedy still wins ties.
+    ///
+    /// The holdback menu can only *drop* attackers, so a declaration
+    /// smaller than greedy-minus-one, or one carrying a creature the
+    /// greedy filters refused, is unreachable at any valuation — the
+    /// menu-hole shape behind both blocking adoptions. Forward growth has
+    /// the mirror blind spot (two attackers that only pay together are
+    /// each bad alone, so the chain stops at nobody), which is why it
+    /// extends the menu rather than replacing it. Cost is up to
+    /// `attack_chain × eligible` simulated turn cycles per declaration on
+    /// top of the menu's `2 + attack_search`. Needs `attack_search > 0`:
+    /// a one-candidate menu returns before any sim runs.
+    ///
+    /// **Adopted 2026-09-04 (round 55)** at 6 on the default and the
+    /// client pilot — see `impl Default` and
+    /// [`client_pilot`](Self::client_pilot) for the numbers;
+    /// `.ladder/run_r55_atkchain.sh` is the gate.
+    pub attack_chain: u8,
     /// Search the block assignment instead of taking the greedy one:
     /// simulate each candidate through combat damage and keep the best (see
     /// [`pick_blocks_scored`]). 0 disables it; higher values allow more
@@ -656,6 +681,7 @@ impl EvalWeights {
             lookahead: 0,
             combat_aware: false,
             attack_search: 0,
+            attack_chain: 0,
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
@@ -734,6 +760,7 @@ impl EvalWeights {
             lookahead: 0,
             combat_aware: false,
             attack_search: 0,
+            attack_chain: 0,
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
@@ -795,6 +822,7 @@ impl EvalWeights {
             lookahead: 0,
             combat_aware: false,
             attack_search: 0,
+            attack_chain: 0,
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
@@ -1247,6 +1275,12 @@ impl EvalWeights {
         Self { damage_order: true, ..Self::block_gang_search() }
     }
 
+    /// The attack chain (round 55) on the `gang` base: ladder `atk-chain`
+    /// as A against `gang`. See [`attack_chain`](Self::attack_chain).
+    pub const fn attack_chain_on() -> Self {
+        Self { attack_chain: 6, ..Self::block_gang_search() }
+    }
+
     /// The default plus outcome-judged mid-resolution targets. The
     /// opt-in for [`target_eval`](Self::target_eval); ladder as A
     /// against the default (profile `targeteval` vs `gang`).
@@ -1259,6 +1293,22 @@ impl EvalWeights {
     /// `net-det1` (the same weights minus the flag).
     pub const fn net_tail_guard_on() -> Self {
         Self { net_tail_guard: true, ..Self::net_eval_det1() }
+    }
+
+    /// The attack chain under the net pilot: ladder `net-chain` as A
+    /// against `net-det1`. See [`attack_chain`](Self::attack_chain).
+    pub const fn net_attack_chain_on() -> Self {
+        Self { attack_chain: 6, ..Self::net_eval_det1() }
+    }
+
+    /// The client's adopted net pilot, composed from the ladder references
+    /// rather than folded into them so `net-det1` / `net-guard` stay the
+    /// flagless controls every recorded net number was read against:
+    /// [`net_eval_det1`](Self::net_eval_det1) plus the saturation fallback
+    /// (round 54, client-adopted on replay evidence) plus the attack chain
+    /// (round 55, 51.2 / 51.0 over `net-det1` on seeds 43/97).
+    pub const fn client_pilot() -> Self {
+        Self { attack_chain: 6, ..Self::net_tail_guard_on() }
     }
 
     /// The attack-search profile plus the walker chip candidate. The
@@ -1680,10 +1730,25 @@ impl Default for EvalWeights {
         // declaration order. Measured on the `gang` base like the layers
         // above; the exact gate re-runs as `dmgorder` vs `gang`
         // (.ladder/run_r52_dmgorder.sh).
+        // `attack_chain` adopted 2026-09-04 (round 55): 53.1 / 51.7 /
+        // 52.1 / 52.3 % against `gang` on ladder seeds 43/97/151/199,
+        // 48 000 paired sealed games, every cell's interval clear of
+        // 51.4 — pooled +2.3, the largest menu-hole reading on record
+        // (gang blocks +1.3, chump blocks +0.9). Replicated under the net
+        // pilot at 51.2 / 51.0 (`net-chain` vs `net-det1`). The holdback
+        // menu could only drop attackers; growing a declaration from
+        // nobody one sim-priced creature at a time reaches the smaller
+        // sets and the greedy-refused bodies it never could (a new set
+        // in 9.7 % of searched declarations, winning in 6.0 %). Cost:
+        // sealed mirror wall-clock 4.7 s -> 6.6 s per 12 000 games
+        // (+40 %) with the chain on both seats. Measured on the `gang`
+        // base like the layers above; the exact gate re-runs as
+        // `atk-chain` vs `gang` (.ladder/run_r55_atkchain.sh).
         Self {
             determinize: 1,
             chump_blocks: true,
             damage_order: true,
+            attack_chain: 6,
             ..Self::block_gang_search()
         }
     }
@@ -7866,20 +7931,19 @@ fn turns_to_lethal(life: i32, clock: i32) -> i32 {
     life / clock + i32::from(life % clock != 0)
 }
 
+/// The player an attack is aimed at by default: an opposing monarch (CR
+/// 724 — stealing the crown denies their end-step card and hands it to
+/// us), otherwise the next alive opponent.
+fn attack_target_player(state: &GameState, seat: usize) -> usize {
+    match state.monarch {
+        Some(m) if m != seat && state.players.get(m).map(|p| p.is_alive()).unwrap_or(false) => m,
+        _ => state.next_alive_seat(seat),
+    }
+}
+
 fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     use crate::card::Keyword;
-    // Pick the attack target: prefer an opposing monarch (CR
-    // 724 — stealing the crown denies their end-step card and
-    // hands it to us); otherwise the next alive opponent.
-    let target_player = match state.monarch {
-        Some(m)
-            if m != seat
-                && state.players.get(m).map(|p| p.is_alive()).unwrap_or(false) =>
-        {
-            m
-        }
-        _ => state.next_alive_seat(seat),
-    };
+    let target_player = attack_target_player(state, seat);
     // Filter on `controller`, not `owner`: cards that have
     // changed control (Threaten / Mind Control / etc.) are
     // attacked WITH by the new controller, not the original
@@ -8593,35 +8657,7 @@ pub(crate) fn attack_candidates_for_mcts(
     // obliged ones" — a legal alternative the menu could not express before
     // — and a holdback that repairs back into greedy is deduped away rather
     // than scored twice.
-    // One freeze scope for the sweep: the repair reads `computed_permanent`
-    // per own creature per candidate, and outside a scope each read rebuilds
-    // the layer gather.
-    if state.with_frozen_layers(attack_requirement_present) {
-        let statics = crate::game::combat::attack_static_scan(state);
-        let power_caps = state.attack_power_caps(statics);
-        state.with_frozen_layers(|st| {
-            for cand in candidates.iter_mut() {
-                let mut ids: Vec<CardId> = cand.iter().map(|a| a.attacker).collect();
-                let before = ids.len();
-                restore_forced_attackers_unchecked(st, seat, &power_caps, statics, &mut ids);
-                for id in ids.into_iter().skip(before) {
-                    if let Some(a) = greedy.iter().find(|a| a.attacker == id) {
-                        cand.push(*a);
-                    }
-                }
-            }
-        });
-        let mut seen: Vec<Vec<u32>> = Vec::new();
-        candidates.retain(|c| {
-            let mut ids: Vec<u32> = c.iter().map(|a| a.attacker.0).collect();
-            ids.sort_unstable();
-            let fresh = !seen.contains(&ids);
-            if fresh {
-                seen.push(ids);
-            }
-            fresh
-        });
-    }
+    repair_attack_subsets(state, seat, &greedy, &mut candidates);
     // Walker chip candidate (flag): the greedy pass only attacks a
     // walker it can finish, so a healthy one sits unpressured to its
     // ultimate. One extra declaration — the smallest attacker with
@@ -8656,6 +8692,158 @@ pub(crate) fn attack_candidates_for_mcts(
         candidates.push(alt);
     }
     candidates
+}
+
+/// CR 508.1d repair for a menu of attack subsets (see the note in
+/// [`attack_candidates_for_mcts`]): an obliged attacker a subset leaves
+/// home is put back with the target the greedy declaration gave it, and a
+/// subset that repairs into an earlier one is deduped away rather than
+/// scored twice. One freeze scope for the sweep: the repair reads
+/// `computed_permanent` per own creature per candidate, and outside a
+/// scope each read rebuilds the layer gather. No-op on a board with no
+/// attack requirement in scope.
+fn repair_attack_subsets(
+    state: &GameState,
+    seat: usize,
+    greedy: &[Attack],
+    candidates: &mut Vec<Vec<Attack>>,
+) {
+    if !state.with_frozen_layers(attack_requirement_present) {
+        return;
+    }
+    let statics = crate::game::combat::attack_static_scan(state);
+    let power_caps = state.attack_power_caps(statics);
+    state.with_frozen_layers(|st| {
+        for cand in candidates.iter_mut() {
+            let mut ids: Vec<CardId> = cand.iter().map(|a| a.attacker).collect();
+            let before = ids.len();
+            restore_forced_attackers_unchecked(st, seat, &power_caps, statics, &mut ids);
+            for id in ids.into_iter().skip(before) {
+                if let Some(a) = greedy.iter().find(|a| a.attacker == id) {
+                    cand.push(*a);
+                }
+            }
+        }
+    });
+    let mut seen: Vec<Vec<u32>> = Vec::new();
+    candidates.retain(|c| {
+        let ids = attack_set_key(c);
+        let fresh = !seen.contains(&ids);
+        if fresh {
+            seen.push(ids);
+        }
+        fresh
+    });
+}
+
+/// A declaration's identity for menu dedupe: its attacker ids, sorted.
+/// Targets are ignored on purpose — the walker-chip candidate is the one
+/// same-set-different-target declaration, and it is pushed after dedupe.
+fn attack_set_key(c: &[Attack]) -> Vec<u32> {
+    let mut ids: Vec<u32> = c.iter().map(|a| a.attacker.0).collect();
+    ids.sort_unstable();
+    ids
+}
+
+/// The attack chain (see [`EvalWeights::attack_chain`]): grow a
+/// declaration from the obliged-only set one creature at a time, keeping
+/// an addition only when its simulated turn cycle scores strictly above
+/// finalizing the set so far. Returns the finished set and its score, or
+/// `None` when the start set could not be scored.
+///
+/// The pool is every creature the engine will accept as an attacker —
+/// `may_declare_attacker`, the greedy picker's own gate — not the greedy
+/// set, so a creature the greedy filters refused is on offer and priced by
+/// the sim rather than by the rule that refused it. Attackers keep the
+/// target greedy gave them; the rest aim at the default face.
+///
+/// `menu` / `menu_scores` are the declarations [`pick_attacks_scored`] has
+/// already simulated (index 0 greedy): the chain's start set is the menu's
+/// repaired "all home" whenever that survived dedupe, so its score is
+/// reused instead of re-simulated.
+fn attack_chain_candidate(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    menu: &[Vec<Attack>],
+    menu_scores: &[(usize, i32)],
+) -> Option<(Vec<Attack>, i32)> {
+    let greedy: &[Attack] = menu.first().map(Vec::as_slice).unwrap_or(&[]);
+    let face_player = attack_target_player(state, seat);
+    let face = AttackTarget::Player(face_player);
+    let statics = crate::game::combat::attack_static_scan(state);
+    let power_caps = state.attack_power_caps(statics);
+    let pool: Vec<Attack> = state.with_frozen_layers(|st| {
+        st.battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && !c.tapped
+                    && c.definition.is_creature()
+                    && st.may_declare_attacker(
+                        seat,
+                        c,
+                        st.computed_permanent_on(c).as_deref(),
+                        &power_caps,
+                        Some(face_player),
+                    )
+            })
+            .map(|c| Attack {
+                attacker: c.id,
+                target: greedy
+                    .iter()
+                    .find(|a| a.attacker == c.id)
+                    .map(|a| a.target)
+                    .unwrap_or(face),
+            })
+            .collect()
+    });
+    if pool.is_empty() {
+        return None;
+    }
+    // Start from "nobody", repaired: the obliged attackers only.
+    let mut start = vec![Vec::new()];
+    repair_attack_subsets(state, seat, greedy, &mut start);
+    let mut current = start.swap_remove(0);
+    let start_key = attack_set_key(&current);
+    let mut current_score = match menu_scores
+        .iter()
+        .find(|(i, _)| menu.get(*i).is_some_and(|c| attack_set_key(c) == start_key))
+    {
+        Some(&(_, s)) => s,
+        None => simulate_attack_outcome(state, seat, &current, w)?,
+    };
+    let mut remaining: Vec<Attack> =
+        pool.into_iter().filter(|a| !current.iter().any(|c| c.attacker == a.attacker)).collect();
+    for _ in 0..w.attack_chain {
+        if remaining.is_empty() {
+            break;
+        }
+        // Candidate 0 is "finalize": the set so far, at its known score.
+        // First-wins-ties in `choose_scored` makes a tie stop the chain.
+        let mut cands: Vec<Vec<Attack>> = Vec::with_capacity(remaining.len() + 1);
+        cands.push(current.clone());
+        for a in &remaining {
+            let mut c = current.clone();
+            c.push(*a);
+            cands.push(c);
+        }
+        repair_attack_subsets(state, seat, greedy, &mut cands);
+        let mut scored: Vec<(usize, i32)> = vec![(0, current_score)];
+        for (i, c) in cands.iter().enumerate().skip(1) {
+            if let Some(s) = simulate_attack_outcome(state, seat, c, w) {
+                scored.push((i, s));
+            }
+        }
+        let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+        if chosen == 0 {
+            break;
+        }
+        current_score = scored.iter().find(|(i, _)| *i == chosen).map(|&(_, s)| s).unwrap_or(current_score);
+        current = cands.swap_remove(chosen);
+        remaining.retain(|a| !current.iter().any(|c| c.attacker == a.attacker));
+    }
+    Some((current, current_score))
 }
 
 /// No opposing seat controls a creature, planeswalker or battle — the board
@@ -8728,9 +8916,20 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
         let Some(score) = simulate_attack_outcome(state, seat, cand, w) else { continue };
         scored.push((i, score));
     }
+    // The chain's finished set is one more candidate in the same argmax
+    // (see `EvalWeights::attack_chain`) — appended, so greedy keeps index
+    // 0 and every tie, and skipped when the menu already holds that set.
+    let menu_len = candidates.len();
+    if w.attack_chain > 0
+        && let Some((chain, score)) = attack_chain_candidate(state, seat, w, &candidates, &scored)
+        && !candidates.iter().any(|c| attack_set_key(c) == attack_set_key(&chain))
+    {
+        candidates.push(chain);
+        scored.push((menu_len, score));
+    }
     let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
     if attack_census::on() {
-        attack_census::tick(state, seat, candidates.len(), chosen, &scored);
+        attack_census::tick(state, seat, menu_len, chosen, &scored, candidates.len() > menu_len);
     }
     candidates.swap_remove(chosen)
 }
@@ -8754,8 +8953,9 @@ pub mod attack_census {
     use crate::game::GameState;
 
     /// `[calls, candidates, won greedy, won none, won holdback, tied with
-    /// the winner, defender had no creature, ... and greedy won there]`.
-    pub static N: [AtomicU64; 8] = [const { AtomicU64::new(0) }; 8];
+    /// the winner, defender had no creature, ... and greedy won there,
+    /// the attack chain proposed a set the menu lacked, ... and it won]`.
+    pub static N: [AtomicU64; 10] = [const { AtomicU64::new(0) }; 10];
 
     /// 0 = off, 1 = count, 2 = count and name each creatureless-defender
     /// search the greedy declaration did not win.
@@ -8772,16 +8972,26 @@ pub mod attack_census {
         level() > 0
     }
 
+    /// `candidates` is the menu size; `chosen >= candidates` is the chain's
+    /// appended set, counted in N[9] rather than as a holdback.
     pub(super) fn tick(
         state: &GameState,
         seat: usize,
         candidates: usize,
         chosen: usize,
         scored: &[(usize, i32)],
+        chain_novel: bool,
     ) {
         N[0].fetch_add(1, Relaxed);
         N[1].fetch_add(candidates as u64, Relaxed);
-        N[2 + chosen.min(2)].fetch_add(1, Relaxed);
+        if chosen >= candidates {
+            N[9].fetch_add(1, Relaxed);
+        } else {
+            N[2 + chosen.min(2)].fetch_add(1, Relaxed);
+        }
+        if chain_novel {
+            N[8].fetch_add(1, Relaxed);
+        }
         if let Some(&(_, best)) = scored.iter().find(|(i, _)| *i == chosen) {
             let tied = scored.iter().filter(|(i, s)| *i != chosen && *s == best).count();
             N[5].fetch_add(tied as u64, Relaxed);
@@ -8824,7 +9034,7 @@ pub mod attack_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 8] {
+    pub fn snapshot() -> [u64; 10] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -15854,6 +16064,144 @@ mod tests {
                 .declare_attackers(c.clone())
                 .expect("every candidate is a legal declaration");
         }
+    }
+
+    /// The attack chain's finished declaration is one the engine accepts,
+    /// obliged attackers included (CR 508.1d): the chain starts from the
+    /// repaired "nobody" and every growth step is repaired again.
+    #[test]
+    fn attack_chain_declaration_is_legal_and_keeps_the_obliged_attacker() {
+        use crate::card::{CardType, Keyword};
+        let obliged = CardDefinition {
+            name: "Rolling Juggernaut",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::MustAttack],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let must = g.add_card_to_battlefield(0, obliged);
+        g.clear_sickness(must);
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(blocker);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // Both seats need something to draw: an empty library decks
+        // whoever draws first and pins every candidate to "we won".
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        let w = EvalWeights::attack_chain_on();
+        let menu = attack_candidates_for_mcts(&g, 0, &w);
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[]).expect("the start set scores");
+        assert!(chain.iter().any(|a| a.attacker == must), "the chain keeps the must-attacker: {chain:?}");
+        g.clone().declare_attackers(chain).expect("the chained declaration is legal");
+        let picked = pick_attacks_scored(&g, 0, &w);
+        assert!(picked.iter().any(|a| a.attacker == must), "so does the picker: {picked:?}");
+        g.clone().declare_attackers(picked).expect("the picked declaration is legal");
+    }
+
+    /// The chain grows when growing pays: a lone bear into an empty board
+    /// is two free damage, so "add it" beats "finalize nobody".
+    #[test]
+    fn attack_chain_adds_a_free_attacker() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // Both seats need something to draw: an empty library decks
+        // whoever draws first and pins every candidate to "we won".
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        let w = EvalWeights::attack_chain_on();
+        let menu = attack_candidates_for_mcts(&g, 0, &w);
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[]).expect("scored");
+        assert_eq!(chain.iter().map(|a| a.attacker).collect::<Vec<_>>(), vec![bear], "{chain:?}");
+    }
+
+    /// The cap bounds the chain, and the chain never displaces a better
+    /// menu entry: with one addition allowed, three free bears chain to
+    /// one attacker, and the picker's argmax still takes greedy's three.
+    #[test]
+    fn attack_chain_respects_its_cap_and_greedy_keeps_the_argmax() {
+        let mut g = two_player_game();
+        let mut bears = Vec::new();
+        for _ in 0..3 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+            bears.push(c);
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // Both seats need something to draw: an empty library decks
+        // whoever draws first and pins every candidate to "we won".
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        let w = EvalWeights { attack_chain: 1, ..EvalWeights::attack_chain_on() };
+        let menu = attack_candidates_for_mcts(&g, 0, &w);
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[]).expect("scored");
+        assert_eq!(chain.len(), 1, "one addition allowed: {chain:?}");
+        let picked = pick_attacks_scored(&g, 0, &w);
+        assert_eq!(picked.len(), 3, "three free bears: the alpha strike wins the argmax: {picked:?}");
+    }
+
+    /// The forward blind spot, pinned so nobody re-derives it: two bears
+    /// into one 3/3 at two life are lethal *together* — one is blocked, the
+    /// other connects — and each alone just dies. The chain prices each
+    /// addition alone, so it finalizes at nobody; the menu's greedy alpha
+    /// strike is why the chain extends the menu instead of replacing it.
+    #[test]
+    fn attack_chain_stops_at_nobody_where_only_the_pair_is_lethal() {
+        use crate::card::CardType;
+        let wall = CardDefinition {
+            name: "Hill Giant Test",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        let giant = g.add_card_to_battlefield(1, wall);
+        g.clear_sickness(giant);
+        g.players[1].life = 2;
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // Both seats need something to draw: an empty library decks
+        // whoever draws first and pins every candidate to "we won".
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        let w = EvalWeights::attack_chain_on();
+        let menu = attack_candidates_for_mcts(&g, 0, &w);
+        assert_eq!(menu[0].len(), 2, "greedy sees the lethal swing: {menu:?}");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[]).expect("scored");
+        assert!(chain.is_empty(), "each bear alone is a dead bear: {chain:?}");
+        let picked = pick_attacks_scored(&g, 0, &w);
+        assert_eq!(picked.len(), 2, "the menu still finds lethal: {picked:?}");
     }
 
     /// The same trim must not fire when there is no tax: `available_mana` is

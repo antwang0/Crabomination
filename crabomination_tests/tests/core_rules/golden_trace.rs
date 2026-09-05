@@ -307,7 +307,13 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // engine rejects the *batch* — so the defender blocked with nothing. It
     // blocks now, and seed 3 runs two turns longer (19 -> 21, 439 -> 484
     // actions) for the same winner. Seeds 1, 2, 4 and 5 are untouched.
-    (3, Some(0), 21, 484, 0x7004_a1c5_7f75_f8c7),
+    // Re-blessed 2026-09-04 for the attack-chain adoption (round 55, +2.3
+    // on the ladder): the default's attack search now also offers a
+    // declaration grown one creature at a time from nobody, and seed 3
+    // contains one board where that set out-scores the holdback menu.
+    // Same winner, same turn count, one action fewer (484 -> 483); seeds
+    // 1, 2, 4 and 5 and the full committed trace are untouched.
+    (3, Some(0), 21, 483, 0x919f_66af_a2d9_f6f8),
     // Re-blessed 2026-08-22 for the slot-walk targeting fix: the filtered
     // auto-target path used to take the first legal permanent in
     // battlefield order, so Swords to Plowshares ("target creature", an

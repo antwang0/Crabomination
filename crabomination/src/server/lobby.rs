@@ -50,9 +50,10 @@ fn default_bot() -> Box<dyn super::Bot> {
             // adopted for the client on the replay evidence (2026-08-30
             // game 5: a flying 5/5 the human could not block, held for
             // two turns of a lost race). The determinized-search shape:
-            // a client default the ladder cannot price. Ladder control
-            // profiles stay flagless.
-            weights: super::EvalWeights::net_tail_guard_on(),
+            // a client default the ladder cannot price. Plus the attack
+            // chain (round 55: 51.2 / 51.0 over `net-det1`). Ladder
+            // control profiles stay flagless; `client_pilot` composes.
+            weights: super::EvalWeights::client_pilot(),
             ..MctsConfig::default()
         }))
     } else {

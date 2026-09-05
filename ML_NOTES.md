@@ -3514,3 +3514,103 @@ pre-registered as not-a-knob.
 The mid-band leaf bias stays head_leaf's job (this is a consumption
 guard, not a model fix), and the over-attack half stays with the
 open-mana sim lead.
+
+## Round 55 — the attack chain: ADOPTED (2026-09-04)
+
+The attack search's menu could only *drop* attackers: greedy, nobody, and
+greedy-minus-one holdbacks (`attack_candidates_for_mcts`). A declaration
+smaller than greedy-minus-one, or one carrying a creature the greedy
+filters refused, was unreachable at any valuation — the missing-candidate
+shape behind gang blocks (+1.3) and chump blocks (+0.9), one decision
+earlier. `EvalWeights::attack_chain` (`attack_chain_candidate`, profiles
+`atk-chain` on the gang base and `net-chain` on the net pilot) grows a
+declaration from the repaired "nobody" one creature at a time. Each step
+simulates "the set so far plus one more eligible creature" for every
+remaining creature through the existing one-turn-cycle attack sim, with
+"finalize" (the set so far, at its known score) as candidate 0 so a tie
+stops the chain; a strict improvement is kept and the chain stops at six
+additions. The pool is every creature `may_declare_attacker` accepts, not
+the greedy set, so a greedy-refused body is on offer and priced by the sim
+rather than by the rule that refused it. The finished set then joins the
+menu for the picker's ONE argmax, where greedy holds index 0 and every
+tie — so the chain only changes a declaration by strictly out-scoring the
+whole menu on the same sim, and forward growth's blind spot (two attackers
+that only pay together are each bad alone, so the chain stops at nobody)
+is covered by greedy's alpha strike still being on the menu. Pinned by
+`attack_chain_stops_at_nobody_where_only_the_pair_is_lethal`; legality by
+`attack_chain_declaration_is_legal_and_keeps_the_obliged_attacker` (CR
+508.1d repair at every step, factored into `repair_attack_subsets`).
+
+**Incidence** (`.ladder/r55_census.txt`, `CRAB_ATTACK_CENSUS=1`, 600
+sealed games, chain on seat A only): 6 334 searched declarations across
+both seats, 3.79 menu candidates per search; the chain proposed a set the
+menu lacked in 616 (9.7 % of all searched, so ~19 % of the chain seat's)
+and that set won the argmax in 377 (6.0 % / ~12 %). Not rare-class: every
+searched declaration runs it.
+
+**The gate** (`.ladder/run_r55_atkchain.sh`, pre-registered, four seeds on
+the gang leg per the r51 budget rule, 1 000 games × 12 sealed decks per
+cell, paired):
+
+| leg | seed | A win % | interval | pairs split | rho |
+|---|---|---|---|---|---|
+| `atk-chain` vs `gang` | 43 | **53.1** | [52.7, 53.5] | 5 373 / 6 000 | −0.80 |
+| | 97 | **51.7** | [51.4, 52.0] | 5 579 | −0.86 |
+| | 151 | **52.1** | [51.7, 52.4] | | |
+| | 199 | **52.3** | [51.9, 52.7] | | |
+| `net-chain` vs `net-det1` | 43 | **51.2** | [50.8, 51.6] | 5 456 | −0.82 |
+| | 97 | **51.0** | [50.7, 51.4] | | |
+
+Pooled **+2.3 on the gang base, +1.1 under the net** — every one of six
+cells clears 50.7 at its low end, and the gang leg is the largest
+menu-hole reading on record. The mirrors break more than dmgorder's (rho
+−0.80 vs −0.94, 498 A-sweeps vs 129 B-sweeps on seed 43) because the flag
+fires every combat, which is also why the cells are ±0.33–0.40 rather than
+±0.22. The net leg reading half the gang leg is the r43/r46 pattern
+(search-level changes read smaller under the net) and replicates.
+
+**Cost.** Sealed mirror, 12 000 games on 23 threads: `gang` vs `gang`
+4.7 s, `atk-chain` vs `atk-chain` 6.6 s — **+40 % wall-clock** with the
+chain on both seats; the `--bench` profile (`gang` = `block_gang_search`)
+is untouched, so PERF's committed baseline stands. A self-play actor on
+the default will generate ~30 % fewer games per hour; that is the price
+of the lever and belongs in the next run's `--games` sizing.
+
+**Adopted**: `EvalWeights::default()` carries `attack_chain: 6` (r52
+style — measured on the `gang` base, stacked onto the default); the net
+ladder references (`net`, `net-det1`, `net-guard`) stay flagless so every
+recorded net number keeps its control, and the lobby pilot composes
+`EvalWeights::client_pilot()` = det1 + tail guard (r54) + chain. The
+client crate's local bot (`crabomination_client/src/menu.rs`) still
+constructs `net_eval_det1()` directly — it did not take r54 either and
+does not build in this container; point it at `client_pilot()` when it
+is next built. Golden digest seed 3 re-blessed (same winner, same 21
+turns, 484 → 483 actions — one declaration differs); the full committed
+trace and the other four seeds are untouched.
+
+**Caveats, recorded.** (1) The sim's standing blindness — it casts
+nothing for the defender — is unchanged, and the chain gives that bias
+more room: a greedy-refused attacker priced as free by a sim that ignores
+the defender's open mana can now be declared. The ladder says the net
+effect is strongly positive against both pilots, but the over-attack half
+of the replay diagnostic (2026-08-31) should be re-read on the next batch
+of client replays with the chain live. (2) Both legs measure against the
+same heuristic blocking; a win that partly exploits `gang`'s block picker
+is still a win against the only opponent the program has, but the human
+replays are the check. (3) Actor-side sampling (`set_action_sampling`)
+routes through `choose_scored`, which the chain's finalize/add step also
+uses — so `--sample-temp` now samples at every micro-step, not only at
+the final argmax. Deliberate (it is the micro-step exploration the chain
+was proposed with), but a re-run of the round-23 sampling arm on the new
+default is a different experiment from the recorded one.
+
+**Next in this shape, in order.** (1) The block chain: the block space is
+(blocker, attacker) pairs, and a chain of "assign this blocker to that
+attacker" reaches gang, double and chump blocks with one mechanism where
+today three hand-written generators do; gate as `blk-chain` vs the new
+default. (2) A backward chain from greedy (beyond minus-one) for the
+boards where the answer is "hold two". (3) The r23 sampling re-run with
+the chain as the exploration mechanism — the training-side half of the
+proposal, unmeasured here. (4) PERF: where the +40 % goes (candidates
+per search under the chain, and whether the finalize-score reuse is
+firing); the attack search was already ~60 % of a cube game.
