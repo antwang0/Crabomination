@@ -293,6 +293,22 @@ pub struct EvalWeights {
     /// [`client_pilot`](Self::client_pilot) for the numbers;
     /// `.ladder/run_r55_atkchain.sh` is the gate.
     pub attack_chain: u8,
+    /// The wide chain (round 56). Two gaps in the round-55 shape: the
+    /// chain never ran when greedy declared *nobody* (a one-candidate
+    /// menu returned before any sim), which is exactly the board where
+    /// every creature was refused by a per-creature rule and none was
+    /// ever priced by the sim; and forward growth is blind to the
+    /// overload — two attackers into one blocker connect where each alone
+    /// is blocked and traded, so the first step ties and the chain stops.
+    /// On, the chain also runs from an empty greedy, and its first step
+    /// offers every *pair* of remaining creatures beside the singles
+    /// (`C(n, 2)` sims once; later steps grow singly). Needs
+    /// `attack_chain > 0`.
+    ///
+    /// **Adopted 2026-09-05 (round 56)** on the default only: 50.4 / 50.7
+    /// / 50.4 / 50.4 vs the r55 default, every interval clear of 50; the
+    /// net leg straddled (50.2 / 50.7). See `default_const`.
+    pub attack_chain_wide: bool,
     /// Search the block assignment instead of taking the greedy one:
     /// simulate each candidate through combat damage and keep the best (see
     /// [`pick_blocks_scored`]). 0 disables it; higher values allow more
@@ -304,6 +320,30 @@ pub struct EvalWeights {
     /// because the payoff of a block — who dies, how much life is saved —
     /// is settled inside the same combat.
     pub block_search: u8,
+    /// Grow the block assignment one move at a time (see
+    /// [`block_chain_candidate`]), the block twin of
+    /// [`attack_chain`](Self::attack_chain). 0 disables it; higher values
+    /// cap the moves. Each step offers "finalize" as candidate 0, one
+    /// (blocker, attacker) pair for every free blocker and every attacker
+    /// it may legally block — a second blocker on a blocked attacker is a
+    /// gang, so gangs grow naturally — and, per attacker, a *gang move*:
+    /// the cheapest free blockers that together kill it, the pair-level
+    /// step forward growth cannot take alone (each gang member is a
+    /// chump on its own). Every step is priced by the block sim, and the
+    /// finished plan joins [`block_candidates_for_mcts`]'s menu for the
+    /// picker's one argmax, greedy keeping index 0 and every tie.
+    ///
+    /// It runs on a one-candidate menu too: `block_candidates_for_mcts`
+    /// returns bare "no blocks" whenever greedy found nothing profitable
+    /// and no chump was warranted — and never generates gang candidates
+    /// there, so a gang that only pays as a pair was unreachable exactly
+    /// when greedy had nothing to seed it with.
+    ///
+    /// **Adopted 2026-09-05 (round 56)** at 4 on the default and the
+    /// client pilot: 56.8 / 55.0 / 55.6 / 55.7 vs the r55 default and
+    /// 57.7 / 55.7 under the net — the largest reading in the program's
+    /// record. See `default_const`; `.ladder/run_r56_chains.sh` is the gate.
+    pub block_chain: u8,
     /// Restore the pre-fix mana behavior: tap every land before deciding
     /// anything, and size affordability off the floating pool.
     ///
@@ -682,7 +722,9 @@ impl EvalWeights {
             combat_aware: false,
             attack_search: 0,
             attack_chain: 0,
+            attack_chain_wide: false,
             block_search: 0,
+            block_chain: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -761,7 +803,9 @@ impl EvalWeights {
             combat_aware: false,
             attack_search: 0,
             attack_chain: 0,
+            attack_chain_wide: false,
             block_search: 0,
+            block_chain: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -823,7 +867,9 @@ impl EvalWeights {
             combat_aware: false,
             attack_search: 0,
             attack_chain: 0,
+            attack_chain_wide: false,
             block_search: 0,
+            block_chain: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -1281,6 +1327,18 @@ impl EvalWeights {
         Self { attack_chain: 6, ..Self::block_gang_search() }
     }
 
+    /// The wide attack chain (round 56) on the round-55 default: ladder
+    /// `atk-chain-wide` as A against `dflt55`.
+    pub const fn attack_chain_wide_on() -> Self {
+        Self { attack_chain_wide: true, ..Self::round55_default() }
+    }
+
+    /// The block chain (round 56) on the round-55 default: ladder
+    /// `blk-chain` as A against `dflt55`.
+    pub const fn block_chain_on() -> Self {
+        Self { block_chain: 4, ..Self::round55_default() }
+    }
+
     /// The default plus outcome-judged mid-resolution targets. The
     /// opt-in for [`target_eval`](Self::target_eval); ladder as A
     /// against the default (profile `targeteval` vs `gang`).
@@ -1301,14 +1359,28 @@ impl EvalWeights {
         Self { attack_chain: 6, ..Self::net_eval_det1() }
     }
 
+    /// The wide attack chain under the net pilot: ladder `net-chain-wide`
+    /// as A against `net-chain`.
+    pub const fn net_attack_chain_wide_on() -> Self {
+        Self { attack_chain_wide: true, ..Self::net_attack_chain_on() }
+    }
+
+    /// The block chain under the net pilot: ladder `net-bchain` as A
+    /// against `net-chain`.
+    pub const fn net_block_chain_on() -> Self {
+        Self { block_chain: 4, ..Self::net_attack_chain_on() }
+    }
+
     /// The client's adopted net pilot, composed from the ladder references
     /// rather than folded into them so `net-det1` / `net-guard` stay the
     /// flagless controls every recorded net number was read against:
     /// [`net_eval_det1`](Self::net_eval_det1) plus the saturation fallback
     /// (round 54, client-adopted on replay evidence) plus the attack chain
-    /// (round 55, 51.2 / 51.0 over `net-det1` on seeds 43/97).
+    /// (round 55, 51.2 / 51.0 over `net-det1` on seeds 43/97) plus the
+    /// block chain (round 56, 57.7 / 55.7 over `net-chain`). Not the wide
+    /// attack chain: its net leg straddled 50 (50.2 / 50.7).
     pub const fn client_pilot() -> Self {
-        Self { attack_chain: 6, ..Self::net_tail_guard_on() }
+        Self { attack_chain: 6, block_chain: 4, ..Self::net_tail_guard_on() }
     }
 
     /// The attack-search profile plus the walker chip candidate. The
@@ -1744,6 +1816,16 @@ impl Default for EvalWeights {
         // (+40 %) with the chain on both seats. Measured on the `gang`
         // base like the layers above; the exact gate re-runs as
         // `atk-chain` vs `gang` (.ladder/run_r55_atkchain.sh).
+        Self::default_const()
+    }
+}
+
+impl EvalWeights {
+    /// The default as it stood after round 55 (determinize, chump blocks,
+    /// damage order, the attack chain), frozen: the base the round-56
+    /// gates were read on (`dflt55`), kept so adoption does not consume
+    /// its own control — the r52 precedent.
+    pub const fn round55_default() -> Self {
         Self {
             determinize: 1,
             chump_blocks: true,
@@ -1751,6 +1833,24 @@ impl Default for EvalWeights {
             attack_chain: 6,
             ..Self::block_gang_search()
         }
+    }
+
+    /// [`Default::default`] as a `const fn`, so a profile can be built on
+    /// the adopted default at compile time; the two must stay identical.
+    ///
+    /// `block_chain` and `attack_chain_wide` adopted 2026-09-05 (round
+    /// 56, `.ladder/run_r56_chains.sh`, 12 000 paired sealed games a
+    /// cell): the block chain read **56.8 / 55.0 / 55.6 / 55.7** against
+    /// the r55 default on seeds 43/97/151/199 (pooled +5.8; 57.7 / 55.7
+    /// under the net; 59.0 vs `gang`, 60.3 vs `atk-sim`, and 54.5 / 54.5
+    /// on `--decks cube`), every interval clear of 54.6 — the block menu
+    /// had been bare "no blocks" whenever greedy found nothing profitable,
+    /// and never generated a gang there. The wide attack chain read 50.4
+    /// / 50.7 / 50.4 / 50.4 with every cell's interval clear of 50 (the
+    /// r50 replicated-small rule) and 50.2 / 50.7 under the net, one cell
+    /// straddling — adopted here, not in [`client_pilot`](Self::client_pilot).
+    pub const fn default_const() -> Self {
+        Self { attack_chain_wide: true, block_chain: 4, ..Self::round55_default() }
     }
 }
 
@@ -8810,12 +8910,16 @@ fn attack_chain_candidate(
         .iter()
         .find(|(i, _)| menu.get(*i).is_some_and(|c| attack_set_key(c) == start_key))
     {
-        Some(&(_, s)) => s,
+        Some(&(_, s)) => {
+            attack_census::add(11, 1);
+            s
+        }
         None => simulate_attack_outcome(state, seat, &current, w)?,
     };
     let mut remaining: Vec<Attack> =
         pool.into_iter().filter(|a| !current.iter().any(|c| c.attacker == a.attacker)).collect();
-    for _ in 0..w.attack_chain {
+    let mut sims = 0u64;
+    for step in 0..w.attack_chain {
         if remaining.is_empty() {
             break;
         }
@@ -8828,9 +8932,23 @@ fn attack_chain_candidate(
             c.push(*a);
             cands.push(c);
         }
+        // The wide chain's first step also offers every pair: two
+        // attackers into one blocker connect where each alone is blocked
+        // and traded, so a single step ties and the chain would stop.
+        if step == 0 && w.attack_chain_wide && remaining.len() >= 2 {
+            for i in 0..remaining.len() {
+                for j in (i + 1)..remaining.len() {
+                    let mut c = current.clone();
+                    c.push(remaining[i]);
+                    c.push(remaining[j]);
+                    cands.push(c);
+                }
+            }
+        }
         repair_attack_subsets(state, seat, greedy, &mut cands);
         let mut scored: Vec<(usize, i32)> = vec![(0, current_score)];
         for (i, c) in cands.iter().enumerate().skip(1) {
+            sims += 1;
             if let Some(s) = simulate_attack_outcome(state, seat, c, w) {
                 scored.push((i, s));
             }
@@ -8843,6 +8961,7 @@ fn attack_chain_candidate(
         current = cands.swap_remove(chosen);
         remaining.retain(|a| !current.iter().any(|c| c.attacker == a.attacker));
     }
+    attack_census::add(10, sims);
     Some((current, current_score))
 }
 
@@ -8905,8 +9024,19 @@ fn tail_guarded(state: &GameState, seat: usize, w: &EvalWeights) -> EvalWeights 
 fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
     let w = &tail_guarded(state, seat, w);
     let mut candidates = attack_candidates_for_mcts(state, seat, w);
-    if candidates.len() == 1 {
+    // A one-candidate menu is greedy alone (search off, open board) or
+    // "nobody" (greedy refused everything). The wide chain prices the
+    // second case instead of returning it (`EvalWeights::attack_chain_wide`).
+    let chain_from_empty = w.attack_chain > 0
+        && w.attack_chain_wide
+        && w.attack_search > 0
+        && candidates.len() == 1
+        && candidates[0].is_empty();
+    if candidates.len() == 1 && !chain_from_empty {
         return candidates.swap_remove(0);
+    }
+    if chain_from_empty {
+        attack_census::add(12, 1);
     }
 
     // First-wins-ties in `choose_scored`: index 0 is greedy, so equal
@@ -8954,8 +9084,17 @@ pub mod attack_census {
 
     /// `[calls, candidates, won greedy, won none, won holdback, tied with
     /// the winner, defender had no creature, ... and greedy won there,
-    /// the attack chain proposed a set the menu lacked, ... and it won]`.
-    pub static N: [AtomicU64; 10] = [const { AtomicU64::new(0) }; 10];
+    /// the attack chain proposed a set the menu lacked, ... and it won,
+    /// sims the chain ran, chain start scores reused from the menu, chains
+    /// run from an empty greedy (the wide flag)]`.
+    pub static N: [AtomicU64; 13] = [const { AtomicU64::new(0) }; 13];
+
+    /// Bump counter `i` by `n` when the census is on.
+    pub fn add(i: usize, n: u64) {
+        if on() && n > 0 {
+            N[i].fetch_add(n, Relaxed);
+        }
+    }
 
     /// 0 = off, 1 = count, 2 = count and name each creatureless-defender
     /// search the greedy declaration did not win.
@@ -9034,7 +9173,42 @@ pub mod attack_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 10] {
+    pub fn snapshot() -> [u64; 13] {
+        std::array::from_fn(|i| N[i].load(Relaxed))
+    }
+}
+
+/// The block side of [`attack_census`], on the same `CRAB_ATTACK_CENSUS`
+/// switch: what the block search decides, and what the block chain adds.
+pub mod block_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// `[calls, menu candidates, sims the chain ran, the chain proposed a
+    /// plan the menu lacked, ... and it won, chain start scores reused]`.
+    pub static N: [AtomicU64; 6] = [const { AtomicU64::new(0) }; 6];
+
+    pub fn on() -> bool {
+        super::attack_census::on()
+    }
+
+    pub fn add(i: usize, n: u64) {
+        if on() && n > 0 {
+            N[i].fetch_add(n, Relaxed);
+        }
+    }
+
+    pub(super) fn tick(menu: usize, chosen: usize, chain_novel: bool) {
+        N[0].fetch_add(1, Relaxed);
+        N[1].fetch_add(menu as u64, Relaxed);
+        if chain_novel {
+            N[3].fetch_add(1, Relaxed);
+            if chosen >= menu {
+                N[4].fetch_add(1, Relaxed);
+            }
+        }
+    }
+
+    pub fn snapshot() -> [u64; 6] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -9768,12 +9942,193 @@ fn repair_block_candidate(state: &GameState, seat: usize, blocks: &mut Vec<(Card
     enforce_block_caps(state, blocks, &provoked);
 }
 
+/// A block plan's identity for menu dedupe: its (blocker, attacker) pairs,
+/// sorted.
+fn block_set_key(c: &[(CardId, CardId)]) -> Vec<(u32, u32)> {
+    let mut key: Vec<(u32, u32)> = c.iter().map(|(b, a)| (b.0, a.0)).collect();
+    key.sort_unstable();
+    key
+}
+
+/// The repair [`block_candidates_for_mcts`] applies to its menu — the
+/// payable-tax trim and the requirement/menace repair, inside one freeze
+/// scope, only when a requirement or tax is in scope — followed by dedupe,
+/// so a plan that repairs into an earlier one is not scored twice.
+fn repair_block_plans(state: &GameState, seat: usize, candidates: &mut Vec<Vec<(CardId, CardId)>>) {
+    state.with_frozen_layers(|st| {
+        if !block_requirement_present(st) && !st.block_tax_present() {
+            return;
+        }
+        for c in candidates.iter_mut() {
+            trim_blocks_to_payable_tax(state, seat, c);
+            repair_block_candidate(state, seat, c);
+        }
+    });
+    let mut seen: Vec<Vec<(u32, u32)>> = Vec::new();
+    candidates.retain(|c| {
+        let key = block_set_key(c);
+        let fresh = !seen.contains(&key);
+        if fresh {
+            seen.push(key);
+        }
+        fresh
+    });
+}
+
+/// The block chain (see [`EvalWeights::block_chain`]): grow a block plan
+/// from the repaired "no blocks" one move at a time, keeping a move only
+/// when its simulated combat scores strictly above finalizing the plan so
+/// far. Returns the finished plan and its score, or `None` when nothing
+/// this seat controls may block anything attacking it.
+///
+/// Moves per step: one (blocker, attacker) pair for every free blocker
+/// and every attacker it may legally block (`blocker_can_block_attacker_pair`,
+/// the engine's own gate, resolved once), plus per attacker not yet dealt
+/// lethal damage a *gang move* — the cheapest free blockers, by
+/// `permanent_value`, that together kill it, [`gang_block_candidates`]'
+/// own arithmetic relative to the plan so far. Legality beyond the pair
+/// gate is left to the sim's opening dry run, as the menu's gangs leave it
+/// to the engine.
+///
+/// `menu` / `menu_scores` are what [`pick_blocks_scored`] already
+/// simulated (index 0 greedy); the start plan's score is reused when the
+/// menu holds that plan.
+fn block_chain_candidate(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    menu: &[Vec<(CardId, CardId)>],
+    menu_scores: &[(usize, i32)],
+) -> Option<(Vec<(CardId, CardId)>, i32)> {
+    use crate::card::Keyword;
+    let blockers = legal_blockers(state, seat);
+    if blockers.is_empty() {
+        return None;
+    }
+    let attackers: Vec<(&crate::card::CardInstance, Option<_>)> = state
+        .attacking
+        .iter()
+        .filter(|a| state.defender_for(a.target) == Some(seat))
+        .filter_map(|a| state.battlefield_find(a.attacker))
+        .map(|c| (c, state.computed_permanent(c.id)))
+        .collect();
+    if attackers.is_empty() {
+        return None;
+    }
+    // The legal pairs, resolved once per decision.
+    let can: Vec<Vec<bool>> = blockers
+        .iter()
+        .map(|(b, bcp)| {
+            attackers
+                .iter()
+                .map(|(a, acp)| state.blocker_can_block_attacker_pair(b, bcp, a, acp.as_deref()))
+                .collect()
+        })
+        .collect();
+    if !can.iter().flatten().any(|&x| x) {
+        return None;
+    }
+    // Cheapest blockers first, for the gang move and for candidate order.
+    let mut order: Vec<usize> = (0..blockers.len()).collect();
+    order.sort_by_cached_key(|&i| permanent_value(state, blockers[i].0.id, w));
+
+    let mut start = vec![Vec::new()];
+    repair_block_plans(state, seat, &mut start);
+    let mut current = start.swap_remove(0);
+    let start_key = block_set_key(&current);
+    let mut current_score = match menu_scores
+        .iter()
+        .find(|(i, _)| menu.get(*i).is_some_and(|c| block_set_key(c) == start_key))
+    {
+        Some(&(_, s)) => {
+            block_census::add(5, 1);
+            s
+        }
+        None => simulate_block_outcome(state, seat, &current, w)?,
+    };
+    let mut sims = 0u64;
+    for _ in 0..w.block_chain {
+        let free: Vec<usize> = order
+            .iter()
+            .copied()
+            .filter(|&i| !current.iter().any(|(b, _)| *b == blockers[i].0.id))
+            .collect();
+        if free.is_empty() {
+            break;
+        }
+        // Candidate 0 is "finalize": the plan so far, at its known score.
+        let mut cands: Vec<Vec<(CardId, CardId)>> = vec![current.clone()];
+        for &i in &free {
+            for (j, (a, _)) in attackers.iter().enumerate() {
+                if can[i][j] {
+                    let mut c = current.clone();
+                    c.push((blockers[i].0.id, a.id));
+                    cands.push(c);
+                }
+            }
+        }
+        for (j, (a, _)) in attackers.iter().enumerate() {
+            let a_tough = a.toughness() - a.damage as i32;
+            let already: i32 = current
+                .iter()
+                .filter(|(_, aid)| *aid == a.id)
+                .filter_map(|(bid, _)| state.battlefield_find(*bid))
+                .map(|b| b.power().max(0))
+                .sum();
+            if already >= a_tough {
+                continue;
+            }
+            let mut gang: Vec<CardId> = Vec::new();
+            let mut dmg = already;
+            for &i in &free {
+                if !can[i][j] {
+                    continue;
+                }
+                gang.push(blockers[i].0.id);
+                dmg += blockers[i].0.power().max(0);
+                if blockers[i].1.keywords().has_kw(&Keyword::Deathtouch) || dmg >= a_tough {
+                    break;
+                }
+            }
+            if gang.len() < 2 || dmg < a_tough {
+                continue;
+            }
+            let mut c = current.clone();
+            for b in gang {
+                c.push((b, a.id));
+            }
+            cands.push(c);
+        }
+        repair_block_plans(state, seat, &mut cands);
+        if cands.len() < 2 {
+            break;
+        }
+        let mut scored: Vec<(usize, i32)> = vec![(0, current_score)];
+        for (i, c) in cands.iter().enumerate().skip(1) {
+            sims += 1;
+            if let Some(s) = simulate_block_outcome(state, seat, c, w) {
+                scored.push((i, s));
+            }
+        }
+        let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+        if chosen == 0 {
+            break;
+        }
+        current_score = scored.iter().find(|(i, _)| *i == chosen).map(|&(_, s)| s).unwrap_or(current_score);
+        current = cands.swap_remove(chosen);
+    }
+    block_census::add(2, sims);
+    Some((current, current_score))
+}
+
 fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
     // Same saturation fallback as the attack picker: a flat net can't
     // rank block plans either, and the tie falls to the greedy menu.
     let w = &tail_guarded(state, seat, w);
     let mut candidates = block_candidates_for_mcts(state, seat, w);
-    if candidates.len() == 1 {
+    // A one-candidate menu is bare "no blocks" (or greedy with the search
+    // off); the block chain prices it rather than returning it.
+    if candidates.len() == 1 && w.block_chain == 0 {
         return candidates.swap_remove(0);
     }
 
@@ -9782,10 +10137,24 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
         let Some(score) = simulate_block_outcome(state, seat, cand, w) else { continue };
         scored.push((i, score));
     }
-    match choose_scored(state.turn_number, &scored) {
-        Some(i) => candidates.swap_remove(i),
-        None => candidates.swap_remove(0),
+    // The chain's finished plan is one more candidate in the same argmax
+    // (see `EvalWeights::block_chain`), appended so greedy keeps index 0
+    // and every tie, and skipped when the menu already holds that plan.
+    let menu_len = candidates.len();
+    let mut chain_novel = false;
+    if w.block_chain > 0
+        && let Some((chain, score)) = block_chain_candidate(state, seat, w, &candidates, &scored)
+        && !candidates.iter().any(|c| block_set_key(c) == block_set_key(&chain))
+    {
+        candidates.push(chain);
+        scored.push((menu_len, score));
+        chain_novel = true;
     }
+    let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+    if block_census::on() {
+        block_census::tick(menu_len, chosen, chain_novel);
+    }
+    candidates.swap_remove(chosen)
 }
 
 /// Desperation chumps: candidates the profitable-blocks-only greedy
@@ -15684,6 +16053,148 @@ mod tests {
             );
             g.clone().declare_blockers(c.clone()).expect("every candidate is legal");
         }
+    }
+
+    /// A board with attackers declared at seat 1 by seat 0's creatures,
+    /// ready for seat 1's block step.
+    fn attacked_board(attackers: &[CardDefinition], blockers: usize) -> (GameState, Vec<CardId>) {
+        let mut g = two_player_game();
+        let mut ids = Vec::new();
+        for d in attackers {
+            let a = g.add_card_to_battlefield(0, d.clone());
+            g.clear_sickness(a);
+            ids.push(a);
+        }
+        for _ in 0..blockers {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(
+            ids.iter()
+                .map(|&a| crate::game::Attack { attacker: a, target: crate::game::AttackTarget::Player(1) })
+                .collect(),
+        )
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        (g, ids)
+    }
+
+    /// The block chain's finished plan is a declaration the engine accepts,
+    /// and it never leaves a Menace attacker with exactly one blocker (CR
+    /// 702.110b): the pair gate and the repair run at every step.
+    #[test]
+    fn block_chain_plan_is_legal_and_never_single_blocks_menace() {
+        use crate::card::{CardType, Keyword};
+        let menacing = CardDefinition {
+            name: "Skulking Brute",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::Menace],
+            ..Default::default()
+        };
+        let (g, atk) = attacked_board(&[menacing], 3);
+        let w = EvalWeights::block_chain_on();
+        let menu = block_candidates_for_mcts(&g, 1, &w);
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[]).expect("scored");
+        assert_ne!(chain.iter().filter(|(_, a)| *a == atk[0]).count(), 1, "{chain:?}");
+        g.clone().declare_blockers(chain).expect("the chained plan is legal");
+        let picked = pick_blocks_scored(&g, 1, &w);
+        assert_ne!(picked.iter().filter(|(_, a)| *a == atk[0]).count(), 1, "{picked:?}");
+        g.clone().declare_blockers(picked).expect("the picked plan is legal");
+    }
+
+    /// The hole the chain closes: a 3/3 into two bears at twenty life.
+    /// Greedy finds no profitable single block and no chump is warranted,
+    /// so the menu is bare "no blocks" and the gang generator never runs —
+    /// the double block that trades a bear for the giant was unreachable.
+    /// The chain's gang move finds it from nothing.
+    #[test]
+    fn block_chain_finds_the_gang_block_the_bare_menu_cannot() {
+        let (g, atk) = attacked_board(&[catalog::hill_giant()], 2);
+        let w = EvalWeights::block_chain_on();
+        let menu = block_candidates_for_mcts(&g, 1, &w);
+        assert_eq!(menu, vec![Vec::new()], "the menu is bare: {menu:?}");
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[]).expect("scored");
+        assert_eq!(chain.len(), 2, "both bears on the giant: {chain:?}");
+        assert!(chain.iter().all(|(_, a)| *a == atk[0]), "{chain:?}");
+        let picked = pick_blocks_scored(&g, 1, &w);
+        assert_eq!(picked.len(), 2, "the picker takes the gang: {picked:?}");
+        g.clone().declare_blockers(picked).expect("legal");
+    }
+
+    /// Two gangs at once: two giants into four bears. The gang generator
+    /// emits one candidate per attacker and never both, so the menu can
+    /// express "gang A" or "gang B", never "gang A and gang B"; the chain
+    /// takes one gang move, then the other.
+    #[test]
+    fn block_chain_reaches_a_double_gang_the_menu_cannot() {
+        let (g, atk) = attacked_board(&[catalog::hill_giant(), catalog::hill_giant()], 4);
+        let w = EvalWeights::block_chain_on();
+        let menu = block_candidates_for_mcts(&g, 1, &w);
+        assert!(
+            !menu.iter().any(|c| c.len() == 4),
+            "the menu never holds the double gang: {menu:?}"
+        );
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[]).expect("scored");
+        assert_eq!(chain.len(), 4, "two bears on each giant: {chain:?}");
+        for a in &atk {
+            assert_eq!(chain.iter().filter(|(_, x)| x == a).count(), 2, "{chain:?}");
+        }
+        let picked = pick_blocks_scored(&g, 1, &w);
+        assert_eq!(picked.len(), 4, "the picker takes the double gang: {picked:?}");
+        g.clone().declare_blockers(picked).expect("legal");
+    }
+
+    /// The wide attack chain's two additions, on one board: two bears
+    /// against a lone untapped bear, with a tapped 6/6 behind it so the
+    /// race math does not fire (their clock beats ours, so greedy is not
+    /// "racing"). Greedy's suicide filter then holds both bears (toughness
+    /// 2 against a power-2 blocker), so the menu is bare "nobody" and the
+    /// round-55 chain never ran; and a single bear into that blocker is a
+    /// straight trade, a tie with staying home, so single growth stops.
+    /// The pair move connects: one trades, the other deals two.
+    #[test]
+    fn attack_chain_wide_overloads_the_lone_blocker_greedy_holds_against() {
+        use crate::card::CardType;
+        let mut g = two_player_game();
+        let mut bears = Vec::new();
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+            bears.push(c);
+        }
+        let wall = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(wall);
+        let fatty = g.add_card_to_battlefield(
+            1,
+            CardDefinition {
+                name: "Colossus Test",
+                card_types: vec![CardType::Creature],
+                power: 6,
+                toughness: 6,
+                ..Default::default()
+            },
+        );
+        g.clear_sickness(fatty);
+        g.battlefield.iter_mut().find(|c| c.id == fatty).expect("on the battlefield").tapped = true;
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        assert!(pick_attacks(&g, 0).is_empty(), "greedy holds both bears");
+        let narrow = pick_attacks_scored(&g, 0, &EvalWeights::round55_default());
+        assert!(narrow.is_empty(), "the round-55 chain never runs from nobody: {narrow:?}");
+        let wide = pick_attacks_scored(&g, 0, &EvalWeights::attack_chain_wide_on());
+        assert_eq!(wide.len(), 2, "the pair move overloads the blocker: {wide:?}");
+        g.clone().declare_attackers(wide).expect("legal");
     }
 
     /// CR 509.1a — `CantBlock` is enforced from the *computed* set, so a

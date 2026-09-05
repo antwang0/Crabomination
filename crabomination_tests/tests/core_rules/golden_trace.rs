@@ -278,7 +278,17 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // is unchanged; only the lines differ, which is what an honest-redeal
     // change looks like -- the searches make a different arbitrary guess,
     // not a better or worse one. Seeds 3 and 4 are untouched.
-    (1, Some(0), 11, 281, 0x50fa_222a_007f_6675),
+    // Re-blessed 2026-09-05 for the round-56 adoptions (the block chain,
+    // +5.8 on the ladder, and the wide attack chain, +0.5): every seat now
+    // finds sim-priced blocks — gangs on a bare menu above all — where the
+    // greedy trade table declared nothing, so combats trade where they
+    // used to connect. Seeds 1 and 2 keep their winners and end a few
+    // actions apart (281 -> 277, 384 -> 434); seeds 3 and 4 FLIP to seat
+    // 1 and run far longer (21 -> 32 turns, 13 -> 24) — the aggro deck's
+    // early swings are now blocked instead of raced, and the skies deck
+    // wins the long game. Seed 5 and no other line are untouched. The
+    // full committed trace moved at one line, a turn-7 block declaration.
+    (1, Some(0), 11, 277, 0x6756_7f37_311c_7e28),
     // Re-blessed Aug 2026 for the CR 510.4/510.5 combat-damage fix: the step
     // loop used to skip a whole attacker/blocker pairing whenever the attacker
     // dealt no damage in that step, so a first striker that failed to kill its
@@ -299,7 +309,7 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // turn count, same action count — only the digest moves, and the filter
     // is sound by measurement (zero cases where `could_pay_cost` accepts a
     // cost the budget rejects, over 21 pool/seed configurations).
-    (2, Some(1), 16, 384, 0x3613_7e1d_7496_f4dc),
+    (2, Some(1), 18, 434, 0x9b44_e2cd_0954_bb3e),
     // Re-blessed 2026-08-26 for the combat-planner legality fixes: the block
     // planner used to assemble batches `declare_blockers` rejects (a landwalk
     // it could not see, a gang pass that skipped the pair gate, menace read
@@ -313,7 +323,7 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // contains one board where that set out-scores the holdback menu.
     // Same winner, same turn count, one action fewer (484 -> 483); seeds
     // 1, 2, 4 and 5 and the full committed trace are untouched.
-    (3, Some(0), 21, 483, 0x919f_66af_a2d9_f6f8),
+    (3, Some(1), 32, 737, 0x5269_7a20_8722_c05d),
     // Re-blessed 2026-08-22 for the slot-walk targeting fix: the filtered
     // auto-target path used to take the first legal permanent in
     // battlefield order, so Swords to Plowshares ("target creature", an
@@ -322,7 +332,7 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // ordering, and seed 4's game ends in two fewer actions (330 -> 328).
     // Same winner, same turn count; seeds 1, 2, 3 and 5 are untouched,
     // which is what a targeting fix rather than a rules change looks like.
-    (4, Some(0), 13, 328, 0xaf13_8770_d502_03cc),
+    (4, Some(1), 24, 580, 0xac57_ca82_2179_451a),
     (5, Some(0), 9, 223, 0x97c2_acfd_3251_1e21),
 ];
 

@@ -6903,6 +6903,28 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**The combat chains (rounds 55–56, 2026-09-05) doubled the default's
+wall-clock and are the top of this list.** Sealed mirror, 12 000 games on
+23 threads, one `release-fast` binary: `gang` (no chains) 4.6 s, the r55
+default (attack chain) 6.8 s, + block chain 7.9 s, + wide attack chain
+8.7 s, the adopted default (both) 9.8 s. The `--bench` profile is `gang`,
+so the committed Baseline is untouched — but every actor and every
+`dflt`-piloted tool now runs at 2.1× it. Where it goes, by census
+(`CRAB_ATTACK_CENSUS=1`, `dflt` mirror, 600 games): the attack chain runs
+3.25 full-turn-cycle sims per searched declaration (12 388 searched,
+45 % from an empty greedy under the wide flag), the block chain 2.88
+end-of-combat sims per block search (5 506). In order: (1) the wide
+chain's pair move offers `C(n, 2)` pairs at EVERY chain's first step, and
+it was built for the empty-greedy overload — restrict it to chains that
+start from nobody and gate for no loss (the wide chain is +0.5 for
++28 %; the block chain +5.8 for +16 %); (2) the block chain reuses the
+menu's start score on only 65 % of searches when a bare menu should make
+that ~100 % — find the miss; (3) `attack_skip_open` (`atk-open`, gated
+for no loss at r50) is worth re-reading now that the wide chain runs on
+the 30 % of searched declarations whose defender has no creature.
+Measure on `--decks sealed` (the chains' pool) and on `cube`; the
+`fixed` bench does not carry them.
+
 **State at the `(-250)` tip — THE IR BASE MOVED (`panic = "abort"` on
 every optimized profile, three-pool Ir against the `(-249)` tip):
 `cube` 1,876,460,069 -> 1,817,493,748 (-3.142 %), `fixed` 681,439,653

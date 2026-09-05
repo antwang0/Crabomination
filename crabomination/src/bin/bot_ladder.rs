@@ -265,6 +265,16 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // and offer the finished set beside the holdback menu. Gate as A
         // against `gang`.
         "atk-chain" => Some(Pilot::Scored(EvalWeights::attack_chain_on())),
+        // The adopted default itself (`EvalWeights::default()`) — moves with
+        // every adoption, so a gate never uses it as its control — and the
+        // frozen round-55 default, the base the round-56 gates read on.
+        "dflt" => Some(Pilot::Scored(EvalWeights::default())),
+        "dflt55" => Some(Pilot::Scored(EvalWeights::round55_default())),
+        // Round 56: the wide attack chain (runs from an empty greedy,
+        // pairs at the first step) and the block chain (pair-or-gang
+        // moves, priced by the block sim). Gate each as A against `dflt55`.
+        "atk-chain-wide" => Some(Pilot::Scored(EvalWeights::attack_chain_wide_on())),
+        "blk-chain" => Some(Pilot::Scored(EvalWeights::block_chain_on())),
         // The open-board shortcut: no opposing creature / planeswalker /
         // battle, so the attack search takes greedy without a sim. A
         // throughput device; gate as A against `gang` for *no loss*.
@@ -306,6 +316,9 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // The attack chain under the net pilot. Gate as A against
         // `net-det1`.
         "net-chain" => Some(Pilot::Scored(EvalWeights::net_attack_chain_on())),
+        // Round 56 under the net pilot. Gate each as A against `net-chain`.
+        "net-chain-wide" => Some(Pilot::Scored(EvalWeights::net_attack_chain_wide_on())),
+        "net-bchain" => Some(Pilot::Scored(EvalWeights::net_block_chain_on())),
         // The pre-2026-08-22 net shape: branched off `atk-sim`, so
         // without either adopted blocking layer. The control for the
         // rebase, and the shape every net gate from round 26 to 46 ran
@@ -587,7 +600,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, atk-chain-wide, blk-chain, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
@@ -1650,7 +1663,7 @@ fn main() {
     // What the attack search (PERF (-21), ~60 % of `cube`) decides. Off
     // unless `CRAB_ATTACK_CENSUS` is set.
     if crabomination::server::bot::attack_census::on() {
-        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won] =
+        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty] =
             crabomination::server::bot::attack_census::snapshot();
         let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
         println!(
@@ -1658,7 +1671,8 @@ fn main() {
              {greedy} ({:.1} %), none {none} ({:.1} %), holdback {hold} ({:.1} %); {tied} \
              tied the winner; defender creatureless {empty} ({:.1} %), greedy won there \
              {empty_greedy}; chain proposed a new set {chain_new} ({:.1} %), won {chain_won} \
-             ({:.1} %)",
+             ({:.1} %); chain sims {chain_sims} ({:.2}/search), start reused {chain_reuse}, \
+             from empty greedy {chain_empty}",
             if calls == 0 { 0.0 } else { cands as f64 / calls as f64 },
             pct(greedy, calls),
             pct(none, calls),
@@ -1666,6 +1680,18 @@ fn main() {
             pct(empty, calls),
             pct(chain_new, calls),
             pct(chain_won, calls),
+            if calls == 0 { 0.0 } else { chain_sims as f64 / calls as f64 },
+        );
+        let [bcalls, bcands, bsims, bnew, bwon, breuse] =
+            crabomination::server::bot::block_census::snapshot();
+        println!(
+            "  block_census {bcalls} searched, {bcands} candidates ({:.2}/search); chain sims \
+             {bsims} ({:.2}/search), proposed a new plan {bnew} ({:.1} %), won {bwon} ({:.1} %), \
+             start reused {breuse}",
+            if bcalls == 0 { 0.0 } else { bcands as f64 / bcalls as f64 },
+            if bcalls == 0 { 0.0 } else { bsims as f64 / bcalls as f64 },
+            pct(bnew, bcalls),
+            pct(bwon, bcalls),
         );
     }
     // PERF (-88): how many state-based-action sweeps re-sweep a state the

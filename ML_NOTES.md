@@ -3614,3 +3614,119 @@ the chain as the exploration mechanism — the training-side half of the
 proposal, unmeasured here. (4) PERF: where the +40 % goes (candidates
 per search under the chain, and whether the finalize-score reuse is
 firing); the attack search was already ~60 % of a cube game.
+
+## Round 56 — the block chain and the wide attack chain: BOTH ADOPTED (2026-09-05)
+
+The two chains round 55 left on the table, measured the same day on the
+same protocol (`.ladder/run_r56_chains.sh`, pre-registered; base `dflt55`
+= the default as it stood after round 55, frozen so adoption does not
+consume its own control).
+
+**The block chain** (`EvalWeights::block_chain`, `block_chain_candidate`,
+profiles `blk-chain` / `net-bchain`) grows a block plan from "no blocks"
+one move at a time: per step, one (blocker, attacker) pair for every free
+blocker and every attacker it may legally block (the engine's
+`blocker_can_block_attacker_pair`, resolved once), plus a per-attacker
+*gang move* — the cheapest free blockers that together kill it, the
+pair-level step single growth cannot take because each gang member is a
+chump alone — each priced by the block sim, "finalize" as candidate 0,
+strict improvement kept, four moves max. The finished plan joins the block
+menu's argmax, greedy keeping index 0 and every tie.
+
+The hole it closes is bigger than expected. `block_candidates_for_mcts`
+returned bare "no blocks" whenever greedy found no profitable single block
+and no chump was warranted, **and never generated gang candidates there**
+— the gang generator only ever ran on a menu greedy had already seeded.
+So the double block that trades a bear for a 3/3 was unreachable on
+exactly the board where it is the only good play, and the r43 gang
+adoption (+1.3) was measured with that hole in place. Pinned by
+`block_chain_finds_the_gang_block_the_bare_menu_cannot` (menu = `[[]]`,
+chain = both bears on the giant) and
+`block_chain_reaches_a_double_gang_the_menu_cannot` (two giants into four
+bears: the generator emits one gang per candidate, never both).
+
+| leg | seed | A win % | interval | rho |
+|---|---|---|---|---|
+| `blk-chain` vs `dflt55` | 43 | **56.8** | [56.3, 57.3] | −0.69 |
+| | 97 | **55.0** | [54.6, 55.5] | −0.74 |
+| | 151 | **55.6** | [55.1, 56.0] | |
+| | 199 | **55.7** | [55.3, 56.2] | |
+| `net-bchain` vs `net-chain` | 43 | **57.7** | [57.2, 58.2] | −0.63 |
+| | 97 | **55.7** | [55.2, 56.2] | |
+
+**Pooled +5.8 on the heuristic base, +6.7 under the net** — two and a
+half times the attack chain and the largest reading in the program's
+record. Cross-checked because of the size: 59.0 vs `gang`, 60.3 vs
+`atk-sim` (seed 43), and **54.5 / 54.5 on `--decks cube`** (seeds 43/97,
+±0.9), so it is not a sealed-pool or a same-opponent artefact. Census
+(`.ladder/r56_census_blk-chain.txt`): the chain proposed a plan the menu
+lacked in 17.2 % of block searches and that plan won in 16.3 % — 95 % of
+its proposals win, which is what "the menu had nothing" looks like.
+
+**The wide attack chain** (`EvalWeights::attack_chain_wide`, profile
+`atk-chain-wide` / `net-chain-wide`): the r55 chain never ran when greedy
+declared *nobody* (a one-candidate menu returned before any sim), and
+forward growth is blind to the overload (two attackers into one blocker
+connect where each alone is blocked and traded, so the first step ties).
+On, the chain runs from an empty greedy and its first step offers every
+pair. Pinned by
+`attack_chain_wide_overloads_the_lone_blocker_greedy_holds_against`.
+Census: 30 % of searched declarations are now empty-greedy boards
+(2 664 of 8 971) — the r55 chain was skipping a third of its decisions.
+
+| leg | cells | pooled |
+|---|---|---|
+| `atk-chain-wide` vs `dflt55` (43/97/151/199) | 50.4 [50.1, 50.7] / 50.7 [50.4, 51.0] / 50.4 [50.1, 50.6] / 50.4 [50.1, 50.7] | **+0.48** |
+| `net-chain-wide` vs `net-chain` (43/97) | 50.2 [49.9, 50.6] / 50.7 [50.4, 51.0] | +0.45 |
+
+Small and replicated: every heuristic cell's interval clears 50 (the r50
+rule), the net leg straddles on one seed. **Adopted on the default, not
+on the client pilot** (pre-registered: the net leg decides the client).
+Why so much smaller than the block chain when it fires on a third of
+declarations: on those boards greedy's refusal is usually right, and the
+sim agrees — the pair move's wins are the overload boards, which are a
+sliver.
+
+**Adopted**: `EvalWeights::default()` = `round55_default()` +
+`block_chain: 4` + `attack_chain_wide: true`; `client_pilot()` = det1 +
+tail guard + attack chain + block chain. Net ladder references stay
+flagless. The r55 default reads 53.2 vs `gang` (seed 43); the new default
+has not been re-read against the flagless controls yet — **every
+reference before 2026-09-05 predates both chains.** Golden traces
+re-blessed: the full committed trace moved at one line (a turn-7 block
+declaration); digest seeds 3 and 4 flip winner and run 21 → 32 and 13 →
+24 turns — the aggro deck's early swings are blocked instead of raced.
+
+**Caveats.** (1) The block sim's horizon ends at end of combat; a block
+plan is priced on who dies and life saved, never on the crack-back. Blocks
+carry no tempo cost, so that is mostly right, but a gang that leaves the
+best blocker dead before the opponent's second wave is invisible. (2) The
+block chain runs on every trivial block menu at (free blockers ×
+attackers) sims a step — the cost line below. (3) The size of the win
+says the greedy trade table was the weakest hand-written policy in the
+bot; the same shape (a sim-priced chain on a bare menu) should be looked
+for in every other picker that returns a bare default: combat tricks,
+defensive removal, the mulligan.
+
+**Cost** (uncontended, sealed mirror, 12 000 games on 23 threads, the
+same binary): `gang` 4.6 s, `dflt55` 6.8 s, `dflt55` + block chain 7.9 s,
+`dflt55` + wide chain 8.7 s, the new default 9.8 s. So the block chain is
++16 % for +5.8 and the wide chain +28 % for +0.5 — the wide chain's pair
+move (`C(n, 2)` full-turn-cycle sims at every chain's first step, not only
+the empty-greedy ones it was built for) is the expensive half, and the
+first perf candidate: pairs only when the chain starts from nobody, gated
+for no loss. Census under the new default (both seats): the attack chain
+runs 3.25 sims per searched declaration and 45 % of searched declarations
+are now empty-greedy boards; the block chain runs 2.88 sims per block
+search, proposes a new plan in 24 % and wins in 23 %, and reuses the
+menu's start score 65 % of the time (why not ~100 % on a bare menu is the
+second candidate). The whole default is now 2.1× `gang`'s wall-clock; a
+self-play actor on it generates roughly half the games per hour the
+round-54 default did, which is the price of the two largest levers the
+program has found and belongs in every `--games` sizing from here.
+
+**Next in this shape.** (1) The r57 sampling re-run (`.ladder/run_r57_sampling.sh`,
+launched this session) — the training-side half. (2) Re-read the standing
+references (champion + mcts-net-deep vs `atk-sim` / `gang`) on the new
+default. (3) A backward chain from greedy beyond minus-one, and the
+block-side release chain. (4) The client replays with both chains live.
