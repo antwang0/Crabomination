@@ -398,6 +398,25 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights::net_eval_det1(),
             ..MctsConfig::default()
         })),
+        // The lobby's exact pilot (`lobby.rs::default_bot`): `mcts-net-deep`
+        // on `client_pilot()` — det1 + the saturation fallback (r54) + the
+        // attack chain (r55) + the block chain (r56). Round 62 reads it
+        // against `dflt`, the heuristic it has to add something on top of.
+        "mcts-client" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights::client_pilot(),
+            ..MctsConfig::default()
+        })),
+        // The same search on the adopted default's weights with NO net: the
+        // material eval is the rollout leaf. Round 62's control for
+        // `mcts-client` — whatever the two differ by is the net's leaf.
+        "mcts-dflt" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights::default(),
+            ..MctsConfig::default()
+        })),
         // The scaling curve above mcts-net-deep: iterations at fixed
         // horizon, and horizon at fixed iterations.
         "mcts-net-128" => Some(Pilot::Mcts(MctsConfig {
@@ -617,7 +636,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, atk-chain-wide, blk-chain, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, atk-chain-wide, blk-chain, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which

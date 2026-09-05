@@ -3967,3 +3967,70 @@ stays: the table above is the first per-index reading of the holdback
 menu and it says the menu's cost is its first two holdbacks (offered on
 every multi-attacker board, 3.3 candidates a search), which are also
 where 90 % of its wins are — there is no cheap cut in this menu.
+
+## Round 62 — the net system re-read on the round-56 heuristic: the net adds nothing in either role; the search alone is +2.5 (2026-09-05)
+
+A reference measurement, not a gate (`.ladder/run_r62_system_reread.sh`,
+pre-registered, one arm added after the first reading). Rounds 55–56
+raised the heuristic default ~8 points, and every recorded net-vs-
+heuristic level was read against controls that predate the chains: the
+r48 line everyone quotes (55.2 vs `atk-sim` / 53.65 vs `gang`) is the
+champion as the SCORED `net` pilot (r48 part B), and the lobby system
+(64-iteration determinized search on the net leaf) had never been read
+against a heuristic carrying the chains. Round 57's side finding — fresh
+nets pilot the new default to exactly 50 — made the question urgent.
+
+All cells vs `dflt` (the round-56 default) unless stated; sealed, paired;
+search cells 500 games × 12 decks (±0.95), scored cells 1 000 (±0.6).
+
+| arm | pilot | seed 43 | seed 97 | pooled |
+|---|---|---|---|---|
+| A | `mcts-client` — the lobby: 64/h3 search, net leaf, det1 + guard + both chains | 53.9 [52.9, 54.8] | 51.3 [50.3, 52.2] | **52.6** |
+| F | `mcts-dflt` — the same search on the default's weights, MATERIAL leaf, no net | 53.6 [52.7, 54.6] | 51.1 [50.2, 52.0] | **52.35** |
+| C | `net-bchain` — the champion as a scored pilot with both chains | 50.1 | 50.0 | **50.05** |
+| B | `mcts-net-deep` — the recorded system, no chains | 47.6 | 49.6 | 48.6 |
+| D | `mcts-client` vs `gang` / vs `atk-sim` (seed 43) | 59.3 / 61.4 | | |
+| E | `net-bchain` vs `gang` / vs `atk-sim` (seed 43) | 59.7 / 61.8 | | |
+| — | `dflt` vs `gang` / vs `atk-sim` (seed 43) | 59.2 / 60.5 | | |
+
+**Reading.** (1) The search still adds on top of the chained heuristic:
++2.6 pooled, and the seeds disagree by 2.6 with disjoint intervals —
+the same split in arm F, so it is the deck field, not noise. (2) **The
+net's leaf is worth +0.25 of that** (A − F: +0.3 / +0.2, inside every
+cell's ±0.95): the material eval at the leaves of a determinized
+64-rollout search reads what the champion reads. (3) **The net as a
+scored pilot is worth +0.05** on top of the chained heuristic (C), on
+two seeds, matching the four fresh r57 nets. (4) The recorded system
+without the chains now *loses* to the heuristic (B, 48.6): the r48
+references are ~8 points stale, and against the old controls the
+heuristic, the scored net and the search all read within a point of
+each other (D, E, last row) — those controls are too weak to separate
+anything any more; `dflt` is the only control that means something.
+
+**So**: on the round-56 heuristic, the champion value net contributes
+nothing measurable in either role it plays. The +2.5 the lobby pilot
+holds over the client's heuristic is the search — determinized rollouts
+with the material eval — not the net inside it. Two days of menu holes
+(+8) did what fifty rounds of training could not, and the thing the net
+was for (ranking near-identical lines the sims settle) is now done by
+the sims themselves.
+
+**Consequences, recorded rather than adopted.** (a) The lobby could
+pilot `mcts-dflt` (search, material leaf) at no measured loss and lose
+the net dependency, the safetensors load, the vocab freeze coupling and
+the saturation fallback with it — a program decision, since the net is
+also the client's belief redeal and the ladder's `net-*` reference
+family. (b) `head_leaf` was queued as "the real fix" for the leaf bias;
+arm F says the bias it would fix costs ≤ 0.25 today. Its premise needs
+re-arguing before its training runs are spent. (c) The search's own
+lever (iterations: r42 read 256 vs 64 = +2.4) is now cheaper to buy
+with the material leaf — no net forward pass per rollout — and is the
+next system-level gate. (d) The training program's remaining
+representational claim is the deck net (60–62 % gates), untouched by
+any of this.
+
+**Corrections.** The memory/notes line "system = champion +
+mcts-net-deep, 55.2 / 53.65" conflated two things: those numbers are
+the scored `net` pilot; the search system's recorded level was the r26
+adoption (56.1 / 54.4 vs `gang`, pre-blocking-fix). Both are replaced by
+this table.
