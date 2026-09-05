@@ -368,6 +368,35 @@ pub struct EvalWeights {
     /// 57.7 / 55.7 under the net — the largest reading in the program's
     /// record. See `default_const`; `.ladder/run_r56_chains.sh` is the gate.
     pub block_chain: u8,
+    /// Sim-priced combat spells in the post-block window (round 63), both
+    /// chairs. [`pick_combat_trick`] is a rule: the first pump that flips a
+    /// fight one of our creatures is losing, one (blocker, attacker) pair
+    /// at a time — so a double block it misses (each pair reads "already
+    /// winning"), an unblocked attacker's extra damage, and removal at a
+    /// blocker are never considered. On, [`pick_combat_trick_scored`]
+    /// offers every affordable instant in hand at every creature in the
+    /// combat ([`combat_instant_candidates`] — no shape filter at all),
+    /// runs each through the rest of the combat ([`run_combat_window`]) and
+    /// takes a strict improvement over the rule's own line (candidate 0,
+    /// which the sim's spell layer plays out); a tie returns the rule's
+    /// pick. Sims keep the rule (`sim_spell_action`), so no recursion.
+    ///
+    /// **Measured null (round 63)**: 50.3 / 49.4 / 50.2 / 50.3 vs the
+    /// round-56 default, firing 89 times per 600 games. Off by default;
+    /// the combat-only horizon cannot price the card it spends.
+    pub trick_sim: bool,
+    /// Sim-priced defensive removal (round 63), the defender's pre-block
+    /// windows. [`pick_defensive_removal`] is a rule: the first removal
+    /// that answers an attacker worth six units or more. On,
+    /// [`pick_defensive_removal_scored`] offers every affordable instant at
+    /// every attacker and every own creature, runs each through the combat (greedy
+    /// blocks inside the sim) and casts only when it beats holding the
+    /// card; a tie holds, where the rule would have cast.
+    ///
+    /// **Adopted 2026-09-05 (round 63)** on the default and the client
+    /// pilot: 50.3 / 50.3 / 50.2 / 50.2 vs the round-56 default, every
+    /// interval clear of 50. See `default_const`.
+    pub removal_sim: bool,
     /// Restore the pre-fix mana behavior: tap every land before deciding
     /// anything, and size affordability off the floating pool.
     ///
@@ -753,6 +782,8 @@ impl EvalWeights {
             attack_empty_gate: false,
             block_search: 0,
             block_chain: 0,
+            trick_sim: false,
+            removal_sim: false,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -837,6 +868,8 @@ impl EvalWeights {
             attack_empty_gate: false,
             block_search: 0,
             block_chain: 0,
+            trick_sim: false,
+            removal_sim: false,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -904,6 +937,8 @@ impl EvalWeights {
             attack_empty_gate: false,
             block_search: 0,
             block_chain: 0,
+            trick_sim: false,
+            removal_sim: false,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -1414,7 +1449,7 @@ impl EvalWeights {
     /// block chain (round 56, 57.7 / 55.7 over `net-chain`). Not the wide
     /// attack chain: its net leg straddled 50 (50.2 / 50.7).
     pub const fn client_pilot() -> Self {
-        Self { attack_chain: 6, block_chain: 4, ..Self::net_tail_guard_on() }
+        Self { attack_chain: 6, block_chain: 4, removal_sim: true, ..Self::net_tail_guard_on() }
     }
 
     /// The attack-search profile plus the walker chip candidate. The
@@ -1902,11 +1937,21 @@ impl EvalWeights {
     /// reading at `e725e5c2` (-0.1 on 96 k games) was the same flag on a
     /// search a third the size. Default only: the client pilot is built
     /// on `block_gang_search` and keeps the sim's hold-backs.
+    ///
+    /// `removal_sim` adopted 2026-09-05 (round 63,
+    /// `.ladder/run_r63_combat_spells.sh`, a strength gate read on the
+    /// round-56 default in a concurrent session, ahead of the throughput
+    /// adoptions above): 50.3 / 50.3 / 50.2 / 50.2 vs
+    /// the round-56 default on seeds 43/97/151/199, every cell's interval
+    /// clear of 50 (the r50 replicated-small rule; incidence ~0.04 casts a
+    /// game, 5 900+ of 6 000 pairs exact mirrors). `trick_sim` measured
+    /// 50.3 / 49.4 / 50.2 / 50.3 — null — and stays off.
     pub const fn default_const() -> Self {
         Self {
             attack_pairs_empty_only: true,
             attack_pairs_lazy: true,
             attack_skip_open: true,
+            removal_sim: true,
             ..Self::round56_default()
         }
     }
@@ -1965,6 +2010,18 @@ impl EvalWeights {
     /// flag on the `gang` base, the round-50-era reading.
     pub const fn attack_skip_open_default() -> Self {
         Self { attack_skip_open: true, ..Self::round58_default() }
+    }
+
+    /// Sim-priced combat tricks (round 63) on the round-56 default: ladder
+    /// `trick-sim` as A against `dflt56`.
+    pub const fn trick_sim_on() -> Self {
+        Self { trick_sim: true, ..Self::round56_default() }
+    }
+
+    /// Sim-priced defensive removal (round 63) on the round-56 default:
+    /// ladder `removal-sim` as A against `dflt56`.
+    pub const fn removal_sim_on() -> Self {
+        Self { removal_sim: true, ..Self::round56_default() }
     }
 }
 
@@ -2143,7 +2200,7 @@ impl HeuristicBot {
                     // answer. Validated actions only, so a resolved kill
                     // falls through to the block declaration next tick.
                     if !is_active
-                        && let Some(a) = pick_defensive_removal(state, seat, &self.weights)
+                        && let Some(a) = pick_defensive_removal_any(state, seat, &self.weights)
                     {
                         return Some(BotStep::plain(a));
                     }
@@ -2164,7 +2221,7 @@ impl HeuristicBot {
                     // dry-runs the trick to gate it, so `Probed` carries the
                     // state the driver would otherwise re-run.
                     Some(
-                        pick_combat_trick(state, seat, &self.weights)
+                        pick_combat_trick_any(state, seat, &self.weights)
                             .map(Picked::into_step)
                             .unwrap_or_else(|| BotStep::plain(GameAction::PassPriority)),
                     )
@@ -2178,7 +2235,7 @@ impl HeuristicBot {
                 if is_active && state.blockers_declared() && state.stack.is_empty() =>
             {
                 Some(
-                    pick_combat_trick(state, seat, &self.weights)
+                    pick_combat_trick_any(state, seat, &self.weights)
                         .map(Picked::into_step)
                         .unwrap_or_else(|| BotStep::plain(GameAction::PassPriority)),
                 )
@@ -2220,10 +2277,10 @@ impl HeuristicBot {
                 // an action, so their outputs stay `Plain`. Try the settled
                 // path first; fall through to the plain chain otherwise.
                 if !state.stack.is_empty() {
-                    if let Some(picked) = pick_stack_response(state, seat, &self.weights) {
+                    if let Some(picked) = pick_stack_response_top(state, seat, &self.weights) {
                         return Some(picked.into_step());
                     }
-                    if let Some(a) = pick_ability_counter_response(state, seat, &self.weights)
+                    if let Some(a) = pick_ability_counter_response_top(state, seat, &self.weights)
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
                     {
@@ -2266,17 +2323,17 @@ impl HeuristicBot {
                 // Same shape as the main-phase stack window above: only
                 // `pick_stack_response` carries a dry-run state; the rest
                 // fall back through the `Plain` chain to a plain action.
-                if let Some(picked) = pick_stack_response(state, seat, &self.weights) {
+                if let Some(picked) = pick_stack_response_top(state, seat, &self.weights) {
                     return Some(picked.into_step());
                 }
-                let action = pick_ability_counter_response(state, seat, &self.weights)
+                let action = pick_ability_counter_response_top(state, seat, &self.weights)
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
                     .or_else(|| pick_buff_response(state, seat, &self.weights))
                     // Defender windows in the attack steps (the picker
                     // no-ops unless declared attackers are coming at us).
                     .or_else(|| {
                         if state.stack.is_empty() {
-                            pick_defensive_removal(state, seat, &self.weights)
+                            pick_defensive_removal_any(state, seat, &self.weights)
                         } else {
                             None
                         }
@@ -3081,9 +3138,42 @@ fn pick_buff_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option
 /// to cleanup discards. Aim at the most valuable attacker the spell
 /// actually answers, before blocks commit; `would_accept` gates instant
 /// timing and the ward gate keeps taxes payable.
+/// First-leaf removal shapes, the same convention the counter scan uses:
+/// a dedicated kill spell, not a buried rider.
+fn removal_leaf(e: &Effect) -> Option<&Effect> {
+    match e {
+        Effect::Destroy { .. } | Effect::DestroyNoRegen { .. } | Effect::DealDamage { .. } => Some(e),
+        Effect::Seq(v) => v.first().and_then(removal_leaf),
+        _ => None,
+    }
+}
+
+/// Does this removal leaf, aimed at `target`, actually answer it: a
+/// targeted destroy always, targeted damage only when the constant amount
+/// meets the creature's remaining toughness.
+fn removal_answers(state: &GameState, leaf: &Effect, target: CardId) -> bool {
+    use crate::effect::{Selector, Value};
+    match leaf {
+        Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
+            matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
+        }
+        Effect::DealDamage { to, amount } => {
+            matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. })
+                && match amount {
+                    Value::Const(n) => state.computed_permanent(target).is_some_and(|cp| {
+                        let marked =
+                            state.battlefield_find(target).map(|c| c.damage as i32).unwrap_or(0);
+                        *n >= cp.toughness - marked
+                    }),
+                    _ => false,
+                }
+        }
+        _ => false,
+    }
+}
+
 fn pick_defensive_removal(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     use crate::card::CardType;
-    use crate::effect::{Selector, Value};
     let mut attackers: Vec<CardId> = state
         .attacking()
         .iter()
@@ -3094,17 +3184,6 @@ fn pick_defensive_removal(state: &GameState, seat: usize, w: &EvalWeights) -> Op
         return None;
     }
     attackers.sort_by_cached_key(|id| std::cmp::Reverse(permanent_value(state, *id, w)));
-    // First-leaf removal shapes, the same convention the counter scan
-    // uses: a dedicated kill spell, not a buried rider.
-    fn removal_leaf(e: &Effect) -> Option<&Effect> {
-        match e {
-            Effect::Destroy { .. } | Effect::DestroyNoRegen { .. } | Effect::DealDamage { .. } => {
-                Some(e)
-            }
-            Effect::Seq(v) => v.first().and_then(removal_leaf),
-            _ => None,
-        }
-    }
     let sweep = SweepMana::new(state, seat);
     for c in state.players[seat]
         .hand
@@ -3118,28 +3197,7 @@ fn pick_defensive_removal(state: &GameState, seat: usize, w: &EvalWeights) -> Op
             if permanent_value(state, atk, w) < 6 * w.unit {
                 continue;
             }
-            let answers = match leaf {
-                Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
-                    matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
-                }
-                Effect::DealDamage { to, amount } => {
-                    matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. })
-                        && match amount {
-                            Value::Const(n) => state
-                                .computed_permanent(atk)
-                                .is_some_and(|cp| {
-                                    let marked = state
-                                        .battlefield_find(atk)
-                                        .map(|c| c.damage as i32)
-                                        .unwrap_or(0);
-                                    *n >= cp.toughness - marked
-                                }),
-                            _ => false,
-                        }
-                }
-                _ => false,
-            };
-            if !answers {
+            if !removal_answers(state, leaf, atk) {
                 continue;
             }
             let action = GameAction::CastSpell {
@@ -9796,6 +9854,14 @@ enum Picked {
 }
 
 impl Picked {
+    /// A view of the action.
+    #[cfg(test)]
+    fn action_ref(&self) -> &GameAction {
+        match self {
+            Picked::Probed(a, _) | Picked::Plain(a) => a,
+        }
+    }
+
     /// The action, discarding any state its probe produced.
     #[cfg(test)]
     fn action(self) -> GameAction {
@@ -13922,6 +13988,354 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
         }
     }
     None
+}
+
+/// Play a combat out from wherever `g` stands on the current turn — a
+/// pending stack resolves, the defender's blocks are declared greedily if
+/// they are still owed, both seats' rule-level spell layer fires — until the
+/// end of combat, and score the board for `seat`. `None` on a rejected
+/// action or out of fuel. The block sim's loop with the block declaration
+/// folded in, so a pre-block cast (removal) and a post-block cast (a trick)
+/// are priced by the same walk.
+fn run_combat_window(g: &mut GameState, seat: usize, w: &EvalWeights) -> Option<i32> {
+    let turn = g.turn_number;
+    let mut fuel = 240u32;
+    let mut blocks_submitted = false;
+    while !g.is_game_over() && g.turn_number == turn && g.step < TurnStep::EndCombat {
+        fuel = fuel.checked_sub(1)?;
+        if g.pending_decision.is_some() {
+            let answer = {
+                let pending = g.pending_decision.as_ref().unwrap();
+                decide_pending_policy(g, pending.acting_player(), w, &pending.decision, false)
+            };
+            dry_run(g, GameAction::SubmitDecision(answer)).ok()?;
+            continue;
+        }
+        let action = if g.step == TurnStep::DeclareBlockers
+            && !blocks_submitted
+            && !g.blockers_declared()
+            && !g.attacking().is_empty()
+            && g.stack.is_empty()
+        {
+            match (0..g.players.len()).find(|&s| g.may_declare_blocks(s)) {
+                Some(defender) => {
+                    blocks_submitted = true;
+                    GameAction::DeclareBlockers(pick_blocks(g, defender))
+                }
+                None => GameAction::PassPriority,
+            }
+        } else {
+            match w.attack_sim_spells.then(|| sim_spell_action(g, w)).flatten() {
+                Some(Picked::Probed(_, next)) => {
+                    *g = *next;
+                    continue;
+                }
+                Some(Picked::Plain(a)) => a,
+                None => GameAction::PassPriority,
+            }
+        };
+        if !sim_step(g, action) {
+            return None;
+        }
+    }
+    Some(eval_material(g, seat, w))
+}
+
+/// Own creatures in this combat (attacking, or blocking) and opposing ones
+/// (attacking us, or blocking ours), for the trick picker's target sets.
+fn combat_creatures(state: &GameState, seat: usize) -> (Vec<CardId>, Vec<CardId>) {
+    let mut ours = Vec::new();
+    let mut theirs = Vec::new();
+    for a in state.attacking() {
+        let Some(c) = state.battlefield_find(a.attacker) else { continue };
+        if c.controller == seat {
+            ours.push(c.id);
+        } else if state.defender_for(a.target) == Some(seat) {
+            theirs.push(c.id);
+        }
+    }
+    for (blocker, attacker) in state.block_map_snapshot() {
+        let (Some(b), Some(a)) = (state.battlefield_find(blocker), state.battlefield_find(attacker))
+        else {
+            continue;
+        };
+        if b.controller == seat && !state.same_team(a.controller, seat) {
+            if !ours.contains(&blocker) {
+                ours.push(blocker);
+            }
+        } else if a.controller == seat && !state.same_team(b.controller, seat) && !theirs.contains(&blocker) {
+            theirs.push(blocker);
+        }
+    }
+    (ours, theirs)
+}
+
+/// Every affordable instant in hand, at the engine's own target and at
+/// every creature in this combat besides — the sim, not a shape filter,
+/// decides which are worth casting. The round-63 census found the shape
+/// filters (`is_combat_trick`: pure temporary pumps; `removal_leaf`:
+/// first-leaf destroy or damage) rejecting ~85 % of the sealed pools'
+/// instants — exile, modal charms, +1/+1-counter pumps, pumps with riders,
+/// conditional damage — so the pickers had nothing to price at windows
+/// where an instant was in hand 29 % of the time and mana up 70–80 %.
+/// `cast_candidates` is the main-phase enumerator (modes, X and
+/// alternative costs come with it); `accept` rejects an illegal retarget
+/// downstream.
+fn combat_instant_candidates(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    creatures: &[CardId],
+) -> Vec<GameAction> {
+    use crate::card::CardType;
+    let have = SweepMana::new(state, seat);
+    let mut out: Vec<GameAction> = Vec::new();
+    let mut seen: Vec<String> = Vec::new();
+    let mut push = |a: GameAction, out: &mut Vec<GameAction>| {
+        let key = format!("{a:?}");
+        if !seen.contains(&key) {
+            seen.push(key);
+            out.push(a);
+        }
+    };
+    // Every affordable instant, aimed at every combat creature: the plain
+    // cast shape, which is every pump, removal, exile, tap or counter-pump
+    // with one creature target. The enumerator below adds what this cannot
+    // spell — modes, X, untargeted and player-targeted casts.
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.card_types.contains(&CardType::Instant))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, &have))
+    {
+        for &t in creatures {
+            push(
+                GameAction::CastSpell {
+                    card_id: c.id,
+                    target: Some(Target::Permanent(t)),
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                },
+                &mut out,
+            );
+        }
+    }
+    for (a, _) in cast_candidates(state, seat, w, Some(&have)) {
+        let GameAction::CastSpell { card_id, target, .. } = &a else { continue };
+        let Some(card) = state.players[seat].hand.iter().find(|c| c.id == *card_id) else { continue };
+        if !card.definition.card_types.contains(&CardType::Instant) {
+            continue;
+        }
+        let retarget = matches!(target, Some(Target::Permanent(_)));
+        push(a.clone(), &mut out);
+        if retarget {
+            for &t in creatures {
+                let mut alt = a.clone();
+                if let GameAction::CastSpell { target, .. } = &mut alt {
+                    *target = Some(Target::Permanent(t));
+                }
+                push(alt, &mut out);
+            }
+        }
+    }
+    out
+}
+
+/// The sim-priced post-block spell (see [`EvalWeights::trick_sim`]).
+/// Candidate 0 is the rule's own line — the window as it stands, with the
+/// sim's spell layer playing the rule for both seats — so the search only
+/// departs from [`pick_combat_trick`] for a strict improvement and a tie
+/// returns the rule's pick.
+fn pick_combat_trick_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
+    let (ours, theirs) = combat_creatures(state, seat);
+    let creatures: Vec<CardId> = ours.iter().chain(theirs.iter()).copied().collect();
+    let cands = combat_instant_candidates(state, seat, w, &creatures);
+    if cands.is_empty() {
+        return pick_combat_trick(state, seat, w);
+    }
+    let base = {
+        let mut g = sim_start_state(state, seat, w, 0);
+        run_combat_window(&mut g, seat, w)?
+    };
+    let mut scored: Vec<(usize, i32)> = vec![(0, base)];
+    let mut probed: Vec<Option<(GameAction, Box<GameState>)>> = vec![None];
+    let mut sims = 0u64;
+    for a in cands {
+        if !ward_gate_ok(state, seat, &a) {
+            continue;
+        }
+        let Some(next) = state.accept(a.clone()) else { continue };
+        let mut g = sim_start_state(state, seat, w, 0);
+        if dry_run(&mut g, a.clone()).is_err() {
+            continue;
+        }
+        sims += 1;
+        let Some(v) = run_combat_window(&mut g, seat, w) else { continue };
+        probed.push(Some((a, Box::new(next))));
+        scored.push((probed.len() - 1, v));
+    }
+    response_census::add(2, sims);
+    let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+    if chosen == 0 {
+        return pick_combat_trick(state, seat, w);
+    }
+    response_census::add(3, 1);
+    let (a, next) = probed.swap_remove(chosen)?;
+    Some(Picked::Probed(a, next))
+}
+
+/// The sim-priced defensive removal (see [`EvalWeights::removal_sim`]).
+/// Candidate 0 is holding the card — the combat as it stands, greedy
+/// blocks inside the sim — so a removal is cast only when it strictly
+/// beats that; a tie holds.
+fn pick_defensive_removal_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    let attackers: Vec<CardId> = state
+        .attacking()
+        .iter()
+        .filter(|a| state.defender_for(a.target) == Some(seat))
+        .map(|a| a.attacker)
+        .collect();
+    if attackers.is_empty() {
+        return None;
+    }
+    let mut creatures = attackers;
+    creatures.extend(
+        state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.definition.is_creature())
+            .map(|c| c.id),
+    );
+    let cands = combat_instant_candidates(state, seat, w, &creatures);
+    if cands.is_empty() {
+        return None;
+    }
+    let base = {
+        let mut g = sim_start_state(state, seat, w, 0);
+        run_combat_window(&mut g, seat, w)?
+    };
+    let mut scored: Vec<(usize, i32)> = vec![(0, base)];
+    let mut actions: Vec<Option<GameAction>> = vec![None];
+    let mut sims = 0u64;
+    for a in cands {
+        if !ward_gate_ok(state, seat, &a) {
+            continue;
+        }
+        let mut g = sim_start_state(state, seat, w, 0);
+        if dry_run(&mut g, a.clone()).is_err() {
+            continue;
+        }
+        sims += 1;
+        let Some(v) = run_combat_window(&mut g, seat, w) else { continue };
+        actions.push(Some(a));
+        scored.push((actions.len() - 1, v));
+    }
+    response_census::add(6, sims);
+    let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+    if chosen == 0 {
+        return None;
+    }
+    response_census::add(7, 1);
+    actions.swap_remove(chosen)
+}
+
+/// The post-block spell picker the bot's own dispatch calls: the rule or
+/// the sim-priced one by flag, counted either way. Sims call the rule
+/// directly (`sim_spell_action`), which is what keeps the sim-priced one
+/// from recursing.
+fn pick_combat_trick_any(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
+    response_census::add(0, 1);
+    if response_census::on() {
+        response_census::window(state, seat, w, 12);
+    }
+    let picked =
+        if w.trick_sim { pick_combat_trick_scored(state, seat, w) } else { pick_combat_trick(state, seat, w) };
+    if picked.is_some() {
+        response_census::add(1, 1);
+    }
+    picked
+}
+
+fn pick_defensive_removal_any(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    response_census::add(4, 1);
+    if response_census::on()
+        && state.attacking().iter().any(|a| state.defender_for(a.target) == Some(seat))
+    {
+        response_census::window(state, seat, w, 15);
+    }
+    let picked = if w.removal_sim {
+        pick_defensive_removal_scored(state, seat, w)
+    } else {
+        pick_defensive_removal(state, seat, w)
+    };
+    if picked.is_some() {
+        response_census::add(5, 1);
+    }
+    picked
+}
+
+fn pick_stack_response_top(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
+    response_census::add(8, 1);
+    let picked = pick_stack_response(state, seat, w);
+    if picked.is_some() {
+        response_census::add(9, 1);
+    }
+    picked
+}
+
+fn pick_ability_counter_response_top(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    response_census::add(10, 1);
+    let picked = pick_ability_counter_response(state, seat, w);
+    if picked.is_some() {
+        response_census::add(11, 1);
+    }
+    picked
+}
+
+/// The response pickers' census, on the `CRAB_ATTACK_CENSUS` switch: how
+/// often each instant-speed picker is asked at the bot's own dispatch (not
+/// inside sims) and how often it acts; for the sim-priced ones, the sims
+/// they ran and the casts that beat the rule.
+pub mod response_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// `[trick asks, trick acts, trick-sim sims, trick-sim casts beating the
+    /// rule, removal asks, removal acts, removal-sim sims, removal-sim casts,
+    /// stack-response asks, acts, ability-counter asks, acts, trick windows
+    /// (blocks in), ... with an instant in hand, ... with an untapped mana
+    /// source, removal windows (attackers at us), ... with an instant,
+    /// ... with mana]`.
+    pub static N: [AtomicU64; 18] = [const { AtomicU64::new(0) }; 18];
+
+    /// The diagnosis counters: at a real window, does the seat hold an
+    /// instant at all, and does it have a single untapped mana source?
+    /// Asked per priority pass, so the numbers are fractions of asks.
+    pub(super) fn window(state: &super::GameState, seat: usize, w: &super::EvalWeights, base: usize) {
+        use crate::card::CardType;
+        N[base].fetch_add(1, Relaxed);
+        if state.players[seat].hand.iter().any(|c| c.definition.card_types.contains(&CardType::Instant)) {
+            N[base + 1].fetch_add(1, Relaxed);
+        }
+        let _ = w;
+        if super::available_mana(state, seat).total > 0 {
+            N[base + 2].fetch_add(1, Relaxed);
+        }
+    }
+
+    pub fn on() -> bool {
+        super::attack_census::on()
+    }
+
+    pub fn add(i: usize, n: u64) {
+        if on() && n > 0 {
+            N[i].fetch_add(n, Relaxed);
+        }
+    }
+
+    pub fn snapshot() -> [u64; 18] {
+        std::array::from_fn(|i| N[i].load(Relaxed))
+    }
 }
 
 fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &EvalWeights) -> i32 {
@@ -18921,6 +19335,94 @@ mod tests {
         assert!(
             matches!(action, Some(GameAction::PassPriority)),
             "no trick needed on a won fight, got {action:?}",
+        );
+    }
+
+    /// The rule reads one (blocker, attacker) pair at a time, so a 3/3
+    /// double-blocked by two bears reads "already winning" twice and gets
+    /// no pump — and dies to four damage, killing one bear. The sim sees
+    /// the whole fight: +3/+3 survives and kills both.
+    #[test]
+    fn trick_sim_pumps_the_double_blocked_attacker_the_rule_skips() {
+        let mut g = two_player_game();
+        let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+        let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let growth = g.add_card_to_hand(0, catalog::giant_growth());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.set_attacking(vec![Attack { attacker: giant, target: AttackTarget::Player(1) }]);
+        g.set_block_map([(b1, giant), (b2, giant)]);
+        g.set_blockers_declared(true);
+        let w = EvalWeights::trick_sim_on();
+        assert!(pick_combat_trick(&g, 0, &w).is_none(), "the rule skips the double block");
+        let picked = pick_combat_trick_scored(&g, 0, &w).expect("the sim casts");
+        assert!(
+            matches!(
+                picked.action_ref(),
+                GameAction::CastSpell { card_id, target: Some(crate::game::Target::Permanent(t)), .. }
+                    if *card_id == growth && *t == giant
+            ),
+            "Giant Growth on the giant: {:?}",
+            picked.action_ref()
+        );
+    }
+
+    /// The rule holds removal for an attacker worth six units, so a 1/1
+    /// swinging at one life is not worth a card by its table — and kills
+    /// us. The sim prices the combat: dead versus alive.
+    #[test]
+    fn removal_sim_answers_the_lethal_chaff_attacker_the_rule_ignores() {
+        let mut g = two_player_game();
+        let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+        g.clear_sickness(elf);
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[1].life = 1;
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.set_attacking(vec![Attack { attacker: elf, target: AttackTarget::Player(1) }]);
+        g.priority.player_with_priority = 1;
+        let w = EvalWeights::removal_sim_on();
+        assert!(pick_defensive_removal(&g, 1, &w).is_none(), "the rule holds: chaff attacker");
+        let action = pick_defensive_removal_scored(&g, 1, &w).expect("the sim bolts it");
+        assert!(
+            matches!(
+                action,
+                GameAction::CastSpell { card_id, target: Some(crate::game::Target::Permanent(t)), .. }
+                    if card_id == bolt && t == elf
+            ),
+            "Bolt on the elf: {action:?}"
+        );
+    }
+
+    /// The shape the round-63 census found missing: exile is not a
+    /// `removal_leaf`, so the rule never offers Swords to Plowshares at a
+    /// dragon. The widened generator offers every instant at every combat
+    /// creature and the sim takes the exile.
+    #[test]
+    fn removal_sim_exiles_the_dragon_the_shape_filter_never_offered() {
+        let mut g = two_player_game();
+        let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+        g.clear_sickness(dragon);
+        let swords = g.add_card_to_hand(1, catalog::swords_to_plowshares());
+        g.players[1].mana_pool.add(crate::mana::Color::White, 1);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.set_attacking(vec![Attack { attacker: dragon, target: AttackTarget::Player(1) }]);
+        g.priority.player_with_priority = 1;
+        let w = EvalWeights::removal_sim_on();
+        assert!(pick_defensive_removal(&g, 1, &w).is_none(), "the rule's shape filter skips exile");
+        let action = pick_defensive_removal_scored(&g, 1, &w).expect("the sim exiles it");
+        assert!(
+            matches!(
+                action,
+                GameAction::CastSpell { card_id, target: Some(crate::game::Target::Permanent(t)), .. }
+                    if card_id == swords && t == dragon
+            ),
+            "Swords on the dragon: {action:?}"
         );
     }
 

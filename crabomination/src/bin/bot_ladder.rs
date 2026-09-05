@@ -270,6 +270,13 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // frozen round-55 default, the base the round-56 gates read on.
         "dflt" => Some(Pilot::Scored(EvalWeights::default())),
         "dflt55" => Some(Pilot::Scored(EvalWeights::round55_default())),
+        // The frozen round-56 default: the base the round-63 gates read on.
+        "dflt56" => Some(Pilot::Scored(EvalWeights::round56_default())),
+        // Round 63: sim-priced combat spells in the post-block window and
+        // sim-priced defensive removal before blocks. Gate each as A
+        // against `dflt56`.
+        "trick-sim" => Some(Pilot::Scored(EvalWeights::trick_sim_on())),
+        "removal-sim" => Some(Pilot::Scored(EvalWeights::removal_sim_on())),
         // Round 56: the wide attack chain (runs from an empty greedy,
         // pairs at the first step) and the block chain (pair-or-gang
         // moves, priced by the block sim). Gate each as A against `dflt55`.
@@ -636,7 +643,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, atk-chain-wide, blk-chain, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, trick-sim, removal-sim, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
@@ -1721,6 +1728,21 @@ fn main() {
             pct(chain_new, calls),
             pct(chain_won, calls),
             if calls == 0 { 0.0 } else { chain_sims as f64 / calls as f64 },
+        );
+        let [ta, tp, ts, tw, ra, rp, rs, rw, sa, sp, aa, ap, twin, tinst, tmana, rwin, rinst, rmana] =
+            crabomination::server::bot::response_census::snapshot();
+        println!(
+            "  response_census trick asks {ta} acts {tp} ({:.1} %) sims {ts} beat-rule {tw}; removal \
+             asks {ra} acts {rp} ({:.1} %) sims {rs} beat-hold {rw}; stack asks {sa} acts {sp}; \
+             ability asks {aa} acts {ap}; windows: trick {twin} (instant in hand {tinst} = {:.1} %, \
+             untapped mana {tmana} = {:.1} %), removal {rwin} (instant {rinst} = {:.1} %, mana \
+             {rmana} = {:.1} %)",
+            pct(tp, ta),
+            pct(rp, ra),
+            pct(tinst, twin),
+            pct(tmana, twin),
+            pct(rinst, rwin),
+            pct(rmana, rwin),
         );
         let [bcalls, bcands, bsims, bnew, bwon, breuse, bran] =
             crabomination::server::bot::block_census::snapshot();

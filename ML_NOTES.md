@@ -4034,3 +4034,69 @@ mcts-net-deep, 55.2 / 53.65" conflated two things: those numbers are
 the scored `net` pilot; the search system's recorded level was the r26
 adoption (56.1 / 54.4 vs `gang`, pre-blocking-fix). Both are replaced by
 this table.
+
+## Round 63 — the combat-window pickers: the shape filters were the hole; sim-priced removal ADOPTED (+0.25), sim-priced tricks null (2026-09-05)
+
+The two instant-speed pickers in the combat window were still rule tables
+after rounds 55–56: `pick_combat_trick` (post-blocks, both chairs: the
+first pure pump that flips a fight, one (blocker, attacker) pair at a
+time) and `pick_defensive_removal` (the defender, pre-blocks: the first
+first-leaf destroy/damage that answers an attacker worth six units). Both
+were given the r55/r56 treatment — every candidate priced by a walk to
+the end of combat (`run_combat_window`), candidate 0 the status quo, a
+strict improvement taken — as `trick_sim` and `removal_sim`
+(`.ladder/run_r63_combat_spells.sh`, base `dflt56`).
+
+**First reading: exactly 50.0 on every removal cell, 5 sims in 600 games
+on the trick side.** Neither picker had anything to price. The window
+census (new, on `CRAB_ATTACK_CENSUS`) ruled out the obvious cause: at the
+post-block window the seat had an untapped mana source 80 % of the time
+and an instant in hand 29 %; pre-blocks, 70 % and 29 %. A pool probe gave
+the real one: **the sealed pools' instants do not have the pickers'
+shapes.** Seed 43's 17 instants hold one pure pump and two first-leaf
+removal spells; seed 97's 22 hold none and three. The rest are exile
+(`Wander Off`), modal charms, +1/+1-counter pumps (`Efflorescence`),
+pumps with riders (`Interjection`, `Masterful Flourish`), tap effects
+(`Rapier Wit`), conditional damage (`Wilt in the Heat`: exile-if-dies
+first, damage second) and mass pumps. The rule pickers had been dead for
+the same reason — the rule trick acted **once** in 600 games, the rule
+removal **never** — so the sim-priced versions, built on the same
+generators, inherited a hole that was never in the pricing.
+
+**Second reading, with `combat_instant_candidates`** — every affordable
+instant in hand at every creature in the combat, plus the main-phase
+enumerator's modal / X / untargeted shapes; the sim, not a filter, decides
+(`cast_candidates` skips pure pumps by design, so the direct
+creature-targeted casts are what carry Giant Growth):
+
+| leg | acts / 600 games | sims | seed 43 | 97 | 151 | 199 | pooled |
+|---|---|---|---|---|---|---|---|
+| `removal-sim` vs `dflt56` | 26 | 288 | 50.3 [50.2, 50.5] | 50.3 [50.1, 50.5] | 50.2 [50.1, 50.3] | 50.2 [50.1, 50.3] | **+0.25** |
+| `trick-sim` vs `dflt56` | 89 | 562 | 50.3 [50.1, 50.6] | 49.4 [49.0, 49.7] | 50.2 [49.9, 50.5] | 50.3 [50.0, 50.5] | +0.05 |
+
+**Removal adopted** (the r50 replicated-small rule: every cell's interval
+clears 50 at ~0.04 casts a game — the rare class the mirrors resolve),
+into the default and `client_pilot()`. **Tricks null** and off: the
+picker fires three times as often and nets nothing, with one seed
+negative. The pre-registered reading for that: a walk that ends at end of
+combat prices the fight but not the card — a trick spent on a marginal
+exchange is a trick not held for the one that decides the game — and
+that is a horizon problem, not a candidate problem. The removal window
+escapes it because a removal spell answering an attacker is the exchange
+it was held for.
+
+**The lesson, filed above the result.** Round 56's +5.8 was "a sim-priced
+chain on a bare menu"; this round says *check the candidate generator
+before the pricing*: both rule pickers had zero incidence in this pool
+and nobody knew, because incidence was never read. The other two
+instant-speed rules — `pick_stack_response` (58 acts / 600 games) and
+`pick_ability_counter_response` (0) — are counted now too; the
+counterspell decision is the remaining rule-shaped window, at 0.1 casts a
+game.
+
+**Also in the census** (both pools, `dflt56` mirror): trick windows have
+an instant in hand 29 % / 47 % (sealed / cube) and mana up 80 % / 85 %;
+removal windows 29 % / 45 % and 70 % / 77 %. The old "the bot taps out on
+its own turn, so instant-speed play is dead" story (`main_phase_action_with`'s
+1 366-window count) is no longer true of the default; the mana is there,
+the shapes were not.
