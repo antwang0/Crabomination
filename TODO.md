@@ -37,14 +37,16 @@ sixty-seventh pass, so don't re-take that.
    `--games 6` sealed `dflt` ~2 min. ⚠ `pkill -f` kills your own shell — kill by pid.
 2. **Gates at the `(-255)` tip (PERF Baseline):** suite green, workspace clippy, release-fast
    typecheck, `--bench` counters identical to `2003d1cf` (the `gang` profile carries no chain),
-   golden traces 7/7 (re-blessed once this run, for round 58's adoption).
+   golden traces 7/7 (re-blessed for the round-58 and round-60 adoptions where they moved).
 3. **This run:** round 58 ADOPTED (`pairs-both`, -14.9 % sealed default wall clock, no loss);
    `(-254)` TAKEN (bare block menu, Ir -0.195 %); `(-255)` TAKEN (empty-greedy menu with no
-   eligible attacker returned without its full-turn sim, Ir -2.17 %, wall 0.984); round 59's
-   blocker gate REFUTED (flat, neutral); r56's "65 % start reuse" CLOSED as a denominator.
+   eligible attacker returned without its full-turn sim, Ir -2.17 % / -2.26 % cube, wall 0.984);
+   round 59's blocker gate REFUTED (flat, neutral); round 60 ADOPTED (`attack_skip_open` on the
+   default, wall 0.959, no loss). The default is ~0.80 of the r56 default's wall clock, ~1.7x
+   `gang`; `dflt56` / `dflt58` are the frozen controls.
 4. **Perf leads (PERF candidates, top):** the attack menu proper and the chain's singles by
-   board class (read `start reused` against `searched` first — the rule round 59 yielded), then
-   `atk-open` re-read on this default, then the block chain's gang-move `Vec` churn.
+   board class (read `start reused` against `searched` first — the rule round 59 yielded), the
+   block search's own open-board twin (no census yet), then the gang-move `Vec` churn.
 5. **Cards/rules (leftover only):** unchanged — per-turn cast-name memory, `modes_chosen`,
    the "when you next attack" `DelayedKind`, CARD_BACKLOG's printed-clause ratchets.
 

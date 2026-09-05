@@ -288,7 +288,17 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // early swings are now blocked instead of raced, and the skies deck
     // wins the long game. Seed 5 and no other line are untouched. The
     // full committed trace moved at one line, a turn-7 block declaration.
-    (1, Some(0), 11, 277, 0x6756_7f37_311c_7e28),
+    // Re-blessed 2026-09-05 for the round-60 adoption (the open-board
+    // attack shortcut on the default: no loss on sealed, cube and fixed,
+    // -4.1 % wall clock): on a board with no opposing creature the greedy
+    // declaration is taken without the sim, and these two red decks meet
+    // that board every early turn — the sim's occasional hold-back of a
+    // Goblin Guide (its trigger cards the opponent) is gone. Seed 1 keeps
+    // its winner and runs longer (11 -> 19 turns, 277 -> 460 actions);
+    // seed 4 keeps its winner and runs shorter (24 -> 22, 580 -> 541);
+    // seed 5 keeps its winner and races faster (9 -> 7, 223 -> 181).
+    // Seeds 2 and 3 and the full committed trace are untouched.
+    (1, Some(0), 19, 460, 0xd6aa_9217_5911_0df5),
     // Re-blessed Aug 2026 for the CR 510.4/510.5 combat-damage fix: the step
     // loop used to skip a whole attacker/blocker pairing whenever the attacker
     // dealt no damage in that step, so a first striker that failed to kill its
@@ -339,8 +349,8 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // ordering, and seed 4's game ends in two fewer actions (330 -> 328).
     // Same winner, same turn count; seeds 1, 2, 3 and 5 are untouched,
     // which is what a targeting fix rather than a rules change looks like.
-    (4, Some(1), 24, 580, 0xac57_ca82_2179_451a),
-    (5, Some(0), 9, 223, 0x97c2_acfd_3251_1e21),
+    (4, Some(1), 22, 541, 0x5b00_4268_cea2_9a41),
+    (5, Some(0), 7, 181, 0xbdda_f862_13d8_5da0),
 ];
 
 #[test]

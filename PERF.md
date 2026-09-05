@@ -2557,6 +2557,25 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### Round 60 — closing state at the round-60 tip
+
+One adoption commit on top of `(-255)`, a search-budget change gated
+for no loss (`.ladder/run_r60_open.sh`): `attack_skip_open` on the
+default. `round58_default()` frozen as `dflt58`, the base rounds 59 and
+60 read on.
+
+```text
+  sealed dflt58 mirror, 200 x 12, 5 paired reps:  dflt-open 0.959 median / 0.958 mean
+  cumulative vs the r56 default:                   0.851 x 0.984 x 0.959 = ~0.80 (~1.7x gang)
+  Ir base for the three-pool gate: unchanged from (-250) — the `gang` path is untouched
+suite   19,230 / 0 / 5; golden traces 7/7 (see the commit for any re-bless)
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast typecheck gate: clean
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf
+ladder  round 60, dflt-open vs dflt58, four seeds: 50.0 / 50.0 / 50.0 / 49.9 (pooled 49.98) — adopted;
+        cube 50.2 / 50.0, fixed 50.2 / 50.1 (seeds 43/97) as the attack-trigger cross-check
+```
+
 ### `(-255)` and round 59 — closing state at the `(-255)` tip
 
 One engine commit on top of the round-58 tip, behaviour-preserving
@@ -3317,12 +3336,28 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### Round 60 ADOPTED — the open-board attack shortcut (`attack_skip_open`) on the round-58 default: sealed wall clock **-4.1 %** at no loss
+
+```text
+  arm         wall/dflt58 (median of 5 paired reps, sealed 200 x 12, one binary)   ladder pooled (4 seeds x 12,000)
+  dflt-open   0.959  [0.928 .. 0.992]   <- adopted, default only                    49.98  (50.0 / 50.0 / 50.0 / 49.9, every cell within +-0.08)
+  chain sims 110,382 -> 99,478 at 200 x 12; searched declarations -11.4 % (the creatureless boards)
+  cross-check   cube 50.2 / 50.0 (3,200 games each), fixed 50.2 / 50.1 (1,600 each), seeds 43/97
+  --bench (gang) untouched. Golden traces: seeds 1, 4, 5 re-blessed (same winners; 11->19, 24->22, 9->7 turns).
+```
+
+The `e725e5c2` reading of the same flag on the `gang` base (-1.3/-1.8 %,
+-0.1 pt on 96 k games) is superseded on the default: the search it
+skips tripled in cost since, the loss did not reproduce (ML_NOTES round
+60). The client pilot keeps the sim.
+
 ### `(-255)` TAKEN — the attack chain's pool resolved ahead of the sims, and an empty-greedy menu with nothing eligible returned without one: sealed default Ir **-2.167 %**, paired wall clock **0.984**
 
 ```text
   binary pair          sealed --games 6 --threads 1 --seed 1, dflt mirror (mimalloc totals)
   base (e4babdbd+r59)  3,453,977,308 Ir
   (-255)               3,379,132,442 Ir   **-2.167 %**
+  cube, same recipe    2,648,931,446 -> 2,589,149,241 Ir   **-2.257 %**
   wall clock           0.984 median / 0.982 mean over 7 paired reps (sealed 200 x 12, one host, arms alternated)
   searched declarations at 100 x 12   25,384 -> 16,060  (-9,324 full turn-cycle sims of "nobody", 7.9 % of all attack sims)
   outcomes + census otherwise identical; --bench (gang) counters identical; golden traces 7/7 unmoved
@@ -7040,8 +7075,11 @@ default's wall clock at no loss (four cells, every interval touching
 50), adopted — the default is now ~1.8× `gang`.** `(-254)` (Log): the
 bare block menu's sim skipped when the chain cannot run, Ir -0.195 %.
 **`(-255)` (Log): the empty-greedy menu with nothing eligible returned
-without its full-turn sim, Ir -2.17 % / wall 0.984** — 84 % of the
-"chains from an empty greedy" the r56 census counted never had a pool.
+without its full-turn sim, Ir -2.17 % sealed / -2.26 % cube, wall
+0.984** — 84 % of the "chains from an empty greedy" the r56 census
+counted never had a pool. **Round 60 (Log): `attack_skip_open` adopted
+on the default, wall 0.959 at no loss.** Cumulative: the adopted default
+runs at ~0.80 of the r56 default's sealed wall clock, ~1.7× `gang`.
 The `--bench` profile is `gang`, so the committed Baseline is untouched
 — every actor and every `dflt`-piloted tool pays the ratio above.
 Census on the adopted default (`CRAB_ATTACK_CENSUS=1`, sealed, 1 200
@@ -7053,12 +7091,13 @@ searches). In order:
 chain that actually runs from an empty greedy is 1 876 searches per
 1 200 games and wins 452 of them; the blocker gate was flat on wall
 clock and strength-neutral. What is left of the attack search's cost is
-the menu proper (2.47 candidates a search, `pick_attacks_scored` ~60 %
-of `cube`) and the chain's singles (2.16 sims a search) — read the
-per-search sim count by board class before gating either; (2) `attack_skip_open`
-(`atk-open`, gated for no loss at r50 and refuted by -0.1) is worth
-re-reading now that 30 % of searched declarations face no creature and
-the chain prices them; (3) the block chain's gang move builds one
+the menu proper (3.3 candidates a search, `pick_attacks_scored` ~60 %
+of `cube`) and the chain's singles (3.4 sims a search) — read the
+per-search sim count by board class before gating either; (2)
+~~`attack_skip_open` re-read~~ ADOPTED in round 60 (wall 0.959, no
+loss); the sim-side twin — a block search whose defender faces no
+attacker it could profitably block — has no census yet; (3) the block
+chain's gang move builds one
 `Vec` per attacker per step — read it by Ir before touching it. Measure
 on `--decks sealed` (the chains' pool) and on `cube`; the `fixed` bench
 does not carry them. Round 56's second candidate (the 65 % start-score

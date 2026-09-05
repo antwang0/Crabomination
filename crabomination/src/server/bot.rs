@@ -394,7 +394,8 @@ pub struct EvalWeights {
     /// declarations on every pool and greedy winning 94-100 % of them (the
     /// rest a lone Goblin Guide or mana dork, where the sim prices the
     /// trigger's land or the tapped mana above the damage); see
-    /// [`attack_candidates_for_mcts`].
+    /// [`attack_candidates_for_mcts`]. **Adopted 2026-09-05 (round 60)** on
+    /// the default, not the client pilot — see `default_const`.
     pub attack_skip_open: bool,
     /// Extend the attack simulation one extra turn cycle when it ends
     /// with either life total at 10 or below. The one-cycle horizon can
@@ -1891,7 +1892,29 @@ impl EvalWeights {
     /// of the sealed mirror's wall clock — the pair move beside a
     /// non-empty greedy declaration, and ahead of a single that wins, was
     /// buying nothing.
+    ///
+    /// `attack_skip_open` adopted 2026-09-05 (round 60,
+    /// `.ladder/run_r60_open.sh`, a no-loss throughput gate on the round-58
+    /// default): 50.0 / 50.0 / 50.0 / 49.9 on seeds 43/97/151/199 (pooled
+    /// -0.02, every cell within ±0.08 and touching 50) for -4.1 % of the
+    /// sealed mirror's wall clock — greedy won 1,814 of the 1,824
+    /// creatureless-defender searches the sim priced. The `gang`-base
+    /// reading at `e725e5c2` (-0.1 on 96 k games) was the same flag on a
+    /// search a third the size. Default only: the client pilot is built
+    /// on `block_gang_search` and keeps the sim's hold-backs.
     pub const fn default_const() -> Self {
+        Self {
+            attack_pairs_empty_only: true,
+            attack_pairs_lazy: true,
+            attack_skip_open: true,
+            ..Self::round56_default()
+        }
+    }
+
+    /// The default as it stood after round 58 (the round-56 default plus
+    /// the pair-move restrictions), frozen as the base round 59 and round
+    /// 60 read on (`dflt58`).
+    pub const fn round58_default() -> Self {
         Self { attack_pairs_empty_only: true, attack_pairs_lazy: true, ..Self::round56_default() }
     }
 
@@ -1923,10 +1946,18 @@ impl EvalWeights {
     }
 
     /// The empty-greedy blocker gate on the round-58 default: ladder
-    /// `empty-gate` as A against `dflt`, gated for no loss. See
+    /// `empty-gate` as A against `dflt58`, gated for no loss. See
     /// [`attack_empty_gate`](Self::attack_empty_gate).
     pub const fn attack_empty_gate_on() -> Self {
-        Self { attack_empty_gate: true, ..Self::default_const() }
+        Self { attack_empty_gate: true, ..Self::round58_default() }
+    }
+
+    /// The open-board shortcut on the round-58 default (round 60): ladder
+    /// `dflt-open` as A against `dflt58`, gated for no loss. See
+    /// [`attack_skip_open`](Self::attack_skip_open); `atk-open` is the same
+    /// flag on the `gang` base, the round-50-era reading.
+    pub const fn attack_skip_open_default() -> Self {
+        Self { attack_skip_open: true, ..Self::round58_default() }
     }
 }
 
@@ -16801,7 +16832,9 @@ mod tests {
         g.step = TurnStep::DeclareAttackers;
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
-        let w = EvalWeights { attack_search: 3, ..EvalWeights::default() };
+        // The open-board shortcut (round 60) would take greedy alone on
+        // this blockerless board; the menu's repair is what is under test.
+        let w = EvalWeights { attack_search: 3, attack_skip_open: false, ..EvalWeights::default() };
         let candidates = attack_candidates_for_mcts(&g, 0, &w);
         assert!(candidates.len() > 1, "the search has a menu: {candidates:?}");
         for c in &candidates {

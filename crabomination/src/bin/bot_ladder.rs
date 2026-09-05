@@ -279,12 +279,16 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // restrictions on the wide chain's pair move. Gate each as A
         // against `dflt56` for *no loss* (.ladder/run_r58_pairs.sh).
         "dflt56" => Some(Pilot::Scored(EvalWeights::round56_default())),
+        "dflt58" => Some(Pilot::Scored(EvalWeights::round58_default())),
         "pairs-empty" => Some(Pilot::Scored(EvalWeights::attack_pairs_empty_only_on())),
         "pairs-lazy" => Some(Pilot::Scored(EvalWeights::attack_pairs_lazy_on())),
         "pairs-both" => Some(Pilot::Scored(EvalWeights::attack_pairs_both_on())),
         // Round 59: the empty-greedy chain behind the blocker gate. Gate as
-        // A against `dflt` for *no loss* (.ladder/run_r59_emptygate.sh).
+        // A against `dflt58` for *no loss* (.ladder/run_r59_emptygate.sh).
         "empty-gate" => Some(Pilot::Scored(EvalWeights::attack_empty_gate_on())),
+        // Round 60: the open-board shortcut re-read on the round-58 default.
+        // Gate as A against `dflt58` for *no loss* (.ladder/run_r60_open.sh).
+        "dflt-open" => Some(Pilot::Scored(EvalWeights::attack_skip_open_default())),
         // The open-board shortcut: no opposing creature / planeswalker /
         // battle, so the attack search takes greedy without a sim. A
         // throughput device; gate as A against `gang` for *no loss*.

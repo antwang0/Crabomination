@@ -3896,3 +3896,45 @@ what this round set out to prune.
 `searched` before gating what the chain *decides*: the gap is the
 searches that never reached a decision, and that is where the sims were
 going.
+
+## Round 60 — the open-board shortcut re-read on the round-58 default: NO LOSS at −4.1 % wall clock, ADOPTED on the default (2026-09-05)
+
+`attack_skip_open` (`board_open_for_attack`: no opposing creature,
+planeswalker or battle, so the greedy declaration is taken without a
+sim) was read at `e725e5c2` on the `gang` base: −1.3 / −1.8 % wall clock
+and −0.1 pt on 96 000 sealed games, filed as the opt-in `atk-open`.
+Re-read here as `dflt-open` (the round-58 default + the flag,
+`.ladder/run_r60_open.sh`, pre-registered) because the search it skips
+has since grown to 3.3 menu sims plus 3.4 chain sims a declaration and
+the creatureless board is 11.4 % of searched declarations (1 824 of
+16 060 at 100 × 12, greedy winning 1 814 of them).
+
+**Cost** (step 0, one binary, sealed 200 × 12 mirrors, 5 paired reps):
+`dflt-open` **0.959** of the r58 default's wall clock.
+
+| `dflt-open` vs `dflt58` | 43 | 97 | 151 | 199 | pooled |
+|---|---|---|---|---|---|
+| | 50.0 [49.9, 50.0] | 50.0 [49.9, 50.0] | 50.0 [49.9, 50.1] | 49.9 [49.8, 50.0] | −0.02 |
+
+Every cell within ±0.08 and touching 50: the shortcut changes 10
+declarations in 1 824, and the ladder cannot tell them from noise.
+Cross-checked on the pools that carry attack-trigger creatures, because
+the golden-trace decks (four Goblin Guides) moved three of five seeds:
+`--decks cube` 50.2 [50.0, 50.3] / 50.0 [49.9, 50.2] (seeds 43/97,
+3 200 games each) and `--decks fixed` 50.2 [49.8, 50.7] / 50.1
+[49.6, 50.6] (1 600 each) — no loss there either.
+**Adopted on the default only**: `EvalWeights::default()` =
+`round58_default()` + `attack_skip_open`. The client pilot is built on
+`block_gang_search` and keeps the sim's hold-backs (the Goblin Guide
+case the r50-era reading found); the net references are flagless.
+
+**Why the r50-era −0.1 did not reproduce.** That reading was on a
+search a third the size, so the sim's rare correct hold-back weighed
+more against a smaller saving; here the saving is 4 % and the cells are
+the tightest in the program's record (the paired design's mirror
+property again — 11 990 of 12 000 pairs play identically).
+
+**Cost, cumulative for the run.** Against the round-56 default the
+adopted default now runs at 0.851 (r58) × 0.984 (`(-255)`) × 0.959
+(r60) ≈ **0.80** of its sealed wall clock, i.e. ~1.7× `gang` where it
+was 2.1×, with both chains intact and no strength given up on any gate.
