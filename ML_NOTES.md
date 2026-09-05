@@ -4100,3 +4100,42 @@ removal windows 29 % / 45 % and 70 % / 77 %. The old "the bot taps out on
 its own turn, so instant-speed play is dead" story (`main_phase_action_with`'s
 1 366-window count) is no longer true of the default; the mana is there,
 the shapes were not.
+
+
+## Round 64 — the lean wide chain: no loss at −16 % wall clock, a replication of the concurrent round 58, folded into it; sim-priced counterspells null; search depth pending (2026-09-05)
+
+Three cells from the round-62/63 findings, one build
+(`.ladder/run_r64_depth_lean_counter.sh`, base `dflt63` = the frozen
+round-63 default).
+
+**B. The lean wide chain** (`attack_chain_lean`, profile `atk-lean`; read
+at tip `51a29c3f8`, before the rebase onto the concurrent rounds 58–61).
+The wide chain's pair move (r56, +0.5) fired at every chain's first step
+— `C(n, 2)` full-turn-cycle sims — while it was built for the
+empty-greedy overload; the wide chain was a fifth of the default's
+wall-clock. Lean restricted the pair move to chains whose greedy declared
+nobody. Gated for no loss: **50.0 / 50.1 / 50.0 / 50.2** vs `dflt63` on
+seeds 43/97/151/199, every cell inside ±0.3 (5 700+ of 6 000 pairs exact
+mirrors), and the uncontended sealed mirror **9.2 s → 7.7 s** per 12 000
+games. The same restriction had landed concurrently as round 58's
+`attack_pairs_empty_only` (`pairs-empty`: 50.08 pooled on the same four
+seeds; −14.9 % together with `pairs-lazy`). This reading replicates it,
+and the flag was folded into round 58's at the rebase: the default
+carries `attack_pairs_empty_only` + `attack_pairs_lazy`, not
+`attack_chain_lean`, and the pre-rebase re-bless of golden seed 3 went
+with the flag. Two sessions built the same restriction from the same
+census line within a day — the reason the branch's rule is to fetch and
+rebase before starting, and to push the hour a round lands.
+
+**C. Sim-priced counterspells** (`counter_sim`, profile `counter-sim`):
+"let it resolve" against each affordable counter, both priced by the
+main-phase outcome walk (`evaluate_action_sequence`, combat-aware), cast
+on a strict improvement. Census: the rule cast 58 counters per 600 games,
+the sim 48 (91 sims) — it holds more. **50.3 [50.1, 50.5] / 50.0 [49.9,
+50.2] / 50.0 [50.0, 50.1] / 50.2 [50.0, 50.3]**, pooled +0.12, two cells
+straddling — null, off. The last rule-shaped instant-speed window; at
+0.1 casts a game it could never have been worth more than removal's
+quarter point, and it is not.
+
+**A. Search depth on the material leaf** — cells running; see the
+addendum below.

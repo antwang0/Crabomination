@@ -277,6 +277,12 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // against `dflt56`.
         "trick-sim" => Some(Pilot::Scored(EvalWeights::trick_sim_on())),
         "removal-sim" => Some(Pilot::Scored(EvalWeights::removal_sim_on())),
+        // The frozen round-63 default, and round 64's two heuristic-level
+        // arm on it: sim-priced counterspells, gated as A against `dflt63`.
+        // (The lean wide chain read here, `atk-lean`, replicated round 58's
+        // `pairs-empty` and was folded into it at the rebase.)
+        "dflt63" => Some(Pilot::Scored(EvalWeights::round63_default())),
+        "counter-sim" => Some(Pilot::Scored(EvalWeights::counter_sim_on())),
         // Round 56: the wide attack chain (runs from an empty greedy,
         // pairs at the first step) and the block chain (pair-or-gang
         // moves, priced by the block sim). Gate each as A against `dflt55`.
@@ -420,6 +426,19 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // `mcts-client` — whatever the two differ by is the net's leaf.
         "mcts-dflt" => Some(Pilot::Mcts(MctsConfig {
             iterations: 64,
+            horizon_turns: 3,
+            weights: EvalWeights::default(),
+            ..MctsConfig::default()
+        })),
+        // Round 64: search depth on the material leaf.
+        "mcts-dflt-128" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 128,
+            horizon_turns: 3,
+            weights: EvalWeights::default(),
+            ..MctsConfig::default()
+        })),
+        "mcts-dflt-256" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
             horizon_turns: 3,
             weights: EvalWeights::default(),
             ..MctsConfig::default()
@@ -643,7 +662,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, trick-sim, removal-sim, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, trick-sim, removal-sim, dflt63, counter-sim, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-dflt-128, mcts-dflt-256, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
@@ -1729,14 +1748,14 @@ fn main() {
             pct(chain_won, calls),
             if calls == 0 { 0.0 } else { chain_sims as f64 / calls as f64 },
         );
-        let [ta, tp, ts, tw, ra, rp, rs, rw, sa, sp, aa, ap, twin, tinst, tmana, rwin, rinst, rmana] =
+        let [ta, tp, ts, tw, ra, rp, rs, rw, sa, sp, aa, ap, twin, tinst, tmana, rwin, rinst, rmana, cs, cw] =
             crabomination::server::bot::response_census::snapshot();
         println!(
             "  response_census trick asks {ta} acts {tp} ({:.1} %) sims {ts} beat-rule {tw}; removal \
              asks {ra} acts {rp} ({:.1} %) sims {rs} beat-hold {rw}; stack asks {sa} acts {sp}; \
              ability asks {aa} acts {ap}; windows: trick {twin} (instant in hand {tinst} = {:.1} %, \
              untapped mana {tmana} = {:.1} %), removal {rwin} (instant {rinst} = {:.1} %, mana \
-             {rmana} = {:.1} %)",
+             {rmana} = {:.1} %); counter-sim sims {cs} beat-hold {cw}",
             pct(tp, ta),
             pct(rp, ra),
             pct(tinst, twin),

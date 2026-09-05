@@ -397,6 +397,17 @@ pub struct EvalWeights {
     /// pilot: 50.3 / 50.3 / 50.2 / 50.2 vs the round-56 default, every
     /// interval clear of 50. See `default_const`.
     pub removal_sim: bool,
+    /// Sim-priced counterspells (round 64). [`pick_stack_response`] is a
+    /// rule: a threat bar on the top spell and the cheapest counter that
+    /// clears it. On, [`pick_stack_response_scored`] prices "let it
+    /// resolve" against each affordable counter by the main-phase outcome
+    /// walk (`evaluate_action_sequence`, combat-aware) and casts on a
+    /// strict improvement; a tie holds.
+    ///
+    /// **Measured null (round 64)**: 50.3 / 50.0 / 50.0 / 50.2 vs the
+    /// round-63 default, casting 48 times per 600 games where the rule
+    /// cast 58. Off by default.
+    pub counter_sim: bool,
     /// Restore the pre-fix mana behavior: tap every land before deciding
     /// anything, and size affordability off the floating pool.
     ///
@@ -784,6 +795,7 @@ impl EvalWeights {
             block_chain: 0,
             trick_sim: false,
             removal_sim: false,
+            counter_sim: false,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -870,6 +882,7 @@ impl EvalWeights {
             block_chain: 0,
             trick_sim: false,
             removal_sim: false,
+            counter_sim: false,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -939,6 +952,7 @@ impl EvalWeights {
             block_chain: 0,
             trick_sim: false,
             removal_sim: false,
+            counter_sim: false,
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
@@ -1946,6 +1960,15 @@ impl EvalWeights {
     /// clear of 50 (the r50 replicated-small rule; incidence ~0.04 casts a
     /// game, 5 900+ of 6 000 pairs exact mirrors). `trick_sim` measured
     /// 50.3 / 49.4 / 50.2 / 50.3 — null — and stays off.
+    ///
+    /// `attack_chain_lean` (round 64, `.ladder/run_r64_depth_lean_counter.sh`)
+    /// read no loss — 50.0 / 50.1 / 50.0 / 50.2 vs the round-63 default on
+    /// seeds 43/97/151/199 — at −16 % of the sealed mirror's wall clock
+    /// (9.2 s → 7.7 s per 12 000 games). The same restriction had landed
+    /// concurrently as round 58's `attack_pairs_empty_only` (50.08 pooled,
+    /// the same four seeds); this reading replicates it, and the flag was
+    /// folded into round 58's at the rebase. `counter_sim` measured 50.3 /
+    /// 50.0 / 50.0 / 50.2, two cells straddling 50 — null — and stays off.
     pub const fn default_const() -> Self {
         Self {
             attack_pairs_empty_only: true,
@@ -1961,6 +1984,23 @@ impl EvalWeights {
     /// 60 read on (`dflt58`).
     pub const fn round58_default() -> Self {
         Self { attack_pairs_empty_only: true, attack_pairs_lazy: true, ..Self::round56_default() }
+    }
+
+    /// The round-56 default plus sim-priced defensive removal, frozen as
+    /// the base round 64 read on (`dflt63`). Round 63 was read in a
+    /// concurrent session, so this base carries none of rounds 58-60's
+    /// throughput adoptions (the pair-move restrictions, the open-board
+    /// shortcut); those are no-loss gates, and round 64's readings were
+    /// taken with the pair move restricted to the empty greedy (the
+    /// `attack_chain_lean` replication) on top of it.
+    pub const fn round63_default() -> Self {
+        Self { removal_sim: true, ..Self::round56_default() }
+    }
+
+    /// Sim-priced counterspells (round 64) on the round-63 default: ladder
+    /// `counter-sim` as A against `dflt63`.
+    pub const fn counter_sim_on() -> Self {
+        Self { counter_sim: true, ..Self::round63_default() }
     }
 
     /// The default as it stood after round 56 (the round-55 default plus
@@ -14275,9 +14315,67 @@ fn pick_defensive_removal_any(state: &GameState, seat: usize, w: &EvalWeights) -
     picked
 }
 
+/// The sim-priced counterspell (see [`EvalWeights::counter_sim`]).
+/// Candidate 0 is letting the top spell resolve; each affordable counter
+/// in hand is a candidate; both are priced by the main-phase outcome walk
+/// to quiescence (combat-aware), and a counter is cast only on a strict
+/// improvement. Returns `None` to hold.
+fn pick_stack_response_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
+    use crate::game::types::StackItem;
+    let spell_id = state.stack.iter().rev().find_map(|si| match si {
+        StackItem::Spell { card, caster, uncounterable, .. } if *caster != seat && !*uncounterable => {
+            Some(card.id)
+        }
+        _ => None,
+    })?;
+    let sweep = SweepMana::new(state, seat);
+    let counters: Vec<&crate::card::CardInstance> = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| {
+            c.definition.card_types.contains(&crate::card::CardType::Instant)
+                && effect_counters_spells(&c.definition.effect)
+        })
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, &sweep))
+        .collect();
+    if counters.is_empty() {
+        return None;
+    }
+    let base = evaluate_action_sequence(state, seat, &GameAction::PassPriority, None, w, 0)?;
+    let mut scored: Vec<(usize, i32)> = vec![(0, base)];
+    let mut probed: Vec<Option<(GameAction, Box<GameState>)>> = vec![None];
+    let mut sims = 0u64;
+    for c in counters {
+        let action = GameAction::CastSpell {
+            card_id: c.id,
+            target: Some(Target::Permanent(spell_id)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        let Some(next) = state.accept(action.clone()) else { continue };
+        sims += 1;
+        let Some(v) = evaluate_action_sequence(state, seat, &action, Some(&next), w, 0) else { continue };
+        probed.push(Some((action, Box::new(next))));
+        scored.push((probed.len() - 1, v));
+    }
+    response_census::add(18, sims);
+    let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+    if chosen == 0 {
+        return None;
+    }
+    response_census::add(19, 1);
+    let (a, next) = probed.swap_remove(chosen)?;
+    Some(Picked::Probed(a, next))
+}
+
 fn pick_stack_response_top(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
     response_census::add(8, 1);
-    let picked = pick_stack_response(state, seat, w);
+    let picked = if w.counter_sim {
+        pick_stack_response_scored(state, seat, w)
+    } else {
+        pick_stack_response(state, seat, w)
+    };
     if picked.is_some() {
         response_census::add(9, 1);
     }
@@ -14305,8 +14403,8 @@ pub mod response_census {
     /// stack-response asks, acts, ability-counter asks, acts, trick windows
     /// (blocks in), ... with an instant in hand, ... with an untapped mana
     /// source, removal windows (attackers at us), ... with an instant,
-    /// ... with mana]`.
-    pub static N: [AtomicU64; 18] = [const { AtomicU64::new(0) }; 18];
+    /// ... with mana, counter-sim sims, counter-sim casts beating hold]`.
+    pub static N: [AtomicU64; 20] = [const { AtomicU64::new(0) }; 20];
 
     /// The diagnosis counters: at a real window, does the seat hold an
     /// instant at all, and does it have a single untapped mana source?
@@ -14333,7 +14431,7 @@ pub mod response_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 18] {
+    pub fn snapshot() -> [u64; 20] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -20710,6 +20808,38 @@ mod stack_response_tests {
             }
             other => panic!("expected a counterspell, got {other:?}"),
         }
+    }
+
+    /// The sim-priced counter takes the same dragon the rule takes, by
+    /// outcome rather than by bar: letting a 5/5 flier resolve scores
+    /// below trading a two-mana card for it.
+    #[test]
+    fn counter_sim_counters_the_dragon_by_outcome() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 6);
+        g.perform_action(GameAction::CastSpell {
+            card_id: dragon,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .unwrap();
+        let cs = g.add_card_to_hand(1, catalog::counterspell());
+        for _ in 0..2 {
+            g.add_card_to_battlefield(1, catalog::island());
+        }
+        g.priority.player_with_priority = 1;
+        let w = EvalWeights::counter_sim_on();
+        let picked = pick_stack_response_scored(&g, 1, &w).expect("the sim counters");
+        assert!(
+            matches!(picked.action_ref(), GameAction::CastSpell { card_id, .. } if *card_id == cs),
+            "Counterspell on the dragon: {:?}",
+            picked.action_ref()
+        );
     }
 
     /// A beneficial Aura (Rancor) is cast on the bot's own best creature,
