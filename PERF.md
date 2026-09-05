@@ -3358,6 +3358,31 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-257)` TAKEN — `fire_step_triggers`' delayed-trigger rebuild behind a read-only match: sealed default Ir **-0.903 %** / cube **-0.085 %**
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast, system allocator)
+  sealed            3,547,131,260 -> 3,515,088,115 Ir   **-0.903 %**
+  cube              2,585,999,842 -> 2,583,811,909 Ir   **-0.085 %**
+  outcomes identical (stdout differs only in the wall-clock line); golden traces 7/7 unmoved
+  before, under fire_step_triggers (53,996 calls, 132.8 M inclusive, 3.74 %):
+          __memcpy 228,198 calls / 19.6 M, grow_one 24,962 / 14.4 M, __rust_dealloc 19,602 / 3.9 M
+  after:  __memcpy  42,198 calls /  3.1 M, grow_one  6,484 /  3.4 M, __rust_dealloc  5,506 / 1.1 M
+```
+
+Every step of every turn `std::mem::take`s `delayed_triggers` and
+rebuilds it — a `DelayedTrigger` carries an `Effect` (448 bytes), so
+each live entry is two ~500-byte memcpys plus the fresh `keep` Vec's
+allocation, and the list is non-empty on about a third of the steps
+(the `keep` grows above) with nothing on it matching the step. The
+match closure now runs once over a shared borrow first, and the
+take-and-rebuild is entered only when something fires. `cube` carries
+few delayed triggers on the six-game board, hence the small reading
+there; `fixed` (the `--bench` pool) runs `gang`, which takes the same
+path. Found off `--callers __memcpy_avx_unaligned_erms` on the first
+context map taken under `dflt` — the second-largest memcpy caller in the
+program was a function that clones 2,966 effects a run.
+
 ### Round 61 REFUTED — `attack_search` capped at 3 (`dflt-as3`): paired wall clock **0.991 median / 1.000 mean**, ladder 49.98 pooled, not adopted
 
 Holdback wins by menu index (sealed, 2,400 games): #1 2,060 / 14,470

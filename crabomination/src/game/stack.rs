@@ -1091,50 +1091,52 @@ impl GameState {
             Option<crate::game::effects::EntityRef>,
         );
         let mut delayed_to_fire: Vec<DelayedFire> = Vec::new();
-        let mut keep: Vec<DelayedTrigger> = Vec::new();
-        for dt in std::mem::take(&mut self.delayed_triggers) {
-            let matches = match (&dt.kind, step) {
-                (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
-                (DelayedKind::EachPlayersUpkeep, TurnStep::Upkeep) => true,
-                (DelayedKind::NextUpkeep { after_turn }, TurnStep::Upkeep) => {
-                    self.turn_number > *after_turn
-                }
-                (DelayedKind::YourNextMainPhase, TurnStep::PreCombatMain) => {
-                    dt.controller == active
-                }
-                (DelayedKind::NextEndStep, TurnStep::End) => true,
-                (DelayedKind::PlayersNextEndStep { player, after_turn }, TurnStep::End) => {
-                    *player == active && self.turn_number > *after_turn
-                }
-                (DelayedKind::PlayersNextDrawStep { player, after_turn }, TurnStep::Draw) => {
-                    *player == active && self.turn_number > *after_turn
-                }
-                (DelayedKind::NextCleanupStep, TurnStep::Cleanup) => true,
-                (DelayedKind::EachCombatThisTurn, TurnStep::BeginCombat) => {
-                    dt.controller == active
-                }
-                (DelayedKind::EndOfCombat, TurnStep::EndCombat) => true,
-                (DelayedKind::NextCombat, TurnStep::BeginCombat) => true,
-                _ => false,
-            };
-            if matches {
-                delayed_to_fire.push((
-                    dt.source,
-                    dt.effect.clone(),
-                    dt.controller,
-                    dt.target.clone(),
-                    dt.bound_subject.or_else(|| {
-                        dt.bound_token.map(crate::game::effects::EntityRef::Permanent)
-                    }),
-                ));
-                if !dt.fires_once {
+        let turn = self.turn_number;
+        let delayed_matches = |dt: &DelayedTrigger| match (&dt.kind, step) {
+            (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
+            (DelayedKind::EachPlayersUpkeep, TurnStep::Upkeep) => true,
+            (DelayedKind::NextUpkeep { after_turn }, TurnStep::Upkeep) => turn > *after_turn,
+            (DelayedKind::YourNextMainPhase, TurnStep::PreCombatMain) => dt.controller == active,
+            (DelayedKind::NextEndStep, TurnStep::End) => true,
+            (DelayedKind::PlayersNextEndStep { player, after_turn }, TurnStep::End) => {
+                *player == active && turn > *after_turn
+            }
+            (DelayedKind::PlayersNextDrawStep { player, after_turn }, TurnStep::Draw) => {
+                *player == active && turn > *after_turn
+            }
+            (DelayedKind::NextCleanupStep, TurnStep::Cleanup) => true,
+            (DelayedKind::EachCombatThisTurn, TurnStep::BeginCombat) => dt.controller == active,
+            (DelayedKind::EndOfCombat, TurnStep::EndCombat) => true,
+            (DelayedKind::NextCombat, TurnStep::BeginCombat) => true,
+            _ => false,
+        };
+        // Read before rebuilding: the take-and-rebuild below moves every live
+        // entry out of the list and back — two memcpys of a ~500-byte
+        // `DelayedTrigger` each — on every step of every turn, and a step on
+        // which nothing matches (nearly all of them) leaves the list as it
+        // was. PERF `(-257)`.
+        if self.delayed_triggers.iter().any(|dt| delayed_matches(dt)) {
+            let mut keep: Vec<DelayedTrigger> = Vec::new();
+            for dt in std::mem::take(&mut self.delayed_triggers) {
+                if delayed_matches(&dt) {
+                    delayed_to_fire.push((
+                        dt.source,
+                        dt.effect.clone(),
+                        dt.controller,
+                        dt.target.clone(),
+                        dt.bound_subject.or_else(|| {
+                            dt.bound_token.map(crate::game::effects::EntityRef::Permanent)
+                        }),
+                    ));
+                    if !dt.fires_once {
+                        keep.push(dt);
+                    }
+                } else {
                     keep.push(dt);
                 }
-            } else {
-                keep.push(dt);
             }
+            self.delayed_triggers = keep;
         }
-        self.delayed_triggers = keep;
 
         // Build a single queue (delayed triggers first, then step
         // triggers; APNAP-sorted below) so `drain_trigger_queue` can surface
