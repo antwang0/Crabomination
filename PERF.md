@@ -7702,6 +7702,33 @@ range; it is the same text, one file over.
 
 ## Log
 
+### `(-252)` REFUTED — `-C llvm-args=-inline-threshold=500` on `release-fast`: paired wall clock **+0.02 %** (flat), Ir -1.69 %, I1 misses -0.13 %, `.text` -28 %
+
+```text
+  wall clock, scripts/bench_ab.py, release-fast (+abort) vs the same with the flag, 16 pairs
+    A median 525.55   B median 529.94   paired B/A median +0.02 %  mean -0.11 %  sd 3.14
+  cachegrind, cube (mimalloc on both sides)
+    Ir            1,692,597,648 -> 1,663,979,447   -1.69 %
+    I1 misses        70,175,375 ->    70,082,275   -0.13 %
+    D1 misses        35,231,226 ->    35,878,030   +1.84 %
+    mispredicts      34,470,843 ->    34,343,504   -0.37 %  (indirect 4.80 M -> 4.54 M)
+    .text          112.7 MB -> 81.1 MB (-28 %); bin_bytes 125,179,032 -> 92,734,568
+  --bench counters identical; determinism ok
+  built with RUSTFLAGS="-C llvm-args=-inline-threshold=500" CARGO_TARGET_DIR=target-inl
+```
+
+`(-251)`'s converse: if less inlining loses 8 %, does more win? No.
+The threshold doubles the inliner's budget, and what that inlines is
+mostly the catalog — thousands of small definition constructors fold
+into their one caller and are no longer emitted, which is where the
+28 % of `.text` goes — while the engine's hot working set, already
+inlined at level 3, does not change: I1 misses move 0.13 %, the Ir
+saving is the call frames of the cold constructors, and the wall clock
+does not move at all. **Total code size is not the front-end cost; the
+hot working set is**, and the flag does not touch it. One build, one
+bench, one dump; not landed (it would be a global `RUSTFLAGS` lever
+anyway, `PGO`'s awkward shape without its win). Do not rebuild.
+
 ### `(-251)` REFUTED — `opt-level = 2` on `release-fast`: paired wall clock **-8.13 %**, Ir +5.0 %, I1 misses +9.0 %
 
 ```text
@@ -20721,7 +20748,12 @@ against these; nothing in the tables below was re-read on the new base
 PGO (-24 %, opt-in), `panic = "abort"` (`(-250)`, +4.5-5.5 %); refuted:
 `target-cpu=native` (flat), **`opt-level = 2` (`(-251)`: -8.1 % wall
 clock, Ir +5.0 %, I1 misses +9.0 %, binary +8.6 % — level 3's win here
-is the calls it inlines, not width)**. Not tried, with the reason: fat LTO on
+is the calls it inlines, not width)**, **`-inline-threshold=500`
+(`(-252)`: flat wall clock, Ir -1.7 %, I1 misses -0.1 %, `.text` -28 %
+— it inlines the cold catalog constructors, not the hot working set)**.
+The inlining axis is closed from both sides; what is left on the
+build is PGO (a profile, not a threshold) and the unshare direction in
+source. Not tried, with the reason: fat LTO on
 `release` (the single-codegen-unit engine already peaks at ~5.9 GB in
 this container — `profiling` cannot build here; fat LTO is worse);
 `opt-level = 3` on the dev deps is already on. **`-C force-frame-
