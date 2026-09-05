@@ -3358,6 +3358,27 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-260)` TAKEN — the SBA legend-rule leg behind a printed-legendary count of two: sealed default Ir **-0.246 %** / cube **-0.111 %**
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast, system allocator), against the (-259) tip
+  sealed            3,491,854,975 -> 3,483,259,284 Ir   **-0.246 %**
+  cube              2,574,857,158 -> 2,572,001,381 Ir   **-0.111 %**
+  outcomes identical
+  under the sweep (sealed):  SmallVec::extend 40,440 calls / 18.2 M -> 15,990 / 8.4 M (the legend leg's by_id collect)
+                             sba_board_scan 71.1 M -> 76.6 M (+5.5 M: one AND + add per card per sweep for the count)
+```
+
+The leg ran whenever one printed legendary was on the board — two
+thirds of all sweeps on the sealed pool — and walked the whole
+battlefield through the `is_legendary` filter to build groups of one.
+A group needs two members, so `sba_board_scan` now counts printed
+legendaries and the leg runs at two or more (a live supertype grant
+keeps the full walk, since it can make any permanent legendary). The
+`legendary: bool` flag it replaces had no other reader. Net 8.6 M for
+14 M of collect removed: the count is paid on every sweep, the walk only
+on the ones that had a legendary.
+
 ### `(-259)` TAKEN — `CardInstance::toughness` / `power` as one pass over the counter bag: sealed default Ir **-0.548 %** / cube **-0.337 %**
 
 ```text

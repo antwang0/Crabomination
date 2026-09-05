@@ -103,7 +103,10 @@ struct SbaBoardScan {
     persist_undying: bool,
     pm_both: bool,
     max_counters: bool,
-    legendary: bool,
+    /// Permanents whose current definition is printed Legendary. The legend
+    /// rule needs two under one controller, so the leg is skipped below two
+    /// unless a supertype grant is live (PERF `(-260)`).
+    legendary_count: u32,
     supertype_grant: bool,
     legend_rule_off: bool,
     lethal_by_power: bool,
@@ -4807,6 +4810,7 @@ impl GameState {
         for c in self.battlefield.iter() {
             let d = c.sba_scan_bits();
             m |= d & b::UNCONDITIONAL;
+            s.legendary_count += (d & b::LEGENDARY != 0) as u32;
             if !c.flipped {
                 m |= d & b::UNFLIPPED;
             }
@@ -4836,7 +4840,6 @@ impl GameState {
         s.persist_undying = m & b::PERSIST_UNDYING != 0;
         s.start_engines = m & b::START_ENGINES != 0;
         s.sculptor = m & b::SCULPTOR != 0;
-        s.legendary = m & b::LEGENDARY != 0;
         s.world = m & b::WORLD != 0;
         s.planeswalker = m & b::PLANESWALKER != 0;
         s.battle = m & b::BATTLE != 0;
@@ -5496,7 +5499,13 @@ impl GameState {
             // Only *this* SBA is switched off; the rest of the sweep (deaths,
             // loss conditions, the Aura/Equipment sweeps) still runs.
             let mut out = Vec::new();
-            if !scan.legend_rule_off && (scan.legendary || supertype_grant_active) {
+            // A group needs two members, so one printed legendary on the
+            // board cannot fire the rule — and one is the common sealed
+            // board: the walk-and-group below ran on two thirds of all
+            // sweeps to build groups of one (PERF `(-260)`). A live
+            // supertype grant can make any permanent legendary, so it keeps
+            // the full walk.
+            if !scan.legend_rule_off && (scan.legendary_count >= 2 || supertype_grant_active) {
                 // Walk descending by id so each group's vec is newest-first.
                 let mut by_id: SmallVec<[&CardInstance; 8]> = self
                     .battlefield
