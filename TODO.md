@@ -29,25 +29,26 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-255)` is the last claimed,
-   `(-256)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-256)` is the last claimed,
+   `(-257)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold: `release-fast`
    bot_ladder 8m46s (2m15s warm), the core_rules test binary ~11 min, suite ~100 s, `nextest`
    needs installing; a 12 000-game sealed ladder cell ~60-80 s on 4 threads; callgrind
    `--games 6` sealed `dflt` ~2 min. ⚠ `pkill -f` kills your own shell — kill by pid.
-2. **Gates at the `(-255)` tip (PERF Baseline):** suite green, workspace clippy, release-fast
+2. **Gates at the `(-256)` tip (PERF Baseline):** suite green, workspace clippy, release-fast
    typecheck, `--bench` counters identical to `2003d1cf` (the `gang` profile carries no chain),
    golden traces 7/7 (re-blessed for the round-58 and round-60 adoptions where they moved).
 3. **This run:** round 58 ADOPTED (`pairs-both`, -14.9 % sealed default wall clock, no loss);
    `(-254)` TAKEN (bare block menu, Ir -0.195 %); `(-255)` TAKEN (empty-greedy menu with no
    eligible attacker returned without its full-turn sim, Ir -2.17 % / -2.26 % cube, wall 0.984);
    round 59's blocker gate REFUTED (flat, neutral); round 60 ADOPTED (`attack_skip_open` on the
-   default, wall 0.959, no loss). The default is ~0.80 (sealed) / ~0.69 (cube) of the r56
+   default, wall 0.959, no loss); `(-256)` TAKEN (one redeal per decision, not per candidate,
+   Ir -1.54 % / -2.56 % cube, wall 0.991). The default is ~0.79 (sealed) / ~0.68 (cube) of the r56
    default's wall clock, ~1.7x `gang`; `dflt56` / `dflt58` are the frozen controls. Sweep on the
    adopted default clean (24,000 games); scaling 96 % linear at 4 threads.
-4. **Perf leads (PERF candidates, top):** the attack menu proper and the chain's singles by
-   board class (read `start reused` against `searched` first — the rule round 59 yielded), the
-   block search's own open-board twin (no census yet), then the gang-move `Vec` churn.
+4. **Perf leads (PERF candidates, top):** the attack sim's body (65.5 % of the sealed default's
+   Ir; ~50 priority passes a sim — read it by `--separate-callers=3` under `dflt`, not `gang`),
+   the menu and chain singles by board class, the block search's open-board twin (no census yet).
 5. **Cards/rules (leftover only):** unchanged — per-turn cast-name memory, `modes_chosen`,
    the "when you next attack" `DelayedKind`, CARD_BACKLOG's printed-clause ratchets.
 

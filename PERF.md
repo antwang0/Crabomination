@@ -2557,6 +2557,22 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-256)` — closing state at the `(-256)` tip
+
+One behaviour-preserving engine commit on top of round 60 (outcomes,
+census, `--bench` counters and golden traces identical).
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,313,679,418 -> 3,262,741,089 Ir  (-1.537 %)
+  cube   dflt, same recipe:                               2,470,130,419 -> 2,406,910,404 Ir  (-2.559 %)
+  paired wall clock, sealed 200 x 12, 7 reps:             0.991 median / 0.988 mean
+  Ir base for the three-pool gate: unchanged from (-250) — `gang` runs no sims
+suite   19,230 / 0 / 5; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast typecheck gate: clean
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf
+```
+
 ### Round 60 — closing state at the round-60 tip
 
 One adoption commit on top of `(-255)`, a search-budget change gated
@@ -3341,6 +3357,30 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-256)` TAKEN — one redeal per decision, not per candidate: the sims start from a shared `SimStarts` base: sealed default Ir **-1.537 %** / cube **-2.559 %**, paired wall clock **0.991**
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (mimalloc totals)
+  sealed            3,313,679,418 -> 3,262,741,089 Ir   **-1.537 %**
+  cube              2,470,130,419 -> 2,406,910,404 Ir   **-2.559 %**
+  wall clock        0.991 median / 0.988 mean over 7 paired reps (sealed 200 x 12)
+  outcomes + census identical; --bench (gang) counters identical; golden traces 7/7 unmoved
+  before: determinize_hidden 10,334 calls / 106.2 M Ir inclusive (3.14 %) under sim_start_state 119.4 M (3.53 %),
+          its body: ipnsort 37.3 M (the redeal's keyed library sort), partial_shuffle 24.7 M, make_mut_slow 30.9 M
+```
+
+`sim_start_state` cloned the real state and redealt the opponent's
+hidden zones inside every `simulate_*_outcome_once` — with a fixed
+seed, so the ~8 candidates of one argmax (a six-game sealed run: 10,334
+redeals against ~1,300 decisions) all redealt the same board. The
+pickers now build `SimStarts` once per decision (one base per redeal
+index `k`) and every sim clones its base; the clone was paid before
+too, and the sim's first draw still unshares the library, so what
+moved is the sort, the shuffle and the seeding. Read off the
+`--callees determinize_hidden` table — the "price a hot row by who
+calls it" rule, applied to a row that had never been on a table
+because `sim_start_state` inlines into two callers.
 
 ### Round 60 ADOPTED — the open-board attack shortcut (`attack_skip_open`) on the round-58 default: sealed wall clock **-4.1 %** at no loss
 
@@ -7086,8 +7126,12 @@ bare block menu's sim skipped when the chain cannot run, Ir -0.195 %.
 without its full-turn sim, Ir -2.17 % sealed / -2.26 % cube, wall
 0.984** — 84 % of the "chains from an empty greedy" the r56 census
 counted never had a pool. **Round 60 (Log): `attack_skip_open` adopted
-on the default, wall 0.959 at no loss.** Cumulative: the adopted default
-runs at ~0.80 of the r56 default's sealed wall clock, ~1.7× `gang`.
+on the default, wall 0.959 at no loss.** **`(-256)` (Log): one redeal
+per decision instead of per candidate, Ir -1.54 % sealed / -2.56 %
+cube, wall 0.991.** Cumulative: the adopted default runs at ~0.79 of
+the r56 default's sealed wall clock, ~1.7× `gang`. The attack sim is
+65.5 % of the sealed default's Ir (`simulate_attack_outcome_once`
+inclusive), the block sim 6.2 %: the per-sim body is where the rest is.
 The `--bench` profile is `gang`, so the committed Baseline is untouched
 — every actor and every `dflt`-piloted tool pays the ratio above.
 Census on the adopted default (`CRAB_ATTACK_CENSUS=1`, sealed, 1 200
@@ -7099,9 +7143,14 @@ searches). In order:
 chain that actually runs from an empty greedy is 1 876 searches per
 1 200 games and wins 452 of them; the blocker gate was flat on wall
 clock and strength-neutral. What is left of the attack search's cost is
-the menu proper (3.3 candidates a search, `pick_attacks_scored` ~60 %
-of `cube`) and the chain's singles (3.4 sims a search) — read the
-per-search sim count by board class before gating either; (2)
+the sim body itself — `simulate_attack_outcome_once` is 65.5 % of the
+sealed default's Ir inclusive, ~50 engine priority passes a sim on a
+clone, the block sim 6.2 % — and then the menu (3.3 candidates a
+search) and the chain's singles (3.4 sims a search). The sim body has
+never been read by context under `dflt`: every `--separate-callers=3`
+map on record is a `gang` dump, where the search is a third the size.
+Take one on `--decks sealed --a dflt --b dflt` before gating anything
+by board class; (2)
 ~~`attack_skip_open` re-read~~ ADOPTED in round 60 (wall 0.959, no
 loss); the sim-side twin — a block search whose defender faces no
 attacker it could profitably block — has no census yet; (3) the block

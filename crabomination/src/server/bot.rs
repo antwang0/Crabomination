@@ -378,8 +378,8 @@ pub struct EvalWeights {
     /// measurement in `main_phase_action_with` was of.
     pub legacy_pretap: bool,
     /// Let the combat simulations cast spells: whichever seat holds
-    /// priority inside [`simulate_attack_outcome`] /
-    /// [`simulate_block_outcome`] fires the response layer, the
+    /// priority inside [`simulate_attack_outcome_from`] /
+    /// [`simulate_block_outcome_from`] fires the response layer, the
     /// combat-trick window, and — inside the attack sim's one-turn
     /// horizon — a static-ranked main-phase cast (see
     /// [`sim_spell_action`]). Off, the sims are pure priority passes and
@@ -510,7 +510,7 @@ pub struct EvalWeights {
     /// nothing about this.
     ///
     /// The gangs are candidates, not decisions:
-    /// [`simulate_block_outcome`] prices the blockers that die against
+    /// [`simulate_block_outcome_from`] prices the blockers that die against
     /// the attacker that dies, and ties keep the greedy assignment.
     pub block_gang: bool,
     /// Redeal the hidden zones before an attack/block simulation, and
@@ -1226,7 +1226,7 @@ impl EvalWeights {
     /// What it adds: at a healthy life total the greedy pass blocks an
     /// attacker only when one creature kills it alone, so two 2/2s never
     /// ate a 4/4 however good the trade. Gangs are now offered as
-    /// candidates and [`simulate_block_outcome`] prices the dead
+    /// candidates and [`simulate_block_outcome_from`] prices the dead
     /// blockers against the dead attacker.
     ///
     /// The bundle caveat, stated plainly: `block_search` alone measured
@@ -8962,12 +8962,18 @@ fn attack_set_key(c: &[Attack]) -> Vec<u32> {
 /// nothing to add, and it used to pay one full turn-cycle sim of "nobody"
 /// to feed an argmax of one (18.7 k of 22.2 k empty-greedy searches,
 /// sealed, 2,400 games, round 59's census).
-fn attack_chain_pool(state: &GameState, seat: usize, greedy: &[Attack]) -> Vec<Attack> {
+struct AttackPool {
+    attackers: Vec<Attack>,
+    /// Greedy declared nobody (the wide flag's board).
+    from_empty: bool,
+}
+
+fn attack_chain_pool(state: &GameState, seat: usize, greedy: &[Attack]) -> AttackPool {
     let face_player = attack_target_player(state, seat);
     let face = AttackTarget::Player(face_player);
     let statics = crate::game::combat::attack_static_scan(state);
     let power_caps = state.attack_power_caps(statics);
-    state.with_frozen_layers(|st| {
+    let attackers: Vec<Attack> = state.with_frozen_layers(|st| {
         st.battlefield
             .iter()
             .filter(|c| {
@@ -8991,7 +8997,8 @@ fn attack_chain_pool(state: &GameState, seat: usize, greedy: &[Attack]) -> Vec<A
                     .unwrap_or(face),
             })
             .collect()
-    })
+    });
+    AttackPool { attackers, from_empty: greedy.is_empty() }
 }
 
 /// The attack chain (see [`EvalWeights::attack_chain`]): grow a
@@ -9005,7 +9012,7 @@ fn attack_chain_pool(state: &GameState, seat: usize, greedy: &[Attack]) -> Vec<A
 /// `menu` / `menu_scores` are the declarations [`pick_attacks_scored`] has
 /// already simulated (index 0 greedy): the chain's start set is the menu's
 /// repaired "all home" whenever that survived dedupe, so its score is
-/// reused instead of re-simulated. `from_empty` says greedy declared
+/// reused instead of re-simulated. `pool.from_empty` says greedy declared
 /// nobody, which is what [`EvalWeights::attack_pairs_empty_only`] gates on.
 fn attack_chain_candidate(
     state: &GameState,
@@ -9013,10 +9020,11 @@ fn attack_chain_candidate(
     w: &EvalWeights,
     menu: &[Vec<Attack>],
     menu_scores: &[(usize, i32)],
-    from_empty: bool,
-    pool: Vec<Attack>,
+    pool: AttackPool,
+    starts: &SimStarts,
 ) -> Option<(Vec<Attack>, i32)> {
     let greedy: &[Attack] = menu.first().map(Vec::as_slice).unwrap_or(&[]);
+    let AttackPool { attackers: pool, from_empty } = pool;
     if pool.is_empty() {
         return None;
     }
@@ -9033,7 +9041,7 @@ fn attack_chain_candidate(
             attack_census::add(11, 1);
             s
         }
-        None => simulate_attack_outcome(state, seat, &current, w)?,
+        None => simulate_attack_outcome_from(starts, seat, &current, w)?,
     };
     let mut remaining: Vec<Attack> =
         pool.into_iter().filter(|a| !current.iter().any(|c| c.attacker == a.attacker)).collect();
@@ -9055,7 +9063,7 @@ fn attack_chain_candidate(
         let mut scored: Vec<(usize, i32)> = vec![(0, current_score)];
         for (i, c) in cands.iter().enumerate().skip(1) {
             sims += 1;
-            if let Some(s) = simulate_attack_outcome(state, seat, c, w) {
+            if let Some(s) = simulate_attack_outcome_from(starts, seat, c, w) {
                 scored.push((i, s));
             }
         }
@@ -9176,12 +9184,15 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     // eligible to attack (every creature sick, tapped or barred) is a
     // one-candidate menu the chain cannot extend, so it is returned as it
     // stands rather than simulated for an argmax of one.
-    let pool = if w.attack_chain > 0 {
+    let mut pool = if w.attack_chain > 0 {
         attack_chain_pool(state, seat, candidates.first().map(Vec::as_slice).unwrap_or(&[]))
     } else {
-        Vec::new()
+        AttackPool { attackers: Vec::new(), from_empty: false }
     };
-    if chain_from_empty && pool.is_empty() {
+    // The picker's own gate, not the greedy set's emptiness: identical
+    // whenever the chain runs, and this is the one the census counts.
+    pool.from_empty = chain_from_empty;
+    if chain_from_empty && pool.attackers.is_empty() {
         return candidates.swap_remove(0);
     }
     // The blocker gate (`EvalWeights::attack_empty_gate`, REFUTED in
@@ -9201,9 +9212,10 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
 
     // First-wins-ties in `choose_scored`: index 0 is greedy, so equal
     // scores keep it (unless this thread is sampling — actors only).
+    let starts = SimStarts::new(state, seat, w);
     let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
-        let Some(score) = simulate_attack_outcome(state, seat, cand, w) else { continue };
+        let Some(score) = simulate_attack_outcome_from(&starts, seat, cand, w) else { continue };
         scored.push((i, score));
     }
     // The chain's finished set is one more candidate in the same argmax
@@ -9212,7 +9224,7 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     let menu_len = candidates.len();
     if w.attack_chain > 0
         && let Some((chain, score)) =
-            attack_chain_candidate(state, seat, w, &candidates, &scored, chain_from_empty, pool)
+            attack_chain_candidate(state, seat, w, &candidates, &scored, pool, &starts)
         && !candidates.iter().any(|c| attack_set_key(c) == attack_set_key(&chain))
     {
         candidates.push(chain);
@@ -9468,8 +9480,19 @@ pub mod block_census {
 /// tried to hold back) or the simulation runs out of fuel — an unfinished
 /// turn is scored not at all rather than scored wrong, the same rule
 /// [`simulate_through_combat`] settled on.
+#[cfg(test)]
 fn simulate_attack_outcome(
     state: &GameState,
+    seat: usize,
+    attacks: &[Attack],
+    w: &EvalWeights,
+) -> Option<i32> {
+    simulate_attack_outcome_from(&SimStarts::new(state, seat, w), seat, attacks, w)
+}
+
+/// [`simulate_attack_outcome_from`] from a decision's prepared start states.
+fn simulate_attack_outcome_from(
+    starts: &SimStarts,
     seat: usize,
     attacks: &[Attack],
     w: &EvalWeights,
@@ -9478,14 +9501,14 @@ fn simulate_attack_outcome(
         let mut total = 0i64;
         let mut n = 0i64;
         for k in 0..w.determinize {
-            if let Some(v) = simulate_attack_outcome_once(state, seat, attacks, w, k) {
+            if let Some(v) = simulate_attack_outcome_once(starts.base(k), seat, attacks, w) {
                 total += v as i64;
                 n += 1;
             }
         }
         return (n > 0).then(|| (total / n) as i32);
     }
-    simulate_attack_outcome_once(state, seat, attacks, w, 0)
+    simulate_attack_outcome_once(starts.base(0), seat, attacks, w)
 }
 
 /// One action on a throwaway dry-run clone.
@@ -9513,7 +9536,7 @@ fn dry_run(
 /// configurations** across five pools, and the sim owns `g` outright — a
 /// caller that gets `false` drops it unread, so a partially-mutated state is
 /// never observed. That is also the semantics
-/// [`simulate_attack_outcome`]'s own doc already promises for the *opening*
+/// [`simulate_attack_outcome_from`]'s own doc already promises for the *opening*
 /// declaration ("an unfinished turn is scored not at all rather than scored
 /// wrong"); this makes the loop's later declarations agree with it.
 ///
@@ -9522,7 +9545,7 @@ fn dry_run(
 /// leaves exactly the state a retry would have seen — so the retry is kept and
 /// reads the same, here as on the pass branch.
 ///
-/// [`simulate_attack_outcome`]: fn@simulate_attack_outcome
+/// [`simulate_attack_outcome_from`]: fn@simulate_attack_outcome
 /// The simulation's own declaration pickers against the engine, counted.
 ///
 /// A picker that proposes an illegal attack or block shows up nowhere on its
@@ -9636,13 +9659,12 @@ fn sim_outcome(
 }
 
 fn simulate_attack_outcome_once(
-    state: &GameState,
+    base: &GameState,
     seat: usize,
     attacks: &[Attack],
     w: &EvalWeights,
-    k: u8,
 ) -> Option<i32> {
-    let mut g = sim_start_state(state, seat, w, k);
+    let mut g = base.clone();
     dry_run(&mut g, GameAction::DeclareAttackers(attacks.to_vec())).ok()?;
     let start_turn = g.turn_number;
     // One turn cycle of pure priority passes is on the order of fifty
@@ -10279,6 +10301,7 @@ fn block_chain_candidate(
     menu: &[Vec<(CardId, CardId)>],
     menu_scores: &[(usize, i32)],
     setup: BlockChainSetup<'_>,
+    starts: &SimStarts,
 ) -> Option<(Vec<(CardId, CardId)>, i32)> {
     use crate::card::Keyword;
     let BlockChainSetup { blockers, attackers, can } = setup;
@@ -10299,7 +10322,7 @@ fn block_chain_candidate(
             block_census::add(5, 1);
             s
         }
-        None => simulate_block_outcome(state, seat, &current, w)?,
+        None => simulate_block_outcome_from(starts, seat, &current, w)?,
     };
     let mut sims = 0u64;
     for _ in 0..w.block_chain {
@@ -10361,7 +10384,7 @@ fn block_chain_candidate(
         let mut scored: Vec<(usize, i32)> = vec![(0, current_score)];
         for (i, c) in cands.iter().enumerate().skip(1) {
             sims += 1;
-            if let Some(s) = simulate_block_outcome(state, seat, c, w) {
+            if let Some(s) = simulate_block_outcome_from(starts, seat, c, w) {
                 scored.push((i, s));
             }
         }
@@ -10390,9 +10413,10 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
         return candidates.swap_remove(0);
     }
 
+    let starts = SimStarts::new(state, seat, w);
     let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
-        let Some(score) = simulate_block_outcome(state, seat, cand, w) else { continue };
+        let Some(score) = simulate_block_outcome_from(&starts, seat, cand, w) else { continue };
         scored.push((i, score));
     }
     // The chain's finished plan is one more candidate in the same argmax
@@ -10402,7 +10426,7 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
     let mut chain_novel = false;
     if let Some(setup) = setup
         && let Some((chain, score)) =
-            block_chain_candidate(state, seat, w, &candidates, &scored, setup)
+            block_chain_candidate(state, seat, w, &candidates, &scored, setup, &starts)
         && !candidates.iter().any(|c| block_set_key(c) == block_set_key(&chain))
     {
         candidates.push(chain);
@@ -10481,7 +10505,7 @@ fn chump_block_candidates(
 ///
 /// Illegal declarations (menace needing two, a "must be blocked"
 /// attacker left uncovered) are not filtered here: the engine rejects
-/// them and [`simulate_block_outcome`] returns `None`, which drops the
+/// them and [`simulate_block_outcome_from`] returns `None`, which drops the
 /// candidate. Legality is the engine's job, not this heuristic's.
 fn gang_block_candidates(
     state: &GameState,
@@ -10750,8 +10774,32 @@ fn sim_start_state(state: &GameState, seat: usize, w: &EvalWeights, k: u8) -> Ga
     g
 }
 
-fn simulate_block_outcome(
-    state: &GameState,
+/// The start states of one decision's simulations, one per redeal index
+/// `k`. A redeal is a function of the pre-decision state, the seat and
+/// `k` (the seed is fixed), so every candidate of one argmax starts from
+/// the same board; building it here once instead of inside every sim
+/// pays the redeal — the library sort, the shuffle, the CoW unshare of
+/// two zones, ~10 k Ir — per decision rather than per candidate (PERF
+/// `(-256)`: 10,334 redeals against ~1,300 decisions on a six-game
+/// sealed run). Each sim still clones its base, as it cloned the real
+/// state before.
+struct SimStarts {
+    bases: Vec<GameState>,
+}
+
+impl SimStarts {
+    fn new(state: &GameState, seat: usize, w: &EvalWeights) -> Self {
+        let n = w.determinize.max(1);
+        Self { bases: (0..n).map(|k| sim_start_state(state, seat, w, k)).collect() }
+    }
+
+    fn base(&self, k: u8) -> &GameState {
+        &self.bases[k as usize]
+    }
+}
+
+fn simulate_block_outcome_from(
+    starts: &SimStarts,
     seat: usize,
     blocks: &[(CardId, CardId)],
     w: &EvalWeights,
@@ -10762,7 +10810,7 @@ fn simulate_block_outcome(
         let mut total = 0i64;
         let mut n = 0i64;
         for k in 0..w.determinize {
-            if let Some(v) = simulate_block_outcome_once(state, seat, blocks, w, k) {
+            if let Some(v) = simulate_block_outcome_once(starts.base(k), seat, blocks, w) {
                 total += v as i64;
                 n += 1;
             }
@@ -10771,17 +10819,16 @@ fn simulate_block_outcome(
         // merely unlucky — propagate that as before.
         return (n > 0).then(|| (total / n) as i32);
     }
-    simulate_block_outcome_once(state, seat, blocks, w, 0)
+    simulate_block_outcome_once(starts.base(0), seat, blocks, w)
 }
 
 fn simulate_block_outcome_once(
-    state: &GameState,
+    base: &GameState,
     seat: usize,
     blocks: &[(CardId, CardId)],
     w: &EvalWeights,
-    k: u8,
 ) -> Option<i32> {
-    let mut g = sim_start_state(state, seat, w, k);
+    let mut g = base.clone();
     dry_run(&mut g, GameAction::DeclareBlockers(blocks.to_vec())).ok()?;
     let turn = g.turn_number;
     let mut fuel = 200u32;
@@ -16358,7 +16405,7 @@ mod tests {
         let (g, atk) = attacked_board(&[menacing], 3);
         let w = EvalWeights::block_chain_on();
         let menu = block_candidates_for_mcts(&g, 1, &w);
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run")).expect("scored");
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
         assert_ne!(chain.iter().filter(|(_, a)| *a == atk[0]).count(), 1, "{chain:?}");
         g.clone().declare_blockers(chain).expect("the chained plan is legal");
         let picked = pick_blocks_scored(&g, 1, &w);
@@ -16377,7 +16424,7 @@ mod tests {
         let w = EvalWeights::block_chain_on();
         let menu = block_candidates_for_mcts(&g, 1, &w);
         assert_eq!(menu, vec![Vec::new()], "the menu is bare: {menu:?}");
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run")).expect("scored");
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
         assert_eq!(chain.len(), 2, "both bears on the giant: {chain:?}");
         assert!(chain.iter().all(|(_, a)| *a == atk[0]), "{chain:?}");
         let picked = pick_blocks_scored(&g, 1, &w);
@@ -16398,7 +16445,7 @@ mod tests {
             !menu.iter().any(|c| c.len() == 4),
             "the menu never holds the double gang: {menu:?}"
         );
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run")).expect("scored");
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
         assert_eq!(chain.len(), 4, "two bears on each giant: {chain:?}");
         for a in &atk {
             assert_eq!(chain.iter().filter(|(_, x)| x == a).count(), 2, "{chain:?}");
@@ -16883,7 +16930,7 @@ mod tests {
         }
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false, attack_chain_pool(&g, 0, &menu[0])).expect("the start set scores");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0]), &SimStarts::new(&g, 0, &w)).expect("the start set scores");
         assert!(chain.iter().any(|a| a.attacker == must), "the chain keeps the must-attacker: {chain:?}");
         g.clone().declare_attackers(chain).expect("the chained declaration is legal");
         let picked = pick_attacks_scored(&g, 0, &w);
@@ -16910,7 +16957,7 @@ mod tests {
         }
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false, attack_chain_pool(&g, 0, &menu[0])).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0]), &SimStarts::new(&g, 0, &w)).expect("scored");
         assert_eq!(chain.iter().map(|a| a.attacker).collect::<Vec<_>>(), vec![bear], "{chain:?}");
     }
 
@@ -16938,7 +16985,7 @@ mod tests {
         }
         let w = EvalWeights { attack_chain: 1, ..EvalWeights::attack_chain_on() };
         let menu = attack_candidates_for_mcts(&g, 0, &w);
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false, attack_chain_pool(&g, 0, &menu[0])).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0]), &SimStarts::new(&g, 0, &w)).expect("scored");
         assert_eq!(chain.len(), 1, "one addition allowed: {chain:?}");
         let picked = pick_attacks_scored(&g, 0, &w);
         assert_eq!(picked.len(), 3, "three free bears: the alpha strike wins the argmax: {picked:?}");
@@ -16980,7 +17027,7 @@ mod tests {
         let w = EvalWeights::attack_chain_on();
         let menu = attack_candidates_for_mcts(&g, 0, &w);
         assert_eq!(menu[0].len(), 2, "greedy sees the lethal swing: {menu:?}");
-        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], false, attack_chain_pool(&g, 0, &menu[0])).expect("scored");
+        let (chain, _) = attack_chain_candidate(&g, 0, &w, &menu, &[], attack_chain_pool(&g, 0, &menu[0]), &SimStarts::new(&g, 0, &w)).expect("scored");
         assert!(chain.is_empty(), "each bear alone is a dead bear: {chain:?}");
         let picked = pick_attacks_scored(&g, 0, &w);
         assert_eq!(picked.len(), 2, "the menu still finds lethal: {picked:?}");
