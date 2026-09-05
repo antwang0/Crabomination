@@ -3938,3 +3938,8 @@ property again — 11 990 of 12 000 pairs play identically).
 adopted default now runs at 0.851 (r58) × 0.984 (`(-255)`) × 0.959
 (r60) ≈ **0.80** of its sealed wall clock, i.e. ~1.7× `gang` where it
 was 2.1×, with both chains intact and no strength given up on any gate.
+On `--decks cube` the same three read 0.750 × 0.977 × 0.939 ≈ **0.69**
+— the cube boards are wider, so the pair move and the open board were
+a larger share there. A fresh-seed sweep on the adopted default (8
+primes × {all, cube}, 24 000 games) is clean, and the actor scaling
+probe reads 96 % linear at 4 threads.

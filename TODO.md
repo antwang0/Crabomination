@@ -42,8 +42,9 @@ sixty-seventh pass, so don't re-take that.
    `(-254)` TAKEN (bare block menu, Ir -0.195 %); `(-255)` TAKEN (empty-greedy menu with no
    eligible attacker returned without its full-turn sim, Ir -2.17 % / -2.26 % cube, wall 0.984);
    round 59's blocker gate REFUTED (flat, neutral); round 60 ADOPTED (`attack_skip_open` on the
-   default, wall 0.959, no loss). The default is ~0.80 of the r56 default's wall clock, ~1.7x
-   `gang`; `dflt56` / `dflt58` are the frozen controls.
+   default, wall 0.959, no loss). The default is ~0.80 (sealed) / ~0.69 (cube) of the r56
+   default's wall clock, ~1.7x `gang`; `dflt56` / `dflt58` are the frozen controls. Sweep on the
+   adopted default clean (24,000 games); scaling 96 % linear at 4 threads.
 4. **Perf leads (PERF candidates, top):** the attack menu proper and the chain's singles by
    board class (read `start reused` against `searched` first — the rule round 59 yielded), the
    block search's own open-board twin (no census yet), then the gang-move `Vec` churn.

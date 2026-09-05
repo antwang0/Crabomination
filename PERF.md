@@ -2566,7 +2566,13 @@ default. `round58_default()` frozen as `dflt58`, the base rounds 59 and
 
 ```text
   sealed dflt58 mirror, 200 x 12, 5 paired reps:  dflt-open 0.959 median / 0.958 mean
-  cumulative vs the r56 default:                   0.851 x 0.984 x 0.959 = ~0.80 (~1.7x gang)
+  cube  dflt58 mirror, 200 x 12, 5 paired reps:   dflt-open 0.939 median
+  cumulative vs the r56 default:  sealed 0.851 x 0.984 x 0.959 = ~0.80 (~1.7x gang); cube 0.750 x 0.977 x 0.939 = ~0.69
+  scaling, sealed dflt 200 x 12 on this 4-core host: 70.4 / 67.8 / 67.4 games/s per thread at 1 / 2 / 4 threads
+        (96 % linear at 4 — no contention on the chain path; the (-52) reading stands)
+sweep   fresh seeds on the ADOPTED DEFAULT (the earlier sweeps ran `gang`): 8 primes 211..251 x {all, cube} x
+        --games 120 --threads 2 = 16 cells / 24,000 games, 0 undecided, 0 panics, every rc 0
+audits  audit_incomplete --structural-only 21,795 / 0 to review; audit_stubs 0
   Ir base for the three-pool gate: unchanged from (-250) — the `gang` path is untouched
 suite   19,230 / 0 / 5; golden traces 7/7 (see the commit for any re-bless)
 clippy  --workspace --exclude crabomination_client --all-targets   clean
@@ -3343,6 +3349,7 @@ Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
   dflt-open   0.959  [0.928 .. 0.992]   <- adopted, default only                    49.98  (50.0 / 50.0 / 50.0 / 49.9, every cell within +-0.08)
   chain sims 110,382 -> 99,478 at 200 x 12; searched declarations -11.4 % (the creatureless boards)
   cross-check   cube 50.2 / 50.0 (3,200 games each), fixed 50.2 / 50.1 (1,600 each), seeds 43/97
+  cube wall     dflt-open / dflt58, 200 x 12, 5 paired reps:  **0.939** median / 0.941 mean  [0.903 .. 0.970]
   --bench (gang) untouched. Golden traces: seeds 1, 4, 5 re-blessed (same winners; 11->19, 24->22, 9->7 turns).
 ```
 
@@ -3392,6 +3399,7 @@ the flag or the census.
   pairs-lazy    0.893  [0.872 .. 0.965]                                                2.48                50.00  (50.0 / 50.0 / 50.0 / 50.0)
   pairs-both    0.851  [0.833 .. 0.888]   <- adopted                                   2.18                50.10  (50.1 / 50.1 / 50.0 / 50.2)
   dflt56        1.000                                                                  3.20
+  cube, pairs-both / dflt56, 100 x 12, 5 paired reps:  **0.750** median / 0.749 mean  [0.727 .. 0.773]
   --bench (gang) untouched: no chain in that profile. Golden traces re-blessed (the default's declarations move).
 ```
 
