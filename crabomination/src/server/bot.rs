@@ -307,19 +307,22 @@ pub struct EvalWeights {
     ///
     /// **Adopted 2026-09-05 (round 56)** on the default only: 50.4 / 50.7
     /// / 50.4 / 50.4 vs the r55 default, every interval clear of 50; the
-    /// net leg straddled (50.2 / 50.7). See `default_const`.
+    /// net leg straddled (50.2 / 50.7). See `default_const`. Round 58
+    /// then restricted the pair move (the two flags below, both adopted).
     pub attack_chain_wide: bool,
     /// The wide chain's pair move only when greedy declared *nobody* —
     /// the board it was built for. Off, the `C(n, 2)` pairs are priced at
     /// every chain's first step, including the 55 % that start beside a
     /// non-empty greedy declaration the menu already prices. A throughput
-    /// device; needs `attack_chain_wide`.
+    /// device; needs `attack_chain_wide`. **Adopted 2026-09-05 (round
+    /// 58)**, see `default_const`.
     pub attack_pairs_empty_only: bool,
     /// The wide chain's pair move only after the singles step ties: the
     /// overload it exists to find is exactly the board where every single
     /// addition is a trade with staying home, so the pairs are priced only
     /// when single growth would have stopped the chain at nobody. A
-    /// throughput device; needs `attack_chain_wide`.
+    /// throughput device; needs `attack_chain_wide`. **Adopted 2026-09-05
+    /// (round 58)**, see `default_const`.
     pub attack_pairs_lazy: bool,
     /// Search the block assignment instead of taking the greedy one:
     /// simulate each candidate through combat damage and keep the best (see
@@ -1867,8 +1870,17 @@ impl EvalWeights {
     /// / 50.7 / 50.4 / 50.4 with every cell's interval clear of 50 (the
     /// r50 replicated-small rule) and 50.2 / 50.7 under the net, one cell
     /// straddling — adopted here, not in [`client_pilot`](Self::client_pilot).
+    ///
+    /// `attack_pairs_empty_only` and `attack_pairs_lazy` adopted 2026-09-05
+    /// (round 58, `.ladder/run_r58_pairs.sh`, a no-loss throughput gate):
+    /// `pairs-both` read 50.1 / 50.1 / 50.0 / 50.2 against the round-56
+    /// default on seeds 43/97/151/199 (pooled +0.10, every interval
+    /// touching 50; `pairs-empty` 50.08, `pairs-lazy` 50.00) for -14.9 %
+    /// of the sealed mirror's wall clock — the pair move beside a
+    /// non-empty greedy declaration, and ahead of a single that wins, was
+    /// buying nothing.
     pub const fn default_const() -> Self {
-        Self::round56_default()
+        Self { attack_pairs_empty_only: true, attack_pairs_lazy: true, ..Self::round56_default() }
     }
 
     /// The default as it stood after round 56 (the round-55 default plus

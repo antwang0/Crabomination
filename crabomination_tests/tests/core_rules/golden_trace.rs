@@ -323,7 +323,14 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // contains one board where that set out-scores the holdback menu.
     // Same winner, same turn count, one action fewer (484 -> 483); seeds
     // 1, 2, 4 and 5 and the full committed trace are untouched.
-    (3, Some(1), 32, 737, 0x5269_7a20_8722_c05d),
+    // Re-blessed 2026-09-05 for the round-58 adoption (the wide chain's
+    // pair move only from an empty greedy and only after the singles tie;
+    // no loss over four ladder seeds, -14.9 % wall clock): seed 3 holds
+    // one board where the pair move used to out-score the singles beside
+    // a non-empty greedy declaration. Same winner, same turn count, same
+    // action count — only the digest moves; seeds 1, 2, 4 and 5 and the
+    // full committed trace are untouched.
+    (3, Some(1), 32, 737, 0x72af_f312_fcea_3b21),
     // Re-blessed 2026-08-22 for the slot-walk targeting fix: the filtered
     // auto-target path used to take the first legal permanent in
     // battlefield order, so Swords to Plowshares ("target creature", an

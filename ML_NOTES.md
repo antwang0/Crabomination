@@ -3791,3 +3791,60 @@ wall-clock on this machine with the machine mostly idle; the learner, not
 generation, is the budget here, which inverts ML_PIPELINE's "generation
 is the bottleneck by design" and is worth knowing before the next
 training round is sized.
+
+## Round 58 — the wide chain's pair move restricted: NO LOSS at −14.9 % wall clock, ADOPTED (2026-09-05)
+
+The first perf candidate round 56 filed: the wide attack chain's pair
+move priced `C(n, 2)` full-turn-cycle sims at *every* chain's first
+step, though it was built for the empty-greedy overload, and cost +28 %
+of the default's wall clock for its +0.5. Two restrictions as flags,
+each keeping the overload board `attack_chain_wide_overloads_the_lone_
+blocker_greedy_holds_against` pins (pre-registered in
+`.ladder/run_r58_pairs.sh`; base `dflt56` = `round56_default()`,
+frozen):
+
+* `attack_pairs_empty_only` (`pairs-empty`): pairs only when greedy
+  declared nobody.
+* `attack_pairs_lazy` (`pairs-lazy`): singles first, pairs only when
+  every single tied "finalize" — the overload's own definition; a single
+  that wins grows the set and the second attacker is a single addition
+  at the next step.
+* both (`pairs-both`).
+
+**Cost first** (step 0, one binary, sealed 200-game mirrors, arms
+alternated, median of 5 per-rep ratios against `dflt56`): `pairs-empty`
+0.872, `pairs-lazy` 0.893, `pairs-both` **0.851**. Chain sims per
+searched declaration 3.20 → 2.19 / 2.48 / 2.18.
+
+| leg (vs `dflt56`, sealed, 12 000 games a cell) | 43 | 97 | 151 | 199 | pooled |
+|---|---|---|---|---|---|
+| `pairs-empty` | 50.0 [49.9, 50.2] | 50.1 [49.9, 50.2] | 50.0 [49.9, 50.2] | 50.2 [50.1, 50.3] | +0.08 |
+| `pairs-lazy` | 50.0 [50.0, 50.1] | 50.0 [49.9, 50.1] | 50.0 [49.9, 50.1] | 50.0 [49.9, 50.1] | 0.00 |
+| `pairs-both` | 50.1 [49.9, 50.2] | 50.1 [49.9, 50.2] | 50.0 [49.9, 50.2] | 50.2 [50.1, 50.3] | **+0.10** |
+
+Every cell's interval touches 50 and none sits below it: the
+pre-registered "no loss — adopt the cheapest" reading, and `pairs-both`
+is the cheapest. **Adopted**: `EvalWeights::default()` =
+`round56_default()` + both flags. The client pilot does not carry the
+wide chain and is unchanged; the net references are flagless.
+
+What the cells say beyond the verdict: `pairs-lazy` is a strength no-op
+to ±0.1 — when a single wins the first step, the pair it might have
+preferred is reached by growth anyway — and `pairs-empty` leans
+positive, i.e. the pairs beside a non-empty greedy declaration were, if
+anything, buying an over-attack. The whole wide chain is therefore
+worth its round-56 +0.5 at roughly half its round-56 cost.
+
+**Cost, updated.** Sealed mirror per 12 000 games on this container's 4
+cores (the r56 numbers were on 23 threads and are not comparable): the
+new default runs at 0.851 of the round-56 default; against `gang` the
+round-56 default was 2.1×, so the adopted default is ~1.8× `gang`.
+`(-254)` (PERF) takes another 0.2 % off the same path.
+
+**Next in this shape.** The chains' remaining cost is the attack chain
+proper (3.17 sims a searched declaration, 45 % of searches on
+empty-greedy boards where greedy's refusal is usually right): a cheap
+pre-filter for the empty-greedy chain — skip it when no remaining
+creature can connect or trade (the sim says "tie" on those) — is the next
+candidate, gated the same way; then `attack_skip_open` re-read on this
+default.

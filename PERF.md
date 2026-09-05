@@ -2557,6 +2557,38 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### Round 58 and `(-254)` — closing state at the round-58 tip
+
+Two engine commits on the bot's chain path and one adoption: the wide
+attack chain's pair move restricted (round 58, a search-budget change
+gated for no loss), the bare block menu's sim skipped when the chain
+cannot run (`(-254)`). The `--bench` profile (`gang`) carries neither
+chain, so its counters are unmoved; the number that moved is the
+default's own wall clock, which every actor pays.
+
+```text
+  sealed default mirror, this container (4 cores), 200 x 12 games, one binary, 5 paired reps:
+    dflt56 (r56 default)  1.000      pairs-both (adopted)  0.851 median  [0.833 .. 0.888]
+  Ir, sealed dflt56 --games 6 --threads 1 --seed 1 (mimalloc totals):  4,460,465,907 -> 4,451,753,506  (-0.195 %, (-254))
+  Ir base for the three-pool gate: unchanged from (-250) — neither leg touches the `gang` path
+  (cube 1,817,493,748 / fixed 656,319,384 / sealed 1,886,392,273 under `--a gang --b gang`)
+
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,230 / 0 / 5 (97.6 s under nextest); golden traces 7/7 (seed 3's digest re-blessed:
+        same winner / 32 turns / 737 actions, one attack declaration moved; the full trace unmoved)
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast typecheck gate (debug-assertions off): clean, 1m24s
+--bench release-fast (mimalloc): 195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls —
+        counters identical to 2003d1cf; determinism ok (all pairs split); peak_rss 30.5 MiB
+        (mimalloc; the 18.9 MiB readings are system-allocator profiling-fast builds)
+ladder  round 58, sealed, 12,000 games a cell, four seeds each: pairs-empty 50.08, pairs-lazy 50.00,
+        pairs-both 50.10 pooled — every cell's interval touches 50, none below it
+census  CRAB_ATTACK_CENSUS on the adopted default, sealed 100 x 12, seed 43: 25,384 searched,
+        2.47 candidates/search, chain sims 2.16/search (3.20 before), 11,200 from an empty greedy;
+        block chain runs on 98.8 % of 7,484 searches (bare menus with nothing to add no longer
+        counted), start reused 100 % of runs
+```
+
 ### The layout-flag refutation and the tracker compaction — closing state at the `(-253)` tip
 
 No engine commit: `(-253)` was measured and not landed, and the run's
@@ -3263,6 +3295,47 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### Round 58 ADOPTED — the wide chain's pair move only from an empty greedy and only after the singles tie: sealed default wall clock **-14.9 %** at no strength loss
+
+```text
+  arm           wall/dflt56 (median of 5 paired reps, sealed 200 x 12, one binary)   chain sims/search   ladder pooled (4 seeds x 12,000)
+  pairs-empty   0.872  [0.840 .. 0.888]                                                2.19                50.08  (cells 50.0 / 50.1 / 50.0 / 50.2)
+  pairs-lazy    0.893  [0.872 .. 0.965]                                                2.48                50.00  (50.0 / 50.0 / 50.0 / 50.0)
+  pairs-both    0.851  [0.833 .. 0.888]   <- adopted                                   2.18                50.10  (50.1 / 50.1 / 50.0 / 50.2)
+  dflt56        1.000                                                                  3.20
+  --bench (gang) untouched: no chain in that profile. Golden traces re-blessed (the default's declarations move).
+```
+
+A search-budget change, not a pure optimization, so it went through the
+strength gate (`.ladder/run_r58_pairs.sh`, ML_NOTES round 58) and the
+traces move with it. The pair move was priced at every chain's first
+step; restricted to the empty-greedy board it was built for *and* to
+the step where the singles have already tied, it keeps the r56 test's
+overload and drops a third of the chain's sims. Every ladder cell's
+interval touches 50, none sits below it. The `fixed` bench profile
+carries no chain, so the committed Baseline is unmoved; the number
+that moved is the one every actor pays.
+
+### `(-254)` TAKEN — the block chain's setup built once, and a bare block menu returned without a sim when the chain cannot run: sealed `dflt56` Ir -0.195 %
+
+```text
+  binary pair          sealed --games 6 --threads 1 --seed 1, dflt56 mirror (mimalloc, totals only)
+  base (3344ba01)      4,460,465,907 Ir
+  (-254)               4,451,753,506 Ir   **-0.195 %**
+  block searches       11,376 -> 7,552 at 100 x 12 (-3,824 bare-menu sims, 7.2 % of all block sims)
+  outcomes + attack census identical; paired wall clock 1.000 median (inside the +-3 % resolution)
+```
+
+Round 56's second candidate closed by a census denominator first: the
+block chain reused the menu's start score on 65 % of *searches* because
+it ran on 65 % of them — reuse is 100 % of runs. The other 34 % had no
+free blocker or no legal pair, and `pick_blocks_scored` was simulating
+their one-candidate menu to feed an argmax of one before the chain said
+so. `BlockChainSetup::new` now answers that before the sim. Small
+because the sim it removes is the cheapest one there is — a combat with
+nothing blocking — and the callgrind total is the isolating instrument
+at this size, not the wall clock.
 
 ### `(-253)` REFUTED — `-C llvm-args=-hot-cold-split=true` on `profiling-fast`: paired wall clock **+0.89 % median / -0.03 % mean** (noise), Ir +0.16 %, I1 misses +0.42 %
 
@@ -6903,27 +6976,35 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**The combat chains (rounds 55–56, 2026-09-05) doubled the default's
-wall-clock and are the top of this list.** Sealed mirror, 12 000 games on
-23 threads, one `release-fast` binary: `gang` (no chains) 4.6 s, the r55
-default (attack chain) 6.8 s, + block chain 7.9 s, + wide attack chain
-8.7 s, the adopted default (both) 9.8 s. The `--bench` profile is `gang`,
-so the committed Baseline is untouched — but every actor and every
-`dflt`-piloted tool now runs at 2.1× it. Where it goes, by census
-(`CRAB_ATTACK_CENSUS=1`, `dflt` mirror, 600 games): the attack chain runs
-3.25 full-turn-cycle sims per searched declaration (12 388 searched,
-45 % from an empty greedy under the wide flag), the block chain 2.88
-end-of-combat sims per block search (5 506). In order: (1) the wide
-chain's pair move offers `C(n, 2)` pairs at EVERY chain's first step, and
-it was built for the empty-greedy overload — restrict it to chains that
-start from nobody and gate for no loss (the wide chain is +0.5 for
-+28 %; the block chain +5.8 for +16 %); (2) the block chain reuses the
-menu's start score on only 65 % of searches when a bare menu should make
-that ~100 % — find the miss; (3) `attack_skip_open` (`atk-open`, gated
-for no loss at r50) is worth re-reading now that the wide chain runs on
-the 30 % of searched declarations whose defender has no creature.
-Measure on `--decks sealed` (the chains' pool) and on `cube`; the
-`fixed` bench does not carry them.
+**The combat chains (rounds 55–56) doubled the default's wall clock;
+round 58 took a third of it back and this is still the top of the
+list.** Sealed mirror, 12 000 games on 23 threads, one `release-fast`
+binary: `gang` (no chains) 4.6 s, the r55 default (attack chain) 6.8 s,
++ block chain 7.9 s, + wide attack chain 8.7 s, the r56 default (both)
+9.8 s. **Round 58 (Log): the wide chain's pair move only from an empty
+greedy and only after the singles tie, `pairs-both` 0.851 of the r56
+default's wall clock at no loss (four cells, every interval touching
+50), adopted — the default is now ~1.8× `gang`.** `(-254)` (Log): the
+bare block menu's sim skipped when the chain cannot run, Ir -0.195 %.
+The `--bench` profile is `gang`, so the committed Baseline is untouched
+— every actor and every `dflt`-piloted tool pays the ratio above.
+Census on the adopted default (`CRAB_ATTACK_CENSUS=1`, sealed, 1 200
+games, seed 43): the attack chain runs 2.16 sims per searched declaration
+(25 384 searched, 44 % from an empty greedy under the wide flag), the
+block chain 4.50 per block search that reaches it (7 484, 98.8 % of
+searches). In order:
+(1) the empty-greedy chain runs on 11 200 of 25 384 searches and greedy's
+refusal is usually right there — a pre-filter that skips the chain when
+no remaining creature can connect or trade (the sim's own "tie") is the
+next candidate, gated for no loss like round 58; (2) `attack_skip_open`
+(`atk-open`, gated for no loss at r50 and refuted by -0.1) is worth
+re-reading now that 30 % of searched declarations face no creature and
+the chain prices them; (3) the block chain's gang move builds one
+`Vec` per attacker per step — read it by Ir before touching it. Measure
+on `--decks sealed` (the chains' pool) and on `cube`; the `fixed` bench
+does not carry them. Round 56's second candidate (the 65 % start-score
+reuse) is CLOSED: it was the share of searches the chain runs on, reuse
+is 100 % of runs (`block_census` now prints both).
 
 **State at the `(-250)` tip — THE IR BASE MOVED (`panic = "abort"` on
 every optimized profile, three-pool Ir against the `(-249)` tip):

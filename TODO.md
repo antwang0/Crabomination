@@ -29,34 +29,24 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-253)` is the last claimed,
-   `(-254)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
-   **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold: `profiling-fast`
-   10m12s, the nextest build ~11 min, suite 98 s, `nextest` needs installing; the release-fast
-   typecheck 1m34s; callgrind `--games 6` x three pools in parallel ~1.5 min; `bench_ab.py`
-   16 pairs ~1 min. ⚠ `pkill -f` kills your own shell — kill by pid.
-2. **Gates at the `(-253)` tip (PERF Baseline):** suite 19,220 / 0 / 5 (35 data tests
-   deleted, PERF's test-suite section), workspace clippy,
-   release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7, the
-   three-pool Ir re-taken to the `(-250)` numbers, a fresh-seed sweep (8 primes 211..251,
-   `all` + `cube`, 24,000 games) 0 undecided / 0 panics. The Ir base is still `(-250)`'s
-   (`cube` 1,817,493,748 / `fixed` 656,319,384 / `sealed` 1,886,392,273).
-3. **This run:** `(-253)` REFUTED — `-C llvm-args=-hot-cold-split=true` is flat on wall clock
-   and +0.4 % I1 misses (PERF Log); with `(-251)`/`(-252)` the profile-free layout and inlining
-   axes are closed from every side — **PGO is the only build lever left**, opt-in by policy.
-   And `PERF.md` 21,520 -> 7,600 lines, the old Log and Baseline entries verbatim in
-   `PERF_ARCHIVE.md`. No engine change; no card change.
-4. **Perf leads (PERF candidates, top):** the source side is at the freeze design's floor —
-   every table under 1 % is read, the allocation table is diffuse (top growth site 8 M Ir),
-   `clone_from_ref_in` splits into five monomorphizations of 2-6 M each. What is left is
-   structural: the probe design (`simulate_attack_outcome_once`, 2,070 probes a six-game
-   `cube` run, ~60 % of it; the candidate menu is a strength decision, see `e725e5c2`) or the
-   unshare direction (`(-200)`/`(-201)`, a per-probe zone copy the CoW cannot avoid). Serde
-   feature-gating (build time) is scoped in PERF, not started; not a one-run job.
-5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
-   `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
-   printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`)
-   left in place: one `Effect` arm each (`CastSpellBack` itself is live at three catalog sites).
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-254)` is the last claimed,
+   `(-255)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
+   **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold: `release-fast`
+   bot_ladder 8m46s (2m15s warm), the core_rules test binary ~11 min, suite ~100 s, `nextest`
+   needs installing; a 12 000-game sealed ladder cell ~60-80 s on 4 threads; callgrind
+   `--games 6` sealed `dflt56` ~2 min. ⚠ `pkill -f` kills your own shell — kill by pid.
+2. **Gates at the round-58 tip (PERF Baseline):** suite green, workspace clippy, release-fast
+   typecheck, `--bench` counters identical to `2003d1cf` (the `gang` profile carries no chain),
+   golden traces re-blessed under the new default (round 58 moved the declarations).
+3. **This run:** round 58 ADOPTED (`pairs-both`: the wide chain's pair move only from an empty
+   greedy and only after the singles tie, -14.9 % sealed default wall clock, no loss over four
+   seeds); `(-254)` TAKEN (bare block menu returns without a sim when the chain cannot run,
+   Ir -0.195 %); r56's "65 % start reuse" candidate CLOSED as a census denominator.
+4. **Perf leads (PERF candidates, top):** the empty-greedy attack chain's pre-filter (11 180 of
+   25 414 searched declarations, greedy usually right there), then `atk-open` re-read on this
+   default, then the block chain's gang-move `Vec` churn; all gated for no loss on sealed.
+5. **Cards/rules (leftover only):** unchanged — per-turn cast-name memory, `modes_chosen`,
+   the "when you next attack" `DelayedKind`, CARD_BACKLOG's printed-clause ratchets.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
