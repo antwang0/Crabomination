@@ -37,7 +37,7 @@ sixty-seventh pass, so don't re-take that.
    delayed rebuild -0.903 %, `(-258)` watcher collects -0.114 %, `(-259)` one-pass P/T -0.548 %, `(-260)` legend-leg
    count gate -0.246 % (sealed `dflt` Ir; cumulative sealed -1.80 %, cube -0.54 %); the death path's unshares CLOSED.
 4. **Rounds 62-64 (ML session; numbers in ML_NOTES):** the net adds nothing on the chained heuristic (r62); `removal_sim`
-   ADOPTED on the default (r63, +0.25; **its wall clock vs the r61 default is UNREAD** — read it first); leaf depth 64/128/256 =
+   ADOPTED on the default (r63, +0.25; cost READ in PERF's Log: ~+0.4 % of sealed `dflt` Ir, the picker's own rows); leaf depth 64/128/256 =
    52.35/54.75/55.25 → the lobby is the net-free `MctsBot` at 256 (r64); the lean chain = r58's `pairs-empty`, folded in.
 5. **Perf leads (PERF candidates, the block under the map):** prompt text for headless seats (~0.35 %, needs a state
    flag), `cast_from_*` flags onto the `CardInstance` handle (~0.2 %, serde-visible), the map's big three untouched

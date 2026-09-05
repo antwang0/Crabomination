@@ -3385,6 +3385,29 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### Round 63's cost READ — `removal_sim` on the default is **~+0.4 %** of sealed `dflt` Ir (the six-game totals move ±1.4 % as different games)
+
+```text
+  tip e7ffebe9 (rounds 62-64 rebased onto (-260)), profiling-fast, system allocator, --games 6 --threads 1 --seed 1
+  sealed  dflt-open (default minus removal_sim) 3,486,761,065   dflt 3,437,316,166   -1.418 %  <- different games, not a cost
+  cube    dflt-open                              2,573,695,278   dflt 2,603,518,781   +1.159 %  <- same
+  the picker itself, sealed dflt dump:  pick_defensive_removal_any 19,302 windows;
+      combat_instant_candidates 1,218 calls / 7.8 M (6.4 k each: a cast_candidates enumeration plus a `format!("{a:?}")` dedup key per candidate),
+      sim_start_state 252 / 3.3 M, the candidates' dry runs 208 / 2.9 M, run_combat_window 56 / 3.1 M  = ~18 M inclusive (0.52 %)
+      against the rule picker's 4.1 M on the dflt-open dump  ->  net ~+0.4 %
+```
+
+The ML session adopted the flag with its wall clock unread. A flag that
+changes decisions changes the six games, so the whole-run Ir compare
+cannot price it (the two pools disagree in sign); the picker's own
+inclusive rows can, and they say the sims are cheap because the
+enumerator rarely yields (26 casts in 600 games). What the read leaves
+as a small lead: `combat_instant_candidates` runs a full
+`cast_candidates` sweep and formats a `Debug` string per candidate at
+every pre-block window where the seat holds an instant — 0.22 % for a
+picker that acts once in 23 games. Not taken; a paired wall clock at
+200 x 12 would resolve nothing at this size.
+
 ### `(-260)` TAKEN — the SBA legend-rule leg behind a printed-legendary count of two: sealed default Ir **-0.246 %** / cube **-0.111 %**
 
 ```text
