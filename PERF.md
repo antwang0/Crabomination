@@ -3358,6 +3358,26 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-259)` TAKEN — `CardInstance::toughness` / `power` as one pass over the counter bag: sealed default Ir **-0.548 %** / cube **-0.337 %**
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast, system allocator), against the (-258) tip
+  sealed            3,511,084,325 -> 3,491,854,975 Ir   **-0.548 %**
+  cube              2,583,556,668 -> 2,574,857,158 Ir   **-0.337 %**
+  outcomes identical
+  self by row (sealed):  toughness 23,189,098 -> 7,822,568 (238,188 calls, ~97 -> ~33 Ir)
+                         power      6,375,268 -> 2,511,916 (88,816 calls)
+```
+
+`toughness()` was seven `counter_count` scans of the bag and `power()`
+six, ~100 Ir a call on a bag that is empty or one entry long; the SBA
+death filter alone asks toughness 159 k times a run (the damaged or
+countered permanents `card_death_possible` cannot answer from fields).
+`CounterBag` holds one entry per kind (`add` / `insert` find-or-push),
+so one pass summing each entry's P/T contribution reads the same
+number. Found off the self table: a `crabomination_base` row at 0.66 %
+that no map had named because every caller is a legitimate ask.
+
 ### `(-258)` TAKEN — `fire_delayed_event_watchers` returns on an empty watcher list, its two ungated collects ask the batch first: sealed default Ir **-0.114 %** / cube **-0.010 %**
 
 ```text
@@ -7276,6 +7296,55 @@ before touching it; the last leg there was `(-217)`.
 (5) The `gang`-era rows (the dispatcher mask, the presence lanes, the
 gathers' floors) hold their shape here; nothing in this table is a new
 1 %+ self row that the earlier maps did not already price.
+
+**Read off the same map at the `(-256)` tip (base retaken here at
+3,547,131,260 Ir, 0.004 % off the map's total), the libc and std rows
+by caller — `--callers __memcpy`, `--callers __rust_alloc`,
+`cg_contexts.py` on `from_iter` / `SmallVec::extend` / `make_mut_slow` —
+which is the read the map itself had not done:**
+
+* **TAKEN `(-257)`** — `fire_step_triggers` was the program's
+  second-largest memcpy caller (228 k calls) for a function that clones
+  2,966 effects a run: the per-step `mem::take` + rebuild of
+  `delayed_triggers`. Sealed -0.903 %.
+* **TAKEN `(-258)`** — `fire_delayed_event_watchers`' two ungated
+  per-dispatch collects and its empty-list early return. Sealed -0.114 %.
+* **TAKEN `(-259)`** — `CardInstance::toughness` / `power` as one pass
+  over the counter bag instead of six or seven `counter_count` scans
+  (toughness 238 k calls / 23.2 M self, 159 k of them the SBA death
+  filter's). Numbers in the Log.
+* **TAKEN `(-260)`** — the SBA legend-rule leg (`SmallVec::extend`
+  40,440 calls / 18.2 M under the sweep) behind a printed-legendary
+  count of two from `sba_board_scan`. Numbers in the Log.
+* **Priced and CLOSED — the death path's two `make_mut_slow` rows**
+  (`on_left_battlefield` 9,644 / 7.5 M, `remove_from_battlefield_to_
+  graveyard_raw` 5,234 / 7.3 M), read with `--demangle=no` +
+  `cg_chain.py`: the first is the `CardData` unshare that clears
+  `cast_from_hand` on the ~53 % of dying permanents that were cast — a
+  real write, and moving the six `cast_from_*` flags onto the
+  `CardInstance` handle (beside `attacked_last_turn`) is the only device,
+  ~0.2 % for a serde-visible layout change; the second is the `PlayerData`
+  unshare of the Revolt flag write, which is merely the *first* seat write
+  on the death — gating it moves the unshare twenty lines down into
+  `send_to_graveyard`. Neither is a lead. `find_card_anywhere_mut`
+  (18,788 calls) has no unshare inside it: 0 callees on the dump.
+* **Not taken, ~0.35 % — prompt text for headless seats.**
+  `drain_trigger_queue` builds `effect_short_text` + `format!` + the
+  source name for every targeted trigger's `Decision::ChooseTarget` /
+  `ChooseCards` (2,880 a run, ~10 M with `run_effect`'s 2,382 prompt
+  formats), and `bot_ladder` / `selfplay` seats are `wants_ui` so the
+  bot answers them and never reads the string. Needs a state flag
+  ("no prompt text") set by the headless drivers; filed, not built.
+* **Floors re-read here, so nobody re-reads them:** `cleanup_wear_off`'s
+  battlefield `iter_mut` unshares the zone on 6,214 of 6,358 cleanups at
+  ~476 Ir (≤ 0.08 %); `sba_board_scan` 1,178 Ir a sweep over 60 k sweeps
+  (2.0 %) is the seven instance reads per card; `check_state_based_
+  actions_into` self 1,785 a sweep is its gate chain; `fire_combat_
+  damage_triggers` ~2 k self per damage event (1.55 %) is its phased
+  board walks; the dispatcher's 352 k calls take the empty-batch return
+  on most; `Vec::from_iter` 8.6 % inclusive is the block planner's
+  per-sim `attacker_info` collect (35.9 M, consumed whole) and the layer
+  pass's `compute_permanents` views (real work).
 
 **State at the `(-250)` tip — THE IR BASE MOVED (`panic = "abort"` on
 every optimized profile, three-pool Ir against the `(-249)` tip):

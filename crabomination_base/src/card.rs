@@ -8246,36 +8246,39 @@ impl CardInstance {
         }
     }
 
+    /// One pass over the counter bag, not one `counter_count` scan per
+    /// P/T counter kind: the bag holds one entry per kind (`add` / `insert`
+    /// find-or-push), so summing each entry's contribution reads the same
+    /// answer, and the six or seven scans were ~100 Ir a call on a bag that
+    /// is empty or one entry long (PERF `(-259)`).
     pub fn power(&self) -> i32 {
-        let plus = self.counter_count(CounterType::PlusOnePlusOne) as i32;
-        let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
-        let minus_one_zero = self.counter_count(CounterType::MinusOneMinusZero) as i32;
-        let plus_one_zero = self.counter_count(CounterType::PlusOnePlusZero) as i32;
-        let plus_two_zero = self.counter_count(CounterType::PlusTwoPlusZero) as i32;
-        let plus_two_two = self.counter_count(CounterType::PlusTwoPlusTwo) as i32;
-        self.definition.base_power() + self.power_bonus + self.perm_power_bonus + plus
-            - minus
-            - minus_one_zero
-            + plus_one_zero
-            + 2 * plus_two_zero
-            + 2 * plus_two_two
+        let mut p = self.definition.base_power() + self.power_bonus + self.perm_power_bonus;
+        for (ct, n) in self.counters.iter() {
+            let n = *n as i32;
+            p += match ct {
+                CounterType::PlusOnePlusOne | CounterType::PlusOnePlusZero => n,
+                CounterType::MinusOneMinusOne | CounterType::MinusOneMinusZero => -n,
+                CounterType::PlusTwoPlusZero | CounterType::PlusTwoPlusTwo => 2 * n,
+                _ => 0,
+            };
+        }
+        p
     }
 
     pub fn toughness(&self) -> i32 {
-        let plus = self.counter_count(CounterType::PlusOnePlusOne) as i32;
-        let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
-        let minus_zero_one = self.counter_count(CounterType::MinusZeroMinusOne) as i32;
-        let minus_zero_two = self.counter_count(CounterType::MinusZeroMinusTwo) as i32;
-        let plus_zero_one = self.counter_count(CounterType::PlusZeroPlusOne) as i32;
-        let plus_zero_two = self.counter_count(CounterType::PlusZeroPlusTwo) as i32;
-        let plus_two_two = self.counter_count(CounterType::PlusTwoPlusTwo) as i32;
-        self.definition.base_toughness() + self.toughness_bonus + self.perm_toughness_bonus + plus
-            - minus
-            - minus_zero_one
-            - 2 * minus_zero_two
-            + plus_zero_one
-            + 2 * plus_zero_two
-            + 2 * plus_two_two
+        let mut t =
+            self.definition.base_toughness() + self.toughness_bonus + self.perm_toughness_bonus;
+        for (ct, n) in self.counters.iter() {
+            let n = *n as i32;
+            t += match ct {
+                CounterType::PlusOnePlusOne | CounterType::PlusZeroPlusOne => n,
+                CounterType::MinusOneMinusOne | CounterType::MinusZeroMinusOne => -n,
+                CounterType::MinusZeroMinusTwo => -2 * n,
+                CounterType::PlusZeroPlusTwo | CounterType::PlusTwoPlusTwo => 2 * n,
+                _ => 0,
+            };
+        }
+        t
     }
 
     pub fn counter_count(&self, ct: CounterType) -> u32 {
