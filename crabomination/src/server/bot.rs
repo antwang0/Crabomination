@@ -10043,6 +10043,54 @@ fn repair_block_plans(state: &GameState, seat: usize, candidates: &mut Vec<Vec<(
     });
 }
 
+/// What the block chain needs before it can offer a move, resolved once
+/// per decision: this seat's legal blockers, the attackers pointed at it,
+/// and the legal pairs. `None` when there is nothing to add — no free
+/// blocker, no attacker, no legal pair — which is what lets
+/// [`pick_blocks_scored`] hand back a one-candidate menu without
+/// simulating it: the chain ran on 65.6 % of block searches under the
+/// round-56 default (`CRAB_ATTACK_CENSUS`, sealed, 1,200 games) and the
+/// other third paid one combat sim of bare "no blocks" for an argmax of
+/// one.
+struct BlockChainSetup<'a> {
+    blockers: Vec<(&'a crate::card::CardInstance, std::sync::Arc<crate::game::layers::ComputedPermanent>)>,
+    attackers: Vec<(&'a crate::card::CardInstance, Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>)>,
+    can: Vec<Vec<bool>>,
+}
+
+impl<'a> BlockChainSetup<'a> {
+    fn new(state: &'a GameState, seat: usize) -> Option<Self> {
+        let blockers = legal_blockers(state, seat);
+        if blockers.is_empty() {
+            return None;
+        }
+        let attackers: Vec<(&crate::card::CardInstance, Option<_>)> = state
+            .attacking
+            .iter()
+            .filter(|a| state.defender_for(a.target) == Some(seat))
+            .filter_map(|a| state.battlefield_find(a.attacker))
+            .map(|c| (c, state.computed_permanent(c.id)))
+            .collect();
+        if attackers.is_empty() {
+            return None;
+        }
+        // The legal pairs, resolved once per decision.
+        let can: Vec<Vec<bool>> = blockers
+            .iter()
+            .map(|(b, bcp)| {
+                attackers
+                    .iter()
+                    .map(|(a, acp)| state.blocker_can_block_attacker_pair(b, bcp, a, acp.as_deref()))
+                    .collect()
+            })
+            .collect();
+        if !can.iter().flatten().any(|&x| x) {
+            return None;
+        }
+        Some(Self { blockers, attackers, can })
+    }
+}
+
 /// The block chain (see [`EvalWeights::block_chain`]): grow a block plan
 /// from the repaired "no blocks" one move at a time, keeping a move only
 /// when its simulated combat scores strictly above finalizing the plan so
@@ -10067,35 +10115,10 @@ fn block_chain_candidate(
     w: &EvalWeights,
     menu: &[Vec<(CardId, CardId)>],
     menu_scores: &[(usize, i32)],
+    setup: BlockChainSetup<'_>,
 ) -> Option<(Vec<(CardId, CardId)>, i32)> {
     use crate::card::Keyword;
-    let blockers = legal_blockers(state, seat);
-    if blockers.is_empty() {
-        return None;
-    }
-    let attackers: Vec<(&crate::card::CardInstance, Option<_>)> = state
-        .attacking
-        .iter()
-        .filter(|a| state.defender_for(a.target) == Some(seat))
-        .filter_map(|a| state.battlefield_find(a.attacker))
-        .map(|c| (c, state.computed_permanent(c.id)))
-        .collect();
-    if attackers.is_empty() {
-        return None;
-    }
-    // The legal pairs, resolved once per decision.
-    let can: Vec<Vec<bool>> = blockers
-        .iter()
-        .map(|(b, bcp)| {
-            attackers
-                .iter()
-                .map(|(a, acp)| state.blocker_can_block_attacker_pair(b, bcp, a, acp.as_deref()))
-                .collect()
-        })
-        .collect();
-    if !can.iter().flatten().any(|&x| x) {
-        return None;
-    }
+    let BlockChainSetup { blockers, attackers, can } = setup;
     // Cheapest blockers first, for the gang move and for candidate order.
     let mut order: Vec<usize> = (0..blockers.len()).collect();
     order.sort_by_cached_key(|&i| permanent_value(state, blockers[i].0.id, w));
@@ -10196,8 +10219,11 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
     let w = &tail_guarded(state, seat, w);
     let mut candidates = block_candidates_for_mcts(state, seat, w);
     // A one-candidate menu is bare "no blocks" (or greedy with the search
-    // off); the block chain prices it rather than returning it.
-    if candidates.len() == 1 && w.block_chain == 0 {
+    // off); the block chain prices it rather than returning it — when it
+    // can run at all. With nothing to add, the one candidate is the
+    // answer and its sim would only feed an argmax of one.
+    let setup = if w.block_chain > 0 { BlockChainSetup::new(state, seat) } else { None };
+    if candidates.len() == 1 && setup.is_none() {
         return candidates.swap_remove(0);
     }
 
@@ -10211,8 +10237,9 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
     // and every tie, and skipped when the menu already holds that plan.
     let menu_len = candidates.len();
     let mut chain_novel = false;
-    if w.block_chain > 0
-        && let Some((chain, score)) = block_chain_candidate(state, seat, w, &candidates, &scored)
+    if let Some(setup) = setup
+        && let Some((chain, score)) =
+            block_chain_candidate(state, seat, w, &candidates, &scored, setup)
         && !candidates.iter().any(|c| block_set_key(c) == block_set_key(&chain))
     {
         candidates.push(chain);
@@ -16168,7 +16195,7 @@ mod tests {
         let (g, atk) = attacked_board(&[menacing], 3);
         let w = EvalWeights::block_chain_on();
         let menu = block_candidates_for_mcts(&g, 1, &w);
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[]).expect("scored");
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run")).expect("scored");
         assert_ne!(chain.iter().filter(|(_, a)| *a == atk[0]).count(), 1, "{chain:?}");
         g.clone().declare_blockers(chain).expect("the chained plan is legal");
         let picked = pick_blocks_scored(&g, 1, &w);
@@ -16187,7 +16214,7 @@ mod tests {
         let w = EvalWeights::block_chain_on();
         let menu = block_candidates_for_mcts(&g, 1, &w);
         assert_eq!(menu, vec![Vec::new()], "the menu is bare: {menu:?}");
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[]).expect("scored");
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run")).expect("scored");
         assert_eq!(chain.len(), 2, "both bears on the giant: {chain:?}");
         assert!(chain.iter().all(|(_, a)| *a == atk[0]), "{chain:?}");
         let picked = pick_blocks_scored(&g, 1, &w);
@@ -16208,7 +16235,7 @@ mod tests {
             !menu.iter().any(|c| c.len() == 4),
             "the menu never holds the double gang: {menu:?}"
         );
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[]).expect("scored");
+        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run")).expect("scored");
         assert_eq!(chain.len(), 4, "two bears on each giant: {chain:?}");
         for a in &atk {
             assert_eq!(chain.iter().filter(|(_, x)| x == a).count(), 2, "{chain:?}");
