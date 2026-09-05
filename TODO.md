@@ -43,7 +43,8 @@ sixty-seventh pass, so don't re-take that.
    eligible attacker returned without its full-turn sim, Ir -2.17 % / -2.26 % cube, wall 0.984);
    round 59's blocker gate REFUTED (flat, neutral); round 60 ADOPTED (`attack_skip_open` on the
    default, wall 0.959, no loss); `(-256)` TAKEN (one redeal per decision, not per candidate,
-   Ir -1.54 % / -2.56 % cube, wall 0.991). The default is ~0.79 (sealed) / ~0.68 (cube) of the r56
+   Ir -1.54 % / -2.56 % cube, wall 0.991); round 61's holdback cap REFUTED (flat, neutral) and
+   the actor-path map taken. The default is ~0.79 (sealed) / ~0.68 (cube) of the r56
    default's wall clock, ~1.7x `gang`; `dflt56` / `dflt58` are the frozen controls. Sweep on the
    adopted default clean (24,000 games); scaling 96 % linear at 4 threads.
 4. **Perf leads (PERF candidates, "THE ACTOR-PATH MAP", taken this run under `dflt`):** the

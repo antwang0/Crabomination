@@ -3358,6 +3358,16 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### Round 61 REFUTED — `attack_search` capped at 3 (`dflt-as3`): paired wall clock **0.991 median / 1.000 mean**, ladder 49.98 pooled, not adopted
+
+Holdback wins by menu index (sealed, 2,400 games): #1 2,060 / 14,470
+offered, #2 1,262 / 14,470, #3 282 / 7,384, #4 48 / 3,402, #5 18 /
+1,540, #6+ 10 / 698. The cap drops 5,640 of ~196,000 attack sims and 76
+argmax wins in 28,940 searches; the wall clock cannot see it, the
+cells read 49.9 / 50.0 / 50.0 / 50.0. The menu's cost is its first two
+holdbacks and so are 90 % of its wins — no cheap cut here. The census
+column stays (ML_NOTES round 61).
+
 ### `(-256)` TAKEN — one redeal per decision, not per candidate: the sims start from a shared `SimStarts` base: sealed default Ir **-1.537 %** / cube **-2.559 %**, paired wall clock **0.991**
 
 ```text
@@ -7142,7 +7152,9 @@ searches). In order:
 (1) ~~the empty-greedy chain's pre-filter~~ CLOSED by round 59: the
 chain that actually runs from an empty greedy is 1 876 searches per
 1 200 games and wins 452 of them; the blocker gate was flat on wall
-clock and strength-neutral. What is left of the attack search's cost is
+clock and strength-neutral. The holdback menu is CLOSED as a lead by round
+61 (the deep holdbacks are 3 % of the sims and a cap is flat).
+What is left of the attack search's cost is
 the sim body itself — `simulate_attack_outcome_once` is 65.5 % of the
 sealed default's Ir inclusive, ~50 engine priority passes a sim on a
 clone, the block sim 6.2 % — and then the menu (3.3 candidates a

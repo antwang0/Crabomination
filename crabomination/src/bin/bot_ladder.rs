@@ -289,6 +289,9 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // Round 60: the open-board shortcut re-read on the round-58 default.
         // Gate as A against `dflt58` for *no loss* (.ladder/run_r60_open.sh).
         "dflt-open" => Some(Pilot::Scored(EvalWeights::attack_skip_open_default())),
+        // Round 61: the holdback menu capped at three. Gate as A against
+        // `dflt` for *no loss* (.ladder/run_r61_holdbacks.sh).
+        "dflt-as3" => Some(Pilot::Scored(EvalWeights::attack_search_default3())),
         // The open-board shortcut: no opposing creature / planeswalker /
         // battle, so the attack search takes greedy without a sim. A
         // throughput device; gate as A against `gang` for *no loss*.
@@ -1679,7 +1682,7 @@ fn main() {
     // What the attack search (PERF (-21), ~60 % of `cube`) decides. Off
     // unless `CRAB_ATTACK_CENSUS` is set.
     if crabomination::server::bot::attack_census::on() {
-        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty, e_new, e_won, gate, gate_won] =
+        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty, e_new, e_won, gate, gate_won, h1, h2, h3, h4, h5, h6, o1, o2, o3, o4, o5, o6] =
             crabomination::server::bot::attack_census::snapshot();
         let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
         println!(
@@ -1689,7 +1692,8 @@ fn main() {
              {empty_greedy}; chain proposed a new set {chain_new} ({:.1} %), won {chain_won} \
              ({:.1} %); chain sims {chain_sims} ({:.2}/search), start reused {chain_reuse}, \
              from empty greedy {chain_empty} (proposed {e_new}, won {e_won}; blocker gate covers \
-             {gate}, chain won there {gate_won})",
+             {gate}, chain won there {gate_won}); holdbacks by menu index won/offered \
+             {h1}/{o1} {h2}/{o2} {h3}/{o3} {h4}/{o4} {h5}/{o5} {h6}+/{o6}+",
             if calls == 0 { 0.0 } else { cands as f64 / calls as f64 },
             pct(greedy, calls),
             pct(none, calls),

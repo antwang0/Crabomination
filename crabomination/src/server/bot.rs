@@ -1952,6 +1952,13 @@ impl EvalWeights {
         Self { attack_empty_gate: true, ..Self::round58_default() }
     }
 
+    /// The holdback menu capped at three on the round-60 default (round
+    /// 61): ladder `dflt-as3` as A against `dflt`, gated for no loss. See
+    /// [`attack_search`](Self::attack_search) — the default's cap is 6.
+    pub const fn attack_search_default3() -> Self {
+        Self { attack_search: 3, ..Self::default_const() }
+    }
+
     /// The open-board shortcut on the round-58 default (round 60): ladder
     /// `dflt-open` as A against `dflt58`, gated for no loss. See
     /// [`attack_skip_open`](Self::attack_skip_open); `atk-open` is the same
@@ -9303,8 +9310,10 @@ pub mod attack_census {
     /// run from an empty greedy (the wide flag), ... of which the chain
     /// proposed a set, ... and it won, empty-greedy searches the blocker
     /// gate covers (`attack_empty_gate`, counted whether or not it is on),
-    /// ... of which the chain won]`.
-    pub static N: [AtomicU64; 17] = [const { AtomicU64::new(0) }; 17];
+    /// ... of which the chain won, then six slots of holdback wins by menu
+    /// index (greedy-minus-one #1..#6, the last slot folding the rest) and
+    /// six of holdbacks OFFERED at that index]`.
+    pub static N: [AtomicU64; 29] = [const { AtomicU64::new(0) }; 29];
 
     /// Bump counter `i` by `n` when the census is on.
     pub fn add(i: usize, n: u64) {
@@ -9362,6 +9371,12 @@ pub mod attack_census {
             }
         } else {
             N[2 + chosen.min(2)].fetch_add(1, Relaxed);
+            if chosen >= 2 {
+                N[17 + (chosen - 2).min(5)].fetch_add(1, Relaxed);
+            }
+        }
+        for idx in 0..candidates.saturating_sub(2).min(6) {
+            N[23 + idx].fetch_add(1, Relaxed);
         }
         if chain_novel {
             N[8].fetch_add(1, Relaxed);
@@ -9414,7 +9429,7 @@ pub mod attack_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 17] {
+    pub fn snapshot() -> [u64; 29] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }

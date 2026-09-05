@@ -3943,3 +3943,27 @@ On `--decks cube` the same three read 0.750 × 0.977 × 0.939 ≈ **0.69**
 a larger share there. A fresh-seed sweep on the adopted default (8
 primes × {all, cube}, 24 000 games) is clean, and the actor scaling
 probe reads 96 % linear at 4 threads.
+
+## Round 61 — the holdback menu capped at three: strength-neutral, cost-flat, NOT adopted (2026-09-05)
+
+`attack_search` is 6 on the default: greedy, all-home, then greedy-minus-
+one for the six lowest-toughness attackers. With the attack chain
+growing declarations from nobody since round 55, the deep holdbacks
+looked redundant. A census by menu index first (`CRAB_ATTACK_CENSUS`,
+sealed, 2 400 games; "won" is the argmax, "offered" the searches with
+that index on the menu):
+
+| holdback | #1 | #2 | #3 | #4 | #5 | #6+ |
+|---|---|---|---|---|---|---|
+| won / offered | 2 060 / 14 470 | 1 262 / 14 470 | 282 / 7 384 | 48 / 3 402 | 18 / 1 540 | 10 / 698 |
+
+Capping at three (`dflt-as3`, `.ladder/run_r61_holdbacks.sh`) drops 76
+argmax wins in 28 940 searches and 5 640 of ~196 000 attack sims.
+Paired wall clock **0.991 median / 1.000 mean** (5 reps) — inside the
+noise; cells 49.9 / 50.0 / 50.0 / 50.0 vs `dflt` (pooled 49.98, every
+cell within ±0.07). A device that buys no measurable throughput is not
+adopted whatever the cells say (the round-59 precedent). The instrument
+stays: the table above is the first per-index reading of the holdback
+menu and it says the menu's cost is its first two holdbacks (offered on
+every multi-attacker board, 3.3 candidates a search), which are also
+where 90 % of its wins are — there is no cheap cut in this menu.
