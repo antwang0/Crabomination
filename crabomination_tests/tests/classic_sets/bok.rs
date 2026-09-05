@@ -218,14 +218,6 @@ fn indebted_samurai_mourns_with_a_counter() {
     assert_eq!(g.battlefield_find(sam).map(|c| c.counter_count(CounterType::PlusOnePlusOne)), Some(1));
 }
 
-/// Isao can't be countered and keeps a Samurai alive.
-#[test]
-fn isao_is_uncounterable_and_regenerates() {
-    let d = catalog::isao_enlightened_bushi();
-    assert!(d.keywords.contains(&Keyword::CantBeCountered));
-    assert!(d.keywords.contains(&Keyword::Bushido(2)));
-}
-
 /// Mannichi flips everyone's power and toughness.
 #[test]
 fn mannichi_switches_every_bodys_stats() {
@@ -666,14 +658,6 @@ fn heart_of_light_seals_both_ways() {
         &mut evs,
     );
     assert_eq!(g.players[0].life, life, "deals nothing");
-}
-
-/// Ashen Monstrosity is forced into combat.
-#[test]
-fn ashen_monstrosity_must_swing() {
-    let d = catalog::ashen_monstrosity();
-    assert!(d.keywords.contains(&Keyword::MustAttack));
-    assert!(d.keywords.contains(&Keyword::Haste));
 }
 
 /// The BOK stat lines match print.

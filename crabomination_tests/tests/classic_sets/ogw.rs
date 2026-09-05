@@ -1726,15 +1726,6 @@ fn visions_of_brutality_cant_block_and_bleeds() {
         "controller loses life equal to the 2 combat damage dealt");
 }
 
-/// Kor Castigator can't be blocked by Eldrazi Scions.
-#[test]
-fn kor_castigator_evades_scions() {
-    use crabomination::card::Keyword;
-    let def = catalog::kor_castigator();
-    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))));
-    assert_eq!((def.power, def.toughness), (3, 1));
-}
-
 /// Mutant's Prey fights an opponent's creature using a counter-bearing attacker.
 #[test]
 fn mutants_prey_fights() {

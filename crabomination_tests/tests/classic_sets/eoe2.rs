@@ -1,6 +1,6 @@
 //! Edge of Eternities (EOE) gap closure.
 
-use crabomination::card::{CounterType, Keyword};
+use crabomination::card::CounterType;
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
@@ -72,14 +72,6 @@ fn famished_worldsire_devours_lands() {
     let c = g.battlefield_find(sire).expect("Worldsire");
     assert_eq!(c.counters.get(&CounterType::PlusOnePlusOne).copied(), Some(6));
     assert!(g.battlefield_find(bear).is_some(), "creatures aren't devoured");
-}
-
-/// Ward {3} is printed on the Worldsire.
-#[test]
-fn famished_worldsire_has_ward_three() {
-    let d = catalog::famished_worldsire();
-    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))));
-    assert_eq!((d.power, d.toughness), (0, 0));
 }
 
 /// The Inquisitor exiles an opponent's hand card and leaves it playable for its

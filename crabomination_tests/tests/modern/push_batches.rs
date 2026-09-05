@@ -71,16 +71,6 @@ fn snapcaster_mage_etb_grants_may_play_on_gy_is_card() {
 }
 
 #[test]
-fn snapcaster_mage_is_a_two_one_flash_wizard() {
-    use crabomination::card::{CreatureType, Keyword};
-    let snap = catalog::snapcaster_mage();
-    assert_eq!(snap.power, 2);
-    assert_eq!(snap.toughness, 1);
-    assert!(snap.keywords.contains(&Keyword::Flash));
-    assert!(snap.subtypes.creature_types.contains(&CreatureType::Wizard));
-}
-
-#[test]
 fn pyroblast_counters_a_blue_spell() {
     use crabomination::game::types::Target;
     let mut g = two_player_game();

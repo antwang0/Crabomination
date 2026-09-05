@@ -964,12 +964,3 @@ fn last_caress_drains_and_draws() {
     assert_eq!(g.players[0].life, 21);
     assert_eq!(g.players[0].hand.len(), before + 1);
 }
-
-/// Lightning Angel ships all three keywords.
-#[test]
-fn lightning_angel_keywords() {
-    let def = catalog::lightning_angel();
-    for kw in [Keyword::Flying, Keyword::Vigilance, Keyword::Haste] {
-        assert!(def.keywords.contains(&kw));
-    }
-}

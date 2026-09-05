@@ -12,15 +12,6 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
     }
 }
 
-/// Assault Zeppelid is a 3/3 with flying and trample.
-#[test]
-fn assault_zeppelid_flying_trample() {
-    let z = catalog::assault_zeppelid();
-    assert_eq!((z.power, z.toughness), (3, 3));
-    assert!(z.keywords.contains(&Keyword::Flying));
-    assert!(z.keywords.contains(&Keyword::Trample));
-}
-
 /// Sky Hussar untaps all your creatures when it enters.
 #[test]
 fn sky_hussar_untaps_your_creatures_on_etb() {
@@ -676,14 +667,6 @@ fn cytoplast_manipulator_steals_counter_creature() {
     .expect("steal");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "creature is now controlled by you");
-}
-
-/// Paladin of Prahv has lifelink (its "gain life on damage" body).
-#[test]
-fn paladin_of_prahv_has_lifelink() {
-    let p = catalog::paladin_of_prahv();
-    assert_eq!((p.power, p.toughness), (3, 4));
-    assert!(p.keywords.contains(&Keyword::Lifelink));
 }
 
 /// Wit's End empties a target player's hand.

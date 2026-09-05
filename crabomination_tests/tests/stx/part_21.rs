@@ -1771,13 +1771,3 @@ fn prismari_bonfire_b172_burns_and_mints_treasure() {
     ).count();
     assert_eq!(t, 1);
 }
-
-#[test]
-fn inkling_stylist_b174_is_a_two_mana_flying_lifelink_inkling() {
-    let def = catalog::inkling_stylist_b174();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.is_creature());
-    assert!(def.has_creature_type(CreatureType::Inkling));
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-}

@@ -35,7 +35,8 @@ sixty-seventh pass, so don't re-take that.
    10m12s, the nextest build ~11 min, suite 98 s, `nextest` needs installing; the release-fast
    typecheck 1m34s; callgrind `--games 6` x three pools in parallel ~1.5 min; `bench_ab.py`
    16 pairs ~1 min. ⚠ `pkill -f` kills your own shell — kill by pid.
-2. **Gates at the `(-253)` tip (PERF Baseline):** suite 19,255 / 0 / 5, workspace clippy,
+2. **Gates at the `(-253)` tip (PERF Baseline):** suite 19,220 / 0 / 5 (35 data tests
+   deleted, PERF's test-suite section), workspace clippy,
    release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7, the
    three-pool Ir re-taken to the `(-250)` numbers, a fresh-seed sweep (8 primes 211..251,
    `all` + `cube`, 24,000 games) 0 undecided / 0 panics. The Ir base is still `(-250)`'s

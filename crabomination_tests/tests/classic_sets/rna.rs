@@ -812,13 +812,6 @@ fn sylvan_brushstrider_gains_two() {
     assert_eq!(g.players[0].life, life + 2, "ETB gained 2");
 }
 
-/// Enraged Ceratok can't be blocked by a power-2-or-less creature.
-#[test]
-fn enraged_ceratok_evades_small_blockers() {
-    let c = catalog::enraged_ceratok();
-    assert!(c.keywords.contains(&Keyword::CantBeBlockedByPowerAtMost(2)), "power-2-or-less can't block");
-}
-
 /// Dagger Caster pings each opponent and each opposing creature on entry.
 #[test]
 fn dagger_caster_etb_pings() {
@@ -1201,13 +1194,6 @@ fn frilled_mystic_flash_counter() {
         if matches!(&**body, Effect::CounterSpell { .. })), "ETB may counter a spell");
 }
 
-/// Rubblebelt Runner can't be blocked by a token.
-#[test]
-fn rubblebelt_runner_evades_tokens() {
-    let c = catalog::rubblebelt_runner();
-    assert!(c.keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))), "carries the token-block restriction");
-}
-
 /// Zegana draws on entry when you control a countered creature.
 #[test]
 fn zegana_etb_draws_with_counter() {
@@ -1273,12 +1259,6 @@ fn skarrgan_hellkite_ping_needs_counter() {
     g.battlefield_find_mut(dragon).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     let with_counter = g.perform_action(GameAction::ActivateAbility { card_id: dragon, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(!matches!(with_counter, Err(crabomination::game::GameError::AbilityConditionNotMet)), "counter → gate satisfied: {with_counter:?}");
-}
-
-/// Sunder Shaman can't be blocked by more than one creature.
-#[test]
-fn sunder_shaman_menace_like() {
-    assert!(catalog::sunder_shaman().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne), "can't be blocked by more than one");
 }
 
 // ── RNA batch 7 (modern_decks) behavior tests ───────────────────────────────

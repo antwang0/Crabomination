@@ -2175,6 +2175,20 @@ honest absolute; use `ab_wall.py` for any comparison between two binaries.**
 
 ## Test-suite cleanup does not buy build time at this scale — measured 2026-08-27
 
+**Sweep at the `(-253)` tip (2026-09-05):** 35 single-card printed-line
+tests deleted across `modern` (14), `classic_sets` (15), `mh` (2), `stx`
+(2), `core_rules` (1 — `c21::zetalpa_has_all_keywords`) — each asserted
+only P/T, keywords, types, subtypes or cmc of one `catalog::` definition,
+which `catalog_registration`'s oracle-backed audits already check for
+every card. Kept: every multi-card table (`*_stat_lines`, `*_bodies_*`,
+`*_printed_shapes`), every test asserting ability *structure* (a trigger
+count, an effect variant, an alt cost), the serde and `effect_short_text`
+tests, and the 18 `[CR]` rows. `find_data_tests.sh` still lists ~185
+rows after this, nearly all of them the tables that are the sweep's
+destination, so the list is not a delete count. Suite 19,255 -> 19,220,
+-302 test LOC, no link-time claim (the section above measured that lever
+dead).
+
 The suite convention says "test *execution* is nearly free; the cost is
 compile + link", which is the reason given for deleting pure-data tests. At
 the eighty-second pass nineteen of them went (the last of what
@@ -2558,7 +2572,8 @@ and was re-taken on this container to the same three numbers.
   sealed   1,886,392,273    1,886,392,623   +0.00002 %
 
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
-suite   19,255 / 0 / 5 (97.8 s under nextest); golden traces 7/7 in it
+suite   19,255 / 0 / 5 (97.8 s under nextest) before the data-test sweep, 19,220 after it
+        (the five touched binaries re-run green); golden traces 7/7 in it
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 release the release-fast typecheck gate (debug-assertions off): clean, 1m34s
 --bench profiling-fast (system allocator): 195,806 decisions / 27.49 turns / 611.9 per game /

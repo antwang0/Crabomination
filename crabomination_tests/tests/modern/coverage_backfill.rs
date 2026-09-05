@@ -381,14 +381,6 @@ fn saheeli_rai_minus_seven_rejects_duplicate_names() {
     assert!(g.battlefield_find(c).is_some());
 }
 
-#[test]
-fn containment_priest_is_a_two_two_with_flash() {
-    let g_def = catalog::containment_priest();
-    assert_eq!((g_def.power, g_def.toughness), (2, 2));
-    assert!(g_def.keywords.contains(&crabomination::card::Keyword::Flash),
-        "Containment Priest has Flash");
-}
-
 /// Containment Priest exiles a reanimated (non-cast) nontoken creature
 /// instead of letting it enter the battlefield.
 #[test]
@@ -556,13 +548,6 @@ fn fork_is_a_red_copy_spell() {
     let d = catalog::fork();
     assert!(matches!(d.effect, crabomination::effect::Effect::CopySpellMayChooseTargets { .. }));
     assert_eq!(d.cost.cmc(), 2);
-}
-
-#[test]
-fn simian_spirit_guide_is_a_two_two_ape_spirit() {
-    let d = catalog::simian_spirit_guide();
-    assert_eq!((d.power, d.toughness), (2, 2));
-    assert!(d.has_creature_type(crabomination::card::CreatureType::Ape));
 }
 
 /// Simian Spirit Guide: "Exile this from your hand: Add {R}." pitches for

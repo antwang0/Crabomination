@@ -11,16 +11,6 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
     }
 }
 
-/// Iron Giant ships as a 6/6 with vigilance, reach, and trample.
-#[test]
-fn iron_giant_keywords() {
-    let g = catalog::iron_giant();
-    assert_eq!((g.power, g.toughness), (6, 6));
-    for kw in [Keyword::Vigilance, Keyword::Reach, Keyword::Trample] {
-        assert!(g.keywords.contains(&kw), "Iron Giant has {kw:?}");
-    }
-}
-
 /// Sazh's Chocobo grows with a +1/+1 counter on landfall.
 #[test]
 fn sazhs_chocobo_grows_on_landfall() {
@@ -758,15 +748,6 @@ fn coliseum_behemoth_modal_draw() {
     g.move_card_to_battlefield_for_test(0, catalog::coliseum_behemoth());
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "chose the draw mode");
-}
-
-/// Hill Gigas ships with trample, haste, and Mountaincycling.
-#[test]
-fn hill_gigas_keywords() {
-    let g = catalog::hill_gigas();
-    assert!(g.keywords.contains(&Keyword::Trample));
-    assert!(g.keywords.contains(&Keyword::Haste));
-    assert!(g.keywords.iter().any(|k| matches!(k, Keyword::Landcycling(_, crabomination::card::LandType::Mountain))));
 }
 
 /// Cloudbound Moogle puts a +1/+1 counter on a creature when it enters.

@@ -880,15 +880,6 @@ fn tectonic_giant_attack_burn_mode() {
 
 // ── THB batch (modern_decks) — vanilla/ETB/death/constellation/activated ──────
 
-/// Nyxborn Brute is a 7/3 enchantment creature.
-#[test]
-fn nyxborn_brute_is_enchantment_creature() {
-    let c = catalog::nyxborn_brute();
-    assert!(c.card_types.contains(&crabomination::card::CardType::Enchantment));
-    assert!(c.card_types.contains(&crabomination::card::CardType::Creature));
-    assert_eq!((c.power, c.toughness), (7, 3));
-}
-
 /// Moss Viper has deathtouch.
 #[test]
 fn moss_viper_has_deathtouch() {

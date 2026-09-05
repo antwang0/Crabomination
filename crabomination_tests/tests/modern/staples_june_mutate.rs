@@ -773,18 +773,6 @@ fn bushmeat_poacher_sac_gains_life_and_draws() {
 
 
 #[test]
-fn mosscoat_goriak_and_lava_serpent_stats() {
-    use crabomination::card::Keyword;
-    let g1 = catalog::mosscoat_goriak();
-    assert_eq!((g1.power, g1.toughness), (2, 4));
-    assert!(g1.keywords.contains(&Keyword::Vigilance));
-    let s = catalog::lava_serpent();
-    assert_eq!((s.power, s.toughness), (5, 5));
-    assert!(s.keywords.contains(&Keyword::Haste));
-    assert!(s.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))));
-}
-
-#[test]
 fn glint_buffs_toughness_and_grants_hexproof() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
@@ -939,13 +927,6 @@ fn titanoth_rex_cycle_adds_trample_counter() {
     assert_eq!(
         g.battlefield_find(bear).unwrap().keyword_counters.get(&Keyword::Trample).copied().unwrap_or(0),
         1, "trample counter from the cycle trigger");
-}
-
-#[test]
-fn crystacean_is_a_flash_wall() {
-    let d = catalog::crystacean();
-    assert_eq!((d.power, d.toughness), (1, 6));
-    assert!(d.keywords.contains(&crabomination::card::Keyword::Flash));
 }
 
 #[test]
@@ -2776,16 +2757,6 @@ fn pridemalkin_counter_trample() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample),
         "countered creature has trample");
-}
-
-/// Dirgur Nemesis is a 6/5 Defender with megamorph.
-#[test]
-fn dirgur_nemesis_stats() {
-    use crabomination::card::Keyword;
-    let d = catalog::dirgur_nemesis();
-    assert_eq!((d.power, d.toughness), (6, 5));
-    assert!(d.keywords.contains(&Keyword::Defender));
-    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_))));
 }
 
 /// Coordinated Charge pumps your team +2/+1 until end of turn.

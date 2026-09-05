@@ -147,18 +147,6 @@ fn barren_moor_cycles() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }
 
-/// Zetalpa carries its full keyword suite.
-#[test]
-fn zetalpa_has_all_keywords() {
-    let z = catalog::zetalpa_primal_dawn();
-    for kw in [
-        Keyword::Flying, Keyword::DoubleStrike, Keyword::Vigilance,
-        Keyword::Trample, Keyword::Indestructible,
-    ] {
-        assert!(z.keywords.contains(&kw), "missing {kw:?}");
-    }
-}
-
 /// Verdant Sun's Avatar gains life equal to a creature's toughness on ETB.
 #[test]
 fn verdant_suns_avatar_gains_life_on_creature_etb() {

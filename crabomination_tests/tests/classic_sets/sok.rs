@@ -128,13 +128,6 @@ fn gaze_of_adamaro_burns_for_their_hand_size() {
     assert_eq!(g.players[1].life, life - 5);
 }
 
-/// Ayumi can't be blocked while the defender has a legendary land.
-#[test]
-fn ayumi_walks_past_legendary_lands() {
-    let ayumi = catalog::ayumi_the_last_visitor();
-    assert!(ayumi.keywords.iter().any(|k| matches!(k, Keyword::LandwalkFiltered(_))));
-}
-
 /// Burning-Eye Zubera only goes off if it soaked four damage.
 #[test]
 fn burning_eye_zubera_needs_four_damage() {

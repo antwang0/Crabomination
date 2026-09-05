@@ -1821,14 +1821,6 @@ fn zurgo_mobilizes_two() {
     assert_eq!(warriors, 2, "Mobilize 2 made two Warrior tokens");
 }
 
-/// Rot-Curse Rakshasa is a 5/5 with trample and decayed.
-#[test]
-fn rot_curse_rakshasa_stats() {
-    let r = catalog::rot_curse_rakshasa();
-    assert_eq!((r.power, r.toughness), (5, 5));
-    assert!(r.keywords.contains(&Keyword::Trample) && r.keywords.contains(&Keyword::Decayed));
-}
-
 /// Flamehold Grappler copies the next spell you cast after it enters.
 #[test]
 fn flamehold_grappler_copies_next_spell() {

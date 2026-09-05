@@ -339,15 +339,6 @@ fn sol_talisman_suspends_and_taps_for_two() {
     assert!(talisman.definition.is_artifact());
 }
 
-/// Gargadon carries trample + suspend 4.
-#[test]
-fn gargadon_stats() {
-    let d = catalog::gargadon();
-    assert!(d.keywords.contains(&Keyword::Trample));
-    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Suspend(4, _))));
-    assert_eq!((d.power, d.toughness), (7, 5));
-}
-
 /// Vile Entomber entombs on ETB.
 #[test]
 fn vile_entomber_entombs() {
@@ -626,14 +617,6 @@ fn abiding_grace_returns_one_drop() {
     g.fire_step_triggers(crabomination::game::types::TurnStep::End);
     drain_stack(&mut g);
     assert!(g.battlefield_find(elf).is_some(), "Llanowar Elves returned");
-}
-
-/// Jade Avenger and Sinister Starfish stat checks.
-#[test]
-fn jade_avenger_and_starfish_stats() {
-    assert!(catalog::jade_avenger().keywords.contains(&Keyword::Bushido(2)));
-    let fish = catalog::sinister_starfish();
-    assert_eq!((fish.power, fish.toughness), (0, 3));
 }
 
 // ── Batch 3 — commons/uncommons ──────────────────────────────────────────────

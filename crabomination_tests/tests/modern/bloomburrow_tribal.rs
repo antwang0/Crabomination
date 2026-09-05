@@ -981,14 +981,6 @@ fn omnath_landfall_escalates_across_three_lands() {
 }
 
 #[test]
-fn gifted_aetherborn_has_deathtouch_lifelink() {
-    use crabomination::card::Keyword;
-    let d = catalog::gifted_aetherborn();
-    assert!(d.keywords.contains(&Keyword::Deathtouch) && d.keywords.contains(&Keyword::Lifelink));
-    assert_eq!((d.power, d.toughness), (2, 3));
-}
-
-#[test]
 fn doom_whisperer_pays_life_to_surveil() {
     let mut g = two_player_game();
     let dw = g.add_card_to_battlefield(0, catalog::doom_whisperer());

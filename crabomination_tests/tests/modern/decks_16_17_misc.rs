@@ -1446,15 +1446,6 @@ fn magda_cannot_tutor_without_five_treasures() {
 }
 
 #[test]
-fn robber_of_the_rich_has_reach_and_haste() {
-    let card = catalog::robber_of_the_rich();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&crabomination::card::Keyword::Reach));
-    assert!(card.keywords.contains(&crabomination::card::Keyword::Haste));
-}
-
-#[test]
 fn robber_of_the_rich_exiles_top_when_defender_has_more_cards() {
     let mut g = two_player_game();
     let robber = g.add_card_to_battlefield(0, catalog::robber_of_the_rich());
@@ -1495,17 +1486,6 @@ fn robber_of_the_rich_no_exile_when_defender_has_fewer_cards() {
 }
 
 // ── Push XXIV: 3 more body stubs ──────────────────────────────────────────
-
-#[test]
-fn phyrexian_revoker_is_a_two_one_phyrexian_construct() {
-    let card = catalog::phyrexian_revoker();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 1);
-    assert!(card.card_types.contains(&crabomination::card::CardType::Artifact));
-    assert!(card.card_types.contains(&crabomination::card::CardType::Creature));
-    assert!(card.subtypes.creature_types.contains(&crabomination::card::CreatureType::Phyrexian));
-    assert!(card.subtypes.creature_types.contains(&crabomination::card::CreatureType::Horror));
-}
 
 #[test]
 fn solemn_simulacrum_etb_may_search_for_basic_land() {
@@ -1703,15 +1683,6 @@ fn sentinel_of_the_nameless_city_ward_counters_unpaid_spell() {
         g.battlefield.iter().any(|c| c.id == sentinel),
         "Ward 2 counters the unpaid Bolt; Sentinel survives",
     );
-}
-
-#[test]
-fn sentinel_of_the_nameless_city_is_a_merfolk_warrior_scout() {
-    use crabomination::card::CreatureType;
-    let s = catalog::sentinel_of_the_nameless_city();
-    assert!(s.has_creature_type(CreatureType::Merfolk));
-    assert!(s.has_creature_type(CreatureType::Warrior));
-    assert!(s.has_creature_type(CreatureType::Scout));
 }
 
 #[test]

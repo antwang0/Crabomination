@@ -404,13 +404,6 @@ fn kozileks_predator_makes_two_spawns() {
         "two Eldrazi Spawn tokens");
 }
 
-#[test]
-fn greater_basilisk_has_deathtouch() {
-    use crabomination::card::Keyword;
-    let b = catalog::greater_basilisk();
-    assert!(b.keywords.contains(&Keyword::Deathtouch) && (b.power, b.toughness) == (3, 5));
-}
-
 // ── Green burn + combat trick ──────────────────────────────────────────────
 
 #[test]

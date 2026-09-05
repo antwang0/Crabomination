@@ -1707,16 +1707,6 @@ fn glidedive_duo_drains_two() {
 }
 
 #[test]
-fn galewind_moose_has_flash_and_evasion_keywords() {
-    use crabomination::card::Keyword;
-    let m = catalog::galewind_moose();
-    for kw in [Keyword::Flash, Keyword::Vigilance, Keyword::Reach, Keyword::Trample] {
-        assert!(m.keywords.contains(&kw), "Galewind Moose has {kw:?}");
-    }
-    assert_eq!((m.power, m.toughness), (6, 6));
-}
-
-#[test]
 fn thieving_otter_draws_on_combat_damage() {
     use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();

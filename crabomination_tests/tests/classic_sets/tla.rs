@@ -350,14 +350,6 @@ fn walltop_sentries_lifegain_needs_a_lesson() {
 }
 
 #[test]
-fn saber_tooth_is_a_french_vanilla_reach() {
-    let def = catalog::saber_tooth_moose_lion();
-    assert_eq!((def.power, def.toughness), (7, 7));
-    assert!(def.keywords.contains(&Keyword::Reach));
-    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Landcycling(_, _))));
-}
-
-#[test]
 fn cunning_maneuver_pumps_and_clues() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

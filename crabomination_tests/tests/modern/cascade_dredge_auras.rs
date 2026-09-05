@@ -366,14 +366,6 @@ fn maelstrom_wanderer_double_cascades_and_grants_haste() {
 }
 
 #[test]
-fn stinkweed_imp_has_flying_deathtouch_and_dredge() {
-    let def = catalog::stinkweed_imp();
-    assert!(def.keywords.contains(&crabomination::card::Keyword::Flying));
-    assert!(def.keywords.contains(&crabomination::card::Keyword::Deathtouch));
-    assert!(def.keywords.iter().any(|k| matches!(k, crabomination::card::Keyword::Dredge(5))));
-}
-
-#[test]
 fn golgari_brownscale_can_dredge_two() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();

@@ -792,15 +792,6 @@ fn big_game_hunter_etb_destroys_a_big_creature() {
 }
 
 #[test]
-fn arrogant_wurm_is_a_four_four_trampling_madness_wurm() {
-    use crabomination::card::Keyword;
-    let def = catalog::arrogant_wurm();
-    assert_eq!((def.power, def.toughness), (4, 4));
-    assert!(def.keywords.contains(&Keyword::Trample));
-    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Madness(_))));
-}
-
-#[test]
 fn cunning_sparkmage_taps_to_ping_for_one() {
     let mut g = two_player_game();
     let mage = g.add_card_to_battlefield(0, catalog::cunning_sparkmage());

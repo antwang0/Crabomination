@@ -191,14 +191,6 @@ fn increasing_vengeance_double_copies_when_flashed_back_from_graveyard() {
 // ── Spined Karok ────────────────────────────────────────────────────────
 
 #[test]
-fn spined_karok_is_a_vanilla_two_four() {
-    let c = catalog::spined_karok();
-    assert_eq!(c.cost.cmc(), 3);
-    assert_eq!((c.power, c.toughness), (2, 4));
-    assert!(c.triggered_abilities.is_empty() && c.activated_abilities.is_empty());
-}
-
-#[test]
 fn brackish_trudge_recurs_from_graveyard_only_after_lifegain() {
     let mut g = two_player_game();
     let id = g.add_card_to_graveyard(0, catalog::brackish_trudge());
