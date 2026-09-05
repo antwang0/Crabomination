@@ -42,6 +42,10 @@ sixty-seventh pass, so don't re-take that.
 4. **Perf leads (PERF candidates, "THE ACTOR-PATH MAP"):** the real game is 4 % of the run, the engine
    under the sims 71 %; in order — the sim casts (35 k Ir each, 9.3 %), the decision submissions'
    resumed work (26 k each, 6.1 %), the creature-death move path (~6.6 k a death). Cards: leftover only.
+5. **Rounds 62-64 (an ML session, rebased in 2026-09-05; numbers in ML_NOTES):** the net adds nothing on the chained
+   heuristic (r62); `removal_sim` ADOPTED on the default (r63, +0.25; its wall clock vs the r61 default is UNREAD); depth
+   on the material leaf 64/128/256 = 52.35/54.75/55.25 → the lobby is the net-free `MctsBot` at 256 (r64); the lean
+   chain = r58's `pairs-empty`, folded in. Gates at this tip: suite 19,234 / 0 / 5, golden 7/7 unchanged, release-fast typecheck.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
