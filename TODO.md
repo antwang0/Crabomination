@@ -29,43 +29,33 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-252)` is the last claimed,
-   `(-253)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-253)` is the last claimed,
+   `(-254)` is next (`git fetch` before naming a leg in a commit). Container gotchas in
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold: `profiling-fast`
-   9m48s, the test build ~12 min, suite 114 s, `nextest` needs installing, the audit
-   (`overflow` + debug-assertions) build 8m36s; warm engine rebuild 3m13s; callgrind
-   `--games 6` x three pools in parallel ~1 min. ⚠ `pkill -f` kills your own shell — kill by pid.
-2. **Gates at the `(-250)` tip (PERF Baseline):** suite 19,255 / 0 / 5, workspace clippy,
-   release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7,
-   three-pool outcomes identical, `robustness_grid.sh --no-actor` green on both the `(-249)`
-   and `(-250)` trees (30 cells / 33,120 games, 0 failures each) and `--pilots` green on
-   `(-250)` (45 cells, 0 failures). The fresh-seed sweep (20 primes > 101, `all` + `cube`) is at `(-248)`: 0 panics /
-   0 stuck, every cap Beacon-class. ⚠ **THE IR BASE MOVED AT `(-250)`** — A/B only against
-   `(-250)`-or-later numbers (`cube` 1,817,493,748 / `fixed` 656,319,384 / `sealed` 1,886,392,273).
-3. **This run:** `(-250)`, `panic = "abort"` on every optimized profile — paired wall clock
-   **+4.45 % / +5.51 %** (two 16-pair `bench_ab.py` runs), Ir -3.1..-3.8 % on all three pools,
-   binary -13 %; found off the first **cachegrind** reading (PERF Profile of record, "THE CACHE
-   AND BRANCH AXIS"; `scripts/cg_cache.py`): I1 misses 4.03 % of Ir, the CoW unshare's clone
-   missing once per 8.6 instructions — front-end-bound, so layout is the lever. And `(-249)`,
-   an untap-static lane in front of `do_untap` (`cube` -0.399 % / `sealed` -0.362 %): a step
-   that reads as once a turn runs once a turn on every simulation clone, and "any static at all"
-   read `true` on nearly every `cube` board.
-4. **Perf leads (PERF candidates, top):** the plain `cube` self table at `(-248)` is re-read to
-   forty rows and every fresh row is priced (floors: the freeze memo's `perms` scan,
-   `grant_scan`, `fire_step_triggers`, `grants_nothing_slow`, `blocker_self_block`, the
-   `IntoIter::drop` spread). Nothing under 1 % is left unread; the next device is structural —
-   the probe design (`simulate_attack_outcome_once`: 32,790 scopes / 6 % of `cube`) or a gather
-   version — or the wall-clock axis: a `bench_ab.py` A/B of a layout change (the `(-200)` unshare
-   direction) that Ir under-prices. Build levers: `opt-level = 2` is REFUTED (`(-251)`, -8.1 %
-   wall clock — level 3's win is the calls it inlines) and so is `-inline-threshold=500`
-   (`(-252)`, flat — it inlines the cold catalog, `.text` -28 %, not the hot working set); the
-   inlining axis is closed from both sides. PGO stays the one build lever left, opt-in by policy. **Serde feature-gating (build time) was scoped, not
-   attempted:** 86 derives in `crabomination_base` and 23 engine files use serde, `snapshot.rs`
-   / `net.rs` / `cow.rs` among them, so the gate would have to thread the engine crate's own
-   modules; not a one-run job.
+   10m12s, the nextest build ~11 min, suite 98 s, `nextest` needs installing; the release-fast
+   typecheck 1m34s; callgrind `--games 6` x three pools in parallel ~1.5 min; `bench_ab.py`
+   16 pairs ~1 min. ⚠ `pkill -f` kills your own shell — kill by pid.
+2. **Gates at the `(-253)` tip (PERF Baseline):** suite 19,255 / 0 / 5, workspace clippy,
+   release-fast typecheck, `--bench` counters identical to `2003d1cf`, golden traces 7/7, the
+   three-pool Ir re-taken to the `(-250)` numbers, a fresh-seed sweep (8 primes 211..251,
+   `all` + `cube`, 24,000 games) 0 undecided / 0 panics. The Ir base is still `(-250)`'s
+   (`cube` 1,817,493,748 / `fixed` 656,319,384 / `sealed` 1,886,392,273).
+3. **This run:** `(-253)` REFUTED — `-C llvm-args=-hot-cold-split=true` is flat on wall clock
+   and +0.4 % I1 misses (PERF Log); with `(-251)`/`(-252)` the profile-free layout and inlining
+   axes are closed from every side — **PGO is the only build lever left**, opt-in by policy.
+   And `PERF.md` 21,520 -> 7,600 lines, the old Log and Baseline entries verbatim in
+   `PERF_ARCHIVE.md`. No engine change; no card change.
+4. **Perf leads (PERF candidates, top):** the source side is at the freeze design's floor —
+   every table under 1 % is read, the allocation table is diffuse (top growth site 8 M Ir),
+   `clone_from_ref_in` splits into five monomorphizations of 2-6 M each. What is left is
+   structural: the probe design (`simulate_attack_outcome_once`, 2,070 probes a six-game
+   `cube` run, ~60 % of it; the candidate menu is a strength decision, see `e725e5c2`) or the
+   unshare direction (`(-200)`/`(-201)`, a per-probe zone copy the CoW cannot avoid). Serde
+   feature-gating (build time) is scoped in PERF, not started; not a one-run job.
 5. **Cards/rules (leftover only):** unchanged — the per-turn cast-name memory, the
    `modes_chosen` sibling, the "when you next attack" `DelayedKind`, then CARD_BACKLOG's
-   printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`).
+   printed-clause ratchets; 2 dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`)
+   left in place: one `Effect` arm each (`CastSpellBack` itself is live at three catalog sites).
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

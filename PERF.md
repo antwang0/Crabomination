@@ -2543,6 +2543,42 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### The layout-flag refutation and the tracker compaction — closing state at the `(-253)` tip
+
+No engine commit: `(-253)` was measured and not landed, and the run's
+other product is `PERF.md` 21,520 -> 7,600 lines (the Log from `(-199)`
+down and the Baseline closing states from the `(-185)` tip down moved
+verbatim to `PERF_ARCHIVE.md`). The Ir base is unchanged from `(-250)`
+and was re-taken on this container to the same three numbers.
+
+```text
+  pool     (-250) base      re-taken here    delta
+  cube     1,817,493,748    1,817,493,538   -0.00001 %   (the once-per-process cost's jitter)
+  fixed      656,319,384      656,319,786   +0.00006 %
+  sealed   1,886,392,273    1,886,392,623   +0.00002 %
+
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,255 / 0 / 5 (97.8 s under nextest); golden traces 7/7 in it
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast typecheck gate (debug-assertions off): clean, 1m34s
+--bench profiling-fast (system allocator): 195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls — counters identical to 2003d1cf; determinism ok (all pairs split);
+        peak_rss 18.9 MiB; games_per_s 374-378 median over 32 paired runs (not a committed number)
+sweep   fresh seeds on the profiling-fast binary: 8 primes 211..251 x {all, cube} x
+        --games 120 --threads 2 = 16 cells / 24,000 games, 0 undecided, 0 panics, every rc 0
+        (release-only: no overflow checks, no debug_assert — the (-248) audit-build sweep stands)
+census  CRAB_ATTACK_CENSUS on cube --games 6 --seed 1: 538 searched, 3.85 candidates/search,
+        greedy 55.0 % / none 32.0 % / holdback 13.0 %, 208 tied the winner — identical to the
+        e725e5c2 reading, so the search menu has not moved in 60 legs
+```
+
+**The device: a profile-free layout flag is refuted in one build and
+one bench.** `bench_ab.py` at 16 pairs costs a minute against a
+ten-minute build, and cachegrind's I1 column on `cube` says the same
+thing deterministically; a build flag that claims layout can be priced
+in under fifteen minutes end to end, which is how `(-251)`..`(-253)`
+closed the axis from three sides.
+
 ### `panic = "abort"` — closing state at the `(-250)` tip, THE NEW IR BASE
 
 One build-profile commit on top of `(-249)`, behaviour-preserving
@@ -3212,6 +3248,36 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-253)` REFUTED — `-C llvm-args=-hot-cold-split=true` on `profiling-fast`: paired wall clock **+0.89 % median / -0.03 % mean** (noise), Ir +0.16 %, I1 misses +0.42 %
+
+```text
+  wall clock, scripts/bench_ab.py, profiling-fast --no-default-features vs the same with the flag, 16 pairs
+    A median 374.18   B median 378.20   paired B/A median +0.89 %  mean -0.03 %  sd 3.78
+  cachegrind, cube (system allocator on both sides)
+    Ir            1,820,495,293 -> 1,823,480,183   +0.16 %
+    I1 misses        71,932,638 ->    72,233,323   +0.42 %
+    D1 misses        46,934,487 ->    46,843,819   -0.19 %
+    mispredicts      36,146,087 ->    36,342,715   +0.54 %  (cond +1.4 %, indirect -5.0 %)
+    .cold symbols  0 -> 4,840; bin_bytes 183,143,512 -> 183,533,352 (+0.2 %)
+  --bench counters identical (195,806 / 27.49 / 611.9 / 0 stalls); determinism ok;
+  three-pool stdout identical to the base but for the elapsed line
+  built with RUSTFLAGS="-C link-arg=-fuse-ld=lld -C llvm-args=-hot-cold-split=true" CARGO_TARGET_DIR=target-hcs
+```
+
+The third side of the layout axis after `(-251)`/`(-252)`: `(-250)` said
+the program is front-end-bound and PGO's -24 % says layout is the lever,
+so the question was whether LLVM's *profile-free* hot/cold splitting
+(static heuristics: `noreturn`, `cold` calls, unlikely branches) buys any
+of that. It does not. With `panic = "abort"` the `noreturn` tails are
+already the small part of every function, so what the pass splits is
+guesswork — 4,840 cold sections carved out of live code, each one an
+extra jump the front end fetches through — and the I1-miss count goes
+*up* by 0.4 %, the conditional mispredicts by 1.4 %, the Ir by 0.16 %;
+the wall clock reads flat inside the instrument's noise. One build, one
+bench, two cachegrinds; not landed. **Do not rebuild.** The layout lever
+needs a profile, which is PGO (opt-in, `scripts/pgo_build.sh`); no
+static flag has moved it.
 
 ### `(-252)` REFUTED — `-C llvm-args=-inline-threshold=500` on `release-fast`: paired wall clock **+0.02 %** (flat), Ir -1.69 %, I1 misses -0.13 %, `.text` -28 %
 
@@ -6837,9 +6903,12 @@ clock, Ir +5.0 %, I1 misses +9.0 %, binary +8.6 % — level 3's win here
 is the calls it inlines, not width)**, **`-inline-threshold=500`
 (`(-252)`: flat wall clock, Ir -1.7 %, I1 misses -0.1 %, `.text` -28 %
 — it inlines the cold catalog constructors, not the hot working set)**.
-The inlining axis is closed from both sides; what is left on the
-build is PGO (a profile, not a threshold) and the unshare direction in
-source. Not tried, with the reason: fat LTO on
+**`-C llvm-args=-hot-cold-split=true` (`(-253)`: flat wall clock,
+Ir +0.16 %, I1 misses +0.42 % — profile-free splitting carves live
+code, not cold code, once `panic = "abort"` has removed the unwind
+tails)**. The inlining axis is closed from both sides and the
+profile-free layout axis is closed too; what is left on the build is
+PGO (a profile, not a heuristic) and the unshare direction in source. Not tried, with the reason: fat LTO on
 `release` (the single-codegen-unit engine already peaks at ~5.9 GB in
 this container — `profiling` cannot build here; fat LTO is worse);
 `opt-level = 3` on the dev deps is already on. **`-C force-frame-
