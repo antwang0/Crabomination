@@ -38,11 +38,11 @@ sixty-seventh pass, so don't re-take that.
    -0.068 %; the growth row split by allocator entry first — 23,212 first allocations, 5,166 re-growths), `(-274)` the
    dispatcher's pair loop reuses the per-event kind mask (sealed -0.202 %, cube +0.027 %; the `SmallVec` form of it read
    +0.35 / +0.58 % and is the `(-229)` rule again). `(-272)` (`drain_trigger_queue`'s split in place) REFUTED at -0.018 %.
-   Sealed -0.299 % over the run. Actor not re-measured (engine legs under the sims; nothing on the recorder path moved).
-4. **Leads (PERF candidates, "READ AT THE (-271) TIP"):** the growth census has no volume row left above 1.35 a call; the
-   sealed self table's unpriced rows are now priced (`fingerprint` floor, `ManaPool::is_empty` ~0.1 %); the land-tap
-   keyword gates stay PRICED (0.24 % actor, not built); the ladder profile is FLAT — re-profile the actor (last read at
-   the `(-268)` tip) before pulling anything else. Cards: leftover only.
+   Sealed -0.299 % / actor -0.212 % over the run (actor against the `(-271)` record; the sealed base matched its record).
+4. **Leads (PERF candidates, "READ AT THE (-271) TIP" and "THE ACTOR RE-READ AT THE (-274) TIP"):** both profiles are
+   FLAT — no growth row with volume above 1.35 a call, every unpriced self row now priced (`fingerprint` floor,
+   `ManaPool::is_empty` ~0.1 %, the prompt-text family ~0.17 % actor). The one lead with a device is the land-tap keyword
+   gates (0.24 % actor, an exact-keyword fold lane, PRICED not built); below it, accept the floor. Cards: leftover only.
 5. **Round 65/66 (ML sessions, ML_NOTES):** lobby pilot is `MctsBot` 256; `attack_blocker_guard` PARKED; round 66 (b3fd2c43):
    converge4 list, `deck_gauntlet`, `stun_x_hold` parked, `own_graveyard_picks` off per pre-registration.
 

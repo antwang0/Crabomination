@@ -2572,7 +2572,9 @@ revert's 0.6 M / 0.4 M exactly.
   cube   dflt, same recipe:                               2,583,686,536 -> 2,582,609,088 Ir  (-0.042 %)
         (-272) -0.016 % [reverted]  (-273) -0.068 %  (-274) +0.027 %
         (this base against the (-271) record's 3,378,573,605 / 2,583,687,288: -2.5 k / -0.8 k Ir, a different host)
-  actor  not re-measured this run (both legs sit under the sims' priority passes, which the sealed default reads; nothing under encode.rs or the recorder moved)
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), the (-274) tip
+         against the (-271) record:  3,160,759,000 -> 3,154,050,563 Ir  (-0.212 %);  60 games / 6,080 rows / 0 stalls both sides
+         (one binary, no (-271) actor rebuilt here: the sealed base matched its record to 2.5 k Ir, so the record is the base)
 suite   19,239 / 0 / 5 (123 s) at the (-274) tip; golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 release release-fast build of bot_ladder (the typecheck gate and more): clean
@@ -7832,6 +7834,27 @@ re-read), so nobody re-reads them:**
   47 M: all where the `(-260)` table left them. The allocator is 12.4 %
   (1.87 M mallocs); `from_iter` 803 k calls / 98.5 M self is the map's
   "consumed whole" collects.
+
+**THE ACTOR RE-READ AT THE `(-274)` TIP (`cg.actor.tip.out` in a
+scratchpad, 3,154,050,563 Ir, -0.212 % against the `(-271)` record):
+FLAT, so nobody re-takes it.** The growth census's top volume row is
+`mint_token_with_counters` at 2.71 a call over 1,523 calls (0.72 M);
+nothing above 1.5 a call has volume. The self table is the sealed
+table's shape plus the encoder (`encode_state_inner` 21.1 M + 12.2 M
+slice iteration, `encode_printed_into` 17.4 M, the keyword pass 9.3 M —
+`(-266)`..`(-270)`'s floors) and the once-a-process rows (`Normal::sample`
+42 M, `rand_chacha` 12 M, `debug_flags` 148 calls / 8.6 M: the net init
+and the once-per-name `{:?}` cache, 0 in a 10 k-game run). `__memcpy`
+is the top row (107 M, 3.4 %) and its callers are the CoW unshare
+(417,679 calls / 9.0 M), `GameState::clone` (201,470 / 7.0 M) and glibc's
+own realloc copy (82,676 / 5.9 M) — the `(-200)`/`(-201)` unshare
+direction, nothing new. `format_inner` 7,687 calls / 14.6 M is
+`debug_flags` (8.6 M) plus the prompt-text family (`effect_short_text`
+2.1 M, `run_effect`'s prompts 1.5 M, `drain_trigger_queue` 0.8 M,
+`target_phrase`/`target_noun` 1.3 M: the "not taken, ~0.35-0.5 %" entry
+below, unchanged). Nothing on either pool is a 0.2 %+ lead with a known
+device; the next run should pull the land-tap keyword gates (0.24 %
+actor, priced below) or accept the floor.
 
 **THE ACTOR-ONLY ROWS AT THE `(-268)` TIP (`45e162d2`, the same
 `selfplay_train --actors 1 --games 60 --steps 1 --seed 7` recipe,
