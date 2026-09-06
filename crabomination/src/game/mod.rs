@@ -4839,6 +4839,32 @@ impl GameState {
         if delta == 0 {
             return self.effective_life(seat);
         }
+        // The seven helpers below each walk the battlefield's statics for one
+        // life-arithmetic `StaticEffect`, on every life change of every
+        // simulation clone, and find nothing on almost every board. Each
+        // reads the `LANE_LIFE_STATIC` lane first (PERF `(-262)`); this audits
+        // that the lane's predicate names every static they match, so a lane
+        // that reads clear never skips a live one.
+        debug_assert!(
+            self.battlefield.has_life_static()
+                || !self.battlefield.iter().any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            self.active_static(&sa.effect, c),
+                            Some(
+                                crate::effect::StaticEffect::LifeGainBecomesLoss { .. }
+                                    | crate::effect::StaticEffect::LifeGainBecomesDraw
+                                    | crate::effect::StaticEffect::LifeGainBonus { .. }
+                                    | crate::effect::StaticEffect::LifeGainMultiplier { .. }
+                                    | crate::effect::StaticEffect::PlayerCannotGainLife { .. }
+                                    | crate::effect::StaticEffect::PlayerCannotLoseLife { .. }
+                                    | crate::effect::StaticEffect::OpponentLifeLossDoubledDuringYourTurn
+                            )
+                        )
+                    })
+                }),
+            "card_has_life_static missed a static adjust_life reads: a lane that reads clear would skip it",
+        );
         // `CRAB_LIFE_WATCH=<n>` — print every single adjustment of at least
         // `n` in absolute size, with the seat, the turn and the resulting
         // total. The instrument for "where did that life come from": a
@@ -8532,7 +8558,7 @@ impl GameState {
         if self.players[seat].cannot_gain_life || self.players[seat].cannot_gain_life_this_turn {
             return true;
         }
-        self.battlefield.iter().any(|src| {
+        self.battlefield.has_life_static() && self.battlefield.iter().any(|src| {
             src.definition.static_abilities.iter().any(|sa| {
                 if let StaticEffect::PlayerCannotGainLife { target } = &sa.effect {
                     match target {
@@ -8577,7 +8603,7 @@ impl GameState {
         if self.same_team(seat, active) {
             return false;
         }
-        self.battlefield.iter().any(|src| {
+        self.battlefield.has_life_static() && self.battlefield.iter().any(|src| {
             src.controller == active
                 && src.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, StaticEffect::OpponentLifeLossDoubledDuringYourTurn)
@@ -8595,7 +8621,7 @@ impl GameState {
         if self.players[seat].life_locked_this_turn {
             return true;
         }
-        self.battlefield.iter().any(|src| {
+        self.battlefield.has_life_static() && self.battlefield.iter().any(|src| {
             src.definition.static_abilities.iter().any(|sa| {
                 if let StaticEffect::PlayerCannotLoseLife { target } = &sa.effect {
                     match target {
@@ -8998,7 +9024,7 @@ impl GameState {
     /// `seat`.
     pub fn life_gain_becomes_loss_now(&self, seat: usize) -> bool {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
-        self.battlefield.iter().any(|src| {
+        self.battlefield.has_life_static() && self.battlefield.iter().any(|src| {
             src.definition.static_abilities.iter().any(|sa| {
                 if let StaticEffect::LifeGainBecomesLoss { target } = &sa.effect {
                     match target {
@@ -9019,7 +9045,7 @@ impl GameState {
     /// CR 614 — Nefarious Lich: `seat`'s life gains become card draws.
     pub fn life_gain_becomes_draw_now(&self, seat: usize) -> bool {
         use crate::effect::StaticEffect;
-        self.battlefield.iter().any(|src| {
+        self.battlefield.has_life_static() && self.battlefield.iter().any(|src| {
             src.controller == seat
                 && src.definition.static_abilities.iter().any(|sa| {
                     matches!(
@@ -9035,6 +9061,9 @@ impl GameState {
     /// gain"). Bonuses from multiple sources stack additively.
     pub fn life_gain_bonus_now(&self, seat: usize) -> i32 {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
+        if !self.battlefield.has_life_static() {
+            return 0;
+        }
         self.battlefield
             .iter()
             .flat_map(|src| {
@@ -9062,6 +9091,9 @@ impl GameState {
     /// Multiple multipliers compound; returns 1 when none are active.
     pub fn life_gain_multiplier_now(&self, seat: usize) -> i32 {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
+        if !self.battlefield.has_life_static() {
+            return 1;
+        }
         self.battlefield
             .iter()
             .flat_map(|src| {

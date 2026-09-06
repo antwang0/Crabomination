@@ -516,11 +516,16 @@ const LANE_BLOCK_TAX_STATIC: u32 = 50;
 /// once per untap step, real or simulated (PERF `(-249)`). See
 /// [`card_has_untap_static`].
 const LANE_UNTAP_STATIC: u32 = 52;
+/// Any permanent's definition carries a static that changes a life total's
+/// arithmetic — the seven `StaticEffect`s `adjust_life`'s helpers walk the
+/// board for, up to seven walks per life change, real or simulated (PERF
+/// `(-262)`). See [`card_has_life_static`].
+const LANE_LIFE_STATIC: u32 = 54;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
-/// The lane count the predicate table below covers (shift 0 ..= 52).
-const LANE_COUNT: usize = 27;
+/// The lane count the predicate table below covers (shift 0 ..= 54).
+const LANE_COUNT: usize = 28;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -563,6 +568,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_prevent_static),                       // LANE_PREVENT_STATIC
     Some(card_has_block_tax_static),                     // LANE_BLOCK_TAX_STATIC
     Some(card_has_untap_static),                         // LANE_UNTAP_STATIC
+    Some(card_has_life_static),                          // LANE_LIFE_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -826,6 +832,36 @@ fn static_effect_touches_untap(e: &crate::effect::StaticEffect) -> bool {
         | S::MaxUntapsPerStep { .. }
         | S::UntapSelfEachUntapStep
         | S::UntapAttachedEachUntapStep => true,
+        _ => false,
+    }
+}
+
+/// Does this permanent's definition carry a static that changes a life
+/// total's arithmetic — one of the seven `adjust_life`'s helpers walk for
+/// (the gain-to-loss / gain-to-draw replacements, the gain bonus and
+/// multiplier, the cannot-gain / cannot-lose locks, the loss doubler), under
+/// any of the `While*` wrappers `active_static` peels (peeled unconditionally
+/// here, the sound direction)? The [`LANE_LIFE_STATIC`] predicate;
+/// definition-only.
+pub(crate) fn card_has_life_static(c: &CardInstance) -> bool {
+    c.definition.static_abilities.iter().any(|sa| static_effect_touches_life(&sa.effect))
+}
+
+fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as S;
+    match e {
+        S::WhileClassLevelAtLeast { inner, .. }
+        | S::WhileYourTurn { inner }
+        | S::WhileNotYourTurn { inner }
+        | S::WhileCountersAtLeast { inner, .. }
+        | S::WhileCondition { inner, .. } => static_effect_touches_life(inner),
+        S::LifeGainBecomesLoss { .. }
+        | S::LifeGainBecomesDraw
+        | S::LifeGainBonus { .. }
+        | S::LifeGainMultiplier { .. }
+        | S::PlayerCannotGainLife { .. }
+        | S::PlayerCannotLoseLife { .. }
+        | S::OpponentLifeLossDoubledDuringYourTurn => true,
         _ => false,
     }
 }
@@ -1544,6 +1580,14 @@ impl Battlefield {
     #[inline]
     pub fn has_untap_static(&self) -> bool {
         self.lane(LANE_UNTAP_STATIC, card_has_untap_static)
+    }
+
+    /// Does any permanent here carry a life-arithmetic static
+    /// ([`card_has_life_static`])? Read by `adjust_life`'s seven helpers in
+    /// front of their board walks, on every life change (PERF `(-262)`).
+    #[inline]
+    pub fn has_life_static(&self) -> bool {
+        self.lane(LANE_LIFE_STATIC, card_has_life_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

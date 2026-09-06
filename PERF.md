@@ -3385,6 +3385,32 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-262)` TAKEN — a life-static lane in front of `adjust_life`'s seven board walks: sealed default Ir **-0.303 %** / cube **-0.243 %**
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast, system allocator), against the (-261) tip
+  sealed            3,420,656,488 -> 3,410,280,060 Ir   **-0.303 %**
+  cube              2,604,494,712 -> 2,598,163,044 Ir   **-0.243 %**
+  outcomes identical on both pools
+  self by row (sealed):  adjust_life 14,630,125 -> 3,596,035 (28,992 calls, ~505 -> ~124 Ir);  player_cannot_gain_life_now 868,610 -> 132,060
+                         the lane's own cost: lanes_after_push +358 k, lanes_after_removal +185 k, walk_and_store +214 k
+  self by row (cube):    adjust_life 9,175,883 -> 2,064,413;  lanes_after_push +300 k, walk_and_store +363 k, lanes_after_removal +132 k
+```
+
+`adjust_life`'s self was seven inlined battlefield walks — the
+gain-to-loss and gain-to-draw replacements, the gain bonus and
+multiplier, the cannot-gain lock (on a gain), the cannot-lose lock and
+the loss doubler (on a loss) — each matching one `StaticEffect` across
+every permanent's `static_abilities`, on every life change of every
+simulation clone, for statics that thirteen cards in the catalog carry
+between them. `LANE_LIFE_STATIC` is the union of the seven (wrappers
+peeled, as `(-249)`'s untap lane does), read by each helper in front of
+its walk; the other callers of those helpers (`Effect::LoseLife`, the
+drain gates) get the same read for free. A `debug_assert!` in
+`adjust_life` recomputes the seven through `active_static` on every
+call, so the whole suite audits the predicate. `(-233)`'s rule again:
+one lane whose predicate is the union, not seven lanes.
+
 ### `(-261)` TAKEN — `fire_spell_cast_triggers`' two delayed-trigger partitions behind a read-only match: sealed default Ir **-0.485 %** / cube **+0.037 %**
 
 ```text
@@ -7469,7 +7495,7 @@ map left them.**
    0.58 %  check_target_legality_with_source 53,828      372 self a call + a with_frozen_layers scope + the per-state freeze-memo Mutex (36,422 locks / 0.9 M); 22,626 from auto_targets, 11,084 from legal_targets
    0.47 %  Iterator::partition 12,392 / 16.2 M           8,324 / 12.8 M under finalize_cast — TAKEN (-261); 2,880 / 3.0 M is drain_trigger_queue's clickable/offboard split
    0.42 %  spell_kind 14,570 / 14.5 M                    once a cast: debug_flags 8.6 M (the once-per-name format cache's lookups), creature_types.clone() 9,766 allocs
-   0.42 %  adjust_life 28,992 calls, 14.6 M self         ~420 Ir of inlined static walks a call — the seven life helpers (cannot-lose + loss-doubled on a loss, five on a gain): a lane, the (-233) shape
+   0.42 %  adjust_life 28,992 calls, 14.6 M self         ~420 Ir of inlined static walks a call — the seven life helpers (cannot-lose + loss-doubled on a loss, five on a gain) — TAKEN (-262)
   12.4 %   glibc allocator, 1.92 M allocations           finish_grow 393,752 / from_iter 264,716 / clone_from_ref_in 254,940 / Vec::clone 128,154 / GameState::clone 107,190 (44,152 clones) / CowBox::push 86,104 / make_mut_slow 81,924
    4.66 %  Arc::clone_from_ref_in, the CoW unshares      183,928 copies / 160.2 M: cast_spell_with_convoke 72,696 make_mut_slow / 58.5 M, determinize_hidden 17,870 / 11.2 M, declare_blockers 16,422 / 9.5 M, resolve_top_of_stack_inner 12,920 / 12.3 M
   15.0 %   resolve_combat_into 17,422 / 515 M            29.6 k a damage step: deal_combat_damage_to_target 18,604 / 78.9 M (fire_combat_damage_to_player_triggers 38.6 M, adjust_life 15.4 M), combat_damage_computed 17,422 / 62.3 M,
@@ -7480,8 +7506,8 @@ map left them.**
 ```
 
 What it says, cheapest lead first. (1) `adjust_life` and `finalize_cast`
-were the two rows with a known device — a lane and the `(-257)` gate;
-`(-261)` took the second and the first is the next leg. (2) `activate_ability_inner`'s land tap asks
+were the two rows with a known device — a lane and the `(-257)` gate —
+and are `(-262)` / `(-261)`. (2) `activate_ability_inner`'s land tap asks
 `card_keyword_possible_on` twice at 162 Ir (the two CR 602.5 gates, each
 ending in `keyword_grant_in_scope`) — 0.22 %, a `dispatch_bits`-shaped
 per-definition bit would settle both. (3) `spell_kind` builds a
