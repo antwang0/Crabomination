@@ -33,7 +33,7 @@ sixty-seventh pass, so don't re-take that.
    bot_ladder 13 min cold / 4 min warm, selfplay_train 9 min cold / 8 min warm, release-fast bot_ladder 7 min,
    debug suite build+run ~10 min; ⚠ another session pushes to this branch concurrently — fetch before every push.
 2. **Gates:** the `(-274)` tip (PERF Baseline) suite 19,239 / 0 / 5, clippy, release-fast, `--bench` counters identical to
-   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games clean (9 cells, 3 pools, seeds 501..503).
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games clean (9 cells, 3 pools, seeds 501..503) + the training binary 9,000 games / 0 stalls (seeds 909/910).
 3. **Perf this run (PERF Log):** `(-273)` `declare_attackers_banded`'s event buffer sized exactly (sealed -0.097 %, cube
    -0.068 %; the growth row split by allocator entry first — 23,212 first allocations, 5,166 re-growths), `(-274)` the
    dispatcher's pair loop reuses the per-event kind mask (sealed -0.202 %, cube +0.027 %; the `SmallVec` form of it read

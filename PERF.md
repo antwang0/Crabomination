@@ -2582,6 +2582,8 @@ release release-fast build of bot_ladder (the typecheck gate and more): clean
         determinism ok; thread_determinism ok (3 vs 1 threads identical); 304 games/s on this host (a slower box than the (-271) record's 506)
 sweep   fresh seeds on the ADOPTED DEFAULT (release-fast, the (-274) tip): 501..503 x {sealed, cube, fixed} x --games 400 --threads 3 =
         9 cells / 28,800 games, 0 undecided, 0 panics, every rc 0 (sealed 4,800 games in 31-43 s a cell)
+        AND the training binary itself, first time in a closing state: release-fast selfplay_train --actors 4 --steps 1, seeds 909 / 910 x
+        --games 3000 / 6000 = 9,000 games / 900,512 rows, 0 stalls, both rc 0 (194.7 / 210.2 games/s on this 4-core host)
 audits  audit_panics.py: 78 sites off the bin/test paths, 67 guarded, 11 lock-poison, 0 bare;  audit_variant_coverage.py: 0 dead capabilities, the same 2 dead primitives
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
 ```
