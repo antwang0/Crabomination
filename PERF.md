@@ -2557,23 +2557,24 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-261)`..`(-262)` — closing state at the `(-262)` tip
+### `(-261)`..`(-264)` — closing state at the `(-264)` tip
 
-Two behaviour-preserving engine commits on top of the round-63 read
+Three behaviour-preserving engine commits on top of the round-63 read
 (outcomes identical on both dumps, `--bench` counters and golden traces
 unmoved), each read off the sealed `dflt` profile re-taken at the
 `(-260)` tip (the "SEALED `dflt` RE-READ" block in candidates — the sim's
 spell layer by callee). `(-263)`, the enumerator's graveyard hint, was
-built, read flat and reverted. Dumps are `profiling-fast` with the
-system allocator (`--no-default-features`).
+built, read flat and reverted; the census it asked for found `(-264)`.
+Dumps are `profiling-fast` with the system allocator
+(`--no-default-features`).
 
 ```text
-  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,437,314,145 -> 3,410,280,060 Ir  (-0.786 %)
-        (-261) -0.485 %  (-262) -0.303 %   [(-263) -0.020 %, reverted]
-  cube   dflt, same recipe:                               2,603,519,085 -> 2,598,163,044 Ir  (-0.206 %)
-        (-261) +0.037 %  (-262) -0.243 %   [(-263) -0.014 %, reverted]
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,437,314,145 -> 3,403,417,590 Ir  (-0.986 %)
+        (-261) -0.485 %  (-262) -0.303 %  (-264) -0.201 %   [(-263) -0.020 %, reverted]
+  cube   dflt, same recipe:                               2,603,519,085 -> 2,597,119,771 Ir  (-0.246 %)
+        (-261) +0.037 %  (-262) -0.243 %  (-264) -0.040 %   [(-263) -0.014 %, reverted]
   Ir base for the three-pool gate: unchanged from (-250) — not remeasured
-suite   19,234 / 0 / 5 (123 s) at each of the two tips; golden traces 7/7 unmoved
+suite   19,234 / 0 / 5 (123 s) at each of the three tips; golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 release the release-fast build of bot_ladder (the typecheck gate and more): clean
 --bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
@@ -3410,6 +3411,32 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-264)` TAKEN — printed arms for the zone and player requirements a battlefield permanent answers by construction: sealed default Ir **-0.201 %** / cube **-0.040 %**
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast, system allocator), against the (-262) tip
+  sealed            3,410,280,060 -> 3,403,417,590 Ir   **-0.201 %**
+  cube              2,598,163,044 -> 2,597,119,771 Ir   **-0.040 %**
+  outcomes identical on both pools
+  under legal_targets_for_filter_scope (sealed):  evaluate_requirement_static_hinted 60,478 / 16.4 M -> 22,886 / 11.0 M;  printed_requirement_impl 61,690 calls both sides
+  the census that found it (CRAB_REQ_CENSUS, a throwaway eprintln in the worktree, sealed --games 6): 3,276 enumerations, 61,690 battlefield candidates, 37,616 printed declines —
+        1,754 x InGraveyard (36,556 declines, every permanent), 90 x OpponentPlayer (1,036), 6 x And(Creature, PowerAtLeast(3)) (24); the And/Or creature-and-controller shapes declined 0
+```
+
+`(-263)`'s follow-up, by the census it asked for. The printed evaluator
+had arms for `InYourGraveyard` / `InOpponentGraveyard` (each a graveyard
+scan by id, on the battlefield too) and none for bare `InGraveyard`,
+`InExile` or the three player-only requirements — and bare `InGraveyard`
+is the slot-0 filter on 54 % of the targeted triggers a `wants_ui` seat
+is offered on the sealed pool, so the enumerator fell through to the
+walker for every permanent on the board. An id names one object: the
+battlefield permanent the `OFF = false` path holds is in no graveyard
+and no exile, and no card is a player, so those arms are constants on
+the battlefield and the walker's own scans off it. The suite's
+`debug_assert_eq` in `requirement_on_permanent` audits every printed
+answer against the walker. `cube` carries few such triggers on the
+six-game board.
 
 ### `(-263)` REFUTED — the trigger-prompt enumerator's graveyard candidates through `requirement_on_graveyard_card`: sealed **-0.020 %** / cube **-0.014 %**, reverted
 
@@ -7566,13 +7593,15 @@ per-definition bit would settle both. (3) `spell_kind` builds a
 read; a borrowed slice is a `SpellKind<'a>` lifetime across 18
 construction sites, ~0.05 %, and `wants_converge`'s cache lookup is the
 other 0.25 % — a bit on `CardData` beside `trigger_kind_fold` would be
-the shape. (4) `legal_targets_for_filter_scope`'s walker calls (60 k / 16.4 M) are
+the shape. (4) `legal_targets_for_filter_scope`'s walker calls (60 k / 16.4 M) were
 battlefield permanents whose trigger-prompt filter the printed evaluator
-DECLINES — `(-263)` proved it is not the graveyard loop (flat, reverted).
-The lead is `printed_requirement`'s coverage of whatever shapes those
-trigger filters carry — unread; census the declined discriminants at
-this site first. Its auto-target twin `auto_targets_for_effect_all_slots`
-(2.2 %) is answered 88 % by the printed path already.
+DECLINED — `(-263)` proved it is not the graveyard loop (flat, reverted),
+the census found bare `InGraveyard` on 54 % of the prompts, and `(-264)`
+gave it (and `InExile`, the player-only arms) a printed answer. The
+22,886 walker calls left there are the graveyard-card candidates
+(`is_legal` by id) and `PowerAtLeast`; its auto-target twin
+`auto_targets_for_effect_all_slots` (2.2 %) is answered 88 % by the
+printed path already.
 (5) `resolve_combat_into` is the one `cg_growth.py` row above 2 grows a
 call with volume (36,822 / 17,422); `declare_attackers_banded` 1.99 —
 the `(-108)` reserve shape, but `(-227)` refuted a reserve one function

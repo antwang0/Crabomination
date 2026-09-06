@@ -3404,15 +3404,34 @@ impl GameState {
             R::IsSpellOnStack => Some(self.stack.iter().any(
                 |si| matches!(si, StackItem::Spell { card: c, .. } if c.id == cid),
             )),
+            // An id names one object, so the battlefield permanent this arm
+            // holds is in no graveyard and no exile: the on-battlefield
+            // answer is a constant and the scans run only off it. Bare
+            // `InGraveyard` had no arm at all, and it is the filter on 54 %
+            // of the targeted triggers a `wants_ui` seat is offered on the
+            // sealed pool — the enumerator fell through to the walker on
+            // every permanent for it (PERF `(-264)`).
+            R::InGraveyard => Some(
+                !on_bf && self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cid)),
+            ),
             R::InYourGraveyard => Some(
-                self.players.get(controller).is_some_and(|p| p.graveyard.iter().any(|c| c.id == cid)),
+                !on_bf
+                    && self
+                        .players
+                        .get(controller)
+                        .is_some_and(|p| p.graveyard.iter().any(|c| c.id == cid)),
             ),
             R::InOpponentGraveyard => Some(
-                self.players
-                    .iter()
-                    .enumerate()
-                    .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == cid)),
+                !on_bf
+                    && self
+                        .players
+                        .iter()
+                        .enumerate()
+                        .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == cid)),
             ),
+            R::InExile => Some(!on_bf && self.exile.iter().any(|c| c.id == cid)),
+            // A card is never a player, whichever seat the arm asks about.
+            R::OpponentPlayer | R::YouPlayer | R::PlayerAttackedThisTurn => Some(false),
             _ => None,
         }
     }
