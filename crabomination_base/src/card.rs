@@ -5585,6 +5585,9 @@ impl CardDefinition {
                 _ => {}
             }
         }
+        if self.can_grant_keyword(&is_ability_lock_keyword) {
+            m |= g::ABILITY_LOCK_GRANT;
+        }
         m
     }
 
@@ -6781,9 +6784,25 @@ pub mod gather_spec {
     pub const HEXPROOF_UNLESS: u64 = 1 << 50;
     /// A printed `Keyword::LivingMetal`.
     pub const LIVING_METAL: u64 = 1 << 51;
+    /// The definition can grant one of the two CR 602.5 ability-lock
+    /// keywords ([`is_ability_lock_keyword`]) — `can_grant_keyword` at that
+    /// predicate. Not a pass gate: the exact-keyword answer every land tap and
+    /// activation asks, off the grant members' memo word instead of a static
+    /// walk per member.
+    pub const ABILITY_LOCK_GRANT: u64 = 1 << 52;
 
-    /// The memo's payload — both halves.
-    pub const ALL: u64 = (1 << 52) - 1;
+    /// The memo's payload — both halves and the grant bit.
+    pub const ALL: u64 = (1 << 53) - 1;
+}
+
+/// The two CR 602.5 restrictions `activate_ability` reads off the computed
+/// keyword set — "activated abilities with {T} can't be activated" and "this
+/// permanent's activated abilities can't be activated". One list, so the
+/// [`gather_spec::ABILITY_LOCK_GRANT`] bit and the engine's continuous-effect
+/// family fold cannot disagree with the gates that consume them.
+#[inline]
+pub fn is_ability_lock_keyword(k: &Keyword) -> bool {
+    matches!(k, Keyword::CantActivateTapAbilities | Keyword::CantActivateAbilities)
 }
 
 /// The [`gather_spec`] bits `effect` can contribute.

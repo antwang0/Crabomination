@@ -9850,6 +9850,19 @@ impl GameState {
         // is a payload-carrying enum and its `PartialEq` is not free — into a
         // branch no predicate takes unless it names one of the three.
         let synth = pred(&Keyword::Hexproof) || pred(&Keyword::CantBlock) || pred(&Keyword::Menace);
+        (self.continuous_effects.has_family(mod_families::KEYWORD)
+            && self
+                .continuous_effects
+                .iter()
+                .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k))))
+            || self.board_grants_keyword(&pred, synth)
+            || self.offboard_grants_keyword(&pred, synth)
+    }
+
+    /// The off-battlefield legs of
+    /// [`keyword_grant_in_scope`](Self::keyword_grant_in_scope): command-zone
+    /// cards and emblems, and the Incarnation cycle's graveyard anthems.
+    fn offboard_grants_keyword(&self, pred: &impl Fn(&Keyword) -> bool, synth: bool) -> bool {
         // The command-zone and emblem legs sit behind `offboard_keyword_grants`
         // (PERF `(-191)`): exact after every cleanup, set by every push into
         // either list in between, audited here.
@@ -9858,35 +9871,44 @@ impl GameState {
             offboard || !self.offboard_keyword_grants_now(),
             "offboard_keyword_grants is clear, but a command-zone card or emblem can grant a keyword"
         );
-        (self.continuous_effects.has_family(mod_families::KEYWORD)
-            && self
-                .continuous_effects
-                .iter()
-                .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k))))
-            || self.board_grants_keyword(&pred, synth)
-            || self.players.iter().any(|p| {
-                (offboard
-                    && (p.command.iter().any(|c| {
-                        (c.definition.is_scheme() || c.command_zone_abilities_active())
-                            && card_can_grant_keyword(c, &pred, synth)
-                    }) || p.emblems.iter().any(|em| {
-                        em.statics
-                            .iter()
-                            .any(|sa| static_effect_grants_keyword(&sa.effect, &pred))
-                    })))
-                    // The Incarnation cycle's `GraveyardAnthem` is the gather's
-                    // one zone-special grant — read off *graveyard* cards'
-                    // printed statics. The zone answers "is there one here" off
-                    // its own memo (`crate::zone::Graveyard`), so a graveyard
-                    // that grows all game costs one load rather than a walk.
-                    || (p.graveyard.has_anthem() && p.graveyard.iter().any(|c| {
+        self.players.iter().any(|p| {
+            (offboard
+                && (p.command.iter().any(|c| {
+                    (c.definition.is_scheme() || c.command_zone_abilities_active())
+                        && card_can_grant_keyword(c, pred, synth)
+                }) || p.emblems.iter().any(|em| {
+                    em.statics.iter().any(|sa| static_effect_grants_keyword(&sa.effect, pred))
+                })))
+                // The Incarnation cycle's `GraveyardAnthem` is the gather's
+                // one zone-special grant — read off *graveyard* cards'
+                // printed statics. The zone answers "is there one here" off
+                // its own memo (`crate::zone::Graveyard`), so a graveyard
+                // that grows all game costs one load rather than a walk.
+                || (p.graveyard.has_anthem()
+                    && p.graveyard.iter().any(|c| {
                         c.definition.static_abilities.iter().any(|sa| {
                             matches!(&sa.effect,
                                 crate::effect::StaticEffect::GraveyardAnthem { keyword, .. }
                                 if pred(keyword))
                         })
                     }))
+        })
+    }
+
+    /// [`keyword_grant_in_scope`](Self::keyword_grant_in_scope) for one of
+    /// the two CR 602.5 ability-lock keywords — the question every land tap
+    /// and every activation asks. Same contract, `false` authoritative, but
+    /// every leg reads a fold that already holds the exact answer: the
+    /// continuous-effects `ABILITY_LOCK` family word, the grant members'
+    /// `gather_spec::ABILITY_LOCK_GRANT` memo bit, then the off-board legs
+    /// unchanged. No `synth` — neither keyword is one the gather makes up.
+    pub(crate) fn ability_lock_grant_in_scope(&self, kw: &Keyword) -> bool {
+        debug_assert!(crate::card::is_ability_lock_keyword(kw));
+        self.continuous_effects.has_family(mod_families::ABILITY_LOCK)
+            || self.board_grant_members_any(|c| {
+                c.gather_scan_bits() & gather_spec::ABILITY_LOCK_GRANT != 0
             })
+            || self.offboard_grants_keyword(&|k: &Keyword| k == kw, false)
     }
 
     /// [`offboard_keyword_grants`](Self::offboard_keyword_grants) recomputed
@@ -9929,16 +9951,24 @@ impl GameState {
     /// `card.suspected`, an instance field, so no definition-keyed lane can
     /// hold its answer — the membership rule, unchanged.
     fn board_grants_keyword(&self, pred: &impl Fn(&Keyword) -> bool, synth: bool) -> bool {
-        use crate::card::grant_bits as gb;
         if synth {
             return self.battlefield.iter().any(|c| card_can_grant_keyword(c, pred, synth));
         }
+        self.board_grant_members_any(|c| c.definition.can_grant_keyword(pred))
+    }
+
+    /// Does `member` hold on any permanent of the grant member list? The
+    /// list walk and its fill, shared by the predicate form above and the
+    /// exact-keyword form (`ability_lock_grant_in_scope`); `member` is only
+    /// ever asked of a permanent whose `ANY_GRANT` bit is set.
+    fn board_grant_members_any(&self, member: impl Fn(&CardInstance) -> bool) -> bool {
+        use crate::card::grant_bits as gb;
         let epoch = match self.battlefield.grant_members() {
             Ok(mut bits) => {
                 while bits != 0 {
                     let i = bits.trailing_zeros() as usize;
                     bits &= bits - 1;
-                    if self.battlefield[i].definition.can_grant_keyword(pred) {
+                    if member(&self.battlefield[i]) {
                         return true;
                     }
                 }
@@ -9958,7 +9988,7 @@ impl GameState {
             } else if found {
                 break;
             }
-            found = found || c.definition.can_grant_keyword(pred);
+            found = found || member(c);
         }
         if listable {
             self.battlefield.store_grant_members(epoch, bits);
@@ -10000,6 +10030,19 @@ impl GameState {
             || c.granted_keywords_eot.iter().any(&pred)
             || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
             || self.keyword_grant_in_scope(pred)
+    }
+
+    /// [`card_keyword_possible_on`](Self::card_keyword_possible_on) for a CR
+    /// 602.5 ability-lock keyword, with the grant leg answered off
+    /// [`ability_lock_grant_in_scope`](Self::ability_lock_grant_in_scope).
+    /// `activate_ability_inner`'s two gates and the land-tap fast path ask it
+    /// on every activation, and on the ordinary board every leg is a word
+    /// load or an empty list.
+    pub(crate) fn ability_lock_possible_on(&self, c: &CardInstance, kw: &Keyword) -> bool {
+        c.definition.keywords.has_kw(kw)
+            || c.granted_keywords_eot.has_kw(kw)
+            || c.keyword_counters.iter().any(|(k, n)| *n > 0 && k == kw)
+            || self.ability_lock_grant_in_scope(kw)
     }
 
     /// The same device for the one layer-7 question a caller can ask without
@@ -10224,6 +10267,12 @@ impl GameState {
                     debug_assert!(
                         self.keyword_grant_in_scope(|x: &Keyword| x == k),
                         "the keyword-grant presence gate missed a source for {k:?}",
+                    );
+                    // The exact-keyword lane's audit, same direction.
+                    debug_assert!(
+                        !crate::card::is_ability_lock_keyword(k)
+                            || self.ability_lock_grant_in_scope(k),
+                        "the ability-lock presence gate missed a source for {k:?}",
                     );
                 }
             }

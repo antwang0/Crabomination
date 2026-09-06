@@ -185,6 +185,10 @@ pub mod mod_families {
     /// A layer-7 modification that can lower toughness
     /// (`modification_reduces_toughness`).
     pub const TOUGHNESS_REDUCE: u32 = 1 << 6;
+    /// `AddKeyword` of a CR 602.5 ability lock
+    /// (`card::is_ability_lock_keyword`) — the [`KEYWORD`] subset the
+    /// activation gates ask about, so they read one word instead of the list.
+    pub const ABILITY_LOCK: u32 = 1 << 7;
     /// The fold is computed; bit 31, so a zero word is "unknown".
     pub(super) const VALID: u32 = 1 << 31;
 }
@@ -198,6 +202,7 @@ pub fn modification_families(m: &Modification) -> u32 {
         M::AddLandType(_) | M::SetLandTypes(_) | M::ReplaceBasicLandType(..) => F::LAND_TYPE,
         M::AddCreatureType(_) | M::SetCreatureTypes(_) => F::CREATURE_TYPE,
         M::AddColor(_) | M::SetColors(_) | M::LoseAllColors => F::COLOR,
+        M::AddKeyword(k) if crate::card::is_ability_lock_keyword(k) => F::KEYWORD | F::ABILITY_LOCK,
         M::AddKeyword(_) => F::KEYWORD,
         M::RemoveAllAbilities => F::STRIP,
         _ => 0,

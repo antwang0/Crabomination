@@ -14867,7 +14867,7 @@ impl GameState {
             || (self.land_type_change_in_scope()
                 && Self::printed_land_mana_basic(src, ability_index).is_some())
             || self.ability_strip_possible()
-            || self.card_keyword_possible_on(src, |k| *k == Keyword::CantActivateTapAbilities)
+            || self.ability_lock_possible_on(src, &Keyword::CantActivateTapAbilities)
             || self.board_has_mana_static()
         {
             return None;
@@ -15616,7 +15616,7 @@ impl GameState {
         // when the answer could be `true`. Off the battlefield the keyword
         // gates answer `false` outright (a `bf_src!()` miss), which is the
         // same answer the old code paid a gather to get back as `None`. Both
-        // take `card_keyword_possible_on` off the permanent this frame has
+        // take `ability_lock_possible_on` off the permanent this frame has
         // already found rather than the `CardId` form, which opens with a
         // second `battlefield_find`.
         let tap_gated = ability.tap_cost || ability.untap_self_cost;
@@ -15627,9 +15627,7 @@ impl GameState {
         // granted restriction applies immediately.
         if tap_gated
             && bf_src!().is_some_and(|src| {
-                self.card_keyword_possible_on(src, |k| {
-                    *k == Keyword::CantActivateTapAbilities
-                })
+                self.ability_lock_possible_on(src, &Keyword::CantActivateTapAbilities)
             })
             && bf_cp!()
                 .as_ref()
@@ -15657,12 +15655,9 @@ impl GameState {
         // activate its non-mana abilities. Battlefield sources only.
         if on_battlefield
             && !ability_is_mana
-            && bf_src!()
-                .is_some_and(|src| {
-                    self.card_keyword_possible_on(src, |k| {
-                        *k == Keyword::CantActivateAbilities
-                    })
-                })
+            && bf_src!().is_some_and(|src| {
+                self.ability_lock_possible_on(src, &Keyword::CantActivateAbilities)
+            })
             && bf_cp!()
                 .as_ref()
                 .is_some_and(|c| c.keywords().has_kw(&Keyword::CantActivateAbilities))
