@@ -15139,8 +15139,11 @@ impl GameState {
         // the entropy differed between the pair's two halves. The decider and
         // the two per-seat pilot flags are the same class: a restart must not
         // change who answers decisions or how a seat taps.
-        let carried: Vec<(bool, bool, bool)> =
-            self.players.iter().map(|p| (p.smart_tap, p.wants_ui, p.converge_rarest)).collect();
+        let carried: Vec<(bool, bool, bool, bool)> = self
+            .players
+            .iter()
+            .map(|p| (p.smart_tap, p.wants_ui, p.converge_rarest, p.hostile_player_targets))
+            .collect();
         let players: Vec<crate::player::Player> = self
             .players
             .iter()
@@ -15170,10 +15173,13 @@ impl GameState {
         self.teams = teams;
         self.rng = rng;
         self.decider = decider;
-        for (i, (smart_tap, wants_ui, converge_rarest)) in carried.into_iter().enumerate() {
+        for (i, (smart_tap, wants_ui, converge_rarest, hostile_player_targets)) in
+            carried.into_iter().enumerate()
+        {
             if let Some(p) = self.players.get_mut(i) {
                 p.smart_tap = smart_tap;
                 p.converge_rarest = converge_rarest;
+                p.hostile_player_targets = hostile_player_targets;
                 p.wants_ui = wants_ui;
             }
         }
@@ -20832,17 +20838,24 @@ impl GameState {
                     && self.cross_slot_targets_ok(&req, t, &filled)
                     && self.check_target_legality(t, controller).is_ok()
             };
-            // Player slots: an unclaimed player first (controller-biased),
-            // then any legal player.
-            let mut pick = [Target::Player(controller), Target::Player(opp)]
+            // Player slots: an unclaimed player first, then any legal player.
+            // Controller-biased, unless the seat's `hostile_player_targets`
+            // flag is set and the slot's effect is hostile (a discard, damage,
+            // life loss, …): then the opponent comes first — see the same rule
+            // in `auto_targets_for_effect_all_slots_kicked`.
+            let hostile = self.players[controller].hostile_player_targets
+                && eff.player_slot_is_hostile(slot, None);
+            let order = if hostile {
+                [Target::Player(opp), Target::Player(controller)]
+            } else {
+                [Target::Player(controller), Target::Player(opp)]
+            };
+            let mut pick = order
+                .clone()
                 .into_iter()
                 .filter(|t| !matches!(t, Target::Player(pl) if used_players.contains(pl)))
                 .find(|t| is_legal(t))
-                .or_else(|| {
-                    [Target::Player(controller), Target::Player(opp)]
-                        .into_iter()
-                        .find(|t| is_legal(t))
-                });
+                .or_else(|| order.into_iter().find(|t| is_legal(t)));
             // Then a not-yet-claimed permanent, your own preferred.
             if pick.is_none() {
                 pick = self

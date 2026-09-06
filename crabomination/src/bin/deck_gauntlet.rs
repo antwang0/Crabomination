@@ -168,6 +168,34 @@ fn parse_pilot(name: &str) -> Option<Pilot> {
         "trickmodes" => Pilot::Scored(EvalWeights::trick_modes_combat_only_on()),
         "convfixes" => Pilot::Scored(EvalWeights::converge_fixes_on()),
         "trickoff" => Pilot::Scored(EvalWeights::trick_modes_off()),
+        // 2026-09-06 targeting work: hostile player slots aimed at the
+        // opponent (seat flag), the other player as a cast-time arm, both;
+        // the own-graveyard pick with the X=0 no-op prune; everything.
+        "hostile" => Pilot::Scored(EvalWeights::hostile_player_targets_on()),
+        "parms" => Pilot::Scored(EvalWeights::player_target_arms_on()),
+        "targetfix" => Pilot::Scored(EvalWeights::target_fixes_on()),
+        "x0skip" => Pilot::Scored(EvalWeights::skip_noop_x0_on()),
+        "gyfix" => Pilot::Scored(EvalWeights::graveyard_fixes_on()),
+        "allfix" => Pilot::Scored(EvalWeights::all_fixes_on()),
+        "r67off" => Pilot::Scored(EvalWeights::round67_off()),
+        "mcts256-r67off" => Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights::round67_off(),
+            ..MctsConfig::default()
+        }),
+        "mcts256-targetfix" => Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights::target_fixes_on(),
+            ..MctsConfig::default()
+        }),
+        "mcts256-allfix" => Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights::all_fixes_on(),
+            ..MctsConfig::default()
+        }),
         "both" => Pilot::Scored(EvalWeights { own_graveyard_picks: true, ..EvalWeights::stun_x_hold_on() }),
         "mcts64" => Pilot::Mcts(MctsConfig {
             iterations: 64,
@@ -558,6 +586,13 @@ fn play_chunk_server(
                     g.players[seat].smart_tap = w.smart_tap;
                     g.players[seat].converge_rarest = w.converge_rarest;
                 }
+                // The polarity flag reaches search seats too (see the same
+                // push in `recommend::play_seeded_game`).
+                g.players[seat].hostile_player_targets = match p {
+                    Pilot::Scored(w) => w.hostile_player_targets,
+                    Pilot::Mcts(cfg) => cfg.weights.hostile_player_targets,
+                    Pilot::Uniform => false,
+                };
             }
             let mut rng = StdRng::seed_from_u64(pair_seed);
             for seat in 0..2 {

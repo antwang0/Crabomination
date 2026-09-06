@@ -4344,3 +4344,58 @@ seeds 43/97):
   replay to its game) and `scripts/replay_scan.py`. The scored pilot is a
   faithful screen for the search pilot here: the first +16.4 step read
   +16.3 under search, the total +26.0 read +27.8.
+
+## Round 67 — the auto-target picker aimed hostile player slots at the caster; four flags adopted (2026-09-06, evening)
+
+Found while answering "why does the gauntlet rate Arcane Omens, Divergent
+Equation and Traumatic Critique badly": `auto_targets_for_effect_all_slots_kicked`
+(and the triggers' `auto_extra_distinct_slot_targets`) tried the **caster
+first for every player slot**. Right for "target player draws" (Mathemagics,
+Cost of Brilliance, Homesickness), wrong for discard and damage. Both pilots
+build their candidate list through that picker, so the search never saw the
+other player: in 1,200 converge3 search-pilot games Arcane Omens made the
+caster discard in 98 of 113 casts (0 opponent discards), Traumatic Critique
+and Together as One dealt their X to the caster's face on every cast (455 /
+616 damage), while the 24 opponent decks self-targeted 12 times in total.
+The scored pilot did the same (192-game probe: 18/24 Omens, 151 damage / 46
+Critique). Divergent Equation was cast at X=0 in 286 of 439 casts and its
+pick returned nothing (`own_graveyard_picks` off — a flag that had only ever
+been gated on lists that never fire it).
+
+Built, gated, adopted (`.ladder/deckwork/r3/`, gauntlet = deck seat vs the
+24 deep-pool builds, 500 pairs x 24 x seeds 43 / 97, opponents `dflt`):
+
+| flag | converge3 (46 cards) | converge4 | sealed mirrors 43 / 97 |
+|---|---|---|---|
+| default before | 43.20 / 43.95 | 66.36 / 67.10 | — |
+| `hostile_player_targets` (seat flag, both pickers, pushed to search seats too) | 51.26 / 51.79 (**+8.0**) | 68.58 / 68.95 (**+2.0**) | 50.4 / 50.5 (24:0, 37:8 sweeps) |
+| `player_target_arms` (the other player as a cast-time arm) | 47.99 / 48.68 (+4.8) | 66.02 / 66.75 (−0.3) | **51.7 / 51.7** (129:28) |
+| both | 50.99 / 51.47 | 68.24 / 68.84 | 51.7 / 51.7 |
+| `own_graveyard_picks` alone | 44.00 / 44.91 (+0.9) | identical | 50.0 (zero incidence) |
+| + `skip_noop_x0` | 44.28 / 45.14 (+1.1) | identical | 50.0 |
+| all four (**the round-67 default**) | **52.14 / 52.65** | **68.24 / 68.84** | 51.7 / 51.7 |
+
+The arm's first cut cost −0.5 beside the seat flag because `score_candidate`
+priced "the opponent" at 4 units and "the caster" at 1 for every player slot,
+so the "they draw X" arm of Together as One outranked the right one in a
+third of casts (82 of 227 cards in a converge4 probe); the arm's term now
+reads the slot's polarity (4 of 233 cards after). Beside the seat flag the
+arm is −0.3 on the converge lists (noise) and +1.2 on the sealed mirrors —
+it finds what the hostile-shape classifier cannot express (a loot pointed at
+a low opponent, among others). Control: `round67_off` (`r67-off`,
+`r67off`, `mcts256-r67off`). Tests: `hostile_player_slots_aim_at_the_opponent`,
+`player_target_arm_offers_the_other_player`,
+`player_target_arm_keeps_a_gift_on_the_caster`, `x_zero_no_op_casts_are_pruned`.
+
+Search pilot (mcts256 both seats, converge3, 1,200 games with replays):
+**48.42 ±1.47 with all four vs 39.17 ±1.45** without (+9.3, the scored
+pilot's +8.8). In those replays Arcane Omens made the opponent discard 526
+cards over 179 casts (self in 10), Traumatic Critique dealt 901 to the
+opponent's face and 101 to its own, Together as One 887 across with 83 % of
+its draws kept — the residual self-picks are the search taking the offered
+arm in some states, not the picker, and are the next thing to read.
+
+Not verified: the same slot shape sits on 129 STX cards and 88 of the modern
+deck set (Electrolyze, Forked Bolt, Crackle with Power …). If the cube ladder
+pools carry them, the round ≤66 ladders had bots bolting their own faces;
+the seat flag now covers every pool, but no cube reading was taken here.

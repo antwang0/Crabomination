@@ -500,10 +500,15 @@ pub struct EvalWeights {
     /// 2026-09-06 with ZERO incidence everywhere it was measured: the
     /// converge gauntlet with the card already cut reads the default to
     /// the hundredth, and both sealed-ladder mirrors split every pair —
-    /// no gating pool plays an optional own-graveyard pick. A correctness
-    /// fix with a unit test and no measured win; off until a pool that
-    /// exercises it says otherwise ([`own_graveyard_picks_on`]
-    /// (Self::own_graveyard_picks_on), profile `gy-pick`).
+    /// no gating pool plays an optional own-graveyard pick. **Re-measured
+    /// the same evening on the list that does** (the 46-card converge list
+    /// with Divergent Equation, deck seat vs the deep-pool field, seeds
+    /// 43 / 97): 44.00 / 44.91 vs 43.20 / 43.95 (**+0.9**), and 44.28 /
+    /// 45.14 (**+1.1**) with [`skip_noop_x0`](Self::skip_noop_x0) beside
+    /// it; converge4 identical to the hundredth (the scored pilot never
+    /// casts Bind to Life). Adopted into the default as the correctness
+    /// fix it is ([`own_graveyard_picks_on`](Self::own_graveyard_picks_on),
+    /// profile `gy-pick`).
     pub own_graveyard_picks: bool,
     /// Seat flag for the engine's converge auto-tap (`Player::converge_rarest`,
     /// pushed like `smart_tap`): a dual pays the fresh colour with the fewest
@@ -538,6 +543,51 @@ pub struct EvalWeights {
     /// 50.2 ±0.30. Control: [`trick_modes_off`](Self::trick_modes_off),
     /// profile `trick-modes-off`.
     pub trick_modes_combat_only: bool,
+    /// Seat flag (`Player::hostile_player_targets`, pushed like `smart_tap`
+    /// and onto search seats too): the auto-target pickers aim a *hostile*
+    /// player slot — discard, damage, life loss, mill, sacrifice, hand exile
+    /// (`Effect::player_slot_is_hostile`) — at the opponent first instead of
+    /// the caster. Found 2026-09-06: under the caster-first rule the converge
+    /// deck's Arcane Omens discarded its own hand in 98 of 113 recorded
+    /// casts, and Traumatic Critique / Together as One dealt their X to the
+    /// caster's face in every one (455 / 616 damage over 1,200 games), while
+    /// the 24 opponent decks self-targeted 12 times in the same games.
+    /// **Measured the same evening** (deck seat vs the deep-pool field, 500
+    /// pairs x 24 x seeds 43 / 97; profile `hostile-targets`): the 46-card
+    /// list 51.26 / 51.79 vs 43.20 / 43.95 (**+8.0**), converge4 (Together
+    /// as One is its only such card) 68.58 / 68.95 vs 66.36 / 67.10
+    /// (**+2.0**); sealed-ladder mirrors 50.4 / 50.5 (24 A-sweeps to 0 and
+    /// 37 to 8 — the shape is rare in random sealed pools). Adopted into the
+    /// default ([`hostile_player_targets_on`]
+    /// (Self::hostile_player_targets_on)).
+    pub hostile_player_targets: bool,
+    /// The other player as a cast-time arm: a spell whose slot 0 was aimed
+    /// at a player also offers the same cast aimed at the other player, so
+    /// the scored eval (which already prices an opponent target at 4 units
+    /// and the caster at 1) and the search choose the side instead of
+    /// inheriting the picker's guess. One extra candidate per such spell.
+    /// The arm's scoring reads the slot's polarity ([`score_candidate`]):
+    /// the polarity-blind "opponent 4, caster 1" term sent Together as
+    /// One's draw across the table in a third of casts (82 of 227 cards in
+    /// a converge4 probe) until it did. **Measured 2026-09-06** (profile
+    /// `player-arms`): sealed-ladder mirrors **51.7 / 51.7** (129 A-sweeps
+    /// to 28), alone or beside the seat flag — the arm finds what the
+    /// polarity classifier cannot say, a loot pointed at a low opponent
+    /// among them; on the converge deck seat 47.99 / 48.68 alone (+4.8 vs
+    /// 43.20 / 43.95) and −0.3 beside the seat flag on both lists, within
+    /// noise. Adopted into the default with the seat flag
+    /// ([`player_target_arms_on`](Self::player_target_arms_on)).
+    pub player_target_arms: bool,
+    /// Skip an X cast at X=0 when every leaf of the effect scales with X
+    /// (`x_zero_is_noop`): Divergent Equation was cast at X=0 in 286 of 439
+    /// recorded casts, a one-mana no-op that exiles itself. Measured
+    /// 2026-09-06 on the 46-card converge list: null on its own (42.95 /
+    /// 43.73 vs 43.20 / 43.95 — the later cast returned nothing either) and
+    /// +0.2 beside the own-graveyard pick; zero incidence on converge4 and
+    /// on the sealed mirrors (50.0, every pair split). Adopted with the
+    /// pick ([`skip_noop_x0_on`](Self::skip_noop_x0_on), profile
+    /// `x0-skip`).
+    pub skip_noop_x0: bool,
     /// Extend the attack simulation one extra turn cycle when it ends
     /// with either life total at 10 or below. The one-cycle horizon can
     /// see "this creature survives to block" but not "this is the race I
@@ -906,6 +956,9 @@ impl EvalWeights {
             converge_rarest: false,
             converge_fetch: false,
             trick_modes_combat_only: false,
+            hostile_player_targets: false,
+            player_target_arms: false,
+            skip_noop_x0: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -999,6 +1052,9 @@ impl EvalWeights {
             converge_rarest: false,
             converge_fetch: false,
             trick_modes_combat_only: false,
+            hostile_player_targets: false,
+            player_target_arms: false,
+            skip_noop_x0: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -1075,6 +1131,9 @@ impl EvalWeights {
             converge_rarest: false,
             converge_fetch: false,
             trick_modes_combat_only: false,
+            hostile_player_targets: false,
+            player_target_arms: false,
+            skip_noop_x0: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -2098,7 +2157,27 @@ impl EvalWeights {
             removal_sim: true,
             // Round 66 (2026-09-06): trick modes held for the combat window.
             trick_modes_combat_only: true,
+            // Round 67 (2026-09-06, the same evening): hostile player slots
+            // aimed at the opponent, the other player as a cast-time arm,
+            // the own-graveyard pick and the X=0 no-op prune. Control:
+            // [`round67_off`](Self::round67_off), profile `r67-off`.
+            hostile_player_targets: true,
+            player_target_arms: true,
+            own_graveyard_picks: true,
+            skip_noop_x0: true,
             ..Self::round56_default()
+        }
+    }
+
+    /// The round-67 control: the default with the four 2026-09-06 targeting
+    /// and graveyard fixes back off (profile `r67-off`).
+    pub const fn round67_off() -> Self {
+        Self {
+            hostile_player_targets: false,
+            player_target_arms: false,
+            own_graveyard_picks: false,
+            skip_noop_x0: false,
+            ..Self::default_const()
         }
     }
 
@@ -2176,6 +2255,44 @@ impl EvalWeights {
             converge_rarest: true,
             converge_fetch: true,
             trick_modes_combat_only: true,
+            ..Self::default_const()
+        }
+    }
+
+    /// Hostile player slots aimed at the opponent (profile `hostile-targets`).
+    pub const fn hostile_player_targets_on() -> Self {
+        Self { hostile_player_targets: true, ..Self::default_const() }
+    }
+
+    /// The other player as a cast-time arm (profile `player-arms`).
+    pub const fn player_target_arms_on() -> Self {
+        Self { player_target_arms: true, ..Self::default_const() }
+    }
+
+    /// Both 2026-09-06 targeting fixes (profile `target-fixes`).
+    pub const fn target_fixes_on() -> Self {
+        Self { hostile_player_targets: true, player_target_arms: true, ..Self::default_const() }
+    }
+
+    /// The X=0 no-op prune (profile `x0-skip`).
+    pub const fn skip_noop_x0_on() -> Self {
+        Self { skip_noop_x0: true, ..Self::default_const() }
+    }
+
+    /// The own-graveyard pick with the X=0 prune (profile `gy-fixes`).
+    pub const fn graveyard_fixes_on() -> Self {
+        Self { own_graveyard_picks: true, skip_noop_x0: true, ..Self::default_const() }
+    }
+
+    /// Every 2026-09-06 targeting and graveyard fix (profile `all-fixes`) —
+    /// equal to the default since round 67 adopted all four; kept as the
+    /// named arm.
+    pub const fn all_fixes_on() -> Self {
+        Self {
+            hostile_player_targets: true,
+            player_target_arms: true,
+            own_graveyard_picks: true,
+            skip_noop_x0: true,
             ..Self::default_const()
         }
     }
@@ -5422,6 +5539,11 @@ fn cast_candidates<'a>(
         {
             continue;
         }
+        // `skip_noop_x0`: an X spell whose every leaf scales with X does
+        // nothing at X=0 — the cast waits for a real X.
+        if w.skip_noop_x0 && x_value == Some(0) && x_zero_is_noop(&c.definition.effect) {
+            continue;
+        }
         for i in 0..modes.unwrap_or(1) {
             let mode = modes.map(|_| i);
             // Pick a target appropriate to the chosen mode (ChooseMode
@@ -5493,6 +5615,32 @@ fn cast_candidates<'a>(
                 mode,
                 x_value,
             });
+            // `player_target_arms`: a slot-0 player target gets the other
+            // player as a sibling arm, legal-checked against the slot's own
+            // filter, so the scored eval / the search judges which side the
+            // spell wants instead of inheriting the picker's guess.
+            let player_alt = if w.player_target_arms
+                && let Some(Target::Player(p)) = &target
+                && let Some(req) = mode_effect.target_filter_for_slot_in_mode_kicked(0, mode, false)
+            {
+                let other = if *p == seat {
+                    state.first_opponent_of(seat).unwrap_or((seat + 1) % state.players.len())
+                } else {
+                    seat
+                };
+                let t = Target::Player(other);
+                (state.evaluate_requirement_static(req, &t, seat, None)
+                    && state.check_target_legality(&t, seat).is_ok())
+                .then(|| GameAction::CastSpell {
+                    card_id: c.id,
+                    target: Some(t),
+                    additional_targets: additional_targets.clone(),
+                    mode,
+                    x_value,
+                })
+            } else {
+                None
+            };
             let primary = GameAction::CastSpell {
                 card_id: c.id,
                 target,
@@ -5508,6 +5656,9 @@ fn cast_candidates<'a>(
             unvalidated.push(primary);
             if let Some(sibling) = sibling {
                 unvalidated.push(sibling);
+            }
+            if let Some(alt) = player_alt {
+                unvalidated.push(alt);
             }
         }
     }
@@ -13004,6 +13155,31 @@ pub fn x_relevant(def: &CardDefinition) -> bool {
     def.cost.has_x() || effect_uses_x(&def.effect)
 }
 
+/// `skip_noop_x0`: every leaf of the effect scales with X, so a cast at
+/// X=0 resolves to nothing (Divergent Equation's "return up to X" was cast
+/// at X=0 in 286 of 439 recorded casts: a one-mana no-op that exiles
+/// itself). A leaf with any constant part (Traumatic Critique's "draw two")
+/// keeps the X=0 cast on the menu.
+fn x_zero_is_noop(e: &Effect) -> bool {
+    use crate::effect::Value;
+    let is_x = |v: &Value| matches!(v, Value::XFromCost);
+    match e {
+        Effect::Seq(v) => !v.is_empty() && v.iter().all(x_zero_is_noop),
+        Effect::MoveChosen { count, .. } => is_x(count),
+        Effect::Draw { amount, .. }
+        | Effect::DealDamage { amount, .. }
+        | Effect::Discard { amount, .. }
+        | Effect::GainLife { amount, .. }
+        | Effect::LoseLife { amount, .. }
+        | Effect::Mill { amount, .. }
+        | Effect::AddCounter { amount, .. } => is_x(amount),
+        Effect::CreateToken { count, .. } => is_x(count),
+        Effect::ApplyToTargets { effect, .. } => x_zero_is_noop(effect),
+        Effect::MayDo { body, .. } => x_zero_is_noop(body),
+        _ => false,
+    }
+}
+
 fn effect_uses_x(eff: &Effect) -> bool {
     use crate::effect::Value;
     fn value_uses_x(v: &Value) -> bool {
@@ -14932,6 +15108,14 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
 
     let mut score = 0i32;
     let mut damage: Option<i32> = None;
+    // Which player slot 0 wants, for the player-target term below. The
+    // term prices "the opponent" at 4 units and "the caster" at 1 whatever
+    // the effect — right for damage and discard, backwards for a gift.
+    // Under `player_target_arms` both players are candidates, and the
+    // polarity-blind term sent Together as One's draw to the opponent in a
+    // third of recorded casts (82 of 227 cards, converge4 probe,
+    // 2026-09-06); so the arm's own rule reads the slot's polarity.
+    let mut slot0_wants_self = false;
     if let Some(card) = state.find_card_anywhere(card_id) {
         // Score the face actually being cast when it isn't the front:
         // MDFC backs for back-face casts, and the inset spell for
@@ -14950,6 +15134,14 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         // profile's scale, so lift them into the same units or a scaled
         // profile would drown the cast's own merits in the target's value.
         score += 2 * (def.cost.cmc() as i32 + extra_mana as i32) * w.unit;
+        if w.player_target_arms {
+            let mode = match action {
+                GameAction::CastSpell { mode, .. } => *mode,
+                _ => None,
+            };
+            slot0_wants_self = !def.effect.player_slot_is_hostile(0, mode)
+                && def.effect.prefers_friendly_target_for_slot(0, mode);
+        }
         if def.card_types.contains(&CardType::Creature) {
             score += (def.power.max(0) + def.toughness.max(0)) * w.unit;
             score += (def.keywords.len() as i32).min(3) * w.unit;
@@ -15018,7 +15210,10 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
             }
         }
         // Face damage / discard at an opponent beats a self-aimed cantrip.
-        Some(Target::Player(p)) => score += if p != seat { 4 * w.unit } else { w.unit },
+        Some(Target::Player(p)) => {
+            let wanted = if slot0_wants_self { p == seat } else { p != seat };
+            score += if wanted { 4 * w.unit } else { w.unit };
+        }
         _ => {}
     }
 
@@ -19839,6 +20034,132 @@ mod tests {
         );
     }
 
+    /// 2026-09-06 targeting work: a hostile player slot goes across the
+    /// table under the seat flag; a gift stays ours; Together as One's draw
+    /// stays ours while its damage crosses.
+    #[test]
+    fn hostile_player_slots_aim_at_the_opponent() {
+        use crate::game::Target;
+        fn slots(def: &crate::card::CardDefinition, flag: bool) -> (Option<Target>, Vec<Target>) {
+            let mut g = two_player_game();
+            g.players[0].hostile_player_targets = flag;
+            g.auto_targets_for_effect_all_slots(&def.effect, 0, None)
+        }
+        for def in [catalog::arcane_omens(), catalog::traumatic_critique()] {
+            assert_eq!(slots(&def, false).0, Some(Target::Player(0)), "{}: the control aims at the caster", def.name);
+            assert_eq!(slots(&def, true).0, Some(Target::Player(1)), "{}: the flag aims at the opponent", def.name);
+        }
+        for def in [catalog::mathemagics(), catalog::cost_of_brilliance(), catalog::homesickness()] {
+            assert_eq!(slots(&def, true).0, Some(Target::Player(0)), "{}: the draw stays ours", def.name);
+        }
+        let (s0, extra) = slots(&catalog::together_as_one(), true);
+        assert_eq!(s0, Some(Target::Player(0)), "slot 0 draws for us");
+        assert_eq!(extra, vec![Target::Player(1)], "slot 1's damage crosses");
+        let (_, extra) = slots(&catalog::together_as_one(), false);
+        assert_eq!(extra, vec![Target::Player(0)], "the control burned the caster");
+    }
+
+    /// `player_target_arms`: the other player is offered as a sibling cast,
+    /// and the scored pick takes the opponent's hand over its own.
+    #[test]
+    fn player_target_arm_offers_the_other_player() {
+        use crate::game::Target;
+        let mut g = two_player_game();
+        let omens = g.add_card_to_hand(0, catalog::arcane_omens());
+        for _ in 0..3 {
+            g.add_card_to_hand(1, catalog::grizzly_bears());
+        }
+        for _ in 0..4 {
+            g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        }
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let targets = |w: &EvalWeights| -> Vec<Option<Target>> {
+            cast_candidates(&g, 0, w, None)
+                .into_iter()
+                .filter_map(|(a, _)| match a {
+                    GameAction::CastSpell { card_id, target, .. } if card_id == omens => Some(target),
+                    _ => None,
+                })
+                .collect()
+        };
+        assert_eq!(targets(&EvalWeights::round67_off()), vec![Some(Target::Player(0))], "the control bakes the caster");
+        let arms = targets(&EvalWeights::player_target_arms_on());
+        assert!(
+            arms.contains(&Some(Target::Player(1))) && arms.contains(&Some(Target::Player(0))),
+            "both players are arms: {arms:?}"
+        );
+        let action = main_phase_action_with(&g, 0, true, &EvalWeights::player_target_arms_on()).action;
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Player(1)), .. } if card_id == omens),
+            "the scored pick takes the opponent's hand, got {action:?}"
+        );
+    }
+
+    /// The arm's own scoring reads the slot's polarity: Together as One's
+    /// draw stays with the caster even though the opponent is offered.
+    #[test]
+    fn player_target_arm_keeps_a_gift_on_the_caster() {
+        use crate::game::Target;
+        let mut g = two_player_game();
+        let together = g.add_card_to_hand(0, catalog::together_as_one());
+        // Libraries, or "target player draws" is a kill in the sim.
+        for seat in 0..2 {
+            for _ in 0..6 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        for _ in 0..6 {
+            g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        }
+        g.players[0].hostile_player_targets = true;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let w = EvalWeights::target_fixes_on();
+        let arms: Vec<(Option<Target>, i32)> = cast_candidates(&g, 0, &w, None)
+            .into_iter()
+            .filter_map(|(a, _)| match &a {
+                GameAction::CastSpell { card_id, target, .. } if *card_id == together => {
+                    Some((target.clone(), score_candidate(&g, 0, &a, &w)))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(arms.len(), 2, "both players are arms: {arms:?}");
+        let score_of = |p: usize| arms.iter().find(|(t, _)| *t == Some(Target::Player(p))).map(|(_, s)| *s);
+        assert!(score_of(0) > score_of(1), "the draw is ours to take: {arms:?}");
+        let action = main_phase_action_with(&g, 0, true, &w).action;
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, target: Some(Target::Player(0)), .. } if card_id == together),
+            "the scored pick draws for us, got {action:?}"
+        );
+    }
+
+    /// `skip_noop_x0`: Divergent Equation at X=0 returns nothing and is not
+    /// offered; at X=1 it is.
+    #[test]
+    fn x_zero_no_op_casts_are_pruned() {
+        let mut g = two_player_game();
+        let eq = g.add_card_to_hand(0, catalog::divergent_equation());
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let offered = |g: &GameState, w: &EvalWeights| {
+            cast_candidates(g, 0, w, None)
+                .iter()
+                .any(|(a, _)| matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == eq))
+        };
+        assert!(offered(&g, &EvalWeights::round67_off()), "the control offers the X=0 cast");
+        assert!(!offered(&g, &EvalWeights::skip_noop_x0_on()), "X=0 returns nothing: pruned");
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+        assert!(offered(&g, &EvalWeights::skip_noop_x0_on()), "X=1 is a real cast");
+        assert!(!x_zero_is_noop(&catalog::traumatic_critique().effect), "a loot rider keeps the X=0 cast");
+    }
+
     /// `trick_modes_combat_only`: Quandrix Charm's base-5/5 mode is not a
     /// main-phase candidate, and after blocks the trick picker casts it on
     /// our blocked bear (2/2 into a 3/3: the 5/5 kills and survives).
@@ -19902,7 +20223,7 @@ mod tests {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![pricey], "flag on: take the priciest own card"),
             other => panic!("expected Cards, got {other:?}"),
         }
-        match decide_choose_cards(&EvalWeights::default(), &g, 0, "Choose up to 1 cards to move", &candidates, 0, 1) {
+        match decide_choose_cards(&EvalWeights::round67_off(), &g, 0, "Choose up to 1 cards to move", &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert!(v.is_empty(), "flag off: the hostile-exile reading picks nothing"),
             other => panic!("expected Cards, got {other:?}"),
         }

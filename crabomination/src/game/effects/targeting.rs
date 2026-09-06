@@ -736,14 +736,25 @@ impl GameState {
             };
             let pick = {
                 // Player slots: try controller first (caster-friendly),
-                // then opponent.
+                // then opponent — unless the seat's `hostile_player_targets`
+                // flag is set and the slot's effect is hostile (a discard,
+                // damage, life loss, mill, …: `player_slot_is_hostile`), in
+                // which case the opponent comes first. Under the unconditional
+                // caster-first rule Arcane Omens discarded the caster's own
+                // hand in 98 of 113 recorded casts and Traumatic Critique /
+                // Together as One dealt their X to the caster's face every
+                // time (2026-09-06 deck work): a bot's search never sees the
+                // other player because the candidate list bakes one target.
                 let mut found: Option<Target> = None;
-                let player_caster = Target::Player(controller);
-                let player_opp = Target::Player(opp);
-                if is_legal(&player_caster) {
-                    found = Some(player_caster);
-                } else if is_legal(&player_opp) {
-                    found = Some(player_opp);
+                let hostile = self.players[controller].hostile_player_targets
+                    && eff.player_slot_is_hostile(slot, mode);
+                let (first, second) = if hostile { (opp, controller) } else { (controller, opp) };
+                let player_first = Target::Player(first);
+                let player_second = Target::Player(second);
+                if is_legal(&player_first) {
+                    found = Some(player_first);
+                } else if is_legal(&player_second) {
+                    found = Some(player_second);
                 }
                 // Graveyard-preferring effects (reanimate / regrow — Young
                 // Necromancer's reflexive return) must not grab a battlefield

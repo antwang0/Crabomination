@@ -2669,32 +2669,83 @@ impl Effect {
     /// When no single child owns the slot — a bare `Target(0)` payload
     /// with no surfaced filter — the whole-effect answer stands.
     pub fn prefers_friendly_target_for_slot(&self, slot: u8, mode: Option<usize>) -> bool {
-        fn owner_of(eff: &Effect, slot: u8, mode: Option<usize>) -> Option<&Effect> {
-            match eff {
-                Effect::Seq(v) => v.iter().find_map(|c| owner_of(c, slot, None)),
-                Effect::ChooseMode(modes) | Effect::ChooseN { modes, .. } => match mode {
-                    Some(m) => modes.get(m).and_then(|e| owner_of(e, slot, None)),
-                    None => modes.iter().find_map(|e| owner_of(e, slot, None)),
-                },
-                Effect::If { then, else_, .. } => {
-                    owner_of(then, slot, mode).or_else(|| owner_of(else_, slot, mode))
-                }
+        self.slot_owner(slot, mode)
+            .map(|e| e.prefers_friendly_target())
+            .unwrap_or_else(|| self.prefers_friendly_target())
+    }
+
+    /// The child that declares target slot `slot` (in `mode`, for a modal
+    /// effect), or `None` when no single child owns it. The walk behind
+    /// [`prefers_friendly_target_for_slot`](Self::prefers_friendly_target_for_slot)
+    /// and [`player_slot_is_hostile`](Self::player_slot_is_hostile).
+    pub fn slot_owner(&self, slot: u8, mode: Option<usize>) -> Option<&Effect> {
+        match self {
+            Effect::Seq(v) => v.iter().find_map(|c| c.slot_owner(slot, None)),
+            Effect::ChooseMode(modes) | Effect::ChooseN { modes, .. } => match mode {
+                Some(m) => modes.get(m).and_then(|e| e.slot_owner(slot, None)),
+                None => modes.iter().find_map(|e| e.slot_owner(slot, None)),
+            },
+            Effect::If { then, else_, .. } => {
+                then.slot_owner(slot, mode).or_else(|| else_.slot_owner(slot, mode))
+            }
+            Effect::MayDo { body, .. }
+            | Effect::MayDoBy { body, .. }
+            | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
+            | Effect::CapTargetsAt { body, .. }
+            | Effect::MayPayX { body, .. }
+            | Effect::Repeat { body, .. } => body.slot_owner(slot, mode),
+            other => other
+                .target_filter_for_slot_in_mode_kicked(slot, None, false)
+                .is_some()
+                .then_some(other),
+        }
+    }
+
+    /// Slot `slot` is a *player* target the effect wants to hurt: a
+    /// discard, damage, life loss, mill, sacrifice or hand/graveyard exile
+    /// whose target slot admits a player. The auto-target pickers used to
+    /// try the caster first for every player slot (right for "target player
+    /// draws", the SOS loot shapes), so Arcane Omens discarded the caster's
+    /// hand in 98 of 113 recorded casts and Traumatic Critique / Together as
+    /// One dealt their X to the caster's face every time (2026-09-06 deck
+    /// work). Only shapes whose polarity is not in doubt are listed; a
+    /// loot ("target player discards any number, then draws that many") or
+    /// a gift stays caster-first, so the answer is "hostile", not "friendly
+    /// or not".
+    pub fn player_slot_is_hostile(&self, slot: u8, mode: Option<usize>) -> bool {
+        fn hostile(e: &Effect) -> bool {
+            match e {
+                Effect::Discard { .. }
+                | Effect::DiscardChosen { .. }
+                | Effect::DiscardHalf { .. }
+                | Effect::DealDamage { .. }
+                | Effect::DealDamageDivided { .. }
+                | Effect::LoseLife { .. }
+                | Effect::Drain { .. }
+                | Effect::Mill { .. }
+                | Effect::Sacrifice { .. }
+                | Effect::SacrificeHalf { .. }
+                | Effect::SacrificeAndRemember { .. }
+                | Effect::ExileFromHand { .. }
+                | Effect::ExileChosenFromHand { .. }
+                | Effect::ExilePlayerGraveyard { .. }
+                | Effect::ExileTopOfLibrary { .. }
+                | Effect::LookAtHand { .. }
+                | Effect::RevealHandDiscardAllMatching { .. } => true,
+                Effect::ApplyToTargets { effect, .. } => hostile(effect),
+                Effect::TargetPlayerThen { then, .. } => hostile(then),
                 Effect::MayDo { body, .. }
                 | Effect::MayDoBy { body, .. }
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::MayPayX { body, .. }
-                | Effect::Repeat { body, .. } => owner_of(body, slot, mode),
-                other => other
-                    .target_filter_for_slot_in_mode_kicked(slot, None, false)
-                    .is_some()
-                    .then_some(other),
+                | Effect::Repeat { body, .. } => hostile(body),
+                _ => false,
             }
         }
-        owner_of(self, slot, mode)
-            .map(|e| e.prefers_friendly_target())
-            .unwrap_or_else(|| self.prefers_friendly_target())
+        self.slot_owner(slot, mode).is_some_and(hostile)
     }
 
     pub fn prefers_friendly_target(&self) -> bool {

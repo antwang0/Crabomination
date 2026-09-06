@@ -2010,6 +2010,16 @@ fn play_one_game_traced(
             g.players[seat].smart_tap = w.smart_tap;
             g.players[seat].converge_rarest = w.converge_rarest;
         }
+        // The player-slot polarity flag reaches search seats too: the
+        // search's candidate list is built by the same picker, so an MCTS
+        // pilot without it self-targets exactly as the scored one did. The
+        // other seat flags keep their Scored-only push (a search seat has
+        // never carried `smart_tap`, and its baselines are read that way).
+        g.players[seat].hostile_player_targets = match pilot {
+            Pilot::Scored(w) => w.hostile_player_targets,
+            Pilot::Mcts(cfg) => cfg.weights.hostile_player_targets,
+            Pilot::Uniform => false,
+        };
     }
     let mut seeded = shuffle_rng;
     for seat in 0..2 {

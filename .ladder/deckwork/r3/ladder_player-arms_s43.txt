@@ -1,0 +1,25 @@
+ladder: player-arms (A) vs dflt (B) — 500 games x 12 sealed decks on 20 threads, seed 43 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #1             247    253      0     49.4%  [45.0%, 53.8%]
+sealed #2             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #3             277    223      0     55.4%  [51.0%, 59.7%]
+sealed #4             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #5             249    251      0     49.8%  [45.4%, 54.2%]
+sealed #6             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #7             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #8             245    255      0     49.0%  [44.6%, 53.4%]
+sealed #9             329    171      0     65.8%  [61.5%, 69.8%]
+sealed #10            251    249      0     50.2%  [45.8%, 54.6%]
+sealed #11            250    250      0     50.0%  [45.6%, 54.4%]
+----------------------------------------------------------------
+TOTAL                3098   2902      0     51.6%  [50.4%, 52.9%]
+
+6000 decided, 0 undecided, in 4.1s
+
+paired: 3000 pairs — 133 A-sweeps, 35 B-sweeps, 2832 splits
+        A win%  51.6%  [51.2%, 52.1%]  (±0.42 pts)
+        within-pair rho -0.890 — variance x0.11 vs independent games, i.e. these 6000 games carry the precision of 54554
+verdict: A (player-arms) is stronger — the interval clears 50%

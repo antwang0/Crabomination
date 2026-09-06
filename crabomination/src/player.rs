@@ -1030,6 +1030,17 @@ pub struct PlayerData {
     /// work). Pushed from `EvalWeights::converge_rarest` like `smart_tap`;
     /// off is the ladder control.
     pub converge_rarest: bool,
+    /// Auto-target polarity for player slots (bot seats): a "target
+    /// player" / "any target" slot whose effect is hostile (discard,
+    /// damage, life loss, mill, sacrifice, hand exile — see
+    /// `Effect::player_slot_is_hostile`) is aimed at the opponent first.
+    /// Off, every player slot tries the caster first, which had Arcane
+    /// Omens discarding the caster's hand and Traumatic Critique / Together
+    /// as One dealing X to the caster's face in every recorded cast
+    /// (2026-09-06 deck work). Pushed from
+    /// `EvalWeights::hostile_player_targets` like `smart_tap`; off is the
+    /// ladder control.
+    pub hostile_player_targets: bool,
     /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
     /// every coin flip this player makes is replayed `coin_flip_advantage`
     /// extra times and they get to keep the result they prefer. Practically
@@ -1279,6 +1290,7 @@ impl Player {
             wants_ui: false,
             smart_tap: false,
             converge_rarest: false,
+            hostile_player_targets: false,
             manual_mana: false,
             coin_flip_advantage: 0,
         })

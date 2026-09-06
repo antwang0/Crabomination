@@ -140,6 +140,43 @@ screen field). Confirmation of converge4 on this binary: held-out 64.72 /
 **69.7 %** [68.3, 71.1] (72.0 earlier was under the old default). So
 `decks/real_build_converge4.txt` is the answer under both defaults.
 
+## The bot was aiming its own spells at itself (r3, the same evening)
+
+The user asked why Oracle's Restoration survives while Arcane Omens,
+Divergent Equation and Traumatic Critique were cut. The replays answered:
+the auto-target picker that fills a spell's slots tried the **caster first
+for every player slot**. Right for "target player draws"; wrong for discard
+and damage. Both pilots build their candidate list through it, so the
+search never saw the other player.
+
+| card (converge3, 1,200 search-pilot games) | what happened |
+|---|---|
+| Arcane Omens, 113 casts | the caster discarded in 98, the opponent in 0 |
+| Traumatic Critique, 201 casts | X to the caster's own face every player-aimed cast (455 damage) |
+| Together as One, 151 casts | X to own face every cast (616 damage), offset by the X life |
+| Divergent Equation, 439 casts | 286 at X=0; the pick returned nothing (flag off) |
+
+The deck seat hit its own face with a spell 376 times and self-discarded 344
+times; the 24 opponent decks did it 12 and 34 times. Every earlier verdict
+on those cards, and on Together as One (−0.15 when cut), was a verdict on
+the bug. Two more findings on the way: the committed pool file lacked five of
+the user's own cards (Arcane Omens among them, so it was never offered as an
+add), and Bind to Life put a creature onto the battlefield in ~5 of 86 casts.
+
+**Fixed and adopted (round 67)**, gated on the deck seat vs the field and
+on the sealed mirrors:
+
+| flag | converge3 | converge4 | sealed |
+|---|---|---|---|
+| picker aims hostile player slots at the opponent (seat flag) | 51.26 / 51.79 vs 43.20 / 43.95 (+8.0) | +2.0 | 50.4 / 50.5 |
+| the other player as a cast-time arm | +4.8 alone, −0.3 beside the flag | −0.3 | **51.7 / 51.7** |
+| own-graveyard pick + X=0 prune | +1.1 | identical | 50.0 |
+| all four (the new default) | **52.14 / 52.65** | **68.24 / 68.84** | 51.7 |
+
+Search pilot on converge3, both seats: **48.42 ±1.5 vs 39.17 ±1.5**. The
+search was then rerun from the user's 46-card list on the fixed pool
+(`r3/search/`); see the section below once it lands.
+
 ## Caveats
 
 - Every number is "as the bot plays both decks" against consistent

@@ -1,0 +1,25 @@
+ladder: hostile-targets (A) vs dflt (B) — 500 games x 12 sealed decks on 20 threads, seed 97 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #1             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #2             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #3             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #4             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #5             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #6             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #7             265    235      0     53.0%  [48.6%, 57.3%]
+sealed #8             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #9             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #10            250    250      0     50.0%  [45.6%, 54.4%]
+sealed #11            264    236      0     52.8%  [48.4%, 57.1%]
+----------------------------------------------------------------
+TOTAL                3029   2971      0     50.5%  [49.2%, 51.7%]
+
+6000 decided, 0 undecided, in 3.1s
+
+paired: 3000 pairs — 37 A-sweeps, 8 B-sweeps, 2955 splits
+        A win%  50.5%  [50.3%, 50.7%]  (±0.22 pts)
+        within-pair rho -0.970 — variance x0.03 vs independent games, i.e. these 6000 games carry the precision of 201235
+verdict: marginal — A (hostile-targets) leads by 0.5 points, but an edge this small needs several times 6000 games before it can be trusted; re-run with a different --seed to see whether it holds

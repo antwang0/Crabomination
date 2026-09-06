@@ -305,3 +305,61 @@ gauntlet and the ladder; the duel bin is now rebuilt too). Scan: suicides
 `scripts/deck_search.py` is the loop as a script (cuts → adds for the
 weakest card → swaps → lands, the bar built in); `run_r2.sh` chains it
 with the three-way confirmation.
+
+## 2026-09-06 evening — the "good cards rate badly" question (r3)
+
+The user asked why Oracle's Restoration survives while Arcane Omens, Divergent
+Equation and Traumatic Critique were cut, and whether Vastlands Scavenger fits.
+Replay audit of the three search-pilot sets and a fresh 192-game scored probe:
+
+- **Auto-target bug.** `auto_targets_for_effect_all_slots_kicked` tries the
+  caster first for every player slot. Arcane Omens: 98 of 113 casts made the
+  caster discard (0 opponent discards; the other 15 had an empty hand).
+  Traumatic Critique: X to the caster's face on every player-aimed cast (455
+  damage / 201 casts). Together as One: X to own face every cast (616 / 151 in
+  converge3; 828 / 226 in converge4). Deck seat: 376 self-face casts and 344
+  self-discards over 8,487 spells; the 24 opponent decks: 12 and 34 over 8,157.
+  The scored pilot does the same (18/24 Omens, 151 dmg / 46 Critique).
+  Same rule in `auto_extra_distinct_slot_targets` (triggers, slots 1+).
+- **Divergent Equation** was cast at X=0 in 286 of 439 casts, and the pick
+  returned nothing under the default (own_graveyard_picks off). Its −3.67 in r2
+  was the blank. **Bind to Life**: 86 casts in converge4's replays, ~5 creatures.
+- **Pool file** lacked five of the user's own cards (2 Studious, Terramorphic,
+  Dreamroot, Arcane Omens, Shared Roots) — the user added them locally; Omens
+  was never offered as an add. Traumatic Critique is excluded from converge4
+  adds by the 3-source rule (one red source).
+- **Oracle's Restoration** is the neutral filler; +Mountain −Oracle read +0.94.
+
+Built (flags, all off): `hostile_player_targets` (seat flag, both pickers, pushed
+to search seats too), `player_target_arms` (the other player as a cast-time
+arm; score_candidate already prices opp 4 vs self 1), `skip_noop_x0`
+(`x_zero_is_noop`), profiles `target-fixes`, `gy-fixes` (own_graveyard_picks +
+x0), `all-fixes`. Tests: hostile_player_slots_aim_at_the_opponent,
+player_target_arm_offers_the_other_player, x_zero_no_op_casts_are_pruned.
+Gate plan: `r3/gate3.sh` (gauntlet converge3/converge4 per flag, sealed mirrors,
+mcts256-allfix vs mcts256 on converge3 with replays), then adopt and rerun the
+search from converge3 with the fixed pool.
+
+### 21:05 — r3 gates (fresh release-fast binary, `r3/gate3.sh`, `gate3b.sh`)
+
+converge3 dflt 43.20 / 43.95; hostile 51.26 / 51.79; parms 47.99 / 48.68;
+targetfix 50.99 / 51.47 (after the polarity-aware score term; 50.72 / 51.28
+before it); x0skip 42.95 / 43.73; gypick 44.00 / 44.91; gyfix 44.28 / 45.14;
+allfix 52.14 / 52.65. converge4 dflt 66.36 / 67.10 (reproduces); hostile
+68.58 / 68.95; parms 66.02 / 66.75; targetfix 68.24 / 68.84; x0skip and gyfix
+identical; allfix 68.24 / 68.84. Sealed mirrors: hostile 50.4 / 50.5,
+player-arms 51.7 / 51.7, target-fixes 51.7 / 51.7, x0 and gy 50.0 (zero
+incidence), all-fixes 51.7 / 51.7. Search pilot converge3 mcts256 control:
+39.17 ±1.45 (self-face damage reproduced: 630 Together, 573 Critique).
+Probe of the arm's cost: Together as One's draw went to the opponent in 82 of
+227 cards under the polarity-blind score term, 4 of 233 after.
+Adopted all four into the default (round 67); control `r67-off`. Next:
+`after_confirm.sh` → tests, rebuild, incumbents must read 52.14 / 52.65 and
+68.24 / 68.84, then `run_r3_search.sh` from converge3 on the fixed pool.
+
+### 21:14 — search-pilot confirm (gate3b)
+
+converge3 mcts256-allfix both seats: 48.42 ±1.47 vs the 39.17 ±1.45 control
+(+9.3). Replays: Omens 526 opponent discards / 179 casts (self 10); Critique
+901 opponent face / 101 own; Together 887 across, 83 % of draws kept.
+`after_confirm.sh` running: tests, rebuild, incumbents, then the search.
