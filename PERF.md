@@ -3418,6 +3418,32 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-267)` TAKEN — a battlefield object skips the printed type flags and the instance keyword pass the computed view overwrites: actor **-0.229 %**
+
+```text
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), against the (-266) tip + b3fd2c43
+         3,236,108,381 -> 3,228,688,149 Ir  **-0.229 %**;  60 games / 6,080 rows / 0 stalls / 6,566 encoded states both sides
+  encode_card_object_into 236,471 calls / 53.96 M self  ->  encode_printed_into 236,471 / 30.04 M self + encode_instance_keywords_into 160,523 / 15.94 M self
+         (the 75,948 battlefield objects no longer run the keyword pass: ward 236,471 -> 160,523 calls, 3.65 M -> 2.57 M);  encode_state_inner self 56.5 M -> 58.2 M (inlining moved)
+  bot_ladder pools: unmoved by construction (encode.rs only)
+```
+
+`encode_battlefield_object_into` ran the whole printed pass — five
+type walks, `object_keyword_bits` over the instance lists, `ward()` —
+and then, for every real battlefield object, overwrote all of it from
+`ComputedPermanent` (types, keywords, the ward flag). The pass is now
+two halves: `encode_printed_into` (cost, P/T, pips, attachment,
+multiplicity, the index, and the type flags only when asked) and
+`encode_instance_keywords_into` (the off-battlefield keyword answer);
+a battlefield object asks for the computed view first and runs the
+type flags and the keyword half only on the raw fallback that a real
+walk never takes. Same final features, one write instead of two. The
+encoder's residual after `(-266)`/`(-267)`: the printed half 30 M
+(0.93 %, ~127 Ir an object: `cmc` 22, the pip walk, two subtype walks,
+`is_creature`/`is_land`/... for the 160 k off-board objects), the
+off-board keyword half 16 M (0.49 %), the layer views 43.8 M (1.36 %),
+self 58 M (1.8 %), the castability scope 15.7 M.
+
 ### `(-266)` TAKEN — the encoder's board totals summed inside the object pass instead of a second `computed_permanent_on` walk: actor **-0.317 %**
 
 ```text

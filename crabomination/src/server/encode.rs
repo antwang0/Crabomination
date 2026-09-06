@@ -934,23 +934,64 @@ fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
 /// `out` is assumed **zeroed**: this writes only the features it sets, exactly
 /// as the by-value form did over a fresh `[0.0; OBJ_FEATS]`.
 fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObject) {
-    use crate::card::Keyword;
+    encode_printed_into(c, vocab, out, true);
+    encode_instance_keywords_into(c, out);
+}
+
+/// The printed half of [`encode_card_object_into`]: cost, P/T, colour
+/// pips, the attachment flag, multiplicity and the card index — and the
+/// type flags when `with_types`. A battlefield object takes its types
+/// from the computed view instead and skips them here (PERF `(-267)`).
+fn encode_printed_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObject, with_types: bool) {
     let def = &c.definition;
     let feats = &mut out.feats;
     feats[0] = def.cost.cmc() as f32 / 8.0;
-    feats[1] = if def.is_creature() { 1.0 } else { 0.0 };
-    feats[2] = if def.is_land() { 1.0 } else { 0.0 };
-    feats[3] = if def.is_planeswalker() { 1.0 } else { 0.0 };
+    if with_types {
+        feats[1] = if def.is_creature() { 1.0 } else { 0.0 };
+        feats[2] = if def.is_land() { 1.0 } else { 0.0 };
+        feats[3] = if def.is_planeswalker() { 1.0 } else { 0.0 };
+        // v8: the two permanent classes the round-4 flags left in one
+        // undifferentiated "none of the above" bucket. The embedding carries
+        // the type for in-vocab cards; tokens and off-vocab cards live on
+        // these bits alone, and a modern board is mostly made of them.
+        if !ablated(ABLATE_V8) {
+            feats[53] = if def.is_artifact() { 1.0 } else { 0.0 };
+            feats[54] = if def.is_enchantment() { 1.0 } else { 0.0 };
+        }
+    }
     feats[4] = def.power.max(0) as f32 / 8.0;
     feats[5] = def.toughness.max(0) as f32 / 8.0;
-    // v8: the two permanent classes the round-4 flags left in one
-    // undifferentiated "none of the above" bucket. The embedding carries
-    // the type for in-vocab cards; tokens and off-vocab cards live on
-    // these bits alone, and a modern board is mostly made of them.
-    if !ablated(ABLATE_V8) {
-        feats[53] = if def.is_artifact() { 1.0 } else { 0.0 };
-        feats[54] = if def.is_enchantment() { 1.0 } else { 0.0 };
+    // Colour requirement, printed. `cmc` alone said a card costs four; it
+    // could not say the four was {2}{G}{G} in a deck with three Forests.
+    if !ablated(ABLATE_CASTABILITY) {
+        for col in def.cost.colored_symbols() {
+            feats[20 + color_index(col)] += 1.0 / 2.0;
+        }
     }
+    // 25/26 (castable now / next turn) are hand-only and filled by the
+    // caller, which is the only place that knows the seat's mana.
+    // Multiplicity: one copy unless the library encoder says otherwise.
+    feats[27] = 1.0 / 4.0;
+    // An aura or equipment is a card whose whole value is an edge; the
+    // printed-type flag lets the net treat "attachment in hand" as a
+    // different kind of spell before any edge exists.
+    if !ablated(ABLATE_RELATIONS) && (def.is_aura() || def.is_equipment()) {
+        feats[35] = 1.0;
+    }
+    // Memoized on the card object — `index_of` is a hash lookup and the
+    // actor asks it once per encoded object plus once per library card,
+    // 438,318 times a sixty-game run at ~49 Ir. See `CardData::vocab_index`.
+    out.card = c.vocab_index(|d| vocab.index_of(d.name));
+}
+
+/// The keyword half of [`encode_card_object_into`], off the object's own
+/// lists — printed, EOT-granted and CR 122.1b counters, minus removals —
+/// which is the whole answer off the battlefield, where nothing else can
+/// grant. A battlefield object reads the computed view's keywords
+/// instead ([`encode_battlefield_object_into`]) and does not come here.
+fn encode_instance_keywords_into(c: &CardInstance, out: &mut EncodedObject) {
+    use crate::card::Keyword;
+    let feats = &mut out.feats;
     // Evasion/combat keywords, granted ones included (`has_keyword`
     // reads printed + granted lists; the granted lists are simply empty
     // off the battlefield). First and double strike share a flag — for a
@@ -1005,23 +1046,6 @@ fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObj
             feats[12 + i] = 1.0;
         }
     }
-    // Colour requirement, printed. `cmc` alone said a card costs four; it
-    // could not say the four was {2}{G}{G} in a deck with three Forests.
-    if !ablated(ABLATE_CASTABILITY) {
-        for col in def.cost.colored_symbols() {
-            feats[20 + color_index(col)] += 1.0 / 2.0;
-        }
-    }
-    // 25/26 (castable now / next turn) are hand-only and filled by the
-    // caller, which is the only place that knows the seat's mana.
-    // Multiplicity: one copy unless the library encoder says otherwise.
-    feats[27] = 1.0 / 4.0;
-    // An aura or equipment is a card whose whole value is an edge; the
-    // printed-type flag lets the net treat "attachment in hand" as a
-    // different kind of spell before any edge exists.
-    if !ablated(ABLATE_RELATIONS) && (def.is_aura() || def.is_equipment()) {
-        feats[35] = 1.0;
-    }
     // Keyword classes (round 28) the round-4 evasion flags don't carry.
     // Mostly redundant with the card embedding for in-vocab cards; this
     // is for tokens (index 0) and granted keywords, which the embedding
@@ -1048,10 +1072,6 @@ fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObj
             feats[43] = 1.0;
         }
     }
-    // Memoized on the card object — `index_of` is a hash lookup and the
-    // actor asks it once per encoded object plus once per library card,
-    // 438,318 times a sixty-game run at ~49 Ir. See `CardData::vocab_index`.
-    out.card = c.vocab_index(|d| vocab.index_of(d.name));
 }
 
 /// Any printed or EOT-granted keyword matching `pred`, minus removals.
@@ -1131,7 +1151,16 @@ fn encode_battlefield_object_into(
     vocab: &Vocab,
     o: &mut EncodedObject,
 ) -> (bool, bool, i32) {
-    encode_card_object_into(c, vocab, o);
+    // The computed view is the final word on types and keywords below, so
+    // the printed pass skips its type flags and the instance keyword pass
+    // runs only for the raw fallback: both were written and then
+    // overwritten on every one of the 75,948 battlefield objects a
+    // 60-game actor run encodes (PERF `(-267)`).
+    let cp = g.computed_permanent_on(c);
+    encode_printed_into(c, vocab, o, cp.is_none());
+    if cp.is_none() {
+        encode_instance_keywords_into(c, o);
+    }
     let f = &mut o.feats;
     f[6] = if c.tapped { 1.0 } else { 0.0 };
     f[7] = if c.summoning_sick { 1.0 } else { 0.0 };
@@ -1149,7 +1178,7 @@ fn encode_battlefield_object_into(
     // per permanent inside `encode_state`'s frozen scope; the raw
     // fallback is unreachable for a real battlefield walk and exists so
     // a malformed synthetic state degrades instead of panicking.
-    let totals = match g.computed_permanent_on(c) {
+    let totals = match cp {
         Some(cp) => {
             use crate::card::CardType;
             let is_creature = cp.card_types().contains(&CardType::Creature);
