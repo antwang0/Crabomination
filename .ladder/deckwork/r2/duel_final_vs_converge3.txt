@@ -1,0 +1,10 @@
+A: .ladder/deckwork/r2/final.txt (40 cards)
+B: decks/real_build_converge3.txt (46 cards)
+2000 antithetic pairs = 4000 games, seed 7, identical pilots
+
+unpaired: A 2789 - 1211 B (0 undecided) = 69.7% [68.3%, 71.1%]
+paired:   2000 pairs — 973 A-sweeps, 184 B-sweeps, 843 splits
+          A win% 69.7%  [68.3%, 71.1%]  (+/-1.42 pts)
+          within-pair rho 0.002 — variance x1.00 vs independent games, i.e. these 4000 games carry the precision of 3994
+
+verdict: A (.ladder/deckwork/r2/final.txt) is stronger — the interval is entirely above 50%

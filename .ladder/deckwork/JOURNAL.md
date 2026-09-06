@@ -268,3 +268,40 @@ v4_removal: new default 60.99 / 60.86 vs `trickoff` control 57.50 / 57.45
 identical to the hundredth. Sealed mirror `trick-modes-off` vs dflt: 50.0
 (all split) / 49.8 ±0.30. Golden traces 7/7 unchanged under the new
 default; 255 bot tests pass; release-fast typecheck clean.
+
+## 16:25 Search rerun under the round-66 default (user: "rerun the search")
+`scripts/deck_search.py` (the loop as a script: cuts → adds for the weakest
+card → swaps of top-3 cuts x top-4 adds; adopt on the same bar; up to 3
+generations; then lands) from converge4 with the charms back in the pool,
+`r2/` work dir, `r2/results.txt` (this binary only). Baselines first:
+converge3 and converge4 on the flipped default. Then the three-way
+confirmation of `r2/final.txt`: held-out field, mcts256 both seats with
+replays, duels vs converge4 and converge3.
+
+## 16:59 Rerun gen 1 (r2/results.txt, new default)
+Baselines: converge3 43.20 / 43.95 (was 40.55 / 41.00 — the charm window
+alone is +2.8 for the original list); converge4 66.36 / 67.10 (unchanged).
+Cuts from converge4: every cut costs; cheapest Studious First-Year −0.03,
+Together as One −0.15, Proctor's −0.33, Wander Off −0.42, Sundering −0.44.
+Adds for Studious: Thornfist Striker 67.67 (+0.94), Arnyn 67.16, Fractal
+Mascot 67.12, Stone Docent 66.86, Spellbook Seeker 66.85, Stoneglider
+66.84; second Oracle's 66.69. **Quandrix Charm 66.45**: −0.3 vs the
+incumbent and −0.24 vs a cantrip — a fair card now, no longer the −3.9
+liability the old timing made it. Witherbloom Charm 64.45 (−2.3): still
+bad; its modes are not tricks, the fix does not touch it. Efflorescence
+64.69, Burrog Barrage 65.92.
+
+## 17:30 Rerun done: converge4 stands under the round-66 default
+Gen 1 best: -Proctor's Gaze +Thornfist Striker 68.05 (+1.32 ±0.61, seeds
+67.83 / 68.26) → STOP (under the 1.5 bar, the third time this swap reads
++1.2 to +1.3). Lands: +Mountain 67.67 (+0.9), +Forest +0.6, -Island +0.5 →
+18 stand. Confirmation of the final (= converge4): held-out 64.72 / 65.11
+(converge3 there 40.77 / 41.16, up from 38.16 / 38.79); mcts256 both seats
+61.67 ±2.9 (63.17 before; within noise); duel vs converge3 **69.7 %**
+[68.3, 71.1] on a rebuilt `deck_duel` — the chain's first duel read 72.0
+on a binary built before the default flipped (`build7` rebuilt only the
+gauntlet and the ladder; the duel bin is now rebuilt too). Scan: suicides
+9 % / 12 %, <4 lands after own T4 in 19 %.
+`scripts/deck_search.py` is the loop as a script (cuts → adds for the
+weakest card → swaps → lands, the bar built in); `run_r2.sh` chains it
+with the three-way confirmation.

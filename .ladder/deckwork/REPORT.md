@@ -126,6 +126,20 @@ Striker is +1.3 on the screen field (4.2σ) and +1.2 on the held-out field
 (66.23 / 66.05 vs 64.72 / 65.11) — replicated, below the pre-registered
 1.5. It is noted in the proposal's header, not applied.
 
+## Rerun under the new default (`r2/`)
+
+With trick modes held for combat, the search was rerun from converge4 with
+the charms back in the candidate pool (`scripts/deck_search.py`, the same
+bar). Nothing clears it: the best change is once more Thornfist Striker for
+Proctor's Gaze at +1.3 (both seeds, third replication), and 18 lands stand.
+Quandrix Charm for Studious First-Year now reads −0.3 — a fair card, no
+longer a liability — and Witherbloom Charm −2.3 (its modes are not tricks).
+The original 46-card list gains +2.8 from the timing fix alone (43.6 on the
+screen field). Confirmation of converge4 on this binary: held-out 64.72 /
+65.11 vs converge3's 40.77 / 41.16; search pilot 61.7 ± 2.9; head to head
+**69.7 %** [68.3, 71.1] (72.0 earlier was under the old default). So
+`decks/real_build_converge4.txt` is the answer under both defaults.
+
 ## Caveats
 
 - Every number is "as the bot plays both decks" against consistent

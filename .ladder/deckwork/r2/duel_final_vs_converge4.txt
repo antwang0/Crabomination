@@ -1,0 +1,10 @@
+A: .ladder/deckwork/r2/final.txt (40 cards)
+B: decks/real_build_converge4.txt (40 cards)
+2000 antithetic pairs = 4000 games, seed 7, identical pilots
+
+unpaired: A 2000 - 2000 B (0 undecided) = 50.0% [48.5%, 51.5%]
+paired:   2000 pairs — 0 A-sweeps, 0 B-sweeps, 2000 splits
+          A win% 50.0%  [50.0%, 50.0%]  (+/-0.00 pts)
+          within-pair rho -1.000 — variance x0.00 vs independent games, i.e. these 4000 games carry the precision of inf
+
+verdict: inconclusive — the interval straddles 50%
