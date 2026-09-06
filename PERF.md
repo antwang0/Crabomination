@@ -2557,9 +2557,9 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-266)`..`(-269)` — closing state at the `(-269)` tip
+### `(-266)`..`(-270)` — closing state at the `(-270)` tip
 
-Four actor-only legs on the recorder and the encoder (outcomes identical
+Five actor-only legs on the recorder and the encoder (outcomes identical
 on every dump; `--bench` counters, golden traces and the ladder pools
 unmoved by construction — nothing a `bot_ladder` game runs was touched),
 all read off the actor recipe, plus the `spell_kind` memo leg built,
@@ -2570,11 +2570,11 @@ actor is +0.011 %.
 
 ```text
   actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features):
-         3,246,053,464 -> 3,181,309,243 Ir  (-1.994 %)  across (-266) -0.317 %, b3fd2c43 +0.011 %, (-267) -0.229 %, (-268) -1.007 %, (-269) -0.465 %
+         3,246,053,464 -> 3,172,892,750 Ir  (-2.254 %)  across (-266) -0.317 %, b3fd2c43 +0.011 %, (-267) -0.229 %, (-268) -1.007 %, (-269) -0.465 %, (-270) -0.265 %
          60 games / 6,080 rows / 0 stalls / 6,566 encoded states on every side
   sealed / cube dflt Ir: not remeasured — encode.rs, selfplay.rs' recorder and a CardMemo word no ladder pool reads; (-269)'s +8 bytes on CardData
          priced on the actor at +0.22 M in Arc::clone_from_ref_in (0.007 %)
-suite   19,239 / 0 / 5 (75 s) at the (-269) tip; golden traces 7/7 unmoved; 32 encoder tests (two new: the totals fold, the packed word vs every catalog card)
+suite   19,239 / 0 / 5 (75 s) at the (-269) and (-270) tips; golden traces 7/7 unmoved; 32 encoder tests (two new: the totals fold, the packed word vs every catalog card)
 clippy  --workspace --exclude crabomination_client --all-targets   clean (one manual_is_multiple_of in the concurrent deck_gauntlet bin, fixed here)
 release release-fast typecheck of bot_ladder: clean
 --bench release-fast (mimalloc) at the (-269) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok (506 games/s on this host)
@@ -7708,6 +7708,24 @@ What is left of the two actor-only rows, so nobody re-reads them:**
   `(-63)`'s shape at its floor; nothing here is a lead.
 * **`Normal::sample` 41.9 M + `rand_chacha` 15.2 M (1.8 %) is the net's
   weight init, once a process** — 0 in a 10 k-game run. Not a row.
+* **`(-270)` took the castability tables** (the pair shares them);
+  the encoder's castability scope is now one `mana_source_table` pair
+  per snapshot, and `mana_source_table` self is 13.9 M program-wide,
+  most of it the bot's.
+* **The sealed list's (2), priced on the actor at the `(-270)` tip and
+  NOT built:** `card_keyword_possible_on` 47,363 asks / 7.65 M
+  (0.24 %), all from `activate_ability_inner`'s two CR 602.5 gates on a
+  land tap, ~161 Ir each — the `synth` triple (three `Keyword`
+  compares), `has_family(KEYWORD)`, then the grant-member walk's
+  `can_grant_keyword(pred)` per member. The device is an exact-keyword
+  fold lane beside `grant_members` (OR of each member's grantable
+  keyword discriminants, definition-only so the lane is sound) behind
+  an exact-keyword entry point for the two gates — ~120 Ir an ask,
+  ~0.18 % actor / ~0.2 % sealed. Its cost is a second walker of the
+  grant statics that must agree with `can_grant_keyword`, unless the
+  fold is defined *through* it (237 predicate walks per definition,
+  memoized — and the memo has no free word; `penc` leaves bits 31-62 of
+  the fifth). Below the build's price this run.
 
 **THE ACTOR-PATH MAP — `--separate-callers=3` on `--decks sealed --a dflt
 --b dflt --games 6 --threads 1 --seed 1` at the `(-256)` tip

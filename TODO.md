@@ -28,20 +28,21 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`.
-   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-269)` is the last
-   claimed, `(-270)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
+   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-270)` is the last
+   claimed, `(-271)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
    selfplay_train 9 min cold / 8 min warm (a base-crate edit rebuilds the catalog too), release-fast bot_ladder 7 min,
    debug suite build+run ~10 min; ⚠ another session pushes to this branch concurrently — fetch before every push.
-2. **Gates:** the `(-269)` tip (PERF Baseline) suite green, clippy, release-fast, `--bench` counters identical to
-   `2003d1cf` (27.49 / 611.9 / 0 stalls), golden 7/7 unmoved, fresh-seed sweep 28,800 games clean (9 cells, 3 pools).
-3. **Perf this run — ALL ACTOR-ONLY (PERF Log; candidates' "ACTOR-ONLY ROWS AT THE (-269) TIP"):** `(-266)` encoder totals
+2. **Gates:** the `(-270)` tip (PERF Baseline) suite 19,239 / 0 / 5, clippy, release-fast, `--bench` counters identical to
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games clean (9 cells, 3 pools).
+3. **Perf this run — ALL ACTOR-ONLY (PERF Log; candidates' "ACTOR-ONLY ROWS AT THE (-268) TIP"):** `(-266)` encoder totals
    fold (-0.317 %), `(-267)` battlefield object skips the overwritten printed pass (-0.229 %), `(-268)` one frozen scope
-   per recorder snapshot (-1.007 %), `(-269)` printed half off a fifth `CardMemo` word (-0.465 %): actor -1.99 % between
-   them; bot_ladder pools unmoved by construction. `spell_kind` memo leg REFUTED (-0.105 %; the 8.6 M was first-touch
-   `format!`s, and a cast clears the memo before asking) — candidates (3) closed.
+   per recorder snapshot (-1.007 %), `(-269)` printed half off a fifth `CardMemo` word (-0.465 %), `(-270)` the pair shares
+   its source tables (-0.265 %): actor -2.25 % between them; bot_ladder pools unmoved by construction. `spell_kind` memo
+   leg REFUTED (-0.105 %; the 8.6 M was first-touch `format!`s, and a cast clears the memo before asking).
 4. **Leads (PERF candidates):** encoder residual is flat (self 58 M, layer views 26 M, off-board keyword half 16 M);
-   the deck builder is flat by line (64 M, `(-63)`'s floor). Back to the sealed `dflt` list: `card_keyword_possible_on`
-   twice a land tap (0.22 %), `resolve_combat_into`'s growth ladder — both need bot_ladder base+cand builds. Cards: leftover only.
+   the deck builder is flat by line (64 M, `(-63)`'s floor); the land-tap keyword gates are PRICED (0.24 % actor, an
+   exact-keyword fold lane, not built — the walker-agreement cost). Then `resolve_combat_into`'s growth ladder (bot_ladder
+   base+cand builds). Cards: leftover only.
 5. **Round 65/66 (ML sessions, ML_NOTES):** lobby pilot is `MctsBot` 256; `attack_blocker_guard` PARKED; round 66 (b3fd2c43):
    converge4 list, `deck_gauntlet`, `stun_x_hold` parked, `own_graveyard_picks` off per pre-registration.
 
