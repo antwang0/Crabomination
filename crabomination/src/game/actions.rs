@@ -11964,64 +11964,88 @@ impl GameState {
         // only these two blocks read. One length check answers all of it. The
         // second block re-checks because the first pushes repeating watchers
         // back.
-        if !self.delayed_triggers.is_empty() {
+        //
+        // And the list is non-empty on more than half the casts of a sealed
+        // game (8,324 partitions over 14,486 casts at the `(-260)` tip) while
+        // almost never holding a watcher *for this cast*: each block below
+        // asks its match read-only first and enters the take / partition /
+        // reassign only when something fires — `(-257)`'s device, on the
+        // per-cast walk. A partition that keeps nothing leaves the list
+        // exactly as it was, so the gate changes no order and no outcome.
+        let watches_cast = |dt: &crate::game::types::DelayedTrigger| {
+            dt.controller == controller
+                && matches!(
+                    dt.kind,
+                    crate::game::types::DelayedKind::YourNextSpellCastThisTurn
+                        | crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
+                )
+        };
+        if self.delayed_triggers.iter().any(watches_cast) {
             let cast_is_is = self.find_card_anywhere(cast_card).is_some_and(|c| {
                 c.definition.card_types.contains(&crate::card::CardType::Instant)
                     || c.definition.card_types.contains(&crate::card::CardType::Sorcery)
             });
-            let (next_cast, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
-                .into_iter()
-                .partition(|dt| {
-                    dt.controller == controller
-                        && (matches!(
+            let fires = |dt: &crate::game::types::DelayedTrigger| {
+                dt.controller == controller
+                    && (matches!(
+                        dt.kind,
+                        crate::game::types::DelayedKind::YourNextSpellCastThisTurn
+                    ) || (cast_is_is
+                        && matches!(
                             dt.kind,
-                            crate::game::types::DelayedKind::YourNextSpellCastThisTurn
-                        ) || (cast_is_is
-                            && matches!(
-                                dt.kind,
-                                crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
-                            )))
-                });
-            self.delayed_triggers = rest;
-            // Expose the cast spell's mana value so bodies can gate on it
-            // (Vivien, Monsters' Advocate — "a creature card with lesser mana
-            // value" via `ManaValueLessThanEventAmount`).
-            let cast_mv = self
-                .find_card_anywhere(cast_card)
-                .map(|c| c.definition.cost.cmc())
-                .unwrap_or(0);
-            for dt in next_cast {
-                self.stack.push(
-                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
-                        .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
-                        .event_amount(cast_mv)
-                        .build(),
-                );
-                // Repeating watchers ("whenever you cast a spell this turn",
-                // Rediscover the Way III) survive until cleanup clears them.
-                if !dt.fires_once {
-                    self.delayed_triggers.push(dt);
+                            crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
+                        )))
+            };
+            if self.delayed_triggers.iter().any(fires) {
+                let (next_cast, rest): (Vec<_>, Vec<_>) =
+                    std::mem::take(&mut self.delayed_triggers).into_iter().partition(fires);
+                self.delayed_triggers = rest;
+                // Expose the cast spell's mana value so bodies can gate on it
+                // (Vivien, Monsters' Advocate — "a creature card with lesser
+                // mana value" via `ManaValueLessThanEventAmount`).
+                let cast_mv = self
+                    .find_card_anywhere(cast_card)
+                    .map(|c| c.definition.cost.cmc())
+                    .unwrap_or(0);
+                for dt in next_cast {
+                    self.stack.push(
+                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                            .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                            .event_amount(cast_mv)
+                            .build(),
+                    );
+                    // Repeating watchers ("whenever you cast a spell this
+                    // turn", Rediscover the Way III) survive until cleanup
+                    // clears them.
+                    if !dt.fires_once {
+                        self.delayed_triggers.push(dt);
+                    }
                 }
             }
         }
         // CR 603.7e (name-gated) — "when you cast a spell with the chosen name
         // for the first time this turn" (Medomai's Prophecy III). Only a cast
         // whose name matches the watching source's `named_card` consumes the
-        // one-shot; other casts leave it armed.
-        if !self.delayed_triggers.is_empty() {
-            let cast_name = self
-                .find_card_anywhere(cast_card)
-                .map(|c| c.definition.name.to_string());
-            let (named_fire, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
-                .into_iter()
-                .partition(|dt| {
-                    dt.controller == controller
-                        && matches!(dt.kind, crate::game::types::DelayedKind::YourNextNamedSpellThisTurn)
-                        && self
-                            .battlefield_find(dt.source)
-                            .and_then(|s| s.named_card.clone())
-                            == cast_name
-                });
+        // one-shot; other casts leave it armed. Same read-only gate as above:
+        // the name is looked up (and the partition run) only when a
+        // name-watcher of the caster's is on the list at all.
+        let watches_name = |dt: &crate::game::types::DelayedTrigger| {
+            dt.controller == controller
+                && matches!(dt.kind, crate::game::types::DelayedKind::YourNextNamedSpellThisTurn)
+        };
+        if self.delayed_triggers.iter().any(watches_name) {
+            let cast_name: Option<&'static str> =
+                self.find_card_anywhere(cast_card).map(|c| c.definition.name);
+            // Borrows the zone, not `self`: the partition below takes the
+            // list by `&mut`.
+            let battlefield = &self.battlefield;
+            let fires = |dt: &crate::game::types::DelayedTrigger| {
+                watches_name(dt)
+                    && battlefield.find_by_id(dt.source).and_then(|s| s.named_card.as_deref())
+                        == cast_name
+            };
+            let (named_fire, rest): (Vec<_>, Vec<_>) =
+                std::mem::take(&mut self.delayed_triggers).into_iter().partition(fires);
             self.delayed_triggers = rest;
             for dt in named_fire {
                 self.stack.push(

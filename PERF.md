@@ -3385,6 +3385,34 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-261)` TAKEN — `fire_spell_cast_triggers`' two delayed-trigger partitions behind a read-only match: sealed default Ir **-0.485 %** / cube **+0.037 %**
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast, system allocator), against the (-260) tip
+  sealed            3,437,314,145 -> 3,420,656,488 Ir   **-0.485 %**
+  cube              2,603,519,085 -> 2,604,494,712 Ir   **+0.037 %**
+  outcomes identical on both pools
+  under finalize_cast (sealed):  Iterator::partition 8,324 calls / 12,783,516 Ir -> 0 calls;  __rust_alloc 25,578 -> 21,416 (the per-cast `cast_name` String)
+  the `visit` closure's FnMut shim:  sealed 18.23 M -> 18.44 M, cube 11.98 M -> 12.96 M — the inlining of the changed body retaken, and the whole of cube's delta
+```
+
+`(-257)`'s shape on the per-cast walk. `fire_spell_cast_triggers` guarded
+its two CR 603.7e watcher blocks on `delayed_triggers` being non-empty,
+then `mem::take` + `partition`ed the list into two fresh `Vec`s and
+reassigned it — twice a cast, plus a `find_card_anywhere` and a
+`name.to_string()` for the name-gated block — and on the sealed pool the
+list is non-empty on 4,162 of 14,486 casts while holding a watcher *for
+the cast* on almost none (Codie, Medomai's Prophecy III, Rediscover the
+Way III are the whole population). Each block now asks its match over a
+shared borrow first and enters the rebuild only when something fires; a
+partition that keeps nothing left the list exactly as it was, so the
+gate moves no order and no outcome. The name compare is `as_deref()`
+against a `&'static str` instead of a cloned `Option<String>` per entry.
+`cube` carries few delayed triggers on the six-game board (300
+partitions), and its +0.037 % is one closure shim inside `finalize_cast`
+reading 1 M more at the same call count — the standing rule about a
+branch retaking an inlining decision, not a cost of the gate.
+
 ### Round 63's cost READ — `removal_sim` on the default is **~+0.4 %** of sealed `dflt` Ir (the six-game totals move ±1.4 % as different games)
 
 ```text
@@ -7291,11 +7319,10 @@ What is left of the attack search's cost is
 the sim body itself — `simulate_attack_outcome_once` is 65.5 % of the
 sealed default's Ir inclusive, ~50 engine priority passes a sim on a
 clone, the block sim 6.2 % — and then the menu (3.3 candidates a
-search) and the chain's singles (3.4 sims a search). The sim body has
-never been read by context under `dflt`: every `--separate-callers=3`
-map on record is a `gang` dump, where the search is a third the size.
-Take one on `--decks sealed --a dflt --b dflt` before gating anything
-by board class; (2)
+search) and the chain's singles (3.4 sims a search). The sim body is
+read by context in the actor-path map below (the `(-256)` tip) and by
+callee in the `(-260)` re-read under it; gate nothing by board class
+without reading both first; (2)
 ~~`attack_skip_open` re-read~~ ADOPTED in round 60 (wall 0.959, no
 loss); the sim-side twin — a block search whose defender faces no
 attacker it could profitably block — has no census yet; (3) the block
@@ -7399,13 +7426,18 @@ which is the read the map itself had not done:**
   on the death — gating it moves the unshare twenty lines down into
   `send_to_graveyard`. Neither is a lead. `find_card_anywhere_mut`
   (18,788 calls) has no unshare inside it: 0 callees on the dump.
-* **Not taken, ~0.35 % — prompt text for headless seats.**
-  `drain_trigger_queue` builds `effect_short_text` + `format!` + the
-  source name for every targeted trigger's `Decision::ChooseTarget` /
-  `ChooseCards` (2,880 a run, ~10 M with `run_effect`'s 2,382 prompt
-  formats), and `bot_ladder` / `selfplay` seats are `wants_ui` so the
-  bot answers them and never reads the string. Needs a state flag
-  ("no prompt text") set by the headless drivers; filed, not built.
+* **Not taken, ~0.35-0.5 % — prompt text for headless seats — AND THE
+  PREMISE IS HALF WRONG.** `drain_trigger_queue` builds
+  `effect_short_text` + `format!` + the source name for every targeted
+  trigger's `Decision::ChooseTarget` / `ChooseCards` (2,880 a run, ~10 M
+  with `run_effect`'s 2,382 prompt formats; 17 M with the collects and
+  the partition beside them at the `(-260)` re-read). But the bot DOES
+  read prompt text: `decide_choose_cards` keys "sacrifice" / "discard"
+  off the `ChooseCards` prompt, `ChooseAmount` matches its prompt, and
+  every `OptionalTrigger` policy branches on `description` — only
+  `ChooseTarget`'s `description` goes unread. A "no prompt text" flag
+  must leave those three families intact, which is ~0.2 % of the
+  ~0.5 %. Filed, not built.
 * **Floors re-read here, so nobody re-reads them:** `cleanup_wear_off`'s
   battlefield `iter_mut` unshares the zone on 6,214 of 6,358 cleanups at
   ~476 Ir (≤ 0.08 %); `sba_board_scan` 1,178 Ir a sweep over 60 k sweeps
@@ -7416,6 +7448,63 @@ which is the read the map itself had not done:**
   on most; `Vec::from_iter` 8.6 % inclusive is the block planner's
   per-sim `attacker_info` collect (35.9 M, consumed whole) and the layer
   pass's `compute_permanents` views (real work).
+
+**THE SEALED `dflt` RE-READ AT THE `(-260)` TIP (`1e48b56a`,
+`profiling-fast`, system allocator, sealed 3,437,314,145 Ir / cube
+2,603,519,085; the dumps are `cg.sealed.base.out` and the
+`--separate-callers=3` `cg.sc.out` in a scratchpad). The sim's spell
+layer read by callee for the first time; the engine rows sit where the
+map left them.**
+
+```text
+  share    row                                          what it is
+  15.04 %  accept_on::{{closure}} 18,982 probes / 517 M  9,364 / 340.9 M under sim_spell_action_inner (36 k a probe: GameState::clone ~1.2 k + the cast itself, adopted, so nothing is wasted);
+                                                        6,518 / 145.3 M under main_phase_action_with (the real game's own probes)
+   6.30 %  cast_candidates 28,496 / 216.6 M              18,360 / 146.3 M in the sim, 8 k a call: can_afford_in_state_with 63,678 / 90.0 M (the SweepMana OnceCell 46,120 / 48.9 M of it, ~650 a card after it),
+                                                        auto_targets_for_effect_all_slots 11,914 / 75.5 M (6.3 k each: ~20 printed_requirement_impl + 1.9 check_target_legality a call)
+   3.91 %  auto_tap_for_cost_inner 15,614 / 134.5 M      activate_ability_into 47,634 / 79.0 M (1.66 k a land tap), mana_source_table 15,246 / 20.3 M (1.33 k a build), Map::fold 48,138 / 10.9 M
+   2.85 %  activate_ability_inner 50,184 / 97.9 M        ~1.95 k a tap: continue_ability_resolution_x_into 48,304 / 33.6 M (696 for AddMana), find_by_id_mut 9.6 M, card_keyword_possible_on 48,028 / 7.8 M (162 each, twice a tap), ~680 self
+   2.93 %  fire_step_triggers 53,690 / 100.6 M           drain_trigger_queue 53,690 / 44.7 M (enumerate_legal_targets_xc 1,562 / 19.1 M of it — the wants_ui trigger targets), the visit closure 196,768 / 18.1 M, 24.3 M self
+   1.05 %  enumerate_legal_targets_xc 3,276 / 35.9 M     11 k a call, all under drain_trigger_queue: legal_targets_for_filter_scope 31.6 M = ~18 candidates x (printed_requirement_impl 87 + evaluate_requirement_static_hinted 271) + 3.4 check_target_legality (554)
+   0.58 %  check_target_legality_with_source 53,828      372 self a call + a with_frozen_layers scope + the per-state freeze-memo Mutex (36,422 locks / 0.9 M); 22,626 from auto_targets, 11,084 from legal_targets
+   0.47 %  Iterator::partition 12,392 / 16.2 M           8,324 / 12.8 M under finalize_cast — TAKEN (-261); 2,880 / 3.0 M is drain_trigger_queue's clickable/offboard split
+   0.42 %  spell_kind 14,570 / 14.5 M                    once a cast: debug_flags 8.6 M (the once-per-name format cache's lookups), creature_types.clone() 9,766 allocs
+   0.42 %  adjust_life 28,992 calls, 14.6 M self         ~420 Ir of inlined static walks a call — the seven life helpers (cannot-lose + loss-doubled on a loss, five on a gain): a lane, the (-233) shape
+  12.4 %   glibc allocator, 1.92 M allocations           finish_grow 393,752 / from_iter 264,716 / clone_from_ref_in 254,940 / Vec::clone 128,154 / GameState::clone 107,190 (44,152 clones) / CowBox::push 86,104 / make_mut_slow 81,924
+   4.66 %  Arc::clone_from_ref_in, the CoW unshares      183,928 copies / 160.2 M: cast_spell_with_convoke 72,696 make_mut_slow / 58.5 M, determinize_hidden 17,870 / 11.2 M, declare_blockers 16,422 / 9.5 M, resolve_top_of_stack_inner 12,920 / 12.3 M
+  15.0 %   resolve_combat_into 17,422 / 515 M            29.6 k a damage step: deal_combat_damage_to_target 18,604 / 78.9 M (fire_combat_damage_to_player_triggers 38.6 M, adjust_life 15.4 M), combat_damage_computed 17,422 / 62.3 M,
+                                                        the SBA sweep 13,678 / 180.8 M (13.2 k: deaths — remove_from_battlefield_to_graveyard_raw 17,326 / 69.1 M, 4.0 k a death), fire_combat_damage_triggers 26,582 / 34.0 M; 2.11 grows a call (22.4 M incl)
+   5.54 %  dispatch_triggers_for_events self 190.5 M     347,816 calls, ~185 k past the empty return at ~1 k self each; by line it is FLAT (top line 4.3 M): the member walk and the bookkeeping match — no lead
+   3.25 %  gather_continuous_effects_inner 117,386       952 a gather: fx_pool::alloc_with 76,536 (the freeze scopes), compute_permanents 28,612, computed_permanent_hinted 12,070 — one gather per scope per distinct state
+   2.97 %  check_state_based_actions_into self 102 M     59,196 sweeps, 1.7 k self each (the gate chain, toughness 159 k, effective_poison 117 k); sba_board_scan 75.1 M beside it, 1.27 k a sweep
+```
+
+What it says, cheapest lead first. (1) `adjust_life` and `finalize_cast`
+were the two rows with a known device — a lane and the `(-257)` gate;
+`(-261)` took the second and the first is the next leg. (2) `activate_ability_inner`'s land tap asks
+`card_keyword_possible_on` twice at 162 Ir (the two CR 602.5 gates, each
+ending in `keyword_grant_in_scope`) — 0.22 %, a `dispatch_bits`-shaped
+per-definition bit would settle both. (3) `spell_kind` builds a
+`Vec<CreatureType>` clone per cast for a field two spend restrictions
+read; a borrowed slice is a `SpellKind<'a>` lifetime across 18
+construction sites, ~0.05 %, and `wants_converge`'s cache lookup is the
+other 0.25 % — a bit on `CardData` beside `trigger_kind_fold` would be
+the shape. (4) `legal_targets_for_filter_scope` runs the printed gate
+*and* the computed requirement on every permanent for the wants_ui
+trigger prompt (0.9 %), and its auto-target twin
+`auto_targets_for_effect_all_slots` (2.2 %) does the same per castable
+targeted spell — read `requirement_on_permanent` before pricing either.
+(5) `resolve_combat_into` is the one `cg_growth.py` row above 2 grows a
+call with volume (36,822 / 17,422); `declare_attackers_banded` 1.99 —
+the `(-108)` reserve shape, but `(-227)` refuted a reserve one function
+up, so census which `Vec` first. (6) **The sim's spell layer is ~18 % of
+the sealed default** (enumerate 4.3 + probe/cast 9.9 + the tapper under
+it 3.9) and none of it is waste in the engine's sense: a probe is
+adopted, a candidate is scored on its target (so lazy targeting is a bot
+change, not a pure one), and the tapper's 1.66 k a land is the settled
+`(-204)` path. It is the ML session's flag (`attack_sim_spells`); price
+it there. (7) The dispatcher, the gather, the SBA sweep and the death
+path are at the floors the earlier reads set; nothing new.
 
 **State at the `(-250)` tip — THE IR BASE MOVED (`panic = "abort"` on
 every optimized profile, three-pool Ir against the `(-249)` tip):
