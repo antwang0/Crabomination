@@ -544,29 +544,36 @@ pub fn play_recorded_game_mcts(
             };
         if new_turn || step_point {
             last_turn = (g.turn_number, g.active_player_idx);
-            let pair = [encode_state(&g, 0, vocab), encode_state(&g, 1, vocab)];
-            let repeat = last_pair
-                .is_some_and(|i| snaps[i].2 == pair[0] && snaps[i + 1].2 == pair[1]);
-            if !repeat {
-                last_pair = Some(snaps.len());
-                for (seat, s) in pair.into_iter().enumerate() {
-                    snaps.push((g.turn_number, seat, s));
-                    heur.push(crate::server::bot::eval_material_public(
-                        &g,
-                        seat,
-                        &EvalWeights::default(),
-                    ));
-                    raw.push(snapshot_stats(&g, seat));
-                    opp_hands.push(
-                        g.players[1 - seat]
-                            .hand
-                            .iter()
-                            .map(|c| vocab.index_of(c.definition.name))
-                            .filter(|&i| i != 0)
-                            .collect(),
-                    );
+            // One frozen-layer scope for the whole snapshot: the two
+            // encodes and the two material evals read the same position,
+            // and each opened its own scope and rebuilt every permanent's
+            // layer view — four gathers and four view sets per snapshot
+            // where nested scopes reuse the first (PERF `(-268)`).
+            g.with_frozen_layers(|g| {
+                let pair = [encode_state(g, 0, vocab), encode_state(g, 1, vocab)];
+                let repeat = last_pair
+                    .is_some_and(|i| snaps[i].2 == pair[0] && snaps[i + 1].2 == pair[1]);
+                if !repeat {
+                    last_pair = Some(snaps.len());
+                    for (seat, s) in pair.into_iter().enumerate() {
+                        snaps.push((g.turn_number, seat, s));
+                        heur.push(crate::server::bot::eval_material_public(
+                            g,
+                            seat,
+                            &EvalWeights::default(),
+                        ));
+                        raw.push(snapshot_stats(g, seat));
+                        opp_hands.push(
+                            g.players[1 - seat]
+                                .hand
+                                .iter()
+                                .map(|c| vocab.index_of(c.definition.name))
+                                .filter(|&i| i != 0)
+                                .collect(),
+                        );
+                    }
                 }
-            }
+            });
         }
         last_step = g.step;
         let mut any = false;

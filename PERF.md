@@ -3418,6 +3418,29 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-268)` TAKEN — one frozen scope per recorder snapshot, so the two encodes and the two material evals share one set of layer views: actor **-1.007 %**
+
+```text
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), against the (-267) tip
+         3,228,688,149 -> 3,196,166,585 Ir  **-1.007 %**;  60 games / 6,080 rows / 0 stalls / 6,566 encoded states both sides
+  with_frozen_layers <- play_recorded_game_mcts  13,132 scopes / 3.3 M  ->  3,283 / 194.1 M (the snapshot block, inclusive);  encode_state_inner's own scope unchanged
+  computed_permanent_hinted <- encode_state_inner  75,948 asks / 43.84 M -> 26.11 M (seat 1's encode now hits seat 0's views)
+  program-wide:  compute_permanent_pass 93.44 M -> 80.97 M;  gather_continuous_effects_inner 98.38 M -> 91.34 M;  computed_permanent_hinted self 60.13 M -> 57.72 M
+  bot_ladder pools: unmoved by construction (selfplay.rs' recorder is the actor path)
+```
+
+The recorder snapshots a position as `[encode_state(g, 0), encode_state(g, 1)]`
+followed by `eval_material_public` per seat — four readers of one
+position, each opening its own `with_frozen_layers` scope and so each
+gathering the continuous effects and rebuilding every permanent's
+`ComputedPermanent` from scratch. Nested scopes reuse the outer
+gather and view memo (the design `encode_state` itself relies on for
+its castability block), so one scope around the snapshot block turns
+the second encode and both evals into memo hits. Read-only inside the
+scope, the same features and the same material numbers; the bot's
+`next_action` stays outside it. Found by asking who calls
+`encode_state` (one caller, 6,566 calls, 3,283 pairs).
+
 ### `(-267)` TAKEN — a battlefield object skips the printed type flags and the instance keyword pass the computed view overwrites: actor **-0.229 %**
 
 ```text
