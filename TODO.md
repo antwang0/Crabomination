@@ -28,25 +28,19 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`.
-   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-264)` is
-   the last claimed, `(-265)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold:
-   `profiling-fast` bot_ladder 12 min in a fresh worktree / 4 min warm, debug test build 7 min, `nextest` needs installing; callgrind sealed `dflt` ~50 s.
-2. **Gates:** the `(-262)` tip (PERF Baseline) suite 19,234 / 0 / 5, clippy, release-fast, `--bench` counters identical
-   to `2003d1cf`, golden 7/7 unmoved.
-3. **Perf this run:** the sealed `dflt` profile re-read at the `(-260)` tip (PERF candidates, "THE SEALED `dflt`
-   RE-READ") — the sim's spell layer by callee for the first time, ~18 % of the default and none of it engine waste;
-   two legs off it: `(-261)` `fire_spell_cast_triggers`' partitions behind a read-only match (sealed -0.485 %),
-   `(-262)` a life-static lane in front of `adjust_life`'s seven walks (sealed -0.303 % / cube -0.243 %);
-   `(-263)` (the enumerator's graveyard hint) flat, reverted; its census found bare `InGraveyard` on 54 % of the
-   trigger prompts → `(-264)` printed arms for the zone/player requirements (sealed -0.201 %).
-4. **Perf leads (PERF candidates, the re-read block):** `spell_kind`'s per-cast clone + `wants_converge` lookup
-   (~0.3 %); `resolve_combat_into`'s growth ladder (2.11 grows a call); `activate_ability_inner`'s
-   `card_keyword_possible_on` ask per land tap is lane-gated already (0.22 %, floor). The prompt-text lead is half
-   wrong (the bot reads three prompt families). Cards: leftover only.
-5. **Round 65 (2026-09-06, ML_NOTES):** the client's local bot was two generations behind the lobby and its replays
-   showed 7 suicide attacks in 130 — now the lobby pilot (`MctsBot` 256, default). The greedy filter's holes are behind
-   `attack_blocker_guard`: +0.58 and 0.74× wall as the scored pilot, −1.0/−1.3 under the 256 search → PARKED; the clean
-   read is a paired `mcts-guard-256` vs `mcts-dflt-256` A/B. Golden 7/7 unchanged.
+   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-265)` is the last
+   claimed, `(-266)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
+   bot_ladder 12 min cold / 4 min warm, debug test build 7 min; ⚠ `target/debug/incremental` hit 15 GB and killed a link.
+2. **Gates:** the `(-265)` tip (PERF Baseline) suite 19,234 / 0 / 5, clippy, release-fast, `--bench` counters identical
+   to `2003d1cf`, golden 7/7 unmoved, fresh-seed sweep 4,800 games clean.
+3. **Perf this run (PERF Log; candidates' "SEALED `dflt` RE-READ"; Profile of record's actor re-read):** `(-261)` cast-trigger
+   partitions gated (sealed -0.485 %), `(-262)` life-static lane (-0.303 %), `(-263)` flat/reverted, `(-264)` printed arms
+   for `InGraveyard` & co. (-0.201 %), `(-265)` `prepare_spell` as an `Arc` (ACTOR -1.803 %, sealed -0.538 %, cube -0.496 %).
+   ⚠ two `-p` flags with `--no-default-features` left `bot_ladder` on mimalloc (nm 294): one `-p` per profiling build.
+4. **Leads (PERF candidates):** the encoder is 6.4 % of the actor INCLUSIVE (~32 k Ir a row) — the next actor-only read;
+   `spell_kind`'s per-cast clone (~0.3 %); `resolve_combat_into`'s growth ladder. Cards: leftover only.
+5. **Round 65 (ML session, ML_NOTES):** the client's bot is now the lobby pilot (`MctsBot` 256); `attack_blocker_guard`
+   +0.58 scored / 0.74x wall but -1.0/-1.3 under the 256 search → PARKED; clean read = paired `mcts-guard-256` vs `mcts-dflt-256`.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
