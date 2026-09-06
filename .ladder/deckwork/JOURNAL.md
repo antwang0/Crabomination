@@ -187,3 +187,84 @@ Session total: ~190 lists, ~9.2 million scored-pilot games, 4,800
 search-pilot games, 5 accepted steps, 2 bot flags measured (both off),
 1 correctness bug found (own-graveyard picks), 1 hypothesis refuted
 (stun hold), 1 existing flag measured negative (converge_lands).
+
+## 08:05 Addendum — the user's follow-up: charms, converge, X, ramp fetches (read-only analysis of the 3 x 1,200 search-pilot replay sets)
+- **Converge payment leaves a colour on the table in 18 % of casts** (175 of
+  959 in converge4's games, tapped state reconstructed per turn): e.g. paid
+  B/U/W off Paradox Gardens(U) + Island + Swamp + Swamp + Shattered(W) with
+  a Forest-less board where Paradox's G was the only green. Cause, in
+  `auto_tap_for_cost_inner`'s `diverse` generic loop: a dual takes the FIRST
+  fresh colour in WUBRG order it can make (Paradox → U), so the colour only
+  that dual could supply (G) is lost when a basic already makes the other
+  (Island → U). Fix shape: rarest-fresh-colour first (assign the colour
+  with the fewest untapped sources before the common ones). Engine-side;
+  gate like `smart_tap` (a seat flag), golden traces must hold with it off.
+- **Ramp fetches ignore converge**: of 1,384 basics fetched onto the
+  battlefield (Rampant Growth 589, Terramorphic 433, Proctor's 362), 1,187
+  added a colour the board already made with no pip in hand asking for it;
+  only 197 added a new colour. `rank_library_search` scores unmet demand
+  then scarcity; Forest wins because G demand dominates. Fix shape: when
+  the seat has converge cards, a basic whose colour the board cannot make
+  yet outranks a covered colour once every pip in hand is coverable.
+  Environmental Scientist's to-hand fetch is invisible in replays (no card
+  id) but goes through the same ranker.
+- **Terramorphic timing is fine**: 65 % cracked the turn it is played, 25 %
+  the next own turn. Rampant Growth: cast the turn Studious enters (198) or
+  the next own turn (207) of 619; no issue.
+- **Charm modes**: Quandrix Charm's 5/5 mode was 126 of 163 own-precombat
+  casts and 34 + 52 casts at the OPPONENT's end step across the two sets —
+  a base-P/T pump at end of turn does nothing. The bot never plays it as a
+  post-block trick: `is_combat_trick`/`pick_combat_trick` accept only
+  constant `PumpPT`, not `SetBasePT`, and the temporary-leaf skip
+  (`contains_temporary_leaf`) only removes the outcome eval, leaving the
+  static score to cast it when nothing else is castable. Witherbloom: 181
+  destroy-MV<=2, 139 gain-5 (Blech/Pest synergy makes that a real mode).
+  Fix shape: temporary-leaf modes are combat-window-only (extend the trick
+  picker to SetBasePT as "pump to 5/5"), never end-step candidates.
+- **X**: Trudge's hold lost (-1.4); Divergent's zero return is the fixed
+  `own_graveyard_picks`. No further X lever with evidence.
+
+## 08:20 The converge trio built behind flags (user: "build the fixes")
+- `converge_rarest` (seat flag `Player::converge_rarest`, pushed like
+  `smart_tap`): the diverse auto-tap's generic loop assigns a dual the fresh
+  colour with the fewest other untapped sources, recomputed per pip.
+- `converge_fetch`: `rank_library_search` puts a colour the board cannot
+  make first once every pip in hand is covered, for a seat holding converge
+  cards anywhere (`seat_wants_converge`).
+- `trick_modes_combat_only`: an instant's until-end-of-turn stat mode
+  (`contains_temp_stat_leaf`, not bounces) leaves the main-phase / end-step
+  enumeration; `pick_combat_trick` gains modal instants and the base-P/T
+  shape (delta = new base − printed base).
+- Profiles: `conv-rarest`, `conv-fetch`, `trick-modes`, `conv-fixes`
+  (ladder) / `convrarest`, `convfetch`, `trickmodes`, `convfixes`,
+  `mcts256-convfixes` (gauntlet). Unit tests: the five-land Rancorous cast
+  pays 3 colours off / 4 on; the fetch prefers Plains/Swamp over Forest;
+  the charm leaves the main phase and is cast on a blocked bear after blocks.
+- Gate (`phase6.sh`, `results6.txt`): converge4 with all four profiles and
+  v4_removal (both charms) with the trick flag, dflt reference cells on the
+  same binary, seeds 43/97; sealed-ladder mirrors for the four profiles.
+
+## 16:12 Gate — the converge trio (results6.txt; deck seat vs dflt opponents, 24,000 games a cell)
+| flag | converge4 s43 / s97 (ref 66.36 / 67.10) | v4_removal s43 / s97 (ref 57.25 / 57.14) | sealed mirrors s43 / s97 |
+|---|---|---|---|
+| convrarest | 66.40 / 67.15 (+0.05) | — | 50.0 / 50.0 (4 and 1 non-split pairs) |
+| convfetch | 66.71 / 66.88 (+0.06, signs disagree) | — | 50.0 / 50.0 |
+| trickmodes | 66.36 / 67.10 (identical: no charm) | **60.87 / 60.70 (+3.6)** | 50.0 / 50.2 ±0.30 (87 non-split) |
+| convfixes | 66.75 / 66.91 | 60.91 / 60.71 | 50.0 / 50.2 |
+- **`trick_modes_combat_only` ADOPTED into `default_const()`** (round 66):
+  +3.6 on both seeds on the list that plays the charms, identical where
+  nothing fires, ladder not below 49.5. Control `trick_modes_off` /
+  `trick-modes-off` / gauntlet `trickoff`. Re-measured on the flipped
+  binary in results7.txt (new default should read the flag-on numbers;
+  the off control the old ones). Cutting Quandrix Charm was +3.9 under the
+  old timing — the charm was fine, the bot's windows were the problem.
+- `converge_rarest`: correct (unit test: 4 colours off the five-land board
+  vs 3) and worth +0.05 — kept as an opt-in correctness fix.
+- `converge_fetch`: +0.06 with the seeds disagreeing — null, off.
+
+## 16:16 The flipped default re-measured (results7.txt)
+v4_removal: new default 60.99 / 60.86 vs `trickoff` control 57.50 / 57.45
+(+3.5 / +3.4 — the flag now on both seats). converge4: 66.36 / 67.10,
+identical to the hundredth. Sealed mirror `trick-modes-off` vs dflt: 50.0
+(all split) / 49.8 ±0.30. Golden traces 7/7 unchanged under the new
+default; 255 bot tests pass; release-fast typecheck clean.

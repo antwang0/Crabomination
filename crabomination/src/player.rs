@@ -1022,6 +1022,14 @@ pub struct PlayerData {
     /// showing anything.
     #[serde(default)]
     pub smart_tap: bool,
+    /// Converge auto-tap (bot seats): when a cast counts distinct colours,
+    /// a dual takes the fresh colour with the FEWEST other untapped
+    /// sources, not the first in W-U-B-R-G order — the order that paid
+    /// Paradox Gardens for blue beside an Island and lost the green only it
+    /// could make (18 % of converge casts short by a colour, 2026-09-06 deck
+    /// work). Pushed from `EvalWeights::converge_rarest` like `smart_tap`;
+    /// off is the ladder control.
+    pub converge_rarest: bool,
     /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
     /// every coin flip this player makes is replayed `coin_flip_advantage`
     /// extra times and they get to keep the result they prefer. Practically
@@ -1270,6 +1278,7 @@ impl Player {
             cannot_gain_life: false,
             wants_ui: false,
             smart_tap: false,
+            converge_rarest: false,
             manual_mana: false,
             coin_flip_advantage: 0,
         })

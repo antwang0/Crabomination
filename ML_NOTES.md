@@ -4314,6 +4314,31 @@ seeds 43/97):
 - Confirmed, not new: converge payment maximises colours (X 3-4 with the
   deck's 4-5 colours); suicide attacks are 10-12 % of attacks on both
   seats under the 256 search (round 65's hole).
+- **The converge trio (later the same day, the user's "build the fixes").**
+  Three more flags, same gate (deck seat on the gauntlet at 24,000 games x
+  2 seeds; sealed mirrors 500 x 12 x 2 seeds), results in
+  `.ladder/deckwork/results6.txt`:
+  - **`trick_modes_combat_only` — ADOPTED, +3.6** (60.87 / 60.70 vs 57.25 /
+    57.14) on the list that plays Quandrix and Witherbloom Charm; identical
+    to the hundredth on a list with no such instant; mirrors 50.0 (zero
+    incidence) and 50.2 ±0.30. An instant's until-end-of-turn stat mode
+    leaves the main-phase and end-step enumeration and `pick_combat_trick`
+    learns modal instants and the base-P/T shape. 1,200 replays had the
+    charm's 5/5 mode cast precombat 126 of 163 times and 86 times at the
+    opponent's end step. Control `trick-modes-off`.
+  - `converge_rarest` (seat flag like `smart_tap`): the diverse auto-tap
+    gives a dual the fresh colour with the fewest other untapped sources.
+    18 % of the deck's converge casts paid a colour short under the
+    W-U-B-R-G-first rule; the fix pays it (unit test: 4 colours off Paradox
+    Gardens + Island + Swamp + Swamp + Shattered Sanctum, not 3) and reads
+    **+0.05**. Correctness, kept as an opt-in.
+  - `converge_fetch`: a new colour outranks a covered one in
+    `rank_library_search` once every pip in hand is covered. **+0.06** with
+    the seeds disagreeing in sign; off.
+  - Lesson: the replay counts were right about all three (a colour short
+    in 18 % of casts, Forest in 86 % of fetches, the pump at end step) and
+    only one of them was worth win rate. Payment and fetch colours move X
+    by one on a fifth of casts; the charm's window moved a whole card.
 - Instrument: `deck_gauntlet` (one list vs `random_sealed_opponent_packs`
   decks, paired, pooled; `--replays` uses the server path and tags each
   replay to its game) and `scripts/replay_scan.py`. The scored pilot is a

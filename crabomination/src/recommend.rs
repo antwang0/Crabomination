@@ -2008,6 +2008,7 @@ fn play_one_game_traced(
     for (seat, pilot) in pilots.into_iter().enumerate() {
         if let Some(w) = pilot.weights() {
             g.players[seat].smart_tap = w.smart_tap;
+            g.players[seat].converge_rarest = w.converge_rarest;
         }
     }
     let mut seeded = shuffle_rng;

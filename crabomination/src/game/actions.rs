@@ -13342,6 +13342,7 @@ impl GameState {
         // activation, then battlefield order" — the historical behaviour,
         // kept as the ladder control.
         let smart = self.players[player].smart_tap;
+        let rarest = self.players[player].converge_rarest;
 
         // Deduct what the pool already covers before deciding what to tap.
         // We track a "virtual" pool snapshot so we don't mutate the real pool here.
@@ -13582,27 +13583,56 @@ impl GameState {
             // converge value); the fresh color rides along so the tap
             // can script it on an any-color source, and the ability
             // index switches to that color's half on a dual.
+            // `converge_rarest`: how many untapped sources can still make
+            // each fresh colour. A dual then takes the colour with the
+            // fewest alternatives (Paradox Gardens pays green beside an
+            // Island, not blue), so the colour only it could make is not
+            // the one left unspent. Recomputed per pip — each tap changes
+            // the counts. Flag off, every fresh source ranks equal here and
+            // the key is the historical (stale, rank, keep).
+            let mut supply = [0u32; 5];
+            if diverse && rarest {
+                for s in sources.iter() {
+                    if self.source_card(s).is_some_and(|c| c.tapped) {
+                        continue;
+                    }
+                    for c in ManaColor::ALL {
+                        if s.colors.contains(c) && !covered[color_index(c)] {
+                            supply[color_index(c)] += 1;
+                        }
+                    }
+                }
+            }
             let source = sources
                 .iter()
                 .enumerate()
                 .filter(|(_, s)| !self.source_card(s).is_some_and(|c| c.tapped))
                 .map(|(i, s)| {
                     let keep = if smart { keep_by_idx[i] } else { 0 };
-                    let fresh = if diverse {
+                    let fresh = if diverse && rarest {
+                        ManaColor::ALL
+                            .into_iter()
+                            .filter(|c| s.colors.contains(*c) && !covered[color_index(*c)])
+                            .min_by_key(|c| supply[color_index(*c)])
+                    } else if diverse {
                         ManaColor::ALL
                             .into_iter()
                             .find(|c| s.colors.contains(*c) && !covered[color_index(*c)])
                     } else {
                         None
                     };
+                    let rarity = match fresh {
+                        Some(c) if rarest => supply[color_index(c)],
+                        _ => 0,
+                    };
                     let idx = match fresh {
                         Some(c) => s.color_idx[color_index(c)],
                         None => s.first_idx,
                     };
-                    (fresh.is_none(), s.rank, std::cmp::Reverse(keep), s.id, idx, fresh)
+                    (fresh.is_none(), rarity, s.rank, std::cmp::Reverse(keep), s.id, idx, fresh)
                 })
-                .min_by_key(|&(stale, rank, keep, ..)| (stale, rank, keep))
-                .map(|(_, _, _, id, idx, fresh)| (id, idx, fresh));
+                .min_by_key(|&(stale, rarity, rank, keep, ..)| (stale, rarity, rank, keep))
+                .map(|(_, _, _, _, id, idx, fresh)| (id, idx, fresh));
             let Some((id, idx, fresh)) = source else { break };
             // Same reserve as the colored loop above; the two share
             // `events` and either can be the first to write.

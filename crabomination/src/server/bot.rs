@@ -505,6 +505,39 @@ pub struct EvalWeights {
     /// exercises it says otherwise ([`own_graveyard_picks_on`]
     /// (Self::own_graveyard_picks_on), profile `gy-pick`).
     pub own_graveyard_picks: bool,
+    /// Seat flag for the engine's converge auto-tap (`Player::converge_rarest`,
+    /// pushed like `smart_tap`): a dual pays the fresh colour with the fewest
+    /// other untapped sources. 18 % of the converge deck's payoff casts paid a
+    /// colour short under the W-U-B-R-G-first rule (2026-09-06). Off until
+    /// laddered ([`converge_rarest_on`](Self::converge_rarest_on), profile
+    /// `conv-rarest`). Measured 2026-09-06 (round 66): **+0.05** on the
+    /// converge deck (66.40 / 67.15 vs 66.36 / 67.10) — the extra colour is
+    /// real (unit-tested: four colours off the five-land board, not three)
+    /// and worth nothing in win rate; sealed mirrors 50.0 (zero incidence).
+    /// A correctness fix kept as an opt-in.
+    pub converge_rarest: bool,
+    /// Ramp fetches for a converge seat: once every pip in hand has a source,
+    /// a basic of a colour the board cannot make yet outranks a covered one
+    /// in `rank_library_search` — each new colour is +1 on every converge
+    /// payoff. The demand read fetched Forest 1,187 times in 1,384 fetches
+    /// (2026-09-06). Off until laddered ([`converge_fetch_on`]
+    /// (Self::converge_fetch_on), profile `conv-fetch`). Measured
+    /// 2026-09-06 (round 66): **+0.06** pooled (66.71 / 66.88 vs 66.36 /
+    /// 67.10; the seeds disagree in sign), sealed mirrors 50.0. Null; off.
+    pub converge_fetch: bool,
+    /// An instant's until-end-of-turn stat change (a `PumpPT` / `SetBasePT`
+    /// mode) is offered only after blocks, by `pick_combat_trick` — which
+    /// learns modal instants and the base-P/T shape — and never by the main
+    /// phase or the opponent's-end-step enumeration. Quandrix Charm's 5/5
+    /// mode was 126 of 163 own-precombat casts and 86 casts at the
+    /// opponent's end step, where it does nothing (2026-09-06). **ADOPTED
+    /// (round 66): +3.6 on the list that plays both charms** (60.87 / 60.70
+    /// vs 57.25 / 57.14, seeds 43 / 97, 24,000 games a cell, deck seat on
+    /// the deep-pool gauntlet), identical to the hundredth on a list with no
+    /// such instant, sealed-ladder mirrors 50.0 (zero incidence) and
+    /// 50.2 ±0.30. Control: [`trick_modes_off`](Self::trick_modes_off),
+    /// profile `trick-modes-off`.
+    pub trick_modes_combat_only: bool,
     /// Extend the attack simulation one extra turn cycle when it ends
     /// with either life total at 10 or below. The one-cycle horizon can
     /// see "this creature survives to block" but not "this is the race I
@@ -870,6 +903,9 @@ impl EvalWeights {
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
+            converge_rarest: false,
+            converge_fetch: false,
+            trick_modes_combat_only: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -960,6 +996,9 @@ impl EvalWeights {
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
+            converge_rarest: false,
+            converge_fetch: false,
+            trick_modes_combat_only: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -1033,6 +1072,9 @@ impl EvalWeights {
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
+            converge_rarest: false,
+            converge_fetch: false,
+            trick_modes_combat_only: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -2054,6 +2096,8 @@ impl EvalWeights {
             attack_pairs_lazy: true,
             attack_skip_open: true,
             removal_sim: true,
+            // Round 66 (2026-09-06): trick modes held for the combat window.
+            trick_modes_combat_only: true,
             ..Self::round56_default()
         }
     }
@@ -2102,6 +2146,38 @@ impl EvalWeights {
     /// against the default.
     pub const fn own_graveyard_picks_on() -> Self {
         Self { own_graveyard_picks: true, ..Self::default_const() }
+    }
+
+    /// The default plus the rarest-fresh-colour converge auto-tap.
+    pub const fn converge_rarest_on() -> Self {
+        Self { converge_rarest: true, ..Self::default_const() }
+    }
+
+    /// The default plus new-colour ramp fetches for a converge seat.
+    pub const fn converge_fetch_on() -> Self {
+        Self { converge_fetch: true, ..Self::default_const() }
+    }
+
+    /// The default with trick modes held for the combat window — equal to
+    /// the default since round 66 adopted the flag; kept as the named arm.
+    pub const fn trick_modes_combat_only_on() -> Self {
+        Self { trick_modes_combat_only: true, ..Self::default_const() }
+    }
+
+    /// The round-66 control: the default with trick modes back in the main
+    /// phase and end-step enumeration (profile `trick-modes-off`).
+    pub const fn trick_modes_off() -> Self {
+        Self { trick_modes_combat_only: false, ..Self::default_const() }
+    }
+
+    /// All three 2026-09-06 converge fixes together (profile `conv-fixes`).
+    pub const fn converge_fixes_on() -> Self {
+        Self {
+            converge_rarest: true,
+            converge_fetch: true,
+            trick_modes_combat_only: true,
+            ..Self::default_const()
+        }
     }
 
     /// The default as it stood after round 56 (the round-55 default plus
@@ -4250,6 +4326,14 @@ pub(crate) fn rank_library_search(
         .iter()
         .filter(|c| c.controller == seat && c.definition.is_land())
         .count() as u32;
+    // `converge_fetch`: once every pip in hand has a source, a colour the
+    // board cannot make yet outranks a covered one — for a seat that holds
+    // converge cards anywhere (hand, board, library).
+    let converge_new_first = w.converge_fetch
+        && !COLORS.iter().any(|c| {
+            demand.get(c).is_some_and(|&n| n > 0) && sources.get(c).copied().unwrap_or(0) == 0
+        })
+        && seat_wants_converge(state, seat);
 
     let lib = &state.players[seat].library;
     let mut basics: Vec<(i64, u32, crate::card::CardId)> = Vec::new();
@@ -4271,6 +4355,7 @@ pub(crate) fn rank_library_search(
                     // Pips we cannot currently produce are the whole point;
                     // an uncovered color is worth more than a deep one.
                     let unmet = if have == 0 { want * 2 } else { want };
+                    let unmet = if converge_new_first && have == 0 { unmet + 1_000 } else { unmet };
                     if w.legacy_fetch { (0, -have) } else { (unmet, -have) }
                 })
                 .max()
@@ -5347,6 +5432,21 @@ fn cast_candidates<'a>(
             // slots that find no legal target are skipped, matching
             // "up to N target" semantics.
             let mode_effect = mode_branch(&c.definition.effect, mode);
+            // `trick_modes_combat_only`: an instant's until-end-of-turn stat
+            // change is offered after blocks by `pick_combat_trick`, not
+            // here — the main phase cast it as a telegraphed pump and the
+            // opponent's end step cast it for nothing. Sorceries (an
+            // Overrun) keep their main-phase slot: they have no other.
+            if w.trick_modes_combat_only
+                && c.definition.card_types.contains(&crate::card::CardType::Instant)
+                && contains_temp_stat_leaf(mode_effect)
+                && !matches!(
+                    state.step,
+                    TurnStep::DeclareBlockers | TurnStep::FirstStrikeDamage | TurnStep::CombatDamage
+                )
+            {
+                continue;
+            }
             // Beneficial Auras pick their host explicitly: `Effect::Attach`
             // isn't classified friendly by the generic auto-targeter, so
             // without this a Rancor walks the OPPONENT's creatures first.
@@ -13230,6 +13330,19 @@ fn best_hostile_creature_target(
 /// both spellings, and reading the whole definition rather than the cast's own
 /// effect only over-approximates here: the pre-float below is bounded on every
 /// other side, so a spare tap is the worst a false positive costs.
+/// True when `seat` holds a converge card anywhere it can still cast one
+/// from — hand, battlefield (a prepared body), or library. The
+/// `converge_fetch` gate: a new colour is only worth fetching for a deck
+/// that will count it.
+fn seat_wants_converge(state: &GameState, seat: usize) -> bool {
+    let p = &state.players[seat];
+    p.hand.iter().chain(p.library.iter()).any(|c| c.definition.wants_converge())
+        || state
+            .battlefield
+            .iter()
+            .any(|c| c.controller == seat && c.definition.wants_converge())
+}
+
 fn card_reads_converge(def: &CardDefinition) -> bool {
     def.wants_converge()
 }
@@ -14165,6 +14278,26 @@ fn contains_temporary_leaf(e: &Effect) -> bool {
     }
 }
 
+/// [`contains_temporary_leaf`] restricted to stat changes: a pump, a base
+/// P/T rewrite or a P/T switch that ends with the turn or the combat. A
+/// bounce is temporary too, but Proctor's Gaze at the opponent's end step is
+/// right, so the `trick_modes_combat_only` hold reads only this shape.
+fn contains_temp_stat_leaf(e: &Effect) -> bool {
+    use crate::effect::Duration;
+    match e {
+        Effect::PumpPT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. }
+        | Effect::SetBasePT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. }
+        | Effect::SwitchPT { duration: Duration::EndOfTurn | Duration::EndOfCombat, .. } => true,
+        Effect::Seq(v) => v.iter().any(contains_temp_stat_leaf),
+        Effect::If { then, else_, .. } => {
+            contains_temp_stat_leaf(then) || contains_temp_stat_leaf(else_)
+        }
+        Effect::MayDo { body, .. } => contains_temp_stat_leaf(body),
+        Effect::ApplyToTargets { effect, .. } => contains_temp_stat_leaf(effect),
+        _ => false,
+    }
+}
+
 /// True when `action` is a cast whose (mode-resolved) effect contains a
 /// temporary leaf — such candidates skip the outcome evaluation (see
 /// [`contains_temporary_leaf`]) and compete on static score alone.
@@ -14229,14 +14362,58 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
             _ => None,
         }
     }
+    /// A trick's shape: a constant pump, or a base-P/T rewrite whose change
+    /// to the computed stats is the new base minus the printed one (layer
+    /// 7b: counters and pumps stay on top).
+    #[derive(Clone, Copy)]
+    enum Shape {
+        Pump(i32, i32),
+        SetBase(i32, i32),
+    }
+    fn set_base_amounts(e: &Effect) -> Option<(i32, i32)> {
+        match e {
+            Effect::SetBasePT {
+                what: Selector::Target(_) | Selector::TargetFiltered { .. },
+                power: Value::Const(p),
+                toughness: Value::Const(t),
+                duration: Duration::EndOfTurn | Duration::EndOfCombat,
+            } => Some((*p, *t)),
+            _ => None,
+        }
+    }
     let have_mana = SweepMana::new(state, seat);
-    let tricks: Vec<(CardId, i32, i32)> = state.players[seat]
+    let mut tricks: Vec<(CardId, Option<usize>, Shape)> = state.players[seat]
         .hand
         .iter()
         .filter(|c| is_combat_trick(&c.definition))
         .filter(|c| can_afford_in_state_with(state, seat, c, w, &have_mana))
-        .filter_map(|c| pump_amounts(&c.definition.effect).map(|(p, t)| (c.id, p, t)))
+        .filter_map(|c| {
+            pump_amounts(&c.definition.effect).map(|(p, t)| (c.id, None, Shape::Pump(p, t)))
+        })
         .collect();
+    // `trick_modes_combat_only`: a modal instant's pump / base-P/T mode is a
+    // trick too (Quandrix Charm's "base 5/5"), offered here now that the
+    // main phase leaves it alone.
+    if w.trick_modes_combat_only {
+        use crate::card::CardType;
+        for c in state.players[seat].hand.iter() {
+            if !c.definition.card_types.contains(&CardType::Instant) {
+                continue;
+            }
+            let Some(n) = modal_mode_count(&c.definition.effect) else { continue };
+            if !can_afford_in_state_with(state, seat, c, w, &have_mana) {
+                continue;
+            }
+            for i in 0..n {
+                let branch = mode_branch(&c.definition.effect, Some(i));
+                if let Some((p, t)) = pump_amounts(branch) {
+                    tricks.push((c.id, Some(i), Shape::Pump(p, t)));
+                } else if let Some((p, t)) = set_base_amounts(branch) {
+                    tricks.push((c.id, Some(i), Shape::SetBase(p, t)));
+                }
+            }
+        }
+    }
     if tricks.is_empty() {
         return None;
     }
@@ -14270,7 +14447,14 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
         if !dies && kills {
             continue; // already winning this fight
         }
-        for &(cid, p, t) in &tricks {
+        for &(cid, mode, shape) in &tricks {
+            let (p, t) = match shape {
+                Shape::Pump(p, t) => (p, t),
+                Shape::SetBase(bp, bt) => {
+                    let Some(raw) = state.battlefield_find(our_id) else { continue };
+                    (bp - raw.definition.power, bt - raw.definition.toughness)
+                }
+            };
             let saves = dies && ot + t > tp;
             let now_kills = !kills && op + p >= tt;
             if !(saves || now_kills) {
@@ -14280,7 +14464,7 @@ fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
                 card_id: cid,
                 target: Some(Target::Permanent(our_id)),
                 additional_targets: vec![],
-                mode: None,
+                mode,
                 x_value: None,
             };
             if let Some(next) = state.accept(action.clone()) {
@@ -19578,6 +19762,126 @@ mod tests {
                 "bot picks the highest-cmc creature to cheat in"),
             other => panic!("expected Cards, got {other:?}"),
         }
+    }
+
+    /// `converge_rarest`: Rancorous Archaic ({5}) off Paradox Gardens,
+    /// Island, Swamp, Swamp and Shattered Sanctum. W-U-B-R-G-first hands the
+    /// dual blue beside the Island and loses the only green: three colours.
+    /// Rarest-first gives it green and the Sanctum white: four.
+    #[test]
+    fn converge_rarest_pays_every_colour_the_board_makes() {
+        fn colours_paid(flag: bool) -> usize {
+            let mut g = two_player_game();
+            for f in [
+                catalog::paradox_gardens,
+                catalog::island,
+                catalog::swamp,
+                catalog::swamp,
+                catalog::shattered_sanctum,
+            ] {
+                let id = g.add_card_to_battlefield(0, f());
+                if let Some(c) = g.battlefield_find_mut(id) {
+                    c.tapped = false;
+                }
+            }
+            let archaic = g.add_card_to_hand(0, catalog::rancorous_archaic());
+            g.players[0].converge_rarest = flag;
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            g.step = TurnStep::PreCombatMain;
+            let events = g
+                .perform_action(GameAction::CastSpell {
+                    card_id: archaic,
+                    target: None,
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                })
+                .expect("the cast is accepted");
+            let mut seen = std::collections::HashSet::new();
+            for e in &events {
+                if let crate::game::GameEvent::ManaAdded { color, .. } = e {
+                    seen.insert(*color);
+                }
+            }
+            seen.len()
+        }
+        assert_eq!(colours_paid(false), 3, "the control pays U-B-W");
+        assert_eq!(colours_paid(true), 4, "rarest-first pays G-W-U-B");
+    }
+
+    /// `converge_fetch`: Forest, Forest, Island on the board, a green bear
+    /// and Rancorous Archaic in hand, Plains / Forest / Swamp in the
+    /// library. Demand-first fetches the Forest; with the flag a colour the
+    /// board cannot make wins because every pip in hand is covered.
+    #[test]
+    fn converge_fetch_prefers_a_new_colour_once_pips_are_covered() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::forest());
+        g.add_card_to_battlefield(0, catalog::forest());
+        g.add_card_to_battlefield(0, catalog::island());
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.add_card_to_hand(0, catalog::rancorous_archaic());
+        let plains = g.add_card_to_library(0, crate::cube::card_arc(catalog::plains));
+        let forest = g.add_card_to_library(0, crate::cube::card_arc(catalog::forest));
+        let swamp = g.add_card_to_library(0, crate::cube::card_arc(catalog::swamp));
+        let candidates = vec![
+            (forest, "Forest".to_string()),
+            (plains, "Plains".to_string()),
+            (swamp, "Swamp".to_string()),
+        ];
+        let control = rank_library_search(&g, 0, &candidates, &EvalWeights::default());
+        assert_eq!(control.first(), Some(&forest), "demand-first fetches the Forest");
+        let fetched = rank_library_search(&g, 0, &candidates, &EvalWeights::converge_fetch_on());
+        assert!(
+            fetched.first() == Some(&plains) || fetched.first() == Some(&swamp),
+            "a new colour outranks the covered one, got {fetched:?}"
+        );
+    }
+
+    /// `trick_modes_combat_only`: Quandrix Charm's base-5/5 mode is not a
+    /// main-phase candidate, and after blocks the trick picker casts it on
+    /// our blocked bear (2/2 into a 3/3: the 5/5 kills and survives).
+    #[test]
+    fn trick_modes_hold_the_charm_for_combat() {
+        // The default since round 66; `trick_modes_off` is the control.
+        let w = EvalWeights::trick_modes_combat_only_on();
+        // Main phase: only the charm is castable; the bot must not pump.
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let charm = g.add_card_to_hand(0, catalog::quandrix_charm());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PostCombatMain;
+        let action = main_phase_action_with(&g, 0, true, &w).action;
+        assert!(
+            !matches!(action, GameAction::CastSpell { card_id, .. } if card_id == charm),
+            "the pump mode stays out of the main phase, got {action:?}"
+        );
+        // After blocks: our bear is blocked by a 3/3; the 5/5 mode flips it.
+        let mut g = two_player_game();
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+        let charm = g.add_card_to_hand(0, catalog::quandrix_charm());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareBlockers;
+        g.set_attacking(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]);
+        g.set_block_map([(giant, bears)]);
+        g.set_blockers_declared(true);
+        assert!(pick_combat_trick(&g, 0, &EvalWeights::trick_modes_off()).is_none(), "the control has no trick");
+        let picked = pick_combat_trick(&g, 0, &w).expect("the charm is the trick");
+        let action = match picked {
+            Picked::Probed(a, _) | Picked::Plain(a) => a,
+        };
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, mode: Some(2), target: Some(Target::Permanent(t)), .. } if card_id == charm && t == bears),
+            "base-5/5 mode on the blocked bear, got {action:?}"
+        );
     }
 
     /// An optional "choose up to N" pick over the bot's OWN graveyard

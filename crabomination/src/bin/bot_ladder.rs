@@ -294,6 +294,14 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // `gy-pick`: take our own graveyard's cards on an optional "choose
         // up to N" pick (Divergent Equation, Bind to Life).
         "gy-pick" => Some(Pilot::Scored(EvalWeights::own_graveyard_picks_on())),
+        // The converge trio (2026-09-06 deck work): rarest-fresh-colour
+        // auto-tap, new-colour ramp fetches, and trick modes held for
+        // combat. `conv-fixes` is all three.
+        "conv-rarest" => Some(Pilot::Scored(EvalWeights::converge_rarest_on())),
+        "conv-fetch" => Some(Pilot::Scored(EvalWeights::converge_fetch_on())),
+        "trick-modes" => Some(Pilot::Scored(EvalWeights::trick_modes_combat_only_on())),
+        "conv-fixes" => Some(Pilot::Scored(EvalWeights::converge_fixes_on())),
+        "trick-modes-off" => Some(Pilot::Scored(EvalWeights::trick_modes_off())),
         // Round 56: the wide attack chain (runs from an empty greedy,
         // pairs at the first step) and the block chain (pair-or-gang
         // moves, priced by the block sim). Gate each as A against `dflt55`.
@@ -690,7 +698,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, dflt58, pairs-empty, pairs-lazy, pairs-both, empty-gate, dflt-open, dflt-as3, trick-sim, removal-sim, dflt63, counter-sim, atk-guard, stun-hold, gy-pick, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-dflt-128, mcts-dflt-256, mcts-guard-256, mcts-stunhold-256, mcts-gypick-256, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, dflt58, pairs-empty, pairs-lazy, pairs-both, empty-gate, dflt-open, dflt-as3, trick-sim, removal-sim, dflt63, counter-sim, atk-guard, stun-hold, gy-pick, conv-rarest, conv-fetch, trick-modes, trick-modes-off, conv-fixes, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-dflt-128, mcts-dflt-256, mcts-guard-256, mcts-stunhold-256, mcts-gypick-256, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which

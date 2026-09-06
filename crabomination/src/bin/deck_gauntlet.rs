@@ -17,7 +17,7 @@
 //!     [--pairs 100] [--pilot PILOT] [--opp-pilot PILOT] [--seed 43]
 //!     [--threads N] [--chunk 10] [--out results.txt] [--replays DIR]
 //!     [--dump-field DIR] [--max-actions 4000]
-//! PILOT: dflt | convlands | stunhold | gypick | both | mcts64 | mcts128 | mcts256 | mcts256-convlands | mcts256-stunhold | mcts256-gypick | mcts256-both
+//! PILOT: dflt | convlands | stunhold | gypick | both | convrarest | convfetch | trickmodes | trickoff | convfixes | mcts64 | mcts128 | mcts256 | mcts256-convlands | mcts256-stunhold | mcts256-gypick | mcts256-both | mcts256-convfixes
 //! ```
 //!
 //! Two paths. The fast one is the in-process paired loop
@@ -100,7 +100,7 @@ fn usage() -> ! {
         "usage: deck_gauntlet --deck FILE [--field 9,12,16,20x6] [--field-seed 0xDECC0000]\n\
          \x20   [--pairs 100] [--pilot PILOT] [--opp-pilot PILOT] [--seed 43] [--threads N]\n\
          \x20   [--chunk 10] [--out FILE] [--replays DIR] [--dump-field DIR] [--max-actions 4000]\n\
-         PILOT: dflt | convlands | stunhold | gypick | both | mcts64 | mcts128 | mcts256 | mcts256-convlands | mcts256-stunhold | mcts256-gypick | mcts256-both"
+         PILOT: dflt | convlands | stunhold | gypick | both | convrarest | convfetch | trickmodes | trickoff | convfixes | mcts64 | mcts128 | mcts256 | mcts256-convlands | mcts256-stunhold | mcts256-gypick | mcts256-both | mcts256-convfixes"
     );
     std::process::exit(2)
 }
@@ -163,6 +163,11 @@ fn parse_pilot(name: &str) -> Option<Pilot> {
         "convlands" => Pilot::Scored(EvalWeights::converge_lands_on()),
         "stunhold" => Pilot::Scored(EvalWeights::stun_x_hold_on()),
         "gypick" => Pilot::Scored(EvalWeights::own_graveyard_picks_on()),
+        "convrarest" => Pilot::Scored(EvalWeights::converge_rarest_on()),
+        "convfetch" => Pilot::Scored(EvalWeights::converge_fetch_on()),
+        "trickmodes" => Pilot::Scored(EvalWeights::trick_modes_combat_only_on()),
+        "convfixes" => Pilot::Scored(EvalWeights::converge_fixes_on()),
+        "trickoff" => Pilot::Scored(EvalWeights::trick_modes_off()),
         "both" => Pilot::Scored(EvalWeights { own_graveyard_picks: true, ..EvalWeights::stun_x_hold_on() }),
         "mcts64" => Pilot::Mcts(MctsConfig {
             iterations: 64,
@@ -198,6 +203,12 @@ fn parse_pilot(name: &str) -> Option<Pilot> {
             iterations: 256,
             horizon_turns: 3,
             weights: EvalWeights::own_graveyard_picks_on(),
+            ..MctsConfig::default()
+        }),
+        "mcts256-convfixes" => Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights::converge_fixes_on(),
             ..MctsConfig::default()
         }),
         "mcts256-both" => Pilot::Mcts(MctsConfig {
@@ -545,6 +556,7 @@ fn play_chunk_server(
             for (seat, p) in seated.iter().enumerate() {
                 if let Pilot::Scored(w) = p {
                     g.players[seat].smart_tap = w.smart_tap;
+                    g.players[seat].converge_rarest = w.converge_rarest;
                 }
             }
             let mut rng = StdRng::seed_from_u64(pair_seed);

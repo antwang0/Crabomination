@@ -84,6 +84,21 @@ seeds agreeing). Gen 2's runner-up (-Studious First-Year +Shopkeeper) was
 - **Suicide attacks** are 10-11 % of attacks on BOTH seats under the 256
   search (round-65 hole; the guard was a search-level loss). Unchanged.
 
+## Follow-up: charms, converge payment, ramp fetches (built after the report)
+
+Three flags, gated the same way (`results6.txt`, journal 16:12):
+
+| fix | where it fires | gauntlet | verdict |
+|---|---|---|---|
+| `trick_modes_combat_only`: an instant's stat mode waits for the combat window; the trick picker learns modal instants and base-P/T | the list with both charms | **+3.6** (60.87 / 60.70 vs 57.25 / 57.14) | **adopted into the default** |
+| `converge_rarest`: a dual pays the fresh colour with the fewest other sources | 18 % of converge casts | +0.05 | correct, opt-in |
+| `converge_fetch`: a new colour outranks a covered one once hand pips are covered | 86 % of ramp fetches | +0.06, seeds disagree | null, off |
+
+So the charm finding reverses: Quandrix Charm was a liability only because
+of the bot's timing. With the trick window fixed, a list that keeps the
+charm is back within reach; converge4 itself is unchanged by any of the
+three (no charm, and the extra converge colour is worth ~0).
+
 ## Final confirmation
 
 | cell | converge4 | converge3 |

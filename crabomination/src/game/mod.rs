@@ -15139,8 +15139,8 @@ impl GameState {
         // the entropy differed between the pair's two halves. The decider and
         // the two per-seat pilot flags are the same class: a restart must not
         // change who answers decisions or how a seat taps.
-        let carried: Vec<(bool, bool)> =
-            self.players.iter().map(|p| (p.smart_tap, p.wants_ui)).collect();
+        let carried: Vec<(bool, bool, bool)> =
+            self.players.iter().map(|p| (p.smart_tap, p.wants_ui, p.converge_rarest)).collect();
         let players: Vec<crate::player::Player> = self
             .players
             .iter()
@@ -15170,9 +15170,10 @@ impl GameState {
         self.teams = teams;
         self.rng = rng;
         self.decider = decider;
-        for (i, (smart_tap, wants_ui)) in carried.into_iter().enumerate() {
+        for (i, (smart_tap, wants_ui, converge_rarest)) in carried.into_iter().enumerate() {
             if let Some(p) = self.players.get_mut(i) {
                 p.smart_tap = smart_tap;
+                p.converge_rarest = converge_rarest;
                 p.wants_ui = wants_ui;
             }
         }
