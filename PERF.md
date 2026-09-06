@@ -2557,6 +2557,32 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-261)`..`(-262)` — closing state at the `(-262)` tip
+
+Two behaviour-preserving engine commits on top of the round-63 read
+(outcomes identical on both dumps, `--bench` counters and golden traces
+unmoved), each read off the sealed `dflt` profile re-taken at the
+`(-260)` tip (the "SEALED `dflt` RE-READ" block in candidates — the sim's
+spell layer by callee). `(-263)`, the enumerator's graveyard hint, was
+built, read flat and reverted. Dumps are `profiling-fast` with the
+system allocator (`--no-default-features`).
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,437,314,145 -> 3,410,280,060 Ir  (-0.786 %)
+        (-261) -0.485 %  (-262) -0.303 %   [(-263) -0.020 %, reverted]
+  cube   dflt, same recipe:                               2,603,519,085 -> 2,598,163,044 Ir  (-0.206 %)
+        (-261) +0.037 %  (-262) -0.243 %   [(-263) -0.014 %, reverted]
+  Ir base for the three-pool gate: unchanged from (-250) — not remeasured
+suite   19,234 / 0 / 5 (123 s) at each of the two tips; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast build of bot_ladder (the typecheck gate and more): clean
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; thread_determinism ok (3 vs 1 threads identical)
+audits  audit_panics.py: 78 sites off the bin/test paths, 67 guarded, 11 lock-poison, 0 bare;
+        audit_variant_coverage.py: 0 dead capabilities, the same 2 dead primitives
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+```
+
 ### `(-257)`..`(-260)` — closing state at the `(-260)` tip
 
 Four behaviour-preserving engine commits on top of `(-256)` (outcomes
@@ -3384,6 +3410,31 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-263)` REFUTED — the trigger-prompt enumerator's graveyard candidates through `requirement_on_graveyard_card`: sealed **-0.020 %** / cube **-0.014 %**, reverted
+
+```text
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast, system allocator), against the (-262) tip
+  sealed            3,410,280,060 -> 3,409,599,592 Ir   -0.020 %
+  cube              2,598,163,044 -> 2,597,792,272 Ir   -0.014 %
+  under legal_targets_for_filter_scope (sealed):  printed_requirement_impl 61,690 -> 72,970 calls;  evaluate_requirement_static_hinted 60,478 / 16.4 M -> 57,728 / 14.5 M
+```
+
+The re-read's row (4) guessed the enumerator's ~1:1 printed-to-walker
+ratio was its graveyard loop asking the walker by id. It was not: only
+11,280 of the 60,478 walker calls were graveyard cards, and the printed
+evaluator answered 2,750 of those. The rest are **battlefield**
+permanents whose filter `printed_requirement` declines, so
+`requirement_on_permanent` falls through to the walker on nearly every
+permanent at this one site while the auto-target twin is answered 88 %
+printed. Which requirement shapes the `wants_ui` trigger prompts carry
+that the printed arms do not was NOT read — a `--separate-callers`
+context on `printed_requirement_impl`'s `None` returns, or a census by
+`SelectionRequirement` discriminant at this call site, is the next
+step; the lead, if it is one, is `printed_requirement`'s coverage
+(a `(-183)` follow-up with the suite's `debug_assert_eq` as the
+ratchet), not the zone the candidate sits in. Candidates row (4)
+corrected.
 
 ### `(-262)` TAKEN — a life-static lane in front of `adjust_life`'s seven board walks: sealed default Ir **-0.303 %** / cube **-0.243 %**
 
@@ -7515,11 +7566,13 @@ per-definition bit would settle both. (3) `spell_kind` builds a
 read; a borrowed slice is a `SpellKind<'a>` lifetime across 18
 construction sites, ~0.05 %, and `wants_converge`'s cache lookup is the
 other 0.25 % — a bit on `CardData` beside `trigger_kind_fold` would be
-the shape. (4) `legal_targets_for_filter_scope` runs the printed gate
-*and* the computed requirement on every permanent for the wants_ui
-trigger prompt (0.9 %), and its auto-target twin
-`auto_targets_for_effect_all_slots` (2.2 %) does the same per castable
-targeted spell — read `requirement_on_permanent` before pricing either.
+the shape. (4) `legal_targets_for_filter_scope`'s walker calls (60 k / 16.4 M) are
+battlefield permanents whose trigger-prompt filter the printed evaluator
+DECLINES — `(-263)` proved it is not the graveyard loop (flat, reverted).
+The lead is `printed_requirement`'s coverage of whatever shapes those
+trigger filters carry — unread; census the declined discriminants at
+this site first. Its auto-target twin `auto_targets_for_effect_all_slots`
+(2.2 %) is answered 88 % by the printed path already.
 (5) `resolve_combat_into` is the one `cg_growth.py` row above 2 grows a
 call with volume (36,822 / 17,422); `declare_attackers_banded` 1.99 —
 the `(-108)` reserve shape, but `(-227)` refuted a reserve one function

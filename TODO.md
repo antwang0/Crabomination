@@ -28,20 +28,20 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`.
-   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-260)` is
-   the last claimed, `(-261)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold:
-   `profiling-fast` bot_ladder ~10 min (a `crabomination_base` edit adds the catalog, ~15 min), debug test build 4m19s, `nextest` needs installing; callgrind sealed `dflt` ~2.5 min.
-2. **Gates:** the `(-260)` tip (PERF Baseline) suite 19,230 / 0 / 5, clippy, release-fast, `--bench` counters identical
-   to `2003d1cf`, golden 7/7 unmoved; the r62-64 tip (ML session, rebased in the same day) suite 19,234 / 0 / 5, golden 7/7.
-3. **Perf this run:** four engine legs off the actor-path map's libc/std rows read BY CALLER — `(-257)` step-trigger
-   delayed rebuild -0.903 %, `(-258)` watcher collects -0.114 %, `(-259)` one-pass P/T -0.548 %, `(-260)` legend-leg
-   count gate -0.246 % (sealed `dflt` Ir; cumulative sealed -1.80 %, cube -0.54 %); the death path's unshares CLOSED.
-4. **Rounds 62-64 (ML session; numbers in ML_NOTES):** the net adds nothing on the chained heuristic (r62); `removal_sim`
-   ADOPTED on the default (r63, +0.25; cost READ in PERF's Log: ~+0.4 % of sealed `dflt` Ir, the picker's own rows); leaf depth 64/128/256 =
-   52.35/54.75/55.25 → the lobby is the net-free `MctsBot` at 256 (r64); the lean chain = r58's `pairs-empty`, folded in.
-5. **Perf leads (PERF candidates, the block under the map):** prompt text for headless seats (~0.35 %, needs a state
-   flag), `cast_from_*` flags onto the `CardInstance` handle (~0.2 %, serde-visible), the map's big three untouched
-   (sim casts 9.3 %, decision submissions 6.1 %, the death move path 4 k a death). Cards: leftover only.
+   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-263)` is
+   the last claimed (refuted), `(-264)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold:
+   `profiling-fast` bot_ladder 12 min in a fresh worktree / 4 min warm, debug test build 7 min, `nextest` needs installing; callgrind sealed `dflt` ~50 s.
+2. **Gates:** the `(-262)` tip (PERF Baseline) suite 19,234 / 0 / 5, clippy, release-fast, `--bench` counters identical
+   to `2003d1cf`, golden 7/7 unmoved.
+3. **Perf this run:** the sealed `dflt` profile re-read at the `(-260)` tip (PERF candidates, "THE SEALED `dflt`
+   RE-READ") — the sim's spell layer by callee for the first time, ~18 % of the default and none of it engine waste;
+   two legs off it: `(-261)` `fire_spell_cast_triggers`' partitions behind a read-only match (sealed -0.485 %),
+   `(-262)` a life-static lane in front of `adjust_life`'s seven walks (sealed -0.303 % / cube -0.243 %);
+   `(-263)` (the enumerator's graveyard hint) built, flat, reverted — the row is printed-evaluator coverage.
+4. **Perf leads (PERF candidates, the re-read block, cheapest first):** `activate_ability_inner`'s `card_keyword_possible_on`
+   ask per land tap (~0.22 %); `spell_kind`'s per-cast clone + `wants_converge` lookup (~0.3 %); `printed_requirement`'s
+   coverage of the trigger-prompt filters it declines (census the shapes first, 0.5 %); `resolve_combat_into`'s growth
+   ladder. The prompt-text lead is half wrong (the bot reads three prompt families). Cards: leftover only.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
