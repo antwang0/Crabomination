@@ -2557,6 +2557,42 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-275)` — closing state at the `(-275)` tip
+
+One behaviour-preserving engine leg (outcomes identical on every dump,
+`--bench` counters and golden traces unmoved), the last priced lead off
+the `(-274)` actor re-read. **The base was re-taken at `0876f5f3`**:
+two deck-work commits (`4b09dcb0`, `0876f5f3` — `trick_modes_combat_only`
+into the default, two flags off) landed after the `(-274)` closing state
+and moved the *default pilot's* six-game runs — sealed
+3,368,479,285 -> 3,238,972,578 (-3.8 %), cube 2,582,609,088 ->
+3,577,188,860 (**+38.5 %**), actor 3,154,050,563 -> 3,147,098,694
+(-0.2 %, 6,080 -> 6,074 rows). Those are different games, not a costlier
+engine: `--bench` (`gang`, `fixed`) is byte-identical, and
+`pick_combat_trick` is 7.3 M of the cube run. Quote the new totals as
+the base from here; the `(-274)` block's numbers describe a pilot that
+no longer ships.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,238,972,578 -> 3,235,138,032 Ir  (-0.118 %)
+  cube   dflt, same recipe:                               3,577,188,860 -> 3,571,024,045 Ir  (-0.172 %)
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features):
+         3,147,098,694 -> 3,142,639,712 Ir  (-0.142 %);  60 games / 6,074 rows / 0 stalls both sides
+suite   19,242 / 0 / 5 (125 s) at the (-275) tip; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release release-fast build of bot_ladder and selfplay_train: clean
+--bench release-fast (mimalloc) at the (-275) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; thread_determinism ok (3 vs 1 threads identical); 189 games/s at --threads 3 with a build running beside it (not a throughput reading)
+sweep   fresh seeds on the ADOPTED DEFAULT (release-fast, the (-275) tip): 601..603 x {sealed, cube, fixed} x --games 400 --threads 3 =
+        9 cells / 28,800 games, 0 cap / 0 stuck, 2 `draw` (cube 601 — a legal simultaneous loss, not a stall), 0 panics, every rc 0
+        AND the training binary: release-fast selfplay_train --actors 4 --steps 1, seeds 911 / 912 x --games 3000 / 6000 =
+        9,000 games / 897,316 rows, 0 stalls, both rc 0 (98-101 games/s with the ladder sweep and the grid build sharing the box — not a throughput reading)
+grid    scripts/robustness_grid.sh (debug-assertions, overflow profile) at the (-275) tip: green — 30 ladder cells (5 pools x 6 seeds x 120 games = 33,120 games, 0 undecided) + 3 actor cells (seeds 1 / 7 / 23 x 600 games),
+        0 failures, no panic / assertion / overflow; both audit binaries carry the assertion strings (8 lines). Run because (-275) lands a debug_assert! in gather_continuous_effects.
+audits  audit_panics.py: 78 sites off the bin/test paths, 67 guarded, 11 lock-poison, 0 bare;  audit_variant_coverage.py: 0 dead capabilities, the same 2 dead primitives
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+```
+
 ### `(-272)`..`(-274)` — closing state at the `(-274)` tip
 
 Two behaviour-preserving engine legs off the growth census and the
@@ -3477,6 +3513,36 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-275)` TAKEN — the two CR 602.5 ability-lock gates read an exact-keyword fold: sealed default Ir **-0.118 %** / cube **-0.172 %** / actor **-0.142 %**
+
+```text
+  binary pair   dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast -p crabomination --no-default-features), one tree either side (the 0876f5f3 tip)
+  sealed        3,238,972,578 -> 3,235,138,032 Ir   **-0.118 %**
+  cube          3,577,188,860 -> 3,571,024,045 Ir   **-0.172 %**
+  actor         3,147,098,694 -> 3,142,639,712 Ir   **-0.142 %**   (selfplay_train --actors 1 --games 60 --steps 1 --seed 7, -p crabomination_ml --no-default-features)
+  the row       card_keyword_possible_on <- activate_ability_inner  46,106 / 44,070 / 47,529 calls, 7.34 M / 9.22 M / 7.70 M incl (sealed / cube / actor)
+                -> ability_lock_possible_on  48,654 / 48,964 / ~48 k calls, 4.89 M / 5.45 M incl;  callees now card_has_anthem ~10 k / 0.15 M and gather_scan_bits a few hundred
+                base callees: Keyword::eq 138,318 / 1.52 M (the synth triple, three calls an ask, not inlined), can_grant_keyword 1,280 / 0.14 M sealed but 21,470 / 1.88 M cube (a static walk per grant member)
+  by line       flat on the candidate (--dump-instr): 4.65 M over ~25 lines, the top line 10 Ir an ask, three atomic loads ~9.4 Ir an ask, the graveyard anthem lane ~8
+  outcomes identical on every dump (72 / 48 decided, 0 undecided; 60 games / 6,074 rows / 0 stalls on the actor)
+```
+
+The land-tap keyword gates, priced at the `(-270)` tip and left as the
+one lead with a device. Three folds already held the exact answer and
+none was asked: the definition memo (a `gather_spec::ABILITY_LOCK_GRANT`
+bit, `can_grant_keyword` at the two-keyword predicate, so the grant
+member list is tested by word load instead of a static walk), the
+continuous-effects family fold (a `mod_families::ABILITY_LOCK` subset
+of `KEYWORD`, one load instead of the list walk), and the instance
+legs by `has_kw` (a discriminant compare, no `Keyword::eq` call). The
+off-board legs are `keyword_grant_in_scope`'s own, extracted rather
+than copied, so the generic gate lost nothing and there is one walker
+of the command zone / emblems / graveyard anthems, not two. Sound by
+monotonicity (`can_grant_keyword(lock)` implies `ANY_GRANT`) and audited
+in `gather_continuous_effects` beside the generic lane's assertion. The
+residue is ~100 Ir an ask of branching over eight legs with no hot
+line; not a lead.
 
 ### `(-274)` TAKEN — the dispatcher's pair loop reuses the per-event kind mask it folded for the batch gate: sealed default Ir **-0.202 %** / cube **+0.027 %**
 
@@ -7812,6 +7878,25 @@ does not carry them. Round 56's second candidate (the 65 % start-score
 reuse) is CLOSED: it was the share of searches the chain runs on, reuse
 is 100 % of runs (`block_census` now prints both).
 
+**THE NEW CUBE DEFAULT, READ BY CONTEXT AT THE `(-275)` TIP
+(`--separate-callers=3`, `cg.cube.sc.out` in a scratchpad, 3,571,023,344
+Ir), so nobody re-takes it to explain the +38.5 % against the `(-274)`
+block.** `perform_action_inner` is 70.4 % (246,132 calls); the attack
+sim is 63.9 % (4,562 `simulate_attack_outcome_once`, ~500 k Ir each —
+**33 `sim_step` passes a sim against the sealed map's 13.2**), split
+2,420 sims / 36.3 % under `attack_chain_candidate` and 2,142 / 27.6 %
+under `pick_attacks_scored`'s greedy. **The sim's own casts are 17.2 %**
+(`sim_spell_action_inner` 61,534 calls / 611 M inside the sim, ~10 k Ir
+each; `accept_on` under it 10,684 / 392 M) — the trick-mode instants
+that `trick_modes_combat_only` moved out of the main-phase menu are
+now cast inside the sim's combat window, which is what the cube pool
+(instant-heavy) pays and sealed does not. The real game is 2.97 %; the
+block sims 6.7 %; `main_phase_action_with`'s probes 3.1 %. Nothing
+engine-side is new: the per-pass cost is the `(-260)` shape. The lever,
+if one is wanted, is bot-side (how many spell responses a sim plays
+out per pass, which is a strength question for an ML session with a
+gate, not a perf leg) — filed here, not pulled.
+
 **READ AT THE `(-271)` TIP (the sealed `dflt` and cube base dumps of
 the `(-272)`..`(-274)` run, `cg.sealed.b.out` / `cg.cube.b.out` in a
 scratchpad; the sealed self table, rows 1-90, against the `(-260)`
@@ -7855,8 +7940,8 @@ direction, nothing new. `format_inner` 7,687 calls / 14.6 M is
 2.1 M, `run_effect`'s prompts 1.5 M, `drain_trigger_queue` 0.8 M,
 `target_phrase`/`target_noun` 1.3 M: the "not taken, ~0.35-0.5 %" entry
 below, unchanged). Nothing on either pool is a 0.2 %+ lead with a known
-device; the next run should pull the land-tap keyword gates (0.24 %
-actor, priced below) or accept the floor.
+device; the land-tap keyword gates (0.24 % actor) were the last one and
+are **TAKEN as `(-275)`** (actor -0.142 %). The floor stands.
 
 **THE ACTOR-ONLY ROWS AT THE `(-268)` TIP (`45e162d2`, the same
 `selfplay_train --actors 1 --games 60 --steps 1 --seed 7` recipe,
@@ -7896,20 +7981,17 @@ What is left of the two actor-only rows, so nobody re-reads them:**
   the encoder's castability scope is now one `mana_source_table` pair
   per snapshot, and `mana_source_table` self is 13.9 M program-wide,
   most of it the bot's.
-* **The sealed list's (2), priced on the actor at the `(-270)` tip and
-  NOT built:** `card_keyword_possible_on` 47,363 asks / 7.65 M
+* **TAKEN `(-275)` — the sealed list's (2), priced on the actor at the
+  `(-270)` tip:** `card_keyword_possible_on` 47,363 asks / 7.65 M
   (0.24 %), all from `activate_ability_inner`'s two CR 602.5 gates on a
   land tap, ~161 Ir each — the `synth` triple (three `Keyword`
   compares), `has_family(KEYWORD)`, then the grant-member walk's
-  `can_grant_keyword(pred)` per member. The device is an exact-keyword
-  fold lane beside `grant_members` (OR of each member's grantable
-  keyword discriminants, definition-only so the lane is sound) behind
-  an exact-keyword entry point for the two gates — ~120 Ir an ask,
-  ~0.18 % actor / ~0.2 % sealed. Its cost is a second walker of the
-  grant statics that must agree with `can_grant_keyword`, unless the
-  fold is defined *through* it (237 predicate walks per definition,
-  memoized — and the memo has no free word; `penc` leaves bits 31-62 of
-  the fifth). Below the build's price this run.
+  `can_grant_keyword(pred)` per member. Built as one exact-keyword
+  entry over three existing folds rather than the second walker this
+  entry feared: the bit is `can_grant_keyword` *at the lock predicate*
+  on the gather word (bits 52-62 of the second memo word were free),
+  the family fold gained a `KEYWORD` subset, and the member list is
+  read by word. Actor -0.142 %, sealed -0.118 %, cube -0.172 % (Log).
 
 **THE ACTOR-PATH MAP — `--separate-callers=3` on `--decks sealed --a dflt
 --b dflt --games 6 --threads 1 --seed 1` at the `(-256)` tip

@@ -28,23 +28,22 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`.
-   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-274)` is the last
-   claimed, `(-275)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
-   bot_ladder 13 min cold / 4 min warm, selfplay_train 9 min cold / 8 min warm, release-fast bot_ladder 7 min,
-   debug suite build+run ~10 min; ⚠ another session pushes to this branch concurrently — fetch before every push.
-2. **Gates:** the `(-274)` tip (PERF Baseline) suite 19,239 / 0 / 5, clippy, release-fast, `--bench` counters identical to
-   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games clean (9 cells, 3 pools, seeds 501..503) + the training binary 9,000 games / 0 stalls (seeds 909/910).
-3. **Perf this run (PERF Log):** `(-273)` `declare_attackers_banded`'s event buffer sized exactly (sealed -0.097 %, cube
-   -0.068 %; the growth row split by allocator entry first — 23,212 first allocations, 5,166 re-growths), `(-274)` the
-   dispatcher's pair loop reuses the per-event kind mask (sealed -0.202 %, cube +0.027 %; the `SmallVec` form of it read
-   +0.35 / +0.58 % and is the `(-229)` rule again). `(-272)` (`drain_trigger_queue`'s split in place) REFUTED at -0.018 %.
-   Sealed -0.299 % / actor -0.212 % over the run (actor against the `(-271)` record; the sealed base matched its record).
-4. **Leads (PERF candidates, "READ AT THE (-271) TIP" and "THE ACTOR RE-READ AT THE (-274) TIP"):** both profiles are
-   FLAT — no growth row with volume above 1.35 a call, every unpriced self row now priced (`fingerprint` floor,
-   `ManaPool::is_empty` ~0.1 %, the prompt-text family ~0.17 % actor). The one lead with a device is the land-tap keyword
-   gates (0.24 % actor, an exact-keyword fold lane, PRICED not built); below it, accept the floor. Cards: leftover only.
-5. **Round 65/66 (ML sessions, ML_NOTES):** lobby pilot is `MctsBot` 256; `attack_blocker_guard` PARKED; round 66 (b3fd2c43):
-   converge4 list, `deck_gauntlet`, `stun_x_hold` parked, `own_graveyard_picks` off per pre-registration.
+   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-275)` is the last
+   claimed, `(-276)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
+   bot_ladder 12 min cold / selfplay_train +6 min, release-fast bot_ladder 10 min / selfplay_train +6 min, clippy 6 min,
+   debug suite build+run ~9 min, callgrind ~45 s a pool; ⚠ another session pushes to this branch concurrently — fetch before every push.
+2. **Gates:** the `(-275)` tip (PERF Baseline) suite 19,242 / 0 / 5, clippy, release-fast, `--bench` counters identical to
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games (seeds 601..603; 2 `draw`, 0 cap / stuck)
+   + the training binary 9,000 games / 0 stalls (seeds 911/912); the debug-assertions grid green at the tip (the leg lands a `debug_assert!`).
+3. **Perf this run (PERF Log):** `(-275)` the two CR 602.5 ability-lock gates read an exact-keyword fold — sealed -0.118 %,
+   cube -0.172 %, actor -0.142 %, the last priced lead. ⚠ **The dflt base moved under the deck-work commits** (`4b09dcb0`:
+   `trick_modes_combat_only` in the default): cube six-game Ir **+38.5 %**, sealed -3.8 % — different games, not a costlier
+   engine (`--bench` byte-identical). The Baseline block says so; read the new totals as the base, never as a regression.
+4. **Leads (PERF candidates):** FLAT on all three pools at the `(-275)` tip — every self row priced, no lead with a device
+   above ~0.1 %. The new cube default IS read by context ("THE NEW CUBE DEFAULT" in candidates): 33 sim passes a sim against
+   sealed's 13, the sim's own casts 17 % — bot-side, an ML session's call. Accept the floor; spend leftover on bugs / cards.
+5. **Rounds 65-67 (ML sessions, ML_NOTES):** lobby pilot is `MctsBot` 256; round 66 (b3fd2c43) converge4 list, `deck_gauntlet`;
+   round 67 (f51e9c5c) `hostile_player_targets`, `player_target_arms`, `own_graveyard_picks`, `skip_noop_x0` ADOPTED (+8 converge).
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
