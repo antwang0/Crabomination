@@ -497,6 +497,25 @@ pub(crate) fn event_matches_spec(
     event_matches_spec_rest(state, event, spec, source)
 }
 
+/// [`event_matches_spec`] with the event's variant mask already in hand:
+/// the dispatcher derives [`event_kind_bits`] once per event for its batch
+/// mask, and the per-pair loop hands it back here instead of re-deriving
+/// it per (pair, event) (PERF `(-274)`). `bits` must be `event_kind_bits(event)`.
+#[inline]
+pub(crate) fn event_matches_spec_with_bits(
+    state: &GameState,
+    event: &GameEvent,
+    bits: u128,
+    spec: &EventSpec,
+    source: &CardInstance,
+) -> bool {
+    debug_assert_eq!(bits, event_kind_bits(event));
+    if bits & spec.kind.bit() == 0 || !event_payload_matches(state, event, spec, Some(source)) {
+        return false;
+    }
+    event_matches_spec_rest(state, event, spec, source)
+}
+
 /// The riders on [`event_matches_spec`], reached only once the kind test has
 /// passed. Same arguments in the same order, so the call above is a tail jump.
 #[inline(never)]

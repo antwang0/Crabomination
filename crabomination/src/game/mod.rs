@@ -18752,9 +18752,22 @@ impl GameState {
         // with one AND instead of one `event_matches_spec` per event, and
         // the grant pre-filters ask it before their exact loop. Sound by
         // construction: `event_kind_matches` itself opens with this test.
-        let batch_bits = events
-            .iter()
-            .fold(0u128, |m, ev| m | crate::game::effects::events::event_kind_bits(ev));
+        // The first `KEPT_BITS` kept per event as well: the battlefield pair
+        // loop below asks the same mask per (pair, event), ~1.4 events a
+        // pair (PERF `(-274)`). A fixed frame array, never a `SmallVec`:
+        // `collect` cost 153 Ir a dispatch (more than the leg saved) and
+        // 18 % of batches run past four events, so a push loop would spill.
+        // Events past the array re-derive their mask in the loop.
+        const KEPT_BITS: usize = 8;
+        let mut event_bits = [0u128; KEPT_BITS];
+        let mut batch_bits = 0u128;
+        for (i, ev) in events.iter().enumerate() {
+            let b = crate::game::effects::events::event_kind_bits(ev);
+            batch_bits |= b;
+            if i < KEPT_BITS {
+                event_bits[i] = b;
+            }
+        }
         // The same mask folded to one word, against each permanent's memoized
         // printed-trigger fold (PERF `(-196)`): with no grant in play, a
         // permanent whose fold misses the batch's has no trigger to walk.
@@ -19277,7 +19290,12 @@ impl GameState {
                 // partner set via `Selector::BlockedAttacker` /
                 // `BlockingCreatures`, so one trigger instance still covers all.
                 block_sides_seen.clear();
-                for ev in events {
+                for (i, ev) in events.iter().enumerate() {
+                    let bits = if i < KEPT_BITS {
+                        event_bits[i]
+                    } else {
+                        crate::game::effects::events::event_kind_bits(ev)
+                    };
                     // **The kind test goes first and the three exclusions
                     // after it, and that ordering is the measurement.** All
                     // four are pure `continue` guards, so the order is free to
@@ -19287,7 +19305,9 @@ impl GameState {
                     // a match over the whole `GameEvent` enum and was the
                     // largest named source line in this function (PERF
                     // `(-116)`).
-                    if !crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                    if !crate::game::effects::events::event_matches_spec_with_bits(
+                        self, ev, bits, &ta.event, card,
+                    ) {
                         continue;
                     }
                     if is_event_hardcoded(ev, &ta.event) {
