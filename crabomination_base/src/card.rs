@@ -7345,10 +7345,14 @@ pub struct CardData {
     /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
     /// Reset at cleanup; in-memory only.
     ///
-    /// The four lists are [`OftenEmpty`](crate::oftenempty::OftenEmpty):
+    /// Inline, the same 24 bytes as the `Vec` it was: every creature a
+    /// combat damages took one push onto an empty list, and that first
+    /// push was the combat damage step's 2.04 allocator growths a call —
+    /// 28,339 over 13,924 steps on a 60-game actor run (PERF `(-271)`).
+    /// The three lists below stay [`OftenEmpty`](crate::oftenempty::OftenEmpty):
     /// empty on nearly every permanent and cloned on every CoW unshare, so
     /// their `Clone` tests the length first (PERF `(-200)`).
-    pub damaged_by_this_turn: crate::oftenempty::OftenEmpty<CardId>,
+    pub damaged_by_this_turn: crate::copyvec::CopyVec<[CardId; 4]>,
     /// Seats this permanent has dealt damage to this *game*, and the
     /// planeswalkers likewise (The Fallen). Never reset per turn.
     pub damaged_players_this_game: crate::oftenempty::OftenEmpty<usize>,
@@ -8170,7 +8174,7 @@ impl CardInstance {
             perm_power_bonus: 0,
             perm_toughness_bonus: 0,
             counters,
-            damaged_by_this_turn: Default::default(),
+            damaged_by_this_turn: crate::copyvec::CopyVec::new(),
             damaged_players_this_game: Default::default(),
             damaged_permanents_this_game: Default::default(),
             damage_by_source_name_this_turn: Default::default(),

@@ -3445,6 +3445,32 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-271)` TAKEN — `damaged_by_this_turn` as an inline `CopyVec<[CardId; 4]>`: sealed default Ir **-0.430 %** / cube **-0.307 %**, actor **-0.382 %**
+
+```text
+  actor         selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), against the (-270) tip
+                3,172,892,750 -> 3,160,759,000 Ir  **-0.382 %**;  60 games / 6,080 rows / 0 stalls both sides
+                allocator growths 438,603 -> 420,002 (-18,601; resolve_combat_into's 28,339 / 2.04 a call row is gone from cg_growth's table);
+                _int_malloc 82.32 M -> 78.06 M, _int_free 108.66 M -> 106.36 M, malloc 84.11 M -> 82.32 M;  clone_from_ref_in +0.47 M, __memcpy +0.53 M (the inline copies)
+  binary pair   dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast -p crabomination --no-default-features), one tree either side of the field change
+  sealed        3,393,159,334 -> 3,378,573,605 Ir   **-0.430 %**
+  cube          2,591,645,196 -> 2,583,687,288 Ir   **-0.307 %**
+  outcomes identical on every dump (72 / 48 decided, 0 undecided)
+```
+
+`cg_growth.py` on the actor dump ranked `resolve_combat_into` at 2.04
+re-growths a call over 13,924 calls (19.2 M inclusive) — the row the
+candidates list had asked to census (`(-227)` had refuted a `reserve`
+on the events buffer one function up). The source says which `Vec`:
+every creature a combat damages takes `damaged_by_this_turn.push(..)`,
+an `OftenEmpty<CardId>` whose first push is a heap growth, ~2 a damage
+step. `CopyVec<[CardId; 4]>` is the same 24 bytes as the `Vec` (the
+`(-161)` rule: an inline buffer is free when it does not grow its owner),
+spills past four like any `SmallVec`, and clears through the same
+`empty` macro arms `damage_by_source_this_turn` already uses. The three
+`OftenEmpty` siblings stay: they are per-game lists that are rarely
+pushed at all.
+
 ### `(-270)` TAKEN — `encode_state_pair`: a recorder snapshot's two encodes share the two untapped-source tables: actor **-0.265 %**
 
 ```text
