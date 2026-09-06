@@ -28,8 +28,8 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`.
-   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-263)` is
-   the last claimed (refuted), `(-264)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold:
+   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-264)` is
+   the last claimed, `(-265)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here, cold:
    `profiling-fast` bot_ladder 12 min in a fresh worktree / 4 min warm, debug test build 7 min, `nextest` needs installing; callgrind sealed `dflt` ~50 s.
 2. **Gates:** the `(-262)` tip (PERF Baseline) suite 19,234 / 0 / 5, clippy, release-fast, `--bench` counters identical
    to `2003d1cf`, golden 7/7 unmoved.
@@ -37,11 +37,12 @@ sixty-seventh pass, so don't re-take that.
    RE-READ") — the sim's spell layer by callee for the first time, ~18 % of the default and none of it engine waste;
    two legs off it: `(-261)` `fire_spell_cast_triggers`' partitions behind a read-only match (sealed -0.485 %),
    `(-262)` a life-static lane in front of `adjust_life`'s seven walks (sealed -0.303 % / cube -0.243 %);
-   `(-263)` (the enumerator's graveyard hint) built, flat, reverted — the row is printed-evaluator coverage.
-4. **Perf leads (PERF candidates, the re-read block, cheapest first):** `activate_ability_inner`'s `card_keyword_possible_on`
-   ask per land tap (~0.22 %); `spell_kind`'s per-cast clone + `wants_converge` lookup (~0.3 %); `printed_requirement`'s
-   coverage of the trigger-prompt filters it declines (census the shapes first, 0.5 %); `resolve_combat_into`'s growth
-   ladder. The prompt-text lead is half wrong (the bot reads three prompt families). Cards: leftover only.
+   `(-263)` (the enumerator's graveyard hint) flat, reverted; its census found bare `InGraveyard` on 54 % of the
+   trigger prompts → `(-264)` printed arms for the zone/player requirements (sealed -0.201 %).
+4. **Perf leads (PERF candidates, the re-read block):** `spell_kind`'s per-cast clone + `wants_converge` lookup
+   (~0.3 %); `resolve_combat_into`'s growth ladder (2.11 grows a call); `activate_ability_inner`'s
+   `card_keyword_possible_on` ask per land tap is lane-gated already (0.22 %, floor). The prompt-text lead is half
+   wrong (the bot reads three prompt families). Cards: leftover only.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
