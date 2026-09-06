@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-serde = { version = "1.0.228", features = ["derive"] }
+# `rc`: `CardDefinition::prepare_spell` is an `Arc<CardDefinition>` so the
+# inset spell is shared, not deep-cloned, per Prepare cast (PERF `(-265)`);
+# an `Arc<T>` (de)serializes exactly as the `Box<T>` it replaced.
+serde = { version = "1.0.228", features = ["derive", "rc"] }
 # Inline storage for the small per-turn lists on `CardData`. `union` for the
 # reason `crabomination/Cargo.toml` gives; `serde` so the fields keep their
 # derived (sequence) wire shape.

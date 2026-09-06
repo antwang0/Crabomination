@@ -484,7 +484,7 @@ pub fn shopkeepers_bane() -> CardDefinition {
 /// card, put it onto the battlefield tapped, then shuffle.
 ///
 /// Wired via the engine's prepare-spell plumbing: the creature
-/// `CardDefinition` carries `prepare_spell: Some(Box<...>)` pointing at
+/// `CardDefinition` carries `prepare_spell: Some(Arc<...>)` pointing at
 /// a freshly-built sorcery `CardDefinition` (it is a creature card in
 /// every zone — the spell is never cast from hand). While the creature
 /// carries its `Prepared` counter, the controller casts the spell via
@@ -518,7 +518,7 @@ pub fn studious_first_year() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        prepare_spell: Some(Box::new(spell)),
+        prepare_spell: Some(std::sync::Arc::new(spell)),
         enters_with_counters: Some((CounterType::Prepared, Value::Const(1))),
         ..Default::default()
     }

@@ -69,7 +69,7 @@ fn vanilla_front(
         power,
         toughness,
         keywords,
-        prepare_spell: Some(Box::new(prepare)),
+        prepare_spell: Some(std::sync::Arc::new(prepare)),
         ..Default::default()
     }
 }

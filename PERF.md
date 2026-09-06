@@ -2557,24 +2557,27 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-261)`..`(-264)` — closing state at the `(-264)` tip
+### `(-261)`..`(-265)` — closing state at the `(-265)` tip
 
-Three behaviour-preserving engine commits on top of the round-63 read
-(outcomes identical on both dumps, `--bench` counters and golden traces
-unmoved), each read off the sealed `dflt` profile re-taken at the
+Four behaviour-preserving engine commits on top of the round-63 read
+(outcomes identical on every dump, `--bench` counters and golden traces
+unmoved): three read off the sealed `dflt` profile re-taken at the
 `(-260)` tip (the "SEALED `dflt` RE-READ" block in candidates — the sim's
-spell layer by callee). `(-263)`, the enumerator's graveyard hint, was
+spell layer by callee), the fourth off the actor re-read at the `(-264)`
+tip (Profile of record). `(-263)`, the enumerator's graveyard hint, was
 built, read flat and reverted; the census it asked for found `(-264)`.
 Dumps are `profiling-fast` with the system allocator
-(`--no-default-features`).
+(`--no-default-features`, one `-p` per build — two `-p` flags left
+`bot_ladder` on mimalloc once this run, caught by `nm`).
 
 ```text
-  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,437,314,145 -> 3,403,417,590 Ir  (-0.986 %)
-        (-261) -0.485 %  (-262) -0.303 %  (-264) -0.201 %   [(-263) -0.020 %, reverted]
-  cube   dflt, same recipe:                               2,603,519,085 -> 2,597,119,771 Ir  (-0.246 %)
-        (-261) +0.037 %  (-262) -0.243 %  (-264) -0.040 %   [(-263) -0.014 %, reverted]
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,437,314,145 -> 3,385,114,447 Ir  (-1.519 %)
+        (-261) -0.485 %  (-262) -0.303 %  (-264) -0.201 %  (-265) -0.538 %   [(-263) -0.020 %, reverted]
+  cube   dflt, same recipe:                               2,603,519,085 -> 2,584,225,619 Ir  (-0.741 %)
+        (-261) +0.037 %  (-262) -0.243 %  (-264) -0.040 %  (-265) -0.496 %   [(-263) -0.014 %, reverted]
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7, (-264) -> (-265) tips:  3,297,447,030 -> 3,238,000,614 Ir  (-1.803 %)
   Ir base for the three-pool gate: unchanged from (-250) — not remeasured
-suite   19,234 / 0 / 5 (123 s) at each of the three tips; golden traces 7/7 unmoved
+suite   19,234 / 0 / 5 (123 s) at each of the four tips; golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 release the release-fast build of bot_ladder (the typecheck gate and more): clean
 --bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
@@ -3413,6 +3416,34 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-265)` TAKEN — `prepare_spell` shared as an `Arc<CardDefinition>` instead of deep-cloned per Prepare cast: actor **-1.803 %**, sealed default **-0.538 %** / cube **-0.496 %**
+
+```text
+  actor             selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), against the (-264) tip
+                    3,297,447,030 -> 3,238,000,614 Ir   **-1.803 %**;  60 games / 6,080 rows / 0 stalls on both sides
+  binary pair       dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast -p crabomination --no-default-features), against the (-264) tip
+  sealed            3,403,417,590 -> 3,385,114,447 Ir   **-0.538 %**
+  cube              2,597,119,771 -> 2,584,225,619 Ir   **-0.496 %**
+  outcomes identical on every dump
+  under cast_prepare_spell (actor, 3,597 casts):  CardDefinition::clone 13.98 M -> 0;  CardInstance::new 32.56 M -> 1.62 M inclusive;
+                                                  settle_prepare_after_cast 9.47 M -> 5.70 M (the unmaterialized copy's drop);  __memcpy program-wide 141.2 M -> 107.2 M
+```
+
+Found on the actor re-read at the `(-264)` tip (Profile of record): the
+SOS Prepare cast — 3,597 a 60-game run on the actor's sealed-cube pool,
+764 a six-game ladder run — materialized its copy by `clone()`ing the
+creature's inset `prepare_spell: Box<CardDefinition>` and handing the
+owned definition to `CardInstance::new`, which `Arc::new`s it: a deep
+clone of a definition's two dozen `Vec`s plus two moves of the
+several-KB struct per cast, 46.5 M Ir of the actor's 3,297 M before the
+cast itself ran. The field is an `Arc` now (serde's `rc` feature; the
+wire form is the `Box`'s), the cast is one refcount, and the copy's
+`CardInstance` shares the creature's inset definition — which is also
+what every other `CardInstance` already does with its definition. Two
+catalog factories build the field. **An actor-only row: no `bot_ladder`
+pool prepares often enough to rank it, which is the reason the actor
+re-read is on the recipe list.**
 
 ### `(-264)` TAKEN — printed arms for the zone and player requirements a battlefield permanent answers by construction: sealed default Ir **-0.201 %** / cube **-0.040 %**
 
@@ -5671,6 +5702,47 @@ reading is small but whose shape touches a hot `match` or a clone path;
 a leg that moves `I1mr` or `Bcm` by more than its Ir share is one to
 confirm with `bench_ab.py`. It is one more reading a run has to make,
 so it is not part of the three-pool gate.
+
+### THE ACTOR RE-READ AT THE `(-264)` TIP (`f3fb0fa9`) — the shape holds, the encoder is 6.4 % inclusive, and the SOS Prepare cast builds a definition per copy
+
+Same recipe (`profiling-fast -p crabomination_ml --no-default-features`,
+`CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60 --steps 1 --seed 7`,
+callgrind, `nm | grep -cE " (T|t) (_)?mi_"` 0). **3,297,447,030 Ir**; not
+comparable to `b13f5ccd`'s 2,884 M — rounds 55–64 changed the default's
+pilot (the chained search runs ~1.7x `gang`), so this is a shape read.
+60 games, 6,080 rows, 0 stalls, 6,566 encoded states.
+
+```text
+   now      b13f5ccd  row
+  4.52 %    5.92 %    dispatch_triggers_for_events
+  4.28 %    6.04 %    __memcpy_avx_unaligned_erms      make_mut_slow 231 k calls / GameState::clone 201 k / clone_from_ref_in 142 k / fmt write_str 138 k
+  3.36 %    2.75 %    _int_free                        allocator cluster (_int_free, malloc, _int_malloc, free, __rdl_alloc, consolidate) 11.6 %; 1.79 M allocations
+  2.98 %    2.37 %    gather_continuous_effects_inner
+  2.83 %    2.47 %    compute_permanent_pass
+  2.43 %    2.11 %    Vec::from_iter
+  2.33 %    2.04 %    check_state_based_actions_into
+  2.07 %    2.31 %    computed_permanent_hinted
+  1.87 %    1.68 %    cow::make_mut_slow               self; cast_spell_with_convoke 64,427 of its 238,866 calls / 50.6 M
+  1.78 %    1.97 %    encode_state_inner       } the encoder's self, 3.42 %; INCLUSIVE 209.8 M = 6.36 %, ~32 k Ir a row:
+  1.64 %    1.77 %    encode_card_object_into  }   encode_card_object_into 236 k / 65.1 M, computed_permanent_hinted 152 k / 52.0 M, its scope's gather 15.7 M, sort 5.0 M
+  1.27 %    1.46 %    rand_distr Normal::sample        net init, once per process (+ rand_chacha 0.46 %)
+  0.93 %    1.14 %    recommend::rank_shape            the deck builder
+```
+
+New here, and actor-only: **`cast_prepare_spell` — 3,597 SOS Prepare
+casts a 60-game run, each `clone()`ing the creature's inset
+`prepare_spell: Box<CardDefinition>` (13.98 M, ~3.9 k a clone) and
+building a fresh `CardInstance::new` around it (32.56 M, ~9 k each), then
+`cast_spell` 54.1 M and `settle_prepare_after_cast` 9.5 M.** The ladder's
+sealed pool prepares 764 times a six-game run (2.6 M of clone), so no
+`bot_ladder` dump ranked it; the actor's sealed-cube pool is SOS-heavy.
+The deep clone exists only to hand `CardInstance::new` an owned
+definition — an `Arc<CardDefinition>` in the field would make it a
+refcount and skip the Arc allocation inside `new`, ~1.4 % of the actor
+between them. **TAKEN as `(-265)`: actor -1.803 %, sealed -0.538 %,
+cube -0.496 % (Log).** Otherwise the shape holds: the engine rows in the same
+order, the encoder and the deck builder the only actor-only rows,
+`evaluate_requirement_static_hinted` off the top forty as at `b13f5ccd`.
 
 ### THE ACTOR RE-READ AT `b13f5ccd` — the printed-filter pass reaches the training path: -5.6 % since `ec1bb132`, and the requirement walker has left the table
 

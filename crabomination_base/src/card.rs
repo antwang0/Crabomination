@@ -3487,8 +3487,12 @@ pub struct CardDefinition {
     /// which unprepares the creature. Cards that printed "This creature
     /// enters prepared." model it with `enters_with_counters:
     /// Some((CounterType::Prepared, Value::Const(1)))`.
+    /// An `Arc`, not a `Box`: `cast_prepare_spell` materializes one
+    /// `CardInstance` per cast around this definition, and an owned copy was
+    /// a deep clone of the whole definition each time — 3,597 casts / 14 M
+    /// Ir on a 60-game actor run of the SOS pool (PERF `(-265)`).
     #[serde(default)]
-    pub prepare_spell: Option<Box<CardDefinition>>,
+    pub prepare_spell: Option<Arc<CardDefinition>>,
     /// CR 710 — flip card. When `Some`, this is the *unflipped* (top) face and
     /// the value is the flipped (bottom) characteristics. Unlike a DFC, a flip
     /// card is single-faced — it is never cast or rendered as its flip side; it

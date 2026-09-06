@@ -4130,9 +4130,11 @@ impl GameState {
         let Some(creature) = self.battlefield.find_by_id(creature_id) else {
             return Err(GameError::CardNotOnBattlefield(creature_id));
         };
-        let prep_def = match creature.definition.prepare_spell.as_deref() {
+        // The inset definition is shared into the copy, not deep-cloned
+        // (PERF `(-265)`): `CardInstance::new` takes the `Arc` as it is.
+        let prep_def = match creature.definition.prepare_spell.as_ref() {
             Some(d) if creature.controller == p
-                && creature.counter_count(CounterType::Prepared) > 0 => d.clone(),
+                && creature.counter_count(CounterType::Prepared) > 0 => std::sync::Arc::clone(d),
             _ => return Err(GameError::NotPrepared(creature_id)),
         };
         // Materialize the copy and run it through the normal cast path —
