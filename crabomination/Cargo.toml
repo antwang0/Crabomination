@@ -101,6 +101,10 @@ name = "deck_duel"
 test = false
 
 [[bin]]
+name = "deck_gauntlet"
+test = false
+
+[[bin]]
 name = "dump_cards"
 test = false
 

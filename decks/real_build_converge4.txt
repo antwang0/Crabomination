@@ -1,0 +1,34 @@
+# real_build_converge4 — proposal from the 2026-09-06 deck work (.ladder/deckwork/REPORT.md).
+# = converge3 trimmed to 40: -Divergent Equation -Arcane Omens -Traumatic Critique -1 Sundering Archaic
+#   -Mountain -Fields of Strife -Quandrix Charm -Pensive Professor -Zimone's Experiment -Shared Roots
+#   +Vastlands Scavenger +Oracle's Restoration +Rancorous Archaic #3 +Shopkeeper's Bane #2
+# 40 cards, 18 lands. Scored-pilot gauntlet 66.7 vs 40.8 for converge3 (held-out field 64.9 vs 38);
+# see the report for the search-pilot cells. Optional: -Proctor's Gaze +Thornfist Striker read +1.3 on the
+# screen field and +1.2 on the held-out field — replicated, but under the pre-registered 1.5-pt bar.
+1 Blech, Loafing Pest
+1 Emeritus of Ideation
+1 Environmental Scientist
+1 Feed the Swarm
+1 Knockout Maneuver
+1 Oracle's Restoration
+1 Proctor's Gaze
+1 Professor Dellian Fel
+3 Rancorous Archaic
+1 Send in the Pest
+2 Shopkeeper's Bane
+1 Slumbering Trudge
+1 Snarl Song
+2 Studious First-Year
+1 Sundering Archaic
+1 Together as One
+1 Vastlands Scavenger
+1 Wander Off
+1 Dreamroot Cascade
+4 Forest
+2 Forum of Amity
+4 Island
+2 Paradox Gardens
+1 Plains
+1 Shattered Sanctum
+2 Swamp
+1 Terramorphic Expanse

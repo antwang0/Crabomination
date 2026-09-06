@@ -4280,3 +4280,42 @@ standing open lead. Next in shape, in order: the paired search-level A/B
 above; then a rollout-policy read on its own (the guard in the rollouts
 only, greedy unchanged at the root) to separate the two mechanisms.
 
+
+## Round 66 — deck-work by-products: `converge_lands` −3.5 on its own deck, a stun-counter X hold −1.4, an own-graveyard pick that never fired, and a gauntlet for one list vs deep-pool bots (2026-09-06)
+
+Not a bot round by design: the user asked for their SOS converge sealed
+list to be improved against 9-20 pack bot opponents, with the bot fixed
+where the replays showed it wrong. The deck side is in
+`.ladder/deckwork/REPORT.md` (pre-registration `PLAN.md`, run `JOURNAL.md`,
+every cell `results.txt`): the 46-card list went 40.8 → 66.7 on a fixed
+24-deck field (`deck_gauntlet`, 24,000 games a cell) and 35.4 → 63.2 under
+the lobby's 256 search, 72 % head to head, 65 vs 38 on a held-out field.
+The bot side, measured the house way (deck seat on the gauntlet at
+24,000 games x 2 seeds; sealed-ladder mirror `--a FLAG --b dflt`, 500 x 12,
+seeds 43/97):
+
+- **`converge_lands` (off since it was written) reads −3.5 on the converge
+  deck itself** (36.85 / 37.60 vs 40.55 / 41.00). Colour-diversifying land
+  drops lose to pip coverage even here. Stays off; now a measured negative.
+- **`stun_x_hold`** (new, off): skip an X creature's cast while it would
+  enter with stun counters — Slumbering Trudge was cast for X=0 on turn 2-3
+  in 44 % of its casts (1,200 replays). **−1.4** (59.44 / 60.19 vs 60.83 /
+  61.39); ladder mirrors 50.0 (zero incidence) and 49.7 ±0.26. The early
+  tapped 6/6 is right as the bot plays both sides. Parked.
+- **`own_graveyard_picks`** (new, off): `decide_choose_cards`'s graveyard
+  branch was the hostile-exile reading (opponents' cards only), so an
+  optional "choose up to N" over the bot's OWN graveyard — Divergent
+  Equation returned 0 cards in 221 of 221 casts; Bind to Life's "put a
+  creature from among them" — moved nothing. Fixed and unit-tested;
+  **zero incidence** on every gating pool (gauntlet identical to the
+  hundredth, both ladder mirrors 50.0 with every pair split). A
+  correctness change with no measured win: left off per the
+  pre-registration, recommended for adoption as a correctness change.
+- Confirmed, not new: converge payment maximises colours (X 3-4 with the
+  deck's 4-5 colours); suicide attacks are 10-12 % of attacks on both
+  seats under the 256 search (round 65's hole).
+- Instrument: `deck_gauntlet` (one list vs `random_sealed_opponent_packs`
+  decks, paired, pooled; `--replays` uses the server path and tags each
+  replay to its game) and `scripts/replay_scan.py`. The scored pilot is a
+  faithful screen for the search pilot here: the first +16.4 step read
+  +16.3 under search, the total +26.0 read +27.8.

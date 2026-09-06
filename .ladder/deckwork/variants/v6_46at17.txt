@@ -1,0 +1,33 @@
+# v6_46at17: the 46-card list minus three lands (43 cards, 17 lands): is size or spell choice the problem
+# 43 cards, 17 lands
+1 Slumbering Trudge
+2 Studious First-Year // Rampant Growth
+1 Send in the Pest
+1 Quandrix Charm
+1 Environmental Scientist
+1 Feed the Swarm
+1 Shared Roots
+1 Pensive Professor
+1 Blech, Loafing Pest
+1 Knockout Maneuver
+1 Shopkeeper's Bane
+1 Professor Dellian Fel
+1 Zimone's Experiment
+1 Proctor's Gaze
+1 Wander Off
+2 Rancorous Archaic
+1 Emeritus of Ideation // Ancestral Recall
+1 Arcane Omens
+1 Together as One
+2 Sundering Archaic
+1 Snarl Song
+1 Traumatic Critique
+1 Divergent Equation
+4 Forest
+4 Island
+2 Swamp
+2 Forum of Amity
+2 Paradox Gardens
+1 Dreamroot Cascade
+1 Shattered Sanctum
+1 Terramorphic Expanse

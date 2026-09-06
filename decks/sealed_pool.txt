@@ -3,9 +3,9 @@
 1 burrog barrage
 2 zimone's experiment
 1 thornfist striker
-1 shopkeeper's bane
+2 shopkeeper's bane
 1 wild hypothesis
-1 oracle's restoration
+2 oracle's restoration
 1 environmental scientist
 1 knockout maneuver
 1 snarl song
@@ -71,7 +71,15 @@
 2 forum of amity
 2 fields of strife
 2 page, loose leaf
-2 rancorous archaic
-1 sundering archaic
+3 rancorous archaic
+2 sundering archaic
 1 together as one
 1 shattered sanctum
+1 slumbering trudge
+1 Vastlands Scavenger // Bind to Life
+1 Essenceknit Scholar
+1 witherbloom charm
+1 embrace the paradox
+2 paradox gardens
+1 pest mascot
+1 pursue the past

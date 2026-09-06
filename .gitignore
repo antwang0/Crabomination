@@ -64,6 +64,14 @@ web/dist/
 # pre-registration nobody can read afterwards is not one. Track those.
 .ladder/*
 !.ladder/run_*.sh
+# The 2026-09-06 deck-work record (pre-registration, journal, report,
+# every cell, the field and variant lists, the runners) is tracked for the
+# same reason; its logs, per-game files and the card dump are scratch.
+!.ladder/deckwork/
+.ladder/deckwork/*.log
+.ladder/deckwork/cards.json
+.ladder/deckwork/games_*.txt
+.ladder/deckwork/smoke_games.txt
 
 # Training checkpoints. Each net directory is tens of megabytes of
 # weights plus a stats stream; they are run artifacts, reproducible from

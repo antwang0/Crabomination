@@ -469,6 +469,42 @@ pub struct EvalWeights {
     /// flagless greedy; ML_NOTES "Round 65" has the replay evidence and
     /// the clean A/B still owed.
     pub attack_blocker_guard: bool,
+    /// Hold an X creature until X is large enough for it to enter
+    /// without stun counters. `max_affordable_x` sizes X to the spare
+    /// mana, so Slumbering Trudge ({X}{G}, enters with `3 - X` stun
+    /// counters, tapped below X=3) was cast for X=0 on turn 2 or 3 in 44 %
+    /// of its casts across 1,200 replays of the user's converge deck under
+    /// the 256 search (2026-09-06 deck work): a 6/6 that neither blocks nor
+    /// untaps before turn 6, when waiting two turns buys an untapped one.
+    /// The material leaf sees only the body. With this on, the cast
+    /// candidate is skipped while [`stun_counters_at_x`] at the affordable
+    /// X is positive — the hold, not a smaller X, because a smaller X is
+    /// never better here. Measured 2026-09-06 on the deck it was written
+    /// for (`deck_gauntlet`, the converge list vs 24 deep-pool decks,
+    /// 24,000 games a cell): **-1.4** (59.44 / 60.19 vs 60.83 / 61.39,
+    /// seeds 43 / 97) — the turn-2 X=0 Trudge is worth more than the
+    /// untapped one two turns later, as the bot plays both sides. Sealed
+    /// ladder mirrors 50.0 (zero incidence) and 49.7 ±0.26. PARKED, off
+    /// ([`stun_x_hold_on`](Self::stun_x_hold_on), profile `stun-hold`).
+    pub stun_x_hold: bool,
+    /// Take our own graveyard's cards on an optional "choose up to N"
+    /// pick. `decide_choose_cards`'s graveyard branch was written for the
+    /// hostile exile (Collect Evidence): it picks opponents' cards and, with
+    /// `min` 0, nothing else — so the bot's OWN graveyard-to-hand and
+    /// graveyard-to-battlefield effects moved nothing: Divergent Equation
+    /// returned 0 cards in 221 of 221 casts and Bind to Life put no creature
+    /// onto the battlefield (2026-09-06 deck work, 1,200 search replays).
+    /// With this on, an optional pick whose candidates are all in our own
+    /// graveyard and whose prompt is not a cost ("exile", "sacrifice",
+    /// "discard") takes up to `max` of them, priciest first. Gated
+    /// 2026-09-06 with ZERO incidence everywhere it was measured: the
+    /// converge gauntlet with the card already cut reads the default to
+    /// the hundredth, and both sealed-ladder mirrors split every pair —
+    /// no gating pool plays an optional own-graveyard pick. A correctness
+    /// fix with a unit test and no measured win; off until a pool that
+    /// exercises it says otherwise ([`own_graveyard_picks_on`]
+    /// (Self::own_graveyard_picks_on), profile `gy-pick`).
+    pub own_graveyard_picks: bool,
     /// Extend the attack simulation one extra turn cycle when it ends
     /// with either life total at 10 or below. The one-cycle horizon can
     /// see "this creature survives to block" but not "this is the race I
@@ -832,6 +868,8 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_skip_open: false,
             attack_blocker_guard: false,
+            stun_x_hold: false,
+            own_graveyard_picks: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -920,6 +958,8 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_skip_open: false,
             attack_blocker_guard: false,
+            stun_x_hold: false,
+            own_graveyard_picks: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -991,6 +1031,8 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_skip_open: false,
             attack_blocker_guard: false,
+            stun_x_hold: false,
+            own_graveyard_picks: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -2047,6 +2089,19 @@ impl EvalWeights {
     /// [`attack_blocker_guard`](Self::attack_blocker_guard).
     pub const fn attack_blocker_guard_on() -> Self {
         Self { attack_blocker_guard: true, ..Self::default_const() }
+    }
+
+    /// The default plus the stun-counter X hold. The opt-in for
+    /// [`stun_x_hold`](Self::stun_x_hold); ladder as A against the default.
+    pub const fn stun_x_hold_on() -> Self {
+        Self { stun_x_hold: true, ..Self::default_const() }
+    }
+
+    /// The default plus own-graveyard picks. The opt-in for
+    /// [`own_graveyard_picks`](Self::own_graveyard_picks); ladder as A
+    /// against the default.
+    pub const fn own_graveyard_picks_on() -> Self {
+        Self { own_graveyard_picks: true, ..Self::default_const() }
     }
 
     /// The default as it stood after round 56 (the round-55 default plus
@@ -4375,6 +4430,30 @@ fn decide_choose_cards(
         .map(|(id, _)| *id)
         .take(max as usize)
         .collect();
+    // Our own effect over our own graveyard (Divergent Equation's "return up
+    // to X", Bind to Life's "put a creature from among them onto the
+    // battlefield"): the optional pick is upside, take it. A cost-shaped
+    // prompt keeps the hostile-exile reading above.
+    let all_own_graveyard = !candidates.is_empty()
+        && candidates
+            .iter()
+            .all(|(id, _)| state.players[seat].graveyard.iter().any(|c| c.id == *id));
+    if w.own_graveyard_picks
+        && chosen.is_empty()
+        && all_own_graveyard
+        && !detrimental
+        && !prompt_lc.contains("exile")
+    {
+        let mut own: Vec<(crate::card::CardId, i32)> = candidates
+            .iter()
+            .filter_map(|(id, _)| {
+                let c = state.players[seat].graveyard.iter().find(|c| c.id == *id)?;
+                Some((*id, c.definition.cost.cmc() as i32))
+            })
+            .collect();
+        own.sort_by_key(|b| std::cmp::Reverse(b.1));
+        chosen = own.into_iter().take(max as usize).map(|(id, _)| id).collect();
+    }
     // A mandatory pick (min ≥ 1) over our own graveyard — Cache Grab's "put a
     // permanent card milled this way into your hand". Keep the biggest one.
     if chosen.len() < min as usize {
@@ -5250,6 +5329,14 @@ fn cast_candidates<'a>(
         } else {
             None
         };
+        // Stun-hold: a creature that would enter stunned at the X the mana
+        // allows waits for the X that lets it enter clean.
+        if w.stun_x_hold
+            && let Some(x) = x_value
+            && stun_counters_at_x(&c.definition, x) > 0
+        {
+            continue;
+        }
         for i in 0..modes.unwrap_or(1) {
             let mode = modes.map(|_| i);
             // Pick a target appropriate to the chosen mode (ChooseMode
@@ -12787,6 +12874,32 @@ fn creature_only_x_damage_cap(state: &GameState, seat: usize, def: &CardDefiniti
 /// or the effect tree mentions `Value::XFromCost`. The latter catches
 /// catalog cards (Banefire, Mind Twist, …) whose costs predate the
 /// engine's proper X-pip wiring.
+/// Stun counters `def` enters with at a declared `x`, when its
+/// `enters_with_counters` is a stun count in closed form of X (Slumbering
+/// Trudge: `NonNeg(3 - X)`). Zero for any other shape — the
+/// [`stun_x_hold`](EvalWeights::stun_x_hold) then stays out of the way.
+pub fn stun_counters_at_x(def: &CardDefinition, x: u32) -> u32 {
+    use crate::card::CounterType;
+    use crate::effect::Value;
+    fn eval(v: &Value, x: i64) -> Option<i64> {
+        Some(match v {
+            Value::Const(c) => i64::from(*c),
+            Value::XFromCost => x,
+            Value::Sum(parts) => parts.iter().map(|p| eval(p, x)).sum::<Option<i64>>()?,
+            Value::Diff(a, b) => eval(a, x)? - eval(b, x)?,
+            Value::Times(a, b) => eval(a, x)? * eval(b, x)?,
+            Value::Min(a, b) => eval(a, x)?.min(eval(b, x)?),
+            Value::Max(a, b) => eval(a, x)?.max(eval(b, x)?),
+            Value::NonNeg(inner) => eval(inner, x)?.max(0),
+            _ => return None,
+        })
+    }
+    match &def.enters_with_counters {
+        Some((CounterType::Stun, v)) => eval(v, i64::from(x)).map_or(0, |n| n.max(0) as u32),
+        _ => 0,
+    }
+}
+
 pub fn x_relevant(def: &CardDefinition) -> bool {
     def.cost.has_x() || effect_uses_x(&def.effect)
 }
@@ -19467,6 +19580,35 @@ mod tests {
         }
     }
 
+    /// An optional "choose up to N" pick over the bot's OWN graveyard
+    /// (Divergent Equation's return-to-hand, Bind to Life's put-onto-the-
+    /// battlefield) is upside: with `own_graveyard_picks` the bot takes up to
+    /// N, priciest first; the default's hostile-exile reading takes nothing.
+    #[test]
+    fn bot_choose_cards_takes_own_graveyard_with_flag() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let cheap = g.add_card_to_graveyard(0, catalog::lightning_bolt()); // cmc 1
+        let pricey = g.add_card_to_graveyard(0, catalog::shivan_dragon()); // cmc 6
+        let candidates = vec![
+            (cheap, "Lightning Bolt".to_string()),
+            (pricey, "Shivan Dragon".to_string()),
+        ];
+        match decide_choose_cards(&EvalWeights::own_graveyard_picks_on(), &g, 0, "Choose up to 1 cards to move", &candidates, 0, 1) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![pricey], "flag on: take the priciest own card"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, "Choose up to 1 cards to move", &candidates, 0, 1) {
+            DecisionAnswer::Cards(v) => assert!(v.is_empty(), "flag off: the hostile-exile reading picks nothing"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+        // A cost-shaped prompt keeps the old reading even with the flag.
+        match decide_choose_cards(&EvalWeights::own_graveyard_picks_on(), &g, 0, "Exile up to 1 cards from graveyards", &candidates, 0, 1) {
+            DecisionAnswer::Cards(v) => assert!(v.is_empty(), "an exile prompt is not taken as upside"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
     /// `decide_choose_cards` over battlefield creatures (Archipelagore's tap)
     /// targets opponents' biggest creature, never the bot's own.
     #[test]
@@ -19642,6 +19784,19 @@ mod tests {
             ),
             "Bolt on the elf: {action:?}"
         );
+    }
+
+    /// The stun-hold evaluator on Slumbering Trudge's printed `3 - X`:
+    /// X=0 enters with 3 stun counters, X=2 with 1, X=3 clean; a card whose
+    /// enters-with counters are not stun (Rancorous Archaic) reads 0.
+    #[test]
+    fn stun_counters_at_x_reads_trudge() {
+        let t = crate::catalog::slumbering_trudge();
+        assert_eq!(stun_counters_at_x(&t, 0), 3);
+        assert_eq!(stun_counters_at_x(&t, 2), 1);
+        assert_eq!(stun_counters_at_x(&t, 3), 0);
+        assert_eq!(stun_counters_at_x(&t, 7), 0);
+        assert_eq!(stun_counters_at_x(&crate::catalog::rancorous_archaic(), 0), 0);
     }
 
     /// Round 65: the guarded greedy filter holds the six suicide shapes the

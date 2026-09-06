@@ -1,0 +1,13 @@
+pilot             opp        win%     ±  games  seeds      delta vs real_build_converge3 deck
+dflt              dflt      57.20  0.46  48000  43,97      +16.42 ±0.64 (+50.5σ)      v4_removal  
+dflt              dflt      55.42  0.45  48000  43,97      +14.65 ±0.63 (+45.4σ)      v2a_17lands  
+dflt              dflt      55.04  0.46  48000  43,97      +14.27 ±0.64 (+43.9σ)      v2b_5colour  
+dflt              dflt      54.69  0.46  48000  43,97      +13.91 ±0.64 (+42.8σ)      v1_trim40  
+dflt              dflt      53.26  0.46  48000  43,97      +12.48 ±0.64 (+38.4σ)      v3_bombs  
+dflt              dflt      49.01  0.46  48000  43,97       +8.23 ±0.64 (+25.3σ)      v5_curve  
+dflt              dflt      48.50  0.46  48000  43,97       +7.73 ±0.64 (+23.8σ)      v7_notrudge  
+dflt              dflt      43.01  0.45  48000  43,97       +2.24 ±0.63 (+6.9σ)       v6_46at17  
+dflt              dflt      40.77  0.44  48000  43,97                                 real_build_converge3  
+dflt              dflt      40.46  1.00   9600  43,97                                 real_build_converge3  
+dflt              dflt      38.66  0.63  24000  43          -2.12 ±0.77 (-5.4σ)       recommended_from_pool  
+dflt              dflt      37.92  1.35   4800  43          -2.54 ±1.68 (-3.0σ)       recommended_from_pool  

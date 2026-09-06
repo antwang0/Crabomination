@@ -1,0 +1,56 @@
+add_ad_nauseam	+Ad Nauseam -Witherbloom Charm
+add_adventurous_eater	+Adventurous Eater -Witherbloom Charm
+add_arnyn_deathbloom_botanist	+Arnyn, Deathbloom Botanist -Witherbloom Charm
+add_ascendant_dustspeaker	+Ascendant Dustspeaker -Witherbloom Charm
+add_brain_freeze	+Brain Freeze -Witherbloom Charm
+add_burrog_barrage	+Burrog Barrage -Witherbloom Charm
+add_chase_inspiration	+Chase Inspiration -Witherbloom Charm
+add_dig_site_inventory	+Dig Site Inventory -Witherbloom Charm
+add_dissection_practice	+Dissection Practice -Witherbloom Charm
+add_efflorescence	+Efflorescence -Witherbloom Charm
+add_elite_interceptor	+Elite Interceptor -Witherbloom Charm
+add_embrace_the_paradox	+Embrace the Paradox -Witherbloom Charm
+add_emeritus_of_truce	+Emeritus of Truce -Witherbloom Charm
+add_essenceknit_scholar	+Essenceknit Scholar -Witherbloom Charm
+add_follow_the_lumarets	+Follow the Lumarets -Witherbloom Charm
+add_fractal_mascot	+Fractal Mascot -Witherbloom Charm
+add_hop_to_it	+Hop to It -Witherbloom Charm
+add_hydro_channeler	+Hydro-Channeler -Witherbloom Charm
+add_imperious_inkmage	+Imperious Inkmage -Witherbloom Charm
+add_inkling_mascot	+Inkling Mascot -Witherbloom Charm
+add_inkshape_demonstrator	+Inkshape Demonstrator -Witherbloom Charm
+add_landscape_painter	+Landscape Painter -Witherbloom Charm
+add_lecturing_scornmage	+Lecturing Scornmage -Witherbloom Charm
+add_melancholic_poet	+Melancholic Poet -Witherbloom Charm
+add_muse_s_encouragement	+Muse's Encouragement -Witherbloom Charm
+add_oracle_s_restoration	+Oracle's Restoration -Witherbloom Charm
+add_page_loose_leaf	+Page, Loose Leaf -Witherbloom Charm
+add_pensive_professor	+Pensive Professor -Witherbloom Charm
+add_pest_mascot	+Pest Mascot -Witherbloom Charm
+add_poisoner_s_apprentice	+Poisoner's Apprentice -Witherbloom Charm
+add_procrastinate	+Procrastinate -Witherbloom Charm
+add_pull_from_the_grave	+Pull from the Grave -Witherbloom Charm
+add_quill_blade_laureate	+Quill-Blade Laureate -Witherbloom Charm
+add_rancorous_archaic	+Rancorous Archaic -Witherbloom Charm
+add_rapier_wit	+Rapier Wit -Witherbloom Charm
+add_rehearsed_debater	+Rehearsed Debater -Witherbloom Charm
+add_scolding_administrator	+Scolding Administrator -Witherbloom Charm
+add_shopkeeper_s_bane	+Shopkeeper's Bane -Witherbloom Charm
+add_soaring_stoneglider	+Soaring Stoneglider -Witherbloom Charm
+add_social_snub	+Social Snub -Witherbloom Charm
+add_spellbook_seeker	+Spellbook Seeker -Witherbloom Charm
+add_stone_docent	+Stone Docent -Witherbloom Charm
+add_sundering_archaic	+Sundering Archaic -Witherbloom Charm
+add_thornfist_striker	+Thornfist Striker -Witherbloom Charm
+add_tragedy_feaster	+Tragedy Feaster -Witherbloom Charm
+add_wild_hypothesis	+Wild Hypothesis -Witherbloom Charm
+add_zimone_s_experiment	+Zimone's Experiment -Witherbloom Charm
+land_minus_plains	-Plains +Oracle's Restoration
+land_plus_plains	+Plains -Oracle's Restoration
+land_minus_island	-Island +Oracle's Restoration
+land_plus_island	+Island -Oracle's Restoration
+land_minus_swamp	-Swamp +Oracle's Restoration
+land_plus_swamp	+Swamp -Oracle's Restoration
+land_plus_mountain	+Mountain -Oracle's Restoration
+land_minus_forest	-Forest +Oracle's Restoration
+land_plus_forest	+Forest -Oracle's Restoration

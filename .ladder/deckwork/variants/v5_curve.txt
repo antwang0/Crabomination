@@ -1,0 +1,32 @@
+# v5_curve: V1 +Thornfist Striker +Essenceknit Scholar +Pest Mascot -Together as One -Snarl Song -1 Rancorous Archaic
+# 40 cards, 18 lands
+1 Slumbering Trudge
+2 Studious First-Year // Rampant Growth
+1 Send in the Pest
+1 Quandrix Charm
+1 Environmental Scientist
+1 Feed the Swarm
+1 Shared Roots
+1 Pensive Professor
+1 Blech, Loafing Pest
+1 Knockout Maneuver
+1 Shopkeeper's Bane
+1 Professor Dellian Fel
+1 Zimone's Experiment
+1 Proctor's Gaze
+1 Wander Off
+1 Rancorous Archaic
+1 Emeritus of Ideation // Ancestral Recall
+1 Sundering Archaic
+4 Forest
+4 Island
+2 Swamp
+1 Plains
+2 Forum of Amity
+2 Paradox Gardens
+1 Dreamroot Cascade
+1 Shattered Sanctum
+1 Terramorphic Expanse
+1 Thornfist Striker
+1 Essenceknit Scholar
+1 Pest Mascot

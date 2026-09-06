@@ -1,0 +1,89 @@
+pilot             opp        win%     ±  games  seeds      delta vs inc1              deck
+dflt              dflt      64.73  0.44  48000  43,97                                 add_rancorous_archaic  +Rancorous Archaic -Witherbloom Charm
+dflt              dflt      64.46  0.44  48000  43,97                                 add_shopkeeper_s_bane  +Shopkeeper's Bane -Witherbloom Charm
+dflt              dflt      64.37  0.44  48000  43,97                                 add_fractal_mascot  +Fractal Mascot -Witherbloom Charm
+dflt              dflt      64.26  0.44  48000  43,97                                 add_thornfist_striker  +Thornfist Striker -Witherbloom Charm
+dflt              dflt      63.65  0.44  48000  43,97                                 add_arnyn_deathbloom_botanist  +Arnyn, Deathbloom Botanist -Witherbloom Charm
+dflt              dflt      63.64  0.44  48000  43,97                                 add_sundering_archaic  +Sundering Archaic -Witherbloom Charm
+dflt              dflt      63.60  0.44  48000  43,97                                 add_spellbook_seeker  +Spellbook Seeker -Witherbloom Charm
+dflt              dflt      63.52  0.44  48000  43,97                                 add_ascendant_dustspeaker  +Ascendant Dustspeaker -Witherbloom Charm
+dflt              dflt      63.52  0.44  48000  43,97                                 add_soaring_stoneglider  +Soaring Stoneglider -Witherbloom Charm
+dflt              dflt      63.38  0.44  48000  43,97                                 add_pensive_professor  +Pensive Professor -Witherbloom Charm
+dflt              dflt      63.32  0.44  48000  43,97                                 add_adventurous_eater  +Adventurous Eater -Witherbloom Charm
+dflt              dflt      63.13  0.44  48000  43,97                                 add_stone_docent  +Stone Docent -Witherbloom Charm
+dflt              dflt      63.06  0.44  48000  43,97                                 add_tragedy_feaster  +Tragedy Feaster -Witherbloom Charm
+dflt              dflt      63.02  0.44  48000  43,97                                 add_wild_hypothesis  +Wild Hypothesis -Witherbloom Charm
+dflt              dflt      62.80  0.44  48000  43,97                                 add_muse_s_encouragement  +Muse's Encouragement -Witherbloom Charm
+dflt              dflt      62.77  0.44  48000  43,97                                 add_hop_to_it  +Hop to It -Witherbloom Charm
+dflt              dflt      62.77  0.44  48000  43,97                                 add_pest_mascot  +Pest Mascot -Witherbloom Charm
+dflt              dflt      62.73  0.44  48000  43,97                                 add_rehearsed_debater  +Rehearsed Debater -Witherbloom Charm
+dflt              dflt      62.66  0.44  48000  43,97                                 add_imperious_inkmage  +Imperious Inkmage -Witherbloom Charm
+dflt              dflt      62.63  0.44  48000  43,97                                 add_inkshape_demonstrator  +Inkshape Demonstrator -Witherbloom Charm
+dflt              dflt      62.55  0.44  48000  43,97                                 add_landscape_painter  +Landscape Painter -Witherbloom Charm
+dflt              dflt      62.53  0.44  48000  43,97                                 add_social_snub  +Social Snub -Witherbloom Charm
+dflt              dflt      62.51  0.44  48000  43,97                                 add_embrace_the_paradox  +Embrace the Paradox -Witherbloom Charm
+dflt              dflt      62.49  0.44  48000  43,97                                 add_essenceknit_scholar  +Essenceknit Scholar -Witherbloom Charm
+dflt              dflt      62.44  0.44  48000  43,97                                 add_oracle_s_restoration  +Oracle's Restoration -Witherbloom Charm
+dflt              dflt      62.41  0.44  48000  43,97                                 add_elite_interceptor  +Elite Interceptor -Witherbloom Charm
+dflt              dflt      62.34  0.44  48000  43,97                                 add_rapier_wit  +Rapier Wit -Witherbloom Charm
+dflt              dflt      62.23  0.44  48000  43,97                                 add_dig_site_inventory  +Dig Site Inventory -Witherbloom Charm
+dflt              dflt      61.99  0.44  48000  43,97                                 add_quill_blade_laureate  +Quill-Blade Laureate -Witherbloom Charm
+dflt              dflt      61.94  0.44  48000  43,97                                 add_burrog_barrage  +Burrog Barrage -Witherbloom Charm
+dflt              dflt      61.94  0.44  48000  43,97                                 add_scolding_administrator  +Scolding Administrator -Witherbloom Charm
+dflt              dflt      61.68  0.44  48000  43,97                                 land_plus_mountain  +Mountain -Oracle's Restoration
+dflt              dflt      61.63  0.44  48000  43,97                                 add_melancholic_poet  +Melancholic Poet -Witherbloom Charm
+dflt              dflt      61.56  0.44  48000  43,97                                 add_lecturing_scornmage  +Lecturing Scornmage -Witherbloom Charm
+dflt              dflt      61.38  0.44  48000  43,97                                 add_efflorescence  +Efflorescence -Witherbloom Charm
+dflt              dflt      61.37  0.44  48000  43,97                                 land_minus_plains  -Plains +Oracle's Restoration
+dflt              dflt      61.34  0.44  48000  43,97                                 land_minus_island  -Island +Oracle's Restoration
+dflt              dflt      61.29  0.44  48000  43,97                                 add_poisoner_s_apprentice  +Poisoner's Apprentice -Witherbloom Charm
+dflt              dflt      61.24  0.45  48000  43,97                                 add_page_loose_leaf  +Page, Loose Leaf -Witherbloom Charm
+dflt              dflt      61.21  0.45  48000  43,97                                 land_plus_forest  +Forest -Oracle's Restoration
+dflt              dflt      61.20  0.44  48000  43,97                                 add_dissection_practice  +Dissection Practice -Witherbloom Charm
+dflt              dflt      61.11  0.44  48000  43,97                                 cut_quandrix_charm  
+dflt              dflt      61.03  0.44  48000  43,97                                 add_inkling_mascot  +Inkling Mascot -Witherbloom Charm
+dflt              dflt      60.85  0.44  48000  43,97                                 add_follow_the_lumarets  +Follow the Lumarets -Witherbloom Charm
+dflt              dflt      60.76  0.44  48000  43,97                                 add_ad_nauseam  +Ad Nauseam -Witherbloom Charm
+dflt              dflt      60.63  0.44  48000  43,97                                 land_minus_swamp  -Swamp +Oracle's Restoration
+dflt              dflt      60.41  0.46  48000  43,97                                 add_procrastinate  +Procrastinate -Witherbloom Charm
+dflt              dflt      60.28  0.45  48000  43,97                                 land_plus_swamp  +Swamp -Oracle's Restoration
+dflt              dflt      60.19  0.44  48000  43,97                                 add_emeritus_of_truce  +Emeritus of Truce -Witherbloom Charm
+dflt              dflt      60.17  0.45  48000  43,97                                 add_pull_from_the_grave  +Pull from the Grave -Witherbloom Charm
+dflt              dflt      59.89  0.44  48000  43,97                                 add_hydro_channeler  +Hydro-Channeler -Witherbloom Charm
+dflt              dflt      59.84  0.46  48000  43,97                                 land_plus_island  +Island -Oracle's Restoration
+dflt              dflt      59.80  0.46  48000  43,97                                 land_plus_plains  +Plains -Oracle's Restoration
+dflt              dflt      59.80  0.45  48000  43,97                                 add_zimone_s_experiment  +Zimone's Experiment -Witherbloom Charm
+dflt              dflt      59.20  0.44  48000  43,97                                 land_minus_forest  -Forest +Oracle's Restoration
+dflt              dflt      59.16  0.45  48000  43,97                                 add_chase_inspiration  +Chase Inspiration -Witherbloom Charm
+dflt              dflt      58.89  0.45  48000  43,97                                 cut_witherbloom_charm  
+dflt              dflt      57.65  0.45  48000  43,97                                 cut_shared_roots  
+dflt              dflt      57.57  0.46  48000  43,97                                 add_brain_freeze  +Brain Freeze -Witherbloom Charm
+dflt              dflt      57.42  0.46  48000  43,97                                 cut_proctor_s_gaze  
+dflt              dflt      57.24  0.46  48000  43,97                                 cut_studious_first_year  
+dflt              dflt      57.20  0.46  48000  43,97                                 v4_removal  
+dflt              dflt      56.92  0.46  48000  43,97                                 cut_feed_the_swarm  
+dflt              dflt      56.83  0.46  48000  43,97                                 cut_together_as_one  
+dflt              dflt      56.64  0.46  48000  43,97                                 cut_send_in_the_pest  
+dflt              dflt      56.23  0.46  48000  43,97                                 cut_wander_off  
+dflt              dflt      55.79  0.46  48000  43,97                                 cut_sundering_archaic  
+dflt              dflt      55.73  0.46  48000  43,97                                 cut_environmental_scientist  
+dflt              dflt      55.64  0.45  48000  43,97                                 cut_knockout_maneuver  
+dflt              dflt      55.42  0.45  48000  43,97                                 v2a_17lands  
+dflt              dflt      55.09  0.46  48000  43,97                                 cut_vastlands_scavenger  
+dflt              dflt      55.04  0.46  48000  43,97                                 v2b_5colour  
+dflt              dflt      54.69  0.46  48000  43,97                                 v1_trim40  
+dflt              dflt      54.60  0.46  48000  43,97                                 cut_shopkeeper_s_bane  
+dflt              dflt      54.16  0.46  48000  43,97                                 cut_blech_loafing_pest  
+dflt              dflt      54.12  0.46  48000  43,97                                 cut_rancorous_archaic  
+dflt              dflt      54.02  0.46  48000  43,97                                 cut_professor_dellian_fel  
+dflt              dflt      53.26  0.46  48000  43,97                                 v3_bombs  
+dflt              dflt      53.01  0.46  48000  43,97                                 cut_snarl_song  
+dflt              dflt      51.05  0.46  48000  43,97                                 cut_emeritus_of_ideation  
+dflt              dflt      50.80  0.46  48000  43,97                                 cut_slumbering_trudge  
+dflt              dflt      49.01  0.46  48000  43,97                                 v5_curve  
+dflt              dflt      48.50  0.46  48000  43,97                                 v7_notrudge  
+dflt              dflt      43.01  0.45  48000  43,97                                 v6_46at17  
+dflt              dflt      40.77  0.44  48000  43,97                                 real_build_converge3  
+dflt              dflt      40.46  1.00   9600  43,97                                 real_build_converge3  
+dflt              dflt      38.66  0.63  24000  43                                    recommended_from_pool  
+dflt              dflt      37.92  1.35   4800  43                                    recommended_from_pool  

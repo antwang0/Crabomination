@@ -1,0 +1,153 @@
+pilot             opp        win%     ±  games  seeds      delta vs add_rancorous_archaic deck
+dflt              dflt      66.73  0.43  48000  43,97       +2.00 ±0.61 (+6.4σ)       swap_shared_roots__shopkeeper_s_bane  -Shared Roots +Shopkeeper's Bane
+dflt              dflt      66.72  0.43  48000  43,97       +1.99 ±0.61 (+6.4σ)       swap_studious_first_year__shopkeeper_s_bane  -Studious First-Year +Shopkeeper's Bane
+dflt              dflt      66.46  0.43  48000  43,97       +1.73 ±0.61 (+5.6σ)       swap_proctor_s_gaze__shopkeeper_s_bane  -Proctor's Gaze +Shopkeeper's Bane
+dflt              dflt      66.45  0.43  48000  43,97       +1.71 ±0.61 (+5.5σ)       swap_together_as_one__shopkeeper_s_bane  -Together as One +Shopkeeper's Bane
+dflt              dflt      66.30  0.43  48000  43,97       +1.57 ±0.61 (+5.0σ)       swap_oracle_s_restoration__shopkeeper_s_bane  -Oracle's Restoration +Shopkeeper's Bane
+dflt              dflt      66.26  0.44  48000  43,97       +1.53 ±0.62 (+4.9σ)       swap_studious_first_year__thornfist_striker  -Studious First-Year +Thornfist Striker
+dflt              dflt      66.21  0.43  48000  43,97       +1.48 ±0.61 (+4.8σ)       swap_send_in_the_pest__shopkeeper_s_bane  -Send in the Pest +Shopkeeper's Bane
+dflt              dflt      66.20  0.44  48000  43,97       +1.47 ±0.62 (+4.7σ)       swap_oracle_s_restoration__fractal_mascot  -Oracle's Restoration +Fractal Mascot
+dflt              dflt      66.11  0.43  48000  43,97       +1.38 ±0.61 (+4.4σ)       swap_shared_roots__thornfist_striker  -Shared Roots +Thornfist Striker
+dflt              dflt      66.06  0.44  48000  43,97       +1.33 ±0.62 (+4.2σ)       swap_oracle_s_restoration__thornfist_striker  -Oracle's Restoration +Thornfist Striker
+dflt              dflt      66.03  0.43  48000  43,97       +1.30 ±0.61 (+4.2σ)       swap_studious_first_year__fractal_mascot  -Studious First-Year +Fractal Mascot
+dflt              dflt      66.03  0.43  48000  43,97       +1.29 ±0.61 (+4.1σ)       swap_proctor_s_gaze__thornfist_striker  -Proctor's Gaze +Thornfist Striker
+dflt              dflt      66.03  0.43  48000  43,97       +1.29 ±0.61 (+4.1σ)       swap_studious_first_year__arnyn_deathbloom_botanist  -Studious First-Year +Arnyn, Deathbloom Botanist
+dflt              dflt      65.97  0.44  48000  43,97       +1.24 ±0.62 (+3.9σ)       swap_proctor_s_gaze__fractal_mascot  -Proctor's Gaze +Fractal Mascot
+dflt              dflt      65.92  0.43  48000  43,97       +1.19 ±0.61 (+3.8σ)       swap_shared_roots__fractal_mascot  -Shared Roots +Fractal Mascot
+dflt              dflt      65.74  0.44  48000  43,97       +1.01 ±0.62 (+3.2σ)       swap_feed_the_swarm__thornfist_striker  -Feed the Swarm +Thornfist Striker
+dflt              dflt      65.73  0.44  48000  43,97       +1.00 ±0.62 (+3.2σ)       swap_send_in_the_pest__fractal_mascot  -Send in the Pest +Fractal Mascot
+dflt              dflt      65.73  0.43  48000  43,97       +1.00 ±0.61 (+3.2σ)       swap_shared_roots__arnyn_deathbloom_botanist  -Shared Roots +Arnyn, Deathbloom Botanist
+dflt              dflt      65.70  0.43  48000  43,97       +0.97 ±0.61 (+3.1σ)       swap_feed_the_swarm__shopkeeper_s_bane  -Feed the Swarm +Shopkeeper's Bane
+dflt              dflt      65.65  0.44  48000  43,97       +0.91 ±0.62 (+2.9σ)       swap_together_as_one__fractal_mascot  -Together as One +Fractal Mascot
+dflt              dflt      65.64  0.44  48000  43,97       +0.90 ±0.62 (+2.8σ)       swap_feed_the_swarm__fractal_mascot  -Feed the Swarm +Fractal Mascot
+dflt              dflt      65.61  0.44  48000  43,97       +0.88 ±0.62 (+2.8σ)       swap_send_in_the_pest__thornfist_striker  -Send in the Pest +Thornfist Striker
+dflt              dflt      65.59  0.43  48000  43,97       +0.85 ±0.61 (+2.7σ)       swap_oracle_s_restoration__arnyn_deathbloom_botanist  -Oracle's Restoration +Arnyn, Deathbloom Botanist
+dflt              dflt      65.56  0.43  48000  43,97       +0.83 ±0.61 (+2.7σ)       swap_proctor_s_gaze__arnyn_deathbloom_botanist  -Proctor's Gaze +Arnyn, Deathbloom Botanist
+dflt              dflt      65.56  0.44  48000  43,97       +0.83 ±0.62 (+2.6σ)       swap_studious_first_year__spellbook_seeker  -Studious First-Year +Spellbook Seeker
+dflt              dflt      65.54  0.44  48000  43,97       +0.81 ±0.62 (+2.6σ)       swap_together_as_one__pensive_professor  -Together as One +Pensive Professor
+dflt              dflt      65.53  0.44  48000  43,97       +0.80 ±0.62 (+2.6σ)       swap_studious_first_year__soaring_stoneglider  -Studious First-Year +Soaring Stoneglider
+dflt              dflt      65.53  0.44  48000  43,97       +0.79 ±0.62 (+2.5σ)       swap_oracle_s_restoration__spellbook_seeker  -Oracle's Restoration +Spellbook Seeker
+dflt              dflt      65.52  0.44  48000  43,97       +0.78 ±0.62 (+2.5σ)       swap_proctor_s_gaze__spellbook_seeker  -Proctor's Gaze +Spellbook Seeker
+dflt              dflt      65.45  0.43  48000  43,97       +0.72 ±0.61 (+2.3σ)       swap_feed_the_swarm__arnyn_deathbloom_botanist  -Feed the Swarm +Arnyn, Deathbloom Botanist
+dflt              dflt      65.45  0.44  48000  43,97       +0.72 ±0.62 (+2.3σ)       swap_together_as_one__thornfist_striker  -Together as One +Thornfist Striker
+dflt              dflt      65.45  0.44  48000  43,97       +0.72 ±0.62 (+2.3σ)       swap_proctor_s_gaze__sundering_archaic  -Proctor's Gaze +Sundering Archaic
+dflt              dflt      65.44  0.44  48000  43,97       +0.71 ±0.62 (+2.3σ)       swap_together_as_one__soaring_stoneglider  -Together as One +Soaring Stoneglider
+dflt              dflt      65.44  0.44  48000  43,97       +0.70 ±0.62 (+2.2σ)       swap_oracle_s_restoration__sundering_archaic  -Oracle's Restoration +Sundering Archaic
+dflt              dflt      65.43  0.44  48000  43,97       +0.69 ±0.62 (+2.2σ)       swap_oracle_s_restoration__pensive_professor  -Oracle's Restoration +Pensive Professor
+dflt              dflt      65.40  0.44  48000  43,97       +0.67 ±0.62 (+2.1σ)       swap_together_as_one__spellbook_seeker  -Together as One +Spellbook Seeker
+dflt              dflt      65.40  0.44  48000  43,97       +0.67 ±0.62 (+2.1σ)       swap_shared_roots__pensive_professor  -Shared Roots +Pensive Professor
+dflt              dflt      65.33  0.44  48000  43,97       +0.59 ±0.62 (+1.9σ)       swap_proctor_s_gaze__soaring_stoneglider  -Proctor's Gaze +Soaring Stoneglider
+dflt              dflt      65.30  0.44  48000  43,97       +0.57 ±0.62 (+1.8σ)       swap_oracle_s_restoration__soaring_stoneglider  -Oracle's Restoration +Soaring Stoneglider
+dflt              dflt      65.28  0.44  48000  43,97       +0.55 ±0.62 (+1.7σ)       swap_feed_the_swarm__sundering_archaic  -Feed the Swarm +Sundering Archaic
+dflt              dflt      65.27  0.43  48000  43,97       +0.53 ±0.61 (+1.7σ)       swap_together_as_one__arnyn_deathbloom_botanist  -Together as One +Arnyn, Deathbloom Botanist
+dflt              dflt      65.26  0.44  48000  43,97       +0.53 ±0.62 (+1.7σ)       swap_shared_roots__spellbook_seeker  -Shared Roots +Spellbook Seeker
+dflt              dflt      65.23  0.44  48000  43,97       +0.50 ±0.62 (+1.6σ)       swap_together_as_one__sundering_archaic  -Together as One +Sundering Archaic
+dflt              dflt      65.23  0.44  48000  43,97       +0.50 ±0.62 (+1.6σ)       swap_oracle_s_restoration__ascendant_dustspeaker  -Oracle's Restoration +Ascendant Dustspeaker
+dflt              dflt      65.14  0.44  48000  43,97       +0.41 ±0.62 (+1.3σ)       swap_studious_first_year__pensive_professor  -Studious First-Year +Pensive Professor
+dflt              dflt      65.12  0.44  48000  43,97       +0.39 ±0.62 (+1.2σ)       swap_shared_roots__soaring_stoneglider  -Shared Roots +Soaring Stoneglider
+dflt              dflt      65.11  0.44  48000  43,97       +0.38 ±0.62 (+1.2σ)       swap_send_in_the_pest__sundering_archaic  -Send in the Pest +Sundering Archaic
+dflt              dflt      65.10  0.44  48000  43,97       +0.37 ±0.62 (+1.2σ)       swap_shared_roots__ascendant_dustspeaker  -Shared Roots +Ascendant Dustspeaker
+dflt              dflt      65.09  0.44  48000  43,97       +0.36 ±0.62 (+1.1σ)       swap_send_in_the_pest__spellbook_seeker  -Send in the Pest +Spellbook Seeker
+dflt              dflt      65.08  0.44  48000  43,97       +0.35 ±0.62 (+1.1σ)       swap_send_in_the_pest__arnyn_deathbloom_botanist  -Send in the Pest +Arnyn, Deathbloom Botanist
+dflt              dflt      65.06  0.44  48000  43,97       +0.33 ±0.62 (+1.1σ)       swap_studious_first_year__ascendant_dustspeaker  -Studious First-Year +Ascendant Dustspeaker
+dflt              dflt      65.03  0.44  48000  43,97       +0.30 ±0.62 (+0.9σ)       swap_shared_roots__sundering_archaic  -Shared Roots +Sundering Archaic
+dflt              dflt      65.03  0.44  48000  43,97       +0.29 ±0.62 (+0.9σ)       swap_feed_the_swarm__spellbook_seeker  -Feed the Swarm +Spellbook Seeker
+dflt              dflt      65.01  0.44  48000  43,97       +0.28 ±0.62 (+0.9σ)       swap_studious_first_year__sundering_archaic  -Studious First-Year +Sundering Archaic
+dflt              dflt      65.01  0.44  48000  43,97       +0.28 ±0.62 (+0.9σ)       swap_send_in_the_pest__pensive_professor  -Send in the Pest +Pensive Professor
+dflt              dflt      64.97  0.44  48000  43,97       +0.24 ±0.62 (+0.8σ)       swap_feed_the_swarm__ascendant_dustspeaker  -Feed the Swarm +Ascendant Dustspeaker
+dflt              dflt      64.96  0.44  48000  43,97       +0.23 ±0.62 (+0.7σ)       swap_proctor_s_gaze__ascendant_dustspeaker  -Proctor's Gaze +Ascendant Dustspeaker
+dflt              dflt      64.96  0.44  48000  43,97       +0.23 ±0.62 (+0.7σ)       swap_together_as_one__ascendant_dustspeaker  -Together as One +Ascendant Dustspeaker
+dflt              dflt      64.94  0.44  48000  43,97       +0.21 ±0.62 (+0.7σ)       swap_proctor_s_gaze__pensive_professor  -Proctor's Gaze +Pensive Professor
+dflt              dflt      64.82  0.44  48000  43,97       +0.09 ±0.62 (+0.3σ)       swap_feed_the_swarm__soaring_stoneglider  -Feed the Swarm +Soaring Stoneglider
+dflt              dflt      64.80  0.44  48000  43,97       +0.07 ±0.62 (+0.2σ)       swap_send_in_the_pest__soaring_stoneglider  -Send in the Pest +Soaring Stoneglider
+dflt              dflt      64.73  0.44  48000  43,97                                 add_rancorous_archaic  
+dflt              dflt      64.73  0.44  48000  43,97       -0.00 ±0.62 (-0.0σ)       swap_send_in_the_pest__ascendant_dustspeaker  -Send in the Pest +Ascendant Dustspeaker
+dflt              dflt      64.54  0.44  48000  43,97       -0.19 ±0.62 (-0.6σ)       swap_feed_the_swarm__pensive_professor  -Feed the Swarm +Pensive Professor
+dflt              dflt      64.46  0.44  48000  43,97       -0.27 ±0.62 (-0.9σ)       add_shopkeeper_s_bane  
+dflt              dflt      64.37  0.44  48000  43,97       -0.36 ±0.62 (-1.1σ)       add_fractal_mascot  
+dflt              dflt      64.26  0.44  48000  43,97       -0.47 ±0.62 (-1.5σ)       add_thornfist_striker  
+dflt              dflt      63.65  0.44  48000  43,97       -1.09 ±0.62 (-3.4σ)       add_arnyn_deathbloom_botanist  
+dflt              dflt      63.64  0.44  48000  43,97       -1.09 ±0.62 (-3.4σ)       add_sundering_archaic  
+dflt              dflt      63.60  0.44  48000  43,97       -1.13 ±0.62 (-3.6σ)       add_spellbook_seeker  
+dflt              dflt      63.52  0.44  48000  43,97       -1.21 ±0.62 (-3.8σ)       add_ascendant_dustspeaker  
+dflt              dflt      63.52  0.44  48000  43,97       -1.21 ±0.62 (-3.8σ)       add_soaring_stoneglider  
+dflt              dflt      63.38  0.44  48000  43,97       -1.36 ±0.62 (-4.3σ)       add_pensive_professor  
+dflt              dflt      63.32  0.44  48000  43,97       -1.41 ±0.62 (-4.4σ)       add_adventurous_eater  
+dflt              dflt      63.13  0.44  48000  43,97       -1.60 ±0.62 (-5.0σ)       add_stone_docent  
+dflt              dflt      63.06  0.44  48000  43,97       -1.67 ±0.62 (-5.3σ)       add_tragedy_feaster  
+dflt              dflt      63.02  0.44  48000  43,97       -1.72 ±0.62 (-5.4σ)       add_wild_hypothesis  
+dflt              dflt      62.80  0.44  48000  43,97       -1.93 ±0.62 (-6.1σ)       add_muse_s_encouragement  
+dflt              dflt      62.77  0.44  48000  43,97       -1.96 ±0.62 (-6.2σ)       add_hop_to_it  
+dflt              dflt      62.77  0.44  48000  43,97       -1.97 ±0.62 (-6.2σ)       add_pest_mascot  
+dflt              dflt      62.73  0.44  48000  43,97       -2.01 ±0.62 (-6.3σ)       add_rehearsed_debater  
+dflt              dflt      62.66  0.44  48000  43,97       -2.07 ±0.62 (-6.5σ)       add_imperious_inkmage  
+dflt              dflt      62.63  0.44  48000  43,97       -2.10 ±0.62 (-6.6σ)       add_inkshape_demonstrator  
+dflt              dflt      62.55  0.44  48000  43,97       -2.18 ±0.62 (-6.9σ)       add_landscape_painter  
+dflt              dflt      62.53  0.44  48000  43,97       -2.20 ±0.62 (-6.9σ)       add_social_snub  
+dflt              dflt      62.51  0.44  48000  43,97       -2.22 ±0.62 (-7.0σ)       add_embrace_the_paradox  
+dflt              dflt      62.49  0.44  48000  43,97       -2.24 ±0.62 (-7.0σ)       add_essenceknit_scholar  
+dflt              dflt      62.44  0.44  48000  43,97       -2.30 ±0.62 (-7.2σ)       add_oracle_s_restoration  
+dflt              dflt      62.41  0.44  48000  43,97       -2.32 ±0.62 (-7.3σ)       add_elite_interceptor  
+dflt              dflt      62.34  0.44  48000  43,97       -2.39 ±0.62 (-7.5σ)       add_rapier_wit  
+dflt              dflt      62.23  0.44  48000  43,97       -2.50 ±0.62 (-7.9σ)       add_dig_site_inventory  
+dflt              dflt      61.99  0.44  48000  43,97       -2.74 ±0.62 (-8.6σ)       add_quill_blade_laureate  
+dflt              dflt      61.94  0.44  48000  43,97       -2.79 ±0.62 (-8.8σ)       add_burrog_barrage  
+dflt              dflt      61.94  0.44  48000  43,97       -2.79 ±0.62 (-8.8σ)       add_scolding_administrator  
+dflt              dflt      61.68  0.44  48000  43,97       -3.05 ±0.62 (-9.6σ)       land_plus_mountain  
+dflt              dflt      61.63  0.44  48000  43,97       -3.10 ±0.62 (-9.8σ)       add_melancholic_poet  
+dflt              dflt      61.56  0.44  48000  43,97       -3.17 ±0.62 (-10.0σ)      add_lecturing_scornmage  
+dflt              dflt      61.38  0.44  48000  43,97       -3.35 ±0.62 (-10.6σ)      add_efflorescence  
+dflt              dflt      61.37  0.44  48000  43,97       -3.37 ±0.62 (-10.6σ)      land_minus_plains  
+dflt              dflt      61.34  0.44  48000  43,97       -3.39 ±0.62 (-10.7σ)      land_minus_island  
+dflt              dflt      61.29  0.44  48000  43,97       -3.44 ±0.62 (-10.8σ)      add_poisoner_s_apprentice  
+dflt              dflt      61.24  0.45  48000  43,97       -3.49 ±0.63 (-10.9σ)      add_page_loose_leaf  
+dflt              dflt      61.21  0.45  48000  43,97       -3.52 ±0.63 (-11.0σ)      land_plus_forest  
+dflt              dflt      61.20  0.44  48000  43,97       -3.53 ±0.62 (-11.1σ)      add_dissection_practice  
+dflt              dflt      61.11  0.44  48000  43,97       -3.62 ±0.62 (-11.4σ)      cut_quandrix_charm  
+dflt              dflt      61.11  0.44  48000  43,97       -3.62 ±0.62 (-11.4σ)      inc1  
+dflt              dflt      61.03  0.44  48000  43,97       -3.70 ±0.62 (-11.6σ)      add_inkling_mascot  
+dflt              dflt      60.85  0.44  48000  43,97       -3.88 ±0.62 (-12.2σ)      add_follow_the_lumarets  
+dflt              dflt      60.76  0.44  48000  43,97       -3.98 ±0.62 (-12.5σ)      add_ad_nauseam  
+dflt              dflt      60.63  0.44  48000  43,97       -4.10 ±0.62 (-12.9σ)      land_minus_swamp  
+dflt              dflt      60.41  0.46  48000  43,97       -4.33 ±0.63 (-13.4σ)      add_procrastinate  
+dflt              dflt      60.28  0.45  48000  43,97       -4.45 ±0.63 (-13.9σ)      land_plus_swamp  
+dflt              dflt      60.19  0.44  48000  43,97       -4.55 ±0.62 (-14.3σ)      add_emeritus_of_truce  
+dflt              dflt      60.17  0.45  48000  43,97       -4.57 ±0.63 (-14.3σ)      add_pull_from_the_grave  
+dflt              dflt      59.89  0.44  48000  43,97       -4.84 ±0.62 (-15.2σ)      add_hydro_channeler  
+dflt              dflt      59.84  0.46  48000  43,97       -4.89 ±0.63 (-15.2σ)      land_plus_island  
+dflt              dflt      59.80  0.46  48000  43,97       -4.93 ±0.63 (-15.3σ)      land_plus_plains  
+dflt              dflt      59.80  0.45  48000  43,97       -4.93 ±0.63 (-15.4σ)      add_zimone_s_experiment  
+dflt              dflt      59.20  0.44  48000  43,97       -5.54 ±0.62 (-17.4σ)      land_minus_forest  
+dflt              dflt      59.16  0.45  48000  43,97       -5.57 ±0.63 (-17.4σ)      add_chase_inspiration  
+dflt              dflt      58.89  0.45  48000  43,97       -5.84 ±0.63 (-18.3σ)      cut_witherbloom_charm  
+dflt              dflt      57.65  0.45  48000  43,97       -7.08 ±0.63 (-22.1σ)      cut_shared_roots  
+dflt              dflt      57.57  0.46  48000  43,97       -7.16 ±0.63 (-22.2σ)      add_brain_freeze  
+dflt              dflt      57.42  0.46  48000  43,97       -7.31 ±0.63 (-22.7σ)      cut_proctor_s_gaze  
+dflt              dflt      57.24  0.46  48000  43,97       -7.49 ±0.63 (-23.2σ)      cut_studious_first_year  
+dflt              dflt      57.20  0.46  48000  43,97       -7.54 ±0.63 (-23.4σ)      v4_removal  
+dflt              dflt      56.92  0.46  48000  43,97       -7.81 ±0.63 (-24.2σ)      cut_feed_the_swarm  
+dflt              dflt      56.83  0.46  48000  43,97       -7.91 ±0.63 (-24.5σ)      cut_together_as_one  
+dflt              dflt      56.64  0.46  48000  43,97       -8.09 ±0.63 (-25.1σ)      cut_send_in_the_pest  
+dflt              dflt      56.23  0.46  48000  43,97       -8.51 ±0.63 (-26.4σ)      cut_wander_off  
+dflt              dflt      55.79  0.46  48000  43,97       -8.94 ±0.63 (-27.7σ)      cut_sundering_archaic  
+dflt              dflt      55.73  0.46  48000  43,97       -9.00 ±0.63 (-27.9σ)      cut_environmental_scientist  
+dflt              dflt      55.64  0.45  48000  43,97       -9.09 ±0.63 (-28.4σ)      cut_knockout_maneuver  
+dflt              dflt      55.42  0.45  48000  43,97       -9.31 ±0.63 (-29.1σ)      v2a_17lands  
+dflt              dflt      55.09  0.46  48000  43,97       -9.64 ±0.63 (-29.9σ)      cut_vastlands_scavenger  
+dflt              dflt      55.04  0.46  48000  43,97       -9.69 ±0.63 (-30.0σ)      v2b_5colour  
+dflt              dflt      54.69  0.46  48000  43,97      -10.04 ±0.63 (-31.1σ)      v1_trim40  
+dflt              dflt      54.60  0.46  48000  43,97      -10.13 ±0.63 (-31.4σ)      cut_shopkeeper_s_bane  
+dflt              dflt      54.16  0.46  48000  43,97      -10.58 ±0.63 (-32.8σ)      cut_blech_loafing_pest  
+dflt              dflt      54.12  0.46  48000  43,97      -10.61 ±0.63 (-32.9σ)      cut_rancorous_archaic  
+dflt              dflt      54.02  0.46  48000  43,97      -10.71 ±0.63 (-33.2σ)      cut_professor_dellian_fel  
+dflt              dflt      53.26  0.46  48000  43,97      -11.48 ±0.63 (-35.6σ)      v3_bombs  
+dflt              dflt      53.01  0.46  48000  43,97      -11.72 ±0.63 (-36.3σ)      cut_snarl_song  
+dflt              dflt      51.05  0.46  48000  43,97      -13.68 ±0.63 (-42.4σ)      cut_emeritus_of_ideation  
+dflt              dflt      50.80  0.46  48000  43,97      -13.94 ±0.63 (-43.2σ)      cut_slumbering_trudge  
+dflt              dflt      49.01  0.46  48000  43,97      -15.73 ±0.63 (-48.8σ)      v5_curve  
+dflt              dflt      48.50  0.46  48000  43,97      -16.23 ±0.63 (-50.3σ)      v7_notrudge  
+dflt              dflt      43.01  0.45  48000  43,97      -21.72 ±0.63 (-67.9σ)      v6_46at17  
+dflt              dflt      40.77  0.44  48000  43,97      -23.96 ±0.62 (-75.5σ)      real_build_converge3  
+dflt              dflt      40.46  1.00   9600  43,97                                 real_build_converge3  
+dflt              dflt      38.66  0.63  24000  43         -26.07 ±0.76 (-66.9σ)      recommended_from_pool  
+dflt              dflt      37.92  1.35   4800  43                                    recommended_from_pool  
