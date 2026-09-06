@@ -2557,6 +2557,33 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-272)`..`(-274)` — closing state at the `(-274)` tip
+
+Two behaviour-preserving engine legs off the growth census and the
+call-count table of a fresh sealed `dflt` base at the `(-271)` tip
+(outcomes identical on every dump, `--bench` counters and golden traces
+unmoved), plus `(-272)` built, read flat (-0.018 %) and reverted. The
+tip binary re-dumped after the revert: its totals are cand4 + the
+revert's 0.6 M / 0.4 M exactly.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,378,571,112 -> 3,368,479,285 Ir  (-0.299 %)
+        (-272) -0.018 % [reverted]  (-273) -0.097 %  (-274) -0.202 %
+  cube   dflt, same recipe:                               2,583,686,536 -> 2,582,609,088 Ir  (-0.042 %)
+        (-272) -0.016 % [reverted]  (-273) -0.068 %  (-274) +0.027 %
+        (this base against the (-271) record's 3,378,573,605 / 2,583,687,288: -2.5 k / -0.8 k Ir, a different host)
+  actor  not re-measured this run (both legs sit under the sims' priority passes, which the sealed default reads; nothing under encode.rs or the recorder moved)
+suite   19,239 / 0 / 5 (123 s) at the (-274) tip; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release release-fast build of bot_ladder (the typecheck gate and more): clean
+--bench release-fast (mimalloc) at the (-274) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; thread_determinism ok (3 vs 1 threads identical); 304 games/s on this host (a slower box than the (-271) record's 506)
+sweep   fresh seeds on the ADOPTED DEFAULT (release-fast, the (-274) tip): 501..503 x {sealed, cube, fixed} x --games 400 --threads 3 =
+        9 cells / 28,800 games, 0 undecided, 0 panics, every rc 0 (sealed 4,800 games in 31-43 s a cell)
+audits  audit_panics.py: 78 sites off the bin/test paths, 67 guarded, 11 lock-poison, 0 bare;  audit_variant_coverage.py: 0 dead capabilities, the same 2 dead primitives
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+```
+
 ### `(-266)`..`(-271)` — closing state at the `(-271)` tip
 
 Five actor-only legs on the recorder and the encoder (outcomes identical
@@ -3446,6 +3473,85 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-274)` TAKEN — the dispatcher's pair loop reuses the per-event kind mask it folded for the batch gate: sealed default Ir **-0.202 %** / cube **+0.027 %**
+
+```text
+  binary pair   dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast -p crabomination --no-default-features), the (-273) build either side
+  sealed        3,374,695,837 -> 3,367,871,911 Ir   **-0.202 %**
+  cube          2,581,521,333 -> 2,582,210,012 Ir   **+0.027 %**
+  sealed rows   event_matches_spec <- dispatcher  496,062 calls / 28.53 M incl (36.8 self + 12.1 event_kind_bits + the _rest calls)  ->  0;
+                event_matches_spec_rest 60,148 / 4.48 M stays;  dispatcher self 190.46 M -> 207.68 M (+17.2 M: the payload match, now inlined, at ~35 Ir a pair-event against ~49 through the call)
+  cube rows     the same shape at 169,968 pair-events: 11.26 M removed, self +8.38 M, rest 3.05 M, +0.53 M of event_matches_spec from the LKI/exile walks  ->  +0.70 M net
+  first build   the masks collected into a SmallVec<[u128; 4]>: sealed +0.354 % / cube +0.580 % — SmallVec::extend 185,754 / 28.4 M (153 Ir a dispatch, try_grow on 32,858 of them: 18 % of batches run past four events)
+  outcomes identical on every dump (72 / 48 decided, 0 undecided)
+```
+
+The base's second-largest call row by count was `event_kind_bits` at
+1.09 M calls / 13.1 M: 594 k from the dispatcher's own batch fold
+(`(-195)`), and 496 k from `event_matches_spec` re-deriving the same
+mask per (pair, event) one frame down. The leg keeps the first eight
+masks in a frame array beside the fold and hands each back through
+`event_matches_spec_with_bits`, which also lets the payload match
+inline into the pair loop — that inlining is most of sealed's win (the
+call chain was ~14 Ir a pair-event) and none of cube's, where the
+per-dispatch setup (~5 Ir over 245 k dispatches) is the residue. The
+`SmallVec` form of the same idea was +0.35 / +0.58 % and is the
+`(-229)`/`(-242)` rule again: a per-call `SmallVec` built by `collect`
+costs more than a 12-Ir callee it replaces, and a push loop would have
+spilled on 18 % of batches. Fixed array, events past it re-derive.
+Taken on the sealed default (the actors' pool), as `(-261)` was at
+sealed -0.485 / cube +0.037.
+
+### `(-273)` TAKEN — `declare_attackers_banded`'s event buffer sized at two events an attacker: sealed default Ir **-0.097 %** / cube **-0.068 %**
+
+```text
+  binary pair   dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast -p crabomination --no-default-features), one tree either side (on top of the (-272) build, which is +0.6 M on both)
+  sealed        3,377,968,053 -> 3,374,695,837 Ir   **-0.097 %**
+  cube          2,583,275,496 -> 2,581,521,333 Ir   **-0.068 %**
+  grow_one <- declare_attackers_banded (sealed)   28,378 calls / 7.06 M -> 12,830 / 2.87 M;  + try_allocate_in 14,266 / 1.20 M (the exact allocation)
+  the --separate-callers=2 split of the base row: 23,212 first allocations (__rust_alloc, 2.23 M) + 5,166 re-growths (__rust_realloc, 3.00 M)
+  outcomes identical on both dumps (72 / 48 decided, 0 undecided)
+```
+
+`cg_growth.py`'s top volume row at the `(-271)` tip (14,266 calls, 1.99
+growths a call, 7.06 M) split by allocator entry — the instrument PERF's
+"How to measure" prescribes before touching a growth row — as 23,212
+mallocs and 5,166 reallocs: two buffers take a first push on every
+declaration (`events` and the cloned state's capacity-0 `attacking`),
+and `events` climbs 4 -> 8 on the 36 % of declarations with three or
+more attackers (two events each: the tap and `AttackerDeclared`).
+`Vec::with_capacity(2 * attacks.len())` is the exact size, so the
+ladder is gone and the 1-2 attacker case pays the same one allocation
+it did. `attacking`'s first push stays: an inline buffer there is bytes
+on `GameState` (the `(-165)` rule), and a reserve only moves a first
+allocation. Not the `(-227)` shape — that reserved 32 slots a frame up
+for a buffer the callee then re-reserved past.
+
+### `(-272)` REFUTED — `drain_trigger_queue`'s clickable/off-board split in place (`retain`) when the filter names no off-board zone: sealed **-0.018 %** / cube **-0.016 %**, reverted
+
+```text
+  binary pair   dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast -p crabomination --no-default-features), the (-271) tip either side
+  sealed        3,378,571,112 -> 3,377,968,053 Ir   -0.018 %
+  cube          2,583,686,536 -> 2,583,275,496 Ir   -0.016 %
+  Iterator::partition <- drain_trigger_queue   2,880 calls / 3.01 M -> 1,906 / 2.43 M   (the other 974 prompts took `retain`)
+  outcomes identical on both dumps
+```
+
+The growth census's `Iterator::partition` row (4,068 calls, 1.34 a
+call, 1.16 M inclusive under `grow_one`) is `drain_trigger_queue`'s
+split of a `wants_ui` trigger's ~18 legal targets into clickable and
+off-board halves, the off-board half then dropped unless the filter
+names a graveyard or exile. Two things the row did not say: **66 % of
+those prompts DO name an off-board zone** (1,906 of 2,880 still take the
+partition), and the row's 3.0 M inclusive is the per-candidate
+`battlefield.iter().any(..)` predicate, which `retain` runs too — the two
+grow ladders and the dealloc it removes are ~0.6 M on the third of
+prompts it reaches. Below the branch's floor for a shipped leg
+(`(-263)`'s -0.020 % was reverted on the same reading); reverted. The
+row is a floor, not a lead: what would move it is the predicate (a
+battlefield presence test per candidate is the `find_by_id` shape), and
+at 3.0 M / 0.09 % that is not worth a lane.
 
 ### `(-271)` TAKEN — `damaged_by_this_turn` as an inline `CopyVec<[CardId; 4]>`: sealed default Ir **-0.430 %** / cube **-0.307 %**, actor **-0.382 %**
 
@@ -7702,6 +7808,31 @@ does not carry them. Round 56's second candidate (the 65 % start-score
 reuse) is CLOSED: it was the share of searches the chain runs on, reuse
 is 100 % of runs (`block_census` now prints both).
 
+**READ AT THE `(-271)` TIP (the sealed `dflt` and cube base dumps of
+the `(-272)`..`(-274)` run, `cg.sealed.b.out` / `cg.cube.b.out` in a
+scratchpad; the sealed self table, rows 1-90, against the `(-260)`
+re-read), so nobody re-reads them:**
+
+* **TAKEN `(-274)`** — `event_kind_bits` was the second-largest call
+  row (1.09 M calls / 13.1 M): half the dispatcher's own batch fold,
+  half `event_matches_spec` re-deriving it per (pair, event). Sealed
+  -0.202 %, cube +0.027 %; the entry has the `SmallVec` refutation.
+* **`fingerprint` 15,334 calls / 13.5 M (0.40 %)** — the CR 104.4b
+  resolution watchdog, once per `resolve_top_of_stack`, ~880 Ir a call
+  over the board; `(-176)`/`(-179)` already halved it and the residue
+  is the per-permanent mix. Floor.
+* **`ManaPool::is_empty` 216,316 calls / 6.5 M (0.19 %)** — 203,664
+  from `empty_mana_pools` (both seats, every step), ~30 Ir: `total()`
+  over six buckets plus the creature array and two restricted lists.
+  A `u32` bucket sum on the pool would halve it; ~0.1 %, not built.
+* **`sba_board_scan` 55.4 M self (1.64 %)**, `dispatch_triggers_for_events`
+  self 68 M + 27 M slice iteration (2.8 %; 82 M / 2.4 % after `(-274)`
+  folded the payload match in), `compute_permanent_pass` 48 M + the
+  `SmallVec` and `Vec` rows under it, `gather_continuous_effects_inner`
+  47 M: all where the `(-260)` table left them. The allocator is 12.4 %
+  (1.87 M mallocs); `from_iter` 803 k calls / 98.5 M self is the map's
+  "consumed whole" collects.
+
 **THE ACTOR-ONLY ROWS AT THE `(-268)` TIP (`45e162d2`, the same
 `selfplay_train --actors 1 --games 60 --steps 1 --seed 7` recipe,
 3,196,166,585 Ir; the dump is `cg.actor.c268.out` in a scratchpad).
@@ -7926,10 +8057,16 @@ gave it (and `InExile`, the player-only arms) a printed answer. The
 (`is_legal` by id) and `PowerAtLeast`; its auto-target twin
 `auto_targets_for_effect_all_slots` (2.2 %) is answered 88 % by the
 printed path already.
-(5) `resolve_combat_into` is the one `cg_growth.py` row above 2 grows a
+(5) ~~`resolve_combat_into` is the one `cg_growth.py` row above 2 grows a
 call with volume (36,822 / 17,422); `declare_attackers_banded` 1.99 —
 the `(-108)` reserve shape, but `(-227)` refuted a reserve one function
-up, so census which `Vec` first. (6) **The sim's spell layer is ~18 % of
+up, so census which `Vec` first.~~ Both TAKEN: `resolve_combat_into`'s
+row was `damaged_by_this_turn` (`(-271)`), `declare_attackers_banded`'s
+the events buffer (`(-273)`, split by allocator entry first: 23,212
+first allocations / 5,166 re-growths). The growth table at the `(-273)`
+tip has no volume row left above 1.35 a call except `do_untap` (8,514
+growths / 6,326 calls, 2.2 M — `(-249)`'s residue) and
+`Iterator::partition` (`(-272)`, REFUTED: the row is its predicate). (6) **The sim's spell layer is ~18 % of
 the sealed default** (enumerate 4.3 + probe/cast 9.9 + the tapper under
 it 3.9) and none of it is waste in the engine's sense: a probe is
 adopted, a candidate is scored on its target (so lazy targeting is a bot

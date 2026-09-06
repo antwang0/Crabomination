@@ -28,21 +28,21 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`.
-   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-271)` is the last
-   claimed, `(-272)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
-   selfplay_train 9 min cold / 8 min warm (a base-crate edit rebuilds the catalog too), release-fast bot_ladder 7 min,
+   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-274)` is the last
+   claimed, `(-275)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
+   bot_ladder 13 min cold / 4 min warm, selfplay_train 9 min cold / 8 min warm, release-fast bot_ladder 7 min,
    debug suite build+run ~10 min; ⚠ another session pushes to this branch concurrently — fetch before every push.
-2. **Gates:** the `(-271)` tip (PERF Baseline) suite 19,239 / 0 / 5, clippy, release-fast, `--bench` counters identical to
-   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games clean (9 cells, 3 pools).
-3. **Perf this run (PERF Log; candidates' "ACTOR-ONLY ROWS AT THE (-268) TIP"):** `(-266)` encoder totals fold (-0.317 %),
-   `(-267)` battlefield object skips the overwritten printed pass (-0.229 %), `(-268)` one frozen scope per recorder
-   snapshot (-1.007 %), `(-269)` printed half off a fifth `CardMemo` word (-0.465 %), `(-270)` the pair shares its source
-   tables (-0.265 %) — actor-only, ladder pools unmoved by construction; `(-271)` `damaged_by_this_turn` inline
-   (actor -0.382 %, sealed -0.430 %, cube -0.307 %). Actor -2.63 % over the run. `spell_kind` memo leg REFUTED (-0.105 %).
-4. **Leads (PERF candidates):** `cg_growth.py` on the actor dump is the instrument that found `(-271)` — the next rows
-   (`declare_attackers_banded` 1.88 a call / 5.7 M, `Iterator::partition` 1.49 / 3.2 M) are worth ~0.1 % each; the
-   land-tap keyword gates are PRICED (0.24 % actor, an exact-keyword fold lane, not built); encoder and deck builder are
-   flat. Cards: leftover only.
+2. **Gates:** the `(-274)` tip (PERF Baseline) suite 19,239 / 0 / 5, clippy, release-fast, `--bench` counters identical to
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games clean (9 cells, 3 pools, seeds 501..503).
+3. **Perf this run (PERF Log):** `(-273)` `declare_attackers_banded`'s event buffer sized exactly (sealed -0.097 %, cube
+   -0.068 %; the growth row split by allocator entry first — 23,212 first allocations, 5,166 re-growths), `(-274)` the
+   dispatcher's pair loop reuses the per-event kind mask (sealed -0.202 %, cube +0.027 %; the `SmallVec` form of it read
+   +0.35 / +0.58 % and is the `(-229)` rule again). `(-272)` (`drain_trigger_queue`'s split in place) REFUTED at -0.018 %.
+   Sealed -0.299 % over the run. Actor not re-measured (engine legs under the sims; nothing on the recorder path moved).
+4. **Leads (PERF candidates, "READ AT THE (-271) TIP"):** the growth census has no volume row left above 1.35 a call; the
+   sealed self table's unpriced rows are now priced (`fingerprint` floor, `ManaPool::is_empty` ~0.1 %); the land-tap
+   keyword gates stay PRICED (0.24 % actor, not built); the ladder profile is FLAT — re-profile the actor (last read at
+   the `(-268)` tip) before pulling anything else. Cards: leftover only.
 5. **Round 65/66 (ML sessions, ML_NOTES):** lobby pilot is `MctsBot` 256; `attack_blocker_guard` PARKED; round 66 (b3fd2c43):
    converge4 list, `deck_gauntlet`, `stun_x_hold` parked, `own_graveyard_picks` off per pre-registration.
 
