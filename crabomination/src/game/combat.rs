@@ -1058,7 +1058,10 @@ impl GameState {
             return Err(attack_reject(line!(), GameError::CannotAttack(first.attacker)));
         }
 
-        let mut events = vec![];
+        // Two events an attacker (the tap and the declaration), sized once:
+        // the growth census read this buffer climbing the 4 -> 8 ladder on
+        // 5,166 of 14,266 declarations (PERF (-273)).
+        let mut events: Vec<GameEvent> = Vec::with_capacity(2 * attacks.len());
         // Per CR 506.5, the Attacks trigger filter must be evaluated
         // post-batch, so we carry the optional filter alongside each
         // queued trigger.
