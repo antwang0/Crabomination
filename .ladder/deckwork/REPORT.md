@@ -173,9 +173,42 @@ on the sealed mirrors:
 | own-graveyard pick + X=0 prune | +1.1 | identical | 50.0 |
 | all four (the new default) | **52.14 / 52.65** | **68.24 / 68.84** | 51.7 |
 
-Search pilot on converge3, both seats: **48.42 ±1.5 vs 39.17 ±1.5**. The
-search was then rerun from the user's 46-card list on the fixed pool
-(`r3/search/`); see the section below once it lands.
+Search pilot on converge3, both seats: **48.42 ±1.5 vs 39.17 ±1.5**. 
+
+## The search under the fixed bot (`r3/search/`, `r3/search4/`)
+
+From the user's 46-card list (card-for-card swaps only, so the count stays
+46): the cheapest cuts are now Zimone's Experiment (+2.9 for a cantrip),
+Divergent Equation (+2.3), Arcane Omens (+1.6), Traumatic Critique (+0.5) —
+still below a one-mana cantrip in this deck as the bot plays it, but by a
+third to a half of what the bug made them look. Together as One is no
+longer a cheap cut. Its first move was the third Rancorous Archaic for
+Zimone's Experiment (+5.0), the first pass's direction; it was stopped
+there in favour of the question that matters.
+
+From converge4 (40 cards) with Arcane Omens back in the pool: nothing clears
+the bar. Cuts are flat (the five cheapest within 0.2 of the incumbent);
+Thornfist Striker for Send in the Pest is +1.2 (69.65 vs 68.48); Arcane
+Omens for that slot is under +0.1; a nineteenth land (a Mountain) for
+Oracle's Restoration is **+1.4** (69.89), the closest miss of the four
+passes. So `decks/real_build_converge4.txt` stands under the fixed bot too.
+
+| cell, fixed bot | converge4 | converge3 |
+|---|---|---|
+| screen field, scored pilot (43 / 97) | 68.21 / 68.76 | 52.12 / 52.65 |
+| held-out field 0xDECC1000 (43 / 97) | 66.24 / 66.62 | 49.09 / 49.71 |
+| 256-search pilot both seats, 1,200 games | 66.58 ± 2.8 | 48.42 ± 2.9 |
+| `deck_duel` converge4 vs converge3, 2,000 pairs | **60.3 %** [58.8, 61.8] | |
+
+The original list gains the most from the fix (it holds all four affected
+cards), so the head-to-head narrows from 69.7 to 60.3 and the field gap from
+26 to 16 points. In the final replays Together as One is the deck's best card
+by win rate when seen (73.6 %, X = 4 in 187 of 261 casts); Oracle's
+Restoration is second (71.0 %) as a one-mana cantrip in a deck that now plays
+its top end. One residue for the next session: under the 256-search pilot,
+Together as One's draw still goes to the opponent in 24 % of its cards (228
+of 963) — the search taking the offered arm, where the scored pilot takes it
+in 2 %.
 
 ## Caveats
 

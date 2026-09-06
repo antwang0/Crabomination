@@ -1,0 +1,7 @@
+Divergent Equation {}
+Traumatic Critique {}
+Arcane Omens {}
+Together as One {'casts': 265, 'draw_opp': 228, 'dmg_opp': 948, 'lose_opp': 948, 'gain_self': 954, 'casts_with_self_discard': 18, 'casts_with_opp_discard': 0, 'draw_self': 735, 'lose_self': 15, 'discard_self': 30}
+Bind to Life {'casts': 81, 'casts_with_self_discard': 0, 'casts_with_opp_discard': 1, 'draw_opp': 2, 'draw_self': 9, 'lose_self': 9, 'gain_self': 3, 'discard_opp': 1}
+
+any-seat casts followed by caster-only discards, top 15: [('Ancestral Recall', 25), ('Together as One', 18), ('Environmental Scientist', 4), ('Sundering Archaic', 4), ('Splatter Technique', 4), ('Slumbering Trudge', 3), ('Wander Off', 3), ('Charging Strifeknight', 3), ("Proctor's Gaze", 2), ('Studious First-Year', 2), ('Feed the Swarm', 2), ('Knockout Maneuver', 2), ('Soaring Stoneglider', 2), ("Oracle's Restoration", 2), ("Shopkeeper's Bane", 2)]

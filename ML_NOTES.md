@@ -4395,6 +4395,10 @@ opponent's face and 101 to its own, Together as One 887 across with 83 % of
 its draws kept — the residual self-picks are the search taking the offered
 arm in some states, not the picker, and are the next thing to read.
 
+Deck rerun under the new default: converge4 stands (screen 68.21 / 68.76,
+held-out 66.24 / 66.62, search pilot 66.58 ±1.40, duel vs the 46-card list
+60.3 %); Together as One is now the deck's best card by WR-when-seen.
+
 Not verified: the same slot shape sits on 129 STX cards and 88 of the modern
 deck set (Electrolyze, Forked Bolt, Crackle with Power …). If the cube ladder
 pools carry them, the round ≤66 ladders had bots bolting their own faces;

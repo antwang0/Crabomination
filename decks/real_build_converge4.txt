@@ -5,6 +5,9 @@
 # 40 cards, 18 lands. Scored-pilot gauntlet 66.7 vs 40.8 for converge3 (held-out field 64.9 vs 38);
 # see the report for the search-pilot cells. Optional: -Proctor's Gaze +Thornfist Striker read +1.3 on the
 # screen field and +1.2 on the held-out field — replicated, but under the pre-registered 1.5-pt bar.
+# Under the round-67 bot (auto-target fix, 2026-09-06 evening): 68.5 / 66.4 held-out; converge3 52.4 / 49.4;
+# duel 60.3 %. Still nothing over the bar: Thornfist for Send in the Pest +1.2, a 19th land (Mountain) for
+# Oracle's Restoration +1.4.
 1 Blech, Loafing Pest
 1 Emeritus of Ideation
 1 Environmental Scientist

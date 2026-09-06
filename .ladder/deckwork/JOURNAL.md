@@ -363,3 +363,13 @@ converge3 mcts256-allfix both seats: 48.42 ±1.47 vs the 39.17 ±1.45 control
 (+9.3). Replays: Omens 526 opponent discards / 179 casts (self 10); Critique
 901 opponent face / 101 own; Together 887 across, 83 % of draws kept.
 `after_confirm.sh` running: tests, rebuild, incumbents, then the search.
+
+### 22:58 — the search under the fixed bot (r3/search, r3/search4)
+
+46-card run, gen 1: cuts -Zimone +2.9, -Divergent +2.3, -Omens +1.6,
+-Critique +0.5; best +Rancorous #3 -Zimone +5.0 (stopped there).
+converge4 run: cuts flat; +Thornfist -Send in the Pest +1.2; +Mountain
+-Oracle's Restoration +1.4; STOP, converge4 stands. Held-out 66.24 / 66.62
+vs converge3 49.09 / 49.71; mcts256 both seats 66.58 ±1.40; duel vs
+converge3 60.3 % [58.8, 61.8]. Residue: Together as One's draw to the
+opponent in 24 % of cards under the search pilot (2 % scored).

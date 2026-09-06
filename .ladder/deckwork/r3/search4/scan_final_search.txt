@@ -1,0 +1,81 @@
+1200 games from 1200 replay files under target/deckwork/replays/r3b_final_search
+deck wins 799/1200 = 66.6%  | on the play 66.2% (n=600)  on the draw 67.0% (n=600)
+mean game length: deck wins 18.2 turns, deck losses 18.5 turns
+
+mana (lands on battlefield after own turn N; games that reached it):
+  deck: T3: mean 3.28, <3 lands 14% | T4: mean 4.34, <4 lands 17% | T5: mean 5.27, <5 lands 22% | T6: mean 6.11, <6 lands 30%
+  opp : T3: mean 3.10, <3 lands 12% | T4: mean 3.86, <4 lands 27% | T5: mean 4.51, <5 lands 46% | T6: mean 5.12, <6 lands 63%
+  deck flood proxy: >=8 lands after own T8 in 59% of 762 games reaching T8
+  deck losses with <3 lands after own T4: 34 of 401 losses
+
+spells cast per own turn (mean; deck / opp):
+  T1: 0.28 / 0.18
+  T2: 0.53 / 0.49
+  T3: 0.79 / 0.75
+  T4: 0.98 / 0.89
+  T5: 1.06 / 0.98
+  T6: 1.15 / 1.00
+  T7: 1.21 / 1.03
+
+per-card (deck seat): seen = drawn or played; WR when seen vs when not; casts / seen; mean cast turn
+  WR seen    n  WR not casts  cast%  castT  card
+    78.8%  283   62.8%   312   110%    8.0  Ancestral Recall
+    74.1%  455   62.0%   341    75%    6.8  Emeritus of Ideation
+    73.6%  416   62.9%   265    64%    8.0  Together as One
+    73.0%  519   61.7%   420    81%    6.2  Knockout Maneuver
+    72.1%  581   61.4%   517    89%    4.3  Slumbering Trudge
+    71.8%  549   62.2%   474    86%    5.7  Blech, Loafing Pest
+    71.2%  838   55.8%   889    93%    5.3  Shopkeeper's Bane
+    71.0%  527   63.2%   450    85%    5.5  Oracle's Restoration
+    70.4%  446   64.3%   301    67%    7.8  Snarl Song
+    70.3%  508   63.9%   414    81%    5.9  Professor Dellian Fel
+    69.8%  514   64.1%   430    84%    4.7  Environmental Scientist
+    69.7%  907   57.0%  1067    88%    6.8  Rancorous Archaic
+    69.5%  548   64.1%     0     0%    nan  Shattered Sanctum
+    69.5%  528   64.3%   413    78%    5.7  Feed the Swarm
+    69.1%  540   64.5%   445    82%    5.1  Send in the Pest
+    68.9%  962   57.1%     0     0%    nan  Swamp
+    68.3%  423   65.6%   260    61%    7.8  Sundering Archaic
+    68.3%  813   63.0%   887    98%    4.6  Studious First-Year
+    68.0% 1140   40.0%     0     0%    nan  Forest
+    68.0%  462   65.7%   345    75%    6.0  Vastlands Scavenger
+    67.9%  468   65.7%   368    79%    6.8  Proctor's Gaze
+    67.4%  635   65.7%     0     0%    nan  Plains
+    67.1%  502   66.2%   594   118%    5.8  Rampant Growth
+    66.8%  567   66.4%     0     0%    nan  Dreamroot Cascade
+    66.8%  852   66.1%     0     0%    nan  Paradox Gardens
+    66.7% 1111   65.2%     0     0%    nan  Island
+    65.7%  469   67.2%   383    82%    6.8  Wander Off
+    65.5%  844   69.1%     0     0%    nan  Forum of Amity
+    64.2%  530   68.5%     0     0%    nan  Terramorphic Expanse
+    51.9%   81   67.6%    81   100%    9.4  Bind to Life
+     0.0%    2   66.7%     0     0%    nan  ?
+
+converge payoffs cast by the deck seat (X = counters / life / discards; Sundering = exiled target):
+  Rancorous Archaic: 1043 casts, mean colours paid 3.51, mean cast turn 6.8; X dist {2: 44, 3: 418, 4: 581}
+  Together as One: 261 casts, mean colours paid 3.71, mean cast turn 8.0; X dist {1: 1, 2: 3, 3: 70, 4: 187}
+  Sundering Archaic: 223 casts, mean colours paid 3.61, mean cast turn 7.9; targets [('Soaring Stoneglider', 17), ('Grave Researcher', 14), ("Geometer's Arthropod", 14), ('Strife Scholar', 13), ('Arnyn, Deathbloom Botanist', 13), ('Nita, Forum Conciliator', 11)]
+  Snarl Song: 297 casts, mean colours paid 3.66, mean cast turn 7.8; X dist {2: 3, 3: 96, 4: 198}
+  ! 1 casts where X < colours paid (bookkeeping mismatch or a payment bug): [('Together as One', 1, 4)]
+
+Slumbering Trudge: 403 casts; X distribution {0: 240, 1: 111, 2: 52}; mean cast turn 3.3
+
+attack outcomes (deck seat / opp seat):
+  deck: 5598 attacks — unblocked 3882 (69%), won 181 (3%), trade 927 (17%), bounced 62 (1%), suicide 546 (10%)
+  opp : 5227 attacks — unblocked 3829 (73%), won 123 (2%), trade 610 (12%), bounced 45 (1%), suicide 620 (12%)
+  deck-seat suicides (546), first 15:
+    replay-1788730869-1.jsonl T21: Environmental Scientist into Inkshape Demonstrator
+    replay-1788730869-10.jsonl T11: Environmental Scientist into Inkshape Demonstrator
+    replay-1788730869-10.jsonl T13: Pest into Rubble Rouser
+    replay-1788730869-4.jsonl T9: Studious First-Year into Grave Researcher
+    replay-1788730869-4.jsonl T25: Studious First-Year into Shattered Acolyte
+    replay-1788730871-12.jsonl T18: Studious First-Year into Practiced Scrollsmith
+    replay-1788730873-17.jsonl T10: Pest into Silverquill, the Disputant
+    replay-1788730873-17.jsonl T16: Studious First-Year into Eager Glyphmage
+    replay-1788730877-22.jsonl T17: Pest into Shattered Acolyte
+    replay-1788730877-22.jsonl T19: Sundering Archaic into Silverquill, the Disputant
+    replay-1788730877-22.jsonl T21: Fractal into Inkshape Demonstrator
+    replay-1788730877-24.jsonl T26: Sundering Archaic into Forum Necroscribe
+    replay-1788730877-25.jsonl T12: Pest into Eager Glyphmage
+    replay-1788730877-26.jsonl T24: Shopkeeper's Bane into Blech, Loafing Pest
+    replay-1788730877-26.jsonl T26: Blech, Loafing Pest into Quandrix, the Proof

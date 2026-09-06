@@ -1,0 +1,36 @@
+# r3g1_add_dig_site_inventory: +Dig Site Inventory -Zimone's Experiment
+# 46 cards, 20 lands
+1 Arcane Omens
+1 Blech, Loafing Pest
+1 Dig Site Inventory
+1 Divergent Equation
+1 Emeritus of Ideation
+1 Environmental Scientist
+1 Feed the Swarm
+1 Knockout Maneuver
+1 Pensive Professor
+1 Proctor's Gaze
+1 Professor Dellian Fel
+1 Quandrix Charm
+2 Rancorous Archaic
+1 Send in the Pest
+1 Shared Roots
+1 Shopkeeper's Bane
+1 Slumbering Trudge
+1 Snarl Song
+2 Studious First-Year
+2 Sundering Archaic
+1 Together as One
+1 Traumatic Critique
+1 Wander Off
+1 Dreamroot Cascade
+1 Fields of Strife
+4 Forest
+2 Forum of Amity
+4 Island
+1 Mountain
+2 Paradox Gardens
+1 Plains
+1 Shattered Sanctum
+2 Swamp
+1 Terramorphic Expanse
