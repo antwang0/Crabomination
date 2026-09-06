@@ -2557,27 +2557,29 @@ a box whose state moves.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-266)`..`(-270)` — closing state at the `(-270)` tip
+### `(-266)`..`(-271)` — closing state at the `(-271)` tip
 
 Five actor-only legs on the recorder and the encoder (outcomes identical
 on every dump; `--bench` counters, golden traces and the ladder pools
 unmoved by construction — nothing a `bot_ladder` game runs was touched),
-all read off the actor recipe, plus the `spell_kind` memo leg built,
-read -0.105 % and reverted (Log). The concurrent deck-work commit
-`b3fd2c43` landed between `(-266)` and `(-267)` (bot.rs: two gated
-flags, both off), so the base was re-taken there; its own delta on the
-actor is +0.011 %.
+all read off the actor recipe, then one engine leg off the actor's
+growth census that moved every pool (`(-271)`), plus the `spell_kind`
+memo leg built, read -0.105 % and reverted (Log). The concurrent
+deck-work commit `b3fd2c43` landed between `(-266)` and `(-267)`
+(bot.rs: two gated flags, both off), so the base was re-taken there;
+its own delta on the actor is +0.011 %.
 
 ```text
   actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features):
-         3,246,053,464 -> 3,172,892,750 Ir  (-2.254 %)  across (-266) -0.317 %, b3fd2c43 +0.011 %, (-267) -0.229 %, (-268) -1.007 %, (-269) -0.465 %, (-270) -0.265 %
-         60 games / 6,080 rows / 0 stalls / 6,566 encoded states on every side
-  sealed / cube dflt Ir: not remeasured — encode.rs, selfplay.rs' recorder and a CardMemo word no ladder pool reads; (-269)'s +8 bytes on CardData
-         priced on the actor at +0.22 M in Arc::clone_from_ref_in (0.007 %)
-suite   19,239 / 0 / 5 (75 s) at the (-269) and (-270) tips; golden traces 7/7 unmoved; 32 encoder tests (two new: the totals fold, the packed word vs every catalog card)
+         3,246,053,464 -> 3,160,759,000 Ir  (-2.628 %)  across (-266) -0.317 %, b3fd2c43 +0.011 %, (-267) -0.229 %, (-268) -1.007 %, (-269) -0.465 %,
+         (-270) -0.265 %, (-271) -0.382 %;  60 games / 6,080 rows / 0 stalls / 6,566 encoded states on every side
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,393,159,334 -> 3,378,573,605 Ir  (-0.430 %)   [(-271) alone; (-266)..(-270) touch nothing a ladder game runs]
+  cube   dflt, same recipe:                               2,591,645,196 -> 2,583,687,288 Ir  (-0.307 %)
+         (the (-265) record's 3,385,114,447 / 2,584,225,619 -> this base is b3fd2c43's +0.24 % / +0.29 %, its two gated bot flags' checks)
+suite   19,239 / 0 / 5 (75 s) at the (-269), (-270) and (-271) tips; golden traces 7/7 unmoved; 32 encoder tests (two new: the totals fold, the packed word vs every catalog card)
 clippy  --workspace --exclude crabomination_client --all-targets   clean (one manual_is_multiple_of in the concurrent deck_gauntlet bin, fixed here)
 release release-fast typecheck of bot_ladder: clean
---bench release-fast (mimalloc) at the (-269) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok (506 games/s on this host)
+--bench release-fast (mimalloc) at the (-269) and (-271) tips: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok (506 games/s on this host)
 sweep   fresh seeds on the ADOPTED DEFAULT (release-fast, the (-268) tip + b3fd2c43): 401..403 x {sealed, cube, fixed} x --games 400 --threads 3 =
         9 cells / 28,800 games, 0 undecided, 0 panics, every rc 0
 audits  audit_panics.py: 78 sites off the bin/test paths, 67 guarded, 11 lock-poison, 0 bare;  audit_variant_coverage.py: 0 dead capabilities, the same 2 dead primitives
