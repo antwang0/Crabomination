@@ -27,7 +27,7 @@ use crate::recommend::{
     STALE_ROUNDS, SimConfig, StopReason, build_match_template, build_random_deck,
 };
 use crate::server::bot::{Bot, EvalWeights, HeuristicBot};
-use crate::server::encode::{Vocab, encode_state};
+use crate::server::encode::{Vocab, encode_state_pair};
 
 /// Whether the snapshot cadence includes combat steps.
 ///
@@ -550,7 +550,7 @@ pub fn play_recorded_game_mcts(
             // layer view — four gathers and four view sets per snapshot
             // where nested scopes reuse the first (PERF `(-268)`).
             g.with_frozen_layers(|g| {
-                let pair = [encode_state(g, 0, vocab), encode_state(g, 1, vocab)];
+                let pair = encode_state_pair(g, vocab);
                 let repeat = last_pair
                     .is_some_and(|i| snaps[i].2 == pair[0] && snaps[i + 1].2 == pair[1]);
                 if !repeat {

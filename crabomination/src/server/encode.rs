@@ -230,10 +230,40 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // the castability block already opened a scope of its own — nested
     // scopes reuse the outer gather, so this is one continuous-effect
     // gather per encoded state, not one per read.
-    g.with_frozen_layers(|g| encode_state_inner(g, seat, vocab))
+    g.with_frozen_layers(|g| encode_state_inner(g, seat, vocab, &untapped_sources(g)))
 }
 
-fn encode_state_inner(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
+/// Both seats' encodings of one position, in one scope and off one pair
+/// of source tables. Each seat's castability block reads *both* seats'
+/// untapped sources, so two `encode_state` calls built the same two
+/// tables twice — four `mana_source_table` builds a recorder snapshot
+/// where two are the whole answer (PERF `(-270)`).
+pub fn encode_state_pair(g: &GameState, vocab: &Vocab) -> [EncodedState; 2] {
+    g.with_frozen_layers(|g| {
+        let sources = untapped_sources(g);
+        [encode_state_inner(g, 0, vocab, &sources), encode_state_inner(g, 1, vocab, &sources)]
+    })
+}
+
+/// Both seats' untapped mana sources as colour masks, indexed by seat —
+/// empty when the castability block is ablated, which is the block's
+/// only reader. Under ONE freeze scope: `mana_source_table` opens its
+/// own, so two calls outside a scope gathered the whole continuous-effect
+/// set twice and built two `perms` memos; nested scopes reuse the outer.
+fn untapped_sources(g: &GameState) -> [Vec<[bool; 5]>; 2] {
+    if ablated(ABLATE_CASTABILITY) {
+        [Vec::new(), Vec::new()]
+    } else {
+        g.with_frozen_layers(|g| [g.untapped_mana_colors(0), g.untapped_mana_colors(1)])
+    }
+}
+
+fn encode_state_inner(
+    g: &GameState,
+    seat: usize,
+    vocab: &Vocab,
+    sources: &[Vec<[bool; 5]>; 2],
+) -> EncodedState {
     let opp = 1 - seat;
     let mut s = EncodedState::default();
 
@@ -393,20 +423,14 @@ fn encode_state_inner(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState
     // Castability is per-seat state, so the hand's live/dead split is
     // computed against this seat's own untapped sources.
     let no_cast = ablated(ABLATE_CASTABILITY);
-    // Both seats' source tables under ONE freeze scope. `mana_source_table`
-    // opens its own, so two calls gathered the whole continuous-effect set
-    // twice per encode and built two `perms` memos; nested scopes reuse the
-    // outer one. `g` is `&GameState` for the whole function, so the
-    // opponent's half is the same answer wherever it is computed — it is
-    // read ~90 lines down, next to the globals it fills.
-    let (sources, opp_sources) = if no_cast {
-        (Vec::new(), Vec::new())
-    } else {
-        g.with_frozen_layers(|g| (g.untapped_mana_colors(seat), g.untapped_mana_colors(opp)))
-    };
+    // Both seats' source tables, built by the caller (`untapped_sources`)
+    // so a seat pair shares them. `g` is `&GameState` for the whole
+    // function, so the opponent's half is the same answer wherever it is
+    // computed — it is read ~90 lines down, next to the globals it fills.
+    let (sources, opp_sources) = (&sources[seat], &sources[opp]);
     // One mask cover for the whole hand — see `source_cover`.
     let n_sources = sources.len() as u32;
-    let cover = source_cover(&sources);
+    let cover = source_cover(sources);
     let cover_extra = cover_with_extra(&cover);
     for c in g.players[seat].hand.iter() {
         let o = s.push_default(G_HAND_SELF);
@@ -476,7 +500,7 @@ fn encode_state_inner(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState
     // untapped blue" — the shape of every instant-speed decision — even
     // representable.
     if !no_cast {
-        for (base, src) in [(24, &sources), (30, &opp_sources)] {
+        for (base, src) in [(24, sources), (30, opp_sources)] {
             for ci in 0..5 {
                 gl[base + ci] = src.iter().filter(|m| m[ci]).count() as f32 / 6.0;
             }

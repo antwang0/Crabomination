@@ -3445,6 +3445,23 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-270)` TAKEN — `encode_state_pair`: a recorder snapshot's two encodes share the two untapped-source tables: actor **-0.265 %**
+
+```text
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), against the (-269) tip
+         3,181,309,243 -> 3,172,892,750 Ir  **-0.265 %**;  60 games / 6,080 rows / 0 stalls / 6,566 encoded states both sides
+  mana_source_table self 16.65 M -> 13.93 M (the encoder's four builds a snapshot are two);  the castability scope under encode_state_inner (15.68 M) is the pair's now
+  bot_ladder pools: unmoved by construction (encode.rs + the recorder)
+```
+
+Each seat's castability block reads *both* seats' untapped sources
+(its own for the hand's live/dead split, the opponent's for globals
+30..=35), so `encode_state(g, 0)` then `encode_state(g, 1)` built the
+same two `mana_source_table`s twice. `untapped_sources` builds them
+once per call of the new `encode_state_pair`, which the recorder now
+uses; `encode_state` keeps its one-seat contract for the tests and any
+other single-seat reader. Same tables, same features.
+
 ### `(-269)` TAKEN — the encoder's printed half off a per-object memo word (mana value, seven type bits, five pip counts): actor **-0.465 %**
 
 ```text
