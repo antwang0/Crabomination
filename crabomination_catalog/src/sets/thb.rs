@@ -2521,9 +2521,8 @@ pub fn pharikas_spawn() -> CardDefinition {
 }
 
 /// Tymaret, Chosen from Death — {B}{B} 2/* Legendary Demigod whose toughness
-/// equals your devotion to black. {1}{B}: Exile target card from a graveyard
-/// (the printed "up to two… gain 1 if a creature" is modeled as a single
-/// target).
+/// equals your devotion to black. {1}{B}: Exile up to two target cards from
+/// graveyards; gain 1 life for each creature card exiled this way.
 pub fn tymaret_chosen_from_death() -> CardDefinition {
     CardDefinition {
         name: "Tymaret, Chosen from Death",
@@ -5549,9 +5548,9 @@ pub fn the_first_iroan_games() -> CardDefinition {
 }
 
 /// The Binding of the Titans — {1}{G} Saga. I: each player mills three. II:
-/// exile up to two target cards from graveyards. III: return a creature or land
-/// card from your graveyard to your hand. (The per-creature life gain on II is
-/// omitted.)
+/// exile up to two target cards from graveyards, gaining 1 life per creature
+/// card exiled. III: return a creature or land card from your graveyard to
+/// your hand.
 pub fn the_binding_of_the_titans() -> CardDefinition {
     CardDefinition {
         name: "The Binding of the Titans",

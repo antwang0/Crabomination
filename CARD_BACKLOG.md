@@ -704,6 +704,17 @@ Filed, with the reason:
 
 ## Oracle-verb audit — the `damage`, `return_to_hand`, `untap` and `scry` classes
 
+**Re-run 2026-09-06 at the `(-275)` tip: 61 rows over 17,028 cards (was
+172 on 2026-08-31), and every row is either filed on a primitive below or a
+bespoke-effect false positive** — the regex cannot see a verb done inside
+`GristPlusOne`, `ManifestFromHand { controller_draws }`,
+`CatchUpBasicLands`, `CounterAbilityAndDestroySource` or the ward-shaped
+tax approximations (Chancellor of the Annex, Diffusion Sliver). Nothing in
+the class is a card fix any more; the next reduction is a primitive
+(Dyadrine's two-creature counter cost, All-Out Assault's delayed untap,
+Takklemaggot's re-attach, Geyadrone's corruption counters).
+
+
 **Thirteen rows, the last four classes nobody had read: nine fixed with a
 test apiece, one false, three filed.** Every fix used a primitive that
 already existed — the notable ones are `from_hand` + `discard_self_cost`
@@ -1178,10 +1189,9 @@ wrong abilities, not missing riders:**
   against the card it exiled), **Search for Glory** drops "gain 1 life for
   each {S} spent" (no snow-mana-spent tally exists), **Earth Kingdom
   General** drops a once-a-turn counters-placed payoff.
-- **Tymaret, Chosen from Death** and **The Binding of the Titans** chapter II
-  share one shape: "you gain 1 life for each creature card exiled this way",
-  i.e. a count over `Selector::LastMoved` filtered to creature cards. **Two
-  cards on one `Value`** — the best ratio left in this class.
+- ~~**Tymaret, Chosen from Death** and **The Binding of the Titans** chapter
+  II~~ — both ship the life gain (`CountOf(MatchingAmong { LastMoved,
+  Creature })`); only their doc comments still said otherwise, fixed 2026-09-06.
 
 **The `draw` class worked: 32 rows -> 19, nine of them the Parley/method class
 and four of them real defects, all four fixed with a regression test apiece.**
