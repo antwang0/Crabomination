@@ -312,12 +312,29 @@ fn encode_state_inner(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState
     // The buffer is laid out group by group, so the battlefield's controller
     // split is two filtered passes rather than one interleaved one: the same
     // cards are encoded, in the same within-group order, by the same code.
+    // The board totals for the globals (lands, untapped lands, creatures,
+    // power by side) are summed here off the same computed view: a
+    // separate totals walk asked `computed_permanent_on` a second time per
+    // permanent — 75,948 memo hits at ~342 Ir on a 60-game actor run, half
+    // the encoder's layer asks (PERF `(-266)`).
+    let (mut lands, mut untapped, mut creatures, mut power) = ([0i32; 2], [0i32; 2], [0i32; 2], [0i32; 2]);
     for (group, mine) in [(G_BF_SELF, true), (G_BF_OPP, false)] {
+        let side = if mine { 0 } else { 1 };
         for c in g.battlefield.iter().filter(|c| (c.controller == seat) == mine) {
             // Push an empty object and fill it in place: see
             // `encode_card_object_into` for what the by-value form cost.
             let o = s.push_default(group);
-            encode_battlefield_object_into(g, c, vocab, o);
+            let (is_land, is_creature, pw) = encode_battlefield_object_into(g, c, vocab, o);
+            if is_land {
+                lands[side] += 1;
+                if !c.tapped {
+                    untapped[side] += 1;
+                }
+            }
+            if is_creature {
+                creatures[side] += 1;
+                power[side] += pw;
+            }
             if !no_combat {
                 // An object is never both an attacker and a blocker in one
                 // combat, so one feature pair serves both endpoints.
@@ -417,35 +434,6 @@ fn encode_state_inner(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState
     encode_library(&mut s, g, seat, vocab);
     if !no_rel {
         encode_stack(&mut s, g, seat, vocab);
-    }
-
-    let (mut lands, mut untapped, mut creatures, mut power) = ([0i32; 2], [0i32; 2], [0i32; 2], [0i32; 2]);
-    for c in g.battlefield.iter() {
-        let side = if c.controller == seat { 0 } else { 1 };
-        // Computed types and power, so an animated manland counts as the
-        // creature it currently is and an anthem's pump reaches the power
-        // totals — the same memoized layer pass the group loop paid.
-        let (is_land, is_creature, pw) = match g.computed_permanent_on(c) {
-            Some(cp) => {
-                use crate::card::CardType;
-                (
-                    cp.card_types().contains(&CardType::Land),
-                    cp.card_types().contains(&CardType::Creature),
-                    cp.power.max(0),
-                )
-            }
-            None => (c.definition.is_land(), c.definition.is_creature(), c.power().max(0)),
-        };
-        if is_land {
-            lands[side] += 1;
-            if !c.tapped {
-                untapped[side] += 1;
-            }
-        }
-        if is_creature {
-            creatures[side] += 1;
-            power[side] += pw;
-        }
     }
 
     let gl = &mut s.global;
@@ -1132,12 +1120,17 @@ fn is_hard_to_block(k: &crate::card::Keyword) -> bool {
 /// effective P/T net of damage, the damage itself and the part of the
 /// P/T that expires at cleanup, tapped, summoning sickness, loyalty,
 /// SOS prepared status, attacking, and counters.
+///
+/// Returns `(is_land, is_creature, power)` off the same computed view, for
+/// the caller's board totals — computed, so an animated manland counts as
+/// the creature it currently is and an anthem's pump reaches the power
+/// total.
 fn encode_battlefield_object_into(
     g: &GameState,
     c: &CardInstance,
     vocab: &Vocab,
     o: &mut EncodedObject,
-) {
+) -> (bool, bool, i32) {
     encode_card_object_into(c, vocab, o);
     let f = &mut o.feats;
     f[6] = if c.tapped { 1.0 } else { 0.0 };
@@ -1156,11 +1149,13 @@ fn encode_battlefield_object_into(
     // per permanent inside `encode_state`'s frozen scope; the raw
     // fallback is unreachable for a real battlefield walk and exists so
     // a malformed synthetic state degrades instead of panicking.
-    match g.computed_permanent_on(c) {
+    let totals = match g.computed_permanent_on(c) {
         Some(cp) => {
             use crate::card::CardType;
-            f[1] = if cp.card_types().contains(&CardType::Creature) { 1.0 } else { 0.0 };
-            f[2] = if cp.card_types().contains(&CardType::Land) { 1.0 } else { 0.0 };
+            let is_creature = cp.card_types().contains(&CardType::Creature);
+            let is_land = cp.card_types().contains(&CardType::Land);
+            f[1] = if is_creature { 1.0 } else { 0.0 };
+            f[2] = if is_land { 1.0 } else { 0.0 };
             f[3] = if cp.card_types().contains(&CardType::Planeswalker) { 1.0 } else { 0.0 };
             if !ablated(ABLATE_V8) {
                 f[53] = if cp.card_types().contains(&CardType::Artifact) { 1.0 } else { 0.0 };
@@ -1209,12 +1204,14 @@ fn encode_battlefield_object_into(
                 // The Indestructible *counter* lives in `counters`, not the
                 // layer pass; the walk below re-ORs it into f[42].
             }
+            (is_land, is_creature, cp.power.max(0))
         }
         None => {
             f[4] = c.power().max(0) as f32 / 8.0;
             f[5] = (c.toughness() - c.damage as i32).max(0) as f32 / 8.0;
+            (c.definition.is_land(), c.definition.is_creature(), c.power().max(0))
         }
-    }
+    };
     // ONE walk of the counter bag for all eight counter slots. `CounterBag`
     // is a `Vec<(CounterType, u32)>` and `counter_count` is a linear scan of
     // it, so the seven calls this replaces (loyalty, prepared, and the five
@@ -1307,6 +1304,7 @@ fn encode_battlefield_object_into(
         f[46] = c.power_bonus as f32 / 4.0;
         f[47] = c.toughness_bonus as f32 / 4.0;
     }
+    totals
 }
 
 #[cfg(test)]
@@ -2134,6 +2132,50 @@ mod tests {
         assert!((unbuffed.feats[4] - 2.0 / 8.0).abs() < 1e-6, "their bear is not ours to buff");
         assert!((s.global[22] - 3.0 / 12.0).abs() < 1e-6, "the power total sees the anthem");
         assert!((s.global[23] - 2.0 / 12.0).abs() < 1e-6);
+    }
+
+    /// The board totals (globals 14..=23) are summed inside the object pass
+    /// since PERF `(-266)`, off the same computed view each object encodes
+    /// from, so they are still per side and still count computed types: a
+    /// tapped land, an untapped land, a creature and an animated Mutavault
+    /// land the counts the separate totals walk used to.
+    #[test]
+    fn board_totals_follow_the_object_pass() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        let mut tapped = CardInstance::new(crate::card::CardId(1), catalog::forest(), 0);
+        tapped.controller = 0;
+        tapped.tapped = true;
+        g.battlefield.push(tapped);
+        let mut open = CardInstance::new(crate::card::CardId(2), catalog::forest(), 0);
+        open.controller = 0;
+        g.battlefield.push(open);
+        let mut bear = CardInstance::new(crate::card::CardId(3), catalog::grizzly_bears(), 0);
+        bear.controller = 0;
+        g.battlefield.push(bear);
+        let mut theirs = CardInstance::new(crate::card::CardId(4), catalog::mountain(), 1);
+        theirs.controller = 1;
+        g.battlefield.push(theirs);
+        // An animated manland is both a land and a creature to the totals.
+        let mut animated = catalog::mountain();
+        animated.card_types.push(crate::card::CardType::Creature);
+        animated.power = 2;
+        animated.toughness = 2;
+        let mut manland = CardInstance::new(crate::card::CardId(5), animated, 1);
+        manland.controller = 1;
+        g.battlefield.push(manland);
+
+        let s = encode_state(&g, 0, &vocab);
+        let close = |i: usize, want: f32| assert!((s.global[i] - want).abs() < 1e-6, "global {i}");
+        close(14, 1.0 / 6.0); // my untapped lands
+        close(15, 2.0 / 6.0); // theirs
+        close(16, 2.0 / 8.0); // my lands
+        close(17, 2.0 / 8.0); // theirs: Mountain + the animated Mutavault
+        close(20, 1.0 / 6.0); // my creatures
+        close(21, 1.0 / 6.0); // theirs: the animated Mutavault
+        close(22, 2.0 / 12.0);
+        close(23, 2.0 / 12.0);
     }
 
     /// The v8 block (modern precondition 3): artifact/enchantment type

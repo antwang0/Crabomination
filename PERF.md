@@ -3418,6 +3418,53 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-266)` TAKEN — the encoder's board totals summed inside the object pass instead of a second `computed_permanent_on` walk: actor **-0.317 %**
+
+```text
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), (-265) tip
+         3,246,053,464 -> 3,235,755,573 Ir  **-0.317 %**;  60 games / 6,080 rows / 0 stalls / 6,566 encoded states both sides
+  under encode_state_inner:  computed_permanent_hinted 151,896 asks / 51.98 M -> 75,948 / 43.81 M  (the second ask per permanent was the memo hit, ~110 Ir;
+                             the first, ~577, is the layer view the scope has to build);  encode_state_inner self 58.73 M -> 56.52 M
+  bot_ladder pools: not dumped — no pool of the ladder encodes a state (encode.rs is the only file touched), so sealed/cube are unmoved by construction
+  encoder after this leg (the residual, per the same dump):  encode_card_object_into 236,471 objects / 65.1 M (2.0 %, the printed pass — cmc 5.3 M,
+         is_equipment 2.1 M, ward 3.7 M, the rest is inlined type walks and keyword bits; for the 75,948 battlefield objects its keyword and type
+         features are OVERWRITTEN by the computed view);  the layer views 43.8 M (1.35 %);  self 56.5 M (1.75 %, flat by line — top line 4.5 M is the
+         eight-bit keyword loop);  the castability scope with_frozen_layers 15.7 M (0.5 %, two mana_source_table builds);  the library sort 5.5 M;
+         affordable_covered 36,564 / 5.1 M
+```
+
+`encode_state_inner` walked the battlefield twice: once per controller
+group to encode each permanent off `computed_permanent_on`, and once
+more for the globals' land / untapped / creature / power totals, asking
+`computed_permanent_on` again per permanent. `encode_battlefield_object_into`
+now returns `(is_land, is_creature, power)` off the view it already
+holds and the group loop sums them per side — the same computed facts
+(an animated manland counts as the creature it is, an anthem reaches
+the power total), the same integers, summed in group order instead of
+battlefield order. Regression test
+`encode::tests::board_totals_follow_the_object_pass`. Actor-only, like
+every encoder row.
+
+### `spell_kind` READ and REFUTED — the converge flag off the object memo plus an inline `creature_types`: actor **-0.105 %**, reverted
+
+```text
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), (-265) tip
+         3,246,053,464 -> 3,242,646,797 Ir  (-0.105 %);  60 games / 6,080 rows / 0 stalls both sides
+  base   debug_flags 43,406 calls, 12.9 M inclusive: format_inner 148 calls / 8.56 M + is_contained_in 736 / 2.43 M (the once-per-name scan)
+         + hash_one 384 (the L1 misses: 0.9 %); spell_kind's edge carries 11.3 M of it because a card is cast before it damages anything
+  cand   Definition::debug_flags 14,881 asks -> CardDefinition::debug_flags 14,770 (the memo missed 99 %); SmallVec::extend 8,226 / 0.59 M for Vec::clone's 8,226 allocs
+```
+
+The candidates entry priced `spell_kind`'s `debug_flags` edge (8.6 M
+on the sealed default) as a cache lookup worth 0.25 %. It is the
+first-touch `format!` of 148 definitions — the saturating cost "How to
+measure" warns about — and the L1 hits 99.1 % of asks. The memo device
+cannot help either: `cast_spell_with_convoke` moves the card (a
+`DerefMut`, which clears every memo word) and asks `spell_kind` on the
+freshly written object, so the per-object memo is cold on exactly this
+ask. What is left is the `Vec<CreatureType>` clone per creature cast,
+~0.05 %. Reverted; the read closes candidates (3).
+
 ### `(-265)` TAKEN — `prepare_spell` shared as an `Arc<CardDefinition>` instead of deep-cloned per Prepare cast: actor **-1.803 %**, sealed default **-0.538 %** / cube **-0.496 %**
 
 ```text
@@ -7663,12 +7710,18 @@ were the two rows with a known device — a lane and the `(-257)` gate —
 and are `(-262)` / `(-261)`. (2) `activate_ability_inner`'s land tap asks
 `card_keyword_possible_on` twice at 162 Ir (the two CR 602.5 gates, each
 ending in `keyword_grant_in_scope`) — 0.22 %, a `dispatch_bits`-shaped
-per-definition bit would settle both. (3) `spell_kind` builds a
+per-definition bit would settle both. (3) ~~`spell_kind` builds a
 `Vec<CreatureType>` clone per cast for a field two spend restrictions
 read; a borrowed slice is a `SpellKind<'a>` lifetime across 18
 construction sites, ~0.05 %, and `wants_converge`'s cache lookup is the
 other 0.25 % — a bit on `CardData` beside `trigger_kind_fold` would be
-the shape. (4) `legal_targets_for_filter_scope`'s walker calls (60 k / 16.4 M) were
+the shape.~~ **CLOSED, built and refuted on the actor (the `(-266)`
+run's Log READ): the "cache lookup" is 148 once-per-name `format!`s
+(11.1 M of `debug_flags`' 12.9 M inclusive), the L1 misses 384 of
+43,406 asks, and a `CardMemo` bit misses anyway — the cast writes the
+card through `DerefMut` (the zone move) right before asking, which
+clears the memo (14,770 of 14,881 asks fell through). The `SmallVec`
+half plus the memo read -0.105 % on the actor; reverted.** (4) `legal_targets_for_filter_scope`'s walker calls (60 k / 16.4 M) were
 battlefield permanents whose trigger-prompt filter the printed evaluator
 DECLINED — `(-263)` proved it is not the graveyard loop (flat, reverted),
 the census found bare `InGraveyard` on 54 % of the prompts, and `(-264)`
