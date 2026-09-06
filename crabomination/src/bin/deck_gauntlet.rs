@@ -400,7 +400,7 @@ fn run() {
                         };
                         results.lock().unwrap().push((job.opp, cell));
                         let n = done.fetch_add(1, Ordering::Relaxed) + 1;
-                        if n % threads.max(1) == 0 || n == jobs.len() {
+                        if n.is_multiple_of(threads.max(1)) || n == jobs.len() {
                             eprintln!(
                                 "  {n}/{} jobs, {:.0}s elapsed",
                                 jobs.len(),

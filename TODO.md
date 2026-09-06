@@ -28,19 +28,22 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`.
-   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-265)` is the last
-   claimed, `(-266)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
-   bot_ladder 12 min cold / 4 min warm, debug test build 7 min; ⚠ `target/debug/incremental` hit 15 GB and killed a link.
-2. **Gates:** the `(-265)` tip (PERF Baseline) suite 19,234 / 0 / 5, clippy, release-fast, `--bench` counters identical
-   to `2003d1cf`, golden 7/7 unmoved, fresh-seed sweep 4,800 games clean.
-3. **Perf this run (PERF Log; candidates' "SEALED `dflt` RE-READ"; Profile of record's actor re-read):** `(-261)` cast-trigger
-   partitions gated (sealed -0.485 %), `(-262)` life-static lane (-0.303 %), `(-263)` flat/reverted, `(-264)` printed arms
-   for `InGraveyard` & co. (-0.201 %), `(-265)` `prepare_spell` as an `Arc` (ACTOR -1.803 %, sealed -0.538 %, cube -0.496 %).
-   ⚠ two `-p` flags with `--no-default-features` left `bot_ladder` on mimalloc (nm 294): one `-p` per profiling build.
-4. **Leads (PERF candidates):** the encoder is 6.4 % of the actor INCLUSIVE (~32 k Ir a row) — the next actor-only read;
-   `spell_kind`'s per-cast clone (~0.3 %); `resolve_combat_into`'s growth ladder. Cards: leftover only.
-5. **Round 65 (ML session, ML_NOTES):** the client's bot is now the lobby pilot (`MctsBot` 256); `attack_blocker_guard`
-   +0.58 scored / 0.74x wall but -1.0/-1.3 under the 256 search → PARKED; clean read = paired `mcts-guard-256` vs `mcts-dflt-256`.
+   Rebase, never force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-269)` is the last
+   claimed, `(-270)` next. Gotchas in **CLAUDE.md**; measurement in **PERF's "Standing rules"**. Here: `profiling-fast`
+   selfplay_train 9 min cold / 8 min warm (a base-crate edit rebuilds the catalog too), release-fast bot_ladder 7 min,
+   debug suite build+run ~10 min; ⚠ another session pushes to this branch concurrently — fetch before every push.
+2. **Gates:** the `(-269)` tip (PERF Baseline) suite green, clippy, release-fast, `--bench` counters identical to
+   `2003d1cf` (27.49 / 611.9 / 0 stalls), golden 7/7 unmoved, fresh-seed sweep 28,800 games clean (9 cells, 3 pools).
+3. **Perf this run — ALL ACTOR-ONLY (PERF Log; candidates' "ACTOR-ONLY ROWS AT THE (-269) TIP"):** `(-266)` encoder totals
+   fold (-0.317 %), `(-267)` battlefield object skips the overwritten printed pass (-0.229 %), `(-268)` one frozen scope
+   per recorder snapshot (-1.007 %), `(-269)` printed half off a fifth `CardMemo` word (-0.465 %): actor -1.99 % between
+   them; bot_ladder pools unmoved by construction. `spell_kind` memo leg REFUTED (-0.105 %; the 8.6 M was first-touch
+   `format!`s, and a cast clears the memo before asking) — candidates (3) closed.
+4. **Leads (PERF candidates):** encoder residual is flat (self 58 M, layer views 26 M, off-board keyword half 16 M);
+   the deck builder is flat by line (64 M, `(-63)`'s floor). Back to the sealed `dflt` list: `card_keyword_possible_on`
+   twice a land tap (0.22 %), `resolve_combat_into`'s growth ladder — both need bot_ladder base+cand builds. Cards: leftover only.
+5. **Round 65/66 (ML sessions, ML_NOTES):** lobby pilot is `MctsBot` 256; `attack_blocker_guard` PARKED; round 66 (b3fd2c43):
+   converge4 list, `deck_gauntlet`, `stun_x_hold` parked, `own_graveyard_picks` off per pre-registration.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
