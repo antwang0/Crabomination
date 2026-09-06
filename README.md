@@ -44,11 +44,13 @@ CRAB_SEALED_DECK=/path/to/mydeck.txt cargo run -p crabomination_client -- --play
 A missing, unparseable, or under-40-card list is not fatal — the seat
 falls back to a generated build, with the reason on stderr.
 
-**The opponent** is net-evaluated MCTS (64 iterations, 3-turn horizon,
-honest determinized rollouts) whenever a value net is present —
-`nets/champion.safetensors` by default, `CRAB_NET` overrides — and the
-heuristic bot otherwise. This is the same profile a hosted lobby seat
-gets. Expect a few seconds of thinking per turn.
+**The opponent** is the lobby's pilot: a determinized Monte Carlo search
+at 256 iterations over a 3-turn horizon, scoring rollouts with the
+material evaluator — no value net is loaded for play. Round 64
+(2026-09-05) read 64 / 128 / 256 iterations at 52.35 / 54.75 / 55.25 %
+against the heuristic default, and round 62 read the champion net's leaf
+at +0.25 inside the search, so the net stays out of the client. Expect
+about half a second per searched decision, a few seconds on a busy board.
 
 ## Status & roadmap
 

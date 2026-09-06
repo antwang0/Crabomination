@@ -43,6 +43,10 @@ sixty-seventh pass, so don't re-take that.
    (~0.3 %); `resolve_combat_into`'s growth ladder (2.11 grows a call); `activate_ability_inner`'s
    `card_keyword_possible_on` ask per land tap is lane-gated already (0.22 %, floor). The prompt-text lead is half
    wrong (the bot reads three prompt families). Cards: leftover only.
+5. **Round 65 (2026-09-06, ML_NOTES):** the client's local bot was two generations behind the lobby and its replays
+   showed 7 suicide attacks in 130 — now the lobby pilot (`MctsBot` 256, default). The greedy filter's holes are behind
+   `attack_blocker_guard`: +0.58 and 0.74× wall as the scored pilot, −1.0/−1.3 under the 256 search → PARKED; the clean
+   read is a paired `mcts-guard-256` vs `mcts-dflt-256` A/B. Golden 7/7 unchanged.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

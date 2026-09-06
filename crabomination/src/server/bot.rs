@@ -437,6 +437,38 @@ pub struct EvalWeights {
     /// [`attack_candidates_for_mcts`]. **Adopted 2026-09-05 (round 60)** on
     /// the default, not the client pilot — see `default_const`.
     pub attack_skip_open: bool,
+    /// The greedy attack filter judged against the blockers that can
+    /// legally block each attacker (round 65). Off, the filter's suicide
+    /// check reads only *ground* blockers — a flier is never held back
+    /// from a bigger flier or a reach creature, and a ground attacker is
+    /// never held back from an opposing flier that can block it — trample
+    /// and lifelink attackers bypass the check altogether, and a "lethal
+    /// swing" counts raw power with no blockers subtracted, so an alpha
+    /// into six untapped blockers reads as lethal. Forty client games
+    /// (2026-09-01) showed every one of those shapes: a 2/1 Inkling into a
+    /// 5/5 flier, a 1/1 Spirit into a 7/7 reach trampler, six attackers
+    /// into six blockers for four dead. On, [`attack_is_safe_guarded`]
+    /// runs instead: per attacker, the eligible blockers
+    /// (`blocker_can_block_attacker`); a blocker that kills it and
+    /// survives holds it back, racing or not; a trade is held unless
+    /// racing (the existing rule's shape); lethal is what gets through
+    /// after every untapped blocker chumps the biggest attacker it can.
+    /// Greedy is also the declaration both seats take inside every sim
+    /// and rollout, so the flag reaches the search through
+    /// [`pick_attacks_w`].
+    ///
+    /// **Measured 2026-09-06 (round 65), parked off the default.** As the
+    /// scored pilot: 50.4 / 50.8 / 50.6 / 50.5 vs the default on seeds
+    /// 43/97/151/199 (pooled +0.58, every interval at or above 50) at
+    /// 0.74× the sealed mirror's wall clock — greedy wins 71 % of searched
+    /// declarations instead of 51 %. Under the lobby's 256-iteration
+    /// search: 55.2 / 53.0 vs the default where round 64's search read
+    /// 56.2 / 54.3, −1.0 / −1.3 on both seeds, the pre-registered park
+    /// line — a rollout opponent who never suicides makes every line look
+    /// harder than the real one. The default and the client keep the
+    /// flagless greedy; ML_NOTES "Round 65" has the replay evidence and
+    /// the clean A/B still owed.
+    pub attack_blocker_guard: bool,
     /// Extend the attack simulation one extra turn cycle when it ends
     /// with either life total at 10 or below. The one-cycle horizon can
     /// see "this creature survives to block" but not "this is the race I
@@ -799,6 +831,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
+            attack_blocker_guard: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -886,6 +919,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
+            attack_blocker_guard: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -956,6 +990,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
+            attack_blocker_guard: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -2003,6 +2038,15 @@ impl EvalWeights {
     /// `counter-sim` as A against `dflt63`.
     pub const fn counter_sim_on() -> Self {
         Self { counter_sim: true, ..Self::round63_default() }
+    }
+
+    /// The greedy attack filter judged against eligible blockers (round
+    /// 65) on the default: ladder `atk-guard` as A against `dflt` (+0.58,
+    /// 0.74× wall clock); `mcts-guard-256` is the same flag under the
+    /// lobby's search (−1.0 / −1.3 vs round 64's reference — parked). See
+    /// [`attack_blocker_guard`](Self::attack_blocker_guard).
+    pub const fn attack_blocker_guard_on() -> Self {
+        Self { attack_blocker_guard: true, ..Self::default_const() }
     }
 
     /// The default as it stood after round 56 (the round-55 default plus
@@ -8226,7 +8270,96 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     // computed P/T) run once per candidate attacker — share one gather, the
     // same way `pick_blocks` does. Matters most inside the attack/block sims,
     // which call this on a freshly cloned (and therefore unfrozen) state.
-    state.with_frozen_layers(|state| pick_attacks_inner(state, seat))
+    state.with_frozen_layers(|state| pick_attacks_inner(state, seat, false))
+}
+
+/// [`pick_attacks`] under a profile: the greedy declaration every sim,
+/// rollout and search menu starts from, with
+/// [`attack_blocker_guard`](EvalWeights::attack_blocker_guard) read from
+/// `w`. The flagless [`pick_attacks`] is the pre-round-65 filter, kept as
+/// the test entry so the recorded greedy shapes stay pinned.
+pub fn pick_attacks_w(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
+    state.with_frozen_layers(|state| pick_attacks_inner(state, seat, w.attack_blocker_guard))
+}
+
+/// The guarded safe-attack test (round 65): may `c` swing into
+/// `opp_blockers` without dying for nothing? `all_in` is the guarded
+/// lethal read (damage through every chump), `racing` the clock read
+/// both filters share.
+///
+/// Eligible blockers are the ones that can legally block *this* creature
+/// — flying and reach for a flier, everything untapped for a ground body
+/// — so the filter no longer treats an opposing flier as a non-blocker of
+/// ground attackers, nor a reach creature as a non-blocker of fliers. A
+/// blocker that kills `c` and survives it (first strike and deathtouch
+/// on either side counted) holds `c` back whatever the race says; a
+/// blocker that kills `c` but dies to it is a trade, held unless racing
+/// or `c` outmuscles the biggest eligible blocker (the flagless rule's
+/// shape). Trample and lifelink earn nothing here: a 4/4 trampler into a
+/// 6/6 tramples over nothing and dies. Deathtouch, menace, indestructible
+/// and a shield counter keep their flagless exemptions. Anything the
+/// guard holds back, the attack chain can still add on a priced sim.
+fn attack_is_safe_guarded(
+    state: &GameState,
+    c: &crate::card::CardInstance,
+    opp_blockers: &[&crate::card::CardInstance],
+    all_in: bool,
+    racing: bool,
+) -> bool {
+    use crate::card::Keyword;
+    if all_in {
+        return true;
+    }
+    if state.combat_damage_prevented_for_dealer(c.id) {
+        return false;
+    }
+    let eligible: smallvec::SmallVec<[&crate::card::CardInstance; 16]> = opp_blockers
+        .iter()
+        .copied()
+        .filter(|b| state.blocker_can_block_attacker(b.id, c.id))
+        .collect();
+    if eligible.is_empty()
+        || c.has_keyword(&Keyword::Indestructible)
+        || c.counter_count(crate::card::CounterType::Shield) > 0
+    {
+        return true;
+    }
+    if c.has_keyword(&Keyword::Menace) && eligible.len() < 2 {
+        return true;
+    }
+    let strikes_first = c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike);
+    let deathtouch = c.has_keyword(&Keyword::Deathtouch) && c.power() >= 1;
+    if deathtouch {
+        // CR 702.2: whatever blocks it dies — at worst an even trade.
+        return true;
+    }
+    let mut killer = false;
+    let mut every_killer_dies = true;
+    for b in &eligible {
+        let b_strikes_first = b.has_keyword(&Keyword::FirstStrike) || b.has_keyword(&Keyword::DoubleStrike);
+        let c_kills_b = c.power() >= b.toughness();
+        let b_kills_c = (b.has_keyword(&Keyword::Deathtouch) && b.power() >= 1) || b.power() >= c.toughness();
+        // First strike: `c` kills `b` before `b` deals damage, unless `b`
+        // strikes first too.
+        let b_kills_c = b_kills_c && !(strikes_first && c_kills_b && !b_strikes_first);
+        if b_kills_c {
+            killer = true;
+            if !c_kills_b {
+                every_killer_dies = false;
+            }
+        }
+    }
+    if !killer {
+        return true;
+    }
+    if !every_killer_dies {
+        return false;
+    }
+    if racing {
+        return true;
+    }
+    let max_power = eligible.iter().map(|b| b.power()).max().unwrap_or(0);
+    c.power() > max_power
 }
 
 /// Turns for `clock` damage a turn to finish `life`, without the overflow the
@@ -8255,7 +8388,7 @@ fn attack_target_player(state: &GameState, seat: usize) -> usize {
     }
 }
 
-fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
+fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack> {
     use crate::card::Keyword;
     let target_player = attack_target_player(state, seat);
     // Filter on `controller`, not `owner`: cards that have
@@ -8378,6 +8511,16 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
             opp_blockers.push(c);
         }
     }
+    // The guard's lethal read: the damage that still gets through after
+    // every untapped blocker chumps the biggest attacker it can. The
+    // flagless `lethal_swing` above subtracts nothing.
+    let all_in_guarded = guard && {
+        let mut dmg: smallvec::SmallVec<[i32; 16]> =
+            raw_attackers.iter().map(|c| attacker_damage_value(state, c.id)).collect();
+        dmg.sort_unstable_by(|a, b| b.cmp(a));
+        let through: i32 = dmg.iter().skip(opp_blockers.len()).sum();
+        through >= opp_life
+    };
     let has_ground_deathtouch = opp_blockers
         .iter()
         .any(|b| b.has_keyword(&Keyword::Deathtouch) && !b.has_keyword(&Keyword::Flying));
@@ -8394,6 +8537,9 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
             // here: `restore_forced_attackers` below re-adds every one
             // the *computed* set obliges, which is the same membership
             // and one predicate instead of two that drifted.
+            if guard {
+                return attack_is_safe_guarded(state, c, &opp_blockers, all_in_guarded, racing);
+            }
             // Always attack on lethal swings — the bot
             // would rather suicide than miss a kill.
             if lethal_swing {
@@ -8940,7 +9086,7 @@ pub(crate) fn attack_candidates_for_mcts(
     seat: usize,
     w: &EvalWeights,
 ) -> Vec<Vec<Attack>> {
-    let greedy = pick_attacks(state, seat);
+    let greedy = pick_attacks_w(state, seat, w);
     if w.attack_search == 0 || greedy.is_empty() {
         return vec![greedy];
     }
@@ -9832,7 +9978,7 @@ fn simulate_attack_outcome_once(
                 let declarer = g.attack_declarer();
                 // Greedy, deliberately: calling the search here would
                 // recurse a turn deeper on every candidate.
-                GameAction::DeclareAttackers(pick_attacks(&g, declarer))
+                GameAction::DeclareAttackers(pick_attacks_w(&g, declarer, w))
             }
             TurnStep::DeclareBlockers if !declared.contains(&key) && !g.attacking().is_empty() => {
                 match (0..g.players.len()).find(|&s| g.may_declare_blocks(s)) {
@@ -13506,7 +13652,7 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -
             TurnStep::DeclareAttackers if !attacks_submitted => {
                 attacks_submitted = true;
                 let declarer = g.attack_declarer();
-                GameAction::DeclareAttackers(pick_attacks(g, declarer))
+                GameAction::DeclareAttackers(pick_attacks_w(g, declarer, w))
             }
             TurnStep::DeclareBlockers if !blocks_submitted && !g.attacking().is_empty() => {
                 // The defender is not the priority holder at this point, so
@@ -19496,6 +19642,67 @@ mod tests {
             ),
             "Bolt on the elf: {action:?}"
         );
+    }
+
+    /// Round 65: the guarded greedy filter holds the six suicide shapes the
+    /// September client replays showed, and the flagless filter still takes
+    /// them (its recorded behaviour, pinned so a change is deliberate).
+    #[test]
+    fn attack_blocker_guard_holds_the_replay_suicides() {
+        use crate::card::{CardDefinition, CardType, Keyword};
+        fn body(name: &'static str, p: i32, t: i32, kws: Vec<Keyword>) -> CardDefinition {
+            CardDefinition { name, card_types: vec![CardType::Creature], power: p, toughness: t, keywords: kws, ..Default::default() }
+        }
+        fn board(mine: &[(&'static str, i32, i32, Vec<Keyword>)], theirs: &[(&'static str, i32, i32, Vec<Keyword>)], their_life: i32) -> GameState {
+            let mut g = two_player_game();
+            for (name, p, t, kws) in mine.iter().cloned() {
+                let id = g.add_card_to_battlefield(0, body(name, p, t, kws));
+                g.clear_sickness(id);
+            }
+            for (name, p, t, kws) in theirs.iter().cloned() {
+                let id = g.add_card_to_battlefield(1, body(name, p, t, kws));
+                g.clear_sickness(id);
+            }
+            g.players[1].life = their_life;
+            g.step = TurnStep::DeclareAttackers;
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            g
+        }
+        let guard = EvalWeights::attack_blocker_guard_on();
+        let cases: Vec<(&str, GameState, usize, usize)> = vec![
+            ("a 2/1 flier into a 5/5 flier",
+             board(&[("Inkling", 2, 1, vec![Keyword::Flying])], &[("Emeritus", 5, 5, vec![Keyword::Flying])], 20), 1, 0),
+            ("a 1/1 flier into a 7/7 reach trampler",
+             board(&[("Spirit", 1, 1, vec![Keyword::Flying])], &[("Archaic", 7, 7, vec![Keyword::Reach, Keyword::Trample])], 20), 1, 0),
+            ("a 4/4 trampler into a 6/6",
+             board(&[("Sloth", 4, 4, vec![Keyword::Trample])], &[("Fatty", 6, 6, vec![])], 20), 1, 0),
+            ("a 2/2 lifelinker into a 5/5",
+             board(&[("Cleric", 2, 2, vec![Keyword::Lifelink])], &[("Fatty", 5, 5, vec![])], 20), 1, 0),
+            ("a 2/2 ground body into an opposing 4/4 flier",
+             board(&[("Bear", 2, 2, vec![])], &[("Drake", 4, 4, vec![Keyword::Flying])], 20), 1, 0),
+            ("four 2/2s into four 3/3s at 8 life (\"lethal\" only without blockers)",
+             board(&[("a1", 2, 2, vec![]), ("a2", 2, 2, vec![]), ("a3", 2, 2, vec![]), ("a4", 2, 2, vec![])],
+                   &[("b1", 3, 3, vec![]), ("b2", 3, 3, vec![]), ("b3", 3, 3, vec![]), ("b4", 3, 3, vec![])], 8), 4, 0),
+            ("racing: the 2/2 dies to the 3/3 for nothing, the 4/4 goes",
+             board(&[("Bear", 2, 2, vec![]), ("Hill", 4, 4, vec![])], &[("Blocker", 3, 3, vec![])], 10), 2, 1),
+        ];
+        for (what, g, flagless, guarded) in &cases {
+            assert_eq!(pick_attacks(g, 0).len(), *flagless, "flagless greedy, {what}");
+            assert_eq!(pick_attacks_w(g, 0, &guard).len(), *guarded, "guarded greedy, {what}");
+        }
+        // Still swings: a real lethal through the chumps, a 3/3 into a 2/2,
+        // a flier over ground-only blockers, a first striker that kills first.
+        let keeps: Vec<(&str, GameState, usize)> = vec![
+            ("three 3/3s into one 2/2 at 6 life: 6 gets through a chump",
+             board(&[("a1", 3, 3, vec![]), ("a2", 3, 3, vec![]), ("a3", 3, 3, vec![])], &[("b1", 2, 2, vec![])], 6), 3),
+            ("a 3/3 into a 2/2", board(&[("Hill", 3, 3, vec![])], &[("Bear", 2, 2, vec![])], 20), 1),
+            ("a 2/1 flier over ground blockers", board(&[("Inkling", 2, 1, vec![Keyword::Flying])], &[("Fatty", 6, 6, vec![])], 20), 1),
+            ("a 3/1 first striker into a 3/3", board(&[("Lancer", 3, 1, vec![Keyword::FirstStrike])], &[("Blocker", 3, 3, vec![])], 20), 1),
+        ];
+        for (what, g, n) in &keeps {
+            assert_eq!(pick_attacks_w(g, 0, &guard).len(), *n, "guarded greedy still swings, {what}");
+        }
     }
 
     /// The shape the round-63 census found missing: exile is not a

@@ -4164,3 +4164,119 @@ champion for the `net-*` ladder family and the belief redeal; `mcts-client`
 keeps the old shape on the ladder. What is left on the search side is
 horizon (3 turns) and the r29 knobs, all measured null on the net leaf and
 never re-read on the material one.
+
+## Round 65 — the greedy attack filter's holes: the client's suicide attacks, a guard for greedy, and the client moved to the lobby pilot (2026-09-06)
+
+**The report.** From client games: the bot "doesn't calculate flying vs
+trample correctly during attacking" and "suicides attackers for no
+reason, even outside flying vs trample cases". Both true, three
+mechanisms.
+
+**The evidence** (forty client games of 2026-09-01,
+`replays/replay-17882*.jsonl`, scanned by attack outcome). Bot: 106
+unblocked, 5 bounced, 3 kills, 9 trades, **7 died for nothing**; human:
+106 / 1 / 6 / 19 / 3. Three games hold the seven. Game 7 turn 20: six
+attackers into six untapped blockers, four dead for two — Strife Scholar,
+two Spirit Mascots and a Spirit token into a 7/7 Rancorous Archaic, a 5/3
+Shopkeeper's Bane, a 4/5 Blech and a countered Pensive Professor, an
+all-in that read as lethal on raw power. Game 5 turn 26: a 2/1 Inkling
+into an untapped 5/5 Emeritus of Ideation, both fliers. Game 7 turn 12: a
+2/2 Aziza into a countered Professor. Game 25 turn 14: a 4/4 Startled
+Relic Sloth into a Professor pumped by Quandrix Charm — the trick blind
+spot, unchanged by anything here. "Flying vs trample" is Rancorous
+Archaic, which has reach as well as trample, and the bot's fliers went
+into it.
+
+**The client was two generations behind the lobby.**
+`crabomination_client/src/menu.rs::local_bot` built
+`MctsBot { 64, net_eval_det1 }` behind the champion net — no chains, no
+saturation fallback, and the net leaf the r40/r44 census showed biased on
+settled combats — while the lobby moved to the net-free 256-iteration
+search in round 64. (An earlier statement in this session that the client
+carried the chains was wrong: `net_eval_det1` is flagless.)
+
+**The holes in greedy** (`pick_attacks_inner`). (1) The suicide filter
+reads `max_ground_blocker_power` — non-flying blockers only — and skips
+fliers outright (`!flying && …`): a flier is never held from a bigger
+flier or a reach creature, and a ground attacker is never held from an
+opposing flier that can block it. (2) Trample and lifelink return "safe"
+before the filter runs. (3) `lethal_swing = total_raw_power >= opp_life`
+subtracts no blocker, and `racing` (our clock strictly faster, inside
+five turns) sends everything.
+
+**The probe** (hand-built boards; the greedy declaration, the default's
+scored pick on the material leaf, and the client's net-leaf pick with the
+champion loaded):
+
+| board | greedy | `dflt` | client (det1, net) |
+|---|---|---|---|
+| 2/1 flier vs untapped 5/5 flier | attacks | holds | holds |
+| 1/1 flier vs 7/7 reach trampler | attacks | holds | holds |
+| 4/4 trample vs 6/6 | attacks | holds | holds |
+| 2/2 lifelink vs 5/5 | attacks | holds | **attacks** |
+| four 2/2 vs four 3/3 at 8 life | all four | holds | holds |
+| 2/2 + 4/4 vs one 3/3 at 10 life, racing | both | 4/4 only | **both** |
+| 2/2 vs 3/3 (control) | holds | holds | holds |
+
+The material-leaf sims correct every board — the holdback menu and the
+chain do the work greedy fails to do. The net leaf leaks two on clean
+boards and more on real ones (the r40 bias; saturation at lopsided life),
+and the holdback menu (greedy, greedy-minus-one, none) cannot express
+"hold four, send two", which is the game-7 shape.
+
+**Fixes.** (a) `local_bot` now builds the lobby's
+`MctsBot { 256, h3, EvalWeights::default() }`; the client's net loader and
+its `CRAB_NET` path are gone; README updated. (b)
+`EvalWeights::attack_blocker_guard` (profiles `atk-guard`,
+`mcts-guard-256`): `attack_is_safe_guarded` judges each attacker against
+the blockers that can legally block it (`blocker_can_block_attacker`); a
+blocker that kills it and survives it holds it back, racing or not; a
+trade is held unless racing or the attacker outmuscles the biggest
+eligible blocker (the flagless rule's shape); lethal is the damage
+through every untapped blocker chumping the biggest attacker it can;
+trample and lifelink earn nothing; deathtouch, menace, indestructible and
+a shield counter keep their exemptions; first strike on either side is
+counted. Threaded as `pick_attacks_w(state, seat, w)` through the menu's
+start, both combat sims and the rollouts (`HeuristicBot::with_weights`),
+so a gate reads the whole effect — greedy is also the declaration both
+seats take inside every sim. Anything the guard holds, the chain can
+re-add on a priced sim. Pinned by
+`attack_blocker_guard_holds_the_replay_suicides` (seven hold shapes, four
+keep shapes; the flagless greedy's recorded behaviour pinned beside it).
+
+**Gate** (`.ladder/run_r65_attack_guard.sh`, pre-registered: stage 1
+`atk-guard` vs `dflt` on four seeds, no-loss to adopt on the default;
+stage 2 `mcts-guard-256` vs `dflt` on seeds 43/97 against round 64's
+56.2 / 54.3, ±1 = neutral for the search): **Stage 1 (heuristic level, sealed, 12 000 paired games a cell):** `atk-guard` vs `dflt` **50.4** [50.0, 50.9] / **50.8** [50.4, 51.2] / **50.6** [50.1, 51.0] / **50.5** [50.0, 50.9] on seeds 43/97/151/199, pooled +0.58, every cell's interval at or above 50 (two touching, two clear) — the pre-registered adopt reading. Cost: the paired sealed mirror at **0.739×** the default's wall clock (−26 %). The attack census says why both: under the guard greedy wins 71.2 % of searched declarations (50.6 % on `dflt`), "nobody" wins 9.0 % (22.9 %) and a holdback 7.4 % (13.0 %), at 2.72 candidates a search (3.35) — the sims had been spending most of their corrections undoing greedy's suicides, and every such correction cost a one-turn-cycle sim per holdback. The intervals are ±0.45 rather than the ±0.1 a heuristic-level flag usually gets: the guard changes greedy on BOTH seats inside every sim, so fewer pairs stay exact mirrors.
+
+**Stage 2 (the client's shape, sealed, 500 games × 12 decks a cell):**
+`mcts-guard-256` vs `dflt` **55.2** [54.2, 56.1] / **53.0** [52.1, 54.0]
+on seeds 43/97, against round 64's `mcts-dflt-256` vs `dflt` of 56.2 /
+54.3 — **−1.0 / −1.3**, both at or past the pre-registered −1 line, so
+the guard is **PARKED off the default**: the lobby and the client run
+`EvalWeights::default()` under the search, which is exactly where it
+reads down. The flag stays as `atk-guard` / `mcts-guard-256`.
+
+Two caveats on that read, recorded rather than argued around. The
+reference is stale: round 64's cells were taken on the round-63 default
+plus the lean chain and an engine six perf passes older, and each side of
+the comparison is a ±0.95 cell, so a −1.0 / −1.3 pair is suggestive, not
+proven — the clean instrument is a paired `mcts-guard-256` vs
+`mcts-dflt-256` A/B, twice the cost of these cells. And the two stages
+disagree in a way that has a mechanism: the scored pilot's search
+corrects greedy with one-turn sims, so a better greedy saves it sims and
+suicides; the 256-iteration search plays out three turns under
+`HeuristicBot::with_weights` on BOTH seats, and a rollout opponent who
+never suicides makes every line look harder than the real one, the same
+lesson as r44's settlement bias — the search was calibrated against
+greedy's holes.
+
+**What the user gets.** The client now faces the lobby pilot, which the
+probe table shows correcting every suicide shape on its own sims, and
+which round 64 put 55.25 over the heuristic. The seven-in-130 replay
+suicides were the old pilot's: net leaf, no chains, a holdback menu that
+cannot hold four and send two. The trick blind spot (game 25) is the
+standing open lead. Next in shape, in order: the paired search-level A/B
+above; then a rollout-policy read on its own (the guard in the rollouts
+only, greedy unchanged at the root) to separate the two mechanisms.
+

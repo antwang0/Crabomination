@@ -1460,65 +1460,24 @@ pub(crate) fn menu_player_name(world: &World) -> String {
         .unwrap_or_else(|| "Player".to_string())
 }
 
-/// The champion value net, loaded once per process into `SLOT_BEST` so
-/// local bot seats can play the same profile a hosted lobby seat gets.
-///
-/// The server does this at boot; the client never did, so every local
-/// match was played by the bare `HeuristicBot` while the strongest
-/// adopted pilot sat unused in the repo. `CRAB_NET` overrides the path,
-/// matching `bot_ladder` and the server. A missing or bad file is not
-/// fatal here — unlike the server, where a bad net is a boot error, a
-/// single-player match should still start, just against the heuristic.
-fn ensure_local_net() -> bool {
-    use std::sync::OnceLock;
-    static LOADED: OnceLock<bool> = OnceLock::new();
-    *LOADED.get_or_init(|| {
-        let path = std::env::var("CRAB_NET").map(std::path::PathBuf::from).unwrap_or_else(|_| {
-            let mut dir: &std::path::Path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-            loop {
-                if dir.join("Cargo.lock").exists() {
-                    return dir.join("nets").join("champion.safetensors");
-                }
-                match dir.parent() {
-                    Some(p) => dir = p,
-                    None => return std::path::PathBuf::from("nets/champion.safetensors"),
-                }
-            }
-        });
-        if !path.exists() {
-            return false;
-        }
-        match crabomination::server::net_eval::load_slot(
-            crabomination::server::net_eval::SLOT_BEST,
-            &path,
-        ) {
-            Ok(()) => {
-                eprintln!("bot: value net loaded from {}", path.display());
-                true
-            }
-            Err(e) => {
-                eprintln!("bot: {} unusable ({e}) — playing the heuristic bot", path.display());
-                false
-            }
-        }
-    })
-}
-
-/// The bot a local seat gets: net-evaluated MCTS at the adopted
-/// round-26 shape when a value net is available, the heuristic
-/// otherwise — the same rule `server::lobby::default_bot` follows, so
-/// single-player and hosted games face the same opponent.
+/// The bot a local seat gets: the lobby's pilot, the net-free search at
+/// 256 iterations on the adopted default — the same rule
+/// `server::lobby::default_bot` follows, so single-player and hosted
+/// games face the same opponent. Round 64 (2026-09-05) read 64 / 128 /
+/// 256 iterations on the material leaf at 52.35 / 54.75 / 55.25 against
+/// the heuristic default; round 62 read the champion net's leaf at +0.25
+/// inside the search and the search itself at +2.5, so no net is loaded
+/// for play. Before this the client built its own pilot — `net_eval_det1`
+/// at 64 iterations behind a loaded net, without the combat chains — and
+/// forty September replays showed its attack judgment two generations
+/// behind the lobby's (ML_NOTES "Round 65").
 fn local_bot() -> Box<dyn crabomination::server::Bot> {
-    if ensure_local_net() {
-        Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
-            iterations: 64,
-            horizon_turns: 3,
-            weights: crabomination::server::EvalWeights::net_eval_det1(),
-            ..crabomination::server::MctsConfig::default()
-        }))
-    } else {
-        Box::new(HeuristicBot::new())
-    }
+    Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
+        iterations: 256,
+        horizon_turns: 3,
+        weights: crabomination::server::EvalWeights::default(),
+        ..crabomination::server::MctsConfig::default()
+    }))
 }
 
 fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
@@ -1849,46 +1808,6 @@ mod tests {
         );
         // The live session must be left untouched (not clobbered by a respawn).
         assert!(world.contains_resource::<NetOutbox>());
-    }
-
-    /// The local bot must be the same profile a hosted lobby seat gets.
-    /// Two things this pins, both of which silently degrade rather than
-    /// fail: the committed champion has to *resolve* from the client
-    /// crate's directory (the path walk looks for the workspace
-    /// `Cargo.lock`), and it has to actually load — `load_slot` checks
-    /// the net's vocabulary against the encoder's, so a vocab drift
-    /// would leave every single-player match on the heuristic bot with
-    /// only a line on stderr to say so.
-    #[test]
-    fn local_matches_get_the_net_bot_when_the_champion_is_present() {
-        let champion = {
-            let mut dir: &std::path::Path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-            loop {
-                if dir.join("Cargo.lock").exists() {
-                    break dir.join("nets").join("champion.safetensors");
-                }
-                match dir.parent() {
-                    Some(p) => dir = p,
-                    None => break std::path::PathBuf::from("nets/champion.safetensors"),
-                }
-            }
-        };
-        if !champion.exists() {
-            // A bare checkout legitimately has no net; the fallback is
-            // the heuristic bot and that is not a failure.
-            assert!(!ensure_local_net());
-            return;
-        }
-        assert!(
-            ensure_local_net(),
-            "the committed champion at {} must load into SLOT_BEST",
-            champion.display()
-        );
-        assert!(crabomination::server::net_eval::slot_loaded(
-            crabomination::server::net_eval::SLOT_BEST
-        ));
-        // Idempotent: the OnceLock means repeated seats reuse one load.
-        assert!(ensure_local_net());
     }
 
     /// Sealed reads the env override when set, and otherwise resolves a
