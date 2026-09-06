@@ -3418,6 +3418,28 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-269)` TAKEN — the encoder's printed half off a per-object memo word (mana value, seven type bits, five pip counts): actor **-0.465 %**
+
+```text
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features), against the (-268) tip
+         3,196,166,585 -> 3,181,309,243 Ir  **-0.465 %**;  60 games / 6,080 rows / 0 stalls / 6,566 encoded states both sides
+  encode_printed_into  236,471 objects:  self 30.04 M -> 21.95 M;  callees (cmc + is_equipment + index_of) 7.46 M -> 0.18 M;  pack_printed ran 4,030 times (the misses: 1.7 %)
+  the fifth CardMemo word (+8 bytes on CardData):  Arc::clone_from_ref_in 90.32 M -> 90.54 M (+0.22 M, the unshare copies);  __memcpy unmoved
+  bot_ladder pools: not dumped — the word is read by the encoder only; the CardData growth is the +0.22 M above, ~0.007 %
+```
+
+The printed half of an object — `cmc()`, five `card_types.contains`
+walks, the pip walk and two subtype walks — is a pure function of the
+definition, and the object memo already showed the shape hits for
+encoded objects (`vocab_index`: 941 `index_of` calls for 236 k
+objects). A fifth `CardMemo` word packs it (`penc`: six bits of mana
+value, seven type/subtype bits, five three-bit pip counts; bit 63 the
+memo's) through `CardData::printed_encoding`, the `mana_summary`
+accessor's shape with the same stale-memo `debug_assert!`.
+`encode::tests::the_printed_encoding_word_matches_the_walked_features_
+for_every_card` packs every catalog card against the walked reads, which
+is also what pins the two saturating counts. Not serde-visible.
+
 ### `(-268)` TAKEN — one frozen scope per recorder snapshot, so the two encodes and the two material evals share one set of layer views: actor **-1.007 %**
 
 ```text
@@ -7607,6 +7629,41 @@ on `--decks sealed` (the chains' pool) and on `cube`; the `fixed` bench
 does not carry them. Round 56's second candidate (the 65 % start-score
 reuse) is CLOSED: it was the share of searches the chain runs on, reuse
 is 100 % of runs (`block_census` now prints both).
+
+**THE ACTOR-ONLY ROWS AT THE `(-268)` TIP (`45e162d2`, the same
+`selfplay_train --actors 1 --games 60 --steps 1 --seed 7` recipe,
+3,196,166,585 Ir; the dump is `cg.actor.c268.out` in a scratchpad).
+Three legs came off the encoder this run — `(-266)` the totals fold,
+`(-267)` the battlefield object's skipped printed pass, `(-268)` one
+scope per recorder snapshot — for -1.54 % of the actor between them.
+What is left of the two actor-only rows, so nobody re-reads them:**
+
+* **The encoder, 6.4 % -> ~4.9 % inclusive.** `encode_state_inner` self
+  58.2 M (1.8 %, flat by line: the top line is the eight-bit keyword
+  loop at 4.5 M); `encode_printed_into` 236,471 objects / 30.0 M
+  (~127 Ir an object: `cmc` 22, the pip walk, `is_aura`/`is_equipment`,
+  and the five type walks for the 160 k off-board objects);
+  `encode_instance_keywords_into` 160,523 / 15.9 M; the layer views
+  26.1 M (seat 0's encode is the first reader of the snapshot's scope
+  and builds them — seat 1 and both material evals hit); the
+  castability scope 15.7 M (two `mana_source_table` builds a state);
+  the library sort 5.5 M; `affordable_covered` 5.1 M. **The one device
+  left with a size is a per-definition memo of the printed half** (cmc,
+  type bits, pips, aura/equipment: ~40 bits) on a fifth `CardMemo` word
+  — ~20 M if it hits for the off-board objects, which it should (a hand
+  or library card is rarely written), but every `&mut` through the
+  handle clears it and 8 bytes on `CardData` is 231 k `make_mut_slow`
+  copies a run. Priced, not built. **Extending the snapshot scope over
+  the first bot's `next_action` is NOT a lead**: the search runs on
+  clones, and a scope held open across the bot is the `(-200)`/`(-201)`
+  shape with no census.
+* **The deck builder, 64.0 M inclusive (2.0 %; `lattice` 120 pools x
+  56 shapes = 6,720 `rank_shape` at 8.8 k each).** Read by line at this
+  tip: FLAT — the top line is the `allow` bitmask test at 3.6 M, then
+  `splash_cards` 7.9 M and `static_build_score` 8.5 M inclusive. It is
+  `(-63)`'s shape at its floor; nothing here is a lead.
+* **`Normal::sample` 41.9 M + `rand_chacha` 15.2 M (1.8 %) is the net's
+  weight init, once a process** — 0 in a 10 k-game run. Not a row.
 
 **THE ACTOR-PATH MAP — `--separate-callers=3` on `--decks sealed --a dflt
 --b dflt --games 6 --threads 1 --seed 1` at the `(-256)` tip

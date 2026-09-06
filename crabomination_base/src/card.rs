@@ -7014,6 +7014,9 @@ pub struct CardMemo(
     /// The auto-tapper's printed mana summary ([`CardData::mana_summary`]),
     /// valid flag at bit 63; the packing is the engine's.
     std::sync::atomic::AtomicU64,
+    /// The net encoder's printed half ([`CardData::printed_encoding`]),
+    /// valid flag at bit 63; the packing is the encoder's (PERF `(-269)`).
+    std::sync::atomic::AtomicU64,
 );
 
 impl CardMemo {
@@ -7179,6 +7182,20 @@ impl CardMemo {
         self.3.store(word | Self::MANA_VALID, std::sync::atomic::Ordering::Relaxed);
     }
 
+    /// On the *fifth* word; see the type doc.
+    const ENC_VALID: u64 = 1 << 63;
+
+    #[inline]
+    fn get_enc(&self) -> Option<u64> {
+        let v = self.4.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::ENC_VALID != 0).then_some(v & !Self::ENC_VALID)
+    }
+
+    #[inline]
+    fn set_enc(&self, word: u64) {
+        self.4.store(word | Self::ENC_VALID, std::sync::atomic::Ordering::Relaxed);
+    }
+
     /// The invalidation, called from [`CardInstance`]'s `DerefMut`.
     #[inline]
     fn clear(&self) {
@@ -7186,6 +7203,7 @@ impl CardMemo {
         self.1.store(0, std::sync::atomic::Ordering::Relaxed);
         self.2.store(0, std::sync::atomic::Ordering::Relaxed);
         self.3.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.4.store(0, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
@@ -7204,6 +7222,9 @@ impl Clone for CardMemo {
             ),
             std::sync::atomic::AtomicU64::new(
                 self.3.load(std::sync::atomic::Ordering::Relaxed),
+            ),
+            std::sync::atomic::AtomicU64::new(
+                self.4.load(std::sync::atomic::Ordering::Relaxed),
             ),
         )
     }
@@ -7948,6 +7969,26 @@ impl CardData {
         debug_assert_eq!(w & CardMemo::MANA_VALID, 0, "mana summary packs into bit 63");
         self.definition.memo.set_mana(w);
         Some(w)
+    }
+
+    /// The net encoder's printed half for this object, memoized on the
+    /// fifth word — `compute` packs it (bit 63 is the memo's). Pure in the
+    /// definition: cost, printed types and subtypes, nothing an instance
+    /// field can move. PERF `(-269)`.
+    #[inline]
+    pub fn printed_encoding(&self, compute: impl Fn(&CardDefinition) -> u64) -> u64 {
+        if let Some(w) = self.definition.memo.get_enc() {
+            debug_assert_eq!(
+                w,
+                compute(&self.definition),
+                "printed-encoding memo is stale: a definition rewrite did not clear it",
+            );
+            return w;
+        }
+        let w = compute(&self.definition);
+        debug_assert_eq!(w & CardMemo::ENC_VALID, 0, "printed encoding packs into bit 63");
+        self.definition.memo.set_enc(w);
+        w
     }
 
     /// [`CardDefinition::trigger_kind_fold`] for this object, memoized on the

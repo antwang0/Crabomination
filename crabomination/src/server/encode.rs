@@ -938,6 +938,53 @@ fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObj
     encode_instance_keywords_into(c, out);
 }
 
+/// The packing of [`CardData::printed_encoding`]'s word: mana value in the
+/// low six bits, seven printed type / subtype bits, and five three-bit pip
+/// counts from bit 16 (WUBRG order, as `color_index`). Bit 63 is the memo's.
+mod penc {
+    pub const CMC_MASK: u64 = 63;
+    pub const CREATURE: u32 = 6;
+    pub const LAND: u32 = 7;
+    pub const PLANESWALKER: u32 = 8;
+    pub const ARTIFACT: u32 = 9;
+    pub const ENCHANTMENT: u32 = 10;
+    pub const AURA: u32 = 11;
+    pub const EQUIPMENT: u32 = 12;
+    pub const PIPS_SHIFT: u32 = 16;
+}
+
+/// [`penc`]'s word for a definition. Saturating in the two counts, which
+/// no catalog card reaches (`debug_assert!`ed, and the test below packs
+/// every card of both pools against the walked features, so a card that
+/// did would fail the suite rather than encode quietly wrong).
+fn pack_printed(def: &crate::card::CardDefinition) -> u64 {
+    let cmc = def.cost.cmc();
+    debug_assert!(cmc <= penc::CMC_MASK as u32, "{}: mana value {cmc} saturates the encoding", def.name);
+    let mut w = u64::from(cmc.min(penc::CMC_MASK as u32));
+    for (on, bit) in [
+        (def.is_creature(), penc::CREATURE),
+        (def.is_land(), penc::LAND),
+        (def.is_planeswalker(), penc::PLANESWALKER),
+        (def.is_artifact(), penc::ARTIFACT),
+        (def.is_enchantment(), penc::ENCHANTMENT),
+        (def.is_aura(), penc::AURA),
+        (def.is_equipment(), penc::EQUIPMENT),
+    ] {
+        if on {
+            w |= 1 << bit;
+        }
+    }
+    let mut pips = [0u64; 5];
+    for col in def.cost.colored_symbols() {
+        pips[color_index(col)] += 1;
+    }
+    for (ci, n) in pips.iter().enumerate() {
+        debug_assert!(*n <= 7, "{}: {n} pips of one colour saturate the encoding", def.name);
+        w |= (*n).min(7) << (penc::PIPS_SHIFT + 3 * ci as u32);
+    }
+    w
+}
+
 /// The printed half of [`encode_card_object_into`]: cost, P/T, colour
 /// pips, the attachment flag, multiplicity and the card index — and the
 /// type flags when `with_types`. A battlefield object takes its types
@@ -945,18 +992,24 @@ fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObj
 fn encode_printed_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObject, with_types: bool) {
     let def = &c.definition;
     let feats = &mut out.feats;
-    feats[0] = def.cost.cmc() as f32 / 8.0;
+    // The definition's half of this pass as one memoized word: the cost
+    // walk, five type walks, the pip walk and two subtype walks were
+    // ~110 Ir an object over 236 k objects a 60-game actor run, on a
+    // definition nothing writes between two encodes (PERF `(-269)`).
+    let w = c.printed_encoding(pack_printed);
+    let bit = |b: u32| if w & (1 << b) != 0 { 1.0 } else { 0.0 };
+    feats[0] = (w & penc::CMC_MASK) as f32 / 8.0;
     if with_types {
-        feats[1] = if def.is_creature() { 1.0 } else { 0.0 };
-        feats[2] = if def.is_land() { 1.0 } else { 0.0 };
-        feats[3] = if def.is_planeswalker() { 1.0 } else { 0.0 };
+        feats[1] = bit(penc::CREATURE);
+        feats[2] = bit(penc::LAND);
+        feats[3] = bit(penc::PLANESWALKER);
         // v8: the two permanent classes the round-4 flags left in one
         // undifferentiated "none of the above" bucket. The embedding carries
         // the type for in-vocab cards; tokens and off-vocab cards live on
         // these bits alone, and a modern board is mostly made of them.
         if !ablated(ABLATE_V8) {
-            feats[53] = if def.is_artifact() { 1.0 } else { 0.0 };
-            feats[54] = if def.is_enchantment() { 1.0 } else { 0.0 };
+            feats[53] = bit(penc::ARTIFACT);
+            feats[54] = bit(penc::ENCHANTMENT);
         }
     }
     feats[4] = def.power.max(0) as f32 / 8.0;
@@ -964,8 +1017,11 @@ fn encode_printed_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObject,
     // Colour requirement, printed. `cmc` alone said a card costs four; it
     // could not say the four was {2}{G}{G} in a deck with three Forests.
     if !ablated(ABLATE_CASTABILITY) {
-        for col in def.cost.colored_symbols() {
-            feats[20 + color_index(col)] += 1.0 / 2.0;
+        for ci in 0..5 {
+            let n = (w >> (penc::PIPS_SHIFT + 3 * ci as u32)) & 7;
+            if n != 0 {
+                feats[20 + ci] = n as f32 / 2.0;
+            }
         }
     }
     // 25/26 (castable now / next turn) are hand-only and filled by the
@@ -975,7 +1031,7 @@ fn encode_printed_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObject,
     // An aura or equipment is a card whose whole value is an edge; the
     // printed-type flag lets the net treat "attachment in hand" as a
     // different kind of spell before any edge exists.
-    if !ablated(ABLATE_RELATIONS) && (def.is_aura() || def.is_equipment()) {
+    if !ablated(ABLATE_RELATIONS) && w & (1 << penc::AURA | 1 << penc::EQUIPMENT) != 0 {
         feats[35] = 1.0;
     }
     // Memoized on the card object — `index_of` is a hash lookup and the
@@ -2161,6 +2217,38 @@ mod tests {
         assert!((unbuffed.feats[4] - 2.0 / 8.0).abs() < 1e-6, "their bear is not ours to buff");
         assert!((s.global[22] - 3.0 / 12.0).abs() < 1e-6, "the power total sees the anthem");
         assert!((s.global[23] - 2.0 / 12.0).abs() < 1e-6);
+    }
+
+    /// `(-269)`: the printed half of an object comes off one memoized
+    /// word. Every card the catalog knows packs and unpacks to the
+    /// features the walked reads gave — the saturating counts included,
+    /// since a card past them would fail here rather than encode wrong.
+    #[test]
+    fn the_printed_encoding_word_matches_the_walked_features_for_every_card() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut checked = 0usize;
+        for f in crate::catalog::all_known_factories() {
+            let c = CardInstance::new(crate::card::CardId(1), f(), 0);
+            let def = &c.definition;
+            let mut o = EncodedObject::default();
+            encode_printed_into(&c, &vocab, &mut o, true);
+            let want = |on: bool| if on { 1.0 } else { 0.0 };
+            assert_eq!(o.feats[0], def.cost.cmc() as f32 / 8.0, "{}: mana value", def.name);
+            assert_eq!(o.feats[1], want(def.is_creature()), "{}: creature", def.name);
+            assert_eq!(o.feats[2], want(def.is_land()), "{}: land", def.name);
+            assert_eq!(o.feats[3], want(def.is_planeswalker()), "{}: planeswalker", def.name);
+            assert_eq!(o.feats[53], want(def.is_artifact()), "{}: artifact", def.name);
+            assert_eq!(o.feats[54], want(def.is_enchantment()), "{}: enchantment", def.name);
+            assert_eq!(o.feats[35], want(def.is_aura() || def.is_equipment()), "{}: attachment", def.name);
+            let mut pips = [0.0f32; 5];
+            for col in def.cost.colored_symbols() {
+                pips[color_index(col)] += 1.0 / 2.0;
+            }
+            assert_eq!(&o.feats[20..25], &pips, "{}: pips", def.name);
+            checked += 1;
+        }
+        assert!(checked > 20_000, "the catalog walk ran ({checked} cards)");
     }
 
     /// The board totals (globals 14..=23) are summed inside the object pass
