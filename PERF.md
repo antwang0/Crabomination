@@ -2582,8 +2582,9 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
 release the release-fast build of bot_ladder (the typecheck gate and more): clean
 --bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
         determinism ok; thread_determinism ok (3 vs 1 threads identical)
-sweep   fresh seeds on the ADOPTED DEFAULT (release-fast, the (-264) tip): 211, 223 x {sealed, cube} x --games 120 --threads 3 =
-        4 cells / 4,800 games, 0 undecided, 0 panics, every rc 0
+sweep   fresh seeds on the ADOPTED DEFAULT (release-fast): the (-264) tip, 211, 223 x {sealed, cube} x --games 120 --threads 3 =
+        4 cells / 4,800 games, 0 undecided, 0 panics, every rc 0;  the (-265) tip, 301..305 x {sealed, cube, fixed} x --games 400
+        --threads 3 = 15 cells / 48,000 games, 0 undecided, 0 panics, every rc 0 (sealed 4,800 games in ~23 s a cell)
 audits  audit_panics.py: 78 sites off the bin/test paths, 67 guarded, 11 lock-poison, 0 bare;
         audit_variant_coverage.py: 0 dead capabilities, the same 2 dead primitives
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
