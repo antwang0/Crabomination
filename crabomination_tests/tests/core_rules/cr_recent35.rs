@@ -215,6 +215,48 @@ fn cr_611_2b_until_your_next_turn_spans_one_turn_cycle() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "expired on your next turn");
 }
 
+/// CR 611.2b — `Effect::GrantKeyword` with an "until your next turn" /
+/// "until your next untap step" duration expires there, and `LoseKeyword`
+/// with one lasts that long. Before 2026-09-07 the grant arms knew only
+/// end-of-turn and permanent: Academic Probation's "can't block until your
+/// next turn" never ended, Bond of Revival's haste was permanent, and
+/// Ertai's Familiar regained phasing at end of turn.
+#[test]
+fn cr_611_2b_keyword_grant_and_loss_honour_until_your_next_turn() {
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    for (dur, bear_gains, familiar_loses) in [
+        (Duration::UntilNextTurn, true, false),
+        (Duration::UntilYourNextUntap, true, true),
+        (Duration::Permanent, false, false),
+    ] {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        // A printed flyer stands in for the Familiar: phasing itself would
+        // phase the test subject out at the very untap step under test.
+        let familiar = g.add_card_to_battlefield(0, catalog::storm_crow());
+        assert!(g.permanent_has_keyword(familiar, &Keyword::Flying), "printed flying");
+        if bear_gains {
+            let ctx = EffectContext::for_ability(bear, 0, None);
+            let gain = Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Haste, duration: dur };
+            g.resolve_effect(&gain, &ctx).expect("grant resolves");
+        }
+        if familiar_loses {
+            let ctx = EffectContext::for_ability(familiar, 0, None);
+            let lose = Effect::LoseKeyword { what: Selector::This, keyword: Keyword::Flying, duration: dur };
+            g.resolve_effect(&lose, &ctx).expect("loss resolves");
+        }
+        assert_eq!(g.permanent_has_keyword(bear, &Keyword::Haste), bear_gains, "{dur:?}: granted");
+        assert_eq!(g.permanent_has_keyword(familiar, &Keyword::Flying), !familiar_loses, "{dur:?}: lost");
+        advance_until_active(&mut g, 1);
+        assert_eq!(g.permanent_has_keyword(bear, &Keyword::Haste), bear_gains, "{dur:?}: spans the opponent's turn");
+        assert_eq!(g.permanent_has_keyword(familiar, &Keyword::Flying), !familiar_loses, "{dur:?}: the loss spans it too");
+        advance_until_active(&mut g, 0);
+        assert!(!g.permanent_has_keyword(bear, &Keyword::Haste), "{dur:?}: expired on your next turn");
+        assert!(g.permanent_has_keyword(familiar, &Keyword::Flying), "{dur:?}: flying is back at your next untap");
+    }
+}
+
 /// Step the game until `seat` is the active player.
 fn advance_until_active(g: &mut GameState, seat: usize) {
     for _ in 0..200 {

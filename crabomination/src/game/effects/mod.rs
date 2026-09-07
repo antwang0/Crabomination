@@ -13991,38 +13991,25 @@ impl GameState {
             }
 
             Effect::GrantKeyword { what, keyword, duration } => {
-                // Per-instance granted keyword. Previously mutated
-                // `definition.keywords` directly with no cleanup, so an
-                // "EOT haste" grant would persist forever. Now distinguishes
-                // EOT vs Permanent: EOT grants enter the `granted_keywords_eot`
-                // bag (cleared at Cleanup along with `power_bonus`), while
-                // Permanent grants still mutate the printed keyword list
-                // (a leak-free no-op since indefinite grants don't expire).
-                use crate::effect::Duration as EffectDur;
-                let is_eot = matches!(
-                    duration,
-                    EffectDur::EndOfTurn | EffectDur::EndOfCombat
-                );
-                for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id() {
-                        if is_eot {
-                            self.grant_keyword_eot(cid, keyword.clone());
-                        } else if let Some(c) = self.battlefield_find_mut(cid)
-                            && !c.definition.keywords.contains(keyword)
-                        {
-                            c.definition_make_mut()
-                                .keywords
-                                .push(keyword.clone());
-                        }
-                    }
+                // Three carriers by duration (`grant_keyword_for`): the
+                // per-instance `granted_keywords_eot` bag (cleared at Cleanup
+                // along with `power_bonus`), the printed keyword list for a
+                // permanent grant, and a layer-6 effect under
+                // `effect_duration_for` for everything else — "until your
+                // next turn", "while this is tapped" — which used to be baked
+                // onto the definition as permanent.
+                let ids: Vec<_> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for cid in ids {
+                    self.grant_keyword_for(cid, keyword.clone(), *duration, ctx);
                 }
                 Ok(())
             }
 
             Effect::GrantKeywords { what, keywords, duration } => {
-                use crate::effect::Duration as EffectDur;
-                let is_eot =
-                    matches!(duration, EffectDur::EndOfTurn | EffectDur::EndOfCombat);
                 let ids: Vec<_> = self
                     .resolve_selector(what, ctx)
                     .into_iter()
@@ -14030,34 +14017,40 @@ impl GameState {
                     .collect();
                 for cid in ids {
                     for keyword in keywords {
-                        if is_eot {
-                            self.grant_keyword_eot(cid, keyword.clone());
-                        } else if let Some(c) = self.battlefield_find_mut(cid)
-                            && !c.definition.keywords.contains(keyword)
-                        {
-                            c.definition_make_mut()
-                                .keywords
-                                .push(keyword.clone());
-                        }
+                        self.grant_keyword_for(cid, keyword.clone(), *duration, ctx);
                     }
                 }
                 Ok(())
             }
 
             Effect::LoseKeyword { what, keyword, duration } => {
-                let indefinite = matches!(duration, Duration::Permanent);
-                for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id()
-                        && let Some(c) = self.battlefield_find_mut(cid)
-                    {
-                        let list = if indefinite {
-                            &mut c.removed_keywords
-                        } else {
-                            &mut c.removed_keywords_eot
-                        };
-                        if !list.contains(keyword) {
-                            list.push(keyword.clone());
+                let ids: Vec<_> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for cid in ids {
+                    match duration {
+                        Duration::Permanent | Duration::EndOfTurn | Duration::EndOfCombat => {
+                            let Some(c) = self.battlefield_find_mut(cid) else { continue };
+                            let list = if matches!(duration, Duration::Permanent) {
+                                &mut c.removed_keywords
+                            } else {
+                                &mut c.removed_keywords_eot
+                            };
+                            if !list.contains(keyword) {
+                                list.push(keyword.clone());
+                            }
                         }
+                        // "until your next untap step" (Ertai's Familiar's
+                        // phasing) — the EOT bag ended it a turn early.
+                        other => self.keyword_layer_effect(
+                            cid,
+                            crate::game::layers::Modification::RemoveKeyword(keyword.clone()),
+                            *other,
+                            ctx.controller,
+                            ctx.source.unwrap_or(CardId(0)),
+                        ),
                     }
                 }
                 Ok(())
@@ -14858,20 +14851,13 @@ impl GameState {
                     },
                 };
                 let kw = Keyword::Protection(color);
-                let is_eot = matches!(
-                    duration,
-                    crate::effect::Duration::EndOfTurn | crate::effect::Duration::EndOfCombat
-                );
-                for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id() {
-                        if is_eot {
-                            self.grant_keyword_eot(cid, kw.clone());
-                        } else if let Some(c) = self.battlefield_find_mut(cid)
-                            && !c.definition.keywords.contains(&kw)
-                        {
-                            c.definition_make_mut().keywords.push(kw.clone());
-                        }
-                    }
+                let ids: Vec<_> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for cid in ids {
+                    self.grant_keyword_for(cid, kw.clone(), *duration, ctx);
                 }
                 Ok(())
             }

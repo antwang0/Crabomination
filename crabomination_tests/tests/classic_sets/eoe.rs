@@ -1158,6 +1158,22 @@ fn mouth_of_the_storm_shrinks_opponents() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(mouth).unwrap().keywords().contains(&Keyword::Flying));
     assert_eq!(g.computed_permanent(foe).unwrap().power, 1, "-3/-0 on opponents");
+    // CR 611.2b — "until your next turn" spans the opponent's turn. Before
+    // 2026-09-07 `Duration::UntilNextTurn` expired at *any* player's next
+    // turn, so the shrink was gone before the opponent could attack into it.
+    for seat in 0..2 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    while !(g.active_player_idx == 1 && g.step == TurnStep::PreCombatMain) {
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 1, "still -3/-0 on the opponent's turn");
+    while g.active_player_idx != 0 {
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 4, "wears off as your next turn begins");
 }
 
 /// Meltstrider Eulogist draws when a counter-bearing creature you control dies.

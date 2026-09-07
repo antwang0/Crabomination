@@ -2172,7 +2172,11 @@ pub enum Duration {
     /// `UntilYourNextUntap`, so the affected permanent is still animated as
     /// its controller untaps (Xenic Poltergeist).
     UntilYourNextUpkeep,
-    /// Until the start of the next turn.
+    /// Until the controller's next turn begins — the oracle "until your next
+    /// turn" (CR 611.2b), which is every catalog use; the engine maps it beside
+    /// `UntilYourNextUntap`. It was read as "any player's next turn" before
+    /// 2026-09-07, so Liliana's -2/-1 and Mouth of the Storm's -3/-0 ended
+    /// before the opponent's combat.
     UntilNextTurn,
     /// CR 611.2c — "for as long as this permanent remains tapped" (Thran
     /// Weaponry). The affected set is locked in at resolution; the SBA sweep

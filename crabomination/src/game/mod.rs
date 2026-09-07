@@ -14839,6 +14839,66 @@ impl GameState {
         }
     }
 
+    /// A keyword grant or loss whose duration neither the per-instance EOT
+    /// bags nor the printed list can hold — "until your next turn", "until
+    /// your next upkeep", "while this is tapped" — as a layer-6 continuous
+    /// effect under [`effect_duration_for`](Self::effect_duration_for), so it
+    /// expires where the card says. Before 2026-09-07 every such grant was
+    /// baked onto the definition as permanent (Academic Probation's "can't
+    /// block until your next turn" never ended).
+    pub(crate) fn keyword_layer_effect(
+        &mut self,
+        cid: CardId,
+        modification: crate::game::layers::Modification,
+        duration: crate::effect::Duration,
+        controller: usize,
+        source: CardId,
+    ) {
+        use crate::game::layers::{AffectedPermanents, ContinuousEffect, Layer};
+        let duration = self.effect_duration_for(duration, controller);
+        let ts = self.next_timestamp();
+        self.add_continuous_effect(ContinuousEffect {
+            timestamp: ts,
+            source,
+            affected: AffectedPermanents::just(cid),
+            layer: Layer::L6Ability,
+            sublayer: None,
+            duration,
+            modification,
+        });
+    }
+
+    /// `Effect::GrantKeyword`'s three carriers by duration: the per-instance
+    /// EOT bag (end of turn / combat), the printed list (permanent — a
+    /// leak-free no-op since indefinite grants don't expire), or a layer-6
+    /// effect for everything else ([`keyword_layer_effect`](Self::keyword_layer_effect)).
+    pub(crate) fn grant_keyword_for(
+        &mut self,
+        cid: CardId,
+        kw: crate::card::Keyword,
+        duration: crate::effect::Duration,
+        ctx: &crate::game::effects::EffectContext,
+    ) {
+        use crate::effect::Duration;
+        match duration {
+            Duration::EndOfTurn | Duration::EndOfCombat => self.grant_keyword_eot(cid, kw),
+            Duration::Permanent => {
+                if let Some(c) = self.battlefield_find_mut(cid)
+                    && !c.definition.keywords.contains(&kw)
+                {
+                    c.definition_make_mut().keywords.push(kw);
+                }
+            }
+            other => self.keyword_layer_effect(
+                cid,
+                crate::game::layers::Modification::AddKeyword(kw),
+                other,
+                ctx.controller,
+                ctx.source.unwrap_or(CardId(0)),
+            ),
+        }
+    }
+
     /// Allocate a new monotonically-increasing timestamp.
     pub fn next_timestamp(&mut self) -> u64 {
         let ts = self.next_effect_timestamp;
@@ -14881,7 +14941,12 @@ impl GameState {
         controller: usize,
     ) -> EffectDuration {
         match duration {
-            crate::effect::Duration::UntilYourNextUntap => EffectDuration::UntilYourNextTurn {
+            // CR 611.2b — "until your next turn" is the controller's next turn
+            // (every catalog `UntilNextTurn` prints it), not any player's:
+            // the controller-less `map_effect_duration` read it as the latter
+            // and a -2/-1 cast on your turn wore off before the opponent's.
+            crate::effect::Duration::UntilYourNextUntap
+            | crate::effect::Duration::UntilNextTurn => EffectDuration::UntilYourNextTurn {
                 player: controller,
                 installed_turn: self.turn_number,
             },
