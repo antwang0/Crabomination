@@ -1339,6 +1339,42 @@ fn twilight_drover_grows_on_token_death() {
     );
 }
 
+/// A bounced token leaves the battlefield too. `PermanentLeavesBattlefield`
+/// matched only deaths until 2026-09-07 (`GameEvent::PermanentLeftBattlefield`
+/// is the non-death half now), so every "leaves the battlefield" watcher in
+/// the catalog slept through bounces and exiles.
+#[test]
+fn twilight_drover_grows_on_token_bounce() {
+    let mut g = two_player_game();
+    let drover = g.add_card_to_battlefield(0, catalog::twilight_drover());
+    let land = g.add_card_to_battlefield(0, catalog::vitu_ghazi_the_city_tree());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("saproling");
+    drain_stack(&mut g);
+    let sap = g.battlefield.iter().find(|c| c.definition.name == "Saproling").unwrap().id;
+    let ctx = crabomination::game::effects::EffectContext::for_ability(sap, 1, Some(Target::Permanent(sap)));
+    let bounce = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::Target(0),
+        to: crabomination::effect::ZoneDest::Hand(crabomination::effect::PlayerRef::OwnerOf(Box::new(
+            crabomination::effect::Selector::Target(0),
+        ))),
+    };
+    let evs = g.resolve_effect(&bounce, &ctx).expect("bounce resolves");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sap).is_none(), "the token is gone");
+    assert_eq!(
+        g.battlefield_find(drover).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne),
+        1,
+        "a bounced creature token grows Twilight Drover",
+    );
+}
+
 // ── gap wave 9 ───────────────────────────────────────────────────────────────
 
 /// Necroplasm grows on upkeep and, at the end step, destroys every creature

@@ -62,6 +62,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::CreatureSacrificed { .. } => bits!(K::CreatureSacrificed),
         E::PermanentSacrificed { .. } => bits!(K::PermanentSacrificed),
         E::CreatureLeftWithoutDying { .. } => bits!(K::CreatureLeavesBattlefieldNotDying),
+        E::PermanentLeftBattlefield { .. } => bits!(K::PermanentLeavesBattlefield),
         E::MonarchChanged { .. } => bits!(K::BecameMonarch),
         E::CardDrawn { .. } => bits!(K::CardDrawn),
         E::FirstCardDrawnThisTurn { .. } => bits!(K::FirstCardDrawnThisTurn),
@@ -255,6 +256,7 @@ fn reference_event_kind_matches(
         (EventKind::CreatureSacrificed, GameEvent::CreatureSacrificed { .. }) => true,
         (EventKind::PermanentSacrificed, GameEvent::PermanentSacrificed { .. }) => true,
         (EventKind::PermanentLeavesBattlefield, GameEvent::CreatureDied { .. }) => true,
+        (EventKind::PermanentLeavesBattlefield, GameEvent::PermanentLeftBattlefield { .. }) => true,
         (
             EventKind::CreatureLeavesBattlefieldNotDying,
             GameEvent::CreatureLeftWithoutDying { .. },
@@ -778,6 +780,12 @@ fn event_matches_spec_rest(
             event,
             GameEvent::CreatureLeftWithoutDying { card_id, .. } if *card_id == source.id
         ) || matches!(
+            // "When this leaves the battlefield" off a bounce / exile: the
+            // source is the just-left snapshot the dispatcher's LKI walk hands
+            // in (a death is collected before removal instead).
+            event,
+            GameEvent::PermanentLeftBattlefield { card_id, .. } if *card_id == source.id
+        ) || matches!(
             // CR 702.122/702.171 — "Whenever this creature crews a Vehicle or
             // saddles a Mount." The source must be among the crew / riders.
             event,
@@ -844,7 +852,8 @@ fn event_matches_spec_rest(
                 // A creature that left without dying is gone from every zone;
                 // its last controller rides the event (Dour Port-Mage).
                 .or(match event {
-                    GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
+                    GameEvent::CreatureLeftWithoutDying { controller, .. }
+                    | GameEvent::PermanentLeftBattlefield { controller, .. } => Some(*controller),
                     // The dead permanent's authoritative last controller (a
                     // stolen permanent that dies fires the thief's watcher).
                     GameEvent::PermanentDied { controller, .. } => Some(*controller),
@@ -1122,7 +1131,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // The leaving creature is gone from every zone by dispatch time, so
         // its last controller travels in the event (drives YourControl /
         // OpponentControl scope for Three Tree Scribe).
-        GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
+        GameEvent::CreatureLeftWithoutDying { controller, .. }
+        | GameEvent::PermanentLeftBattlefield { controller, .. } => Some(*controller),
         // The dead permanent's last controller drives "a … you control dies".
         GameEvent::PermanentDied { controller, .. } => Some(*controller),
         // DSK Eerie — the unlocking player drives "whenever you fully unlock
@@ -1157,7 +1167,8 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::PermanentDestroyedByEffect { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
-        GameEvent::CreatureLeftWithoutDying { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CreatureLeftWithoutDying { card_id, .. }
+        | GameEvent::PermanentLeftBattlefield { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::AttackerDeclared(card_id) => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BlockerDeclared { blocker, attacker } => Some(EntityRef::Permanent(
             if matches!(kind, EventKind::BecomesBlocked | EventKind::BecomesBlockedByNOrMore(_)) {
@@ -1344,6 +1355,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CardMilled { card_id, .. }
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::CreatureLeftWithoutDying { card_id, .. }
+        | GameEvent::PermanentLeftBattlefield { card_id, .. }
         | GameEvent::PermanentTapped { card_id, .. }
         | GameEvent::TappedForMana { card_id, .. }
         | GameEvent::PermanentUntapped { card_id }

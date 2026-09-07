@@ -2749,6 +2749,8 @@ pub enum GameEventWire {
     PermanentSacrificed { card_id: CardId, who: usize },
     /// Wire mirror of `GameEvent::CreatureLeftWithoutDying` (CR 603.6).
     CreatureLeftWithoutDying { card_id: CardId, controller: usize },
+    /// Wire mirror of `GameEvent::PermanentLeftBattlefield` (CR 603.10).
+    PermanentLeftBattlefield { card_id: CardId, controller: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     #[serde(rename = "kw_counter_added")]
@@ -2988,6 +2990,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::CreatureLeftWithoutDying { card_id, controller } => {
                 GameEventWire::CreatureLeftWithoutDying { card_id: *card_id, controller: *controller }
+            }
+            GameEvent::PermanentLeftBattlefield { card_id, controller } => {
+                GameEventWire::PermanentLeftBattlefield { card_id: *card_id, controller: *controller }
             }
             GameEvent::PermanentSacrificed { card_id, who } => {
                 GameEventWire::PermanentSacrificed { card_id: *card_id, who: *who }
@@ -3331,6 +3336,9 @@ impl GameEventWire {
             }
             E::CreatureLeftWithoutDying { card_id, .. } => {
                 format!("{} left the battlefield without dying", name(*card_id))
+            }
+            E::PermanentLeftBattlefield { card_id, .. } => {
+                format!("{} left the battlefield", name(*card_id))
             }
             E::PumpApplied {
                 card_id,

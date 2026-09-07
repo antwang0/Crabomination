@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-07 — "leaves the battlefield" fired only on death, and the untap step minted one trigger for a board](#fixed-2026-09-07--leaves-the-battlefield-fired-only-on-death-and-the-untap-step-minted-one-trigger-for-a-board) | 34 |
 | Bugs & robustness | [The `debug-assertions` sweep found FIVE real defects, and the committed grid was green on all of them](#the-debug-assertions-sweep-found-five-real-defects-and-the-committed-grid-was-green-on-all-of-them) | 120 |
 | Bugs & robustness | [CLOSED — the two stall-sweep leads, and why neither is a bug](#closed--the-two-stall-sweep-leads-and-why-neither-is-a-bug) | 28 |
 | Bugs & robustness | [CLOSED — what the seeded cube smoke test left behind (eighty-fifth pass)](#closed--what-the-seeded-cube-smoke-test-left-behind-eighty-fifth-pass) | 72 |
@@ -34,6 +35,40 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-07 — "leaves the battlefield" fired only on death, and the untap step minted one trigger for a board
+
+Found by the `trig` audit column (INCOMPLETE_CARDS, "Trigger events"):
+Thragtusk's Beast moved to `PermanentLeavesBattlefield` and its bounce
+test failed, because `event_kind_bits` / `event_kind_matches` paired that
+kind with `GameEvent::CreatureDied` and nothing else. The non-graveyard
+exits (the `Move` path, `remove_from_battlefield_to_hand`, the exile
+path, Glimpse of Tomorrow, meld) reported `CreatureLeftWithoutDying` for
+creatures — a different kind, used by two cards — and nothing for the
+87 `PermanentLeavesBattlefield` literals. Every one of them was a dies
+trigger in practice; every test of one killed the permanent.
+
+The fix is one new event, `GameEvent::PermanentLeftBattlefield {
+card_id, controller }`, pushed by `GameState::note_left_without_dying`
+beside `on_left_battlefield` at each of those exits. The `SelfSource`
+half needs the card after it has gone, so the same helper snapshots the
+leaver into `died_card_snapshots` and the dispatcher's LKI walk gained a
+`lki_self_left` arm that pairs a `SelfSource` leaves trigger with *that
+event only* — a death's copy of the trigger is still collected before
+removal in `remove_to_graveyard_with_triggers`, so nothing double-fires.
+Scope / subject / actor plumbing in `events.rs` treats it as
+`CreatureLeftWithoutDying`'s sibling; `GameEventWire` mirrors it.
+
+The same run: `BecomesUntapped` was absent from the CR 603.6 fan-out
+list in `push_ordered_trigger_candidates`, so an untap step untapping
+three permanents minted one Mesmeric Orb trigger. Added. `Tapped` is the
+same shape and is **not** added — no test covers a batch of taps yet.
+
+Tests: `modern::decks_16_17_misc::thragtusk_bounced_still_makes_a_beast`,
+`classic_sets::rav::twilight_drover_grows_on_token_bounce`,
+`modern::cascade_dredge_auras::rancor_exiled_from_the_battlefield_stays_in_exile`
+(the dies-only card must *not* hear the new event),
+`modern::coverage_backfill::mesmeric_orb_mills_one_per_permanent_untapped`.
 
 ## The `debug-assertions` sweep found FIVE real defects, and the committed grid was green on all of them
 

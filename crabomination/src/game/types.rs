@@ -2677,6 +2677,14 @@ pub enum GameEvent {
     /// from the leaving card (it's gone by dispatch time). Dour Port-Mage,
     /// Three Tree Scribe.
     CreatureLeftWithoutDying { card_id: CardId, controller: usize },
+    /// CR 603.10 — any permanent left the battlefield for a zone other than a
+    /// graveyard (bounced / exiled / shuffled away / melded). The "leaves the
+    /// battlefield" event a death does not produce: `CreatureDied` already
+    /// reaches `EventKind::PermanentLeavesBattlefield`, this is the other half.
+    /// `controller` is its last controller (the card is gone by dispatch).
+    /// The exit snapshots the leaver into `died_card_snapshots` so its own
+    /// leaves trigger fires off last-known information.
+    PermanentLeftBattlefield { card_id: CardId, controller: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     /// CR 122.1b — keyword counters are counters; surfaced so the log /

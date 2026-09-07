@@ -2087,6 +2087,9 @@ impl GameState {
             // (bounce / exile / library) *without dying* before it's consumed.
             let leaver = (card.definition.is_creature() && !matches!(resolved_dest, ZoneDest::Graveyard))
                 .then_some((card.id, card.controller));
+            if !matches!(resolved_dest, ZoneDest::Graveyard | ZoneDest::Battlefield { .. }) {
+                self.note_left_without_dying(&card, events);
+            }
             // EOE Void — any nonland permanent leaving the battlefield (bounce,
             // sacrifice, exile, …) latches the turn-wide flag.
             if !card.definition.is_land() {
@@ -2687,6 +2690,24 @@ impl GameState {
     /// battlefield-removal path: CR 603.6e linked-exile returns plus
     /// "when [that permanent] leaves the battlefield" delayed triggers
     /// (`DelayedKind::WhenCardLeavesBattlefield` — Hofri Ghostforge).
+    /// CR 603.10 — a permanent leaving for a zone other than a graveyard.
+    /// Snapshots the leaver for the dispatcher's LKI walk (its own "when this
+    /// leaves the battlefield" fires off the snapshot, the card being gone by
+    /// dispatch — the death path collects that trigger before removal
+    /// instead) and reports the leave to every other listener. Every
+    /// non-graveyard exit calls this beside `on_left_battlefield`.
+    pub(crate) fn note_left_without_dying(
+        &mut self,
+        card: &crate::card::CardInstance,
+        events: &mut Vec<GameEvent>,
+    ) {
+        self.died_card_snapshots.insert(card.id, card.clone());
+        events.push(GameEvent::PermanentLeftBattlefield {
+            card_id: card.id,
+            controller: card.controller,
+        });
+    }
+
     pub(crate) fn on_left_battlefield(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         self.return_linked_exiles(id, events);
         // CR 702.26 — permanents phased out "until [this] leaves the

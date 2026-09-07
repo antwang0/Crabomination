@@ -4103,6 +4103,7 @@ impl GameState {
                     if let Some(mut card) = self.battlefield.take_by_id(cid) {
                         self.remove_effects_from_source(cid);
                         self.remove_from_combat(cid);
+                        self.note_left_without_dying(&card, events);
                         self.on_left_battlefield(cid, events);
                         if card.is_token {
                             continue; // tokens cease to exist (CR 111.7)
@@ -14356,6 +14357,7 @@ impl GameState {
                     self.remove_effects_from_source(id);
                     self.remove_from_combat(id);
                     events.push(GameEvent::PermanentExiled { card_id: id });
+                    self.note_left_without_dying(&card, events);
                     self.on_left_battlefield(id, events);
                     parts.push(card);
                 }

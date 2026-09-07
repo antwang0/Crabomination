@@ -6709,6 +6709,7 @@ impl GameState {
             self.nonland_permanent_left_bf_this_turn = true;
         }
         let leaver = card.definition.is_creature().then_some((card.id, card.controller));
+        self.note_left_without_dying(&card, &mut events);
         if !card.is_token {
             self.players[owner].hand.push(card);
         }
@@ -6742,6 +6743,8 @@ impl GameState {
             // without dying (Dour Port-Mage / Three Tree Scribe watchers).
             let leaver =
                 (card.definition.is_creature()).then_some((card.id, card.controller));
+            let mut events = Vec::new();
+            self.note_left_without_dying(&card, &mut events);
             // Record for `Selector::ExiledThisResolution` ("that many basic
             // lands", "if you exiled a land card this way"). The library and
             // graveyard exits record it in `place_card_in_dest` /
@@ -6755,7 +6758,6 @@ impl GameState {
                 self.scratch.exiled_card_ids_this_resolution.push(id);
             }
             self.place_card_at_resolved_zone(card, resolved);
-            let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);
             if let Some((card_id, controller)) = leaver {
                 events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });

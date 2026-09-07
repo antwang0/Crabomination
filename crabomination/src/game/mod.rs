@@ -2352,7 +2352,10 @@ pub struct GameState {
     /// way to read both the controller AND the dying card's
     /// printed types / counters. Cleared after each dispatch pass.
     /// `#[serde(skip)]` because it's transient scratch — snapshots
-    /// don't need to preserve mid-SBA state.
+    /// don't need to preserve mid-SBA state. Also holds the permanents
+    /// that just left for a non-graveyard zone (`note_left_without_dying`),
+    /// so their own "when this leaves the battlefield" fires off the same
+    /// LKI walk.
     #[serde(skip)]
     pub died_card_snapshots: crate::game::types::IdMap<CardId, CardInstance>,
     /// CR 603.10 / 608.2h — last-known-information snapshots for
@@ -19306,6 +19309,10 @@ impl GameState {
                         | crate::effect::EventKind::CreatureSacrificed
                         | crate::effect::EventKind::PermanentSacrificed
                         | crate::effect::EventKind::PermanentLeavesBattlefield
+                        // The untap step untaps a board at once; "whenever a
+                        // permanent becomes untapped" (Mesmeric Orb) fires
+                        // per permanent.
+                        | crate::effect::EventKind::BecomesUntapped
                         | crate::effect::EventKind::CardDrawn
                         | crate::effect::EventKind::CardDiscarded
                         // Its twin: Spiritual Focus pays per card an
@@ -19589,10 +19596,23 @@ impl GameState {
                         | crate::effect::EventKind::CardExiled
                         | crate::effect::EventKind::DealtDamage
                 ) && ta.event.scope == crate::effect::EventScope::EnchantedBySource;
-                if !(lki_self || lki_enchanted) {
+                // "When this leaves the battlefield" off a bounce / exile /
+                // shuffle: the exit snapshotted the leaver and reported
+                // `PermanentLeftBattlefield`. Paired with that event only — a
+                // death's copy of the same trigger was collected before
+                // removal (`remove_to_graveyard_with_triggers`).
+                let lki_self_left = ta.event.kind
+                    == crate::effect::EventKind::PermanentLeavesBattlefield
+                    && ta.event.scope == crate::effect::EventScope::SelfSource;
+                if !(lki_self || lki_enchanted || lki_self_left) {
                     continue;
                 }
                 for ev in events {
+                    if lki_self_left
+                        && !matches!(ev, GameEvent::PermanentLeftBattlefield { card_id, .. } if *card_id == snap.id)
+                    {
+                        continue;
+                    }
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, snap) {
                         candidates.push(TriggerCandidate {
                             from_mana_ability: false,
