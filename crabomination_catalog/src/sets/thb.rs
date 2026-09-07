@@ -5306,15 +5306,18 @@ pub fn impending_doom() -> CardDefinition {
             power: 3,
             toughness: 3,
             keywords: vec![Keyword::MustAttack],
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-                effect: Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::You),
-                    amount: Value::Const(3),
-                },
-            }],
             ..Default::default()
         }),
+        // "This Aura deals 3 damage to that creature's controller": the
+        // Aura's own trigger (Death Watch's shape), so the damage is the
+        // Aura's, not the dying creature's.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::Const(3),
+            },
+        }],
         ..Default::default()
     }
 }

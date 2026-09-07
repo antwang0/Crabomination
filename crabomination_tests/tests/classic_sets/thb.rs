@@ -2882,7 +2882,8 @@ fn inevitable_end_sacrifices_at_upkeep() {
     assert!(g.battlefield_find(victim).is_none(), "controller sacrificed the bear");
 }
 
-/// Impending Doom burns the enchanted creature's controller when it dies.
+/// Impending Doom burns the enchanted creature's controller when it dies —
+/// the Aura's own trigger off the death path, dealt by the Aura.
 #[test]
 fn impending_doom_burns_on_death() {
     let mut g = two_player_game();
@@ -2893,10 +2894,12 @@ fn impending_doom_burns_on_death() {
     assert_eq!(cp.power, 5, "2/2 + 3/3");
     assert!(cp.keywords().contains(&crabomination::card::Keyword::MustAttack));
     let life_before = g.players[1].life;
-    let dies = catalog::impending_doom().equipped_bonus.unwrap().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_trigger(victim, 1, None, 0);
-    g.resolve_effect(&dies, &ctx).unwrap();
-    assert_eq!(g.players[1].life, life_before - 3, "controller took 3");
+    g.battlefield_find_mut(victim).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 3, "the creature's controller took 3");
+    assert_eq!(g.players[0].life, 20, "not the Aura's controller");
 }
 
 /// Naiad of Hidden Coves discounts your spells only on opponents' turns.

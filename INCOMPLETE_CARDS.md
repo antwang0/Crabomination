@@ -702,7 +702,12 @@ second loot, and a colourless burn stopped by protection from red. The
 helper sets `triggers_on_equipment` now; Sword of Truth and Justice's
 `Selector::This` (the creature, under the old source) became the printed
 "target creature you control". `sword_of_war_and_peace_burns_by_hand_and_
-gains_life` asserts the single loot.
+gains_life` asserts the single loot. The flag then turned out to be
+honoured by two hooks only (ENGINE_BACKLOG, first section): Godsend and a
+bestowed Crystalline Nautilus were dead, Kusari-Gama and Impending Doom
+dealt their damage as the creature's — all four fixed the same day.
+Of the eight other attachments with a damage rider, six print "this
+creature deals" and are right as they are.
 
 False positives worth knowing: Valley Mightcaller's Squirrel sat in a
 multi-line `HasCreatureType(\n CreatureType::Squirrel,\n)` the first regex
