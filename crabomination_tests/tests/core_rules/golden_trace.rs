@@ -340,7 +340,18 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // a non-empty greedy declaration. Same winner, same turn count, same
     // action count — only the digest moves; seeds 1, 2, 4 and 5 and the
     // full committed trace are untouched.
-    (3, Some(1), 32, 737, 0x72af_f312_fcea_3b21),
+    // Re-blessed 2026-09-07 for the round-68 adoption (the attack sim's
+    // main-phase casts capped at one per sim; no loss over four ladder
+    // seeds plus cube and fixed, 0.86 / 0.84 of the sealed / cube wall
+    // clock): the sim no longer plays the opponent's second and third
+    // spells of their next main phase, so a hold-back priced against a
+    // fully deployed crack-back is priced against its first card. Seed 3
+    // FLIPS back to seat 0 and runs far shorter (32 -> 19 turns, 737 ->
+    // 451 actions) — the aggro deck races where round 56's block-heavy
+    // line let the skies deck win the long game; seed 4 keeps its winner
+    // and ends two turns sooner (22 -> 20, 541 -> 504). Seeds 1, 2 and 5
+    // are untouched; the full committed trace moves.
+    (3, Some(0), 19, 451, 0x9a11_e2ff_b683_abfa),
     // Re-blessed 2026-08-22 for the slot-walk targeting fix: the filtered
     // auto-target path used to take the first legal permanent in
     // battlefield order, so Swords to Plowshares ("target creature", an
@@ -349,7 +360,7 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // ordering, and seed 4's game ends in two fewer actions (330 -> 328).
     // Same winner, same turn count; seeds 1, 2, 3 and 5 are untouched,
     // which is what a targeting fix rather than a rules change looks like.
-    (4, Some(1), 22, 541, 0x5b00_4268_cea2_9a41),
+    (4, Some(1), 20, 504, 0xa39c_a065_2398_4c2c),
     (5, Some(0), 7, 181, 0xbdda_f862_13d8_5da0),
 ];
 

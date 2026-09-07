@@ -4403,3 +4403,65 @@ Not verified: the same slot shape sits on 129 STX cards and 88 of the modern
 deck set (Electrolyze, Forked Bolt, Crackle with Power …). If the cube ladder
 pools carry them, the round ≤66 ladders had bots bolting their own faces;
 the seat flag now covers every pool, but no cube reading was taken here.
+
+## Round 68 — the attack sim's main-phase casts capped at one: NO LOSS at −14 / −16 % wall clock, ADOPTED on the default (2026-09-07)
+
+The `(-275)` context read of the cube default (PERF candidates, "THE
+NEW CUBE DEFAULT") left one lever and filed it as bot-side: the sim's
+own casts were 17.2 % of the run, and 33 sim passes a sim against
+sealed's 13.2. `simulate_attack_outcome_once` plays a turn cycle with
+both seats' spell layer live (`attack_sim_spells`), and from a main
+phase that layer casts the best static-ranked candidate, resolves it,
+re-enumerates and casts the next — 2.35 main-phase casts a sim on cube,
+1.74 on sealed (`accept_on` under `sim_spell_action_inner`, six-game
+dumps at the round-67 tip). `sim_main_cast_cap` caps those casts per
+sim; tricks, removal and stack responses stay uncapped — they are the
+combat information the sim exists for, where the main-phase casts stand
+in for "that mana will be spent on something". Three arms
+(`.ladder/run_r68_simcast.sh`, pre-registered, base `dflt` = the
+uncapped round-67 default), one `profiling-fast` binary.
+
+**Cost** (step 0, 200 × 12 mirrors, 5 paired reps, median wall/`dflt`):
+
+| arm | sealed | cube | sim main casts (cube six-game dump) |
+|---|---|---|---|
+| `sim-cast0` | 0.730 | 0.753 | 0 |
+| `sim-cast1` | **0.864** | **0.837** | 4,928 (was 11,030) |
+| `sim-cast2` | 0.926 | 0.940 | 8,126 |
+
+**Strength** (sealed mirror `--a ARM --b dflt`, 1,000 × 12 = 12,000 games a cell):
+
+| arm | 43 | 97 | 151 | 199 | pooled | verdict |
+|---|---|---|---|---|---|---|
+| `sim-cast0` | 49.0 [48.5, 49.5] | 48.9 [48.5, 49.4] | 49.3 [48.9, 49.8] | 49.1 [48.7, 49.6] | 49.08 | **loss** — every cell wholly below 50; parked |
+| `sim-cast1` | 50.0 [49.6, 50.3] | 50.1 [49.7, 50.4] | 50.2 [49.8, 50.6] | 50.1 [49.7, 50.4] | 50.10 | no loss |
+| `sim-cast2` | 50.0 [49.7, 50.2] | 50.0 [49.8, 50.2] | 50.3 [50.1, 50.5] | 50.1 [49.9, 50.3] | 50.10 | no loss |
+
+Cross-checks for `sim-cast1`: `--decks cube` 50.6 [50.1, 51.1] / 50.2
+[49.6, 50.8] (seeds 43 / 97, 3,200 games each), `--decks fixed` 50.4
+[49.3, 51.5] / 50.1 [49.1, 51.1] (1,600 each). `sim-cast2` on cube 50.1
+/ 49.8.
+
+**Adopted: `Some(1)`, the cheapest cap with no loss** — the
+pre-registration said "the cheapest cap that passes", which is the
+throughput gate's purpose (round 58 took the cheapest no-loss arm the
+same way). The first cast is the information: with it the sim still
+sees the opponent deploy their best card and our own post-combat play;
+what the second and third casts add is a re-enumeration and a
+resolution each, and the ladder cannot tell the boards they produce
+from the ones they don't. Zero casts loses a point: the sim then never
+sees the crack-back creature or the removal cast from a main phase, and
+every hold-back is priced against an empty hand. `EvalWeights::default()`
+= the round-67 default + `sim_main_cast_cap: Some(1)`. Control
+`sim-cast-off` (`sim_main_cast_off()`); `sim-cast0` / `sim-cast2` stay as
+arms. The client pilot is built on `net_tail_guard_on` and is untouched;
+the training actors run the default and pay the ratio above.
+
+**Cost, cumulative.** Against the round-56 default the adopted default
+now runs at ≈ 0.80 (rounds 58–60, `(-255)`) × 0.864 ≈ **0.69** of its
+sealed wall clock; on cube the round-66 `trick_modes_combat_only`
+adoption had raised the six-game Ir 38.5 % (different games), and this
+round takes 0.837 of that. Golden traces re-blessed (the default's
+declarations move, the round-58 precedent); `--bench` (`gang`, `fixed`)
+untouched. Ir, the tip dumps and the actor reading are in PERF's Log
+under round 68.

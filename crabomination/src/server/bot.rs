@@ -543,6 +543,26 @@ pub struct EvalWeights {
     /// 50.2 ±0.30. Control: [`trick_modes_off`](Self::trick_modes_off),
     /// profile `trick-modes-off`.
     pub trick_modes_combat_only: bool,
+    /// The attack simulation's spell layer casts at most this many spells
+    /// from a main phase per sim (`None` = no cap). Tricks, removal and stack
+    /// responses are never capped — they are the combat information the sim
+    /// exists for; the main-phase casts (our post-combat, the opponent's
+    /// precombat) stand in for "that mana will be spent on something". Read
+    /// at the `(-275)` tip on the cube default: the sim's own casts were
+    /// 17.2 % of the run and 33 sim passes a sim against sealed's 13.2 (PERF
+    /// candidates, "THE NEW CUBE DEFAULT"); 2.35 / 1.74 such casts a sim on
+    /// cube / sealed. **ADOPTED at `Some(1)` (round 68, 2026-09-07,
+    /// `.ladder/run_r68_simcast.sh`, a no-loss throughput gate):** sealed
+    /// mirrors 50.0 / 50.1 / 50.2 / 50.1 vs the uncapped default on seeds
+    /// 43/97/151/199 (12,000 games a cell, every interval touching 50), cube
+    /// 50.6 / 50.2, fixed 50.4 / 50.1, for **0.864 / 0.837** of the sealed /
+    /// cube mirror's wall clock (median of 5 paired reps). `Some(2)` read the
+    /// same cells at 0.926 / 0.940; `Some(0)` **loses** (49.1 pooled, every
+    /// cell wholly below 50, wall 0.73 / 0.75) — the first cast is the
+    /// information, the rest is cost. Control:
+    /// [`sim_main_cast_off`](Self::sim_main_cast_off), profile `sim-cast-off`;
+    /// arms [`sim_main_cast_cap_at`](Self::sim_main_cast_cap_at).
+    pub sim_main_cast_cap: Option<u8>,
     /// Seat flag (`Player::hostile_player_targets`, pushed like `smart_tap`
     /// and onto search seats too): the auto-target pickers aim a *hostile*
     /// player slot — discard, damage, life loss, mill, sacrifice, hand exile
@@ -956,6 +976,7 @@ impl EvalWeights {
             converge_rarest: false,
             converge_fetch: false,
             trick_modes_combat_only: false,
+            sim_main_cast_cap: None,
             hostile_player_targets: false,
             player_target_arms: false,
             skip_noop_x0: false,
@@ -1052,6 +1073,7 @@ impl EvalWeights {
             converge_rarest: false,
             converge_fetch: false,
             trick_modes_combat_only: false,
+            sim_main_cast_cap: None,
             hostile_player_targets: false,
             player_target_arms: false,
             skip_noop_x0: false,
@@ -1131,6 +1153,7 @@ impl EvalWeights {
             converge_rarest: false,
             converge_fetch: false,
             trick_modes_combat_only: false,
+            sim_main_cast_cap: None,
             hostile_player_targets: false,
             player_target_arms: false,
             skip_noop_x0: false,
@@ -2157,6 +2180,13 @@ impl EvalWeights {
             removal_sim: true,
             // Round 66 (2026-09-06): trick modes held for the combat window.
             trick_modes_combat_only: true,
+            // Round 68 (2026-09-07): the attack sim casts at most one spell
+            // from a main phase per sim — a no-loss throughput gate (sealed
+            // 50.0 / 50.1 / 50.2 / 50.1 on seeds 43/97/151/199, cube 50.6 /
+            // 50.2, fixed 50.4 / 50.1) for 0.86 / 0.84 of the sealed / cube
+            // mirror's wall clock. Control: [`sim_main_cast_off`]
+            // (Self::sim_main_cast_off), profile `sim-cast-off`.
+            sim_main_cast_cap: Some(1),
             // Round 67 (2026-09-06, the same evening): hostile player slots
             // aimed at the opponent, the other player as a cast-time arm,
             // the own-graveyard pick and the X=0 no-op prune. Control:
@@ -2247,6 +2277,20 @@ impl EvalWeights {
     /// phase and end-step enumeration (profile `trick-modes-off`).
     pub const fn trick_modes_off() -> Self {
         Self { trick_modes_combat_only: false, ..Self::default_const() }
+    }
+
+    /// The default with the attack sim's main-phase casts capped at `n`
+    /// (round 68; profiles `sim-cast0` / `sim-cast1` / `sim-cast2` — `1` is
+    /// the default since the round adopted it). Ladder as A against
+    /// [`sim_main_cast_off`](Self::sim_main_cast_off).
+    pub const fn sim_main_cast_cap_at(n: u8) -> Self {
+        Self { sim_main_cast_cap: Some(n), ..Self::default_const() }
+    }
+
+    /// The round-68 control: the default with the attack sim's main-phase
+    /// casts uncapped again (profile `sim-cast-off`).
+    pub const fn sim_main_cast_off() -> Self {
+        Self { sim_main_cast_cap: None, ..Self::default_const() }
     }
 
     /// All three 2026-09-06 converge fixes together (profile `conv-fixes`).
@@ -10274,6 +10318,8 @@ fn simulate_attack_outcome_once(
     let mut stop_turn = start_turn;
     let mut extended = false;
     let mut declared: crate::game::types::SmallIdSet<(u32, TurnStep)> = Default::default();
+    // `sim_main_cast_cap`: main-phase casts taken so far in this sim.
+    let mut main_casts = 0u8;
     // *This* turn's attack declaration is the candidate, already submitted.
     // Without this the loop's own DeclareAttackers arm fires on the same
     // turn and re-declares the greedy set over the top of it — which the
@@ -10327,17 +10373,28 @@ fn simulate_attack_outcome_once(
                     None => GameAction::PassPriority,
                 }
             }
-            _ if w.attack_sim_spells => match sim_spell_action(&g, w) {
-                // The spell layer's dry run already resolved this cast on a
-                // clone of exactly this state; adopt it rather than run the
-                // same cast a second time through `sim_step`.
-                Some(Picked::Probed(_, next)) => {
-                    g = *next;
-                    continue;
+            _ if w.attack_sim_spells => {
+                let allow_main = w.sim_main_cast_cap.is_none_or(|cap| main_casts < cap);
+                // A pick from an empty stack in a main phase is a main-phase
+                // cast (the inner's other arms need a stack or a block).
+                let main_window = g.stack.is_empty()
+                    && matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain);
+                match sim_spell_action_with(&g, w, allow_main) {
+                    // The spell layer's dry run already resolved this cast on
+                    // a clone of exactly this state; adopt it rather than run
+                    // the same cast a second time through `sim_step`.
+                    Some(Picked::Probed(_, next)) => {
+                        main_casts += u8::from(main_window);
+                        g = *next;
+                        continue;
+                    }
+                    Some(Picked::Plain(a)) => {
+                        main_casts += u8::from(main_window);
+                        a
+                    }
+                    None => GameAction::PassPriority,
                 }
-                Some(Picked::Plain(a)) => a,
-                None => GameAction::PassPriority,
-            },
+            }
             _ => GameAction::PassPriority,
         };
         if !sim_step(&mut g, action) {
@@ -10425,6 +10482,13 @@ struct Finalist {
 }
 
 fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<Picked> {
+    sim_spell_action_with(g, w, true)
+}
+
+/// [`sim_spell_action`] with the main-phase arm switchable: `allow_main`
+/// false leaves only the response and trick arms live — the attack sim
+/// under [`EvalWeights::sim_main_cast_cap`] once the cap is spent.
+fn sim_spell_action_with(g: &GameState, w: &EvalWeights, allow_main: bool) -> Option<Picked> {
     // Called once per sim-loop iteration on a cloned (unfrozen) state; every
     // candidate it ranks runs layer-aware checks — so the body wants a freeze
     // scope, but the question of whether there is a window to act in does not.
@@ -10435,19 +10499,20 @@ fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<Picked> {
     let p = g.player_with_priority();
     let window = !g.stack.is_empty()
         || (g.step == TurnStep::DeclareBlockers && g.blockers_declared())
-        || (matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+        || (allow_main
+            && matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
             && g.active_player_idx == p);
     if !window {
         debug_assert!(
-            g.with_frozen_layers(|g| sim_spell_action_inner(g, w)).is_none(),
+            g.with_frozen_layers(|g| sim_spell_action_inner(g, w, allow_main)).is_none(),
             "sim_spell_action's window gate skipped a real action",
         );
         return None;
     }
-    g.with_frozen_layers(|g| sim_spell_action_inner(g, w))
+    g.with_frozen_layers(|g| sim_spell_action_inner(g, w, allow_main))
 }
 
-fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<Picked> {
+fn sim_spell_action_inner(g: &GameState, w: &EvalWeights, allow_main: bool) -> Option<Picked> {
     let p = g.player_with_priority();
     if !g.stack.is_empty() {
         return pick_stack_response(g, p, w)
@@ -10458,7 +10523,8 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<Picked> {
     if g.step == TurnStep::DeclareBlockers && g.blockers_declared() {
         return pick_combat_trick(g, p, w);
     }
-    if matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+    if allow_main
+        && matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
         && g.active_player_idx == p
     {
         let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, p, w, None)
@@ -22067,6 +22133,36 @@ mod stack_response_tests {
             seeing < blind,
             "the sim that lets the opponent Doom Blade must score lower \
              ({seeing} !< {blind})"
+        );
+    }
+
+    /// `sim_main_cast_cap`: with the cap spent the attack sim's spell layer
+    /// no longer casts from a main phase, so the opponent's creature in
+    /// hand stays there and the line scores higher than under the uncapped
+    /// sim, which deploys it on their turn.
+    #[test]
+    fn sim_main_cast_cap_holds_the_sims_main_phase_casts() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.add_card_to_battlefield(1, catalog::forest());
+        g.add_card_to_battlefield(1, catalog::forest());
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+            g.add_card_to_library(1, catalog::forest());
+        }
+        let atk = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+        let open = EvalWeights { sim_main_cast_cap: None, ..EvalWeights::attack_search_sim() };
+        let capped = EvalWeights { sim_main_cast_cap: Some(0), ..EvalWeights::attack_search_sim() };
+        let open_v = simulate_attack_outcome(&g, 0, &atk, &open).expect("uncapped sim completes");
+        let capped_v =
+            simulate_attack_outcome(&g, 0, &atk, &capped).expect("capped sim completes");
+        assert!(
+            capped_v > open_v,
+            "the capped sim must not see the opponent's bear deployed ({capped_v} !> {open_v})"
         );
     }
 

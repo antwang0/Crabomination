@@ -3742,6 +3742,44 @@ the allocation. What is left is the 970-arm `match`'s own tail — 28
 `PendingEffectState` slots LLVM did not colour together — and that is
 the split, not a helper.
 
+### Round 68 ADOPTED — the attack sim's main-phase casts capped at one per sim (`sim_main_cast_cap`): sealed default wall clock **0.864** / cube **0.837** at no loss; six-game Ir sealed **-7.95 %** / cube **-18.75 %** (different games)
+
+```text
+  binary pair    dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast -p crabomination --no-default-features), one tree either side (the 301f5edb tip)
+  sealed         3,277,686,484 (uncapped) -> 3,017,209,691 Ir (cap 1, the new default)   -7.95 %   (72 decided either side, different games)
+  cube           3,635,747,593            -> 2,953,897,394 Ir                            -18.75 %  (48 decided either side, different games)
+  actor          3,120,856,905 -> 3,094,007,397 Ir (-0.86 %, different games: 6,078 -> 6,198 rows, 0 stalls both)   (selfplay_train --actors 1 --games 60 --steps 1 --seed 7, -p crabomination_ml --no-default-features)
+                 per sim: 4,042 sims / 1,590.3 M -> 4,518 / 1,478.7 M under simulate_attack_outcome_from = 393 k -> 327 k Ir a sim (-17 %); the sim's main-phase casts 8,860 -> 4,635
+  flag off       the same binary with the cap off reads sealed 3,279,647,929 / cube 3,637,573,887 against the base's 3,277,686,484 / 3,635,747,593: +0.060 % / +0.050 %, the counter and the window test per sim iteration
+  arms (cand_bl) sealed cast0 2,411,806,036 / cast1 3,017,223,838 / cast2 3,202,641,219;  cube cast0 3,185,572,866 / cast1 2,953,897,330 / cast2 3,205,334,601
+  the rows       accept_on <- sim_spell_action_inner (the sim's main-phase casts):  cube 11,030 calls / 419.7 M -> 4,928 / 175.6 M;  sealed 8,998 / 300.9 M -> 4,986 / 171.5 M
+                 cast_candidates <- sim_spell_action_inner:  cube 17,816 / 179.7 M -> 6,284 / 67.7 M;  sealed 17,672 / 134.2 M -> 7,282 / 66.9 M
+                 sims (simulate_attack_outcome_once):  cube 4,686 -> 4,588;  sealed 5,168 -> 5,456
+  wall clock     200 x 12 mirrors, 5 paired reps, median arm/dflt:  sealed cast0 0.730 / cast1 0.864 / cast2 0.926;  cube 0.753 / 0.837 / 0.940
+  ladder         sealed --a ARM --b dflt, 12,000 games a cell, seeds 43/97/151/199:
+                 cast0  49.0 / 48.9 / 49.3 / 49.1  (pooled 49.08, every cell wholly below 50)  LOSS, parked
+                 cast1  50.0 / 50.1 / 50.2 / 50.1  (pooled 50.10, every interval touching 50)  adopted;  cube 50.6 / 50.2 (3,200 each), fixed 50.4 / 50.1 (1,600 each)
+                 cast2  50.0 / 50.0 / 50.3 / 50.1  (pooled 50.10)  no loss, not adopted (0.926 / 0.940 against cast1's 0.864 / 0.837)
+  golden traces  seeds 3 (32 -> 19 turns, winner flips back to seat 0) and 4 (22 -> 20) and the committed c0ffee trace (372 -> 368 actions, same winner) re-blessed; seeds 1, 2, 5 unmoved
+  --bench        gang / fixed, untouched by construction
+```
+
+A search-budget change, not a pure optimization, so it went through the
+strength gate (`.ladder/run_r68_simcast.sh`, ML_NOTES round 68) and the
+traces move with it. The `(-275)` context read filed the lever and
+called it bot-side: the attack sim's spell layer casts from a main
+phase, resolves, re-enumerates and casts again — 2.35 casts a sim on
+cube, 1.74 on sealed — and each cast is a `cast_candidates` enumeration
+(~10 k Ir) plus an `accept_on` resolution (~38 k) plus the passes it
+induces. The cap keeps the first: the sim still sees the opponent's
+best card and our post-combat play, and the ladder cannot tell the
+boards the second and third produce from the ones they don't. Zero
+casts loses a point (the crack-back creature and the main-phase removal
+vanish from every hold-back's price). Tricks, removal and stack
+responses are never capped. The flag-off residue (+0.05-0.06 %) is the
+`main_window` test and the counter per sim iteration, inside the win.
+Cumulative against the round-56 default: ~0.69 of its sealed wall clock.
+
 ### `(-275)` TAKEN — the two CR 602.5 ability-lock gates read an exact-keyword fold: sealed default Ir **-0.118 %** / cube **-0.172 %** / actor **-0.142 %**
 
 ```text
@@ -8123,7 +8161,16 @@ block sims 6.7 %; `main_phase_action_with`'s probes 3.1 %. Nothing
 engine-side is new: the per-pass cost is the `(-260)` shape. The lever,
 if one is wanted, is bot-side (how many spell responses a sim plays
 out per pass, which is a strength question for an ML session with a
-gate, not a perf leg) — filed here, not pulled.
+gate, not a perf leg) — filed here, not pulled. **TAKEN as round 68
+(Log, ML_NOTES): `sim_main_cast_cap: Some(1)` in the default — the
+sim's main-phase casts halved (cube 11,030 -> 4,928 a six-game run),
+wall clock 0.837 cube / 0.864 sealed at no loss on four ladder seeds,
+cube and fixed. What is left of the sim's own casts is the one cast a
+main phase the gate says is the information (cap 0 loses a point);
+tricks, removal and stack responses were never the cost. The next
+context read is the sealed / cube tip dumps of that round
+(`cg.sealed.tip.out` / `cg.cube.tip.out` in a scratchpad) — nobody has
+re-read the sim's per-pass body under the capped default yet.**
 
 **READ AT THE `(-271)` TIP (the sealed `dflt` and cube base dumps of
 the `(-272)`..`(-274)` run, `cg.sealed.b.out` / `cg.cube.b.out` in a
