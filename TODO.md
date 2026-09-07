@@ -31,19 +31,19 @@ sixty-seventh pass, so don't re-take that.
    code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
    running `cargo build`. Disk: purge `target/debug/incremental` and stale target dirs before a big build; `cargo-llvm-lines` is installed.
-2. **Gates at the tip (PERF Baseline, 2026-09-07 addendum):** suite 19,265 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
-   (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, client type-checks, debug-assertions grid green with the default pilot (33,120 + 1,800 + 680
-   games), fresh-seed sweep 28,800 games / 0 undecided.
-3. **Engine, this run (ENGINE_BACKLOG first section):** "leaves the battlefield" fired only on death for all 87 literals — `GameEvent::
-   PermanentLeftBattlefield` + `note_left_without_dying` at every non-graveyard exit; `BecomesUntapped` and `Tapped` joined the CR 603.6 fan-out.
-   The ten `sword()` Swords fire off the Sword now (`triggers_on_equipment`); of the eight other attachments with a damage rider, six say
-   "this creature deals" (right as is) and Kusari-Gama / Impending Doom ("this Equipment / this Aura deals") still deal it as the creature's.
-4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns; the sixth (`trig`, a trigger's event) fixed 40 shipped cards, the seventh
-   (`scope`) nine, the eighth (`filt`, the filter's type words) five; residues in INCOMPLETE_CARDS "Trigger events" / "Trigger scopes" /
-   "Trigger filters". Next: the filters the reader skips (`Not(..)`, power / mana-value bounds, `let` helpers), then a static's *text*.
-   Structural / stub audits not re-run this pass.
-5. **Perf/build:** engine profile FLAT (PERF candidates); the wire decoders left the lib (`#[inline]`, IR -13.7 %, wall clock flat — PERF "Serde
-   derives" says why and what that refutes). Round 68 (ML_NOTES) is the default-pilot base; the sim body / horizon is a strength question.
+2. **Gates at the tip (PERF Baseline, the `b3f6067b` addendum):** suite 19,267 / 0 / 5, clippy, release-fast typecheck, `--bench` counters identical
+   to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games / 0 undecided, `audit_stubs` /
+   `audit_incomplete --structural-only` both 0. The debug-assertions grid was last run at `03b53eab` (green, default pilot); not re-run this pass.
+3. **Engine, this run (ENGINE_BACKLOG first section):** `triggers_on_equipment` was honoured by the combat-damage and step hooks and *dropped* by the
+   general dispatcher, so Godsend (`Blocks`) and a bestowed Crystalline Nautilus (`BecameTarget`) were dead. A grant is `(host, source, abilities)`
+   now, through all three consumers and both death-path collectors; Kusari-Gama gained the flag, Impending Doom moved onto the Aura's own
+   `EnchantedBySource` trigger. Ir flat on sealed/cube (PERF Log). **Method that found it: read a flag's consumers, not the audit columns** — the
+   shape "a bool on a definition that some hooks honour and one walk excludes" is worth one more pass (`per_subject_cap`, `EventScope` on grants).
+4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns (residues in INCOMPLETE_CARDS "Trigger events / scopes / filters"). Next
+   reader rules, still open: the filters it skips (`Not(..)`, power / mana-value bounds, `let` helpers), then a static's *text*. Latent, no
+   shipped card: `once_per_turn` on a *granted* trigger is not gated (ENGINE_BACKLOG first section says how to key it).
+5. **Perf/build:** engine profile FLAT (PERF candidates; the sealed/cube base to quote is now 3,020.7 M / 2,963.7 M at `d04a225d`). Round 68
+   (ML_NOTES) is the default-pilot base; the sim body / horizon is a strength question, not a perf leg.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

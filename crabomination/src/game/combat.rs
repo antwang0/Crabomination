@@ -11,6 +11,14 @@ use smallvec::SmallVec;
 /// Kaito's "return one of them to hand").
 type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool);
 
+/// One attacker's granted Attacks triggers: the statics' (fired off the
+/// attacker) and the attachments' (`(source, ability)` — the attachment's own
+/// under `triggers_on_equipment`).
+type AttackerGrants = (
+    Vec<crate::card::TriggeredAbility>,
+    Vec<(CardId, crate::card::TriggeredAbility)>,
+);
+
 /// Static prohibitions `declare_attackers_banded` checks against the whole
 /// battlefield. Same device as [`crate::game::actions::cast_static`] and
 /// `prevent_static`: one walk up front, a bit per family, and each gated
@@ -1475,10 +1483,7 @@ impl GameState {
         // walk the board once here rather than per attacker inside the loop
         // below. Consumed by value in the main loop so its `&mut self`
         // borrow of `battlefield.iter_mut()` is unblocked.
-        let attacker_grants: Vec<(
-            Vec<crate::card::TriggeredAbility>,
-            Vec<(CardId, crate::card::TriggeredAbility)>,
-        )> = {
+        let attacker_grants: Vec<AttackerGrants> = {
             let trigger_grants = self.trigger_grant_sources();
             let equip_grants = self.equip_granted_trigger_sources();
             attacks

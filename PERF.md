@@ -2821,6 +2821,23 @@ scaling release-fast selfplay_train --steps 1 --seed 31, --actors 1 / 2 / 4 x 60
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 ```
 
+### 2026-09-07 — the `triggers_on_equipment` dispatcher fix: addendum at the tip after `b3f6067b`
+
+Two commits after the addendum below (ENGINE_BACKLOG, first section; the
+Log's "equipment-grant dispatcher fix READ" has the Ir A/B). A rules
+change on the grant list, priced and flat:
+
+```text
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; bin_bytes 126,742,096; 379.3 games/s single run (3 threads, host_calib_ms 58)
+Ir      sealed dflt 3,020,686,102 -> 3,020,489,826 (-0.006 %) / cube 2,963,669,195 -> 2,964,205,035 (+0.018 %), outcomes identical (Log)
+golden  7/7 unmoved
+suite   19,267 / 0 / 5 at b3f6067b; audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+gate    cargo check --profile release-fast -p crabomination --bin bot_ladder   clean (the debug-assertions=off typecheck)
+sweep   fresh seeds on the same release-fast binary: 601..603 x {sealed, cube, fixed} x --a dflt --b dflt --games 400 --threads 3 = 9 cells / 28,800 games,
+        0 undecided, 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent
+```
+
 ### 2026-09-07 — the `trig` column, the leaves-the-battlefield fix and the wire `#[inline]`: addendum at the tip after `03b53eab`
 
 Three commits after the `(-276)` addendum: the sixth audit column and 40
@@ -3828,6 +3845,34 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### The equipment-grant dispatcher fix READ — flagged attachments join `equip_grants`: sealed default Ir **-0.006 %** / cube **+0.018 %**, outcomes identical
+
+A rules fix, not a perf leg, filed here because it touches the trigger
+dispatcher's grant list (ENGINE_BACKLOG, first section: `triggers_on_
+equipment` was honoured by two hooks and dropped by the dispatcher). The
+change widens `DispatchScan::equip_grants` to every attachment with a
+granted trigger — the ten `sword()` Swords, Jitte, Godsend, Kusari-Gama
+and Mask of Griselbrand were excluded before — and carries a per-grant
+source through the three consumers. The cost to price was the wider
+`any_equip_grant` gate (a flagged Sword on the board used to leave the
+dispatcher on its member lane; now it walks the whole board on the
+batches whose kinds its grants can match, which `(-121)`'s retain keeps
+to the combat-damage batches the hook already owns).
+
+```text
+profiling-fast, system allocator, --a dflt --b dflt --games 6 --threads 1 --seed 1, base d04a225d in a detached worktree, candidate = the two commits' patch applied there
+  sealed  3,020,686,102 -> 3,020,489,826 Ir   (-0.006 %)   72 / 72 decided, 0 undecided both sides
+  cube    2,963,669,195 -> 2,964,205,035 Ir   (+0.018 %)   48 / 48 decided
+  cube rows: dispatch_triggers_for_events 136,115,116 -> 136,129,146 (+0.01 %); dispatch_board_scan 12,047,280 -> 12,081,568; dispatch_scan_card 3,961,968 -> 4,087,828 (+3.2 % of a 0.13 % row: the flag test moved into the bit fold)
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; bin_bytes 126,742,096
+```
+
+**FLAT on both pools and the same games** — the fixed pool carries no
+flagged attachment and the six-game cube/sealed runs field them rarely.
+Kept as the correctness change it is. The base here (3,020.7 M / 2,963.7 M)
+is within 0.2 % of the round-68 context map's totals (`62e38777`:
+3,015.6 M / 2,957.2 M) and is the base to quote from this tip.
 
 ### `(-276)` TAKEN — the 8 KB `CardDefinition` temporaries leave `run_effect`'s frame: 97,256 -> 64,312 bytes, sealed default Ir **-0.256 %** / cube **-0.288 %**
 
