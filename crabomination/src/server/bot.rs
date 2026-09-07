@@ -1786,6 +1786,18 @@ impl EvalWeights {
         Self { determinize: 1, target_arms: true, ..Self::net_eval() }
     }
 
+    /// The net's leaf on the **current** default (profile `net67`; round
+    /// 68, 2026-09-07). Every earlier `net*` profile chains from
+    /// [`block_gang_search`](Self::block_gang_search), which predates the
+    /// pair-move flags, sim-priced removal (r63), the trick window (r66)
+    /// and the round-67 targeting fixes — so a fresh net gated as
+    /// `net-bchain` plays a weaker heuristic than `dflt` in every way but
+    /// the leaf. This is `dflt` plus the net, nothing else, and its search
+    /// twin is `mcts-net67-256` against `mcts-dflt-256`.
+    pub const fn net_on_default() -> Self {
+        Self { net_slot: super::net_eval::SLOT_BEST, ..Self::default_const() }
+    }
+
     /// [`net_eval_det1`](Self::net_eval_det1) averaging three redeals per
     /// combat sim — the lower-variance honest search, at 3× sim cost.
     pub const fn net_eval_det3() -> Self {

@@ -4465,3 +4465,75 @@ round takes 0.837 of that. Golden traces re-blessed (the default's
 declarations move, the round-58 precedent); `--bench` (`gang`, `fixed`)
 untouched. Ir, the tip dumps and the actor reading are in PERF's Log
 under round 68.
+## Round 69 — the value net retrained on post-round-67 self-play: the null is the idea, not the data; on a fair pilot the old nets read +1 scored and +4 to +5 as the search leaf (2026-09-07)
+
+(Numbered 69 at push time: the concurrent perf session landed its round 68 —
+the attack-sim cast cap — while this round ran. Every cell below ran on the
+**round-67 default**, i.e. without that cap; `dflt` / `mcts-dflt-256` here
+mean the pre-cap default.)
+
+`.ladder/run_r68_retrain.sh` (pre-registered). Two things had never been
+true of any training run: the actors' picker aimed hostile player slots at
+the caster (round 67), and `play_recorded_game_mcts` never pushed the engine
+seat flags onto the players at all — so even a post-fix actor would have
+kept the caster-first picker. Both fixed; the actor now pushes `smart_tap`,
+`converge_rarest` and `hostile_player_targets` from its pilot weights, as
+`recommend` and `deck_gauntlet` do. Four seeds on the round-23 recipe
+(`--actors 3`, 250 000 games, ~18 min a seed on the 4090).
+
+The gate pilot is new too: **`net67` = `dflt` + the net leaf, nothing
+else.** Every earlier `net*` profile chains from `block_gang_search`, four
+adoptions behind the default (pair moves, sim-priced removal, the trick
+window, round 67), so a net gated as `net-bchain` always played a weaker
+heuristic than its control in every way but the leaf — round 62's "+0.05"
+was read on that profile. Search twin: `mcts-net67-256` vs `mcts-dflt-256`.
+
+| training seed | fresh AUC | old (r57 ctrl) AUC | fresh `net67` vs `dflt` (g43 / g97) | old `net67` vs `dflt` | fresh − old |
+|---|---|---|---|---|---|
+| 43 | 0.808 | 0.821 | 50.3 / 50.5 | 50.3 / 51.4 | −0.45 |
+| 97 | 0.803 | 0.812 | 50.0 / 51.3 | 51.0 / 51.4 | −0.55 |
+| 151 | 0.788 | 0.776 | 50.3 / 51.1 | 50.9 / 51.3 | −0.40 |
+| 199 | 0.824 | 0.843 | 50.0 / 51.2 | 50.7 / 51.6 | −0.55 |
+| pooled | | | **50.59** | **51.08** | **−0.49 ±0.10** (t, 4 seeds) |
+
+1 000 games x 12 sealed decks per cell (±0.6), paired within training seed.
+
+**Readings.** (1) Fresh − old is −0.49 ±0.10, every seed the same sign:
+retraining on clean data did not help and cost half a point — by the
+pre-registration, the null is the idea. Whatever the leaf is worth, it was
+not the self-targeting rows that hid it. (2) The by-product the round did
+not pre-register but eight cells agree on: on the fair pilot the OLD nets
+read **+1.1** over the default (50.3–51.6, seven of eight intervals clear
+of 50), and the fresh ones +0.6. Round 62's "+0.05" measured the net on a
+profile that spotted the control four adoptions, and understated it by
+about a point. Not adopted — a scored pilot is not the lobby — but it
+replaces the round-62 number as the standing scored reading. (3) Why fresh
+< old is open: AUCs are not comparable across regimes (three of four old
+nets are higher, the r23 caveat cuts both ways), and the fresh actors play a
+different game (arms on, hostile slots across). A run of the OLD recipe on
+the NEW actors minus the seat-flag push would split "regime" from "data".
+
+**Search cells** — the net as the leaf of the 256-iteration search on the
+default's weights (`mcts-net67-256`) vs the same search on the material
+leaf (`mcts-dflt-256`, the lobby pilot since round 64); 500 games x 12
+sealed decks, ±0.95, ~64 min a cell on 22 threads:
+
+| leaf | seed 43 | seed 97 | pooled |
+|---|---|---|---|
+| fresh net, training seed 151 (the best scored fresh) | 52.5 [51.6, 53.4] | 55.1 [54.2, 56.0] | **+3.8** |
+| old net, r57 ctrl training seed 97 (the best scored old) | 53.0 [52.1, 53.9] | 56.2 [55.3, 57.1] | **+4.6** |
+
+**Reading (4).** Inside the search the leaf is worth **four to five
+points**, on both seeds, with either net — the largest system-level
+reading since the chains, and fifteen times round 62's +0.25. Round 62
+read the leaf at 64 iterations on a profile that lacked four adoptions,
+and rounds 62/64 sent the lobby net-free on that number. The difference
+is the fair profile and the depth: a deeper search leans harder on its
+leaf, and the material eval is what the sims already price, so the net
+only separates lines the sims tie. Old ≥ fresh again (+0.8, inside ±0.9),
+so the data question is closed the same way at the search level.
+**Recorded, not adopted**: the lobby's pilot is a program decision (the
+net dependency, the safetensors load, the vocab freeze coupling come
+back). The recommendation is `mcts-net67-256` on the best-gated net; the
+committed `nets/champion.safetensors` (round 20) is being read on the same
+two cells so the adoption names the right weights.

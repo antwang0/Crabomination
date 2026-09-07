@@ -441,6 +441,19 @@ pub fn play_recorded_game_mcts(
     mcts_gumbel: bool,
 ) -> RecordedGame {
     let mut g = template.clone();
+    // Profile settings the ENGINE reads off the seat, not the bot — the
+    // same push `recommend::play_seeded_game` and `deck_gauntlet` make.
+    // Until round 68 (2026-09-07) no actor ever carried them, so the
+    // self-play stream was generated with the auto-target picker's
+    // caster-first player slots even after round 67 fixed them for every
+    // ladder pilot: the training data disagreed with the pilot it trained
+    // for. `smart_tap` and `converge_rarest` are off in the default, so
+    // only `hostile_player_targets` changes anything today.
+    for (seat, w) in weights.iter().enumerate() {
+        g.players[seat].smart_tap = w.smart_tap;
+        g.players[seat].converge_rarest = w.converge_rarest;
+        g.players[seat].hostile_player_targets = w.hostile_player_targets;
+    }
     let mut rng = StdRng::seed_from_u64(seed);
     for seat in 0..2 {
         g.players[seat].library.shuffle(&mut rng);
