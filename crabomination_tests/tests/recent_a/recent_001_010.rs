@@ -6443,6 +6443,34 @@ mod recent {
         assert_eq!(g.players[0].hand.len(), hand + 1, "cantrip drew a card");
     }
 
+    /// "When this artifact is put into a graveyard from the battlefield, draw a
+    /// card" — Terrarion and Implement shipped on a sacrifice event (a Shatter
+    /// drew nothing), Chromatic Star and Nutrient Block on leaves-the-battlefield
+    /// (an exile drew). Trig audit column, 2026-09-07.
+    #[test]
+    fn graveyard_from_battlefield_cantrips_draw_on_destroy_not_exile() {
+        use crabomination::effect::{Effect, Selector, ZoneDest};
+        use crabomination::game::effects::EffectContext;
+        use crabomination::game::types::Target;
+        for def in [catalog::terrarion, catalog::implement_of_combustion, catalog::chromatic_star, catalog::nutrient_block] {
+            let mut g = two_player_game();
+            for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+            let hand = g.players[0].hand.len();
+            let id = g.add_card_to_battlefield(0, def());
+            let name = g.battlefield_find(id).unwrap().definition.name;
+            g.remove_to_graveyard_with_triggers(id);
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].hand.len(), hand + 1, "{name}: destroyed -> draws");
+            let id = g.add_card_to_battlefield(0, def());
+            let ctx = EffectContext::for_ability(id, 1, Some(Target::Permanent(id)));
+            let exile = Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile };
+            let evs = g.resolve_effect(&exile, &ctx).expect("exile resolves");
+            g.dispatch_triggers_for_events(&evs);
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].hand.len(), hand + 1, "{name}: exiled -> no draw");
+        }
+    }
+
     /// Implement of Combustion pings and cantrips.
     #[test]
     fn implement_of_combustion_pings_and_cantrips() {

@@ -3091,21 +3091,30 @@ mod recent252 {
         assert!(ret.tapped, "returned tapped");
     }
 
-    /// Dramatic Accusation taps the enchanted creature on ETB and can shuffle it
-    /// into its owner's library.
+    /// Dramatic Accusation taps the enchanted creature on ETB, holds it tapped
+    /// through its controller's untap step (it shipped as a tap-each-upkeep
+    /// approximation — trig audit column, 2026-09-07) and can shuffle it into
+    /// its owner's library.
     #[test]
-    fn dramatic_accusation_taps_then_shuffles() {
+    fn dramatic_accusation_taps_holds_then_shuffles() {
         let mut g = two_player_game();
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-        let aura = g.add_card_to_battlefield(0, catalog::dramatic_accusation());
-        // ETB effect: attach + tap.
-        let ctx = EffectContext::for_trigger(aura, 0, Some(Target::Permanent(foe)), 0);
-        let etb = catalog::dramatic_accusation().effect.clone();
-        g.resolve_effect(&etb, &ctx).unwrap();
+        let aura = g.add_card_to_hand(0, catalog::dramatic_accusation());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: aura, target: Some(Target::Permanent(foe)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("Aura castable for {2}{U}");
         drain_stack(&mut g);
         assert!(g.battlefield_find(foe).unwrap().tapped, "enchanted creature tapped on ETB");
+        g.active_player_idx = 1;
+        g.do_untap();
+        assert!(g.battlefield_find(foe).unwrap().tapped, "doesn't untap during its controller's untap step");
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
         // Activate the shuffle.
         g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 2);
         g.perform_action(GameAction::ActivateAbility {

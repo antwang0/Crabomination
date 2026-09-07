@@ -365,9 +365,8 @@ pub fn undergrowth_recon() -> CardDefinition {
 }
 
 /// Dramatic Accusation — {2}{U} Aura. Enchant creature. When it enters, tap the
-/// enchanted creature; the enchanted creature doesn't untap (modeled by tapping
-/// it each upkeep, as Narcolepsy does). {U}{U}: Shuffle enchanted creature into
-/// its owner's library.
+/// enchanted creature; it doesn't untap during its controller's untap step.
+/// {U}{U}: Shuffle enchanted creature into its owner's library.
 pub fn dramatic_accusation() -> CardDefinition {
     use crate::card::EnchantmentSubtype;
     use crate::effect::{ActivatedAbility, LibraryPosition};
@@ -379,22 +378,17 @@ pub fn dramatic_accusation() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Seq(vec![
-            Effect::Attach {
-                what: Selector::This,
-                to: target_filtered(R::Creature),
-            },
-            Effect::Tap {
-                what: Selector::AttachedTo(Box::new(Selector::This)),
-            },
-        ]),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
-                EventScope::AnyPlayer,
-            ),
-            effect: Effect::Tap {
-                what: Selector::AttachedTo(Box::new(Selector::This)),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Tap {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: crate::card::StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

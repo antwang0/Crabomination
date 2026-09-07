@@ -2704,7 +2704,7 @@ pub fn fire_nation_warship() -> CardDefinition {
         // whether or not it was crewed when destroyed).
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::PermanentLeavesBattlefield,
+                EventKind::PermanentDied,
                 EventScope::SelfSource,
             ),
             effect: investigate(1),

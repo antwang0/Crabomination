@@ -1236,7 +1236,7 @@ pub fn sandals_of_abdallah() -> CardDefinition {
 pub fn nafs_asp() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::DelayUntilWithCapture {
                 kind: crate::effect::DelayedTriggerKind::TargetsNextDrawStep,
                 capture: Selector::Player(PlayerRef::DefendingPlayer),

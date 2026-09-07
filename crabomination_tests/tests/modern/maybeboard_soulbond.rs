@@ -1221,6 +1221,9 @@ fn sword_of_war_and_peace_burns_by_hand_and_gains_life() {
     let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
     let sword = g.add_card_to_battlefield(0, catalog::sword_of_war_and_peace());
     g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);
+    // The Looter loots on any damage it deals (2026-09-07), the Sword's burn
+    // included: give it a library to draw from.
+    stock_libraries(&mut g, 4);
     for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); } // defender hand = 3
     for _ in 0..2 { g.add_card_to_hand(0, catalog::forest()); } // your hand contributes life
     g.clear_sickness(attacker);

@@ -3537,7 +3537,7 @@ pub fn thieving_magpie() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -3562,7 +3562,7 @@ pub fn abyssal_specter() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::DefendingPlayer),
                 amount: Value::Const(1),
@@ -4550,7 +4550,7 @@ pub fn thragtusk() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
@@ -4991,25 +4991,19 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
 
 /// Mesmeric Orb — {2}, Artifact.
 ///
-/// Oracle: "Whenever a permanent becomes untapped, that permanent's
-/// controller mills a card."
-///
-/// Approximation: At the beginning of each player's upkeep, each player
-/// mills 3 (approximates the mass-untap mill without needing an untap
-/// event per permanent).
+/// "Whenever a permanent becomes untapped, that permanent's controller
+/// mills a card." One `BecomesUntapped` trigger per permanent, the untap
+/// step's included.
 pub fn mesmeric_orb() -> CardDefinition {
     CardDefinition {
         name: "Mesmeric Orb",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(TurnStep::Upkeep),
-                EventScope::AnyPlayer,
-            ),
+            event: EventSpec::new(EventKind::BecomesUntapped, EventScope::AnyPlayer),
             effect: Effect::Mill {
-                who: Selector::Player(PlayerRef::EachPlayer),
-                amount: Value::Const(3),
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::ONE,
             },
         }],
         ..Default::default()
@@ -8435,7 +8429,7 @@ pub fn looter_il_kor() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Shadow],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::Draw {
                     who: Selector::You,

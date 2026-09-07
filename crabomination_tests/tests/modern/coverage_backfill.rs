@@ -2504,21 +2504,29 @@ fn callous_bloodmage_etb_makes_a_pest_token() {
         "ETB mode 0 mints a Pest token");
 }
 
+/// "Whenever a permanent becomes untapped, that permanent's controller mills a
+/// card" — it shipped as an upkeep mill-3 approximation (trig audit column,
+/// 2026-09-07). One mill per permanent the untap step untaps, the
+/// non-active player's tapped permanents untouched.
 #[test]
-fn mesmeric_orb_mills_each_player_on_upkeep() {
-    use crabomination::game::types::TurnStep;
+fn mesmeric_orb_mills_one_per_permanent_untapped() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::mesmeric_orb());
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(1, catalog::island());
     }
+    for (seat, def) in [(0, catalog::grizzly_bears()), (0, catalog::island()), (1, catalog::grizzly_bears())] {
+        let id = g.add_card_to_battlefield(seat, def);
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
     let gy0 = g.players[0].graveyard.len();
     let gy1 = g.players[1].graveyard.len();
-    g.fire_step_triggers(TurnStep::Upkeep);
+    g.active_player_idx = 0;
+    g.do_untap();
     drain_stack(&mut g);
-    assert_eq!(g.players[0].graveyard.len(), gy0 + 3, "P0 mills 3");
-    assert_eq!(g.players[1].graveyard.len(), gy1 + 3, "P1 mills 3");
+    assert_eq!(g.players[0].graveyard.len(), gy0 + 2, "P0 mills one per permanent untapped");
+    assert_eq!(g.players[1].graveyard.len(), gy1, "P1's permanent stayed tapped: no mill");
 }
 
 #[test]

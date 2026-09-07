@@ -452,6 +452,27 @@ fn rancor_returns_to_hand_when_it_leaves_the_battlefield() {
     );
 }
 
+/// "When Rancor is put into a graveyard from the battlefield" — it shipped as
+/// a leaves-the-battlefield trigger (trig audit column, 2026-09-07), which
+/// pulled an exiled Rancor back to hand.
+#[test]
+fn rancor_exiled_from_the_battlefield_stays_in_exile() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rancor = g.add_card_to_battlefield(0, catalog::rancor());
+    g.battlefield_find_mut(rancor).unwrap().attached_to = Some(bears);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(rancor, 1, Some(Target::Permanent(rancor)));
+    let exile = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::Target(0),
+        to: crabomination::effect::ZoneDest::Exile,
+    };
+    let evs = g.resolve_effect(&exile, &ctx).expect("exile resolves");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == rancor), "Rancor stays exiled");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == rancor), "no return from exile");
+}
+
 // ── Transforming double-faced permanents (CR 712) ───────────────────────────
 
 #[test]

@@ -78,8 +78,8 @@ pub fn corpse_blockade() -> CardDefinition {
     }
 }
 
-/// Vulturous Zombie — {3}{B}{G} 3/3 Zombie with Flying. Whenever another
-/// creature dies, put a +1/+1 counter on this creature.
+/// Vulturous Zombie — {3}{B}{G} 3/3 Zombie with Flying. Whenever a card is put
+/// into an opponent's graveyard from anywhere, put a +1/+1 counter on it.
 pub fn vulturous_zombie() -> CardDefinition {
     CardDefinition {
         name: "Vulturous Zombie",
@@ -93,12 +93,7 @@ pub fn vulturous_zombie() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
-                Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::Creature.and(R::OtherThanSource),
-                },
-            ),
+            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::OpponentControl),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

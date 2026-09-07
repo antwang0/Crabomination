@@ -896,7 +896,7 @@ pub fn glistening_oil() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
                 effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
             },
         ],

@@ -299,6 +299,8 @@ fn specters_shroud_discards_on_combat_damage() {
     let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
     let shroud = g.add_card_to_battlefield(0, catalog::specters_shroud());
     g.battlefield_find_mut(shroud).unwrap().attached_to = Some(attacker);
+    // The Looter loots on any damage it deals (2026-09-07): give it a library.
+    stock_libraries(&mut g, 4);
     g.add_card_to_hand(1, catalog::grizzly_bears());
     g.clear_sickness(attacker);
     while g.step != TurnStep::DeclareAttackers {

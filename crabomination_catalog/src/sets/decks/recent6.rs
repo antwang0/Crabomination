@@ -390,7 +390,7 @@ pub fn malcolm_keen_eyed_navigator() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
+                EventKind::DealsDamageToPlayer,
                 EventScope::YourControl,
             )
             .with_filter(Predicate::EntityMatches {

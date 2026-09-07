@@ -2112,6 +2112,22 @@ fn hypnotic_specter_discards_damaged_opponent() {
     assert_eq!(g.players[1].graveyard.len(), 1);
 }
 
+/// "Whenever this creature deals damage to an opponent" — it shipped combat-only
+/// (trig audit column, 2026-09-07), with eighteen more of the shape. Noncombat
+/// damage from the Specter discards too.
+#[test]
+fn hypnotic_specter_discards_on_noncombat_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::forest());
+    let spec = g.add_card_to_battlefield(0, catalog::hypnotic_specter());
+    let ctx = EffectContext::for_ability(spec, 0, Some(Target::Player(1)));
+    let dmg = Effect::DealDamage { to: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(1) };
+    let evs = g.resolve_effect(&dmg, &ctx).expect("damage resolves");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "noncombat damage from the Specter discards");
+}
+
 #[test]
 fn wheel_of_fortune_discards_both_hands_and_draws_seven() {
     let mut g = two_player_game();
@@ -2579,10 +2595,9 @@ fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
 }
 
 #[test]
-fn quantum_riddler_on_cast_draws_a_card() {
+fn quantum_riddler_etb_draws_a_card() {
     let mut g = two_player_game();
-    // Top of library: a known card to confirm it gets drawn from the on-cast
-    // cantrip.
+    // Top of library: a known card to confirm the ETB cantrip draws it.
     let top = g.add_card_to_library(0, catalog::island());
     let qr_id = g.add_card_to_hand(0, catalog::quantum_riddler());
     // Pay {3}{U}{U}.
@@ -2602,7 +2617,7 @@ fn quantum_riddler_on_cast_draws_a_card() {
     assert!(g.battlefield.iter().any(|c| c.id == qr_id),
         "Quantum Riddler should resolve onto the battlefield");
     assert!(g.players[0].hand.iter().any(|c| c.id == top),
-        "Quantum Riddler's on-cast cantrip should draw a card");
+        "Quantum Riddler's ETB cantrip should draw a card");
 }
 
 #[test]
@@ -3359,10 +3374,10 @@ fn mystical_dispute_counters_when_opponent_cannot_pay() {
 }
 
 #[test]
-fn quantum_riddler_on_cast_draws_even_if_countered() {
-    // The cantrip is a SpellCast+SelfSource trigger that goes on the stack
-    // above the spell, so it resolves first — countering Quantum Riddler in
-    // response should not prevent the draw.
+fn quantum_riddler_countered_does_not_draw() {
+    // "When this creature enters, draw a card" — it shipped as an on-cast
+    // trigger (trig audit column, 2026-09-07), so a countered Riddler still
+    // drew. A countered Riddler never enters, so nothing is drawn.
     let mut g = two_player_game();
     let drawn = g.add_card_to_library(0, catalog::forest());
 
@@ -3393,8 +3408,8 @@ fn quantum_riddler_on_cast_draws_even_if_countered() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == qr),
         "Quantum Riddler should be countered (no permanent in play)");
-    assert!(g.players[0].hand.iter().any(|c| c.id == drawn),
-        "On-cast cantrip should still draw P0's library card even though the spell was countered");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == drawn),
+        "a countered Quantum Riddler never entered, so its ETB draw must not fire");
 }
 
 #[test]

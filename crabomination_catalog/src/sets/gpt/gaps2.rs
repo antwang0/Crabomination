@@ -401,7 +401,7 @@ pub fn hatching_plans() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::PermanentLeavesBattlefield,
+                EventKind::PermanentDied,
                 EventScope::SelfSource,
             ),
             effect: Effect::Draw {

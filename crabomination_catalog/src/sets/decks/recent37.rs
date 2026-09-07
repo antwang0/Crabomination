@@ -70,7 +70,7 @@ pub fn femeref_enchantress() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::AnyPlayer).with_filter(
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Enchantment,

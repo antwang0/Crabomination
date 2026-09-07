@@ -8323,7 +8323,7 @@ pub fn cecil_dark_knight() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::LoseLife {
                     who: Selector::You,

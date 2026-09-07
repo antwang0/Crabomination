@@ -1117,7 +1117,7 @@ pub fn spectral_lynx() -> CardDefinition {
 pub fn spiritmonger() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToCreature, EventScope::SelfSource),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -1560,7 +1560,7 @@ pub fn fungal_shambler() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 draw(1),
                 Effect::Discard {

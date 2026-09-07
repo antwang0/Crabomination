@@ -377,7 +377,7 @@ pub fn chromatic_star() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::PermanentLeavesBattlefield,
+                EventKind::PermanentDied,
                 EventScope::SelfSource,
             ),
             effect: Effect::Draw {

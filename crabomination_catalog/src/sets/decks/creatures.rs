@@ -282,10 +282,9 @@ pub fn psychic_frog() -> CardDefinition {
     }
 }
 
-/// Quantum Riddler — {3}{U}{U}, 4/6 Sphinx with flying. "When you cast
-/// Quantum Riddler, draw a card." Wired as a real on-cast trigger via
-/// `SpellCast` + `SelfSource`, so the cantrip fires (and the card resolves)
-/// even if Quantum Riddler itself is countered.
+/// Quantum Riddler — {3}{U}{U}, 4/6 Sphinx with flying. "When this creature
+/// enters, draw a card." The hand-size draw replacement and Warp are not
+/// modelled.
 pub fn quantum_riddler() -> CardDefinition {
     CardDefinition {
         name: "Quantum Riddler",
@@ -299,7 +298,7 @@ pub fn quantum_riddler() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

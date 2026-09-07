@@ -4207,7 +4207,7 @@ pub fn akki_lavarunner() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Flip {
                 what: Selector::This,
             },

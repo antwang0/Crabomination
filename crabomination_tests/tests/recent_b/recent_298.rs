@@ -47,14 +47,29 @@ fn corpse_blockade_gains_deathtouch_by_sacrifice() {
     assert!(g.computed_permanent(blockade).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
+/// "Whenever a card is put into an opponent's graveyard from anywhere" — it
+/// shipped as "another creature dies" (trig audit column, 2026-09-07): an
+/// opponent's discard grows it, your own creature's death does not.
 #[test]
-fn vulturous_zombie_grows_on_each_other_death() {
+fn vulturous_zombie_grows_per_card_into_an_opponents_graveyard() {
     let mut g = two_player_game();
     let vz = g.add_card_to_battlefield(0, catalog::vulturous_zombie());
+    let counters = |g: &GameState| g.battlefield_find(vz).unwrap().counter_count(CounterType::PlusOnePlusOne);
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     kill(&mut g, bear);
-    assert_eq!(g.battlefield_find(vz).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
-        "a +1/+1 counter for the other creature's death");
+    assert_eq!(counters(&g), 1, "the opponent's creature hit their graveyard");
+    let card = g.add_card_to_hand(1, catalog::forest());
+    let ctx = EffectContext::for_ability(vz, 0, Some(Target::Player(1)));
+    let evs = g.resolve_effect(&Effect::Discard {
+        who: Selector::Player(crabomination::effect::PlayerRef::Target(0)), amount: crabomination::effect::Value::ONE, random: false,
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == card), "discarded");
+    assert_eq!(counters(&g), 2, "a discard into the opponent's graveyard counts too");
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    kill(&mut g, mine);
+    assert_eq!(counters(&g), 2, "your own graveyard is not an opponent's");
 }
 
 #[test]

@@ -55,7 +55,7 @@ pub fn reach_for_the_sky() -> CardDefinition {
         }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::PermanentLeavesBattlefield,
+                EventKind::PermanentDied,
                 EventScope::SelfSource,
             ),
             effect: Effect::Draw {

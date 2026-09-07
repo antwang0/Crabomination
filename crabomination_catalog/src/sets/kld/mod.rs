@@ -655,8 +655,9 @@ pub fn voltaic_brawler() -> CardDefinition {
     }
 }
 
-/// Aetherborn Marauder — {3}{B} 2/2 Aetherborn. Whenever you get one or more
-/// {E}, put two +1/+1 counters on it (`EventKind::EnergyGained`, CR 107.16).
+/// Aetherborn Marauder — {3}{B} 2/2 flying lifelink. ETB: move any number of
+/// +1/+1 counters from other permanents you control onto it — every such
+/// counter, the bot's best pick (no partial-move prompt).
 pub fn aetherborn_marauder() -> CardDefinition {
     CardDefinition {
         name: "Aetherborn Marauder",
@@ -670,11 +671,13 @@ pub fn aetherborn_marauder() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EnergyGained, EventScope::YourControl),
-            effect: Effect::AddCounter {
-                what: Selector::This,
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MoveAllCountersOfKind {
+                from: Selector::EachPermanent(
+                    SelectionRequirement::ControlledByYou.and(SelectionRequirement::OtherThanSource),
+                ),
+                to: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
             },
         }],
         ..Default::default()

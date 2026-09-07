@@ -279,7 +279,7 @@ pub fn origin_spellbomb() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
             effect: Effect::MayPay {
                 description: "Pay {W}: draw a card.".into(),
                 mana_cost: cost(&[w()]),

@@ -145,7 +145,7 @@ pub fn hypnotic_specter() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             // Combat fires this trigger with `target = Player(damaged)` so
             // `PlayerRef::Target(0)` resolves to exactly the player who took
             // damage — not every opponent.

@@ -128,7 +128,7 @@ pub fn east_mark_cavalier() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::DealsCombatDamageToCreature,
+                EventKind::DealsDamageToCreature,
                 EventScope::SelfSource,
             )
             .with_filter(Predicate::EntityMatches {

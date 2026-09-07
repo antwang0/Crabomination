@@ -16960,7 +16960,7 @@ pub fn rancor() -> CardDefinition {
         // Self-recursion: leaves battlefield → return from graveyard to hand.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::PermanentLeavesBattlefield,
+                EventKind::PermanentDied,
                 EventScope::SelfSource,
             ),
             effect: Effect::Move {
@@ -34584,7 +34584,7 @@ pub fn thieving_otter() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -40876,7 +40876,7 @@ pub fn goblin_lackey() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::PutFromHandOntoBattlefield {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
@@ -40908,7 +40908,7 @@ pub fn warren_instigator() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::DoubleStrike],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::PutFromHandOntoBattlefield {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
@@ -66714,7 +66714,7 @@ pub fn barbed_shocker() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Trample, Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::DiscardHandDrawThatMany {
                 who: Selector::Player(PlayerRef::Target(0)),
             },

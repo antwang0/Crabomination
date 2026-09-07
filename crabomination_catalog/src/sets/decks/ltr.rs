@@ -309,7 +309,7 @@ pub fn wizards_rockets() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

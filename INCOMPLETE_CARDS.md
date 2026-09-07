@@ -576,6 +576,66 @@ the oracle's "N/N … token" mentions: 509 cards compared, **zero**
 mismatches (2026-09-07). Kept as a standing check; the first reading is
 the useful one to know about.
 
+### Trigger events — the sixth column, 2026-09-07: 40 shipped cards on the wrong event, and one engine gap under nine of them
+
+`trig` folds each `TriggeredAbility` literal's `EventKind` (a `StepBegins`
+by its step) and each oracle "When / Whenever / At the beginning of" line
+(the clause up to its first comma) to a coarse class — etb / dies /
+leaves / attacks / combat_damage / deals_damage / upkeep / … — and asks
+for a one-to-one assignment when the counts match. A clause naming two
+events ("enters or attacks", "at the beginning of your upkeep and
+whenever …") is not compared: a card may spell it as one literal or two.
+First run 63 rows; the reader's four leniencies (below) took it to 50,
+forty real, all fixed in one commit:
+
+| Shape | Cards | Was | Printed |
+|---|---|---|---|
+| combat-only damage trigger | Hypnotic Specter, Abyssal Specter, Thieving Magpie, Thieving Otter, Looter il-Kor, Goblin Lackey, Warren Instigator, Barbed Shocker, Reef Pirates, Order of Yawgmoth, Ruinous Minotaur, Fungal Shambler, Nafs Asp, Akki Lavarunner, Malcolm (Pirates) | `DealsCombatDamageToPlayer` | "deals damage to a player / an opponent" — `DealsDamageToPlayer` (a Fling, a fight, a ping all count) |
+| the same, creature side | Spiritmonger, Vampire Slayer, East-Mark Cavalier | `DealsCombatDamageToCreature` | `DealsDamageToCreature` |
+| the same, any recipient | Cecil, Dark Knight | `DealsCombatDamageToPlayer` | "whenever Cecil deals damage" — `DealsDamage` |
+| leaves for dies | Rancor, Chromatic Star, Nutrient Block, Hatching Plans, Zoetic Glyph, Demonic Ruckus, Audacity, Reach for the Sky, Fire Nation Warship | `PermanentLeavesBattlefield` | "is put into a graveyard from the battlefield" / "dies" — `PermanentDied` (an exiled Rancor came back to hand) |
+| sacrifice for dies | Terrarion, Implement of Combustion, Disciple of the Vault | `PermanentSacrificed` | `PermanentDied` (a Shatter drew nothing / drained nothing) |
+| anywhere for dies | Origin Spellbomb, Wizard's Rockets, Glistening Oil, Femeref Enchantress | `PutIntoGraveyard` | `PermanentDied` (a discarded enchantment drew Femeref a card) |
+| dies for anywhere | Vulturous Zombie | `CreatureDied` on another creature | "a card is put into an opponent's graveyard from anywhere" — `PutIntoGraveyard` / `OpponentControl` |
+| dies for leaves | Thragtusk | `CreatureDied` | "leaves the battlefield" — `PermanentLeavesBattlefield` |
+| on-cast for ETB | Quantum Riddler | `SpellCast` / `SelfSource` (a countered Riddler drew; its own test asserted it) | `EntersBattlefield` |
+| a different card | Aetherborn Marauder | an energy-gain +2 counters grower | ETB `MoveAllCountersOfKind` from your other permanents |
+| approximations retired | Mesmeric Orb (upkeep mill-3), Dramatic Accusation (tap each upkeep) | | `BecomesUntapped` per permanent; ETB tap + `PreventUntap` |
+
+**And the engine gap the Thragtusk fix exposed: `EventKind::
+PermanentLeavesBattlefield` matched only `CreatureDied`.** Every "when
+this / whenever a … leaves the battlefield" in the catalog (87 literals,
+25 on `SelfSource`) fired on a death and slept through a bounce, an exile
+or a shuffle — Thought-Knot Seer, Vesperlark, Momo, Twilight Drover
+among them, and their tests all killed the permanent. Fixed the same day:
+`GameEvent::PermanentLeftBattlefield` at every non-graveyard exit (the
+`Move` path, return-to-hand, exile, Glimpse of Tomorrow, meld), the
+leaver snapshotted into `died_card_snapshots` so its own trigger fires
+off the LKI walk, paired with that event only (a death's copy is still
+collected before removal). Tests: `thragtusk_bounced_still_makes_a_beast`,
+`twilight_drover_grows_on_token_bounce`, `rancor_exiled_from_the_
+battlefield_stays_in_exile`. **The CR 603.6 fan-out list also lacked
+`BecomesUntapped`**: an untap step untapping three permanents minted one
+Mesmeric Orb trigger.
+
+The reader's leniencies, each a documented engine spelling rather than a
+gap: "a source you control deals damage to an opponent" as the
+recipient-keyed `PlayerDamaged` / `DealtDamage` with a dealer filter
+(Night Dealings, Shocker, Bellowing Fiend, Talon of Pain, Niv-Mizzet ×2,
+Fear of Burning Alive, Teysa's "combat damage to you"); "a land enters"
+as `LandPlayed`; "becomes blocked by a creature" as a per-blocker
+`Blocks` + `TriggerBlocksSource` (Nessian Boar); "cast a spell that
+targets" as `BecameTarget` (Gnarlback Rhino). Residue, six rows:
+Whirling Dervish and Skizzik model an end-step conditional as the event
+that would satisfy it (a combat-damage counter; an ETB that schedules
+the sacrifice), and four `stx/extras_*` names (Sproutback Trudge,
+Cunning Rhetoric, Lorehold Archivist, Lone Rider) are supplemental
+inventions that predate the printed cards of the same name. Not
+compared, worth knowing: Barret, Avalanche Leader ships the Equipment
+token trigger and not the begin-combat attach (the counts differ, so
+the column skips it); Frost Titan's targeting tax is absent behind an
+"enters or attacks" clause.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

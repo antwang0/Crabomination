@@ -571,6 +571,24 @@ fn spiritmonger_grows_off_combat_damage() {
     );
 }
 
+/// "Whenever this creature deals damage to a creature" — it shipped combat-only
+/// (trig audit column, 2026-09-07). A bite outside combat grows it too.
+#[test]
+fn spiritmonger_grows_off_noncombat_damage() {
+    let mut g = two_player_game();
+    let monger = g.add_card_to_battlefield(0, catalog::spiritmonger());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(monger, 0, Some(Target::Permanent(bear)));
+    let bite = crabomination::effect::Effect::DealDamage {
+        to: crabomination::effect::Selector::Target(0),
+        amount: crabomination::effect::Value::Const(1),
+    };
+    let evs = g.resolve_effect(&bite, &ctx).expect("damage resolves");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(monger).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
 /// Squee's Embrace hands the host back when it dies.
 #[test]
 fn squees_embrace_returns_the_host() {

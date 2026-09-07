@@ -555,7 +555,7 @@ pub fn order_of_yawgmoth() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Fear],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::ONE,

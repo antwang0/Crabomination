@@ -455,7 +455,7 @@ pub fn narwhal() -> CardDefinition {
 pub fn reef_pirates() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Mill {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::ONE,

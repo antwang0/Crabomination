@@ -6086,7 +6086,7 @@ pub fn zoetic_glyph() -> CardDefinition {
         }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::PermanentLeavesBattlefield,
+                EventKind::PermanentDied,
                 EventScope::SelfSource,
             ),
             effect: Effect::Discover {

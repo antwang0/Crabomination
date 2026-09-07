@@ -4431,7 +4431,7 @@ pub fn vampire_slayer() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
-                EventKind::DealsCombatDamageToCreature,
+                EventKind::DealsDamageToCreature,
                 EventScope::SelfSource,
             )
             .with_filter(Predicate::EntityMatches {

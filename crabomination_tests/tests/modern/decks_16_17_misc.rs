@@ -180,6 +180,28 @@ fn thragtusk_etb_gains_five_life() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Thragtusk"));
 }
 
+/// "When this creature leaves the battlefield, create a 3/3 Beast" — it
+/// shipped as a dies trigger (trig audit column, 2026-09-07); a bounce makes
+/// the Beast too.
+#[test]
+fn thragtusk_bounced_still_makes_a_beast() {
+    let mut g = two_player_game();
+    let tusk = g.add_card_to_battlefield(0, catalog::thragtusk());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(tusk, 1, Some(Target::Permanent(tusk)));
+    let bounce = crabomination::effect::Effect::Move {
+        what: crabomination::effect::Selector::Target(0),
+        to: crabomination::effect::ZoneDest::Hand(crabomination::effect::PlayerRef::OwnerOf(Box::new(
+            crabomination::effect::Selector::Target(0),
+        ))),
+    };
+    let evs = g.resolve_effect(&bounce, &ctx).expect("bounce resolves");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == tusk), "Thragtusk bounced to hand");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Beast" && c.controller == 0),
+        "leaving without dying still creates the Beast");
+}
+
 #[test]
 fn lingering_souls_creates_two_spirit_tokens() {
     let mut g = two_player_game();

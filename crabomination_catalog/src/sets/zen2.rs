@@ -1755,7 +1755,7 @@ pub fn noble_vestige() -> CardDefinition {
 pub fn ruinous_minotaur() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Sacrifice {
                 who: Selector::You,
                 count: Value::Const(1),

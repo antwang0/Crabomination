@@ -415,46 +415,28 @@ fn aether_hub_etb_gives_one_energy() {
     assert!(g.battlefield_find(id).is_some());
 }
 
+/// "When this creature enters, move any number of +1/+1 counters from other
+/// permanents you control onto it" — it shipped as an invented energy-gain
+/// grower (trig audit column, 2026-09-07). Every such counter moves; an
+/// opponent's stay put.
 #[test]
-fn aetherborn_marauder_grows_when_you_get_energy() {
-    // CR 107.16 — "Whenever you get one or more {E}" triggers off the new
-    // EventKind::EnergyGained, adding two +1/+1 counters per energy gain.
+fn aetherborn_marauder_etb_gathers_your_plus_one_counters() {
     let mut g = two_player_game();
-    let m = g.add_card_to_battlefield(0, catalog::aetherborn_marauder());
-    // Resolve Sage of Shaila's Claim ETB ({E}{E}{E}) to fire one energy gain.
-    let sage = g.add_card_to_hand(0, catalog::sage_of_shailas_claim());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    cast_creature(&mut g, sage);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for (id, n) in [(a, 2), (b, 1), (theirs, 3)] {
+        g.battlefield_find_mut(id).unwrap().counters.insert(CounterType::PlusOnePlusOne, n);
+    }
+    let m = g.add_card_to_hand(0, catalog::aetherborn_marauder());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast_creature(&mut g, m);
     drain_stack(&mut g);
-    let marauder = g.battlefield_find(m).expect("still in play");
-    assert_eq!(
-        marauder.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
-        2,
-        "two +1/+1 counters from one energy gain",
-    );
-}
-
-#[test]
-fn aetherborn_marauder_does_not_trigger_on_opponent_energy() {
-    let mut g = two_player_game();
-    let m = g.add_card_to_battlefield(0, catalog::aetherborn_marauder());
-    // Opponent gains energy — YourControl scope must not fire for P0.
-    let sage = g.add_card_to_hand(1, catalog::sage_of_shailas_claim());
-    g.players[1].mana_pool.add(Color::Green, 1);
-    g.players[1].mana_pool.add_colorless(1);
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: sage, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    let marauder = g.battlefield_find(m).expect("still in play");
-    assert_eq!(
-        marauder.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
-        0,
-        "opponent's energy gain must not grow our Marauder",
-    );
+    let count = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(count(&g, m), 3, "both of your creatures' counters moved onto the Marauder");
+    assert_eq!((count(&g, a), count(&g, b)), (0, 0));
+    assert_eq!(count(&g, theirs), 3, "an opponent's counters are not yours to move");
 }
 
 /// ⚠ The tax is at the **end step**, not the upkeep — it shipped on the
