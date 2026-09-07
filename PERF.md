@@ -2831,7 +2831,7 @@ on the grant list and the two hardcoded hooks, priced and flat:
 --bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,744,752; 379.3 / 264.3 games/s single runs (3 threads, the second under a suite build)
 Ir      against d04a225d: sealed dflt 3,020,686,102 -> 3,021,669,628 (+0.033 %) / cube 2,963,669,195 -> 2,966,364,550 (+0.091 %), outcomes identical (Log, both entries)
 golden  7/7 unmoved
-suite   19,270 / 0 / 5 at the once/dealer_filter tip (19,267 at b3f6067b); audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review
+suite   19,271 / 0 / 5 at the run's tip (19,267 at b3f6067b, 19,270 at the once/dealer_filter tip); audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 gate    cargo check --profile release-fast -p crabomination --bin bot_ladder   clean (the debug-assertions=off typecheck)
 sweep   fresh seeds, release-fast: 601..603 at b3f6067b and 604..606 at the once/dealer_filter tip, x {sealed, cube, fixed} x --a dflt --b dflt --games 400

@@ -31,7 +31,7 @@ sixty-seventh pass, so don't re-take that.
    code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
    running `cargo build`. Disk: purge `target/debug/incremental` and stale target dirs before a big build; `cargo-llvm-lines` is installed.
-2. **Gates at the tip (PERF Baseline, the `b3f6067b` addendum):** suite 19,270 / 0 / 5, clippy, release-fast typecheck, `--bench` counters identical
+2. **Gates at the tip (PERF Baseline, the `b3f6067b` addendum):** suite 19,271 / 0 / 5, clippy, release-fast typecheck, `--bench` counters identical
    to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweeps 57,600 games / 0 undecided, `audit_stubs` /
    `audit_incomplete --structural-only` both 0, debug-assertions grid green at `78e57bd2` with the default pilot (33,120 + 1,800 + 680 games).
 3. **Engine, this run (ENGINE_BACKLOG first section):** `triggers_on_equipment` was honoured by the combat-damage and step hooks and *dropped* by the
