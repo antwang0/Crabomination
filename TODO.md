@@ -27,30 +27,22 @@ sixty-seventh pass, so don't re-take that.
 
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
-1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never
-   force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in
-   **CLAUDE.md**; measurement in **PERF's "Standing rules"**; build budgets in PERF's `(-275)` closing block. ⚠ Another session pushes
-   to this branch concurrently — fetch before every push, and ⚠ never rebase under a running `cargo build` (the tree it reads changes
-   mid-compile). Disk: `target/debug/incremental` hit 13 GB in one run; purge it before a worktree build.
-2. **Gates at the tip (`20e9f479`, the three ability-audit fixes on top of round 68; PERF Baseline):** suite 19,248 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
-   (195,806 / 27.49 / 611.9 / 0), golden 7/7 (seeds 3, 4, c0ffee re-blessed for the round), fresh-seed sweep 28,800 games (0 undecided)
-   + the training binary 9,000 games / 0 stalls; the debug-assertions grid green at the round-68 tip WITH the default pilot
-   (`PILOTS="dflt …" --pilots` — the grid's own list lacks `dflt`); `--wide` last green at `(-275)`; actor scaling linear to 4.
-3. **Perf this run:** `(-275)` the ability-lock gates on an exact-keyword fold; `(-276)` the 8 KB `CardDefinition` temporaries out of
-   `run_effect`'s frame (97 KB -> 64 KB, sealed -0.256 %, cube -0.288 %); **round 68 (ML_NOTES)** `sim_main_cast_cap: Some(1)` in the
-   default — the attack sim casts once from a main phase per sim: sealed wall **0.864** / cube **0.837** at no loss (four sealed seeds
-   + cube + fixed); cap 0 loses a point, cap 2 is 0.93 / 0.94. ⚠ The dflt six-game totals moved (different games); the round-68
-   Baseline block is the base, the `(-276)` addendum under it predates the pilot change. `--bench` (gang) untouched.
-4. **Leads:** engine profile FLAT on all three pools. Bot-side, the sim body is 31 % of cube (`sim_step` 30 passes a sim, ~7.5 k Ir a
-   pass, the `(-260)` shape) and the horizon sets the pass count — a horizon change is a strength question, not a leg. **Build time is
-   where the lever is** (PERF "Serde derives"): serde was 44 % of the engine's LLVM IR, the `CardDefinition: Deserialize` relocation cut
-   it 27 %; next of that shape needs a box where the client builds (PERF says why). **Frame:** what is left of `run_effect`'s 64 KB is
-   the 970-arm match's own tail (28 `PendingEffectState` slots) — the split.
-5. **Rounds 65-68 (ML_NOTES):** lobby pilot `MctsBot` 256; round 67 (f51e9c5c) the four targeting flags ADOPTED (+8 converge);
-   round 68 `sim_main_cast_cap` ADOPTED, control `sim-cast-off`, gate `.ladder/run_r68_simcast.sh`. **Cards:** the oracle-verb audit is 61
-   rows, all filed; `audit_catalog_stats.py` gained five oracle columns (ability mana cost / timing / {T}-sac halves / loyalty /
-   token P/T): 27 + 18 + 10 + 1 + 0 wrong shipped cards, all fixed (INCOMPLETE_CARDS' tables; five documented residues). Next of
-   that shape: a trigger's *event* or a static's *text*, which no auditor reads. Spell Queller and Manifold Key are printed now.
+1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force;
+   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in **CLAUDE.md**;
+   measurement in **PERF's "Standing rules"**; build budgets in PERF's `(-275)` block. ⚠ Another session pushes here concurrently — fetch before
+   every push, never rebase under a running `cargo build`. Disk: purge `target/debug/incremental` (7-13 GB) and stale target dirs before a big build.
+2. **Gates at the tip (PERF Baseline, round-68 block):** suite 19,248 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
+   (195,806 / 27.49 / 611.9 / 0), golden 7/7 (seeds 3, 4, c0ffee re-blessed for round 68), fresh-seed sweep 28,800 games + training binary 9,000
+   games / 0 stalls, the debug-assertions grid green WITH the default pilot (`PILOTS="dflt …" --pilots` — its own list lacks `dflt`), actor scaling linear to 4.
+3. **Perf:** `(-275)`/`(-276)` engine legs (PERF Log); **round 68 (ML_NOTES)** `sim_main_cast_cap: Some(1)` in the default — sealed wall **0.864** /
+   cube **0.837** at no loss on four seeds + cube + fixed; cap 0 loses a point. The dflt six-game totals moved (different games); the round-68
+   Baseline block is the base. Engine profile FLAT; bot-side the sim body is 31 % of cube at 30 passes a sim (`(-260)` shape), the horizon sets
+   the pass count — a strength question. **Build time is the lever** (PERF "Serde derives"): next of that shape needs a box where the client builds.
+4. **Cards/bugs:** `audit_catalog_stats.py` now reads five oracle columns per activated ability (mana cost / timing / {T}-sac / loyalty / token P/T):
+   27 + 18 + 10 + 1 + 0 wrong shipped cards fixed this run (INCOMPLETE_CARDS' tables, five documented residues). Next of that shape: a trigger's
+   *event* or a static's *text*. Spell Queller and Manifold Key are the printed cards. Structural / stub / oracle-verb audits clean.
+5. **Rounds 65-68 (ML_NOTES):** lobby pilot `MctsBot` 256; round 67 the four targeting flags (+8 converge); round 68 `sim_main_cast_cap`,
+   control `sim-cast-off`, gate `.ladder/run_r68_simcast.sh`.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

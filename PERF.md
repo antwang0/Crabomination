@@ -8180,6 +8180,33 @@ does not carry them. Round 56's second candidate (the 65 % start-score
 reuse) is CLOSED: it was the share of searches the chain runs on, reuse
 is 100 % of runs (`block_census` now prints both).
 
+**THE CAPPED DEFAULT, READ BY CONTEXT AT THE ROUND-68 TIP (`62e38777`,
+`--separate-callers=3`, `cg.cube.sc2.out` / `cg.sealed.sc2.out` in a
+scratchpad, cube 2,957,247,714 Ir / sealed 3,015,637,612 — within 0.1 %
+of the round-68 Baseline dumps after the ability-cost catalog fixes), so
+nobody re-takes it.** `perform_action_inner` is 70.2 % (223,232 calls).
+The attack sim is **58.9 %** (4,592 `simulate_attack_outcome_once`, 379 k
+Ir each; was 63.9 % / ~500 k at the `(-275)` tip): **2,482 sims / 33.5 %
+under `attack_chain_candidate` and 2,110 / 25.4 % under the greedy menu**
+— the chain is now the larger half (1.18 chain sims per menu sim). Inside
+it: `sim_step` 138,692 passes / 900.8 M (30.5 %) = **30.2 passes a sim,
+6.5 k Ir a pass** (the `(-260)` shape; the horizon to the opponent's end
+of combat sets the count); the sim's main-phase casts (`accept_on` under
+`sim_spell_action_inner`) **4,932 / 166.7 M = 5.6 %** (was 17.2 % — the
+round-68 cap); `sim_spell_action_inner` itself 45,772 calls / 269.6 M
+(9.1 %, ~8 asks a sim, 5.9 k each — the 103 M outside the casts is the
+trick / response / `cast_candidates` enumeration); the chain's own
+declaration dry runs + decision submits 7,040 / 191 M (6.5 %). The block
+sims 7,808 passes / 153 M (5.2 %); the real game 99 M (3.4 %);
+`main_phase_action_with`'s probes 107 M (3.6 %) + `simulate_through_combat`
+79 M (2.7 %). Engine-side nothing moved: `gather_continuous_effects_inner`
+93,762 / 213 M (7.2 %, `frozen_effects <- compute_permanents` 21.5 k /
+47 M the top context), the allocator ~5.2 % self, `dispatch_triggers_for_events`
+0.86 %, `sba_board_scan` 0.9 %, `compute_permanent_pass` 0.85 %. **What
+is left bot-side is the sim count** (the chain's singles: 2,482 sims for
+~1,150 searched declarations) **and the horizon**, both strength
+questions; the per-pass body is the engine floor.
+
 **THE NEW CUBE DEFAULT, READ BY CONTEXT AT THE `(-275)` TIP
 (`--separate-callers=3`, `cg.cube.sc.out` in a scratchpad, 3,571,023,344
 Ir), so nobody re-takes it to explain the +38.5 % against the `(-274)`
