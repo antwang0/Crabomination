@@ -520,18 +520,24 @@ The `tim` column reads each literal's `sorcery_speed` / `once_per_turn` /
 `IsTurnOf(PlayerRef::You)` condition against the oracle line's "Activate
 only as a sorcery" / "only once each turn" / "only during your turn"
 (sorcery speed accepted as the documented model of "only during your
-turn"). First run 29 rows; three reader rules later, 12; nine real, fixed:
+turn"). First run 29 rows; five reader rules later, 19 ("only during your upkeep"
+is the your-turn rider plus the upkeep step); eighteen real, fixed:
 
 | Card | Was | Printed |
 |---|---|---|
 | Pernicious Deed, Domesticated Hydra (monstrosity), Soul Conduit, Clattering Augur, Llanowar Greenwidow, Relentless X-ATM092, Scrapheap Scrounger, Geier Reach Sanitarium's loot | `sorcery_speed: true` | no timing rider — the gate was invented, each card was weaker than printed |
 | Essence Anchor | the graveyard gate only | "only during your turn and only if …" — `All([IsTurnOf(You), ..])` |
+| Amulet of Quoz, Hammer of Bogardan, Hell's Caretaker, Undead Gladiator, Necrosavant, Eternal Dragon, Nim Devourer, Grim Reminder | `CurrentStepIs(Upkeep)` alone — activatable in the *opponent's* upkeep, so a graveyard recursion ran twice a turn cycle | "only during your upkeep" — `All([IsTurnOf(You), CurrentStepIs(Upkeep)])`, the `atq.rs` `upkeep_only()` shape |
+| Mtenda Griffin | no gate at all | the same |
 
 Residue, one row: Vampire Bats prints "no more than twice each turn" and
 ships `once_per_turn` (no twice-a-turn limiter exists). The reader's rules:
 the rider is a substring, not a sentence ("and only once each turn"); an
-`IsTurnOf(You)` nested in an `All(..)` is the rider; and the old "activate
-only as a sorcery" printings (Soul Conduit) are not the current oracle.
+`IsTurnOf(You)` nested in an `All(..)` is the rider and a
+`Not(IsTurnOf(You))` is the opposite one (Maddening Imp); a step list that
+merely includes the upkeep (Cao Cao's "before attackers are declared") is
+not an upkeep rider; and the old "activate only as a sorcery" printings
+(Soul Conduit) are not the current oracle.
 
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
