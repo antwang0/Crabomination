@@ -381,6 +381,265 @@ def ref_token_stats(card, face=None):
         return None
     return [f"{p}/{t}" for p, t in _ORACLE_TOKEN.findall(text)]
 
+# ── trigger events ──────────────────────────────────────────────────────────
+# A `TriggeredAbility` literal's `EventKind` and the oracle's "When / Whenever
+# / At the beginning of" clause, both folded to a coarse class so that the
+# question is "does this card trigger on the printed *event*" — an upkeep
+# trigger shipped at the end step, a "deals combat damage" shipped as
+# "attacks" — and never "is the scope/filter right" (a different column).
+_STEP_CLASS = {
+    "Upkeep": "upkeep", "End": "end", "BeginCombat": "combat", "EndCombat": "endcombat",
+    "PreCombatMain": "main", "PostCombatMain": "main", "Draw": "draw", "Untap": "untap",
+    "Cleanup": "cleanup", "DeclareAttackers": "attackers", "DeclareBlockers": "blockers",
+    "CombatDamage": "combatdamage", "FirstStrikeDamage": "combatdamage",
+}
+_KIND_CLASS = {
+    "EntersBattlefield": "etb",
+    "CreatureDied": "dies", "PermanentDied": "dies", "CreatureOrArtifactDied": "dies",
+    "PermanentLeavesBattlefield": "leaves", "CreatureLeavesBattlefieldNotDying": "leaves",
+    "PermanentReturnedToHand": "leaves",
+    "PutIntoGraveyard": "to_graveyard", "LandPutIntoGraveyard": "to_graveyard", "CardMilled": "to_graveyard",
+    "CardLeftGraveyard": "leaves_graveyard", "PutIntoHandFromGraveyard": "leaves_graveyard",
+    "CardExiled": "exiled", "CardExiledFromPlayOrGraveyard": "exiled",
+    "SpellCast": "cast", "SpellCopied": "copied", "SpellCountered": "countered",
+    "Attacks": "attacks", "YouAttack": "attacks", "AttacksAndIsntBlocked": "attacks",
+    "Blocks": "blocks", "BlocksNOrMore": "blocks",
+    "BecomesBlocked": "blocked", "BecomesBlockedByNOrMore": "blocked",
+    "DealsCombatDamageToPlayer": "combat_damage", "DealsCombatDamageToCreature": "combat_damage",
+    "DealsCombatDamageToPlaneswalker": "combat_damage", "DealsCombatDamage": "combat_damage",
+    "DealsDamage": "deals_damage", "DealsDamageToPlayer": "deals_damage", "DealsDamageToCreature": "deals_damage",
+    "YourInstantOrSorceryDealtDamage": "deals_damage", "YourInstantOrSorceryDealtDamageToPlayer": "deals_damage",
+    "YourSourceDealtNoncombatDamageEqualToToughness": "deals_damage",
+    "DealtDamage": "dealt_damage", "DealtCombatDamage": "dealt_damage", "PlayerDamaged": "dealt_damage",
+    "ControllerDealtCombatDamage": "dealt_damage", "PlayerDealtNoncombatDamage": "dealt_damage",
+    "LandPlayed": "land",
+    "LifeGained": "lifegain", "LifeLost": "lifeloss", "PaidLife": "lifeloss",
+    "CardDrawn": "draws", "FirstCardDrawnThisTurn": "draws",
+    "Tapped": "tapped", "TappedForMana": "tapped", "BecomesUntapped": "untapped",
+    "BecameTarget": "targeted", "ChoseTargets": "targeted",
+    "PermanentSacrificed": "sacrifice", "CreatureSacrificed": "sacrifice",
+    "CardCycled": "cycle", "TurnedFaceUp": "faceup",
+    "CardDiscarded": "discard", "OpponentCausedYouToDiscard": "discard", "DiscardedOneOrMore": "discard",
+    "CounterAdded": "counter", "AnyCounterAdded": "counter", "CounterRemoved": "counter_removed",
+    "PoisonAdded": "counter", "Proliferated": "proliferate",
+    "CommittedCrime": "crime", "Expend": "expend", "DoorUnlocked": "door", "RoomFullyUnlocked": "door",
+    "Transformed": "transform", "TokenCreated": "token", "BecameMonarch": "monarch",
+    "ScriedOrSurveiled": "scry", "RolledDice": "dice", "WonCoinFlip": "coin", "LostCoinFlip": "coin",
+    "Explored": "explore", "EnergyGained": "energy", "PhasesIn": "phase", "PhasesOut": "phase",
+    "AuraAttached": "attach", "AuraAttachedToAny": "attach", "BecameAttached": "attach",
+    "AbilityActivated": "activated", "ExhaustAbilityActivated": "activated", "AdaptAbilityActivated": "activated",
+    "LibraryShuffled": "shuffle", "PlayerSearchedLibrary": "search",
+    "Mutated": "mutate", "ManifestedDread": "manifest", "Foraged": "forage", "GiftGiven": "gift",
+    "EvidenceCollected": "evidence", "Discovered": "discover", "Encountered": "encounter",
+    "CrewsOrSaddles": "crew", "DayNightChanged": "daynight", "ClassLevelReached": "level",
+    "RingTempted": "ring", "BecomesPlotted": "plot", "DungeonCompleted": "dungeon",
+    "GainedControlOfThis": "control", "LostControlOfThis": "control", "VotingFinished": "vote",
+    "CaseSolved": "case", "Regenerated": "regenerate", "CumulativeUpkeepUnpaid": "cumulative",
+    "ChaosEnsues": "chaos", "PlaneswalkedAwayFrom": "planeswalk", "SetInMotion": "scheme",
+    "VisitedAttraction": "attraction",
+}
+
+# Oracle clause -> the classes a literal may spell it as. Read against the
+# clause up to its first comma (the condition; an "if" rider is after it),
+# every matching row unions in, and a clause no row reads leaves the card
+# uncompared.
+_ORACLE_TRIGGER_CLASSES = [
+    (r"^at the beginning of .*upkeep", {"upkeep"}),
+    (r"^at the beginning of .*end step", {"end"}),
+    (r"^at the beginning of .*end of combat", {"endcombat"}),
+    (r"^at the beginning of .*declare attackers", {"attackers"}),
+    (r"^at the beginning of .*declare blockers", {"blockers"}),
+    (r"^at the beginning of .*combat damage", {"combatdamage"}),
+    (r"^at the beginning of (?:(?!end).)*\bcombat\b", {"combat"}),
+    (r"^at the beginning of .*main phase", {"main"}),
+    (r"^at the beginning of .*draw step", {"draw"}),
+    (r"^at the beginning of .*untap step", {"untap"}),
+    (r"^at the beginning of .*cleanup", {"cleanup"}),
+    (r"^when(?:ever)? .*\benters\b(?! (?:a|your|the) graveyard)", {"etb"}),
+    (r"^when(?:ever)? .*\bdies?\b", {"dies"}),
+    (r"^when(?:ever)? .*put into (?:a|an|your|their|an opponent's) graveyard from the battlefield", {"dies"}),
+    (r"^when(?:ever)? .*put into (?:a|an|your|their|an opponent's) graveyard(?! from the battlefield)", {"to_graveyard"}),
+    (r"^when(?:ever)? .*\bmill(?:s|ed)?\b", {"to_graveyard"}),
+    (r"^when(?:ever)? .*leaves? the battlefield", {"leaves"}),
+    (r"^when(?:ever)? .*\battacks?\b", {"attacks"}),
+    (r"^when(?:ever)? .*\bblocks?\b", {"blocks"}),
+    (r"^when(?:ever)? .*(?:becomes?|is|are) blocked\b", {"blocked"}),
+    (r"^when(?:ever)? .*deals? combat damage", {"combat_damage"}),
+    (r"^when(?:ever)? .*\bdeals?\b(?! combat damage)", {"deals_damage"}),
+    (r"^when(?:ever)? .*(?:is|are|you're|you are) dealt (?:combat |noncombat )?damage", {"dealt_damage"}),
+    (r"^when(?:ever)? .*damage is dealt to", {"dealt_damage"}),
+    (r"^when(?:ever)? .*\bcasts?\b", {"cast"}),
+    (r"^when(?:ever)? .*\bcop(?:y|ies)\b", {"copied"}),
+    (r"^when(?:ever)? .*(?:is|are) countered", {"countered"}),
+    (r"^when(?:ever)? .*plays? a land", {"land"}),
+    (r"^when(?:ever)? .*gains? life", {"lifegain"}),
+    (r"^when(?:ever)? .*loses? life", {"lifeloss"}),
+    (r"^when(?:ever)? .*pays? life", {"lifeloss"}),
+    (r"^when(?:ever)? .*\bdraws?\b", {"draws"}),
+    (r"^when(?:ever)? .*(?:becomes?|is|are) tapped", {"tapped"}),
+    (r"^when(?:ever)? .*\btaps?\b", {"tapped"}),
+    (r"^when(?:ever)? .*(?:becomes?|is|are) untapped", {"untapped"}),
+    (r"^when(?:ever)? .*becomes? the target", {"targeted"}),
+    (r"^when(?:ever)? .*\bsacrifices?\b", {"sacrifice"}),
+    (r"^when(?:ever)? .*\bcycles?\b", {"cycle"}),
+    (r"^when(?:ever)? .*turned face up", {"faceup"}),
+    (r"^when(?:ever)? .*\bdiscards?\b", {"discard"}),
+    (r"^when(?:ever)? .*counters? (?:is|are) put on|^when(?:ever)? .*\bput (?:a|an|one or more|two or more|\w+) (?:[\w+/\-]+ )?counters?\b", {"counter"}),
+    (r"^when(?:ever)? .*counters? (?:is|are) removed|^when(?:ever)? .*\bremoves? (?:a|an|one or more|\w+) (?:[\w+/\-]+ )?counters?\b", {"counter_removed"}),
+    (r"^when(?:ever)? .*\bproliferate\b", {"proliferate"}),
+    (r"^when(?:ever)? .*leaves? (?:your|a|the) graveyard", {"leaves_graveyard"}),
+    (r"^when(?:ever)? .*\bexiled?\b", {"exiled"}),
+    (r"^when(?:ever)? .*commits? a crime", {"crime"}),
+    (r"^when(?:ever)? .*\bexpend\b", {"expend"}),
+    (r"^when(?:ever)? .*\bunlock", {"door"}),
+    (r"^when(?:ever)? .*\btransforms?\b", {"transform"}),
+    (r"^when(?:ever)? .*tokens? (?:is|are|enters?|would)|^when(?:ever)? .*creates? (?:a|an|one or more|two or more)\b.*\btokens?\b", {"token"}),
+    (r"^when(?:ever)? .*\bmonarch\b", {"monarch"}),
+    (r"^when(?:ever)? .*\b(?:scry|surveil)\b", {"scry"}),
+    (r"^when(?:ever)? .*\broll", {"dice"}),
+    (r"^when(?:ever)? .*\bflip", {"coin"}),
+    (r"^when(?:ever)? .*\bexplores?\b", {"explore"}),
+    (r"^when(?:ever)? .*\benergy\b", {"energy"}),
+    (r"^when(?:ever)? .*phases? (?:in|out)", {"phase"}),
+    (r"^when(?:ever)? .*becomes? attached|^when(?:ever)? .*\battach\b", {"attach"}),
+    (r"^when(?:ever)? .*\bactivates?\b", {"activated"}),
+    (r"^when(?:ever)? .*\bshuffles?\b", {"shuffle"}),
+    (r"^when(?:ever)? .*\bsearch", {"search"}),
+    (r"^when(?:ever)? .*\bmutates?\b", {"mutate"}),
+    (r"^when(?:ever)? .*manifests? dread", {"manifest"}),
+    (r"^when(?:ever)? .*\bforages?\b", {"forage"}),
+    (r"^when(?:ever)? .*gives? a gift", {"gift"}),
+    (r"^when(?:ever)? .*collects? evidence", {"evidence"}),
+    (r"^when(?:ever)? .*\bdiscovers?\b", {"discover"}),
+    (r"^when(?:ever)? .*\b(?:crews?|saddles?)\b", {"crew"}),
+    (r"^when(?:ever)? .*becomes? (?:day|night)", {"daynight"}),
+    (r"^when(?:ever)? .*\bregenerates?\b", {"regenerate"}),
+    (r"^when(?:ever)? .*tempts? you", {"ring"}),
+    (r"^when(?:ever)? .*becomes? plotted", {"plot"}),
+    (r"^when(?:ever)? .*complete a dungeon", {"dungeon"}),
+    (r"^when(?:ever)? .*(?:gain|lose) control of", {"control"}),
+    (r"^when(?:ever)? .*\bvote\b", {"vote"}),
+    (r"^when(?:ever)? .*solves? a case", {"case"}),
+    (r"^when(?:ever)? .*cumulative upkeep", {"cumulative"}),
+    (r"^when(?:ever)? .*chaos ensues", {"chaos"}),
+    (r"^when(?:ever)? .*planeswalk away", {"planeswalk"}),
+    (r"^when(?:ever)? .*set in motion", {"scheme"}),
+    (r"^when(?:ever)? .*visit", {"attraction"}),
+]
+_ORACLE_TRIGGER_CLASSES = [(re.compile(p), frozenset(c)) for p, c in _ORACLE_TRIGGER_CLASSES]
+_ORACLE_TRIG_LINE = re.compile(r"^(?:[^—\n]{1,40} — )?(when(?:ever)? |at (?:the beginning|end) of )", re.I)
+
+# The engine's documented spellings of a clause, added to what the rows read:
+# "a land enters" as `LandPlayed`; "a source deals damage to a player" as the
+# recipient-keyed `PlayerDamaged` / `DealtDamage` with a dealer filter (never
+# the combat-only kinds); "becomes blocked by a creature" as a per-blocker
+# `Blocks` with `TriggerBlocksSource`; "cast a spell that targets" as
+# `BecameTarget`.
+def _lenient(cond, classes):
+    if classes == {"etb"} and re.search(r"\bland\b", cond):
+        classes.add("land")
+    if classes == {"deals_damage"}:
+        classes.add("dealt_damage")
+    if classes == {"combat_damage"} and "to you" in cond:
+        classes.add("dealt_damage")
+    if classes == {"blocked"} and "becomes blocked by" in cond:
+        classes.add("blocks")
+    if classes == {"cast"} and "target" in cond:
+        classes.add("targeted")
+    return classes
+
+def trigger_literals(body):
+    """Every `TriggeredAbility { .. }` literal in the card's own
+    `triggered_abilities: vec![..]`; `None` when the field is absent or any
+    element is a helper call."""
+    m = own_field(body, r"triggered_abilities:")
+    if m is None:
+        return None
+    vec = vec_after(body, m.start())
+    if vec is None:
+        return None
+    for item in top_level_items(vec):
+        if item.strip() and not item.strip().startswith("TriggeredAbility {"):
+            return None
+    out, i = [], 0
+    while True:
+        j = vec.find("TriggeredAbility {", i)
+        if j < 0:
+            break
+        end = bracket_span(vec, j + len("TriggeredAbility "))
+        out.append(vec[j:end])
+        i = end
+    return out
+
+def trigger_kinds(body):
+    """Per literal, the class of its `event:` kind; `None` when any literal's
+    event is a helper call or an unclassed kind."""
+    lits = trigger_literals(body)
+    if lits is None:
+        return None
+    out = []
+    for lit in lits:
+        k = literal_depth1_field(lit, "event:")
+        if k is None:
+            return None
+        expr, depth = lit[k + len("event:"):], 0
+        for idx, ch in enumerate(expr):
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth -= 1
+            if depth < 0 or (ch == "," and depth == 0):
+                expr = expr[:idx]
+                break
+        m = re.search(r"EventKind::(\w+)", expr)
+        if not m:
+            return None
+        if m.group(1) == "StepBegins":
+            s = re.search(r"TurnStep::(\w+)", expr)
+            cls = _STEP_CLASS.get(s.group(1)) if s else None
+        else:
+            cls = _KIND_CLASS.get(m.group(1))
+        if cls is None:
+            return None
+        out.append(cls)
+    return out
+
+def ref_trigger_kinds(card, face=None):
+    """Per oracle trigger line, the set of classes it accepts; `None` when a
+    line reads as a trigger and no row classes it."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    out = []
+    for line in text.split("\n"):
+        line = line.strip()
+        m = _ORACLE_TRIG_LINE.match(line)
+        if not m:
+            continue
+        cond = line[m.start(1):].split(",")[0].lower()
+        classes = set()
+        for rx, cls in _ORACLE_TRIGGER_CLASSES:
+            if rx.match(cond):
+                classes |= cls
+        # An unread clause, or one that names two events ("enters or
+        # attacks", "at the beginning of your upkeep and whenever …") that a
+        # card may spell as one literal or two: the card is not compared.
+        if not classes or (len(classes) > 1 and re.search(r"\b(?:or|and)\b", cond)) \
+                or re.search(r"\b(?:and|or) (?:when(?:ever)?|at the beginning)\b", cond):
+            return None
+        out.append(frozenset(_lenient(cond, classes)))
+    return out
+
+def trigger_mismatch(code, ref):
+    """No one-to-one assignment of literals to oracle lines accepts every
+    literal's class (both lists are short; backtracking is fine)."""
+    def fit(i, free):
+        if i == len(code):
+            return True
+        return any(code[i] in ref[j] and fit(i + 1, free - {j}) for j in free)
+    return not fit(0, frozenset(range(len(ref))))
+
 def ability_mana_costs(body):
     """The mana cost of every `ActivatedAbility { .. }` literal in the card's
     own `activated_abilities: vec![..]`, each as `norm()`'s symbol tuple; a
@@ -886,7 +1145,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -1027,6 +1286,14 @@ def audit():
             ref_tok = ref_token_stats(card, face)
             if tok and ref_tok and len(tok) == len(ref_tok) and sorted(tok) != sorted(ref_tok):
                 d["tok"].append((tag, sorted(tok), sorted(ref_tok)))
+            # trigger events: each literal's EventKind class against the
+            # oracle's When / Whenever / At-the-beginning lines, matched
+            # one-to-one, same count gate.
+            trg = trigger_kinds(body)
+            ref_trg = ref_trigger_kinds(card, face)
+            if trg is not None and ref_trg is not None and len(trg) == len(ref_trg):
+                if trigger_mismatch(trg, ref_trg):
+                    d["trig"].append((tag, trg, ["|".join(sorted(f)) for f in ref_trg]))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -1043,21 +1310,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}")
-        print("-" * 86)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}")
+        print("-" * 92)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 86)
+        print("-" * 92)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 
