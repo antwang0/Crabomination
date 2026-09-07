@@ -571,9 +571,10 @@ def trigger_literals(body):
         i = end
     return out
 
-def trigger_kinds(body):
-    """Per literal, the class of its `event:` kind; `None` when any literal's
-    event is a helper call or an unclassed kind."""
+def trigger_event_exprs(body):
+    """Per literal, the text of its `event:` field (to the literal's next
+    depth-0 comma); `None` when the vec has a helper call or a literal has
+    no `event:`."""
     lits = trigger_literals(body)
     if lits is None:
         return None
@@ -591,6 +592,17 @@ def trigger_kinds(body):
             if depth < 0 or (ch == "," and depth == 0):
                 expr = expr[:idx]
                 break
+        out.append(expr)
+    return out
+
+def trigger_kinds(body):
+    """Per literal, the class of its `event:` kind; `None` when any literal's
+    event is a helper call or an unclassed kind."""
+    exprs = trigger_event_exprs(body)
+    if exprs is None:
+        return None
+    out = []
+    for expr in exprs:
         m = re.search(r"EventKind::(\w+)", expr)
         if not m:
             return None
@@ -639,6 +651,125 @@ def trigger_mismatch(code, ref):
             return True
         return any(code[i] in ref[j] and fit(i + 1, free - {j}) for j in free)
     return not fit(0, frozenset(range(len(ref))))
+
+# ── trigger scopes ──────────────────────────────────────────────────────────
+# The same literals, read for their `EventScope` against the clause's
+# subject: "this creature" / "you" / "another … you control" / "… you
+# control" / "an opponent" / "a player, a creature". Whose event the trigger
+# listens to — the column the `trig` class does not see. A literal on
+# `AnyPlayer` *with a filter* is not compared: the filter is usually the scope
+# ("a creature an opponent controls" as `AnyPlayer` + `ControlledByOpponent`).
+_SCOPE_CLASS = {
+    "SelfSource": "self", "YourControl": "yours", "AnotherOfYours": "another",
+    "OpponentControl": "opp", "AnyPlayer": "any", "ActivePlayer": "active",
+    "EnchantedBySource": "ench",
+}
+
+def trigger_scopes(body):
+    exprs = trigger_event_exprs(body)
+    if exprs is None:
+        return None
+    out = []
+    for expr in exprs:
+        m = re.search(r"EventScope::(\w+)", expr)
+        cls = _SCOPE_CLASS.get(m.group(1)) if m else None
+        # `YouAttack` is "whenever you attack" on either seat spelling; an
+        # `AnyPlayer` narrowed by `.from_opponent()` is the opponent scope.
+        if "EventKind::YouAttack" in expr:
+            cls = "yours"
+        elif cls == "any" and re.search(r"from_opponent|actor_is_opponent", expr):
+            cls = "opp"
+        elif cls is None or (cls == "any" and re.search(r"filter|dealt_by", expr)):
+            return None
+        out.append(cls)
+    return out
+
+def _clause(text):
+    """The trigger condition: up to the first comma that is not inside a
+    list ("Rabbits, Bats, and/or Mice", "nontoken, non-Angel")."""
+    i = 0
+    while True:
+        j = text.find(",", i)
+        if j < 0:
+            return text
+        rest = text[j + 1:].lstrip()
+        if re.match(r"(?:and|or|and/or)\b|[\w'-]+,|non-?\w", rest):
+            i = j + 1
+            continue
+        return text[:j]
+
+def ref_trigger_scopes(card, face=None):
+    """Per oracle trigger line, the scope classes its subject accepts. A
+    step trigger's `ActivePlayer` is "your step" in `fire_step_triggers`, so
+    "your upkeep" accepts it; a clause naming two subjects ("this creature or
+    another Ally you control") and the targeting / attachment / "causes you
+    to" shapes, whose scope is the *caster's*, are not compared."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    full = (face or card).get("name", "").lower()
+    short = full.split(",")[0].strip()
+    this = r"(?:this \w+|it|" + re.escape(short) + r")\b"
+    out = []
+    for line in text.split("\n"):
+        line = line.strip()
+        m = _ORACLE_TRIG_LINE.match(line)
+        if not m:
+            continue
+        cond = _clause(line[m.start(1):].lower())
+        if re.search(r"becomes? the target|\btargets?\b|attached to|causes? you to|\bor (?:an)?other\b|enchanted|^when you control", cond) \
+                or re.search(r"\b(?:and|or) (?:when(?:ever)?|at the beginning)\b", cond):
+            return None
+        classes = set()
+        if cond.startswith("at "):
+            rider = line.lower()
+            if re.search(r"\byour\b", cond) or "if it's your turn" in rider:
+                classes |= {"self", "yours", "active"}
+            elif "if it's an opponent's turn" in rider or "if it's not your turn" in rider:
+                classes |= {"opp"}
+            elif re.search(r"enchanted", cond):
+                classes |= {"ench"}
+            elif re.search(r"opponent", cond):
+                classes |= {"opp"}
+            elif re.search(r"\b(?:each|the)\b", cond):
+                classes |= {"any"}
+        else:
+            subj = re.sub(r"^when(?:ever)? ", "", cond)
+            if re.match(this, subj) or re.search(r"\bthis (?!turn|way|game|combat|step|phase)\w+|\b" + re.escape(short) + r"\b", subj) \
+                    or subj.startswith("you cast this spell"):
+                classes |= {"self"}
+            if re.match(r"you(?:'re| )", subj) and not subj.startswith("you cast this spell"):
+                classes |= {"yours", "self"}
+            if subj.startswith("enchanted "):
+                classes |= {"ench"}
+            # "a creature you control" is spelled `AnotherOfYours` by any
+            # source that cannot be its own subject (an enchantment, an
+            # Equipment); accept both for the whole family.
+            if re.search(r"\b(?:you control|under your control|your graveyard|your library|your hand)\b", subj):
+                classes |= {"another", "yours"}
+            if re.search(r"\b(?:an|each|one or more) opponents?\b|opponents?(?:'s)? \b|you don't control|\battacks you\b", subj):
+                classes |= {"opp"}
+            # A damage event keyed on its recipient: "to you" is your seat
+            # (`PlayerDamaged` / `ControllerDealtCombatDamage` on SelfSource or
+            # YourControl), "to an opponent" the opponent's.
+            if re.search(r"damage to you\b", subj):
+                classes |= {"opp", "yours", "self"}
+            if re.search(r"damage to an opponent\b", subj):
+                classes |= {"opp", "yours"}
+            if re.search(r"^you .*\banother\b", subj):
+                classes |= {"another"}
+            if not classes and re.match(r"(?:a|an|one or more|two or more|each|any) ", subj):
+                classes |= {"any"}
+        # "this or another …", "you or an opponent": subjects on different
+        # seats, which a card may spell as one literal or two. "one or more"
+        # and "Ninja or Rogue" are not that.
+        seats = {frozenset({"self", "yours", "active", "another"}), frozenset({"opp"}), frozenset({"any"}), frozenset({"ench"})}
+        spanned = sum(1 for s in seats if classes & s)
+        if not classes or (spanned > 1 and re.search(r"\b(?:or|and)\b", cond)):
+            return None
+        out.append(frozenset(classes))
+    return out
 
 def ability_mana_costs(body):
     """The mana cost of every `ActivatedAbility { .. }` literal in the card's
@@ -1145,7 +1276,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -1294,6 +1425,13 @@ def audit():
             if trg is not None and ref_trg is not None and len(trg) == len(ref_trg):
                 if trigger_mismatch(trg, ref_trg):
                     d["trig"].append((tag, trg, ["|".join(sorted(f)) for f in ref_trg]))
+            # trigger scopes: each literal's EventScope class against the
+            # clause's subject, one-to-one, same count gate.
+            sc = trigger_scopes(body)
+            ref_sc = ref_trigger_scopes(card, face)
+            if sc is not None and ref_sc is not None and len(sc) == len(ref_sc):
+                if trigger_mismatch(sc, ref_sc):
+                    d["scope"].append((tag, sc, ["|".join(sorted(f)) for f in ref_sc]))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -1310,21 +1448,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}")
-        print("-" * 92)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}")
+        print("-" * 98)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 92)
+        print("-" * 98)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 
