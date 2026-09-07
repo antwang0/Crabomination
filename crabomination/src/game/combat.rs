@@ -6,10 +6,22 @@ use smallvec::SmallVec;
 
 /// One combat/noncombat damage trigger gathered by `fire_combat_damage_
 /// triggers`, before its intervening-'if' runs: `(source, effect,
-/// controller, intervening-if, bind_dealer)`. The last flag binds the damage
-/// dealer as the body's `TriggerSource` (the Phase-1.5 listener pattern —
-/// Kaito's "return one of them to hand").
-type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool);
+/// controller, intervening-if, bind_dealer, once)`. `bind_dealer` binds the
+/// damage dealer as the body's `TriggerSource` (the Phase-1.5 listener
+/// pattern — Kaito's "return one of them to hand"); `once` is the printed
+/// index of a `once_per_turn` trigger, the CR 603.3d key the dispatcher
+/// uses (`triggered_once_per_turn_used`), so a hook-fired trigger obeys the
+/// same gate — "one or more creatures you control deal combat damage" is
+/// one fire for the batch, not one per dealer.
+type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool, Option<usize>);
+
+/// The `once` key of a printed trigger at index `idx`: `Some` only when the
+/// ability says "only once each turn" (a granted trigger passes `None`, as
+/// the dispatcher's `trig_idx < n_printed` rule does).
+#[inline]
+fn once_key(idx: Option<usize>, t: &crate::card::TriggeredAbility) -> Option<usize> {
+    idx.filter(|_| t.event.once_per_turn)
+}
 
 /// One attacker's granted Attacks triggers: the statics' (fired off the
 /// attacker) and the attachments' (`(source, ability)` — the attachment's own
@@ -1073,11 +1085,15 @@ impl GameState {
         // Per CR 506.5, the Attacks trigger filter must be evaluated
         // post-batch, so we carry the optional filter alongside each
         // queued trigger.
+        // `(source, effect, controller, filter, once)` — `once` as in
+        // `DamageTrigger`: the CR 603.3d key of an "attacks for the first time
+        // each turn" trigger (Aurelia, Godo), checked after the filter.
         let mut triggers: Vec<(
             CardId,
             Effect,
             usize,
             Option<crate::effect::Predicate>,
+            Option<usize>,
         )> = vec![];
         let computed_kw = |id: CardId| -> &[Keyword] {
             #[cfg(debug_assertions)]
@@ -1554,10 +1570,10 @@ impl GameState {
                 .definition
                 .triggered_abilities
                 .iter()
-                .chain(granted.iter())
-                .chain(static_granted.iter())
-                .map(|t| (id, t));
-            for (src, t) in own.chain(equip_granted.iter().map(|(s, t)| (*s, t))) {
+                .enumerate()
+                .map(|(i, t)| (id, Some(i), t))
+                .chain(granted.iter().chain(static_granted.iter()).map(|t| (id, None, t)));
+            for (src, idx, t) in own.chain(equip_granted.iter().map(|(s, t)| (*s, None, t))) {
                 // Only SelfSource Attacks triggers are hardcoded here.
                 // YourControl-scoped Attacks triggers (Exalted via
                 // `Predicate::AttackingAlone`, Battle Banner, …) are
@@ -1571,7 +1587,7 @@ impl GameState {
                     // re-evaluate it AFTER the entire attacker batch is
                     // declared (CR 506.5 "attacking alone" semantics
                     // require the post-batch view).
-                    triggers.push((src, t.effect.clone(), p, t.event.filter.clone()));
+                    triggers.push((src, t.effect.clone(), p, t.event.filter.clone(), once_key(idx, t)));
                 }
             }
             // CR 702.147 — Decayed. "When it attacks, sacrifice it at end of
@@ -1603,7 +1619,7 @@ impl GameState {
                     count: Value::Const(n as i32),
                     filter: crate::card::SelectionRequirement::Permanent,
                 };
-                triggers.push((id, sac_effect, p, None));
+                triggers.push((id, sac_effect, p, None, None));
             }
             // Firebending N — CR 702.189a: a triggered mana ability (resolves
             // without the stack, CR 605.3b). Add N {R} now; the mana survives
@@ -1705,7 +1721,7 @@ impl GameState {
         // the dispatcher). The hardcoded `is_event_hardcoded` check only
         // marks SelfSource Attacks as already handled.
 
-        for (source, effect, controller, filter) in triggers {
+        for (source, effect, controller, filter, once) in triggers {
             // CR 603.2 + CR 506.5: evaluate the trigger's optional filter
             // predicate at fire-time, which for Attacks is "after the
             // entire declare attackers step batch is resolved".
@@ -1739,6 +1755,13 @@ impl GameState {
                 if !self.evaluate_predicate(&predicate, &ctx) {
                     continue;
                 }
+            }
+            // CR 603.3d — after the filter, so a declaration the filter
+            // rejects does not spend the slot (the dispatcher's order).
+            if let Some(i) = once
+                && !self.triggered_once_per_turn_used.insert((source, i))
+            {
+                continue;
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
@@ -5514,12 +5537,9 @@ impl GameState {
             // Primal Odin's Zantetsuken) fire alike.
             let instance_granted: &[crate::card::TriggeredAbility] =
                 self.granted_triggers_eot.get(&c.id).map(Vec::as_slice).unwrap_or(&[]);
-            for t in c
-                .definition
-                .triggered_abilities
-                .iter()
-                .chain(static_granted.iter())
-                .chain(instance_granted.iter())
+            let printed = c.definition.triggered_abilities.iter().enumerate().map(|(i, t)| (Some(i), t));
+            for (idx, t) in
+                printed.chain(static_granted.iter().chain(instance_granted.iter()).map(|t| (None, t)))
             {
                 if !matches!(
                     t.event.scope,
@@ -5527,13 +5547,27 @@ impl GameState {
                 ) {
                     continue;
                 }
-                if let Some(i) = slot(&t.event.kind) {
+                // The dealer's own `AnyPlayer` trigger is still "whenever a
+                // Goblin deals combat damage" — its `dealer_filter` reads the
+                // dealer here exactly as Phase 1.6 reads it for a bystander
+                // (Cabal Slaver is a Cleric; its own hit strips nothing).
+                if let Some(i) = slot(&t.event.kind)
+                    && t.event.dealer_filter.as_ref().is_none_or(|f| {
+                        self.evaluate_requirement_static(
+                            f,
+                            &Target::Permanent(source),
+                            c.controller,
+                            None,
+                        )
+                    })
+                {
                     by_kind[i].push((
                         c.id,
                         t.effect.clone(),
                         c.controller,
                         t.event.filter.clone(),
                         false,
+                        once_key(idx, t),
                     ));
                 }
             }
@@ -5567,6 +5601,7 @@ impl GameState {
                             atk_ctrl,
                             t.event.filter.clone(),
                             false,
+                            None,
                         ));
                     }
                 }
@@ -5579,7 +5614,7 @@ impl GameState {
                 if aura.attached_to != Some(source) || !aura.definition.is_enchantment() {
                     continue;
                 }
-                for t in &aura.definition.triggered_abilities {
+                for (idx, t) in aura.definition.triggered_abilities.iter().enumerate() {
                     if t.event.scope == crate::effect::EventScope::EnchantedBySource
                         && let Some(i) = slot(&t.event.kind)
                     {
@@ -5589,6 +5624,7 @@ impl GameState {
                             aura.controller,
                             t.event.filter.clone(),
                             false,
+                            once_key(Some(idx), t),
                         ));
                     }
                 }
@@ -5619,6 +5655,7 @@ impl GameState {
                             atk_ctrl,
                             t.event.filter.clone(),
                             false,
+                            None,
                         ));
                     }
                 }
@@ -5678,7 +5715,7 @@ impl GameState {
                 any_listener = true;
                 let mine = attacker_controller == Some(c.controller);
                 let other = c.id != source;
-                for t in &c.definition.triggered_abilities {
+                for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
                     match t.event.scope {
                         crate::effect::EventScope::YourControl if mine => {
                             if let Some(i) = slot(&t.event.kind) {
@@ -5688,6 +5725,7 @@ impl GameState {
                                     c.controller,
                                     t.event.filter.clone(),
                                     true,
+                                    once_key(Some(idx), t),
                                 ));
                             }
                         }
@@ -5710,6 +5748,7 @@ impl GameState {
                                         c.controller,
                                         t.event.filter.clone(),
                                         true,
+                                        once_key(Some(idx), t),
                                     ),
                                 ));
                             }
@@ -5769,6 +5808,7 @@ impl GameState {
                                     gy_card.owner,
                                     t.event.filter.clone(),
                                     false,
+                                    None,
                                 ));
                                 fired.push(gy_card.id);
                             }
@@ -5795,7 +5835,7 @@ impl GameState {
             if self.exile.has_encoded() {
                 for enc in &self.exile {
                     if enc.encoded_on == Some(source) {
-                        by_kind[i].push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None, false));
+                        by_kind[i].push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl, None, false, None));
                     }
                 }
             }
@@ -5813,6 +5853,7 @@ impl GameState {
                     atk_ctrl,
                     None,
                     false,
+                    None,
                 ));
             }
         }
@@ -5824,7 +5865,7 @@ impl GameState {
         if let Target::Player(p) = default_target {
             self.trigger_event_player_scratch = Some(p);
         }
-        for (trig_source, effect, controller, filter, bind_dealer) in
+        for (trig_source, effect, controller, filter, bind_dealer, once) in
             by_kind.into_iter().flatten()
         {
             // CR 603.4 — intervening-'if' on combat-damage triggers ("whenever
@@ -5843,6 +5884,15 @@ impl GameState {
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
                 }
+            }
+            // CR 603.3d — one fire a turn, checked after the filter: this
+            // hook runs once per dealer, so it is also what makes "one or
+            // more creatures you control deal combat damage" one trigger for
+            // the batch.
+            if let Some(i) = once
+                && !self.triggered_once_per_turn_used.insert((trig_source, i))
+            {
+                continue;
             }
             // Most combat-damage triggers implicitly target the damaged player
             // (drain riders, "that player discards / loses life"). But some

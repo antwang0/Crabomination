@@ -416,6 +416,32 @@ fn cabal_slaver_punishes_goblin_damage() {
     assert!(g.players[1].hand.is_empty());
 }
 
+/// The Slaver is a Cleric, not a Goblin: its own connection strips nothing.
+/// The combat-damage hook's Phase 1 (the dealer's own `AnyPlayer` trigger)
+/// used to skip the `dealer_filter` that Phase 1.6 applies to everyone else.
+#[test]
+fn cabal_slaver_does_not_punish_its_own_hit() {
+    let mut g = main_phase();
+    let slaver = g.add_card_to_battlefield(0, catalog::cabal_slaver());
+    g.add_card_to_hand(1, catalog::forest());
+    g.clear_sickness(slaver);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: slaver,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1, "no Goblin dealt the damage");
+    assert_eq!(g.players[1].life, 18, "the Slaver connected");
+}
+
 /// Centaur Glade makes a 3/3 on demand.
 #[test]
 fn centaur_glade_mints_a_centaur() {

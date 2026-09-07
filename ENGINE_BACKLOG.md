@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-07 — the attack and combat-damage hooks dropped `once_per_turn`](#fixed-2026-09-07--the-attack-and-combat-damage-hooks-dropped-once_per_turn) | 36 |
 | Bugs & robustness | [FIXED 2026-09-07 — `triggers_on_equipment` was honoured by two hooks and dropped by the dispatcher](#fixed-2026-09-07--triggers_on_equipment-was-honoured-by-two-hooks-and-dropped-by-the-dispatcher) | 44 |
 | Bugs & robustness | [FIXED 2026-09-07 — "leaves the battlefield" fired only on death, and the untap step minted one trigger for a board](#fixed-2026-09-07--leaves-the-battlefield-fired-only-on-death-and-the-untap-step-minted-one-trigger-for-a-board) | 34 |
 | Bugs & robustness | [The `debug-assertions` sweep found FIVE real defects, and the committed grid was green on all of them](#the-debug-assertions-sweep-found-five-real-defects-and-the-committed-grid-was-green-on-all-of-them) | 120 |
@@ -36,6 +37,50 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-07 — the attack and combat-damage hooks dropped `once_per_turn`
+
+The second find of the same shape as the entry below it, from the same
+method (read a definition field's consumers): `EventSpec::once_per_turn`
+is gated by the dispatcher (`triggered_once_per_turn_used`, keyed
+`(source, printed index)`) and by the cast-trigger walk — and by neither
+of the two hooks that push their kinds themselves. `declare_attackers_
+banded` carried `(source, effect, controller, filter)` and nothing else,
+so **"whenever Aurelia attacks for the first time each turn" fired on her
+second attack too**: the extra combat she bought untapped the team and
+bought a third, and so on until the turn cap — Aurelia, Godo, Scourge of
+the Throne and Fear of Missing Out all print the clause and all four were
+an unbounded-combat loop in self-play whenever the bot kept attacking.
+`fire_combat_damage_triggers` runs once per dealer, so a `YourControl`
+"one or more creatures you control deal combat damage" listener with the
+flag (Vaan, Yarus, Frostcliff Siege, Mu Yanling, Invasion Tactics) fired
+once per connecting creature.
+
+The fix threads the key through both: the attack hook's tuple and
+`DamageTrigger` gain an `Option<usize>` (`once_key`: the printed index
+when the ability says once, `None` for a granted one — the dispatcher's
+`trig_idx < n_printed` rule), and each consumer inserts into the same set
+*after* its intervening-if passes, so a rejected declaration does not
+spend the slot (CR 603.4, the dispatcher's order). The step-trigger walk,
+the SelfSource ETB push and the death path were read too: no shipped card
+puts `once_per_turn` on a kind they own (the catalog scan is
+`scripts`-less: every `once_per_turn` keyed by the nearest `EventSpec`).
+
+Tests: `recent_b::recent_208_222::aurelia_does_not_fire_on_her_second_attack`
+(no third combat, the team stays tapped),
+`classic_sets::fin::vaan_exiles_once_when_two_thieves_connect`.
+
+The same read, one more field: `EventSpec::dealer_filter` ("whenever a
+Goblin deals combat damage to a player") was applied by the dispatcher
+and by the hook's Phase 1.6 (a bystander's `AnyPlayer` trigger) and not
+by Phase 1 (the dealer's *own* `AnyPlayer` trigger), so Cabal Slaver — a
+Cleric — stripped a card off its own hit. Gated the same way now;
+`classic_sets::ons::cabal_slaver_does_not_punish_its_own_hit`. Bellowing
+Fiend, the other `dealt_by` card, is a `DealtDamage` listener the
+dispatcher owns and was right. The remaining `EventSpec` fields
+(`actor_is_opponent`, `exclude_attacker_taps`, `exclude_tap_cost_
+abilities`, `per_subject_cap`) are read only by the dispatcher and are
+only set on dispatcher-owned kinds — checked, nothing to do.
 
 ## FIXED 2026-09-07 — `triggers_on_equipment` was honoured by two hooks and dropped by the dispatcher
 

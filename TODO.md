@@ -37,8 +37,10 @@ sixty-seventh pass, so don't re-take that.
 3. **Engine, this run (ENGINE_BACKLOG first section):** `triggers_on_equipment` was honoured by the combat-damage and step hooks and *dropped* by the
    general dispatcher, so Godsend (`Blocks`) and a bestowed Crystalline Nautilus (`BecameTarget`) were dead. A grant is `(host, source, abilities)`
    now, through all three consumers and both death-path collectors; Kusari-Gama gained the flag, Impending Doom moved onto the Aura's own
-   `EnchantedBySource` trigger. Ir flat on sealed/cube (PERF Log). **Method that found it: read a flag's consumers, not the audit columns** — the
-   shape "a bool on a definition that some hooks honour and one walk excludes" is worth one more pass (`per_subject_cap`, `EventScope` on grants).
+   `EnchantedBySource` trigger. Ir flat on sealed/cube (PERF Log). **Method that found it: read a field's consumers, not the audit columns.** The
+   same read then found the attack / combat-damage hooks dropping `once_per_turn` (Aurelia bought a combat per attack — an unbounded loop in
+   self-play; Vaan fired per dealer) and Phase 1 dropping `dealer_filter` (Cabal Slaver stripped a card off its own hit). Every `EventSpec` field
+   is now read by every hook that owns a kind it is set on; the next family of the shape is `ActivatedAbility` / `StaticAbility` fields.
 4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns (residues in INCOMPLETE_CARDS "Trigger events / scopes / filters"). Next
    reader rules, still open: the filters it skips (`Not(..)`, power / mana-value bounds, `let` helpers), then a static's *text*. Latent, no
    shipped card: `once_per_turn` on a *granted* trigger is not gated (ENGINE_BACKLOG first section says how to key it).

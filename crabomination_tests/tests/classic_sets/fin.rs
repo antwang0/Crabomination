@@ -5156,6 +5156,32 @@ fn vaan_steals_on_tribal_combat_damage() {
     assert!(exiled.may_play_until.is_some(), "may-cast grant stamped");
 }
 
+/// "Whenever one or more Scouts, Pirates, and/or Rogues you control deal
+/// combat damage to a player" — two connecting Thieves exile one card, not
+/// two. The combat-damage hook fires per dealer, so its `once_per_turn`
+/// gate is what folds the batch.
+#[test]
+fn vaan_exiles_once_when_two_thieves_connect() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let vaan = g.add_card_to_battlefield(0, catalog::vaan_street_thief()); // Scout
+    let pirate = g.add_card_to_battlefield(0, catalog::kitesail_freebooter()); // Pirate
+    let top = g.add_card_to_library(1, catalog::lightning_bolt());
+    let second = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.clear_sickness(vaan);
+    g.clear_sickness(pirate);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: vaan, target: AttackTarget::Player(1) },
+        Attack { attacker: pirate, target: AttackTarget::Player(1) },
+    ]))
+    .expect("both attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let exiled = g.exile.iter().filter(|c| c.id == top || c.id == second).count();
+    assert_eq!(exiled, 1, "one exile for the batch, not one per Thief");
+}
+
 /// Vaan's second trigger: casting a spell you don't own puts a +1/+1 counter
 /// on each Scout/Pirate/Rogue you control.
 #[test]

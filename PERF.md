@@ -2821,21 +2821,21 @@ scaling release-fast selfplay_train --steps 1 --seed 31, --actors 1 / 2 / 4 x 60
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 ```
 
-### 2026-09-07 — the `triggers_on_equipment` dispatcher fix: addendum at the tip after `b3f6067b`
+### 2026-09-07 — the trigger-hook fixes (`triggers_on_equipment`, `once_per_turn`, `dealer_filter`): addendum at the tip after `b3f6067b`
 
-Two commits after the addendum below (ENGINE_BACKLOG, first section; the
-Log's "equipment-grant dispatcher fix READ" has the Ir A/B). A rules
-change on the grant list, priced and flat:
+Four commits after the addendum below (ENGINE_BACKLOG, first two
+sections; the Log's two "READ" entries have the Ir A/Bs). Rules changes
+on the grant list and the two hardcoded hooks, priced and flat:
 
 ```text
---bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; bin_bytes 126,742,096; 379.3 games/s single run (3 threads, host_calib_ms 58)
-Ir      sealed dflt 3,020,686,102 -> 3,020,489,826 (-0.006 %) / cube 2,963,669,195 -> 2,964,205,035 (+0.018 %), outcomes identical (Log)
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; bin_bytes 126,744,752; 379.3 / 264.3 games/s single runs (3 threads, the second under a suite build)
+Ir      against d04a225d: sealed dflt 3,020,686,102 -> 3,021,669,628 (+0.033 %) / cube 2,963,669,195 -> 2,966,364,550 (+0.091 %), outcomes identical (Log, both entries)
 golden  7/7 unmoved
-suite   19,267 / 0 / 5 at b3f6067b; audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review
+suite   19,270 / 0 / 5 at the once/dealer_filter tip (19,267 at b3f6067b); audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 gate    cargo check --profile release-fast -p crabomination --bin bot_ladder   clean (the debug-assertions=off typecheck)
-sweep   fresh seeds on the same release-fast binary: 601..603 x {sealed, cube, fixed} x --a dflt --b dflt --games 400 --threads 3 = 9 cells / 28,800 games,
-        0 undecided, 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent
+sweep   fresh seeds, release-fast: 601..603 at b3f6067b and 604..606 at the once/dealer_filter tip, x {sealed, cube, fixed} x --a dflt --b dflt --games 400
+        --threads 3 = 18 cells / 57,600 games, 0 undecided, 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent
 ```
 
 ### 2026-09-07 — the `trig` column, the leaves-the-battlefield fix and the wire `#[inline]`: addendum at the tip after `03b53eab`
@@ -3845,6 +3845,29 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### The hook `once_per_turn` / `dealer_filter` gates READ — an `Option<usize>` on the attack and combat-damage tuples: sealed default Ir **+0.033 %** / cube **+0.091 %** against the run's base, outcomes identical
+
+The second rules fix of the day on the trigger hooks (ENGINE_BACKLOG,
+first section): `declare_attackers_banded`'s trigger tuple and
+`DamageTrigger` carry the CR 603.3d once-key, the two consumers insert
+into `triggered_once_per_turn_used` after their filter, and Phase 1 of the
+combat-damage hook reads `dealer_filter`. Priced against the same
+`d04a225d` base dumps as the entry below (so this reading includes that
+entry's flat -0.006 / +0.018 %):
+
+```text
+profiling-fast, system allocator, --a dflt --b dflt --games 6 --threads 1 --seed 1
+  sealed  3,020,686,102 -> 3,021,669,628 Ir   (+0.033 %)   72 / 72 decided both sides
+  cube    2,963,669,195 -> 2,966,364,550 Ir   (+0.091 %)   48 / 48 decided
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; bin_bytes 126,744,752
+```
+
+**FLAT** (the tuple grew 8 bytes on a per-damage-event push, plus an
+`enumerate` and an `is_none_or` per Phase-1 trigger); the games are the
+same on both pools because neither six-game run fields a once-per-turn
+attacker or a `dealt_by` card. Kept as correctness — an Aurelia in
+self-play was an unbounded combat loop before it.
 
 ### The equipment-grant dispatcher fix READ — flagged attachments join `equip_grants`: sealed default Ir **-0.006 %** / cube **+0.018 %**, outcomes identical
 

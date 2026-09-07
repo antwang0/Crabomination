@@ -623,6 +623,35 @@ mod recent212 {
         assert!(v.keywords().contains(&Keyword::MustBeBlocked), "must be blocked");
     }
 
+    /// "Whenever Aurelia attacks for the first time each turn" — the second
+    /// attack, in the extra combat she bought, neither untaps the team nor
+    /// buys a third combat. The attack hook is hardcoded (`declare_attackers`
+    /// pushes SelfSource Attacks triggers itself) and used to drop the
+    /// CR 603.3d `once_per_turn` gate the dispatcher applies.
+    #[test]
+    fn aurelia_does_not_fire_on_her_second_attack() {
+        let mut g = two_player_game();
+        let aurelia = g.add_card_to_battlefield(0, catalog::aurelia_the_warleader());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(aurelia);
+        advance_to(&mut g, TurnStep::DeclareAttackers);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: aurelia, target: AttackTarget::Player(1),
+        }])).expect("first attack");
+        drain_stack(&mut g);
+        assert_eq!(g.additional_combat_phases, 1, "one extra combat banked");
+        advance_to(&mut g, TurnStep::EndCombat);
+        advance_to(&mut g, TurnStep::DeclareAttackers);
+        assert_eq!(g.additional_combat_phases, 0, "the extra combat is this one");
+        g.battlefield_find_mut(bear).unwrap().tapped = true;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: aurelia, target: AttackTarget::Player(1),
+        }])).expect("second attack (vigilance)");
+        drain_stack(&mut g);
+        assert_eq!(g.additional_combat_phases, 0, "no third combat");
+        assert!(g.battlefield_find(bear).unwrap().tapped, "the team stayed tapped");
+    }
+
     /// Aurelia untaps your team and grants an extra combat on her first attack.
     #[test]
     fn aurelia_untaps_and_adds_combat() {
