@@ -495,6 +495,52 @@ fn cr_702_6e_equip_observer_trigger_fires_off_creature() {
         "equip-granted observer trigger put a +1/+1 counter on the equipped creature");
 }
 
+/// CR 702.6e — the fourth quadrant: `triggers_on_equipment` on a kind the
+/// *general dispatcher* owns (not the combat-damage or step hooks). The host
+/// is still the event's subject ("whenever equipped creature becomes
+/// tapped"), the Equipment is the source, so `This` is the Equipment. A
+/// synthetic Equipment, so the invariant does not ride on a catalog card;
+/// before 2026-09-07 the dispatcher excluded every flagged attachment and
+/// this trigger never fired (Godsend, a bestowed Crystalline Nautilus).
+#[test]
+fn cr_702_6e_flagged_equip_trigger_fires_through_the_dispatcher() {
+    use crabomination::card::{ArtifactSubtype, CardDefinition, CardType, CounterType, EquipBonus, Subtypes, TriggeredAbility};
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
+    use crabomination::game::effects::EffectContext;
+    let charm = CardDefinition {
+        name: "Test Charm",
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::ONE,
+                },
+            }],
+            triggers_on_equipment: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let charm = g.add_card_to_battlefield(0, charm);
+    g.battlefield_find_mut(charm).unwrap().attached_to = Some(host);
+    let ctx = EffectContext::for_ability(charm, 0, None);
+    let tap = Effect::Tap { what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)) };
+    let evs = g.resolve_effect(&tap, &ctx).expect("tap resolves");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(charm).unwrap().counter_count(CounterType::Charge), 1,
+        "the flagged grant fired off the Equipment: `This` is the Equipment");
+    assert_eq!(g.battlefield_find(host).unwrap().counter_count(CounterType::Charge), 0,
+        "and not off the host");
+}
+
 // ── CR 510.2 — combat damage to a creature fires triggers ─────────────────────
 
 /// `DealsCombatDamageToCreature` triggers (CR 510.2) are now dispatched from

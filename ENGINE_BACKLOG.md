@@ -122,7 +122,10 @@ Tests: `classic_sets::jou::godsend_exiles_a_blocker_with_the_equipment`,
 `jou::bestowed_crystalline_nautilus_sacrifices_the_targeted_host`,
 `chk2::kusari_gama_splashes_onto_the_other_defenders` (the lifelink
 assert), `thb::impending_doom_burns_on_death` (now through the SBA death
-path, not a hand-built context).
+path, not a hand-built context), and the catalog-independent pin
+`core_rules::cr_rules::cr_702_6e_flagged_equip_trigger_fires_through_the_
+dispatcher` (a synthetic Equipment, `Tapped/SelfSource`, the counter lands
+on the Equipment).
 
 Checked and clean, so nobody re-checks: `once_per_turn` on a *granted*
 trigger is skipped by the dispatcher (grants carry the `usize::MAX`
