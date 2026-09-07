@@ -2821,6 +2821,20 @@ scaling release-fast selfplay_train --steps 1 --seed 31, --actors 1 / 2 / 4 x 60
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 ```
 
+### 2026-09-07 — `GrantActivatedAbilityToMatching`'s permanent carrier and the five upkeep gates: addendum at the tip after the Life Matrix commits
+
+Two commits after the duration addendum below (ENGINE_BACKLOG, first
+section): one engine arm (the Log's "READ" entry has the Ir A/B) and one
+catalog shape on five cards. The fixed pool is byte-identical:
+
+```text
+--bench release-fast (mimalloc), the engine commit: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
+        thread_determinism ok (3 vs 1); bin_bytes 126,758,088; 275.0 games/s single run
+Ir      against 09b9f056: sealed 3,023,234,030 -> 3,023,237,395 (+0.000 %) / cube 2,966,367,971 -> 2,966,378,057 (+0.000 %), outcome lines identical (Log)
+golden  7/7 unmoved
+suite   19,275 / 0 / 5 at the engine commit (one test added), the same count at the catalog commit (that test extended); clippy clean; release-fast typecheck clean
+```
+
 ### 2026-09-07 — the keyword-grant carriers and `UntilNextTurn`: addendum at the tip after the duration commit
 
 One engine commit after the `1f2cabcb` addendum below (ENGINE_BACKLOG,
@@ -3889,6 +3903,22 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `GrantActivatedAbilityToMatching`'s permanent carrier READ — sealed default Ir **+0.000 %** / cube **+0.000 %**, outcomes identical
+
+The arm that returned early on every duration but end of turn (Life
+Matrix, ENGINE_BACKLOG first section) grants through the two
+`GainActivatedAbility` lists now. Priced against the duration tip
+(`09b9f056`, the `cg.cand2.*` dumps):
+
+```text
+profiling-fast, system allocator, --a dflt --b dflt --games 6 --threads 1 --seed 1
+  sealed  3,023,234,030 -> 3,023,237,395 Ir   (+3,365, +0.0001 %)   72 / 72 decided, outcome lines identical
+  cube    2,966,367,971 -> 2,966,378,057 Ir   (+10,086, +0.0003 %)  48 / 48 decided, outcome lines identical
+```
+
+**FLAT** — the arm runs only when a card resolves the effect, and none did
+in either dump; the few thousand Ir are layout.
 
 ### The keyword-grant carriers and `UntilNextTurn` READ — sealed default Ir **+0.040 %** / cube **-0.011 %**, outcomes identical
 

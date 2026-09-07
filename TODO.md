@@ -32,17 +32,18 @@ sixty-seventh pass, so don't re-take that.
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
    running `cargo build`. A cold `profiling-fast` build of `bot_ladder` is 12.5 min here (deps included), the warm engine rebuild 4 min;
    a detached `setsid nohup` chain survives the tool timeout, a plain background command does not. `cargo-nextest` installs in 5 s.
-2. **Gates at the tip (PERF Baseline, the duration-commit addendum):** suite 19,274 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
+2. **Gates at the tip (PERF Baseline, the Life Matrix addendum):** suite 19,275 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
    identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), fresh-seed sweeps 607..612 x three pools 0 undecided, `audit_stubs` /
-   `audit_incomplete --structural-only` both 0. Ir against the run's base: sealed +0.05 % / cube 0.00 % over two rules commits, outcomes identical.
+   `audit_incomplete --structural-only` both 0. Ir against the run's base: sealed +0.05 % / cube 0.00 % over three rules commits, outcomes identical.
 3. **Engine, this run (ENGINE_BACKLOG first two sections):** two finds off the consumer-read method. (a) The trigger-grant family as a
    **consumer x source matrix** — the dispatcher's LKI walk never read `granted_triggers_eot` (Requiem Monolith's lethal ping drew nothing);
    `ConditionalEquipBonus.condition` skipped by `granted_abilities_of` (latent). (b) The **duration axis**: `GrantKeyword` & co. knew EOT
    and Permanent only, so thirteen "until your next turn" keyword grants were permanent (Academic Probation, Akroan War, Nahiri...), and
    `Duration::UntilNextTurn` meant *any* player's next turn while every catalog use prints "your" (Liliana's -2/-1 wore off early). Both
-   now ride the layer system's `UntilYourNextTurn`. **Next of the shape:** the remaining hand-rolled duration arms — `GrantTriggeredAbility`
-   (Vraska's until-next-turn trigger is permanent; needs an expiry stamp on the EOT trigger map) and the `temporary_control` / `Top` / `Bottom`
-   family — read each arm's `duration` match against the catalog's variants the way ENGINE_BACKLOG's newest section did.
+   now ride the layer system's `UntilYourNextTurn`; `GrantActivatedAbilityToMatching` dropped every non-EOT grant (Life Matrix). The duration
+   axis is closed (every arm censused). **Next of the shape:** the one latent — `GrantTriggeredAbility` with `UntilNextTurn` (Vraska's +1 is
+   permanent; needs an expiry stamp on the EOT trigger map read through `granted_triggers()`) — and the *step-gate* axis: `CurrentStepIs`
+   without `IsTurnOf(You)` was five catalog cards; the next such field pair is `Predicate` conditions on triggers ("during your turn" clauses).
 4. **Cards/bugs:** `audit_catalog_stats.py`'s eight oracle columns are at their floor (INCOMPLETE_CARDS residues). Latent, no shipped card:
    `once_per_turn` on a granted trigger; an EOT-granted `StepBegins` / `SpellCast` / ETB trigger (those three hooks read no EOT list).
 5. **Perf/build:** engine profile FLAT — the sealed self table at `1f2cabcb` is the `(-271)` shape (PERF candidates, first entry); the base to

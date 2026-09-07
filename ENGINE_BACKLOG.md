@@ -80,7 +80,23 @@ keeps its old arm for a caller without a seat (there is none today).
 Tests: `core_rules::cr_recent35::cr_611_2b_keyword_grant_and_loss_honour_
 until_your_next_turn` (three durations, grant and loss, across the turn
 cycle) and `classic_sets::eoe::mouth_of_the_storm_shrinks_opponents`
-(extended across the opponent's turn). Still latent: `Effect::
+(extended across the opponent's turn).
+
+The same axis, one more arm: `GrantActivatedAbilityToMatching` returned
+early for every duration but `EndOfTurn`, so **Life Matrix's `Permanent`
+"remove a matrix counter: regenerate" grant put a bare counter on the
+creature and nothing to spend it on**. It has `GainActivatedAbility`'s two
+carriers now (the EOT list, or the permanent list deduped — the filter
+re-matches every earlier recipient on each resolution);
+`classic_sets::leg4::life_matrix_grants_the_regeneration_ability`. A
+census of every `run_effect` arm that returns `Ok(())` on a field's value
+finds no other such guard, and every other duration-carrying arm either
+maps through `effect_duration_for` or sees only the durations the catalog
+hands it. Beside it, a catalog shape: five "activate only during your
+upkeep" abilities (Clockwork Swarm, Black Carriage, Trade Caravan, Life
+Chisel, Life Matrix) gated on `CurrentStepIs(Upkeep)` alone, which is any
+player's upkeep; each is `All([CurrentStepIs, IsTurnOf(You)])` now, and
+the four that print "any upkeep" / "during the … step" were left alone. Still latent: `Effect::
 GrantTriggeredAbility` with `UntilNextTurn` (Vraska the Unseen's +1) is
 baked as permanent — the EOT trigger map has no duration stamp, and a
 separate list would re-open the consumer matrix above; the right fix is a
