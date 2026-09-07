@@ -1477,7 +1477,7 @@ impl GameState {
         // borrow of `battlefield.iter_mut()` is unblocked.
         let attacker_grants: Vec<(
             Vec<crate::card::TriggeredAbility>,
-            Vec<crate::card::TriggeredAbility>,
+            Vec<(CardId, crate::card::TriggeredAbility)>,
         )> = {
             let trigger_grants = self.trigger_grant_sources();
             let equip_grants = self.equip_granted_trigger_sources();
@@ -1542,14 +1542,17 @@ impl GameState {
             // Walk printed Attacks triggers + any transient granted
             // Attacks triggers (Root Manipulation's "gain 1 life when
             // this attacks" grant lands in `granted_triggers_eot`).
-            for t in card
+            // An attachment's grant fires off the attachment when it says
+            // so (`triggers_on_equipment`); every other trigger off the
+            // attacker.
+            let own = card
                 .definition
                 .triggered_abilities
                 .iter()
                 .chain(granted.iter())
                 .chain(static_granted.iter())
-                .chain(equip_granted.iter())
-            {
+                .map(|t| (id, t));
+            for (src, t) in own.chain(equip_granted.iter().map(|(s, t)| (*s, t))) {
                 // Only SelfSource Attacks triggers are hardcoded here.
                 // YourControl-scoped Attacks triggers (Exalted via
                 // `Predicate::AttackingAlone`, Battle Banner, …) are
@@ -1563,7 +1566,7 @@ impl GameState {
                     // re-evaluate it AFTER the entire attacker batch is
                     // declared (CR 506.5 "attacking alone" semantics
                     // require the post-batch view).
-                    triggers.push((id, t.effect.clone(), p, t.event.filter.clone()));
+                    triggers.push((src, t.effect.clone(), p, t.event.filter.clone()));
                 }
             }
             // CR 702.147 — Decayed. "When it attacks, sacrifice it at end of

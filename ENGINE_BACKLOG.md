@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-07 — `triggers_on_equipment` was honoured by two hooks and dropped by the dispatcher](#fixed-2026-09-07--triggers_on_equipment-was-honoured-by-two-hooks-and-dropped-by-the-dispatcher) | 44 |
 | Bugs & robustness | [FIXED 2026-09-07 — "leaves the battlefield" fired only on death, and the untap step minted one trigger for a board](#fixed-2026-09-07--leaves-the-battlefield-fired-only-on-death-and-the-untap-step-minted-one-trigger-for-a-board) | 34 |
 | Bugs & robustness | [The `debug-assertions` sweep found FIVE real defects, and the committed grid was green on all of them](#the-debug-assertions-sweep-found-five-real-defects-and-the-committed-grid-was-green-on-all-of-them) | 120 |
 | Bugs & robustness | [CLOSED — the two stall-sweep leads, and why neither is a bug](#closed--the-two-stall-sweep-leads-and-why-neither-is-a-bug) | 28 |
@@ -35,6 +36,52 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-07 — `triggers_on_equipment` was honoured by two hooks and dropped by the dispatcher
+
+`EquipBonus::triggers_on_equipment` ("the granted trigger fires off the
+Equipment, so `This` is the Equipment" — Jitte) was read by the
+combat-damage hook and the step-trigger walk, and `equip_granted_trigger_
+sources` / `dispatch_scan_bits` *excluded* every flagged attachment from
+the general dispatcher on the theory that the combat hook owned them. So
+any flagged trigger on a non-combat, non-step kind never fired: Godsend's
+"whenever equipped creature blocks" (`Blocks`) and Crystalline Nautilus's
+bestowed "when this creature becomes the target" (`BecameTarget`) were
+dead, with no test on either. Mask of Griselbrand's dies trigger fired
+only because the death path ignores the flag and collects every
+attachment's `CreatureDied` with the creature as source.
+
+The fix is one shape everywhere: a grant is `(host, source, abilities)`,
+the host is always the event subject and the source is the attachment
+under the flag. `equip_granted_triggers_with` returns `(source, ability)`
+pairs, the three consumers (the dispatcher, `fire_spell_cast_triggers`,
+`declare_attackers_banded`) push that source, and the two death-path
+collectors do the same with the dying creature bound explicitly as the
+trigger's subject (`TriggerPush::trigger_source`). No double-firing:
+the combat-damage kinds and `StepChanged` never match in the dispatcher.
+
+Catalog, the same commit: Godsend fires on `Blocks` *and* `BecomesBlocked`
+and exiles *one* partner (`ChooseOneAmong`); Crystalline Nautilus drops
+the flag (the printed "sacrifice it" is the host, CR 702.6e —
+`SacrificeSource` under the flag would have sacrificed the Nautilus);
+Kusari-Gama gains it (its splash is the Equipment's damage — a lifelink
+bearer gains only for its own hit); Impending Doom moves its burn onto the
+Aura's own `EnchantedBySource` trigger, Death Watch's shape, dealt to the
+creature's controller by the Aura.
+
+Tests: `classic_sets::jou::godsend_exiles_a_blocker_with_the_equipment`,
+`jou::bestowed_crystalline_nautilus_sacrifices_the_targeted_host`,
+`chk2::kusari_gama_splashes_onto_the_other_defenders` (the lifelink
+assert), `thb::impending_doom_burns_on_death` (now through the SBA death
+path, not a hand-built context).
+
+Checked and clean, so nobody re-checks: `once_per_turn` on a *granted*
+trigger is skipped by the dispatcher (grants carry the `usize::MAX`
+sentinel index, and the CR 603.3d gate is `trig_idx < n_printed`) — a
+brace-nesting scan of the catalog finds **zero** `once_per_turn: true`
+triggers inside an `equipped_bonus` / `GrantTriggeredAbility` /
+`soulbond_bonus`, so it is a latent gap, not a shipped bug. The first card
+to need it keys the gate on `(source, grant index)` instead.
 
 ## FIXED 2026-09-07 — "leaves the battlefield" fired only on death, and the untap step minted one trigger for a board
 

@@ -12141,10 +12141,14 @@ impl GameState {
             } else {
                 Vec::new()
             };
-            for t in static_granted.iter().copied().chain(equip_granted.iter()) {
+            let granted = static_granted
+                .iter()
+                .map(|t| (cid, *t))
+                .chain(equip_granted.iter().map(|(src, t)| (*src, t)));
+            for (src, t) in granted {
                 if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
                     candidates.push((
-                        cid,
+                        src,
                         c_controller,
                         t.effect.clone(),
                         t.event.filter.clone(),

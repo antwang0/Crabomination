@@ -447,14 +447,16 @@ fn blood_speaker_returns_when_a_demon_enters() {
 }
 
 /// Kusari-Gama splashes the blocker damage across the rest of the defending
-/// player's board.
+/// player's board — as the *Equipment's* damage, so a lifelink bearer gains
+/// only for its own combat damage.
 #[test]
 fn kusari_gama_splashes_onto_the_other_defenders() {
     let mut g = two_player_game();
     let gama = g.add_card_to_battlefield(0, catalog::kusari_gama());
-    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let host = g.add_card_to_battlefield(0, catalog::child_of_night()); // 2/1 lifelink
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let bystander = g.add_card_to_battlefield(1, catalog::lantern_kami());
+    let life = g.players[0].life;
     g.clear_sickness(host);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::Equip { equipment: gama, target: host }).expect("equip");
@@ -472,6 +474,7 @@ fn kusari_gama_splashes_onto_the_other_defenders() {
     drain_stack(&mut g);
     g.check_state_based_actions();
     assert!(g.battlefield_find(bystander).is_none(), "the 1/1 bystander took 2");
+    assert_eq!(g.players[0].life, life + 2, "lifelink counted the bearer's 2, not the splash");
 }
 
 /// Oathkeeper exiles its host when the Equipment dies, and reanimates a Samurai

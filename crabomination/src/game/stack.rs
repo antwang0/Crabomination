@@ -5896,15 +5896,18 @@ impl GameState {
             // printed on the equipped creature (Skullclamp). Collect them
             // while the creature is still attached (pre-removal). Source is
             // the dying creature so `Selector::This` reads its last-known
-            // info; controller is the creature's controller.
+            // info — or the attachment under `triggers_on_equipment`; the
+            // creature stays the subject either way. Controller is the
+            // creature's controller.
             for eq in &self.battlefield {
                 if eq.attached_to != Some(id) {
                     continue;
                 }
                 let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+                let src = if bonus.triggers_on_equipment { eq.id } else { id };
                 for ta in &bonus.triggered_abilities {
                     if ta.event.kind == EventKind::CreatureDied && !dies_suppressed {
-                        die_triggers.push((id, ta.effect.clone(), controller_idx, ta.event.filter.clone()));
+                        die_triggers.push((src, ta.effect.clone(), controller_idx, ta.event.filter.clone()));
                     }
                 }
             }
@@ -5984,6 +5987,7 @@ impl GameState {
                 self.stack.push(
                     TriggerPush::new(source, controller, effect)
                         .target(auto_target)
+                        .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
                         .event_amount(died_ev_amount)
                         .build(),
                 );
@@ -7033,9 +7037,10 @@ impl GameState {
                     continue;
                 }
                 let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+                let src = if bonus.triggers_on_equipment { eq.id } else { id };
                 for ta in &bonus.triggered_abilities {
                     if ta.event.kind == EventKind::CreatureDied {
-                        leave_triggers.push((id, ta.effect.clone(), controller, ta.event.filter.clone()));
+                        leave_triggers.push((src, ta.effect.clone(), controller, ta.event.filter.clone()));
                     }
                 }
             }
@@ -7173,6 +7178,7 @@ impl GameState {
                 self.stack.push(
                     TriggerPush::new(source, controller, effect.clone())
                         .target(auto_target)
+                        .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
                         .build(),
                 );
             }

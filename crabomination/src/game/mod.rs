@@ -268,8 +268,8 @@ pub(crate) struct DispatchScan<'a> {
     pub strip_on_battlefield: bool,
     /// [`GameState::trigger_grant_sources`].
     pub trigger_grants: Vec<TriggerGrant<'a>>,
-    /// [`GameState::equip_granted_trigger_sources`].
-    pub equip_grants: Vec<(CardId, &'a [crate::card::TriggeredAbility])>,
+    /// [`GameState::equip_granted_trigger_sources`]: `(host, source, abilities)`.
+    pub equip_grants: Vec<(CardId, CardId, &'a [crate::card::TriggeredAbility])>,
 }
 
 /// One bit per cast-time lock static, as produced by
@@ -3863,21 +3863,19 @@ impl GameState {
         out
     }
 
-    /// Triggered abilities granted to `card` by Equipment attached to it
-    /// (CR 702.6e). Only the `triggers_on_equipment == false` abilities are
-    /// surfaced here — they fire as though printed on the equipped creature
-    /// (Tarrian's Soulcleaver's "whenever another artifact/creature dies, put
-    /// a +1/+1 counter on equipped creature"). The `triggers_on_equipment`
-    /// (Jitte-style) abilities fire off the Equipment via the dedicated
-    /// combat-damage hook, so they're excluded to avoid double-firing.
     /// The battlefield attachments that hand their `equipped_bonus` triggered
-    /// abilities to their host, as `(host_id, abilities)`. Hoisted so a caller
-    /// asking about every battlefield permanent — the trigger dispatcher does,
-    /// once per event batch — walks the battlefield once instead of once per
-    /// permanent.
+    /// abilities to their host (CR 702.6e), as `(host, source, abilities)`.
+    /// The host is always the event subject ("whenever equipped creature
+    /// blocks"); the source is the host too (Tarrian's Soulcleaver's "put a
+    /// +1/+1 counter on equipped creature") unless `triggers_on_equipment`
+    /// makes it the attachment (Godsend's "exile with this Equipment"). The
+    /// combat-damage and step hooks collect their kinds themselves, with the
+    /// same source rule. Hoisted so a caller asking about every battlefield
+    /// permanent — the trigger dispatcher does, once per event batch — walks
+    /// the battlefield once instead of once per permanent.
     pub(crate) fn equip_granted_trigger_sources(
         &self,
-    ) -> Vec<(CardId, &[crate::card::TriggeredAbility])> {
+    ) -> Vec<(CardId, CardId, &[crate::card::TriggeredAbility])> {
         self.battlefield
             .iter()
             .filter_map(|eq| {
@@ -3885,25 +3883,29 @@ impl GameState {
                 let bonus = eq.definition.equipped_bonus.as_ref()?;
                 // Same emptiness rule as `dispatch_board_scan`'s leg, which
                 // this function is the `debug_assert!` cross-check for.
-                (!bonus.triggers_on_equipment && !bonus.triggered_abilities.is_empty())
-                    .then_some((host, bonus.triggered_abilities.as_slice()))
+                (!bonus.triggered_abilities.is_empty()).then_some((
+                    host,
+                    if bonus.triggers_on_equipment { eq.id } else { host },
+                    bonus.triggered_abilities.as_slice(),
+                ))
             })
             .collect()
     }
 
-    /// The equipment-granted triggered abilities on `card`, against a
-    /// prebuilt attachment list (see [`equip_granted_trigger_sources`]).
+    /// The equipment-granted triggered abilities on `card`, each with the
+    /// source it fires from, against a prebuilt attachment list (see
+    /// [`equip_granted_trigger_sources`]).
     ///
     /// [`equip_granted_trigger_sources`]: Self::equip_granted_trigger_sources
     pub(crate) fn equip_granted_triggers_with(
         &self,
         card: &CardInstance,
-        sources: &[(CardId, &[crate::card::TriggeredAbility])],
-    ) -> Vec<crate::card::TriggeredAbility> {
+        sources: &[(CardId, CardId, &[crate::card::TriggeredAbility])],
+    ) -> Vec<(CardId, crate::card::TriggeredAbility)> {
         let mut out = Vec::new();
-        for (host, abilities) in sources {
+        for (host, source, abilities) in sources {
             if *host == card.id {
-                out.extend(abilities.iter().cloned());
+                out.extend(abilities.iter().map(|t| (*source, t.clone())));
             }
         }
         out
@@ -3925,8 +3927,9 @@ impl GameState {
             // `STRIP_ATTACHED` half of the gate above lets one in for its
             // `remove_abilities`, so the emptiness has to be re-asked here —
             // see `EQUIP_TRIGGER_GRANT`'s doc and PERF `(-120)`.
-            if !bonus.triggers_on_equipment && !bonus.triggered_abilities.is_empty() {
-                scan.equip_grants.push((host, bonus.triggered_abilities.as_slice()));
+            if !bonus.triggered_abilities.is_empty() {
+                let source = if bonus.triggers_on_equipment { card.id } else { host };
+                scan.equip_grants.push((host, source, bonus.triggered_abilities.as_slice()));
             }
             scan.strip_on_battlefield |= bonus.remove_abilities;
         }
@@ -18997,7 +19000,7 @@ impl GameState {
         // fail contributes nothing at all. PERF `(-121)`.
         let mut equip_grants = scan.equip_grants;
         if !equip_grants.is_empty() {
-            equip_grants.retain(|(_, abilities)| {
+            equip_grants.retain(|(_, _, abilities)| {
                 abilities.iter().any(|ab| {
                     batch_bits & ab.event.kind.bit() != 0
                         && events.iter().any(|ev| {
@@ -19065,7 +19068,7 @@ impl GameState {
             }
             if equip {
                 reason |= tc::GRANT_EQUIP;
-                if equip_grants.iter().flat_map(|(_, abs)| abs.iter()).any(batch_can_match) {
+                if equip_grants.iter().flat_map(|(_, _, abs)| abs.iter()).any(batch_can_match) {
                     filtered |= tc::GRANT_EQUIP;
                 }
             }
@@ -19240,13 +19243,17 @@ impl GameState {
             {
                 continue;
             }
+            // `(index, source, ability)`: an attachment's grant may fire off
+            // the attachment (`triggers_on_equipment`); everything else fires
+            // off the permanent being walked.
             let all_triggers = printed
                 .iter()
                 .enumerate()
-                .chain(own_granted.iter().map(|t| (usize::MAX, t)))
-                .chain(static_granted.iter().map(|t| (usize::MAX, *t)))
-                .chain(equip_granted.iter().map(|t| (usize::MAX, t)));
-            for (trig_idx, ta) in all_triggers {
+                .map(|(i, t)| (i, card.id, t))
+                .chain(own_granted.iter().map(|t| (usize::MAX, card.id, t)))
+                .chain(static_granted.iter().map(|t| (usize::MAX, card.id, *t)))
+                .chain(equip_granted.iter().map(|(src, t)| (usize::MAX, *src, t)));
+            for (trig_idx, trig_source, ta) in all_triggers {
                 // PERF `(-129)`'s census: is this pair's whole event loop
                 // dead? The `source: None` over-approximation is the same one
                 // the two grant pre-filters above use, so a "dead" here is a
@@ -19428,7 +19435,7 @@ impl GameState {
                     if let Some(filter) = &ta.event.filter {
                         let ctx = crate::game::effects::EffectContext {
                             controller: card.controller,
-                            source: Some(card.id),
+                            source: Some(trig_source),
                             targets: vec![],
                             trigger_source: subject,
                             mode: 0,
@@ -19481,7 +19488,7 @@ impl GameState {
                         _ => card.controller,
                     };
                     candidates.push(TriggerCandidate {
-                        source: card.id,
+                        source: trig_source,
                         effect: ta.effect.clone(),
                         controller,
                         filter: ta.event.filter.clone(),

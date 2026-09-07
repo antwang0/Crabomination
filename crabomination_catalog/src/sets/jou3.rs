@@ -116,8 +116,9 @@ pub fn spirespine() -> CardDefinition {
     }
 }
 
-/// Crystalline Nautilus — {2}{U} 4/4 Nautilus. Bestow {3}{U}{U}; it and its
-/// host are sacrificed when targeted.
+/// Crystalline Nautilus — {2}{U} 4/4 Nautilus. Bestow {3}{U}{U}; it, or the
+/// creature it enchants, is sacrificed when targeted (the granted ability
+/// fires off the host: "sacrifice it" is the creature, CR 702.6e).
 pub fn crystalline_nautilus() -> CardDefinition {
     let sac_when_targeted = TriggeredAbility {
         event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
@@ -135,7 +136,6 @@ pub fn crystalline_nautilus() -> CardDefinition {
                 power: 4,
                 toughness: 4,
                 triggered_abilities: vec![sac_when_targeted],
-                triggers_on_equipment: true,
                 ..Default::default()
             },
         )
@@ -276,8 +276,9 @@ pub fn deserters_quarters() -> CardDefinition {
     }
 }
 
-/// Godsend — {1}{W}{W} legendary Equipment. +3/+3; exile a creature it blocks
-/// or is blocked by, and lock opponents out of that name. Equip {3}.
+/// Godsend — {1}{W}{W} legendary Equipment. +3/+3; you may exile one creature
+/// the bearer blocks or is blocked by, and lock opponents out of that name.
+/// Both halves fire off the Equipment (`ExileWithSource` stamps it). Equip {3}.
 pub fn godsend() -> CardDefinition {
     CardDefinition {
         name: "Godsend",
@@ -292,15 +293,25 @@ pub fn godsend() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 3,
             toughness: 3,
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
-                effect: Effect::MayDo {
-                    description: "Exile a creature Godsend's bearer is in combat with?".into(),
-                    body: Box::new(Effect::ExileWithSource {
-                        what: Selector::CreaturesInCombatWith(Box::new(Selector::TriggerSource)),
-                    }),
-                },
-            }],
+            // "Blocks or becomes blocked by one or more creatures": one
+            // trigger per event kind, each picking one of the partners.
+            triggered_abilities: [EventKind::Blocks, EventKind::BecomesBlocked]
+                .into_iter()
+                .map(|kind| TriggeredAbility {
+                    event: EventSpec::new(kind, EventScope::SelfSource),
+                    effect: Effect::MayDo {
+                        description: "Exile a creature Godsend's bearer is in combat with?".into(),
+                        body: Box::new(Effect::ChooseOneAmong {
+                            what: Selector::CreaturesInCombatWith(Box::new(Selector::TriggerSource)),
+                            chooser: PlayerRef::You,
+                            chosen: Box::new(Effect::ExileWithSource {
+                                what: Selector::SeparatedPile { chosen: true },
+                            }),
+                            other: Box::new(Effect::Noop),
+                        }),
+                    },
+                })
+                .collect(),
             triggers_on_equipment: true,
             ..Default::default()
         }),

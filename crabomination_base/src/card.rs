@@ -5750,7 +5750,7 @@ impl CardDefinition {
         use dispatch_bits as b;
         let mut m = 0u64;
         if let Some(bonus) = self.equipped_bonus.as_ref() {
-            if !bonus.triggers_on_equipment && !bonus.triggered_abilities.is_empty() {
+            if !bonus.triggered_abilities.is_empty() {
                 m |= b::EQUIP_TRIGGER_GRANT;
             }
             if bonus.remove_abilities {
@@ -6968,9 +6968,9 @@ pub mod layer4_bits {
 ///
 /// [`GRANT_TRIGGER`]: self::GRANT_TRIGGER
 pub mod dispatch_bits {
-    /// `equipped_bonus` exists, carries at least one triggered ability, and
-    /// hands them to the host (i.e. is not the Jitte-style
-    /// `triggers_on_equipment` shape). Attachment-gated.
+    /// `equipped_bonus` exists and carries at least one triggered ability —
+    /// host-sourced or the Jitte-style `triggers_on_equipment` shape alike;
+    /// the grant carries its own source. Attachment-gated.
     ///
     /// **The non-empty check is load-bearing, not tidiness.** Without it every
     /// plain buff Aura and Equipment set this bit, so

@@ -1756,8 +1756,9 @@ pub fn junkyo_bell() -> CardDefinition {
 }
 
 /// Kusari-Gama — {3} Equipment. Equipped creature can pump itself, and damage it
-/// deals to a blocker splashes onto the rest of the defending player's board.
-/// Equip {3}.
+/// deals to a blocker splashes onto the rest of the defending player's board —
+/// dealt by the Equipment (`triggers_on_equipment`), so the bearer's lifelink
+/// and colour do not ride along. Equip {3}.
 pub fn kusari_gama() -> CardDefinition {
     CardDefinition {
         name: "Kusari-Gama",
@@ -1795,6 +1796,7 @@ pub fn kusari_gama() -> CardDefinition {
                     amount: Value::TriggerEventAmount,
                 },
             }],
+            triggers_on_equipment: true,
             ..Default::default()
         }),
         ..Default::default()

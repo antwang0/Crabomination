@@ -929,6 +929,73 @@ fn dictate_of_karametra_doubles_land_taps() {
     assert_eq!(g.players[1].mana_pool.total(), 2, "the opponent's land doubles too");
 }
 
+/// Godsend's bearer becomes blocked: the exile fires off the *Equipment*
+/// (`triggers_on_equipment` through the general dispatcher — it was only
+/// honoured by the combat-damage hook before), so the blocker is exiled with
+/// Godsend, which is what its name lock reads.
+#[test]
+fn godsend_exiles_a_blocker_with_the_equipment() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let godsend = g.add_card_to_battlefield(0, catalog::godsend());
+    let bearer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bearer);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: godsend, target: bearer }).expect("equip");
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bearer,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![blocker]),
+    ]));
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bearer)])).expect("block");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == blocker).expect("blocker exiled");
+    assert_eq!(exiled.exiled_with, Some(godsend), "exiled with Godsend, not the bearer");
+    assert!(g.battlefield_find(godsend).is_some(), "Godsend stays");
+}
+
+/// A bestowed Crystalline Nautilus grants "when this creature becomes the
+/// target …, sacrifice it" to the *host* (CR 702.6e): the host goes, the
+/// Nautilus stays as a creature.
+#[test]
+fn bestowed_crystalline_nautilus_sacrifices_the_targeted_host() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let nautilus = g.add_card_to_hand(0, catalog::crystalline_nautilus());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastBestow {
+        card_id: nautilus,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bestow");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 6, "2/2 + 4/4");
+    cast(&mut g, catalog::lightning_bolt(), Some(Target::Permanent(bear)), 0, &[(Color::Red, 1)]);
+    assert!(g.battlefield_find(bear).is_none(), "the targeted host was sacrificed");
+    let naut = g.battlefield_find(nautilus).expect("the Nautilus falls off and stays");
+    assert!(naut.attached_to.is_none());
+    let cp = g.computed_permanent(nautilus).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "a creature again");
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
 /// Stat / keyword lines for the wave-3 bodies.
 #[test]
 fn jou3_stat_lines() {
