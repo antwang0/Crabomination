@@ -675,7 +675,7 @@ def trigger_scopes(body):
         cls = _SCOPE_CLASS.get(m.group(1)) if m else None
         # `YouAttack` is "whenever you attack" on either seat spelling; an
         # `AnyPlayer` narrowed by `.from_opponent()` is the opponent scope.
-        if "EventKind::YouAttack" in expr:
+        if "EventKind::YouAttack" in expr and cls in ("self", "yours"):
             cls = "yours"
         elif cls == "any" and re.search(r"from_opponent|actor_is_opponent", expr):
             cls = "opp"
@@ -770,6 +770,149 @@ def ref_trigger_scopes(card, face=None):
             return None
         out.append(frozenset(classes))
     return out
+
+# ── trigger filters ─────────────────────────────────────────────────────────
+# The type words of a literal's filter (`R::Creature`, `HasCreatureType(Goblin)`,
+# `NotToken`, `HasKeyword(Flying)` …) against the type words of the clause
+# ("another nontoken Goblin creature you control"). Neutral words the kind
+# implies — permanent, card, spell, counter — are not compared, "creature" is
+# implied by a creature-only kind on the code side and by a creature type on
+# the oracle side, and a literal whose filter the reader cannot name (a
+# `Not(..)`, a `HasName`, a power / mana-value bound, a helper) is skipped.
+_CREATURE_TYPES = ['Advisor', 'Aetherborn', 'Alien', 'Ally', 'Angel', 'Antelope', 'Ape', 'Archer', 'Archon', 'Armadillo', 'Army', 'Artificer', 'Assassin', 'AssemblyWorker', 'Atog', 'Aurochs', 'Avatar', 'Azra', 'Badger', 'Balloon', 'Barbarian', 'Bard', 'Basilisk', 'Bat', 'Bear', 'Beast', 'Beaver', 'Beeble', 'Berserker', 'Bird', 'Bison', 'Blinkmoth', 'Boar', 'Book', 'Bringer', 'Brushwagg', 'Camel', 'Capybara', 'Carrier', 'Cat', 'Centaur', 'Chimera', 'Citizen', 'Cleric', 'Clown', 'Cockatrice', 'Construct', 'Coward', 'Coyote', 'Crab', 'Crocodile', 'Cyclops', 'Dalek', 'Dauthi', 'Demigod', 'Demon', 'Detective', 'Devil', 'Dinosaur', 'Djinn', 'Doctor', 'Dog', 'Dragon', 'Drake', 'Dreadnought', 'Drix', 'Drone', 'Druid', 'Dryad', 'Dwarf', 'Efreet', 'Egg', 'Elder', 'Eldrazi', 'Elemental', 'Elephant', 'Elf', 'Elk', 'Employee', 'Eye', 'Fae', 'Faerie', 'Ferret', 'Fish', 'Flagbearer', 'Fox', 'Fractal', 'Frog', 'Fungus', 'Gargoyle', 'Giant', 'Giraffe', 'Glimmer', 'Gnome', 'Goat', 'Goblin', 'God', 'Golem', 'Gorgon', 'Gremlin', 'Griffin', 'Hag', 'Halfling', 'Hamster', 'Harpy', 'Hellion', 'Hero', 'Hippo', 'Hippogriff', 'Homarid', 'Homunculus', 'Horror', 'Horse', 'Hound', 'Human', 'Hydra', 'Hyena', 'Illusion', 'Imp', 'Incarnation', 'Inkling', 'Insect', 'Jackal', 'Jellyfish', 'Juggernaut', 'Kangaroo', 'Kavu', 'Kirin', 'Kithkin', 'Knight', 'Kobold', 'Kor', 'Kraken', 'Lamia', 'Lammasu', 'Leech', 'Lemur', 'Leviathan', 'Lhurgoyf', 'Licid', 'Lion', 'Lizard', 'Llama', 'Mammoth', 'Manticore', 'Masticore', 'Mercenary', 'Merfolk', 'Metathran', 'Minion', 'Minotaur', 'Mite', 'Mole', 'Monger', 'Mongoose', 'Monk', 'Monkey', 'Moogle', 'Moonfolk', 'Mount', 'Mouse', 'Mutant', 'Myr', 'Mystic', 'Naga', 'Nautilus', 'Nephilim', 'Nightmare', 'Nightstalker', 'Ninja', 'Noble', 'Noggle', 'Nomad', 'Nymph', 'Octopus', 'Ogre', 'Ooze', 'Orc', 'Orgg', 'Otter', 'Ouphe', 'Ox', 'Oyster', 'Pangolin', 'Peasant', 'Pegasus', 'Performer', 'Pest', 'Phelddagrif', 'Phoenix', 'Phyrexian', 'Pilot', 'Pincher', 'Pirate', 'Plant', 'Platypus', 'Porcupine', 'Possum', 'Praetor', 'Processor', 'Qu', 'Rabbit', 'Raccoon', 'Ranger', 'Rat', 'Rebel', 'Reflection', 'Rhino', 'Robot', 'Rogue', 'Sable', 'Salamander', 'Samurai', 'Sand', 'Saproling', 'Satyr', 'Scarecrow', 'Scientist', 'Scion', 'Scorpion', 'Scout', 'Seal', 'Serpent', 'Servo', 'Shade', 'Shaman', 'Shapeshifter', 'Shark', 'Sheep', 'Siren', 'Skeleton', 'Skunk', 'Slith', 'Sliver', 'Sloth', 'Slug', 'Snail', 'Snake', 'Soldier', 'Soltari', 'Sorcerer', 'Spawn', 'Specter', 'Spellshaper', 'Sphinx', 'Spider', 'Spike', 'Spirit', 'Sponge', 'Squid', 'Squirrel', 'Starfish', 'Surrakar', 'Survivor', 'Symbiote', 'Tentacle', 'Thalakos', 'Thopter', 'Thrull', 'Tiefling', 'Toy', 'Treefolk', 'Trilobite', 'Troll', 'Turtle', 'Tyranid', 'Unicorn', 'Vampire', 'Varmint', 'Vedalken', 'Viashino', 'Villain', 'Volver', 'Wall', 'Warlock', 'Warrior', 'Weasel', 'Weird', 'Werewolf', 'Whale', 'Wizard', 'Wolf', 'Wolverine', 'Wombat', 'Worm', 'Wraith', 'Wurm', 'Yeti', 'Zombie', 'Zubera']
+_FILTER_KEYWORDS = ["Flying", "Trample", "Haste", "Vigilance", "Deathtouch", "Lifelink", "Reach", "Menace",
+                    "Defender", "Flash", "Hexproof", "Indestructible", "FirstStrike", "DoubleStrike"]
+_CREATURE_KINDS = {"CreatureDied", "CreatureSacrificed", "CreatureLeavesBattlefieldNotDying", "Attacks", "Blocks",
+                   "BecomesBlocked", "AttacksAndIsntBlocked", "DealsCombatDamageToPlayer", "DealsCombatDamageToCreature",
+                   "DealsDamageToPlayer", "DealsDamageToCreature", "DealsDamage", "DealsCombatDamage", "DealtDamage",
+                   "DealtCombatDamage", "CreatureOrArtifactDied", "Regenerated", "TurnedFaceUp", "Mutated", "Explored"}
+_SUBJECT_KINDS = {"BecameTarget", "ChoseTargets", "PlayerDamaged", "PlayerDealtNoncombatDamage", "ControllerDealtCombatDamage",
+                  "YourInstantOrSorceryDealtDamage", "YourInstantOrSorceryDealtDamageToPlayer", "YourSourceDealtNoncombatDamageEqualToToughness",
+                  "LandPutIntoGraveyard", "AbilityActivated", "BlocksNOrMore", "BecomesBlockedByNOrMore", "StepBegins", "CardCycled",
+                  "SpellCopied", "SpellCountered", "AuraAttached", "AuraAttachedToAny", "BecameAttached", "CounterAdded", "AnyCounterAdded",
+                  "CounterRemoved", "TokenCreated", "CrewsOrSaddles", "DealtDamage", "DealtCombatDamage", "Transformed", "TurnedFaceUp"}
+_SIMPLE_REQ = {"Creature": "creature", "Artifact": "artifact", "Enchantment": "enchantment", "Land": "land",
+               "Planeswalker": "planeswalker", "Instant": "instant", "Sorcery": "sorcery", "NotToken": "nontoken",
+               "IsToken": "token", "Noncreature": "noncreature", "Nonland": "nonland", "Colorless": "colorless",
+               "Multicolored": "multicolored", "IsBasicLand": "basic", "Legendary": "legendary"}
+_COLORS = {"White": "white", "Blue": "blue", "Black": "black", "Red": "red", "Green": "green"}
+_UNREADABLE_REQ = re.compile(r"\b(?:Not|HasName|PowerAt|ToughnessAt|ManaValue|WithCounter|InYourGraveyard|InGraveyard|"
+                             r"Tapped|IsAttacking|DamagedBySource|Any|Player|OpponentPlayer|IsSource|EntityMatches \{ what: Selector::(?!TriggerSource))")
+
+def _plural(w):
+    if w.endswith("f"): return {w, w[:-1] + "ves"}
+    if w.endswith("y"): return {w, w[:-1] + "ies"}
+    if w.endswith(("s", "x", "ch", "sh")): return {w, w + "es"}
+    if w == "mouse": return {w, "mice"}
+    if w == "merfolk" or w == "kithkin" or w == "moonfolk": return {w}
+    return {w, w + "s"}
+_ORACLE_TYPE_WORDS = {}
+for _w in list(_SIMPLE_REQ.values()) + list(_COLORS.values()) + ["equipment", "aura", "vehicle", "food", "clue", "treasure", "blood", "map", "powerstone", "saga", "mount"]:
+    for _f in _plural(_w): _ORACLE_TYPE_WORDS[_f] = _w
+for _ct in _CREATURE_TYPES:
+    for _f in _plural(_ct.lower()): _ORACLE_TYPE_WORDS[_f] = _ct.lower()
+for _k in _FILTER_KEYWORDS:
+    _ORACLE_TYPE_WORDS[re.sub(r"(?<!^)(?=[A-Z])", " ", _k).lower()] = _k.lower()
+
+def trigger_filter_words(body):
+    """Per literal, (kind, the filter's type words); `None` for a literal the
+    reader cannot name."""
+    exprs = trigger_event_exprs(body)
+    if exprs is None:
+        return None
+    out = []
+    for expr in exprs:
+        m = re.search(r"EventKind::(\w+)", expr)
+        if not m:
+            return None
+        kind = m.group(1)
+        # The source's own type is not a filter ("When this creature enters");
+        # a kind or scope that carries its subject (a targeting, a damage
+        # recipient, an activation) is not read either.
+        if re.search(r"EventScope::(?:SelfSource|EnchantedBySource|FromYourGraveyard)", expr) \
+                or kind in _SUBJECT_KINDS or not re.search(r"EventScope::(?:YourControl|AnyPlayer|OpponentControl|AnotherOfYours|ActivePlayer)", expr) \
+                or expr.lstrip().startswith("EventSpec {"):
+            out.append(None)
+            continue
+        f = expr.find(".with_filter(")
+        if f < 0:
+            f = expr.find("filter: Some(")
+        filt = expr[f:] if f >= 0 else ""
+        filt = filt.replace("IsToken.negate()", "NotToken").replace("Not(Box::new(R::IsToken))", "NotToken") \
+                   .replace("Not(Box::new(SelectionRequirement::IsToken))", "NotToken")
+        if filt and (not re.search(r"^\.with_filter\((?:crate::effect::)?Predicate::EntityMatches|^filter: Some\((?:crate::effect::)?Predicate::EntityMatches", filt)
+                     or _UNREADABLE_REQ.search(filt) or "negate()" in filt or "TriggerSource" not in filt
+                     or not re.search(r"(?:R|SelectionRequirement)::", filt) or re.search(r"\b[a-z_]+\(\)", filt)):
+            return None
+        # "Whenever a Goblin deals combat damage" narrows the dealer, which
+        # rides in `.dealt_by(..)` rather than the filter.
+        d = expr.find(".dealt_by(")
+        if d >= 0:
+            filt += expr[d:]
+        words = set()
+        for r in re.findall(r"(?:R|SelectionRequirement)::(\w+)", filt):
+            if r in _SIMPLE_REQ: words.add(_SIMPLE_REQ[r])
+        for r in re.findall(r"HasCardType\(CardType::(\w+)\)", filt):
+            if r in _SIMPLE_REQ: words.add(_SIMPLE_REQ[r])
+        for r in re.findall(r"HasSupertype\(Supertype::(\w+)\)", filt):
+            if r in _SIMPLE_REQ: words.add(_SIMPLE_REQ[r])
+        words |= {c.lower() for c in re.findall(r"HasCreatureType\(\s*CreatureType::(\w+),?\s*\)", filt)}
+        words |= {k.lower() for k in re.findall(r"HasKeyword\(Keyword::(\w+)\)", filt) if k in _FILTER_KEYWORDS}
+        words |= {_COLORS[c] for c in re.findall(r"HasColor\(Color::(\w+)\)", filt) if c in _COLORS}
+        words |= {s.lower() for s in re.findall(r"HasArtifactSubtype\(ArtifactSubtype::(\w+)\)", filt)}
+        words |= {s.lower() for s in re.findall(r"HasEnchantmentSubtype\(EnchantmentSubtype::(\w+)\)", filt)}
+        if kind in _CREATURE_KINDS or words & {c.lower() for c in _CREATURE_TYPES}:
+            words.add("creature")
+        if kind == "CreatureOrArtifactDied":
+            words |= {"creature", "artifact"}
+        if kind == "LandPlayed":
+            words.add("land")
+        out.append((kind, frozenset(words)))
+    return out
+
+def ref_trigger_filter_words(card, face=None):
+    """Per oracle trigger line, the type words of its subject clause."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    out = []
+    for line in text.split("\n"):
+        line = line.strip()
+        m = _ORACLE_TRIG_LINE.match(line)
+        if not m:
+            continue
+        cond = _clause(line[m.start(1):].lower())
+        if cond.startswith("at ") or re.search(r"\bor (?:an)?other\b|\b(?:and|or) when|^when you control", cond):
+            out.append(None)
+            continue
+        # The subject only: what it does something *to* / *by* / *with* is
+        # the object ("deals combat damage to a player or planeswalker").
+        cond = re.split(r"\b(?:to|by|from|into|onto|for|attacks|blocks|targets) \b", cond)[0]
+        words = set()
+        for w in re.findall(r"[a-z][a-z'-]*", cond):
+            if w in _ORACLE_TYPE_WORDS:
+                words.add(_ORACLE_TYPE_WORDS[w])
+        if words & set(c.lower() for c in _CREATURE_TYPES):
+            words.add("creature")
+        # A Blood / Clue / Food / Treasure is a token by construction.
+        if words & {"blood", "clue", "food", "treasure", "map", "powerstone"}:
+            words.discard("token")
+        out.append(frozenset(words))
+    return out
+
+def filter_mismatch(code, ref):
+    """Multiset compare of the type words, one-to-one; an oracle line the
+    reader skipped (`None`) accepts anything."""
+    def fit(i, free):
+        if i == len(code):
+            return True
+        for j in free:
+            if ref[j] is None or code[i] is None or code[i][1] == ref[j]:
+                if fit(i + 1, free - {j}):
+                    return True
+        return False
+    return not fit(0, frozenset(range(len(ref))))
 
 def ability_mana_costs(body):
     """The mana cost of every `ActivatedAbility { .. }` literal in the card's
@@ -1276,7 +1419,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -1432,6 +1575,12 @@ def audit():
             if sc is not None and ref_sc is not None and len(sc) == len(ref_sc):
                 if trigger_mismatch(sc, ref_sc):
                     d["scope"].append((tag, sc, ["|".join(sorted(f)) for f in ref_sc]))
+            # trigger filters: type words, one-to-one, same count gate.
+            fw = trigger_filter_words(body)
+            ref_fw = ref_trigger_filter_words(card, face)
+            if fw is not None and ref_fw is not None and len(fw) == len(ref_fw):
+                if filter_mismatch(fw, ref_fw):
+                    d["filt"].append((tag, [sorted(c[1]) if c is not None else "-" for c in fw], [sorted(f) if f is not None else "-" for f in ref_fw]))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -1448,21 +1597,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}")
-        print("-" * 98)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}")
+        print("-" * 104)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 98)
+        print("-" * 104)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 
