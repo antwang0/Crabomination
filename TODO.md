@@ -36,8 +36,7 @@ sixty-seventh pass, so don't re-take that.
    games), fresh-seed sweep 28,800 games / 0 undecided.
 3. **Engine, this run (ENGINE_BACKLOG first section):** "leaves the battlefield" fired only on death for all 87 literals — `GameEvent::
    PermanentLeftBattlefield` + `note_left_without_dying` at every non-graveyard exit; `BecomesUntapped` and `Tapped` joined the CR 603.6 fan-out.
-   Open: an Equipment-granted trigger's damage is dealt *by the creature* (Sword of War and Peace's burn re-fires the Looter) —
-   `triggers_on_equipment` is the device, the `sword()` helper does not set it.
+   The ten `sword()` Swords fire off the Sword now (`triggers_on_equipment`); the other Equipment with a damage rider have not been read.
 4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns; the sixth (`trig`, a trigger's event) fixed 40 shipped cards, the seventh
    (`scope`) nine, the eighth (`filt`, the filter's type words) five; residues in INCOMPLETE_CARDS "Trigger events" / "Trigger scopes" /
    "Trigger filters". Next: the filters the reader skips (`Not(..)`, power / mana-value bounds, `let` helpers), then a static's *text*.

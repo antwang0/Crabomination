@@ -695,6 +695,15 @@ bound, a `let` helper), and the struct-form `EventSpec { .. }`. First run
 | Augusta, Dean of Order | the same — the untap-and-retap ran once per attacker | `YouAttack` |
 | Foundry Street Denizen, Court Street Denizen, Sage's Row Denizen | a colour alone — a red / white / blue enchantment or artifact entering triggered | "another red creature" — the colour *and* `Creature` |
 
+And one the `trig` fixes exposed rather than the column: **the ten
+`sword()` Swords fired their rider off the equipped creature** (CR 702.6e's
+default), so Sword of War and Peace's burn was the *Looter's* damage — a
+second loot, and a colourless burn stopped by protection from red. The
+helper sets `triggers_on_equipment` now; Sword of Truth and Justice's
+`Selector::This` (the creature, under the old source) became the printed
+"target creature you control". `sword_of_war_and_peace_burns_by_hand_and_
+gains_life` asserts the single loot.
+
 False positives worth knowing: Valley Mightcaller's Squirrel sat in a
 multi-line `HasCreatureType(\n CreatureType::Squirrel,\n)` the first regex
 did not span (the reader now does; nothing was wrong with the card), and

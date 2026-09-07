@@ -1246,6 +1246,10 @@ fn sword_of_war_and_peace_burns_by_hand_and_gains_life() {
     }
     assert_eq!(g.players[1].life, opp_life - combat - opp_hand, "burned by defender's hand size");
     assert_eq!(g.players[0].life, my_life + my_hand, "gained life by your hand size");
+    // The burn is the Sword's damage (`triggers_on_equipment`), not the
+    // Looter's: "whenever this creature deals damage to a player" fired once,
+    // off the combat damage, so exactly one card was looted away.
+    assert_eq!(g.players[0].graveyard.len(), 1, "one loot: the Sword's burn is not the Looter's damage");
 }
 
 // ── Soulbond (CR 702.95) ─────────────────────────────────────────────────────

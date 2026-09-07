@@ -27382,6 +27382,9 @@ pub fn sword_of_body_and_mind() -> CardDefinition {
 
 /// Helper for the Mirran/Phyrexian Sword cycle: {3} Equipment, Equip {2}, +2/+2
 /// and protection from two colors, plus a `DealsCombatDamageToPlayer` rider.
+/// The rider fires off the *Sword* (`triggers_on_equipment`): its damage is
+/// the Sword's, not the creature's, so a Looter wearing Sword of War and
+/// Peace loots once and a colourless burn ignores protection from red.
 fn sword(name: &'static str, prot: [Color; 2], rider: Effect) -> CardDefinition {
     use crate::card::{ArtifactSubtype, EquipBonus};
     CardDefinition {
@@ -27402,6 +27405,7 @@ fn sword(name: &'static str, prot: [Color; 2], rider: Effect) -> CardDefinition 
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: rider,
             }],
+            triggers_on_equipment: true,
             ..Default::default()
         }),
         ..Default::default()
@@ -38850,7 +38854,7 @@ pub fn sword_of_truth_and_justice() -> CardDefinition {
         [Color::White, Color::Blue],
         Effect::Seq(vec![
             Effect::AddCounter {
-                what: Selector::This,
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
