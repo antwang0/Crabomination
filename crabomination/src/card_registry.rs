@@ -154,6 +154,14 @@ fn name_index() -> &'static HashMap<&'static str, CardFactory> {
 /// Look up a `CardDefinition` by name. Returns `None` if no catalog
 /// factory produces a card with that name. Used by snapshot
 /// deserialization to rebuild `CardInstance`s from saved game state.
+/// [`lookup_by_name`] straight into an `Arc`, in this frame: the by-value
+/// form hands its 8 KB `CardDefinition` back into the caller's frame, and
+/// `run_effect` is a caller (PERF "run_effect's frame"). Never inline.
+#[inline(never)]
+pub fn lookup_arc_by_name(name: &str) -> Option<std::sync::Arc<CardDefinition>> {
+    lookup_by_name(name).map(std::sync::Arc::new)
+}
+
 pub fn lookup_by_name(name: &str) -> Option<CardDefinition> {
     // Token cards (Clue, Treasure, Food, Blood) come from the engine-baked
     // token factories — those don't go through `all_known_factories`

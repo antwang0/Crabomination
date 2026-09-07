@@ -385,6 +385,24 @@ impl EntityRef {
     }
 }
 
+
+/// Grist, the Hunger Tide's +1 Insect, built in its own frame: an ~8 KB
+/// `TokenDefinition` literal inline was a slot of `run_effect`'s frame for
+/// every call (PERF "run_effect's frame"). Never inline.
+#[inline(never)]
+fn grist_insect_token() -> Box<crate::card::TokenDefinition> {
+    use crate::card::{CardType, CreatureType, Subtypes, TokenDefinition};
+    Box::new(TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        colors: vec![crate::mana::Color::Black, crate::mana::Color::Green],
+        ..Default::default()
+    })
+}
+
 impl GameState {
     /// Petals of Insight — look at the top `count`, then either bottom the
     /// whole batch and run `then`, or leave them and run `else_`.
@@ -1519,7 +1537,7 @@ impl GameState {
             || spec.non_legendary)
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
-            let def = std::sync::Arc::make_mut(c.definition_mut());
+            let def = c.definition_make_mut();
             def.triggered_abilities
                 .extend(spec.extra_triggered.iter().cloned());
             def.activated_abilities
@@ -1630,7 +1648,7 @@ impl GameState {
         };
         let mode = &modes[idx];
         if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
-            let def = std::sync::Arc::make_mut(c.definition_mut());
+            let def = c.definition_make_mut();
             def.power = mode.power;
             def.toughness = mode.toughness;
             for kw in &mode.keywords {
@@ -4198,7 +4216,7 @@ impl GameState {
                 // Approximation: the copy is created in the controller's hand
                 // as a real castable card (a true copy would cease to exist
                 // if not cast — CR 704.5e).
-                if let Some(def) = crate::catalog::lookup_by_name(&name) {
+                if let Some(def) = crate::catalog::lookup_arc_by_name(&name) {
                     let id = self.next_id();
                     let inst = crate::card::CardInstance::new(id, def, ctx.controller);
                     self.players[ctx.controller].hand.push(inst);
@@ -4523,26 +4541,15 @@ impl GameState {
             }
 
             Effect::GristPlusOne => {
-                use crate::card::{CardType, CounterType, CreatureType, Subtypes, TokenDefinition};
+                use crate::card::{CounterType, CreatureType};
                 let p = ctx.controller;
-                let insect = TokenDefinition {
-                    name: "Insect".into(),
-                    power: 1,
-                    toughness: 1,
-                    card_types: vec![CardType::Creature],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Insect],
-                        ..Default::default()
-                    },
-                    colors: vec![crate::mana::Color::Black, crate::mana::Color::Green],
-                    ..Default::default()
-                };
+                let insect = grist_insect_token();
                 for _ in 0..100 {
                     self.run_effect(
                         &Effect::CreateToken {
                             who: crate::effect::PlayerRef::You,
                             count: crate::effect::Value::ONE,
-                            definition: Box::new(insect.clone()),
+                            definition: insect.boxed_clone(),
                         },
                         ctx,
                         events,
@@ -13973,7 +13980,7 @@ impl GameState {
                                 .or_default()
                                 .push((**trigger).clone());
                         } else if let Some(c) = self.battlefield_find_mut(cid) {
-                            std::sync::Arc::make_mut(c.definition_mut())
+                            c.definition_make_mut()
                                 .triggered_abilities
                                 .push((**trigger).clone());
                         }
@@ -14002,7 +14009,7 @@ impl GameState {
                         } else if let Some(c) = self.battlefield_find_mut(cid)
                             && !c.definition.keywords.contains(keyword)
                         {
-                            std::sync::Arc::make_mut(c.definition_mut())
+                            c.definition_make_mut()
                                 .keywords
                                 .push(keyword.clone());
                         }
@@ -14027,7 +14034,7 @@ impl GameState {
                         } else if let Some(c) = self.battlefield_find_mut(cid)
                             && !c.definition.keywords.contains(keyword)
                         {
-                            std::sync::Arc::make_mut(c.definition_mut())
+                            c.definition_make_mut()
                                 .keywords
                                 .push(keyword.clone());
                         }
@@ -14160,7 +14167,7 @@ impl GameState {
                 self.move_card_to(src, &dest, &ret_ctx, events);
                 // Strip the Creature type so it returns as an enchantment.
                 if let Some(c) = self.battlefield.find_by_id_mut(src) {
-                    let def = std::sync::Arc::make_mut(c.definition_mut());
+                    let def = c.definition_make_mut();
                     def.card_types.retain(|t| *t != CardType::Creature);
                 }
                 Ok(())
@@ -14860,7 +14867,7 @@ impl GameState {
                         } else if let Some(c) = self.battlefield_find_mut(cid)
                             && !c.definition.keywords.contains(&kw)
                         {
-                            std::sync::Arc::make_mut(c.definition_mut()).keywords.push(kw.clone());
+                            c.definition_make_mut().keywords.push(kw.clone());
                         }
                     }
                 }
@@ -17981,7 +17988,10 @@ impl GameState {
                             .iter()
                             .find_map(|pl| pl.graveyard.iter().find(|c| c.id == src_id))
                     })
-                    .map(|c| (**c.definition).clone());
+                    .map(|c| c.definition.boxed_clone());
+                // Edited through the `Box` and moved into the `Arc` heap to
+                // heap below: the by-value form kept an 8 KB slot in this
+                // frame, and `Arc::make_mut` would inline one back.
                 let Some(mut def) = source_def else { return Ok(()); };
                 // Apply extra creature types & P/T override.
                 let mut extra_types = def.subtypes.creature_types.clone();
@@ -18029,7 +18039,7 @@ impl GameState {
                 }
                 // One allocation for the whole batch; the mint takes
                 // `Into<Arc<_>>`, so `clone` below is a refcount bump.
-                let def = std::sync::Arc::new(def);
+                let def: std::sync::Arc<crate::card::CardDefinition> = std::sync::Arc::from(def);
                 for _ in 0..n {
                     self.mint_token_onto_battlefield(def.clone(), p, *enters_tapped, events);
                 }
@@ -20175,7 +20185,7 @@ impl GameState {
                     DecisionAnswer::Color(c) => c,
                     _ => Color::Green,
                 };
-                let def = crate::draft::basic_land_factory(color)();
+                let def = crate::draft::basic_land_arc(color);
                 let id = CardId(self.next_id);
                 self.next_id = self.next_id.saturating_add(1);
                 self.players[ctx.controller]
@@ -20659,7 +20669,7 @@ impl GameState {
                     if let StackItem::Spell { card, .. } = si
                         && ids.contains(&card.id)
                     {
-                        std::sync::Arc::make_mut(card.definition_mut()).color_override =
+                        card.definition_make_mut().color_override =
                             Some(vec![color]);
                     }
                 }
@@ -22167,7 +22177,7 @@ impl GameState {
                     };
                     self.move_card_to(id, &dest, ctx, events);
                     if let Some(c) = self.battlefield_find_mut(id) {
-                        let def = std::sync::Arc::make_mut(c.definition_mut());
+                        let def = c.definition_make_mut();
                         if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Nightmare) {
                             def.subtypes.creature_types.push(crate::card::CreatureType::Nightmare);
                         }
@@ -22700,7 +22710,7 @@ impl GameState {
                 if let Some(c) = self.battlefield.find_by_id_mut(id) {
                     c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
                     // "…a black Zombie in addition to its other types."
-                    let def = std::sync::Arc::make_mut(c.definition_mut());
+                    let def = c.definition_make_mut();
                     if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie) {
                         def.subtypes.creature_types.push(crate::card::CreatureType::Zombie);
                     }
@@ -24323,7 +24333,7 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(id)
                         && !c.definition.keywords.has_kw(&crate::card::Keyword::Decayed)
                     {
-                        std::sync::Arc::make_mut(c.definition_mut())
+                        c.definition_make_mut()
                             .keywords
                             .push(crate::card::Keyword::Decayed);
                     }
@@ -30620,9 +30630,9 @@ impl GameState {
                     })
                 };
                 let Some(mut card) = taken else { return Ok(()) };
-                let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
+                let back = card.definition.back_face.as_ref().map(|b| b.clone_arc()).unwrap();
                 card.front_face = Some(card.definition.arc());
-                card.set_definition(std::sync::Arc::new(back));
+                card.set_definition(back);
                 card.transformed = true;
                 events.push(GameEvent::Transformed { card_id: id });
                 self.place_card_in_dest(
@@ -30740,9 +30750,9 @@ impl GameState {
                     return Ok(());
                 }
                 let mut card = self.players[owner].graveyard.remove(pos);
-                let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
+                let back = card.definition.back_face.as_ref().map(|b| b.clone_arc()).unwrap();
                 card.front_face = Some(card.definition.arc());
-                card.set_definition(std::sync::Arc::new(back));
+                card.set_definition(back);
                 card.transformed = true;
                 events.push(GameEvent::Transformed { card_id: src });
                 self.place_card_in_dest(
@@ -31662,7 +31672,7 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
                     if let Some(c) = self.battlefield_find_mut(id) {
-                        let def = std::sync::Arc::make_mut(c.definition_mut());
+                        let def = c.definition_make_mut();
                         for kw in def.keywords.iter_mut() {
                             if let crate::card::Keyword::Equip(cost) = kw {
                                 cost.reduce_generic(*amount);

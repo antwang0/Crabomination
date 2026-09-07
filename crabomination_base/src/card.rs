@@ -3374,6 +3374,16 @@ pub struct TokenDefinition {
 }
 
 impl TokenDefinition {
+    /// `Box::new(self.clone())` in its own frame. A token definition is ~8 KB
+    /// by value; cloned inline it is a stack slot the caller keeps for its
+    /// whole life, and `run_effect` keeps ~970 arms' slots (PERF
+    /// "run_effect's frame"). Never inline: the point is where the temporary
+    /// lives.
+    #[inline(never)]
+    pub fn boxed_clone(&self) -> Box<TokenDefinition> {
+        Box::new(self.clone())
+    }
+
     /// Builder for `enters_with_counters`: "create this token with `amount`
     /// `kind` counters on it".
     pub fn entering_with(mut self, kind: CounterType, amount: crate::effect::Value) -> Self {
@@ -5351,6 +5361,23 @@ pub(crate) mod debug_flag {
 }
 
 impl CardDefinition {
+    /// `Arc::new(self.clone())` in its own frame — see
+    /// [`TokenDefinition::boxed_clone`]: a `CardDefinition` is 8,232 bytes,
+    /// and four of them cloned inline were a third of `run_effect`'s 97 KB
+    /// frame. Never inline.
+    #[inline(never)]
+    pub fn clone_arc(&self) -> Arc<CardDefinition> {
+        Arc::new(self.clone())
+    }
+
+    /// [`clone_arc`](Self::clone_arc)'s `Box` form, for a caller that edits
+    /// the clone before sharing it: `Arc::from(Box<T>)` moves heap to heap,
+    /// where `Arc::make_mut` would inline an 8 KB clone path into the caller.
+    #[inline(never)]
+    pub fn boxed_clone(&self) -> Box<CardDefinition> {
+        Box::new(self.clone())
+    }
+
     // `#[inline]` on the card-type predicates, measured at `c58f8407`:
     // `release-fast` (cgu 16, no LTO) `fixed` -0.907 % / `cube` -0.741 % /
     // `sealed` -0.831 %, and `profiling-lto` (the same with thin LTO)
@@ -7840,15 +7867,24 @@ impl CardData {
     }
 
     /// The one way to get `&mut` at the definition, and the only place
-    /// besides [`Self::set_definition`] that clears the memo. For
-    /// `Arc::make_mut(c.definition_mut())` — an in-place rewrite of a
-    /// uniquely-owned definition, which is what most of the ~17 rewrite
-    /// sites do. See [`Definition`].
+    /// besides [`Self::set_definition`] that clears the memo. Reach it
+    /// through [`Self::definition_make_mut`] for an in-place rewrite; this
+    /// form is for a caller that swaps the `Arc` itself. See [`Definition`].
     #[inline]
     pub fn definition_mut(&mut self) -> &mut Arc<CardDefinition> {
         self.definition.memo.clear();
         bump_definition_epoch();
         &mut self.definition.def
+    }
+
+    /// `Arc::make_mut(self.definition_mut())` in its own frame. The
+    /// definition is shared with the catalog's `Arc` on most cards, so
+    /// `make_mut` clones its 8 KB — and inlined into `run_effect` that clone
+    /// was an unnamed 8 KB slot of a 97 KB frame, twice (PERF "run_effect's
+    /// frame"). Never inline.
+    #[inline(never)]
+    pub fn definition_make_mut(&mut self) -> &mut CardDefinition {
+        Arc::make_mut(self.definition_mut())
     }
 
     /// Replace the definition wholesale (face swap, copy effect, revert),

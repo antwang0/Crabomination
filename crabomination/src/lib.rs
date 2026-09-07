@@ -16,7 +16,7 @@ pub use crabomination_base::{card, effect, mana, static_str_serde};
 pub mod catalog {
     pub use crabomination_catalog::*;
 
-    pub use crate::card_registry::{all_known_factories, lookup_by_name};
+    pub use crate::card_registry::{all_known_factories, lookup_arc_by_name, lookup_by_name};
 }
 
 mod card_registry;

@@ -3555,7 +3555,7 @@ impl GameState {
                 tap_other_filter: None, from_hand: false,
                 ..Default::default()
             });
-            std::sync::Arc::make_mut(card.definition_mut()).activated_abilities = kept;
+            card.definition_make_mut().activated_abilities = kept;
         }
         self.players[p].lands_played_this_turn += 1;
         self.battlefield.push(card);
@@ -8050,7 +8050,7 @@ impl GameState {
                 self.sacrificed_mana_value,
             ) {
                 let sac_card = self.sacrificed_card;
-                let def = std::sync::Arc::make_mut(card.definition_mut());
+                let def = card.definition_make_mut();
                 def.effect = Effect::WithSacrificedPt {
                     power: pw,
                     total_power: self.sacrificed_total_power,
@@ -11204,7 +11204,7 @@ impl GameState {
         // effect to the alternative version so it resolves with "each"
         // instead of "target" semantics (or whatever the override says).
         if let Some(override_effect) = alt.effect_override {
-            std::sync::Arc::make_mut(card.definition_mut()).effect = override_effect;
+            card.definition_make_mut().effect = override_effect;
         }
 
         auto_events.push(GameEvent::SpellCast {

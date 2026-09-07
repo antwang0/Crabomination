@@ -774,6 +774,14 @@ pub fn suggest_basic_split(main_deck: &[CardFactory], colors: [Color; 2], total_
     out
 }
 
+/// [`basic_land_factory`] built straight into an `Arc`, in this frame: a
+/// factory returns its 8 KB `CardDefinition` by value into the caller's
+/// frame, and `run_effect` is a caller (PERF "run_effect's frame").
+#[inline(never)]
+pub fn basic_land_arc(color: Color) -> std::sync::Arc<crate::card::CardDefinition> {
+    std::sync::Arc::new(basic_land_factory(color)())
+}
+
 /// Look up the basic-land factory for a color. Mirrors the helper in
 /// `cube::basic_factory` (which is private), exposed here so the
 /// deck-builder can materialize basics alongside drafted spells.

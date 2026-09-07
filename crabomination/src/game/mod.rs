@@ -14185,7 +14185,7 @@ impl GameState {
         {
             let printed = &snap.definition.subtypes.creature_types;
             if cp.subtypes().creature_types.iter().any(|t| !printed.contains(t)) {
-                std::sync::Arc::make_mut(snap.definition_mut()).subtypes.creature_types =
+                snap.definition_make_mut().subtypes.creature_types =
                     cp.subtypes().creature_types.clone();
             }
         }
@@ -23070,7 +23070,7 @@ impl GameState {
         else {
             return;
         };
-        *std::sync::Arc::make_mut(card.definition_mut()) = def;
+        *card.definition_make_mut() = def;
     }
 
     /// Resolve a spell's effect tree. On suspension, installs a
