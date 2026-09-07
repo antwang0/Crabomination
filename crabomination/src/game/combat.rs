@@ -15,6 +15,12 @@ use smallvec::SmallVec;
 /// one fire for the batch, not one per dealer.
 type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool, Option<usize>);
 
+/// One SelfSource Attacks trigger `declare_attackers_banded` pushes itself,
+/// before its filter runs post-batch: `(source, effect, controller, filter,
+/// once)` — `once` as in `DamageTrigger`, the CR 603.3d key of an "attacks
+/// for the first time each turn" trigger (Aurelia, Godo).
+type AttackTrigger = (CardId, Effect, usize, Option<crate::effect::Predicate>, Option<usize>);
+
 /// The `once` key of a printed trigger at index `idx`: `Some` only when the
 /// ability says "only once each turn" (a granted trigger passes `None`, as
 /// the dispatcher's `trig_idx < n_printed` rule does).
@@ -1085,16 +1091,7 @@ impl GameState {
         // Per CR 506.5, the Attacks trigger filter must be evaluated
         // post-batch, so we carry the optional filter alongside each
         // queued trigger.
-        // `(source, effect, controller, filter, once)` — `once` as in
-        // `DamageTrigger`: the CR 603.3d key of an "attacks for the first time
-        // each turn" trigger (Aurelia, Godo), checked after the filter.
-        let mut triggers: Vec<(
-            CardId,
-            Effect,
-            usize,
-            Option<crate::effect::Predicate>,
-            Option<usize>,
-        )> = vec![];
+        let mut triggers: Vec<AttackTrigger> = vec![];
         let computed_kw = |id: CardId| -> &[Keyword] {
             #[cfg(debug_assertions)]
             debug_assert!(
