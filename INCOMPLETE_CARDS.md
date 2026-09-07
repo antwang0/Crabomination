@@ -569,6 +569,13 @@ and `loyalty`. 128 walkers, one wrong: **Karn, the Great Creator** shipped
 its two abilities with the signs swapped — a +2 that tutored an artifact
 from outside the game every turn and a −1 animation. Fixed 2026-09-07.
 
+### Token P/T — the fifth column, clean
+
+`tok` reads every `TokenDefinition` literal's P/T in a card body against
+the oracle's "N/N … token" mentions: 509 cards compared, **zero**
+mismatches (2026-09-07). Kept as a standing check; the first reading is
+the useful one to know about.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

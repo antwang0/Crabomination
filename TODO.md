@@ -48,10 +48,9 @@ sixty-seventh pass, so don't re-take that.
    the 970-arm match's own tail (28 `PendingEffectState` slots) — the split.
 5. **Rounds 65-68 (ML_NOTES):** lobby pilot `MctsBot` 256; round 67 (f51e9c5c) the four targeting flags ADOPTED (+8 converge);
    round 68 `sim_main_cast_cap` ADOPTED, control `sim-cast-off`, gate `.ladder/run_r68_simcast.sh`. **Cards:** the oracle-verb audit is 61
-   rows, all filed; `audit_catalog_stats.py` gained three activated-ability columns (`abil` mana cost, `tim` timing rider, `T/sac`
-   the {T} / self-sacrifice halves) that found 27 + 18 + 10 wrong shipped cards, all fixed (INCOMPLETE_CARDS' three tables; five
-   documented residues) — the next column of that shape is a trigger's *event* or a static's *text*, which no auditor reads.
-   Spell Queller and Manifold Key are the printed cards now.
+   rows, all filed; `audit_catalog_stats.py` gained five oracle columns (ability mana cost / timing / {T}-sac halves / loyalty /
+   token P/T): 27 + 18 + 10 + 1 + 0 wrong shipped cards, all fixed (INCOMPLETE_CARDS' tables; five documented residues). Next of
+   that shape: a trigger's *event* or a static's *text*, which no auditor reads. Spell Queller and Manifold Key are printed now.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

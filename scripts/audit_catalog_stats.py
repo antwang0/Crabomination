@@ -354,6 +354,33 @@ def ref_loyalty_costs(card, face=None):
         out.append(("-X" if m.group(2) == "X" else str(int(sign + m.group(2)))))
     return out, (face or card).get("loyalty")
 
+# "a 3/3 green Elephant creature token", "two 1/1 white Soldier creature tokens".
+_ORACLE_TOKEN = re.compile(r"(\d+)/(\d+) [A-Za-z\-, ]*?tokens?")
+
+def token_stats(body):
+    """Every `TokenDefinition { .. }` literal's P/T in the card body (before
+    `strip_token_literals` runs — this reader takes the raw body), as
+    sorted "P/T" strings; `None` when a token literal names no P/T."""
+    out, i = [], 0
+    while True:
+        j = body.find("TokenDefinition {", i)
+        if j < 0:
+            break
+        end = bracket_span(body, j + len("TokenDefinition ")); lit = body[j:end]; i = end
+        kp = literal_depth1_field(lit, "power:"); kt = literal_depth1_field(lit, "toughness:")
+        mp = re.match(r"power:\s*(-?\d+)", lit[kp:]) if kp is not None else None
+        mt = re.match(r"toughness:\s*(-?\d+)", lit[kt:]) if kt is not None else None
+        if not (mp and mt):
+            return None
+        out.append(f"{mp.group(1)}/{mt.group(1)}")
+    return out
+
+def ref_token_stats(card, face=None):
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    return [f"{p}/{t}" for p, t in _ORACLE_TOKEN.findall(text)]
+
 def ability_mana_costs(body):
     """The mana cost of every `ActivatedAbility { .. }` literal in the card's
     own `activated_abilities: vec![..]`, each as `norm()`'s symbol tuple; a
@@ -859,7 +886,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -875,6 +902,7 @@ def audit():
             cut = re.search(r"\n(?:pub(?:\([^)]*\))?\s+)?fn \w+", body)
             if cut:
                 body = body[: cut.start()]
+            raw_body = inline_helper_call(body, helpers, hconsts)
             body = strip_token_literals(body)
             body = inline_helper_call(body, helpers, hconsts)
             nm = card_def_name(body)
@@ -992,6 +1020,13 @@ def audit():
                     got_b is not None and ref_b is not None and str(ref_b).isdigit() and got_b != ref_b
                 ):
                     d["loy"].append((tag, f"{got_l} base {got_b}", f"{ref_l} base {ref_b}"))
+            # token P/T: every TokenDefinition literal's stats against the
+            # oracle's "N/N … token" mentions, as multisets, when the counts
+            # match (a token helper call is invisible to both sides).
+            tok = token_stats(raw_body)
+            ref_tok = ref_token_stats(card, face)
+            if tok and ref_tok and len(tok) == len(ref_tok) and sorted(tok) != sorted(ref_tok):
+                d["tok"].append((tag, sorted(tok), sorted(ref_tok)))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -1008,21 +1043,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}")
-        print("-" * 80)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}")
+        print("-" * 86)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 80)
+        print("-" * 86)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 
