@@ -566,8 +566,11 @@ Tasigur (Splice / Delve).
   {1},{T} to untap *another* artifact. Tests in `stx::part_01` pin both
   costs and the self-target refusal.
 - **Manland pump / artifact-creature type / land detail dropped** across
-  `decks/lands.rs` (Mishra's Factory, Blinkmoth Nexus, Thespian's Stage, Ghost
-  Quarter, Field of Ruin, …).
+  `decks/lands.rs`. Re-read 2026-09-07: Mishra's Factory and Blinkmoth Nexus
+  are not in the catalog at all; Ghost Quarter and Field of Ruin both ship
+  their basic-land search riders (Ghost Quarter's doc comment claimed
+  otherwise and is fixed); Thespian's Stage's only residual is the printed
+  "except it has this ability" on the copy. Nothing verified open here.
 - **Missing creature subtypes bridged to a related type** (cosmetic):
   Dwarf→Warlock, Rhino→Bard, Kor→Warlock, Gorgon→Snake, …
 

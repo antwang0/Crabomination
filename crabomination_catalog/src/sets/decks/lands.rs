@@ -1520,9 +1520,10 @@ pub fn mana_confluence() -> CardDefinition {
 }
 
 /// Ghost Quarter — `{T}: Add {C}` plus `{T}, Sacrifice this land: Destroy
-/// target land.` (The printed "its controller may search for a basic land"
-/// rider — a downside-mitigation for the opponent — is dropped; tracked in
-/// TODO.md.)
+/// target land. Its controller may search their library for a basic land
+/// card, put it onto the battlefield, then shuffle.` The search is the
+/// destroyed land's controller's choice (`MayDoBy`), seated as "you" for
+/// the search and the destination.
 pub fn ghost_quarter() -> CardDefinition {
     use crate::card::SelectionRequirement;
     CardDefinition {
