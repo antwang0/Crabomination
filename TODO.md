@@ -28,20 +28,21 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never
-   force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-275)` is the last claimed, `(-276)` next. Gotchas in
+   force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**; build budgets in PERF's `(-275)` closing block. ⚠ Another session pushes
    to this branch concurrently — fetch before every push. ⚠ Disk: `target/debug/incremental` hit 13 GB this run; purge it before a worktree build.
 2. **Gates at the `(-275)` tip (PERF Baseline):** suite 19,246 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
    (195,806 / 27.49 / 611.9 / 0), golden 7/7, fresh-seed sweep 28,800 games (0 cap / stuck) + training binary 9,000 games / 0 stalls,
    debug-assertions grid green AND `--wide` green (301,600 + 60,000 + 45 pilot cells; cap 4 = the documented Beacon seeds 53/73).
-3. **Perf this run:** `(-275)` the two CR 602.5 ability-lock gates read an exact-keyword fold — sealed -0.118 %, cube -0.172 %,
-   actor -0.142 % — the last priced lead. ⚠ **The dflt base moved under the deck-work commits** (cube six-game Ir +38.5 %, sealed
-   -3.8 %: different games under `trick_modes_combat_only`, `--bench` byte-identical); read the new totals as the base.
+3. **Perf this run:** `(-275)` the ability-lock gates on an exact-keyword fold (sealed -0.118 %, cube -0.172 %, actor -0.142 %);
+   `(-276)` the 8 KB `CardDefinition` temporaries out of `run_effect`'s frame — 97 KB -> 64 KB, the only >4 KB frame in the binary
+   and the reason for the 32 MB thread stacks; sealed -0.256 %, cube -0.288 %. ⚠ The dflt base moved twice under concurrent bot
+   commits (`trick_modes_combat_only`: cube +38.5 %; round 67's picker: +1.5 / +1.9 %); read PERF's newest totals as the base.
 4. **Leads:** the engine profile is FLAT on all three pools; the new cube default is read by context (candidates: 33 sim passes a sim,
    the sim's own casts 17 % — bot-side, an ML session's call). **Build time is where the lever is** (PERF "Serde derives"): serde was
    44 % of the engine crate's LLVM IR; relocating the one `CardDefinition: Deserialize` instantiation into `crabomination_base::textrewrite`
-   cut it 27 % (engine-edit rebuild -3.5 % release-fast / -9 % dev). Next of that shape: the wire protocol's `Deserialize`
-   (`ClientMsg`, crossplay `Msg`; ~240 k lines + visitors) that `bot_ladder` codegens and never runs — `cargo llvm-lines -p crabomination --lib`.
+   cut it 27 % (engine-edit rebuild -3.5 % release-fast / -9 % dev). Next of that shape needs a box where the client builds (PERF says
+   why). **Frame:** what is left of `run_effect`'s 64 KB is the 970-arm match's own tail (28 `PendingEffectState` slots) — the split.
 5. **Rounds 65-67 (ML sessions, ML_NOTES):** lobby pilot `MctsBot` 256; round 67 (f51e9c5c) `hostile_player_targets`,
    `player_target_arms`, `own_graveyard_picks`, `skip_noop_x0` ADOPTED (+8 converge). Cards: the oracle-verb audit is 61 rows, all filed.
 

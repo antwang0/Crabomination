@@ -2655,13 +2655,106 @@ from_value::<T>` / `from_str::<T>` in a crate instantiates `T`'s entire
 `T`, as a non-generic function, and the codegen moves with it.** The next
 candidate of the shape is the wire protocol's `Deserialize` (`ClientMsg`
 and crossplay `Msg`, `serde_json::de::` 238 k lines plus their visitors),
-which `bot_ladder` and `selfplay_train` codegen and never run; the honest
-size of that leg is another `llvm-lines` reading, not a guess.
+which `bot_ladder` and `selfplay_train` codegen and never run. Sized at
+the same tip: `serde_json::de::` 238 k + `GameAction` 72 k + `GameEventWire`
+29 k + the views / `DecisionWire` / `CreatureType` / `Keyword` /
+`SelectionRequirement` deserializers ~85 k = **~420 k lines, 13 % of the
+crate** — but the device that moves it (a decoder closure handed to
+`tcp_seat` / `ws_seat` / `tcp_client`, so the bin instantiates
+`from_slice`) changes three signatures that `crabomination_client` calls
+from four files, and that crate does not build here. Pull it from a box
+where the client builds, or not at all. The `Serialize` side (~330 k:
+`Effect` 75 k, `StaticEffect` 21 k, the text serializer 37 k) stays
+regardless: the server's deadlock dump (`server/mod.rs`,
+`to_value(state)`) needs `GameState: Serialize` in the lib, and
+`GameState` reaches `Effect`.
 ```
+
+### `(-276)` `run_effect`'s frame — the 32 MB stack requirement, priced and a third of it taken 2026-09-07
+
+The routine's candidate list carries "effect-resolution recursion depth (the
+32 MB-stack requirement)" and nobody had asked *why* every worker thread is
+spawned with `stack_size(32 * 1024 * 1024)`. The prologue answers it in one
+`objdump`: **`run_effect` had a 97,256-byte frame, and it is the only
+function in the whole binary past 4 KB** (`scripts`-less census: one
+streamed `objdump -d` over `bot_ladder`, every probed or >= 16 KB prologue;
+two hits, the other is `gimli` at 1 byte). Every call runs the inline probe
+loop — 23 `movq $0,(%rsp)` page touches — and every level of effect
+nesting (a `Seq` in a trigger in a `Reflexive` ...) keeps ~95 KB: 32 MB is
+~340 levels, a default 2 MB thread ~20. The next-largest frames are
+`main_phase_action_with` 4,056, `gather_continuous_effects_inner` 3,976,
+`submit_decision` 3,576, `finalize_cast` 3,432; `pass_priority` is 72.
+
+What is in it (the `profiling-fast` `.dwo`, `llvm-dwarfdump
+--debug-info=<concrete DIE> -c`, every `DW_OP_fbreg` slot, the gap to the
+next slot as its size — `frames.py` / `dwarf_frame.py` in the scratchpad,
+worth committing under `scripts/` if this is ever read again): 1,112
+distinct slots, and the frame is **a few whole `CardDefinition`s by value
+(8,232 bytes each) plus a long tail LLVM's stack colouring did not merge**
+— 28 arms each own a 208-byte `PendingEffectState` slot, 7 a `StackItem`,
+one an `ActivatedAbility` (2,016). The 8 KB slots were: two transform arms
+cloning `back_face` (`(**b).clone()`), `CreateTokenCopyOf` editing a
+by-value clone, the basic-land factory's by-value return, Grist's
+`Box::new(insect.clone())` and the `TokenDefinition` literal beside it, an
+`Option<CardDefinition>` from `lookup_by_name`, and two *unnamed* 8 KB
+temporaries — `Arc::make_mut`'s inlined clone path, at the 12 sites that
+rewrite a card's definition in place.
+
+**The device is the same one every time: the 8 KB value must be born in a
+frame that dies.** `CardDefinition::clone_arc` / `boxed_clone`,
+`TokenDefinition::boxed_clone`, `CardData::definition_make_mut`,
+`draft::basic_land_arc`, `catalog::lookup_arc_by_name`, and
+`effects::grist_insect_token` are all `#[inline(never)]` one-liners whose
+only job is to own that temporary; `Box::new(self.clone())` in such a
+helper compiles to a 48-byte frame (the clone is built in the allocation).
+Two things that do NOT work, both tried: `Arc::make_mut` on a fresh `Arc`
+(its shared-path clone inlines anyway), and any form that hands the value
+back by value.
+
+```text
+release-fast bot_ladder, run_effect's frame
+  before                            97,256 bytes  (probe loop 23 pages)
+  first pass (five arms boxed)      72,568
+  second pass (+ make_mut, lookup)  64,312          (probe loop 16 pages)   -33.9 %
+callgrind, dflt mirror --games 6 --threads 1 --seed 1, profiling-fast, system allocator, the 41ca3089 tip either side
+  first pass   sealed 3,283,015,188 -> 3,279,823,194  (-0.097 %)   cube 3,639,696,059 -> 3,635,489,731  (-0.116 %)
+  second pass  sealed 3,283,015,188 -> 3,274,597,848  (-0.256 %)   cube 3,639,696,059 -> 3,629,217,631  (-0.288 %)
+  outcomes identical on every dump (72 / 48 decided, 0 undecided); suite 19,246 / 0 / 5
+```
+
+A robustness lever first and a small throughput one second: the probe
+loop is ~5 Ir a page, and most of the -0.26 / -0.29 % is the twelve
+`make_mut` bodies that no longer inline into `run_effect` (the clone
+path's `memcpy` and allocator calls were laid out in the hot function's
+own code; `definition_make_mut`'s frame reads 0 bytes — it tail-calls). The tail — 28
+`pending` slots that are one variable in 28 arms — is the 970-arm `match`
+itself, and the only device for that is the split into per-family
+functions, which the file-size section above rightly says is not a
+build-time lever and this section says is a frame one. Sized: ~8.5 KB of
+`PendingEffectState` slots, ~2.3 KB of `StackItem`, so after the 8 KB
+values are gone the floor of the current shape is ~60 KB.
 
 ## Baseline
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-276)` — addendum to the closing state, at the `(-276)` tip
+
+One more behaviour-preserving leg after the closing state below (outcomes
+identical on every dump, `--bench` counters unmoved, golden 7/7): the
+base for it is the tree at `41ca3089` (round 67's picker + the serde
+relocation), which reads sealed 3,283,015,188 / cube 3,639,696,059 —
++1.5 % / +1.9 % on the `(-275)` totals below, the picker's different
+games. Quote these as the base from here.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,283,015,188 -> 3,274,597,848 Ir  (-0.256 %)
+  cube   dflt, same recipe:                               3,639,696,059 -> 3,629,217,631 Ir  (-0.288 %)
+  frame   run_effect 97,256 -> 64,312 bytes (release-fast); still the only frame in the binary past 4 KB
+suite   19,246 / 0 / 5 at the (-276) tip; golden traces 7/7 unmoved; clippy clean
+--bench release-fast (mimalloc) at the (-276) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok
+build   engine LLVM IR 4,407,454 -> 3,214,231 lines under the serde relocation ("Serde derives" in the build-time section), engine-edit rebuild -3.5 % release-fast / -11.5 % dev
+```
 
 ### `(-275)` — closing state at the `(-275)` tip
 
@@ -3624,6 +3717,30 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-276)` TAKEN — the 8 KB `CardDefinition` temporaries leave `run_effect`'s frame: 97,256 -> 64,312 bytes, sealed default Ir **-0.256 %** / cube **-0.288 %**
+
+```text
+  binary pair   dflt mirror, --games 6 --threads 1 --seed 1 (profiling-fast -p crabomination --no-default-features), the 41ca3089 tip either side
+  sealed        3,283,015,188 -> 3,274,597,848 Ir   **-0.256 %**   (first pass, the five by-value arms alone: -0.097 %)
+  cube          3,639,696,059 -> 3,629,217,631 Ir   **-0.288 %**   (first pass -0.116 %)
+  frame         run_effect 97,256 -> 72,568 -> 64,312 bytes (release-fast); the inline probe loop 23 -> 16 pages a call, 61,084 calls a cube run
+  outcomes identical on every dump (72 / 48 decided, 0 undecided); suite 19,246 / 0 / 5 either pass
+```
+
+The build-time section's "`run_effect`'s frame" entry has the whole
+read: the only frame in the binary past 4 KB, attributed slot by slot
+from the `.dwo`. Eight 8 KB `CardDefinition` values were born in the
+frame — five named (`back_face` clones, `CreateTokenCopyOf`, the
+basic-land factory, Grist's insect and its literal, `lookup_by_name`)
+and two unnamed (`Arc::make_mut`'s inlined clone path at twelve
+definition-rewrite sites). Each now lives in an `#[inline(never)]`
+one-liner (`clone_arc` / `boxed_clone` / `definition_make_mut` /
+`basic_land_arc` / `lookup_arc_by_name` / `grist_insect_token`), whose
+frame is 48 bytes because `Box::new(self.clone())` builds the clone in
+the allocation. What is left is the 970-arm `match`'s own tail — 28
+`PendingEffectState` slots LLVM did not colour together — and that is
+the split, not a helper.
 
 ### `(-275)` TAKEN — the two CR 602.5 ability-lock gates read an exact-keyword fold: sealed default Ir **-0.118 %** / cube **-0.172 %** / actor **-0.142 %**
 
