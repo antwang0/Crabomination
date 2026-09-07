@@ -32,7 +32,7 @@ sixty-seventh pass, so don't re-take that.
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**; build budgets in PERF's `(-275)` closing block. ⚠ Another session pushes
    to this branch concurrently — fetch before every push, and ⚠ never rebase under a running `cargo build` (the tree it reads changes
    mid-compile). Disk: `target/debug/incremental` hit 13 GB in one run; purge it before a worktree build.
-2. **Gates at the tip (`dadea931`, the ability-cost fixes on top of round 68; PERF Baseline):** suite 19,248 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
+2. **Gates at the tip (`20e9f479`, the three ability-audit fixes on top of round 68; PERF Baseline):** suite 19,248 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
    (195,806 / 27.49 / 611.9 / 0), golden 7/7 (seeds 3, 4, c0ffee re-blessed for the round), fresh-seed sweep 28,800 games (0 undecided)
    + the training binary 9,000 games / 0 stalls; the debug-assertions grid green at the round-68 tip WITH the default pilot
    (`PILOTS="dflt …" --pilots` — the grid's own list lacks `dflt`); `--wide` last green at `(-275)`; actor scaling linear to 4.
@@ -48,8 +48,9 @@ sixty-seventh pass, so don't re-take that.
    the 970-arm match's own tail (28 `PendingEffectState` slots) — the split.
 5. **Rounds 65-68 (ML_NOTES):** lobby pilot `MctsBot` 256; round 67 (f51e9c5c) the four targeting flags ADOPTED (+8 converge);
    round 68 `sim_main_cast_cap` ADOPTED, control `sim-cast-off`, gate `.ladder/run_r68_simcast.sh`. **Cards:** the oracle-verb audit is 61
-   rows, all filed; `audit_catalog_stats.py` gained an `abil` column (activated-ability costs vs the oracle) that found 27 wrong-cost
-   shipped cards, all fixed (INCOMPLETE_CARDS' table) — the next column of that shape is triggered/static *text*, which no auditor reads.
+   rows, all filed; `audit_catalog_stats.py` gained three activated-ability columns (`abil` mana cost, `tim` timing rider, `T/sac`
+   the {T} / self-sacrifice halves) that found 27 + 18 + 10 wrong shipped cards, all fixed (INCOMPLETE_CARDS' three tables; five
+   documented residues) — the next column of that shape is a trigger's *event* or a static's *text*, which no auditor reads.
    Spell Queller and Manifold Key are the printed cards now.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
