@@ -1196,29 +1196,26 @@ pub fn inscription_of_insight() -> CardDefinition {
 
 // ── Manifold Key (STX — colorless rare) ────────────────────────────────────
 
-/// Manifold Key — {1} Artifact. "{1}, {T}: Target creature can't be
-/// blocked this turn. / {T}: Untap target artifact."
+/// Manifold Key — {1} Artifact. "{1}, {T}: Untap another target
+/// artifact. / {3}, {T}: Target creature can't be blocked this turn."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): a Strixhaven reprint of
-/// the classic Aether Key / Voltaic Key shape. Two activated
-/// abilities: (1) `{1},{T}: target creature gains "can't be blocked"
-/// EOT` via `Effect::GrantKeyword(Unblockable, EOT)`, and (2) `{T}:
-/// Untap target artifact` via `Effect::Untap { what: Target(0) }`.
-/// The "any target artifact" can include Manifold Key itself — which
-/// is a no-op since the second tap-cost can't be paid while it's
-/// being untapped, but the engine doesn't reject the activation.
+/// Shipped until 2026-09-07 with the costs of the Voltaic Key shape it
+/// was written from ({1} for the evasion, {0} for the untap, and no
+/// "another"); the printed card is three times the price on the
+/// evasion and cannot untap itself. Ability 0 is the evasion, 1 the
+/// untap — the index order the tests and the bot's ability arms use.
 pub fn manifold_key() -> CardDefinition {
     CardDefinition {
         name: "Manifold Key",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![
-            // {1}, {T}: Target creature can't be blocked this turn.
+            // {3}, {T}: Target creature can't be blocked this turn.
             ActivatedAbility {
                 energy_cost: 0,
                 discard_cost: None,
                 tap_cost: true,
-                mana_cost: cost(&[generic(1)]),
+                mana_cost: cost(&[generic(3)]),
                 effect: Effect::GrantKeyword {
                     what: target_filtered(SelectionRequirement::Creature),
                     keyword: Keyword::Unblockable,
@@ -1238,14 +1235,16 @@ pub fn manifold_key() -> CardDefinition {
                 from_hand: false,
                 ..Default::default()
             },
-            // {T}: Untap target artifact.
+            // {1}, {T}: Untap another target artifact.
             ActivatedAbility {
                 energy_cost: 0,
                 discard_cost: None,
                 tap_cost: true,
-                mana_cost: ManaCost::default(),
+                mana_cost: cost(&[generic(1)]),
                 effect: Effect::Untap {
-                    what: target_filtered(SelectionRequirement::Artifact),
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::OtherThanSource),
+                    ),
                     up_to: None,
                 },
                 once_per_turn: false,

@@ -515,8 +515,12 @@ Tasigur (Splice / Delve).
 "Missing-primitive buckets," plus:
 
 - **Conditional-gate flattening** (~12): a printed "if/may" condition dropped,
-  effect fires unconditionally (Silverquill Standardbearer, Lorehold Crackleflame,
-  Witherbloom Mortislide, Witherbloom Apprentice, …).
+  effect fires unconditionally. **Re-read 2026-09-07 and the named examples
+  are stale**: Silverquill Standardbearer, Lorehold Crackleflame and
+  Witherbloom Mortislide are synthesized names with no oracle to be wrong
+  against, and Witherbloom Apprentice prints no condition (magecraft drain
+  1, which is what ships). The bucket has no verified member; a future
+  entry names the card *and* the oracle clause it drops.
 - **Optional "may" → mandatory — now has an auditor, and it is bigger than
   ~10.** `scripts/audit_dropped_may.py` diffs every catalog definition against
   the offline Scryfall cache and flags the ones whose oracle says "you may"
@@ -549,9 +553,18 @@ Tasigur (Splice / Delve).
   the cache has to reject a definition whose `name:` is a back face or a
   token before it can say anything.
 - **"each opponent" instead of "target/defending player"** (multiplayer drift):
-  Hellrider, Bojuka Bog, Tormod's Crypt, Barbed Servitor, Lorehold Apprentice, …
+  Bojuka Bog, Tormod's Crypt, … — 1v1-equivalent. Re-read 2026-09-07:
+  Hellrider already reads `PlayerRef::DefendingPlayer`; Barbed Servitor's
+  oracle has no player clause at all; Lorehold Apprentice *prints* "each
+  opponent". Three of the five named were not members.
 - **Per-N counting flattened to a constant**: Witherbloom per-creature-milled
-  lifegain (×3 → flat +1), Manifold Key, Fractal Caller, Prismari Pyroshaper.
+  lifegain (×3 → flat +1); Fractal Caller and Prismari Pyroshaper are
+  synthesized names (no oracle). **Manifold Key was on this row for the wrong
+  reason and was a real defect of another kind — FIXED 2026-09-07**: it
+  shipped with the Voltaic Key costs it was written from ({1},{T} evasion,
+  {T} untap, no "another"); the printed card is {3},{T} for the evasion and
+  {1},{T} to untap *another* artifact. Tests in `stx::part_01` pin both
+  costs and the self-target refusal.
 - **Manland pump / artifact-creature type / land detail dropped** across
   `decks/lands.rs` (Mishra's Factory, Blinkmoth Nexus, Thespian's Stage, Ghost
   Quarter, Field of Ruin, …).

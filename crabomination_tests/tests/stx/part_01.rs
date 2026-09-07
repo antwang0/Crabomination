@@ -4269,13 +4269,20 @@ fn manifold_key_grants_unblockable_to_target_creature() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(mk);
     g.clear_sickness(bear);
+    // Printed {3}, not the Voltaic Key {1} it shipped with until 2026-09-07.
+    g.players[0].mana_pool.add_colorless(2);
+    let short = g.perform_action(GameAction::ActivateAbility {
+        card_id: mk,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None});
+    assert!(short.is_err(), "the evasion costs {{3}}, two mana must not pay it");
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: mk,
         ability_index: 0,
         target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None})
-    .expect("Manifold Key {1},{T}: unblockable activatable");
+    .expect("Manifold Key {3},{T}: unblockable activatable");
     drain_stack(&mut g);
 
     let bear_on_bf = g
@@ -4308,11 +4315,18 @@ fn manifold_key_untaps_target_artifact() {
         .map(|c| c.tapped)
         .unwrap_or(false));
 
+    // "Another target artifact": the Key cannot aim its untap at itself.
+    g.players[0].mana_pool.add_colorless(1);
+    let self_aim = g.perform_action(GameAction::ActivateAbility {
+        card_id: mk,
+        ability_index: 1,
+        target: Some(Target::Permanent(mk)), additional_targets: Vec::new(), x_value: None , mode: None});
+    assert!(self_aim.is_err(), "Manifold Key must not untap itself");
     g.perform_action(GameAction::ActivateAbility {
         card_id: mk,
         ability_index: 1,
         target: Some(Target::Permanent(target_artifact)), additional_targets: Vec::new(), x_value: None , mode: None})
-    .expect("Manifold Key {T}: untap artifact activatable");
+    .expect("Manifold Key {1},{T}: untap another artifact activatable");
     drain_stack(&mut g);
 
     let target_on_bf = g
