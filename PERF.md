@@ -2836,6 +2836,11 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
 gate    cargo check --profile release-fast -p crabomination --bin bot_ladder   clean (the debug-assertions=off typecheck)
 sweep   fresh seeds, release-fast: 601..603 at b3f6067b and 604..606 at the once/dealer_filter tip, x {sealed, cube, fixed} x --a dflt --b dflt --games 400
         --threads 3 = 18 cells / 57,600 games, 0 undecided, 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent
+grid    scripts/robustness_grid.sh --pilots, PILOTS="dflt" PILOT_GAMES=40, at 78e57bd2 (the once/dealer_filter tip; the debug-assertions build took
+        the tree with every hook change in): green — 30 ladder cells (33,120 games, 0 undecided: cap 0 / stuck 0 / draw 0) + 3 actor cells (seeds
+        1 / 7 / 23 x 600 games, 60.6-64.3 games/s) + 1 pilot cell (dflt, 680 games, 0 undecided), 0 failures, no panic / assertion / overflow;
+        9 assertion-string lines in both audit binaries. Run because the grant list and both hooks changed, and the `equip_grants ==
+        equip_granted_trigger_sources()` cross-check is a `debug_assert!`.
 ```
 
 ### 2026-09-07 — the `trig` column, the leaves-the-battlefield fix and the wire `#[inline]`: addendum at the tip after `03b53eab`

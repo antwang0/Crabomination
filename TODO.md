@@ -33,7 +33,7 @@ sixty-seventh pass, so don't re-take that.
    running `cargo build`. Disk: purge `target/debug/incremental` and stale target dirs before a big build; `cargo-llvm-lines` is installed.
 2. **Gates at the tip (PERF Baseline, the `b3f6067b` addendum):** suite 19,267 / 0 / 5, clippy, release-fast typecheck, `--bench` counters identical
    to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games / 0 undecided, `audit_stubs` /
-   `audit_incomplete --structural-only` both 0. The debug-assertions grid was last run at `03b53eab` (green, default pilot); not re-run this pass.
+   `audit_incomplete --structural-only` both 0, debug-assertions grid green at `78e57bd2` with the default pilot (33,120 + 1,800 + 680 games).
 3. **Engine, this run (ENGINE_BACKLOG first section):** `triggers_on_equipment` was honoured by the combat-damage and step hooks and *dropped* by the
    general dispatcher, so Godsend (`Blocks`) and a bestowed Crystalline Nautilus (`BecameTarget`) were dead. A grant is `(host, source, abilities)`
    now, through all three consumers and both death-path collectors; Kusari-Gama gained the flag, Impending Doom moved onto the Aura's own
