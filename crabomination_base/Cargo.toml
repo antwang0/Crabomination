@@ -12,7 +12,8 @@ serde = { version = "1.0.228", features = ["derive", "rc"] }
 # reason `crabomination/Cargo.toml` gives; `serde` so the fields keep their
 # derived (sequence) wire shape.
 smallvec = { version = "1.15", features = ["union", "serde"] }
-
-[dev-dependencies]
-# `copyvec`'s serde round-trip test only; the crate itself has no JSON path.
+# `textrewrite` only (and `copyvec`'s round-trip test): the CR 612.1 rewrite
+# is the one JSON round trip of the definition tree, kept in this crate so
+# the engine never instantiates `CardDefinition: Deserialize` (PERF "Serde
+# derives" — 482 k of the engine's 4.4 M LLVM-IR lines).
 serde_json = "1.0.150"

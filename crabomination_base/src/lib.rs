@@ -26,6 +26,7 @@ pub mod mana;
 pub mod oftenempty;
 pub mod registry;
 pub mod static_str_serde;
+pub mod textrewrite;
 pub mod tokens;
 pub mod turn_step;
 

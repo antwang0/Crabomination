@@ -23056,10 +23056,8 @@ impl GameState {
     }
 
     /// CR 612.1 — rewrite every printed instance of `from` as `to` in
-    /// `target_id`'s definition (type line, filters and ability bodies alike).
-    /// The walk runs over the serialized definition so the whole `Effect` /
-    /// `SelectionRequirement` tree is covered without a per-variant visitor;
-    /// `name` is skipped so a card called "Goblin …" keeps its name (CR 612.2).
+    /// `target_id`'s definition (type line, filters and ability bodies alike);
+    /// the walk is `crabomination_base::textrewrite::rewrite_creature_type`.
     pub(crate) fn replace_creature_type_text(
         &mut self,
         target_id: CardId,
@@ -23067,10 +23065,9 @@ impl GameState {
         to: crate::card::CreatureType,
     ) {
         let Some(card) = self.find_card_anywhere_mut(target_id) else { return };
-        let Ok(json) = serde_json::to_value(card.definition.as_ref()) else { return };
-        let (from_word, to_word) = (format!("{from:?}"), format!("{to:?}"));
-        let rewritten = rewrite_json_words(json, &from_word, &to_word);
-        let Ok(def) = serde_json::from_value::<crate::card::CardDefinition>(rewritten) else {
+        let Some(def) =
+            crabomination_base::textrewrite::rewrite_creature_type(card.definition.as_ref(), from, to)
+        else {
             return;
         };
         *std::sync::Arc::make_mut(card.definition_mut()) = def;
@@ -26372,25 +26369,6 @@ fn extract_power_gate(
 /// Rewrite every string *value* equal to `from` as `to`, skipping the `name`
 /// key. Serde renders a unit enum variant (a `CreatureType`) as exactly that
 /// string, so this substitutes the type wherever a definition mentions it.
-fn rewrite_json_words(v: serde_json::Value, from: &str, to: &str) -> serde_json::Value {
-    use serde_json::Value;
-    match v {
-        Value::String(s) if s == from => Value::String(to.to_string()),
-        Value::Array(a) => {
-            Value::Array(a.into_iter().map(|x| rewrite_json_words(x, from, to)).collect())
-        }
-        Value::Object(o) => Value::Object(
-            o.into_iter()
-                .map(|(k, x)| {
-                    let x = if k == "name" { x } else { rewrite_json_words(x, from, to) };
-                    (k, x)
-                })
-                .collect(),
-        ),
-        other => other,
-    }
-}
-
 fn requirement_mentions_power(req: &SelectionRequirement) -> bool {
     use SelectionRequirement as R;
     match req {
