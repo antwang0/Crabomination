@@ -36,7 +36,8 @@ sixty-seventh pass, so don't re-take that.
    games), fresh-seed sweep 28,800 games / 0 undecided.
 3. **Engine, this run (ENGINE_BACKLOG first section):** "leaves the battlefield" fired only on death for all 87 literals — `GameEvent::
    PermanentLeftBattlefield` + `note_left_without_dying` at every non-graveyard exit; `BecomesUntapped` and `Tapped` joined the CR 603.6 fan-out.
-   The ten `sword()` Swords fire off the Sword now (`triggers_on_equipment`); the other Equipment with a damage rider have not been read.
+   The ten `sword()` Swords fire off the Sword now (`triggers_on_equipment`); of the eight other attachments with a damage rider, six say
+   "this creature deals" (right as is) and Kusari-Gama / Impending Doom ("this Equipment / this Aura deals") still deal it as the creature's.
 4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns; the sixth (`trig`, a trigger's event) fixed 40 shipped cards, the seventh
    (`scope`) nine, the eighth (`filt`, the filter's type words) five; residues in INCOMPLETE_CARDS "Trigger events" / "Trigger scopes" /
    "Trigger filters". Next: the filters the reader skips (`Not(..)`, power / mana-value bounds, `let` helpers), then a static's *text*.
