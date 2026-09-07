@@ -2553,6 +2553,112 @@ no equivalent — **interleave the sides (ABBA) and discard a warm-up, or do not
 quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
+### Serde derives — priced on the base crate 2026-09-06, the engine half pending
+
+The routine's build-time list names "serde derives on the giant effect/state
+types" as a plausible monomorphization cost that nobody had measured. The
+base-crate half is now measured, by stripping every `Serialize` /
+`Deserialize` derive, `#[serde(..)]` attribute and manual impl out of
+`crabomination_base` in the working tree (93 derive sites, 716 attributes,
+6 manual impls; a scratch script, reverted with `git checkout`) and timing
+the warm check, `CARGO_TARGET_DIR=target-probe`, `touch card.rs` between
+runs, the wide robustness grid running on three of the four cores
+throughout:
+
+```text
+cargo check -p crabomination_base, warm
+  serde on        7.01 / 7.28 / 7.22 s     then after the restore  7.23 s
+  serde stripped  1.14 / 1.06 / 1.03 s
+```
+
+**~6.1 s of the base crate's 7.2 s check is the serde derive expansion and
+the typecheck of what it expands to — 85 %.** That is a real number and a
+small lever: a base-crate edit is followed by the catalog (619 k lines) and
+the engine rebuilding against it, which is minutes, and the 6 s sits in
+front of that chain. The engine crate's own derive cost cannot be measured
+by stripping (its `GameState` / `GameEvent` derives need the base impls);
+what *is* measurable there is the monomorphization share — the
+`serde_json` instantiations that every engine build codegens — and
+`cargo llvm-lines -p crabomination --lib` (dev profile, the tool installed
+with `cargo install cargo-llvm-lines`) answers it:
+
+```text
+engine crate, LLVM-IR lines by family, at 0a0ee368 (the (-275) tip)
+  TOTAL                          4,407,454 lines   112,687 copies
+  serde (any)                    1,930,400   43.8 %
+    serde_json::value::de          482,509   11.0 %   <- ONE call site: replace_creature_type_text's from_value
+    serde_json::de:: (from_str)    238,229    5.4 %   the wire protocol (ClientMsg, crossplay Msg)
+    derive visitors (_::)          999,368   22.7 %   Effect::deserialize alone 201,333 lines / 811 copies; Effect::serialize 143,654
+  crabomination:: own              862,389   19.6 %
+  Vec machinery                    402,157    9.1 %
+```
+
+**Nearly half of the engine crate's IR was serde, and a quarter of the
+crate was one function.** `replace_creature_type_text` (CR 612.1,
+Artificial Evolution) round-trips a `CardDefinition` through
+`serde_json::Value` to rewrite a creature-type word without a per-variant
+visitor — and that `from_value` was the crate's only `CardDefinition:
+Deserialize` instantiation, which drags the whole `Effect` /
+`StaticEffect` / `SelectionRequirement` tree in behind it.
+
+Two readings, one refuted: routing the same call through `to_string` +
+`from_str` instead **grew** the crate to 4,776,794 lines (+8.4 %: the text
+deserializer's per-type machinery is larger than `Value`'s), reverted.
+Moving the round trip into `crabomination_base::textrewrite` (a
+non-generic function, so the instantiation is codegen'd where it is
+written, not where it is called) took the engine crate to
+**3,214,231 lines (-27.1 %)**, copies 112,687 -> 86,646; the base crate
+went 250,838 -> 1,444,541 — the instantiation moved, and now it is paid on
+a *base* edit (which rebuilds everything anyway) instead of on every
+engine edit. `serde_json` becomes a real dependency of the base crate
+(it was a dev-dependency); the graph gains nothing, the engine already
+built it. What is left of serde in the engine (795 k lines) is the wire
+protocol's `Deserialize` (`ClientMsg` and friends, 238 k + visitors) and
+the `Serialize` side (`to_value` in `audit`, the deadlock dump, the
+decision log) — the next lever of the same shape is the server's
+deserialization, which `bot_ladder` and `selfplay_train` codegen and never
+run.
+
+Wall clock, `release-fast bot_ladder` rebuilt after `touch
+crabomination/src/game/mod.rs` (the engine-edit loop) and after `touch
+crabomination_base/src/card.rs` (the base-edit chain), the before side a
+detached worktree at `0a0ee368` with its own target dir, ABBA:
+
+```text
+release-fast bot_ladder, touch game/mod.rs (engine + bin + link), 2 rounds A B B A
+  before   171.4 / 169.8 / 173.4 / 171.2 s   mean 171.5
+  after    161.4 / 167.9 / 164.4 / 168.1 s   mean 165.5      -3.5 %   (every B row below every A row)
+dev --lib, touch game/mod.rs, CARGO_INCREMENTAL=0 (the engine crate alone at opt 0), 2 rounds
+  before    61.7 / 61.6 / 67.8 s              mean 63.7       (one warm-up row discarded)
+  after     56.9 / 55.8 / 54.0 / 58.7 s       mean 56.4      -11.5 %
+dev --lib, touch game/mod.rs, incremental (the edit loop the suite pays), 2 rounds
+  before     9.5 / 10.7 / 9.2 s               mean 9.8        (one warm-up row discarded)
+  after      8.9 / 8.9 / 8.5 / 9.4 s          mean 8.9        -9 %
+dev --lib, touch crabomination_base/src/card.rs, CARGO_INCREMENTAL=0 (base + catalog + engine)
+  before   132.0 / 130.3 s                    mean 131.2
+  after    127.1 / 130.4 s                    mean 128.8      -1.8 %   (the instantiation moved to base and the chain did not lose)
+release-fast bot_ladder, touch crabomination_base/src/card.rs (the whole optimized chain)
+  before   622.5 / 631.7 s                    mean 627.1
+  after    598.8 / 603.1 s                    mean 601.0      -4.2 %
+```
+
+**Kept: every loop reads faster, none slower.** The IR fell 27 % and the
+wall clock 3.5-11.5 % because what left was cheap-per-line serde visitor
+code and what stayed is the engine's own giant functions (`run_effect`
+alone is 151 k lines in one body), which is where an O3 build spends its
+time; the dev profile (O0, cost ~linear in lines) is where the cut shows
+most. The base-edit chain is flat to slightly better in both profiles —
+the moved instantiation is codegen'd in `crabomination_base` while the
+catalog builds beside it. **The rule that fell out: a `serde_json::
+from_value::<T>` / `from_str::<T>` in a crate instantiates `T`'s entire
+`Deserialize` tree *in that crate*; put the call in the crate that owns
+`T`, as a non-generic function, and the codegen moves with it.** The next
+candidate of the shape is the wire protocol's `Deserialize` (`ClientMsg`
+and crossplay `Msg`, `serde_json::de::` 238 k lines plus their visitors),
+which `bot_ladder` and `selfplay_train` codegen and never run; the honest
+size of that leg is another `llvm-lines` reading, not a guess.
+```
+
 ## Baseline
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
@@ -2589,6 +2695,11 @@ sweep   fresh seeds on the ADOPTED DEFAULT (release-fast, the (-275) tip): 601..
         9,000 games / 897,316 rows, 0 stalls, both rc 0 (98-101 games/s with the ladder sweep and the grid build sharing the box — not a throughput reading)
 grid    scripts/robustness_grid.sh (debug-assertions, overflow profile) at the (-275) tip: green — 30 ladder cells (5 pools x 6 seeds x 120 games = 33,120 games, 0 undecided) + 3 actor cells (seeds 1 / 7 / 23 x 600 games),
         0 failures, no panic / assertion / overflow; both audit binaries carry the assertion strings (8 lines). Run because (-275) lands a debug_assert! in gather_continuous_effects.
+        AND --wide at the same tip (first since df27df7e, sixty passes and the round 55-67 bot changes ago): ladder 52 cells / 301,600 games,
+        cap 4 / stuck 0 / draw 12 — the four caps are seeds 53 and 73 on `all`, the documented Beacon of Immortality board (ENGINE_BACKLOG "CLOSED —
+        the two stall-sweep leads"), the same two seeds and the same count df27df7e read; actor leg 2 x 30,000 games (seeds 7 / 20260901,
+        --actors 3 --steps 2, ~50 games/s on the audit build; that binary was built from the tree carrying the serde relocation below) 0 failures;
+        pilots leg 45 decision policies x 12 games on `all`, 0 failures. ~2 h 20 min of box time end to end.
 audits  audit_panics.py: 78 sites off the bin/test paths, 67 guarded, 11 lock-poison, 0 bare;  audit_variant_coverage.py: 0 dead capabilities, the same 2 dead primitives
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 ```
