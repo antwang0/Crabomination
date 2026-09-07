@@ -31,16 +31,17 @@ sixty-seventh pass, so don't re-take that.
    code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
    running `cargo build`. Disk: purge `target/debug/incremental` and stale target dirs before a big build; `cargo-llvm-lines` is installed.
-2. **Gates at the tip (PERF Baseline, 2026-09-07 addendum):** suite 19,253 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
-   (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, client type-checks. **NOT re-run: the fresh-seed sweep and the debug-assertions grid** —
-   run both first (`scripts/robustness_grid.sh`, PERF "Robustness gate"): the leaves fix changes what a bounce does.
+2. **Gates at the tip (PERF Baseline, 2026-09-07 addendum):** suite 19,265 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
+   (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, client type-checks, debug-assertions grid green with the default pilot (33,120 + 1,800 + 680
+   games), fresh-seed sweep 28,800 games / 0 undecided.
 3. **Engine, this run (ENGINE_BACKLOG first section):** "leaves the battlefield" fired only on death for all 87 literals — `GameEvent::
-   PermanentLeftBattlefield` + `note_left_without_dying` at every non-graveyard exit; `BecomesUntapped` joined the CR 603.6 fan-out. Open of the
-   same shape, untested so not landed: `Tapped` fans out per permanent too (13 non-self literals); an Equipment-granted trigger's damage is dealt
-   *by the creature* (Sword of War and Peace's burn re-fires the Looter) — `triggers_on_equipment` is the device, no card sets it for the Swords.
-4. **Cards/bugs:** `audit_catalog_stats.py` has six oracle columns; the sixth (`trig`, a trigger's event) fixed 40 shipped cards; residue six rows
-   (INCOMPLETE_CARDS "Trigger events"). Next of that shape: a static's *text* (`StaticAbility.description` against the oracle line), or the
-   trigger's *scope* (SelfSource / YourControl / AnyPlayer against "this / you control / a player"). Structural / stub audits not re-run this pass.
+   PermanentLeftBattlefield` + `note_left_without_dying` at every non-graveyard exit; `BecomesUntapped` and `Tapped` joined the CR 603.6 fan-out.
+   Open: an Equipment-granted trigger's damage is dealt *by the creature* (Sword of War and Peace's burn re-fires the Looter) —
+   `triggers_on_equipment` is the device, the `sword()` helper does not set it.
+4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns; the sixth (`trig`, a trigger's event) fixed 40 shipped cards, the seventh
+   (`scope`) nine, the eighth (`filt`, the filter's type words) five; residues in INCOMPLETE_CARDS "Trigger events" / "Trigger scopes" /
+   "Trigger filters". Next: the filters the reader skips (`Not(..)`, power / mana-value bounds, `let` helpers), then a static's *text*.
+   Structural / stub audits not re-run this pass.
 5. **Perf/build:** engine profile FLAT (PERF candidates); the wire decoders left the lib (`#[inline]`, IR -13.7 %, wall clock flat — PERF "Serde
    derives" says why and what that refutes). Round 68 (ML_NOTES) is the default-pilot base; the sim body / horizon is a strength question.
 

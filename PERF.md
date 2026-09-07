@@ -2834,7 +2834,7 @@ have moved games; it did not move the fixed pool:
 --bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok
         games/s 340.8 (before) / 394.9 (after) single runs, i.e. the host's spread, not a reading; bin_bytes 127,765,784 -> 126,628,472
 golden  7/7 unmoved (the seeds' games bounce and exile nothing that carried a leaves trigger)
-suite   19,253 / 0 / 5 at 03b53eab (two Looter il-Kor fixtures gained a library — the Looter loots on any damage now)
+suite   19,253 / 0 / 5 at 03b53eab (two Looter il-Kor fixtures gained a library — the Looter loots on any damage now); 19,265 / 0 / 5 at a83993a9, clippy clean
 build   engine LLVM IR 3,217,700 -> 2,778,508 lines (-13.65 %); wall clock flat on all three loops (the table above)
 clippy  --workspace --exclude crabomination_client --all-targets   clean;  cargo check -p crabomination_client   clean
 ```
@@ -2843,7 +2843,10 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean;  cargo
 grid    scripts/robustness_grid.sh --pilots, PILOTS="dflt" PILOT_GAMES=40, at 03b53eab (the audit build took the tree before the scope commits):
         green — 30 ladder cells (33,120 games, 0 undecided: cap 0 / stuck 0 / draw 0) + 3 actor cells (seeds 1 / 7 / 23 x 600 games, 61.5-68.6 games/s on a
         busy box) + 1 pilot cell (dflt, 680 games, 0 undecided), 0 failures, no panic / assertion / overflow; 9 assertion-string lines in both audit binaries.
-        Run because the leaves fix changes what a bounce does; the sweep of fresh seeds on release-fast is still the one leg not re-run this pass.
+        Run because the leaves fix changes what a bounce does.
+sweep   fresh seeds on release-fast at a83993a9's catalog (the Tapped fan-out in, the last seven card fixes half in): 601..603 x {sealed, cube, fixed} x
+        --games 400 --threads 3 = 9 cells / 28,800 games, 0 undecided, 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent;
+        --bench on the same binary 195,806 / 27.49 / 611.9 / 0 — counters identical to 2003d1cf, 367.6 games/s, bin_bytes 126,638,608
 ```
 
 ### `(-276)` — addendum to the closing state, at the `(-276)` tip
