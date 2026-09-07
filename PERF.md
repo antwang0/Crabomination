@@ -2668,7 +2668,6 @@ where the client builds, or not at all. The `Serialize` side (~330 k:
 regardless: the server's deadlock dump (`server/mod.rs`,
 `to_value(state)`) needs `GameState: Serialize` in the lib, and
 `GameState` reaches `Effect`.
-```
 
 ### `(-276)` `run_effect`'s frame — the 32 MB stack requirement, priced and a third of it taken 2026-09-07
 
@@ -2766,7 +2765,14 @@ sweep   fresh seeds on the ADOPTED DEFAULT (release-fast, the round-68 tip): 601
         9 cells / 28,800 games, 0 undecided (0 cap / 0 stuck / 0 draw), 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent
         AND the training binary: release-fast selfplay_train --actors 4 --steps 1, seeds 911 / 912 x --games 3000 / 6000 =
         9,000 games / 902,097 rows, 0 stalls, both rc 0 — 165.6 / 162.5 games/s (`actors:`) on an otherwise idle 4-core box, the capped default's first uncontended reading
+grid    scripts/robustness_grid.sh (debug-assertions, overflow profile) at the round-68 tip, PILOTS="dflt sim-cast-off sim-cast0 sim-cast2" PILOT_GAMES=40 --pilots:
+        green — 30 ladder cells (33,120 games, 0 undecided) + 3 actor cells (seeds 1 / 7 / 23 x 600 games, the actors on the capped default) + 4 pilot cells (680 games each),
+        0 failures, no panic / assertion / overflow; 10 assertion-string lines in the audit binary. Run because the round changes what the bot proposes; the grid's own
+        pilot list does not carry `dflt`, so the pilots leg is how the default pilot gets audited — pass PILOTS explicitly.
+scaling release-fast selfplay_train --steps 1 --seed 31, --actors 1 / 2 / 4 x 600 games an actor, quiet box: 54.7 / 103.9 / 235.2 games/s (`actors:`) — linear to 4;
+        the (-275)-era 96 % reading holds under the capped default
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+```
 
 ### `(-276)` — addendum to the closing state, at the `(-276)` tip
 
