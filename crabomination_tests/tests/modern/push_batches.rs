@@ -547,6 +547,21 @@ fn ophiomancer_mints_a_snake_each_upkeep() {
     assert!(tok.has_keyword(&crabomination::card::Keyword::Deathtouch));
 }
 
+/// "At the beginning of *each* upkeep" — it shipped on yours only (scope audit
+/// column, 2026-09-07).
+#[test]
+fn ophiomancer_mints_on_the_opponents_upkeep_too() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ophiomancer());
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.controller == 0), "a Snake for you on their upkeep");
+}
+
 #[test]
 fn yavimaya_elder_dies_searches_two_basics() {
     let mut g = two_player_game();

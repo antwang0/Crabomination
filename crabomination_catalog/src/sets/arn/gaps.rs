@@ -781,7 +781,7 @@ pub fn old_man_of_the_sea() -> CardDefinition {
 pub fn ghazban_ogre() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource),
             effect: Effect::GainControl {
                 what: Selector::This,
                 to: Some(PlayerRef::PlayerWithMostLife),

@@ -732,6 +732,28 @@ mod recent95 {
         assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "made a Treasure");
     }
 
+    /// "Whenever one or more Ninja or Rogue creatures you control deal combat
+    /// damage" — it shipped as the Thief's own damage (scope audit column,
+    /// 2026-09-07). A Looter il-Kor (Kor Rogue, shadow) connecting alone pays.
+    #[test]
+    fn prosperous_thief_makes_treasure_off_another_rogue() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::prosperous_thief());
+        let looter = g.add_card_to_battlefield(0, catalog::looter_il_kor());
+        stock_libraries(&mut g, 3);
+        g.clear_sickness(looter);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        while g.step != TurnStep::DeclareAttackers {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: looter, target: AttackTarget::Player(1) }]))
+            .expect("looter attacks");
+        drain_stack(&mut g);
+        pass_through_combat(&mut g);
+        assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "a Rogue's damage makes a Treasure");
+    }
+
     /// Bronzeplate Boar buffs +3/+2 (and trample) when attached via Reconfigure.
     #[test]
     fn bronzeplate_boar_equip_bonus() {

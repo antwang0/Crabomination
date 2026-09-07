@@ -326,6 +326,18 @@ fn ghazban_ogre_defects_to_the_life_leader() {
     assert_eq!(g.battlefield_find(ogre).expect("ogre").controller, 1);
 }
 
+/// "At the beginning of *your* upkeep" — it shipped on every upkeep (scope
+/// audit column, 2026-09-07).
+#[test]
+fn ghazban_ogre_ignores_the_opponents_upkeep() {
+    let mut g = main_phase();
+    let ogre = g.add_card_to_battlefield(0, catalog::ghazban_ogre());
+    g.players[1].life = 30;
+    g.active_player_idx = 1;
+    upkeep(&mut g);
+    assert_eq!(g.battlefield_find(ogre).expect("ogre").controller, 0, "not your upkeep");
+}
+
 #[test]
 fn merchant_ship_needs_an_island_to_sail_at() {
     let mut g = main_phase();

@@ -12148,7 +12148,7 @@ pub fn ophiomancer() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
-                EventScope::YourControl,
+                EventScope::AnyPlayer,
             ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
@@ -21167,7 +21167,7 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::BeginCombat),
-                EventScope::ActivePlayer,
+                EventScope::AnyPlayer,
             ),
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -49363,7 +49363,7 @@ pub fn savai_thundermane() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardCycled, EventScope::AnyPlayer),
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
             effect: Effect::MayPay {
                 description: "Pay {2}: deal 2 to target creature and gain 2 life?".into(),
                 mana_cost: cost(&[generic(2)]),
@@ -64307,8 +64307,9 @@ pub fn luminous_broodmoth() -> CardDefinition {
 
 /// Quartzwood Crasher — {2}{R}{R}{G} 6/6 Dinosaur Beast with trample. Whenever it
 /// deals combat damage to a player, create an X/X green Dinosaur Beast with
-/// trample, where X is that damage. (The "any trampler you control" batch
-/// clause is narrowed to the Crasher's own combat damage.)
+/// trample, where X is that damage. Fires per trampler you control that
+/// connects (the printed "one or more … X is the total" batch is per
+/// creature here).
 pub fn quartzwood_crasher() -> CardDefinition {
     CardDefinition {
         name: "Quartzwood Crasher",
@@ -64322,7 +64323,11 @@ pub fn quartzwood_crasher() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasKeyword(Keyword::Trample),
+                }),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,

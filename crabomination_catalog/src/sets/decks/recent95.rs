@@ -273,9 +273,9 @@ pub fn selfless_samurai() -> CardDefinition {
     }
 }
 
-/// Prosperous Thief — {2}{U} 3/2 Human Ninja. Ninjutsu {1}{U}. Whenever it deals
-/// combat damage to a player, create a Treasure token. (The printed trigger fires
-/// off any Ninja/Rogue you control; modeled as this creature's own combat damage.)
+/// Prosperous Thief — {2}{U} 3/2 Human Ninja. Ninjutsu {1}{U}. Whenever a Ninja
+/// or Rogue you control deals combat damage to a player, create a Treasure
+/// token (per creature; the printed "one or more" batch fires once).
 pub fn prosperous_thief() -> CardDefinition {
     CardDefinition {
         name: "Prosperous Thief",
@@ -289,7 +289,12 @@ pub fn prosperous_thief() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Ninjutsu(cost(&[generic(1), u()]))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Ninja)
+                        .or(R::HasCreatureType(CreatureType::Rogue)),
+                }),
             effect: mint_treasures(1),
         }],
         ..Default::default()

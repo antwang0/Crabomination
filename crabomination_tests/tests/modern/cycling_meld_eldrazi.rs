@@ -410,6 +410,27 @@ fn savai_thundermane_pays_on_cycle() {
     assert_eq!(g.players[0].life, 22, "gained 2");
 }
 
+/// "Whenever *you* cycle a card" — it shipped on any player's cycle (scope
+/// audit column, 2026-09-07).
+#[test]
+fn savai_thundermane_ignores_an_opponents_cycle() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::savai_thundermane());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::island());
+    let cy = g.add_card_to_hand(1, catalog::desert_cerodon());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::Cycle { card_id: cy, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "an opponent's cycle is not yours");
+    assert_eq!(g.players[0].life, 20);
+}
+
 /// Gisela doubles damage to the opponent's side and halves damage to her
 /// controller's side (CR 614.5, side-scoped).
 #[test]

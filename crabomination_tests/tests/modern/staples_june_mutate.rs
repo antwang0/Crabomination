@@ -3323,6 +3323,32 @@ fn quartzwood_crasher_makes_token_on_combat_damage() {
     assert_eq!(token.counter_count(CounterType::PlusOnePlusOne), 6, "X = 6 combat damage");
 }
 
+/// "Whenever one or more creatures you control with trample deal combat
+/// damage to a player" — it shipped as the Crasher's own damage only (scope
+/// audit column, 2026-09-07). A Siege Wurm connecting alone makes the token.
+#[test]
+fn quartzwood_crasher_makes_token_off_another_trampler() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::quartzwood_crasher());
+    let rhino = g.add_card_to_battlefield(0, catalog::siege_wurm()); // 5/5 trample
+    g.clear_sickness(rhino);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rhino, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).ok();
+        if g.stack.is_empty() && g.priority.player_with_priority == 0
+            && matches!(g.step, TurnStep::PostCombatMain | TurnStep::End) { break; }
+    }
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Dinosaur Beast")
+        .expect("a Dinosaur Beast off the Wurm's damage");
+    assert_eq!(token.counter_count(CounterType::PlusOnePlusOne), 5, "X = the Wurm's 5");
+}
+
 /// CR 603.10: a stolen creature dying fires the *thief's* "a creature you
 /// control dies" watcher (Bastion drains), not the owner's.
 #[test]

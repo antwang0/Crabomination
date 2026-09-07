@@ -218,6 +218,23 @@ mod recent81 {
         assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "bolt cast, then drew when the creature died");
     }
 
+    /// "Whenever a creature dies, *that creature's controller* may draw" — it
+    /// shipped as your creatures only, you drawing (scope audit column,
+    /// 2026-09-07).
+    #[test]
+    fn fecundity_draws_for_the_dead_creatures_controller() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::fecundity());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        for _ in 0..2 { g.add_card_to_library(1, catalog::plains()); }
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+        let (mine, theirs) = (g.players[0].hand.len(), g.players[1].hand.len());
+        cast_at(&mut g, bolt, Target::Permanent(bear));
+        assert_eq!(g.players[1].hand.len(), theirs + 1, "the opponent draws for their creature");
+        assert_eq!(g.players[0].hand.len(), mine - 1, "you only spent the Bolt");
+    }
+
     #[test]
     fn mask_of_griselbrand_draws_on_equipped_death() {
         let mut g = two_player_game();

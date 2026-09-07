@@ -636,6 +636,40 @@ token trigger and not the begin-combat attach (the counts differ, so
 the column skips it); Frost Titan's targeting tax is absent behind an
 "enters or attacks" clause.
 
+### Trigger scopes — the seventh column, the same day: seven more
+
+`scope` reads the same literals for their `EventScope` against the
+clause's subject — "this creature" / "you" / "another … you control" /
+"… you control" / "an opponent" / "a creature, a player" — and for a step
+trigger against "your" / "each" / "each opponent's" (`ActivePlayer` is
+"your step" in `fire_step_triggers`, so it is accepted beside `SelfSource`
+and `YourControl` there). A literal on `AnyPlayer` narrowed by a filter or
+a `dealt_by` is not compared (the filter is usually the scope); one with
+`.from_opponent()` reads as the opponent's; `YouAttack` reads as "you" on
+either spelling; "a creature you control" accepts `AnotherOfYours` (an
+enchantment cannot be its own subject, and that is how the family is
+spelled). First run 298 rows, eleven reader rules later 12, seven real:
+
+| Card | Was | Printed |
+|---|---|---|
+| Ghazbán Ogre | `AnyPlayer` — checked the life leader on every upkeep | "your upkeep" — `SelfSource` |
+| Ophiomancer | `YourControl` — a Snake on your upkeep only | "each upkeep" — `AnyPlayer` |
+| Zopandrel, Hunger Dominus | `ActivePlayer` — doubled on your combat only, so your blockers never grew | "each combat" — `AnyPlayer` |
+| Savai Thundermane | `AnyPlayer` — paid off the opponent's cycling too | "whenever you cycle" — `YourControl` |
+| Fecundity | `AnotherOfYours`, you drew | "whenever a creature dies, that creature's controller may draw" — `AnyPlayer`, `ControllerOf(TriggerSource)` draws |
+| Quartzwood Crasher | `SelfSource` | "one or more creatures you control with trample" — `YourControl` + a trample filter (per creature) |
+| Prosperous Thief | `SelfSource` | "one or more Ninja or Rogue creatures you control" — `YourControl` + the type filter (per creature) |
+
+Residue, five rows: Whirling Dervish, Skizzik and Lone Rider (the
+end-step conditional modelled as the event that satisfies it, the
+`trig` residue), Teo, Spirited Glider (`YouAttack` on `SelfSource` with
+an `AttackedWithCreatureMatching` predicate — "you attack with a flyer",
+read as "you"), and Fatespinner, which the reader learned from
+(`.from_opponent()` on `AnyPlayer`). **The two columns together are the
+whole trigger header: kind and scope. What neither reads is the
+*filter* — "a nontoken creature", "a spell with mana value 3 or less" —
+and the effect's own text, which is the eighth column.**
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

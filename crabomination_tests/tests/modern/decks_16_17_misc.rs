@@ -2310,6 +2310,22 @@ fn zopandrel_doubles_each_creatures_power_and_toughness_at_combat() {
     assert_eq!((b.power, b.toughness), (4, 4), "bear's P/T doubled");
 }
 
+/// "At the beginning of *each* combat" — it shipped on your combat only, so
+/// the blockers never doubled (scope audit column, 2026-09-07).
+#[test]
+fn zopandrel_doubles_on_the_opponents_combat_too() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zopandrel_hunger_dominus());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let b = view.iter().find(|c| c.id == bear).expect("bear present");
+    assert_eq!((b.power, b.toughness), (4, 4), "doubled on the opponent's combat");
+}
+
 #[test]
 fn zopandrel_activation_rejected_without_two_other_creatures() {
     let mut g = two_player_game();

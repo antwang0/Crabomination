@@ -378,17 +378,18 @@ pub fn underworld_coinsmith() -> CardDefinition {
 // ── Misc ───────────────────────────────────────────────────────────────────────
 
 /// Fecundity — {2}{G} Enchantment. Whenever a creature dies, that creature's
-/// controller may draw a card. (Modeled as: you draw when a creature you
-/// control dies — the "each controller" clause is approximated to the
-/// Fecundity controller.)
+/// controller draws a card (the "may" is taken; either seat's creature).
 pub fn fecundity() -> CardDefinition {
     CardDefinition {
         name: "Fecundity",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
-            effect: draw(1),
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
