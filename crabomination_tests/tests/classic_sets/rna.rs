@@ -2151,6 +2151,32 @@ fn verity_circle_draws_on_nonattacker_tap() {
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "Verity Circle drew");
 }
 
+/// CR 603.6 — two creatures tapped by one effect are two "becomes tapped"
+/// events, so Verity Circle draws twice. `Tapped` was missing from the
+/// dispatcher's fan-out list until 2026-09-07 (one trigger per batch).
+#[test]
+fn verity_circle_draws_once_per_creature_tapped_in_a_batch() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let vc = g.add_card_to_battlefield(0, catalog::verity_circle());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let hand0 = g.players[0].hand.len();
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    let ctx = EffectContext::for_ability(vc, 0, None);
+    let tap_all = Effect::Tap { what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)) };
+    let evs = g.resolve_effect(&tap_all, &ctx).expect("tap resolves");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "one draw per creature tapped");
+}
+
 /// Declaring an opponent's creature as an attacker does not trigger Verity Circle.
 #[test]
 fn verity_circle_silent_on_attacker_tap() {

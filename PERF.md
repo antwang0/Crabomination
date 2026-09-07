@@ -2839,13 +2839,12 @@ build   engine LLVM IR 3,217,700 -> 2,778,508 lines (-13.65 %); wall clock flat 
 clippy  --workspace --exclude crabomination_client --all-targets   clean;  cargo check -p crabomination_client   clean
 ```
 
-Not re-run this pass: the fresh-seed sweep and the debug-assertions
-grid. The leaves fix adds one `CardInstance` clone and one event per
-non-graveyard exit and a `died_card_snapshots` entry that the existing
-clear already drops; nothing it touches is in the SBA or the sim's pass.
-Run the grid next pass (the recipe in "Robustness gate"), because the
-change alters what the engine *does* on a bounce, not only what it
-counts.
+```text
+grid    scripts/robustness_grid.sh --pilots, PILOTS="dflt" PILOT_GAMES=40, at 03b53eab (the audit build took the tree before the scope commits):
+        green — 30 ladder cells (33,120 games, 0 undecided: cap 0 / stuck 0 / draw 0) + 3 actor cells (seeds 1 / 7 / 23 x 600 games, 61.5-68.6 games/s on a
+        busy box) + 1 pilot cell (dflt, 680 games, 0 undecided), 0 failures, no panic / assertion / overflow; 9 assertion-string lines in both audit binaries.
+        Run because the leaves fix changes what a bounce does; the sweep of fresh seeds on release-fast is still the one leg not re-run this pass.
+```
 
 ### `(-276)` — addendum to the closing state, at the `(-276)` tip
 

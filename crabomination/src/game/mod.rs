@@ -19309,10 +19309,11 @@ impl GameState {
                         | crate::effect::EventKind::CreatureSacrificed
                         | crate::effect::EventKind::PermanentSacrificed
                         | crate::effect::EventKind::PermanentLeavesBattlefield
-                        // The untap step untaps a board at once; "whenever a
-                        // permanent becomes untapped" (Mesmeric Orb) fires
-                        // per permanent.
+                        // The untap step untaps a board at once and one effect
+                        // taps several; "whenever a permanent becomes untapped /
+                        // tapped" (Mesmeric Orb, Verity Circle) fires per permanent.
                         | crate::effect::EventKind::BecomesUntapped
+                        | crate::effect::EventKind::Tapped
                         | crate::effect::EventKind::CardDrawn
                         | crate::effect::EventKind::CardDiscarded
                         // Its twin: Spiritual Focus pays per card an

@@ -61,8 +61,10 @@ Scope / subject / actor plumbing in `events.rs` treats it as
 
 The same run: `BecomesUntapped` was absent from the CR 603.6 fan-out
 list in `push_ordered_trigger_candidates`, so an untap step untapping
-three permanents minted one Mesmeric Orb trigger. Added. `Tapped` is the
-same shape and is **not** added — no test covers a batch of taps yet.
+three permanents minted one Mesmeric Orb trigger. Added, and `Tapped`
+with it the same day (Verity Circle drew once for two creatures tapped by
+one effect — `classic_sets::rna::verity_circle_draws_once_per_creature_
+tapped_in_a_batch`, which fails without the entry).
 
 Tests: `modern::decks_16_17_misc::thragtusk_bounced_still_makes_a_beast`,
 `classic_sets::rav::twilight_drover_grows_on_token_bounce`,
