@@ -10366,7 +10366,6 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
                     },
                 ]),
                 once_per_turn: false,
-                sorcery_speed: true,
                 sac_cost: false,
                 condition: None,
                 life_cost: 0,
@@ -11883,7 +11882,6 @@ pub fn pernicious_deed() -> CardDefinition {
                 }),
             },
             once_per_turn: false,
-            sorcery_speed: true,
             sac_cost: true,
             condition: None,
             life_cost: 0,
@@ -29223,7 +29221,8 @@ pub fn arbor_elf() -> CardDefinition {
 
 /// Scrapheap Scrounger — {2} 3/2 Artifact Creature — Construct. Can't block.
 /// `{1}, Exile a creature card from your graveyard: Return this from your
-/// graveyard to your hand. Activate only as a sorcery.`
+/// graveyard to the battlefield.` No timing rider is printed (the sorcery-speed
+/// gate it shipped with until 2026-09-07 was invented).
 pub fn scrapheap_scrounger() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -29240,7 +29239,6 @@ pub fn scrapheap_scrounger() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
             from_graveyard: true,
-            sorcery_speed: true,
             exile_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::Move {
                 what: Selector::This,

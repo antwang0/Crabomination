@@ -680,10 +680,16 @@ pub fn essence_anchor() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            condition: Some(Predicate::CardsLeftGraveyardThisTurnAtLeast {
-                who: PlayerRef::You,
-                at_least: Value::Const(1),
-            }),
+            // "Activate only during your turn and only if a card left your
+            // graveyard this turn." (The your-turn half was absent until
+            // 2026-09-07.)
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CardsLeftGraveyardThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+            ])),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),

@@ -294,7 +294,6 @@ pub fn clattering_augur() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b(), b()]),
             from_graveyard: true,
-            sorcery_speed: true,
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Hand(PlayerRef::You),

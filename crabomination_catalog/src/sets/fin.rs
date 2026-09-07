@@ -5613,7 +5613,6 @@ pub fn relentless_x_atm092() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(8)]),
             from_graveyard: true,
-            sorcery_speed: true,
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,

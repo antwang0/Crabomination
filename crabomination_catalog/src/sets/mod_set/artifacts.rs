@@ -318,7 +318,8 @@ pub fn zuran_orb() -> CardDefinition {
 }
 
 /// Soul Conduit — {6} Artifact. "{6}, {T}: Exchange life totals with target
-/// player. Activate only as a sorcery." (CR 701.12c). Targets the opponent
+/// player." (CR 701.12c; the current oracle prints no timing rider — the
+/// sorcery-speed gate it shipped with until 2026-09-07 was an older printing's). Targets the opponent
 /// in heads-up via `Selector::Player(EachOpponent)` rather than a player
 /// prompt.
 pub fn soul_conduit() -> CardDefinition {
@@ -332,7 +333,6 @@ pub fn soul_conduit() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(6)]),
-            sorcery_speed: true,
             effect: Effect::ExchangeLifeTotals {
                 a: Selector::You,
                 b: Selector::Player(PlayerRef::EachOpponent),

@@ -146,6 +146,101 @@ def bracket_span(body, i):
         k += 1
     return k
 
+def ability_literals(body):
+    """Every `ActivatedAbility { .. }` literal in the card's own
+    `activated_abilities: vec![..]`, as source text; `None` when the field is
+    absent or any element is a helper call the scan cannot open."""
+    m = own_field(body, r"activated_abilities:")
+    if m is None:
+        return None
+    vec = vec_after(body, m.start())
+    if vec is None:
+        return None
+    for item in top_level_items(vec):
+        if item.strip() and not item.strip().startswith("ActivatedAbility {"):
+            return None
+    out, i = [], 0
+    while True:
+        j = vec.find("ActivatedAbility {", i)
+        if j < 0:
+            break
+        end = bracket_span(vec, j + len("ActivatedAbility "))
+        out.append(vec[j:end])
+        i = end
+    return out
+
+def literal_depth1_field(lit, field):
+    """`field:` at brace depth 1 of an `ActivatedAbility { .. }` literal — its
+    own field, never one of a nested effect's."""
+    depth, k = 0, len("ActivatedAbility {")
+    while k < len(lit):
+        c = lit[k]
+        if c in "{[(":
+            depth += 1
+        elif c in "}])":
+            depth -= 1
+        elif depth == 0 and lit.startswith(field, k):
+            return k
+        k += 1
+    return None
+
+# The oracle's activation-timing riders. "only during your turn" is met by
+# `condition: Some(Predicate::IsTurnOf(PlayerRef::You))`, and — the catalog's
+# documented approximation of it (Rag Man, Stern Marshal) — by
+# `sorcery_speed: true` when no line prints "only as a sorcery".
+_TIMING = (
+    ("only as a sorcery", "sorcery"),
+    ("only during your turn", "your_turn"),
+    ("only once each turn", "once"),
+)
+
+def ability_timing(body):
+    """Per literal, the timing riders it declares."""
+    lits = ability_literals(body)
+    if lits is None:
+        return None
+    out = []
+    for lit in lits:
+        flags = set()
+        k = literal_depth1_field(lit, "sorcery_speed:")
+        if k is not None and re.match(r"sorcery_speed:\s*true", lit[k:]):
+            flags.add("sorcery")
+        k = literal_depth1_field(lit, "once_per_turn:")
+        if k is not None and re.match(r"once_per_turn:\s*true", lit[k:]):
+            flags.add("once")
+        k = literal_depth1_field(lit, "condition:")
+        if k is not None:
+            # The whole `Some(..)` expression — an `IsTurnOf(You)` nested in
+            # an `All(..)` (Cao Cao) is the rider too.
+            m = re.match(r"condition:\s*Some\(", lit[k:])
+            if m:
+                a = k + m.end() - 1
+                cond = lit[a:bracket_span(lit, a)]
+                if re.search(r"IsTurnOf\((?:crate::effect::)?PlayerRef::You\)", cond):
+                    flags.add("your_turn")
+        out.append(frozenset(flags))
+    return out
+
+def ref_ability_timing(card, face=None):
+    """Per oracle activation line, the timing riders it prints."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    out = []
+    for line in text.split("\n"):
+        if not _ORACLE_ACT.match(line.strip()):
+            continue
+        out.append(frozenset(flag for phrase, flag in _TIMING if phrase in line))
+    return out
+
+def timing_mismatch(code, ref):
+    """Multiset compare with the your-turn approximation: a code `sorcery`
+    stands for a printed `your_turn` when nothing printed asks for sorcery."""
+    if not any("sorcery" in f for f in ref) and any("your_turn" in f for f in ref):
+        code = [frozenset(("your_turn" if x == "sorcery" else x) for x in f) for f in code]
+    return sorted(sorted(f) for f in code) != sorted(sorted(f) for f in ref)
+
 def ability_mana_costs(body):
     """The mana cost of every `ActivatedAbility { .. }` literal in the card's
     own `activated_abilities: vec![..]`, each as `norm()`'s symbol tuple; a
@@ -651,7 +746,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -761,6 +856,13 @@ def audit():
                 ref_ab = sorted(a for a in ref_abil if a)
                 if got_ab != ref_ab:
                     d["abil"].append((tag, ["".join(a) or "{0}" for a in abil], ["".join(a) or "{0}" for a in ref_abil]))
+            # activation timing: "Activate only as a sorcery" / "only once each
+            # turn" against the literal's own flags, as multisets, same gate.
+            tim = ability_timing(body)
+            ref_tim = ref_ability_timing(card, face)
+            if tim is not None and ref_tim is not None and len(tim) == len(ref_tim):
+                if timing_mismatch(tim, ref_tim):
+                    d["timing"].append((tag, [sorted(f) or ["-"] for f in tim], [sorted(f) or ["-"] for f in ref_tim]))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -777,21 +879,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}")
-        print("-" * 62)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}")
+        print("-" * 68)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 62)
+        print("-" * 68)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 

@@ -440,7 +440,6 @@ pub fn domesticated_hydra() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x(), g(), g(), g()]),
             effect: Effect::Monstrosity { n: Value::XFromCost },
-            sorcery_speed: true,
             ..Default::default()
         }],
         static_abilities: vec![monstrous_keyword(

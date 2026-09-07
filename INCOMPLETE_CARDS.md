@@ -514,6 +514,25 @@ ability costs had never been read, and 27 of them were wrong — audit the
 column nobody has run before trusting the silence of the ones everybody
 has.**
 
+### Activation timing — the second column of that shape, the same day: 9 more
+
+The `tim` column reads each literal's `sorcery_speed` / `once_per_turn` /
+`IsTurnOf(PlayerRef::You)` condition against the oracle line's "Activate
+only as a sorcery" / "only once each turn" / "only during your turn"
+(sorcery speed accepted as the documented model of "only during your
+turn"). First run 29 rows; three reader rules later, 12; nine real, fixed:
+
+| Card | Was | Printed |
+|---|---|---|
+| Pernicious Deed, Domesticated Hydra (monstrosity), Soul Conduit, Clattering Augur, Llanowar Greenwidow, Relentless X-ATM092, Scrapheap Scrounger, Geier Reach Sanitarium's loot | `sorcery_speed: true` | no timing rider — the gate was invented, each card was weaker than printed |
+| Essence Anchor | the graveyard gate only | "only during your turn and only if …" — `All([IsTurnOf(You), ..])` |
+
+Residue, one row: Vampire Bats prints "no more than twice each turn" and
+ships `once_per_turn` (no twice-a-turn limiter exists). The reader's rules:
+the rider is a substring, not a sentence ("and only once each turn"); an
+`IsTurnOf(You)` nested in an `All(..)` is the rider; and the old "activate
+only as a sorcery" printings (Soul Conduit) are not the current oracle.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

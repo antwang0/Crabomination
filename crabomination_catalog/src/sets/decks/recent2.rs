@@ -193,7 +193,7 @@ pub fn hush() -> CardDefinition {
 
 /// Llanowar Greenwidow — {2}{G} 4/3 Spider with reach and trample. {7}{G},
 /// exile from graveyard isn't required — return it from your graveyard to the
-/// battlefield tapped (sorcery speed). (The Domain cost reduction and the
+/// battlefield tapped (no timing rider is printed; it shipped sorcery-speed until 2026-09-07). (The Domain cost reduction and the
 /// "exile if it would leave" rider are dropped.)
 pub fn llanowar_greenwidow() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -211,7 +211,6 @@ pub fn llanowar_greenwidow() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(7), g()]),
             from_graveyard: true,
-            sorcery_speed: true,
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Battlefield {
