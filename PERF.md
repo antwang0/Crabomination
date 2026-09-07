@@ -2687,8 +2687,8 @@ nesting (a `Seq` in a trigger in a `Reflexive` ...) keeps ~95 KB: 32 MB is
 
 What is in it (the `profiling-fast` `.dwo`, `llvm-dwarfdump
 --debug-info=<concrete DIE> -c`, every `DW_OP_fbreg` slot, the gap to the
-next slot as its size — `frames.py` / `dwarf_frame.py` in the scratchpad,
-worth committing under `scripts/` if this is ever read again): 1,112
+next slot as its size — `scripts/frames.py` and `scripts/dwarf_frame.py`,
+whose docstrings carry the three-step recipe): 1,112
 distinct slots, and the frame is **a few whole `CardDefinition`s by value
 (8,232 bytes each) plus a long tail LLVM's stack colouring did not merge**
 — 28 arms each own a 208-byte `PendingEffectState` slot, 7 a `StackItem`,
