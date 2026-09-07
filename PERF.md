@@ -2821,6 +2821,32 @@ scaling release-fast selfplay_train --steps 1 --seed 31, --actors 1 / 2 / 4 x 60
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 ```
 
+### 2026-09-07 — the `trig` column, the leaves-the-battlefield fix and the wire `#[inline]`: addendum at the tip after `03b53eab`
+
+Three commits after the `(-276)` addendum: the sixth audit column and 40
+catalog cards on their printed trigger event (INCOMPLETE_CARDS "Trigger
+events"), the engine's non-death leaves event + the `BecomesUntapped`
+fan-out (ENGINE_BACKLOG, first section), and the wire decoders out of the
+lib ("Serde derives" above). The engine leg is a rules change and could
+have moved games; it did not move the fixed pool:
+
+```text
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok
+        games/s 340.8 (before) / 394.9 (after) single runs, i.e. the host's spread, not a reading; bin_bytes 127,765,784 -> 126,628,472
+golden  7/7 unmoved (the seeds' games bounce and exile nothing that carried a leaves trigger)
+suite   19,253 / 0 / 5 at 03b53eab (two Looter il-Kor fixtures gained a library — the Looter loots on any damage now)
+build   engine LLVM IR 3,217,700 -> 2,778,508 lines (-13.65 %); wall clock flat on all three loops (the table above)
+clippy  --workspace --exclude crabomination_client --all-targets   clean;  cargo check -p crabomination_client   clean
+```
+
+Not re-run this pass: the fresh-seed sweep and the debug-assertions
+grid. The leaves fix adds one `CardInstance` clone and one event per
+non-graveyard exit and a `died_card_snapshots` entry that the existing
+clear already drops; nothing it touches is in the SBA or the sim's pass.
+Run the grid next pass (the recipe in "Robustness gate"), because the
+change alters what the engine *does* on a bounce, not only what it
+counts.
+
 ### `(-276)` — addendum to the closing state, at the `(-276)` tip
 
 One more behaviour-preserving leg after the closing state below (outcomes

@@ -29,20 +29,20 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force;
    code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in **CLAUDE.md**;
-   measurement in **PERF's "Standing rules"**; build budgets in PERF's `(-275)` block. ⚠ Another session pushes here concurrently — fetch before
-   every push, never rebase under a running `cargo build`. Disk: purge `target/debug/incremental` (7-13 GB) and stale target dirs before a big build.
-2. **Gates at the tip (PERF Baseline, round-68 block):** suite 19,248 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
-   (195,806 / 27.49 / 611.9 / 0), golden 7/7 (seeds 3, 4, c0ffee re-blessed for round 68), fresh-seed sweep 28,800 games + training binary 9,000
-   games / 0 stalls, the debug-assertions grid green WITH the default pilot (`PILOTS="dflt …" --pilots` — its own list lacks `dflt`), actor scaling linear to 4.
-3. **Perf:** `(-275)`/`(-276)` engine legs (PERF Log); **round 68 (ML_NOTES)** `sim_main_cast_cap: Some(1)` in the default — sealed wall **0.864** /
-   cube **0.837** at no loss on four seeds + cube + fixed; cap 0 loses a point. The dflt six-game totals moved (different games); the round-68
-   Baseline block is the base. Engine profile FLAT; bot-side the sim body is 31 % of cube at 30 passes a sim (`(-260)` shape), the horizon sets
-   the pass count — a strength question. **Build time is the lever** (PERF "Serde derives"): next of that shape needs a box where the client builds.
-4. **Cards/bugs:** `audit_catalog_stats.py` now reads five oracle columns per activated ability (mana cost / timing / {T}-sac / loyalty / token P/T):
-   27 + 18 + 10 + 1 + 0 wrong shipped cards fixed this run (INCOMPLETE_CARDS' tables, five documented residues). Next of that shape: a trigger's
-   *event* or a static's *text*. Spell Queller and Manifold Key are the printed cards. Structural / stub / oracle-verb audits clean.
-5. **Rounds 65-68 (ML_NOTES):** lobby pilot `MctsBot` 256; round 67 the four targeting flags (+8 converge); round 68 `sim_main_cast_cap`,
-   control `sim-cast-off`, gate `.ladder/run_r68_simcast.sh`.
+   measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
+   running `cargo build`. Disk: purge `target/debug/incremental` and stale target dirs before a big build; `cargo-llvm-lines` is installed.
+2. **Gates at the tip (PERF Baseline, 2026-09-07 addendum):** suite 19,253 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
+   (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, client type-checks. **NOT re-run: the fresh-seed sweep and the debug-assertions grid** —
+   run both first (`scripts/robustness_grid.sh`, PERF "Robustness gate"): the leaves fix changes what a bounce does.
+3. **Engine, this run (ENGINE_BACKLOG first section):** "leaves the battlefield" fired only on death for all 87 literals — `GameEvent::
+   PermanentLeftBattlefield` + `note_left_without_dying` at every non-graveyard exit; `BecomesUntapped` joined the CR 603.6 fan-out. Open of the
+   same shape, untested so not landed: `Tapped` fans out per permanent too (13 non-self literals); an Equipment-granted trigger's damage is dealt
+   *by the creature* (Sword of War and Peace's burn re-fires the Looter) — `triggers_on_equipment` is the device, no card sets it for the Swords.
+4. **Cards/bugs:** `audit_catalog_stats.py` has six oracle columns; the sixth (`trig`, a trigger's event) fixed 40 shipped cards; residue six rows
+   (INCOMPLETE_CARDS "Trigger events"). Next of that shape: a static's *text* (`StaticAbility.description` against the oracle line), or the
+   trigger's *scope* (SelfSource / YourControl / AnyPlayer against "this / you control / a player"). Structural / stub audits not re-run this pass.
+5. **Perf/build:** engine profile FLAT (PERF candidates); the wire decoders left the lib (`#[inline]`, IR -13.7 %, wall clock flat — PERF "Serde
+   derives" says why and what that refutes). Round 68 (ML_NOTES) is the default-pilot base; the sim body / horizon is a strength question.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
