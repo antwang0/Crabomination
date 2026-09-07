@@ -561,6 +561,14 @@ into a sacrifice by its doc's own choice), Gemstone Mine (the sacrifice is
 the conditional last step of the effect, printed that way) and Tomb of
 Urami ("Sacrifice all lands you control" includes itself).
 
+### Loyalty costs — the fourth column, one finding
+
+`loy` reads each `LoyaltyAbility` literal's signed `loyalty_cost` (`x_cost`
+as −X) and the card's `base_loyalty` against the oracle's "+1:" / "−2:" lines
+and `loyalty`. 128 walkers, one wrong: **Karn, the Great Creator** shipped
+its two abilities with the signs swapped — a +2 that tutored an artifact
+from outside the game every turn and a −1 animation. Fixed 2026-09-07.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

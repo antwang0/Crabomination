@@ -307,6 +307,53 @@ def ref_ability_tap_sac(card, face=None):
         out.append(frozenset(flags))
     return out
 
+_ORACLE_LOY = re.compile(r"^([+\u2212-]?)(\d+|X):\s")
+
+def loyalty_costs(body):
+    """The signed loyalty cost of every `LoyaltyAbility { .. }` literal in the
+    card's own `loyalty_abilities: vec![..]` ("X" for an `x_cost: true` minus),
+    plus the card's `base_loyalty`; `None` when the field is absent or an
+    element is a helper call."""
+    m = own_field(body, r"loyalty_abilities:")
+    if m is None:
+        return None
+    vec = vec_after(body, m.start())
+    if vec is None:
+        return None
+    for item in top_level_items(vec):
+        if item.strip() and not item.strip().startswith("LoyaltyAbility {"):
+            return None
+    out, i = [], 0
+    while True:
+        j = vec.find("LoyaltyAbility {", i)
+        if j < 0:
+            break
+        end = bracket_span(vec, j + len("LoyaltyAbility ")); lit = vec[j:end]; i = end
+        kx = literal_depth1_field(lit, "x_cost:")
+        if kx is not None and re.match(r"x_cost:\s*true", lit[kx:]):
+            out.append("-X")
+            continue
+        kc = literal_depth1_field(lit, "loyalty_cost:")
+        mc = re.match(r"loyalty_cost:\s*(-?\d+)", lit[kc:]) if kc is not None else None
+        if not mc:
+            return None
+        out.append(str(int(mc.group(1))))
+    bl = own_field(body, r"base_loyalty:\s*(\d+)")
+    return out, (bl.group(1) if bl else None)
+
+def ref_loyalty_costs(card, face=None):
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    out = []
+    for line in text.split("\n"):
+        m = _ORACLE_LOY.match(line.strip())
+        if not m:
+            continue
+        sign = "-" if m.group(1) in ("-", "\u2212") else ""
+        out.append(("-X" if m.group(2) == "X" else str(int(sign + m.group(2)))))
+    return out, (face or card).get("loyalty")
+
 def ability_mana_costs(body):
     """The mana cost of every `ActivatedAbility { .. }` literal in the card's
     own `activated_abilities: vec![..]`, each as `norm()`'s symbol tuple; a
@@ -812,7 +859,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -936,6 +983,15 @@ def audit():
             if ts is not None and ref_ts is not None and len(ts) == len(ref_ts):
                 if sorted(sorted(f) for f in ts) != sorted(sorted(f) for f in ref_ts):
                     d["tapsac"].append((tag, [sorted(f) or ["-"] for f in ts], [sorted(f) or ["-"] for f in ref_ts]))
+            # loyalty: the signed costs as a multiset plus the base loyalty.
+            loy = loyalty_costs(body)
+            ref_loy = ref_loyalty_costs(card, face)
+            if loy is not None and ref_loy is not None and ref_loy[0]:
+                (got_l, got_b), (ref_l, ref_b) = loy, ref_loy
+                if (len(got_l) == len(ref_l) and sorted(got_l) != sorted(ref_l)) or (
+                    got_b is not None and ref_b is not None and str(ref_b).isdigit() and got_b != ref_b
+                ):
+                    d["loy"].append((tag, f"{got_l} base {got_b}", f"{ref_l} base {ref_b}"))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -952,21 +1008,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}")
-        print("-" * 74)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}")
+        print("-" * 80)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 74)
+        print("-" * 80)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 

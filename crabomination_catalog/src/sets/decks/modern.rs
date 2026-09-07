@@ -55030,7 +55030,7 @@ pub fn karn_the_great_creator() -> CardDefinition {
         }],
         loyalty_abilities: vec![
             LoyaltyAbility {
-                loyalty_cost: -1,
+                loyalty_cost: 1, // +1 (shipped as -1 until 2026-09-07)
                 effect: Effect::BecomeCreature {
                     what: target_filtered(SelectionRequirement::Artifact.and(
                         SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)),
@@ -55044,7 +55044,7 @@ pub fn karn_the_great_creator() -> CardDefinition {
                 ..Default::default()
             },
             LoyaltyAbility {
-                loyalty_cost: 2,
+                loyalty_cost: -2, // -2 (shipped as +2: a free artifact tutor every turn)
                 effect: Effect::WishToHand {
                     filter: SelectionRequirement::Artifact,
                 },
