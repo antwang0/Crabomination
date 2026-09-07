@@ -2738,6 +2738,36 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### Round 68 — closing state at the round-68 tip, THE NEW DEFAULT-PILOT BASE
+
+One bot-side throughput leg (Log, ML_NOTES round 68): the attack sim's
+main-phase casts capped at one per sim, adopted at no loss. **The dflt
+six-game totals below are a different pilot's games** — quote them as
+the base from here, never as an engine change against the `(-275)`
+block. `--bench` (`gang`, `fixed`) is byte-identical. The round-68
+commit was rebased onto the concurrent session's serde relocation
+(`41ca3089`, a build-time leg, "Serde derives" above) and then onto
+`(-276)` (the addendum below, an engine leg landed concurrently); the
+six-game dumps below predate both, the suite / clippy / `--bench` lines
+were re-taken on the tip rebased onto `41ca3089`.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,277,686,484 (round-67 tip, this container) -> 3,017,209,691 Ir  (-7.95 %, different games)
+  cube   dflt, same recipe:                               3,635,747,593 -> 2,953,897,394 Ir  (-18.75 %, different games)
+  actor  selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features):
+         3,120,856,905 -> 3,094,007,397 Ir  (-0.86 %, different games: 6,078 -> 6,198 rows);  393 k -> 327 k Ir a sim (-17 %)
+  wall   200 x 12 mirrors, 5 paired reps, median cap1/uncapped:  sealed 0.864 / cube 0.837
+suite   19,247 / 0 / 5 (120 s) at the round-68 tip; golden traces 7/7 (seeds 3, 4 and c0ffee re-blessed for the round, seeds 1, 2, 5 unmoved)
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release release-fast build of bot_ladder: clean
+--bench release-fast (mimalloc) at the round-68 tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; 290 games/s at --threads 3 (games_per_s_th 96.7, host_calib_ms 49; bin_bytes 125,892,976)
+sweep   fresh seeds on the ADOPTED DEFAULT (release-fast, the round-68 tip): 601..603 x {sealed, cube, fixed} x --games 400 --threads 3 =
+        9 cells / 28,800 games, 0 undecided (0 cap / 0 stuck / 0 draw), 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent
+        AND the training binary: release-fast selfplay_train --actors 4 --steps 1, seeds 911 / 912 x --games 3000 / 6000 =
+        9,000 games / 902,097 rows, 0 stalls, both rc 0 — 165.6 / 162.5 games/s (`actors:`) on an otherwise idle 4-core box, the capped default's first uncontended reading
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+
 ### `(-276)` — addendum to the closing state, at the `(-276)` tip
 
 One more behaviour-preserving leg after the closing state below (outcomes

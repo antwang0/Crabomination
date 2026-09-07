@@ -30,21 +30,23 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never
    force; code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in
    **CLAUDE.md**; measurement in **PERF's "Standing rules"**; build budgets in PERF's `(-275)` closing block. ⚠ Another session pushes
-   to this branch concurrently — fetch before every push. ⚠ Disk: `target/debug/incremental` hit 13 GB this run; purge it before a worktree build.
-2. **Gates at the `(-275)` tip (PERF Baseline):** suite 19,246 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
-   (195,806 / 27.49 / 611.9 / 0), golden 7/7, fresh-seed sweep 28,800 games (0 cap / stuck) + training binary 9,000 games / 0 stalls,
-   debug-assertions grid green AND `--wide` green (301,600 + 60,000 + 45 pilot cells; cap 4 = the documented Beacon seeds 53/73).
-3. **Perf this run:** `(-275)` the ability-lock gates on an exact-keyword fold (sealed -0.118 %, cube -0.172 %, actor -0.142 %);
-   `(-276)` the 8 KB `CardDefinition` temporaries out of `run_effect`'s frame — 97 KB -> 64 KB, the only >4 KB frame in the binary
-   and the reason for the 32 MB thread stacks; sealed -0.256 %, cube -0.288 %. ⚠ The dflt base moved twice under concurrent bot
-   commits (`trick_modes_combat_only`: cube +38.5 %; round 67's picker: +1.5 / +1.9 %); read PERF's newest totals as the base.
-4. **Leads:** the engine profile is FLAT on all three pools; the new cube default is read by context (candidates: 33 sim passes a sim,
-   the sim's own casts 17 % — bot-side, an ML session's call). **Build time is where the lever is** (PERF "Serde derives"): serde was
-   44 % of the engine crate's LLVM IR; relocating the one `CardDefinition: Deserialize` instantiation into `crabomination_base::textrewrite`
-   cut it 27 % (engine-edit rebuild -3.5 % release-fast / -9 % dev). Next of that shape needs a box where the client builds (PERF says
-   why). **Frame:** what is left of `run_effect`'s 64 KB is the 970-arm match's own tail (28 `PendingEffectState` slots) — the split.
-5. **Rounds 65-67 (ML sessions, ML_NOTES):** lobby pilot `MctsBot` 256; round 67 (f51e9c5c) `hostile_player_targets`,
-   `player_target_arms`, `own_graveyard_picks`, `skip_noop_x0` ADOPTED (+8 converge). Cards: the oracle-verb audit is 61 rows, all filed.
+   to this branch concurrently — fetch before every push, and ⚠ never rebase under a running `cargo build` (the tree it reads changes
+   mid-compile). Disk: `target/debug/incremental` hit 13 GB in one run; purge it before a worktree build.
+2. **Gates at the round-68 tip (PERF Baseline):** suite 19,247 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
+   (195,806 / 27.49 / 611.9 / 0), golden 7/7 (seeds 3, 4, c0ffee re-blessed for the round), fresh-seed sweep 28,800 games (0 undecided)
+   + the training binary 9,000 games / 0 stalls; the debug-assertions grid and `--wide` last green at the `(-275)` tip.
+3. **Perf this run:** `(-275)` the ability-lock gates on an exact-keyword fold; `(-276)` the 8 KB `CardDefinition` temporaries out of
+   `run_effect`'s frame (97 KB -> 64 KB, sealed -0.256 %, cube -0.288 %); **round 68 (ML_NOTES)** `sim_main_cast_cap: Some(1)` in the
+   default — the attack sim casts once from a main phase per sim: sealed wall **0.864** / cube **0.837** at no loss (four sealed seeds
+   + cube + fixed); cap 0 loses a point, cap 2 is 0.93 / 0.94. ⚠ The dflt six-game totals moved (different games); the round-68
+   Baseline block is the base, the `(-276)` addendum under it predates the pilot change. `--bench` (gang) untouched.
+4. **Leads:** engine profile FLAT on all three pools. Bot-side, the sim body is 31 % of cube (`sim_step` 30 passes a sim, ~7.5 k Ir a
+   pass, the `(-260)` shape) and the horizon sets the pass count — a horizon change is a strength question, not a leg. **Build time is
+   where the lever is** (PERF "Serde derives"): serde was 44 % of the engine's LLVM IR, the `CardDefinition: Deserialize` relocation cut
+   it 27 %; next of that shape needs a box where the client builds (PERF says why). **Frame:** what is left of `run_effect`'s 64 KB is
+   the 970-arm match's own tail (28 `PendingEffectState` slots) — the split.
+5. **Rounds 65-68 (ML_NOTES):** lobby pilot `MctsBot` 256; round 67 (f51e9c5c) the four targeting flags ADOPTED (+8 converge);
+   round 68 `sim_main_cast_cap` ADOPTED, control `sim-cast-off`, gate `.ladder/run_r68_simcast.sh`. Cards: the oracle-verb audit is 61 rows, all filed.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
