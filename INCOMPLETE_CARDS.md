@@ -465,7 +465,7 @@ Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|
-| Spell Queller ✓ | modern.rs:15114 | counters instead of exile-until-LTB (opponent can't recast) |
+| ~~Spell Queller~~ ✅ **FIXED 2026-09-07** | modern.rs | was a plain counter; now the printed shape off existing primitives — `CounterSpellToZone { ExileWithSource }` (MV ≤ 4) and an LTB `EachPlayerDoes { OwnerOf(CardExiledWithSource) }` around `CastWithoutPayingImmediate`, so the card's owner casts it free when the Queller leaves. Tests: `modern::decks_16_17_misc::spell_queller_*` |
 | ~~Generous Gift~~ ✓ | modern.rs | stale — ships `CreateToken { who: ControllerOf(Target(0)) }` (the Elephant) before the Destroy, Beast Within's shape; re-read 2026-09-07 |
 
 ### Other notable HIGH — **all closed; every remaining entry here was stale**

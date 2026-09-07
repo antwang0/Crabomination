@@ -2467,17 +2467,23 @@ fn decree_of_justice_makes_x_angels() {
     assert!(angels[0].definition.keywords.contains(&crabomination::card::Keyword::Flying));
 }
 
+/// Spell Queller exiles the spell (not the graveyard, linked to the Queller),
+/// and when the Queller leaves the battlefield the card's owner casts it for
+/// free — so a Bears quelled and then freed ends up on the opponent's board.
 #[test]
-fn spell_queller_etb_counters_a_spell() {
+fn spell_queller_exiles_the_spell_and_its_owner_casts_it_when_the_queller_leaves() {
     let mut g = two_player_game();
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    // Seat 1's own main phase: a creature is sorcery-speed.
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(0)),
-        additional_targets: vec![], mode: None, x_value: None,
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Bolt castable");
+    .expect("Bears castable");
     g.priority.player_with_priority = 0;
     let queller = g.add_card_to_hand(0, catalog::spell_queller());
     g.players[0].mana_pool.add(Color::White, 1);
@@ -2488,7 +2494,47 @@ fn spell_queller_etb_counters_a_spell() {
     })
     .expect("Spell Queller castable at flash speed");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, 20, "the bolt was countered by Spell Queller's ETB");
     assert!(g.battlefield_find(queller).is_some(), "Queller resolved onto the battlefield");
+    assert!(g.battlefield_find(bears).is_none(), "the Bears did not resolve");
+    let exiled = g.exile.iter().find(|c| c.id == bears).expect("the Bears are in exile, not the graveyard");
+    assert_eq!(exiled.exiled_with, Some(queller), "linked to the Queller");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != bears));
+
+    // The Queller leaves: its owner (seat 1) casts the Bears without paying.
+    let mut evs = Vec::new();
+    g.destroy_permanent(queller, false, &mut evs);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bears).expect("the freed Bears resolved onto the battlefield");
+    assert_eq!(back.controller, 1, "under their owner's control");
+    assert!(g.exile.iter().all(|c| c.id != bears));
+}
+
+/// The ETB targets only spells with mana value 4 or less: a five-drop on the
+/// stack is not a legal target, so the Queller enters and the spell resolves.
+#[test]
+fn spell_queller_cannot_target_a_five_mana_spell() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_hand(1, catalog::air_elemental());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.players[1].mana_pool.add_colorless(3);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Air Elemental castable");
+    g.priority.player_with_priority = 0;
+    let queller = g.add_card_to_hand(0, catalog::spell_queller());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: queller, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Spell Queller castable at flash speed");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(queller).is_some(), "Queller resolved onto the battlefield");
+    assert!(g.battlefield_find(big).is_some(), "a five-drop is out of the Queller's reach");
 }
 

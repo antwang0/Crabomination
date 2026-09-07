@@ -16039,10 +16039,15 @@ pub fn detectives_phoenix() -> CardDefinition {
 
 /// Spell Queller — {1}{W}{U} Creature 2/3 Spirit. Flash, flying.
 /// When this enters, exile target spell with mana value 4 or less.
+/// When this leaves the battlefield, the exiled card's owner may cast it
+/// without paying its mana cost.
 ///
-/// Approximation: ETB counters target spell (exile-until-LTB not wired).
+/// Shipped as a plain counter until 2026-09-07; the printed shape is Shell
+/// of the Last Kappa's `CounterSpellToZone { ExileWithSource }` plus the
+/// free cast re-seated to the card's owner (`EachPlayerDoes { OwnerOf }`),
+/// so a Queller that dies hands the spell back.
 pub fn spell_queller() -> CardDefinition {
-    use crate::effect::shortcut::counter_target_spell;
+    use crate::effect::CounteredSpellZone;
     CardDefinition {
         name: "Spell Queller",
         cost: cost(&[generic(1), w(), u()]),
@@ -16054,10 +16059,35 @@ pub fn spell_queller() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: counter_target_spell(),
-        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CounterSpellToZone {
+                    what: target_filtered(
+                        SelectionRequirement::IsSpellOnStack
+                            .and(SelectionRequirement::ManaValueAtMost(4)),
+                    ),
+                    zone: CounteredSpellZone::ExileWithSource,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::EachPlayerDoes {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::CardExiledWithSource)),
+                    body: Box::new(Effect::CastWithoutPayingImmediate {
+                        what: Selector::CardExiledWithSource,
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                        pay_own_cost: false,
+                    }),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
