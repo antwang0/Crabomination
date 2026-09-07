@@ -4534,6 +4534,11 @@ only separates lines the sims tie. Old ≥ fresh again (+0.8, inside ±0.9),
 so the data question is closed the same way at the search level.
 **Recorded, not adopted**: the lobby's pilot is a program decision (the
 net dependency, the safetensors load, the vocab freeze coupling come
-back). The recommendation is `mcts-net67-256` on the best-gated net; the
-committed `nets/champion.safetensors` (round 20) is being read on the same
-two cells so the adoption names the right weights.
+back). The recommendation is `mcts-net67-256` on the committed champion: read on
+the same two cells, `nets/champion.safetensors` (the round-20 net) is
+**53.0 [52.1, 54.0] / 55.5 [54.6, 56.4]**, pooled +4.25, between the fresh
+net's +3.8 and the best old net's +4.6 — all three inside one another's
+±0.65, so no champion swap is needed and the adoption is one line in
+`lobby.rs`. Timing: a 256-search cell of 6 000 games is ~64 min on 22
+threads, the champion's the same, so the leaf costs no measurable wall
+clock at this depth (the forward pass was vectorized in perf pass 41).
