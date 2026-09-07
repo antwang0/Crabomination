@@ -2821,6 +2821,23 @@ scaling release-fast selfplay_train --steps 1 --seed 31, --actors 1 / 2 / 4 x 60
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 ```
 
+### 2026-09-07 — the keyword-grant carriers and `UntilNextTurn`: addendum at the tip after the duration commit
+
+One engine commit after the `1f2cabcb` addendum below (ENGINE_BACKLOG,
+first section; the Log's "READ" entry has the Ir A/B). A rules change on
+four effect arms and the duration map, priced and flat; the fixed pool is
+byte-identical:
+
+```text
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1);
+        bin_bytes 126,762,112 (+16,784 B: the four arms' collects and the two helpers); 253.0 games/s single run under a suite build
+Ir      against 1f2cabcb: sealed 3,022,028,711 -> 3,023,234,030 (+0.040 %) / cube 2,966,685,176 -> 2,966,367,971 (-0.011 %), outcome lines identical (Log)
+golden  7/7 unmoved
+suite   19,274 / 0 / 5 (one test added, one extended across the turn cycle); clippy clean; release-fast typecheck clean
+sweep   fresh seeds on the profiling-fast binary of the duration tip: 610..612 x {sealed, cube, fixed} x --a dflt --b dflt --games 400 --threads 2 =
+        9 cells / 28,800 games, 0 undecided, 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent
+```
+
 ### 2026-09-07 — the LKI-walk EOT-grant read and the conditional rider gate: addendum at the tip after `1f2cabcb`
 
 One engine commit after the addendum below (ENGINE_BACKLOG, first
@@ -3872,6 +3889,28 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### The keyword-grant carriers and `UntilNextTurn` READ — sealed default Ir **+0.040 %** / cube **-0.011 %**, outcomes identical
+
+The fourth rules fix off the consumer-read method (ENGINE_BACKLOG, first
+section): `GrantKeyword` / `GrantKeywords` / `GrantProtectionFromChosenColor`
+/ `LoseKeyword` route any duration past EOT / Permanent through a layer-6
+continuous effect (`grant_keyword_for`, `keyword_layer_effect`), and
+`effect_duration_for` maps `Duration::UntilNextTurn` to the controller's
+next turn. Priced against `1f2cabcb` (the `cg.cand.*` dumps of the entry
+below, this run's tip):
+
+```text
+profiling-fast, system allocator, --a dflt --b dflt --games 6 --threads 1 --seed 1
+  sealed  3,022,028,711 -> 3,023,234,030 Ir   (+0.040 %)   72 / 72 decided, outcome lines identical
+  cube    2,966,685,176 -> 2,966,367,971 Ir   (-0.011 %)   48 / 48 decided, outcome lines identical
+```
+
+**FLAT** — the arms now collect their selector's ids before granting
+(one `Vec` per resolution, a handful a game), and no game in either dump
+resolved a grant with one of the new durations. Kept as correctness:
+thirteen shipped cards had a permanent grant, six more a debuff that wore
+off before the opponent's combat.
 
 ### The LKI walk's EOT-grant read and the conditional rider gate READ — sealed default Ir **+0.012 %** / cube **+0.011 %**, outcomes identical
 

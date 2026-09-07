@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-07 — keyword grants with an "until your next turn" duration were permanent, and `UntilNextTurn` itself meant "any player's next turn"](#fixed-2026-09-07--keyword-grants-with-an-until-your-next-turn-duration-were-permanent-and-untilnextturn-itself-meant-any-players-next-turn) | 52 |
 | Bugs & robustness | [FIXED 2026-09-07 — the LKI walk dropped until-end-of-turn granted triggers, and a conditional Equipment rider granted its abilities unconditionally](#fixed-2026-09-07--the-lki-walk-dropped-until-end-of-turn-granted-triggers-and-a-conditional-equipment-rider-granted-its-abilities-unconditionally) | 44 |
 | Bugs & robustness | [FIXED 2026-09-07 — the attack and combat-damage hooks dropped `once_per_turn`](#fixed-2026-09-07--the-attack-and-combat-damage-hooks-dropped-once_per_turn) | 36 |
 | Bugs & robustness | [FIXED 2026-09-07 — `triggers_on_equipment` was honoured by two hooks and dropped by the dispatcher](#fixed-2026-09-07--triggers_on_equipment-was-honoured-by-two-hooks-and-dropped-by-the-dispatcher) | 44 |
@@ -38,6 +39,53 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-07 — keyword grants with an "until your next turn" duration were permanent, and `UntilNextTurn` itself meant "any player's next turn"
+
+The fourth find of the consumer-read method, from the *duration* axis:
+for each effect arm that matches on its `duration`, which `Duration`
+variants does it actually distinguish? `GrantKeyword`, `GrantKeywords` and
+`GrantProtectionFromChosenColor` knew two buckets — `EndOfTurn |
+EndOfCombat` to the per-instance EOT bag, everything else baked onto the
+definition's printed keyword list — so **every "until your next turn" /
+"until your next untap step" / "while this is tapped" keyword grant was
+permanent**: Academic Probation's "can't attack / can't block / can't
+activate until your next turn" never ended, The Akroan War's and Nahiri
+the Unforgiving's "attacks each combat if able" was forever, Bond of
+Revival's haste, Emeria's Call's, Venat's and For the Common Good's
+indestructible, Elspeth Storm Slayer's flying, Vivien's vigilance and
+reach, Erhnam Djinn's forestwalk, Spatial Binding's phase lock, Gabriel
+Angelfire's chosen keyword, Crown of Vigor's tapped-only grant — thirteen
+shipped cards. `LoseKeyword` had the mirror pair (`Permanent` or the EOT
+bag), so Ertai's Familiar regained phasing a turn early.
+
+The layer system already carries every one of those durations
+(`EffectDuration::UntilYourNextTurn { player, installed_turn }`,
+`WhileSourceTapped`, …) and `PumpPT` / `SetBasePT` already route through
+`effect_duration_for`. The fix is one carrier choice, `grant_keyword_for`:
+EOT / end of combat to the bag, `Permanent` to the printed list, anything
+else a layer-6 `AddKeyword` (`RemoveKeyword` for the loss) continuous
+effect under `effect_duration_for` (`keyword_layer_effect`).
+
+The same read then found the enum itself wrong: `Duration::UntilNextTurn`
+was documented and mapped as "the start of the next turn (any player's)",
+and **all thirteen catalog uses print "until your next turn"** — so the
+PumpPT-style ones (Liliana, the Last Hope's -2/-1, Mouth of the Storm's
+-3/-0, Fear of Falling, Azure Beastbinder, Mila) wore off as the
+opponent's turn *began*, before the combat they were cast to blunt.
+`effect_duration_for` now maps it beside `UntilYourNextUntap` (CR 611.2b)
+and the variant's doc says so; the controller-less `map_effect_duration`
+keeps its old arm for a caller without a seat (there is none today).
+
+Tests: `core_rules::cr_recent35::cr_611_2b_keyword_grant_and_loss_honour_
+until_your_next_turn` (three durations, grant and loss, across the turn
+cycle) and `classic_sets::eoe::mouth_of_the_storm_shrinks_opponents`
+(extended across the opponent's turn). Still latent: `Effect::
+GrantTriggeredAbility` with `UntilNextTurn` (Vraska the Unseen's +1) is
+baked as permanent — the EOT trigger map has no duration stamp, and a
+separate list would re-open the consumer matrix above; the right fix is a
+`(TriggeredAbility, expiry)` value in `granted_triggers_eot` read through
+`granted_triggers()`.
 
 ## FIXED 2026-09-07 — the LKI walk dropped until-end-of-turn granted triggers, and a conditional Equipment rider granted its abilities unconditionally
 
