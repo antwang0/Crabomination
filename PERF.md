@@ -2828,7 +2828,7 @@ sections; the Log's two "READ" entries have the Ir A/Bs). Rules changes
 on the grant list and the two hardcoded hooks, priced and flat:
 
 ```text
---bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; bin_bytes 126,744,752; 379.3 / 264.3 games/s single runs (3 threads, the second under a suite build)
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,744,752; 379.3 / 264.3 games/s single runs (3 threads, the second under a suite build)
 Ir      against d04a225d: sealed dflt 3,020,686,102 -> 3,021,669,628 (+0.033 %) / cube 2,963,669,195 -> 2,966,364,550 (+0.091 %), outcomes identical (Log, both entries)
 golden  7/7 unmoved
 suite   19,270 / 0 / 5 at the once/dealer_filter tip (19,267 at b3f6067b); audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review

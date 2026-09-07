@@ -65,6 +65,10 @@ spend the slot (CR 603.4, the dispatcher's order). The step-trigger walk,
 the SelfSource ETB push and the death path were read too: no shipped card
 puts `once_per_turn` on a kind they own (the catalog scan is
 `scripts`-less: every `once_per_turn` keyed by the nearest `EventSpec`).
+The inverse was scanned too: every oracle trigger line printing "only
+once each turn" / "for the first time each turn" has a once gate in its
+code — the nine Valiant cards through `shortcut::valiant()`, Venat through
+`CastSpellFirstMatchingThisTurn` — so nothing is missing the flag.
 
 Tests: `recent_b::recent_208_222::aurelia_does_not_fire_on_her_second_attack`
 (no third combat, the team stays tapped),
