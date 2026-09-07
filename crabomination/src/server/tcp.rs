@@ -290,6 +290,16 @@ where
 /// thread (socket → mpsc<ClientMsg>) plus a coalescing writer pair
 /// (mpsc<ServerMsg> → bounded outbox → socket). When either side
 /// disconnects, the threads exit.
+///
+/// `#[inline]` is a codegen decision, not a speed one: the reader's
+/// `serde_json::from_slice::<ClientMsg>` instantiates that whole `Deserialize`
+/// tree (`GameAction`, the views, `DecisionWire` …) wherever this body is
+/// codegen'd. An inlinable function with no in-crate caller is codegen'd in
+/// no crate at all, so the ~13 % of the engine's LLVM IR that was the wire
+/// decoder now lands only in the binary that opens a socket
+/// (`crabomination_server`, the client) — never in `bot_ladder` or
+/// `selfplay_train`. PERF "Serde derives" has the numbers.
+#[inline]
 pub fn tcp_seat(stream: TcpStream) -> io::Result<SeatChannel> {
     stream.set_nodelay(true)?;
     enable_keepalive(&stream)?;
@@ -320,7 +330,9 @@ pub fn tcp_seat(stream: TcpStream) -> io::Result<SeatChannel> {
 
 /// Wrap a [`TcpStream`] into a client-side [`ClientChannel`]. Symmetric of
 /// [`tcp_seat`]: reader thread converts incoming `ServerMsg` frames into the
-/// inbox, writer thread serializes outbound `ClientMsg`s.
+/// inbox, writer thread serializes outbound `ClientMsg`s. `#[inline]` for
+/// the reason `tcp_seat` gives (`ServerMsg` here).
+#[inline]
 pub fn tcp_client(stream: TcpStream) -> io::Result<ClientChannel> {
     stream.set_nodelay(true)?;
     enable_keepalive(&stream)?;

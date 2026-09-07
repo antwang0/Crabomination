@@ -2669,6 +2669,53 @@ regardless: the server's deadlock dump (`server/mod.rs`,
 `to_value(state)`) needs `GameState: Serialize` in the lib, and
 `GameState` reaches `Effect`.
 
+**The wire half, taken 2026-09-07 without the signature change.** The
+device is `#[inline]` on `tcp_seat` / `tcp_client` / `ws_seat` and
+`CrossLink::recv`: rustc's mono-item collector roots a non-generic
+function only when it is *not* cross-crate-inlinable, so an `#[inline]`
+function with no in-crate caller is codegen'd in no crate at all, and the
+`from_slice::<ClientMsg>` / `from_slice::<ServerMsg>` / `from_str::<Msg>`
+trees it owns move to whichever binary calls it (`crabomination_server`,
+the client, `bot_ladder`'s peer mode). Nothing in the lib calls the four;
+`crabomination_client` type-checks against them unchanged (5 min cold,
+after CLIENT_BACKLOG's four apt packages). What left with them was more
+than the decoders: the coalescing writer's `to_vec::<ServerMsg>` (the
+whole view tree's `Serialize`) was reachable only from the same bodies.
+
+```text
+cargo llvm-lines -p crabomination --lib, dev, at 03b53eab either side
+  TOTAL                    3,217,700 lines / 86,669 copies  ->  2,778,508 / 79,833   (-13.65 % / -7.9 %)
+  serde_core::de::           469,461  (14.6 %)             ->    105,060  (3.8 %)
+  serde_json::de::           238,767  ( 7.4 %)             ->     52,928  (1.9 %)
+  <crabomination::net::      107,527  ( 3.3 %)             ->     10,787  (0.4 %)
+  any *erialize              735,086  (22.8 %)             ->    378,662 (13.6 %)
+  bot_ladder release-fast    127,765,784 bytes             ->  126,628,472         (-0.9 %; the same engine tip)
+```
+
+Wall clock, ABAB with `git stash` as the A side, `touch game/mod.rs`
+between every build, the box otherwise idle:
+
+```text
+release-fast bot_ladder (engine + bin + link)   A 139.8 s     B 142.8 / 150.6 s    (A1 discarded: 495 s, a cold engine after the llvm-lines fingerprint)
+dev --lib, incremental                          A 7.57 / 7.42  B 7.03 / 7.61
+dev --lib, CARGO_INCREMENTAL=0                  A 46.6 / 47.0  B 45.6 / 46.5        (-1.6 %, inside the spread)
+```
+
+**FLAT on every loop.** The 440 k lines that left were the cheapest kind
+(visitor shells, one match arm per field) and none of them sat in a CGU
+an engine edit dirties, so neither the incremental loop nor the O3 build
+had been paying for them in time — only in IR and in the 1.1 MB of dead
+decoder every simulator binary carried. Kept as a codegen-placement
+change: the wire protocol is now instantiated by the process that opens
+a socket and by nothing else, at four attributes. **The rule that fell
+out narrows the one above: moving an instantiation out of a crate buys
+wall clock only when the instantiation is *expensive per line* or sits
+in a CGU the edit loop rebuilds; `serde_json::value::de` (the `Value`
+walker, -27 % IR for -3.5..-11.5 % time) was, the text decoder's visitors
+were not.** What is left of serde in the lib (`serde_core::de::` 105 k,
+`serde_json::de::` 53 k) is `replay.rs` / the puzzle corpus / the decision
+log reading `Value`, plus the `Serialize` side the deadlock dump pins.
+
 ### `(-276)` `run_effect`'s frame — the 32 MB stack requirement, priced and a third of it taken 2026-09-07
 
 The routine's candidate list carries "effect-resolution recursion depth (the

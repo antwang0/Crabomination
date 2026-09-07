@@ -128,6 +128,10 @@ impl CrossLink {
         self.w.flush().map_err(|e| CrossFault::Io(e.to_string()))
     }
 
+    /// `#[inline]` so the `Msg` decoder (`GameAction`'s whole `Deserialize`
+    /// tree) is codegen'd in `bot_ladder`, the one binary that runs it, and
+    /// not in the engine lib every other binary links (PERF "Serde derives").
+    #[inline]
     pub fn recv(&mut self) -> Result<Msg, CrossFault> {
         self.line.clear();
         let n = self.r.read_line(&mut self.line).map_err(|e| CrossFault::Io(e.to_string()))?;

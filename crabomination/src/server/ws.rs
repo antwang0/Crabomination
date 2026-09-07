@@ -44,7 +44,10 @@ const MAX_MESSAGE_BYTES: usize = 16 * 1024 * 1024;
 /// the connection into a [`SeatChannel`]. Mirrors
 /// [`tcp_seat`](super::tcp::tcp_seat); the handshake itself runs on the
 /// caller's thread and is bounded by a 5s read timeout so a
-/// connect-and-stall peer can't wedge the accept loop.
+/// connect-and-stall peer can't wedge the accept loop. `#[inline]` for the
+/// reason `tcp_seat` gives: the `ClientMsg` decoder is codegen'd by the
+/// binary that calls this, not by the engine lib.
+#[inline]
 pub fn ws_seat(stream: TcpStream) -> io::Result<SeatChannel> {
     stream.set_nodelay(true)?;
     // Bound the HTTP upgrade: without a timeout a peer that connects and
