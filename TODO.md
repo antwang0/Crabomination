@@ -31,8 +31,8 @@ sixty-seventh pass, so don't re-take that.
    code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
    running `cargo build`. Disk: purge `target/debug/incremental` and stale target dirs before a big build; `cargo-llvm-lines` is installed.
-2. **Gates at the tip (PERF Baseline, the `b3f6067b` addendum):** suite 19,267 / 0 / 5, clippy, release-fast typecheck, `--bench` counters identical
-   to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweep 28,800 games / 0 undecided, `audit_stubs` /
+2. **Gates at the tip (PERF Baseline, the `b3f6067b` addendum):** suite 19,270 / 0 / 5, clippy, release-fast typecheck, `--bench` counters identical
+   to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweeps 57,600 games / 0 undecided, `audit_stubs` /
    `audit_incomplete --structural-only` both 0, debug-assertions grid green at `78e57bd2` with the default pilot (33,120 + 1,800 + 680 games).
 3. **Engine, this run (ENGINE_BACKLOG first section):** `triggers_on_equipment` was honoured by the combat-damage and step hooks and *dropped* by the
    general dispatcher, so Godsend (`Blocks`) and a bestowed Crystalline Nautilus (`BecameTarget`) were dead. A grant is `(host, source, abilities)`
@@ -41,9 +41,10 @@ sixty-seventh pass, so don't re-take that.
    same read then found the attack / combat-damage hooks dropping `once_per_turn` (Aurelia bought a combat per attack — an unbounded loop in
    self-play; Vaan fired per dealer) and Phase 1 dropping `dealer_filter` (Cabal Slaver stripped a card off its own hit). Every `EventSpec` field
    is now read by every hook that owns a kind it is set on; the next family of the shape is `ActivatedAbility` / `StaticAbility` fields.
-4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns (residues in INCOMPLETE_CARDS "Trigger events / scopes / filters"). Next
-   reader rules, still open: the filters it skips (`Not(..)`, power / mana-value bounds, `let` helpers), then a static's *text*. Latent, no
-   shipped card: `once_per_turn` on a *granted* trigger is not gated (ENGINE_BACKLOG first section says how to key it).
+4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns (residues in INCOMPLETE_CARDS "Trigger events / scopes / filters"). The
+   `filt` reader is at its floor (602 of 2,840 literals named, 0 mismatches — the multi-line / `Not` / bound / helper rules landed this run);
+   the next column, if any, is a static's *text*. Latent, no shipped card: `once_per_turn` on a *granted* trigger is not gated
+   (ENGINE_BACKLOG first section says how to key it).
 5. **Perf/build:** engine profile FLAT (PERF candidates; the sealed/cube base to quote is now 3,020.7 M / 2,963.7 M at `d04a225d`). Round 68
    (ML_NOTES) is the default-pilot base; the sim body / horizon is a strength question, not a perf leg.
 
