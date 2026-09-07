@@ -1248,7 +1248,10 @@ pub fn necrosavant() -> CardDefinition {
             mana_cost: cost(&[generic(3), b(), b()]),
             from_graveyard: true,
             sac_other_filter: Some((R::Creature, 1)),
-            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },

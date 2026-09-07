@@ -424,7 +424,10 @@ pub fn hells_caretaker() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_other_filter: Some((R::Creature, 1)),
-            condition: Some(Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep),
+            ])),
             effect: Effect::Move {
                 what: target_filtered(R::Creature.and(R::InYourGraveyard)),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },

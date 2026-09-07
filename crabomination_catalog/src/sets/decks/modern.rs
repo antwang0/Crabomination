@@ -23152,7 +23152,10 @@ pub fn hammer_of_bogardan() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), r(), r(), r()]),
             from_graveyard: true,
-            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Hand(PlayerRef::You),

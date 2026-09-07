@@ -176,6 +176,11 @@ pub fn mtenda_griffin() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             tap_cost: true,
+            // "Activate only during your upkeep." (ungated until 2026-09-07)
+            condition: Some(crate::effect::Predicate::All(vec![
+                crate::effect::Predicate::IsTurnOf(PlayerRef::You),
+                crate::effect::Predicate::CurrentStepIs(crate::game::TurnStep::Upkeep),
+            ])),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,

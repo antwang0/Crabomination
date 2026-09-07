@@ -117,7 +117,10 @@ pub fn amulet_of_quoz() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_cost: true,
-            condition: Some(Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep),
+            ])),
             effect: Effect::AnteTopOfLibrary {
                 who: PlayerRef::Target(0),
                 optional: true,

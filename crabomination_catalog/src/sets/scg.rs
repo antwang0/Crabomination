@@ -1496,7 +1496,10 @@ pub fn eternal_dragon() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w(), w()]),
             from_graveyard: true,
-            condition: Some(Predicate::CurrentStepIs(crate::game::TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                Predicate::CurrentStepIs(crate::game::TurnStep::Upkeep),
+            ])),
             effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
             ..Default::default()
         }],

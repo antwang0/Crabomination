@@ -199,7 +199,10 @@ pub fn grim_reminder() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b(), b()]),
             from_graveyard: true,
-            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
             effect: Effect::Move {
                 what: Selector::This,
                 to: crate::effect::ZoneDest::Hand(PlayerRef::You),

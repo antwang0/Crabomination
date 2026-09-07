@@ -2049,7 +2049,10 @@ pub fn undead_gladiator() -> CardDefinition {
             mana_cost: cost(&[generic(1), b()]),
             from_graveyard: true,
             discard_cost: Some((R::Any, 1)),
-            condition: Some(Predicate::CurrentStepIs(crate::game::TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                Predicate::CurrentStepIs(crate::game::TurnStep::Upkeep),
+            ])),
             effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
             ..Default::default()
         }],

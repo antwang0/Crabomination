@@ -191,6 +191,10 @@ def literal_depth1_field(lit, field):
 _TIMING = (
     ("only as a sorcery", "sorcery"),
     ("only during your turn", "your_turn"),
+    # "only during your upkeep" (Mirror Universe, Firemane Angel) is a
+    # your-turn rider plus the upkeep step, both read.
+    ("only during your upkeep", "your_turn"),
+    ("only during your upkeep", "upkeep"),
     ("only once each turn", "once"),
 )
 
@@ -216,7 +220,13 @@ def ability_timing(body):
             if m:
                 a = k + m.end() - 1
                 cond = lit[a:bracket_span(lit, a)]
-                if re.search(r"IsTurnOf\((?:crate::effect::)?PlayerRef::You\)", cond):
+                # `Not(IsTurnOf(You))` is "an opponent's turn" (Maddening Imp).
+                bare = re.sub(r"Not\(Box::new\(\s*(?:crate::effect::)?Predicate::IsTurnOf\((?:crate::effect::)?PlayerRef::You\)\)\)", "", cond)
+                if re.search(r"IsTurnOf\((?:crate::effect::)?PlayerRef::You\)", bare):
+                    flags.add("your_turn")
+                if re.search(r"CurrentStepIs\((?:crate::game::(?:types::)?)?TurnStep::Upkeep\)|upkeep_only\(\)", cond):
+                    flags.add("upkeep")
+                if "upkeep_only()" in cond:  # atq.rs: IsTurnOf(You) + the upkeep step
                     flags.add("your_turn")
         out.append(frozenset(flags))
     return out
@@ -239,6 +249,10 @@ def timing_mismatch(code, ref):
     stands for a printed `your_turn` when nothing printed asks for sorcery."""
     if not any("sorcery" in f for f in ref) and any("your_turn" in f for f in ref):
         code = [frozenset(("your_turn" if x == "sorcery" else x) for x in f) for f in code]
+    # A step list that merely includes the upkeep ("before attackers are
+    # declared" — Cao Cao) is not an upkeep rider.
+    if not any("upkeep" in f for f in ref):
+        code = [frozenset(x for x in f if x != "upkeep") for f in code]
     return sorted(sorted(f) for f in code) != sorted(sorted(f) for f in ref)
 
 def ability_mana_costs(body):
