@@ -14700,9 +14700,23 @@ impl GameState {
                     if cond.activated_abilities.is_empty() {
                         continue;
                     }
-                    if self.evaluate_requirement_on_card(&cond.host_filter, me, eq.controller) {
-                        out.extend(cond.activated_abilities.iter());
+                    if !self.evaluate_requirement_on_card(&cond.host_filter, me, eq.controller) {
+                        continue;
                     }
+                    // The same gate the layer walk applies to the rider's P/T
+                    // and keywords (`gather_continuous_effects_inner`); an
+                    // ability rider with a `condition` was granted unconditionally.
+                    if let Some(pred) = &cond.condition {
+                        let ctx = crate::game::effects::EffectContext::for_ability(
+                            eq.id,
+                            eq.controller,
+                            None,
+                        );
+                        if !self.evaluate_predicate(pred, &ctx) {
+                            continue;
+                        }
+                    }
+                    out.extend(cond.activated_abilities.iter());
                 }
             }
         }

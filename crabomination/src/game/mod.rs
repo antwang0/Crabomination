@@ -19564,10 +19564,18 @@ impl GameState {
             // (Endless Whispers' "each creature has 'when this dies …'") looks
             // back in time, so gather the grants against the death snapshot.
             let granted = self.statics_granted_dying_triggers(snap);
+            // An until-end-of-turn grant (`Effect::GrantTriggeredAbility`,
+            // Requiem Monolith's "whenever this is dealt damage") rides
+            // `granted_triggers_eot`, which nothing clears at the exit, so it
+            // is still keyed by the snapshot's id here. It reads as a printed
+            // trigger, not `is_granted`: the death path already collected
+            // its dies copy in `remove_to_graveyard_with_triggers`, exactly
+            // as it does the printed one.
             let all = snap
                 .definition
                 .triggered_abilities
                 .iter()
+                .chain(self.granted_triggers(snap.id))
                 .map(|t| (t, false))
                 .chain(granted.iter().map(|t| (t, true)));
             for (ta, is_granted) in all {

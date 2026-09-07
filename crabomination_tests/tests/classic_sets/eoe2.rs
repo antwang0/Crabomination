@@ -136,6 +136,39 @@ fn requiem_monolith_grants_the_damage_trigger() {
     assert_eq!(g.players[0].life, life - 1);
 }
 
+/// CR 603.10a — the grant looks back in time: a ping that kills the creature
+/// still draws. The until-EOT grant lives on `granted_triggers_eot`, which the
+/// dispatcher's LKI walk used to skip (printed and statics-granted only), so
+/// the Monolith's own play line — ping an X/1 — drew nothing.
+#[test]
+fn requiem_monolith_draws_off_a_lethal_ping() {
+    let mut g = two_player_game();
+    let mono = g.add_card_to_battlefield(0, catalog::requiem_monolith());
+    let lion = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    for i in 0..4 {
+        g.players[0].library.push(CardInstance::new(CardId(700 + i), catalog::forest(), 0));
+    }
+    g.decider = Box::new(ScriptedDecider::new(std::iter::repeat_n(
+        DecisionAnswer::Bool(true),
+        4,
+    )));
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mono,
+        ability_index: 0,
+        target: Some(Target::Permanent(lion)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lion).is_none(), "the ping was lethal");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the granted trigger fired from LKI");
+    assert_eq!(g.players[0].life, life - 1);
+}
+
 /// The Bracelet's granted ability is exile-the-Equipment, discounted by the
 /// bearer's power.
 #[test]

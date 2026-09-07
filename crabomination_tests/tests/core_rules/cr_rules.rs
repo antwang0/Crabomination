@@ -541,6 +541,54 @@ fn cr_702_6e_flagged_equip_trigger_fires_through_the_dispatcher() {
         "and not off the host");
 }
 
+/// CR 702.6e / 613 — a host-conditional Equipment rider grants its activated
+/// abilities under the same `condition` gate the layer walk applies to its
+/// P/T and keywords. `granted_abilities_of` read only `host_filter` before
+/// 2026-09-07 (no shipped card sets both, so a pin rather than a card test).
+#[test]
+fn cr_702_6e_conditional_equip_ability_grant_honours_its_condition() {
+    use crabomination::card::{ArtifactSubtype, CardDefinition, CardType, ConditionalEquipBonus, CounterType, EquipBonus, Subtypes};
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{ActivatedAbility, Effect, Predicate, Selector, Value};
+    let make = |condition: Predicate| CardDefinition {
+        name: "Test Rider",
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        equipped_bonus: Some(EquipBonus {
+            conditional: vec![ConditionalEquipBonus {
+                host_filter: R::Creature,
+                condition: Some(condition),
+                activated_abilities: vec![ActivatedAbility {
+                    effect: Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Charge,
+                        amount: Value::ONE,
+                    },
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    for (pred, granted) in [(Predicate::False, false), (Predicate::True, true)] {
+        let mut g = two_player_game();
+        let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let rider = g.add_card_to_battlefield(0, make(pred));
+        g.battlefield_find_mut(rider).unwrap().attached_to = Some(host);
+        let r = g.perform_action(GameAction::ActivateAbility {
+            card_id: host,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        });
+        assert_eq!(r.is_ok(), granted, "condition {granted}: {r:?}");
+    }
+}
+
 // ── CR 510.2 — combat damage to a creature fires triggers ─────────────────────
 
 /// `DealsCombatDamageToCreature` triggers (CR 510.2) are now dispatched from
