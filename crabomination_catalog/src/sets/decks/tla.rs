@@ -5090,7 +5090,7 @@ pub fn realm_of_koh() -> CardDefinition {
 }
 
 /// Earthen Ally — {G} */2 Human Soldier Ally. Gets +1/+0 for each color among
-/// Allies you control. {W}{U}{B}{R}{G}: Earthbend 5.
+/// Allies you control. {2}{W}{U}{B}{R}{G}: Earthbend 5.
 pub fn earthen_ally() -> CardDefinition {
     CardDefinition {
         name: "Earthen Ally",
@@ -5111,7 +5111,7 @@ pub fn earthen_ally() -> CardDefinition {
             base_t: 2,
         }),
         activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            mana_cost: cost(&[generic(2), w(), u(), b(), r(), g()]),
             effect: Effect::Earthbend { n: Value::Const(5) },
             ..Default::default()
         }],

@@ -794,8 +794,10 @@ fn spike_feeder_enters_with_two_counters_and_trades_one_for_life() {
     assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
         .counter_count(CounterType::PlusOnePlusOne), 2, "enters with two +1/+1 counters");
     let life_before = g.players[0].life;
+    // Ability 1 is the free "remove a counter: gain 2 life"; ability 0 is
+    // the printed "{2}, remove a counter: +1/+1 counter on target creature".
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("ability activates");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");

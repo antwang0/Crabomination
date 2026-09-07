@@ -1101,7 +1101,7 @@ fn geier_reach_sanitarium_taps_for_colorless() {
 fn geier_reach_sanitarium_wheel_ability_each_player_loots() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::geier_reach_sanitarium());
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
     // Stock libraries so each player has a card to draw.
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(1, catalog::island());

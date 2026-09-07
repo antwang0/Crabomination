@@ -353,6 +353,8 @@ fn wizards_rockets_sac_for_mana_draws() {
     g.battlefield_find_mut(rockets).unwrap().tapped = false;
     g.add_card_to_library(0, catalog::forest());
     let hand = g.players[0].hand.len();
+    // {X}, {T}, sacrifice at the modelled X = 1.
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: rockets, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate mana ability");

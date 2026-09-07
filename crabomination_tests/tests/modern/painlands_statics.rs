@@ -415,6 +415,7 @@ fn scrapheap_scrounger_returns_itself_exiling_a_creature() {
     let scrap = g.add_card_to_graveyard(0, catalog::scrapheap_scrounger());
     let fodder = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: scrap, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Scrapheap recursion");

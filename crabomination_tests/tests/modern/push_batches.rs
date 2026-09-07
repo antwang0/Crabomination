@@ -2839,6 +2839,7 @@ fn wishclaw_talisman_searches_and_consumes_a_charge_counter() {
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Search(Some(bear)),
     ]));
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: wishclaw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,

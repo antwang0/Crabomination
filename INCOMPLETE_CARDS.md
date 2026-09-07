@@ -462,6 +462,58 @@ Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 | ~~Callaphe, Beloved of the Sea~~ ✅ **FIXED** | thb.rs | "{1} tax on opponents' spells targeting your creatures/enchantments" now wired via the existing `StaticEffect::TaxOpponentSpellsTargeting` (the stale doc claimed `extra_cost_for_spell` couldn't read the cast target — Jubilant Skybonder already proved otherwise). Test `callaphe_taxes_opponent_spells_targeting_your_permanents`. |
 | ~~Siona, Captain of the Pyleas~~ ✅ **FIXED** | thb.rs | "Aura becomes attached → make a 1/1 Soldier" — wired via new `GameEvent::AuraAttached`/`EventKind::AuraAttached` (CR 303.4), emitted when an Aura resolves attached; `EventScope::YourControl` requires the host to be a creature you control. Test `siona_makes_a_soldier_when_aura_attaches_to_your_creature`. |
 
+### Activated-ability costs — a column nobody had, 2026-09-07: 27 shipped cards at the wrong price
+
+`scripts/audit_catalog_stats.py` read a card's *own* mana cost against the
+cache and never an ability's. Manifold Key (above: {1},{T} for a printed
+{3},{T}, a free untap for a printed {1}) was found by hand; the new `abil`
+column reads every `ActivatedAbility` literal's `mana_cost` in the card's
+own `activated_abilities` vec against the oracle's `{cost}: effect` lines
+and compares the mana-bearing multisets. First run: 31 findings, 27 real,
+all fixed in one commit (tests re-pinned to the printed costs):
+
+| Card | Was | Printed |
+|---|---|---|
+| Elvish Reclaimer | {T}, sac a land | {2}, {T}, sac a land |
+| Geier Reach Sanitarium | {1}, {T} | {2}, {T} |
+| Yavimaya Elder | {2}{G}, sac | {2}, sac |
+| Wishclaw Talisman | {T} | {1}, {T} |
+| Golgari Grave-Troll | {T}, remove four counters | {1}, remove one counter |
+| Pyrite Spellbomb | {T}, sac: 2 damage · {R}, sac: draw | {R}, sac: 2 damage · {1}, sac: draw |
+| Soul Snare | {1}, sac | {W}, sac |
+| Scrapheap Scrounger | {1} | {1}{B} |
+| Oblivion Stone | {10}, {T}, sac | {5}, {T}, sac |
+| Kitsa, Otterball Elite | {2}{U}, {T} | {2}, {T} |
+| Elvish Clancaller | {3}{G}{G}, {T} | {4}{G}{G}, {T} |
+| Earthen Ally | {W}{U}{B}{R}{G} | {2}{W}{U}{B}{R}{G} |
+| Dynavolt Tower | {5}, {T}, 5 energy: 4 damage | {T}, 5 energy: 3 damage |
+| Woodweaver's Puzzleknot | {2}, sac | {2}{G}, sac |
+| Soul-Guide Lantern | a different card (no ETB; repeatable {T}: exile opponents' graveyards; {2},{T},sac: exile all + draw) | ETB exile target graveyard card; {T}, sac: exile opponents' graveyards; {1}, {T}, sac: draw |
+| Cankerbloom | {G}, sac | {1}, sac |
+| Hedron Archive | {T}, sac: draw two | {2}, {T}, sac: draw two |
+| Birthing Pod | {1}{G}, {T}, sac | {1}{G/P}, {T}, sac (the engine pays Phyrexian mana) |
+| Pteramander | {7}: adapt 4 | {7}{U}: adapt 4 |
+| Haywire Mite | {2}, sac | {G}, sac |
+| Spike Feeder | the {2} counter-move ability absent | both printed abilities |
+| Frenzied Arynx | {3}{R}{G} | {4}{R}{G} |
+| Ember Hauler | {2}, sac | {1}, sac |
+| Tome of the Infinite | {2}, {T} (a synthesized cantrip under an Alchemy name) | {U}, {T}; the draw stands in for conjure |
+| Waker of Waves | {2}{U}{U}, discard | {1}{U}, discard |
+| Witch's Cauldron | {T}, sac: gain the toughness, draw | {1}{B}, {T}, sac: gain 1, draw |
+| Tome of the Guildpact | an invented "{2}, {T}: draw" under a real name | "whenever you cast a multicolored spell, draw"; {T}: add any colour |
+| Wizard's Rockets | {T}, sac: one mana of any colour (free) | {X}, {T}, sac: X mana — modelled at X = 1 ({1}), the documented approximation and the one row the column still lists |
+
+The four false positives taught the reader its three rules: an
+ability-word prefix ("Delirium — {2}{G}{G}: ..") is still an activation
+line; a helper call among the vec's elements (`tutor_chain(6, ..)`, a mana
+ability) means the card cannot be compared at all — never "the literals
+beside it are the whole card"; and `generic_cost_value: Some(..)` is a
+value-defined {X} (Bargaining Table). **The lesson is the Manifold Key
+one at scale: the cost column was clean on 17,229 cards while the
+ability costs had never been read, and 27 of them were wrong — audit the
+column nobody has run before trusting the silence of the ones everybody
+has.**
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

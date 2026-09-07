@@ -432,10 +432,10 @@ pub fn kitsa_otterball_elite() -> CardDefinition {
                 ]),
                 ..Default::default()
             },
-            // {2}{U}, {T}: copy target I/S you control — only at power ≥ 3.
+            // {2}, {T}: copy target I/S you control — only at power ≥ 3.
             ActivatedAbility {
                 tap_cost: true,
-                mana_cost: cost(&[generic(2), u()]),
+                mana_cost: cost(&[generic(2)]),
                 condition: Some(Predicate::ValueAtLeast(
                     Value::PowerOf(Box::new(Selector::This)),
                     Value::Const(3),

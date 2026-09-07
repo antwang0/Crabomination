@@ -1792,6 +1792,7 @@ fn elvish_reclaimer_sacrifices_land_to_search_for_one() {
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Search(Some(target_in_lib)),
     ]));
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: reclaimer,
         ability_index: 0,

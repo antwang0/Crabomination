@@ -8116,7 +8116,7 @@ pub fn elvish_reclaimer() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            mana_cost: ManaCost::default(),
+            mana_cost: cost(&[generic(2)]),
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Land,
@@ -10353,7 +10353,7 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
                 energy_cost: 0,
                 discard_cost: None,
                 tap_cost: true,
-                mana_cost: cost(&[generic(1)]),
+                mana_cost: cost(&[generic(2)]),
                 effect: Effect::Seq(vec![
                     Effect::Draw {
                         who: Selector::Player(PlayerRef::EachPlayer),
@@ -12207,7 +12207,7 @@ pub fn yavimaya_elder() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: cost(&[generic(2), g()]),
+            mana_cost: cost(&[generic(2)]),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -15545,6 +15545,7 @@ pub fn wishclaw_talisman() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
             effect: Effect::Seq(vec![
                 Effect::RemoveCounter {
                     what: Selector::This,
@@ -16907,19 +16908,19 @@ pub fn golgari_grave_troll() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
             condition: Some(Predicate::ValueAtLeast(
                 Value::CountersOn {
                     what: Box::new(Selector::This),
                     kind: CounterType::PlusOnePlusOne,
                 },
-                Value::Const(4),
+                Value::Const(1),
             )),
             effect: Effect::Seq(vec![
                 Effect::RemoveCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(4),
+                    amount: Value::Const(1),
                 },
                 Effect::Regenerate {
                     what: Selector::This,
@@ -23095,7 +23096,7 @@ pub fn pyrite_spellbomb() -> CardDefinition {
             ActivatedAbility {
                 energy_cost: 0,
                 discard_cost: None,
-                tap_cost: true,
+                mana_cost: cost(&[r()]),
                 sac_cost: true,
                 effect: Effect::DealDamage {
                     to: target_any(),
@@ -23106,7 +23107,7 @@ pub fn pyrite_spellbomb() -> CardDefinition {
             ActivatedAbility {
                 energy_cost: 0,
                 discard_cost: None,
-                mana_cost: cost(&[r()]),
+                mana_cost: cost(&[generic(1)]),
                 sac_cost: true,
                 effect: Effect::Draw {
                     who: Selector::You,
@@ -25653,7 +25654,7 @@ pub fn soul_snare() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            mana_cost: cost(&[generic(1)]),
+            mana_cost: cost(&[w()]),
             sac_cost: true,
             effect: Effect::Exile {
                 what: target_filtered(
@@ -29237,7 +29238,7 @@ pub fn scrapheap_scrounger() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::CantBlock],
         activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(1)]),
+            mana_cost: cost(&[generic(1), b()]),
             from_graveyard: true,
             sorcery_speed: true,
             exile_other_filter: Some((SelectionRequirement::Creature, 1)),
@@ -50803,7 +50804,7 @@ pub fn all_is_dust() -> CardDefinition {
 }
 
 /// Oblivion Stone — {3} Artifact. {4},{T}: fate counter on target permanent.
-/// {10},{T}, Sacrifice: destroy each nonland permanent without a fate
+/// {5},{T}, Sacrifice: destroy each nonland permanent without a fate
 /// counter, then remove all fate counters from all permanents.
 pub fn oblivion_stone() -> CardDefinition {
     CardDefinition {
@@ -50822,7 +50823,7 @@ pub fn oblivion_stone() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
-                mana_cost: cost(&[generic(10)]),
+                mana_cost: cost(&[generic(5)]),
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Seq(vec![

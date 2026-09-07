@@ -168,16 +168,15 @@ fn dynavolt_tower_pays_mana_and_energy_to_burn() {
     let mut g = two_player_game();
     let tower = g.add_card_to_battlefield(0, catalog::dynavolt_tower());
     g.players[0].energy = 5;
-    g.players[0].mana_pool.add_colorless(5);
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: tower, ability_index: 0,
         target: Some(crabomination::game::types::Target::Player(1)),
         additional_targets: Vec::new(),
         x_value: None, mode: None,
-    }).expect("activatable with {5} + 5 energy");
+    }).expect("activatable with {T} + 5 energy (no mana — it shipped charging {5} until 2026-09-07)");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1_life - 4, "deals 4 to any target");
+    assert_eq!(g.players[1].life, p1_life - 3, "deals 3 to any target");
     assert_eq!(g.players[0].energy, 0, "spent five {{E}}");
 }
 
@@ -280,7 +279,9 @@ fn woodweavers_puzzleknot_etb_and_sac_payoff() {
     cast_creature(&mut g, id);
     assert_eq!(g.players[0].energy, 3, "ETB {{E}}{{E}}{{E}}");
     assert_eq!(g.players[0].life, life + 3, "ETB gain 3");
+    // {2}{G}, sacrifice.
     g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac ability");

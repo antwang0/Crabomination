@@ -267,12 +267,11 @@ pub fn dynavolt_tower() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            mana_cost: cost(&[generic(5)]),
-            effect: Effect::PayEnergy {
+                        effect: Effect::PayEnergy {
                 amount: 5,
                 then: Box::new(Effect::DealDamage {
                     to: target_any(),
-                    amount: Value::Const(4),
+                    amount: Value::Const(3),
                 }),
             },
             once_per_turn: false,
@@ -450,7 +449,7 @@ pub fn woodweavers_puzzleknot() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: cost(&[generic(2)]),
+            mana_cost: cost(&[generic(2), g()]),
             effect: payoff(),
             once_per_turn: false,
             sorcery_speed: false,

@@ -3884,7 +3884,7 @@ fn final_payment_destroys_creature_or_planeswalker() {
 // ── Witch's Cauldron (modern_decks push) ───────────────────────────────
 
 #[test]
-fn witchs_cauldron_sac_gains_two_life_and_draws() {
+fn witchs_cauldron_sac_gains_one_life_and_draws() {
     let mut g = two_player_game();
     let cauldron = g.add_card_to_battlefield(0, catalog::witchs_cauldron());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -3893,13 +3893,16 @@ fn witchs_cauldron_sac_gains_two_life_and_draws() {
 
     let life_before = g.players[0].life;
     let hand_before = g.players[0].hand.len();
+    // {1}{B}, {T}, sacrifice a creature.
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: cauldron,
         ability_index: 0,
         target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Cauldron activation");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
+    assert_eq!(g.players[0].life, life_before + 1, "gained 1 life (printed; it gained the toughness until 2026-09-07)");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
     let bear_dead = !g.battlefield.iter().any(|c| c.id == bear);
     assert!(bear_dead, "bear sacrificed");
@@ -3927,22 +3930,32 @@ fn steady_stance_pumps_three_toughness_and_grants_vigilance() {
     assert!(b.keywords().contains(&Keyword::Vigilance), "vigilance granted");
 }
 
+/// The printed Tome: "{T}: Add one mana of any color" and "whenever you cast
+/// a multicolored spell, draw a card" (it was an invented "{2}, {T}: draw"
+/// until 2026-09-07).
 #[test]
-fn tome_of_the_guildpact_activation_draws_a_card() {
+fn tome_of_the_guildpact_taps_for_any_color_and_draws_on_a_multicolored_cast() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let tome = g.add_card_to_battlefield(0, catalog::tome_of_the_guildpact());
     g.clear_sickness(tome);
-    g.players[0].mana_pool.add_colorless(2);
-    let hand_before = g.players[0].hand.len();
-
+    let pool_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
         card_id: tome,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Tome activation");
-    drain_stack(&mut g);
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Tome taps for mana");
+    assert_eq!(g.players[0].mana_pool.total(), pool_before + 1, "one mana added");
 
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+    let helix = g.add_card_to_hand(0, catalog::lightning_helix());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: helix, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lightning Helix castable");
+    drain_stack(&mut g);
+    // Hand: -1 for the Helix cast, +1 for the Tome's draw.
+    assert_eq!(g.players[0].hand.len(), hand_before, "the multicolored cast drew a card");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

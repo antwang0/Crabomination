@@ -389,23 +389,20 @@ pub fn chromatic_star() -> CardDefinition {
     }
 }
 
-/// Soul-Guide Lantern — {1} Artifact. {T}: target opponent exiles a card
-/// from their graveyard. {2}, {T}, Sacrifice this: Each player exiles
-/// each card from their graveyard. Draw a card.
+/// Soul-Guide Lantern — {1} Artifact. "When this enters, exile target card
+/// from a graveyard. / {T}, Sacrifice this: Exile each opponent's graveyard.
+/// / {1}, {T}, Sacrifice this: Draw a card."
 ///
-/// The first ability is approximated as "exile every card from each
-/// opponent's graveyard" (the engine has no "let opponent pick" exile
-/// primitive yet) — strictly more powerful but the typical line is
-/// against an opponent with one exile-target anyway, where this is
-/// gameplay-equivalent. The second uses `sac_cost: true` for the
-/// activation cost.
+/// Shipped until 2026-09-07 as a different card: no ETB, a repeatable
+/// un-sacrificed "{T}: exile each opponent's graveyard", and "{2}, {T},
+/// sacrifice: exile every graveyard and draw".
 pub fn soul_guide_lantern() -> CardDefinition {
     CardDefinition {
         name: "Soul-Guide Lantern",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![
-            // {T}: target opponent exiles a card from their graveyard.
+            // {T}, Sacrifice this artifact: Exile each opponent's graveyard.
             ActivatedAbility {
                 energy_cost: 0,
                 discard_cost: None,
@@ -421,7 +418,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
                 },
                 once_per_turn: false,
                 sorcery_speed: false,
-                sac_cost: false,
+                sac_cost: true,
                 condition: None,
                 life_cost: 0,
                 from_graveyard: false,
@@ -433,26 +430,13 @@ pub fn soul_guide_lantern() -> CardDefinition {
                 from_hand: false,
                 ..Default::default()
             },
-            // {2}, {T}, Sac: Each player exiles their graveyard, you draw.
+            // {1}, {T}, Sacrifice this artifact: Draw a card.
             ActivatedAbility {
                 energy_cost: 0,
                 discard_cost: None,
                 tap_cost: true,
-                mana_cost: cost(&[generic(2)]),
-                effect: Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::CardsInZone {
-                            who: PlayerRef::EachPlayer,
-                            zone: Zone::Graveyard,
-                            filter: SelectionRequirement::Any,
-                        },
-                        to: ZoneDest::Exile,
-                    },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                ]),
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                 once_per_turn: false,
                 sorcery_speed: false,
                 sac_cost: true,
@@ -468,6 +452,17 @@ pub fn soul_guide_lantern() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        // When this artifact enters, exile target card from a graveyard.
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(
+                crate::card::EventKind::EntersBattlefield,
+                crate::card::EventScope::SelfSource,
+            ),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::InGraveyard),
+                to: ZoneDest::Exile,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -495,7 +490,7 @@ pub fn cankerbloom() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: cost(&[g()]),
+            mana_cost: cost(&[generic(1)]),
             effect: Effect::Seq(vec![
                 Effect::Destroy {
                     what: target_filtered(
@@ -975,6 +970,7 @@ pub fn hedron_archive() -> CardDefinition {
                 energy_cost: 0,
                 discard_cost: None,
                 tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
                 sac_cost: true,
                 effect: Effect::Draw {
                     who: Selector::You,
@@ -1364,14 +1360,13 @@ pub fn disrupting_scepter() -> CardDefinition {
 /// it can't fire as a free tutor.
 pub fn birthing_pod() -> CardDefinition {
     use crate::effect::Predicate;
-    use crate::mana::g;
     CardDefinition {
         name: "Birthing Pod",
         cost: cost(&[generic(3), phyrexian(Color::Green)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            mana_cost: cost(&[generic(1), g()]),
+            mana_cost: cost(&[generic(1), phyrexian(Color::Green)]),
             // "Activate only as a sorcery." — the rider was missing, so the
             // Pod was an instant-speed sacrifice outlet.
             sorcery_speed: true,

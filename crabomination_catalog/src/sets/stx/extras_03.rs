@@ -890,7 +890,7 @@ pub fn waker_of_waves() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: cost(&[generic(2), u(), u()]),
+            mana_cost: cost(&[generic(1), u()]),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
@@ -1362,7 +1362,7 @@ pub fn witchs_cauldron() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            mana_cost: ManaCost::default(),
+            mana_cost: cost(&[generic(1), b()]),
             // Approximate "sacrifice a creature" as part of the effect
             // body: at resolution, sacrifice one creature you control
             // (using SacrificeAndRemember so we capture its toughness
@@ -1377,7 +1377,7 @@ pub fn witchs_cauldron() -> CardDefinition {
                 },
                 Effect::GainLife {
                     who: Selector::You,
-                    amount: Value::SacrificedToughness,
+                    amount: Value::Const(1),
                 },
                 Effect::Draw {
                     who: Selector::You,
@@ -1445,7 +1445,9 @@ pub fn steady_stance() -> CardDefinition {
 // ── Tome of the Guildpact (synthesised STX colorless utility) ──────────────
 
 /// Tome of the Guildpact — {5} Artifact (synthesised STX colorless
-/// utility). "{2}, {T}: Draw a card."
+/// utility). Printed: "Whenever you cast a multicolored spell, draw a card.
+/// {T}: Add one mana of any color." Shipped until 2026-09-07 as an invented
+/// "{2}, {T}: Draw a card." under the real name; now the printed card.
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A 4-mana-rate cantrip
 /// rock that turns over time into card velocity. Wired as a single
@@ -1463,27 +1465,21 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
             ..Default::default()
         },
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
             tap_cost: true,
-            mana_cost: cost(&[generic(2)]),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
             ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Multicolored,
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         ..Default::default()
     }

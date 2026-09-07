@@ -1306,7 +1306,7 @@ fn haywire_mite_sac_destroys_artifact_and_gains_life() {
     let opp_ring = g.add_card_to_battlefield(1, catalog::sol_ring());
     let mite = g.add_card_to_battlefield(0, catalog::haywire_mite());
     g.clear_sickness(mite);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: mite,
@@ -1947,7 +1947,7 @@ fn merfolk_skydiver_counters_on_entry_then_proliferates_for_five() {
     );
 }
 
-/// Pteramander's `{7}: Adapt 4` puts four +1/+1 counters on it (1/1 → 5/5)
+/// Pteramander's `{7}{U}: Adapt 4` puts four +1/+1 counters on it (1/1 → 5/5)
 /// when it has none; a second activation is a no-op (CR 702.108).
 #[test]
 fn pteramander_adapt_four_then_noop_when_already_adapted() {
@@ -1958,6 +1958,7 @@ fn pteramander_adapt_four_then_noop_when_already_adapted() {
     };
     assert_eq!(count(&g), (1, 1));
     g.players[0].mana_pool.add_colorless(7);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Adapt activatable");
@@ -1966,6 +1967,7 @@ fn pteramander_adapt_four_then_noop_when_already_adapted() {
 
     // Second adapt: it already has counters, so nothing happens.
     g.players[0].mana_pool.add_colorless(7);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Adapt re-activatable (resolves to nothing)");
@@ -2336,11 +2338,11 @@ fn chromatic_star_sacrifices_for_mana_and_cantrips_on_leave() {
         "Star's leaves-the-battlefield trigger should draw a card");
 }
 
-/// Soul-Guide Lantern's first ability exiles a card from each opponent's
-/// graveyard (approximation of "target opponent exiles one"). For the
-/// 2-player demo it's gameplay-equivalent.
+/// Soul-Guide Lantern's first ability — "{T}, Sacrifice this artifact: Exile
+/// each opponent's graveyard" — exiles the opponent's graveyard and costs the
+/// Lantern (it was a repeatable, un-sacrificed tap until 2026-09-07).
 #[test]
-fn soul_guide_lantern_first_ability_exiles_from_opponent_graveyard() {
+fn soul_guide_lantern_first_ability_exiles_opponents_graveyard() {
     let mut g = two_player_game();
     let lantern = g.add_card_to_battlefield(0, catalog::soul_guide_lantern());
     g.clear_sickness(lantern);
@@ -2358,12 +2360,14 @@ fn soul_guide_lantern_first_ability_exiles_from_opponent_graveyard() {
     assert!(g.exile.iter().any(|c| c.id == trash),
         "Opponent's graveyard card should be in exile");
     assert!(!g.players[1].graveyard.iter().any(|c| c.id == trash));
+    assert!(!g.battlefield.iter().any(|c| c.id == lantern), "the Lantern is sacrificed");
 }
 
-/// Soul-Guide Lantern's second ability exiles every player's graveyard,
-/// sacrifices itself, and draws a card.
+/// Soul-Guide Lantern's second ability — "{1}, {T}, Sacrifice this artifact:
+/// Draw a card" — draws and touches no graveyard (it exiled every graveyard
+/// for {2} until 2026-09-07).
 #[test]
-fn soul_guide_lantern_second_ability_clears_graveyards_and_draws() {
+fn soul_guide_lantern_second_ability_sacrifices_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let lantern = g.add_card_to_battlefield(0, catalog::soul_guide_lantern());
@@ -2378,7 +2382,7 @@ fn soul_guide_lantern_second_ability_clears_graveyards_and_draws() {
     let card = g.players[1].library.remove(pos);
     g.players[1].graveyard.push(card);
 
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::ActivateAbility {
@@ -2386,9 +2390,9 @@ fn soul_guide_lantern_second_ability_clears_graveyards_and_draws() {
     .expect("Lantern's sac ability activates");
     drain_stack(&mut g);
 
-    // Both graveyards are cleared (modulo the sacrificed Lantern itself).
-    assert!(g.exile.iter().any(|c| c.id == p0_card));
-    assert!(g.exile.iter().any(|c| c.id == p1_card));
+    // Neither graveyard is touched by the draw ability.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == p0_card));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == p1_card));
     assert!(!g.battlefield.iter().any(|c| c.id == lantern),
         "Lantern is sacrificed");
     assert_eq!(g.players[0].hand.len(), hand_before + 1,

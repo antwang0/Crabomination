@@ -395,8 +395,10 @@ fn golgari_grave_troll_enters_with_x_plus_one_counters() {
     assert_eq!((t.power, t.toughness), (3, 3), "0/0 base + three +1/+1 counters = 3/3");
 }
 
+/// "{1}, Remove a +1/+1 counter from this creature: Regenerate this
+/// creature." It shipped as "{T}, remove four counters" until 2026-09-07.
 #[test]
-fn golgari_grave_troll_removes_four_counters_to_regenerate() {
+fn golgari_grave_troll_pays_one_and_a_counter_to_regenerate() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let troll = g.add_card_to_battlefield(0, catalog::golgari_grave_troll());
@@ -406,12 +408,13 @@ fn golgari_grave_troll_removes_four_counters_to_regenerate() {
         c.add_counters(CounterType::PlusOnePlusOne, 5);
     }
     g.clear_sickness(troll);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: troll, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("regenerate ability activatable with 5 counters");
+    }).expect("regenerate ability activatable with {1} and a counter");
     drain_stack(&mut g);
     let c = g.battlefield_find(troll).expect("troll still here");
-    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "four counters removed");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 4, "one counter removed");
     assert_eq!(c.regeneration_shields, 1, "gained a regeneration shield");
 }
 

@@ -282,8 +282,9 @@ pub fn banish_from_edoras() -> CardDefinition {
 
 /// Wizard's Rockets — {1} Artifact. Enters tapped. {X}, {T}, Sacrifice: add X
 /// mana in any combination of colors. When it's put into a graveyard from the
-/// battlefield, draw a card. (The X-mana ability is approximated as a single
-/// any-color mana to keep within the activated-mana-ability primitive.)
+/// battlefield, draw a card. (The X-mana ability is approximated at X = 1:
+/// {1}, {T}, sacrifice for one mana of any colour — a colour filter, as the
+/// printed card is at X = 1. It shipped with no mana cost until 2026-09-07.)
 pub fn wizards_rockets() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     use crate::effect::ManaPayload;
@@ -299,6 +300,7 @@ pub fn wizards_rockets() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
             sac_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,

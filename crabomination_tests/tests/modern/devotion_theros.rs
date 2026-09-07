@@ -727,10 +727,11 @@ fn pyrite_spellbomb_deals_two_to_a_player() {
     let mut g = two_player_game();
     let bomb = g.add_card_to_battlefield(0, catalog::pyrite_spellbomb());
     g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: bomb, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
-        .expect("{T},Sac: 2 damage to any target");
+        .expect("{R},Sac: 2 damage to any target");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 2);
 }
@@ -1003,11 +1004,11 @@ fn soul_snare_exiles_an_attacker() {
     g.priority.player_with_priority = 1;
     g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(0) }])
         .expect("declare attacker");
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: snare, ability_index: 0, target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None , mode: None})
-        .expect("{1},Sac: exile attacking creature");
+        .expect("{W},Sac: exile attacking creature");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == attacker), "attacking creature exiled");
 }

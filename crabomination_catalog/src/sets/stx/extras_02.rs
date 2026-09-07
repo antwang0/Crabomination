@@ -1776,7 +1776,9 @@ pub fn inscription_of_ruin() -> CardDefinition {
 
 /// Tome of the Infinite — {2}{U} Legendary Artifact (STX-flavor).
 ///
-/// "When this enters, scry 1. / {2}, {T}: Draw a card."
+/// Printed (Alchemy): "{U}, {T}: Conjure a random card from its spellbook into
+/// your hand." Conjure has no primitive, so the draw stands in — at the
+/// printed {U}, {T} (it shipped at {2}, {T} until 2026-09-07).
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A cheap card-velocity rock
 /// in the Hall of Oracles / Letter of Acceptance line. Both abilities
@@ -1797,7 +1799,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            mana_cost: cost(&[generic(2)]),
+            mana_cost: cost(&[u()]),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

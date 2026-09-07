@@ -266,7 +266,7 @@ pub fn pteramander() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            mana_cost: cost(&[generic(7)]),
+            mana_cost: cost(&[generic(7), u()]),
             effect: crate::effect::shortcut::adapt(4),
             ..Default::default()
         }],
@@ -609,7 +609,7 @@ pub fn haywire_mite() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: cost(&[generic(2)]),
+            mana_cost: cost(&[g()]),
             effect: Effect::Seq(vec![
                 Effect::Destroy {
                     what: target_filtered(
@@ -2524,7 +2524,33 @@ pub fn spike_feeder() -> CardDefinition {
             ..Default::default()
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        activated_abilities: vec![ActivatedAbility {
+        activated_abilities: vec![
+            // {2}, Remove a +1/+1 counter from this creature: Put a +1/+1
+            // counter on target creature. (Absent until 2026-09-07.)
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                condition: Some(crate::effect::Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    Value::Const(1),
+                )),
+                effect: Effect::Seq(vec![
+                    Effect::RemoveCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::AddCounter {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
             // "Remove a +1/+1 counter" is the cost — gate on having one so
@@ -3000,7 +3026,7 @@ pub fn frenzied_arynx() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            mana_cost: cost(&[generic(3), r(), g()]),
+            mana_cost: cost(&[generic(4), r(), g()]),
             effect: Effect::PumpPT {
                 what: Selector::This,
                 power: Value::Const(2),
@@ -3664,7 +3690,7 @@ pub fn ember_hauler() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            mana_cost: cost(&[generic(2)]),
+            mana_cost: cost(&[generic(1)]),
             sac_cost: true,
             effect: Effect::DealDamage {
                 to: target_any(),

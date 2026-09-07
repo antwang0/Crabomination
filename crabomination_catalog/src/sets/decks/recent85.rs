@@ -83,7 +83,7 @@ pub fn elvish_clancaller() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(3), g(), g()]),
+            mana_cost: cost(&[generic(4), g(), g()]),
             tap_cost: true,
             effect: Effect::Search {
                 who: PlayerRef::You,

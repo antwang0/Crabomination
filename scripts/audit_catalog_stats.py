@@ -136,6 +136,103 @@ def vec_after(body, i):
         k += 1
     return body[j + 5:k - 1]
 
+def bracket_span(body, i):
+    """`body[i]` is an opening `[`/`{`/`(`; the index one past its match."""
+    pairs = {"[": "]", "{": "}", "(": ")"}
+    close, d, k = pairs[body[i]], 1, i + 1
+    while k < len(body) and d:
+        if body[k] == body[i]: d += 1
+        elif body[k] == close: d -= 1
+        k += 1
+    return k
+
+def ability_mana_costs(body):
+    """The mana cost of every `ActivatedAbility { .. }` literal in the card's
+    own `activated_abilities: vec![..]`, each as `norm()`'s symbol tuple; a
+    literal with no `mana_cost:` (or `ManaCost::default()`) reads `()`. Only
+    the literal's own top-level field is read — a `cost(&[..])` nested in its
+    effect (a `MayPay`) is not the ability's cost. `None` when the field is
+    absent or every ability is a helper call the table cannot open. Found
+    Manifold Key (2026-09-07): the card's cost was right and both abilities
+    carried the Voltaic Key costs it was written from."""
+    m = own_field(body, r"activated_abilities:")
+    if m is None:
+        return None
+    vec = vec_after(body, m.start())
+    if vec is None:
+        return None
+    # A helper call among the elements (`tutor_chain(6, ..)`, a mana
+    # ability) is an ability this scan cannot open: compare nothing rather
+    # than read the literals beside it as the whole card (Cateran Overlord,
+    # Shifting Woodland read that way at the first run).
+    for item in top_level_items(vec):
+        if item.strip() and not item.strip().startswith("ActivatedAbility {"):
+            return None
+    out, i = [], 0
+    while True:
+        j = vec.find("ActivatedAbility {", i)
+        if j < 0:
+            break
+        end = bracket_span(vec, j + len("ActivatedAbility "))
+        lit = vec[j:end]
+        i = end
+        # The literal's own `mana_cost:` at depth 1: skip text inside any
+        # nested braces/brackets before looking for it.
+        depth, k, found = 0, len("ActivatedAbility {"), None
+        while k < len(lit):
+            c = lit[k]
+            if c in "{[(":
+                depth += 1
+            elif c in "}])":
+                depth -= 1
+            elif depth == 0 and lit.startswith("mana_cost:", k):
+                found = k
+                break
+            k += 1
+        if found is None:
+            # `generic_cost_value: Some(..)` is a value-defined {X} (Bargaining
+            # Table's "X is the number of cards in an opponent's hand").
+            out.append(("{X}",) if re.search(r"generic_cost_value:\s*Some", lit) else ())
+            continue
+        mc = re.match(r"mana_cost:\s*cost\(&\[", lit[found:])
+        if mc:
+            a = found + mc.end() - 1
+            args = lit[a + 1:bracket_span(lit, a) - 1]
+            syms = [sym(c) for c in re.split(r",(?![^()]*\))", args) if c.strip()]
+            if not all(syms):
+                return None
+            out.append(norm("".join(syms)))
+        elif re.match(r"mana_cost:\s*ManaCost::default\(\)", lit[found:]):
+            out.append(())
+        else:
+            return None
+    return out
+
+# An oracle activation line: `{cost}[, {cost}...]: effect`, with an optional
+# ability-word prefix ("Delirium — {2}{G}{G}: .."). Reminder text is
+# stripped first — "Cycling {2} ({2}, Discard this card: Draw a card.)" would
+# otherwise read as a {2} ability the code spells as a `cycling` field.
+_ORACLE_ACT = re.compile(r"^(?:[A-Z][a-z]+ — )?(\{[^:\n]*?):\s")
+
+def ref_ability_mana_costs(card, face=None):
+    """The mana-bearing activation costs the oracle prints, as `norm()`
+    tuples — `{T}`-only, `{Q}` and `{E}` costs drop to `()` and are then
+    ignored by the comparison, since the code's mana abilities are helper
+    calls the literal scan never sees."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    out = []
+    for line in text.split("\n"):
+        m = _ORACLE_ACT.match(line.strip())
+        if not m:
+            continue
+        cost = m.group(1)
+        syms = [s for s in re.findall(r"\{[^}]+\}", cost) if s not in ("{T}", "{Q}", "{E}")]
+        out.append(norm("".join(syms)))
+    return out
+
 def toplevel_keywords(body):
     """Same rule as `toplevel_cost_args`: the card's own literal, not a bound
     one's."""
@@ -554,7 +651,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -652,6 +749,18 @@ def audit():
                     code_supers = set(ST_VARIANT.findall(stv))
                     if code_types and code_supers != ref_supers:
                         d["st"].append((tag, sorted(code_supers), sorted(ref_supers)))
+            # activated-ability mana costs: the multiset of the card's
+            # mana-bearing activation costs against the oracle's. Only
+            # compared when the code's literal count matches the oracle's
+            # activation-line count, so a helper-built ability (a mana
+            # ability, an `equip`) does not read as a missing one.
+            abil = ability_mana_costs(body)
+            ref_abil = ref_ability_mana_costs(card, face)
+            if abil is not None and ref_abil is not None and len(abil) == len(ref_abil):
+                got_ab = sorted(a for a in abil if a)
+                ref_ab = sorted(a for a in ref_abil if a)
+                if got_ab != ref_ab:
+                    d["abil"].append((tag, ["".join(a) or "{0}" for a in abil], ["".join(a) or "{0}" for a in ref_abil]))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -668,21 +777,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}")
-        print("-" * 56)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}")
+        print("-" * 62)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 56)
+        print("-" * 62)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 
