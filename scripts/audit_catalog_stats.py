@@ -255,6 +255,58 @@ def timing_mismatch(code, ref):
         code = [frozenset(x for x in f if x != "upkeep") for f in code]
     return sorted(sorted(f) for f in code) != sorted(sorted(f) for f in ref)
 
+def ability_tap_sac(body):
+    """Per literal, which of the non-mana cost halves it declares: `tap`
+    (`tap_cost: true`) and `sac` (`sac_cost: true`, the self-sacrifice)."""
+    lits = ability_literals(body)
+    if lits is None:
+        return None
+    out = []
+    for lit in lits:
+        flags = set()
+        for field, flag in (("tap_cost", "tap"), ("sac_cost", "sac")):
+            k = literal_depth1_field(lit, field + ":")
+            if k is not None and re.match(field + r":\s*true", lit[k:]):
+                flags.add(flag)
+        # A self-sacrifice spelled as the effect's first step (the fetchlands'
+        # `Move { This -> Graveyard }`) is the same shape as a cost here.
+        if re.search(r"Move \{\s*what: Selector::This,\s*to: ZoneDest::Graveyard|Sacrifice \{\s*what: Selector::This", lit):
+            flags.add("sac")
+        out.append(frozenset(flags))
+    return out
+
+def ref_ability_tap_sac(card, face=None):
+    """Per oracle activation line, the `{T}` and "Sacrifice this ..." halves of
+    its cost (the text before the colon)."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    out = []
+    for line in text.split("\n"):
+        m = _ORACLE_ACT.match(line.strip())
+        if not m:
+            continue
+        cost = m.group(1)
+        flags = set()
+        if "{T}" in cost:
+            flags.add("tap")
+        # "Sacrifice Kagemaro:" names the card by its pre-comma half;
+        # "Sacrifice two lands and this artifact" is a self-sacrifice too.
+        short = re.escape(card.get("name", "\0").split(",")[0])
+        self_sac = r"[Ss]acrifice (?:[^:.]* and )?(?:this|~|" + short + r")"
+        if re.search(self_sac, cost):
+            flags.add("sac")
+        # "{2}{W}: Sacrifice this enchantment. Scry 2." — the sacrifice is
+        # the effect's first sentence, and `sac_cost: true` is how the
+        # catalog spells that shape (the difference is only visible to a
+        # response); accept it.
+        effect = line.strip()[m.end():]
+        if re.match(self_sac, effect):
+            flags.add("sac")
+        out.append(frozenset(flags))
+    return out
+
 def ability_mana_costs(body):
     """The mana cost of every `ActivatedAbility { .. }` literal in the card's
     own `activated_abilities: vec![..]`, each as `norm()`'s symbol tuple; a
@@ -760,7 +812,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -877,6 +929,13 @@ def audit():
             if tim is not None and ref_tim is not None and len(tim) == len(ref_tim):
                 if timing_mismatch(tim, ref_tim):
                     d["timing"].append((tag, [sorted(f) or ["-"] for f in tim], [sorted(f) or ["-"] for f in ref_tim]))
+            # {T} / "Sacrifice this" halves of the cost against tap_cost /
+            # sac_cost, as multisets, same gate.
+            ts = ability_tap_sac(body)
+            ref_ts = ref_ability_tap_sac(card, face)
+            if ts is not None and ref_ts is not None and len(ts) == len(ref_ts):
+                if sorted(sorted(f) for f in ts) != sorted(sorted(f) for f in ref_ts):
+                    d["tapsac"].append((tag, [sorted(f) or ["-"] for f in ts], [sorted(f) or ["-"] for f in ref_ts]))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -893,21 +952,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}")
-        print("-" * 68)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}")
+        print("-" * 74)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 68)
+        print("-" * 74)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 

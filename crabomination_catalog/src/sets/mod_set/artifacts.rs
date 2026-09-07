@@ -642,7 +642,7 @@ pub fn contagion_clasp() -> CardDefinition {
     }
 }
 
-/// Throne of Geth — {2} Artifact. `{T}, Sacrifice this artifact: Proliferate.`
+/// Throne of Geth — {2} Artifact. `{T}, Sacrifice an artifact: Proliferate.`
 pub fn throne_of_geth() -> CardDefinition {
     CardDefinition {
         name: "Throne of Geth",
@@ -652,7 +652,9 @@ pub fn throne_of_geth() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            sac_cost: true,
+            // "Sacrifice an artifact": another artifact (`sac_other_filter` cannot
+            // name the source; until 2026-09-07 the Throne always sacrificed itself).
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
             effect: Effect::Proliferate,
             ..Default::default()
         }],

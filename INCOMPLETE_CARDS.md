@@ -539,6 +539,28 @@ merely includes the upkeep (Cao Cao's "before attackers are declared") is
 not an upkeep rider; and the old "activate only as a sorcery" printings
 (Soul Conduit) are not the current oracle.
 
+### The `{T}` and "Sacrifice this" halves of a cost — the third column, ten more
+
+`tapsac` reads each literal's `tap_cost` / `sac_cost` (a self-sacrifice
+spelled as the effect's first `Move { This -> Graveyard }` counts) against
+the `{T}` and "Sacrifice this …" halves of the oracle's cost line (or a
+sacrifice that *is* the effect's first sentence — Hopeful Vigil's shape).
+First run 23 rows; three reader rules later, 13; ten real, fixed:
+
+| Card | Was | Printed |
+|---|---|---|
+| Black Lotus | `{T}`: three mana, **and it stayed** | `{T}, Sacrifice this artifact` |
+| Path to Redemption | `{5}`: exile the enchanted creature, Aura stays | `{5}, Sacrifice this Aura` |
+| Scavenging Ooze, Spectral Sailor, Timmerian Fiends | a `{T}` the oracle never prints — one activation a turn | `{G}` / `{3}{U}` / `{B}{B}{B}, sacrifice` |
+| Knight of the Reliquary | `sac_cost: true` — **the Knight sacrificed itself** to tutor (its doc said so) | `sac_other_filter` on Forest ∨ Plains |
+| Throne of Geth | always sacrificed itself | "Sacrifice an artifact" — another artifact (`sac_other_filter` cannot name the source; a Throne alone still cannot proliferate) |
+| Relic of Progenitus, Metallurgic Summonings, Zombie Assassin | "Exile this" costs spelled as `sac_cost` — the card went to the graveyard | `exile_self_cost: true` |
+
+Residue, three rows: Bronze Tablet (an ante card, the self-exile folded
+into a sacrifice by its doc's own choice), Gemstone Mine (the sacrifice is
+the conditional last step of the effect, printed that way) and Tomb of
+Urami ("Sacrifice all lands you control" includes itself).
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

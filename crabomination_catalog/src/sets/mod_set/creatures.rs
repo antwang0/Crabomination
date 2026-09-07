@@ -3147,7 +3147,6 @@ pub fn spectral_sailor() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             mana_cost: cost(&[generic(3), u()]),
-            tap_cost: true,
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

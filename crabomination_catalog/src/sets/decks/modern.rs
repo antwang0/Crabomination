@@ -8840,14 +8840,9 @@ pub fn etali_primal_storm() -> CardDefinition {
 /// `compute_battlefield` pass injects a layer-7b
 /// `SetPowerToughness(2+N, 2+N)` continuous effect where N is the
 /// total land count across every player's graveyard). The activated
-/// land-tutor uses `sac_cost: true` with the source filtered to
-/// "controller's permanents matching Forest/Plains" approximated as
-/// the activator's own land-typed pick. Approximation: the printed
-/// "sacrifice a Forest or Plains" cost is wired as a generic
-/// `sac_cost: true` (the source itself); the Forest/Plains filter is
-/// dropped — the cube AutoDecider will happily sacrifice the Knight,
-/// which doesn't match printed intent. (A future cost-with-filter
-/// extension would tighten this.)
+/// land-tutor's "sacrifice a Forest or Plains" is `sac_other_filter` on
+/// the two land types (until 2026-09-07 it was `sac_cost: true` — the
+/// Knight sacrificed *itself* to tutor).
 pub fn knight_of_the_reliquary() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -8879,7 +8874,11 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
                     tapped: false,
                 },
             },
-            sac_cost: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasLandType(crate::card::LandType::Forest)
+                    .or(SelectionRequirement::HasLandType(crate::card::LandType::Plains)),
+                1,
+            )),
             ..Default::default()
         }],
         ..Default::default()
@@ -15934,7 +15933,7 @@ pub fn relic_of_progenitus() -> CardDefinition {
                 ]),
                 once_per_turn: false,
                 sorcery_speed: false,
-                sac_cost: true,
+                exile_self_cost: true,
                 condition: None,
                 life_cost: 0,
                 ..Default::default()
@@ -21100,7 +21099,6 @@ pub fn scavenging_ooze() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            tap_cost: true,
             mana_cost: cost(&[g()]),
             effect: Effect::Seq(vec![
                 Effect::AddCounter {

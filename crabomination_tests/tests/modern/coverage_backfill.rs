@@ -2117,11 +2117,14 @@ fn grim_affliction_puts_a_minus_counter() {
         .counter_count(CounterType::MinusOneMinusOne), 1);
 }
 
+/// "{T}, Sacrifice an artifact: Proliferate." — the Throne feeds another
+/// artifact to the cost (until 2026-09-07 it always sacrificed itself).
 #[test]
-fn throne_of_geth_sacrifices_to_proliferate() {
+fn throne_of_geth_sacrifices_an_artifact_to_proliferate() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let throne = g.add_card_to_battlefield(0, catalog::throne_of_geth());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
         .add_counters(CounterType::PlusOnePlusOne, 1);
@@ -2129,7 +2132,8 @@ fn throne_of_geth_sacrifices_to_proliferate() {
         card_id: throne, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activates");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == throne), "Throne sacrificed itself");
+    assert!(g.battlefield.iter().any(|c| c.id == throne), "the Throne stays");
+    assert!(!g.battlefield.iter().any(|c| c.id == ring), "the Ring was sacrificed to the cost");
     assert_eq!(g.battlefield.iter().find(|c| c.id == bear).unwrap()
         .counter_count(CounterType::PlusOnePlusOne), 2, "proliferated the +1/+1 counter");
 }

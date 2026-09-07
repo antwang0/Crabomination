@@ -455,7 +455,7 @@ pub fn zombie_assassin() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            sac_cost: true,
+            exile_self_cost: true,
             exile_other_filter: Some((R::InYourGraveyard, 2)),
             effect: Effect::DestroyNoRegen {
                 what: target_filtered(

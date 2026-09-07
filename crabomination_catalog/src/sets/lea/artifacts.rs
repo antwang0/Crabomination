@@ -53,7 +53,8 @@ pub fn mox_emerald() -> CardDefinition {
     }
 }
 
-/// Black Lotus — {0} Artifact, {T}: Add three mana of any one color
+/// Black Lotus — {0} Artifact, {T}, Sacrifice this artifact: Add three mana of
+/// any one color (it was a reusable Lotus until 2026-09-07).
 pub fn black_lotus() -> CardDefinition {
     CardDefinition {
         name: "Black Lotus",
@@ -69,7 +70,7 @@ pub fn black_lotus() -> CardDefinition {
             },
             once_per_turn: false,
             sorcery_speed: false,
-            sac_cost: false,
+            sac_cost: true,
             condition: None,
             life_cost: 0,
             from_graveyard: false,

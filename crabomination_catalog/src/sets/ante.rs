@@ -181,7 +181,6 @@ pub fn timmerian_fiends() -> CardDefinition {
         toughness: 1,
         ante_only: true,
         activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
             sac_cost: true,
             mana_cost: cost(&[b(), b(), b()]),
             effect: Effect::AnteTopOfLibrary {

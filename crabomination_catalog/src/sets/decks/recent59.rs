@@ -176,7 +176,7 @@ pub fn metallurgic_summonings() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u(), u()]),
-            sac_cost: true,
+            exile_self_cost: true,
             condition: Some(Predicate::SelectorCountAtLeast {
                 sel: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
                 n: Value::Const(6),

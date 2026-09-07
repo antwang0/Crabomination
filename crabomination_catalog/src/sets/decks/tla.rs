@@ -2647,6 +2647,7 @@ pub fn path_to_redemption() -> CardDefinition {
         // still readable when the effect resolves.
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5)]),
+            sac_cost: true,
             sorcery_speed: true,
             effect: Effect::Seq(vec![
                 Effect::Exile {
