@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-07 — the LKI walk dropped until-end-of-turn granted triggers, and a conditional Equipment rider granted its abilities unconditionally](#fixed-2026-09-07--the-lki-walk-dropped-until-end-of-turn-granted-triggers-and-a-conditional-equipment-rider-granted-its-abilities-unconditionally) | 44 |
 | Bugs & robustness | [FIXED 2026-09-07 — the attack and combat-damage hooks dropped `once_per_turn`](#fixed-2026-09-07--the-attack-and-combat-damage-hooks-dropped-once_per_turn) | 36 |
 | Bugs & robustness | [FIXED 2026-09-07 — `triggers_on_equipment` was honoured by two hooks and dropped by the dispatcher](#fixed-2026-09-07--triggers_on_equipment-was-honoured-by-two-hooks-and-dropped-by-the-dispatcher) | 44 |
 | Bugs & robustness | [FIXED 2026-09-07 — "leaves the battlefield" fired only on death, and the untap step minted one trigger for a board](#fixed-2026-09-07--leaves-the-battlefield-fired-only-on-death-and-the-untap-step-minted-one-trigger-for-a-board) | 34 |
@@ -37,6 +38,49 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-07 — the LKI walk dropped until-end-of-turn granted triggers, and a conditional Equipment rider granted its abilities unconditionally
+
+The third find of the consumer-read method, this time as a **consumer x
+source matrix** for the trigger-grant family (printed / `granted_triggers_
+eot` / `GrantTriggeredAbility` statics / `turn_granted_triggers` /
+`equipped_bonus` / `soulbond_bonus` / station bands, against the
+dispatcher, the cast, attack, combat-damage, step and self-ETB hooks, the
+death path and the dispatcher's LKI walk). One cell was a shipped bug:
+`dispatch_triggers_for_events`' `died_card_snapshots` walk read the
+snapshot's printed triggers plus `statics_granted_dying_triggers` and never
+`granted_triggers_eot`, so an until-EOT grant of a kind that fires from LKI
+was dead on the leave. **Requiem Monolith's own play line — grant the
+"whenever this is dealt damage, draw that many and lose that much" and ping
+an X/1 — drew nothing**, because the creature died to the ping and the
+`DealtDamage` copy lives on the EOT list. The map is cleared only at
+cleanup, so the fix is one `.chain(self.granted_triggers(snap.id))` on the
+printed side of the walk (not `is_granted`: the death path already
+collects the EOT dies copy, exactly as it does the printed one).
+`classic_sets::eoe2::requiem_monolith_draws_off_a_lethal_ping`.
+
+The rest of the matrix, so nobody re-walks it: the step, cast and self-ETB
+hooks do not read `granted_triggers_eot` either, and no catalog EOT grant
+is of a kind they own (the 20 `Effect::GrantTriggeredAbility` EOT sites
+are `DealtDamage`, `CreatureDied`, `DealsCombatDamageToPlayer`, `Attacks`,
+`BecomesBlocked`, `PermanentLeavesBattlefield`, `DealtCombatDamage` —
+every one on a hook that reads the list). Permanent-duration grants bake
+onto the definition and reach every consumer. `soulbond_bonus.triggered_
+abilities` is read only by the combat-damage hook, and Tandem Lookout is
+the only card that sets it. `turn_granted_triggers` (`Blocks`,
+`DealsCombatDamageToPlayer`) reaches every consumer through
+`statics_granted_triggers_inner`.
+
+The same read on `EquipBonus`: `ConditionalEquipBonus` carries a
+`condition` the layer walk applies to the rider's P/T and keywords and
+`granted_abilities_of` skipped for the rider's `activated_abilities` (it
+read `host_filter` only). No shipped card sets both — 17 riders, none
+with a `condition` and abilities — so it is pinned by a synthetic
+Equipment, `core_rules::cr_rules::cr_702_6e_conditional_equip_ability_
+grant_honours_its_condition`. `ActivatedAbility`'s ~80 fields were
+censused too: every one is read inside `activate_ability_inner` (the
+single engine consumer; `affordances.rs` dry-runs it, `server/bot.rs` is a
+prefilter), so that family has no parallel walker to drift from.
 
 ## FIXED 2026-09-07 — the attack and combat-damage hooks dropped `once_per_turn`
 

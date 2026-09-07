@@ -30,24 +30,22 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force;
    code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
-   running `cargo build`. Disk: purge `target/debug/incremental` and stale target dirs before a big build; `cargo-llvm-lines` is installed.
-2. **Gates at the tip (PERF Baseline, the `b3f6067b` addendum):** suite 19,271 / 0 / 5, clippy, release-fast typecheck, `--bench` counters identical
-   to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), golden 7/7 unmoved, fresh-seed sweeps 57,600 games / 0 undecided, `audit_stubs` /
-   `audit_incomplete --structural-only` both 0, debug-assertions grid green at `78e57bd2` with the default pilot (33,120 + 1,800 + 680 games).
-3. **Engine, this run (ENGINE_BACKLOG first section):** `triggers_on_equipment` was honoured by the combat-damage and step hooks and *dropped* by the
-   general dispatcher, so Godsend (`Blocks`) and a bestowed Crystalline Nautilus (`BecameTarget`) were dead. A grant is `(host, source, abilities)`
-   now, through all three consumers and both death-path collectors; Kusari-Gama gained the flag, Impending Doom moved onto the Aura's own
-   `EnchantedBySource` trigger. Ir flat on sealed/cube (PERF Log). **Method that found it: read a field's consumers, not the audit columns.** The
-   same read then found the attack / combat-damage hooks dropping `once_per_turn` (Aurelia bought a combat per attack — an unbounded loop in
-   self-play; Vaan fired per dealer) and Phase 1 dropping `dealer_filter` (Cabal Slaver stripped a card off its own hit). Every `EventSpec` field
-   is now read by every hook that owns a kind it is set on; the next family of the shape is `ActivatedAbility` / `StaticAbility` fields.
-4. **Cards/bugs:** `audit_catalog_stats.py` has eight oracle columns (residues in INCOMPLETE_CARDS "Trigger events / scopes / filters"). The
-   `filt` reader is at its floor (602 of 2,840 literals named, 0 mismatches — the multi-line / `Not` / bound / helper rules landed this run);
-   the next column, if any, is a static's *text*. Latent, no shipped card: `once_per_turn` on a *granted* trigger is not gated
-   (ENGINE_BACKLOG first section says how to key it).
-5. **Perf/build:** engine profile FLAT (PERF candidates; the sealed/cube base to quote is now 3,020.7 M / 2,963.7 M at `d04a225d`). Round 68
-   (ML_NOTES) is the default-pilot base; the sim body / horizon is a strength question, not a perf leg.
-
+   running `cargo build`. A cold `profiling-fast` build of `bot_ladder` is 12.5 min here (deps included), the warm engine rebuild 4 min;
+   a detached `setsid nohup` chain survives the tool timeout, a plain background command does not. `cargo-nextest` installs in 5 s.
+2. **Gates at the tip (PERF Baseline, the `1f2cabcb` addendum):** suite 19,273 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
+   identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), fresh-seed sweep 607..609 x three pools 0 undecided, `audit_stubs` /
+   `audit_incomplete --structural-only` both 0. Ir against the run's base: sealed +0.012 % / cube +0.011 %, outcomes identical.
+3. **Engine, this run (ENGINE_BACKLOG first section):** the trigger-grant family read as a **consumer x source matrix** — one dead cell shipped
+   (the dispatcher's LKI walk never read `granted_triggers_eot`, so Requiem Monolith's lethal ping drew nothing) and one latent
+   (`ConditionalEquipBonus.condition` skipped by `granted_abilities_of`). The rest of the matrix is written down there so nobody re-walks it.
+   `ActivatedAbility`'s ~80 fields are single-consumer (`activate_ability_inner`); `TriggerCandidate` / `DelayedTrigger` fields all read.
+   **Next family of the shape:** the cast path's `CardDefinition` cost/timing fields have one engine reader each (`actions.rs`), which is the
+   single-consumer shape — read them for *which* path (`cast_spell` vs a probe-only walker) before filing anything; nothing found so far.
+4. **Cards/bugs:** `audit_catalog_stats.py`'s eight oracle columns are at their floor (INCOMPLETE_CARDS residues). Latent, no shipped card:
+   `once_per_turn` on a granted trigger; an EOT-granted `StepBegins` / `SpellCast` / ETB trigger (those three hooks read no EOT list).
+5. **Perf/build:** engine profile FLAT — the sealed self table at `1f2cabcb` is the `(-271)` shape (PERF candidates, first entry); the base to
+   quote is sealed 3,022,028,711 / cube 2,966,685,176 Ir at `1f2cabcb`. The levers left are bot-side (sim count / horizon, ML_NOTES round 68) and
+   PGO (opt-in). Do not re-read the engine self table without a new device to price.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

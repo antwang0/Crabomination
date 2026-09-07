@@ -2821,6 +2821,28 @@ scaling release-fast selfplay_train --steps 1 --seed 31, --actors 1 / 2 / 4 x 60
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 ```
 
+### 2026-09-07 — the LKI-walk EOT-grant read and the conditional rider gate: addendum at the tip after `1f2cabcb`
+
+One engine commit after the addendum below (ENGINE_BACKLOG, first
+section; the Log's "READ" entry has the Ir A/B). A rules change on the
+dispatcher's died-snapshot walk, priced and flat; the fixed pool is
+byte-identical:
+
+```text
+--bench release-fast (mimalloc): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1);
+        bin_bytes 126,745,328 (+576 B); 276.9 / 290.1 games/s single runs (3 threads, the host's spread)
+Ir      against e52c6191 (the run's base, re-read: sealed 3,021,668,348 / cube 2,966,365,259): sealed 3,022,028,711 (+0.012 %) / cube 2,966,685,176 (+0.011 %),
+        outcome lines identical on both dumps (Log)
+golden  7/7 unmoved
+suite   19,273 / 0 / 5 at 1f2cabcb (two tests added, both failing on the previous engine); audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+gate    cargo check --profile release-fast -p crabomination --bin bot_ladder   clean (the debug-assertions=off typecheck)
+sweep   fresh seeds on the profiling-fast binary of 1f2cabcb (release-fast's opt settings + debuginfo): 607..609 x {sealed, cube, fixed} x --a dflt --b dflt
+        --games 400 --threads 2 = 9 cells / 28,800 games (4,800 / 3,200 / 1,600 a cell), 0 undecided, 0 panics, every rc 0, CRAB_CAP_DIAG=4000 silent
+profile the sealed self table re-read at the tip: the (-271) shape, no new row (Perf candidates, first entry)
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores; a cold profiling-fast bot_ladder is 12m30s here, the warm engine rebuild 3m56s
+```
+
 ### 2026-09-07 — the trigger-hook fixes (`triggers_on_equipment`, `once_per_turn`, `dealer_filter`): addendum at the tip after `b3f6067b`
 
 Four commits after the addendum below (ENGINE_BACKLOG, first two
@@ -3850,6 +3872,27 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### The LKI walk's EOT-grant read and the conditional rider gate READ — sealed default Ir **+0.012 %** / cube **+0.011 %**, outcomes identical
+
+The third rules fix off the consumer-read method (ENGINE_BACKLOG, first
+section): `dispatch_triggers_for_events`' died-snapshot walk chains
+`granted_triggers(snap.id)` beside the printed list (Requiem Monolith's
+lethal ping drew nothing), and `granted_abilities_of` evaluates a
+`ConditionalEquipBonus`'s `condition` before granting its abilities
+(latent, no shipped card). Priced against the tip the run started on
+(`e52c6191`, whose base dumps re-read within 1.3 k / 0.7 k Ir of the
+`78e57bd2` readings below):
+
+```text
+profiling-fast, system allocator, --a dflt --b dflt --games 6 --threads 1 --seed 1
+  sealed  3,021,668,348 -> 3,022,028,711 Ir   (+0.012 %)   72 / 72 decided, outcome lines identical
+  cube    2,966,365,259 -> 2,966,685,176 Ir   (+0.011 %)   48 / 48 decided, outcome lines identical
+```
+
+**FLAT**: one map probe per died snapshot per dispatch (the EOT map is
+empty on nearly every board) and a `condition` read that no rider on
+either pool carries. Kept as correctness.
 
 ### The hook `once_per_turn` / `dealer_filter` gates READ — an `Option<usize>` on the attack and combat-damage tuples: sealed default Ir **+0.033 %** / cube **+0.091 %** against the run's base, outcomes identical
 
@@ -8327,6 +8370,20 @@ on `--decks sealed` (the chains' pool) and on `cube`; the `fixed` bench
 does not carry them. Round 56's second candidate (the 65 % start-score
 reuse) is CLOSED: it was the share of searches the chain runs on, reuse
 is 100 % of runs (`block_census` now prints both).
+
+**THE SEALED SELF TABLE RE-READ AT `1f2cabcb` (the LKI-walk fix tip,
+`cg.cand.sealed.out` in a scratchpad, 3,022,028,711 Ir), so nobody
+re-takes it: the shape of the `(-271)` read below, unmoved.** glibc's
+`_int_free` / `malloc` / `_int_malloc` / `free` 3.40 / 2.51 / 2.31 /
+1.53 % (the system-allocator profile; mimalloc is the shipped one),
+`dispatch_triggers_for_events` self 2.23 % + 0.78 % slice iteration,
+`__memcpy` 2.11 %, `compute_permanent_pass` 1.54 %, `sba_board_scan`
+1.51 %, `gather_continuous_effects_inner` 1.46 %, `perform_action_inner`
+1.36 %, `Arc::clone_from_ref_in` 1.08 % (the CoW unshare), `from_iter`
+0.77 %, `GameState::clone` 0.48 %. Nothing above 0.5 % self that the
+`(-200)`..`(-276)` legs have not already priced to its floor; no new row.
+The floor stands, and the next perf lever remains bot-side (sim count /
+horizon, a strength question) or the build (PGO, opt-in).
 
 **THE CAPPED DEFAULT, READ BY CONTEXT AT THE ROUND-68 TIP (`62e38777`,
 `--separate-callers=3`, `cg.cube.sc2.out` / `cg.sealed.sc2.out` in a
