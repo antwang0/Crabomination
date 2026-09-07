@@ -443,3 +443,38 @@ fn hells_caretaker_reanimates_at_upkeep() {
     activate(&mut g, 0, caretaker, 0, Some(Target::Permanent(corpse)));
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Hill Giant"));
 }
+
+/// Life Matrix's counter comes with the regeneration ability — the
+/// `Permanent` grant used to be dropped by `GrantActivatedAbilityToMatching`,
+/// so the creature got a bare matrix counter and nothing to spend it on.
+#[test]
+fn life_matrix_grants_the_regeneration_ability() {
+    let mut g = main_phase();
+    g.step = TurnStep::Upkeep;
+    let matrix = g.add_card_to_battlefield(0, catalog::life_matrix());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: matrix,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate during your upkeep");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Matrix), 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the granted 'remove a matrix counter: regenerate'");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Matrix), 0, "the counter paid for the shield");
+    assert!(g.battlefield_find(bear).unwrap().regeneration_shields > 0, "regeneration shield up");
+}

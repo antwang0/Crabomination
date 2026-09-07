@@ -3032,17 +3032,24 @@ impl GameState {
             }
 
             Effect::GrantActivatedAbilityToMatching { filter, ability, duration } => {
-                if !matches!(duration, Duration::EndOfTurn) {
-                    return Ok(());
-                }
+                // The same two carriers as `GainActivatedAbility`: the EOT list
+                // or the permanent one. A `Permanent` grant used to return
+                // early and grant nothing (Life Matrix's regeneration shield
+                // was a bare matrix counter). The permanent list is deduped —
+                // the filter re-matches every earlier recipient on each
+                // resolution, and a second copy of the same ability is noise.
+                let eot = matches!(duration, Duration::EndOfTurn | Duration::EndOfCombat);
                 let ids: Vec<CardId> = self
                     .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
                 for id in ids {
-                    if let Some(c) = self.battlefield_find_mut(id) {
+                    let Some(c) = self.battlefield_find_mut(id) else { continue };
+                    if eot {
                         c.granted_activated_eot.push((**ability).clone());
+                    } else if !c.granted_activated_abilities.contains(&**ability) {
+                        c.granted_activated_abilities.push((**ability).clone());
                     }
                 }
                 Ok(())
