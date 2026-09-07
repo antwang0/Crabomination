@@ -454,6 +454,18 @@ fn life_matrix_grants_the_regeneration_ability() {
     let matrix = g.add_card_to_battlefield(0, catalog::life_matrix());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     mana(&mut g, 0);
+    // "Activate only during your upkeep": the opponent's upkeep is not yours.
+    g.active_player_idx = 1;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: matrix,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .is_err(), "not on the opponent's upkeep");
+    g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: matrix,
         ability_index: 0,

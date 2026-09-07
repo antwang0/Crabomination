@@ -209,7 +209,7 @@ pub fn black_carriage() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Untap { what: Selector::This, up_to: None },
-            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![Predicate::CurrentStepIs(TurnStep::Upkeep), Predicate::IsTurnOf(crate::effect::PlayerRef::You)])),
             ..Default::default()
         }],
         ..creature("Black Carriage", cost(&[generic(3), b(), b()]), vec![CreatureType::Horse], 4, 4)
@@ -293,7 +293,7 @@ pub fn trade_caravan() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::Currency, 2)),
             effect: Effect::Untap { what: target_filtered(R::IsBasicLand), up_to: None },
-            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![Predicate::CurrentStepIs(TurnStep::Upkeep), Predicate::IsTurnOf(crate::effect::PlayerRef::You)])),
             ..Default::default()
         }],
         ..creature(

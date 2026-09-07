@@ -1351,7 +1351,7 @@ fn clockwork(name: &'static str, kind: CreatureType, evasion: Keyword) -> CardDe
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[crate::mana::x()]),
             tap_cost: true,
-            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![Predicate::CurrentStepIs(TurnStep::Upkeep), Predicate::IsTurnOf(crate::effect::PlayerRef::You)])),
             effect: Effect::AddCounterCapped {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusZero,

@@ -739,7 +739,7 @@ pub fn life_chisel() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Creature, 1)),
-            condition: Some(Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep), Predicate::IsTurnOf(crate::effect::PlayerRef::You)])),
             effect: Effect::GainLife { who: you(), amount: Value::SacrificedToughness },
             ..Default::default()
         }],

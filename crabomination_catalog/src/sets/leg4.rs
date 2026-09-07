@@ -921,7 +921,7 @@ pub fn life_matrix() -> CardDefinition {
         vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(4)]),
-            condition: Some(Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep)),
+            condition: Some(Predicate::All(vec![Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep), Predicate::IsTurnOf(crate::effect::PlayerRef::You)])),
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
                     what: target_filtered(R::Creature),
