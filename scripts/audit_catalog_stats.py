@@ -822,7 +822,39 @@ for _ct in _CREATURE_TYPES:
 for _k in _FILTER_KEYWORDS:
     _ORACLE_TYPE_WORDS[re.sub(r"(?<!^)(?=[A-Z])", " ", _k).lower()] = _k.lower()
 
-def trigger_filter_words(body):
+PRED_FN = re.compile(r"\nfn (\w+)\(\)\s*->\s*(?:crate::effect::)?Predicate\s*\{")
+
+def pred_fn_table(text):
+    """`{fn_name: body}` for a file-local `fn cast_is_instant_or_sorcery() ->
+    Predicate { .. }`, so a `.with_filter(helper())` reads as its body."""
+    out = {}
+    for m in PRED_FN.finditer(text):
+        end = bracket_span(text, m.end() - 1)
+        out[m.group(1)] = text[m.end():end - 1].strip()
+    return out
+
+# The members of a `Predicate::All(vec![..])` that only *condition* the trigger
+# ("if it's your turn", "if it's the second spell") and name no type word; a
+# conjunction of these plus one `EntityMatches` reads as the `EntityMatches`.
+_CONDITION_PRED = re.compile(r"^(?:crate::effect::)?Predicate::(?:IsTurnOf|CurrentStepIs|SpellsCastThisTurnEquals|ValueAtMost|ValueAtLeast|"
+                             r"ValueEquals|PlayerDrewAtLeastThisTurn|SourceClassLevelAtLeast|ExpendReached|AttackedWithCountAtLeast|"
+                             r"DeliriumActive|Not\(Box::new\((?:crate::effect::)?Predicate::(?:IsTurnOf|CurrentStepIs)\b)")
+
+def _flatten_all(filt):
+    """`.with_filter(Predicate::All(vec![A, B]))` -> the entity members joined
+    as one filter text, or `None` when a member is neither an entity match
+    nor a bare condition."""
+    m = re.match(r"^(\.with_filter\(|filter: Some\()\s*(?:crate::effect::)?Predicate::All\(vec!\[", filt)
+    if not m:
+        return filt
+    end = bracket_span(filt, m.end() - 1)
+    members = [x.strip() for x in top_level_items(filt[m.end():end - 1]) if x.strip()]
+    ents = [x for x in members if re.match(r"^(?:crate::effect::)?Predicate::(?:EntityMatches\b|CastSpellMatches\()", x)]
+    if len(ents) != 1 or any(not _CONDITION_PRED.match(x) for x in members if x not in ents):
+        return None
+    return m.group(1) + ents[0] + filt[end:]
+
+def trigger_filter_words(body, predfns=None):
     """Per literal, (kind, the filter's type words); `None` for a literal the
     reader cannot name."""
     exprs = trigger_event_exprs(body)
@@ -846,6 +878,12 @@ def trigger_filter_words(body):
         if f < 0:
             f = expr.find("filter: Some(")
         filt = expr[f:] if f >= 0 else ""
+        if predfns and filt:
+            filt = re.sub(r"\b([a-z_]\w*)\(\)", lambda m: predfns.get(m.group(1), m.group(0)), filt)
+        if filt:
+            filt = _flatten_all(filt)
+            if filt is None:
+                return None
         filt = filt.replace("IsToken.negate()", "NotToken").replace("Not(Box::new(R::IsToken))", "NotToken") \
                    .replace("Not(Box::new(SelectionRequirement::IsToken))", "NotToken")
         # `Not(Box::new(R::Creature))` is the oracle's "noncreature"; only the
@@ -1459,6 +1497,7 @@ def audit():
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
         kwfns = kw_fn_table(text)
+        predfns = pred_fn_table(text)
         for m in FUNC.finditer(text):
             nxt = FUNC.search(text, m.end()); body = text[m.end():nxt.start() if nxt else len(text)]
             # Stop at the next TOP-LEVEL `fn`, not only at the next `pub fn`:
@@ -1611,7 +1650,7 @@ def audit():
                 if trigger_mismatch(sc, ref_sc):
                     d["scope"].append((tag, sc, ["|".join(sorted(f)) for f in ref_sc]))
             # trigger filters: type words, one-to-one, same count gate.
-            fw = trigger_filter_words(body)
+            fw = trigger_filter_words(body, predfns)
             ref_fw = ref_trigger_filter_words(card, face)
             if fw is not None and ref_fw is not None and len(fw) == len(ref_fw):
                 if filter_mismatch(fw, ref_fw):

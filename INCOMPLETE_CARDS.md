@@ -721,11 +721,15 @@ printed negation), `PowerAtLeast(n)` / `ManaValueAtMost(n)` as
 "power n or greater" / "mana value n or less" words, multi-line
 `HasCardType(\n ..)` calls, land types (a Mountain is a land), "historic"
 (artifact / legendary / Saga), and `SpellTargetsMatching` /
-`IsHostOfSource` as unreadable. Literals the column names: **362 -> 599**
-(2,591 -> 2,835 compared); mismatches **0** — the nine the wider read
-first raised were all reader limits (each is one of the rules above).
-Still unread: a `let` helper's filter (Valley Questcaller's `typal()`), a
-`Not` of a creature type, `Predicate::All` conjunctions.
+`IsHostOfSource` as unreadable, a `Predicate::All` whose other members are
+bare conditions (`IsTurnOf`, `SpellsCastThisTurnEquals`, ...) as its one
+entity member, and a file-local `fn helper() -> Predicate` as its body.
+Literals the column names: **362 -> 602** (2,591 -> 2,840 compared);
+mismatches **0** — the nine the wider read first raised were all reader
+limits (each is one of the rules above), and the last two rules added
+three literals, so the reader is at its useful floor. Still unread: a
+`let` filter inside the card body (Valley Questcaller's `typal()`), a
+`Not` of a creature type.
 
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
