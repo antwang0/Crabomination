@@ -794,10 +794,15 @@ _SUBJECT_KINDS = {"BecameTarget", "ChoseTargets", "PlayerDamaged", "PlayerDealtN
 _SIMPLE_REQ = {"Creature": "creature", "Artifact": "artifact", "Enchantment": "enchantment", "Land": "land",
                "Planeswalker": "planeswalker", "Instant": "instant", "Sorcery": "sorcery", "NotToken": "nontoken",
                "IsToken": "token", "Noncreature": "noncreature", "Nonland": "nonland", "Colorless": "colorless",
-               "Multicolored": "multicolored", "IsBasicLand": "basic", "Legendary": "legendary"}
+               "Multicolored": "multicolored", "IsBasicLand": "basic", "Legendary": "legendary",
+               "NonArtifact": "nonartifact", "NonEnchantment": "nonenchantment", "NonLegendary": "nonlegendary",
+               "NonCreature": "noncreature", "NonLand": "nonland", "NonIsToken": "nontoken", "NonIsBasicLand": "nonbasic"}
 _COLORS = {"White": "white", "Blue": "blue", "Black": "black", "Red": "red", "Green": "green"}
-_UNREADABLE_REQ = re.compile(r"\b(?:Not|HasName|PowerAt|ToughnessAt|ManaValue|WithCounter|InYourGraveyard|InGraveyard|"
+_UNREADABLE_REQ = re.compile(r"\b(?:Not|HasName|ToughnessAt|WithCounter|InYourGraveyard|InGraveyard|SpellTargetsMatching|IsHostOfSource|"
                              r"Tapped|IsAttacking|DamagedBySource|Any|Player|OpponentPlayer|IsSource|EntityMatches \{ what: Selector::(?!TriggerSource))")
+_NOT_REQ = re.compile(r"(?:(?:R|SelectionRequirement)::)?Not\(Box::new\((?:R|SelectionRequirement)::(\w+)\)\)")
+_BOUND_WORD = {"PowerAtLeast": "power>=%d", "PowerAtMost": "power<=%d", "ManaValueAtLeast": "mv>=%d", "ManaValueAtMost": "mv<=%d"}
+_ORACLE_BOUND = re.compile(r"\b(power|mana value|toughness) (\d+) or (greater|less)\b")
 
 def _plural(w):
     if w.endswith("f"): return {w, w[:-1] + "ves"}
@@ -806,7 +811,10 @@ def _plural(w):
     if w == "mouse": return {w, "mice"}
     if w == "merfolk" or w == "kithkin" or w == "moonfolk": return {w}
     return {w, w + "s"}
+_LAND_TYPE_WORDS = {"plains", "island", "swamp", "mountain", "forest", "gate", "desert", "lair", "locus", "cave", "sphere", "town"}
 _ORACLE_TYPE_WORDS = {}
+for _w in _LAND_TYPE_WORDS:
+    for _f in _plural(_w): _ORACLE_TYPE_WORDS[_f] = _w
 for _w in list(_SIMPLE_REQ.values()) + list(_COLORS.values()) + ["equipment", "aura", "vehicle", "food", "clue", "treasure", "blood", "map", "powerstone", "saga", "mount"]:
     for _f in _plural(_w): _ORACLE_TYPE_WORDS[_f] = _w
 for _ct in _CREATURE_TYPES:
@@ -840,8 +848,17 @@ def trigger_filter_words(body):
         filt = expr[f:] if f >= 0 else ""
         filt = filt.replace("IsToken.negate()", "NotToken").replace("Not(Box::new(R::IsToken))", "NotToken") \
                    .replace("Not(Box::new(SelectionRequirement::IsToken))", "NotToken")
-        if filt and (not re.search(r"^\.with_filter\((?:crate::effect::)?Predicate::EntityMatches|^filter: Some\((?:crate::effect::)?Predicate::EntityMatches", filt)
-                     or _UNREADABLE_REQ.search(filt) or "negate()" in filt or "TriggerSource" not in filt
+        # `Not(Box::new(R::Creature))` is the oracle's "noncreature"; only the
+        # simple type words have a printed negation, anything else stays
+        # unreadable. `_NOT_REQ` rewrites the readable ones before the gate.
+        filt = _NOT_REQ.sub(lambda m: "R::Non" + m.group(1) if "Non" + m.group(1) in _SIMPLE_REQ else m.group(0), filt)
+        # The cast spell is the subject of a `SpellCast` literal, and its
+        # filter is spelled `CastSpellMatches(R)` — the same read as an
+        # `EntityMatches` on `TriggerSource`.
+        head = re.compile(r"^(?:\.with_filter\(|filter: Some\()\s*(?:crate::effect::)?Predicate::(EntityMatches\b|CastSpellMatches\()")
+        if filt and (not head.search(filt)
+                     or _UNREADABLE_REQ.search(filt) or "negate()" in filt
+                     or ("TriggerSource" not in filt and not head.search(filt).group(1).startswith("CastSpell"))
                      or not re.search(r"(?:R|SelectionRequirement)::", filt) or re.search(r"\b[a-z_]+\(\)", filt)):
             return None
         # "Whenever a Goblin deals combat damage" narrows the dealer, which
@@ -850,17 +867,26 @@ def trigger_filter_words(body):
         if d >= 0:
             filt += expr[d:]
         words = set()
+        # A power / mana-value bound is a word of its own on both sides
+        # ("power 4 or greater" / `PowerAtLeast(4)`).
+        for fn, n in re.findall(r"(PowerAtLeast|PowerAtMost|ManaValueAtLeast|ManaValueAtMost)\((\d+)\)", filt):
+            words.add(_BOUND_WORD[fn] % int(n))
         for r in re.findall(r"(?:R|SelectionRequirement)::(\w+)", filt):
             if r in _SIMPLE_REQ: words.add(_SIMPLE_REQ[r])
-        for r in re.findall(r"HasCardType\(CardType::(\w+)\)", filt):
+        for r in re.findall(r"HasCardType\(\s*CardType::(\w+),?\s*\)", filt):
             if r in _SIMPLE_REQ: words.add(_SIMPLE_REQ[r])
-        for r in re.findall(r"HasSupertype\(Supertype::(\w+)\)", filt):
+        for r in re.findall(r"HasSupertype\(\s*Supertype::(\w+),?\s*\)", filt):
             if r in _SIMPLE_REQ: words.add(_SIMPLE_REQ[r])
+        # A land type implies "land" on both sides, as a creature type implies
+        # "creature" ("whenever a Mountain becomes tapped" — Lifeblood).
+        land_types = {t.lower() for t in re.findall(r"HasLandType\(\s*LandType::(\w+),?\s*\)", filt)}
+        if land_types:
+            words |= land_types | {"land"}
         words |= {c.lower() for c in re.findall(r"HasCreatureType\(\s*CreatureType::(\w+),?\s*\)", filt)}
         words |= {k.lower() for k in re.findall(r"HasKeyword\(Keyword::(\w+)\)", filt) if k in _FILTER_KEYWORDS}
         words |= {_COLORS[c] for c in re.findall(r"HasColor\(Color::(\w+)\)", filt) if c in _COLORS}
-        words |= {s.lower() for s in re.findall(r"HasArtifactSubtype\(ArtifactSubtype::(\w+)\)", filt)}
-        words |= {s.lower() for s in re.findall(r"HasEnchantmentSubtype\(EnchantmentSubtype::(\w+)\)", filt)}
+        words |= {s.lower() for s in re.findall(r"HasArtifactSubtype\(\s*ArtifactSubtype::(\w+),?\s*\)", filt)}
+        words |= {s.lower() for s in re.findall(r"HasEnchantmentSubtype\(\s*EnchantmentSubtype::(\w+),?\s*\)", filt)}
         if kind in _CREATURE_KINDS or words & {c.lower() for c in _CREATURE_TYPES}:
             words.add("creature")
         if kind == "CreatureOrArtifactDied":
@@ -890,9 +916,18 @@ def ref_trigger_filter_words(card, face=None):
         # the object ("deals combat damage to a player or planeswalker").
         cond = re.split(r"\b(?:to|by|from|into|onto|for|attacks|blocks|targets) \b", cond)[0]
         words = set()
+        for what, n, how in _ORACLE_BOUND.findall(cond):
+            if what != "toughness":
+                words.add(("power" if what == "power" else "mv") + (">=" if how == "greater" else "<=") + n)
         for w in re.findall(r"[a-z][a-z'-]*", cond):
             if w in _ORACLE_TYPE_WORDS:
                 words.add(_ORACLE_TYPE_WORDS[w])
+            elif w.startswith("non-") and w[4:] in _ORACLE_TYPE_WORDS:
+                words.add("non" + _ORACLE_TYPE_WORDS[w[4:]])
+            elif w == "historic":
+                words |= {"artifact", "legendary", "saga"}
+        if words & _LAND_TYPE_WORDS:
+            words.add("land")
         if words & set(c.lower() for c in _CREATURE_TYPES):
             words.add("creature")
         # A Blood / Clue / Food / Treasure is a token by construction.

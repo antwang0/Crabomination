@@ -713,12 +713,19 @@ False positives worth knowing: Valley Mightcaller's Squirrel sat in a
 multi-line `HasCreatureType(\n CreatureType::Squirrel,\n)` the first regex
 did not span (the reader now does; nothing was wrong with the card), and
 every `[]` against `["creature"]` on the first run was a `SelfSource`
-"When this creature enters" whose subject is the source itself. **What
-the three trigger columns still cannot see is a filter the reader skips —
-`Not(..)`, `PowerAtLeast`, `ManaValueAtMost`, a `let` helper — and a
-mismatch of a *creature type in a `let`* (Valley Questcaller's `typal()`)
-is invisible for the same reason; those are the next reader rules, not a
-new column.**
+"When this creature enters" whose subject is the source itself. **The next reader rules, taken the same day:** a line break after
+`.with_filter(` (234 literals the regex had never opened — the single
+largest gap), `CastSpellMatches(R)` as the cast spell's own filter,
+`Not(Box::new(R::Creature))` as "noncreature" (the six type words with a
+printed negation), `PowerAtLeast(n)` / `ManaValueAtMost(n)` as
+"power n or greater" / "mana value n or less" words, multi-line
+`HasCardType(\n ..)` calls, land types (a Mountain is a land), "historic"
+(artifact / legendary / Saga), and `SpellTargetsMatching` /
+`IsHostOfSource` as unreadable. Literals the column names: **362 -> 599**
+(2,591 -> 2,835 compared); mismatches **0** — the nine the wider read
+first raised were all reader limits (each is one of the rules above).
+Still unread: a `let` helper's filter (Valley Questcaller's `typal()`), a
+`Not` of a creature type, `Predicate::All` conjunctions.
 
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
