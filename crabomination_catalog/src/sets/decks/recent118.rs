@@ -131,7 +131,7 @@ pub fn attack_in_the_box() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::MayDo {
                 description:
                     "have it get +4/+0 until end of turn, then sacrifice it at the next end step"

@@ -3320,7 +3320,12 @@ pub fn long_feng_grand_secretariat() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::AnotherOfYours).with_filter(
+                crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),

@@ -152,6 +152,27 @@ mod recent253 {
         assert_eq!(g.battlefield_find(e1).unwrap().counters.get(&crabomination::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2, "each creature got 2 counters");
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew one per Wolf");
     }
+
+    /// "Whenever Voja attacks" — it shipped as "whenever you attack" (scope
+    /// audit column, 2026-09-07): another creature attacking alone is silent.
+    #[test]
+    fn voja_silent_when_another_creature_attacks_alone() {
+        use crabomination::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::voja_jaws_of_the_conclave());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.add_card_to_library(0, catalog::forest());
+        let hand_before = g.players[0].hand.len();
+        g.active_player_idx = 0;
+        g.step = crabomination::TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+            .expect("the bear attacks");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand_before, "Voja did not attack");
+        assert_eq!(g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0);
+    }
 }
 
 mod recent254 {

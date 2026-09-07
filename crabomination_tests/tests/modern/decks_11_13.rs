@@ -420,6 +420,23 @@ fn foundry_street_denizen_grows_when_a_red_creature_enters() {
     assert_eq!((s.power(), s.toughness()), (2, 2), "Denizen grew when a red creature entered");
 }
 
+/// "another red *creature*" — a red enchantment entering did it too (filter
+/// audit column, 2026-09-07; Court Street and Sage's Row Denizen the same).
+#[test]
+fn foundry_street_denizen_ignores_a_red_noncreature() {
+    let mut g = two_player_game();
+    let denizen = g.add_card_to_battlefield(0, catalog::foundry_street_denizen());
+    let moon = g.add_card_to_hand(0, catalog::blood_moon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: moon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blood Moon");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(denizen).unwrap();
+    assert_eq!((s.power(), s.toughness()), (1, 1), "a red enchantment is not a red creature");
+}
+
 #[test]
 fn goblin_sledder_sacs_a_goblin_to_pump() {
     let mut g = two_player_game();

@@ -514,7 +514,7 @@ pub fn phyrexian_ironworks() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
             effect: Effect::AddEnergy(Value::Const(1)),
         }],
         activated_abilities: vec![ActivatedAbility {

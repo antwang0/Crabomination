@@ -277,6 +277,30 @@ fn phyrexian_ironworks_makes_golem() {
     );
 }
 
+/// "Whenever you attack, you get {E}" — once per combat, not once per
+/// attacker (it shipped as a per-creature `Attacks` trigger; filter audit
+/// column, 2026-09-07).
+#[test]
+fn phyrexian_ironworks_one_energy_per_attack_not_per_attacker() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::phyrexian_ironworks());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.players[0].energy = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])).expect("attack with two");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 1, "one energy for the attack, not two");
+}
+
 /// Breathe Your Last destroys the target and gains 1 life per color.
 #[test]
 fn breathe_your_last_gains_life_per_color() {

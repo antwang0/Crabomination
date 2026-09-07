@@ -163,7 +163,7 @@ pub fn court_street_denizen() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::HasColor(Color::White),
+                    filter: R::Creature.and(R::HasColor(Color::White)),
                 }),
             effect: Effect::Tap {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
@@ -187,7 +187,7 @@ pub fn sages_row_denizen() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::HasColor(Color::Blue),
+                    filter: R::Creature.and(R::HasColor(Color::Blue)),
                 }),
             effect: Effect::Mill {
                 who: Selector::Player(PlayerRef::Target(0)),

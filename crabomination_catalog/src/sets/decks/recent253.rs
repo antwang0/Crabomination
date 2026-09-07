@@ -265,7 +265,7 @@ pub fn voja_jaws_of_the_conclave() -> CardDefinition {
             Keyword::Ward(WardCost::Mana(cost(&[generic(3)]))),
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
                     what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),

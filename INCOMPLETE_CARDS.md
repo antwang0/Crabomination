@@ -648,7 +648,7 @@ a `dealt_by` is not compared (the filter is usually the scope); one with
 `.from_opponent()` reads as the opponent's; `YouAttack` reads as "you" on
 either spelling; "a creature you control" accepts `AnotherOfYours` (an
 enchantment cannot be its own subject, and that is how the family is
-spelled). First run 298 rows, eleven reader rules later 12, seven real:
+spelled). First run 298 rows, eleven reader rules later 12, nine real (the last two once the `YouAttack` leniency was narrowed):
 
 | Card | Was | Printed |
 |---|---|---|
@@ -659,6 +659,7 @@ spelled). First run 298 rows, eleven reader rules later 12, seven real:
 | Fecundity | `AnotherOfYours`, you drew | "whenever a creature dies, that creature's controller may draw" — `AnyPlayer`, `ControllerOf(TriggerSource)` draws |
 | Quartzwood Crasher | `SelfSource` | "one or more creatures you control with trample" — `YourControl` + a trample filter (per creature) |
 | Prosperous Thief | `SelfSource` | "one or more Ninja or Rogue creatures you control" — `YourControl` + the type filter (per creature) |
+| Voja, Jaws of the Conclave; Attack-in-the-Box | `YouAttack` / `SelfSource` — fired whenever you attacked with anything | "whenever this creature attacks" — `Attacks` / `SelfSource` (found once the `YouAttack` leniency was narrowed to the "you" scopes) |
 
 Residue, five rows: Whirling Dervish, Skizzik and Lone Rider (the
 end-step conditional modelled as the event that satisfies it, the
@@ -669,6 +670,41 @@ read as "you"), and Fatespinner, which the reader learned from
 whole trigger header: kind and scope. What neither reads is the
 *filter* — "a nontoken creature", "a spell with mana value 3 or less" —
 and the effect's own text, which is the eighth column.**
+
+### Trigger filters — the eighth column, the same day: five more, and the reader's limits
+
+`filt` reads the *type words* of a literal's filter — `R::Creature`,
+`HasCreatureType(Goblin)`, `NotToken` / `IsToken.negate()`,
+`HasKeyword(Flying)`, a colour, an artifact or enchantment subtype, the
+`.dealt_by(..)` of a damage kind — against the type words of the clause's
+subject ("another nontoken Goblin creature you control", cut before its
+object: "… deals combat damage *to a player or planeswalker*"). A
+creature-only kind implies "creature" on the code side, a creature type
+implies it on both, `CreatureOrArtifactDied` implies both words, a Blood /
+Clue / Food is a token by construction. Not read, so not compared: the
+source's own type (`SelfSource`), the kinds that carry their subject
+(targeting, damage recipients, activations, steps), a filter that is not a
+plain `EntityMatches` on the trigger source (a `Not`, a power or mana-value
+bound, a `let` helper), and the struct-form `EventSpec { .. }`. First run
+573 rows, five reader passes later 12, five real:
+
+| Card | Was | Printed |
+|---|---|---|
+| Long Feng, Grand Secretariat | `CreatureDied` | "another creature you control or a land you control is put into a graveyard from the battlefield" — `PermanentDied` + creature-or-land |
+| Phyrexian Ironworks | `Attacks` / `YourControl` — {E} per attacker | "whenever you attack" — `YouAttack`, once a combat |
+| Augusta, Dean of Order | the same — the untap-and-retap ran once per attacker | `YouAttack` |
+| Foundry Street Denizen, Court Street Denizen, Sage's Row Denizen | a colour alone — a red / white / blue enchantment or artifact entering triggered | "another red creature" — the colour *and* `Creature` |
+
+False positives worth knowing: Valley Mightcaller's Squirrel sat in a
+multi-line `HasCreatureType(\n CreatureType::Squirrel,\n)` the first regex
+did not span (the reader now does; nothing was wrong with the card), and
+every `[]` against `["creature"]` on the first run was a `SelfSource`
+"When this creature enters" whose subject is the source itself. **What
+the three trigger columns still cannot see is a filter the reader skips —
+`Not(..)`, `PowerAtLeast`, `ManaValueAtMost`, a `let` helper — and a
+mismatch of a *creature type in a `let`* (Valley Questcaller's `typal()`)
+is invisible for the same reason; those are the next reader rules, not a
+new column.**
 
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |

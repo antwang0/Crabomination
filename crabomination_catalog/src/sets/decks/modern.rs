@@ -9467,7 +9467,7 @@ pub fn foundry_street_denizen() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: SelectionRequirement::HasColor(Color::Red),
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Red)),
                 }),
             effect: Effect::PumpPT {
                 what: Selector::This,

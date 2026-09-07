@@ -1925,6 +1925,23 @@ fn long_feng_grows_on_death() {
     assert_eq!(counters, 1, "one +1/+1 counter placed");
 }
 
+/// "another creature you control *or a land you control* is put into a
+/// graveyard from the battlefield" — it shipped on creatures only (filter
+/// audit column, 2026-09-07).
+#[test]
+fn long_feng_grows_when_your_land_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::long_feng_grand_secretariat());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let events = g.remove_to_graveyard_with_triggers(land);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let counters: u32 = g.battlefield.iter()
+        .map(|c| c.counter_count(crabomination::card::CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(counters, 1, "a land of yours dying grows a creature");
+}
+
 /// Zhao pumps your team when you sacrifice another permanent.
 #[test]
 fn zhao_ruthless_admiral_pumps_on_sac() {

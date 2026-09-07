@@ -689,7 +689,7 @@ pub fn augusta_dean_of_order() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
             effect: Effect::Untap {
                 what: Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
