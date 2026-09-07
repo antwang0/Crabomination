@@ -466,7 +466,7 @@ Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 | Card | Location | Note |
 |---|---|---|
 | Spell Queller ✓ | modern.rs:15114 | counters instead of exile-until-LTB (opponent can't recast) |
-| Generous Gift ✓ | modern.rs:8226 | victim gets no 3/3 Elephant (strictly stronger) |
+| ~~Generous Gift~~ ✓ | modern.rs | stale — ships `CreateToken { who: ControllerOf(Target(0)) }` (the Elephant) before the Destroy, Beast Within's shape; re-read 2026-09-07 |
 
 ### Other notable HIGH — **all closed; every remaining entry here was stale**
 

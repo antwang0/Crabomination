@@ -34,7 +34,8 @@ sixty-seventh pass, so don't re-take that.
    mid-compile). Disk: `target/debug/incremental` hit 13 GB in one run; purge it before a worktree build.
 2. **Gates at the round-68 tip (PERF Baseline):** suite 19,247 / 0 / 5, clippy, release-fast, `--bench` counters identical to `2003d1cf`
    (195,806 / 27.49 / 611.9 / 0), golden 7/7 (seeds 3, 4, c0ffee re-blessed for the round), fresh-seed sweep 28,800 games (0 undecided)
-   + the training binary 9,000 games / 0 stalls; the debug-assertions grid and `--wide` last green at the `(-275)` tip.
+   + the training binary 9,000 games / 0 stalls; the debug-assertions grid green at the round-68 tip WITH the default pilot
+   (`PILOTS="dflt …" --pilots` — the grid's own list lacks `dflt`); `--wide` last green at `(-275)`; actor scaling linear to 4.
 3. **Perf this run:** `(-275)` the ability-lock gates on an exact-keyword fold; `(-276)` the 8 KB `CardDefinition` temporaries out of
    `run_effect`'s frame (97 KB -> 64 KB, sealed -0.256 %, cube -0.288 %); **round 68 (ML_NOTES)** `sim_main_cast_cap: Some(1)` in the
    default — the attack sim casts once from a main phase per sim: sealed wall **0.864** / cube **0.837** at no loss (four sealed seeds
