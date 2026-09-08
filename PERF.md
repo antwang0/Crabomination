@@ -2791,6 +2791,29 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### Round 70 — the attack chain gated on the menu's outcome: closing state at `1d98b202`, THE NEW DEFAULT-PILOT BASE
+
+One bot-side throughput leg after the `(-277)` addendum below (Log, ML_NOTES
+round 70): the attack chain skipped where the menu alone picked a non-empty
+greedy, gated for no loss and adopted. **The dflt six-game totals below are
+a different pilot's games** — quote them as the base from here, never as an
+engine change against the `(-277)` block. `--bench` (`gang`, `fixed`) is
+byte-identical in its counters.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1:  3,315,951,121 (the (-277)+2 tip) -> 2,882,893,998 Ir  (-13.06 %, different games)
+  cube   dflt, same recipe:                               3,144,754,672 -> 2,820,089,306 Ir  (-10.32 %, different games)
+  wall   200 x 12 mirrors, 5 paired reps, median arm/dflt:  sealed 0.841 / cube 0.870
+  gate   sealed 49.9 / 50.0 / 50.1 / 50.3 (seeds 43/97/151/199, 12,000 games a cell, pooled 50.08); cube 49.8 / 50.0; fixed 49.9 / 50.1 — no loss
+--bench release-fast (mimalloc) at 1d98b202: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1);
+        bin_bytes 126,744,864 (+3,280 B: the gate and the census slots); 502.0 / 506.9 / 454.1 games/s, three single runs on the quiet box (this host's spread)
+suite   19,285 / 0 / 5; golden 7/7 unmoved (no seeded game reaches a search the gate changes)
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+census  CRAB_ATTACK_CENSUS=1 sealed 1,200 games seed 43: attack 14,572 searched / 49,464 candidates / chain sims 52,224 before the gate;
+        chain won when the menu alone picked greedy/nobody/holdback 642/992/238 of 1,218/992/406 chained searches (the split behind the round)
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+```
+
 ### `(-277)` — the last printed-only hooks read instance grants, and the walk that inlined: addendum at the `(-277)` tip
 
 One engine commit after the addendum below (the Log's `(-277)` entry has the
@@ -3970,6 +3993,37 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### Round 70 ADOPTED — the attack chain skipped when the menu alone picked a non-empty greedy (`attack_chain_skip_greedy`): sealed default wall clock **0.841** / cube **0.870** at no loss; six-game Ir sealed **-13.06 %** / cube **-10.32 %** (different games)
+
+The census question the previous candidates entry filed, answered the
+same run (ML_NOTES round 70; `.ladder/run_r70_chainskip.sh`): of the
+2,616 sealed searches where the chain proposed a novel set, the menu alone
+had picked greedy on 1,218 (the chain won 642 — 4.4 % of all 14,572
+searches), nobody on 992 (won all 992), a holdback on 406 (won 238). The
+gate keeps the chain on the nobody / holdback / empty-greedy boards and
+drops it where the menu already settled on a non-empty greedy — roughly
+half the chain's 3.58 sims a search. Pre-registered, gated for no loss on
+four sealed seeds (pooled 50.08, cells 49.9 / 50.0 / 50.1 / 50.3, none
+wholly below 50), cube 49.8 / 50.0, fixed 49.9 / 50.1; adopted in
+`EvalWeights::default_const()`, control `chain-skipg-off`. The first cut
+skipped the empty-greedy chain too (0.866 / 0.907, pooled 50.35) and broke
+the round-56 board's unit test; the corrected arm is what was measured and
+adopted.
+
+```text
+paired wall clock, 200 x 12 mirrors, 5 reps, median arm/dflt:   sealed 0.841 (0.841 / 0.860 / 0.828 / 0.865 / 0.835)   cube 0.870 (0.833 / 0.870 / 0.929 / 0.909 / 0.833)
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator (cg.r68.* / cg.cand.* in a scratchpad):
+  sealed  3,315,951,121 -> 2,882,893,998 Ir   (-13.06 %, different games; 72 / 72 decided both sides)
+  cube    3,144,754,672 -> 2,820,089,306 Ir   (-10.32 %, different games; 48 / 48 decided)
+golden 7/7 unmoved (no seeded game reaches a search the gate changes); suite 19,285 / 0 / 5; clippy clean; --bench (gang, fixed) untouched
+```
+
+**The dflt six-game totals above are a different pilot's games** — quote
+them as the base from here, never as an engine change against the
+`(-277)` block. The device that found it is the census extension, not a
+profile: a per-context split of *who wins* the sims the search buys, which
+callgrind cannot see.
 
 ### The `dealer_filter` source hint and the next-attack delayed kind READ — traced sealed Ir **+0.009 %** / cube **+0.000 %**, traces identical
 
@@ -8685,13 +8739,16 @@ chain 12.8 % (it proposed a new set 18.0 %); from an empty greedy 1,882
 chains, 386 proposed and 386 won. Block: 7,290 searches, 15,192 candidates
 (2.08), chain sims 35,536 (4.87 a search), the chain ran on 98.9 % and
 its plan won 37.5 %. The response layer is free (removal asks 347,418 /
-sims 1,156; trick and counter sims 0). **The one lead this leaves is the
-attack chain's 3.58 sims a search against its 12.8 % win rate: a census
-of chain wins *by menu winner* (does the chain ever beat a greedy that
-won its own menu?) would say whether gating the chain on the menu's
-outcome is a no-loss halving — a strength question for a gated round
-(`.ladder/run_r68_simcast.sh` is the template; a 12,000-game sealed cell
-is ~65 s here).** 1,200 dflt sealed games ran in 6.5 s on 3 threads.
+sims 1,156; trick and counter sims 0). **TAKEN as round 70 (Log, ML_NOTES): the census extension (chain wins by
+menu winner: 642 of 1,218 greedy-won menus, all 992 nobody menus, 238 of
+406 holdbacks) priced the gate, and the gated round adopted it at 0.841 /
+0.870 of the wall clock, no loss.** What is left of the chain is the
+nobody / holdback / empty-greedy half (~1.8 sims a search) whose proposals
+win 60-100 % of the time — not a gate candidate. The next census question
+of the same shape is the block chain (4.87 sims a block search, its plan
+wins 37.5 %): split *its* wins by what the block menu alone would have
+chosen. 1,200 dflt sealed games ran in 6.5 s on 3 threads (4.6 s under
+round 70).
 
 **THE ACTOR RE-READ AT THE RUN'S TIP (`2c63ce52`, `cg.actor.out` in a
 scratchpad, `--actors 1 --games 60 --steps 1 --seed 7`, profiling-fast

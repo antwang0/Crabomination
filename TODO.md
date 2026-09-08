@@ -33,20 +33,21 @@ sixty-seventh pass, so don't re-take that.
    running `cargo build`. Cold here: debug suite build ~25 min, `profiling-fast` bot_ladder 8m42s, `release-fast` ~12 min; a detached `setsid
    nohup` chain survives the tool timeout. ⚠ A second worktree sharing `target/` builds NOTHING unless you `touch` its sources first —
    `md5sum` both A/B binaries before reading a number (CLAUDE.md, PERF "How to measure"; this run's first base was the tip).
-2. **Gates at the tip (PERF Baseline, the `(-277)` addendum):** suite 19,282 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
-   identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), Ir against `4db20c51` sealed **-0.132 %** / cube **-0.127 %**, every trace identical,
-   `audit_stubs` / `audit_incomplete --structural-only` both 0, `robustness_grid.sh --wide` (see the addendum for the cells).
+2. **Gates at the tip (PERF Baseline, the round-70 and `(-277)` addenda):** suite 19,285 / 0 / 5, clippy, golden 7/7 unmoved, `--bench`
+   counters identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), the engine legs' Ir against `4db20c51` sealed **-0.132 %** / cube
+   **-0.127 %** with every trace identical, `audit_stubs` / `audit_incomplete --structural-only` both 0, `robustness_grid.sh --wide` at
+   `2c63ce52` clean but for the four recorded Beacon caps (the grid has not been re-run under the round-70 default — run it first).
 3. **Engine, this run:** the last printed-only hooks — the three combat listener walks — read instance grants; every hook outside the
    dispatcher asks `any_granted_trigger_of_kind` and walks `for_each_triggerer_or_all`, whose one `f(c)` call site is what inlined the
    step/cast hooks' closures for the first time (`(-277)`, Log: the five-row build table is the lesson). The grant-bucket class is a
    ratchet now (`catalog_registration::every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket`: kind x scope x bucket over
    every factory, plus "no granted `once_per_turn`"); the self-ETB hook is printed-only by construction.
-4. **Perf/build:** engine profile FLAT — the base to quote is traced sealed 3,315,951,121 / cube 3,144,754,672 at `2c63ce52` (the `(-277)`
-   tip 3,315,651,668 / 3,144,748,521, the `4db20c51` base 3,320,021,324 / 3,148,739,249, one container); actor 3,121,212,158 at the same
-   tip, FLAT (candidates). The `&mut closure` walk class is closed (census 0; what the row still holds is std's `FilterMap`); levers left
-   are bot-side and PGO (opt-in): the fresh search census (candidates, "THE ATTACK / BLOCK SEARCH CENSUS") says the attack chain out-sims
-   the menu (3.58 vs 3.39 a search) for a 12.8 % win rate — the filed question is chain wins by menu winner, then a gated round (~65 s a
-   12k-game cell here). Do not re-read either self table without a device.
+4. **Perf/build:** **round 70 ADOPTED (ML_NOTES, PERF Log): the attack chain skipped where the menu alone picked a non-empty greedy —
+   wall 0.841 sealed / 0.870 cube at no loss; THE NEW DEFAULT-PILOT BASE is traced sealed 2,882,893,998 / cube 2,820,089,306 at `1d98b202`
+   (different games from the `2c63ce52` block's 3,315,951,121 / 3,144,754,672 — never an engine delta).** Engine profile FLAT (actor
+   3,121,212,158 at `2c63ce52`, the recorded shape). The device that found round 70 is a census split of who wins the sims a search buys
+   (`attack_census` N[29..35]); the filed twin is the block chain (4.87 sims a search, its plan wins 37.5 %) — split its wins the same way
+   before a gated round. Do not re-read either self table without a device.
 5. **Cards/bugs:** two filed rows closed by one engine line each (ENGINE_BACKLOG, first section): Calix's second ability (`dealer_filter`
    now sees `IsSource`; `TRIGGER_LIMIT_ABILITY_DROPPED` empty) and All-Out Assault's next-attack untap (`OnYourNextAttackThisTurn`, a new
    one-shot delayed kind). INCOMPLETE_CARDS structural 0 / stubs 0; the oracle-verb table's rows are all filed on primitives or bespoke.
