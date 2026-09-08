@@ -11,6 +11,1740 @@ ML_PIPELINE.md point at it). Every `(-N)` reference resolves here or in
 `PERF.md`'s Log and candidates; the standing rules these passes produced
 live in `PERF.md`'s "Standing rules for a perf pass".
 
+## Log entries `(-249)`..`(-200)` — moved at the `(-278)` pass
+
+Verbatim from `PERF.md`'s Log, newest first; the re-read entries that sat
+between `(-200)` and `(-199)` (the cache/branch axis, the actor re-reads)
+stay in `PERF.md`.
+
+### `(-249)` TAKEN — an untap-static lane in front of `do_untap`'s eight static walks: `cube` -0.399 % / `sealed` -0.362 % / `fixed` -0.055 %
+
+```text
+  pool    base (-248)       (-249)          delta
+  cube    1,883,973,537   1,876,460,069   **-0.399 %**
+  fixed     681,812,730     681,439,653   **-0.055 %**
+  sealed  1,967,054,280   1,959,940,755   **-0.362 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  do_untap (cube)   2,834 calls  23,708,407 -> 16,362,427 Ir inclusive  (8,366 -> 5,773 a call)
+  do_untap (fixed)  1,896 calls   9,918,205 ->  9,514,657               (5,231 -> 5,018)
+```
+
+The tenth presence lane, off this run's fresh `--separate-callers=3`
+re-read of the plain `cube` self table at the `(-248)` tip: `do_untap`
+had never been on any table (11.7 M self, 0.62 %; 23.7 M inclusive),
+because the untap step reads as once a turn — and it *is* once a turn on
+every simulation clone too, 2,834 times a six-game `cube` run against
+~160 real turns. `(-226)` had put six of its walks behind `any_static`,
+"any permanent carries a static ability at all", which is `true` on
+nearly every `cube` board (a cube creature usually prints one) and so
+walked all of them anyway; the question the walks actually ask is
+whether any static is one of the eleven untap `StaticEffect`s, and that
+is a definition-only predicate the lane device already covers.
+`card_has_untap_static` peels the five `While*` wrappers
+unconditionally where the consumers' `active_static` peels them by
+condition — the sound direction — and a `debug_assert!` in `do_untap`
+recomputes the consumers' arm list through `active_static` on every
+clear gate, so the suite and the robustness grid audit the enumeration.
+The command-zone half stays a walk of two usually-empty lists, as
+`(-239)`'s did. `fixed` was already clear under the old gate on most
+boards, so it moves only by the walk that asked it.
+
+**What the step still costs with the gate clear, on `fixed`: ~5,000 Ir
+a call** — `do_phasing`, the untap loop's per-card empty-set lookups,
+the lock fold, the `MayChooseNotToUntap` walk, the flag-reset walk and
+one `vec![p]` a call (1,896 allocations, ~0.03 %); nothing above 1 M.
+
+### `(-248)` TAKEN — the two targeting-time keyword reads behind `card_keyword_possible`: `sealed` -0.240 % / `cube` -0.224 % / `fixed` -0.167 %
+
+```text
+  pool    base (-247)       (-248)          delta
+  cube    1,888,198,355   1,883,972,930   **-0.224 %**
+  fixed     682,953,228     681,813,326   **-0.167 %**
+  sealed  1,971,796,448   1,967,055,576   **-0.240 %**
+  three-pool outcomes identical; --bench counters identical
+  cube:  push_first_targeting_counter's view   884 asks / 2.7 M  ->  4 asks (the gate: can_grant_keyword 1,024 / 75 k, card_has_anthem 484 / 7 k)
+         has_hostile_ward's view             6,494 asks / 1.7 M  ->  5,438 (the memo hits stay; the 1,056 out-of-scope gathers go)
+```
+
+The `(-245)` re-read's `push_ward_triggers_for_targets` row (884 asks
+at ~3,000 Ir — gathers, out of any scope). The Ward read itself was
+already behind `card_keyword_possible` (`(-216)`'s shape); the row was
+`push_first_targeting_counter` one line above it, asking a whole view
+of every targeted permanent on every cast for the Glasskite cycle's
+`CounterFirstTargetingEachTurn`, which four printings carry. Same gate.
+`has_hostile_ward` — the bot's auto-target ranking, 6,494 asks — is the
+other reader that consumes one keyword; it takes the gate behind
+`layers_memoized`, as `check_target_legality_inner` does, so a scope
+that has already gathered keeps its 124-Ir memo hit and one that has
+not skips the gather. Every pool moves the same ~0.2 %: every pool
+casts targeted spells, and the probes cast them through the same path.
+
+**When a gate is on one of two sibling reads, the other is the row.**
+The Ward push was gated at `(-216)` and its ungated sibling sat one
+call above it in the same function for thirty passes; the by-caller
+table charged the asks to the enclosing function, which read as "the
+gated one", and only the callee table (`cg_edges.py --callees`) said
+which of the two lines was still asking.
+
+### `(-247)` TAKEN — `permanent_is_creature` reads the printed type line behind the card-type presence gate: `cube` -0.421 % / `fixed` -0.044 % / `sealed` -0.025 %
+
+```text
+  pool    base (-246)       (-247)          delta
+  cube    1,907,672,245   1,899,633,344   **-0.421 %**
+  fixed     689,420,559     689,113,878   **-0.044 %**
+  sealed  1,986,793,457   1,986,301,307   **-0.025 %**
+  three-pool outcomes identical
+  permanent_is_creature, cube:  computed_permanent_hinted  2,156 asks / 7.96 M  ->  card_type_change_unscoped  2,144 reads / 0.08 M
+  its callers:                  the SBA sweep's CR 704.5n collect 1,174 + a second collect 236, destroy_permanent 464,
+                                activate_ability_inner 154, sacrifice_one 128
+```
+
+The `(-245)` re-read's `permanent_is_creature` row: 2,156 asks at
+~4,200 Ir each, i.e. every one a whole gather plus a layer pass,
+because the caller is the SBA sweep (`&mut self`, no scope) checking
+whether each attached Equipment's host is still a creature (CR
+704.5n). `compute_permanent_pass` seeds the type line from three
+things — the definition, the CR 702.103d bestowed rewrite, and the
+layer-4 `AddCardType` / `RemoveCardType` / `SetCardTypes`
+modifications — and `card_type_change_in_scope` is the presence gate
+for the third, so `!bestowed && !gate` makes the printed line the
+computed one. The same device `activate_ability_inner` already uses
+for its `is_creature` read (`(-204)`'s leg), applied at the helper so
+its five callers get it at once. `fixed` and `sealed` are flat: the
+asks are attached Equipment, which those pools rarely put on the board.
+
+**Three legs, one read.** `(-245)`, `(-246)` and this one all came off
+ranking `computed_permanent_hinted`'s asks by caller and asking what
+each caller *consumed* of the view: one keyword, three keywords, one
+card type. A presence gate answers each without a view. The rows left
+in that table consume the whole view (the block planner's per-blocker
+and per-attacker facts, the material eval) and are the freeze design's
+floor.
+
+### `(-246)` TAKEN — `declare_blockers`' Flanking / Bushido / Rampage keyword views behind the keyword presence gate: `cube` -1.470 % / `fixed` -0.843 % / `sealed` -0.831 %
+
+```text
+  pool    base (-245)       (-246)          delta
+  cube    1,936,134,211   1,907,672,245   **-1.470 %**
+  fixed     695,281,092     689,420,559   **-0.843 %**
+  sealed  2,003,446,075   1,986,793,457   **-0.831 %**
+  three-pool outcomes identical
+  under declare_blockers, cube:  with_frozen_layers        10,072 -> 5,036 calls   45.29 M -> 19.81 M
+                                 board_keyword_matching         0 -> 5,036 calls    0     ->  0.98 M
+                                 compute_permanents (scope 1)  5,036 unchanged      30.28 M -> 30.25 M
+  program-wide:                  gather_continuous_effects_inner  55,700 -> 52,872 gathers
+```
+
+The `(-245)` re-read's fourth row: `computed_permanent_hinted` under
+`Map::next <- SmallVec::extend <- with_frozen_layers`, 14,554 asks /
+21.3 M, unattributed at three callers deep and `declare_blockers <-
+perform_action_inner` at five. It is the declaration's CR 702.25 /
+702.45 / 702.23 P/T-delta pass: after the block taxes are paid it
+opened a **second** freeze scope and asked a view of every declared
+blocker and attacker — a fresh gather and a layer-pass miss per
+participant, ~5,060 Ir a declaration — to read three keywords off the
+computed sets. No bench archetype prints one, and the cube pool prints
+Flanking on 5 files, Bushido on 37 and Rampage on 13 of a 22 k-card
+catalog. `board_keyword_matching(Flanking | Bushido(_) | Rampage(_))`
+in front of the scope; `false` is authoritative for every computed
+keyword set, so the empty list reads exactly as the views would have.
+The three join `card_has_gate_keyword`'s union.
+
+**Gated, not reused.** The declaration's first scope already computes
+those same participants (`(-215)`'s subset pass) and the obvious
+change is to read `kws_of` there — but the block-tax payments sit
+between the two scopes, and the second reads the *post-payment* state,
+which is the state the CR 702 triggers resolve on. A gate keeps that
+reading; a reuse would have moved it, on a board nobody has, and the
+rule is behaviour-preserving by default.
+
+**The scope was the cost, not the asks.** The ask row said 21.3 M; the
+scope's `with_frozen_layers` row said 25.5 M and the gather count fell
+by 2,828 — a scope whose first question is a miss pays the gather too,
+and a table keyed on the memo's asks does not show it. Price a scope
+by its `with_frozen_layers` row.
+
+### `(-245)` TAKEN — `pick_attacks_inner`'s computed `CantBlock` read behind the keyword presence gate: `cube` -0.278 % / `fixed` -0.205 % / `sealed` -0.196 %
+
+```text
+  pool    base (-242)       (-245)          delta
+  cube    1,941,531,739   1,936,134,211   **-0.278 %**
+  fixed     696,705,944     695,281,092   **-0.205 %**
+  sealed  2,007,370,975   2,003,446,075   **-0.196 %**
+  three-pool outcomes identical
+  under pick_attacks_inner, cube:  computed_permanent_hinted  24,918 -> 15,530 asks   26.34 M -> 19.46 M
+                                   board_keyword_in_scope      4,688 ->  9,376 calls    0.63 M ->  1.34 M
+                                   the legality collect (from_iter)                    10.00 M -> 11.37 M  (asks moved, not removed)
+```
+
+Found by ranking `computed_permanent_hinted`'s 284,812 asks by caller
+on the `(-242)` base dump: `legal_blockers` 51,056 / 34.2 M and
+`permanent_value_with` 44,874 / 43.3 M are the `(-194)` freeze-design
+misses, and the third row was `pick_attacks_inner` at 24,918 / 26.3 M
+— 5.3 asks a pick, ~1,060 Ir each, i.e. nearly all of them scope-first
+misses. The `opp_blockers` walk asked a view of every untapped opposing
+creature to test the *computed* set for `CantBlock`, and the pair
+legality gate that follows short-circuits on the first blocker that
+can block, so most of those views were asked nothing else in the scope.
+`board_keyword_in_scope(&[CantBlock])` once per pick, `false`
+authoritative, and the loop reads two instance fields per permanent.
+`CantBlock` joins `card_has_gate_keyword`'s union, which is the lane's
+printed leg; a keyword missing from that list gets a wrong `false`
+there, and the gate's own `debug_assert!` (the whole-board recompute)
+is the audit — 119 catalog files print `CantBlock`, so the lane is set
+on more boards than before and the per-ask printed scan then runs; the
+gate's +0.7 M is that price, paid on both pools.
+
+**The transferable half: rank a memo's asks by caller and read the
+caller's *consumer*, not the ask.** Three of the top four rows are
+asks whose views are consumed whole; this one consumed a single
+keyword, which is what a presence gate answers without a view. The
+same read found `(-246)` one row further down.
+
+### `(-244)` TAKEN — the dispatcher's empty batch skips the trigger push, the empty drain and their `Vec` drops: `fixed` -0.571 % / `sealed` -0.437 % / `cube` -0.337 %
+
+```text
+  pool    base (-243)       (-244)          delta
+  fixed     694,512,156     690,547,383   **-0.571 %**
+  cube    1,935,264,256   1,928,746,090   **-0.337 %**
+  sealed  2,000,872,501   1,992,138,486   **-0.437 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  push_ordered_trigger_candidates 77,126 calls / 12.4 M inclusive (cube) carrying 806 candidates in all;
+    per empty call: its own 60 Ir, drain_trigger_queue 34 Ir + an out-of-line Vec::drop 14 Ir, the slice drop 13 Ir
+  cube self deltas: push_ordered_trigger_candidates -4.45 M  drain_trigger_queue -1.83 M
+                    drop_in_place<[TriggerCandidate]> -0.99 M  dispatch_triggers_for_events +0.76 M
+  first reading, #[inline] on the flag-flip helper: cube -0.265 % / fixed -0.450 % / sealed -0.340 % — the
+    helper stayed out of line, 77 k x 18 Ir = 1.41 M; #[inline(always)] removed the row whole (+16 k inlined)
+```
+
+Found without a build: `profiling-fast` carries line tables, so
+`callgrind_annotate --auto=yes <dump> mod.rs` (the scratchpad's
+`annlines.py` ranks the result by line) puts 12.4 M on the dispatcher's
+one `push_ordered_trigger_candidates` call, and that function's callee
+table shows 806 `Effect::clone`s under 77,126 calls — **97.5 % of the
+calls carried nothing and paid the function's prologue, an empty drain
+and two `Vec` drops, ~120 Ir each.** The dispatcher's own comment said
+the call was kept on the empty batch for the two per-batch jobs the
+function owns (the life-gain flag flip, the `died_card_snapshots`
+clear). Those are now a shared `#[inline(always)]` helper and the
+`clear`, run in the dispatcher on the empty path, in the same order as
+the full path (flags, drain, clear) minus the drain that had nothing to
+drain. `fixed` gains most: more dispatches per Ir. **When a function's
+callee table shows N calls and its work rows show N/100, the N are its
+prologue — count the candidates against the calls before calling a row
+a floor.** The second reading is the `(-229)` rule again: a helper whose
+body is one `is_empty` behind a cold group's `Deref` is a coin the
+inliner flipped tails; `inline(always)` pins it.
+
+### `(-243)` TAKEN — the auto-tapper's activations write into its event buffer instead of returning a `Vec` each: `cube` -0.323 % / `sealed` -0.318 % / `fixed` -0.315 %
+
+```text
+  pool    base (-241)       (-243)          delta
+  fixed     696,705,741     694,512,156   **-0.315 %**
+  cube    1,941,530,315   1,935,264,256   **-0.323 %**
+  sealed  2,007,247,937   2,000,872,501   **-0.318 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  push_mut <- activate_ability_inner <- activate_ability <- auto_tap_for_cost_inner: 48,592 pushes, 24,182 grow_one (cube)
+  cube self deltas: _int_free -1.28 M  malloc -1.15 M  finish_grow -0.93 M  free -0.92 M  activate_ability -0.84 M
+                    memcpy -0.66 M  grow_one -0.55 M  auto_tap_for_cost_inner -0.54 M  _int_malloc -0.45 M  __rdl_alloc -0.21 M
+                    activate_ability_into +1.37 M (the body that was activate_ability's, plus the mark)
+```
+
+The `(-241)` re-read's second lead, found without a line profile: the
+dump's `push_mut` edge under `activate_ability_inner` sat inside an
+inlined `Vec::push` (its call site reads `vec/mod.rs:*`), so the pair of
+pushes was found by reading the activation body for a two-event `Vec`
+— `PermanentTapped` then `TappedForMana`, on both the `(-204)` plain
+land tap and the generic mana branch. Every activation returned that
+`Vec` to `auto_tap_for_cost_inner`, which appended it into its own
+buffer and freed it: one allocation, one growth, one free, one 32-byte
+copy per mana source paid, 24,182 times on a `cube` run because the
+probes pay their casts through the auto-tapper.
+
+The `(-225)` shape: `activate_ability_inner` and `activate_plain_land_
+tap` take `events: &mut Vec<GameEvent>` and return `()`, the
+eight `return Ok(vec![])`s become `Ok(())`, the nested payment's
+`auto_mana_events` is appended at the point it used to *become* the
+list; `activate_ability_into` is the new entry point (it records a mark
+and truncates back to it on `Err`, which is what dropping the owned
+`Vec` did), and `activate_ability` is that with a fresh `Vec`, so its
+eight other callers do not move. The auto-tapper's two loops call the
+`_into` form, with their `reserve(16)` ahead of the activation instead
+of ahead of the append. The whole win is the allocator's rows — every
+pool the same 0.32 %, since every pool casts through the auto-tapper.
+
+### `(-242)` REFUTED — the dispatcher's grant list inline (`SmallVec<[TriggerGrant; 2]>`) with the filter borrowed (`Cow`): `fixed` +1.449 % / `sealed` +1.160 % / `cube` +0.711 %, reverted
+
+```text
+  pool    base (-241)       (-242)          delta
+  fixed     696,705,741     706,802,793   **+1.449 %**
+  cube    1,941,530,315   1,955,337,247   **+0.711 %**
+  sealed  2,007,247,937   2,030,531,687   **+1.160 %**
+  three-pool outcomes identical (only the wall-time line differs)
+  cube self deltas:  memcpy +12.02 M   dispatch_triggers_for_events +3.73 M   SmallVec::drop +2.86 M
+                     SmallVec::retain +1.20 M / Vec::retain closure +0.63 M against Vec::retain -1.53 M
+                     allocator side -4.1 M (_int_free -0.98, malloc -0.85, finish_grow -0.74, free -0.72,
+                       grow_one -0.44, __rdl_alloc -0.17, drop Vec<TriggerGrant> -0.19)
+                     the Cow half: mentions_named_by_source +0.49, resolve_named_by_source_cow +0.49,
+                       resolve_named_by_source -0.49, SelectionRequirement::clone -0.44, its drop -0.31 = -0.27 M
+                     event_matches_spec -3.60 / event_kind_matches +3.04: an inliner flip, a wash
+```
+
+The `(-241)` re-read's first lead: `dispatch_board_scan` builds a fresh
+`Vec<TriggerGrant>` per dispatch and a third of `cube`'s dispatches
+carry a grant (23,576 heap lists), and each grant's filter was cloned by
+`resolve_named_by_source` whether or not it had a `NamedBySource` leaf
+to concretize. Both halves as priced: the list inline for two
+(`DispatchScan.trigger_grants` and `trigger_grant_sources`'s return),
+the filter a `Cow<'a, SelectionRequirement>` borrowed from the
+definition unless the leaf is present. The allocator gave back the
+4.9 M the table promised and the change cost 14 M more than that.
+
+**Inline storage in a struct returned by value is a memcpy per call,
+not per allocation.** `DispatchScan` went from ~56 bytes to ~220 (two
+`TriggerGrant`s of a `Cow<SelectionRequirement>` plus three words each),
+and every dispatch — the ~70 k that carry no grant included — moved it
+out of `dispatch_board_scan`, destructured it, and ran `SmallVec`'s
+out-of-line destructor on both lists: 12 M of `memcpy` and 2.9 M of
+`drop` against an allocation saved on a third of them. The `Vec` form
+is three words, `#[may_dangle]` (no explicit `drop` before the `&mut
+self` phase — `SmallVec`'s destructor has none, so the consumers needed
+a `drop(trigger_grants)` and a destructuring `let` to compile at all),
+and its allocation is the cheaper side of that trade. The Cow half on
+its own is -0.27 M, noise; the `mentions_named_by_source` walk costs
+what the clone cost. Reverted whole. What would make the list free is
+storage that is neither moved nor dropped per dispatch, and the grant
+borrows the board, so that storage cannot live on the state.
+
+### `(-241)` TAKEN — a block-tax lane in front of `block_tax_for`'s per-blocker walk: `cube` -0.154 % / `sealed` -0.089 % / `fixed` -0.086 %
+
+```text
+  pool    base (-240)       (-241)          delta
+  fixed     697,307,501     696,705,741   **-0.086 %**
+  cube    1,944,519,629   1,941,530,315   **-0.154 %**
+  sealed  2,009,041,879   2,007,247,937   **-0.089 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  block_tax_for 8,018 calls x 437 Ir (cube) at the (-231) re-read; block_tax_present is the lane read now
+```
+
+The ninth presence lane, and the last of the walks the `(-231)` grep
+ranked above ~3 M: `block_tax_for` walked the board's statics once per
+declared blocker for `BlockTaxToController`, and the bot's
+`block_tax_present` gate made the same walk. One lane; `block_tax_
+present` *is* the lane read now (its walk was the lane's predicate),
+and `block_tax_for` returns the turn-scoped tax alone on a clear lane.
+Below the bar on `fixed`/`sealed` — it was 0.18 % of `cube` when priced
+and the lane read costs a little of that back per blocker.
+
+**The `(-233)`..`(-241)` lanes together: `fixed` -3.35 % / `cube`
+-2.90 % / `sealed` -2.05 %, nine lanes over 61 `StaticEffect` variants.
+Six lanes free on the word.**
+
+### `(-240)` TAKEN — a prevention-static lane in front of `prevent_static_scan`'s per-damage-event mask walk: `cube` -0.315 % / `sealed` -0.179 % / `fixed` -0.134 %
+
+```text
+  pool    base (-239)       (-240)          delta
+  fixed     698,244,755     697,307,501   **-0.134 %**
+  cube    1,950,673,721   1,944,519,629   **-0.315 %**
+  sealed  2,012,653,333   2,009,041,879   **-0.179 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  apply_prevention_shields_with 21,812 calls (cube), each opening with the scan
+```
+
+`prevent_static_scan` folds twelve prevention statics into a mask with a
+board walk, and `apply_prevention_shields_with` runs it on every damage
+event — 21,812 a six-game `cube` run. The `(-235)` entry priced a
+*word* lane (the mask kept through membership writes); the presence form
+is enough: the lane's predicate is the scan's own arm list, so a clear
+lane is a zero mask, and a board carrying any of the twelve walks as
+before. `cube` gains most — more damage events per game — and its
+boards still carry a prevention static rarely enough for the lane to
+read clear on most of them.
+
+### `(-239)` TAKEN — an ETB-counter static lane in front of `chosen_type_etb_counter_specs` and the cast-rider walk: `fixed` -0.198 % / `sealed` -0.183 % / `cube` -0.156 %
+
+```text
+  pool    base (-238)       (-239)          delta
+  fixed     699,633,465     698,244,755   **-0.198 %**
+  cube    1,953,713,803   1,950,673,721   **-0.156 %**
+  sealed  2,016,346,658   2,012,653,333   **-0.183 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  chosen_type_etb_counter_specs 4,918 calls (cube), the ExtraEtbCountersForCreatureCasts walk per resolving creature spell
+```
+
+The seventh presence lane, over eight `StaticEffect`s (Metallic Mimic,
+Oath of Gideon, Arlinn, Giada, Master Biomancer, Muzzio's Preparations,
+the two type-keyed enters-with-counter forms, and the cast rider). The
+walker reaches `all_static_sources` — the battlefield plus the active
+command-zone cards — so its gate is the lane **and** "no active
+command-zone card", the second term being a walk of two usually-empty
+lists; on a clear board the function returns only the turn-scoped
+Combine Guildmage grant and skips its `creature_types` clone. **A lane
+gates a walk over the zone it memoizes; a walker over two zones needs
+a term per zone.**
+
+### `(-238)` TAKEN — a hand-size static lane in front of `effective_max_hand_size`'s four walks: `fixed` -0.257 % / `cube` -0.140 % / `sealed` -0.134 %
+
+```text
+  pool    base (-237)       (-238)          delta
+  fixed     701,432,933     699,633,465   **-0.257 %**
+  cube    1,956,461,572   1,953,713,803   **-0.140 %**
+  sealed  2,019,051,137   2,016,346,658   **-0.134 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  effective_max_hand_size 2,878 calls (cube): four walks a call — no-max, the two reductions, set-to, increase
+```
+
+The last of the four lanes filed with `(-233)`: `effective_max_hand_size`
+(cleanup and the bot's discard planning) made four board walks per call
+for six `StaticEffect`s. One lane; a clear lane returns the seat's
+printed maximum, which is what the four walks compute on such a board.
+
+**The `(-233)`..`(-238)` legs together: `fixed` -2.94 % / `cube` -2.29 % /
+`sealed` -1.60 %, six lanes over 35 `StaticEffect` variants, each
+priced off one grep of the `static_abilities` read sites ranked by the
+enclosing function's self cost.** Thirteen lanes were free on the
+64-bit word before, seven now. The rest of that list is below the bar
+(`empty_mana_pools` already gates on pool emptiness; `chosen_type_etb_
+counter_specs` walks `all_static_sources`, which reaches the command
+zone, so a battlefield lane alone cannot gate it; `apply_prevention_
+shields_with` and `prevent_static_scan` are the fold-word shape noted in
+`(-235)`).
+
+### `(-237)` TAKEN — an any-colour-spend static lane in front of the payment relaxation's walk: `cube` -0.525 % / `sealed` -0.520 % / `fixed` -0.485 %
+
+```text
+  pool    base (-236)       (-237)          delta
+  fixed     704,849,254     701,432,933   **-0.485 %**
+  cube    1,966,779,439   1,956,461,572   **-0.525 %**
+  sealed  2,029,609,917   2,019,051,137   **-0.520 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  spend_mana_as_any_color_for_spell 8,886 calls (cube) — once per payment, from relax_cost_colors_for_spell
+```
+
+Every payment — spell, ability, tax — opens with `relax_cost_colors_for_
+spell`, which asks whether any permanent lets mana be spent as any colour
+(Mycosynth Lattice, Unexpected Potential, Emissary's Ploy) with a
+board walk that runs a three-arm `match` per static. One lane over the
+three; the walk stays behind it and the seat-agnostic sibling
+`spend_mana_as_any_color_active_for` reads the same lane. The largest of
+the four `(-235)`..`(-238)` lanes because a payment is the commonest event
+of the four and the walk's per-static body was the dearest — the same
+ranking the `static_abilities` grep's self-cost column gave it.
+
+### `(-236)` TAKEN — a land-play static lane in front of `can_player_play_land`'s three walks: `fixed` -0.388 % / `sealed` -0.192 % / `cube` -0.172 %
+
+```text
+  pool    base (-235)       (-236)          delta
+  fixed     707,597,733     704,849,254   **-0.388 %**
+  cube    1,970,174,350   1,966,779,439   **-0.172 %**
+  sealed  2,033,517,838   2,029,609,917   **-0.192 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  can_player_play_land 8,198 calls (cube): the Aggressive Mining walk, damping_engine_locks' walk, extra_land_plays_per_turn's walk
+```
+
+The bot asks `can_player_play_land` once per land-play candidate — 8,198
+times a six-game `cube` run — and each ask was three board walks
+(Aggressive Mining / "you can't play lands", Damping Engine, the
+extra-land count). One lane over the four statics; the two helpers gate
+themselves (they have callers of their own) and the walker reads it once.
+`fixed` gains most: its archetypes play a land nearly every turn and the
+bot re-asks on every main-phase decision.
+
+### `(-235)` TAKEN — a damage-replacement static lane in front of six per-damage-event walks: `fixed` -0.192 % / `sealed` -0.173 % / `cube` -0.165 %
+
+```text
+  pool    base (-234)       (-235)          delta
+  fixed     708,958,856     707,597,733   **-0.192 %**
+  cube    1,973,436,802   1,970,174,350   **-0.165 %**
+  sealed  2,037,047,943   2,033,517,838   **-0.173 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  damage_redirect_target 7,428 calls (two walks); deal_damage_to_from's player arm, four walks per player-damage event
+```
+
+`(-233)`'s device on the damage path: every damage event to a player
+walked the board for The Mindskinner, Crumbling Sanctuary, Delaying
+Shield and Nefarious Lich in turn, and `damage_redirect_target` walked
+it twice more (Pariah's Shield, Palisade Giant) for every damage event
+at all. One lane, six `StaticEffect`s in its predicate, both functions
+read it once. Smaller than the draw and ETB lanes because the walks
+were already cheap — a `matches!` per static on a list that is empty on
+most permanents — and the prevention machinery beside them
+(`prevent_static_scan`'s per-event mask, `apply_prevention_shields_with`)
+is untouched: the scan is a definition-only fold of twelve statics
+computed by a board walk on every damage event, and it is the same shape
+as a lane holding a *word* rather than a bit — the next device on this
+path if one is wanted (~280 Ir an event over ~13 k events on `cube`).
+
+### `(-234)` TAKEN — an ETB-static lane in front of `etb_trigger_multiplier` and `apply_enters_tapped_replacement`: `fixed` -0.391 % / `cube` -0.373 % / `sealed` -0.116 %
+
+```text
+  pool    base (-233)       (-234)          delta
+  fixed     711,743,769     708,958,856   **-0.391 %**
+  cube    1,980,826,495   1,973,436,802   **-0.373 %**
+  sealed  2,039,413,384   2,037,047,943   **-0.116 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  etb_trigger_multiplier 7,916 calls / apply_enters_tapped_replacement 7,758 (cube), both once per entering permanent
+```
+
+`(-233)`'s device on the ETB path: every permanent entering the
+battlefield paid `etb_trigger_multiplier` (two `battlefield_find`s and
+three board walks — Torpor Orb, Doorkeeper Thrull, Elesh Norn /
+Panharmonicon) and `apply_enters_tapped_replacement` (one cross-permanent
+`EntersTapped` walk with a selector match per static, and a
+`LandsEnterUntapped` walk for lands), ~1,400 Ir between them on a board
+that carries none of the five statics. One lane whose predicate is the
+union of the five; the multiplier returns `1` on a clear lane (exact:
+every other return is behind one of those statics) and the enters-tapped
+walks read an empty slice. `sealed` is the smallest because its boards
+carry an enters-tapped static (an Aura or a tapped-land lord) more often
+— the lane reads `PRESENT` and the walks run as before.
+
+### `(-233)` TAKEN — a draw-replacement static lane in front of `draw_one`'s eleven board walks: `fixed` -0.911 % / `cube` -0.773 % / `sealed` -0.478 %
+
+```text
+  pool    base (-231)       (-233)          delta
+  fixed     718,286,239     711,743,769   **-0.911 %**
+  cube    1,996,255,268   1,980,826,495   **-0.773 %**
+  sealed  2,049,218,164   2,039,413,384   **-0.478 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  draw_one inclusive (cube)   <- advance_step 2,822 / 14.16 M -> 5.84 M;  <- run_effect 1,406 / 10.03 M -> 3.00 M
+  the 340 recursive draws (redirects) are 340 on both sides; the 486 "draw_one -> draw_one" calls that
+  went were the global_static closure's own symbol
+```
+
+`draw_one` — 5,072 calls a six-game `cube` run, once per card drawn,
+including every draw inside a bot probe — walked the whole battlefield's
+`static_abilities` up to **eleven** times per draw: three global
+replacement statics (Uba Mask, Shared Fate, "players skip draws"), four
+controller-scoped dig replacements (Abundance, Tomorrow, Parallel
+Thoughts, Archmage Ascension), Obstinate Familiar's skip, Chains of
+Mephistopheles, Notion Thief, Blood Scrivener and Breathstealer's Crypt.
+Each walk is ~250-500 Ir (the dig ones run `active_static` per static)
+and each matches a different `StaticEffect`. One battlefield lane whose
+predicate is the **union** of all twelve (`card_has_draw_static`) answers
+every walk at once: a clear lane — nearly every board — is one word load
+per draw, and the eleven walks stay exactly as written behind it. The
+predicate is definition-only, so the lane holds across taps, damage and
+counters, and the per-instance `active_static` gates inside the helpers
+only narrow what it over-approximates.
+
+**The rule: when a function asks the same zone N different presence
+questions, the lane's predicate is the union, not one question.** Twelve
+`matches!` arms in one predicate is what makes one lane serve eleven
+walks; a lane per question would have been eleven lanes and eleven
+reads. Found by the `static_abilities` grep NEXT filed after `(-231)`,
+ranked by the enclosing functions' self cost: `draw_one` was the top row
+at 8.9 M self, and the same list has `etb_trigger_multiplier` /
+`apply_enters_tapped_replacement` (7.5 M + 3.7 M, the next lane),
+`spend_mana_as_any_color_for_spell` (3.3 M, once per payment),
+`effective_max_hand_size`, `empty_mana_pools`, `can_player_play_land`.
+
+### `(-232)` REFUTED — the step and cast walkers' closures handed to `for_each_triggerer` by value instead of `&mut`: `cube` -0.005 % / `sealed` +0.049 % / `fixed` +0.077 %, reverted
+
+```text
+  pool    base (-231)       (-232)          delta
+  fixed     718,286,239     718,837,316   **+0.077 %**
+  cube    1,996,255,268   1,996,148,610   **-0.005 %**
+  sealed  2,049,218,164   2,050,212,788   **+0.049 %**
+  FnMut for &mut F::call_mut <- fire_step_triggers 73,194 / 4.19 M and <- finalize_cast 53,340 / 13.06 M: both rows gone
+  fire_step_triggers self (cube) 10.72 M -> 10.74 M
+```
+
+`(-228)` and `(-231)` pass their per-card closure as `&mut visit` so one
+body serves two branches (whole board under a live grant, the member
+list otherwise), and the `(-98)` rule says `&mut F: FnMut` routes each
+card through a `call_mut` shim the inliner declines — the dump showed the
+shim on 126,534 calls. A `for_each_triggerer_or_all(all, f)` entry point
+takes the closure by value, the shim rows vanish, and the totals do not
+move: **the shim is a `call` and a frame, ~20 Ir, and the by-value form
+pays it back by monomorphizing the closure body into both branches** —
+the per-card body is what the walk costs, not how it is reached.
+`(-98)`'s 18.8 M was a *predicate* called per card inside `any` over the
+whole board; a closure whose body is a dozen loads is not that. Reverted:
+the `&mut` form is fewer lines.
+
+### `(-231)` TAKEN — the cast-trigger walker's two zone walks behind their memos: `fixed` -1.319 % / `sealed` -0.492 % / `cube` -0.341 %
+
+```text
+  pool    base (-230)       (-231)          delta
+  fixed     727,884,518     718,286,239   **-1.319 %**
+  cube    2,003,093,203   1,996,255,268   **-0.341 %**
+  sealed  2,059,349,123   2,049,218,164   **-0.492 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  finalize_cast self (fire_spell_cast_triggers is inlined into it)   fixed 9.56 M -> 3.74 M   sealed 17.61 M -> below the 0.5 % cut   cube 16.04 M -> below the cut
+```
+
+`fire_spell_cast_triggers` runs once per cast and made two zone walks
+into printed `triggered_abilities`: the whole battlefield for `SpellCast`
+triggers (now the trigger member list when no static or equipment grant
+is live — `(-228)`'s shape), and **every player's graveyard collected as
+`(id, owner)` pairs, filtered to the caster, then each id re-found by a
+linear search of the graveyard it came from** — a quadratic walk per cast
+for the Dissension Eidolons' "whenever you cast a multicolored spell,
+return this from your graveyard". The caster's graveyard is the only one
+the filter ever kept, so it is now walked directly, behind the `(-230)`
+lane. `fixed`'s -1.3 % is the quadratic half: its four archetypes cast
+often and their graveyards are long by mid-game.
+
+**The grep after `(-228)` found this too** (every `definition.
+triggered_abilities` site in the engine, asked "which zone, and is it
+memoized"). Three of the twenty sites were whole-zone walks with a memo
+already beside them — `(-228)`, `(-230)`, `(-231)` — and the grep cost
+nothing. The dispatcher's remaining zone legs (exile behind an event-kind
+gate, command zones and hands behind presence gates) were read and are
+gated.
+
+### `(-230)` TAKEN — the event dispatcher's graveyard leg behind the graveyard lane, the lane's predicate widened to both graveyard-firing families: `fixed` -0.784 % / `sealed` -0.428 % / `cube` -0.350 %
+
+```text
+  pool    base (-228)       (-230)          delta
+  fixed     733,633,503     727,884,518   **-0.784 %**
+  cube    2,010,133,057   2,003,093,203   **-0.350 %**
+  sealed  2,068,205,261   2,059,349,123   **-0.428 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  dispatch_triggers_for_events self   fixed 43.98 M -> 38.39 M   cube 86.71 M -> 79.54 M   sealed 117.26 M -> 108.30 M
+```
+
+`dispatch_triggers_for_events` — 143,852 calls a six-game `cube` run —
+walked **both players' whole graveyards** into every card's printed
+`triggered_abilities` on every dispatch, for the `FromYourGraveyard`
+scope and the graveyard-resident `SelfSource` kinds (cycling, milling,
+discard, "from anywhere"). The `(-210)` lane already held "does any card
+here carry a `FromYourGraveyard` trigger" for the combat-damage and step
+walkers; its predicate now covers both families (`is_graveyard_self_
+source_kind` is the one list, so the lane and the walk cannot drift),
+which is wider — the sound direction — for its two older readers, and
+the dispatcher's leg skips a graveyard whose lane reads `ABSENT`. A
+graveyard grows all game; the cost was a definition deref per graveyard
+card per dispatch on a zone that holds such a card in a few games out of
+six.
+
+**Found by grepping for the read, not by the profile**: every
+`definition.triggered_abilities` site in the engine was listed after
+`(-228)` and each asked "is this a whole-zone walk, and is the zone
+memoized". This one had sat inside the dispatcher's 4-6 % self row —
+which the line profile at `(-115)` called "the per-event bookkeeping" —
+for the whole history of the lane that could gate it. **A self row's
+line profile names where the instructions are; the grep names which of
+them a memo already answers.**
+
+### `(-228)` TAKEN — the step-trigger walk visits the trigger member list when no static grant is live: `fixed` -0.421 % / `cube` -0.127 % / `sealed` -0.052 %
+
+```text
+  pool    base (-229)       (-228)          delta
+  fixed     736,733,907     733,633,503   **-0.421 %**
+  cube    2,012,692,074   2,010,133,057   **-0.127 %**
+  sealed  2,069,285,360   2,068,205,261   **-0.052 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  fire_step_triggers self   fixed 10.89 M -> 6.95 M   cube 16.79 M -> 10.94 M   sealed 19.74 M -> 13.72 M
+  compute_permanent_pass self (cube) 74.22 -> 73.67 M — the (-229) shape held across the build
+```
+
+`fire_step_triggers` runs on every step of every turn (24,216 calls a
+six-game `cube` run) and walked every permanent's printed
+`triggered_abilities` for the step's kind. A live static grant can hand a
+trigger to any permanent, so that board is still walked whole (under the
+freeze scope it already took); without one only a permanent with a
+printed trigger or a Station band can contribute — `card_is_triggerer`,
+the trigger member list's own predicate — so the walk is
+`for_each_triggerer`. The `(-196)` refutation in this function was a
+*per-card* fold gate (a memo load against a one-element tag loop, a
+wash); this skips the cards, not the compare.
+
+**Measured twice, and the first reading is the reason `(-229)` exists:**
+against the `(-226)` tip this read `cube` **+0.86 %** with its own rows
+at -8 M, because the build flipped the layer pass's `extend` out of
+line. **When a total contradicts the device's rows, diff the two self
+tables before believing either** — the confound was two rows the edit
+never touched, and pinning them was worth more than the device.
+
+### `(-229)` TAKEN — the layer pass fills its effect list with push loops, not `SmallVec::extend`: `cube` -0.341 % / `fixed` -0.174 % / `sealed` -0.004 %
+
+```text
+  pool    base (-226)       (-229)          delta
+  fixed     738,014,635     736,733,907   **-0.174 %**
+  cube    2,019,586,479   2,012,692,074   **-0.341 %**
+  sealed  2,069,367,315   2,069,285,360   **-0.004 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  compute_permanent_pass self (cube)   81.09 M -> 74.22 M;  SmallVec::extend <- compute_permanent_pass: gone (was inlined at (-226), out of line at (-228)'s first build)
+```
+
+Found by the confound, not by a profile: `(-228)`'s first build (a
+stack.rs-only edit) read `cube` **+0.86 %** with the device's own rows
+at -8 M, and the self-table diff put the whole difference in two rows the
+edit never touched — `SmallVec::extend` +27.6 M and `compute_permanent_
+pass` -10.2 M. `compute_permanent_pass` built its per-permanent effect
+list with two `extend`s, one over a `Filter`; whether that generic
+inlines is decided per build, and out of line it is 420,672 calls at
+~137 Ir on `cube` against ~0 inlined. **A generic adapter on a
+400 k-call path is a coin the inliner flips on every build; write the
+inlined shape down.** Two `push` loops are that shape. The `(-156)` rule
+("a std-adapter rewrite is worth ~10 % of the adapter's self") is about a
+row that *is* inlined; this one is about keeping it so, and the loop form
+also reads below the previously-inlined build (-6.9 M self on `cube`).
+`sealed` is flat because its layer pass is dominated by boards where the
+list is longer and the loop body, not the frame, is the cost.
+
+### `(-227)` REFUTED — a `reserve(32)` in `advance_step` ahead of the damage steps' first push: `sealed` +0.298 % / `fixed` +0.241 % / `cube` +0.220 %, reverted
+
+```text
+  pool    base (-226)       (-227)          delta
+  fixed     738,014,635     739,793,304   **+0.241 %**
+  cube    2,019,586,479   2,024,029,917   **+0.220 %**
+  sealed  2,069,367,315   2,075,533,702   **+0.298 %**
+  do_reserve_and_handle (cube)   <- advance_step         0 -> 4,862 / 7.36 M  (1,514 Ir each)
+                                 <- resolve_combat_into  4,524 / 5.79 M -> 4,524 / 3.46 M  (still there)
+```
+
+`(-225)`'s priced follow-up, built as filed and wrong on the arithmetic:
+**`Vec::reserve(n)` reserves `n` slots *beyond `len`*, not a capacity of
+`n`.** `advance_step` reserved 32, pushed `StepChanged`, and the damage
+step's own `reserve(32)` then asked for 33 and reallocated the fresh
+32-slot buffer to 64 — two large allocations where the tree had a 4-slot
+first push plus one realloc. The per-call price says the rest: a 32-slot
+`GameEvent` buffer costs ~1,300-1,500 Ir to obtain from the system
+allocator whether by `malloc` or by `realloc`, so a caller-side
+`reserve(33)` would at best trade the 4-slot `malloc` for nothing and
+move the big allocation one frame up. **The cost is the size of the
+buffer, not the number of allocations, and the damage step's batch is
+genuinely that size** (the `(-80)`-era ladder climbed to 32 and past it).
+What would remove it is a scratch that survives probe clones, which is a
+thread-local pool — the `(-166)` recycle-list device — and that is a
+separate entry to price, not this one.
+
+### `(-226)` TAKEN — `do_untap`'s two remaining static-driven walks behind `any_static`: `fixed` -0.229 % / `sealed` -0.042 % / `cube` -0.035 %
+
+```text
+  pool    base (-225)       (-226)          delta
+  fixed     739,706,759     738,014,635   **-0.229 %**
+  cube    2,020,284,063   2,019,586,479   **-0.035 %**
+  sealed  2,070,228,163   2,069,367,315   **-0.042 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  do_untap inclusive   fixed 1,896 / 11.92 M -> 10.22 M   cube 2,834 / 24.76 -> 24.07 M   sealed 3,658 / 26.94 -> 26.09 M
+```
+
+`do_untap` answers "does any permanent or command-zone card carry a
+static at all" once (`any_static`) and six of its walks already sit
+behind it; two did not — the Thousand Moons Infantry "untap this during
+each other player's untap step" `&mut` loop and the Urban Burgeoning
+aura-host collect, both of which read `static_abilities` only. On
+`fixed`, whose four archetypes carry few statics, the gate answers `false`
+on most untap steps and the two walks (~900 Ir a step between them) go;
+`cube`/`sealed` boards usually have a static somewhere, so the gate
+answers `true` and only the gate's own cost shows. Read off the callee
+table's `Vec::from_iter` row (4.4 collects an untap step, 367 Ir each —
+the walk runs *inside* `from_iter`, so a collect over a filter is charged
+to the adapter, not to the function).
+
+### `(-225)` TAKEN — the combat damage step writes into the caller's event buffer: `sealed` -0.136 % / `fixed` -0.118 % / `cube` -0.070 %
+
+```text
+  pool    base (-224)       (-225)          delta
+  fixed     740,581,398     739,706,759   **-0.118 %**
+  cube    2,021,695,434   2,020,284,063   **-0.070 %**
+  sealed  2,073,037,291   2,070,228,163   **-0.136 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  do_reserve_and_handle <- resolve_combat(_into)   cube 4,848 / 5.13 M -> 4,524 / 5.79 M
+                                                    fixed 2,878 / 3.15 M -> 2,688 / 3.64 M
+                                                    sealed 6,632 / 7.21 M -> 6,276 / 8.46 M
+```
+
+`resolve_combat_damage_with_filter` built its own `Vec`, `reserve(32)`'d
+it (the `(-80)`-era fix for a 0->4->8->16->32 ladder) and handed it back
+for `advance_step` to `append` into the recycled scratch buffer and free —
+an allocation, a copy and a free per damage step. Both damage-step entry
+points now have an `_into` form that writes into the caller's buffer, and
+`advance_step` passes its scratch; the `()` forms stay as wrappers for the
+139 suite call sites and `submit_decision`.
+
+**What it did not remove, and why the row grew per call:** 4,524 of the
+4,848 reserves are still there, at 1,279 Ir instead of 1,057. Most combat
+damage steps run inside the bot's probe clones, and a clone's scratch is
+`Vec::new()` — so the step's buffer arrives holding only `StepChanged` in
+a 4-slot allocation, and `reserve(32)` is a `realloc` of it rather than
+a fresh `malloc`. The win is the append and the free; the allocation
+moved rather than vanished, exactly as the recycle-list rules say a
+reserve does. **A buffer recycled per state is not recycled across
+probe clones** — the next device, if any, is a `reserve(32)` in
+`advance_step` before its first push on the two damage steps, merging the
+4-slot allocation and the realloc into one (~1.4 M on `cube`, priced, not
+built).
+
+### `(-224)` TAKEN — the combat-damage-to-player listener walk visits the trigger member list: `fixed` -0.096 % / `cube` -0.069 % / `sealed` -0.057 %
+
+```text
+  pool    base (-223)       (-224)          delta
+  fixed     741,293,309     740,581,398   **-0.096 %**
+  cube    2,023,099,539   2,021,695,434   **-0.069 %**
+  sealed  2,074,212,577   2,073,037,291   **-0.057 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  fire_combat_damage_to_player_triggers inclusive   cube 7,128 / 18.35 M -> 16.93 M   fixed 3,266 / 6.65 -> 5.99 M   sealed 9,450 / 21.02 -> 19.79 M
+```
+
+`(-222)`'s device on its third walk: the CR 510 "whenever combat damage
+is dealt to you" listeners (Risona, Teysa) were a whole-battlefield walk
+into printed `triggered_abilities` per combat-damage event, once per
+attacker that connects. `for_each_triggerer` again. ~200 Ir an event;
+priced at the bar and taken because the change is one line and the list
+is already warm. The remaining printed-trigger walks in `combat.rs` are
+inside `fire_combat_damage_triggers`, whose listener leg is gated by the
+`LISTENER` dispatch bit (and whose fold `(-221)` refuted).
+
+### `(-223)` TAKEN — the block declaration stops paying a `{0}` block tax: `fixed` -0.375 % / `sealed` -0.371 % / `cube` -0.316 %
+
+```text
+  pool    base (-222)       (-223)          delta
+  fixed     744,080,362     741,293,309   **-0.375 %**
+  cube    2,029,520,828   2,023,099,539   **-0.316 %**
+  sealed  2,081,933,562   2,074,212,577   **-0.371 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  try_pay_after_snapshot_mode <- declare_blockers   cube 2,828 / 5.50 M   fixed 1,528 / 2.81 M   sealed 3,680 / 6.65 M   -> 0
+  declare_blockers inclusive (cube)   136.5 M -> 130.3 M
+```
+
+Read off `declare_blockers`' callee table at the `(-220)` tip: the CR
+509.1b "can't block unless its controller pays {N}" leg summed the tax
+per blocking seat and then paid it through `try_pay_with_auto_tap` **for
+every seat in the map, zero included** — a payment snapshot of the seat's
+whole board (`Vec` of `(id, tapped)`), a pool clone, the colour
+relaxation, an auto-tap pass that finds nothing to tap, and a `{0}`
+`pay_for_spell`, once per blocking seat per declaration, on a board that
+carries the keyword on no card. The attack side's twin (`total_tax > 0`,
+in `declare_attackers_banded`) has had the gate for its whole life; this
+side never did. A `{0}` payment moves nothing (the snapshot is restored
+only on failure, and it cannot fail), so the gate is outcome-identical,
+which the three pools, `--bench` and the traces confirm.
+
+**The rule: when two sides of one mechanic are written twice, diff the
+gates, not the bodies.** `attack_block_keyword_tax` is shared; the two
+call sites were not, and the one without `> 0` cost a third of a percent
+of every pool for as long as the block tax has existed.
+
+### `(-222)` TAKEN — the attack declaration's two printed-trigger walks visit the trigger member list: `cube` -0.134 % / `fixed` -0.126 % / `sealed` -0.073 %
+
+```text
+  pool    base (-220)       (-222)          delta
+  fixed     745,019,299     744,080,362   **-0.126 %**
+  cube    2,032,242,422   2,029,520,828   **-0.134 %**
+  sealed  2,083,448,867   2,081,933,562   **-0.073 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  declare_attackers_banded self   cube 27.62 M -> 22.37 M   fixed 10.35 M -> 8.81 M   sealed 26.95 M -> 22.46 M
+```
+
+The `(-219)` re-read priced `declare_attackers_banded`'s 4,086-Ir self as
+"the validation body — a dozen `attacks.iter().any(..)` scans" and left
+it; two of the walks in that body are not scans of the batch but of the
+*board*: the CR 508.1g `ControllerAttackedByOpponent` listeners (one
+whole-battlefield walk per attacker, into every permanent's printed
+`triggered_abilities`) and the CR 508 "whenever you attack" walk (one
+per declaration). Both read printed triggers only, which is exactly the
+question `Battlefield::trigger_members` already holds the answer to —
+kept exact through membership writes since `(-214)`, filled by every
+dispatch, so it is warm at every declaration. `for_each_triggerer` walks
+the list on a hit and the board on a miss (it never fills; the
+dispatcher does). Self came down 19 % on `cube` for ~5 lines.
+
+**The rule: a "validation body" is worth reading for the walks that are
+not over the batch.** A dozen `any` over two attackers is nothing; the
+two loops over twenty-three permanents' definitions beside them were a
+fifth of the function, and the member list that removes them was
+already there.
+
+### `(-221)` REFUTED — the combat-damage walker's listener walk fused into its dealer walk (built against the `(-219)` tip, concurrently with `(-220)`): `fixed` +0.131 % / `cube` +0.174 % / `sealed` +0.131 %, reverted
+
+```text
+  pool    base (-219)       (-221)          delta
+  fixed     745,162,927     746,135,663   **+0.131 %**
+  cube    2,035,554,686   2,039,094,144   **+0.174 %**
+  sealed  2,085,022,232   2,087,761,970   **+0.131 %**
+  cube:   fire_combat_damage_triggers self 28.57 M -> 32.68 M (+4.1 M); nothing else moved
+  three-pool stdout identical; --bench counters identical (the fold changed no push)
+```
+
+The `profiling-lines` read the `(-219)` re-read asked for (a 10-minute
+cold build, `cg_lines.py --in fire_combat_damage_triggers`): 29.0 M
+grouped, and the top rows were `CardId::eq` 5.17 M (`card.rs:13`), the
+listener walk's memo-word test 2.44 M (`combat.rs:5613`), slice
+stepping 1.95 M, `NonNull` / `mut_ptr` 3.0 M, the atomic load 1.34 M —
+i.e. the two full battlefield walks (dealer, listener), each an `Arc`
+deref and a compare per permanent. The obvious fold — collect the
+listeners into a `SmallVec<[&CardInstance; 16]>` on the dealer walk and
+process them where the second walk ran, every push in the same bucket
+in the same order — **cost 4.1 M more than the walk it removed.** The
+second walk over a slice whose `CardData` lines are already hot is a
+tight loop of one word load and one branch per card; the fold added a
+`scan_listeners` test and a `SmallVec` push (length check, spill
+check, store) to the dealer loop's body on every card, and then
+re-walked the hits through an indirection. **A line profile's `Arc`
+deref and `CardId::eq` rows are instruction counts, not cache misses:
+a second walk over a hot slice is priced by its own loop body, and
+fusing it buys nothing unless the fused body is smaller than the two
+it replaces.** Reverted; `fire_combat_damage_triggers` stays at
+~1,400 Ir a call, and its call count (20,480 on `cube`: one per
+attacker per damage event, from `resolve_combat`) is the lever, which
+is the attack search's.
+
+### `(-220)` TAKEN — the CR 732.3 announcement watch fingerprints only on a key repeat: `cube` -0.163 % / `sealed` -0.076 % / `fixed` -0.019 %
+
+```text
+  pool    base (-219)       (-220)          delta
+  fixed     745,162,383     745,019,299   **-0.019 %**
+  cube    2,035,552,660   2,032,242,422   **-0.163 %**
+  sealed  2,085,024,159   2,083,448,867   **-0.076 %**
+  three-pool outcomes identical; --bench counters identical; golden traces 7/7 unmoved
+  fingerprint <- activate_ability   cube 3,232 -> 62   sealed 2,192 -> 362   fixed 122 -> 8
+  the resolve-side watch (3,488 / 808 / 7,384 calls) untouched
+  census, (-217) tip, six games, consecutive same-key announcements / all announcements:
+              cube 220 / 26,000 (0.85 %)   fixed 198 / 8,000 (2.5 %)   sealed 520 / 28,000 (1.9 %)
+```
+
+The other half of the `(-219)` row, built concurrently against the
+`(-217)` tip where it read **`cube` -1.130 % / `sealed` -0.974 % /
+`fixed` -0.919 %** on its own — `(-219)` landed first and took the
+land-tap share, so this is what is left of the announcement side. The
+watch compares a fingerprint against the previous announcement's *only
+when that one was the same ability*, and a census says the key repeats on
+0.9-2.5 % of announcements: a different key now stores the key with
+`n == 0` ("pending") and no fingerprint, and the first repeat computes
+one and counts the pending announcement as unchanged. A genuine loop is
+refused at the same announcement as before (the 50-then-refuse test is
+byte-for-byte); the one case that moves is a repeat whose first two
+announcements saw different states, refused one announcement earlier.
+Same serde shape; the `(-219)` reset is the initial state.
+
+**The rule: price a memo by what compares against it, not by what
+computes it.** The fingerprint was computed on every announcement and
+read on one in fifty; the candidates entry priced the walk (900 Ir a
+call, "no device seen") and refuted a cheaper *policy*, when the device
+was to defer the computation to the read. What is left of `fingerprint`
+is the CR 104.4b resolution watch — 3.2 M on `cube`, 5.8 M on `sealed`
+(0.28 %) — which compares every trigger resolution against the previous
+one, so consecutive trigger resolutions are the common case there and
+the same deferral does not apply.
+
+### `(-219)` TAKEN — the CR 732.3 announcement watch behind the land-tap fast path: `cube` -1.004 % / `fixed` -0.951 % / `sealed` -0.938 %
+
+```text
+  pool    base (-218)       (-219)          delta
+  fixed     752,320,968     745,162,927   **-0.951 %**
+  cube    2,056,208,537   2,035,554,686   **-1.004 %**
+  sealed  2,104,769,657   2,085,022,232   **-0.938 %**
+  three-pool stdout identical; --bench counters identical; golden traces 7/7 unmoved
+  fingerprint (self)   fixed   9,636 calls / 7.53 M  ->    930 / 0.63 M
+                       cube   29,196 calls / 26.28 M -> 6,720 / 6.40 M
+                       sealed 35,598 calls / 26.41 M -> 9,576 / 7.46 M
+```
+
+Read off the `(-217)` tip's self table: `fingerprint` was 1.0-1.3 % of
+every pool, and its caller table said 23,666 of `cube`'s 29,196 calls
+came from `activate_ability` — the CR 732.3 announcement watch, taken
+*before* `activate_ability_inner` and so before the `(-204)` fast path,
+on every printed land tap. A plain land tap cannot trip the watch: it
+flips its source's `tapped` bit and grows a mana pool, both in the
+digest, so its own key can never repeat on an unmoved state; and since
+the watch only compares against the *immediately previous* activation,
+the one thing a land tap ever did to it was reset it. The fast path now
+resets the watch to its initial `(0, None, 0)` and the check runs after
+the fast path for every other activation — still before any cost is
+paid. Outcome-identical in every reachable sequence (the count can
+differ by one only when the same land is re-tapped on a byte-identical
+digest, which needs a step boundary and an untap trigger between the
+two, i.e. at most a handful a turn against a cap of 50); the both-ways
+test names the field and checks each side's value.
+
+**The rule this adds to the fast-path device: price every *caller-side*
+wrapper of the function the fast path shortcuts.** `(-204)` settled
+`activate_ability_inner` and was measured through `activate_ability`,
+whose own prologue kept paying 900 Ir a tap for three passes.
+
+### `(-218)` TAKEN — the step and combat-damage walkers behind zone lanes, the intervening-if filter in place: `fixed` -0.344 % / `sealed` -0.208 % / `cube` -0.158 %
+
+```text
+  pool    base (-217)       (-218)          delta
+  fixed     754,914,487     752,320,968   **-0.344 %**
+  cube    2,059,454,483   2,056,208,537   **-0.158 %**
+  sealed  2,109,167,085   2,104,769,657   **-0.208 %**
+  three-pool stdout identical; --bench counters identical; golden traces 7/7 unmoved
+  rows (self)                        fixed                cube                 sealed
+  fire_step_triggers            12.18 -> 10.89 M    18.06 -> 16.79 M    21.23 -> 19.74 M
+  from_iter_in_place             1.27 ->  0.50 M     2.10 ->  0.94 M     2.58 ->  1.09 M
+  fire_combat_damage_triggers    7.47 ->  7.31 M    28.84 -> 28.57 M    25.31 -> 25.01 M
+```
+
+Three small gates on the two trigger walkers, priced off the `(-217)`
+tip's self table (`fire_step_triggers` 0.9-1.6 % of a pool at ~700 Ir
+a call over 24,216 `cube` calls; `fire_combat_damage_triggers` 1.4 %):
+
+* **`fire_step_triggers` walked the active player's graveyard on every
+  step** — a definition deref per graveyard card for a
+  `FromYourGraveyard` step trigger 44 printings carry. The `(-210)`
+  lane's predicate is the scope, not the kind, so
+  `has_graveyard_trigger()` already held the answer; the walk now sits
+  behind it. Most of the leg on every pool.
+* **The intervening-if pass was `into_iter().filter().collect()` on a
+  list that is empty on most steps**, and the in-place collect
+  machinery runs whether or not there is anything to filter. A guarded
+  `retain` (the emptiness test is there because `retain` is an
+  out-of-line generic that cost `fixed` +0.08 % on an empty list the
+  last time it was tried bare).
+* **The Cipher walk of exile** in `fire_combat_damage_triggers` read
+  `encoded_on` behind every exiled card's `Arc` on every damage event
+  to a player. `CardPile` grew a second lane, `has_encoded()` — an
+  *instance* predicate, which a pile lane may hold because every `&mut`
+  route into a pile (`push`, `DerefMut`) clears the whole word, unlike
+  the battlefield's `iter_mut`; `zone::tests::pile_encoded_lane_follows_
+  the_instance_flag` pins that. The smallest of the three, as priced:
+  exile is short on these pools.
+
+What is left in `fire_step_triggers` (~690 Ir a call on `cube`) is the
+battlefield walk's tag test per printed trigger, the equipment walk and
+the command-zone / emblem walks; `(-196)` measured the per-card kind
+fold as a wash there, and a board-level fold of it would read PRESENT on
+most `cube` boards (`StepBegins` is one tag for every step, and upkeep
+triggers are common). Not a lead.
+
+### `(-217)` TAKEN — the two per-death registries leave the cold group: `cube` -1.228 % / `fixed` -0.832 % / `sealed` -0.351 %
+
+```text
+  pool    base (-216)       (-217)          delta
+  fixed     761,244,306     754,914,487   **-0.832 %**
+  cube    2,085,050,322   2,059,454,483   **-1.228 %**
+  sealed  2,116,592,411   2,109,167,085   **-0.351 %**
+  three-pool stdout identical; --bench counters identical; golden traces 7/7 unmoved
+  the device, priced by make_mut_slow's inclusive row:
+              cube    106.10 M -> 100.94 M   -5.16 M  (-0.25 %)
+              fixed    48.17 M ->  45.89 M   -2.28 M  (-0.30 %)
+              sealed  123.68 M -> 119.42 M   -4.26 M  (-0.20 %)
+              note_creature_death's unshares 1,900 / 7.06 M -> 2,450 / 0.53 M (cube)
+  the rest is a codegen shift that came with the build (cube):
+              SmallVec::extend        37.76 M -> 10.18 M
+              compute_permanent_pass  70.86 M -> 81.09 M
+              FilterMap::next          6.28 M ->  0.34 M;  FnMut::call_mut  9.69 M -> 14.37 M
+```
+
+`creature_deaths_this_turn` and `graveyard_from_battlefield_this_turn`
+were `ColdState` fields and a death writes both, so every death that
+was the first cold write after a clone paid the group's ~3,700-Ir
+unshare — 1,900 of `cube`'s 9,074 deaths under `note_creature_death`
+and the rest under `remove_from_battlefield_to_graveyard_raw`'s insert.
+They now share a `CowBox<TurnDeaths>` of their own, flattened into the
+same serde shape (`ColdState`'s doc said this move was the remedy for a
+field written on the hot path; it was). **Quote the device at its own
+rows, not the total:** the three-pool total is two to five times the
+unshare saving because the inliner moved the layer pass's `SmallVec::
+extend` into `compute_permanent_pass` in the same build (the "LTO
+confound" in the anchors section, seen from the winning side); real
+for this binary, and not to be re-counted when a later build moves it
+back.
+
+**The first cut was refuted (+0.103 % / +0.068 % / +0.078 %):** it
+moved `creature_deaths_this_turn` alone, to its own `CowBox<Vec<..>>`,
+and `make_mut_slow`'s caller table showed the 1,900 unshares had simply
+walked down the path to `remove_from_battlefield_to_graveyard_raw`
+(1,768 -> 3,668) — the graveyard-set insert was the next cold write of
+the same action — while the extra handle cost +1.4 M. **An unshare is
+paid by the first cold write of the action, not by the field that
+happens to be first; move a field out of the cold group only with every
+other cold write on that path** (the cold-write census that found the
+second one is a grep of `self.<cold field>` writes over the path's
+functions, and the remaining ones — `temporary_control`,
+`auras_at_death`, the trigger-use maps — are all guarded or rare).
+
+### `(-216)` TAKEN — a presence gate on the target in `check_target_legality`: `fixed` -0.324 % / `cube` -0.245 % / `sealed` -0.181 %
+
+```text
+  pool    base (-215)+fix   (-216)          delta
+  fixed     763,717,868     761,244,306   **-0.324 %**
+  cube    2,090,168,791   2,085,050,322   **-0.245 %**
+  sealed  2,120,435,808   2,116,592,411   **-0.181 %**
+  three-pool stdout identical; --bench counters identical; golden traces 7/7 unmoved
+  computed_permanent_hinted <- check_target_legality_with_source:
+              cube   15,416 calls / 21.28 M  ->  11,132 / 8.87 M
+              fixed   4,286 calls /  5.63 M  ->   2,196 / 1.48 M
+  the gate's own rows (cube): Mutex::lock 15,416 / 0.40 M (`layers_memoized`),
+              can_grant_keyword 2,166 / 0.17 M, card_has_anthem 496 / 0.01 M
+```
+
+The candidates block's top lead, taken as written: the check opened its
+own freeze scope and read the target's computed view for Shroud,
+Hexproof and the ability ward, so every call that was not nested in an
+outer scope gathered the whole board to ask three questions almost no
+target answers `yes` to. `card_keyword_possible_on` — the `(-204)` fast
+path's device, aimed at the target — answers "none of the three can be
+on this permanent" off its printed keywords, EOT grants, keyword
+counters and the grant member list without a view; only a `true` takes
+the view. Two details carry the win: the gate skips itself when the
+scope's gather is already memoized (`layers_memoized`, the same pairing
+`damage_from_source_prevented_by_keyword` uses — a memo read is cheaper
+than the gate), and the ability-ward family is asked only when a
+`source_card_id` is present, since the check does not read it otherwise.
+A `debug_assert!` recomputes the view on every gated miss, so the suite
+audits the four-seed claim on every targeting decision it makes.
+
+The 11,132 views that remain on `cube` are the memoized ones: the
+gate's `can_grant_keyword` row (2,166 calls) says a granter was on the
+board and asked in only a seventh of them. **What is left in this
+function is the scope itself** — `Unfreeze::drop` 17,458 / 0.32 M and
+`Mutex::lock` — about 0.04 % of `cube`; not a lead.
+
+### `(-215)` TAKEN — the dispatch scan visits its member list: `cube` -0.678 % / `fixed` +0.003 % / `sealed` +0.007 %
+
+```text
+  pool    base (-214)       (-215)          delta
+  fixed     763,686,383     763,711,694   **+0.003 %**  (noise: no contributor on those boards)
+  cube    2,104,414,486   2,090,149,281   **-0.678 %**
+  sealed  2,120,264,238   2,120,419,985   **+0.007 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  dispatch_board_scan self   16.35 M -> 6.92 M
+              trigger_grant_sources self 12.28 M -> 3.66 M
+              dispatch_scan_card                 +2.25 M (the per-contributor body, out of line)
+              lanes_after_push            4.00 M -> 3.80 M
+```
+
+`(-189)`'s device on the dispatch lane, made affordable by `(-214)`:
+the lane's presence bit becomes a **member list** of the permanents
+whose definition carries a `BOARD_SCAN` bit, kept exact through
+membership writes like the other two, and both walkers that filled the
+lane — `dispatch_board_scan` (82,718 calls, once per dispatch) and
+`trigger_grant_sources` — visit only the members on a hit. A `cube`
+board keeps an Equipment, a Blood Moon or a grant-trigger static out
+most of the game, which is why the presence lane read `PRESENT` and
+every dispatch walked the board; `fixed` and `sealed` never had a
+contributor, so their lanes read empty before and after and the leg is
+flat there to the noise. `dispatch_lane()` is now `members != 0`, so
+`ability_strip_possible` reads the same answer it did.
+
+### `(-214)` TAKEN — the member lists kept exact through membership writes: `fixed` -0.235 % / `cube` -0.171 % / `sealed` -0.148 %
+
+```text
+  pool    base (-213)       (-214)          delta
+  fixed     765,488,207     763,686,383   **-0.235 %**
+  cube    2,108,026,790   2,104,414,486   **-0.171 %**
+  sealed  2,123,403,116   2,120,264,238   **-0.148 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  dispatch_triggers_for_events self  89.15 M -> 86.71 M (its trigger-list refills)
+              lanes_after_push                    3.29 M ->  4.00 M
+              lanes_after_removal                 1.24 M ->  1.59 M
+```
+
+`(-213)` one step further: the two member-list lanes (`LANE_GRANT`,
+`LANE_TRIGGERER`) cleared on every membership write because their
+lists are indices — but a push appends at the end, so the new card's
+bit is `1 << len` when it qualifies and nothing else moves, and a
+removal at `i` is a shift of the bits above `i` down by one. Both are
+exact, so `push` / `remove` / `pop` keep the lists; `retain` still
+drops them (it cannot name what it removed), and a 65th card drops
+them too (no list past 64). `member_lanes()` names the two with the
+predicate each list's audit recomputes with (`card_has_any_grant_bits`,
+`card_is_triggerer`), and the audits stay on every read. The refills
+this saves were inline in the dispatcher (its self row moved) and in
+`board_grants_keyword`; smaller than `(-213)` because the lists were
+only ever asked by two callers.
+
+**Fixed after the closing grid found it:** the removal shift was
+`(bits >> (index + 1)) << index`, which for the card at index 63 of a
+64-card board shifts a `u64` by 64 — a panic under overflow checks and
+a silently wrong list in release. Two default-size grid cells (`cube`
+seed 23, `sos` seed 11) hit it inside `remove_from_battlefield_to_
+graveyard_raw`; the suite never builds a 64-card board, and the
+three-pool runs never reached one. `checked_shr(..).unwrap_or(0)` is
+the fix and `zone::tests::membership_writes_demote_only_the_lanes_they_
+can_change` now removes index 63 of a full list. **A grid cell is the
+only audit a 64-card board gets — run the grid before calling a lane
+change done.**
+
+### `(-213)` TAKEN — a membership write answers each lane off the one card it moved: `fixed` -1.158 % / `sealed` -0.887 % / `cube` -0.847 %
+
+```text
+  pool    base (-212)       (-213)          delta
+  fixed     774,454,748     765,488,207   **-1.158 %**
+  cube    2,126,041,074   2,108,026,790   **-0.847 %**
+  sealed  2,142,409,640   2,123,403,116   **-0.887 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  walk_and_store          14.96 M -> 1.94 M  (50,576 walks -> ~6,600)
+              lanes_after_push                 +3.29 M  (new: the per-card answers)
+              lanes_after_removal              +1.24 M  (new)
+              board_has_mana_static    4.01 M -> 1.51 M  (its inline fill)
+              dispatch_board_scan     16.40 M -> 16.35 M
+```
+
+`(-212)` kept the lanes a write could not change; this answers the
+ones it could, **off the one card that moved**. Every lane is "does
+some permanent's definition satisfy P", so after a push an `ABSENT`
+lane is `PRESENT` iff P(new card), and after a removal a `PRESENT` lane
+is still `PRESENT` if the leaver fails P (its witness is elsewhere) —
+one predicate call per lane per write, against a whole-board walk per
+lane per ask. The zone now holds every lane's predicate in
+`LANE_PREDICATES` (indexed by lane; `None` on the two member-list
+lanes, which clear on any change), the eight engine-side predicates
+went `pub(crate)`, and `push` / `remove` / `pop` / `take_by_id` update
+through it; `retain` cannot name what it dropped, so it demotes
+`PRESENT` lanes as `(-212)` did. **The table entry and the predicate a
+lane's callers hand to `lane()` must be the same function**, and the
+lane audits — recomputing against the handed one on every read under
+debug assertions — are what enforce it; the three zone tests that used
+a foreign predicate to stand in for a lane's own were rewritten
+against the real ones, and one of them found that Blood Moon carries
+`STRIP` (CR 305.7) and so sets the dispatch lane, which the old test's
+`never` had been hiding.
+
+The `definition_epoch` half is settled by a census, not a build: a
+throwaway test counted **0, 2 and 6** rewrites over three whole bot
+games (a `fixed`-shaped one and two `cube` pairings), so the "~8 k a
+run" that `card.rs`'s epoch note quotes is wrong by two orders and the
+epoch is not where the fills were. The 1.9 M of walks left are the
+first asks on fresh boards and the `retain` demotions.
+
+### `(-212)` TAKEN — membership writes demote only the lanes they can change: `cube` -0.469 % / `fixed` -0.440 % / `sealed` -0.334 %
+
+```text
+  pool    base (-211)       (-212)          delta
+  fixed     777,877,362     774,454,748   **-0.440 %**
+  cube    2,136,059,209   2,126,041,074   **-0.469 %**
+  sealed  2,149,580,101   2,142,409,640   **-0.334 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  walk_and_store          22.44 M -> 14.96 M; 72,464 walks -> 50,576:
+                the death-redirect lane's  10,116 -> 2,278
+                dying_snapshot's            8,422 -> 2,148
+                card_type_change_unscoped's 10,752 -> 8,006
+                the SBA's                   9,068 -> 7,410
+              dispatch_board_scan     16.88 M -> 16.40 M (its inline fill)
+              board_has_mana_static    4.23 M ->  4.01 M (its inline fill)
+  fixed:      walk_and_store           8.47 M ->  6.48 M;  sealed: 19.59 M -> 15.19 M
+```
+
+`(-209)`'s lesson turned around: the fills are the cost, so make fewer
+writes cause them. Every lane is "does *some* permanent's definition
+satisfy P", and a membership write moves that answer in one direction
+only — **an addition can turn a lane `PRESENT` but never `ABSENT`; a
+removal the reverse.** So `Battlefield::push` keeps every `PRESENT`
+lane and drops only the `ABSENT` ones to `UNKNOWN`, and the removal
+routes — a shadowed `remove`, `retain` and `pop`, plus `take_by_id`,
+which the seven death-path `take_card(&mut self.battlefield, ..)` sites
+now call — keep every `ABSENT` lane and drop only the `PRESENT` ones.
+The two member-list lanes (`LANE_GRANT`, `LANE_TRIGGERER`) hold indices
+and clear on either; anything else that reaches `DerefMut` clears whole
+as before. Two masks (`LANE_ABSENT_BITS` = bit 0 of every field,
+`LANE_PRESENT_BITS` = bit 1) make the demotion one `and`. The lanes'
+`debug_assert!` audits recompute against the handed predicate on every
+read, so a kept state that was wrong fails the suite; `zone::tests::
+membership_writes_demote_only_the_lanes_they_can_change` pins the
+contract and the two old tests that asserted the full clear now assert
+the direction.
+
+Why it pays: a death is a removal followed by a burst of asks (the
+death-redirect lane, the SBA's card-type and dispatch lanes, `dying_
+snapshot`'s creature lane), and on most boards those lanes read
+`ABSENT` — which the removal now leaves standing. An ETB is a push
+followed by the same asks, and the lanes a `cube` board keeps `PRESENT`
+(dispatch, listener) stand through it. The definition-epoch bump still
+throws every lane on every board away; that half is untouched and is
+what the remaining 15 M of fills mostly are.
+
+### `(-211)` TAKEN, below the bar — two standing-rule reorders in `fire_combat_damage_triggers`: `cube` -0.031 % / `fixed` -0.026 % / `sealed` -0.015 %
+
+```text
+  pool    base (-210)       (-211)          delta
+  fixed     778,079,531     777,877,362   **-0.026 %**
+  cube    2,136,721,312   2,136,059,209   **-0.031 %**
+  sealed  2,149,902,704   2,149,580,101   **-0.015 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  SmallVec::extend under the dispatch  20,560 calls / 1.77 M -> gone
+              fire_combat_damage_triggers self     27.93 M -> 29.04 M (the loop
+                                                   it absorbed; net -0.66 M)
+```
+
+The dealer walk read `c.definition.soulbond_bonus` — a pointer chase
+into the definition — on every permanent before the instance's
+`soulbond_partner`, which is `None` on nearly all of them (`(-116)`'s
+order); and the `by_kind` buckets were a `collect()` into a `SmallVec`,
+whose `Extend` is external iteration (the `(-97)` rule). Both are the
+shape the Standing rules prescribe and both measured, so they stay —
+and the reading is that the definition deref was not the cost: the
+`Arc` is hot. **What is left is diffuse across the function's own
+walks** — the dealer pass, the listener pass behind a lane that a
+`cube` board with any `YourControl` trigger keeps `PRESENT`, the
+cipher walk over exile, `slot()`'s linear search per trigger — 1,400 Ir
+a call over 20,560 calls, 98 % of which push nothing. An early-out
+would have to answer "nothing attached to the dealer" without the walk
+that answers it, and `attached_to` is instance state a battlefield lane
+may not hold; a line profile (`profiling-lines`) is the instrument
+before anything else here.
+
+### `(-210)` TAKEN — a graveyard lane in front of the combat-damage dispatch's per-kind graveyard walk: `fixed` -0.618 % / `cube` -0.468 % / `sealed` -0.430 %
+
+```text
+  pool    base (-208)       (-210)          delta
+  fixed     782,919,572     778,079,531   **-0.618 %**
+  cube    2,146,764,044   2,136,721,312   **-0.468 %**
+  sealed  2,159,178,810   2,149,902,704   **-0.430 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  fire_combat_damage_triggers self  38.75 M -> 27.93 M (1.81 % -> 1.31 %)
+              card_has_graveyard_trigger        20,990 calls / 260 k Ir (the lane's fills)
+  fixed:      fire_combat_damage_triggers self  12.71 M -> 7.33 M (1.62 % -> 0.94 %)
+```
+
+Read off the `(-208)` self table with the `(-207)` lesson in hand: a
+1.8 % self row at ~1,900 Ir over 20,560 outer calls is walks, and the
+function's phase 2 walked the dealer's controller's **whole graveyard
+once per event kind** — a `contains` on the dedupe list and a
+definition deref per card per kind — for a `FromYourGraveyard` trigger
+that 44 cards in the catalog print and almost no graveyard holds. The
+`Graveyard` zone had one lane slot left (`GY_LANE_COMBAT_TRIGGER`,
+shift 6); its predicate is the definition-only scope test, and the
+whole phase now sits behind `has_graveyard_trigger()`. `fixed` moved
+most: its graveyards fill with the vanilla creatures it trades.
+
+**What is left in the function (27.9 M self, 1,360 Ir a call), and
+that only 420 of the 20,560 calls push anything:** the dealer walk —
+one pass over the battlefield that finds the dealer, any attachment
+and any soulbond pair, and reads `c.definition.soulbond_bonus` (a
+definition deref) on every permanent *before* the instance's
+`soulbond_partner`, which is `None` on nearly all of them (the `(-116)`
+order, next); the listener walk behind the listener lane, which a
+`cube` board with any `YourControl` trigger keeps `PRESENT`; the cipher
+walk over exile for a `DealsCombatDamageToPlayer` kind; the `by_kind`
+buckets' build and drop (3.2 M).
+
+### `(-209)` REFUTED, one build — a strip lane under `ability_strip_in_scope`: `cube` -0.088 % but `fixed` +0.101 % / `sealed` +0.073 %
+
+```text
+  pool    base (-208)       strip lane      delta
+  fixed     782,919,572     783,708,459   **+0.101 %**
+  cube    2,146,764,044   2,144,879,802   **-0.088 %**
+  sealed  2,159,178,810   2,160,760,531   **+0.073 %**
+  three-pool stdout identical
+  cube rows:  ability_strip_in_scope self  4.62 M -> 1.64 M   (-2.98 M, the walks)
+              walk_and_store              22.44 M -> 24.34 M  (+1.90 M, the fills)
+```
+
+The `(-207)` shape a third time (`LANE_STRIP`, predicate `STRIP |
+STRIP_ATTACHED`, the exact walk behind `PRESENT`), under
+`ability_strip_in_scope` itself so every activation and the fast path's
+new read took it. It lost on two pools and the table says why: **a lane
+is filled by its own whole-board walk after every membership change and
+every definition-epoch bump, and a lane that is asked less often than
+the board changes pays more fills than it saves.** `card_type_change_
+unscoped` won 0.9 % because the SBA sweep asks it after every action;
+the strip question is asked once per activation, the dispatch lane the
+fast path was already reading is filled by the SBA's `dispatch_board_
+scan` for free, and on `fixed` / `sealed` the walk it replaced was over
+boards with almost no statics. Reverted; `(-206)`'s `ability_strip_
+possible` (the dispatch-lane pre-gate) stands.
+
+**What would make a new lane free is the device this refutes toward:
+one walk that fills every definition-only lane at once.** Eighteen
+lanes each walk the board on their own miss, so a membership change is
+up to eighteen walks; every lane predicate is a memo-word read per
+permanent, so one pass could fill them all for ~18 loads a card. The
+predicates live in `mod.rs` / `actions.rs` and are handed in by the
+caller (that is what keeps a lane's `debug_assert!` honest), so the
+batch fill needs a registered table of them in `zone.rs` — a
+structural change, filed in candidates, not a lane.
+
+### `(-208)` TAKEN — `ContinuousEffects`, the stored effect list with a fold of its modification families: `fixed` -0.092 % / `sealed` -0.068 % / `cube` -0.058 %
+
+```text
+  pool    base (-207)       (-208)          delta
+  fixed     783,637,902     782,919,572   **-0.092 %**
+  cube    2,148,010,997   2,146,764,044   **-0.058 %**
+  sealed  2,160,644,386   2,159,178,810   **-0.068 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube rows:  ContinuousEffects::fill   5,966 calls / 69 k Ir (the refills:
+                                        2,878 under process_cumulative_upkeep,
+                                        2,866 under dispatch_triggers_for_events,
+                                        192 under the SBA sweep)
+              card_type_change_unscoped self 2.60 M -> 2.51 M
+```
+
+Seven presence gates walked `GameState::continuous_effects` on every
+ask for one `Modification` family — `card_type_change_unscoped`'s
+other half, `card_color_change_unscoped`, `land_type_change_in_scope`
+and `creature_type_change_in_scope` (behind a freeze-scope slot each),
+`keyword_grant_in_scope`'s `AddKeyword` leg, `ability_strip_off_
+battlefield`, `pt_reduction_in_scope` — and `eval.rs`'s `PrintedGates`
+carried a second hand-written copy of the land and creature walks. The
+list is a `CowBox<Vec<ContinuousEffect>>` with ten mutation sites, all
+already behind an `iter().any` pre-check or once a turn, so
+`layers::ContinuousEffects` is the `Battlefield` shape one level down:
+`Deref` for every read, every `&mut` route (`DerefMut`, `push`) clears
+an `AtomicU32` fold word, and the first ask after a write recomputes
+`modification_families` over the list (`mod_families`: seven bits,
+`TOUGHNESS_REDUCE` from the same `modification_reduces_toughness` the
+gate used, so each gate's answer is exact by construction). The two
+`PresenceGate` slots (`Land`, `Creature`) the fold subsumes are gone;
+`PrintedGates` calls the engine's one gate per family.
+
+**Why it is small, and why it stays.** The walks were over a list that
+is empty on most boards in bot play — a six-game `cube` run refills the
+fold under six thousand times, so the gates were paying a length load
+and a branch, not a walk. The device's value is the other board: a
+client game or a long combat with a dozen until-end-of-turn effects
+scaled every one of these gates by the list's length, and now none
+does. It also closed a parallel-walker pair (`eval.rs`) — the class
+`ENGINE_BACKLOG` keeps closing. Measured, positive on all three pools,
+kept as the structural change it is; the `(-206)` cost it was built to
+take back turned out to live in `ability_strip_in_scope`'s battlefield
+walk instead (that entry is corrected), which is the next lane.
+
+### `(-207)` TAKEN — a card-type lane (the lane word widened to 64 bits) in front of `card_type_change_unscoped`'s battlefield walk: `cube` -0.912 % / `fixed` -0.764 % / `sealed` -0.622 %
+
+```text
+  pool    base (-206)       (-207)          delta
+  fixed     789,673,260     783,637,902   **-0.764 %**
+  cube    2,167,790,574   2,148,010,997   **-0.912 %**
+  sealed  2,174,162,818   2,160,644,386   **-0.622 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube self rows:  check_state_based_actions_into     -6.63 M  (the death sweep's
+                                                               inlined copy)
+                   card_type_change_unscoped          -5.28 M  (the out-of-line row:
+                                                               7.89 M -> 2.60 M)
+                   evaluate_requirement_static_hinted -5.22 M  (the presence-gate
+                                                               copy, inlined)
+                   fold_printed_grant_filter          -2.89 M
+                   tap_ability_summoning_sick         -1.62 M
+                   presence_gate                      -0.64 M
+                   walk_and_store                     +2.71 M  (the lane's misses)
+  fixed:           check_state_based_actions_into -3.04 M, evaluate_requirement_
+                   static_hinted -2.36 M, card_type_change_unscoped -1.75 M,
+                   walk_and_store +1.24 M
+```
+
+`(-204)` priced this at 0.36 % off the one row it could see and it came
+in at 0.9 %: **the function is inlined into four of its eight callers**,
+so the caller table (22,534 calls, all `activate_ability_inner`) named
+a fifth of its cost. The SBA death sweep asks it once per sweep
+(21 k), the requirement walker once per type-flavoured predicate, the
+summoning-sickness gate once per tap — each a `continuous_effects`
+walk plus a memo-bit read per permanent. The Standing rule the first
+line of this entry restates: **price a small function by every caller
+that inlined it, not by its row.**
+
+The device is the `(-87)` lane, one entry further: `LANE_CARD_TYPE`
+(shift 32) holds `type_bits::ALL` over the board — the definition-only
+superset of `card_can_change_card_types`, whose attachment gate reads an
+instance field a lane may not — and the function runs its exact walk
+only when the lane says `PRESENT`, so its answer is unchanged on every
+board. The word was full at sixteen lanes; `type_gates` is now an
+`AtomicU64`, thirty-two lanes, `LANE_MASK` a `u64` and the three state
+constants cast to match — a mechanical widening, +4 bytes on
+`Battlefield` where the `AtomicU64` epoch beside it already fixed the
+alignment. The `continuous_effects` half of the walk stays, and is the
+next entry.
+
+### `(-206)` RULES FIX, priced — a stripped permanent's printed mana ability no longer activates (CR 305.7 / 613.1f): `cube` +0.197 % / `sealed` +0.054 % / `fixed` +0.048 %
+
+```text
+  pool    base (-205)       (-206)          delta
+  fixed     789,290,614     789,673,260   **+0.048 %**
+  cube    2,163,533,978   2,167,790,574   **+0.197 %**
+  sealed  2,172,992,444   2,174,162,818   **+0.054 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube by row:  ability_strip_possible   +22,476 calls x 187 Ir = 4.20 M (new)
+                  of which ability_strip_in_scope  2,872 x 428 = 1.23 M (the
+                  dispatch lane PRESENT or unknown — the full walk)
+                  and 19,604 x 151 = 2.97 M: the lane read plus
+                  ability_strip_off_battlefield's continuous_effects walk
+```
+
+Not a perf change — the `(-204)` audit found `activate_ability_inner`'s
+printed-index gate was `stripped && !is_mana_ability(..)` ("no catalog
+card stripping abilities has a mana ability of interest"), so a
+Blood-Mooned Temple of Epiphany tapped for `{U}` by direct activation
+while the auto-tapper's source table refused it. The gate now refuses
+on `stripped` for the printed leg; the granted and intrinsic legs are
+unchanged, which is exactly the tapper's rule (ENGINE_BACKLOG has the
+entry; `modern::decks_16_17_misc` the two regression tests). The bot
+never took that path, so no trace moved.
+
+**The cost is the fast path's, and it is priced so the next leg can
+take it back.** `activate_plain_land_tap`'s board half needs "no strip
+in scope" now, and the generic path's `ability_strip_in_scope` is a
+~500-Ir walk. `ability_strip_possible` puts the battlefield half behind
+the dispatch lane (`BOARD_SCAN` carries both strip bits, so `ABSENT`
+settles it). **Corrected at `(-208)`, off its callee table:** the 4.2 M
+is 80 % `ability_strip_in_scope` — the dispatch lane is `PRESENT` or
+unknown on 29 % of taps (6,596 of 22,476: an Equipment with a trigger
+grant, a dies-suppressor, a grant-trigger static all set `BOARD_SCAN`
+bits that are not strip bits), and each of those pays the full walk at
+516 Ir. The `continuous_effects` walk in `ability_strip_off_battlefield`
+that this entry first blamed is nearly free in bot play (the list is
+empty most of the time; `(-208)` measured it). **A dedicated strip lane
+— predicate `STRIP | STRIP_ATTACHED`, the definition-only superset of
+`card_can_strip_abilities` — is the device**, and `ability_strip_in_
+scope` itself takes it too: candidates, top.
+
+### `(-205)` TAKEN — the `AddMana` arm's Contamination / Pulse walk behind the mana-static lane: `cube` -0.156 % / `sealed` -0.114 % / `fixed` -0.032 %
+
+```text
+  pool    base (-204)       (-205)          delta
+  fixed     789,546,300     789,290,614   **-0.032 %**
+  cube    2,166,909,379   2,163,533,978   **-0.156 %**
+  sealed  2,175,477,317   2,172,992,444   **-0.114 %**
+  three-pool stdout identical; golden traces 7/7 unmoved
+  cube by row:  run_effect self            12.51 M -> 7.94 M (-4.57 M)
+                board_has_mana_static      25,166 calls -> 47,844 (2.68 M -> 4.23 M)
+                is_basic                   24,278 calls, unchanged (the source read
+                                           stays: the turn-scoped replacements need it)
+```
+
+`(-204)` left the resolver alone and priced its `AddMana` arm: a
+whole-board `static_abilities` walk for `LandsProduceColorInstead` /
+`YourBasicLandsProduceChosenColorInstead` on every land source, which
+is every land tap. Engine-only: the two statics fold into the `(-198)`
+memo word as `mana_summary::LAND_MANA_REPLACER` (bit 50), the lane's
+predicate is now one `pub(crate) fn card_has_mana_static` — the four
+`MANA_STATIC` dispatch bits *or* that memo bit — shared by the lane's
+fill and its `debug_assert!` audit, and the walk runs only behind
+`board_has_mana_static`. The lane is a superset for its other three
+consumers, as it already was; a Contamination board now takes the
+generic activation path (the fast path's board half reads the same
+lane), which `core_rules::land_tap_fast_path`'s Contamination board
+now pins as a decline. `fixed` moved least because its boards carry
+almost no statics, so the walk it lost was over empty lists.
+
+**What the new lane reads cost, and why it is a candidate:** the extra
+22,678 `board_has_mana_static` asks are 68 Ir each, and the lane's
+*hit* is a handful of loads — the average is the misses, filled inline
+by `board_has_mana_static`'s own walk (two memo-word reads per
+permanent under the widened predicate) after every membership change
+and every definition rewrite, since `definition_epoch` is global and
+one bump throws every lane on every board away. Both halves are
+structural to the lane design; the epoch's over-invalidation is the
+half worth a census (how many lane misses follow an epoch bump alone).
+
+### `(-204)` TAKEN — the printed land tap settled by inspection, ahead of `activate_ability_inner`'s gate walk: `sealed` -1.623 % / `cube` -1.509 % / `fixed` -1.496 %
+
+```text
+  pool    base (-203)       (-204)          delta
+  fixed     801,539,915     789,546,300   **-1.496 %**
+  cube    2,200,107,698   2,166,909,379   **-1.509 %**
+  sealed  2,211,363,961   2,175,477,317   **-1.623 %**
+  (base re-taken from the committed tip: within 0.00001 % of the (-203)
+  readings)
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  activate_ability_inner self  46.02 M -> 12.83 M (2.09 % -> 0.59 %)
+                its callee table 751,274 calls -> 384,322 — the gate walk's
+                helpers: Keyword::eq 77,766 -> 10,256, ManaCost::has_x
+                76,040 -> 8,612, battlefield_find 57,104 -> 6,516,
+                ability_spend_kind 25,708 -> 3,232, prefers_graveyard_target
+                24,882 -> 2,438, tap_ability_summoning_sick 24,540 -> 0,
+                requires_target 24,382 -> 0, its own closures 51,018 -> 6,066
+                CardData::mana_summary  +24,718 asks (176 k Ir); the fast
+                path took 22,534 of them (91 %)
+  fixed by row: activate_ability_inner self  16.61 M -> 2.77 M (2.07 % -> 0.35 %);
+                8,706 of 8,770 asks taken
+  sealed:       activate_ability_inner self  49.68 M -> 11.26 M (2.25 % -> 0.52 %);
+                26,022 of 26,714 asks taken
+```
+
+`(-197)`'s "two-thousand-line read" was done, and the device fell out of
+it: nearly every one of the ~100 gates in `activate_ability_inner` is a
+question about the *ability's cost line* or the *source's printed type
+line*, both pure in the definition, and the rest are five board presence
+reads the generic path already pays. `activate_plain_land_tap` runs ahead
+of the gate walk when the definition word says so and the board does not
+object, and performs the generic path's mutations verbatim, in its order.
+
+* **The definition half is two new families on the `(-198)` memo word**
+  (bits 43-49, computed by `mana_summary_of` beside the others).
+  `PLAIN_TAP << i`: printed ability `i` is a bare `{T}: Add …` for the
+  activator — `plain_tap_mana`, which is `is_free`'s probe compare with
+  `tap_cost` and the `AddMana` body masked, so every cost field, cap,
+  gate, zone flag and reduction sits at its default. `PLAIN_LAND`: a land
+  whose printed type line is neither creature, artifact nor enchantment —
+  the three types the Karn / Abolisher / Cursed Totem / CR 106.12 gates
+  key on. The first six indices pack; a seventh takes the generic path.
+* **The board half is what the generic path reads for the same
+  activation anyway**, minus the ones it reads and then ignores for a
+  mana ability: yours, untapped, not detained, not bestowed;
+  `card_type_change_unscoped` (layer 4 could make it a creature — CR
+  106.12 and CR 602.5g both hang off that), `land_type_change_in_scope`
+  only when `printed_land_mana_basic` is `Some` (CR 305.6),
+  `card_keyword_possible_on(CantActivateTapAbilities)` (CR 602.5),
+  `board_has_mana_static` (the Skyseer tax, the multiplier and the CR
+  605.1b grant all sit behind it — a board with one goes generic rather
+  than reproduce three walks), and `limited_range` (CR 801.6). Any
+  `true` hands the activation back untouched.
+* **The mutations are the generic path's, in its order, including the
+  ones it makes for nothing**: the five pending-pick takes, the tap, the
+  two events, `tapped_land_for_mana_this_turn`, the six cost-scratch
+  resets (`exiled_for_cost_mana_value`, `sacrificed_count`,
+  `sacrificed_total_power`, `counters_removed_as_cost`,
+  `cost_discarded_mana_value`, `cost_exiled_cards`, plus the gated
+  `cost_sacrificed_batch` / `tapped_for_cost` assignments), the
+  multiplier around `continue_ability_resolution_x_into` and the extra
+  mana splice. The resolver is untouched — Contamination, Pulse, the
+  turn-scoped replacements and Bubbling Muck all resolve through the same
+  code — so the win is the gate walk alone.
+* **`core_rules::land_tap_fast_path` is the audit**: fourteen boards
+  built twice, tapped once down each path (`FORCE_GENERIC_ACTIVATION`
+  is the switch, one relaxed load an activation), the returned events
+  and the whole serialized `GameState` compared; a debug-only tally says
+  which path was taken so an "accept" board cannot pass by declining;
+  and a 4,000-action bot game traced both ways. It found one wrong
+  *expectation*, not one wrong answer: a Blood-Mooned Temple's printed
+  `{T}: Add {U}` is accepted by both paths — only a basic's *intrinsic*
+  ability is CR 305.6-gated, and the generic path lets a stripped
+  permanent's printed mana ability through (`stripped &&
+  !is_mana_ability`). That is a rules gap in the generic path (CR
+  113.10b: "loses all abilities" loses mana abilities too; the
+  auto-tapper's source table already gets it right), filed in TODO —
+  a fix there adds `ability_strip_in_scope` to the fast path's board
+  half, one presence read.
+
+**What is left of the tap, priced off the candidate's callee table
+(`cube`, 22,534 fast taps):** `continue_ability_resolution_x_into`
+24,252 x 897 Ir = 21.7 M (1.0 %) — `resolve_effect_into`'s self is 238
+a call (the ~30 resolution-scratch resets), and `run_effect`'s `AddMana`
+arm walks every permanent's `static_abilities` for Contamination / Pulse
+of Llanowar on **every land source** (`is_basic` 24,278 calls, the False
+Dawn `find` 22,702) — a lane question, the two statics are not in
+`MANA_STATIC`; `card_type_change_unscoped` 22,534 x 350 = 7.9 M (0.36 %,
+the `continuous_effects` walk plus a memo bit per permanent — a lane,
+and the lane word is full); `find_by_id_mut` 24,388 x 220 = 5.4 M (the
+probe clone's CoW unshare, structural); `card_keyword_possible_on`
+22,476 x 223 = 5.0 M (`keyword_grant_in_scope`'s board walk);
+`board_has_mana_static` 25,166 x 106 = 2.7 M (a lane *hit* should not
+cost 106 — read `mana_static_lane`); the two event pushes 4.2 M (the
+first push's allocation). Candidates carries them.
+
+### `(-203)` TAKEN — a death-redirect lane in front of the death path's four board walks: `cube` -0.459 % / `fixed` -0.299 % / `sealed` -0.268 %
+
+```text
+  pool    base (-202)       (-203)          delta
+  fixed     803,947,410     801,539,784   **-0.299 %**
+  cube    2,210,248,307   2,200,107,512   **-0.459 %**
+  sealed  2,217,304,432   2,211,369,741   **-0.268 %**
+  (base re-taken from the committed tip via stash: within 0.0001 % of
+  the (-202) readings)
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  remove_from_battlefield_to_graveyard_raw  10.8 M -> 4.9 M self
+                graveyard_exile_redirects                 5.0 M -> 0.6 M
+                Vec::from_iter (the hand-redirect collect) -4.2 M
+                walk_and_store                            +3.9 M (the lane's
+                                                          misses, see below)
+```
+
+The re-read at `966289ae` priced the death path at ~4,800 Ir a death and
+said "line profile"; reading the three bodies by eye was enough. Four
+whole-board `static_abilities` walks ran on every death — Valentin's
+`ExileDyingOpponentCreatures`, `DiesToLibraryTopInstead`,
+`DiesToOwnersHandInstead` (which also `collect`ed a `Vec` of filters to
+evaluate) in `remove_from_battlefield_to_graveyard_raw`, and
+`ExileCardsBoundForGraveyard` in `graveyard_exile_redirects`, which
+`route_to_graveyard` asks at every graveyard placement (mills and
+discards included). One definition bit answers all four:
+`mana_summary::DEATH_REDIRECT` on the engine's definition-fold word
+(bit 59, computed by `mana_summary_of` like `(-199)`'s two), and
+`Battlefield::has_death_redirect` — `LANE_DEATH_REDIRECT`, lane 30, **the
+word's last free lane** — holds the board's answer. The dying card's
+*own* statics are still read (it is already off the battlefield when the
+walks ask); the walks over everything else run only behind the lane.
+
+**The miss is structural and priced:** `take_card` moves the dying card
+out before the ask, so the first ask after every death is a membership
+miss and walks the board once at ~390 Ir (a memo-word read per
+permanent) — the +3.9 M. Asking before `take_card` does not help: the
+placement's own ask comes after it either way, so it is one walk a death
+whichever side asks first. What is left of the death path on `cube`:
+`place_card_at_resolved_zone` ~1,260 Ir (the revert chain: face, flip,
+transform, prototype, rooms, cases, `clear_effects_on_zone_change`),
+`on_left_battlefield` ~1,080 Ir (`find_card_anywhere_mut` across zones
+for a card that just moved, the `phased_out` / `temporary_control` /
+`continuous_effects` / `delayed_triggers` walks) and the raw self ~480
+(`remove_effects_from_source`, `remove_from_combat`,
+`collect_leaver_counters`) — each a line read, none a lane.
+
+### `(-202)` TAKEN — `resolve_combat`'s protection asks over the views it holds: `cube` -0.127 % / `fixed` -0.070 % / `sealed` -0.037 %
+
+```text
+  pool    base (-201)       (-202)          delta
+  fixed     804,508,935     803,947,481   **-0.070 %**
+  cube    2,213,055,780   2,210,248,706   **-0.127 %**
+  sealed  2,218,115,166   2,217,299,276   **-0.037 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  damage_prevented_by_protection  4.92 M -> 2.20 M self
+                can_grant_keyword               5.49 M -> 4.67 M
+                protection_prevents_views       2.68 M -> 3.24 M (+13 k calls)
+                resolve_combat self             +1.3 M (the closure inlined
+                                                differently; net -2.8 M)
+```
+
+The `(-194)` shape, third application: the per-pair damage loop in
+`resolve_combat` already holds the batch's `computed` slice
+(`computed_of`, a slice find) and a freeze scope, and still asked
+`damage_prevented_by_protection` twice per (attacker, blocker) — a nested
+scope, a memo-hit `computed_permanent` of each side and, on the misses,
+the presence gate's board walk. Both sites now call
+`protection_prevents_views` over `computed_of(target)` /
+`computed_of(source)`. The remaining 5,896 calls are the SBA's
+attachment-legality sweep (CR 704.5m, Auras and Equipment via
+`is_protected_from`), a different shape: under `&mut self`, no scope, and
+the presence gate's `can_grant_keyword` walk is its cost — a lane
+question, not a views one.
+
+### `(-201)` TAKEN — `OftenEmpty` on `PlayerData`'s seven lists: `fixed` -0.154 % / `sealed` -0.143 % / `cube` -0.113 %
+
+```text
+  pool    base (-200)       (-201)          delta
+  fixed     805,746,838     804,508,935   **-0.154 %**
+  cube    2,215,563,492   2,213,055,780   **-0.113 %**
+  sealed  2,221,285,766   2,218,115,166   **-0.143 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  fixed by row:  Arc::clone_from_ref_in self 25.65 M -> 24.41 M (-1.24 M)
+                 Vec::clone under it   118,704 calls, unchanged
+```
+
+The seven plain `Vec` fields on `PlayerData` take the `(-200)` newtype;
+engine-only, three sites gained an `.into()` (two tests, and
+`creatures_entered_last_turn = mem::take(..)` needed nothing). A sixth of
+the priced ceiling, for the same reason as `(-200)`: the seat's lists
+were **inlined** into `clone_from_ref_in` too, so the guard's whole win
+is that row's self cost. **The 118,704 out-of-line `Vec::clone` calls
+under `make_mut_slow` (8.75 M, 1.09 % of `fixed`) still do not move** —
+they are a third CoW'd owner. Read next with `--demangle=no` (How to
+measure): 26,488 of them allocate and 8,900 `memcpy`, so ~80 % copy
+nothing at ~45 Ir.
+
+### `(-200)` TAKEN — cheap-on-empty clones on `CardData`, `CounterBag` and `GameState::clone`: `fixed` -0.360 % / `sealed` -0.346 % / `cube` -0.294 %
+
+```text
+  pool    base (-199)       (-200)          delta
+  fixed     808,660,509     805,746,838   **-0.360 %**
+  cube    2,222,094,501   2,215,563,492   **-0.294 %**
+  sealed  2,228,991,395   2,221,285,766   **-0.346 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  Vec::clone           471,251 calls -> 334,757 (24.1 M -> 19.7 M):
+                                     GameState::clone's 139,412 are gone
+                GameState::clone     self +0.5 M (the inlined guards + to_vec)
+                Arc::clone_from_ref_in self 59.0 M -> 56.4 M (-2.55 M): the
+                                     five CardData lists' guards
+```
+
+`OftenEmpty<T>` (`crabomination_base::oftenempty`): a `Vec` newtype whose
+`Clone` tests `is_empty()` first, `Deref`/`DerefMut`/`From`/`IntoIterator`
+/`PartialEq<Vec<T>>` so its 46 call sites did not change, same size as the
+`Vec`. On `CardData`'s four damage lists; `CounterBag` (already its own
+type) takes the same `Clone` by hand; `GameState::clone` guards its two
+lists and five `IdMap`s through `clone_list` / `clone_map`.
+
+**What the row said that the candidate did not.** The 260,894 `Vec::clone`
+calls under `Arc::clone_from_ref_in` (20.4 M, 0.92 % of `cube`) are
+**unchanged** by this — `CardData`'s five lists were already *inlined*
+into `clone_from_ref_in` (their whole cost was the -2.55 M off its self
+row), so the out-of-line clones belong to another CoW'd owner:
+`PlayerData` (`player.rs`), which carries seven plain `Vec` fields and is
+unshared on every probe write to a seat. **Candidates, top: the same
+device on `PlayerData`, engine-only.**
+
+## Profile of record
+
 ## Log entries `(-199)` and older — moved at the `(-253)` pass
 
 ### `(-199)` TAKEN — the grants-nothing gate asks its questions of the permanent, not the board: `cube` -0.644 % / `fixed` -0.561 % / `sealed` -0.354 %

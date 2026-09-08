@@ -20,7 +20,7 @@ sixty-seventh pass, so don't re-take that.
   has the command and the disk caveat.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates. `PERF_ARCHIVE.md` holds,
-  verbatim, the Log entries from `(-199)` down, the Baseline's closing
+  verbatim, the Log entries from `(-249)` down, the Baseline's closing
   states from the `(-185)` tip down, and the candidates section's entries
   from `(-192)` down (the `(-90)`/`(-92)` maps and `(-174)`'s open half
   among them).
