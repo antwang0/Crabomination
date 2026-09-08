@@ -69,6 +69,19 @@ catalog grant of their kinds: the self-ETB hook (a permanent cannot carry
 an instance grant before it enters) and the three combat listener walks
 (`ControllerAttackedByOpponent`, `YouAttack`, `ControllerDealtCombatDamage`).
 
+And one more parallel walker, found by the catalog's step-gate pass the
+same day: `gather_continuous_effects_inner`'s live-filter leg for
+`SetBasePtForFilter` / `GrantKeyword` (filters `selector_to_affected`
+cannot decompose — `IsOutlaw`, `IsEnchanted`) matched `sa.effect` raw
+while the eager leg and the layer path peel the `WhileYourTurn` /
+`WhileClassLevelAtLeast` / `WhileCountersAtLeast` / `WhileCondition`
+wrappers through `active_static`, so a wrapped live-filter grant emitted
+nothing on either path ("during your turn, outlaws you control have first
+strike" granted nothing on any turn). The leg peels through
+`active_static` now; `core_rules::cr_recent49::cr_611_2_your_turn_wrapper_
+reaches_a_live_filter_keyword_grant`. No shipped card carried the shape (At
+Knifepoint ships the `only_your_turn` anthem).
+
 The test for it found the second half: **the planeswalker branch of
 combat damage (`deal_combat_damage_to_target`) and of `deal_damage`
 removed loyalty and recorded nothing on the victim** — no
