@@ -2814,16 +2814,24 @@ are the `(-278)` games, cheaper, and the base for every later A/B.
         bin_bytes 126,743,528 (+2,784 B against 6acd58c3); 285.1 / 297.8 / 291.7 games/s, three single runs (host_calib_ms 50 / 53 / 53) — THE BOX, NOT THE
         CHANGE: the 6acd58c3 profiling-fast binary reads 272.9 median on the same afternoon against its recorded ~520; paired bench_ab.py tip vs (-279),
         12 pairs, B/A median +0.99 % / mean +1.10 % (sd 3.97) — inside the instrument's noise, the right sign, Ir is the number
-suite   19,286 / 0 / 5 (one lib test added: `game::event_scratch_tests`); golden 7/7 unmoved; 19,288 / 0 / 5 with the board-cap test below
+suite   19,286 / 0 / 5 (one lib test added: `game::event_scratch_tests`); golden 7/7 unmoved; 19,288 / 0 / 5 with the board-cap test below, 19,289 / 0 / 5 with the CR 400.7 test
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 gate    profiling-fast (release-fast opt settings, debug-assertions off) and release-fast bot_ladder both built from the tree
 sweep   fresh seeds on the (-278) tip binary (profiling-fast): {all, sealed} x seeds 701..706 x {dflt, gang} mirror x --games 400 --threads 3, CRAB_CAP_DIAG=4000:
         24 cells / 139,200 games, 0 panics, 0 cap, 0 stuck, 16 draws (all rc 0, the diag silent)
 grid    robustness_grid.sh on the debug-assertions overflow build (target-audit, 8 assertion strings) at the (-279) tip, FRESH SEEDS: ladder {all, sealed} x
-        seeds 701..712 x 400 = 24 cells / 139,200 games, 0 failures, cap 0 / stuck 0 / draw 8; pilots leg (dflt + the script's 45) at seed 701, 46 cells, 0 failures
+        seeds 701..712 x 400 = 24 cells / 139,200 games, 0 failures, cap 0 / stuck 0 / draw 8; pilots leg (dflt + the script's 45) at seed 701, 46 cells, 0 failures;
+        actor leg (selfplay_train --actors 3 --games 600 --steps 2, seeds 1 / 7 / 23) at the board-cap tip: 3 cells, 0 failures, 35.0 / 36.1 / 63.7 games/s on the audit build
 guard   `MAX_BATTLEFIELD` (1,024, ENGINE_BACKLOG 2026-09-08 third run): the dflt cube mirror at seed 43, --games 1200 --threads 3, ran 62.5 s / 9,598 decided /
         2 cap (the Scute Swarm pair, capped at action 3,123 with 1,027 permanents) where the unguarded binary held one thread for 90+ minutes and was killed;
         sealed dflt callgrind with the guard 2,562,992,038 Ir (+14,288 / +0.0006 % against the (-279) base — one `len` compare an action); golden 8/8
+fix     CR 400.7 (ENGINE_BACKLOG 2026-09-08 third run, the Golgari Thug loop): a permanent leaving by death / exile / bounce now drops its tap and
+        attachment on the way out and its damage where it next enters. Sealed dflt 2,562,992,392 -> 2,563,124,101 Ir (+0.005 %, 72 / 72 traces
+        IDENTICAL); cube dflt 2,508,404,082 -> 2,467,644,697 (-1.62 %, DIFFERENT GAMES: 4 of 48 traces — a creature recast after dying now
+        lives at T32 of pairing 1, and an attack decision downstream at T7 of pairing 5 — the rules fix, not a perf claim; THE CUBE A/B BASE
+        MOVES TO 2,467,644,697); fixed gang 671,541,515 -> 671,675,835 (+0.020 %); golden 7/7 unmoved. REFUTED variant: the same reset on the leave side (`damage = 0` in `place_card_at_
+        resolved_zone`) read +0.107 % sealed on identical games — the write deep-copies a dying card's CoW data under every bot clone.
+        Cube sweep under the bound, dflt mirror seeds 701..706 x 400 (19,200 games): seed 702's cap 2 -> 0, the rest unchanged (10 draws)
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores; cold profiling-fast bot_ladder 13m07s (cold registry), warm engine rebuild 4m05s,
         cold debug suite build ~9 min, release-fast 11m42s
 ```

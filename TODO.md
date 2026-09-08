@@ -32,16 +32,18 @@ sixty-seventh pass, so don't re-take that.
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
    running `cargo build`. Cold here: debug suite build ~9 min, `profiling-fast` bot_ladder 13m07s (cold registry), `release-fast` 11m42s; a
    detached `setsid nohup` chain survives the tool timeout (⚠ kill it by pid — `pkill -f`/`pgrep -f` on a log name matches your own shell).
-   **The untraced `(-279)` triple (PERF Baseline addendum) is the A/B base on all three pools**; both sides from one tree, `md5sum` both.
-2. **Gates at the tip (PERF Baseline, the `(-279)` addendum):** suite 19,288 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
+   **The A/B base is the CR 400.7 fix's triple (PERF Baseline addendum, the `fix` line): sealed 2,563,124,101 / cube 2,467,644,697 (different
+   games from `(-279)`) / fixed 671,675,835**; both sides from one tree, `md5sum` both.
+2. **Gates at the tip (PERF Baseline, the `(-279)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
    `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, the debug-assertions grid on FRESH seeds 701..712 (24 ladder cells /
    139,200 games + 46 pilot cells) 0 failures, `audit_stubs` / `audit_incomplete --structural-only` both 0 at the previous tip.
 3. **This run:** `(-279)` TAKEN (Log: the event scratch pooled across clones, sealed -0.378 % / cube -0.272 % / fixed -0.332 %, traces
    identical); the block sim READ by context (candidates: it is `resolve_combat_into`, 17 % of sealed dflt, every callee a recorded floor);
    the attack sim's cheapest horizon arm REFUTED off a census (1 % of iterations past an empty crack-back; the instrument cost +0.126 % and
-   was not kept); **ONE BUG FIXED** (ENGINE_BACKLOG first entry): a Scute Swarm token-doubling board held a thread 90+ min — `recommend::
-   MAX_BATTLEFIELD` (1,024) ends it as a cap through the one `stop_reason` both driver loops read; `CRAB_MAX_ACTIONS=<n>` + `CRAB_CAP_DIAG=1`
-   names a slow game (PERF "How to measure").
+   was not kept); **TWO BUGS FIXED** (ENGINE_BACKLOG, first two entries): a permanent dying or bouncing kept its damage / tap / attachment
+   into its next zone (CR 400.7 — a recast Golgari Thug died on entry every turn to the cap, cube seed 702), and a Scute Swarm token-doubling
+   board held a thread 90+ min — `recommend::MAX_BATTLEFIELD` (1,024) ends it as a cap through the one `stop_reason` both driver loops read;
+   `CRAB_MAX_ACTIONS=<n>` + `CRAB_CAP_DIAG=1` names a slow game (PERF "How to measure"). Sweep cube under the bound each run — it finds things.
 4. **Next moves, in order:** (a) a shorter attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor;
    `.ladder/run_r71_blockchain.sh` the template, 12,000-game cells ~45 s here) — a real loss risk, gate it; (b) thin allocation rows from the
    read, not built: `fire_delayed_event_watchers`' collects on boards holding a delayed trigger (21,712 / 5.5 M) and the SBA sweep's (22,810 /
