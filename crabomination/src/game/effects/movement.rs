@@ -1573,6 +1573,15 @@ impl GameState {
                         let new_loyalty = current.saturating_sub(amount);
                         c.counters
                             .insert(CounterType::Loyalty, new_loyalty);
+                        // The creature branch's per-victim record, so a
+                        // planeswalker's `LastDamagerOf` (Vraska the Unseen)
+                        // resolves off noncombat damage too.
+                        c.dealt_damage_this_turn = true;
+                        c.damage_dealt_to_this_turn += amount;
+                        if let Some(src) = source {
+                            c.damaged_by_this_turn.push(src);
+                            c.record_damage_from(src, amount);
+                        }
                         events.push(GameEvent::DamageDealt {
                             amount,
                             to_player: None,

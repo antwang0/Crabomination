@@ -2174,6 +2174,114 @@ fn vraska_the_unseen_removal_and_assassins() {
     );
 }
 
+/// Vraska's +1 "until your next turn" grant (CR 611.2b) outlives the cleanup
+/// step: the creature that hits her on the opponent's turn is destroyed, and
+/// the grant is gone once her controller's next turn begins. It was baked as
+/// permanent before 2026-09-08 — the map it rides had only an EOT bucket.
+#[test]
+fn vraska_the_unseen_plus_one_spans_the_opponents_turn_and_then_expires() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let vraska = g.add_card_to_battlefield(0, catalog::vraska_the_unseen());
+    for p in 0..2 {
+        for _ in 0..4 {
+            g.add_card_to_library(p, catalog::grizzly_bears());
+        }
+    }
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vraska,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("+1");
+    drain_stack(&mut g);
+    let hit_her = |g: &mut GameState| {
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: bear,
+            target: AttackTarget::Planeswalker(vraska),
+        }]))
+        .expect("attack");
+        g.step = TurnStep::CombatDamage;
+        let evs = g.resolve_combat().expect("damage");
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+        bear
+    };
+    for _ in 0..40 {
+        if g.active_player_idx == 1 {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.active_player_idx, 1, "the opponent's turn");
+    assert!(!g.granted_triggers_timed.is_empty(), "the grant survives cleanup");
+    let bear = hit_her(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the +1 destroys what damaged her");
+    for _ in 0..40 {
+        if g.active_player_idx == 0 {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.active_player_idx, 0, "back to her controller");
+    assert!(g.granted_triggers_timed.is_empty(), "expired as her controller's turn began");
+    for _ in 0..40 {
+        if g.active_player_idx == 1 {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+    }
+    let bear = hit_her(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "a later hit is not punished");
+}
+
+/// Vraska's +1 is combat-only: a ping neither triggers it nor spends the
+/// destroy. The loyalty branch of `deal_damage` now records the damager
+/// like the creature branch does (`damaged_by_this_turn`), so a
+/// planeswalker's `LastDamagerOf` has something to read.
+#[test]
+fn vraska_the_unseen_plus_one_ignores_a_pinger() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let vraska = g.add_card_to_battlefield(0, catalog::vraska_the_unseen());
+    let tim = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(tim);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vraska,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("+1");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tim,
+        ability_index: 0,
+        target: Some(Target::Permanent(vraska)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tim).is_some(), "noncombat damage is not the trigger");
+    let v = g.battlefield_find(vraska).unwrap();
+    assert_eq!(v.counter_count(crabomination::card::CounterType::Loyalty), 5, "6 - 1");
+    assert_eq!(v.damaged_by_this_turn.last(), Some(&tim), "the damager is on record");
+}
+
 /// Jace, Architect of Thought's −2 splits three cards; the losing pile is
 /// bottomed rather than binned.
 #[test]

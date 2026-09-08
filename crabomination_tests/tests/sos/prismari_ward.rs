@@ -1674,7 +1674,7 @@ fn rabid_attack_grants_die_draws_card_trigger() {
     // target a CreatureDied/SelfSource trigger ("draw a card on die")
     // until end of turn. Kill the bear after the grant lands — the
     // granted trigger fires from the SBA dies handler (now consulting
-    // `granted_triggers_eot` alongside printed Dies triggers).
+    // `granted_triggers_timed` alongside printed Dies triggers).
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -1700,7 +1700,7 @@ fn rabid_attack_grants_die_draws_card_trigger() {
     let _ = g.check_state_based_actions();
     drain_stack(&mut g);
     // We need to also dispatch the CreatureDied event so the trigger
-    // we registered via granted_triggers_eot actually fires. The
+    // we registered via granted_triggers_timed actually fires. The
     // SBA-dies-handler already pushes printed Dies triggers + granted
     // ones to the stack inside check_state_based_actions, so drain
     // again to resolve.

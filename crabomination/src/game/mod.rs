@@ -1150,18 +1150,17 @@ pub struct ColdState {
     /// Fanatic of Aclazotz). Keyed by source `CardId`; cleared at cleanup.
     #[serde(default)]
     pub(crate) ability_resolutions_this_turn: crate::fxhash::HashMap<CardId, u32>,
-    /// Per-permanent transient triggered abilities granted by spells /
-    /// continuous effects (Rabid Attack, Root Manipulation: "creatures
-    /// you control gain '…trigger…' until end of turn"). The dispatcher
-    /// walks this map alongside each permanent's printed
-    /// `triggered_abilities` and fires matching events. Cleared in
-    /// `do_cleanup` (the "until end of turn" expiry). Other durations
-    /// (Permanent) would need a separate map; only EOT grants are
-    /// modeled today since that's what the printed catalog needs.
+    /// Per-permanent triggered abilities a resolution granted for a while
+    /// (Rabid Attack, Root Manipulation: "creatures you control gain
+    /// '…trigger…' until end of turn"; Vraska the Unseen's +1 "until your
+    /// next turn"). Every trigger consumer walks this beside the permanent's
+    /// printed `triggered_abilities` through [`Self::granted_triggers`].
+    /// Each entry carries its expiry, swept where the layer system sweeps a
+    /// continuous effect of the same duration (`expire_granted_triggers`);
+    /// a `Permanent` grant is baked onto the definition instead.
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
-    pub granted_triggers_eot:
-        crate::fxhash::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
+    pub granted_triggers_timed: crate::fxhash::HashMap<CardId, Vec<GrantedTrigger>>,
     /// Permanents whose death is replaced by exile for the rest of the
     /// turn — "if that creature would die this turn, exile it instead"
     /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
@@ -2911,6 +2910,17 @@ pub(crate) struct TempControl {
     pub(crate) while_source_attached: bool,
 }
 
+/// A triggered ability a resolution granted to a permanent for a while —
+/// see `GameState.granted_triggers_timed`. `expiry` is the layer system's
+/// duration, so the grant ends on the sweep a continuous effect of that
+/// duration ends on; `source` is what the `WhileSource*` sweeps read.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GrantedTrigger {
+    pub ability: crate::card::TriggeredAbility,
+    pub expiry: crate::game::layers::EffectDuration,
+    pub source: CardId,
+}
+
 /// A turn-scoped spell tax — see `GameState.turn_scoped_spell_taxes`.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TurnScopedSpellTax {
@@ -3623,19 +3633,37 @@ impl GameState {
         }
     }
 
-    /// Transient triggers granted to a permanent until EOT (Root
-    /// Manipulation, Rabid Attack-style "creatures gain '…' EOT").
-    /// Returns an empty slice when no grant is active — call sites can
+    /// Triggers a resolution granted to a permanent for a while (Root
+    /// Manipulation, Rabid Attack-style "creatures gain '…' EOT", Vraska's
+    /// +1). Empty when no grant is active — call sites
     /// `.iter().chain(self.granted_triggers(id))` against the printed
     /// abilities without cloning.
     pub(crate) fn granted_triggers(
         &self,
         id: CardId,
-    ) -> &[crate::card::TriggeredAbility] {
-        self.granted_triggers_eot
+    ) -> impl Iterator<Item = &crate::card::TriggeredAbility> + Clone {
+        self.granted_triggers_timed
             .get(&id)
             .map(Vec::as_slice)
             .unwrap_or(&[])
+            .iter()
+            .map(|g| &g.ability)
+    }
+
+    /// Drop every granted trigger whose `expiry` satisfies `expired`; the
+    /// turn-start, upkeep, end-of-combat, cleanup and SBA sweeps each pass
+    /// the duration they retire. Reads before it writes — the map is empty
+    /// on most boards.
+    pub(crate) fn expire_granted_triggers(
+        &mut self,
+        expired: impl Fn(&GrantedTrigger) -> bool,
+    ) {
+        if self.granted_triggers_timed.values().flatten().any(&expired) {
+            self.granted_triggers_timed.retain(|_, v| {
+                v.retain(|g| !expired(g));
+                !v.is_empty()
+            });
+        }
     }
 
     /// Triggered abilities granted to `card` by battlefield
@@ -15050,6 +15078,7 @@ impl GameState {
     pub fn expire_end_of_combat_effects(&mut self) {
         self.continuous_effects
             .retain(|e| e.duration != EffectDuration::UntilEndOfCombat);
+        self.expire_granted_triggers(|g| g.expiry == EffectDuration::UntilEndOfCombat);
     }
 
     /// Sacrifice/exile Mobilize/Myriad tokens registered by
@@ -19089,7 +19118,7 @@ impl GameState {
         // times each over six bench games. The station leg of
         // `statics_granted_triggers_with` is per-card, so it stays per-card.
         let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
-        let any_own_grant = !self.granted_triggers_eot.is_empty();
+        let any_own_grant = !self.granted_triggers_timed.is_empty();
         let any_equip_grant = !equip_grants.is_empty();
         // The same three gates, asked once for the whole board: with no grant
         // of any kind in play, a permanent whose definition carries neither a
@@ -19111,7 +19140,7 @@ impl GameState {
                 events.iter().any(|ev| event_kind_matches(self, ev, &ab.event, None))
             };
             let turn = !self.turn_granted_triggers.is_empty();
-            let own = !self.granted_triggers_eot.is_empty();
+            let own = !self.granted_triggers_timed.is_empty();
             let equip = !equip_grants.is_empty();
             let mut reason = 0u8;
             let mut filtered = 0u8;
@@ -19127,7 +19156,7 @@ impl GameState {
             }
             if own {
                 reason |= tc::GRANT_OWN;
-                if self.granted_triggers_eot.values().flatten().any(batch_can_match) {
+                if self.granted_triggers_timed.values().flatten().any(|g| batch_can_match(&g.ability)) {
                     filtered |= tc::GRANT_OWN;
                 }
             }
@@ -19266,7 +19295,7 @@ impl GameState {
             }
             let stripped = stripped_ids.contains(&card.id);
             // Walk printed triggered abilities AND any transient
-            // granted_triggers_eot for this permanent (Root Manipulation,
+            // granted_triggers_timed for this permanent (Root Manipulation,
             // Rabid Attack-style "creatures gain '…trigger…' EOT"). Printed
             // triggers carry their definition index so `once_per_turn`
             // (CR 603.3d) can be tracked per (source, index); granted
@@ -19277,8 +19306,11 @@ impl GameState {
             } else {
                 SmallVec::new()
             };
-            let own_granted: &[crate::card::TriggeredAbility] =
-                if any_own_grant { self.granted_triggers(card.id) } else { &[] };
+            let own_granted: &[GrantedTrigger] = if any_own_grant {
+                self.granted_triggers_timed.get(&card.id).map(Vec::as_slice).unwrap_or(&[])
+            } else {
+                &[]
+            };
             // Equipment/Aura-granted triggers belong to the *attachment*, not
             // the host, so they fire even when the host lost all abilities
             // (Contaminated Ground's tap trigger on a land it turned into a
@@ -19299,7 +19331,7 @@ impl GameState {
             let empty: &[crate::card::TriggeredAbility] = &[];
             let empty_refs: &[&crate::card::TriggeredAbility] = &[];
             let printed = if stripped { empty } else { &card.definition.triggered_abilities[..] };
-            let own_granted = if stripped { empty } else { own_granted };
+            let own_granted = if stripped { &[][..] } else { own_granted };
             let static_granted = if stripped { empty_refs } else { &static_granted[..] };
             if printed.is_empty()
                 && own_granted.is_empty()
@@ -19315,7 +19347,7 @@ impl GameState {
                 .iter()
                 .enumerate()
                 .map(|(i, t)| (i, card.id, t))
-                .chain(own_granted.iter().map(|t| (usize::MAX, card.id, t)))
+                .chain(own_granted.iter().map(|g| (usize::MAX, card.id, &g.ability)))
                 .chain(static_granted.iter().map(|t| (usize::MAX, card.id, *t)))
                 .chain(equip_granted.iter().map(|(src, t)| (usize::MAX, *src, t)));
             for (trig_idx, trig_source, ta) in all_triggers {
@@ -19631,7 +19663,7 @@ impl GameState {
             let granted = self.statics_granted_dying_triggers(snap);
             // An until-end-of-turn grant (`Effect::GrantTriggeredAbility`,
             // Requiem Monolith's "whenever this is dealt damage") rides
-            // `granted_triggers_eot`, which nothing clears at the exit, so it
+            // `granted_triggers_timed`, which nothing clears at the exit, so it
             // is still keyed by the snapshot's id here. It reads as a printed
             // trigger, not `is_granted`: the death path already collected
             // its dies copy in `remove_to_graveyard_with_triggers`, exactly

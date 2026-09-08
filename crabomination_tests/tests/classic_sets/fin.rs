@@ -4552,7 +4552,7 @@ fn galufs_final_act_pumps_and_grants_death_trigger() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "2/2 + 1/0");
     assert!(
-        g.granted_triggers_eot.get(&bear).map(|v| !v.is_empty()).unwrap_or(false),
+        g.granted_triggers_timed.get(&bear).map(|v| !v.is_empty()).unwrap_or(false),
         "granted a death trigger"
     );
 }

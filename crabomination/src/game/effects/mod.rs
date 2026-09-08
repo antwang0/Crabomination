@@ -13972,25 +13972,33 @@ impl GameState {
             }
 
             Effect::GrantTriggeredAbility { what, trigger, duration } => {
-                // EOT grants ride `granted_triggers_eot` (cleared at Cleanup).
-                // Permanent grants are baked onto the card's own trigger list
+                // A permanent grant is baked onto the card's own trigger list
                 // via `Arc::make_mut` — a leak-free no-op once the card leaves
-                // the battlefield (mirrors `GrantKeyword`'s permanent path).
+                // the battlefield (mirrors `GrantKeyword`'s permanent path;
                 // Emissary of Soulfire models each exalted counter as a
-                // permanently-granted `exalted()` instance.
-                use crate::effect::Duration as EffectDur;
-                let is_eot = matches!(duration, EffectDur::EndOfTurn | EffectDur::EndOfCombat);
+                // permanently-granted `exalted()` instance). Every other
+                // duration rides `granted_triggers_timed` under the layer
+                // system's expiry, so "until your next turn" (Vraska the
+                // Unseen's +1) outlives the cleanup that used to drop it.
+                let expiry = match duration {
+                    crate::effect::Duration::Permanent => None,
+                    d => Some(self.effect_duration_for(*d, ctx.controller)),
+                };
+                let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id() {
-                        if is_eot {
-                            self.granted_triggers_eot
-                                .entry(cid)
-                                .or_default()
-                                .push((**trigger).clone());
-                        } else if let Some(c) = self.battlefield_find_mut(cid) {
-                            c.definition_make_mut()
-                                .triggered_abilities
-                                .push((**trigger).clone());
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    match &expiry {
+                        Some(expiry) => self.granted_triggers_timed.entry(cid).or_default().push(
+                            crate::game::GrantedTrigger {
+                                ability: (**trigger).clone(),
+                                expiry: expiry.clone(),
+                                source,
+                            },
+                        ),
+                        None => {
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.definition_make_mut().triggered_abilities.push((**trigger).clone());
+                            }
                         }
                     }
                 }

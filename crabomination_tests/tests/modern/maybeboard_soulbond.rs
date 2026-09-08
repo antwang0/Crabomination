@@ -2257,7 +2257,14 @@ fn dethrone_grows_when_attacking_highest_life_player() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
-    g.granted_triggers_eot.insert(bear, vec![crabomination::effect::shortcut::dethrone()]);
+    g.granted_triggers_timed.insert(
+        bear,
+        vec![crabomination::game::GrantedTrigger {
+            ability: crabomination::effect::shortcut::dethrone(),
+            expiry: crabomination::game::layers::EffectDuration::UntilEndOfTurn,
+            source: bear,
+        }],
+    );
     g.players[1].life = 30; // the defender has the most life
     g.players[0].life = 20;
     while g.step != TurnStep::DeclareAttackers {
@@ -2277,7 +2284,14 @@ fn dethrone_silent_when_attacking_lower_life_player() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
-    g.granted_triggers_eot.insert(bear, vec![crabomination::effect::shortcut::dethrone()]);
+    g.granted_triggers_timed.insert(
+        bear,
+        vec![crabomination::game::GrantedTrigger {
+            ability: crabomination::effect::shortcut::dethrone(),
+            expiry: crabomination::game::layers::EffectDuration::UntilEndOfTurn,
+            source: bear,
+        }],
+    );
     g.players[1].life = 10; // the defender has the LEAST life
     g.players[0].life = 30;
     while g.step != TurnStep::DeclareAttackers {

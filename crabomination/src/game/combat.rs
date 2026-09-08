@@ -1523,8 +1523,7 @@ impl GameState {
             // Both of these read the cold group, whose `Deref` borrows the
             // whole state — take them before the battlefield `&mut`.
             let decayed = computed_kw(id).has_kw(&Keyword::Decayed);
-            let granted: Vec<crate::card::TriggeredAbility> =
-                self.granted_triggers_eot.get(&id).cloned().unwrap_or_default();
+            let granted: Vec<crate::card::TriggeredAbility> = self.granted_triggers(id).cloned().collect();
             let card = self
                 .battlefield
                 .iter_mut()
@@ -1559,7 +1558,7 @@ impl GameState {
             events.push(GameEvent::AttackerDeclared(id));
             // Walk printed Attacks triggers + any transient granted
             // Attacks triggers (Root Manipulation's "gain 1 life when
-            // this attacks" grant lands in `granted_triggers_eot`).
+            // this attacks" grant lands in `granted_triggers_timed`).
             // An attachment's grant fires off the attachment when it says
             // so (`triggers_on_equipment`); every other trigger off the
             // attacker.
@@ -4577,6 +4576,15 @@ impl GameState {
                     let new_loyalty = current.saturating_sub(amount);
                     pw.counters
                         .insert(crate::card::CounterType::Loyalty, new_loyalty);
+                    // The same per-victim record the creature paths keep, so
+                    // "destroy the creature that dealt damage to her"
+                    // (`LastDamagerOf`, Vraska the Unseen's +1) has a damager.
+                    if amount > 0 {
+                        pw.dealt_damage_this_turn = true;
+                        pw.damage_dealt_to_this_turn += amount;
+                        pw.damaged_by_this_turn.push(atk.id);
+                        pw.record_damage_from(atk.id, amount);
+                    }
                     events.push(GameEvent::DamageDealt {
                         amount,
                         to_player: None,
@@ -5530,13 +5538,12 @@ impl GameState {
             attacker_controller = Some(c.controller);
             // Printed + statics-granted ("Slivers you control have
             // '…combat damage…'" — Tempered/Virulent) + instance-granted
-            // (`GrantTriggeredAbility` on `granted_triggers_eot` — Summon:
+            // (`GrantTriggeredAbility` on `granted_triggers_timed` — Summon:
             // Primal Odin's Zantetsuken) fire alike.
-            let instance_granted: &[crate::card::TriggeredAbility] =
-                self.granted_triggers_eot.get(&c.id).map(Vec::as_slice).unwrap_or(&[]);
+            let instance_granted = self.granted_triggers(c.id);
             let printed = c.definition.triggered_abilities.iter().enumerate().map(|(i, t)| (Some(i), t));
             for (idx, t) in
-                printed.chain(static_granted.iter().chain(instance_granted.iter()).map(|t| (None, t)))
+                printed.chain(static_granted.iter().chain(instance_granted).map(|t| (None, t)))
             {
                 if !matches!(
                     t.event.scope,

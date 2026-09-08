@@ -137,7 +137,7 @@ fn requiem_monolith_grants_the_damage_trigger() {
 }
 
 /// CR 603.10a — the grant looks back in time: a ping that kills the creature
-/// still draws. The until-EOT grant lives on `granted_triggers_eot`, which the
+/// still draws. The until-EOT grant lives on `granted_triggers_timed`, which the
 /// dispatcher's LKI walk used to skip (printed and statics-granted only), so
 /// the Monolith's own play line — ping an X/1 — drew nothing.
 #[test]

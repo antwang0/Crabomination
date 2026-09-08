@@ -518,14 +518,16 @@ impl GameState {
                 // CR 611.2b — "until the next turn" / "until your next turn"
                 // continuous effects end as the relevant turn begins.
                 let (active, turn) = (self.active_player_idx, self.turn_number);
-                self.continuous_effects.retain(|e| match e.duration {
-                    crate::game::layers::EffectDuration::UntilNextTurn => false,
+                let ends_now = |d: &crate::game::layers::EffectDuration| match *d {
+                    crate::game::layers::EffectDuration::UntilNextTurn => true,
                     crate::game::layers::EffectDuration::UntilYourNextTurn {
                         player,
                         installed_turn,
-                    } => !(player == active && turn > installed_turn),
-                    _ => true,
-                });
+                    } => player == active && turn > installed_turn,
+                    _ => false,
+                };
+                self.continuous_effects.retain(|e| !ends_now(&e.duration));
+                self.expire_granted_triggers(|g| ends_now(&g.expiry));
                 // CR 801.2c — ranges of influence are determined as each turn
                 // begins, so a player leaving only shifts them now.
                 self.refresh_range_matrix();
@@ -605,13 +607,15 @@ impl GameState {
                 // CR 611.2b — "until your next upkeep" ends as that upkeep
                 // begins, before any of this step's turn-based actions.
                 let (active, turn) = (self.active_player_idx, self.turn_number);
-                self.continuous_effects.retain(|e| match e.duration {
+                let ends_now = |d: &crate::game::layers::EffectDuration| match *d {
                     crate::game::layers::EffectDuration::UntilYourNextUpkeep {
                         player,
                         installed_turn,
-                    } => !(player == active && turn > installed_turn),
-                    _ => true,
-                });
+                    } => player == active && turn > installed_turn,
+                    _ => false,
+                };
+                self.continuous_effects.retain(|e| !ends_now(&e.duration));
+                self.expire_granted_triggers(|g| ends_now(&g.expiry));
                 // CR 702.32 / 702.62 — Fading / Vanishing tick down as a
                 // turn-based action at upkeep, before step triggers.
                 let mut fv = self.process_fading_vanishing();
@@ -4292,9 +4296,15 @@ impl GameState {
         clear_cold!(self.permanents_amplified_counter_this_turn);
         // CR 603-style "Nth time this turn" escalation counters reset.
         clear_cold!(self.ability_resolutions_this_turn);
-        // Clear transient granted triggers (Rabid Attack, Root
-        // Manipulation EOT-duration grants).
-        clear_cold!(self.granted_triggers_eot);
+        // Until-end-of-turn granted triggers end (Rabid Attack, Root
+        // Manipulation); a longer grant (Vraska's +1) waits for its sweep.
+        self.expire_granted_triggers(|g| {
+            matches!(
+                g.expiry,
+                crate::game::layers::EffectDuration::UntilEndOfTurn
+                    | crate::game::layers::EffectDuration::UntilEndOfCombat
+            )
+        });
         // Close the "if it would die this turn, exile it instead" window
         // (Wilt in the Heat).
         clear_cold!(self.dies_to_exile_eot);
@@ -5269,6 +5279,20 @@ impl GameState {
                     || still_tapped.contains(&e.source)
             });
         }
+        // A granted trigger under any of the three source clauses ends the
+        // same way (no catalog grant carries one yet; the arm accepts them).
+        if !self.granted_triggers_timed.is_empty() {
+            use crate::game::layers::EffectDuration as D;
+            let sources: Vec<(CardId, bool, bool)> =
+                self.battlefield.iter().map(|c| (c.id, c.tapped, c.attached_to.is_some())).collect();
+            let find = |id: CardId| sources.iter().find(|s| s.0 == id);
+            self.expire_granted_triggers(|g| match g.expiry {
+                D::WhileSourceTapped => !find(g.source).is_some_and(|s| s.1),
+                D::WhileSourceAttached => !find(g.source).is_some_and(|s| s.2),
+                D::WhileSourceOnBattlefield => find(g.source).is_none(),
+                _ => false,
+            });
+        }
 
         // And the same for `WhileSourceOnBattlefield` — an effect a resolution
         // installed for as long as its source is out (Tishana's Tidebinder).
@@ -5839,17 +5863,12 @@ impl GameState {
                     // be another, not this dying card).
                     // Walk printed Dies triggers + any granted transient
                     // ones (Rabid Attack EOT "this creature gains 'die →
-                    // draw a card'" grants ride on `granted_triggers_eot`).
-                    let granted: &[crate::card::TriggeredAbility] = self
-                        .granted_triggers_eot
-                        .get(&c.id)
-                        .map(Vec::as_slice)
-                        .unwrap_or(&[]);
+                    // draw a card'" grants ride on `granted_triggers_timed`).
                     let triggers: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = c
                         .definition
                         .triggered_abilities
                         .iter()
-                        .chain(granted)
+                        .chain(self.granted_triggers(c.id))
                         // PermanentLeavesBattlefield ("when this leaves the
                         // battlefield") fires on any departure, including a
                         // lethal-damage death (Thought-Knot Seer); CreatureDied
@@ -6986,16 +7005,11 @@ impl GameState {
                 // Walk printed SelfSource LTB triggers + any transient
                 // granted ones (Rabid Attack-style "this creature gains
                 // 'when this creature dies, draw a card'" grants ride
-                // on `granted_triggers_eot[c.id]`).
-                let granted: &[crate::card::TriggeredAbility] = self
-                    .granted_triggers_eot
-                    .get(&c.id)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]);
+                // on `granted_triggers_timed[c.id]`).
                 let triggers = c.definition
                     .triggered_abilities
                     .iter()
-                    .chain(granted)
+                    .chain(self.granted_triggers(c.id))
                     // CR 603.10a — the dying creature's own self-fire death
                     // triggers. SelfSource always, plus the self-inclusive
                     // scopes ("this or another … you control dies" —
@@ -7093,15 +7107,10 @@ impl GameState {
             .iter()
             .find(|c| c.id == id)
             .map(|c| {
-                let granted: &[crate::card::TriggeredAbility] = self
-                    .granted_triggers_eot
-                    .get(&c.id)
-                    .map(Vec::as_slice)
-                    .unwrap_or(&[]);
                 c.definition
                     .triggered_abilities
                     .iter()
-                    .chain(granted)
+                    .chain(self.granted_triggers(c.id))
                     .any(|t| {
                         matches!(t.event.scope, EventScope::SelfSource)
                             && matches!(t.event.kind, EventKind::PermanentSacrificed)
