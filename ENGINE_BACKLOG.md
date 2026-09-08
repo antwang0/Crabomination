@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-08 — a trigger grant knew two durations, and a planeswalker never recorded who damaged it](#fixed-2026-09-08--a-trigger-grant-knew-two-durations-and-a-planeswalker-never-recorded-who-damaged-it) | 38 |
 | Bugs & robustness | [FIXED 2026-09-07 — keyword grants with an "until your next turn" duration were permanent, and `UntilNextTurn` itself meant "any player's next turn"](#fixed-2026-09-07--keyword-grants-with-an-until-your-next-turn-duration-were-permanent-and-untilnextturn-itself-meant-any-players-next-turn) | 52 |
 | Bugs & robustness | [FIXED 2026-09-07 — the LKI walk dropped until-end-of-turn granted triggers, and a conditional Equipment rider granted its abilities unconditionally](#fixed-2026-09-07--the-lki-walk-dropped-until-end-of-turn-granted-triggers-and-a-conditional-equipment-rider-granted-its-abilities-unconditionally) | 44 |
 | Bugs & robustness | [FIXED 2026-09-07 — the attack and combat-damage hooks dropped `once_per_turn`](#fixed-2026-09-07--the-attack-and-combat-damage-hooks-dropped-once_per_turn) | 36 |
@@ -39,6 +40,46 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-08 — a trigger grant knew two durations, and a planeswalker never recorded who damaged it
+
+The last arm of the duration axis (the entry below): `Effect::
+GrantTriggeredAbility` had an EOT bucket (`granted_triggers_eot`, cleared
+at cleanup) and a permanent one (baked onto the definition), so **Vraska
+the Unseen's +1 — "until your next turn, whenever a creature deals combat
+damage to Vraska, destroy that creature" — was permanent**, the only
+catalog grant with a third duration. The map is `granted_triggers_timed:
+HashMap<CardId, Vec<GrantedTrigger>>` now, each entry carrying the layer
+system's `EffectDuration` from `effect_duration_for` (so "until your next
+turn" is the controller's, CR 611.2b) and its source; `expire_granted_
+triggers(pred)` runs where the matching continuous effects are swept —
+turn start (`UntilNextTurn` / `UntilYourNextTurn`), upkeep
+(`UntilYourNextUpkeep`), the end-of-combat step (`UntilEndOfCombat`, which
+used to wait for cleanup), cleanup (`UntilEndOfTurn`) and the SBA sweep
+(the three `WhileSource*` clauses, no catalog use yet). Every consumer
+reads through `granted_triggers(id)` (an iterator over the abilities);
+the dispatcher's per-permanent slice is the only direct read, and the
+presence gates are unchanged. The two hooks the previous matrix left
+unread — `fire_step_triggers` and `fire_spell_cast_triggers` — read it
+now too, behind a kind-filtered presence gate that also widens their
+member-list walk to the whole board (a grant can land on a permanent with
+no printed trigger); `core_rules::cr_recent49::cr_603_2_instance_granted_
+step_and_cast_triggers_fire`. Still printed-only, and still with no
+catalog grant of their kinds: the self-ETB hook (a permanent cannot carry
+an instance grant before it enters) and the three combat listener walks
+(`ControllerAttackedByOpponent`, `YouAttack`, `ControllerDealtCombatDamage`).
+
+The test for it found the second half: **the planeswalker branch of
+combat damage (`deal_combat_damage_to_target`) and of `deal_damage`
+removed loyalty and recorded nothing on the victim** — no
+`damaged_by_this_turn`, no `record_damage_from` — so `Selector::
+LastDamagerOf(This)` on a planeswalker was always empty and the +1 would
+have destroyed nothing even as a permanent grant. Both branches keep the
+creature branch's record now. Tests: `classic_sets::rtr::vraska_the_
+unseen_plus_one_spans_the_opponents_turn_and_then_expires` (the grant
+survives cleanup, destroys the attacker on the opponent's turn, is gone
+as her controller's turn begins, and a later attacker is spared) and
+`…_ignores_a_pinger` (combat-only, and the damager is on record).
 
 ## FIXED 2026-09-07 — keyword grants with an "until your next turn" duration were permanent, and `UntilNextTurn` itself meant "any player's next turn"
 
@@ -96,12 +137,10 @@ hands it. Beside it, a catalog shape: five "activate only during your
 upkeep" abilities (Clockwork Swarm, Black Carriage, Trade Caravan, Life
 Chisel, Life Matrix) gated on `CurrentStepIs(Upkeep)` alone, which is any
 player's upkeep; each is `All([CurrentStepIs, IsTurnOf(You)])` now, and
-the four that print "any upkeep" / "during the … step" were left alone. Still latent: `Effect::
-GrantTriggeredAbility` with `UntilNextTurn` (Vraska the Unseen's +1) is
-baked as permanent — the EOT trigger map has no duration stamp, and a
-separate list would re-open the consumer matrix above; the right fix is a
-`(TriggeredAbility, expiry)` value in `granted_triggers_eot` read through
-`granted_triggers()`.
+the four that print "any upkeep" / "during the … step" were left alone. The
+one arm left latent here — `Effect::GrantTriggeredAbility` with
+`UntilNextTurn` (Vraska the Unseen's +1), baked as permanent because the
+EOT trigger map had no duration stamp — is the entry above this one.
 
 ## FIXED 2026-09-07 — the LKI walk dropped until-end-of-turn granted triggers, and a conditional Equipment rider granted its abilities unconditionally
 
