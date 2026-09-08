@@ -41,9 +41,10 @@ sixty-seventh pass, so don't re-take that.
    step/cast hooks' closures for the first time (`(-277)`, Log: the five-row build table is the lesson). The grant-bucket class is a
    ratchet now (`catalog_registration::every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket`: kind x scope x bucket over
    every factory, plus "no granted `once_per_turn`"); the self-ETB hook is printed-only by construction.
-4. **Perf/build:** engine profile FLAT — the base to quote is traced sealed 3,315,651,668 / cube 3,144,748,521 at the `(-277)` tip (the
-   `4db20c51` base 3,320,021,324 / 3,148,739,249, same container). Candidates: the `&mut closure` walk class is closed (census 0); levers
-   left are bot-side (sim count / horizon, ML_NOTES round 68) and PGO (opt-in). Do not re-read the engine self table without a device.
+4. **Perf/build:** engine profile FLAT — the base to quote is traced sealed 3,315,951,121 / cube 3,144,754,672 at `2c63ce52` (the `(-277)`
+   tip 3,315,651,668 / 3,144,748,521, the `4db20c51` base 3,320,021,324 / 3,148,739,249, one container); actor 3,121,212,158 at the same
+   tip, FLAT (candidates). The `&mut closure` walk class is closed (census 0; what the row still holds is std's `FilterMap`); levers left
+   are bot-side (sim count / horizon, ML_NOTES round 68) and PGO (opt-in). Do not re-read either self table without a device.
 5. **Cards/bugs:** two filed rows closed by one engine line each (ENGINE_BACKLOG, first section): Calix's second ability (`dealer_filter`
    now sees `IsSource`; `TRIGGER_LIMIT_ABILITY_DROPPED` empty) and All-Out Assault's next-attack untap (`OnYourNextAttackThisTurn`, a new
    one-shot delayed kind). INCOMPLETE_CARDS structural 0 / stubs 0; the oracle-verb table's rows are all filed on primitives or bespoke.

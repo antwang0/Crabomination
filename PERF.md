@@ -2815,6 +2815,8 @@ gate    cargo build --profile release-fast -p crabomination --bin bot_ladder   c
 audit   audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review (21,795 cards); audit_panics.py 78 sites / 0 bare; audit_variant_coverage.py 0 dead capabilities
 --bench at the run's tip (2c63ce52, the two rules changes in): counters identical (195,806 / 27.49 / 611.9 / 0), determinism + thread_determinism ok,
         bin_bytes 126,741,584 (+47,952 B: the new delayed kind's arms), 501.6 / 522.5 / 521.3 games/s under the grid's pilot leg — the host's spread
+actor   callgrind selfplay_train --actors 1 --games 60 --steps 1 --seed 7 at 2c63ce52 (profiling-fast, system allocator): 3,121,212,158 Ir, 6,240 rows — the
+        recorded shape (candidates, "THE ACTOR RE-READ AT THE RUN'S TIP"); the two closure rows are std's FilterMap and the Arc pool, floor
 grid    scripts/robustness_grid.sh --wide, PILOTS with dflt prepended, at 2c63ce52: 52 ladder cells / 301,600 games on `all` + `sealed` x 26 seeds x 400 —
         0 panics, 0 assertion fires, 0 stuck, 4 cap / 12 draw (the caps: seeds 53 and 73 on `all`, twin i32::MAX life totals at turn 2,159 / 2,490 with
         a library of 0-1, the closed Beacon of Immortality fingerprint, read with CRAB_CAP_DIAG=1); 2 actor cells x 30,000 games (seeds 7 / 20260901,
@@ -8611,7 +8613,17 @@ hooks' per-permanent `visit` closures had been called out of line since
 `(-228)`/`(-231)` (`FnMut for &mut F`, 626 k calls a sealed six-game run);
 one walk with one call site inlined them, -0.13 % on both pools. The
 census for the rest of the class (`rg '\(&mut [a-z_]+\)' crabomination/src/game`
-over the `for_each`/walk sites) finds none left in the engine.**
+over the `for_each`/walk sites) finds none left in the engine. What the
+`FnMut for &mut F` row still holds at the `(-277)` tip (383,576 calls /
+28.3 M self, sealed) is std's own `FilterMap::next` — `find_map(&mut
+self.f)` — under the `filter_map(|atk| …?…)` collects in
+`resolve_combat_damage_with_filter` (combat.rs, the `AttackerInfo` build)
+and the bot's `AttackerFacts` build: the bodies are the payload, the call
+is ~10 Ir of the 74, ~0.1 % if every one inlined; not a site anyone can
+change. The `LocalKey::with` row (405 k calls / 26.6 M self) is the
+`ComputedPermanent` Arc pool (`computed_permanent_hinted` 255 k takes,
+`Unfreeze::drop` 146 k puts, const-initialised already): ~65 Ir a take
+against malloc+free's ~150+, so the pool is the cheaper side; floor.**
 
 **The combat chains (rounds 55–56) doubled the default's wall clock;
 round 58 took a third of it back and this is still the top of the
@@ -8662,6 +8674,23 @@ on `--decks sealed` (the chains' pool) and on `cube`; the `fixed` bench
 does not carry them. Round 56's second candidate (the 65 % start-score
 reuse) is CLOSED: it was the share of searches the chain runs on, reuse
 is 100 % of runs (`block_census` now prints both).
+
+**THE ACTOR RE-READ AT THE RUN'S TIP (`2c63ce52`, `cg.actor.out` in a
+scratchpad, `--actors 1 --games 60 --steps 1 --seed 7`, profiling-fast
+`-p crabomination_ml --no-default-features`, system allocator confirmed:
+3,121,212,158 Ir, 60 games / 6,240 rows): FLAT, the recorded shape, so
+nobody re-takes it.** Self: `dispatch_triggers_for_events` 5.16 %, the
+allocator 11.2 % (`_int_free` 3.29, `malloc` 2.53, `_int_malloc` 2.43,
+`free` 2.05), `__memcpy` 3.23 %, `gather_continuous_effects_inner` 3.05 %,
+`compute_permanent_pass` 2.82 %, `from_iter` 2.80 %, the CoW unshare's
+`Arc::clone_from_ref_in` 2.79 %, `check_state_based_actions_into` 2.50 %
++ `sba_board_scan` 1.59 %, `computed_permanent_hinted` 2.01 %, the encoder
+`encode_state_inner` 1.92 % + `encode_printed_into` 0.72 % +
+`encode_instance_keywords_into` 0.52 % (the `(-266)`..`(-270)` floors),
+`Normal::sample` 1.34 % (the net init, once a process). The closure-shaped
+rows are the two the sealed read names (std's `FilterMap` `&mut F`
+333,830 calls, the Arc pool's `LocalKey::with` 414,011); nothing above
+0.2 % with a device.
 
 **THE SEALED SELF TABLE RE-READ AT `1f2cabcb` (the LKI-walk fix tip,
 `cg.cand.sealed.out` in a scratchpad, 3,022,028,711 Ir), so nobody
