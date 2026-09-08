@@ -3101,3 +3101,180 @@ fn every_token_named_after_a_subtype_carries_it() {
         &wrong[..wrong.len().min(40)],
     );
 }
+
+/// **Every trigger a catalog grant hands out reaches a path that reads that
+/// grant bucket.** The dispatcher reads all four buckets (printed, instance,
+/// static, attachment) for the kinds it dispatches; the kinds it does *not*
+/// — `is_event_hardcoded`'s and the push sites `UNPROVEN` above names — each
+/// have a hand-written walk, and a walk that reads printed triggers only
+/// drops a grant of its kind silently (the three combat listener walks did,
+/// until 2026-09-08; no catalog grant carried their kinds, which is the
+/// only reason nothing shipped dead).
+///
+/// The census is the catalog itself: every `StaticEffect::GrantTriggeredAbility`
+/// (`static`), `Effect::GrantTriggeredAbility` (`instance`) and
+/// `equipped_bonus.triggered_abilities` (`equip`) in every known factory,
+/// keyed by the granted ability's `(kind, scope)`. A push-site kind granted
+/// through a bucket its path does not read fails here; `READS` names the
+/// path for each row that has been read.
+#[test]
+fn every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket() {
+    use std::collections::{BTreeMap, BTreeSet};
+
+    /// Kinds dispatched outside the generic dispatcher, with the buckets
+    /// their walk reads: `p` printed, `i` instance (`granted_triggers_timed`),
+    /// `s` static (`statics_granted_triggers_*`), `e` attachment
+    /// (`equip_granted_triggers_*`). A row is added only after reading the
+    /// walk.
+    const READS: &[(&str, &str, &str)] = &[
+        // `dispatch_triggers_for_events` skips these; the self-ETB pushes in
+        // `finalize_cast` / `play_land` read printed + statics (Lavabelly
+        // Sliver); an attachment or an instance grant cannot exist before
+        // the permanent enters.
+        ("EntersBattlefield", "SelfSource", "ps"),
+        // The per-attacker walk in `declare_attackers_banded`.
+        ("Attacks", "SelfSource", "pise"),
+        // `remove_to_graveyard_with_triggers` (printed, instance, equip) plus
+        // the dispatcher's died-snapshot leg (`statics_granted_dying_triggers`).
+        ("CreatureDied", "SelfSource", "pise"),
+        ("PermanentDied", "SelfSource", "pise"),
+        // `fire_spell_cast_triggers`: printed, instance, statics, equip.
+        ("SpellCast", "*", "pise"),
+        // `fire_step_triggers`: printed, instance, statics, and the
+        // `equipped_bonus` loop under it.
+        ("StepBegins", "*", "pise"),
+        // `fire_combat_damage_triggers` phase 1 (`SelfSource`): printed +
+        // `static_granted_triggers_of(source)` + instance, and phase 1b the
+        // attached Equipment / Aura grants; the `YourControl` / `AnyPlayer`
+        // listener walk (phases 1.5 / 1.6) reads printed only.
+        ("DealsCombatDamage", "SelfSource", "pise"),
+        ("DealsCombatDamageToPlayer", "SelfSource", "pise"),
+        ("DealsCombatDamageToCreature", "SelfSource", "pise"),
+        ("DealsCombatDamageToPlaneswalker", "SelfSource", "pise"),
+        ("DealsDamage", "SelfSource", "pise"),
+        ("DealsDamageToPlayer", "SelfSource", "pise"),
+        ("DealsDamageToCreature", "SelfSource", "pise"),
+        // The three combat listener walks: printed + instance since (-277).
+        ("ControllerDealtCombatDamage", "SelfSource", "pi"),
+        ("YouAttack", "*", "pi"),
+        ("Attacks", "ControllerAttackedByOpponent", "pi"),
+        ("Attacks", "ControllerPlaneswalkerAttackedByOpponent", "pi"),
+    ];
+    // Kinds the generic dispatcher does not handle at all (the `UNPROVEN`
+    // list above plus `is_event_hardcoded`); every other (kind, scope) is
+    // dispatched with all four buckets.
+    const PUSH_KINDS: &[&str] = &[
+        "EntersBattlefield", "Mutated", "CreatureDied", "PermanentDied", "SpellCast", "StepBegins",
+        "DealsCombatDamage", "DealsCombatDamageToPlayer", "DealsCombatDamageToCreature",
+        "DealsCombatDamageToPlaneswalker", "ControllerDealtCombatDamage", "DealsDamage",
+        "DealsDamageToPlayer", "DealsDamageToCreature", "YouAttack", "BecomesPlotted",
+        "ChaosEnsues", "Encountered", "PlaneswalkedAwayFrom", "SetInMotion",
+    ];
+    const SELF_ONLY_PUSH: &[&str] = &["EntersBattlefield", "Mutated", "CreatureDied", "PermanentDied"];
+
+    fn variant(v: &serde_json::Value) -> String {
+        match v {
+            serde_json::Value::String(s) => s.clone(),
+            serde_json::Value::Object(m) => m.keys().next().cloned().unwrap_or_default(),
+            other => other.to_string(),
+        }
+    }
+    fn ability_key(ability: &serde_json::Value) -> Option<(String, String)> {
+        let ev = ability.get("event")?;
+        Some((variant(ev.get("kind")?), variant(ev.get("scope")?)))
+    }
+    /// CR 603.3d on a *granted* trigger is unenforced: the dispatcher keys
+    /// `once_per_turn` by printed index and hands every grant the sentinel
+    /// `usize::MAX`, so a granted "only once each turn" would fire per event.
+    /// Latent until a grant carries the flag — this keeps it latent.
+    fn once_per_turn(ability: &serde_json::Value) -> bool {
+        ability
+            .get("event")
+            .and_then(|ev| ev.get("once_per_turn"))
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false)
+    }
+    // (kind, scope, bucket) -> card names
+    let mut found: BTreeMap<(String, String, char), BTreeSet<&'static str>> = BTreeMap::new();
+    fn walk(
+        v: &serde_json::Value,
+        name: &'static str,
+        found: &mut BTreeMap<(String, String, char), BTreeSet<&'static str>>,
+    ) {
+        match v {
+            serde_json::Value::Object(m) => {
+                if let Some(g) = m.get("GrantTriggeredAbility") {
+                    let (bucket, ability) = if let Some(a) = g.get("ability") {
+                        ('s', a)
+                    } else if let Some(t) = g.get("trigger") {
+                        ('i', t)
+                    } else {
+                        ('?', g)
+                    };
+                    if let Some((k, s)) = ability_key(ability) {
+                        found.entry((k, s, bucket)).or_default().insert(name);
+                    }
+                    if once_per_turn(ability) {
+                        found.entry(("once_per_turn".into(), String::new(), bucket)).or_default().insert(name);
+                    }
+                }
+                for child in m.values() {
+                    walk(child, name, found);
+                }
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|c| walk(c, name, found)),
+            _ => {}
+        }
+    }
+    let mut checked = 0usize;
+    for f in crabomination::catalog::all_known_factories() {
+        let def = f();
+        let name = def.name;
+        let Ok(j) = serde_json::to_value(&def) else { continue };
+        checked += 1;
+        walk(&j, name, &mut found);
+        if let Some(bonus) = &def.equipped_bonus {
+            for t in &bonus.triggered_abilities {
+                if let Ok(a) = serde_json::to_value(t)
+                    && let Some((k, s)) = ability_key(&a)
+                {
+                    found.entry((k, s, 'e')).or_default().insert(name);
+                }
+            }
+        }
+    }
+    assert!(checked > 10_000, "only {checked} cards serialized");
+    assert!(found.len() > 20, "the grant census came out thin: {found:?}");
+
+    let mut unread: Vec<String> = Vec::new();
+    for ((kind, scope, bucket), names) in &found {
+        if kind == "once_per_turn" {
+            unread.push(format!(
+                "a granted trigger with `once_per_turn` via bucket '{bucket}' ({} cards, e.g. {:?}) — \
+                 the dispatcher's CR 603.3d key is the printed index, a grant gets the sentinel",
+                names.len(),
+                names.iter().take(4).collect::<Vec<_>>()
+            ));
+            continue;
+        }
+        let pushed = PUSH_KINDS.contains(&kind.as_str())
+            && (!SELF_ONLY_PUSH.contains(&kind.as_str()) || scope == "SelfSource");
+        if !pushed {
+            continue;
+        }
+        let read = READS
+            .iter()
+            .find(|(k, s, _)| k == kind && (*s == "*" || s == scope))
+            .is_some_and(|(_, _, buckets)| buckets.contains(*bucket));
+        if !read {
+            let sample: Vec<&str> = names.iter().take(4).copied().collect();
+            unread.push(format!("{kind}/{scope} via bucket '{bucket}' ({} cards, e.g. {sample:?})", names.len()));
+        }
+    }
+    assert!(
+        unread.is_empty(),
+        "{} granted trigger kind(s) reach a walk that does not read their bucket:\n  {}",
+        unread.len(),
+        unread.join("\n  ")
+    );
+}
