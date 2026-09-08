@@ -64,10 +64,16 @@ unread — `fire_step_triggers` and `fire_spell_cast_triggers` — read it
 now too, behind a kind-filtered presence gate that also widens their
 member-list walk to the whole board (a grant can land on a permanent with
 no printed trigger); `core_rules::cr_recent49::cr_603_2_instance_granted_
-step_and_cast_triggers_fire`. Still printed-only, and still with no
-catalog grant of their kinds: the self-ETB hook (a permanent cannot carry
-an instance grant before it enters) and the three combat listener walks
-(`ControllerAttackedByOpponent`, `YouAttack`, `ControllerDealtCombatDamage`).
+step_and_cast_triggers_fire`. **The three combat listener walks
+(`ControllerAttackedByOpponent`, `YouAttack`, `ControllerDealtCombatDamage`)
+read it too since 2026-09-08 (the following run)**, behind one shared
+presence read, `any_granted_trigger_of_kind`, that the step and cast hooks
+now go through as well — every hook outside the dispatcher asks the same
+question the same way; `core_rules::cr_recent49::cr_603_2_instance_
+granted_combat_listeners_fire`. Still printed-only: the self-ETB hook (a
+permanent cannot carry an instance grant before it enters). Latent: a
+granted trigger's `once_per_turn` is unenforced (sentinel index) — no
+catalog grant carries the flag.
 
 And one more parallel walker, found by the catalog's step-gate pass the
 same day: `gather_continuous_effects_inner`'s live-filter leg for

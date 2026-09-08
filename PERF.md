@@ -198,6 +198,13 @@ python3 scripts/cg_cache.py cache.out Bcm        # or I1mr, D1mr, ...; N rows; -
 #   ( for p in cube fixed sealed; do valgrind --tool=callgrind \
 #       --callgrind-out-file=/tmp/cg.$p.b.out /tmp/base <args> ; done; touch /tmp/b.done ) &
 #   cargo build --profile profiling-fast … && cp target/profiling-fast/bot_ladder /tmp/cand
+# ⚠ THE SECOND-WORKTREE FORM OF THE SAME RECIPE HAS A TRAP. A worktree that
+# shares `target/` is keyed like the main tree (cargo hashes a workspace
+# member by its path relative to the workspace root), so its build is "fresh"
+# whenever its sources are older than the tip's outputs — `Finished in 0.16s`,
+# and the base binary IS the tip's (2026-09-08: identical md5s, -501 Ir).
+# `touch` the worktree's engine sources first and `md5sum` both sides before
+# reading a number. CLAUDE.md's container notes carry the same warning.
 #   while [ ! -f /tmp/b.done ]; do sleep 10; done
 #   for p in cube fixed sealed; do valgrind … /tmp/cand … ; done
 # The stash is safe here where PERF's worktree rule warns it is not: nothing
@@ -2784,6 +2791,32 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-277)` — the last printed-only hooks read instance grants, and the walk that inlined: addendum at the `(-277)` tip
+
+One engine commit after the addendum below (the Log's `(-277)` entry has the
+five-row build table and the delta table): the three combat listener walks
+read `granted_triggers_timed`, every hook outside the dispatcher goes through
+`any_granted_trigger_of_kind` + `for_each_triggerer_or_all`, and the walk's
+single call site inlined the step and cast hooks' closures. The fixed pool
+is byte-identical; sealed and cube are the same games faster:
+
+```text
+--bench release-fast (mimalloc) at the (-277) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1);
+        bin_bytes 126,693,632 (+6,560 B against 72297152's 126,687,072; 126,688,776 at 4db20c51 in this container); 513.0 / 503.0 / 428.1 games/s, three single
+        runs (453.3 / 505.8 / 506.5 at 4db20c51, the same container) — THIS CONTAINER IS A DIFFERENT HOST (Xeon @ 2.10 GHz, host_calib_ms 53) from the
+        addendum below's 2.80 GHz box, so its games/s do not compare with any earlier addendum; the counters and Ir do
+Ir      against 4db20c51, traced, base and tip from one tree, --a dflt --b dflt --games 6 --threads 1 --seed 1, system allocator:
+        sealed 3,320,021,324 -> 3,315,651,668 (-4,369,656, -0.132 %) / cube 3,148,739,249 -> 3,144,748,521 (-3,990,728, -0.127 %); 72 + 48 trace files, 0 differ
+golden  7/7 unmoved
+suite   19,282 / 0 / 5 (one test added: the three walks on a grant with no printed trigger)
+clippy  --workspace --exclude crabomination_client --all-targets   clean (two needless_borrows fixed after the Ir reading — `&listens` -> `listens`, a ZST closure by copy)
+gate    cargo build --profile release-fast -p crabomination --bin bot_ladder   clean (the debug-assertions=off build behind --bench)
+audit   audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review (21,795 cards); audit_panics.py 78 sites / 0 bare; audit_variant_coverage.py 0 dead capabilities
+grid    scripts/robustness_grid.sh --wide, PILOTS with dflt prepended: see the line appended below once it finishes
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores; cold debug suite build ~25 min, cold profiling-fast bot_ladder 8m42s, warm engine
+        rebuild 2m23s; cold release-fast ~12 min
+```
+
 ### 2026-09-08 — the trigger-grant duration carrier, the planeswalker damage record, the two hooks and the wrapper peel: addendum at the tip after `72297152`
 
 Three engine commits and one catalog commit after the Life Matrix addendum
@@ -3928,6 +3961,73 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-277)` TAKEN — every trigger hook reads instance grants through one walk shape: traced sealed Ir **-0.132 %** / cube **-0.127 %**, traces identical
+
+The three combat listener walks (`ControllerAttackedByOpponent`, `YouAttack`,
+`ControllerDealtCombatDamage`) were the last hooks outside the dispatcher
+that read printed triggers only (ENGINE_BACKLOG, first section); they read
+`granted_triggers_timed` now behind the same kind-filtered presence gate the
+step and cast hooks use, `any_granted_trigger_of_kind`, and
+`expire_granted_triggers` took the empty-map fast path the candidates list
+filed. A rules change, priced under the traced recipe of the entries below
+(`--a dflt --b dflt --games 6 --threads 1 --seed 1`, `profiling-fast`, system
+allocator, `CRAB_DUMP_TRACES` both sides, the base at `4db20c51` rebuilt in
+a second worktree — see the trap below), and it took four builds to land as
+a win rather than a loss:
+
+```text
+                                                            sealed Ir            cube Ir              traces
+base 4db20c51                                              3,320,021,324        3,148,739,249
+1  closures as `&mut visit` into two walks (`if own {iter} else {triggerer}`)   +0.217 %             +0.159 %        72 / 48 identical
+2  closures by value into the same two walks               +0.239 %             +0.187 %             identical
+3  one walk, `for_each_triggerer_or_all(all, f)` (match arms, `#[inline]`)      +0.138 %             +0.100 %        identical
+4  + the grant loop out of line (`for_each_granted_trigger_matching`)           +0.072 %             +0.074 %        identical
+5  + one `f(c)` call site (the chunked bit loop)             3,315,651,668 (-0.132 %)  3,144,748,521 (-0.127 %)   identical
+```
+
+**What the five rows say is about the inliner, not the grants.** Every
+row's residue was the per-permanent `visit` closure being *called* instead
+of inlined — `FnMut for &mut F::call_mut` 626,234 -> 892,152 calls in row 1
+(+11.8 M), the same closures as named out-of-line functions in rows 2-4
+(`declare_attackers_banded::{closure}` 183,408 calls / 6.2 M,
+`fire_step_triggers::{closure}` 206,750 / 11.5 M,
+`fire_spell_cast_triggers::{closure}` 35,974 / 4.5 M). Two things kept them
+out: a closure handed to two generic walks (row 1-2) is codegen'd once and
+called from both; and a walk with two `f(c)` sites (the member-list loop
+and the whole-board tail, which the old `for_each_triggerer` also had) is
+two inlining decisions, and once the closure body carried the grant loop
+LLVM took neither. Row 5 is one bit loop over 64-card chunks — "all" is a
+full mask — so `f` has one call site, and every closure inlined:
+
+```text
+sealed self-Ir delta, row 5 against the base
+   -16,401,806  FnMut for &mut F::call_mut      626,234 -> 383,576 calls   the step and cast hooks' `visit`, inlined for the first time (they were `&mut` on both sides before)
+   +12,011,360  for_each_triggerer_or_all             0 -> 46,048          the three combat walks + the cast hook, bodies inlined
+    +7,263,108  fire_step_triggers                    53,848 both sides    its walk inlined into the hook itself
+    -5,718,368  for_each_triggerer                 35,280 -> 0             gone (a one-line wrapper now)
+      +568,400  any_granted_trigger_of_kind            0 -> 28,420         20 Ir a read, `#[inline]`, still out of line at release-fast — the price of the gate
+```
+
+**The rule that fell out: a `visit` closure the hot walks take must have
+ONE call site and a body under the inline budget.** The grant branch lives
+in `GameState::for_each_granted_trigger_matching`, `#[inline(never)]`, so a
+hook's closure stays the printed loop plus one call; and
+`Battlefield::for_each_triggerer_or_all` is the only walk, taking the
+"whole board" answer as a flag. The step and cast hooks moved onto it too,
+which is where most of the -0.13 % comes from — their closures had been
+`&mut visit` since `(-228)`/`(-231)` and out of line the whole time.
+
+⚠ **AND THE FIRST BASE WAS THE TIP.** The worktree recipe the previous
+entry describes gives a "base" build that finishes in 0.16 s and hands back
+the tip's binary when the worktree's sources are older than the tip's
+outputs (cargo keys a member by its path relative to the workspace root):
+the first A/B read -501 Ir with identical md5s. "How to measure" carries the
+`touch` + `md5sum` step now.
+
+`core_rules::cr_recent49::cr_603_2_instance_granted_combat_listeners_fire`
+pins the three walks (a grant on a permanent with no printed trigger fires
+from each). Suite 19,282 / 0 / 5, clippy clean, golden 7/7 unmoved.
 
 ### The stateful keyword-grant gather's wrapper peel READ — traced sealed Ir **+0.027 %** / cube **+0.001 %**, traces identical
 
@@ -8479,14 +8579,13 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**`expire_granted_triggers`' empty-map fast path (2026-09-08, read off
-the duration-carrier delta table in the Log):** the turn-start, upkeep,
-end-of-combat and cleanup sweeps each ask `granted_triggers_timed.values()
-.flatten().any(pred)` on a map that is empty on almost every board, ~40 Ir
-a sweep against the ~2 Ir an `is_empty()` read costs; `expire_end_of_
-combat_effects` alone reads +212,976 Ir over 5,118 calls. ~1 M Ir a
-sealed six-game run (0.03 %) — one line, take it with the next engine
-change that needs a `profiling-fast` build anyway, not on its own.
+**~~`expire_granted_triggers`' empty-map fast path~~ TAKEN with `(-277)`
+(Log), which also found the larger thing beside it: the step and cast
+hooks' per-permanent `visit` closures had been called out of line since
+`(-228)`/`(-231)` (`FnMut for &mut F`, 626 k calls a sealed six-game run);
+one walk with one call site inlined them, -0.13 % on both pools. The
+census for the rest of the class (`rg '\(&mut [a-z_]+\)' crabomination/src/game`
+over the `for_each`/walk sites) finds none left in the engine.**
 
 **The combat chains (rounds 55–56) doubled the default's wall clock;
 round 58 took a third of it back and this is still the top of the

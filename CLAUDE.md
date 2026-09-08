@@ -65,6 +65,15 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   task log) rather than fail loudly. `rm -rf target/debug/incremental`
   costs one non-incremental engine rebuild (~4 min) and returns the space;
   delete superseded A/B binaries and dumps from the scratchpad as you go.
+- **A second worktree sharing `target/` builds NOTHING unless its sources are
+  newer than the main tree's outputs.** Cargo keys a workspace member by its
+  path *relative to the workspace root*, so `/home/user/crab_base/crabomination`
+  and the main tree's engine share one fingerprint and the file mtime is the
+  only tiebreak: a worktree checked out before the tip's build finished reads
+  "Finished in 0.16s" and hands back the tip's binary as the base (this run's
+  A/B read `-501 Ir` and identical md5s before anyone looked). `find
+  crabomination/src crabomination_base/src -name '*.rs' -exec touch {} +` in
+  the worktree first, and `md5sum` both sides before a callgrind.
 - **`pkill -f <pattern>` kills your own shell when the pattern appears in
   the command line that runs it** (a background `cargo nextest` chain
   named in the same `bash -c`). Kill by pid.

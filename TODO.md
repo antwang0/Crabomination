@@ -28,26 +28,23 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force;
-   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-276)` is the last claimed, `(-277)` next. Gotchas in **CLAUDE.md**;
+   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-277)` is the last claimed, `(-278)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
-   running `cargo build`. A cold `profiling-fast` build of `bot_ladder` is 14 min here, the cold `release-fast` 12; a detached `setsid nohup`
-   chain survives the tool timeout, a plain background command does not; a second worktree shares `target/` (path-keyed) for a base-side build.
-2. **Gates at the tip (PERF Baseline, the 2026-09-08 addendum):** suite 19,281 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
-   identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), Ir against `901c66f4` sealed +0.060 % / cube +0.061 % (+0.027 % / +0.001 % more at the
-   peel; every trace identical; read by function in the Log), `audit_catalog_stats.py` tim 1 -> 0, `audit_stubs` / `audit_incomplete
-   --structural-only` both 0 (21,795 cards).
-3. **Engine, this run (ENGINE_BACKLOG first section):** the duration axis is closed — `GrantTriggeredAbility` carries an `EffectDuration` per
-   entry and rides the five sweeps (Vraska's +1 was permanent); a planeswalker records its damager (`LastDamagerOf` was empty on one); the
-   step and cast hooks read instance grants. **Next of the shape:** the three combat listener walks and the self-ETB hook are printed-only
-   (no catalog grant of their kinds); `once_per_turn` on a granted trigger is a sentinel index (latent).
-4. **Cards/bugs:** the step-gate axis' "during your turn" read: 8 activation gates off `sorcery_speed` onto `IsTurnOf(You)` (Rag Man / Stern
-   Marshal with the before-attackers step list), 2 trigger filters, 3 statics, Vampire Bats' twice; the audit's sorcery-for-your-turn leniency
-   is retired. Residue: Temur Battlecrier (no turn-gated `affinity_filter`); the omitted clauses CARD_BACKLOG already lists (Lurrus, Muldrotha,
-   Momo, Birgi/Harnfel, Iroh, Elvish Refueler, Karlov Watchdog, Mine Collapse) are permissions, not gates.
-5. **Perf/build:** engine profile FLAT — the base to quote is sealed 3,025,048,377 / cube 2,968,192,944 at `005a9b8c` (untraced; the traced
-   pair puts `72297152` a further +0.027 % / +0.001 % on it — allocator noise). The empty-map fast path on `expire_granted_triggers` is the
-   one filed micro-lever (~0.03 %, PERF candidates, first entry). Levers left are bot-side (sim count / horizon, ML_NOTES round 68) and PGO
-   (opt-in). Do not re-read the engine self table without a device.
+   running `cargo build`. Cold here: debug suite build ~25 min, `profiling-fast` bot_ladder 8m42s, `release-fast` ~12 min; a detached `setsid
+   nohup` chain survives the tool timeout. ⚠ A second worktree sharing `target/` builds NOTHING unless you `touch` its sources first —
+   `md5sum` both A/B binaries before reading a number (CLAUDE.md, PERF "How to measure"; this run's first base was the tip).
+2. **Gates at the tip (PERF Baseline, the `(-277)` addendum):** suite 19,282 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
+   identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), Ir against `4db20c51` sealed **-0.132 %** / cube **-0.127 %**, every trace identical,
+   `audit_stubs` / `audit_incomplete --structural-only` both 0, `robustness_grid.sh --wide` (see the addendum for the cells).
+3. **Engine, this run:** the last printed-only hooks — the three combat listener walks — read instance grants; every hook outside the
+   dispatcher asks `any_granted_trigger_of_kind` and walks `for_each_triggerer_or_all`, whose one `f(c)` call site is what inlined the
+   step/cast hooks' closures for the first time (`(-277)`, Log: the five-row build table is the lesson). Latent, no catalog use: a granted
+   trigger's `once_per_turn` (sentinel index); the self-ETB hook is printed-only by construction.
+4. **Perf/build:** engine profile FLAT — the base to quote is traced sealed 3,315,651,668 / cube 3,144,748,521 at the `(-277)` tip (the
+   `4db20c51` base 3,320,021,324 / 3,148,739,249, same container). Candidates: the `&mut closure` walk class is closed (census 0); levers
+   left are bot-side (sim count / horizon, ML_NOTES round 68) and PGO (opt-in). Do not re-read the engine self table without a device.
+5. **Cards/bugs:** nothing open on the correctness list; INCOMPLETE_CARDS structural 0 / stubs 0. The step-gate residue (Temur Battlecrier,
+   the CARD_BACKLOG permission clauses) is unchanged from the previous run.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
