@@ -24,7 +24,7 @@ use crate::cube::CardFactory;
 use crate::draft::SosPacks;
 use crate::game::GameState;
 use crate::recommend::{
-    STALE_ROUNDS, SimConfig, StopReason, build_match_template, build_random_deck,
+    SimConfig, StopReason, build_match_template, build_random_deck, stop_reason,
 };
 use crate::server::bot::{Bot, EvalWeights, HeuristicBot};
 use crate::server::encode::{Vocab, encode_state_pair};
@@ -533,7 +533,7 @@ pub fn play_recorded_game_mcts(
     // else pushes to `snaps`, so `i` and `i + 1` are the pair.
     let mut last_pair: Option<usize> = None;
     let (mut actions, mut stale) = (0usize, 0usize);
-    while !g.is_game_over() && actions < max_actions && stale < STALE_ROUNDS {
+    while stop_reason(&g, actions, max_actions, stale).is_none() {
         let new_turn = (g.turn_number, g.active_player_idx) != last_turn;
         // The four shapes a combat passes through, each the leaf of a
         // decision the bot actually makes: declare-attackers (nothing
@@ -607,15 +607,9 @@ pub fn play_recorded_game_mcts(
     }
 
     let turns = g.turn_number;
-    // Same order as `recommend::play_one_game_traced`: `is_game_over`
-    // wins over both caps, and the action cap wins over staleness.
-    let stop = if g.is_game_over() {
-        StopReason::GameOver
-    } else if actions >= max_actions {
-        StopReason::ActionCap
-    } else {
-        StopReason::NoLegalMove
-    };
+    // The same `stop_reason` as `recommend::play_one_game_traced`, so the
+    // actor and the ladder bound a game identically.
+    let stop = stop_reason(&g, actions, max_actions, stale).unwrap_or(StopReason::NoLegalMove);
     let Some(Some(winner)) = g.game_over else {
         return RecordedGame { rows: Vec::new(), heur: Vec::new(), winner: None, turns, stop };
     };

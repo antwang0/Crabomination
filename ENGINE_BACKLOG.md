@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-08 (third run) — a token-doubling board had no bound: the simulator now ends a game whose battlefield passes 1,024 permanents as a cap](#fixed-2026-09-08-third-run--a-token-doubling-board-had-no-bound-the-simulator-now-ends-a-game-whose-battlefield-passes-1024-permanents-as-a-cap) | 26 |
 | Bugs & robustness | [FIXED 2026-09-08 (second run) — a combat-damage `dealer_filter` could never say `IsSource`, and "when you next attack this turn" had no primitive](#fixed-2026-09-08-second-run--a-combat-damage-dealer_filter-could-never-say-issource-and-when-you-next-attack-this-turn-had-no-primitive) | 38 |
 | Bugs & robustness | [FIXED 2026-09-08 — a trigger grant knew two durations, and a planeswalker never recorded who damaged it](#fixed-2026-09-08--a-trigger-grant-knew-two-durations-and-a-planeswalker-never-recorded-who-damaged-it) | 38 |
 | Bugs & robustness | [FIXED 2026-09-07 — keyword grants with an "until your next turn" duration were permanent, and `UntilNextTurn` itself meant "any player's next turn"](#fixed-2026-09-07--keyword-grants-with-an-until-your-next-turn-duration-were-permanent-and-untilnextturn-itself-meant-any-players-next-turn) | 52 |
@@ -41,6 +42,31 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-08 (third run) — a token-doubling board had no bound: the simulator now ends a game whose battlefield passes 1,024 permanents as a cap
+
+Found by the run's own census: a `dflt` cube mirror at seed 43 (`--games
+1200`) held one thread for over ninety minutes and never finished. Named
+with the new `CRAB_MAX_ACTIONS=4000 CRAB_CAP_DIAG=1` pair (PERF "How to
+measure"): at action 4,001, turn 55, the board carried **1,377 Scute
+Swarms** and the stack **671 of their landfall triggers** — each land drop
+doubles the copies (CR-correct: the trigger creates a copy of Scute Swarm
+with six or more lands), every resolution is a priority stop the bot
+answers over a board that size, and the 50,000-action cap was hours away.
+The other 9,598 games of the run took 122 s on one thread.
+
+The class is *finite exponential growth*, which no rule ends and the
+action cap cannot reach in time. Fix: `recommend::MAX_BATTLEFIELD` (1,024)
+and `StopReason::BoardCap`, checked by one shared `recommend::stop_reason`
+that both driver loops — the ladder's `play_one_game_traced` and the
+actor's `play_recorded_game_mcts` — now read, in the loop's own order
+(rules, action cap, board cap, staleness). A board-capped game is counted
+with the action-capped ones everywhere (`SimCost`, the actor's
+`stalls_capped`, the grid's `cap` bucket), and `CRAB_CAP_DIAG` prints its
+board. No legitimate 40-card game approaches a thousand permanents; the
+robustness grid's caps stay a defect signal (the Beacon of Immortality
+seeds are action caps, unchanged). Regression test:
+`core_rules::golden_trace::a_board_past_max_battlefield_ends_the_game_as_a_cap`.
 
 ## FIXED 2026-09-08 (second run) — a combat-damage `dealer_filter` could never say `IsSource`, and "when you next attack this turn" had no primitive
 

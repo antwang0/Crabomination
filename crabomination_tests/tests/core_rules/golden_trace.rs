@@ -424,3 +424,26 @@ fn a_seeded_cube_pairing_replays_identically() {
         );
     }
 }
+
+/// The simulator's battlefield bound (`recommend::MAX_BATTLEFIELD`): a
+/// Scute Swarm landfall board doubled past a thousand copies at cube seed 43
+/// and the 50,000-action cap was hours away (ENGINE_BACKLOG, 2026-09-08).
+/// Both driver loops read `stop_reason`, in the loop's own order.
+#[test]
+fn a_board_past_max_battlefield_ends_the_game_as_a_cap() {
+    use crabomination::game::two_player_game;
+    use crabomination::recommend::{MAX_BATTLEFIELD, STALE_ROUNDS, StopReason, stop_reason};
+    let mut g = two_player_game();
+    for _ in 0..MAX_BATTLEFIELD {
+        g.add_card_to_battlefield(0, c::grizzly_bears());
+    }
+    assert_eq!(g.battlefield.len(), MAX_BATTLEFIELD);
+    assert_eq!(stop_reason(&g, 0, 50_000, 0), None, "at the bound the game plays on");
+    g.add_card_to_battlefield(0, c::grizzly_bears());
+    assert_eq!(stop_reason(&g, 0, 50_000, 0), Some(StopReason::BoardCap));
+    // The action cap and the rules win over it; staleness comes after.
+    assert_eq!(stop_reason(&g, 50_000, 50_000, 0), Some(StopReason::ActionCap));
+    assert_eq!(stop_reason(&g, 0, 50_000, STALE_ROUNDS), Some(StopReason::BoardCap));
+    g.game_over = Some(Some(0));
+    assert_eq!(stop_reason(&g, 0, 50_000, 0), Some(StopReason::GameOver));
+}

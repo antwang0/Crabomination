@@ -837,7 +837,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         if rec.rows.is_empty() {
             shared.stalls.fetch_add(1, Ordering::Relaxed);
             match rec.stop {
-                StopReason::ActionCap => {
+                StopReason::ActionCap | StopReason::BoardCap => {
                     shared.stalls_capped.fetch_add(1, Ordering::Relaxed);
                 }
                 StopReason::NoLegalMove => {

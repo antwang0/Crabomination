@@ -1406,7 +1406,7 @@ impl SimCost {
         self.decisions += o.actions as u64;
         self.turns += o.turns as u64;
         match o.stop {
-            StopReason::ActionCap => self.action_capped += 1,
+            StopReason::ActionCap | StopReason::BoardCap => self.action_capped += 1,
             StopReason::NoLegalMove => self.no_legal_move += 1,
             StopReason::GameOver if o.winner.is_none() => self.draws += 1,
             StopReason::GameOver => {}
@@ -1829,9 +1829,45 @@ pub enum StopReason {
     GameOver,
     /// `actions >= max_actions`.
     ActionCap,
+    /// The battlefield passed [`MAX_BATTLEFIELD`]: a token-doubling board
+    /// whose next action costs more than the last, bounded here so one
+    /// game cannot hold a thread for hours. Counted with the action cap.
+    BoardCap,
     /// [`STALE_ROUNDS`] consecutive rounds in which neither bot had an
     /// action accepted.
     NoLegalMove,
+}
+
+/// The simulator's battlefield bound. Scute Swarm's landfall copy doubles
+/// its own count on every land drop: a cube dflt mirror at seed 43 had
+/// 1,377 copies and 671 of their triggers on the stack at action 4,001,
+/// every one of the next resolutions a priority stop over a board that
+/// size, and the 50,000-action cap was still hours away (2026-09-08). No
+/// legitimate 40-card game approaches a thousand permanents; a board past
+/// it is a runaway, ended as undecided the way an action-capped one is.
+pub const MAX_BATTLEFIELD: usize = 1_024;
+
+/// Why a driver loop stops, in the loop's own order — the rules first, then
+/// the two simulator bounds, then staleness — or `None` to play on. Both
+/// loops ([`play_one_game_traced`] and the actor's) ask this so the bounds
+/// cannot drift apart.
+pub fn stop_reason(
+    g: &GameState,
+    actions: usize,
+    max_actions: usize,
+    stale: usize,
+) -> Option<StopReason> {
+    if g.is_game_over() {
+        Some(StopReason::GameOver)
+    } else if actions >= max_actions {
+        Some(StopReason::ActionCap)
+    } else if g.battlefield.len() > MAX_BATTLEFIELD {
+        Some(StopReason::BoardCap)
+    } else if stale >= STALE_ROUNDS {
+        Some(StopReason::NoLegalMove)
+    } else {
+        None
+    }
 }
 
 /// One finished game: the winning seat (`None` for a stall/draw) plus what
@@ -2044,7 +2080,7 @@ fn play_one_game_traced(
     g.start_mulligan_phase();
     let mut bots: Vec<Box<dyn Bot>> = pilots.into_iter().map(Pilot::build).collect();
     let (mut actions, mut stale) = (0usize, 0usize);
-    while !g.is_game_over() && actions < max_actions && stale < STALE_ROUNDS {
+    while stop_reason(&g, actions, max_actions, stale).is_none() {
         let mut any = false;
         for (s, bot) in bots.iter_mut().enumerate() {
             // Cross-binary: poll only the seat this process pilots and
@@ -2127,16 +2163,10 @@ fn play_one_game_traced(
         if any { stale = 0 } else { stale += 1 }
     }
     crate::server::bot::set_jitter_seed(None);
-    // Tested in the loop's own order: `is_game_over` wins over both caps,
-    // and a game that hits the action cap on the same iteration it goes
-    // stale is reported as capped.
-    let stop = if g.is_game_over() {
-        StopReason::GameOver
-    } else if actions >= max_actions {
-        StopReason::ActionCap
-    } else {
-        StopReason::NoLegalMove
-    };
+    // The loop's own order: `is_game_over` wins over the caps, and a game
+    // that hits a cap on the same iteration it goes stale is reported as
+    // capped. A cross-play fault breaks out early with no reason of its own.
+    let stop = stop_reason(&g, actions, max_actions, stale).unwrap_or(StopReason::NoLegalMove);
     // `CRAB_CAP_DIAG=1` reports the capped games; `CRAB_CAP_DIAG=<n>` reports
     // every game that ran past `n` actions, capped or not. The second form is
     // the one that finds a *slow* game — a pair on `--decks all --seed 43` took
@@ -2146,7 +2176,7 @@ fn play_one_game_traced(
     // same class and it scales with the 10-30k-game gate runs.
     if let Some(floor) = cap_diag_floor() {
         let floor = floor.unwrap_or(max_actions);
-        if actions >= floor || matches!(stop, StopReason::ActionCap) {
+        if actions >= floor || matches!(stop, StopReason::ActionCap | StopReason::BoardCap) {
             eprintln!("{}", cap_diagnosis(&g, actions));
         }
     }
