@@ -34,9 +34,10 @@ sixty-seventh pass, so don't re-take that.
    detached `setsid nohup` chain survives the tool timeout (⚠ kill it by pid — `pkill -f`/`pgrep -f` on a log name matches your own shell).
    **The A/B base is the CR 400.7 fix's triple (PERF Baseline addendum, the `fix` line): sealed 2,563,124,101 / cube 2,467,644,697 (different
    games from `(-279)`) / fixed 671,675,835**; both sides from one tree, `md5sum` both.
-2. **Gates at the tip (PERF Baseline, the `(-279)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
-   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, the debug-assertions grid on FRESH seeds 701..712 (24 ladder cells /
-   139,200 games + 46 pilot cells) 0 failures, `audit_stubs` / `audit_incomplete --structural-only` both 0 at the previous tip.
+2. **Gates at the tip (PERF Baseline, the `(-279)` addendum, `gate` / `sweeps` lines):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench`
+   counters identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0) on the CR 400.7 tip, thread_determinism ok, the debug-assertions grid on
+   FRESH seeds 701..712 (24 ladder cells / 139,200 games + 46 pilot cells + 3 actor cells) 0 failures, dflt sweeps under the bound on cube /
+   all / sealed (108,000 games, seeds 707..718) 0 cap / 0 stuck; `audit_stubs` / `audit_incomplete --structural-only` both 0 at the previous tip.
 3. **This run:** `(-279)` TAKEN (Log: the event scratch pooled across clones, sealed -0.378 % / cube -0.272 % / fixed -0.332 %, traces
    identical); the block sim READ by context (candidates: it is `resolve_combat_into`, 17 % of sealed dflt, every callee a recorded floor);
    the attack sim's cheapest horizon arm REFUTED off a census (1 % of iterations past an empty crack-back; the instrument cost +0.126 % and

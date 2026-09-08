@@ -2832,6 +2832,11 @@ fix     CR 400.7 (ENGINE_BACKLOG 2026-09-08 third run, the Golgari Thug loop): a
         MOVES TO 2,467,644,697); fixed gang 671,541,515 -> 671,675,835 (+0.020 %); golden 7/7 unmoved. REFUTED variant: the same reset on the leave side (`damage = 0` in `place_card_at_
         resolved_zone`) read +0.107 % sealed on identical games — the write deep-copies a dying card's CoW data under every bot clone.
         Cube sweep under the bound, dflt mirror seeds 701..706 x 400 (19,200 games): seed 702's cap 2 -> 0, the rest unchanged (10 draws)
+gate    --bench release-fast (mimalloc) at b746192b (the CR 400.7 tip): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf (no fixed gang game
+        reaches the case); determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,753,680 (+10,152 B against 3d8f3072); 309.4 / 310.1 / 308.6 games/s
+        (host_calib_ms 51 / 49 / 50, the same afternoon's box)
+sweeps  dflt mirror x 400 x --threads 3, CRAB_CAP_DIAG=1, at the CR 400.7 tip: cube seeds 707..718 (38,400 games) 0 cap / 0 stuck / 4 draws;
+        all seeds 707..712 (40,800 games) 0 / 0 / 2; sealed seeds 707..712 (28,800 games) 0 / 0 / 0 — the bound has fired on no board but Scute Swarm's
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores; cold profiling-fast bot_ladder 13m07s (cold registry), warm engine rebuild 4m05s,
         cold debug suite build ~9 min, release-fast 11m42s
 ```
