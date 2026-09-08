@@ -710,8 +710,13 @@ bespoke-effect false positive** — the regex cannot see a verb done inside
 `CatchUpBasicLands`, `CounterAbilityAndDestroySource` or the ward-shaped
 tax approximations (Chancellor of the Annex, Diffusion Sliver). Nothing in
 the class is a card fix any more; the next reduction is a primitive
-(Dyadrine's two-creature counter cost, All-Out Assault's delayed untap,
-Takklemaggot's re-attach, Geyadrone's corruption counters).
+(Dyadrine's two-creature counter cost, ~~All-Out Assault's delayed untap~~
+— built 2026-09-08 as `Effect::OnYourNextAttackThisTurn` /
+`DelayedKind::YourNextAttackThisTurn`, consumed by the dispatcher's
+attack-declared leg after the attackers are tapped; the `untap` class is
+down to Breath of Fury, whose untap lives inside
+`SacrificeEnchantedForExtraCombat` — Takklemaggot's re-attach, Geyadrone's
+corruption counters).
 
 
 **Thirteen rows, the last four classes nobody had read: nine fixed with a

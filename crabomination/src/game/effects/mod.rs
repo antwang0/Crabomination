@@ -27124,6 +27124,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OnYourNextAttackThisTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextAttackThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: true,
+                    expires_after_turn: None,
+                });
+                Ok(())
+            }
+
             Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 let expires = self.controllers_next_turn_number(ctx.controller);

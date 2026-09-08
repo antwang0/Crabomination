@@ -411,6 +411,35 @@ mod recent226 {
         assert!(cp.keywords().contains(&Keyword::Deathtouch));
     }
 
+    /// All-Out Assault's "when you next attack this turn, untap each creature
+    /// you control" — dropped until 2026-09-08, which left the extra combat
+    /// with nobody untapped to attack in it. One-shot: the second attack
+    /// does not untap.
+    #[test]
+    fn all_out_assault_untaps_the_team_on_the_next_attack_once() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let assault = g.add_card_to_battlefield(0, catalog::all_out_assault());
+        let effect = catalog::all_out_assault().triggered_abilities[0].effect.clone();
+        g.resolve_effect(&effect, &EffectContext::for_trigger(assault, 0, None, 0)).unwrap();
+        let attack = |g: &mut crabomination::game::GameState| {
+            use crabomination::game::types::{Attack, AttackTarget, GameAction};
+            g.step = TurnStep::DeclareAttackers;
+            g.priority.player_with_priority = 0;
+            g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+                attacker: bear,
+                target: AttackTarget::Player(1),
+            }]))
+            .expect("attack");
+            drain_stack(g);
+            g.battlefield_find(bear).unwrap().tapped
+        };
+        assert!(!attack(&mut g), "the first attack untaps the team");
+        g.attacking.clear();
+        assert!(attack(&mut g), "the trigger was one-shot: the second attack leaves the bear tapped");
+    }
+
     /// Homicide Investigator investigates when a creature you control dies.
     #[test]
     fn homicide_investigator_investigates_on_death() {

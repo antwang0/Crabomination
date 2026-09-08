@@ -329,6 +329,7 @@ impl Effect {
             | Effect::OnEachSpellCastThisTurn { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body, .. }
             | Effect::OnYourNextExhaustActivationThisTurn { body, .. }
+            | Effect::OnYourNextAttackThisTurn { body, .. }
             | Effect::OnYourNextInstantSorceryThisTurn { body, .. }
             | Effect::OnYourNextNamedSpellThisTurn { body, .. }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { body, .. }
@@ -1253,6 +1254,7 @@ impl Effect {
             Effect::WithTappedPower { body, .. } => body.requires_target(),
             Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
+            | Effect::OnYourNextAttackThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
             | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
@@ -2536,6 +2538,7 @@ impl Effect {
             | Effect::WithTappedPower { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextExhaustActivationThisTurn { body }
+            | Effect::OnYourNextAttackThisTurn { body }
             | Effect::OnYourNextInstantSorceryThisTurn { body }
             | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body }
@@ -4534,6 +4537,7 @@ impl Effect {
                 | Effect::WithTappedPower { body, .. }
                 | Effect::OnYourNextSpellCastThisTurn { body }
                 | Effect::OnYourNextExhaustActivationThisTurn { body }
+                | Effect::OnYourNextAttackThisTurn { body }
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
                 | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }

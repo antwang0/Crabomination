@@ -18693,6 +18693,27 @@ impl GameState {
                     }
                 }
             }
+            // "When you next attack this turn, …" (CR 603.7e, All-Out Assault):
+            // one-shot, the attacking player's own, consumed by this batch.
+            // After the attackers are tapped, so an "untap each creature you
+            // control" body reaches them.
+            let attacking_player =
+                attackers.first().and_then(|id| self.battlefield_find(*id)).map(|c| c.controller);
+            let next_attack = |dt: &crate::game::types::DelayedTrigger| {
+                Some(dt.controller) == attacking_player
+                    && matches!(dt.kind, DelayedKind::YourNextAttackThisTurn)
+            };
+            if self.delayed_triggers.iter().any(next_attack) {
+                let (fired, rest): (Vec<_>, Vec<_>) =
+                    std::mem::take(&mut self.delayed_triggers).into_iter().partition(next_attack);
+                self.delayed_triggers = rest;
+                for dt in fired {
+                    self.stack.push(TriggerPush::new(dt.source, dt.controller, dt.effect.clone()).build());
+                    if !dt.fires_once {
+                        self.delayed_triggers.push(dt);
+                    }
+                }
+            }
             // "Until end of turn, whenever a [filter] creature attacks, …"
             // floating triggers (Summon: Leviathan II/III). Any player's
             // qualifying attacker fires the registering controller's body.

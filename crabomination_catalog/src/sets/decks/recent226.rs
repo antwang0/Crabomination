@@ -114,9 +114,20 @@ pub fn all_out_assault() -> CardDefinition {
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::AdditionalCombatPhaseAfterMain {
-                count: Value::Const(1),
-            },
+            // "When you next attack this turn, untap each creature you
+            // control" — the half that makes the second combat a second
+            // attack with the same team.
+            effect: Effect::Seq(vec![
+                Effect::AdditionalCombatPhaseAfterMain {
+                    count: Value::Const(1),
+                },
+                Effect::OnYourNextAttackThisTurn {
+                    body: Box::new(Effect::Untap {
+                        what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                        up_to: None,
+                    }),
+                },
+            ]),
         }],
         ..Default::default()
     }

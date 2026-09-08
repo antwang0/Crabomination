@@ -8323,6 +8323,13 @@ pub enum Effect {
     OnYourNextSpellCastThisTurn {
         body: Box<Effect>,
     },
+    /// "When you next attack this turn, [body]." A one-shot turn-scoped
+    /// delayed trigger (CR 603.7e) consumed by the controller's next attack
+    /// declaration, after the attackers are tapped — All-Out Assault's
+    /// "untap each creature you control". Expires at cleanup.
+    OnYourNextAttackThisTurn {
+        body: Box<Effect>,
+    },
     /// CR 603.4 — one-shot "when you next activate an exhaust ability that
     /// isn't a mana ability this turn, [body]" (Pit Automaton). Expires at
     /// cleanup.

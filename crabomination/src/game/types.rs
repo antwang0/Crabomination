@@ -1307,6 +1307,10 @@ pub enum DelayedKind {
     /// activation; expires at cleanup.
     YourNextExhaustActivationThisTurn,
     YourNextSpellCastThisTurn,
+    /// "When you next attack this turn, [body]" (CR 603.7e). Consumed by the
+    /// controller's next attack declaration, after the attackers are tapped;
+    /// expires at cleanup. All-Out Assault.
+    YourNextAttackThisTurn,
     /// "When you next cast an instant or sorcery spell this turn, copy that
     /// spell" (Mercurial Spelldancer). Non-matching casts leave it armed.
     YourNextInstantSorceryCastThisTurn,
