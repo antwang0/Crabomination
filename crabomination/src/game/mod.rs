@@ -12553,7 +12553,11 @@ impl GameState {
                     continue;
                 }
                 for sa in &card.definition.static_abilities {
-                    let (req, modification, layer, sublayer) = match &sa.effect {
+                    // The same wrapper peel as the eager `GrantKeyword` path
+                    // above: a `WhileYourTurn`-wrapped live-filter grant was
+                    // matched raw here and so emitted nothing on either path.
+                    let Some(eff) = self.active_static(&sa.effect, card) else { continue };
+                    let (req, modification, layer, sublayer) = match eff {
                         crate::effect::StaticEffect::SetBasePtForFilter {
                             applies_to: crate::effect::Selector::EachPermanent(req),
                             power,

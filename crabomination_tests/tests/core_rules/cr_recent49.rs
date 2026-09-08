@@ -349,3 +349,35 @@ fn cr_602_5_activate_only_during_your_turn_is_a_turn_gate_not_a_sorcery_gate() {
     }
 }
 
+// ── CR 611.2 — a turn-gated live-filter grant ──
+
+/// CR 611.2 — `WhileYourTurn` around a `GrantKeyword` whose filter is
+/// stateful (`IsOutlaw` reads the computed type line) applies on your turn
+/// and not on the opponent's. The stateful gather path matched the static
+/// raw — no wrapper peel — so the grant emitted nothing on either path until
+/// 2026-09-08 (found by At Knifepoint's re-shape; the card ships the
+/// `only_your_turn` anthem, this pins the wrapper).
+#[test]
+fn cr_611_2_your_turn_wrapper_reaches_a_live_filter_keyword_grant() {
+    use crabomination::card::{CreatureType, SelectionRequirement as R, StaticAbility, StaticEffect};
+    let mut g = two_player_game();
+    let mut lord = catalog::grizzly_bears();
+    lord.static_abilities = vec![StaticAbility {
+        description: "During your turn, outlaws you control have first strike.",
+        effect: StaticEffect::WhileYourTurn {
+            inner: Box::new(StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::IsOutlaw.and(R::ControlledByYou)),
+                keyword: Keyword::FirstStrike,
+            }),
+        },
+    }];
+    g.add_card_to_battlefield(0, lord);
+    let mut rogue = catalog::grizzly_bears();
+    rogue.subtypes.creature_types = vec![CreatureType::Rogue];
+    let outlaw = g.add_card_to_battlefield(0, rogue);
+    let fs = |g: &GameState| g.computed_permanent(outlaw).unwrap().keywords().contains(&Keyword::FirstStrike);
+    g.active_player_idx = 0;
+    assert!(fs(&g), "granted on your turn");
+    g.active_player_idx = 1;
+    assert!(!fs(&g), "not on the opponent's");
+}
