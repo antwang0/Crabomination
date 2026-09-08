@@ -2814,11 +2814,16 @@ are the `(-278)` games, cheaper, and the base for every later A/B.
         bin_bytes 126,743,528 (+2,784 B against 6acd58c3); 285.1 / 297.8 / 291.7 games/s, three single runs (host_calib_ms 50 / 53 / 53) — THE BOX, NOT THE
         CHANGE: the 6acd58c3 profiling-fast binary reads 272.9 median on the same afternoon against its recorded ~520; paired bench_ab.py tip vs (-279),
         12 pairs, B/A median +0.99 % / mean +1.10 % (sd 3.97) — inside the instrument's noise, the right sign, Ir is the number
-suite   19,286 / 0 / 5 (one lib test added: `game::event_scratch_tests`); golden 7/7 unmoved
+suite   19,286 / 0 / 5 (one lib test added: `game::event_scratch_tests`); golden 7/7 unmoved; 19,288 / 0 / 5 with the board-cap test below
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 gate    profiling-fast (release-fast opt settings, debug-assertions off) and release-fast bot_ladder both built from the tree
 sweep   fresh seeds on the (-278) tip binary (profiling-fast): {all, sealed} x seeds 701..706 x {dflt, gang} mirror x --games 400 --threads 3, CRAB_CAP_DIAG=4000:
         24 cells / 139,200 games, 0 panics, 0 cap, 0 stuck, 16 draws (all rc 0, the diag silent)
+grid    robustness_grid.sh on the debug-assertions overflow build (target-audit, 8 assertion strings) at the (-279) tip, FRESH SEEDS: ladder {all, sealed} x
+        seeds 701..712 x 400 = 24 cells / 139,200 games, 0 failures, cap 0 / stuck 0 / draw 8; pilots leg (dflt + the script's 45) at seed 701, 46 cells, 0 failures
+guard   `MAX_BATTLEFIELD` (1,024, ENGINE_BACKLOG 2026-09-08 third run): the dflt cube mirror at seed 43, --games 1200 --threads 3, ran 62.5 s / 9,598 decided /
+        2 cap (the Scute Swarm pair, capped at action 3,123 with 1,027 permanents) where the unguarded binary held one thread for 90+ minutes and was killed;
+        sealed dflt callgrind with the guard 2,562,992,038 Ir (+14,288 / +0.0006 % against the (-279) base — one `len` compare an action); golden 8/8
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores; cold profiling-fast bot_ladder 13m07s (cold registry), warm engine rebuild 4m05s,
         cold debug suite build ~9 min, release-fast 11m42s
 ```

@@ -33,23 +33,20 @@ sixty-seventh pass, so don't re-take that.
    running `cargo build`. Cold here: debug suite build ~9 min, `profiling-fast` bot_ladder 13m07s (cold registry), `release-fast` 11m42s; a
    detached `setsid nohup` chain survives the tool timeout (⚠ kill it by pid — `pkill -f`/`pgrep -f` on a log name matches your own shell).
    **The untraced `(-279)` triple (PERF Baseline addendum) is the A/B base on all three pools**; both sides from one tree, `md5sum` both.
-2. **Gates at the tip (PERF Baseline, the `(-279)` addendum):** suite 19,286 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
-   identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, fresh-seed sweep 24 cells / 139,200 games clean (0 cap /
-   0 stuck). `audit_stubs` / `audit_incomplete --structural-only` both 0 and the `--wide` grid clean at the previous tip (allocation-only
-   change since; not re-run).
-3. **Perf, this run:** **`(-279)` TAKEN (Log): the event scratch pooled across clones + the upkeep pass's leaked buffer — sealed -0.378 % /
-   cube -0.272 % / fixed -0.332 %, 120 traces identical.** The block sim READ BY CONTEXT (candidates): it is `resolve_combat_into` (105 of
-   196 M) plus the declaration, nothing bot-side; `resolve_combat_into` is 17.0 % of sealed dflt program-wide and every callee under it is
-   a recorded floor. The rule: a per-state scratch is a per-*clone* scratch — look for the nested call that takes the slot's replacement.
-4. **Next moves, in order:** (a) the attack sim's horizon: its cheapest arm (stop at an empty crack-back) is REFUTED off a census (candidates:
-   the engine already skips an empty combat, 1 % of iterations past it, and the instrument itself cost +0.126 % so it was not kept); what is
-   left is a shorter horizon on a populated crack-back — a strength round with a real loss risk, `.ladder/run_r71_blockchain.sh` the
-   template, 12,000-game cells ~45 s on this box today; (b) two thin allocation rows left
-   from the read, not built: `fire_delayed_event_watchers`' per-dispatch collects on boards holding any delayed trigger (21,712 / 5.5 M,
-   0.2 %) and the SBA sweep's collects (22,810 / 9.5 M); `GameState::clone` is 2.45 allocations a clone — floor; (c) engine self tables are
-   the recorded floor on all three pools — do not re-read them without a device. Nothing half-wired on the branch; no open TODO/FIXME in code.
-5. **Cards/bugs:** none this run. INCOMPLETE_CARDS structural 0 / stubs 0 at the previous tip; ENGINE_BACKLOG's first section is the
-   bug record (no open entries under "Engine — Robustness / defects").
+2. **Gates at the tip (PERF Baseline, the `(-279)` addendum):** suite 19,288 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, the debug-assertions grid on FRESH seeds 701..712 (24 ladder cells /
+   139,200 games + 46 pilot cells) 0 failures, `audit_stubs` / `audit_incomplete --structural-only` both 0 at the previous tip.
+3. **This run:** `(-279)` TAKEN (Log: the event scratch pooled across clones, sealed -0.378 % / cube -0.272 % / fixed -0.332 %, traces
+   identical); the block sim READ by context (candidates: it is `resolve_combat_into`, 17 % of sealed dflt, every callee a recorded floor);
+   the attack sim's cheapest horizon arm REFUTED off a census (1 % of iterations past an empty crack-back; the instrument cost +0.126 % and
+   was not kept); **ONE BUG FIXED** (ENGINE_BACKLOG first entry): a Scute Swarm token-doubling board held a thread 90+ min — `recommend::
+   MAX_BATTLEFIELD` (1,024) ends it as a cap through the one `stop_reason` both driver loops read; `CRAB_MAX_ACTIONS=<n>` + `CRAB_CAP_DIAG=1`
+   names a slow game (PERF "How to measure").
+4. **Next moves, in order:** (a) a shorter attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor;
+   `.ladder/run_r71_blockchain.sh` the template, 12,000-game cells ~45 s here) — a real loss risk, gate it; (b) thin allocation rows from the
+   read, not built: `fire_delayed_event_watchers`' collects on boards holding a delayed trigger (21,712 / 5.5 M) and the SBA sweep's (22,810 /
+   9.5 M); `GameState::clone` is 2.45 allocations a clone — floor; (c) engine self tables are the recorded floor on all three pools. Nothing
+   half-wired on the branch; no open TODO/FIXME in code. Cards: none this run; INCOMPLETE_CARDS structural 0 / stubs 0 at the previous tip.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
