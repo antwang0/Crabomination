@@ -446,16 +446,15 @@ false positives and all load-bearing:
    Hollowmurk Siege carries `.once_per_turn()` inside its Sultai mode, which is
    invisible at the top level; a top-level read reports it as a miss.
 
-**One row is allow-listed and is a real card job**: *Calix, Guided by Fate*
-prints "Whenever Calix or an enchanted creature you control deals combat
-damage to a player, you may create a token that's a copy of a nonlegendary
-enchantment you control. Do this only once each turn." Only the constellation
-half is modelled, so there is no `EventSpec` for the flag to sit on and adding
-one would be a lie. The primitives all exist (`CreateTokenCopyOf`,
-`EventScope::YourSourceDamagedOpponent`, `SelectionRequirement::IsEnchanted`);
-what is missing is the "Calix **or** an enchanted creature" disjunction on the
-damage source. Implement it and delete the entry from
-`TRIGGER_LIMIT_ABILITY_DROPPED`.
+~~**One row is allow-listed and is a real card job**: *Calix, Guided by
+Fate*~~ — DONE 2026-09-08. The "Calix **or** an enchanted creature you
+control" disjunction is `EventScope::AnyPlayer` + `dealt_by(ControlledByYou
+∧ (IsSource ∨ Creature ∧ IsEnchanted))` (Cabal Slaver's idiom), which needed
+one engine line: the combat-damage hook evaluated `dealer_filter` with no
+source hint, so `IsSource` inside one could never be true (no shipped card
+had used it). `TRIGGER_LIMIT_ABILITY_DROPPED` is empty; test
+`recent_a::recent_111_117::recent114::calix_combat_damage_copies_an_
+enchantment_once_a_turn`.
 
 
 ## Activation timing — the direction that is not yet a ratchet

@@ -393,6 +393,41 @@ pub fn calix_guided_by_fate() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
+        },
+        // "Whenever Calix or an enchanted creature you control deals combat
+        // damage to a player, you may create a token that's a copy of a
+        // nonlegendary enchantment you control. Do this only once each turn."
+        // `AnyPlayer` + a dealer filter is the "X or Y you control" shape
+        // (Cabal Slaver's idiom); the copy source is a targeted choice.
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer)
+                .dealt_by(SelectionRequirement::ControlledByYou.and(
+                    SelectionRequirement::IsSource
+                        .or(SelectionRequirement::Creature.and(SelectionRequirement::IsEnchanted)),
+                ))
+                .once_per_turn(),
+            effect: Effect::MayDo {
+                description: "Create a token copy of a nonlegendary enchantment you control?".into(),
+                body: Box::new(Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: target_filtered(
+                        SelectionRequirement::Enchantment
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasSupertype(
+                                Supertype::Legendary,
+                            )))),
+                    ),
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                }),
+            },
         }],
         ..Default::default()
     }

@@ -5592,7 +5592,7 @@ impl GameState {
                             f,
                             &Target::Permanent(source),
                             c.controller,
-                            None,
+                            Some(c.id),
                         )
                     })
                 {
@@ -5771,7 +5771,7 @@ impl GameState {
                                         f,
                                         &Target::Permanent(source),
                                         c.controller,
-                                        None,
+                                        Some(c.id),
                                     )
                                 })
                             {

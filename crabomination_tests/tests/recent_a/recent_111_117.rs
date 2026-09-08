@@ -1299,6 +1299,61 @@ mod recent114 {
         assert_eq!(total, 1, "constellation put one +1/+1 counter on a creature");
     }
 
+    /// Calix's second ability: "Whenever Calix or an enchanted creature you
+    /// control deals combat damage to a player, you may create a token that's
+    /// a copy of a nonlegendary enchantment you control. Do this only once
+    /// each turn." Dropped until 2026-09-08 (only constellation shipped).
+    #[test]
+    fn calix_combat_damage_copies_an_enchantment_once_a_turn() {
+        use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+        let connect = |g: &mut GameState, attackers: &[CardId]| {
+            g.step = TurnStep::DeclareAttackers;
+            g.priority.player_with_priority = 0;
+            g.perform_action(GameAction::DeclareAttackers(
+                attackers.iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(1) }).collect(),
+            ))
+            .expect("attack");
+            g.step = TurnStep::CombatDamage;
+            let evs = g.resolve_combat().expect("damage");
+            g.dispatch_triggers_for_events(&evs);
+            drain_stack(g);
+        };
+        let anthems = |g: &GameState| {
+            g.battlefield.iter().filter(|c| c.definition.name == "Glorious Anthem").count()
+        };
+        let setup = || {
+            let mut g = two_player_game();
+            g.decider = Box::new(crabomination::decision::ScriptedDecider::new(
+                std::iter::repeat_n(crabomination::decision::DecisionAnswer::Bool(true), 4),
+            ));
+            let calix = g.add_card_to_battlefield(0, catalog::calix_guided_by_fate());
+            g.add_card_to_battlefield(0, catalog::glorious_anthem());
+            let enchanted = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            let aura = g.add_card_to_battlefield(0, catalog::holy_strength());
+            g.battlefield_find_mut(aura).unwrap().attached_to = Some(enchanted);
+            let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            for id in [calix, enchanted, plain] {
+                g.clear_sickness(id);
+            }
+            (g, calix, enchanted, plain)
+        };
+        // A plain creature's hit is not the trigger.
+        let (mut g, _, _, plain) = setup();
+        connect(&mut g, &[plain]);
+        assert_eq!(anthems(&g), 1, "an unenchanted creature's hit copies nothing");
+        // Calix's own hit, and the enchanted creature's, each are — but only once a turn.
+        let (mut g, calix, enchanted, _) = setup();
+        connect(&mut g, &[calix, enchanted]);
+        assert_eq!(anthems(&g), 2, "two qualifying hits in one combat make one copy");
+        assert!(
+            g.battlefield.iter().any(|c| c.definition.name == "Glorious Anthem" && c.is_token),
+            "the copy is a token"
+        );
+        let (mut g, _, enchanted, _) = setup();
+        connect(&mut g, &[enchanted]);
+        assert_eq!(anthems(&g), 2, "the enchanted creature alone is enough");
+    }
+
     /// Angelic Renewal sacrifices itself to reanimate a dead creature.
     #[test]
     fn angelic_renewal_reanimates_dead_creature() {

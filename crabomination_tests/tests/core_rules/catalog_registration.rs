@@ -1454,13 +1454,7 @@ fn every_card_has_the_trigger_limit_it_prints() {
     /// Cards printing a once-a-turn trigger limit on an ability that isn't
     /// modeled at all. Adding the flag here would be a lie; implementing the
     /// ability is the fix, and is filed in `CARD_BACKLOG.md`.
-    const TRIGGER_LIMIT_ABILITY_DROPPED: &[&str] = &[
-        // "Whenever Calix or an enchanted creature you control deals combat
-        // damage to a player, you may create a token that's a copy of a
-        // nonlegendary enchantment you control. Do this only once each turn."
-        // Only the constellation half is modeled.
-        "Calix, Guided by Fate",
-    ];
+    const TRIGGER_LIMIT_ABILITY_DROPPED: &[&str] = &[];
 
     let cache_path =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
