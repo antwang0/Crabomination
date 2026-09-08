@@ -3904,6 +3904,26 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### The stateful keyword-grant gather's wrapper peel READ — traced sealed Ir **+0.027 %** / cube **+0.001 %**, traces identical
+
+`gather_continuous_effects_inner`'s live-filter `SetBasePtForFilter` /
+`GrantKeyword` leg peels the `WhileYourTurn`-family wrappers through
+`active_static` like the eager leg beside it (`72297152`, ENGINE_BACKLOG
+first section). Priced against the hook tip under the same traced recipe
+as the entry below (`cg.tip3.*` in a scratchpad):
+
+```text
+profiling-fast, system allocator, --a dflt --b dflt --games 6 --threads 1 --seed 1, CRAB_DUMP_TRACES on both sides
+  sealed  3,310,152,922 -> 3,311,060,214 Ir   (+907,292, +0.027 %)   72 trace files, 0 differ against the 901c66f4 base
+  cube    3,169,363,945 -> 3,169,383,029 Ir   (+19,084, +0.001 %)    48 trace files, 0 differ against the 901c66f4 base
+```
+
+The residue is the allocator, not the peel: the sealed delta table is
+`_int_malloc` +529,604 (265,403 -> 269,777 calls), `malloc_consolidate`
++323,614, `_int_free` +214,391, and `gather_continuous_effects_inner`
+itself **-111,372** at an identical 536,963 calls — glibc's arena state
+under a different layout, the same games. Kept as a correctness change.
+
 ### The trigger-grant duration carrier and the two hooks READ — sealed default Ir **+0.060 %** / cube **+0.061 %**, traces identical
 
 The last arm of the duration axis (ENGINE_BACKLOG, first section):
