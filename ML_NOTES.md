@@ -4542,3 +4542,58 @@ net's +3.8 and the best old net's +4.6 — all three inside one another's
 `lobby.rs`. Timing: a 256-search cell of 6 000 games is ~64 min on 22
 threads, the champion's the same, so the leaf costs no measurable wall
 clock at this depth (the forward pass was vectorized in perf pass 41).
+
+## Round 70 — the attack chain skipped when the menu alone picked greedy: NO LOSS at −16 / −13 % wall clock, ADOPTED on the default (2026-09-08)
+
+The search census at the run's tip (PERF candidates, "THE ATTACK / BLOCK
+SEARCH CENSUS"; `CRAB_ATTACK_CENSUS=1`, sealed dflt mirror, 1,200 games,
+seed 43) said the attack chain had come to out-sim the menu — 52,224 chain
+sims against 49,464 menu candidates over 14,572 searches, 3.58 a search —
+and a one-line extension of the census (chain wins split by what the menu
+alone would have chosen) said where its wins were: of the 2,616 searches
+where the chain proposed a novel set, the menu alone had picked greedy on
+1,218 and the chain won 642 of those (4.4 % of all searches), nobody on
+992 and the chain won all 992, a holdback on 406 and it won 238. So the
+gate `attack_chain_skip_greedy`: run the chain only when the menu's own
+argmax (greedy winning ties, `choose_scored`'s deterministic branch, read
+inline so a sampling actor draws nothing extra) is not a **non-empty**
+greedy — the empty-greedy board stays the wide chain's (round 56), which
+the first cut of the arm had wrongly skipped and
+`attack_chain_wide_overloads_the_lone_blocker_greedy_holds_against` caught.
+One arm (`.ladder/run_r70_chainskip.sh`, pre-registered, base `dflt` = the
+round-68 default), one `profiling-fast` binary.
+
+**Cost** (step 0, 200 × 12 mirrors, 5 paired reps, median wall/`dflt`):
+
+| arm | sealed | cube |
+|---|---|---|
+| `chain-skipg` | **0.841** (per-rep 0.841 / 0.860 / 0.828 / 0.865 / 0.835) | **0.870** (0.833 / 0.870 / 0.929 / 0.909 / 0.833) |
+
+**Strength** (sealed mirror `--a chain-skipg --b dflt`, 1,000 × 12 = 12,000 games a cell):
+
+| arm | 43 | 97 | 151 | 199 | pooled | verdict |
+|---|---|---|---|---|---|---|
+| `chain-skipg` | 49.9 [49.6, 50.1] | 50.0 [49.8, 50.2] | 50.1 [49.8, 50.3] | 50.3 [50.1, 50.5] | 50.08 | no loss |
+
+Cross-checks: `--decks cube` 49.8 [49.5, 50.2] / 50.0 [49.6, 50.4] (seeds
+43 / 97, 3,200 games each), `--decks fixed` 49.9 [49.4, 50.3] / 50.1 [49.7,
+50.4] (1,600 each). (The first cut, which also skipped the empty-greedy
+chain, read 0.866 / 0.907 and 50.35 pooled — every cell at or above 50.2 —
+but broke the round-56 board; the corrected arm is what was adopted.)
+
+**Adopted.** `EvalWeights::default_const()` carries
+`attack_chain_skip_greedy: true`; control `chain-skipg-off`
+(`attack_chain_skip_greedy_off()`, the round-68 default); `chain-skipg`
+stays as the arm name. What the gate removes is the chain on the ~half of
+searches where the menu already settled on attacking with greedy's set —
+the chain's proposals there won the sim's own metric 53 % of the time they
+were offered, and the ladder cannot tell those declarations from greedy's.
+The training actors run the default and get the ratio above; the client
+pilot is untouched. Golden traces unmoved on all seven seeds — none of the
+seeded games reaches a search the gate changes (the suite read 19,285 /
+0 / 5 with no re-bless); `--bench` (`gang`, `fixed`) untouched.
+
+**Cost, cumulative.** Against the round-56 default the adopted default now
+runs at ≈ 0.69 (rounds 58–60, `(-255)`, round 68) × 0.841 ≈ **0.58** of
+its sealed wall clock. Six-game Ir and the tip dumps are in PERF's Log
+under round 70.

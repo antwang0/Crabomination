@@ -437,6 +437,15 @@ pub struct EvalWeights {
     /// [`attack_candidates_for_mcts`]. **Adopted 2026-09-05 (round 60)** on
     /// the default, not the client pilot — see `default_const`.
     pub attack_skip_open: bool,
+    /// Skip the attack chain when the menu alone already chose the greedy
+    /// declaration. The census behind it (PERF candidates, the run's tip):
+    /// the chain out-sims the menu (3.58 against 3.39 a search) and
+    /// overturns a greedy-won menu on 4.4 % of searches (642 of 14,572,
+    /// sealed), against 100 % of the searches whose menu chose nobody. Off
+    /// on the default since round 70 (sealed wall 0.841 / cube 0.870 at no
+    /// loss, `.ladder/run_r70_chainskip.sh`); `chain-skipg-off` is the
+    /// control. Never on the empty-greedy board, which is the wide chain's.
+    pub attack_chain_skip_greedy: bool,
     /// The greedy attack filter judged against the blockers that can
     /// legally block each attacker (round 65). Off, the filter's suicide
     /// check reads only *ground* blockers — a flier is never held back
@@ -970,6 +979,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
+            attack_chain_skip_greedy: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
@@ -1067,6 +1077,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
+            attack_chain_skip_greedy: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
@@ -1147,6 +1158,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_skip_open: false,
+            attack_chain_skip_greedy: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
@@ -2189,6 +2201,14 @@ impl EvalWeights {
             attack_pairs_empty_only: true,
             attack_pairs_lazy: true,
             attack_skip_open: true,
+            // Round 70 (2026-09-08): the attack chain skipped when the menu
+            // alone picked a non-empty greedy — a no-loss throughput gate
+            // (sealed 49.9 / 50.0 / 50.1 / 50.3 on seeds 43/97/151/199,
+            // cube 49.8 / 50.0, fixed 49.9 / 50.1) for 0.841 / 0.870 of the
+            // sealed / cube mirror's wall clock. Control:
+            // [`attack_chain_skip_greedy_off`](Self::attack_chain_skip_greedy_off),
+            // profile `chain-skipg-off`.
+            attack_chain_skip_greedy: true,
             removal_sim: true,
             // Round 66 (2026-09-06): trick modes held for the combat window.
             trick_modes_combat_only: true,
@@ -2372,6 +2392,20 @@ impl EvalWeights {
     /// [`attack_pairs_lazy`](Self::attack_pairs_lazy).
     pub const fn attack_pairs_lazy_on() -> Self {
         Self { attack_pairs_lazy: true, ..Self::round56_default() }
+    }
+
+    /// The chain skipped when the menu alone picked greedy: ladder
+    /// `chain-skipg` as A against the round-68 default, gated for no loss
+    /// and adopted (round 70) — the default itself now. See
+    /// [`attack_chain_skip_greedy`](Self::attack_chain_skip_greedy).
+    pub const fn attack_chain_skip_greedy_on() -> Self {
+        Self { attack_chain_skip_greedy: true, ..Self::default_const() }
+    }
+
+    /// The round-70 control: the default with the chain gate off, i.e. the
+    /// round-68 default. Ladder `chain-skipg-off`.
+    pub const fn attack_chain_skip_greedy_off() -> Self {
+        Self { attack_chain_skip_greedy: false, ..Self::default_const() }
     }
 
     /// Both pair-move restrictions: ladder `pairs-both` as A against
@@ -9869,7 +9903,20 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     // (see `EvalWeights::attack_chain`) — appended, so greedy keeps index
     // 0 and every tie, and skipped when the menu already holds that set.
     let menu_len = candidates.len();
-    if w.attack_chain > 0
+    // `attack_chain_skip_greedy` (round 70): the chain only when the menu
+    // alone did not settle on greedy. The menu's argmax with greedy
+    // winning ties — `choose_scored`'s own deterministic branch — read
+    // inline rather than through `choose_scored`, so a sampling actor's
+    // decision stream draws nothing extra for the gate.
+    // Never on the empty-greedy board: that is the wide chain's own case
+    // (round 56, `chain_from_empty`), where "the menu picked greedy" means
+    // nobody was priced at all.
+    let menu_picks_greedy = || {
+        let greedy = scored.iter().find(|(i, _)| *i == 0).map(|&(_, s)| s);
+        !candidates[0].is_empty() && greedy.is_some_and(|g| scored.iter().all(|&(i, s)| i == 0 || s <= g))
+    };
+    let chain_wanted = w.attack_chain > 0 && !(w.attack_chain_skip_greedy && menu_picks_greedy());
+    if chain_wanted
         && let Some((chain, score)) =
             attack_chain_candidate(state, seat, w, &candidates, &scored, pool, &starts)
         && !candidates.iter().any(|c| attack_set_key(c) == attack_set_key(&chain))
@@ -9952,8 +9999,12 @@ pub mod attack_census {
     /// gate covers (`attack_empty_gate`, counted whether or not it is on),
     /// ... of which the chain won, then six slots of holdback wins by menu
     /// index (greedy-minus-one #1..#6, the last slot folding the rest) and
-    /// six of holdbacks OFFERED at that index]`.
-    pub static N: [AtomicU64; 29] = [const { AtomicU64::new(0) }; 29];
+    /// six of holdbacks OFFERED at that index, then the chain's wins split
+    /// by what the MENU alone would have chosen (greedy / nobody / a
+    /// holdback), and the menu-alone winner of every search the chain ran
+    /// on (the same three classes) — the census behind gating the chain on
+    /// the menu's outcome]`.
+    pub static N: [AtomicU64; 35] = [const { AtomicU64::new(0) }; 35];
 
     /// Bump counter `i` by `n` when the census is on.
     pub fn add(i: usize, n: u64) {
@@ -10001,8 +10052,16 @@ pub mod attack_census {
         let Chain { novel: chain_novel, from_empty, gate_covers } = chain;
         N[0].fetch_add(1, Relaxed);
         N[1].fetch_add(candidates as u64, Relaxed);
+        // The menu alone: index 0 is greedy, 1 is nobody, the rest holdbacks.
+        let menu_only: Vec<(usize, i32)> =
+            scored.iter().copied().filter(|(i, _)| *i < candidates).collect();
+        let menu_winner = super::choose_scored(state.turn_number, &menu_only).unwrap_or(0).min(2);
+        if scored.iter().any(|(i, _)| *i >= candidates) {
+            N[32 + menu_winner].fetch_add(1, Relaxed);
+        }
         if chosen >= candidates {
             N[9].fetch_add(1, Relaxed);
+            N[29 + menu_winner].fetch_add(1, Relaxed);
             if from_empty {
                 N[14].fetch_add(1, Relaxed);
             }
@@ -10069,7 +10128,7 @@ pub mod attack_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 29] {
+    pub fn snapshot() -> [u64; 35] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -17752,6 +17811,7 @@ mod tests {
             ("pairs-empty", EvalWeights::attack_pairs_empty_only_on()),
             ("pairs-lazy", EvalWeights::attack_pairs_lazy_on()),
             ("pairs-both", EvalWeights::attack_pairs_both_on()),
+            ("chain-skipg", EvalWeights::attack_chain_skip_greedy_on()),
         ] {
             let picked = pick_attacks_scored(&g, 0, &w);
             assert_eq!(picked.len(), 2, "{name} still overloads the blocker: {picked:?}");

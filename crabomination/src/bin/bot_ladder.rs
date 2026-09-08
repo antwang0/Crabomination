@@ -309,6 +309,12 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "sim-cast1" => Some(Pilot::Scored(EvalWeights::sim_main_cast_cap_at(1))),
         "sim-cast2" => Some(Pilot::Scored(EvalWeights::sim_main_cast_cap_at(2))),
         "sim-cast-off" => Some(Pilot::Scored(EvalWeights::sim_main_cast_off())),
+        // Round 70: the attack chain skipped when the menu alone picked
+        // greedy. Gate as A against `dflt` for no loss
+        // (.ladder/run_r70_chainskip.sh).
+        "chain-skipg" => Some(Pilot::Scored(EvalWeights::attack_chain_skip_greedy_on())),
+        // Adopted on the default; `chain-skipg-off` is the round-68 default.
+        "chain-skipg-off" => Some(Pilot::Scored(EvalWeights::attack_chain_skip_greedy_off())),
         // 2026-09-06 targeting work: hostile player slots aimed at the
         // opponent (seat flag), the other player as a cast-time arm, both;
         // the own-graveyard pick plus the X=0 no-op prune; everything.
@@ -723,7 +729,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, dflt58, pairs-empty, pairs-lazy, pairs-both, empty-gate, dflt-open, dflt-as3, trick-sim, removal-sim, dflt63, counter-sim, atk-guard, stun-hold, gy-pick, conv-rarest, conv-fetch, trick-modes, trick-modes-off, sim-cast0, sim-cast1, sim-cast2, sim-cast-off, conv-fixes, hostile-targets, player-arms, target-fixes, x0-skip, gy-fixes, all-fixes, r67-off, targeteval, det1, det3, net, net-det1, net67, mcts-net67-256, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-dflt-128, mcts-dflt-256, mcts-guard-256, mcts-stunhold-256, mcts-gypick-256, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, dflt58, pairs-empty, pairs-lazy, pairs-both, empty-gate, dflt-open, dflt-as3, trick-sim, removal-sim, dflt63, counter-sim, atk-guard, stun-hold, gy-pick, conv-rarest, conv-fetch, trick-modes, trick-modes-off, sim-cast0, sim-cast1, sim-cast2, sim-cast-off, chain-skipg, chain-skipg-off, conv-fixes, hostile-targets, player-arms, target-fixes, x0-skip, gy-fixes, all-fixes, r67-off, targeteval, det1, det3, net, net-det1, net67, mcts-net67-256, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-dflt-128, mcts-dflt-256, mcts-guard-256, mcts-stunhold-256, mcts-gypick-256, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
@@ -1788,7 +1794,7 @@ fn main() {
     // What the attack search (PERF (-21), ~60 % of `cube`) decides. Off
     // unless `CRAB_ATTACK_CENSUS` is set.
     if crabomination::server::bot::attack_census::on() {
-        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty, e_new, e_won, gate, gate_won, h1, h2, h3, h4, h5, h6, o1, o2, o3, o4, o5, o6] =
+        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty, e_new, e_won, gate, gate_won, h1, h2, h3, h4, h5, h6, o1, o2, o3, o4, o5, o6, cw_g, cw_n, cw_h, mw_g, mw_n, mw_h] =
             crabomination::server::bot::attack_census::snapshot();
         let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
         println!(
@@ -1799,7 +1805,8 @@ fn main() {
              ({:.1} %); chain sims {chain_sims} ({:.2}/search), start reused {chain_reuse}, \
              from empty greedy {chain_empty} (proposed {e_new}, won {e_won}; blocker gate covers \
              {gate}, chain won there {gate_won}); holdbacks by menu index won/offered \
-             {h1}/{o1} {h2}/{o2} {h3}/{o3} {h4}/{o4} {h5}/{o5} {h6}+/{o6}+",
+             {h1}/{o1} {h2}/{o2} {h3}/{o3} {h4}/{o4} {h5}/{o5} {h6}+/{o6}+; chain won when the menu \
+             alone picked greedy/nobody/holdback {cw_g}/{cw_n}/{cw_h} of {mw_g}/{mw_n}/{mw_h} chained searches",
             if calls == 0 { 0.0 } else { cands as f64 / calls as f64 },
             pct(greedy, calls),
             pct(none, calls),
