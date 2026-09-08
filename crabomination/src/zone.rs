@@ -1924,18 +1924,48 @@ impl Battlefield {
     /// walk when no static grant is live (`(-228)`), and the cast-trigger
     /// walk on the same condition (`(-231)`).
     #[inline]
-    pub fn for_each_triggerer(&self, mut f: impl FnMut(&CardInstance)) {
-        match self.trigger_members() {
-            Ok(mut bits) => {
-                while bits != 0 {
-                    let i = bits.trailing_zeros() as usize;
-                    bits &= bits - 1;
-                    if let Some(c) = self.cards.get(i) {
-                        f(c);
-                    }
+    pub fn for_each_triggerer(&self, f: impl FnMut(&CardInstance)) {
+        self.for_each_triggerer_or_all(false, f)
+    }
+
+    /// [`for_each_triggerer`](Self::for_each_triggerer), or the whole board
+    /// when `all` — the shape for a hook whose grant presence read says a
+    /// permanent with no printed trigger may carry one this time. One call,
+    /// not an `if` over two walks: a closure handed to two generic walks is
+    /// codegen'd out of line and called per permanent (~30 Ir each, +0.24 %
+    /// of a sealed six-game run at `4db20c51`), where a single call site
+    /// inlines it.
+    #[inline]
+    pub fn for_each_triggerer_or_all(&self, all: bool, mut f: impl FnMut(&CardInstance)) {
+        let n = self.cards.len();
+        // One bit loop, one call site: "all" is a full mask over each
+        // 64-card chunk (a board past 64 has no member list either). A
+        // second `f` call site — the tail walk this used to have — is a
+        // second inlining decision, and LLVM took neither.
+        let (whole, mut bits) = match self.trigger_members() {
+            Ok(bits) if !all => (false, bits),
+            _ => (true, 0),
+        };
+        let mut base = 0usize;
+        loop {
+            if whole {
+                let left = n - base;
+                if left == 0 {
+                    break;
+                }
+                bits = u64::MAX >> (64 - left.min(64));
+            }
+            while bits != 0 {
+                let i = bits.trailing_zeros() as usize;
+                bits &= bits - 1;
+                if let Some(c) = self.cards.get(base + i) {
+                    f(c);
                 }
             }
-            Err(_) => self.cards.iter().for_each(f),
+            base += 64;
+            if !whole || base >= n {
+                break;
+            }
         }
     }
 

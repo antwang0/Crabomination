@@ -925,8 +925,7 @@ impl GameState {
                 && self.turn_granted_triggers.iter().any(|(_, t)| t.event.kind == kind));
         // Instance grants (`Effect::GrantTriggeredAbility`) of this kind: none
         // in the catalog today, read so the hook cannot drop one silently.
-        let any_own_grant = !self.granted_triggers_timed.is_empty()
-            && self.granted_triggers_timed.values().flatten().any(|g| g.ability.event.kind == kind);
+        let any_own_grant = self.any_granted_trigger_of_kind(&kind);
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> =
             Vec::new();
         // CR 613 — `statics_granted_triggers_with` evaluates each grant's
@@ -953,18 +952,18 @@ impl GameState {
         // borrowed ability and clone only the survivors: this runs on every
         // step of every turn and a `TriggeredAbility` clone is an `Effect`
         // tree plus the event's filter predicate.
-        let mut visit = |c: &crate::card::CardInstance| {
+        let visit = |c: &crate::card::CardInstance| {
             for t in c.definition.triggered_abilities.iter() {
                 if t.event.kind == kind && scope_matches(&t.event.scope, c.controller) {
                     candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
                 }
             }
             if any_own_grant {
-                for t in self.granted_triggers(c.id) {
-                    if t.event.kind == kind && scope_matches(&t.event.scope, c.controller) {
-                        candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
-                    }
-                }
+                self.for_each_granted_trigger_matching(
+                    c.id,
+                    |t| t.event.kind == kind && scope_matches(&t.event.scope, c.controller),
+                    |t| candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone())),
+                );
             }
             if any_static_grant || !c.definition.station.is_empty() {
                 for t in self.statics_granted_triggers_on(c, &trigger_grants) {
@@ -979,13 +978,9 @@ impl GameState {
         // trigger or a Station band can contribute, which is exactly the
         // trigger member list (PERF `(-228)`, the `(-222)` device on the walk
         // every step of every turn makes).
-        if any_static_grant || any_own_grant {
-            self.battlefield.iter().for_each(&mut visit);
-            if any_static_grant {
-                self.freeze_layers_pop();
-            }
-        } else {
-            self.battlefield.for_each_triggerer(&mut visit);
+        self.battlefield.for_each_triggerer_or_all(any_static_grant || any_own_grant, visit);
+        if any_static_grant {
+            self.freeze_layers_pop();
         }
         // CR 702.6e / 303.4 — step triggers granted to a permanent by an
         // attached Aura/Equipment's `equipped_bonus` fire as though printed on

@@ -293,6 +293,64 @@ fn cr_603_2_instance_granted_step_and_cast_triggers_fire() {
     assert!(g.granted_triggers_timed.is_empty(), "both grants ended at cleanup");
 }
 
+/// CR 603.2 — the three combat listener walks (`ControllerAttackedByOpponent`,
+/// `YouAttack`, `ControllerDealtCombatDamage`) read instance-granted triggers
+/// too, on a permanent with no printed trigger. Before 2026-09-08 all three
+/// walked the printed member list only, so a grant of any of the kinds (none
+/// in the catalog today) would have been dropped silently.
+#[test]
+fn cr_603_2_instance_granted_combat_listeners_fire() {
+    use crabomination::effect::shortcut::gain_life;
+    use crabomination::effect::{Duration, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::game::effects::EffectContext;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let grant = |g: &mut GameState, host: CardId, kind: EventKind, scope: EventScope, life: i32| {
+        let ctx = EffectContext::for_ability(host, 0, None);
+        let grant = Effect::GrantTriggeredAbility {
+            what: Selector::This,
+            trigger: Box::new(TriggeredAbility { event: EventSpec::new(kind, scope), effect: gain_life(life) }),
+            duration: Duration::EndOfTurn,
+        };
+        g.resolve_effect(&grant, &ctx).expect("grant resolves");
+    };
+    // The opponent attacks me / deals me combat damage: the listener is on my
+    // bear (no printed trigger), the attacker theirs.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    grant(&mut g, mine, EventKind::Attacks, EventScope::ControllerAttackedByOpponent, 3);
+    grant(&mut g, mine, EventKind::ControllerDealtCombatDamage, EventScope::SelfSource, 7);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(theirs);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: theirs,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "the granted attacked-by-opponent listener fired");
+    g.step = TurnStep::CombatDamage;
+    let evs = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3 - 2 + 7, "the granted combat-damage-to-me listener fired");
+    // I attack: the "whenever you attack" listener is on a land of mine.
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    grant(&mut g, forest, EventKind::YouAttack, EventScope::SelfSource, 5);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 5, "the granted you-attack listener fired");
+}
+
 // ── CR 602.5 — "Activate only during your turn" ──
 
 /// CR 602.5 — an "activate only during your turn" ability is refused on the

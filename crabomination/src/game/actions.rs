@@ -12113,12 +12113,7 @@ impl GameState {
         let any_equip_grant = !equip_grants.is_empty();
         // Instance grants (`Effect::GrantTriggeredAbility`) of this kind: none
         // in the catalog today, read so the hook cannot drop one silently.
-        let any_own_grant = !self.granted_triggers_timed.is_empty()
-            && self
-                .granted_triggers_timed
-                .values()
-                .flatten()
-                .any(|g| g.ability.event.kind == EventKind::SpellCast);
+        let any_own_grant = self.any_granted_trigger_of_kind(&EventKind::SpellCast);
         // CR 613 — the grant filters read the computed type line, so an
         // unfrozen walk re-gathers per (permanent, grant). Same device and
         // same proof as `dispatch_triggers_for_events` (`36e998aa`): the loop
@@ -12129,7 +12124,7 @@ impl GameState {
         if freeze {
             self.freeze_layers_push();
         }
-        let mut visit = |c: &crate::card::CardInstance| {
+        let visit = |c: &crate::card::CardInstance| {
             if stripped.contains(&c.id) {
                 return;
             }
@@ -12140,11 +12135,11 @@ impl GameState {
                 }
             }
             if any_own_grant {
-                for t in self.granted_triggers(cid) {
-                    if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
-                        candidates.push((cid, c_controller, t.effect.clone(), t.event.filter.clone(), usize::MAX, false));
-                    }
-                }
+                self.for_each_granted_trigger_matching(
+                    cid,
+                    |t| t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller),
+                    |t| candidates.push((cid, c_controller, t.effect.clone(), t.event.filter.clone(), usize::MAX, false)),
+                );
             }
             let static_granted = if any_static_grant || !c.definition.station.is_empty() {
                 self.statics_granted_triggers_on(c, &trigger_grants)
@@ -12177,13 +12172,9 @@ impl GameState {
         // board is walked whole; otherwise only a printed trigger or a
         // Station band can contribute — the trigger member list (PERF
         // `(-231)`, the `(-228)` shape on the per-cast walk).
-        if freeze || any_own_grant {
-            self.battlefield.iter().for_each(&mut visit);
-            if freeze {
-                self.freeze_layers_pop();
-            }
-        } else {
-            self.battlefield.for_each_triggerer(&mut visit);
+        self.battlefield.for_each_triggerer_or_all(freeze || any_own_grant, visit);
+        if freeze {
+            self.freeze_layers_pop();
         }
         // CR 902.5 — a Vanguard avatar's cast trigger fires from the command
         // zone (Serra Angel Avatar's "whenever you cast a spell, gain 2 life").

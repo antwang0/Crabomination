@@ -3650,14 +3650,48 @@ impl GameState {
             .map(|g| &g.ability)
     }
 
+    /// Presence gate for a hook that walks one trigger kind: is any
+    /// instance-granted trigger (`Effect::GrantTriggeredAbility`) of `kind`
+    /// live? Every hook outside the dispatcher reads this before its walk,
+    /// so a grant of a kind no catalog card grants today still cannot be
+    /// dropped silently; the map is empty on most boards.
+    #[inline]
+    pub(crate) fn any_granted_trigger_of_kind(&self, kind: &crate::effect::EventKind) -> bool {
+        !self.granted_triggers_timed.is_empty()
+            && self.granted_triggers_timed.values().flatten().any(|g| g.ability.event.kind == *kind)
+    }
+
+    /// The instance-granted triggers of `id` that `pred` admits, handed to
+    /// `f`. Out of line on purpose: a hook's per-permanent closure that
+    /// carried this loop inline grew past LLVM's inline budget and was
+    /// called per permanent instead (+0.14 % of a sealed six-game run at
+    /// `4db20c51`); a call on the rare grant branch keeps the printed walk
+    /// inlined.
+    #[inline(never)]
+    pub(crate) fn for_each_granted_trigger_matching(
+        &self,
+        id: CardId,
+        pred: impl Fn(&crate::card::TriggeredAbility) -> bool,
+        mut f: impl FnMut(&crate::card::TriggeredAbility),
+    ) {
+        for t in self.granted_triggers(id) {
+            if pred(t) {
+                f(t);
+            }
+        }
+    }
+
     /// Drop every granted trigger whose `expiry` satisfies `expired`; the
     /// turn-start, upkeep, end-of-combat, cleanup and SBA sweeps each pass
     /// the duration they retire. Reads before it writes — the map is empty
-    /// on most boards.
+    /// on most boards, and the `is_empty` read is what those boards pay.
     pub(crate) fn expire_granted_triggers(
         &mut self,
         expired: impl Fn(&GrantedTrigger) -> bool,
     ) {
+        if self.granted_triggers_timed.is_empty() {
+            return;
+        }
         if self.granted_triggers_timed.values().flatten().any(&expired) {
             self.granted_triggers_timed.retain(|_, v| {
                 v.retain(|g| !expired(g));

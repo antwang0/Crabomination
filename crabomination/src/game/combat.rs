@@ -1515,6 +1515,11 @@ impl GameState {
                 })
                 .collect()
         };
+        // Instance grants (`Effect::GrantTriggeredAbility`) of the two kinds
+        // the whole-board listener walks below read: none in the catalog
+        // today, read so neither walk can drop one silently.
+        let own_attacks_grant = self.any_granted_trigger_of_kind(&EventKind::Attacks);
+        let own_you_attack_grant = self.any_granted_trigger_of_kind(&EventKind::YouAttack);
         for (atk, (static_granted, equip_granted)) in attacks.into_iter().zip(attacker_grants) {
             let id = atk.attacker;
             // Validated above — commit only. Filter by *controller*, not
@@ -1658,26 +1663,35 @@ impl GameState {
                 // Plain loops, same reason as `groups` above: a whole-board
                 // walk per attacker, and the `flat_map` was ~20 Ir a
                 // permanent before the filter saw a single trigger. Over the
-                // trigger member list, not the board (PERF `(-222)`): the
-                // body reads printed triggers only, and most of a board
-                // carries none.
+                // trigger member list, not the board (PERF `(-222)`), unless
+                // an instance grant of the kind is live — a grant can land
+                // on a permanent with no printed trigger.
                 let mut listeners: Vec<(CardId, Effect)> = Vec::new();
-                self.battlefield.for_each_triggerer(|c| {
+                let listens = |t: &crate::card::TriggeredAbility| {
+                    t.event.kind == EventKind::Attacks
+                        && (t.event.scope == crate::effect::EventScope::ControllerAttackedByOpponent
+                            || (is_pw_attack
+                                && t.event.scope
+                                    == crate::effect::EventScope::ControllerPlaneswalkerAttackedByOpponent))
+                };
+                // By value into whichever walk runs, so the body inlines
+                // (a `&mut` closure is an out-of-line call per permanent).
+                let visit = |c: &crate::card::CardInstance| {
                     if c.controller != defender {
                         return;
                     }
                     for t in &c.definition.triggered_abilities {
-                        if t.event.kind == EventKind::Attacks
-                            && (t.event.scope
-                                == crate::effect::EventScope::ControllerAttackedByOpponent
-                                || (is_pw_attack
-                                    && t.event.scope
-                                        == crate::effect::EventScope::ControllerPlaneswalkerAttackedByOpponent))
-                        {
+                        if listens(t) {
                             listeners.push((c.id, t.effect.clone()));
                         }
                     }
-                });
+                    if own_attacks_grant {
+                        self.for_each_granted_trigger_matching(c.id, listens, |t| {
+                            listeners.push((c.id, t.effect.clone()))
+                        });
+                    }
+                };
+                self.battlefield.for_each_triggerer_or_all(own_attacks_grant, visit);
                 for (src, effect) in listeners {
                     self.stack.push(
                         TriggerPush::new(src, defender, effect)
@@ -1794,17 +1808,24 @@ impl GameState {
             // over the trigger member list for the same reason as `listeners`.
             let mut you_attack: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> =
                 Vec::new();
-            self.battlefield.for_each_triggerer(|c| {
+            let listens = |t: &crate::card::TriggeredAbility, ctrl: usize| {
+                t.event.kind == EventKind::YouAttack
+                    && (ctrl == ap || t.event.scope == crate::effect::EventScope::AnyPlayer)
+            };
+            let visit = |c: &crate::card::CardInstance| {
                 let ctrl = c.controller;
                 for t in &c.definition.triggered_abilities {
-                    if t.event.kind == EventKind::YouAttack
-                        && (ctrl == ap
-                            || t.event.scope == crate::effect::EventScope::AnyPlayer)
-                    {
+                    if listens(t, ctrl) {
                         you_attack.push((c.id, ctrl, t.effect.clone(), t.event.filter.clone()));
                     }
                 }
-            });
+                if own_you_attack_grant {
+                    self.for_each_granted_trigger_matching(c.id, |t| listens(t, ctrl), |t| {
+                        you_attack.push((c.id, ctrl, t.effect.clone(), t.event.filter.clone()))
+                    });
+                }
+            };
+            self.battlefield.for_each_triggerer_or_all(own_you_attack_grant, visit);
             for (src, ctrl, effect, filter) in you_attack {
                 // CR 603.2 — the "whenever you attack with …" rider is a
                 // trigger-time gate read off the finished attack declaration.
@@ -5241,21 +5262,31 @@ impl GameState {
         // Plain loops: a whole-board walk per damage event, and `FlatMap::next`
         // costs ~20 Ir a permanent before the filter sees a single ability
         // (PERF (-78)). Over the trigger member list, not the board (PERF
-        // `(-224)`, the `(-222)` device): the body reads printed triggers
-        // only.
+        // `(-224)`, the `(-222)` device), unless an instance grant of the
+        // kind is live — none in the catalog today, read so the walk cannot
+        // drop one silently.
+        let own_grant = self.any_granted_trigger_of_kind(&EventKind::ControllerDealtCombatDamage);
         let mut listeners: Vec<(CardId, Effect, usize)> = Vec::new();
-        self.battlefield.for_each_triggerer(|c| {
+        let listens = |ta: &crate::card::TriggeredAbility| {
+            ta.event.kind == EventKind::ControllerDealtCombatDamage
+                && ta.event.scope == crate::effect::EventScope::SelfSource
+        };
+        let visit = |c: &crate::card::CardInstance| {
             if c.controller != damaged_player {
                 return;
             }
             for ta in &c.definition.triggered_abilities {
-                if ta.event.kind == EventKind::ControllerDealtCombatDamage
-                    && ta.event.scope == crate::effect::EventScope::SelfSource
-                {
+                if listens(ta) {
                     listeners.push((c.id, ta.effect.clone(), c.controller));
                 }
             }
-        });
+            if own_grant {
+                self.for_each_granted_trigger_matching(c.id, listens, |ta| {
+                    listeners.push((c.id, ta.effect.clone(), c.controller))
+                });
+            }
+        };
+        self.battlefield.for_each_triggerer_or_all(own_grant, visit);
         for (listener, effect, controller) in listeners {
             let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
             // Bind the creature that dealt the damage as `Selector::TriggerSource`
