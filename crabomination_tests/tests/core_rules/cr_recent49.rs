@@ -232,3 +232,63 @@ fn cr_201_4a_prompt_carries_the_namespace_noun() {
         other => panic!("expected NameCard, got {other:?}"),
     }
 }
+
+// ── CR 603 — instance-granted triggers reach every hook ──
+
+/// A trigger granted by a resolution (`Effect::GrantTriggeredAbility`) fires
+/// off the two hooks that push their own kinds — the step walk and the cast
+/// walk — exactly like a printed one, on a permanent with no printed trigger
+/// at all (so the trigger member list would not have visited it). Neither
+/// hook read the grant map before 2026-09-08; no catalog grant is of either
+/// kind, so this is the pin, not a card.
+#[test]
+fn cr_603_2_instance_granted_step_and_cast_triggers_fire() {
+    use crabomination::effect::shortcut::{gain_life, magecraft};
+    use crabomination::effect::{Duration, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crabomination::game::effects::EffectContext;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    for trigger in [
+        magecraft(gain_life(3)),
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: gain_life(5),
+        },
+    ] {
+        let grant = Effect::GrantTriggeredAbility {
+            what: Selector::This,
+            trigger: Box::new(trigger),
+            duration: Duration::EndOfTurn,
+        };
+        g.resolve_effect(&grant, &ctx).expect("grant resolves");
+    }
+    let life = g.players[0].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "the granted magecraft fired off the cast walk");
+    for _ in 0..20 {
+        if g.step == TurnStep::End {
+            break;
+        }
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.step, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 8, "the granted end-step trigger fired off the step walk");
+    let _ = g.advance_step(Vec::new());
+    let _ = g.advance_step(Vec::new());
+    assert!(g.granted_triggers_timed.is_empty(), "both grants ended at cleanup");
+}

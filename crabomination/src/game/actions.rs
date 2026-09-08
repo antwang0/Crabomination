@@ -12111,6 +12111,14 @@ impl GameState {
         // `statics_granted_triggers_with` is per-card, so it stays per-card.
         let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
         let any_equip_grant = !equip_grants.is_empty();
+        // Instance grants (`Effect::GrantTriggeredAbility`) of this kind: none
+        // in the catalog today, read so the hook cannot drop one silently.
+        let any_own_grant = !self.granted_triggers_timed.is_empty()
+            && self
+                .granted_triggers_timed
+                .values()
+                .flatten()
+                .any(|g| g.ability.event.kind == EventKind::SpellCast);
         // CR 613 — the grant filters read the computed type line, so an
         // unfrozen walk re-gathers per (permanent, grant). Same device and
         // same proof as `dispatch_triggers_for_events` (`36e998aa`): the loop
@@ -12129,6 +12137,13 @@ impl GameState {
             for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
                 if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
                     candidates.push((cid, c_controller, t.effect.clone(), t.event.filter.clone(), idx, t.event.once_per_turn));
+                }
+            }
+            if any_own_grant {
+                for t in self.granted_triggers(cid) {
+                    if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
+                        candidates.push((cid, c_controller, t.effect.clone(), t.event.filter.clone(), usize::MAX, false));
+                    }
                 }
             }
             let static_granted = if any_static_grant || !c.definition.station.is_empty() {
@@ -12162,9 +12177,11 @@ impl GameState {
         // board is walked whole; otherwise only a printed trigger or a
         // Station band can contribute — the trigger member list (PERF
         // `(-231)`, the `(-228)` shape on the per-cast walk).
-        if freeze {
+        if freeze || any_own_grant {
             self.battlefield.iter().for_each(&mut visit);
-            self.freeze_layers_pop();
+            if freeze {
+                self.freeze_layers_pop();
+            }
         } else {
             self.battlefield.for_each_triggerer(&mut visit);
         }
