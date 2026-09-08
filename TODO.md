@@ -36,7 +36,8 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the tip (PERF Baseline, the round-70 and `(-277)` addenda):** suite 19,285 / 0 / 5, clippy, golden 7/7 unmoved, `--bench`
    counters identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), the engine legs' Ir against `4db20c51` sealed **-0.132 %** / cube
    **-0.127 %** with every trace identical, `audit_stubs` / `audit_incomplete --structural-only` both 0, `robustness_grid.sh --wide` at
-   `2c63ce52` clean but for the four recorded Beacon caps (the grid has not been re-run under the round-70 default — run it first).
+   `2c63ce52` clean but for the four recorded Beacon caps; the round-70 default swept clean on the audit build (9 cells / 28,800 games,
+   the addendum's `sweep` line) — the full `--wide` grid has not been re-run under it, which is the next run's first cell.
 3. **Engine, this run:** the last printed-only hooks — the three combat listener walks — read instance grants; every hook outside the
    dispatcher asks `any_granted_trigger_of_kind` and walks `for_each_triggerer_or_all`, whose one `f(c)` call site is what inlined the
    step/cast hooks' closures for the first time (`(-277)`, Log: the five-row build table is the lesson). The grant-bucket class is a

@@ -2809,6 +2809,8 @@ byte-identical in its counters.
         bin_bytes 126,744,864 (+3,280 B: the gate and the census slots); 502.0 / 506.9 / 454.1 games/s, three single runs on the quiet box (this host's spread)
 suite   19,285 / 0 / 5; golden 7/7 unmoved (no seeded game reaches a search the gate changes)
 clippy  --workspace --exclude crabomination_client --all-targets   clean
+sweep   fresh seeds on the ADOPTED DEFAULT under the debug-assertions overflow build (target-audit, 8 assertion strings): 601..603 x {sealed, cube, fixed}
+        x --games 400 --threads 3 = 9 cells / 28,800 games, 0 undecided, 0 panics / assertions / overflows, every rc 0, CRAB_CAP_DIAG=4000 silent
 census  CRAB_ATTACK_CENSUS=1 sealed 1,200 games seed 43: attack 14,572 searched / 49,464 candidates / chain sims 52,224 before the gate;
         chain won when the menu alone picked greedy/nobody/holdback 642/992/238 of 1,218/992/406 chained searches (the split behind the round)
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
