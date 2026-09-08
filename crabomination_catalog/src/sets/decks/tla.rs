@@ -1253,8 +1253,7 @@ pub fn foggy_swamp_hunters() -> CardDefinition {
 
 /// June, Bounty Hunter — {1}{B} 2/2 legendary Human Mercenary. Can't be blocked
 /// while you've drawn two or more cards this turn. {1}, Sacrifice another
-/// creature: investigate. (Activate as a sorcery — approximates "during your
-/// turn.")
+/// creature: investigate, only during your turn.
 pub fn june_bounty_hunter() -> CardDefinition {
     CardDefinition {
         name: "June, Bounty Hunter",
@@ -1276,7 +1275,7 @@ pub fn june_bounty_hunter() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
-            sorcery_speed: true,
+            condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
             sac_other_filter: Some((
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByYou)
@@ -1727,7 +1726,7 @@ pub fn flopsie_bumis_buddy() -> CardDefinition {
 
 /// Professor Zei, Anthropologist — {U/R}{U/R} 0/3 legendary Human Advisor Ally.
 /// {T}, Discard a card: Draw a card. {1}, {T}, Sacrifice him: return an instant
-/// or sorcery from your graveyard to hand (sorcery speed).
+/// or sorcery from your graveyard to hand, only during your turn.
 pub fn professor_zei_anthropologist() -> CardDefinition {
     CardDefinition {
         name: "Professor Zei, Anthropologist",
@@ -1754,7 +1753,7 @@ pub fn professor_zei_anthropologist() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 tap_cost: true,
                 sac_cost: true,
-                sorcery_speed: true,
+                condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
                 effect: Effect::Move {
                     what: target_filtered(
                         SelectionRequirement::HasCardType(CardType::Instant)
@@ -2623,7 +2622,7 @@ pub fn rough_rhino_cavalry() -> CardDefinition {
 
 /// Path to Redemption — {1}{W} Aura. Enchanted creature can't attack or block.
 /// {5}, Sacrifice this Aura: exile the enchanted creature, create a 1/1 white
-/// Ally. (Activate only as a sorcery.)
+/// Ally. Activate only during your turn.
 pub fn path_to_redemption() -> CardDefinition {
     CardDefinition {
         name: "Path to Redemption",
@@ -2648,7 +2647,7 @@ pub fn path_to_redemption() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5)]),
             sac_cost: true,
-            sorcery_speed: true,
+            condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
             effect: Effect::Seq(vec![
                 Effect::Exile {
                     what: Selector::AttachedTo(Box::new(Selector::This)),
@@ -5666,7 +5665,7 @@ pub fn teo_spirited_glider() -> CardDefinition {
 }
 
 /// Bitter Work — {1}{R}{G} Enchantment. Whenever you attack with one or more
-/// creatures of power 4+, draw a card. Exhaust — {4}: Earthbend 4 (your turn).
+/// creatures of power 4+, draw a card. Exhaust — {4}: Earthbend 4, only during your turn.
 pub fn bitter_work() -> CardDefinition {
     CardDefinition {
         name: "Bitter Work",
@@ -5687,7 +5686,7 @@ pub fn bitter_work() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
             exhaust: true,
-            sorcery_speed: true,
+            condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
             effect: Effect::Earthbend { n: Value::Const(4) },
             ..Default::default()
         }],

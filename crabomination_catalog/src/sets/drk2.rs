@@ -284,13 +284,23 @@ pub fn orc_general() -> CardDefinition {
     }
 }
 
-/// Rag Man — sorcery-speed hand attack that rips a creature at random.
+/// Rag Man — your-turn-only hand attack that rips a creature at random.
 pub fn rag_man() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b(), b(), b()]),
             tap_cost: true,
-            sorcery_speed: true,
+            // "Activate only during your turn, before attackers are declared"
+            // (CR 602.5): the steps up to and including beginning of combat.
+            condition: Some(crate::effect::Predicate::All(vec![
+                crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                crate::effect::Predicate::Any(vec![
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep),
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::Draw),
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::PreCombatMain),
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::BeginCombat),
+                ]),
+            ])),
             effect: Effect::Seq(vec![
                 Effect::RevealHand { who: PlayerRef::Target(0) },
                 Effect::DiscardMatchingAtRandom {

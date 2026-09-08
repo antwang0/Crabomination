@@ -878,6 +878,13 @@ mod recent184 {
             g.computed_permanent(outlaw).unwrap().keywords().contains(&Keyword::FirstStrike),
             "outlaw has first strike",
         );
+        // "During your turn" (always-on until 2026-09-08).
+        g.active_player_idx = 1;
+        assert!(
+            !g.computed_permanent(outlaw).unwrap().keywords().contains(&Keyword::FirstStrike),
+            "not on the opponent's turn",
+        );
+        g.active_player_idx = 0;
         g.dispatch_triggers_for_events(&[GameEvent::CommittedCrime { player: 0 }]);
         drain_stack(&mut g);
         let mercs = g

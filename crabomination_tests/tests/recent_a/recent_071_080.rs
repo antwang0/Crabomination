@@ -41,21 +41,24 @@ mod recent71 {
     }
 
     #[test]
-    fn vampire_bats_pumps_once_per_turn() {
+    /// "Activate no more than twice each turn" (CR 602.5f) — shipped as
+    /// once-per-turn until 2026-09-08.
+    fn vampire_bats_pumps_at_most_twice_per_turn() {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, catalog::vampire_bats());
-        g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+        g.players[0].mana_pool.add(crabomination::mana::Color::Black, 3);
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-        }).expect("first activation");
+        let pump = |g: &mut GameState| {
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+            })
+        };
+        pump(&mut g).expect("first activation");
+        pump(&mut g).expect("second activation");
         drain_stack(&mut g);
-        assert_eq!(g.computed_permanent(id).unwrap().power, 1, "0/1 → 1/1");
-        // Second activation the same turn is illegal (once per turn).
-        assert!(g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-        }).is_err(), "can't activate twice in one turn");
+        assert_eq!(g.computed_permanent(id).unwrap().power, 2, "0/1 → 2/1");
+        assert!(pump(&mut g).is_err(), "a third activation the same turn is illegal");
     }
 
     #[test]

@@ -3502,3 +3502,23 @@ fn pit_of_offerings_taps_for_a_color_it_exiled() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
 }
+
+/// Hunter's Blowgun — deathtouch during your turn, reach otherwise (both were
+/// granted at once until 2026-09-08).
+#[test]
+fn hunters_blowgun_swaps_deathtouch_for_reach_by_turn() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gun = g.add_card_to_battlefield(0, catalog::hunters_blowgun());
+    g.battlefield_find_mut(gun).unwrap().attached_to = Some(bear);
+    let kws = |g: &GameState| {
+        let cp = g.computed_permanent(bear).unwrap();
+        assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 either turn");
+        let k = cp.keywords();
+        (k.contains(&Keyword::Deathtouch), k.contains(&Keyword::Reach))
+    };
+    g.active_player_idx = 0;
+    assert_eq!(kws(&g), (true, false), "your turn: deathtouch");
+    g.active_player_idx = 1;
+    assert_eq!(kws(&g), (false, true), "their turn: reach");
+}

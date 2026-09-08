@@ -5426,7 +5426,7 @@ pub fn sunfire_torch() -> CardDefinition {
 }
 
 /// Hunter's Blowgun — {1} Equipment. Equipped creature gets +1/+1 and has
-/// deathtouch during your turn, otherwise reach. (Modeled as granting both.)
+/// deathtouch during your turn; otherwise, it has reach.
 pub fn hunters_blowgun() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -5441,7 +5441,20 @@ pub fn hunters_blowgun() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Deathtouch, Keyword::Reach],
+            conditional: vec![
+                crate::card::ConditionalEquipBonus {
+                    host_filter: crate::card::SelectionRequirement::Any,
+                    keywords: vec![Keyword::Deathtouch],
+                    condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
+                    ..Default::default()
+                },
+                crate::card::ConditionalEquipBonus {
+                    host_filter: crate::card::SelectionRequirement::Any,
+                    keywords: vec![Keyword::Reach],
+                    condition: Some(crate::effect::Predicate::Not(Box::new(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)))),
+                    ..Default::default()
+                },
+            ],
             ..Default::default()
         }),
         ..Default::default()

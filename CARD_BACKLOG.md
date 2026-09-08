@@ -490,16 +490,16 @@ What is left, for whoever picks it up:
   Barbarian / Cleric / Warlock / Wizard Class and the ten `… Talent`
   enchantments (they are `Enchantment — Class` too).
 * **~24 want a per-card read**, and at least some are the same invention the
-  monstrosity helpers were: Arcanum Wings, Bitter Work, Clattering Augur,
-  Domesticated Hydra, Fledgling Mawcor, Geier Reach Sanitarium, June Bounty
-  Hunter, Llanowar Greenwidow, Lonis, Nebuchadnezzar, Path to Redemption,
-  Pernicious Deed, Professor Zei, Rag Man, Relentless X-ATM092, Scrapheap
-  Scrounger, Skeletal Kathari, Sneaky Snacker, Soul Conduit, Squee the
-  Immortal, Stern Marshal, Vizier of Many Faces, Wand of Ith, Wishclaw
-  Talisman. ⚠ **Rag Man is the shape to expect**: it prints "activate only
-  during your turn, before attackers are declared", which is a *different*
-  rider the engine approximates with this flag — that is a named
-  approximation, not a defect.
+  monstrosity helpers were: Arcanum Wings, Clattering Augur, Domesticated
+  Hydra, Fledgling Mawcor, Geier Reach Sanitarium, Llanowar Greenwidow,
+  Lonis, Pernicious Deed, Relentless X-ATM092, Scrapheap Scrounger, Skeletal
+  Kathari, Sneaky Snacker, Soul Conduit, Squee the Immortal, Vizier of Many
+  Faces, Wand of Ith. The eight that print "only during your turn" (Bitter
+  Work, June Bounty Hunter, Nebuchadnezzar, Path to Redemption, Professor
+  Zei, Wishclaw Talisman, and Rag Man / Stern Marshal with "before attackers
+  are declared") are on `IsTurnOf(You)` gates since 2026-09-08
+  (INCOMPLETE_CARDS, the timing table) — the flag no longer approximates the
+  rider, and the audit's `tim` column flags it.
 
 Close the direction by fixing the ~24 and skipping the Class cycle by type
 line, then assert it.
@@ -2551,8 +2551,8 @@ models "up to one target" as a single target. Skipped, each needing a primitive:
 Fleeting Reflection, Full Steam Ahead, Hellspur Posse Boss, Kraum, At Knifepoint)
 on existing primitives (begin-combat modal, crime dig, become-a-copy trick, team
 pump, outlaw-haste/first-strike lords via `StaticEffect::GrantKeyword` + `R::IsOutlaw`,
-Flurry). Approximations: Fleeting Reflection's copy target modeled as required;
-At Knifepoint's first strike always-on (not "during your turn"). Still-open OTJ:
+Flurry). Approximations: Fleeting Reflection's copy target modeled as required
+(At Knifepoint's first strike rides `WhileYourTurn` since 2026-09-08). Still-open OTJ:
 Boom Box (three independent up-to-one destroy slots), Emergent Haunting (spell-gated
 self-animate), Hollow Marauder (per-opponent-discard conditional draw).
 

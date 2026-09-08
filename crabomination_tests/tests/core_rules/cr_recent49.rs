@@ -292,3 +292,60 @@ fn cr_603_2_instance_granted_step_and_cast_triggers_fire() {
     let _ = g.advance_step(Vec::new());
     assert!(g.granted_triggers_timed.is_empty(), "both grants ended at cleanup");
 }
+
+// ── CR 602.5 — "Activate only during your turn" ──
+
+/// CR 602.5 — an "activate only during your turn" ability is refused on the
+/// opponent's turn and accepted at instant speed on yours; "before attackers
+/// are declared" (Rag Man, Stern Marshal) is also refused from the declare-
+/// attackers step on. Every card here shipped `sorcery_speed` as the
+/// approximation until 2026-09-08 — a sorcery gate refuses your own upkeep
+/// and beginning of combat, which the printed rider allows.
+#[test]
+fn cr_602_5_activate_only_during_your_turn_is_a_turn_gate_not_a_sorcery_gate() {
+    use crabomination::card::CardDefinition;
+    let cards: [(fn() -> CardDefinition, usize, bool); 8] = [
+        (catalog::stern_marshal, 0, true),
+        (catalog::rag_man, 0, true),
+        (catalog::wishclaw_talisman, 0, false),
+        (catalog::june_bounty_hunter, 0, false),
+        (catalog::professor_zei_anthropologist, 1, false),
+        (catalog::path_to_redemption, 0, false),
+        (catalog::bitter_work, 0, false),
+        (catalog::nebuchadnezzar, 0, false),
+    ];
+    for (def, idx, before_attackers) in cards {
+        let name = def().name;
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, def());
+        g.clear_sickness(id);
+        if let Some((kind, _)) = def().enters_with_counters {
+            g.battlefield_find_mut(id).unwrap().counters.insert(kind, 3);
+        }
+        let gate = |g: &mut GameState, active: usize, step: TurnStep| {
+            g.active_player_idx = active;
+            g.step = step;
+            g.priority.player_with_priority = 0;
+            matches!(
+                g.perform_action(GameAction::ActivateAbility {
+                    card_id: id,
+                    ability_index: idx,
+                    target: None,
+                    additional_targets: vec![],
+                    x_value: None,
+                    mode: None,
+                }),
+                Err(crabomination::game::GameError::AbilityConditionNotMet)
+            )
+        };
+        assert!(gate(&mut g, 1, TurnStep::PreCombatMain), "{name}: refused on the opponent's turn");
+        assert!(!gate(&mut g, 0, TurnStep::Upkeep), "{name}: your upkeep is not a sorcery window, and it is allowed");
+        assert!(!gate(&mut g, 0, TurnStep::BeginCombat), "{name}: allowed at beginning of combat");
+        assert_eq!(
+            gate(&mut g, 0, TurnStep::DeclareBlockers),
+            before_attackers,
+            "{name}: the before-attackers rider decides declare blockers"
+        );
+    }
+}
+

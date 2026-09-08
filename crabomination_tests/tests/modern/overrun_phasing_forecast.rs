@@ -1726,11 +1726,17 @@ fn skyskipper_duo_blinks_your_creature() {
     assert!(g.exile.iter().any(|c| c.id == bear), "bear is in exile until end step");
 }
 
-/// Wax-Wane Witness pumps itself when you gain life.
+/// Wax-Wane Witness pumps itself when you gain life during your turn — and
+/// not on the opponent's (the clause was dropped until 2026-09-08).
 #[test]
 fn wax_wane_witness_grows_on_lifegain() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::wax_wane_witness());
+    g.active_player_idx = 1;
+    g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::LifeGained { player: 0, amount: 1 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 2, "silent on the opponent's turn");
+    g.active_player_idx = 0;
     g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::LifeGained { player: 0, amount: 1 }]);
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(id).unwrap().power, 3, "Wax-Wane Witness grew +1/+0");

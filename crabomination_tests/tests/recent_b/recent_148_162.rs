@@ -479,6 +479,12 @@ mod recent151 {
     fn moonstone_harbinger_life_gain_pumps_bats() {
         let mut g = two_player_game();
         let bat = g.add_card_to_battlefield(0, catalog::moonstone_harbinger());
+        // "during your turn": the opponent's-turn lifegain is silent (the
+        // clause was dropped until 2026-09-08).
+        g.active_player_idx = 1;
+        g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 1 }]);
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(bat).unwrap().power, 1, "silent on the opponent's turn");
         g.active_player_idx = 0;
         g.adjust_life(0, 1);
         g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 1 }]);

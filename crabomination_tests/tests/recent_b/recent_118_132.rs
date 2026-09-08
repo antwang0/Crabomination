@@ -1673,6 +1673,15 @@ mod recent129 {
             2,
             "two Rats made",
         );
+        // The creature half: first strike during your turn only (dropped
+        // until 2026-09-08).
+        let trainee = g.add_card_to_battlefield(0, catalog::ratcatcher_trainee());
+        let fs = |g: &GameState| {
+            g.computed_permanent(trainee).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike)
+        };
+        assert!(fs(&g), "first strike on your turn");
+        g.active_player_idx = 1;
+        assert!(!fs(&g), "not on the opponent's");
     }
 
     /// Twisted Fealty steals a creature for the turn and drops a Wicked Role.

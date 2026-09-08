@@ -159,8 +159,8 @@ pub fn grand_ball_guest() -> CardDefinition {
 }
 
 /// Ratcatcher Trainee // Pest Problem — {1}{R} 2/1 Human Peasant; Adventure
-/// {2}{R} Instant creates two 1/1 Rats that can't block. (The "during your turn,
-/// has first strike" static is dropped.)
+/// {2}{R} Instant creates two 1/1 Rats that can't block. During your turn, the
+/// creature has first strike.
 pub fn ratcatcher_trainee() -> CardDefinition {
     CardDefinition {
         name: "Ratcatcher Trainee",
@@ -172,6 +172,13 @@ pub fn ratcatcher_trainee() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, this creature has first strike.",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::FirstStrike,
+                condition: crate::card::SelectionRequirement::ControllersTurn,
+            },
+        }],
         adventure: Some(Box::new(Adventure {
             name: "Pest Problem",
             cost: cost(&[generic(2), r()]),

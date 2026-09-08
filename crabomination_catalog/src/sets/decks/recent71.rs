@@ -144,7 +144,7 @@ pub fn segovian_leviathan() -> CardDefinition {
 }
 
 /// Vampire Bats — {B} 0/1 Bat. Flying. {B}: gets +1/+0 until end of turn.
-/// Activate only once each turn.
+/// Activate no more than twice each turn.
 pub fn vampire_bats() -> CardDefinition {
     CardDefinition {
         name: "Vampire Bats",
@@ -159,7 +159,7 @@ pub fn vampire_bats() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
-            once_per_turn: true,
+            max_activations_per_turn: Some(2),
             effect: Effect::PumpPT {
                 what: Selector::This,
                 power: Value::Const(1),

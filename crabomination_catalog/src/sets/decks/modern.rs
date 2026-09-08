@@ -15561,7 +15561,7 @@ pub fn wishclaw_talisman() -> CardDefinition {
                     duration: Duration::Permanent,
                 },
             ]),
-            sorcery_speed: true,
+            condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
             ..Default::default()
         }],
         ..Default::default()
@@ -35371,8 +35371,8 @@ pub fn skyskipper_duo() -> CardDefinition {
 }
 
 /// Wax-Wane Witness — {3}{W} 2/4 Bat Cleric with Flying and Vigilance.
-/// Whenever you gain or lose life, it gets +1/+0 until end of turn. (The "during
-/// your turn" restriction is dropped.)
+/// Whenever you gain or lose life during your turn, it gets +1/+0 until end of
+/// turn.
 pub fn wax_wane_witness() -> CardDefinition {
     let pump = || Effect::PumpPT {
         what: Selector::This,
@@ -35393,11 +35393,13 @@ pub fn wax_wane_witness() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl)
+                    .with_filter(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
                 effect: pump(),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::LifeLost, EventScope::YourControl),
+                event: EventSpec::new(EventKind::LifeLost, EventScope::YourControl)
+                    .with_filter(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
                 effect: pump(),
             },
         ],

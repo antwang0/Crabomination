@@ -805,7 +805,7 @@ pub fn nebuchadnezzar() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[x()]),
-            sorcery_speed: true,
+            condition: Some(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You)),
             effect: Effect::NameCardRevealRandomDiscardNamed {
                 who: PlayerRef::Target(0),
                 count: Value::XFromCost,

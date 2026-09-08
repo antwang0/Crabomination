@@ -1798,7 +1798,8 @@ pub fn nazgul() -> CardDefinition {
 }
 
 /// Stern Marshal — {2}{W} 2/2 Human Soldier. {T}: target creature gets +2/+2
-/// until end of turn. Activate only during your turn (timing approximated).
+/// until end of turn. Activate only during your turn, before attackers are declared
+/// (CR 602.5: the steps up to and including beginning of combat).
 pub fn stern_marshal() -> CardDefinition {
     CardDefinition {
         name: "Stern Marshal",
@@ -1812,7 +1813,15 @@ pub fn stern_marshal() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            sorcery_speed: true,
+            condition: Some(crate::effect::Predicate::All(vec![
+                crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You),
+                crate::effect::Predicate::Any(vec![
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::Upkeep),
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::Draw),
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::PreCombatMain),
+                    crate::effect::Predicate::CurrentStepIs(crate::game::types::TurnStep::BeginCombat),
+                ]),
+            ])),
             effect: Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(2),

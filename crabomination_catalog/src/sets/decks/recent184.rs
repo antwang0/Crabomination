@@ -135,19 +135,25 @@ pub fn kraum_violent_cacophony() -> CardDefinition {
     }
 }
 
-/// At Knifepoint — {1}{B}{R} Enchantment. Outlaws you control have first strike.
-/// Whenever you commit a crime, create a 1/1 red Mercenary token (once each turn).
-/// (First strike modeled as always-on rather than "during your turn.")
+/// At Knifepoint — {1}{B}{R} Enchantment. During your turn, outlaws you control
+/// have first strike. Whenever you commit a crime, create a 1/1 red Mercenary
+/// token (once each turn).
 pub fn at_knifepoint() -> CardDefinition {
     CardDefinition {
         name: "At Knifepoint",
         cost: cost(&[generic(1), b(), r()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
-            description: "Outlaws you control have first strike.",
-            effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(R::IsOutlaw.and(R::ControlledByYou)),
-                keyword: Keyword::FirstStrike,
+            description: "During your turn, outlaws you control have first strike.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::IsOutlaw.and(R::ControlledByYou),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike],
+                opponents: false,
+                all_players: false,
+                only_your_turn: true,
+                scale_by_counters_on_self: None,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

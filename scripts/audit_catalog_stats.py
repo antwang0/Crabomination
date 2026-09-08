@@ -185,9 +185,10 @@ def literal_depth1_field(lit, field):
     return None
 
 # The oracle's activation-timing riders. "only during your turn" is met by
-# `condition: Some(Predicate::IsTurnOf(PlayerRef::You))`, and — the catalog's
-# documented approximation of it (Rag Man, Stern Marshal) — by
-# `sorcery_speed: true` when no line prints "only as a sorcery".
+# `condition: Some(Predicate::IsTurnOf(PlayerRef::You))` — an `All(..)` around
+# it with a step list is "before attackers are declared" (Rag Man, Stern
+# Marshal). `sorcery_speed: true` used to stand in for it and no longer does
+# (2026-09-08: the last eight were re-shaped).
 _TIMING = (
     ("only as a sorcery", "sorcery"),
     ("only during your turn", "your_turn"),
@@ -196,6 +197,9 @@ _TIMING = (
     ("only during your upkeep", "your_turn"),
     ("only during your upkeep", "upkeep"),
     ("only once each turn", "once"),
+    # "no more than twice each turn" (Vampire Bats) — `max_activations_per_turn: Some(2)`.
+    ("no more than twice each turn", "twice"),
+    ("no more than three times each turn", "max3"),
 )
 
 def ability_timing(body):
@@ -212,6 +216,11 @@ def ability_timing(body):
         k = literal_depth1_field(lit, "once_per_turn:")
         if k is not None and re.match(r"once_per_turn:\s*true", lit[k:]):
             flags.add("once")
+        k = literal_depth1_field(lit, "max_activations_per_turn:")
+        if k is not None:
+            m = re.match(r"max_activations_per_turn:\s*Some\((\d+)\)", lit[k:])
+            if m:
+                flags.add({"1": "once", "2": "twice"}.get(m.group(1), "max" + m.group(1)))
         k = literal_depth1_field(lit, "condition:")
         if k is not None:
             # The whole `Some(..)` expression — an `IsTurnOf(You)` nested in
@@ -245,10 +254,8 @@ def ref_ability_timing(card, face=None):
     return out
 
 def timing_mismatch(code, ref):
-    """Multiset compare with the your-turn approximation: a code `sorcery`
-    stands for a printed `your_turn` when nothing printed asks for sorcery."""
-    if not any("sorcery" in f for f in ref) and any("your_turn" in f for f in ref):
-        code = [frozenset(("your_turn" if x == "sorcery" else x) for x in f) for f in code]
+    """Multiset compare. A code `sorcery` no longer stands for a printed
+    `your_turn` (the approximation was retired 2026-09-08)."""
     # A step list that merely includes the upkeep ("before attackers are
     # declared" — Cao Cao) is not an upkeep rider.
     if not any("upkeep" in f for f in ref):
