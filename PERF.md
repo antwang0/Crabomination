@@ -2791,6 +2791,31 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-279)` — the pooled event scratch: closing state at the `(-279)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+
+One engine leg after the `(-278)` addendum below (Log `(-279)`; the
+block-sim context read in the candidates). Behaviour-preserving — every
+trace identical, `--bench` counters identical — so the three totals below
+are the `(-278)` games, cheaper, and the base for every later A/B.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1, UNTRACED, one tree:  2,572,706,282 -> 2,562,977,750 Ir  (-0.378 %, 72 / 72)
+  cube   dflt, same recipe:                                                   2,515,278,324 -> 2,508,428,873 Ir  (-0.272 %, 48 / 48)
+  fixed  gang, same recipe:                                                     673,786,345 ->   671,549,557 Ir  (-0.332 %)
+  traces CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 files, 0 differ
+--bench release-fast (mimalloc) at 3d8f3072: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1);
+        bin_bytes 126,743,528 (+2,784 B against 6acd58c3); 285.1 / 297.8 / 291.7 games/s, three single runs (host_calib_ms 50 / 53 / 53) — THE BOX, NOT THE
+        CHANGE: the 6acd58c3 profiling-fast binary reads 272.9 median on the same afternoon against its recorded ~520; paired bench_ab.py tip vs (-279),
+        12 pairs, B/A median +0.99 % / mean +1.10 % (sd 3.97) — inside the instrument's noise, the right sign, Ir is the number
+suite   19,286 / 0 / 5 (one lib test added: `game::event_scratch_tests`); golden 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+gate    profiling-fast (release-fast opt settings, debug-assertions off) and release-fast bot_ladder both built from the tree
+sweep   fresh seeds on the (-278) tip binary (profiling-fast): {all, sealed} x seeds 701..706 x {dflt, gang} mirror x --games 400 --threads 3, CRAB_CAP_DIAG=4000:
+        24 cells / 139,200 games, 0 panics, 0 cap, 0 stuck, 16 draws (all rc 0, the diag silent)
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores; cold profiling-fast bot_ladder 13m07s (cold registry), warm engine rebuild 4m05s,
+        cold debug suite build ~9 min, release-fast 11m42s
+```
+
 ### `(-278)` and round 71 — the chains read the menu's scores, the block chain gate refuted: closing state at the `(-278)` tip, THE NEW UNTRACED DEFAULT-PILOT BASE
 
 One bot-side leg and one refuted round after the round-70 addendum below

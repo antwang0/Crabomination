@@ -28,24 +28,24 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force;
-   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-278)` is the last claimed, `(-279)` next. Gotchas in **CLAUDE.md**;
+   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-279)` is the last claimed, `(-280)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
-   running `cargo build`. Cold here: debug suite build ~5-25 min, `profiling-fast` bot_ladder 8m03s, `release-fast` ~12 min; a detached `setsid
-   nohup` chain survives the tool timeout. ⚠ An untraced callgrind run is ~5.5 % under a `CRAB_DUMP_TRACES` one — the round-70 Log's
-   dflt totals were traced; **the untraced `(-278)` pair (PERF Log) is the base from here**, and A/B both sides from one tree, `md5sum` both.
-2. **Gates at the tip (PERF Baseline, the `(-278)` addendum):** suite 19,286 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
-   identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), `audit_stubs` / `audit_incomplete --structural-only` both 0, `robustness_grid.sh
-   --wide` re-run under the round-70 default (the first): 52 ladder cells / 301,600 games clean but for the four recorded Beacon caps, 2
-   actor cells / 60,000 games and 46 pilot cells 0 failures.
-3. **Perf, this run:** **`(-278)` TAKEN (Log): both chains read a candidate the menu already simulated — sealed -5.62 % / cube -4.92 %, 120
-   traces identical; actor 2,490,213,350 at the tip (candidates, the re-read: the recorded shape at -20 % since round 70).** **Round 71
-   REFUTED (Log, ML_NOTES): the block chain gated on the menu's outcome loses 1.5-2.3 points on every arm, even seeded from greedy — its
-   value is the reassignment; the block side has no round-70.** The three flags stay off as measured arms (`bchain-skipg` / `-empty` /
-   `-seed`). The census device (`block_census` N[7..16], `attack_census` N[35]) now also counts candidates served from the menu.
-4. **Next moves, in order:** (a) the block sim body is the block search's remaining cost (7.8 % of the actor; `simulate_block_outcome_once`
-   plays to end of combat — read its passes by context before touching it); (b) the attack sim's horizon / pass count is the largest
-   remaining strength question (38 % of the actor), a gated round, not a leg; (c) engine self tables are the recorded floor on all three
-   pools — do not re-read them without a device. Nothing half-wired on the branch; no open TODO/FIXME in code.
+   running `cargo build`. Cold here: debug suite build ~9 min, `profiling-fast` bot_ladder 13m07s (cold registry), `release-fast` 11m42s; a
+   detached `setsid nohup` chain survives the tool timeout (⚠ kill it by pid — `pkill -f`/`pgrep -f` on a log name matches your own shell).
+   **The untraced `(-279)` triple (PERF Baseline addendum) is the A/B base on all three pools**; both sides from one tree, `md5sum` both.
+2. **Gates at the tip (PERF Baseline, the `(-279)` addendum):** suite 19,286 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
+   identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, fresh-seed sweep 24 cells / 139,200 games clean (0 cap /
+   0 stuck). `audit_stubs` / `audit_incomplete --structural-only` both 0 and the `--wide` grid clean at the previous tip (allocation-only
+   change since; not re-run).
+3. **Perf, this run:** **`(-279)` TAKEN (Log): the event scratch pooled across clones + the upkeep pass's leaked buffer — sealed -0.378 % /
+   cube -0.272 % / fixed -0.332 %, 120 traces identical.** The block sim READ BY CONTEXT (candidates): it is `resolve_combat_into` (105 of
+   196 M) plus the declaration, nothing bot-side; `resolve_combat_into` is 17.0 % of sealed dflt program-wide and every callee under it is
+   a recorded floor. The rule: a per-state scratch is a per-*clone* scratch — look for the nested call that takes the slot's replacement.
+4. **Next moves, in order:** (a) the attack sim's horizon / pass count is the largest remaining strength question (38 % of the actor), a gated
+   round (`.ladder/run_r71_blockchain.sh` is the template; 12,000-game cells are ~25 s here), not a leg; (b) two thin allocation rows left
+   from the read, not built: `fire_delayed_event_watchers`' per-dispatch collects on boards holding any delayed trigger (21,712 / 5.5 M,
+   0.2 %) and the SBA sweep's collects (22,810 / 9.5 M); `GameState::clone` is 2.45 allocations a clone — floor; (c) engine self tables are
+   the recorded floor on all three pools — do not re-read them without a device. Nothing half-wired on the branch; no open TODO/FIXME in code.
 5. **Cards/bugs:** none this run. INCOMPLETE_CARDS structural 0 / stubs 0 at the previous tip; ENGINE_BACKLOG's first section is the
    bug record (no open entries under "Engine — Robustness / defects").
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
