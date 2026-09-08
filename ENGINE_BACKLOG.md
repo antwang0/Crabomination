@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-08 (second run) — a combat-damage `dealer_filter` could never say `IsSource`, and "when you next attack this turn" had no primitive](#fixed-2026-09-08-second-run--a-combat-damage-dealer_filter-could-never-say-issource-and-when-you-next-attack-this-turn-had-no-primitive) | 38 |
 | Bugs & robustness | [FIXED 2026-09-08 — a trigger grant knew two durations, and a planeswalker never recorded who damaged it](#fixed-2026-09-08--a-trigger-grant-knew-two-durations-and-a-planeswalker-never-recorded-who-damaged-it) | 38 |
 | Bugs & robustness | [FIXED 2026-09-07 — keyword grants with an "until your next turn" duration were permanent, and `UntilNextTurn` itself meant "any player's next turn"](#fixed-2026-09-07--keyword-grants-with-an-until-your-next-turn-duration-were-permanent-and-untilnextturn-itself-meant-any-players-next-turn) | 52 |
 | Bugs & robustness | [FIXED 2026-09-07 — the LKI walk dropped until-end-of-turn granted triggers, and a conditional Equipment rider granted its abilities unconditionally](#fixed-2026-09-07--the-lki-walk-dropped-until-end-of-turn-granted-triggers-and-a-conditional-equipment-rider-granted-its-abilities-unconditionally) | 44 |
@@ -40,6 +41,37 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-08 (second run) — a combat-damage `dealer_filter` could never say `IsSource`, and "when you next attack this turn" had no primitive
+
+Two card jobs that each turned out to be one engine line, found by
+closing rows other passes had filed:
+
+* **`fire_combat_damage_triggers` evaluated a trigger's `dealer_filter`
+  with no source hint** (phases 1 and 1.6), so `SelectionRequirement::
+  IsSource` inside one was always false — the "Calix **or** an enchanted
+  creature you control deals combat damage" disjunction had been filed as
+  unmodellable for that reason. The listener is the source now (`Some(c.id)`);
+  no shipped card had used the field (the catalog's only other `dealt_by`
+  is Cabal Slaver's creature-type filter). Calix, Guided by Fate carries
+  its second ability and `TRIGGER_LIMIT_ABILITY_DROPPED` is empty;
+  `recent_a::recent_111_117::recent114::calix_combat_damage_copies_an_
+  enchantment_once_a_turn`.
+* **`Effect::OnYourNextAttackThisTurn` / `DelayedKind::YourNextAttackThisTurn`**
+  (CR 603.7e, one-shot, consumed by the dispatcher's attack-declared leg
+  after the attackers are tapped, expired at cleanup). All-Out Assault had
+  shipped its extra combat without "untap each creature you control", which
+  left the second combat with nobody to attack in it;
+  `recent_b::recent_223_237::recent226::all_out_assault_untaps_the_team_
+  on_the_next_attack_once`. The `untap` row of the oracle-verb audit is down
+  to Breath of Fury, whose untap lives inside a bespoke effect.
+
+Robustness at the tip (PERF Baseline, the `(-277)` addendum): the wide
+debug-assertions grid — 52 ladder cells / 301,600 games — read 0 panics,
+0 assertion fires, 0 stuck, 4 caps, 12 draws; the four caps are seeds 53
+and 73's Beacon of Immortality boards, the fingerprint the closed
+stall-sweep entry below records (twin `i32::MAX` life totals), read with
+`CRAB_CAP_DIAG=1`.
 
 ## FIXED 2026-09-08 — a trigger grant knew two durations, and a planeswalker never recorded who damaged it
 
@@ -73,7 +105,18 @@ question the same way; `core_rules::cr_recent49::cr_603_2_instance_
 granted_combat_listeners_fire`. Still printed-only: the self-ETB hook (a
 permanent cannot carry an instance grant before it enters). Latent: a
 granted trigger's `once_per_turn` is unenforced (sentinel index) — no
-catalog grant carries the flag.
+catalog grant carries the flag. **Both are ratchets now:**
+`core_rules::catalog_registration::every_granted_trigger_kind_reaches_a_
+walk_that_reads_its_bucket` serializes every factory, keys each static /
+instance / attachment grant by the granted ability's (kind, scope), and
+for every kind dispatched outside the generic dispatcher asserts the
+bucket against a hand-read table of walks (`READS`) — a new grant of a
+push-site kind through a bucket its walk does not read fails, and so does
+any granted `once_per_turn`. The same census answered the one question the
+first pass had guessed at: the catalog's step and cast instance grants
+(Veiled Apparition, Obsidian Fireheart, Glyph of Delusion, Great Hall of
+the Biblioplex) are all `Duration::Permanent`, which bakes onto the
+definition — nothing shipped dead through those two hooks.
 
 And one more parallel walker, found by the catalog's step-gate pass the
 same day: `gather_continuous_effects_inner`'s live-filter leg for

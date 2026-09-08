@@ -2808,11 +2808,18 @@ is byte-identical; sealed and cube are the same games faster:
 Ir      against 4db20c51, traced, base and tip from one tree, --a dflt --b dflt --games 6 --threads 1 --seed 1, system allocator:
         sealed 3,320,021,324 -> 3,315,651,668 (-4,369,656, -0.132 %) / cube 3,148,739,249 -> 3,144,748,521 (-3,990,728, -0.127 %); 72 + 48 trace files, 0 differ
 golden  7/7 unmoved
-suite   19,282 / 0 / 5 (one test added: the three walks on a grant with no printed trigger)
+suite   19,282 / 0 / 5 at (-277) (one test added: the three walks on a grant with no printed trigger); 19,285 / 0 / 5 at the run's tip (the grant-bucket
+        ratchet, Calix, All-Out Assault); the two rules changes after (-277) read sealed +0.009 % / cube +0.000 % against it, traces identical (Log)
 clippy  --workspace --exclude crabomination_client --all-targets   clean (two needless_borrows fixed after the Ir reading — `&listens` -> `listens`, a ZST closure by copy)
 gate    cargo build --profile release-fast -p crabomination --bin bot_ladder   clean (the debug-assertions=off build behind --bench)
 audit   audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review (21,795 cards); audit_panics.py 78 sites / 0 bare; audit_variant_coverage.py 0 dead capabilities
-grid    scripts/robustness_grid.sh --wide, PILOTS with dflt prepended: see the line appended below once it finishes
+--bench at the run's tip (2c63ce52, the two rules changes in): counters identical (195,806 / 27.49 / 611.9 / 0), determinism + thread_determinism ok,
+        bin_bytes 126,741,584 (+47,952 B: the new delayed kind's arms), 501.6 / 522.5 / 521.3 games/s under the grid's pilot leg — the host's spread
+grid    scripts/robustness_grid.sh --wide, PILOTS with dflt prepended, at 2c63ce52: 52 ladder cells / 301,600 games on `all` + `sealed` x 26 seeds x 400 —
+        0 panics, 0 assertion fires, 0 stuck, 4 cap / 12 draw (the caps: seeds 53 and 73 on `all`, twin i32::MAX life totals at turn 2,159 / 2,490 with
+        a library of 0-1, the closed Beacon of Immortality fingerprint, read with CRAB_CAP_DIAG=1); 2 actor cells x 30,000 games (seeds 7 / 20260901,
+        62.7 / 60.1 games/s on the audit build under a concurrent callgrind) 0 failures; 46 pilot cells (dflt + the script's 45) 0 failures.
+        The script's own exit is 1 for the four caps — a capped game is a defect cell by its rule; the boards say it is the recorded one
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores; cold debug suite build ~25 min, cold profiling-fast bot_ladder 8m42s, warm engine
         rebuild 2m23s; cold release-fast ~12 min
 ```
@@ -3961,6 +3968,25 @@ short to say so.
 ## Log
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### The `dealer_filter` source hint and the next-attack delayed kind READ — traced sealed Ir **+0.009 %** / cube **+0.000 %**, traces identical
+
+Two rules changes after `(-277)` (ENGINE_BACKLOG, first section): the
+combat-damage hook hands a trigger's `dealer_filter` its listener as the
+source (`Some(c.id)` at phases 1 and 1.6, so `IsSource` can be true —
+Calix), and the dispatcher's attack-declared leg consumes
+`DelayedKind::YourNextAttackThisTurn` for the attacking player (All-Out
+Assault) — one `delayed_triggers.iter().any()` per attack batch on a list
+that is empty on almost every board. Priced against the `(-277)` binary
+under the same traced recipe (`cg.base277.*` / `cg.cand.*` in a scratchpad):
+
+```text
+profiling-fast, system allocator, --a dflt --b dflt --games 6 --threads 1 --seed 1, CRAB_DUMP_TRACES both sides
+  sealed  3,315,651,668 -> 3,315,951,121 Ir   (+299,453, +0.009 %)   72 trace files, 0 differ
+  cube    3,144,748,521 -> 3,144,754,672 Ir   (+6,151, +0.000 %)     48 trace files, 0 differ
+```
+
+Kept as rules changes; nothing to read by function at this size.
 
 ### `(-277)` TAKEN — every trigger hook reads instance grants through one walk shape: traced sealed Ir **-0.132 %** / cube **-0.127 %**, traces identical
 

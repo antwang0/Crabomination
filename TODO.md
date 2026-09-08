@@ -38,13 +38,15 @@ sixty-seventh pass, so don't re-take that.
    `audit_stubs` / `audit_incomplete --structural-only` both 0, `robustness_grid.sh --wide` (see the addendum for the cells).
 3. **Engine, this run:** the last printed-only hooks — the three combat listener walks — read instance grants; every hook outside the
    dispatcher asks `any_granted_trigger_of_kind` and walks `for_each_triggerer_or_all`, whose one `f(c)` call site is what inlined the
-   step/cast hooks' closures for the first time (`(-277)`, Log: the five-row build table is the lesson). Latent, no catalog use: a granted
-   trigger's `once_per_turn` (sentinel index); the self-ETB hook is printed-only by construction.
+   step/cast hooks' closures for the first time (`(-277)`, Log: the five-row build table is the lesson). The grant-bucket class is a
+   ratchet now (`catalog_registration::every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket`: kind x scope x bucket over
+   every factory, plus "no granted `once_per_turn`"); the self-ETB hook is printed-only by construction.
 4. **Perf/build:** engine profile FLAT — the base to quote is traced sealed 3,315,651,668 / cube 3,144,748,521 at the `(-277)` tip (the
    `4db20c51` base 3,320,021,324 / 3,148,739,249, same container). Candidates: the `&mut closure` walk class is closed (census 0); levers
    left are bot-side (sim count / horizon, ML_NOTES round 68) and PGO (opt-in). Do not re-read the engine self table without a device.
-5. **Cards/bugs:** nothing open on the correctness list; INCOMPLETE_CARDS structural 0 / stubs 0. The step-gate residue (Temur Battlecrier,
-   the CARD_BACKLOG permission clauses) is unchanged from the previous run.
+5. **Cards/bugs:** two filed rows closed by one engine line each (ENGINE_BACKLOG, first section): Calix's second ability (`dealer_filter`
+   now sees `IsSource`; `TRIGGER_LIMIT_ABILITY_DROPPED` empty) and All-Out Assault's next-attack untap (`OnYourNextAttackThisTurn`, a new
+   one-shot delayed kind). INCOMPLETE_CARDS structural 0 / stubs 0; the oracle-verb table's rows are all filed on primitives or bespoke.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
