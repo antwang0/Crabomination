@@ -3558,6 +3558,12 @@ impl GameState {
             card.definition_make_mut().activated_abilities = kept;
         }
         self.players[p].lands_played_this_turn += 1;
+        // CR 400.7 — a land that was a damaged creature when it last left
+        // the battlefield is a new object now (guarded: the write unshares
+        // the card's data, and a land from hand almost never carries any).
+        if card.damage != 0 {
+            card.damage = 0;
+        }
         self.battlefield.push(card);
         // CR 614.1c — a printed "enters with N counters" land (the MMQ
         // depletion cycle) gets them off the land drop too, and as part of

@@ -8655,3 +8655,48 @@ fn a_recast_planeswalker_enters_with_its_printed_loyalty() {
         "CR 306.5b — it enters with printed loyalty, not its cleared count",
     );
 }
+
+/// CR 400.7 — a Golgari Thug that trades in combat, puts itself on top of
+/// the library with its own dies trigger and is recast next turn is a new
+/// object: a fresh 1/1, nothing marked on it. Cube seed 702 (a dflt
+/// mirror) recast it every turn from turn 5 to the 50,000-action cap at
+/// turn 2,272 because the recast Thug died on resolution with nothing on
+/// the board to kill it (ENGINE_BACKLOG 2026-09-08).
+#[test]
+fn golgari_thug_recast_after_topdecking_itself_survives() {
+    let mut g = two_player_game();
+    let thug = g.add_card_to_battlefield(0, catalog::golgari_thug());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // The block trade: 1 damage on a 1/1.
+    g.battlefield_find_mut(thug).unwrap().damage = 1;
+    let _ = g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == thug), "1 damage kills a 1/1");
+    // Its own dies trigger: the only creature card in its graveyard is itself.
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(thug), "the Thug puts itself on top");
+    let mut events = Vec::new();
+    assert!(g.draw_one(0, &mut events));
+    assert!(g.players[0].has_in_hand(thug));
+    {
+        // The leave side clears the tap, the attachment and the pumps; the
+        // damage is reset where the card next enters (see the engine's
+        // `place_card_at_resolved_zone` for the measured reason).
+        let c = g.players[0].hand.iter().find(|c| c.id == thug).unwrap();
+        assert_eq!(
+            (c.power_bonus, c.toughness_bonus, c.perm_power_bonus, c.perm_toughness_bonus, c.counters.len(), c.tapped, c.attached_to),
+            (0, 0, 0, 0, 0, false, None),
+            "the card in hand carries battlefield state",
+        );
+    }
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell { card_id: thug, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .unwrap();
+    drain_stack(&mut g);
+    let _ = g.check_state_based_actions();
+    let back = g.battlefield_find(thug).unwrap_or_else(|| panic!("the recast Thug is not on the battlefield: gy {:?} lib top {:?}",
+        g.players[0].graveyard.iter().map(|c| c.definition.name).collect::<Vec<_>>(),
+        g.players[0].library.first().map(|c| c.definition.name)));
+    assert_eq!(back.damage, 0, "a new object carries no damage");
+    assert_eq!(g.computed_permanent(thug).unwrap().toughness, 1);
+    assert!(g.battlefield_find(bear).is_some());
+}

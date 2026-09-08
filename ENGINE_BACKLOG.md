@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-08 (third run) — a permanent leaving the battlefield by dying or bouncing kept its damage, tap and attachment into its next zone (CR 400.7); a recast Golgari Thug died on entry every turn](#fixed-2026-09-08-third-run--a-permanent-leaving-the-battlefield-by-dying-or-bouncing-kept-its-damage-tap-and-attachment-into-its-next-zone-cr-4007-a-recast-golgari-thug-died-on-entry-every-turn) | 24 |
 | Bugs & robustness | [FIXED 2026-09-08 (third run) — a token-doubling board had no bound: the simulator now ends a game whose battlefield passes 1,024 permanents as a cap](#fixed-2026-09-08-third-run--a-token-doubling-board-had-no-bound-the-simulator-now-ends-a-game-whose-battlefield-passes-1024-permanents-as-a-cap) | 26 |
 | Bugs & robustness | [FIXED 2026-09-08 (second run) — a combat-damage `dealer_filter` could never say `IsSource`, and "when you next attack this turn" had no primitive](#fixed-2026-09-08-second-run--a-combat-damage-dealer_filter-could-never-say-issource-and-when-you-next-attack-this-turn-had-no-primitive) | 38 |
 | Bugs & robustness | [FIXED 2026-09-08 — a trigger grant knew two durations, and a planeswalker never recorded who damaged it](#fixed-2026-09-08--a-trigger-grant-knew-two-durations-and-a-planeswalker-never-recorded-who-damaged-it) | 38 |
@@ -42,6 +43,40 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-08 (third run) — a permanent leaving the battlefield by dying or bouncing kept its damage, tap and attachment into its next zone (CR 400.7); a recast Golgari Thug died on entry every turn
+
+Found by sweeping cube under the new battlefield bound: seed 702's dflt
+mirror capped a pair at 50,000 actions on **turn 2,272** with libraries,
+life and board unchanged for two thousand turns. The trace
+(`CRAB_DUMP_TRACES`): on turn 5 both seats' Golgari Thugs trade in
+combat; each Thug's dies trigger puts a creature card from its graveyard
+on top of the library and takes itself; each seat draws it, recasts it
+(the only spell it can cast), and it **dies on resolution with nothing on
+the board to kill it** — then tops itself again. Reproduced in a unit
+test: the card in hand after the top-deck still carried `damage: 1` from
+the block, so the recast 1/1 entered with lethal damage marked and the
+state-based check killed it.
+
+Two leave-the-battlefield routes skipped the CR 400.7 reset that
+`move_card_to` (the effect-driven mover) performs: `place_card_at_resolved_
+zone` (every death and every exile through `remove_from_battlefield_to_
+graveyard_raw` / `_to_exile`) reset "until end of turn" effects, cases,
+rooms and copies but not `damage` / `tapped` / `attached_to`, and
+`remove_from_battlefield_to_hand` cleared counters only. Both now clear
+the tap and the attachment; **the damage reset lives at the entry
+instead** — the stack resolution's push (`stack.rs`, where the card's
+data is already being written), `play_land` (guarded) and `move_card_to`
+(already there), which with the phasing paths (state kept by CR 702.26)
+and fresh tokens is every route onto the battlefield. Measured reason:
+`damage` sits behind the CoW `CardData`, and resetting it on the *leave*
+side deep-copies a dying card every bot clone still shares — **+0.107 %
+sealed Ir on identical games** (PERF Baseline addendum); no rule reads
+damage off a card outside the battlefield. Not a bot defect: the bot was
+right that the recast was free, and it was the engine that made it
+worthless. Golden traces 7/7 unmoved (no seeded game reaches the case).
+Regression test:
+`core_rules::game::golgari_thug_recast_after_topdecking_itself_survives`.
 
 ## FIXED 2026-09-08 (third run) — a token-doubling board had no bound: the simulator now ends a game whose battlefield passes 1,024 permanents as a cap
 

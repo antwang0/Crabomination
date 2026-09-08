@@ -2081,6 +2081,13 @@ impl GameState {
                     // recast. The zone-change path (`Effect::Move` into play)
                     // already re-arms it the same way; the cast path did not.
                     card.summoning_sick = card.definition.is_creature();
+                    // CR 400.7 — and it is a new object on the battlefield:
+                    // nothing it carried in an earlier life is marked on it
+                    // (the leave side clears the tap and the attachment; see
+                    // `place_card_at_resolved_zone` for why damage is reset
+                    // here). The `CardData` write above already unshared the
+                    // card, so this is free.
+                    card.damage = 0;
                     self.battlefield.push(card);
                     if let Some((grant_haste, sacrifice_eot)) = resolve_riders {
                         if grant_haste {
@@ -6739,6 +6746,12 @@ impl GameState {
         // "a permanent left the battlefield this turn" watchers latch.
         card.counters.clear();
         card.keyword_counters.clear();
+        // CR 400.7 — see `place_card_at_resolved_zone`: the bounced card is
+        // a new object in hand (damage is reset where it next enters).
+        card.tapped = false;
+        if card.attached_to.is_some() {
+            card.attached_to = None;
+        }
         if card.controller < self.players.len() {
             self.players[card.controller].permanent_left_battlefield_this_turn = true;
         }
@@ -6869,6 +6882,24 @@ impl GameState {
         card.clear_effects_on_zone_change();
         // CR 707 — a temporary copy reverts as it leaves.
         self.revert_copy_on_leave(&mut card);
+        // CR 400.7 — the tap and the attachment go with the old object too,
+        // as `move_card_to` already did. `damage` is deliberately NOT reset
+        // here: it sits behind the CoW `CardData`, and on a death by damage
+        // the write deep-copies a card every bot clone still shares (+0.107 %
+        // sealed Ir, measured); no rule reads damage off a card outside the
+        // battlefield, so the reset lives at the ENTRY instead — the stack
+        // resolution's push (which already unshares the data), `move_card_to`
+        // and `play_land`. The death path came through here without any of
+        // it, so a 1/1 that traded in combat, put itself on top of the
+        // library with its own dies trigger and was recast next turn entered
+        // with its point of damage and died again — every turn to the action
+        // cap (Golgari Thug, cube seed 702; ENGINE_BACKLOG 2026-09-08).
+        if zone != Zone::Battlefield {
+            card.tapped = false;
+            if card.attached_to.is_some() {
+                card.attached_to = None;
+            }
+        }
         // CR 717.6 — an Astrotorium-backed Attraction card bound for anywhere
         // but the battlefield, exile, or the command zone goes to its owner's
         // face-up junkyard pile instead.
@@ -6916,12 +6947,9 @@ impl GameState {
             // a position field today; if a future replacement needs
             // bottom / shuffled, extend the type.
             Zone::Library => {
-                // CR 122.2 — counters and battlefield state don't survive
-                // the zone change.
+                // CR 122.2 — counters don't survive the zone change.
                 card.counters.clear();
                 card.keyword_counters.clear();
-                card.damage = 0;
-                card.tapped = false;
                 self.players[owner].library.insert(0, card)
             }
             Zone::Command => {
