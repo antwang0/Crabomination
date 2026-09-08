@@ -3904,6 +3904,50 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### The trigger-grant duration carrier and the two hooks READ — sealed default Ir **+0.060 %** / cube **+0.061 %**, traces identical
+
+The last arm of the duration axis (ENGINE_BACKLOG, first section):
+`granted_triggers_eot` became `granted_triggers_timed` with an
+`EffectDuration` per entry, `expire_granted_triggers` joined the five
+sweeps that retire continuous effects of the same durations, the two
+planeswalker damage branches record their damager, and the step and cast
+hooks read the map behind a kind-filtered gate (`189bcaee` + `005a9b8c`).
+Priced against `901c66f4`, first as the untraced tip alone and then with
+the base rebuilt beside it in a second worktree (same `target/`, so the
+deps were warm) and both sides dumped under `CRAB_DUMP_TRACES`
+(`cg.base.*` / `cg.tip.*` in a scratchpad):
+
+```text
+profiling-fast, system allocator, --a dflt --b dflt --games 6 --threads 1 --seed 1
+  sealed  3,023,237,395 -> 3,025,048,377 Ir   (+1,810,982, +0.060 %)   72 / 72 decided
+  cube    2,966,378,057 -> 2,968,192,944 Ir   (+1,814,887, +0.061 %)   48 / 48 decided
+traced, base and tip from one tree (the trace writer is ~+9.4 % Ir on both sides)
+  sealed  3,308,028,286 -> 3,310,152,922 Ir   (+2,124,636, +0.064 %)   72 trace files, 0 differ
+  cube    3,167,588,826 -> 3,169,363,945 Ir   (+1,775,119, +0.056 %)   48 trace files, 0 differ
+```
+
+**Identical games, action for action, and the residue is the price of
+asking "is the map empty?" on paths that run every step.** The self-Ir
+delta table (sealed; cube is the same shape):
+
+```text
+   +830,688  Vec::from_iter                 1,427,126 calls both sides — +0.58 Ir a call, the same collects at a different layout
+   +550,018  fire_step_triggers               406,758 -> 406,822 calls — the `any_own_grant` gate, ~1.3 Ir a call on an empty map
+   -533,450  dispatch_triggers_for_events   1,172,882 calls both sides — the `own_granted` slice read (a `GrantedTrigger` slice, not the old `&[TriggeredAbility]`)
+   +500,554  FnMut::call_mut                  527,650 calls — the two hooks' per-permanent `visit`, one branch each
+   +327,762  check_state_based_actions_into   706,035 -> 706,251 calls — the SBA sweep's `is_empty` read, ~0.5 Ir a call
+   +244,320  GameState::granted_triggers      the iterator adaptor the four chain sites now go through, not inlined at release-fast
+   +212,976  expire_end_of_combat_effects       5,118 calls, +41.6 Ir each — `expire_granted_triggers` builds `values().flatten().any()` before it reads the length
+   +141,484  advance_step'2                   the turn-start and upkeep sweeps, the same 40-Ir shape
+   -157,298  deal_combat_damage_to_target     the planeswalker branch's record (a push and a tally on an empty vec)
+```
+
+Kept as a rules change: the four sweeps that grew are ~40 Ir each on an
+empty map because `expire_granted_triggers` asks `values().flatten().any()`
+first and `is_empty()` never — a one-line fast path worth ~1 M Ir a
+six-game run (0.03 %), filed in the candidates rather than built in this
+pass (the third engine commit was already pricing under it).
+
 ### `GrantActivatedAbilityToMatching`'s permanent carrier READ — sealed default Ir **+0.000 %** / cube **+0.000 %**, outcomes identical
 
 The arm that returned early on every duration but end of turn (Life
@@ -8389,6 +8433,15 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**`expire_granted_triggers`' empty-map fast path (2026-09-08, read off
+the duration-carrier delta table in the Log):** the turn-start, upkeep,
+end-of-combat and cleanup sweeps each ask `granted_triggers_timed.values()
+.flatten().any(pred)` on a map that is empty on almost every board, ~40 Ir
+a sweep against the ~2 Ir an `is_empty()` read costs; `expire_end_of_
+combat_effects` alone reads +212,976 Ir over 5,118 calls. ~1 M Ir a
+sealed six-game run (0.03 %) — one line, take it with the next engine
+change that needs a `profiling-fast` build anyway, not on its own.
 
 **The combat chains (rounds 55–56) doubled the default's wall clock;
 round 58 took a third of it back and this is still the top of the
