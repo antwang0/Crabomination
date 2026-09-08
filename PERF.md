@@ -2791,6 +2791,39 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-278)` and round 71 — the chains read the menu's scores, the block chain gate refuted: closing state at the `(-278)` tip, THE NEW UNTRACED DEFAULT-PILOT BASE
+
+One bot-side leg and one refuted round after the round-70 addendum below
+(Log: `(-278)`, round 71; ML_NOTES round 71; the candidates' "THE BLOCK
+CHAIN SPLIT"). `(-278)` is behaviour-preserving — every trace identical —
+so the six-game dflt totals below are the round-70 games, cheaper; the
+untraced pair is the base for every later A/B (the round-70 Log's totals
+were traced, +5.5 %). `--bench` (`gang`, `fixed`) carries no chain and is
+byte-identical in its counters.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1, UNTRACED, one tree:  2,725,852,967 (the round-71 tip) -> 2,572,709,132 Ir  (-5.62 %, same games, 72 / 72)
+  cube   dflt, same recipe:                                                   2,645,404,719 -> 2,515,279,341 Ir  (-4.92 %, same games, 48 / 48)
+  traces CRAB_DUMP_TRACES both sides, both pools: 72 + 48 files, 0 differ
+  round 71   bchain-skipg / bchain-empty / bchain-seed: sealed wall 0.886 / 0.900 / 0.900, ladder 48.50 / 47.67 / 48.30 pooled — every cell wholly below 50, PARKED
+--bench release-fast (mimalloc) at the (-278) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1);
+        bin_bytes 126,740,744 (-4,120 B against 1d98b202); 541.2 / 494.7 / 522.7 games/s, three single runs on the quiet box (host_calib_ms 53 / 66 / 57 — this host's spread)
+suite   19,286 / 0 / 5 (one test added: the three round-71 arms on the round-56 board and the greedy block); golden 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+gate    cargo check --profile release-fast -p crabomination --bin bot_ladder   clean
+audit   audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review (21,795 cards)
+actor   callgrind selfplay_train --actors 1 --games 60 --steps 1 --seed 7 at the (-278) tip (profiling-fast, system allocator): 2,490,213,350 Ir, 6,063 rows —
+        -20.2 % against 2c63ce52's 3,121,212,158 (different games: round 70 + (-278)); the recorded shape (candidates, "THE ACTOR RE-READ AT THE (-278) TIP")
+grid    scripts/robustness_grid.sh --wide, PILOTS with dflt prepended, at the round-71 tip (the round-70 default, the first --wide run under it):
+        52 ladder cells / 301,600 games on `all` + `sealed` x 26 seeds x 400 — 0 panics, 0 assertion fires, 0 stuck, 4 cap / 12 draw (the caps: seeds 53
+        and 73 on `all`, the recorded Beacon of Immortality fingerprint, unchanged); 2 actor cells x 30,000 games (seeds 7 / 20260901, 71.2 / 67.8 games/s
+        on the audit build — 62.7 / 60.1 before round 70) 0 failures; 46 pilot cells (dflt + the script's 45) 0 failures. Exit 1 is the four caps, by the script's rule
+census  CRAB_ATTACK_CENSUS=1 sealed 14,400 games seed 43 at the round-71 tip: block chain 4.77 sims a search, split greedy / nobody / other 46.6 / 27.6 / 25.8 % of the
+        sims, won 24.9 / 48.7 / 40.1 %; at the (-278) tip (1,200 games): attack chain sims 21,096 + served 10,288, block chain 30,386 + 6,026
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores; cold debug suite build 5m08s (a warm registry), cold profiling-fast bot_ladder 8m03s,
+        warm engine rebuild 2m51s; release-fast 14m30s under the grid's three threads
+```
+
 ### Round 70 — the attack chain gated on the menu's outcome: closing state at `1d98b202`, THE NEW DEFAULT-PILOT BASE
 
 One bot-side throughput leg after the `(-277)` addendum below (Log, ML_NOTES
@@ -8858,6 +8891,25 @@ now read off the menu's scores, sealed -5.62 % / cube -4.92 %, traces
 identical.** The chain's remaining sims are all novel sets; the next
 thing of this shape would be a sim memo *across* decisions (the same
 declaration re-asked after a no-op priority pass), which has no census.
+
+**THE ACTOR RE-READ AT THE `(-278)` TIP (`cg.actor.out` in a scratchpad,
+the same `--actors 1 --games 60 --steps 1 --seed 7` recipe, profiling-fast
+`-p crabomination_ml --no-default-features`, system allocator confirmed:
+2,490,213,350 Ir, 60 games / 6,063 rows — -20.2 % against the `2c63ce52`
+record below, DIFFERENT GAMES: round 70 moved the pilot's declarations
+and `(-278)` is the rest), so nobody re-takes it.** The shape: the game
+90.0 % inclusive, `perform_action_inner` 57.3 %, `pick_attacks_scored`
+39.1 % (`simulate_attack_outcome_once` 38.1 %, the chain's closure 12.7 %),
+`main_phase_action_with` 26.6 %, `pick_blocks_scored` 7.8 %, the encoder
+5.7 %, the deck builder 2.8 % (`rank_shape` 0.75 % self). Self: `__memcpy`
+3.57 %, the allocator 9.8 % (`_int_free` 3.32, `_int_malloc` 2.52,
+`malloc` 2.47, `free` 1.49), `dispatch_triggers_for_events` 1.74 % + 0.63
+slice iteration, `compute_permanent_pass` 1.34 %, `gather_continuous_
+effects_inner` 1.19 %, `sba_board_scan` 1.15 %, `perform_action_inner`
+1.06 %, the CoW unshare 0.99 %, `encode_state_inner` 0.83 % + 0.49,
+`encode_printed_into` 0.70 %, `Normal::sample` 0.73 % + `rand_chacha` 0.49
+(the net init, once a process). The recorded shape at a lower total;
+nothing above 0.2 % self with a device.
 
 **THE ACTOR RE-READ AT THE RUN'S TIP (`2c63ce52`, `cg.actor.out` in a
 scratchpad, `--actors 1 --games 60 --steps 1 --seed 7`, profiling-fast

@@ -28,30 +28,26 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force;
-   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-277)` is the last claimed, `(-278)` next. Gotchas in **CLAUDE.md**;
+   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-278)` is the last claimed, `(-279)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
-   running `cargo build`. Cold here: debug suite build ~25 min, `profiling-fast` bot_ladder 8m42s, `release-fast` ~12 min; a detached `setsid
-   nohup` chain survives the tool timeout. ⚠ A second worktree sharing `target/` builds NOTHING unless you `touch` its sources first —
-   `md5sum` both A/B binaries before reading a number (CLAUDE.md, PERF "How to measure"; this run's first base was the tip).
-2. **Gates at the tip (PERF Baseline, the round-70 and `(-277)` addenda):** suite 19,285 / 0 / 5, clippy, golden 7/7 unmoved, `--bench`
-   counters identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), the engine legs' Ir against `4db20c51` sealed **-0.132 %** / cube
-   **-0.127 %** with every trace identical, `audit_stubs` / `audit_incomplete --structural-only` both 0, `robustness_grid.sh --wide` at
-   `2c63ce52` clean but for the four recorded Beacon caps; the round-70 default swept clean on the audit build (9 cells / 28,800 games,
-   the addendum's `sweep` line) — the full `--wide` grid has not been re-run under it, which is the next run's first cell.
-3. **Engine, this run:** the last printed-only hooks — the three combat listener walks — read instance grants; every hook outside the
-   dispatcher asks `any_granted_trigger_of_kind` and walks `for_each_triggerer_or_all`, whose one `f(c)` call site is what inlined the
-   step/cast hooks' closures for the first time (`(-277)`, Log: the five-row build table is the lesson). The grant-bucket class is a
-   ratchet now (`catalog_registration::every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket`: kind x scope x bucket over
-   every factory, plus "no granted `once_per_turn`"); the self-ETB hook is printed-only by construction.
-4. **Perf/build:** **round 70 ADOPTED (ML_NOTES, PERF Log): the attack chain skipped where the menu alone picked a non-empty greedy —
-   wall 0.841 sealed / 0.870 cube at no loss; THE NEW DEFAULT-PILOT BASE is traced sealed 2,882,893,998 / cube 2,820,089,306 at `1d98b202`
-   (different games from the `2c63ce52` block's 3,315,951,121 / 3,144,754,672 — never an engine delta).** Engine profile FLAT (actor
-   3,121,212,158 at `2c63ce52`, the recorded shape). The device that found round 70 is a census split of who wins the sims a search buys
-   (`attack_census` N[29..35]); the filed twin is the block chain (4.87 sims a search, its plan wins 37.5 %) — split its wins the same way
-   before a gated round. Do not re-read either self table without a device.
-5. **Cards/bugs:** two filed rows closed by one engine line each (ENGINE_BACKLOG, first section): Calix's second ability (`dealer_filter`
-   now sees `IsSource`; `TRIGGER_LIMIT_ABILITY_DROPPED` empty) and All-Out Assault's next-attack untap (`OnYourNextAttackThisTurn`, a new
-   one-shot delayed kind). INCOMPLETE_CARDS structural 0 / stubs 0; the oracle-verb table's rows are all filed on primitives or bespoke.
+   running `cargo build`. Cold here: debug suite build ~5-25 min, `profiling-fast` bot_ladder 8m03s, `release-fast` ~12 min; a detached `setsid
+   nohup` chain survives the tool timeout. ⚠ An untraced callgrind run is ~5.5 % under a `CRAB_DUMP_TRACES` one — the round-70 Log's
+   dflt totals were traced; **the untraced `(-278)` pair (PERF Log) is the base from here**, and A/B both sides from one tree, `md5sum` both.
+2. **Gates at the tip (PERF Baseline, the `(-278)` addendum):** suite 19,286 / 0 / 5, clippy, golden 7/7 unmoved, `--bench` counters
+   identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0), `audit_stubs` / `audit_incomplete --structural-only` both 0, `robustness_grid.sh
+   --wide` re-run under the round-70 default (the first): 52 ladder cells / 301,600 games clean but for the four recorded Beacon caps, 2
+   actor cells / 60,000 games and 46 pilot cells 0 failures.
+3. **Perf, this run:** **`(-278)` TAKEN (Log): both chains read a candidate the menu already simulated — sealed -5.62 % / cube -4.92 %, 120
+   traces identical; actor 2,490,213,350 at the tip (candidates, the re-read: the recorded shape at -20 % since round 70).** **Round 71
+   REFUTED (Log, ML_NOTES): the block chain gated on the menu's outcome loses 1.5-2.3 points on every arm, even seeded from greedy — its
+   value is the reassignment; the block side has no round-70.** The three flags stay off as measured arms (`bchain-skipg` / `-empty` /
+   `-seed`). The census device (`block_census` N[7..16], `attack_census` N[35]) now also counts candidates served from the menu.
+4. **Next moves, in order:** (a) the block sim body is the block search's remaining cost (7.8 % of the actor; `simulate_block_outcome_once`
+   plays to end of combat — read its passes by context before touching it); (b) the attack sim's horizon / pass count is the largest
+   remaining strength question (38 % of the actor), a gated round, not a leg; (c) engine self tables are the recorded floor on all three
+   pools — do not re-read them without a device. Nothing half-wired on the branch; no open TODO/FIXME in code.
+5. **Cards/bugs:** none this run. INCOMPLETE_CARDS structural 0 / stubs 0 at the previous tip; ENGINE_BACKLOG's first section is the
+   bug record (no open entries under "Engine — Robustness / defects").
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
