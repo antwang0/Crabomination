@@ -8675,6 +8675,24 @@ does not carry them. Round 56's second candidate (the 65 % start-score
 reuse) is CLOSED: it was the share of searches the chain runs on, reuse
 is 100 % of runs (`block_census` now prints both).
 
+**THE ATTACK / BLOCK SEARCH CENSUS AT THE RUN'S TIP (`CRAB_ATTACK_CENSUS=1`,
+sealed dflt mirror, 1,200 games, seed 43, `2c63ce52`), so the next bot-side
+round starts from numbers, not from round 68's:** 14,572 attack searches,
+49,464 menu candidates (3.39 a search), **chain sims 52,224 (3.58 a
+search — the chain now out-sims the menu)**, every search reuses its
+start; won by greedy 48.8 % / nobody 25.7 % / a holdback 12.6 % / the
+chain 12.8 % (it proposed a new set 18.0 %); from an empty greedy 1,882
+chains, 386 proposed and 386 won. Block: 7,290 searches, 15,192 candidates
+(2.08), chain sims 35,536 (4.87 a search), the chain ran on 98.9 % and
+its plan won 37.5 %. The response layer is free (removal asks 347,418 /
+sims 1,156; trick and counter sims 0). **The one lead this leaves is the
+attack chain's 3.58 sims a search against its 12.8 % win rate: a census
+of chain wins *by menu winner* (does the chain ever beat a greedy that
+won its own menu?) would say whether gating the chain on the menu's
+outcome is a no-loss halving — a strength question for a gated round
+(`.ladder/run_r68_simcast.sh` is the template; a 12,000-game sealed cell
+is ~65 s here).** 1,200 dflt sealed games ran in 6.5 s on 3 threads.
+
 **THE ACTOR RE-READ AT THE RUN'S TIP (`2c63ce52`, `cg.actor.out` in a
 scratchpad, `--actors 1 --games 60 --steps 1 --seed 7`, profiling-fast
 `-p crabomination_ml --no-default-features`, system allocator confirmed:
