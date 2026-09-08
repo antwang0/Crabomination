@@ -52,6 +52,13 @@ CRAB_CAP_DIAG=1 target/profiling-fast/bot_ladder --a gang --b gang \
 # which is the ONLY way to see a *slow* game: one that decides is never
 # "undecided", and `--decks all --seed 43 --games 370` hides a nine-minute
 # game behind `0 undecided`.
+# AND `CRAB_MAX_ACTIONS=<n>` lowers the 50,000-action cap for the run, so
+# the slow game ENDS at `n` instead of holding one thread for an hour under
+# a searching pilot (a dflt cube job at seed 43 sat single-threaded for over
+# an hour on 2026-09-08 with nothing to name it). Pair the two: the game
+# is capped at `n` and the cap line names its board.
+#   CRAB_MAX_ACTIONS=4000 CRAB_CAP_DIAG=1 target/profiling-fast/bot_ladder \
+#     --a dflt --b dflt --games 1200 --threads 3 --seed 43 --decks cube
 
 # WHICH GAME DIVERGED, AND AT WHICH ACTION. Every game the in-process paired
 # loop plays is written as its golden-trace text (one line per accepted
@@ -7163,6 +7170,27 @@ subtree is the recorded floor: deaths (`(-217)`), the SBA scan, the two
 trigger walks (`(-277)`), the views (`(-194)`..`(-196)`); the per-combat
 cost moves only with the sim count or the horizon, both strength
 questions.
+
+**THE ATTACK SIM'S HORIZON, CENSUSED AT THE `(-279)` TIP (`CRAB_ATTACK_CENSUS=1`
+slots 36..40, sealed dflt mirror `--games 1200` = 14,400 games, seed 43),
+so nobody builds the arm:** 834,728 attack sims, 792,922 reached the
+opponent's Declare Attackers, **142,464 (18.0 %) declared nobody there —
+and the iterations past that point are 284,928 of 27,333,306 (1.0 %),
+two a sim**: the engine already skips an empty combat (CR 508.8), so
+"stop the sim at an empty crack-back" (NEXT (a)'s cheapest arm) has a
+1 % ceiling and was refuted off the census, never gated. What the
+horizon still holds is the *populated* crack-back — the opponent's
+declaration, blocks and damage — which is the information the sim exists
+to see (its doc), and the passes before it (upkeep / draw / main 1's one
+cast): 32.7 loop iterations a sim on sealed. A shorter horizon is a
+strength round with a real loss risk and no census that prices it
+positively; not next. **The instrument was not kept**: five counters and
+one flag in `simulate_attack_outcome_once`'s loop read **+0.126 %** sealed
+Ir on the default path with the census off (2,562,977,750 ->
+2,566,203,660 — the inlining decision retaken, `(-182)`'s rule), which is
+more than the arm could ever have returned; the numbers above are the
+record. Re-create it off `fuel` arithmetic (iterations = fuel spent), not
+per-iteration counters, if the question is ever re-asked.
 
 **The combat chains (rounds 55–56) doubled the default's wall clock;
 round 58 took a third of it back and this is still the top of the

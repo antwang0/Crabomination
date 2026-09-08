@@ -41,8 +41,10 @@ sixty-seventh pass, so don't re-take that.
    cube -0.272 % / fixed -0.332 %, 120 traces identical.** The block sim READ BY CONTEXT (candidates): it is `resolve_combat_into` (105 of
    196 M) plus the declaration, nothing bot-side; `resolve_combat_into` is 17.0 % of sealed dflt program-wide and every callee under it is
    a recorded floor. The rule: a per-state scratch is a per-*clone* scratch — look for the nested call that takes the slot's replacement.
-4. **Next moves, in order:** (a) the attack sim's horizon / pass count is the largest remaining strength question (38 % of the actor), a gated
-   round (`.ladder/run_r71_blockchain.sh` is the template; 12,000-game cells are ~25 s here), not a leg; (b) two thin allocation rows left
+4. **Next moves, in order:** (a) the attack sim's horizon: its cheapest arm (stop at an empty crack-back) is REFUTED off a census (candidates:
+   the engine already skips an empty combat, 1 % of iterations past it, and the instrument itself cost +0.126 % so it was not kept); what is
+   left is a shorter horizon on a populated crack-back — a strength round with a real loss risk, `.ladder/run_r71_blockchain.sh` the
+   template, 12,000-game cells ~45 s on this box today; (b) two thin allocation rows left
    from the read, not built: `fire_delayed_event_watchers`' per-dispatch collects on boards holding any delayed trigger (21,712 / 5.5 M,
    0.2 %) and the SBA sweep's collects (22,810 / 9.5 M); `GameState::clone` is 2.45 allocations a clone — floor; (c) engine self tables are
    the recorded floor on all three pools — do not re-read them without a device. Nothing half-wired on the branch; no open TODO/FIXME in code.

@@ -1999,6 +1999,10 @@ fn play_one_game_traced(
     hooks: GameHooks<'_>,
 ) -> GameOutcome {
     let GameHooks { mut trace, mut cross } = hooks;
+    // `CRAB_MAX_ACTIONS=<n>` lowers the action cap for a diagnostic run, so
+    // a game that would hold a thread for an hour under the 50,000 default
+    // ends at `n` and `CRAB_CAP_DIAG=1` names its board. Read once.
+    let max_actions = max_actions_override().unwrap_or(max_actions);
     // Installed for the duration of this game and cleared after, so a
     // seeded game can't leak its stream into whatever the worker plays
     // next. See `bot::set_jitter_seed`.
@@ -2161,6 +2165,13 @@ fn play_one_game_traced(
 /// a trigger or activation loop, an unbounded battlefield is a token loop.
 /// `CRAB_CAP_DIAG` — set at all (outer `Some`) and, if it parses above 1, the
 /// action floor to report at (inner `Some`). See PERF `(-169)`.
+fn max_actions_override() -> Option<usize> {
+    static CAP: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
+    *CAP.get_or_init(|| {
+        std::env::var_os("CRAB_MAX_ACTIONS")?.to_str()?.parse::<usize>().ok().filter(|n| *n > 0)
+    })
+}
+
 fn cap_diag_floor() -> Option<Option<usize>> {
     static FLOOR: std::sync::OnceLock<Option<Option<usize>>> = std::sync::OnceLock::new();
     *FLOOR.get_or_init(|| {
