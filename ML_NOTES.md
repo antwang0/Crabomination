@@ -4597,3 +4597,63 @@ seeded games reaches a search the gate changes (the suite read 19,285 /
 runs at ≈ 0.69 (rounds 58–60, `(-255)`, round 68) × 0.841 ≈ **0.58** of
 its sealed wall clock. Six-game Ir and the tip dumps are in PERF's Log
 under round 70.
+
+## Round 71 — the block chain gated on the menu's outcome: LOSS on all three arms (48.5 / 47.7 / 48.3 pooled), PARKED (2026-09-08)
+
+The round-70 device on the block side. The block census's split (PERF
+candidates, "THE BLOCK CHAIN SPLIT"; `CRAB_ATTACK_CENSUS=1`, sealed dflt
+mirror, 14,400 games, seed 43) said the block chain runs on 98.8 % of block
+searches at 4.77 sims each, and by what the menu alone would have chosen:
+on a non-empty greedy board it spends 46.6 % of its sims (5.88 a search)
+to win 24.9 % of the time, on the no-blocks board 27.6 % (2.62) to win
+48.7 %, on a chump / gang / greedy-minus-one board 25.8 % (11.25) to win
+40.1 %. Round 70's reading was that the attack chain's greedy-board wins
+were not ladder wins; the question was whether the block chain's are.
+Three one-flag arms on the default (`.ladder/run_r71_blockchain.sh`,
+pre-registered, base `dflt` = the round-70 default), one `profiling-fast`
+binary:
+
+* `bchain-skipg` (`block_chain_skip_greedy`) — no chain when the menu
+  alone picked a non-empty greedy plan.
+* `bchain-empty` (`block_chain_empty_only`) — the chain only from the
+  no-blocks board, round 56's own case.
+* `bchain-seed` (`block_chain_from_menu`) — the chain grows from the
+  menu's winner when that plan is non-empty, instead of re-deriving it
+  from "no blocks" one pair at a time; it can extend greedy but no longer
+  reassign a blocker greedy used.
+
+**Cost** (step 0, 200 × 12 mirrors, 5 paired reps, median wall/`dflt`):
+
+| arm | sealed | cube |
+|---|---|---|
+| `bchain-skipg` | 0.886 (1.057 / 0.985 / 0.886 / 0.868 / 0.883) | 0.921 |
+| `bchain-empty` | 0.900 (0.900 / 0.956 / 0.900 / 0.803 / 0.896) | 0.895 |
+| `bchain-seed` | 0.900 (0.900 / 1.015 / 0.957 / 0.855 / 0.870) | 1.000 |
+
+**Strength** (sealed mirror `--a <arm> --b dflt`, 1,000 × 12 = 12,000
+games a cell):
+
+| arm | 43 | 97 | 151 | 199 | pooled | verdict |
+|---|---|---|---|---|---|---|
+| `bchain-skipg` | 48.5 [48.3, 48.8] | 48.5 [48.2, 48.8] | 48.4 [48.1, 48.7] | 48.6 [48.3, 48.8] | 48.50 | LOSS |
+| `bchain-empty` | 47.6 [47.2, 47.9] | 47.9 [47.6, 48.2] | 47.6 [47.3, 48.0] | 47.6 [47.3, 47.9] | 47.67 | LOSS |
+| `bchain-seed` | 48.3 [48.0, 48.6] | 48.4 [48.2, 48.7] | 48.3 [47.9, 48.6] | 48.2 [47.9, 48.5] | 48.30 | LOSS |
+
+**Readings.** (1) The block chain's wins are ladder wins on every board
+class: the greedy board alone is worth 1.5 points, greedy plus "other"
+2.3. The attack chain's greedy-board proposals won the sim's metric and
+not the ladder; the block chain's win both. (2) `bchain-seed` is the
+sharper finding — the chain still runs and still extends, and it loses
+1.7 points, so what the chain is worth on the greedy board is the
+**reassignment** of a blocker greedy already placed (greedy blocks A with
+X; the better plan is X and Y on B), which no plan grown from greedy can
+reach. (3) The ~10 % of the sealed wall clock the arms buy is the block
+chain's price for ~2 points, well past the round's adopt rule; parked, all
+three, the flags kept as measured arms (round 59 / 61 precedent). The
+next cut at the block search's cost is a cheaper sim body, not a cheaper
+search; the "other" board's 11 sims a search (several free blockers, every
+pair a candidate at every step) is the one census row with a size left,
+and it wins 40 % of the time.
+
+**Not adopted.** `EvalWeights::default_const()` is unchanged; golden
+traces and `--bench` untouched.

@@ -3996,6 +3996,35 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### Round 71 REFUTED — the block chain gated on the menu's outcome, three arms: paired wall clock **0.886 / 0.900 / 0.900** sealed, ladder **48.50 / 47.67 / 48.30** pooled, every cell wholly below 50, all parked
+
+The round-70 device on the block side (`.ladder/run_r71_blockchain.sh`,
+ML_NOTES round 71; the census split is in the candidates, "THE BLOCK
+CHAIN SPLIT"). Three one-flag arms on the default, one `profiling-fast`
+binary, the 200 x 12 x 5-rep paired clock and four sealed seeds x 12,000:
+
+```text
+  arm           flag                        sealed wall/dflt   cube wall/dflt   ladder cells (43 / 97 / 151 / 199)    pooled
+  bchain-skipg  block_chain_skip_greedy     0.886 (mean 0.936)  0.921           48.5 / 48.5 / 48.4 / 48.6              48.50   LOSS
+  bchain-empty  block_chain_empty_only      0.900 (0.891)       0.895           47.6 / 47.9 / 47.6 / 47.6              47.67   LOSS
+  bchain-seed   block_chain_from_menu       0.900 (0.919)       1.000           48.3 / 48.4 / 48.3 / 48.2              48.30   LOSS
+  every interval's high is below 50 (48.8 at best); 12,000 decided / 0 undecided a cell; 24-35 s a cell on 3 threads
+```
+
+What it says, so nobody re-gates it: **the block chain's wins are ladder
+wins on every board class**, where the attack chain's greedy-board wins
+were not (round 70). Skipping it on the greedy board alone costs 1.5
+points, on the greedy and "other" boards 2.3, and even *seeding* it from
+the menu's own winner — the chain still runs, it only stops reassigning a
+blocker greedy already used — costs 1.7. The chain's value is the
+reassignment, not the extension. The three flags stay as measured arms
+(off, the round-59 / round-61 precedent); the ~10 % of the default's
+sealed wall clock they would buy is the block chain's price for ~2
+points, and the next cut at the block search is a cheaper *sim*, not a
+cheaper *search*. Golden traces and `--bench` untouched (no flag on the
+default). The census's `menu_class` fold and the seeded start are the
+only code on the default path: ~10 Ir a block search, not read.
+
 ### Round 70 ADOPTED — the attack chain skipped when the menu alone picked a non-empty greedy (`attack_chain_skip_greedy`): sealed default wall clock **0.841** / cube **0.870** at no loss; six-game Ir sealed **-13.06 %** / cube **-10.32 %** (different games)
 
 The census question the previous candidates entry filed, answered the
@@ -8751,6 +8780,39 @@ of the same shape is the block chain (4.87 sims a block search, its plan
 wins 37.5 %): split *its* wins by what the block menu alone would have
 chosen. 1,200 dflt sealed games ran in 6.5 s on 3 threads (4.6 s under
 round 70).
+
+**THE BLOCK CHAIN SPLIT (`CRAB_ATTACK_CENSUS=1`, sealed dflt mirror
+`--games 1200` = 14,400 games, seed 43, at the round-70 tip; the
+`block_census` slots 7..15), the question the entry above filed, answered
+the next run:** 88,328 block searches, 183,484 candidates (2.08), the chain
+ran on 98.8 % at **4.77 sims a search (420,978)** and its plan won 38.2 %.
+By what the menu alone would have chosen (its argmax, greedy winning ties):
+
+```text
+  menu-alone winner   chained   chain won        sims (share)      sims/search
+  non-empty greedy     33,366    8,294 (24.9 %)  196,182 (46.6 %)   5.88
+  no blocks            44,272   21,566 (48.7 %)  116,024 (27.6 %)   2.62
+  other (chump/gang/-1) 9,670    3,876 (40.1 %)  108,772 (25.8 %)  11.25
+  cube (3,200 games):   5,298 / 1,150 (21.7 %) / 42,120 (52 %);  8,258 / 3,186 (38.6 %) / 23,894;  1,112 / 398 (35.8 %) / 14,702
+```
+
+The greedy board is the round-70 shape again — the chain grows from
+"no blocks", re-derives greedy one pair at a time and beats it a quarter
+of the time on the sim's own metric — and the "other" board is the
+expensive one (11 sims a search: the menu's chump or gang plan means a
+board with several free blockers, so every step has many pairs). The
+no-blocks board is the chain's whole reason (round 56's gang from
+nothing) and is left alone by every arm. **CLOSED as a gate lead by round
+71 (Log, ML_NOTES, `.ladder/run_r71_blockchain.sh`): three one-flag arms
+— `bchain-skipg` (no chain on the greedy board), `bchain-empty` (the
+chain only from no blocks), `bchain-seed` (the chain grows from the
+menu's winner) — read 48.50 / 47.67 / 48.30 pooled, every cell wholly
+below 50, for ~0.89-0.90 of the sealed wall clock.** The block chain's
+wins are ladder wins on every board class, and the reassignment (not the
+extension) is what wins; the block side has no round-70. What is left of
+the block search's cost is the sim body (`simulate_block_outcome_once`,
+the combat window's passes) and the "other" board's 11 sims a search —
+a cheaper sim, never a cheaper search.
 
 **THE ACTOR RE-READ AT THE RUN'S TIP (`2c63ce52`, `cg.actor.out` in a
 scratchpad, `--actors 1 --games 60 --steps 1 --seed 7`, profiling-fast

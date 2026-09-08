@@ -446,6 +446,39 @@ pub struct EvalWeights {
     /// loss, `.ladder/run_r70_chainskip.sh`); `chain-skipg-off` is the
     /// control. Never on the empty-greedy board, which is the wide chain's.
     pub attack_chain_skip_greedy: bool,
+    /// Skip the block chain when the menu alone already chose a non-empty
+    /// greedy plan — the round-70 gate on the block side. The census
+    /// behind it (PERF candidates, `CRAB_ATTACK_CENSUS`, sealed dflt
+    /// mirror, 14,400 games): the chain ran on 98.8 % of block searches at
+    /// 4.77 sims each, and where the menu alone picked greedy it spent
+    /// 46.6 % of those sims to win 24.9 % of the time, against 48.7 % on
+    /// the no-blocks board.
+    ///
+    /// **Measured a LOSS (round 71)**: 48.5 / 48.5 / 48.4 / 48.6 vs the
+    /// round-70 default for 0.886 of the sealed wall clock — the block
+    /// chain's greedy-board wins are ladder wins, where the attack
+    /// chain's were not. Off; ladder `bchain-skipg` is the measured arm.
+    pub block_chain_skip_greedy: bool,
+    /// Run the block chain only from the no-blocks board — the one round
+    /// 56 built it for (the bare menu's gang block). Skips the chain where
+    /// the menu alone picked greedy or another candidate (a chump, a
+    /// greedy-minus-one, a gang), 72.4 % of its sims on sealed.
+    ///
+    /// **Measured a LOSS (round 71)**: 47.6 / 47.9 / 47.6 / 47.6 vs the
+    /// round-70 default for 0.900 of the sealed wall clock. Off; ladder
+    /// `bchain-empty` is the measured arm.
+    pub block_chain_empty_only: bool,
+    /// Seed the block chain from the menu's own winner when that plan is
+    /// non-empty, instead of growing every plan from "no blocks": the chain
+    /// then extends greedy (a second blocker on an attacker, a chump the
+    /// menu lacked) rather than re-deriving it one pair at a time, and can
+    /// no longer reassign a blocker greedy already used.
+    ///
+    /// **Measured a LOSS (round 71)**: 48.3 / 48.4 / 48.3 / 48.2 vs the
+    /// round-70 default for 0.900 of the sealed wall clock — the chain's
+    /// value on the greedy board is the reassignment, which no plan grown
+    /// from greedy reaches. Off; ladder `bchain-seed` is the measured arm.
+    pub block_chain_from_menu: bool,
     /// The greedy attack filter judged against the blockers that can
     /// legally block each attacker (round 65). Off, the filter's suicide
     /// check reads only *ground* blockers — a flier is never held back
@@ -980,6 +1013,9 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_skip_open: false,
             attack_chain_skip_greedy: false,
+            block_chain_skip_greedy: false,
+            block_chain_empty_only: false,
+            block_chain_from_menu: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
@@ -1078,6 +1114,9 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_skip_open: false,
             attack_chain_skip_greedy: false,
+            block_chain_skip_greedy: false,
+            block_chain_empty_only: false,
+            block_chain_from_menu: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
@@ -1159,6 +1198,9 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_skip_open: false,
             attack_chain_skip_greedy: false,
+            block_chain_skip_greedy: false,
+            block_chain_empty_only: false,
+            block_chain_from_menu: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
             own_graveyard_picks: false,
@@ -2406,6 +2448,27 @@ impl EvalWeights {
     /// round-68 default. Ladder `chain-skipg-off`.
     pub const fn attack_chain_skip_greedy_off() -> Self {
         Self { attack_chain_skip_greedy: false, ..Self::default_const() }
+    }
+
+    /// The block chain skipped when the menu alone picked a non-empty
+    /// greedy: ladder `bchain-skipg` as A against the default (round 71).
+    /// See [`block_chain_skip_greedy`](Self::block_chain_skip_greedy).
+    pub const fn block_chain_skip_greedy_on() -> Self {
+        Self { block_chain_skip_greedy: true, ..Self::default_const() }
+    }
+
+    /// The block chain only from the no-blocks board: ladder `bchain-empty`
+    /// as A against the default (round 71). See
+    /// [`block_chain_empty_only`](Self::block_chain_empty_only).
+    pub const fn block_chain_empty_only_on() -> Self {
+        Self { block_chain_empty_only: true, ..Self::default_const() }
+    }
+
+    /// The block chain seeded from the menu's winner: ladder `bchain-seed`
+    /// as A against the default (round 71). See
+    /// [`block_chain_from_menu`](Self::block_chain_from_menu).
+    pub const fn block_chain_from_menu_on() -> Self {
+        Self { block_chain_from_menu: true, ..Self::default_const() }
     }
 
     /// Both pair-move restrictions: ladder `pairs-both` as A against
@@ -10141,8 +10204,13 @@ pub mod block_census {
     /// `[calls, menu candidates, sims the chain ran, the chain proposed a
     /// plan the menu lacked, ... and it won, chain start scores reused,
     /// chains that reached their start (the reuse denominator: a search
-    /// with no free blocker or no legal pair returns before it)]`.
-    pub static N: [AtomicU64; 7] = [const { AtomicU64::new(0) }; 7];
+    /// with no free blocker or no legal pair returns before it), then
+    /// three slots each of chained searches / chain wins / chain sims
+    /// split by what the MENU alone would have chosen (a non-empty greedy
+    /// / no blocks / another candidate: a chump, greedy-minus-one or a
+    /// gang) — the census behind gating the chain on the menu's outcome,
+    /// the round-70 device on the block side]`.
+    pub static N: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
 
     pub fn on() -> bool {
         super::attack_census::on()
@@ -10154,7 +10222,15 @@ pub mod block_census {
         }
     }
 
-    pub(super) fn tick(menu: usize, chosen: usize, chain_novel: bool) {
+    /// `menu_winner` is the class of the menu-alone argmax (0 greedy /
+    /// 1 no blocks / 2 other) when the chain reached its start, with the
+    /// sims the chain ran on this search.
+    pub(super) fn tick(
+        menu: usize,
+        chosen: usize,
+        chain_novel: bool,
+        menu_winner: Option<(usize, u64)>,
+    ) {
         N[0].fetch_add(1, Relaxed);
         N[1].fetch_add(menu as u64, Relaxed);
         if chain_novel {
@@ -10163,9 +10239,16 @@ pub mod block_census {
                 N[4].fetch_add(1, Relaxed);
             }
         }
+        if let Some((class, sims)) = menu_winner {
+            N[7 + class].fetch_add(1, Relaxed);
+            if chosen >= menu {
+                N[10 + class].fetch_add(1, Relaxed);
+            }
+            N[13 + class].fetch_add(sims, Relaxed);
+        }
     }
 
-    pub fn snapshot() -> [u64; 7] {
+    pub fn snapshot() -> [u64; 16] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -10985,7 +11068,13 @@ struct BlockChainSetup<'a> {
     blockers: Vec<(&'a crate::card::CardInstance, std::sync::Arc<crate::game::layers::ComputedPermanent>)>,
     attackers: Vec<(&'a crate::card::CardInstance, Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>)>,
     can: Vec<Vec<bool>>,
+    /// A scored menu plan to grow from instead of the repaired "no blocks"
+    /// ([`block_chain_from_menu`](EvalWeights::block_chain_from_menu)).
+    seed: Option<usize>,
 }
+
+/// A chain's finished plan, its score, and the sims it ran.
+type ChainedBlocks = (Vec<(CardId, CardId)>, i32, u64);
 
 impl<'a> BlockChainSetup<'a> {
     fn new(state: &'a GameState, seat: usize) -> Option<Self> {
@@ -11016,7 +11105,7 @@ impl<'a> BlockChainSetup<'a> {
         if !can.iter().flatten().any(|&x| x) {
             return None;
         }
-        Some(Self { blockers, attackers, can })
+        Some(Self { blockers, attackers, can, seed: None })
     }
 }
 
@@ -11037,7 +11126,7 @@ impl<'a> BlockChainSetup<'a> {
 ///
 /// `menu` / `menu_scores` are what [`pick_blocks_scored`] already
 /// simulated (index 0 greedy); the start plan's score is reused when the
-/// menu holds that plan.
+/// menu holds that plan, or is the plan `setup.seed` names.
 fn block_chain_candidate(
     state: &GameState,
     seat: usize,
@@ -11046,27 +11135,37 @@ fn block_chain_candidate(
     menu_scores: &[(usize, i32)],
     setup: BlockChainSetup<'_>,
     starts: &SimStarts,
-) -> Option<(Vec<(CardId, CardId)>, i32)> {
+) -> Option<ChainedBlocks> {
     use crate::card::Keyword;
-    let BlockChainSetup { blockers, attackers, can } = setup;
+    let BlockChainSetup { blockers, attackers, can, seed } = setup;
     // Cheapest blockers first, for the gang move and for candidate order.
     let mut order: Vec<usize> = (0..blockers.len()).collect();
     order.sort_by_cached_key(|&i| permanent_value(state, blockers[i].0.id, w));
 
-    let mut start = vec![Vec::new()];
-    repair_block_plans(state, seat, &mut start);
-    let mut current = start.swap_remove(0);
-    let start_key = block_set_key(&current);
     block_census::add(6, 1);
-    let mut current_score = match menu_scores
-        .iter()
-        .find(|(i, _)| menu.get(*i).is_some_and(|c| block_set_key(c) == start_key))
-    {
-        Some(&(_, s)) => {
+    let (mut current, mut current_score) = match seed {
+        Some(i) => {
+            let &(_, s) = menu_scores.iter().find(|(j, _)| *j == i)?;
             block_census::add(5, 1);
-            s
+            (menu[i].clone(), s)
         }
-        None => simulate_block_outcome_from(starts, seat, &current, w)?,
+        None => {
+            let mut start = vec![Vec::new()];
+            repair_block_plans(state, seat, &mut start);
+            let current = start.swap_remove(0);
+            let start_key = block_set_key(&current);
+            let score = match menu_scores
+                .iter()
+                .find(|(i, _)| menu.get(*i).is_some_and(|c| block_set_key(c) == start_key))
+            {
+                Some(&(_, s)) => {
+                    block_census::add(5, 1);
+                    s
+                }
+                None => simulate_block_outcome_from(starts, seat, &current, w)?,
+            };
+            (current, score)
+        }
     };
     let mut sims = 0u64;
     for _ in 0..w.block_chain {
@@ -11140,7 +11239,7 @@ fn block_chain_candidate(
         current = cands.swap_remove(chosen);
     }
     block_census::add(2, sims);
-    Some((current, current_score))
+    Some((current, current_score, sims))
 }
 
 fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
@@ -11168,18 +11267,46 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
     // and every tie, and skipped when the menu already holds that plan.
     let menu_len = candidates.len();
     let mut chain_novel = false;
-    if let Some(setup) = setup
-        && let Some((chain, score)) =
-            block_chain_candidate(state, seat, w, &candidates, &scored, setup, &starts)
-        && !candidates.iter().any(|c| block_set_key(c) == block_set_key(&chain))
+    // The menu alone: its argmax with greedy winning ties (`choose_scored`'s
+    // deterministic branch, read inline so a sampling actor's decision
+    // stream draws nothing extra), classed as a non-empty greedy (0) / no
+    // blocks (1) / another candidate (2). The round-71 gates and the
+    // census's split of the chain both read it.
+    let menu_best = scored.iter().fold(None, |b: Option<(usize, i32)>, &c| match b {
+        Some(b) if c.1 <= b.1 => Some(b),
+        _ => Some(c),
+    });
+    let menu_class = match menu_best {
+        Some((0, _)) if !candidates[0].is_empty() => 0,
+        Some((i, _)) if candidates[i].is_empty() => 1,
+        _ => 2,
+    };
+    let chain_skipped = (w.block_chain_skip_greedy && menu_class == 0)
+        || (w.block_chain_empty_only && menu_class != 1);
+    let mut menu_winner: Option<(usize, u64)> = None;
+    if !chain_skipped
+        && let Some(mut setup) = setup
     {
-        candidates.push(chain);
-        scored.push((menu_len, score));
-        chain_novel = true;
+        setup.seed = match menu_best {
+            Some((i, _)) if w.block_chain_from_menu && menu_class != 1 => Some(i),
+            _ => None,
+        };
+        if let Some((chain, score, sims)) =
+            block_chain_candidate(state, seat, w, &candidates, &scored, setup, &starts)
+        {
+            if block_census::on() {
+                menu_winner = Some((menu_class, sims));
+            }
+            if !candidates.iter().any(|c| block_set_key(c) == block_set_key(&chain)) {
+                candidates.push(chain);
+                scored.push((menu_len, score));
+                chain_novel = true;
+            }
+        }
     }
     let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
     if block_census::on() {
-        block_census::tick(menu_len, chosen, chain_novel);
+        block_census::tick(menu_len, chosen, chain_novel, menu_winner);
     }
     candidates.swap_remove(chosen)
 }
@@ -17709,7 +17836,7 @@ mod tests {
         let (g, atk) = attacked_board(&[menacing], 3);
         let w = EvalWeights::block_chain_on();
         let menu = block_candidates_for_mcts(&g, 1, &w);
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
+        let (chain, _, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
         assert_ne!(chain.iter().filter(|(_, a)| *a == atk[0]).count(), 1, "{chain:?}");
         g.clone().declare_blockers(chain).expect("the chained plan is legal");
         let picked = pick_blocks_scored(&g, 1, &w);
@@ -17728,7 +17855,7 @@ mod tests {
         let w = EvalWeights::block_chain_on();
         let menu = block_candidates_for_mcts(&g, 1, &w);
         assert_eq!(menu, vec![Vec::new()], "the menu is bare: {menu:?}");
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
+        let (chain, _, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
         assert_eq!(chain.len(), 2, "both bears on the giant: {chain:?}");
         assert!(chain.iter().all(|(_, a)| *a == atk[0]), "{chain:?}");
         let picked = pick_blocks_scored(&g, 1, &w);
@@ -17749,7 +17876,7 @@ mod tests {
             !menu.iter().any(|c| c.len() == 4),
             "the menu never holds the double gang: {menu:?}"
         );
-        let (chain, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
+        let (chain, _, _) = block_chain_candidate(&g, 1, &w, &menu, &[], BlockChainSetup::new(&g, 1).expect("the chain can run"), &SimStarts::new(&g, 1, &w)).expect("scored");
         assert_eq!(chain.len(), 4, "two bears on each giant: {chain:?}");
         for a in &atk {
             assert_eq!(chain.iter().filter(|(_, x)| x == a).count(), 2, "{chain:?}");
@@ -17757,6 +17884,47 @@ mod tests {
         let picked = pick_blocks_scored(&g, 1, &w);
         assert_eq!(picked.len(), 4, "the picker takes the double gang: {picked:?}");
         g.clone().declare_blockers(picked).expect("legal");
+    }
+
+    /// Round 71's three gates keep the round-56 board: the bare menu's
+    /// gang block is the no-blocks class, which no arm skips and the
+    /// seeded arm grows from nothing as before. And where greedy blocks
+    /// profitably (a bear into an untapped giant), every arm still blocks.
+    #[test]
+    fn block_chain_gates_keep_the_bare_menu_gang_and_the_greedy_block() {
+        let arms = [
+            ("bchain-skipg", EvalWeights::block_chain_skip_greedy_on()),
+            ("bchain-empty", EvalWeights::block_chain_empty_only_on()),
+            ("bchain-seed", EvalWeights::block_chain_from_menu_on()),
+        ];
+        let (g, atk) = attacked_board(&[catalog::hill_giant()], 2);
+        assert_eq!(block_candidates_for_mcts(&g, 1, &arms[0].1), vec![Vec::new()]);
+        for (name, w) in &arms {
+            let picked = pick_blocks_scored(&g, 1, w);
+            assert_eq!(picked.len(), 2, "{name} still gangs the giant: {picked:?}");
+            assert!(picked.iter().all(|(_, a)| *a == atk[0]), "{name}: {picked:?}");
+            g.clone().declare_blockers(picked).expect("legal");
+        }
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: bear,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        assert!(!pick_blocks(&g, 1).is_empty(), "greedy blocks the bear with the giant");
+        for (name, w) in &arms {
+            let picked = pick_blocks_scored(&g, 1, w);
+            assert_eq!(picked.len(), 1, "{name} blocks the bear: {picked:?}");
+            g.clone().declare_blockers(picked).expect("legal");
+        }
     }
 
     /// The wide attack chain's two additions, on one board: two bears
