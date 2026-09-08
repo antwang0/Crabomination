@@ -303,8 +303,9 @@ fn cr_603_2_instance_granted_step_and_cast_triggers_fire() {
 /// and beginning of combat, which the printed rider allows.
 #[test]
 fn cr_602_5_activate_only_during_your_turn_is_a_turn_gate_not_a_sorcery_gate() {
-    use crabomination::card::CardDefinition;
-    let cards: [(fn() -> CardDefinition, usize, bool); 8] = [
+    /// (factory, ability index, prints "before attackers are declared").
+    type Row = (fn() -> crabomination::card::CardDefinition, usize, bool);
+    let cards: [Row; 8] = [
         (catalog::stern_marshal, 0, true),
         (catalog::rag_man, 0, true),
         (catalog::wishclaw_talisman, 0, false),
