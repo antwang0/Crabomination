@@ -3996,6 +3996,44 @@ short to say so.
 
 Entries `(-199)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-278)` TAKEN — both chains read a candidate the menu already simulated instead of re-simulating it: sealed default Ir **-5.62 %** / cube **-4.92 %**, 120 / 120 traces identical
+
+The chains grow from "nobody" and so re-derive the menu from below: on
+a two-attacker greedy the attack chain's first-step singles *are* the
+menu's two holdbacks and its second step is greedy; the block chain's
+first step offers the menu's chumps and its gangs again. Only the
+*start* plan's score was being reused (`(-255)`'s device, and 100 % of
+runs hit it). A sim is deterministic per (start state, declaration), so
+`attack_chain_candidate` / `block_chain_candidate` now key the menu's
+scored sets once (the whole declaration — attacker and target — for the
+attack side, since the menu's planeswalker retarget shares greedy's
+attacker set) and every chain candidate asks that table before it is
+simulated. Not a gate and not a search change: the argmax sees the same
+scores in the same order, the chain's `served` candidates are counted
+beside its `sims` in both censuses, and no flag is involved.
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, base and candidate from one tree at the round-71 tip:
+  sealed  2,725,852,967 -> 2,572,709,132 Ir   (-153,143,835, -5.62 %)   72 / 72 decided both sides
+  cube    2,645,404,719 -> 2,515,279,341 Ir   (-130,125,378, -4.92 %)   48 / 48 decided both sides
+  CRAB_DUMP_TRACES both sides, both pools: 72 + 48 trace files, 0 differ
+census  CRAB_ATTACK_CENSUS=1 sealed dflt mirror 1,200 games seed 43 (the candidate binary):
+  attack chain  sims 21,096 (1.44 a search) + served from the menu 10,288  = 32.8 % of its candidates never simulated
+  block chain   sims 30,386 (4.15 a search) + served from the menu  6,026  = 16.5 %
+golden 7/7 unmoved; --bench (gang, fixed) carries no chain and is untouched
+```
+
+**The untraced base above is the number to A/B against from here.** The
+round-70 Log's 2,882,893,998 / 2,820,089,306 were traced runs
+(`CRAB_DUMP_TRACES` on both sides): the trace writer is ~5.5 % of a
+six-game run, and the a1794130 binary rebuilt untraced from this tree
+reads 2,725,174,355 / 2,645,811,737 — the round-71 census commit is
++0.025 % / -0.015 % against it, the `menu_class` fold. **What is left of
+the same shape:** a chain candidate that repeats across *steps* (none: a
+step's sets are strict supersets of the last), and the attack chain's
+lazy pair move (2-sets, never in the menu). The menu itself is 3.4
+candidates a search and all distinct.
+
 ### Round 71 REFUTED — the block chain gated on the menu's outcome, three arms: paired wall clock **0.886 / 0.900 / 0.900** sealed, ladder **48.50 / 47.67 / 48.30** pooled, every cell wholly below 50, all parked
 
 The round-70 device on the block side (`.ladder/run_r71_blockchain.sh`,
@@ -8812,7 +8850,14 @@ wins are ladder wins on every board class, and the reassignment (not the
 extension) is what wins; the block side has no round-70. What is left of
 the block search's cost is the sim body (`simulate_block_outcome_once`,
 the combat window's passes) and the "other" board's 11 sims a search —
-a cheaper sim, never a cheaper search.
+a cheaper sim, never a cheaper search. **And the same census, read
+once more, found `(-278)` (Log): the chains re-derive the menu from
+below and were re-simulating sets the menu had already priced — 32.8 %
+of the attack chain's candidates and 16.5 % of the block chain's are
+now read off the menu's scores, sealed -5.62 % / cube -4.92 %, traces
+identical.** The chain's remaining sims are all novel sets; the next
+thing of this shape would be a sim memo *across* decisions (the same
+declaration re-asked after a no-op priority pass), which has no census.
 
 **THE ACTOR RE-READ AT THE RUN'S TIP (`2c63ce52`, `cg.actor.out` in a
 scratchpad, `--actors 1 --games 60 --steps 1 --seed 7`, profiling-fast

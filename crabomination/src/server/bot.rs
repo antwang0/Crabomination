@@ -9772,16 +9772,33 @@ fn attack_chain_candidate(
     if pool.is_empty() {
         return None;
     }
+    // The menu's scored sets, keyed once. The chain re-derives the menu
+    // from below — its singles are the menu's holdbacks on a two-attacker
+    // greedy, its second step is greedy itself — and a sim is
+    // deterministic per (start, set), so a set the menu already priced is
+    // read, never re-simulated (the start's reuse, generalised).
+    // Keyed on the whole declaration (attacker and target): the menu's
+    // planeswalker retarget shares greedy's attacker set and is a
+    // different sim.
+    let exact = |c: &[Attack]| -> Vec<Attack> {
+        let mut k = c.to_vec();
+        k.sort_unstable_by_key(|a| a.attacker.0);
+        k
+    };
+    let menu_keys: Vec<(Vec<Attack>, i32)> = menu_scores
+        .iter()
+        .filter_map(|&(i, s)| menu.get(i).map(|c| (exact(c), s)))
+        .collect();
+    let menu_score = |c: &[Attack]| -> Option<i32> {
+        let key = exact(c);
+        menu_keys.iter().find(|(k, _)| *k == key).map(|&(_, s)| s)
+    };
     // Start from "nobody", repaired: the obliged attackers only.
     let mut start = vec![Vec::new()];
     repair_attack_subsets(state, seat, greedy, &mut start);
     let mut current = start.swap_remove(0);
-    let start_key = attack_set_key(&current);
-    let mut current_score = match menu_scores
-        .iter()
-        .find(|(i, _)| menu.get(*i).is_some_and(|c| attack_set_key(c) == start_key))
-    {
-        Some(&(_, s)) => {
+    let mut current_score = match menu_score(&current) {
+        Some(s) => {
             attack_census::add(11, 1);
             s
         }
@@ -9790,6 +9807,7 @@ fn attack_chain_candidate(
     let mut remaining: Vec<Attack> =
         pool.into_iter().filter(|a| !current.iter().any(|c| c.attacker == a.attacker)).collect();
     let mut sims = 0u64;
+    let mut served = 0u64;
     // Candidate 0 is always "finalize": the set so far, at its known score.
     // First-wins-ties in `choose_scored` makes a tie stop the chain.
     let push_pairs = |cands: &mut Vec<Vec<Attack>>, current: &[Attack], remaining: &[Attack]| {
@@ -9806,6 +9824,11 @@ fn attack_chain_candidate(
         repair_attack_subsets(state, seat, greedy, cands);
         let mut scored: Vec<(usize, i32)> = vec![(0, current_score)];
         for (i, c) in cands.iter().enumerate().skip(1) {
+            if let Some(s) = menu_score(c) {
+                served += 1;
+                scored.push((i, s));
+                continue;
+            }
             sims += 1;
             if let Some(s) = simulate_attack_outcome_from(starts, seat, c, w) {
                 scored.push((i, s));
@@ -9851,6 +9874,7 @@ fn attack_chain_candidate(
         remaining.retain(|a| !current.iter().any(|c| c.attacker == a.attacker));
     }
     attack_census::add(10, sims);
+    attack_census::add(35, served);
     Some((current, current_score))
 }
 
@@ -10066,8 +10090,9 @@ pub mod attack_census {
     /// by what the MENU alone would have chosen (greedy / nobody / a
     /// holdback), and the menu-alone winner of every search the chain ran
     /// on (the same three classes) — the census behind gating the chain on
-    /// the menu's outcome]`.
-    pub static N: [AtomicU64; 35] = [const { AtomicU64::new(0) }; 35];
+    /// the menu's outcome — then the chain candidates whose score the menu
+    /// had already simulated (served from the menu, no sim)]`.
+    pub static N: [AtomicU64; 36] = [const { AtomicU64::new(0) }; 36];
 
     /// Bump counter `i` by `n` when the census is on.
     pub fn add(i: usize, n: u64) {
@@ -10191,7 +10216,7 @@ pub mod attack_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 35] {
+    pub fn snapshot() -> [u64; 36] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -10209,8 +10234,9 @@ pub mod block_census {
     /// split by what the MENU alone would have chosen (a non-empty greedy
     /// / no blocks / another candidate: a chump, greedy-minus-one or a
     /// gang) — the census behind gating the chain on the menu's outcome,
-    /// the round-70 device on the block side]`.
-    pub static N: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
+    /// the round-70 device on the block side — then the chain candidates
+    /// whose score the menu had already simulated (served, no sim)]`.
+    pub static N: [AtomicU64; 17] = [const { AtomicU64::new(0) }; 17];
 
     pub fn on() -> bool {
         super::attack_census::on()
@@ -10248,7 +10274,7 @@ pub mod block_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 16] {
+    pub fn snapshot() -> [u64; 17] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -11142,6 +11168,18 @@ fn block_chain_candidate(
     let mut order: Vec<usize> = (0..blockers.len()).collect();
     order.sort_by_cached_key(|&i| permanent_value(state, blockers[i].0.id, w));
 
+    // The menu's scored plans, keyed once: the chain's first step offers
+    // the menu's chumps and gangs again, and a sim is deterministic per
+    // (start, plan), so a plan the menu already priced is read, not
+    // re-simulated — see the attack chain's `menu_score`.
+    let menu_keys: Vec<(Vec<(u32, u32)>, i32)> = menu_scores
+        .iter()
+        .filter_map(|&(i, s)| menu.get(i).map(|c| (block_set_key(c), s)))
+        .collect();
+    let menu_score = |c: &[(CardId, CardId)]| -> Option<i32> {
+        let key = block_set_key(c);
+        menu_keys.iter().find(|(k, _)| *k == key).map(|&(_, s)| s)
+    };
     block_census::add(6, 1);
     let (mut current, mut current_score) = match seed {
         Some(i) => {
@@ -11153,12 +11191,8 @@ fn block_chain_candidate(
             let mut start = vec![Vec::new()];
             repair_block_plans(state, seat, &mut start);
             let current = start.swap_remove(0);
-            let start_key = block_set_key(&current);
-            let score = match menu_scores
-                .iter()
-                .find(|(i, _)| menu.get(*i).is_some_and(|c| block_set_key(c) == start_key))
-            {
-                Some(&(_, s)) => {
+            let score = match menu_score(&current) {
+                Some(s) => {
                     block_census::add(5, 1);
                     s
                 }
@@ -11168,6 +11202,7 @@ fn block_chain_candidate(
         }
     };
     let mut sims = 0u64;
+    let mut served = 0u64;
     for _ in 0..w.block_chain {
         let free: Vec<usize> = order
             .iter()
@@ -11226,6 +11261,11 @@ fn block_chain_candidate(
         }
         let mut scored: Vec<(usize, i32)> = vec![(0, current_score)];
         for (i, c) in cands.iter().enumerate().skip(1) {
+            if let Some(s) = menu_score(c) {
+                served += 1;
+                scored.push((i, s));
+                continue;
+            }
             sims += 1;
             if let Some(s) = simulate_block_outcome_from(starts, seat, c, w) {
                 scored.push((i, s));
@@ -11239,6 +11279,7 @@ fn block_chain_candidate(
         current = cands.swap_remove(chosen);
     }
     block_census::add(2, sims);
+    block_census::add(16, served);
     Some((current, current_score, sims))
 }
 

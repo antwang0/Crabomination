@@ -1798,7 +1798,7 @@ fn main() {
     // What the attack search (PERF (-21), ~60 % of `cube`) decides. Off
     // unless `CRAB_ATTACK_CENSUS` is set.
     if crabomination::server::bot::attack_census::on() {
-        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty, e_new, e_won, gate, gate_won, h1, h2, h3, h4, h5, h6, o1, o2, o3, o4, o5, o6, cw_g, cw_n, cw_h, mw_g, mw_n, mw_h] =
+        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy, chain_new, chain_won, chain_sims, chain_reuse, chain_empty, e_new, e_won, gate, gate_won, h1, h2, h3, h4, h5, h6, o1, o2, o3, o4, o5, o6, cw_g, cw_n, cw_h, mw_g, mw_n, mw_h, served] =
             crabomination::server::bot::attack_census::snapshot();
         let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
         println!(
@@ -1810,7 +1810,8 @@ fn main() {
              from empty greedy {chain_empty} (proposed {e_new}, won {e_won}; blocker gate covers \
              {gate}, chain won there {gate_won}); holdbacks by menu index won/offered \
              {h1}/{o1} {h2}/{o2} {h3}/{o3} {h4}/{o4} {h5}/{o5} {h6}+/{o6}+; chain won when the menu \
-             alone picked greedy/nobody/holdback {cw_g}/{cw_n}/{cw_h} of {mw_g}/{mw_n}/{mw_h} chained searches",
+             alone picked greedy/nobody/holdback {cw_g}/{cw_n}/{cw_h} of {mw_g}/{mw_n}/{mw_h} chained searches; \
+             chain candidates served from the menu {served}",
             if calls == 0 { 0.0 } else { cands as f64 / calls as f64 },
             pct(greedy, calls),
             pct(none, calls),
@@ -1835,14 +1836,14 @@ fn main() {
             pct(rinst, rwin),
             pct(rmana, rwin),
         );
-        let [bcalls, bcands, bsims, bnew, bwon, breuse, bran, mg, mn, mo, wg, wn, wo, sg, sn, so] =
+        let [bcalls, bcands, bsims, bnew, bwon, breuse, bran, mg, mn, mo, wg, wn, wo, sg, sn, so, bserved] =
             crabomination::server::bot::block_census::snapshot();
         println!(
             "  block_census {bcalls} searched, {bcands} candidates ({:.2}/search); chain sims \
              {bsims} ({:.2}/search), proposed a new plan {bnew} ({:.1} %), won {bwon} ({:.1} %), \
              chain ran {bran} ({:.1} %), start reused {breuse} ({:.1} % of runs); chain won when \
              the menu alone picked greedy/nobody/other {wg}/{wn}/{wo} of {mg}/{mn}/{mo} chained \
-             searches, sims there {sg}/{sn}/{so}",
+             searches, sims there {sg}/{sn}/{so}; chain candidates served from the menu {bserved}",
             if bcalls == 0 { 0.0 } else { bcands as f64 / bcalls as f64 },
             if bcalls == 0 { 0.0 } else { bsims as f64 / bcalls as f64 },
             pct(bnew, bcalls),
