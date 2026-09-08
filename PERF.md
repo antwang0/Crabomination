@@ -2784,6 +2784,31 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-08 — the trigger-grant duration carrier, the planeswalker damage record, the two hooks and the wrapper peel: addendum at the tip after `72297152`
+
+Three engine commits and one catalog commit after the Life Matrix addendum
+below (ENGINE_BACKLOG, first section; the Log's two "READ" entries have the
+Ir A/Bs and the delta tables). Rules changes on the grant map, two damage
+branches, two hooks and one gather leg, priced and flat; the fixed pool is
+byte-identical:
+
+```text
+--bench release-fast (mimalloc) at 72297152: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1);
+        bin_bytes 126,687,072 (-71,016 B against the Life Matrix tip's 126,758,088; 126,725,176 at 005a9b8c); 311.0 / 295.4 / 287.7 games/s, three single
+        runs (299.6 / 300.8 / 317.7 at 005a9b8c) — the host's spread, not a change
+Ir      against 901c66f4, untraced, at 005a9b8c: sealed 3,023,237,395 -> 3,025,048,377 (+0.060 %) / cube 2,966,378,057 -> 2,968,192,944 (+0.061 %);
+        traced, the base rebuilt beside each tip: 005a9b8c sealed +0.064 % / cube +0.056 %, 72297152 a further +0.027 % / +0.001 % — every trace file
+        identical to the base's on both pools (72 + 48 games, action for action); the residue is read by function in the Log (empty-map gates, then glibc)
+golden  7/7 unmoved
+suite   19,278 / 0 / 5 at 005a9b8c (three tests added, all failing on the previous engine), 19,281 / 0 / 5 at 72297152 (the catalog commit's two and the peel's one)
+clippy  --workspace --exclude crabomination_client --all-targets   clean (one type_complexity in a new test, aliased)
+gate    cargo build --profile release-fast -p crabomination --bin bot_ladder   clean at both tips (the debug-assertions=off build behind --bench)
+audit   audit_catalog_stats.py: tim 1 -> 0 with the sorcery-for-your-turn leniency retired (17,229 cards; the other columns unmoved at 20 / 1 / 3 / 6 / 3);
+        audit_stubs 0 flagged; audit_incomplete --structural-only 0 to review (21,795 cards)
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores; a cold profiling-fast bot_ladder is 14m30s here, the warm engine rebuild 10m under a
+        concurrent build; a second git worktree sharing target/ builds a base side warm (deps by package id, the workspace crates re-keyed by path)
+```
+
 ### Round 68 — closing state at the round-68 tip, THE NEW DEFAULT-PILOT BASE
 
 One bot-side throughput leg (Log, ML_NOTES round 68): the attack sim's
