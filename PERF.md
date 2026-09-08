@@ -4029,6 +4029,58 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-279)` TAKEN — the event scratch outlives the state through a thread-local pool, and the nested upkeep pass hands its buffer back: sealed default Ir **-0.378 %** / cube **-0.272 %** / fixed **-0.332 %**, 120 / 120 traces identical
+
+Off the block-sim context read (candidates, "THE BLOCK SIM READ BY
+CONTEXT"): the largest allocation-shaped row inside `resolve_combat_into`
+was its own `events.reserve(32)` — 10,462 slow-path `do_reserve_and_handle`
+calls / 12.1 M Ir, **1,155 Ir each** on the system allocator (a 4 -> 32
+event regrow is a large-bin realloc: the first push in `pass_priority`
+sized the buffer at four, and the combat step's reserve moved it). The
+buffer is `GameState::event_scratch`, per state, and **a clone starts
+without one** (`Clone` writes `Vec::new()`): every bot simulation's first
+combat re-grew from scratch, and `(-80)`'s recycling only ever helped the
+state that lived long enough to see a second combat. Two changes, both
+allocation-only:
+
+* `EventScratch`, a newtype over the slot with a bounded thread-local pool
+  (`EVENT_POOL`, 8 buffers, only those at 32+ capacity): a dropped state
+  parks its grown buffer, and a fresh state's first `take` — the one place
+  the pool is asked, so the `LocalKey::with` is once per state, not per
+  pass — picks it up already sized. The pool is consulted only when the
+  slot has no capacity; a state that recycled once never touches it again.
+* The nested untap -> upkeep pass in `advance_step` (`stack.rs`, the
+  `pass_priority()?` whose events are appended to the outer batch) took a
+  second buffer from the slot's replacement and dropped it: one pooled
+  buffer leaked to the allocator every turn start, which is why the pool
+  read half-empty on the first A/B (5,081 of the 10,462 slow paths left,
+  `advance_step'2` 4,970 first pushes). `recycle_events` on that inner
+  buffer closed it.
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at 6acd58c3:
+  sealed  2,572,706,282 -> 2,562,977,750 Ir   (-9,728,532, -0.378 %)   72 / 72 decided both sides
+  cube    2,515,278,324 -> 2,508,428,873 Ir   (-6,849,451, -0.272 %)   48 / 48
+  fixed     673,786,345 ->   671,549,557 Ir   (-2,236,788, -0.332 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed): do_reserve_and_handle <- resolve_combat_into 10,462 / 12.08 M -> 2,923 / 2.68 M; grow_one <- advance_step 9,432 / 1.14 M -> 242 / 0.04 M,
+               <- advance_step'2 4,970 / 0.60 M -> 752 / 0.09 M; LocalKey::with 22.07 M -> 22.07 M (+1.4 k: the pool's asks are ~1 per state);
+               _int_free 88.99 -> 87.86 M, malloc 67.49 -> 66.81 M, _int_malloc 62.55 -> 59.52 M, free 55.48 -> 54.95 M
+the pool alone (the first A/B, before the upkeep leak was found): sealed -0.272 % / cube -0.179 % / fixed -0.148 %
+REFUTED arm: an empty pool handing out `Vec::with_capacity(32)` instead of `Vec::new()`: +0.035 % / +0.033 % / +0.053 % against the pool
+             alone — most first pushes never reach a combat, so the wide start bought a large-bin allocation for nothing
+```
+
+What is left of the row: 2,923 slow paths (1,104 under the attack sim,
+944 under `resolve_combat <- submit_decision`, which builds its own
+`Vec`, 174 in the real game) — 0.1 %, thin, not a shape. The rule that
+fell out: **a per-state scratch is a per-*clone* scratch; when the hot
+path is a clone-per-probe, the capacity has to live somewhere the clone
+does not, and the leak to look for first is the nested call that takes
+the slot's replacement and drops it.** Under mimalloc (the shipped
+allocator) a large-bin realloc is cheaper than glibc's, so the wall-clock
+share is smaller than the Ir share; `--bench` counters unchanged (below).
+
 ### `(-278)` TAKEN — both chains read a candidate the menu already simulated instead of re-simulating it: sealed default Ir **-5.62 %** / cube **-4.92 %**, 120 / 120 traces identical
 
 The chains grow from "nobody" and so re-derive the menu from below: on
@@ -7052,6 +7104,40 @@ change. The `LocalKey::with` row (405 k calls / 26.6 M self) is the
 `ComputedPermanent` Arc pool (`computed_permanent_hinted` 255 k takes,
 `Unfreeze::drop` 146 k puts, const-initialised already): ~65 Ir a take
 against malloc+free's ~150+, so the pool is the cheaper side; floor.**
+
+**THE BLOCK SIM READ BY CONTEXT AT THE `(-278)` TIP (`--separate-callers=3`
+and `=6`, sealed dflt six games, `cg.sealed.sc.out` / `cg.sealed.sc6.out`
+in a scratchpad, 2,572,706,800 Ir), the read NEXT (a) asked for, so nobody
+re-takes it.** 2,280 `simulate_block_outcome_once` / 196.1 M inclusive
+(7.62 %; 1,494 from the menu, 786 from the chain via `_from`). Inside one
+sim (~86 k Ir): `sim_step` 3.5 passes / 43.6 k (7,988 / 99.4 M), of which
+`pass_priority` 84.2 M, `advance_step` 3,926 / 82.4 M, and
+**`resolve_combat_into` under it 2,248 / 74.5 M — the combat-damage
+resolution is 38 % of the sim**; the declaration's `declare_blockers`
+2,280 / 28.4 M (12.5 k each); `submit_decision` 994 / 37.8 M (damage
+order + the resumed `resolve_combat`, 30.6 M of it); `eval_material_frozen`
+8.5 M; the clone's drop 8.8 M; `clone` 3.5 M; `sim_spell_action_inner`
+4,632 / 2.2 M (the trick window is free here); `decide_pending_policy`
+2.5 M. **So the block sim is `resolve_combat_into` (105 M of 196 M) plus
+the declaration, and nothing bot-side.** Program-wide `resolve_combat_into`
+is 14,624 calls / 437.5 M = **17.0 % of sealed dflt** (the largest engine
+subtree; 11,220 via `advance_step`, 3,404 via `submit_decision`), ~30 k a
+combat: `check_state_based_actions_into` 11,018 / 155.4 M (14.1 k a
+sweep — `remove_from_battlefield_to_graveyard_raw` 15,402 / 59.1 M
+program-wide at 3.8 k a death, `sba_board_scan` 1.2 k a scan,
+`compute_permanents` 7,320 / 16.1 M), `deal_combat_damage_to_target`
+16,086 / 64.5 M (4 k a target, 35.4 M of it
+`fire_combat_damage_to_player_triggers`), `combat_damage_computed` 14,624
+/ 53.8 M (3.7 k), `fire_combat_damage_triggers` 24,096 / 31.8 M (1.3 k an
+event, self 1.1 k: the dealer walk + the printed loops), self 34 M (2.3 k:
+the pair loop). **TAKEN `(-279)` (Log)**: the `events.reserve(32)` at the
+top of the damage loop was 10,462 slow-path reallocs / 12.1 M — a fresh
+clone's first combat re-growing a four-event scratch — and the nested
+untap→upkeep pass leaked one buffer a turn start. What is left in this
+subtree is the recorded floor: deaths (`(-217)`), the SBA scan, the two
+trigger walks (`(-277)`), the views (`(-194)`..`(-196)`); the per-combat
+cost moves only with the sim count or the horizon, both strength
+questions.
 
 **The combat chains (rounds 55–56) doubled the default's wall clock;
 round 58 took a third of it back and this is still the top of the

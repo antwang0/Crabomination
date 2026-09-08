@@ -281,9 +281,9 @@ impl GameState {
         // context in the program (PERF `(-80)`). Reserving capacity would
         // only move that allocation earlier; what removes it is a caller that
         // hands the buffer back (`recycle_events`). A caller that does not is
-        // unaffected: the slot is empty, `take` yields `Vec::new()`, and the
-        // first push allocates exactly as before.
-        let mut events = std::mem::take(&mut self.event_scratch);
+        // unaffected: the slot is empty, `take` yields the thread pool's
+        // buffer or `Vec::new()`, and the first push allocates as before.
+        let mut events = self.event_scratch.take();
         debug_assert!(events.is_empty(), "the event scratch is stored cleared");
         if self.step == TurnStep::DeclareBlockers
             && !self.attacking.is_empty()
@@ -546,6 +546,11 @@ impl GameState {
                 self.priority.consecutive_passes = self.alive_count().saturating_sub(1);
                 let mut upkeep_events = self.pass_priority()?;
                 events.append(&mut upkeep_events);
+                // The nested pass took the scratch slot's replacement (the
+                // outer one holds `events`); hand it back rather than drop
+                // it, or every turn start leaks one buffer to the allocator
+                // (PERF `(-279)`: 4,970 first pushes a sealed six-game run).
+                self.recycle_events(upkeep_events);
                 return Ok(events);
             }
             TurnStep::Draw => {

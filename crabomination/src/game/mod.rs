@@ -306,6 +306,102 @@ pub(crate) mod cast_lock {
         ONE_SPELL | MANA_MAZE | NAME | CHOSEN_COLOR | EVEN_MV | ABOVE_LANDS | DAMPING;
 }
 
+// `EventScratch`'s pool: cleared, grown event buffers parked by dropped
+// states for the next clone on this thread.
+thread_local! {
+    static EVENT_POOL: std::cell::RefCell<Vec<Vec<GameEvent>>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// The retired event buffer behind [`GameState::recycle_events`], with a
+/// thread-local pool under it so the capacity outlives the state.
+///
+/// A bot simulation runs on a *clone*, and a clone starts with no scratch:
+/// its first `pass_priority` allocated a four-event buffer and its first
+/// combat re-grew it to 32 (`resolve_combat_into`'s `events.reserve(32)`, a
+/// large-bin realloc) — 8,956 of the 14,624 combats on a six-game sealed
+/// run took that slow path, ~1.2 k Ir each (PERF `(-279)`). Dropping the
+/// state parks a grown buffer here instead of freeing it, and the next
+/// clone's first take picks it up already sized. Bounded, thread-local, and
+/// allocation-only: no game state passes through it.
+#[derive(Default)]
+pub(crate) struct EventScratch(Vec<GameEvent>);
+
+impl EventScratch {
+    /// A buffer this size or larger is worth parking — `resolve_combat_into`
+    /// reserves 32, so anything smaller would only be re-grown.
+    const POOL_MIN: usize = 32;
+    /// One thread runs one game at a time; the pool only has to bridge a
+    /// dropped clone to the next one.
+    const POOL_MAX: usize = 8;
+
+    /// The capacity a caller's buffer has to beat to be kept.
+    #[inline]
+    pub(crate) fn capacity(&self) -> usize {
+        self.0.capacity()
+    }
+
+    /// Take the buffer, empty. A fresh state (no capacity yet) asks the pool
+    /// first; the pool is not consulted otherwise, so the thread-local costs
+    /// once per state rather than once per pass. An empty pool hands out
+    /// `Vec::new()`, not `with_capacity(POOL_MIN)`: that arm was measured
+    /// +0.035 % sealed / +0.033 % cube / +0.053 % fixed against this one —
+    /// most first pushes never reach a combat, so the wide start only
+    /// bought a large-bin allocation for nothing.
+    #[inline]
+    pub(crate) fn take(&mut self) -> Vec<GameEvent> {
+        if self.0.capacity() == 0 {
+            return EVENT_POOL.with_borrow_mut(|p| p.pop()).unwrap_or_default();
+        }
+        std::mem::take(&mut self.0)
+    }
+
+    /// Store a cleared buffer; the smaller one it replaces is freed.
+    #[inline]
+    pub(crate) fn put(&mut self, events: Vec<GameEvent>) {
+        debug_assert!(events.is_empty(), "the event scratch is stored cleared");
+        self.0 = events;
+    }
+}
+
+impl Drop for EventScratch {
+    fn drop(&mut self) {
+        if self.0.capacity() >= Self::POOL_MIN {
+            EVENT_POOL.with_borrow_mut(|p| {
+                if p.len() < Self::POOL_MAX {
+                    p.push(std::mem::take(&mut self.0));
+                }
+            });
+        }
+    }
+}
+
+#[cfg(test)]
+mod event_scratch_tests {
+    use super::*;
+
+    /// PERF `(-279)`: a dropped state's grown buffer serves the next fresh
+    /// state's first take; a small one is freed, not parked.
+    #[test]
+    fn a_dropped_states_grown_buffer_serves_the_next_take() {
+        EVENT_POOL.with_borrow_mut(|p| p.clear());
+        let mut a = EventScratch::default();
+        a.put(Vec::with_capacity(64));
+        drop(a);
+        assert!(EventScratch::default().take().capacity() >= 64);
+        let mut c = EventScratch::default();
+        c.put(Vec::with_capacity(4));
+        drop(c);
+        assert_eq!(EventScratch::default().take().capacity(), 0);
+        // A slot that recycled once is not the pool's business again.
+        EVENT_POOL.with_borrow_mut(|p| p.push(Vec::with_capacity(64)));
+        let mut d = EventScratch::default();
+        d.put(Vec::with_capacity(8));
+        assert_eq!(d.take().capacity(), 8);
+        assert_eq!(EVENT_POOL.with_borrow(|p| p.len()), 1);
+    }
+}
+
 /// Interior-mutable memo for [`GameState::with_frozen_layers`]: the gathered
 /// continuous-effect set, shared via `Arc` so per-permanent layer passes
 /// don't re-clone it. `Mutex` (not `RefCell`) keeps `GameState: Sync` for the
@@ -2154,10 +2250,11 @@ pub struct GameState {
     #[serde(skip)]
     pub(crate) layer_freeze: LayerFreeze,
     /// A retired `Vec<GameEvent>`, kept for its capacity — see
-    /// [`recycle_events`](GameState::recycle_events). Always empty between
-    /// actions; clones and serde restores start without one.
+    /// [`recycle_events`](GameState::recycle_events) and [`EventScratch`].
+    /// Always empty between actions; clones and serde restores start without
+    /// one and refill from the thread's pool on their first take.
     #[serde(skip)]
-    pub(crate) event_scratch: Vec<GameEvent>,
+    pub(crate) event_scratch: EventScratch,
     /// CR 505.1b — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
@@ -3016,7 +3113,7 @@ impl Clone for GameState {
             suspend_signal: self.suspend_signal.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
-            event_scratch: Vec::new(),
+            event_scratch: EventScratch::default(),
             controlled_by: self.controlled_by.clone(),
             died_card_snapshots: clone_map(&self.died_card_snapshots),
             leaves_bf_lki: clone_map(&self.leaves_bf_lki),
@@ -3329,7 +3426,7 @@ impl GameState {
             mana_production_multiplier: 1,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
-            event_scratch: Vec::new(),
+            event_scratch: EventScratch::default(),
             additional_combat_phases: 0,
             combat_chooser: None,
             additional_post_main_combats: 0,
@@ -10161,7 +10258,7 @@ impl GameState {
     pub(crate) fn recycle_events(&mut self, mut events: Vec<GameEvent>) {
         if events.capacity() > self.event_scratch.capacity() {
             events.clear();
-            self.event_scratch = events;
+            self.event_scratch.put(events);
         }
     }
 
