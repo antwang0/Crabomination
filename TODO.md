@@ -36,9 +36,8 @@ sixty-seventh pass, so don't re-take that.
    sealed 754..769, all 745..759, sos 749..763, fixed 733..747) 0 abort / 0 stuck, 2 caps = Beacon (a), 12 draws = Flame Rift (c); actor 20,000 games /
    2.01 M rows / 0 stalls; grid + pilots (55 cells), searching mirrors, the cheap-pilot block and the post-fix abilarms / mcts blocks (~200 k games;
    abilarms seeds 774..889, mirror 774..789, mcts 769..771) all clean — 0 caps after the fix.
-3. **This run:** the fourth find (ENGINE_BACKLOG): the CR 732.3 activation watch was reset by the mana ability paying for the loop, so Basalt Monolith's
-   tap-and-untap ran an `abilarms` game to the cap — mana abilities now leave the watch alone (`6b849f26`, a READ by construction); Detention Sphere's
-   restored may (`b62d7c30`). No perf leg: the candidates' engine side is the floor, the bot side is strength rounds.
+3. **This run:** the fourth find (ENGINE_BACKLOG): the CR 732.3 activation watch was reset by the mana ability paying for the loop (Basalt Monolith's
+   tap-and-untap capped an `abilarms` game) — mana abilities now leave it alone (`6b849f26`); Detention Sphere's may (`b62d7c30`). No perf leg: floor.
 4. **Next moves:** (a) the searching pilots found in 100 k games what 880 k dflt games did not — keep the finder there: `abilarms` / `mcts` mirrors at more
    seeds and `--games 400` on the cheap pilots (abilarms next 890+, mirror 790+, mcts 772+; dflt next cube 777, sealed 770, all 760, sos 764, fixed 748);
    (b) the populated crack-back horizon is the one strength round left (38 % of the actor), gate it; (c) a decided draw scores 0 (fingerprint (c)) —
