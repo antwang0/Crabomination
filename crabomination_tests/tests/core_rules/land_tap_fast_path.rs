@@ -43,14 +43,14 @@ fn both_ways(name: &str, accept: bool, setup: Setup) {
     FORCE_GENERIC_ACTIVATION.store(false, Relaxed);
     assert_eq!(taken, u64::from(accept), "{name}: fast path taken {taken} times");
     assert_eq!(fast_events, slow_events, "{name}: events differ");
-    // The one field the two paths leave differently, by design (PERF
-    // `(-219)`): the generic path records the activation in the CR 732.3
-    // watch, the fast path only resets it — a land tap can never repeat
-    // on an unmoved state, so the watch's next comparison is the same.
+    // Neither path touches the CR 732.3 watch: a mana ability is part of
+    // the announcement it pays for, and letting a land tap reset the watch
+    // hid a paid loop (the Basalt Monolith find, 2026-09-09). Until then the
+    // generic path recorded the tap and the fast path reset it (PERF
+    // `(-219)`), the one field the two paths left differently.
     if accept {
-        assert_eq!(fast.free_activation_watch, (0, None, 0), "{name}: the fast path resets the watch");
-        assert_eq!(slow.free_activation_watch.1, Some((id, idx)), "{name}: the generic path records it");
-        slow.free_activation_watch = (0, None, 0);
+        assert_eq!(fast.free_activation_watch, (0, None, 0), "{name}: the fast path leaves the watch alone");
+        assert_eq!(slow.free_activation_watch, (0, None, 0), "{name}: the generic path leaves it alone too");
     }
     assert_eq!(
         serde_json::to_string(&fast).unwrap(),
