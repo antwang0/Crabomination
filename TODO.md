@@ -28,12 +28,12 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code
-   before tracker prose; ⚠ claim a candidate number at PUSH time — `(-286)` is the last claimed, `(-287)` next. Gotchas in **CLAUDE.md**, measurement
+   before tracker prose; ⚠ claim a candidate number at PUSH time — `(-287)` is the last claimed, `(-288)` next. Gotchas in **CLAUDE.md**, measurement
    in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a running `cargo build`.
-   This box: cold debug suite build 5m08s, cold `profiling-fast` bot_ladder 8m18s, warm engine rebuild 2m35s. **The A/B base is the `(-286)` triple
-   (PERF Baseline addendum): sealed 2,516,623,276 / cube 2,433,990,363 / fixed 636,928,451** — RE-TAKE it on a new box (the recorded fixed number
+   This box: cold debug suite build 5m08s, cold `profiling-fast` bot_ladder 8m18s, warm engine rebuild 2m35s. **The A/B base is the `(-287)` triple
+   (PERF Baseline addendum): sealed 2,507,039,807 / cube 2,427,666,471 / fixed 633,484,026** — RE-TAKE it on a new box (the recorded fixed number
    moved 3 % between boxes on identical games, PERF `(-280)`); both sides from one tree, `md5sum` both.
-2. **Gates at the tip (PERF Baseline, the `(-280)`..`(-286)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
+2. **Gates at the tip (PERF Baseline, the `(-280)`..`(-287)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
    `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, fresh-seed dflt sweeps under the bound on cube 719..724 / all 713..718 / sealed
    713..718 (88,800 games) 0 cap / 0 stuck, `audit_panics.py` 0 bare; the debug-assertions grid last ran at the `(-279)` tip (0 failures).
 3. **This run:** `(-280)` TAKEN (the cast validator's target-slot stamp and the death chokepoint's push deep-copied the whole 1 KB `ResolutionScratch`
@@ -44,9 +44,10 @@ sixty-seventh pass, so don't re-take that.
    cube -0.131 % / fixed -0.225 %); `(-284)` TAKEN (the two creature-resolution `mem::take`s behind a read — the `PlayerCold` copy per creature
    resolution, sealed -0.299 % / cube -0.204 % / fixed -0.557 %); `(-285)` TAKEN (`CardData::blocked_attackers_this_turn` deleted for the
    game-level pair log, sealed -0.134 % / cube -0.157 % / fixed -0.125 %); `(-286)` TAKEN (the cast's two `CardCold` stamps behind a read,
-   sealed -0.105 % / cube -0.089 % / fixed -0.053 %); the CoW family READ by monomorphization (candidates, first entry). Cumulative sealed
-   -1.82 % / cube -1.37 % / fixed -2.28 %; paired wall clock base vs `(-285)` +6.67 % median (fixed, system allocator); traces identical
-   throughout. No bugs found; no cards.
+   sealed -0.105 % / cube -0.089 % / fixed -0.053 %); `(-287)` TAKEN (`cast_mana_spent_by_color` to an inline `CopyVec` on `CardData` — the
+   paid cast's `CardCold` copy, sealed -0.381 % / cube -0.260 % / fixed -0.541 %); the CoW family READ by monomorphization (candidates, first
+   entry). Cumulative sealed -2.20 % / cube -1.63 % / fixed -2.81 %; paired wall clock base vs `(-285)` +6.67 % median (fixed, system
+   allocator); traces identical throughout. No bugs found; no cards.
 4. **Next moves:** (a) the CoW residue is census questions under 0.1 % each (PERF Log `(-283)`'s tail: `discard_card` / `move_card_to` /
    `activate_ability_inner`'s remaining cold writes) — read `cg_contexts.py make_mut_slow` at three levels first; (b) the attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk,
    gate it; (c) `robustness_grid.sh --wide` on fresh seeds 719+; (d) the engine self tables are the floor — the next engine lever is a *count* (a
