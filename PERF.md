@@ -2832,6 +2832,10 @@ actor   target-audit/overflow/selfplay_train (debug-assertions, 18m22s cold) --a
 grid    robustness_grid.sh --no-build --no-actor --pilots at FRESH SEEDS: the ladder leg {fixed, cube, sos, sealed, all} x seeds 766, 767 x 120 =
         10 cells / 11,040 games, 0 failures, 0 cap / 0 stuck / 2 draw (cube 766, the Flame Rift pairings again); the pilots leg (45 policies vs gang,
         --decks all, seed 766, 12 games) 45 cells, 0 failures — no panic / assertion / overflow anywhere
+search  searching-pilot mirrors on the same audit build (CRAB_MAX_ACTIONS=6000 CRAB_CAP_DIAG=4000, 3 threads): lookahead cube 767 x 200 (1,600 games,
+        6 s) / all 768 x 200 (3,400, 11 s); planner sealed 768 x 200 (2,400, 6 s) / cube 769 x 200 (1,600, 5 s); abilarms vs gang cube 769 x 16 (128,
+        1 s) / all 770 x 16 (272, 2 s); mcts-heur mirror cube 766 x 40 (320, 306 s); mcts x mcts cube 767 x 40 (320, 242 s) / sealed 768 x 40 (480,
+        321 s) — 10,540 games, all decided, 0 undecided, no assertion
 gate    --bench release-fast (mimalloc, 15m52s cold contended) at c93ee9ff: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
         determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,787,168 (identical to 0085bddf); peak_rss_mib 28.2-28.7; 426.6 / 456.6 /
         462.0 games/s idle at host_calib_ms 45-47 (315.5 contended by the 3-thread sweep at calib 45) — a faster box than the second run's
