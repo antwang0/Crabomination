@@ -40,9 +40,9 @@ sixty-seventh pass, so don't re-take that.
    tap-and-untap ran an `abilarms` game to the cap — mana abilities now leave the watch alone (`6b849f26`, a READ by construction); Detention Sphere's
    restored may (`b62d7c30`). No perf leg: the candidates' engine side is the floor, the bot side is strength rounds.
 4. **Next moves:** (a) the searching pilots found in 100 k games what 880 k dflt games did not — keep the finder there: `abilarms` / `mcts` mirrors at more
-   seeds and `--games 400` on the cheap pilots (abilarms next 890+, mirror 790+, mcts 772+; dflt next cube 777, sealed 770, all 760, sos 764, fixed 748); (b) the populated crack-back
-   horizon is the one strength round left (38 % of the actor), gate it; (c) a decided draw scores 0 (fingerprint (c)) — right in expectation, gate only
-   beside (b); (d) the modal's prompt text the bot keys off (~0.1 % sealed) needs a `ChooseCards` cost flag, wire-visible, not next.
+   seeds and `--games 400` on the cheap pilots (abilarms next 890+, mirror 790+, mcts 772+; dflt next cube 777, sealed 770, all 760, sos 764, fixed 748);
+   (b) the populated crack-back horizon is the one strength round left (38 % of the actor), gate it; (c) a decided draw scores 0 (fingerprint (c)) —
+   right in expectation, gate only beside (b); the modal prompt-text residue is in PERF's candidates ("prompt text"), wire-visible, not next.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
