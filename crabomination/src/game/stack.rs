@@ -2081,12 +2081,15 @@ impl GameState {
                     // recast. The zone-change path (`Effect::Move` into play)
                     // already re-arms it the same way; the cast path did not.
                     card.summoning_sick = card.definition.is_creature();
-                    // CR 400.7 — and it is a new object on the battlefield:
-                    // nothing it carried in an earlier life is marked on it
-                    // (the leave side clears the tap and the attachment; see
-                    // `place_card_at_resolved_zone` for why damage is reset
-                    // here). The `CardData` write above already unshared the
-                    // card, so this is free.
+                    // CR 400.7 — a new object on the battlefield, but NOT
+                    // `enter_as_new_object`: CR 400.7d keeps a characteristic
+                    // change applied to the permanent spell on the permanent
+                    // it becomes (`cr_112_4_permanent_spell_pump_survives_
+                    // resolution`), so the pumps stay and an earlier life's
+                    // state is cleared where the card LEFT the battlefield.
+                    // Damage alone is reset here rather than there (see
+                    // `place_card_at_resolved_zone`); the `CardData` write
+                    // above already unshared the card, so it is free.
                     card.damage = 0;
                     self.battlefield.push(card);
                     if let Some((grant_haste, sacrifice_eot)) = resolve_riders {
@@ -6749,9 +6752,7 @@ impl GameState {
         // CR 400.7 — see `place_card_at_resolved_zone`: the bounced card is
         // a new object in hand (damage is reset where it next enters).
         card.tapped = false;
-        if card.attached_to.is_some() {
-            card.attached_to = None;
-        }
+        card.leave_battlefield_state();
         if card.controller < self.players.len() {
             self.players[card.controller].permanent_left_battlefield_this_turn = true;
         }
@@ -6896,9 +6897,7 @@ impl GameState {
         // cap (Golgari Thug, cube seed 702; ENGINE_BACKLOG 2026-09-08).
         if zone != Zone::Battlefield {
             card.tapped = false;
-            if card.attached_to.is_some() {
-                card.attached_to = None;
-            }
+            card.leave_battlefield_state();
         }
         // CR 717.6 — an Astrotorium-backed Attraction card bound for anywhere
         // but the battlefield, exile, or the command zone goes to its owner's

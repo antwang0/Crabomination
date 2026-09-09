@@ -2528,26 +2528,12 @@ impl GameState {
                     self.players[p].mounts_vehicles_entered_this_turn += 1;
                 }
                 // A permanent entering the battlefield from another zone is
-                // a brand-new object (rule 400.7) — clear residual damage,
-                // pump bonuses, and attachment.
-                card.damage = 0;
-                card.power_bonus = 0;
-                card.toughness_bonus = 0;
-                card.perm_power_bonus = 0;
-                card.perm_toughness_bonus = 0;
-                card.attached_to = None;
-                // CR 400.7 — a fresh object isn't saddled and remembers no
-                // riders (Fortune, Loyal Steed returning after its own blink).
-                card.saddled = false;
-                if !card.saddled_by.is_empty() || !card.crewed_by.is_empty() {
-                    card.saddled_by.clear();
-                    card.crewed_by.clear();
-                }
+                // a brand-new object (rule 400.7): `enter_as_new_object` is
+                // the one list every entry route shares.
+                card.enter_as_new_object();
                 // Not a cast: reanimation / blink / put-onto-battlefield clears
                 // the "if you cast it" flag (CR 400.7 new object).
                 card.entered_by_cast = false;
-                // CR 702.29 — a fresh battlefield object owes echo again.
-                card.echo_paid = false;
                 // CR 122.2 cleared the counters above; re-seed a
                 // planeswalker's starting loyalty (CR 306.5b) so a reanimated
                 // / blinked planeswalker enters with full base loyalty rather

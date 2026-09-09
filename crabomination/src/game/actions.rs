@@ -3558,11 +3558,12 @@ impl GameState {
             card.definition_make_mut().activated_abilities = kept;
         }
         self.players[p].lands_played_this_turn += 1;
-        // CR 400.7 — a land that was a damaged creature when it last left
-        // the battlefield is a new object now (guarded: the write unshares
-        // the card's data, and a land from hand almost never carries any).
-        if card.damage != 0 {
-            card.damage = 0;
+        // CR 400.7 — a land that was an animated, pumped or damaged creature
+        // when it last left the battlefield is a new object now (guarded by
+        // the read-only probe: the reset unshares the card's data, and a
+        // land from hand almost never carries any of it).
+        if card.carries_old_object_state() {
+            card.enter_as_new_object();
         }
         self.battlefield.push(card);
         // CR 614.1c — a printed "enters with N counters" land (the MMQ

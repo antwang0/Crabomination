@@ -8897,6 +8897,77 @@ impl CardInstance {
     /// cleanup only. Guarded like the cleanup clear, so a clean card pays no
     /// CoW unshare. (Found by the `(-190)` audit: a Coral Eel bounced with
     /// "can't block" and recast still could not block.)
+    /// CR 400.7 — the object entering the battlefield is new: nothing its
+    /// last life marked on it (damage, pumps of either duration, an
+    /// attachment, a saddle or crew, a paid echo) comes along. One list for
+    /// every entry route — the resolving spell, `move_card_to`, `play_land`
+    /// — so the routes cannot drift apart again (a Golgari Thug recast after
+    /// dying entered with its damage and died; a permanent pump survived
+    /// the same trip). NOT for the resolving spell's own entry: CR 400.7d
+    /// keeps a change applied to the permanent spell on the permanent, so
+    /// that route resets damage alone and relies on
+    /// [`Self::leave_battlefield_state`] for the rest. Loyalty / defense
+    /// seeding and `entered_by_cast` stay with the caller, which knows how
+    /// the card arrived. Every field is a `DerefMut` write, so call it where
+    /// the data is already being written or behind
+    /// [`Self::carries_old_object_state`].
+    pub fn enter_as_new_object(&mut self) {
+        self.damage = 0;
+        self.power_bonus = 0;
+        self.toughness_bonus = 0;
+        self.perm_power_bonus = 0;
+        self.perm_toughness_bonus = 0;
+        self.attached_to = None;
+        self.attached_to_player = None;
+        self.saddled = false;
+        if !self.saddled_by.is_empty() || !self.crewed_by.is_empty() {
+            self.saddled_by.clear();
+            self.crewed_by.clear();
+        }
+        self.echo_paid = false;
+    }
+
+    /// CR 400.7 — the leave-side half: what an object's next zone must not
+    /// inherit and no later entry can tell apart from a change made to the
+    /// spell it becomes (CR 400.7d keeps a pump applied on the stack): the
+    /// permanent-duration pump, both attachments, a paid echo. Every write
+    /// is guarded — each is a CoW copy of a card a bot clone may still
+    /// share, and nearly every leaving card holds none of them. The
+    /// end-of-turn effects, saddle and crew are `clear_effects_on_zone_
+    /// change`'s; the damage is the entry's (`stack.rs`).
+    pub fn leave_battlefield_state(&mut self) {
+        if self.perm_power_bonus != 0 || self.perm_toughness_bonus != 0 {
+            self.perm_power_bonus = 0;
+            self.perm_toughness_bonus = 0;
+        }
+        if self.attached_to.is_some() {
+            self.attached_to = None;
+        }
+        if self.attached_to_player.is_some() {
+            self.attached_to_player = None;
+        }
+        if self.echo_paid {
+            self.echo_paid = false;
+        }
+    }
+
+    /// Read-only probe for [`Self::enter_as_new_object`]: does any field it
+    /// resets hold a non-default value? A card from hand almost never does,
+    /// and the probe costs no CoW copy where the reset would.
+    pub fn carries_old_object_state(&self) -> bool {
+        self.damage != 0
+            || self.power_bonus != 0
+            || self.toughness_bonus != 0
+            || self.perm_power_bonus != 0
+            || self.perm_toughness_bonus != 0
+            || self.attached_to.is_some()
+            || self.attached_to_player.is_some()
+            || self.saddled
+            || !self.saddled_by.is_empty()
+            || !self.crewed_by.is_empty()
+            || self.echo_paid
+    }
+
     pub fn clear_effects_on_zone_change(&mut self) {
         macro_rules! probe {
             (empty damaged_by_this_turn) => {};

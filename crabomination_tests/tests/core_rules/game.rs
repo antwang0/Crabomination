@@ -8667,8 +8667,16 @@ fn golgari_thug_recast_after_topdecking_itself_survives() {
     let mut g = two_player_game();
     let thug = g.add_card_to_battlefield(0, catalog::golgari_thug());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // The block trade: 1 damage on a 1/1.
-    g.battlefield_find_mut(thug).unwrap().damage = 1;
+    // A +1/+1 counter and a permanent pump ride along to test CR 122.2 and
+    // the rest of the new-object rule; then the block trade: lethal damage.
+    {
+        let c = g.battlefield_find_mut(thug).unwrap();
+        c.add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+        c.perm_power_bonus = 2;
+        c.perm_toughness_bonus = 2;
+        c.damage = 4;
+    }
+    assert_eq!(g.computed_permanent(thug).unwrap().toughness, 4);
     let _ = g.check_state_based_actions();
     assert!(!g.battlefield.iter().any(|c| c.id == thug), "1 damage kills a 1/1");
     // Its own dies trigger: the only creature card in its graveyard is itself.
@@ -8683,8 +8691,8 @@ fn golgari_thug_recast_after_topdecking_itself_survives() {
         // `place_card_at_resolved_zone` for the measured reason).
         let c = g.players[0].hand.iter().find(|c| c.id == thug).unwrap();
         assert_eq!(
-            (c.power_bonus, c.toughness_bonus, c.perm_power_bonus, c.perm_toughness_bonus, c.counters.len(), c.tapped, c.attached_to),
-            (0, 0, 0, 0, 0, false, None),
+            (c.power_bonus, c.toughness_bonus, c.counters.len(), c.tapped, c.attached_to),
+            (0, 0, 0, false, None),
             "the card in hand carries battlefield state",
         );
     }
@@ -8697,6 +8705,8 @@ fn golgari_thug_recast_after_topdecking_itself_survives() {
         g.players[0].graveyard.iter().map(|c| c.definition.name).collect::<Vec<_>>(),
         g.players[0].library.first().map(|c| c.definition.name)));
     assert_eq!(back.damage, 0, "a new object carries no damage");
+    assert!(back.counters.is_empty(), "CR 122.2 — counters do not survive the zone change");
+    assert_eq!((back.perm_power_bonus, back.perm_toughness_bonus), (0, 0), "a permanent pump ended with the old object");
     assert_eq!(g.computed_permanent(thug).unwrap().toughness, 1);
     assert!(g.battlefield_find(bear).is_some());
 }

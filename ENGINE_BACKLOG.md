@@ -63,16 +63,31 @@ Two leave-the-battlefield routes skipped the CR 400.7 reset that
 zone` (every death and every exile through `remove_from_battlefield_to_
 graveyard_raw` / `_to_exile`) reset "until end of turn" effects, cases,
 rooms and copies but not `damage` / `tapped` / `attached_to`, and
-`remove_from_battlefield_to_hand` cleared counters only. Both now clear
-the tap and the attachment; **the damage reset lives at the entry
-instead** — the stack resolution's push (`stack.rs`, where the card's
-data is already being written), `play_land` (guarded) and `move_card_to`
-(already there), which with the phasing paths (state kept by CR 702.26)
-and fresh tokens is every route onto the battlefield. Measured reason:
-`damage` sits behind the CoW `CardData`, and resetting it on the *leave*
-side deep-copies a dying card every bot clone still shares — **+0.107 %
-sealed Ir on identical games** (PERF Baseline addendum); no rule reads
-damage off a card outside the battlefield. Not a bot defect: the bot was
+`remove_from_battlefield_to_hand` cleared counters only — and the
+resolving spell's own entry (`stack.rs`) reset nothing at all, so the
+same trip also carried a **permanent-duration pump** (`perm_power_bonus`,
+Wall of Roots's kind), a **paid echo** and an "enchant player" attachment
+onto the new object (the test probes the pump: a recast Thug came back
++2/+2). The fix is split by what each side can know. **Leaving**
+(`CardInstance::leave_battlefield_state`, from `place_card_at_resolved_
+zone` and `remove_from_battlefield_to_hand` beside the tap): the
+permanent pump, both attachment kinds and the paid echo, every write
+guarded because each is a CoW copy of a card a bot clone may share and
+nearly no leaving card holds any; the end-of-turn effects, saddle and crew
+were already `clear_effects_on_zone_change`'s. **Entering**: the
+resolving spell's push resets **damage only** — CR 400.7d keeps a
+characteristic change applied to the permanent spell on the permanent it
+becomes (`cr_recent50::cr_112_4_permanent_spell_pump_survives_resolution`
+caught the first draft, which cleared the pumps there too) — while the
+non-spell routes, `move_card_to` (reanimation, blink) and `play_land`
+(behind the read-only `carries_old_object_state` probe), take the full
+`enter_as_new_object` list; the phasing paths keep their state by
+CR 702.26 and tokens are fresh. Measured reason for damage-at-entry:
+`damage` sits behind the CoW `CardData` and is non-zero on nearly every
+dying creature, so resetting it on the leave side deep-copies a card
+every bot clone still shares — **+0.107 % sealed Ir on identical games**
+(PERF Baseline addendum); no rule reads damage off a card outside the
+battlefield. Not a bot defect: the bot was
 right that the recast was free, and it was the engine that made it
 worthless. Golden traces 7/7 unmoved (no seeded game reaches the case).
 Regression test:
