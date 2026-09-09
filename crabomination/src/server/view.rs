@@ -81,7 +81,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                     p,
                     i,
                     viewer_seat,
-                    &state.prevention_shields,
+                    &state.turn.prevention_shields,
                     SeatFacts {
                         devotion,
                         draw_cap: state.draw_cap_for(i),
@@ -1464,7 +1464,7 @@ fn summarize_prevention(
     who: crate::game::types::PreventionTarget,
 ) -> PreventionSummary {
     let mut out = PreventionSummary { remaining: Some(0), ..Default::default() };
-    for s in state.prevention_shields.iter().filter(|s| s.target == who && !s.destroy) {
+    for s in state.turn.prevention_shields.iter().filter(|s| s.target == who && !s.destroy) {
         match (s.remaining, s.one_event) {
             // CR 615.8 — a "next instance" shield has no point budget; it is
             // not the blanket "prevent all damage this turn" that `None` alone
@@ -1502,11 +1502,13 @@ fn project_permanent(
     let battlefield = &state.battlefield;
     let cp = computed.iter().find(|c| c.id == card.id);
     let has_prevention_shield = state
+        .turn
         .prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Permanent(card.id) && !s.destroy);
     let prevention = summarize_prevention(state, PreventionTarget::Permanent(card.id));
     let doomed_next_damage = state
+        .turn
         .prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Permanent(card.id) && s.destroy);
@@ -3468,11 +3470,11 @@ mod tests {
         use crate::game::types::{PreventionShield, PreventionTarget};
         let mut state = two_player_game();
         let bear = state.add_card_to_battlefield(1, catalog::grizzly_bears());
-        state.prevention_shields.push(PreventionShield {
+        state.turn.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Player(0),
             ..Default::default()
         });
-        state.prevention_shields.push(PreventionShield {
+        state.turn.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Permanent(bear),
             remaining: Some(2),
             ..Default::default()
@@ -3480,7 +3482,7 @@ mod tests {
         // A Kill-Suit Cultist "destroy on next damage" shield on a second
         // creature reads as `doomed_next_damage`, NOT as protection.
         let doomed = state.add_card_to_battlefield(1, catalog::grizzly_bears());
-        state.prevention_shields.push(PreventionShield {
+        state.turn.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Permanent(doomed),
             destroy: true,
             one_event: true,
@@ -3508,7 +3510,7 @@ mod tests {
         use crate::game::types::{PreventionShield, PreventionTarget};
         let mut state = two_player_game();
         let dragon = state.add_card_to_battlefield(1, catalog::shivan_dragon());
-        state.prevention_shields.push(PreventionShield {
+        state.turn.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Player(0),
             source: Some(dragon),
             source_color: Some(crate::mana::Color::Red),
@@ -3593,13 +3595,13 @@ mod tests {
         let mut state = two_player_game();
         let bear = state.add_card_to_battlefield(0, catalog::grizzly_bears());
         for n in [2, 3] {
-            state.prevention_shields.push(PreventionShield {
+            state.turn.prevention_shields.push(PreventionShield {
                 target: PreventionTarget::Permanent(bear),
                 remaining: Some(n),
                 ..Default::default()
             });
         }
-        state.prevention_shields.push(PreventionShield {
+        state.turn.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Player(0),
             source_color: Some(crate::mana::Color::Red),
             ..Default::default()

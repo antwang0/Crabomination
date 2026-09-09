@@ -315,7 +315,7 @@ fn new_serde_fields_survive_snapshot_roundtrip() {
         card_types: crabomination::card::CardTypeSet::from_slice(&[CardType::Instant]),
     });
     g.players[1].lands_entered_this_turn = 2;
-    g.prevention_shields.push(PreventionShield {
+    g.turn.prevention_shields.push(PreventionShield {
         target: PreventionTarget::PlayerAndPermanents(0),
         remaining: Some(3),
         ..Default::default()
@@ -344,7 +344,7 @@ fn new_serde_fields_survive_snapshot_roundtrip() {
     );
     assert_eq!(g2.players[1].lands_entered_this_turn, 2);
     assert_eq!(
-        g2.prevention_shields[0].target,
+        g2.turn.prevention_shields[0].target,
         PreventionTarget::PlayerAndPermanents(0),
         "the team prevention target round-trips",
     );

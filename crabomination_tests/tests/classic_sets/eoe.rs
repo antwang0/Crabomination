@@ -829,7 +829,7 @@ fn frenzied_baloth_combat_damage_unpreventable() {
     g.add_card_to_battlefield(0, catalog::frenzied_baloth());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
-    g.prevention_shields.push(PreventionShield {
+    g.turn.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
         ..Default::default()
     });

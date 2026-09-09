@@ -667,7 +667,7 @@ fn circle_of_protection_shield_is_source_restricted() {
     g.deal_damage_to_from(
         crabomination::game::effects::EntityRef::Player(0), 2, Some(bears), &mut events);
     assert_eq!(g.players[0].life, 18, "green source ignores the red shield");
-    assert_eq!(g.prevention_shields.len(), 1, "shield still up");
+    assert_eq!(g.turn.prevention_shields.len(), 1, "shield still up");
 }
 
 

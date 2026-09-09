@@ -3584,9 +3584,9 @@ impl GameState {
                 && free_targets.is_empty()
                 && matches!(atk.target, AttackTarget::Player(_))
                 && let Some(i) =
-                    self.next_combat_damage_redirect.iter().position(|(a, _)| *a == atk.id)
+                    self.turn.next_combat_damage_redirect.iter().position(|(a, _)| *a == atk.id)
             {
-                let (_, victim) = self.next_combat_damage_redirect.remove(i);
+                let (_, victim) = self.turn.next_combat_damage_redirect.remove(i);
                 if self.battlefield_find(victim).is_some() {
                     let raw = if prevent_combat_damage { 0 } else { atk.power.max(0) as u32 };
                     self.deal_damage_to_from(
@@ -4030,7 +4030,7 @@ impl GameState {
                     .battlefield_find(source)
                     .is_some_and(|c| c.definition.damage_exiles_if_dies)
             {
-                self.dies_to_exile_eot.insert(damaged);
+                self.turn.dies_to_exile_eot.insert(damaged);
             }
             // Runesword — its damage also denies regeneration this turn.
             if self.damage_denies_regen_eot.contains(&source)
@@ -4219,8 +4219,8 @@ impl GameState {
     /// turn, it deals that damage to you instead". Consumes the charge and
     /// returns the creature's controller.
     pub(crate) fn take_combat_damage_diversion(&mut self, id: CardId) -> Option<usize> {
-        let idx = self.next_combat_damage_to_controller.iter().position(|c| *c == id)?;
-        self.next_combat_damage_to_controller.remove(idx);
+        let idx = self.turn.next_combat_damage_to_controller.iter().position(|c| *c == id)?;
+        self.turn.next_combat_damage_to_controller.remove(idx);
         self.battlefield_find(id).map(|c| c.controller)
     }
 
@@ -4800,7 +4800,7 @@ impl GameState {
         }
         // CR 509.1b — a blanket "can't block this turn" (Concussive Bolt's
         // metalcraft rider).
-        if self.cant_block_this_turn.contains(&blocker.id) {
+        if self.turn.cant_block_this_turn.contains(&blocker.id) {
             return no(line!());
         }
         let owner = blocker.controller;

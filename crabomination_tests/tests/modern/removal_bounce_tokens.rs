@@ -680,7 +680,7 @@ fn healing_salve_mode_one_prevents_next_three_damage() {
     }).expect("Lightning Bolt castable for {R}");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bear), "bear survives a prevented bolt");
-    assert!(g.prevention_shields.is_empty(), "next-3 shield consumed");
+    assert!(g.turn.prevention_shields.is_empty(), "next-3 shield consumed");
 }
 
 /// Raise the Alarm creates two 1/1 Soldier tokens.

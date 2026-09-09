@@ -155,5 +155,5 @@ fn cr_615_9_shield_rechecks_the_sources_color() {
     g.deal_damage_to_from(EntityRef::Player(0), 5, Some(dragon), &mut evs);
     assert_eq!(g.players[0].life, 15, "a white source isn't prevented");
 
-    assert_eq!(g.prevention_shields.len(), 1, "and the shield wasn't spent");
+    assert_eq!(g.turn.prevention_shields.len(), 1, "and the shield wasn't spent");
 }

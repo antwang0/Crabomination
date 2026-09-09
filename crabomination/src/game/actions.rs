@@ -12116,7 +12116,7 @@ impl GameState {
         // grants nothing each returns empty for every permanent (the
         // dispatcher's device). The station leg of
         // `statics_granted_triggers_with` is per-card, so it stays per-card.
-        let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
+        let any_static_grant = !trigger_grants.is_empty() || !self.turn.turn_granted_triggers.is_empty();
         let any_equip_grant = !equip_grants.is_empty();
         // Instance grants (`Effect::GrantTriggeredAbility`) of this kind: none
         // in the catalog today, read so the hook cannot drop one silently.

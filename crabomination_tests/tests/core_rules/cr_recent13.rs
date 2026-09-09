@@ -22,7 +22,7 @@ fn cr_615_12_excruciator_source_scoped_unpreventable() {
     g.clear_sickness(exc);
     g.clear_sickness(bear);
     // A shield that would prevent all damage dealt to player 1.
-    g.prevention_shields.push(PreventionShield {
+    g.turn.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
         ..Default::default()
     });

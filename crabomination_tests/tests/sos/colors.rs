@@ -529,7 +529,7 @@ fn impractical_joke_damage_cant_be_prevented() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     // Shield the bear against all damage this turn.
-    g.prevention_shields.push(PreventionShield {
+    g.turn.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Permanent(bear),
         ..Default::default()
     });
@@ -552,7 +552,7 @@ fn prevention_shield_stops_noncombat_damage() {
     use crabomination::game::types::{PreventionShield, PreventionTarget};
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.prevention_shields.push(PreventionShield {
+    g.turn.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Permanent(bear),
         ..Default::default()
     });

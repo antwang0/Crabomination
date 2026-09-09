@@ -2928,8 +2928,8 @@ impl GameState {
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
                 for id in ids {
-                    if !self.cant_block_this_turn.contains(&id) {
-                        self.cant_block_this_turn.push(id);
+                    if !self.turn.cant_block_this_turn.contains(&id) {
+                        self.turn.cant_block_this_turn.push(id);
                     }
                 }
                 Ok(())
@@ -3132,8 +3132,8 @@ impl GameState {
                     return Ok(());
                 };
                 if let Some(src) = ctx.source {
-                    retain_cold!(self.turn_damage_redirect, |(c, _)| *c != src);
-                    self.turn_damage_redirect.push((src, dest));
+                    retain_cold!(self.turn.turn_damage_redirect, |(c, _)| *c != src);
+                    self.turn.turn_damage_redirect.push((src, dest));
                 }
                 Ok(())
             }
@@ -3141,9 +3141,9 @@ impl GameState {
             Effect::RedirectNextCombatDamageToController { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
-                        && !self.next_combat_damage_to_controller.contains(&cid)
+                        && !self.turn.next_combat_damage_to_controller.contains(&cid)
                     {
-                        self.next_combat_damage_to_controller.push(cid);
+                        self.turn.next_combat_damage_to_controller.push(cid);
                     }
                 }
                 Ok(())
@@ -3159,9 +3159,9 @@ impl GameState {
                 };
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
-                        && !self.next_combat_damage_redirect.iter().any(|(a, _)| *a == cid)
+                        && !self.turn.next_combat_damage_redirect.iter().any(|(a, _)| *a == cid)
                     {
-                        self.next_combat_damage_redirect.push((cid, victim));
+                        self.turn.next_combat_damage_redirect.push((cid, victim));
                     }
                 }
                 Ok(())
@@ -3392,8 +3392,8 @@ impl GameState {
                     }) else {
                         continue;
                     };
-                    retain_cold!(self.spell_damage_to_controller, |(c, _)| *c != cid);
-                    self.spell_damage_to_controller.push((cid, controller));
+                    retain_cold!(self.turn.spell_damage_to_controller, |(c, _)| *c != cid);
+                    self.turn.spell_damage_to_controller.push((cid, controller));
                 }
                 Ok(())
             }
@@ -3538,8 +3538,8 @@ impl GameState {
                 };
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
-                        retain_cold!(self.next_damage_redirect, |(c, _)| *c != cid);
-                        self.next_damage_redirect.push((cid, dest));
+                        retain_cold!(self.turn.next_damage_redirect, |(c, _)| *c != cid);
+                        self.turn.next_damage_redirect.push((cid, dest));
                     }
                 }
                 Ok(())
@@ -4312,7 +4312,7 @@ impl GameState {
             Effect::YourNoncombatDamageBonusThisTurn { amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n > 0 {
-                    self.noncombat_damage_bonus_this_turn.push((ctx.controller, n));
+                    self.turn.noncombat_damage_bonus_this_turn.push((ctx.controller, n));
                 }
                 Ok(())
             }
@@ -4812,7 +4812,7 @@ impl GameState {
                             count: n,
                         });
                     }
-                    self.permanents_gained_counter_this_turn.insert(cid);
+                    self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
                 Ok(())
             }
@@ -6301,7 +6301,7 @@ impl GameState {
                             crate::game::types::PreventionTarget::Permanent(*id)
                         }
                     };
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: shield_target,
                         remaining: Some(n),
                         ..Default::default()
@@ -6355,7 +6355,7 @@ impl GameState {
                             card_id: id, counter_type: CounterType::PlusOnePlusOne, count: n,
                         });
                     }
-                    self.permanents_gained_counter_this_turn.insert(id);
+                    self.turn.permanents_gained_counter_this_turn.insert(id);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -6465,7 +6465,7 @@ impl GameState {
                             card_id: id, counter_type: counter, count: n,
                         });
                     }
-                    self.permanents_gained_counter_this_turn.insert(id);
+                    self.turn.permanents_gained_counter_this_turn.insert(id);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -8532,14 +8532,14 @@ impl GameState {
             }
 
             Effect::GrantTriggeredAbilityThisTurnToMatching { filter, trigger } => {
-                self.turn_granted_triggers.push((filter.clone(), (**trigger).clone()));
+                self.turn.turn_granted_triggers.push((filter.clone(), (**trigger).clone()));
                 Ok(())
             }
 
             Effect::PumpAttackersThisTurn { power, toughness } => {
                 let power = self.evaluate_value(power, ctx);
                 let toughness = self.evaluate_value(toughness, ctx);
-                self.turn_granted_triggers.push((
+                self.turn.turn_granted_triggers.push((
                     crate::card::SelectionRequirement::Creature,
                     crate::card::TriggeredAbility {
                         event: crate::effect::EventSpec::new(
@@ -9412,7 +9412,7 @@ impl GameState {
                             counter_type: CounterType::PlusOnePlusOne,
                             count,
                         });
-                        self.permanents_gained_counter_this_turn.insert(src);
+                        self.turn.permanents_gained_counter_this_turn.insert(src);
                     }
                 }
                 events.push(GameEvent::BecameMonstrous { card_id: src, n: base });
@@ -10101,7 +10101,7 @@ impl GameState {
                                 counter_type: CounterType::PlusOnePlusOne,
                                 count: n,
                             });
-                            self.permanents_gained_counter_this_turn.insert(cid);
+                            self.turn.permanents_gained_counter_this_turn.insert(cid);
                         }
                     }
                     events.push(GameEvent::Explored {
@@ -10971,7 +10971,7 @@ impl GameState {
                 // cleanup.
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
-                        self.dies_to_exile_eot.insert(cid);
+                        self.turn.dies_to_exile_eot.insert(cid);
                     }
                 }
                 Ok(())
@@ -15107,7 +15107,7 @@ impl GameState {
                             count: n,
                         });
                     }
-                    self.permanents_gained_counter_this_turn.insert(cid);
+                    self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -15165,7 +15165,7 @@ impl GameState {
                     if *kind == CounterType::Lore {
                         self.saga_chapters_crossed(cid, before, before + scaled);
                     }
-                    self.permanents_gained_counter_this_turn.insert(cid);
+                    self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -15226,7 +15226,7 @@ impl GameState {
                             // for Fractal Tender's end-step trigger and any
                             // future "if you put a counter on this creature
                             // this turn" payoff.
-                            self.permanents_gained_counter_this_turn.insert(cid);
+                            self.turn.permanents_gained_counter_this_turn.insert(cid);
                             // Cursed Wombat — the controller's once-per-turn
                             // +1/+1 amplifier adds one extra the first time
                             // counters land on each of their permanents.
@@ -15266,7 +15266,7 @@ impl GameState {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
                         events.push(GameEvent::CounterAdded { card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: n });
                     }
-                    self.permanents_gained_counter_this_turn.insert(cid);
+                    self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -15299,7 +15299,7 @@ impl GameState {
                         c.add_counters(*kind, add);
                         events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: add });
                     }
-                    self.permanents_gained_counter_this_turn.insert(cid);
+                    self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -15333,7 +15333,7 @@ impl GameState {
                             events.push(GameEvent::CounterAdded { card_id: cid, counter_type: kind, count: add });
                         }
                     }
-                    self.permanents_gained_counter_this_turn.insert(cid);
+                    self.turn.permanents_gained_counter_this_turn.insert(cid);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -15416,7 +15416,7 @@ impl GameState {
                             counter_type: *kind,
                             count: n,
                         });
-                        self.permanents_gained_counter_this_turn.insert(cid);
+                        self.turn.permanents_gained_counter_this_turn.insert(cid);
                         if !recipients.contains(&cid) {
                             recipients.push(cid);
                         }
@@ -15609,7 +15609,7 @@ impl GameState {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
                         events.push(GameEvent::CounterAdded { card_id: s, counter_type: CounterType::PlusOnePlusOne, count: n });
                     }
-                    self.permanents_gained_counter_this_turn.insert(s);
+                    self.turn.permanents_gained_counter_this_turn.insert(s);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -15722,7 +15722,7 @@ impl GameState {
                             c.keyword_counters.add(keyword.clone(), n);
                             // "This permanent gained a counter this turn"
                             // payoffs count keyword counters too (CR 122.1b).
-                            self.permanents_gained_counter_this_turn.insert(cid);
+                            self.turn.permanents_gained_counter_this_turn.insert(cid);
                             events.push(GameEvent::KeywordCounterAdded {
                                 card_id: cid,
                                 keyword: keyword.clone(),
@@ -15752,7 +15752,7 @@ impl GameState {
                     if total == 0 { continue; }
                     use rand::RngExt;
                     let pick = self.rng.draw().random_range(0..total);
-                    self.permanents_gained_counter_this_turn.insert(cid);
+                    self.turn.permanents_gained_counter_this_turn.insert(cid);
                     if pick < missing_kw.len() {
                         let kw = missing_kw.swap_remove(pick);
                         self.board_instance_keywords = true;
@@ -17725,7 +17725,7 @@ impl GameState {
                                 counter_type: CounterType::PlusOnePlusOne,
                                 count: scaled,
                             });
-                            self.permanents_gained_counter_this_turn.insert(id);
+                            self.turn.permanents_gained_counter_this_turn.insert(id);
                         }
                     }
                 }
@@ -17774,7 +17774,7 @@ impl GameState {
                     events.push(GameEvent::CounterAdded {
                         card_id: army, counter_type: CounterType::PlusOnePlusOne, count: scaled,
                     });
-                    self.permanents_gained_counter_this_turn.insert(army);
+                    self.turn.permanents_gained_counter_this_turn.insert(army);
                 }
                 self.check_state_based_actions_into(events);
                 Ok(())
@@ -24896,7 +24896,7 @@ impl GameState {
                     DecisionAnswer::Color(c) => c,
                     _ => Color::Black,
                 };
-                self.prevention_shields.push(crate::game::types::PreventionShield {
+                self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                     target: crate::game::types::PreventionTarget::Anything,
                     source_color: Some(color),
                     ..Default::default()
@@ -29669,7 +29669,7 @@ impl GameState {
                         .collect(),
                 };
                 for target in targets {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target,
                         source: Some(chosen),
                         one_event: !*whole_turn,
@@ -29707,7 +29707,7 @@ impl GameState {
                 // A pointless budget with `one_event` is the "prevent that
                 // damage" form (Shadowbane) — an unbudgeted one-event shield.
                 if n > 0 || *one_event {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: crate::game::types::PreventionTarget::PlayerAndPermanents(
                             ctx.controller,
                         ),
@@ -29799,7 +29799,7 @@ impl GameState {
                     return Ok(());
                 };
                 let source_controller = self.battlefield_find(src).map(|c| c.controller);
-                self.prevention_shields.push(crate::game::types::PreventionShield {
+                self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                     target: crate::game::types::PreventionTarget::Permanent(shielded),
                     source: Some(src),
                     one_event: true,
@@ -29997,7 +29997,7 @@ impl GameState {
                 let Some(chosen) = chosen else { return Ok(()) };
                 if self.flip_one_coin(p) {
                     events.push(GameEvent::CoinFlipWon { player: p });
-                    self.double_next_damage_from.push(chosen);
+                    self.turn.double_next_damage_from.push(chosen);
                 } else {
                     events.push(GameEvent::CoinFlipLost { player: p });
                     self.run_effect(
@@ -30476,7 +30476,7 @@ impl GameState {
                 // source itself, soaking the next N damage it deals.
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n > 0 && let Some(src) = ctx.source {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: crate::game::types::PreventionTarget::Anything,
                         remaining: Some(n),
                         source: Some(src),
@@ -30517,7 +30517,7 @@ impl GameState {
                         })
                     })
                     .flatten();
-                self.prevention_shields.push(crate::game::types::PreventionShield {
+                self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                     target: crate::game::types::PreventionTarget::Anything,
                     remaining: None,
                     source: Some(chosen),
@@ -30827,7 +30827,7 @@ impl GameState {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n > 0 {
                     for s in self.prevention_targets(target, ctx) {
-                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                        self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                             target: s,
                             remaining: Some(n),
                             counters_on_target: counters,
@@ -30853,7 +30853,7 @@ impl GameState {
                 }
                 if n > 0 && (dst.is_some() || dst_player.is_some()) {
                     for s in self.prevention_targets(target, ctx) {
-                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                        self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                             target: s,
                             remaining: Some(n),
                             redirect_to: dst,
@@ -30871,7 +30871,7 @@ impl GameState {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n > 0 {
                     for s in self.prevention_targets(target, ctx) {
-                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                        self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                             target: s,
                             remaining: Some(n),
                             gain_life: true,
@@ -30932,7 +30932,7 @@ impl GameState {
                     }
                 }
                 for s in self.prevention_targets(target, ctx) {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         redirect_to: dst,
                         redirect_to_player: dst_player,
@@ -30944,7 +30944,7 @@ impl GameState {
 
             Effect::PreventAllDamageThisTurnWithCounters { target } => {
                 for s in self.prevention_targets(target, ctx) {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         counters_on_target: true,
                         ..Default::default()
@@ -30965,7 +30965,7 @@ impl GameState {
                     .collect();
                 for t in self.prevention_targets(to, ctx) {
                     for src in &sources {
-                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                        self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                             target: t,
                             source: Some(*src),
                             ..Default::default()
@@ -31030,7 +31030,7 @@ impl GameState {
                 // target creature this turn, destroy that creature instead."
                 // A one-event prevent-all shield with the `destroy` rider.
                 for s in self.prevention_targets(target, ctx) {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         one_event: true,
                         destroy: true,
@@ -31140,7 +31140,7 @@ impl GameState {
                     _ => Color::Black,
                 };
                 for s in recipients {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         source_color: Some(color),
                         ..Default::default()
@@ -32120,7 +32120,7 @@ impl GameState {
                 };
                 let Some(tgt) = tgt else { return Ok(()) };
                 for seat in 0..self.players.len() {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: crate::game::types::PreventionTarget::Player(seat),
                         source: Some(tgt),
                         one_event: true,

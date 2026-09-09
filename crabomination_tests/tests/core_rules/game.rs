@@ -785,7 +785,7 @@ fn prevention_shield_stops_combat_damage_to_player() {
     use crabomination::game::types::{PreventionShield, PreventionTarget};
     let mut g = two_player_game();
     let bear_id = setup_attacker(&mut g, 0, catalog::grizzly_bears);
-    g.prevention_shields.push(PreventionShield {
+    g.turn.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
         ..Default::default()
     });
@@ -858,7 +858,7 @@ fn skullcrack_damage_cant_be_prevented() {
     use crabomination::game::types::{PreventionShield, PreventionTarget};
     let mut g = two_player_game();
     g.players[1].life = 5;
-    g.prevention_shields.push(PreventionShield {
+    g.turn.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
         ..Default::default()
     });
@@ -922,7 +922,7 @@ fn prevention_shield_stops_creature_combat_damage() {
     let mut g = two_player_game();
     let attacker_id = setup_attacker(&mut g, 0, catalog::hill_giant); // 3/3
     let blocker_id = setup_attacker(&mut g, 1, catalog::grizzly_bears); // 2/2
-    g.prevention_shields.push(PreventionShield {
+    g.turn.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Permanent(blocker_id),
         ..Default::default()
     });

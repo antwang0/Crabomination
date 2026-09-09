@@ -114,7 +114,7 @@ impl GameState {
         &self,
         cid: crate::card::CardId,
     ) -> Option<crate::card::CardId> {
-        self.turn_damage_redirect
+        self.turn.turn_damage_redirect
             .iter()
             .find(|(c, _)| *c == cid)
             .and_then(|(_, to)| to.as_permanent_id())
@@ -698,7 +698,7 @@ impl GameState {
                 return 0;
             }
         }
-        if self.prevention_shields.is_empty() {
+        if self.turn.prevention_shields.is_empty() {
             return amount;
         }
         let (to_player, to_card, key) = match ent {
@@ -746,6 +746,7 @@ impl GameState {
         // observable, the colour recheck can't disprove a match.
         let src_known = source.is_some_and(|id| self.find_card_anywhere(id).is_some());
         for (i, shield) in self
+            .turn
             .prevention_shields
             .iter_mut()
             .enumerate()
@@ -807,7 +808,7 @@ impl GameState {
         }
         // Drop spent "next N" shields and used one-event shields.
         let mut idx = 0;
-        self.prevention_shields.retain(|s| {
+        self.turn.prevention_shields.retain(|s| {
             let spent = s.remaining == Some(0) || spent_one_event.contains(&idx);
             idx += 1;
             !spent
@@ -950,9 +951,9 @@ impl GameState {
         // a registered permanent goes somewhere else instead. Consumed here.
         if !self.in_damage_redirect
             && let EntityRef::Permanent(hit) = ent
-            && let Some(idx) = self.next_damage_redirect.iter().position(|(c, _)| *c == hit)
+            && let Some(idx) = self.turn.next_damage_redirect.iter().position(|(c, _)| *c == hit)
         {
-            let (_, to) = self.next_damage_redirect.remove(idx);
+            let (_, to) = self.turn.next_damage_redirect.remove(idx);
             self.in_damage_redirect = true;
             self.deal_damage_to_from(to, amount, source, events);
             self.in_damage_redirect = false;
@@ -1063,7 +1064,7 @@ impl GameState {
         if !self.in_damage_redirect
             && let Some(src) = source
             && let Some((_, to)) =
-                self.spell_damage_to_controller.iter().find(|(s, _)| *s == src).copied()
+                self.turn.spell_damage_to_controller.iter().find(|(s, _)| *s == src).copied()
             && ent != EntityRef::Player(to)
         {
             self.in_damage_redirect = true;
@@ -1153,10 +1154,10 @@ impl GameState {
         // Desperate Gambit — "the next time that source would deal damage this
         // turn, it deals double that damage instead". One-shot per entry.
         let amount = match source
-            .and_then(|s| self.double_next_damage_from.iter().position(|&d| d == s))
+            .and_then(|s| self.turn.double_next_damage_from.iter().position(|&d| d == s))
         {
             Some(i) => {
-                self.double_next_damage_from.remove(i);
+                self.turn.double_next_damage_from.remove(i);
                 amount.saturating_mul(2)
             }
             None => amount,
@@ -1170,11 +1171,12 @@ impl GameState {
         };
         // Taii Wakeen's {X}, {T} — "it deals that much damage plus X instead",
         // scoped to the activating seat's sources and to this turn.
-        let amount = if self.noncombat_damage_bonus_this_turn.is_empty() {
+        let amount = if self.turn.noncombat_damage_bonus_this_turn.is_empty() {
             amount
         } else {
             let ctrl = source.and_then(|s| self.computed_permanent(s).map(|cp| cp.controller));
             let bonus: u32 = self
+                .turn
                 .noncombat_damage_bonus_this_turn
                 .iter()
                 .filter(|(seat, _)| Some(*seat) == ctrl)
@@ -1258,17 +1260,17 @@ impl GameState {
         // Case of the Burning Masks — tally the distinct sources each seat
         // controlled that have dealt damage this turn.
         if let (Some(src), Some(seat)) = (source, from_controller)
-            && !self.damage_sources_this_turn.contains(&(seat, src))
+            && !self.turn.damage_sources_this_turn.contains(&(seat, src))
         {
-            self.damage_sources_this_turn.push((seat, src));
+            self.turn.damage_sources_this_turn.push((seat, src));
         }
         // Reverse Polarity — tally artifact damage dealt to each player.
         if let (EntityRef::Player(victim), Some(src)) = (ent, source)
             && self.source_is_artifact(src)
         {
-            match self.artifact_damage_to_players_this_turn.iter_mut().find(|(s, _)| *s == victim) {
+            match self.turn.artifact_damage_to_players_this_turn.iter_mut().find(|(s, _)| *s == victim) {
                 Some(entry) => entry.1 += amount,
-                None => self.artifact_damage_to_players_this_turn.push((victim, amount)),
+                None => self.turn.artifact_damage_to_players_this_turn.push((victim, amount)),
             }
         }
         // Backdraft — tally the damage each sorcery spell deals as it resolves.
@@ -1277,9 +1279,9 @@ impl GameState {
                 .then_some((*rid, *caster))
         });
         if let Some((src, caster)) = sorcery_caster {
-            match self.sorcery_damage_this_turn.iter_mut().find(|(s, _, _)| *s == src) {
+            match self.turn.sorcery_damage_this_turn.iter_mut().find(|(s, _, _)| *s == src) {
                 Some(entry) => entry.2 += amount,
-                None => self.sorcery_damage_this_turn.push((src, caster, amount)),
+                None => self.turn.sorcery_damage_this_turn.push((src, caster, amount)),
             }
         }
         // CR 702.90b — damage dealt to a player by a source with infect
@@ -1693,7 +1695,7 @@ impl GameState {
                     });
                     let is_creature = c.definition.is_creature();
                     if source_exiles_damaged && is_creature {
-                        self.dies_to_exile_eot.insert(cid);
+                        self.turn.dies_to_exile_eot.insert(cid);
                     }
                     if source_denies_regen
                         && is_creature

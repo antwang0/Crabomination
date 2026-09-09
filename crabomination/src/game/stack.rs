@@ -926,8 +926,8 @@ impl GameState {
         // on a board that grants nothing on this step it returns empty for
         // every permanent.
         let any_static_grant = !trigger_grants.is_empty()
-            || (!self.turn_granted_triggers.is_empty()
-                && self.turn_granted_triggers.iter().any(|(_, t)| t.event.kind == kind));
+            || (!self.turn.turn_granted_triggers.is_empty()
+                && self.turn.turn_granted_triggers.iter().any(|(_, t)| t.event.kind == kind));
         // Instance grants (`Effect::GrantTriggeredAbility`) of this kind: none
         // in the catalog today, read so the hook cannot drop one silently.
         let any_own_grant = self.any_granted_trigger_of_kind(&kind);
@@ -4315,7 +4315,7 @@ impl GameState {
         // Clear the per-turn "permanents gained a counter this turn"
         // tracker (used by Fractal Tender's end-step trigger). Resetting
         // at cleanup is the canonical "until end of turn" scope.
-        clear_cold!(self.permanents_gained_counter_this_turn);
+        clear_turn!(self.permanents_gained_counter_this_turn);
         clear_cold!(self.permanents_amplified_counter_this_turn);
         // CR 603-style "Nth time this turn" escalation counters reset.
         clear_cold!(self.ability_resolutions_this_turn);
@@ -4330,7 +4330,7 @@ impl GameState {
         });
         // Close the "if it would die this turn, exile it instead" window
         // (Wilt in the Heat).
-        clear_cold!(self.dies_to_exile_eot);
+        clear_turn!(self.dies_to_exile_eot);
         clear_cold!(self.damage_exiles_victim_eot);
         clear_cold!(self.damage_denies_regen_eot);
         // Expire event-keyed "when [card] dies this turn" delayed triggers
@@ -4389,32 +4389,32 @@ impl GameState {
         clear_cold!(self.targeting_damage_prevented_this_turn);
         clear_cold!(self.colored_mana_becomes_this_turn);
         self.blocks_declared_this_turn.clear();
-        clear_cold!(self.turn_granted_triggers);
+        clear_turn!(self.turn_granted_triggers);
         clear_cold!(self.cant_block_pairs);
-        clear_cold!(self.cant_block_this_turn);
+        clear_turn!(self.cant_block_this_turn);
         clear_cold!(self.attack_despite_defender_this_turn);
         // CR 615 — prevention shields and the "can't be prevented" rider
         // are "this turn" effects; they expire at cleanup too.
-        clear_cold!(self.prevention_shields);
+        clear_turn!(self.prevention_shields);
         self.damage_cant_be_prevented_this_turn = false;
         self.attack_tax_this_turn = 0;
         self.block_tax_this_turn = 0;
         clear_cold!(self.damage_redirect_this_turn);
-        clear_cold!(self.next_damage_redirect);
-        clear_cold!(self.turn_damage_redirect);
-        clear_cold!(self.next_combat_damage_to_controller);
-        clear_cold!(self.next_combat_damage_redirect);
-        clear_cold!(self.spell_damage_to_controller);
-        clear_cold!(self.sorcery_damage_this_turn);
-        clear_cold!(self.artifact_damage_to_players_this_turn);
+        clear_turn!(self.next_damage_redirect);
+        clear_turn!(self.turn_damage_redirect);
+        clear_turn!(self.next_combat_damage_to_controller);
+        clear_turn!(self.next_combat_damage_redirect);
+        clear_turn!(self.spell_damage_to_controller);
+        clear_turn!(self.sorcery_damage_this_turn);
+        clear_turn!(self.artifact_damage_to_players_this_turn);
         clear_cold!(self.combat_damage_redirect_this_turn);
         clear_cold!(self.doubled_damage_sources_this_turn);
         clear_cold!(self.assigns_no_combat_damage_this_turn);
         self.creature_combat_damage_doublers = 0;
-        clear_cold!(self.damage_sources_this_turn);
-        clear_cold!(self.noncombat_damage_bonus_this_turn);
+        clear_turn!(self.damage_sources_this_turn);
+        clear_turn!(self.noncombat_damage_bonus_this_turn);
         // Desperate Gambit's unspent doubler expires with the turn.
-        clear_cold!(self.double_next_damage_from);
+        clear_turn!(self.double_next_damage_from);
         self.damaged_creatures_die_this_turn = false;
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;
@@ -6653,7 +6653,7 @@ impl GameState {
                 // battlefield for the Aura still attached to the dying card.
                 .any(|(filter, ctrl)| self.evaluate_requirement_on_card(filter, &card, *ctrl));
             let initial_to = if card.counter_count(crate::card::CounterType::Finality) > 0
-                || self.dies_to_exile_eot.contains(&id)
+                || self.turn.dies_to_exile_eot.contains(&id)
                 || card.definition.dies_to_exile
                 || valentin_redirect.is_some()
             {

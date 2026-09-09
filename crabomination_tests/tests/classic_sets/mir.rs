@@ -2195,7 +2195,7 @@ fn shadowbane_pays_back_only_black_sources() {
     cast(&mut g, spell, None).expect("cast");
     drain_stack(&mut g);
     assert!(
-        g.prevention_shields.iter().any(|s| s.gain_life
+        g.turn.prevention_shields.iter().any(|s| s.gain_life
             && s.gain_life_color == Some(Color::Black)
             && s.one_event),
         "one-event shield with the black-source refund"

@@ -1836,7 +1836,7 @@ fn fractal_tender_end_step_mints_fractal_when_gained_counter() {
     // Manually add a +1/+1 counter to Tender (simulating the Increment
     // trigger that fires on big-spell casts).
     g.battlefield_find_mut(tender).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    g.permanents_gained_counter_this_turn.insert(tender);
+    g.turn.permanents_gained_counter_this_turn.insert(tender);
     // Advance to End step.
     let bf_before = g.battlefield.len();
     g.step = crabomination::game::TurnStep::End;

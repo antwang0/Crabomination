@@ -2798,16 +2798,16 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-280)`..`(-282)` — the CoW-group legs: closing state at the `(-282)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+### `(-280)`..`(-283)` — the CoW-group legs: closing state at the `(-283)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
-Three engine legs after the `(-279)` closing state below (Log `(-280)`,
-`(-281)`, `(-282)`; the CoW family read by monomorphization in the
-candidates). Behaviour-preserving — every trace identical, `--bench`
-counters identical — so the three totals below are the `(-279)` games,
-cheaper, and **the `(-282)` triple is the base for every later A/B:
-sealed 2,536,118,264 / cube 2,448,171,416 / fixed 643,076,738**
-(cumulative against the re-taken base: sealed -1.063 % / cube -0.798 % /
-fixed -1.340 %). ⚠ The base was RE-TAKEN on this box before the legs:
+Four engine legs after the `(-279)` closing state below (Log `(-280)`
+..`(-283)`; the CoW family read by monomorphization in the candidates).
+Behaviour-preserving — every trace identical, `--bench` counters
+identical — so the three totals below are the `(-279)` games, cheaper,
+and **the `(-283)` triple is the base for every later A/B: sealed
+2,530,209,369 / cube 2,444,970,331 / fixed 641,631,948** (cumulative
+against the re-taken base: sealed -1.293 % / cube -0.928 % / fixed
+-1.562 %). ⚠ The base was RE-TAKEN on this box before the legs:
 sealed and cube reproduced the recorded `fix+` triple to within 1-3 k Ir,
 `fixed` did not (651,809,830 against the recorded 671,760,207 on identical
 `--bench` counters and 24 / 24 decided — the recorded fixed number is the
@@ -2823,6 +2823,8 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
          (-0.056 %); traces 120 / 120 identical against the (-280) binary; --bench counters identical; thread_determinism ok
   (-282) sealed 2,545,847,904 -> 2,536,118,264 (-0.382 %, 72 / 72); cube 2,452,405,764 -> 2,448,171,416 (-0.173 %, 48 / 48); fixed 645,681,561 -> 643,076,738
          (-0.403 %); traces 120 / 120 identical against the (-281) binary; --bench counters identical; thread_determinism ok; GameState 1,592 bytes
+  (-283) sealed 2,536,118,264 -> 2,530,209,369 (-0.233 %, 72 / 72); cube 2,448,171,416 -> 2,444,970,331 (-0.131 %, 48 / 48); fixed 643,076,738 -> 641,631,948
+         (-0.225 %); traces 120 / 120 identical against the (-282) binary; --bench counters identical; thread_determinism ok; GameState 1,600 bytes (the cap)
 --bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
 sweeps  fresh seeds on the b7bd9250 tip binary (profiling-fast) BEFORE the leg, dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000:
@@ -4121,6 +4123,44 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-283)` TAKEN — the sixteen per-turn registries an effect writes leave `ColdState` for `TurnRegistries`: sealed default Ir **-0.233 %** / cube **-0.131 %** / fixed **-0.225 %**, 120 / 120 traces identical
+
+The residue `(-282)`'s tail priced: ~2,000 `ColdState` unshares a sealed
+run under `run_effect` (`permanents_gained_counter_this_turn.insert`,
+`prevention_shields.push`, `cant_block_this_turn`, the five damage
+redirect lists), `deal_damage_to_from` (`damage_sources_this_turn`, the
+artifact / sorcery damage tallies, `dies_to_exile_eot`), `discard_card`
+(`last_discarded_colors`), `mint_token_with_counters`. Per `(-217)`'s
+rule they moved together: a `CowBox<TurnRegistries>` of the sixteen
+(`state.turn.<f>`, `#[serde(flatten)]` so the snapshot shape is
+unchanged; `clear_turn!` and a `retain_cold!` arm for the three-segment
+path), so a resolution's first cold write copies sixteen containers
+instead of ~85 and allocates a small-bin `Arc`.
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the (-282) tip:
+  sealed  2,536,118,264 -> 2,530,209,369 Ir   (-5,908,895, -0.233 %)   72 / 72 decided both sides
+  cube    2,448,171,416 -> 2,444,970,331 Ir   (-3,201,085, -0.131 %)   48 / 48
+  fixed     643,076,738 ->   641,631,948 Ir   (-1,444,790, -0.225 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed, make_mut_slow by caller, calls / inclusive): run_effect 1,046 / 2.47 M -> 1,050 / 0.60 M; run_effect'2 758 / 1.70 M -> 762 / 0.51 M;
+               deal_damage_to_from 778 / 1.63 M -> 818 / 0.51 M; cleanup_wear_off 4,692 / 2.44 M -> 4,744 / 1.40 M (the cleanup clears now find the
+               registries in the small group); mint_token_with_counters 242 / 0.49 M -> 242 / 0.18 M; discard_card 834 / 1.31 M -> 1,118 / 1.56 M
+               (+284 — the discard's next cold write walked down, `(-217)`'s first-cut shape, at +0.25 M against the -5 M above); make_mut_slow
+               201,672 -> 202,162 calls; clone_from_ref_in self 70.84 -> 68.36 M; Vec::clone 20.39 -> 19.71 M; RawTable::clone 2.11 -> 1.81 M;
+               Arc::drop_slow 10.44 -> 9.96 M; the allocator family -2.0 M; GameState::clone +0.26 M (the new handle's refcount bump a clone)
+--bench (profiling-fast, system allocator): 195,806 / 27.49 / 611.9 / 0 — counters identical; determinism ok; thread_determinism ok (3 vs 1)
+```
+
+What is left of `ColdState`'s unshare on sealed: `discard_card`'s
++284 (whatever cold field the discard path writes after
+`last_discarded_colors` — read `cg_contexts.py make_mut_slow` at three
+levels before moving it, since `PlayerCold`'s `discarded_this_turn` is
+the likelier one and that is a different group), `activate_ability_inner`
+560 (ability-side registries), `move_card_to` 1,414 (a zone move's
+registries — `dies_to_exile_eot` moved, the rest did not) — each a
+census question, none a row above 0.1 %.
 
 ### `(-282)` TAKEN — `life_gain_flag_pending` as a seat mask on the hot state: sealed default Ir **-0.382 %** / cube **-0.173 %** / fixed **-0.403 %**, 120 / 120 traces identical
 

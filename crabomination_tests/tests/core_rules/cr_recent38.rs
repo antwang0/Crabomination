@@ -220,5 +220,5 @@ fn cr_616_1f_stacked_shields_both_apply_to_one_event() {
         1,
         "2 + 3 prevented, 1 through"
     );
-    assert!(g.prevention_shields.is_empty(), "both shields were spent");
+    assert!(g.turn.prevention_shields.is_empty(), "both shields were spent");
 }

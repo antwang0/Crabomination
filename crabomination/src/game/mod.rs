@@ -39,11 +39,26 @@ macro_rules! clear_cold {
     };
 }
 
+/// [`clear_cold`] for a [`TurnRegistries`] field: `self.turn.<f>`.
+macro_rules! clear_turn {
+    ($self:ident . $f:ident) => {
+        if !$self.turn.$f.is_empty() {
+            $self.turn.$f.clear();
+        }
+    };
+}
+
 /// `self.<cold field>.retain(pred)` behind the same read — see [`clear_cold`].
 macro_rules! retain_cold {
     ($self:ident . $f:ident, $pred:expr) => {
         if !$self.$f.is_empty() {
             $self.$f.retain($pred);
+        }
+    };
+    // The same read on a [`TurnRegistries`] field: `self.turn.<f>`.
+    ($self:ident . turn . $f:ident, $pred:expr) => {
+        if !$self.turn.$f.is_empty() {
+            $self.turn.$f.retain($pred);
         }
     };
 }
@@ -870,6 +885,105 @@ pub struct TurnDeaths {
     pub(crate) creature_deaths_this_turn: Vec<CardInstance>,
 }
 
+/// The per-turn registries an *effect* writes — damage redirects and
+/// tallies, prevention shields, the "gained a counter" set, the turn-granted
+/// triggers — split out of [`ColdState`] the way [`TurnDeaths`] was (PERF
+/// `(-283)`): a resolution's first write to any of them on a simulation
+/// clone paid the cold group's ~3,300-Ir unshare (~85 container clones and
+/// a large-bin `Arc`) for one push. Reached as `state.turn.<field>`; the
+/// cleanup clears go through `clear_turn!`. Membership rule: a per-turn
+/// collection that an effect or a damage event writes on an ordinary board.
+#[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct TurnRegistries {
+    /// Set of permanent CardIds that gained one or more counters during
+    /// the current turn. Bumped in `Effect::AddCounter`'s resolver
+    /// whenever a permanent gains counters; reset to empty in
+    /// `do_cleanup`. Powers Fractal Tender's end-step "if you put a
+    /// counter on this creature this turn, mint a Fractal" rider via
+    /// the new `Predicate::SourceGainedCounterThisTurn` predicate.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub permanents_gained_counter_this_turn: crate::game::types::IdSet<CardId>,
+    /// Distinct (controller, source) pairs that have dealt damage this turn.
+    /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
+    /// (Case of the Burning Masks). Cleared at the turn boundary.
+    #[serde(default)]
+    pub(crate) damage_sources_this_turn: Vec<(usize, CardId)>,
+    /// `(seat, damage)` dealt to each player by artifact sources this turn
+    /// (Reverse Polarity). Cleared at cleanup.
+    #[serde(default)]
+    pub artifact_damage_to_players_this_turn: Vec<(usize, u32)>,
+    /// `(sorcery card id, caster, damage dealt)` for every sorcery spell that
+    /// has dealt damage this turn — Backdraft's "half the damage dealt by one
+    /// of those sorcery spells". Cleared at cleanup.
+    #[serde(default)]
+    pub sorcery_damage_this_turn: Vec<(CardId, usize, u32)>,
+    /// Permanents whose death is replaced by exile for the rest of the
+    /// turn — "if that creature would die this turn, exile it instead"
+    /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
+    /// alongside the Finality-counter redirect; cleared at cleanup. The
+    /// redirect lasts the whole turn, so it also catches deaths from later
+    /// combat / removal, not just the spell's own damage. `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) dies_to_exile_eot: crate::game::types::IdSet<CardId>,
+    /// Colors of the most recently discarded card
+    /// (`Predicate::LastDiscardedWasColor` — Chandra Ablaze). Stamped in
+    /// `discard_card`.
+    #[serde(default)]
+    pub(crate) last_discarded_colors: Vec<crate::mana::Color>,
+    /// CR 509.1b — creatures barred from blocking at all this turn
+    /// (Concussive Bolt). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) cant_block_this_turn: Vec<CardId>,
+    /// Active prevention shields (CR 615.1) around players/permanents.
+    /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
+    /// consulted by the non-combat damage path (`deal_damage_to_from`) and
+    /// cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub prevention_shields: Vec<crate::game::types::PreventionShield>,
+    /// CR 614.9 — "All damage that would be dealt to `.0` this turn is dealt
+    /// to `.1` instead" (Karona's Zealot). Unlike `next_damage_redirect` this
+    /// isn't consumed by the first event; cleared at cleanup.
+    #[serde(default)]
+    pub turn_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
+    /// CR 614.9 — creatures whose next combat damage this turn is dealt to
+    /// their own controller instead (Goblin Psychopath). Cleared at cleanup.
+    #[serde(default)]
+    pub next_combat_damage_to_controller: Vec<CardId>,
+    /// CR 614 — "the next time this would deal combat damage to an opponent
+    /// this turn, it deals that damage to [creature] instead" (Soltari
+    /// Guerrillas). Consumed on the first unblocked hit; cleared at cleanup.
+    #[serde(default)]
+    pub next_combat_damage_redirect: Vec<(CardId, CardId)>,
+    /// CR 614.9 — `(spell card id, that spell's controller)`: all damage the
+    /// spell would deal this turn goes to its controller instead
+    /// (Reverberation). Cleared at cleanup.
+    #[serde(default)]
+    pub spell_damage_to_controller: Vec<(CardId, usize)>,
+    /// CR 614.9 — one-shot per-permanent redirects: "the next time damage
+    /// would be dealt to `.0` this turn, it's dealt to `.1` instead"
+    /// (Mirrorwood Treefolk). Consumed by the first damage event and cleared
+    /// at cleanup.
+    #[serde(default)]
+    pub next_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
+    /// Taii Wakeen — per-seat bonus added to noncombat damage a source that
+    /// seat controls deals this turn. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) noncombat_damage_bonus_this_turn: Vec<(usize, u32)>,
+    /// CR 611.2 — floating "this turn, whenever a [filter] …" watchers. Merged
+    /// into every matching permanent's trigger set for the rest of the turn, so
+    /// permanents entering later carry them too (Mage Hunters' Onslaught).
+    /// Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) turn_granted_triggers:
+        Vec<(crate::card::SelectionRequirement, crate::card::TriggeredAbility)>,
+    /// Desperate Gambit — sources whose next damage this turn is doubled. The
+    /// entry is consumed by the first damage each names.
+    #[serde(default)]
+    pub(crate) double_next_damage_from: Vec<CardId>,
+}
+
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ColdState {
     /// CR 801.2c — the range matrix, recomputed as each turn begins so a
@@ -921,11 +1035,6 @@ pub struct ColdState {
     /// (Necropolis's "the exiled card's mana value").
     #[serde(default)]
     pub(crate) cost_exiled_cards: Vec<CardId>,
-    /// Colors of the most recently discarded card
-    /// (`Predicate::LastDiscardedWasColor` — Chandra Ablaze). Stamped in
-    /// `discard_card`.
-    #[serde(default)]
-    pub(crate) last_discarded_colors: Vec<crate::mana::Color>,
     /// Creature types on the most recently discarded card
     /// (`Predicate::LastDiscardedHasCreatureType` — Necromancer's Stockpile).
     /// Stamped in `discard_card`.
@@ -966,13 +1075,6 @@ pub struct ColdState {
     /// that target this" shield (Silhouette). Cleared at cleanup.
     #[serde(default)]
     pub(crate) targeting_damage_prevented_this_turn: Vec<CardId>,
-    /// CR 611.2 — floating "this turn, whenever a [filter] …" watchers. Merged
-    /// into every matching permanent's trigger set for the rest of the turn, so
-    /// permanents entering later carry them too (Mage Hunters' Onslaught).
-    /// Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) turn_granted_triggers:
-        Vec<(crate::card::SelectionRequirement, crate::card::TriggeredAbility)>,
     /// CR 615.1 fog with an exception (Inspire Awe). When `Some(filter)` and
     /// `prevent_combat_damage_this_turn` is set, a creature's combat damage is
     /// prevented unless the *dealer* matches `filter`. `None` = prevent all.
@@ -1067,11 +1169,6 @@ pub struct ColdState {
     /// of the turn (CR 510.1a). Cleared at cleanup.
     #[serde(default)]
     pub(crate) assigns_no_combat_damage_this_turn: Vec<CardId>,
-    /// Distinct (controller, source) pairs that have dealt damage this turn.
-    /// Powers `Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast`
-    /// (Case of the Burning Masks). Cleared at the turn boundary.
-    #[serde(default)]
-    pub(crate) damage_sources_this_turn: Vec<(usize, CardId)>,
     /// Single Combat's lock — `(registerer, registration_turn)`: no player may
     /// cast a creature or planeswalker spell until the end of the registerer's
     /// next turn. Cleared in `cleanup_wear_off` at the end of the registerer's
@@ -1084,10 +1181,6 @@ pub struct ColdState {
     /// cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub(crate) cant_block_pairs: Vec<(CardId, CardId)>,
-    /// CR 509.1b — creatures barred from blocking at all this turn
-    /// (Concussive Bolt). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) cant_block_this_turn: Vec<CardId>,
     /// CR 508.1a — creatures granted "can attack this turn as though it didn't
     /// have defender" (Krotiq Nestguard's activated ability). Cleared at cleanup.
     pub(crate) attack_despite_defender_this_turn: Vec<CardId>,
@@ -1096,61 +1189,17 @@ pub struct ColdState {
     /// Each entry is `(permanent, the seat whose next turn ends it)`; the
     /// entry is dropped at that seat's untap step.
     pub(crate) damage_locked_until_turn_of: Vec<(CardId, usize)>,
-    /// Active prevention shields (CR 615.1) around players/permanents.
-    /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
-    /// consulted by the non-combat damage path (`deal_damage_to_from`) and
-    /// cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub prevention_shields: Vec<crate::game::types::PreventionShield>,
     /// CR 614.9 — one-shot "all damage to you and your permanents this turn is
     /// dealt to the chosen permanent instead" (Gideon's Sacrifice). Each entry
     /// is `(protected_player, redirect_target)`; consulted in
     /// `damage_redirect_target` and cleared at cleanup.
     #[serde(default)]
     pub damage_redirect_this_turn: Vec<(usize, CardId)>,
-    /// CR 614.9 — one-shot per-permanent redirects: "the next time damage
-    /// would be dealt to `.0` this turn, it's dealt to `.1` instead"
-    /// (Mirrorwood Treefolk). Consumed by the first damage event and cleared
-    /// at cleanup.
-    #[serde(default)]
-    pub next_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
-    /// CR 614.9 — "All damage that would be dealt to `.0` this turn is dealt
-    /// to `.1` instead" (Karona's Zealot). Unlike `next_damage_redirect` this
-    /// isn't consumed by the first event; cleared at cleanup.
-    #[serde(default)]
-    pub turn_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
-    /// CR 614.9 — creatures whose next combat damage this turn is dealt to
-    /// their own controller instead (Goblin Psychopath). Cleared at cleanup.
-    #[serde(default)]
-    pub next_combat_damage_to_controller: Vec<CardId>,
-    /// CR 614 — "the next time this would deal combat damage to an opponent
-    /// this turn, it deals that damage to [creature] instead" (Soltari
-    /// Guerrillas). Consumed on the first unblocked hit; cleared at cleanup.
-    #[serde(default)]
-    pub next_combat_damage_redirect: Vec<(CardId, CardId)>,
-    /// CR 614.9 — `(spell card id, that spell's controller)`: all damage the
-    /// spell would deal this turn goes to its controller instead
-    /// (Reverberation). Cleared at cleanup.
-    #[serde(default)]
-    pub spell_damage_to_controller: Vec<(CardId, usize)>,
-    /// `(sorcery card id, caster, damage dealt)` for every sorcery spell that
-    /// has dealt damage this turn — Backdraft's "half the damage dealt by one
-    /// of those sorcery spells". Cleared at cleanup.
-    #[serde(default)]
-    pub sorcery_damage_this_turn: Vec<(CardId, usize, u32)>,
-    /// `(seat, damage)` dealt to each player by artifact sources this turn
-    /// (Reverse Polarity). Cleared at cleanup.
-    #[serde(default)]
-    pub artifact_damage_to_players_this_turn: Vec<(usize, u32)>,
     /// CR 701.19 — `(viewer, owner)` pairs where `viewer` has looked at
     /// `owner`'s hand and keeps seeing it (Wanderguard Sentry, Thought
     /// Prison). Surfaced through the server view so a UI seat renders it.
     #[serde(default)]
     pub hands_revealed_to: Vec<(usize, usize)>,
-    /// Desperate Gambit — sources whose next damage this turn is doubled. The
-    /// entry is consumed by the first damage each names.
-    #[serde(default)]
-    pub(crate) double_next_damage_from: Vec<CardId>,
     /// CR 708.2 — `(face-down permanent, seat)` pairs a "look at target
     /// face-down creature" effect has revealed (Aven Soulgazer, Spy Network).
     /// The peek persists while the permanent stays face down.
@@ -1219,15 +1268,6 @@ pub struct ColdState {
     /// resolution time. Cleared in `do_cleanup`. `#[serde(skip)]` — transient.
     #[serde(skip)]
     pub(crate) auras_at_death: HashMap<CardId, Vec<(CardId, usize)>>,
-    /// Set of permanent CardIds that gained one or more counters during
-    /// the current turn. Bumped in `Effect::AddCounter`'s resolver
-    /// whenever a permanent gains counters; reset to empty in
-    /// `do_cleanup`. Powers Fractal Tender's end-step "if you put a
-    /// counter on this creature this turn, mint a Fractal" rider via
-    /// the new `Predicate::SourceGainedCounterThisTurn` predicate.
-    /// `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub permanents_gained_counter_this_turn: crate::game::types::IdSet<CardId>,
     /// Permanents whose `StaticEffect::CounterAmplifierOncePerTurn` extra
     /// +1/+1 counter has already been added this turn (Cursed Wombat). The
     /// granted ability "triggers only once each turn" per permanent; cleared at
@@ -1250,15 +1290,6 @@ pub struct ColdState {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub granted_triggers_timed: crate::fxhash::HashMap<CardId, Vec<GrantedTrigger>>,
-    /// Permanents whose death is replaced by exile for the rest of the
-    /// turn — "if that creature would die this turn, exile it instead"
-    /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
-    /// alongside the Finality-counter redirect; cleared at cleanup. The
-    /// redirect lasts the whole turn, so it also catches deaths from later
-    /// combat / removal, not just the spell's own damage. `#[serde(default)]`
-    /// for snapshot back-compat.
-    #[serde(default)]
-    pub(crate) dies_to_exile_eot: crate::game::types::IdSet<CardId>,
     /// CR 614 — creatures granted Kumano's rider until end of turn: a creature
     /// they damage is exiled instead of dying. The granted twin of
     /// `CardDefinition.damage_exiles_if_dies`; cleared at cleanup (Runesword).
@@ -1337,10 +1368,6 @@ pub struct ColdState {
     /// turn, keyed by (watcher, event subject). Cleared at cleanup.
     #[serde(default)]
     pub(crate) per_subject_trigger_uses: crate::fxhash::HashMap<(CardId, CardId), u8>,
-    /// Taii Wakeen — per-seat bonus added to noncombat damage a source that
-    /// seat controls deals this turn. Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) noncombat_damage_bonus_this_turn: Vec<(usize, u32)>,
 }
 
 /// A declined optional extra-target slot (CR 601.4d — "up to N targets"),
@@ -2589,6 +2616,9 @@ pub struct GameState {
     /// The per-death registries — see [`TurnDeaths`].
     #[serde(flatten)]
     pub(crate) deaths: CowBox<TurnDeaths>,
+    /// The per-turn registries an effect writes — see [`TurnRegistries`].
+    #[serde(flatten)]
+    pub turn: CowBox<TurnRegistries>,
     /// The rarely-written tail of the state: per-turn and end-of-turn
     /// registries, format bookkeeping, and cost/vote scratch. Held behind
     /// one CoW handle so a checkpoint clone bumps a refcount instead of
@@ -3142,6 +3172,7 @@ impl Clone for GameState {
             leaves_bf_lki: clone_map(&self.leaves_bf_lki),
             scratch: self.scratch.clone(),
             deaths: self.deaths.clone(),
+            turn: self.turn.clone(),
             cold: self.cold.clone(),
             life_gain_flag_pending: self.life_gain_flag_pending,
             attack_option: self.attack_option,
@@ -3507,6 +3538,7 @@ impl GameState {
             chosen_sector: None,
             scratch: CowBox::default(),
             deaths: CowBox::default(),
+            turn: CowBox::default(),
             cold: CowBox::new(ColdState { teams, ..Default::default() }),
         }
     }
@@ -3996,7 +4028,7 @@ impl GameState {
         // CR 611.2 — turn-scoped floating watchers ("whenever a creature blocks
         // this turn, …"). Unlike an EOT trigger grant, these reach permanents
         // that enter after the granting spell resolved.
-        for (filter, ability) in &self.turn_granted_triggers {
+        for (filter, ability) in &self.turn.turn_granted_triggers {
             if matches(filter, card.controller, None) {
                 out.push(ability);
             }
@@ -7558,7 +7590,7 @@ impl GameState {
     /// Total turn-scoped bonus `seat`'s sources add to noncombat damage
     /// (Taii Wakeen's {X}). Mirrored in the client view.
     pub fn noncombat_damage_bonus_of_seat(&self, seat: usize) -> u32 {
-        self.noncombat_damage_bonus_this_turn
+        self.turn.noncombat_damage_bonus_this_turn
             .iter()
             .filter(|(s, _)| *s == seat)
             .map(|(_, n)| *n)
@@ -8468,7 +8500,7 @@ impl GameState {
                         counter_type: kind,
                         count: scaled,
                     });
-                    self.permanents_gained_counter_this_turn.insert(id);
+                    self.turn.permanents_gained_counter_this_turn.insert(id);
                 }
             }
         }
@@ -9073,7 +9105,7 @@ impl GameState {
             };
             out.push(format!("Each {whose}{which} tapped for mana produces {makes} instead"));
         }
-        for (filter, ability) in &self.turn_granted_triggers {
+        for (filter, ability) in &self.turn.turn_granted_triggers {
             out.push(format!(
                 "This turn, each {} has: {}",
                 crate::server::view::requirement_noun_public(filter),
@@ -16775,7 +16807,7 @@ impl GameState {
         self.last_discarded_creature_types =
             card.definition.subtypes.creature_types.clone();
         self.last_discarded_was_multicolored = Some(card.definition.cost.distinct_colors() >= 2);
-        self.last_discarded_colors = card.definition.cost.colors();
+        self.turn.last_discarded_colors = card.definition.cost.colors();
         *self
             .scratch.cards_discarded_per_player_this_resolution
             .entry_or_default(p) += 1;
@@ -19300,7 +19332,7 @@ impl GameState {
         // and the calls were 36 / 4 / 1 Ir of pure overhead — paid 945,812
         // times each over six bench games. The station leg of
         // `statics_granted_triggers_with` is per-card, so it stays per-card.
-        let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
+        let any_static_grant = !trigger_grants.is_empty() || !self.turn.turn_granted_triggers.is_empty();
         let any_own_grant = !self.granted_triggers_timed.is_empty();
         let any_equip_grant = !equip_grants.is_empty();
         // The same three gates, asked once for the whole board: with no grant
@@ -19322,7 +19354,7 @@ impl GameState {
             let batch_can_match = |ab: &crate::card::TriggeredAbility| {
                 events.iter().any(|ev| event_kind_matches(self, ev, &ab.event, None))
             };
-            let turn = !self.turn_granted_triggers.is_empty();
+            let turn = !self.turn.turn_granted_triggers.is_empty();
             let own = !self.granted_triggers_timed.is_empty();
             let equip = !equip_grants.is_empty();
             let mut reason = 0u8;
@@ -19333,7 +19365,7 @@ impl GameState {
             }
             if turn {
                 reason |= tc::GRANT_TURN;
-                if self.turn_granted_triggers.iter().any(|(_, ab)| batch_can_match(ab)) {
+                if self.turn.turn_granted_triggers.iter().any(|(_, ab)| batch_can_match(ab)) {
                     filtered |= tc::GRANT_TURN;
                 }
             }
@@ -22792,7 +22824,7 @@ impl GameState {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 for s in targets.clone() {
-                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                    self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         source_color: Some(*c),
                         ..Default::default()

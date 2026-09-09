@@ -537,14 +537,14 @@ impl GameState {
             }
             Value::ArtifactDamageToPlayerThisTurn { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
-                self.artifact_damage_to_players_this_turn
+                self.turn.artifact_damage_to_players_this_turn
                     .iter()
                     .find(|(seat, _)| *seat == p)
                     .map_or(0, |(_, n)| *n as i32)
             }
             Value::HalfGreatestSorceryDamageThisTurn { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
-                self.sorcery_damage_this_turn
+                self.turn.sorcery_damage_this_turn
                     .iter()
                     .filter(|(_, caster, _)| *caster == p)
                     .map(|(_, _, dmg)| (dmg / 2) as i32)
@@ -2093,7 +2093,7 @@ impl GameState {
                     >= *n
             }
             Predicate::SourcesYouControlledDealtDamageThisTurnAtLeast(n) => {
-                self.damage_sources_this_turn
+                self.turn.damage_sources_this_turn
                     .iter()
                     .filter(|(seat, _)| *seat == ctx.controller)
                     .count() as u32
@@ -2442,7 +2442,7 @@ impl GameState {
             }
             Predicate::SourceGainedCounterThisTurn => {
                 ctx.source
-                    .map(|cid| self.permanents_gained_counter_this_turn.contains(&cid))
+                    .map(|cid| self.turn.permanents_gained_counter_this_turn.contains(&cid))
                     .unwrap_or(false)
             }
             Predicate::SourceHasCountersAtLeast { counter, n } => ctx
@@ -2610,7 +2610,7 @@ impl GameState {
             Predicate::LastDiscardedWasMulticolored => {
                 self.last_discarded_was_multicolored.unwrap_or(false)
             }
-            Predicate::LastDiscardedWasColor(c) => self.last_discarded_colors.contains(c),
+            Predicate::LastDiscardedWasColor(c) => self.turn.last_discarded_colors.contains(c),
             Predicate::TriggerSourceEnteredFromGraveyard => {
                 let cid = match ctx.trigger_source {
                     Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,

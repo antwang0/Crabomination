@@ -264,12 +264,12 @@ fn cr_615_7_chosen_color_prevention_prompts_a_ui_seat() {
     drain_stack(&mut g);
     let pending = g.pending_decision.as_ref().expect("a ChooseColor prompt is raised");
     assert!(matches!(pending.decision, Decision::ChooseColor { .. }));
-    assert!(g.prevention_shields.is_empty(), "nothing lands until the color is picked");
+    assert!(g.turn.prevention_shields.is_empty(), "nothing lands until the color is picked");
     g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Color(Color::Red)))
         .expect("pick red");
     drain_stack(&mut g);
     assert_eq!(
-        g.prevention_shields.iter().filter(|s| s.source_color == Some(Color::Red)).count(),
+        g.turn.prevention_shields.iter().filter(|s| s.source_color == Some(Color::Red)).count(),
         1,
         "the shield lands scoped to the chosen color",
     );
