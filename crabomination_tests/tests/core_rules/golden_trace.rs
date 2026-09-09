@@ -469,3 +469,23 @@ fn the_two_hole_relic_warder_pair_decides() {
     assert!(t.lines.len() < 6_000, "ran to the cap again: {} lines", t.lines.len());
     assert!(t.winner.is_some(), "not decided after {} lines, turn {}", t.lines.len(), t.turns);
 }
+
+/// The pair the 2026-09-09 fresh-seed sweep aborted on the `AB_DAMAGE` gate
+/// audit: seed 729's cube pool, archetype 2, pair seed 6018027449014118342 —
+/// a summoning-sick Crystalline Crawler paid `{R}` for a Pyrite Spellbomb
+/// the bot's mana estimate had gated off. Debug assertions are on in this
+/// binary, so the game replaying to a decision is the audit passing.
+#[test]
+fn the_sick_crawler_pair_passes_the_gate_audit() {
+    use crabomination::cube::{cube_deck, random_color_pair};
+    use rand::SeedableRng;
+    let mut r = rand::rngs::StdRng::seed_from_u64(729 ^ 0xC0BE_5EED);
+    let mut deck = Vec::new();
+    for _ in 0..3 {
+        let colors = random_color_pair(&mut r);
+        deck = cube_deck(colors, &mut r);
+    }
+    assert!(deck.iter().any(|f| f().name == "Crystalline Crawler"), "the pool moved");
+    let t = trace_game(&deck, &deck, 6_018_027_449_014_118_342, 6_000);
+    assert!(t.winner.is_some(), "not decided after {} lines, turn {}", t.lines.len(), t.turns);
+}

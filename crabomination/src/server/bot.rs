@@ -6886,8 +6886,28 @@ fn gate_blame(state: &GameState, action: Option<&GameAction>) -> String {
         .unwrap_or_else(|| String::from("(granted)"));
     let zone = if state.battlefield.iter().any(|c| c.id == *card_id) { "battlefield" } else { "elsewhere" };
     let have = available_mana(state, card.controller);
+    // The seat's hand and board, so a source the estimate never visits (a
+    // Simian Spirit Guide in hand, a summoning-sick Skirk Prospector) names
+    // itself without a rebuild.
+    let names = |it: &mut dyn Iterator<Item = String>| it.collect::<Vec<_>>().join(", ");
+    let hand = names(&mut state.players[card.controller]
+        .hand
+        .iter()
+        .map(|c| c.definition.name.to_string()));
+    let board = names(&mut state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == card.controller)
+        .map(|c| {
+            format!(
+                "{}{}{}",
+                c.definition.name,
+                if c.tapped { " (T)" } else { "" },
+                if c.summoning_sick { " (sick)" } else { "" }
+            )
+        }));
     format!(
-        "{} ability {ability_index} in {zone}, printed cost {cost}, available total {} by_color {:?}",
+        "{} ability {ability_index} in {zone}, printed cost {cost}, available total {} by_color {:?}; hand [{hand}]; board [{board}]",
         card.definition.name, have.total, have.by_color
     )
 }
@@ -12794,9 +12814,13 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         // treats `total` as a *budget*, so over-counting it does not make the
         // bot optimistic, it makes the engine reject the whole declaration.
         // One method with the engine, so the two cannot drift.
-        if p.summoning_sick && state.tap_ability_summoning_sick(p, seat) {
-            continue;
-        }
+        // Per ability, not per permanent: sickness stops the `{T}` abilities
+        // only. Crystalline Crawler's "remove a +1/+1 counter: add one mana
+        // of any color" fires the turn it enters, and a `continue` here read
+        // a board with a sick one as `by_color` zeros while the engine paid
+        // `{R}` off it — the `AB_DAMAGE` gate audit at cube seed 729
+        // (2026-09-09). Its non-tap abilities still reach the opaque arm.
+        let sick = p.summoning_sick && state.tap_ability_summoning_sick(p, seat);
         // Printed abilities plus anything granted to it (Cryptolith Rite
         // turning creatures into mana sources, Urza's Saga chapters), so a
         // granted mana ability doesn't read as "no mana here".
@@ -12804,6 +12828,9 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         let mut best = 0u32;
         let mut mine = ColorSet::empty();
         for a in p.definition.activated_abilities.iter().chain(granted.iter().copied()) {
+            if sick && a.tap_cost {
+                continue;
+            }
             if !is_countable_mana_ability(a) {
                 // Auto-tap reads its table through `effect_produced_colors`,
                 // which sees mana shapes this estimate does not: a filter
@@ -19472,6 +19499,25 @@ mod tests {
         let forest = g.add_card_to_battlefield(0, catalog::forest());
         g.clear_sickness(forest);
         assert_eq!(available_mana(&g, 0).total, 1, "only the Forest counts");
+    }
+
+    /// A summoning-sick creature's non-tap mana ability still fires (CR
+    /// 302.6 stops `{T}` only): Crystalline Crawler's counter-removal paid
+    /// `{R}` on a board this estimate read as `by_color` zeros, and the
+    /// `AB_DAMAGE` gate audit aborted cube seed 729 (2026-09-09). The sick
+    /// Crawler must make the colour budget opaque, and add nothing to `total`.
+    #[test]
+    fn available_mana_sick_crawler_makes_the_colour_budget_opaque() {
+        let mut g = two_player_game();
+        let crawler = g.add_card_to_battlefield(0, catalog::crystalline_crawler());
+        assert!(g.battlefield_find(crawler).unwrap().summoning_sick);
+        let have = available_mana(&g, 0);
+        assert_eq!(have.total, 0, "a counter-fed source is not spare mana");
+        assert_eq!(have.by_color, [u32::MAX; 5], "but it can cover any colour");
+        // A sick Llanowar Elves is the tap case: still nothing.
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::llanowar_elves());
+        assert_eq!(available_mana(&g, 0).by_color, [0; 5]);
     }
 
     /// Reproducer for the "Vandalblast freeze" bug. The bot is in its main
