@@ -28,28 +28,24 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force;
-   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-279)` is the last claimed, `(-280)` next. Gotchas in **CLAUDE.md**;
+   code before tracker prose; ⚠ claim a candidate number at PUSH time — `(-280)` is the last claimed, `(-281)` next. Gotchas in **CLAUDE.md**;
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
-   running `cargo build`. Cold here: debug suite build ~9 min, `profiling-fast` bot_ladder 13m07s (cold registry), `release-fast` 11m42s; a
-   detached `setsid nohup` chain survives the tool timeout (⚠ kill it by pid — `pkill -f`/`pgrep -f` on a log name matches your own shell).
-   **The A/B base is the CR 400.7 tip's triple (PERF Baseline addendum, the `fix+` line): sealed 2,563,362,373 / cube 2,467,871,065 (different
-   games from `(-279)`) / fixed 671,760,207**; both sides from one tree, `md5sum` both.
-2. **Gates at the tip (PERF Baseline, the `(-279)` addendum, `gate` / `sweeps` lines):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench`
-   counters identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0) on the CR 400.7 tip, thread_determinism ok, the debug-assertions grid on
-   FRESH seeds 701..712 (24 ladder cells / 139,200 games + 46 pilot cells + 3 actor cells) 0 failures, dflt sweeps under the bound on cube /
-   all / sealed (108,000 games, seeds 707..718) 0 cap / 0 stuck; `audit_stubs` / `audit_incomplete --structural-only` both 0 at the previous tip.
-3. **This run:** `(-279)` TAKEN (Log: the event scratch pooled across clones, sealed -0.378 % / cube -0.272 % / fixed -0.332 %, traces
-   identical); the block sim READ by context (candidates: it is `resolve_combat_into`, 17 % of sealed dflt, every callee a recorded floor);
-   the attack sim's cheapest horizon arm REFUTED off a census (1 % of iterations past an empty crack-back; the instrument cost +0.126 % and
-   was not kept); **TWO BUGS FIXED** (ENGINE_BACKLOG, first two entries): a permanent dying or bouncing kept its damage / tap / attachment
-   into its next zone (CR 400.7 — a recast Golgari Thug died on entry every turn to the cap, cube seed 702), and a Scute Swarm token-doubling
-   board held a thread 90+ min — `recommend::MAX_BATTLEFIELD` (1,024) ends it as a cap through the one `stop_reason` both driver loops read;
-   `CRAB_MAX_ACTIONS=<n>` + `CRAB_CAP_DIAG=1` names a slow game (PERF "How to measure"). Sweep cube under the bound each run — it finds things.
-4. **Next moves, in order:** (a) a shorter attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor;
-   `.ladder/run_r71_blockchain.sh` the template, 12,000-game cells ~45 s here) — a real loss risk, gate it; (b) thin allocation rows from the
-   read, not built: `fire_delayed_event_watchers`' collects on boards holding a delayed trigger (21,712 / 5.5 M) and the SBA sweep's (22,810 /
-   9.5 M); `GameState::clone` is 2.45 allocations a clone — floor; (c) engine self tables are the recorded floor on all three pools. Nothing
-   half-wired on the branch; no open TODO/FIXME in code. Cards: none this run; INCOMPLETE_CARDS structural 0 / stubs 0 at the previous tip.
+   running `cargo build`. This box: cold debug suite build 5m08s, cold `profiling-fast` bot_ladder 8m18s, warm engine rebuild 2m35s; a detached
+   `setsid nohup` chain survives the tool timeout (⚠ kill it by pid). **The A/B base is the `(-280)` triple (PERF Baseline addendum): sealed
+   2,548,270,297 / cube 2,453,187,812 / fixed 646,043,365** — RE-TAKE it on a new box (the recorded fixed number moved 3 % between boxes on
+   identical games, PERF `(-280)`); both sides from one tree, `md5sum` both.
+2. **Gates at the tip (PERF Baseline, the `(-280)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, fresh-seed dflt sweeps under the bound on cube 719..724 / all 713..718 /
+   sealed 713..718 (88,800 games) 0 cap / 0 stuck, `audit_panics.py` 0 bare; the debug-assertions grid was last run on seeds 701..712 at the
+   `(-279)` tip (0 failures); `audit_stubs` / `audit_incomplete --structural-only` both 0 at the `(-279)` tip.
+3. **This run:** `(-280)` TAKEN (Log: the cast validator's target-slot stamp and the death chokepoint's push deep-copied the whole 1 KB
+   `ResolutionScratch` on every dry-run clone — both fields moved to the plain-copied state, sealed -0.589 % / cube -0.595 % / fixed
+   -0.885 %, traces identical; a `SmallVec::new()`-in-Clone arm REFUTED); the CoW unshare family READ by monomorphization (candidates, first
+   entry: every instance named by T, the residue is the floor except the scratch struct's size). No bugs found; no cards.
+4. **Next moves, in order:** (a) `(-281)` box `ResolutionScratch::haunt_pending` (456 of its ~1 KB; the Arc allocation runs glibc's large-bin
+   path at 625 Ir) — candidates entry has the census, ~0.2 % sealed expected, take a `--bench` pair too; (b) the attack-sim horizon on a
+   *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk, gate it; (c) the debug-assertions grid on
+   fresh seeds 719+ (`scripts/robustness_grid.sh --wide`, ~9 min build). Nothing half-wired on the branch; no open TODO/FIXME in code.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
