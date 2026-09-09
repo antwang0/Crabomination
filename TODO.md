@@ -29,22 +29,19 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code
    before tracker prose; ⚠ claim a candidate number at PUSH time — `(-287)` is the last claimed, `(-288)` next. Gotchas in **CLAUDE.md**, measurement
-   in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a running `cargo build`.
-   This box: cold debug suite build 5m08s, cold `profiling-fast` bot_ladder 8m18s, warm engine rebuild 2m35s (8m when `crabomination_base` moves).
-   **The A/B base is the `(-287)` triple (PERF Baseline addendum): sealed 2,507,039,807 / cube 2,427,666,471 / fixed 633,484,026** — RE-TAKE it on
-   a new box (the recorded fixed number moved 3 % between boxes on identical games, PERF `(-280)`); both sides from one tree, `md5sum` both.
-2. **Gates at the tip (PERF Baseline, the `(-280)`..`(-287)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
-   `2003d1cf` (195,806 / 27.49 / 611.9 / 0) on release-fast and profiling-fast, thread_determinism ok, fresh-seed dflt sweeps on cube 719..724 /
-   all 713..718 / sealed 713..718 (88,800 games) 0 cap / 0 stuck, the debug-assertions grid (9 fresh-seed cells + 30 default + 45 pilots) 0 failures,
-   `audit_panics.py` 0 bare.
-3. **This run:** eight CoW-group legs `(-280)`..`(-287)` (PERF Log; CLAUDE.md carries the rule): a first write on a clone deep-copied a whole cold
-   group for one stamp — scratch fields to the hot state, `haunt_pending` boxed, a seat mask, sixteen registries to `TurnRegistries`, two guarded
-   takes, a blocker list deleted, three cast stamps guarded or moved. Cumulative sealed -2.20 % / cube -1.63 % / fixed -2.81 % / actor -1.91 %;
-   paired wall clock +6.67 % median; traces identical throughout. The CoW residue is the per-clone floor (candidates, first entry). No bugs; no cards.
-4. **Next moves:** (a) the attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk,
-   gate it; (b) the server's wire `Deserialize` is the next build-time lever (PERF "Serde derives", 238 k IR lines the sim bins never run) — early in
-   a run, landed green or reverted; (c) engine self tables are the floor — the next engine lever is a *count* (a sim memo across decisions, no
-   census yet), not a row. Nothing half-wired on the branch; no open TODO/FIXME in code.
+   in **PERF's "Standing rules"**. ⚠ Fetch before every push. ⚠ `rm -rf target/debug/incremental` before an optimized build (16 GB after one suite).
+   **The A/B base is the `(-287)` triple (PERF Baseline):** sealed 2,507,039,807 / cube 2,427,666,471 / fixed 633,484,026 — RE-TAKE on a new box;
+   the same base binary reads ~0.6x the previous box's `--bench` games/s here (PERF 2026-09-09 addendum), so never compare across boxes.
+2. **Gates at the tip (PERF Baseline, the 2026-09-09 addendum):** suite 19,296 / 0 / 5, clippy 0, golden 8/8, `--bench` counters identical to
+   `2003d1cf`, thread_determinism ok, paired wall clock vs the pre-fix base +1.27 % (noise), fresh-seed dflt sweeps cube/all/sealed 725..728
+   (59,200 games): one cap and one abort, both fixed and re-swept; the default grid (30 cells) + pilots leg (45) at seed 726 clean; 0 bare panics.
+3. **This run (ENGINE_BACKLOG, two "FIXED 2026-09-09" entries):** the CR 104.4b watchdog only ever saw period-1 loops — two Portable Holes and a
+   mandatory Leonin Relic-Warder cycled three boards to the cap: now `(anchor, repeats, since)`, `MANDATORY_LOOP_MAX_PERIOD = 8`; the Warder is
+   "you may"; the bot declines a "you may" removal aimed at its own permanent. And `available_mana` skipped a summoning-sick creature whole, so a
+   Crystalline Crawler's counter mana made the `AB_DAMAGE` gate audit abort — per-ability now. No perf leg (old NEXT (b) taken, (c) refuted).
+4. **Next moves:** (a) fresh-seed sweeps are the cheapest bug finder left — cube 731+, and the actor leg (`selfplay_train` audit build) at a fresh
+   seed, unreached this run; (b) the attack-sim horizon on a *populated* crack-back is the one strength round left (38 % of the actor), gate it;
+   (c) engine self tables are the floor — nothing on the candidates list has a device. Nothing half-wired; no open TODO/FIXME in code.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

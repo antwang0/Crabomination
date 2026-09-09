@@ -2801,6 +2801,42 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-09 — the period watchdog, the Relic-Warder loop and the own-target decline: addendum at the tip after `2b834f38`
+
+No perf leg. Four correctness commits after the `(-287)` closing state
+below (ENGINE_BACKLOG, the two "FIXED 2026-09-09" entries): the CR 104.4b
+watchdog anchors a fingerprint and counts returns to it
+(`mandatory_loop_watch` is a 16-byte triple, GameState 1,600 bytes
+unmoved), Leonin Relic-Warder is "you may exile", the bot declines a "you
+may" removal whose chosen target is its own permanent, and
+`available_mana` reads a summoning-sick creature's non-tap mana abilities
+(the `AB_DAMAGE` gate audit had aborted on a Crystalline Crawler). Both
+found by the fresh-seed sweep on the debug-assertions build — the first
+cap and the first abort in 154,000 sweep games across two runs. The
+`(-287)` triple stays the A/B base (re-take it on a new box).
+
+```text
+sweep   fresh seeds on the (-287) audit build (target-audit/overflow, debug-assertions, 8 assertion strings), dflt mirror x --games 400 x --threads 3,
+        CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000: cube 725..728 (12,800 games) 2 cap / 0 stuck / 0 draw — seed 726's archetype-6 pair, both
+        orientations, at 6,001 actions on turn 11 (the loop above); all 725..728 (27,200) 0 / 0 / 0; sealed 725..728 (19,200) 0 / 0 / 0 —
+        59,200 games, every rc 0, no assertion or overflow; 50-145 s a cell
+        after the loop fixes (audit build rebuilt): cube 726 re-swept 3,200 / 0 undecided; cube 729 ABORTED rc 134 on the AB_DAMAGE gate audit
+        (the Crawler, below); cube 730 3,200 / 0; the script's default ladder 30 cells / 33,120 games 0 failures; pilots leg (45 policies vs
+        gang, --decks all, seed 726, 12 games) 45 cells, 0 failures
+gate    --bench release-fast (mimalloc) at 2b834f38: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
+        thread_determinism ok (3 vs 1); bin_bytes 126,790,272 (+7,896 B against the (-287) tip); 293.8 / 290.1 / 296.7 / 286.9 games/s, four
+        single runs, host_calib_ms 56-58 — THIS BOX (Xeon @ 2.80 GHz, calib 58) reads ~0.6x the previous one on the SAME base binary, see wall
+wall    bench_ab.py bl_base (d6348204, built in a worktree against the shared target dir, sources touched, md5 differs) vs bl_tip (2b834f38),
+        release-fast, 16 pairs: A median 295.59 / B 299.23 games/s, paired B/A median +1.27 % / mean +1.71 % (sd 3.77) — inside the instrument's
+        noise; the change costs nothing the bench can see
+suite   19,294 / 0 / 5 after the loop fixes (five tests added: two watchdog loops, two Relic-Warder, the bot's own-target decline; one
+        golden_trace pin of the found pair); 19,296 / 0 / 5 after the Crawler fix (the sick-Crawler estimate test, the seed-729 pair pinned);
+        golden 8/8 identical both times; clippy 0; audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare; audit_catalog_stats.py 20 kw / 1 abil /
+        3 T/sac / 6 trig / 3 scope, every row the documented residue
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores; cold debug suite build ~9 min (deps from nothing), cold release-fast
+        bot_ladder 11m12s, cold overflow audit build 10m39s, warm engine rebuild ~2.5 min
+```
+
 ### `(-280)`..`(-287)` — the CoW-group legs: closing state at the `(-287)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
 Eight engine legs after the `(-279)` closing state below (Log `(-280)`

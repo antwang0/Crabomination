@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-09 (second find) — the bot's mana estimate skipped a summoning-sick creature whole, so a Crystalline Crawler's counter mana made the `AB_DAMAGE` gate unsound](#fixed-2026-09-09-second-find--the-bots-mana-estimate-skipped-a-summoning-sick-creature-whole-so-a-crystalline-crawlers-counter-mana-made-the-ab_damage-gate-unsound) | 30 |
 | Bugs & robustness | [FIXED 2026-09-09 — the mandatory-loop watchdog saw only period-1 loops; two Portable Holes and a mandatory Leonin Relic-Warder cycled three boards to the action cap](#fixed-2026-09-09--the-mandatory-loop-watchdog-saw-only-period-1-loops-two-portable-holes-and-a-mandatory-leonin-relic-warder-cycled-three-boards-to-the-action-cap) | 40 |
 | Bugs & robustness | [FIXED 2026-09-08 (third run) — a permanent leaving the battlefield by dying or bouncing kept its damage, tap and attachment into its next zone (CR 400.7); a recast Golgari Thug died on entry every turn](#fixed-2026-09-08-third-run--a-permanent-leaving-the-battlefield-by-dying-or-bouncing-kept-its-damage-tap-and-attachment-into-its-next-zone-cr-4007-a-recast-golgari-thug-died-on-entry-every-turn) | 24 |
 | Bugs & robustness | [FIXED 2026-09-08 (third run) — a token-doubling board had no bound: the simulator now ends a game whose battlefield passes 1,024 permanents as a cap](#fixed-2026-09-08-third-run--a-token-doubling-board-had-no-bound-the-simulator-now-ends-a-game-whose-battlefield-passes-1024-permanents-as-a-cap) | 26 |
@@ -44,6 +45,38 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-09 (second find) — the bot's mana estimate skipped a summoning-sick creature whole, so a Crystalline Crawler's counter mana made the `AB_DAMAGE` gate unsound
+
+The same sweep, one seed later: cube seed 729 aborted (rc 134) on the
+`gated_pick!` audit in `main_phase_action_with` — "gate `sink::AB_DAMAGE`
+skipped a real action: Pyrite Spellbomb ability 0, printed cost `{R}`,
+available total 0 by_color [0, 0, 0, 0, 0]". The blame string now also
+prints the seat's hand and board, and the replay (archetype 2, pair seed
+6018027449014118342) read `hand []; board [... Crystalline Crawler (sick)
+...]`. Crystalline Crawler's "remove a +1/+1 counter: add one mana of any
+color" has no `{T}`, so it fires the turn it enters (CR 302.6 stops tap
+abilities only); the engine paid `{R}` off it and the Spellbomb's
+activation was real. `available_mana` skipped a summoning-sick creature
+*before* reading its abilities, so the source never reached the opaque
+arm that widens `by_color` to `u32::MAX`, and `colors_coverable`'s
+"a shortfall is a proof" was false on that board.
+
+Fix (one commit): the sickness check is per ability — `sick && a.tap_cost`
+skips the `{T}` ones, and the rest still make the budget opaque. `total`
+is unchanged (a counter-fed source is not spare mana, the same bias as a
+Lotus Petal). Tests: `server::bot::tests::available_mana_sick_crawler_
+makes_the_colour_budget_opaque` (opaque budget, zero total; a sick
+Llanowar Elves still reads zero) and
+`core_rules::golden_trace::the_sick_crawler_pair_passes_the_gate_audit`
+(the pair replays to a decision under the suite's debug assertions).
+
+Not a hole of the same shape: a from-hand mana ability (Simian Spirit
+Guide) is a payment the engine's auto-tapper does not take either
+(`hand_mana_source_could_pay` makes it a manual choice), so the estimate
+and the engine agree on it. The audit itself is the finding's instrument
+— a release binary would have played the game with one fewer ping and
+nobody would have known; the debug-assertions sweep is where these live.
 
 ## FIXED 2026-09-09 — the mandatory-loop watchdog saw only period-1 loops; two Portable Holes and a mandatory Leonin Relic-Warder cycled three boards to the action cap
 
