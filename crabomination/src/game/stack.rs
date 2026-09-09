@@ -2186,16 +2186,26 @@ impl GameState {
                     // CR 603.7e — one-shot "your next creature spell enters
                     // with N counters / these keywords" riders (FIN "Summon"
                     // saga chapters — Fenrir II counters, Brynhildr Gestalt haste).
+                    // Both takes behind a read (the `PlayerCold` rule): the
+                    // keyword list is a cold-group field, and an unguarded
+                    // `take` on it deep-copied the caster's cold group on
+                    // every creature resolution in a simulation clone —
+                    // 4,978 a sealed six-game run (PERF `(-284)`).
                     if is_creature_resolve {
-                        for (kind, n) in
-                            std::mem::take(&mut self.players[caster].pending_creature_etb_counters)
-                        {
-                            counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
+                        if !self.players[caster].pending_creature_etb_counters.is_empty() {
+                            for (kind, n) in std::mem::take(
+                                &mut self.players[caster].pending_creature_etb_counters,
+                            ) {
+                                counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
+                            }
                         }
-                        let kws =
-                            std::mem::take(&mut self.players[caster].pending_creature_etb_keywords);
-                        for kw in kws {
-                            self.grant_keyword_eot(card_id, kw);
+                        if !self.players[caster].pending_creature_etb_keywords.is_empty() {
+                            let kws = std::mem::take(
+                                &mut self.players[caster].pending_creature_etb_keywords,
+                            );
+                            for kw in kws {
+                                self.grant_keyword_eot(card_id, kw);
+                            }
                         }
                     }
                     // Cast-time ETB-counter riders stamped on the instance

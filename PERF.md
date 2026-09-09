@@ -2798,16 +2798,16 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-280)`..`(-283)` — the CoW-group legs: closing state at the `(-283)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+### `(-280)`..`(-284)` — the CoW-group legs: closing state at the `(-284)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
-Four engine legs after the `(-279)` closing state below (Log `(-280)`
-..`(-283)`; the CoW family read by monomorphization in the candidates).
+Five engine legs after the `(-279)` closing state below (Log `(-280)`
+..`(-284)`; the CoW family read by monomorphization in the candidates).
 Behaviour-preserving — every trace identical, `--bench` counters
 identical — so the three totals below are the `(-279)` games, cheaper,
-and **the `(-283)` triple is the base for every later A/B: sealed
-2,530,209,369 / cube 2,444,970,331 / fixed 641,631,948** (cumulative
-against the re-taken base: sealed -1.293 % / cube -0.928 % / fixed
--1.562 %). ⚠ The base was RE-TAKEN on this box before the legs:
+and **the `(-284)` triple is the base for every later A/B: sealed
+2,522,639,673 / cube 2,439,975,622 / fixed 638,059,921** (cumulative
+against the re-taken base: sealed -1.589 % / cube -1.130 % / fixed
+-2.110 %). ⚠ The base was RE-TAKEN on this box before the legs:
 sealed and cube reproduced the recorded `fix+` triple to within 1-3 k Ir,
 `fixed` did not (651,809,830 against the recorded 671,760,207 on identical
 `--bench` counters and 24 / 24 decided — the recorded fixed number is the
@@ -2825,6 +2825,8 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
          (-0.403 %); traces 120 / 120 identical against the (-281) binary; --bench counters identical; thread_determinism ok; GameState 1,592 bytes
   (-283) sealed 2,536,118,264 -> 2,530,209,369 (-0.233 %, 72 / 72); cube 2,448,171,416 -> 2,444,970,331 (-0.131 %, 48 / 48); fixed 643,076,738 -> 641,631,948
          (-0.225 %); traces 120 / 120 identical against the (-282) binary; --bench counters identical; thread_determinism ok; GameState 1,600 bytes (the cap)
+  (-284) sealed 2,530,209,369 -> 2,522,639,673 (-0.299 %, 72 / 72); cube 2,444,970,331 -> 2,439,975,622 (-0.204 %, 48 / 48); fixed 641,631,948 -> 638,059,921
+         (-0.557 %); traces 120 / 120 identical against the (-283) binary; --bench counters identical; thread_determinism ok
 --bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
 sweeps  fresh seeds on the b7bd9250 tip binary (profiling-fast) BEFORE the leg, dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000:
@@ -4123,6 +4125,38 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-284)` TAKEN — the two creature-resolution `mem::take`s behind a read: sealed default Ir **-0.299 %** / cube **-0.204 %** / fixed **-0.557 %**, 120 / 120 traces identical
+
+The `PlayerCold` instance (`he20b`, 770 Ir) had one caller worth
+reading — `resolve_top_of_stack_inner`, 4,978 of its 5,250 unshares — and
+the field was found by grepping the function for the cold group's
+fifteen names: the CR 603.7e "your next creature spell" riders were
+drained with two unguarded `std::mem::take`s on every creature spell's
+resolution, one on `pending_creature_etb_keywords` (`PlayerCold`) and one
+on `pending_creature_etb_counters` (`PlayerData`, so a shared player's
+unshare too). Both takes sit behind `is_empty()` now — the `PlayerCold`
+rule (twenty-ninth pass), which the cleanup reset three screens up
+already followed for the same two fields.
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the (-283) tip:
+  sealed  2,530,209,369 -> 2,522,639,673 Ir   (-7,569,696, -0.299 %)   72 / 72 decided both sides
+  cube    2,444,970,331 -> 2,439,975,622 Ir   (-4,994,709, -0.204 %)   48 / 48
+  fixed     641,631,948 ->   638,059,921 Ir   (-3,572,027, -0.557 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed): make_mut_slow <- resolve_top_of_stack_inner 13,630 / 10.65 M -> 7,948 / 6.17 M (-5,682: the 4,978 PlayerCold copies and ~700 PlayerData
+               ones the counters' take paid on a still-shared player); make_mut_slow 202,162 -> 196,684 calls; clone_from_ref_in self 68.36 -> 66.57 M;
+               RawTable::clone 1.81 -> 1.19 M and RawTable::drop 0.49 -> 0.05 M (PlayerCold's tables); __memcpy 53.80 -> 53.14 M; the allocator family -1.9 M
+--bench (profiling-fast, system allocator): 195,806 / 27.49 / 611.9 / 0 — counters identical; determinism ok; thread_determinism ok (3 vs 1)
+```
+
+What is left of `resolve_top_of_stack_inner`'s 7,948: the
+`resolving_spell_snapshot` stamp on `ResolutionScratch` (the clones that
+resolve, `(-280)`'s tail) and the resolved card's own `CardData` write —
+both the first write of a resolution, floor. The grep that found this
+one (`self.players[..].<cold field>` over a function that
+`cg_contexts.py` names) is the cheapest instrument on this queue.
 
 ### `(-283)` TAKEN — the sixteen per-turn registries an effect writes leave `ColdState` for `TurnRegistries`: sealed default Ir **-0.233 %** / cube **-0.131 %** / fixed **-0.225 %**, 120 / 120 traces identical
 
