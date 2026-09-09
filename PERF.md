@@ -7489,6 +7489,23 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**A SIM MEMO ACROSS DECISIONS — NEXT (c) at the `(-287)` tip — REFUTED BY
+READING, no build spent, so nobody builds the census.** The shape the
+`(-278)` entry filed was "the same declaration re-asked after a no-op
+priority pass". There is no such re-ask: `HeuristicBot::next_action_inner`
+runs `pick_attacks_scored` once per combat behind `attackers_declared`
+(and `pick_blocks_scored` behind `blocks_declared`; the flags reset in
+`sync_step`), so the real game never searches one board twice. Inside a
+sim, the crack-back's declaration is `pick_attacks_w` — the greedy picker,
+no search — keyed once per `(turn, step)` in `simulate_attack_outcome_once`'s
+`declared` set and `simulate_through_combat`'s `attacks_submitted`. What a
+memo could span is two *candidates* of one search reaching the same
+post-combat state, and they cannot: the candidates differ in which
+attackers tapped, so every sim's crack-back board differs by construction.
+The chain's sims are all novel sets (`(-278)`), and there is no other
+consumer. Closed; the bot-side levers left are the ones the entries below
+name (sim count, horizon: strength rounds).
+
 **~~`expire_granted_triggers`' empty-map fast path~~ TAKEN with `(-277)`
 (Log), which also found the larger thing beside it: the step and cast
 hooks' per-permanent `visit` closures had been called out of line since
