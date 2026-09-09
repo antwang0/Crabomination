@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-09 (fourth find) — the CR 732.3 activation guard was reset by the mana ability that paid for the loop, so Basalt Monolith's tap-and-untap ran an `abilarms` game to the action cap](#fixed-2026-09-09-fourth-find--the-cr-7323-activation-guard-was-reset-by-the-mana-ability-that-paid-for-the-loop-so-basalt-monoliths-tap-and-untap-ran-an-abilarms-game-to-the-action-cap) | 40 |
 | Bugs & robustness | [FIXED 2026-09-09 (third find) — the sickness pre-check on the bot's mana estimate matched a bare `AddMana`, so a sick Wall of Roots' `Seq`-wrapped counter mana made the `AB_SAC` / `AB_SELF_COUNTER` gates unsound](#fixed-2026-09-09-third-find--the-sickness-pre-check-on-the-bots-mana-estimate-matched-a-bare-addmana-so-a-sick-wall-of-roots-seq-wrapped-counter-mana-made-the-ab_sac--ab_self_counter-gates-unsound) | 32 |
 | Bugs & robustness | [FIXED 2026-09-09 (second find) — the bot's mana estimate skipped a summoning-sick creature whole, so a Crystalline Crawler's counter mana made the `AB_DAMAGE` gate unsound](#fixed-2026-09-09-second-find--the-bots-mana-estimate-skipped-a-summoning-sick-creature-whole-so-a-crystalline-crawlers-counter-mana-made-the-ab_damage-gate-unsound) | 30 |
 | Bugs & robustness | [FIXED 2026-09-09 — the mandatory-loop watchdog saw only period-1 loops; two Portable Holes and a mandatory Leonin Relic-Warder cycled three boards to the action cap](#fixed-2026-09-09--the-mandatory-loop-watchdog-saw-only-period-1-loops-two-portable-holes-and-a-mandatory-leonin-relic-warder-cycled-three-boards-to-the-action-cap) | 40 |
@@ -46,6 +47,42 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-09 (fourth find) — the CR 732.3 activation guard was reset by the mana ability that paid for the loop, so Basalt Monolith's tap-and-untap ran an `abilarms` game to the action cap
+
+Found by the searching-pilot mirrors at fresh seeds (`abilarms` vs `gang`,
+`--decks all --seed 773`, one cell of 272 games): `cap: 6000 actions, turn
+21, stack 1 / ability Basalt Monolith x1`, and the trace is one
+`ActivateAbility { CardId(25), ability_index: 1 }` every three actions from
+turn 21 on — `{3}: untap this artifact`, paid by tapping the Monolith
+itself for `{C}{C}{C}`. Mana-neutral, so the board is identical at every
+announcement, which is exactly the shape `check_free_activation_loop`
+refuses after fifty repeats. It never fired because the auto-tapper's
+mana activation went through the same entry and **reset the watch**: the
+key stream read (untap, tap, untap, tap, …), never two of a kind in a row.
+The plain-land-tap fast path reset it too, on the argument that a reset
+"is what the initial state is" — true of the watch's state, false of the
+loop it hides (three lands tapped to pay for untapping three lands is the
+same shape).
+
+Fix (one commit): the guard is asked after the activation resolves its
+ability, only when that ability is not a mana ability (CR 602.2b — a mana
+ability activated to pay a cost is part of the announcement it pays for,
+not a game choice of its own; and its own key can never repeat on an
+unmoved state, since it moves a pool), and the land fast path leaves the
+watch alone. Cheaper on the bot path, not dearer: the ~24 k mana
+activations a six-game cube run no longer touch it, and `ability_is_mana`
+was already computed for the thirteen gates below. Test:
+`core_rules::cr_recent76::cr_732_3_a_paid_loop_through_the_sources_own_
+mana_ability_is_rejected` (Basalt Monolith, tap / untap / drain, refused
+at ~50). The `dflt` pilot never walks this loop (257,600 games at fresh
+seeds this run, 0 caps of the kind), so no trace, bench counter or pool
+game moves; the guard's other two tests stand.
+
+The lesson: **an instrument that a sub-step of the watched action can
+reach is not measuring the action.** The watch keyed announcements, and a
+cost payment announces too; the fix is to name what is *not* an
+announcement, not to widen the period.
 
 ## FIXED 2026-09-09 (third find) — the sickness pre-check on the bot's mana estimate matched a bare `AddMana`, so a sick Wall of Roots' `Seq`-wrapped counter mana made the `AB_SAC` / `AB_SELF_COUNTER` gates unsound
 
@@ -813,6 +850,15 @@ action cap is this engine's clock. 4 games in 183,600.
 board at turn 46, the printed landfall doubling. Every board walk is O(4,091),
 so 9,223 actions take 597 s. The game *decides* (the opponent is at −4,072), so
 **no undecided count can ever see it**; `CRAB_CAP_DIAG=5000` is what found it.
+
+**(d) A slow decided game with a dozen permanents of one creature's name is
+Mirrorform** (2026-09-09, `planner` cube seed 773: 4,553 actions at turn 60,
+Soulherder x12 on a deck that holds one). "Each nonland permanent you
+control becomes a copy of target non-Aura permanent" is the printed card,
+`duration: Permanent` is CR 707.2's indefinite copy, and twelve Soulherders
+blink each other twelve times an end step. The deck check that proved it
+(`cube_deck` at the pair's seeds, one Soulherder, every non-basic under the
+four-copy cap) is the first thing to run on a board like it.
 
 **(c) A cell with a dozen `draw`s is Flame Rift (2026-09-09, cube seed 766:
 12 draws, six pairings x both seat orders, 0 elsewhere in 257,600 games).**

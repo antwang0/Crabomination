@@ -197,3 +197,46 @@ fn cr_732_3_repeat_is_rejected_without_resolving_between_activations() {
         assert!(g.game_over.is_none(), "a fragmented loop is not a draw");
     }
 }
+
+/// CR 732.3 — a paid loop whose cost is met by the source's own mana ability.
+/// Basalt Monolith taps for {C}{C}{C} and pays {3} to untap: mana-neutral, so
+/// the board is identical at every untap announcement. The mana activation in
+/// between used to *reset* the watch, so the untap's key never repeated and an
+/// `abilarms` game ran to the 6,000-action cap (`--decks all --seed 773`,
+/// 2026-09-09). A mana ability is announced inside the cost it pays (CR
+/// 602.2b) and leaves the watch alone.
+#[test]
+fn cr_732_3_a_paid_loop_through_the_sources_own_mana_ability_is_rejected() {
+    use crabomination::game::types::GameError;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_battlefield(0, catalog::basalt_monolith());
+    let activate = |g: &mut GameState, index: usize| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: index,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+    };
+    let mut refused_at = None;
+    for i in 0..200 {
+        activate(&mut g, 0).unwrap_or_else(|e| panic!("tap {i}: {e:?}"));
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 3, "{{C}}{{C}}{{C}} at {i}");
+        let r = activate(&mut g, 1);
+        if matches!(r, Err(GameError::LoopMustBeBroken)) {
+            refused_at = Some(i);
+            break;
+        }
+        r.unwrap_or_else(|e| panic!("untap {i}: {e:?}"));
+        drain_stack(&mut g);
+        assert!(!g.battlefield_find(id).unwrap().tapped, "untapped again at {i}");
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 0, "the {{3}} spent at {i}");
+    }
+    let at = refused_at.expect("the Monolith loop never hit the cap");
+    assert!((45..=60).contains(&at), "refused at {at}, the ~50 the const asks for");
+    assert!(g.game_over.is_none(), "a fragmented loop is not a draw");
+}

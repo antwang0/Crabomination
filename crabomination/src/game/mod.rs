@@ -1715,9 +1715,10 @@ pub struct GameState {
     /// that stays away longer re-anchors; a spell / player action resets it.
     #[serde(default)]
     pub mandatory_loop_watch: (u64, u32, u32),
-    /// CR 732.3 — fragmented-loop guard for *free* activations (`{0}:` with no
-    /// cost line). Holds the state fingerprint, the `(source, ability index)`
-    /// last activated for free, and how many times that pair has been
+    /// CR 732.3 — fragmented-loop guard for non-mana activations (a mana
+    /// ability neither trips nor resets it: it is announced inside the cost
+    /// it pays). Holds the state fingerprint, the `(source, ability index)`
+    /// last announced, and how many times that pair has been
     /// activated without the fingerprint moving. Past
     /// `FREE_ACTIVATION_REPEAT_CAP` the repeat is rejected, forcing a
     /// different game choice instead of an endless loop. A count of `0` with

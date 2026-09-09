@@ -15078,20 +15078,14 @@ impl GameState {
             && let Some(out) =
                 self.activate_plain_land_tap(card_id, ability_index, p, x_value, events)
         {
-            // The CR 732.3 watch below is not asked (PERF `(-219)`): a plain
-            // land tap flips its source's `tapped` bit and grows a pool, both
-            // in the fingerprint, so its own key can never repeat on an
-            // unmoved state — and it can only ever *reset* the watch, which
-            // is what the initial state is.
-            if self.free_activation_watch.1.is_some() {
-                self.free_activation_watch = (0, None, 0);
-            }
+            // The CR 732.3 watch is neither asked nor reset (PERF `(-219)`,
+            // then 2026-09-09): a mana ability is activated *inside* another
+            // ability's announcement (CR 602.2b / 605.3), so it is not a
+            // game choice of its own. Resetting the watch here let the
+            // cost's own mana payment split a period-1 loop into a
+            // period-2 key stream that never tripped the cap.
             return out;
         }
-        // CR 732.3 — before any cost is paid, so a rejected announcement
-        // leaves no trace. After the fast path, whose activation never needs
-        // the ~900-Ir board fingerprint this takes.
-        self.check_free_activation_loop(card_id, ability_index)?;
 
         // CR 801.6 — a player can't activate abilities of an object outside
         // their range of influence.
@@ -15370,6 +15364,19 @@ impl GameState {
         // every activation on the bot path is a land tapping for mana, which
         // reaches most of them.
         let ability_is_mana = is_mana_ability(&ability.effect);
+
+        // CR 732.3 — before any cost is paid, so a rejected announcement
+        // leaves no trace. Not for a mana ability: the auto-tapper announces
+        // one inside the announcement it pays for, and letting it touch the
+        // watch (reset it, as it did until 2026-09-09) hid the loop the guard
+        // exists for — Basalt Monolith tapping itself for {C}{C}{C} to pay
+        // its own {3} untap read as (untap, tap, untap, tap, …), a key
+        // stream that never repeated, and ran an `abilarms` game to the
+        // 6,000-action cap (`--decks all --seed 773`). Its own key can never
+        // repeat on an unmoved state anyway: a mana ability moves a pool.
+        if !ability_is_mana {
+            self.check_free_activation_loop(card_id, ability_index)?;
+        }
 
         // {X} activation costs ({X}, {T}: … — Berta, Imbraham): a
         // hand-paying activator who didn't send an X picks one via a

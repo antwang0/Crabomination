@@ -1718,6 +1718,14 @@ impl GameState {
     ///   to sacrifice, for ever"): 49,427 copies. The printed cost is not the
     ///   question; whether the state moved is.
     ///
+    /// * A third, found the same way (`abilarms`, `--decks all --seed 773`,
+    ///   2026-09-09): **a mana ability reset the watch.** The auto-tapper
+    ///   announces one inside the announcement it pays for, so Basalt Monolith
+    ///   tapping itself for `{C}{C}{C}` to pay its own `{3}` untap read as a
+    ///   period-2 key stream and never repeated. The caller now skips this
+    ///   for a mana ability (CR 602.2b: it is part of the cost, not a choice
+    ///   of its own), and the land-tap fast path no longer resets it.
+    ///
     /// **The fingerprint is computed only when the key repeats** (PERF
     /// `(-220)`). A different ability resets the watch, and a reset compares
     /// its fingerprint against nothing, so it stores `n == 0` — "pending" —
