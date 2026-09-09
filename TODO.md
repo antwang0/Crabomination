@@ -40,9 +40,9 @@ sixty-seventh pass, so don't re-take that.
    mandatory Leonin Relic-Warder cycled three boards to the cap: now `(anchor, repeats, since)`, `MANDATORY_LOOP_MAX_PERIOD = 8`; the Warder is
    "you may"; the bot declines a "you may" removal aimed at its own permanent. And `available_mana` skipped a sick or tapped permanent whole, so a
    Crystalline Crawler's counter mana made the `AB_DAMAGE` gate audit abort — per-ability now. No perf leg (old (b) taken, (c) refuted).
-4. **Next moves:** (a) fresh-seed sweeps on the audit build are the cheapest bug finder left (2 bugs / 154 k games): cube 738+, sos / fixed
-   fresh seeds, the pilots leg on `--decks cube`; (b) the populated crack-back horizon is the one strength round left (38 % of the actor), gate
-   it; (c) engine self tables are the floor. Nothing half-wired; no open TODO/FIXME.
+4. **Next moves:** (a) `scripts/fresh_seed_sweep.sh` on the audit build is the cheapest bug finder left (2 bugs / 154 k games; PERF's Baseline
+   lists the seeds taken — cube through 749, sos through 736); (b) the populated crack-back horizon is the one strength round left (38 % of the
+   actor), gate it; (c) engine self tables are the floor (the actor re-read at the tip, candidates). Nothing half-wired; no open TODO/FIXME.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

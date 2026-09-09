@@ -62,6 +62,11 @@ CRAB_CAP_DIAG=1 target/profiling-fast/bot_ladder --a gang --b gang \
 # is capped at `n` and the cap line names its board.
 #   CRAB_MAX_ACTIONS=4000 CRAB_CAP_DIAG=1 target/profiling-fast/bot_ladder \
 #     --a dflt --b dflt --games 1200 --threads 3 --seed 43 --decks cube
+# THE FRESH-SEED SWEEP, as a script: `scripts/fresh_seed_sweep.sh "<pools>"
+# "<seeds>" [games] [bin]` runs dflt-mirror cells on the debug-assertions
+# build with both variables set and totals cap / stuck / draw — two defects in
+# 154 k games on 2026-09-09, where the `gang` grid had walked past both.
+# Seeds taken so far are in the Baseline addenda ("fresh seeds"); take the next.
 
 # WHICH GAME DIVERGED, AND AT WHICH ACTION. Every game the in-process paired
 # loop plays is written as its golden-trace text (one line per accepted
