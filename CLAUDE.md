@@ -107,6 +107,20 @@ Golden traces (`crabomination_tests/tests/core_rules/golden_trace.rs`) must
 stay identical across a behaviour-preserving change — a commit that moves one
 says why.
 
+**A CoW group is priced by its first write on a clone, not by the size of
+the field written.** `ResolutionScratch`, `ColdState`, `TurnRegistries`,
+`PlayerCold` and `CardCold` exist so a bot probe's clone bumps a refcount
+instead of copying; one unguarded store into any of them — an empty list
+over an empty list, a `mem::take` of an empty `Vec`, a stamp cleared a few
+lines later — deep-copies the whole group on every probe that reaches it
+(PERF `(-280)`..`(-287)`, eight legs, sealed -2.2 % / actor -1.9 %). Guard
+a clear / take / store with the matching read, and put a field an
+ordinary action writes on the plain-copied state (or in a small group of
+its kind), never in a cold one. The census is one dump:
+`valgrind --tool=callgrind --demangle=no`, then
+`cg_edges.py --callers make_mut_slow17h<hash>` per instance and a grep of
+the top caller's body for the group's field names.
+
 ## Test suite conventions (`crabomination_tests`)
 
 The functional suite lives in `crabomination_tests/tests/` as a small number of
