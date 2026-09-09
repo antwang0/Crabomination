@@ -2451,11 +2451,12 @@ impl GameState {
         let mut events = vec![];
         for (blocker_id, attacker_id) in assignments {
             self.add_block(blocker_id, attacker_id);
+            // The flag is a hot `CardInstance` bool; the pair goes to the
+            // game-level log below and nowhere on the card — a per-blocker
+            // list there was a `CardData` copy per blocker declared on a
+            // simulation clone, 12,382 a sealed six-game run (PERF `(-285)`).
             if let Some(b) = self.battlefield_find_mut(blocker_id) {
                 b.blocked_this_turn = true;
-                if !b.blocked_attackers_this_turn.contains(&attacker_id) {
-                    b.blocked_attackers_this_turn.push(attacker_id);
-                }
             }
             if !self.blocks_declared_this_turn.contains(&(blocker_id, attacker_id)) {
                 self.blocks_declared_this_turn.push((blocker_id, attacker_id));

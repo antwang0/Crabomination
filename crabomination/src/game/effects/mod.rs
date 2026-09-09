@@ -13343,11 +13343,18 @@ impl GameState {
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
+                // Each blocker's attackers this turn, off the game-level pair
+                // log (PERF `(-285)`), in battlefield-then-declaration order.
                 let victims: Vec<CardId> = self
                     .battlefield
                     .iter()
                     .filter(|c| blockers.contains(&c.id))
-                    .flat_map(|c| c.blocked_attackers_this_turn.clone())
+                    .flat_map(|c| {
+                        self.blocks_declared_this_turn
+                            .iter()
+                            .filter(move |(b, _)| *b == c.id)
+                            .map(|(_, a)| *a)
+                    })
                     .collect();
                 for cid in victims {
                     if let Some(c) = self.battlefield_find_mut(cid) {

@@ -229,7 +229,7 @@ pub enum Selector {
     /// enchantment" (Saproling Burst).
     TokensCreatedBySource,
     /// Every creature the source blocked *this turn*, read from
-    /// `CardInstance.blocked_attackers_this_turn` — so it still resolves after
+    /// the game-level `blocks_declared_this_turn` pair log — so it still resolves after
     /// combat has been torn down (Defiant Vanguard's end-of-combat sweep).
     CreaturesBlockedBySourceThisTurn,
     /// CR 702.171 — the creatures that saddled the source this turn
@@ -5742,7 +5742,7 @@ pub enum Effect {
     SectorBlockLockThisTurn,
     /// "Tap each creature that was blocked by [what] this turn; those
     /// creatures don't untap during their controllers' next untap steps"
-    /// (Triton Tactics), reading `CardInstance.blocked_attackers_this_turn`.
+    /// (Triton Tactics), reading the game-level `blocks_declared_this_turn` log.
     TapBlockedByAndSkipUntap { what: Selector },
     /// CR 506.4 — remove every targeted creature from combat: an attacker is
     /// pulled from the attack (its blocks released), a blocker is unassigned.

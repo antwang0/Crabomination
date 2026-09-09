@@ -3898,9 +3898,13 @@ impl GameState {
                         self.block_map.get(&card.id).is_some_and(|atk| atk.contains(&s))
                             || self.block_map.get(&s).is_some_and(|atk| atk.contains(&card.id))
                     }),
+                    // The game-level pair log (PERF `(-285)`: the blocker's
+                    // own list was a `CardData` write per blocker declared,
+                    // and the log holds the same pairs), still gated on the
+                    // source being on the battlefield as the field read was.
                     R::BlockedBySourceThisTurn => source
                         .and_then(|s| self.battlefield_find(s))
-                        .is_some_and(|src| src.blocked_attackers_this_turn.contains(&card.id)),
+                        .is_some_and(|src| self.blocks_declared_this_turn.contains(&(src.id, card.id))),
                     // The game-level pair log, not the candidate's own field:
                     // the body that asks is an end-of-combat one and
                     // `resolve_combat` has already dropped `block_map`.

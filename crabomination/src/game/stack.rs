@@ -3836,9 +3836,6 @@ impl GameState {
             if card.blocked_this_turn {
                 card.blocked_this_turn = false;
             }
-            if !card.blocked_attackers_this_turn.is_empty() {
-                card.blocked_attackers_this_turn.clear();
-            }
             if card.controller == p {
                 // "…during your last turn" rolls over as its controller's turn
                 // begins (Giant Turtle), and so does a pending Wall of Dust

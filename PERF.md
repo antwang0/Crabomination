@@ -2798,16 +2798,16 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-280)`..`(-284)` — the CoW-group legs: closing state at the `(-284)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+### `(-280)`..`(-285)` — the CoW-group legs: closing state at the `(-285)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
-Five engine legs after the `(-279)` closing state below (Log `(-280)`
-..`(-284)`; the CoW family read by monomorphization in the candidates).
+Six engine legs after the `(-279)` closing state below (Log `(-280)`
+..`(-285)`; the CoW family read by monomorphization in the candidates).
 Behaviour-preserving — every trace identical, `--bench` counters
 identical — so the three totals below are the `(-279)` games, cheaper,
-and **the `(-284)` triple is the base for every later A/B: sealed
-2,522,639,673 / cube 2,439,975,622 / fixed 638,059,921** (cumulative
-against the re-taken base: sealed -1.589 % / cube -1.130 % / fixed
--2.110 %). ⚠ The base was RE-TAKEN on this box before the legs:
+and **the `(-285)` triple is the base for every later A/B: sealed
+2,519,263,825 / cube 2,436,152,756 / fixed 637,265,047** (cumulative
+against the re-taken base: sealed -1.720 % / cube -1.285 % / fixed
+-2.231 %). ⚠ The base was RE-TAKEN on this box before the legs:
 sealed and cube reproduced the recorded `fix+` triple to within 1-3 k Ir,
 `fixed` did not (651,809,830 against the recorded 671,760,207 on identical
 `--bench` counters and 24 / 24 decided — the recorded fixed number is the
@@ -2827,6 +2827,8 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
          (-0.225 %); traces 120 / 120 identical against the (-282) binary; --bench counters identical; thread_determinism ok; GameState 1,600 bytes (the cap)
   (-284) sealed 2,530,209,369 -> 2,522,639,673 (-0.299 %, 72 / 72); cube 2,444,970,331 -> 2,439,975,622 (-0.204 %, 48 / 48); fixed 641,631,948 -> 638,059,921
          (-0.557 %); traces 120 / 120 identical against the (-283) binary; --bench counters identical; thread_determinism ok
+  (-285) sealed 2,522,639,673 -> 2,519,263,825 (-0.134 %, 72 / 72); cube 2,439,975,622 -> 2,436,152,756 (-0.157 %, 48 / 48); fixed 638,059,921 -> 637,265,047
+         (-0.125 %); traces 120 / 120 identical against the (-284) binary; --bench counters identical; thread_determinism ok
 --bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
 sweeps  fresh seeds on the b7bd9250 tip binary (profiling-fast) BEFORE the leg, dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000:
@@ -4125,6 +4127,43 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-285)` TAKEN — `CardData::blocked_attackers_this_turn` deleted, the two readers take the game-level pair log: sealed default Ir **-0.134 %** / cube **-0.157 %** / fixed **-0.125 %**, 120 / 120 traces identical
+
+The `CardData` instance's largest caller was `declare_blockers`, 12,382
+of its 55,538 unshares: every blocker declared on a simulation clone
+took a `CardData` copy (610 Ir) for `blocked_attackers_this_turn.push`
+— a per-card list that `blocks_declared_this_turn`, the game-level
+`CopyVec` on the hot state, already recorded pair for pair at the same
+site (cleared at cleanup where the card's list cleared at untap; no
+reader sits between). The field is gone: `BlockedBySourceThisTurn`
+reads the log (still gated on the source being on the battlefield, as
+the field read was), `TapBlockedByAndSkipUntap` walks it per blocker in
+battlefield order, `do_untap`'s per-card clear is gone, and `CardData`
+is 20 bytes smaller.
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the (-284) tip:
+  sealed  2,522,639,673 -> 2,519,263,825 Ir   (-3,375,848, -0.134 %)   72 / 72 decided both sides
+  cube    2,439,975,622 -> 2,436,152,756 Ir   (-3,822,866, -0.157 %)   48 / 48
+  fixed     638,059,921 ->   637,265,047 Ir     (-794,874, -0.125 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed): make_mut_slow <- declare_blockers 15,430 / 9.18 M -> 3,048 / 1.74 M, BUT <- resolve_combat_into 10,086 / 6.35 M -> 20,262 / 11.88 M — 10,176
+               of the 12,382 walked down to the blocker's damage write in the same sim, (-217)'s shape at the card level: the win is the 2,206 blockers
+               that never take damage plus the thinner copy; make_mut_slow 196,684 -> 194,794 calls; clone_from_ref_in self 66.57 -> 64.95 M;
+               __memcpy 53.14 -> 52.33 M; declare_blockers self 35.59 -> 35.12 M; do_untap self 14.01 -> 13.56 M (the per-card clear)
+--bench (profiling-fast, system allocator): 195,806 / 27.49 / 611.9 / 0 — counters identical; determinism ok; thread_determinism ok (3 vs 1)
+```
+
+The card-level lesson, stated once: **a `CardData` unshare avoided at
+declaration is paid at damage unless the card is never written again in
+the clone**; the ceiling for any single card-field move is the cards
+written exactly once, and the census for that is `make_mut_slow`'s
+caller table before and after, not the field's own count. The 20,262
+under `resolve_combat_into` are now the recorded floor of the combat
+sim's card copies — they move only if `damage` and `damaged_by_this_turn`
+leave `CardData` for the plain-copied `CardInstance` head (8 + 6 bools
+today), which grows every zone `Vec` clone and has no reading.
 
 ### `(-284)` TAKEN — the two creature-resolution `mem::take`s behind a read: sealed default Ir **-0.299 %** / cube **-0.204 %** / fixed **-0.557 %**, 120 / 120 traces identical
 

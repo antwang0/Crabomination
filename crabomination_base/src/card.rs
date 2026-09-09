@@ -2513,9 +2513,9 @@ pub enum SelectionRequirement {
     /// blocked by it (Sentinel's "target creature blocking or blocked by
     /// this creature"). Reads `block_map` both ways.
     BlockingOrBlockedBySource,
-    /// "Creatures blocked by [source] this turn" — reads the source's
-    /// `blocked_attackers_this_turn`, so it still answers after combat has
-    /// been torn down (Wall of Nets' end-of-combat exile).
+    /// "Creatures blocked by [source] this turn" — reads the game-level
+    /// `blocks_declared_this_turn` pair log, so it still answers after combat
+    /// has been torn down (Wall of Nets' end-of-combat exile).
     BlockedBySourceThisTurn,
     /// The mirror: "creatures that blocked [source] this turn". Reads
     /// `GameState.blocks_declared_this_turn`, not the candidate's own field,
@@ -7707,11 +7707,6 @@ pub struct CardData {
     /// *instance* — "unless lethal damage dealt by a single source is marked
     /// on it" (Ogre Enforcer). Reset at cleanup; in-memory only.
     pub damage_by_source_this_turn: crate::copyvec::CopyVec<[(CardId, u32); 2]>,
-    /// Attackers this creature blocked this turn, in declaration order.
-    /// Outlives combat teardown (`block_map` is cleared at end of combat) so
-    /// delayed "each creature that was blocked by one of those creatures this
-    /// turn" clauses resolve (Triton Tactics). Cleared in per-turn cleanup.
-    pub blocked_attackers_this_turn: crate::copyvec::CopyVec<[CardId; 4]>,
     /// CR 702.39 — Provoke: the attacker this creature must block this
     /// combat if able. Set when an attacker provokes it (untap + force
     /// block); cleared at end of combat. Transient — not serialized.
@@ -8303,7 +8298,6 @@ impl CardInstance {
             untap_locked_while_present: None,
             attack_ban: AttackBan::None,
             damage_by_source_this_turn: crate::copyvec::CopyVec::new(),
-            blocked_attackers_this_turn: crate::copyvec::CopyVec::new(),
             must_block: None,
             exiled_with: None,
             encoded_on: None,
