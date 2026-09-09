@@ -1444,6 +1444,8 @@ fn main() {
             std::process::exit(2);
         }
     };
+    // No seat here renders a prompt; see `game::set_prompt_text`.
+    crabomination::game::set_prompt_text(false);
 
     // Encoder ablation, mirroring selfplay_train's --ablate. A net
     // trained with a block ablated has *never-trained* (random-init)

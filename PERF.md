@@ -2806,6 +2806,33 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-09 (second run) — the Wall of Roots pre-check and `(-288)`: closing state at the `(-288)` tip, THE NEW A/B BASE ON ALL THREE POOLS (a new box, the base RE-TAKEN)
+
+A new box (Xeon @ 2.80 GHz reads as 4 cores, 15 GB), so the three-pool
+base was re-taken at the branch tip `df16ff62` before anything else —
+and it is NOT the `(-287)` triple: sealed 2,379,262,030 (the recorded
+2,507,039,807 was measured before the five 2026-09-09 correctness commits
+moved the sealed games: the Relic-Warder "you may" and the own-target
+decline change what the six seeded games do), cube 2,422,435,410 against
+2,427,666,471 (-0.2 %), fixed 633,371,470 against 633,484,026 (-0.018 %,
+the `gang` pool those commits do not reach). Two legs after it, both
+priced against a binary built from one tree, so they separate:
+
+```text
+  base   df16ff62, profiling-fast, system allocator, callgrind --games 6 --threads 1 --seed 1, UNTRACED:
+         sealed dflt 2,379,262,030 / cube dflt 2,422,435,410 / fixed gang 633,371,470
+  fix    the Wall of Roots pre-check (ENGINE_BACKLOG "third find"): sealed 2,379,600,455 (+0.014 %) / cube 2,422,673,235 (+0.010 %) /
+         fixed 633,483,234 (+0.018 %) — effect_produced_colors in place of a bare AddMana match on every no-tap permanent; traces 120 / 120 identical
+  (-288) sealed 2,379,600,680 -> 2,372,563,789 (-0.296 %, 72 / 72); cube 2,422,673,209 -> 2,421,434,760 (-0.051 %, 48 / 48); fixed 633,483,179 ->
+         633,480,850 (-0.000 %); traces 120 / 120 identical against the fix binary — THE NEW A/B BASE: sealed 2,372,563,789 / cube 2,421,434,760 /
+         fixed 633,480,850 (a re-run of one binary moves a few hundred Ir between dumps; read the triple to the thousand)
+sweep   fresh seeds on the df16ff62 audit build (target-audit/overflow, debug-assertions), dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000
+        CRAB_MAX_ACTIONS=6000: cube 750..753 (12,800 games) 0 cap / 0 stuck / 0 draw; sealed 742..745 (19,200) 0 / 0 / 0; all 734..736 (20,400)
+        0 / 0 / 0; sos 737..740 (8,000) 0 / 0 / 0; fixed 729..732 (6,400) 0 / 0 / 0; all 737 ABORTED rc 134 on the AB_SELF_COUNTER and AB_SAC gate
+        audits (a sick Wall of Roots, ENGINE_BACKLOG) — 66,800 clean games and the one defect; the aborting pair named by CRAB_DUMP_TRACES on one
+        thread (3,008 traces written, job 0x7_00000345 pair 4 next) and pinned in golden_trace
+```
+
 ### 2026-09-09 — the period watchdog, the Relic-Warder loop and the own-target decline: addendum at the tip after `2b834f38`
 
 No perf leg. Five correctness commits after the `(-287)` closing state
@@ -4205,6 +4232,43 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-288)` TAKEN — a simulator process poses its trigger picks without prompt text: sealed default Ir **-0.296 %** / cube **-0.051 %** / fixed **-0.000 %**, 120 / 120 traces identical
+
+The candidates' "prompt text for headless seats" entry, taken in the
+half its own premise allowed. `drain_trigger_queue` built a
+`Decision::ChooseTarget`'s `source_name` (a `find_card_anywhere` and a
+`String`) and `description` (`effect_short_text`, a `format!` walk over
+the effect tree) for every targeted trigger it posed, and a
+`ChooseCards` modal's per-candidate names beside its prompt — and no bot
+reads any of it: the text-keyed policies are `OptionalTrigger`,
+`ChooseAmount` and the modal's *prompt* (`decide_choose_cards` keys
+"sacrifice" / "discard" off the effect text), all of which keep theirs.
+`game::set_prompt_text(false)` is one relaxed `AtomicBool` store at the
+top of `bot_ladder` and `selfplay_train`'s `main` (the `set_jitter_seed`
+idiom); the queue reads it once per posed pick and skips the two walks
+and the name lookups. The server never calls it, the suite never calls
+it, a golden trace carries actions and boards. Measured against the
+Wall of Roots fix's binary (the `mid` column of the addendum), so the
+two are separable:
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the fix tip:
+  sealed  2,379,600,680 -> 2,372,563,789 Ir   (-7,036,891, -0.296 %)   72 / 72 decided both sides
+  cube    2,422,673,209 -> 2,421,434,760 Ir   (-1,238,449, -0.051 %)   48 / 48
+  fixed     633,483,179 ->   633,480,850 Ir   (-2,329, -0.000 %)       gang, the --bench pool: no trigger it poses targets
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed, callees of drain_trigger_queue): effect_short_text 1,618 / 3.60 M -> 1,088 / 1.36 M (the 1,088 left are the modals' prompts);
+               the candidates collect (from_iter) 2.46 M -> 0.58 M; format_inner 1.67 M -> 1.14 M; find_card_anywhere program-wide 58,328 ->
+               51,674 calls; __rust_alloc 7,424 -> 5,806, __rust_dealloc 12,454 -> 11,366 calls under the queue
+first cut  the ChooseTarget text alone: sealed -0.098 % / cube -0.023 % — the modal's candidate names were the larger half
+```
+
+What the flag does not reach: the in-resolution `ChooseTarget`s
+`run_effect` hands its own decider (ten sites, static strings), the
+`OptionalTrigger` / `ChooseAmount` prompts the bot branches on, and the
+modal's prompt. A UI process must not call `set_prompt_text(false)`;
+nothing does, and the doc on the flag says so.
 
 ### `(-287)` TAKEN — `cast_mana_spent_by_color` leaves `CardCold` for an inline `CopyVec` on `CardData`: sealed default Ir **-0.381 %** / cube **-0.260 %** / fixed **-0.541 %**, 120 / 120 traces identical
 
@@ -8122,8 +8186,12 @@ which is the read the map itself had not done:**
   on the death — gating it moves the unshare twenty lines down into
   `send_to_graveyard`. Neither is a lead. `find_card_anywhere_mut`
   (18,788 calls) has no unshare inside it: 0 callees on the dump.
-* **Not taken, ~0.35-0.5 % — prompt text for headless seats — AND THE
-  PREMISE IS HALF WRONG.** `drain_trigger_queue` builds
+* **~~Not taken, ~0.35-0.5 % — prompt text for headless seats~~ TAKEN as
+  `(-288)` (Log) in the half the premise allows: sealed -0.296 % / cube
+  -0.051 %, the `ChooseTarget` text and the modal's candidate names off a
+  process flag the two simulator binaries set; the modal's prompt and the
+  `OptionalTrigger` / `ChooseAmount` text stay, the bot reads them.
+  AND THE PREMISE IS HALF WRONG.** `drain_trigger_queue` builds
   `effect_short_text` + `format!` + the source name for every targeted
   trigger's `Decision::ChooseTarget` / `ChooseCards` (2,880 a run, ~10 M
   with `run_effect`'s 2,382 prompt formats; 17 M with the collects and

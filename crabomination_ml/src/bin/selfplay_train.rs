@@ -1454,6 +1454,8 @@ fn gate_builder_v3(args: &Args, games_per_pool: usize) {
 
 fn main() {
     let args = parse_args();
+    // No seat here renders a prompt; see `game::set_prompt_text`.
+    crabomination::game::set_prompt_text(false);
     // Before anything encodes: the diagnostics below must see the same
     // features the run being diagnosed was trained on.
     if !args.ablate.is_empty() {

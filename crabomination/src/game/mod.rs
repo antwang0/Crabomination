@@ -2647,6 +2647,30 @@ fn life_watch_threshold() -> Option<i32> {
     })
 }
 
+/// Whether a posed `Decision::ChooseTarget` carries its prompt text.
+///
+/// `source_name` / `description` exist for a UI seat's "<name> — <text>"
+/// prompt; no bot reads them (the bot's text-keyed policies are
+/// `OptionalTrigger`, `ChooseCards` and `ChooseAmount`, whose text stays).
+/// A simulator process clears the flag once at startup and every targeted
+/// trigger the queue poses skips its `effect_short_text` walk and its name
+/// lookups (a modal keeps its prompt, which the bot keys off, and loses its
+/// candidate names). On by default: the server and the suite never touch
+/// it, and a golden trace carries actions and boards, not prompts. PERF
+/// `(-288)`.
+static PROMPT_TEXT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Turn the prompt text of posed target picks on or off, process-wide.
+pub fn set_prompt_text(on: bool) {
+    PROMPT_TEXT.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// See [`set_prompt_text`]; one relaxed load.
+#[inline]
+pub fn prompt_text() -> bool {
+    PROMPT_TEXT.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// `CRAB_SIM_REJECTS` — the picker/engine disagreement instrument's level.
 ///
 /// 0 = off, 1 = count, 2 = count and name. Lives here rather than in
@@ -20852,24 +20876,29 @@ impl GameState {
                     continue;
                 }
                 let remaining: Vec<PendingTriggerPush> = iter.collect();
-                let source_name = self
-                    .find_card_anywhere(pending.source)
-                    .map(|c| c.definition.name.to_string())
-                    .unwrap_or_default();
-                let description = pending.effect.effect_short_text();
+                // The modal's prompt is read by the bot (`decide_choose_cards`
+                // keys "sacrifice" / "discard" off the effect text); its
+                // candidate names and the target pick's text are UI-only, so
+                // a simulator process skips those walks and lookups.
+                let text = prompt_text();
+                let name_of = |id: CardId| {
+                    if !text {
+                        return String::new();
+                    }
+                    self.find_card_anywhere(id)
+                        .map(|c| c.definition.name.to_string())
+                        .unwrap_or_default()
+                };
+                let source_name = name_of(pending.source);
                 let decision = if !offboard.is_empty() {
                     let candidates: Vec<(CardId, String)> = offboard
                         .iter()
                         .filter_map(|t| match t {
-                            Target::Permanent(id) => Some((
-                                *id,
-                                self.find_card_anywhere(*id)
-                                    .map(|c| c.definition.name.to_string())
-                                    .unwrap_or_default(),
-                            )),
+                            Target::Permanent(id) => Some((*id, name_of(*id))),
                             Target::Player(_) => None,
                         })
                         .collect();
+                    let description = pending.effect.effect_short_text();
                     Decision::ChooseCards {
                         source: pending.source,
                         prompt: format!("{source_name}: {description}"),
@@ -20888,7 +20917,11 @@ impl GameState {
                         source: pending.source,
                         legal: clickable,
                         source_name,
-                        description,
+                        description: if text {
+                            pending.effect.effect_short_text()
+                        } else {
+                            String::new()
+                        },
                     }
                 };
                 self.pending_decision = Some(Box::new(PendingDecision {
