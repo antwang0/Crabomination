@@ -5054,7 +5054,7 @@ impl GameState {
                     let decision = Decision::ChooseMode {
                         source: ctx.source.unwrap_or(CardId(0)),
                         num_modes: modes.len(),
-                        mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                        mode_texts: crate::game::mode_texts(modes),
                     };
                     match take_opt_scratch!(self.stashed_resolution_answer) {
                         Some(DecisionAnswer::Mode(i)) => i.min(modes.len().saturating_sub(1)),
@@ -5099,7 +5099,7 @@ impl GameState {
                     num_modes: modes.len(),
                     count: picks.len(),
                     default: picks.clone(),
-                    mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                    mode_texts: crate::game::mode_texts(modes),
                 };
                 // Stash-and-rerun suspend: a `wants_ui` controller answers
                 // through the client modal; the resume re-runs this effect
@@ -5191,7 +5191,7 @@ impl GameState {
                     num_modes: modes.len(),
                     count,
                     default: default.clone(),
-                    mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                    mode_texts: crate::game::mode_texts(modes),
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
@@ -5241,7 +5241,7 @@ impl GameState {
                     num_modes: modes.len(),
                     count: modes.len(),
                     default: vec![base],
-                    mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                    mode_texts: crate::game::mode_texts(modes),
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
@@ -5404,10 +5404,11 @@ impl GameState {
                 let answer = self.decider.decide(&Decision::ChooseMode {
                     source,
                     num_modes: available.len(),
-                    mode_texts: available
-                        .iter()
-                        .map(|(i, _)| modes[*i].effect_short_text())
-                        .collect(),
+                    mode_texts: if crate::game::prompt_text() {
+                        available.iter().map(|(i, _)| modes[*i].effect_short_text()).collect()
+                    } else {
+                        Vec::new()
+                    },
                 });
                 let idx = match answer {
                     DecisionAnswer::Mode(i) => i.min(available.len() - 1),

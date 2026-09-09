@@ -31,17 +31,18 @@ sixty-seventh pass, so don't re-take that.
    before tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas in **CLAUDE.md**, measurement
    in **PERF's "Standing rules"**. ⚠ Fetch before every push. ⚠ `rm -rf target/debug/incremental` before an optimized build (16 GB after one suite).
    ⚠ `cargo nextest run -p <one crate>` re-unifies features and rebuilds base + catalog from nothing — filter with `-E` under the workspace set.
-   **A/B base: the `(-288)` triple (PERF Baseline, the second 2026-09-09 addendum)** sealed 2,372,563,789 / cube 2,421,434,760 / fixed 633,480,850
+   **A/B base: the `(-288)` tip triple (PERF Baseline, the second 2026-09-09 addendum)** sealed 2,371,809,802 / cube 2,420,971,650 / fixed 633,456,833
    — taken on THIS box (Xeon 2.80 GHz, 4 cores) at the tip; the `(-287)` triple predates the five 2026-09-09 sealed-moving commits. RE-TAKE on a new box.
 2. **Gates at the tip (PERF Baseline, the second 2026-09-09 addendum):** suite 19,298 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical to
-   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), determinism + thread_determinism ok, 295-302 games/s on this box; fresh-seed dflt sweeps 102,800 games
-   (cube 750..757, sealed 742..747, all 734..738, sos 737..740, fixed 729..732): one abort (fixed, re-swept clean), 0 cap / 0 stuck; the dev-build actor smoke (150 games / 14,953 rows) 0 stalls; 0 bare panics.
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), determinism + thread_determinism ok, 295-302 games/s on this box; fresh-seed dflt sweeps 120,400 games
+   (cube 750..757, sealed 742..749, all 734..738, sos 737..744, fixed 729..732): one abort (fixed, re-swept clean), 0 cap / 0 stuck; the dev-build actor smoke (150 games / 14,953 rows) 0 stalls; 0 bare panics.
 3. **This run:** the sweep's third find (ENGINE_BACKLOG "third find"): the Crawler fix's sickness pre-check matched a bare `AddMana`, so a sick Wall
    of Roots' `Seq`-wrapped counter mana aborted the `AB_SAC` / `AB_SELF_COUNTER` gate audits — the pre-check now asks `effect_produced_colors`, the
    payer's own read (a pre-filter must be the gate's read). And `(-288)` (PERF Log): the two simulator binaries pose trigger picks without prompt
-   text (`game::set_prompt_text(false)`), sealed -0.296 % / cube -0.051 %, traces identical — the candidates' "prompt text" entry, taken.
+   text (`game::set_prompt_text(false)`), sealed -0.296 % / cube -0.051 % (+ the mode picks' texts, -0.032 %), traces identical — the candidates'
+   "prompt text" entry, taken. Grid + pilots leg at fresh seeds (55 cells) clean.
 4. **Next moves:** (a) `scripts/fresh_seed_sweep.sh` on the audit build stays the cheapest bug finder (3 bugs / ~230 k games; seeds taken — cube
-   through 757, sos through 740, all through 738, sealed through 747, fixed through 732; take the next); (b) the populated crack-back horizon is the one
+   through 757, sos through 744, all through 738, sealed through 749, fixed through 732, grid/pilots at 750-751; take the next); (b) the populated crack-back horizon is the one
    strength round left (38 % of the actor), gate it; (c) engine self tables are the floor; the last prompt text left is the modal's prompt the bot
    keys "sacrifice" / "discard" off (1,088 walks / ~0.1 % sealed) — a structural cost flag on `ChooseCards` would free it, wire-visible, not next.
    Nothing half-wired; no open TODO/FIXME.

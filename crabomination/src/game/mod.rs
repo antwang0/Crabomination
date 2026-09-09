@@ -2671,6 +2671,13 @@ pub fn prompt_text() -> bool {
     PROMPT_TEXT.load(std::sync::atomic::Ordering::Relaxed)
 }
 
+/// A mode pick's `mode_texts` — one `effect_short_text` per mode for the
+/// UI's modal, or empty under [`set_prompt_text`]`(false)`: every bot reads
+/// `num_modes` and nothing else of the pick.
+pub(crate) fn mode_texts(modes: &[crate::effect::Effect]) -> Vec<String> {
+    if prompt_text() { modes.iter().map(|m| m.effect_short_text()).collect() } else { Vec::new() }
+}
+
 /// `CRAB_SIM_REJECTS` — the picker/engine disagreement instrument's level.
 ///
 /// 0 = off, 1 = count, 2 = count and name. Lives here rather than in

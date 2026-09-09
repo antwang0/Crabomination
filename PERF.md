@@ -2824,15 +2824,21 @@ priced against a binary built from one tree, so they separate:
   fix    the Wall of Roots pre-check (ENGINE_BACKLOG "third find"): sealed 2,379,600,455 (+0.014 %) / cube 2,422,673,235 (+0.010 %) /
          fixed 633,483,234 (+0.018 %) — effect_produced_colors in place of a bare AddMana match on every no-tap permanent; traces 120 / 120 identical
   (-288) sealed 2,379,600,680 -> 2,372,563,789 (-0.296 %, 72 / 72); cube 2,422,673,209 -> 2,421,434,760 (-0.051 %, 48 / 48); fixed 633,483,179 ->
-         633,480,850 (-0.000 %); traces 120 / 120 identical against the fix binary — THE NEW A/B BASE: sealed 2,372,563,789 / cube 2,421,434,760 /
-         fixed 633,480,850 (a re-run of one binary moves a few hundred Ir between dumps; read the triple to the thousand)
+         633,480,850 (-0.000 %); traces 120 / 120 identical against the fix binary
+  modes  the mode_texts READ under (-288): sealed 2,372,563,638 -> 2,371,809,802 (-0.032 %); cube 2,421,435,131 -> 2,420,971,650 (-0.019 %); fixed
+         633,480,455 -> 633,456,833 (-0.004 %); traces 120 / 120 identical — THE NEW A/B BASE: sealed 2,371,809,802 / cube 2,420,971,650 /
+         fixed 633,456,833 (a re-run of one binary moves a few hundred Ir between dumps; read the triple to the thousand)
 sweep   fresh seeds on the df16ff62 audit build (target-audit/overflow, debug-assertions), dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000
         CRAB_MAX_ACTIONS=6000: cube 750..753 (12,800 games) 0 cap / 0 stuck / 0 draw; sealed 742..745 (19,200) 0 / 0 / 0; all 734..736 (20,400)
         0 / 0 / 0; sos 737..740 (8,000) 0 / 0 / 0; fixed 729..732 (6,400) 0 / 0 / 0; all 737 ABORTED rc 134 on the AB_SELF_COUNTER and AB_SAC gate
         audits (a sick Wall of Roots, ENGINE_BACKLOG) — 66,800 clean games and the one defect; the aborting pair named by CRAB_DUMP_TRACES on one
         thread (3,008 traces written, job 0x7_00000345 pair 4 next) and pinned in golden_trace
         after the fix (audit build rebuilt at the (-288) tip): all 737 re-swept 6,800 / 0 undecided; all 738 (6,800) 0 / 0 / 0; cube 754..757 (12,800)
-        0 cap / 0 stuck / 2 draw; sealed 746, 747 (9,600) 0 / 0 / 0 — 36,000 more games, every rc 0; 102,800 fresh-seed dflt games this run
+        0 cap / 0 stuck / 2 draw; sealed 746, 747 (9,600) 0 / 0 / 0; sos 741..744 (8,000) 0 / 0 / 0; sealed 748, 749 (9,600) 0 / 0 / 0 — 53,600 more
+        games, every rc 0; 120,400 fresh-seed dflt games this run
+grid    robustness_grid.sh --no-build --no-actor --pilots on the (-288) audit build, FRESH SEEDS: the ladder leg {fixed, cube, sos, sealed, all} x
+        seeds 750, 751 x 120 = 10 cells / 11,040 games, 0 failures, 0 cap / 0 stuck / 0 draw; the pilots leg (45 policies vs gang, --decks all,
+        seed 750, 12 games) 45 cells, 0 failures — no panic / assertion / overflow anywhere
 actor   dev-build selfplay_train --actors 3 --games 150 --steps 1 --seed 20260909 with set_prompt_text(false) live: 150 games / 14,953 rows / 0 stalls
 gate    --bench release-fast (mimalloc) at the (-288) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); bin_bytes 126,787,640 (-1,736 B against 9772ce0c); 295.3 / 301.8 / 295.1 games/s, three single runs,
@@ -4280,6 +4286,21 @@ What the flag does not reach: the in-resolution `ChooseTarget`s
 `OptionalTrigger` / `ChooseAmount` prompts the bot branches on, and the
 modal's prompt. A UI process must not call `set_prompt_text(false)`;
 nothing does, and the doc on the flag says so.
+
+**The mode picks READ, kept — sealed -0.032 % / cube -0.019 % / fixed
+-0.004 %, traces identical.** The five `mode_texts` collects (the stack's
+cast-time `ChooseMode`, `run_effect`'s four `ChooseMode` /
+`ChooseNModes` arms) built one `effect_short_text` per mode, and every
+bot reads `num_modes` alone; they are one `game::mode_texts` helper now,
+empty under the flag. Below the branch's revert line on its own
+(`(-272)` went back at -0.018 %), kept because it is what the flag's doc
+promises — no UI-only text built in a simulator — and five copies of one
+collect became one function.
+
+```text
+  sealed  2,372,563,638 -> 2,371,809,802 Ir   (-753,836, -0.032 %)   72 / 72;  cube 2,421,435,131 -> 2,420,971,650 (-463,481, -0.019 %)  48 / 48
+  fixed     633,480,455 ->   633,456,833     (-23,622, -0.004 %);   CRAB_DUMP_TRACES sealed + cube 120 / 120 identical
+```
 
 ### `(-287)` TAKEN — `cast_mana_spent_by_color` leaves `CardCold` for an inline `CopyVec` on `CardData`: sealed default Ir **-0.381 %** / cube **-0.260 %** / fixed **-0.541 %**, 120 / 120 traces identical
 

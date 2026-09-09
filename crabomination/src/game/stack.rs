@@ -184,7 +184,7 @@ impl GameState {
             let answer = self.decider.decide(&Decision::ChooseMode {
                 source,
                 num_modes: modes.len(),
-                mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                mode_texts: crate::game::mode_texts(modes),
             });
             if let DecisionAnswer::Mode(idx) = answer {
                 return Some(idx.min(modes.len() - 1));
