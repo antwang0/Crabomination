@@ -35,13 +35,13 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the tip (PERF Baseline, the 2026-09-09 addendum):** suite 19,296 / 0 / 5, clippy 0, golden 8/8, `--bench` counters identical to
    `2003d1cf`, thread_determinism ok, paired wall clock vs the pre-fix base +1.27 % (noise), fresh-seed dflt sweeps cube/all/sealed 725..728
    (59,200 games): one cap and one abort, both fixed and re-swept with 36,000 more games; the default grid (30) + pilots leg (45) at seed 726
-   clean; the actor leg (`selfplay_train` audit build) at seeds 729 / 20260909 / 731, 7,200 games, 0 stalls; 0 bare panics.
+   clean; the actor leg (`selfplay_train` audit build) at four seeds, 37,200 games / 3.75 M rows, 0 stalls; 0 bare panics.
 3. **This run (ENGINE_BACKLOG, two "FIXED 2026-09-09" entries):** the CR 104.4b watchdog only ever saw period-1 loops — two Portable Holes and a
    mandatory Leonin Relic-Warder cycled three boards to the cap: now `(anchor, repeats, since)`, `MANDATORY_LOOP_MAX_PERIOD = 8`; the Warder is
    "you may"; the bot declines a "you may" removal aimed at its own permanent. And `available_mana` skipped a sick or tapped permanent whole, so a
    Crystalline Crawler's counter mana made the `AB_DAMAGE` gate audit abort — per-ability now. No perf leg (old (b) taken, (c) refuted).
 4. **Next moves:** (a) `scripts/fresh_seed_sweep.sh` on the audit build is the cheapest bug finder left (2 bugs / 154 k games; PERF's Baseline
-   lists the seeds taken — cube through 749, sos through 736, all / sealed through 733); (b) the populated crack-back horizon is the one strength round left (38 % of the
+   lists the seeds taken — cube through 749, sos through 736, all through 733, sealed through 741); (b) the populated crack-back horizon is the one strength round left (38 % of the
    actor), gate it; (c) engine self tables are the floor (the actor re-read at the tip, candidates). Nothing half-wired; no open TODO/FIXME.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
