@@ -32,8 +32,8 @@ sixty-seventh pass, so don't re-take that.
    measurement in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a
    running `cargo build`. Cold here: debug suite build ~9 min, `profiling-fast` bot_ladder 13m07s (cold registry), `release-fast` 11m42s; a
    detached `setsid nohup` chain survives the tool timeout (⚠ kill it by pid — `pkill -f`/`pgrep -f` on a log name matches your own shell).
-   **The A/B base is the CR 400.7 fix's triple (PERF Baseline addendum, the `fix` line): sealed 2,563,124,101 / cube 2,467,644,697 (different
-   games from `(-279)`) / fixed 671,675,835**; both sides from one tree, `md5sum` both.
+   **The A/B base is the CR 400.7 tip's triple (PERF Baseline addendum, the `fix+` line): sealed 2,563,362,373 / cube 2,467,871,065 (different
+   games from `(-279)`) / fixed 671,760,207**; both sides from one tree, `md5sum` both.
 2. **Gates at the tip (PERF Baseline, the `(-279)` addendum, `gate` / `sweeps` lines):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench`
    counters identical to `2003d1cf` (195,806 / 27.49 / 611.9 / 0) on the CR 400.7 tip, thread_determinism ok, the debug-assertions grid on
    FRESH seeds 701..712 (24 ladder cells / 139,200 games + 46 pilot cells + 3 actor cells) 0 failures, dflt sweeps under the bound on cube /

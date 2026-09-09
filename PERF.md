@@ -2832,6 +2832,11 @@ fix     CR 400.7 (ENGINE_BACKLOG 2026-09-08 third run, the Golgari Thug loop): a
         MOVES TO 2,467,644,697); fixed gang 671,541,515 -> 671,675,835 (+0.020 %); golden 7/7 unmoved. REFUTED variant: the same reset on the leave side (`damage = 0` in `place_card_at_
         resolved_zone`) read +0.107 % sealed on identical games — the write deep-copies a dying card's CoW data under every bot clone.
         Cube sweep under the bound, dflt mirror seeds 701..706 x 400 (19,200 games): seed 702's cap 2 -> 0, the rest unchanged (10 draws)
+fix+    the same class widened (a recast Thug came back +2/+2 under the first fix): the leave side drops the permanent pump, both attachments and a paid
+        echo (`leave_battlefield_state`, every write guarded), the non-spell entries take `enter_as_new_object`, the resolving spell's entry resets damage
+        only (CR 400.7d keeps a pump applied on the stack — `cr_112_4` caught the draft that cleared it there): sealed 2,563,124,101 -> 2,563,362,373
+        (+0.009 %), cube 2,467,644,697 -> 2,467,871,065 (+0.009 %), fixed 671,675,835 -> 671,760,207 (+0.013 %), traces IDENTICAL on sealed and cube
+        (72 + 48) — THE A/B BASE IS THIS TRIPLE
 gate    --bench release-fast (mimalloc) at b746192b (the CR 400.7 tip): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf (no fixed gang game
         reaches the case); determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,753,680 (+10,152 B against 3d8f3072); 309.4 / 310.1 / 308.6 games/s
         (host_calib_ms 51 / 49 / 50, the same afternoon's box)
