@@ -28,20 +28,22 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code
-   before tracker prose; ⚠ claim a candidate number at PUSH time — `(-281)` is the last claimed, `(-282)` next. Gotchas in **CLAUDE.md**, measurement
+   before tracker prose; ⚠ claim a candidate number at PUSH time — `(-282)` is the last claimed, `(-283)` next. Gotchas in **CLAUDE.md**, measurement
    in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a running `cargo build`.
-   This box: cold debug suite build 5m08s, cold `profiling-fast` bot_ladder 8m18s, warm engine rebuild 2m35s. **The A/B base is the `(-281)` triple
-   (PERF Baseline addendum): sealed 2,545,847,904 / cube 2,452,405,764 / fixed 645,681,561** — RE-TAKE it on a new box (the recorded fixed number
+   This box: cold debug suite build 5m08s, cold `profiling-fast` bot_ladder 8m18s, warm engine rebuild 2m35s. **The A/B base is the `(-282)` triple
+   (PERF Baseline addendum): sealed 2,536,118,264 / cube 2,448,171,416 / fixed 643,076,738** — RE-TAKE it on a new box (the recorded fixed number
    moved 3 % between boxes on identical games, PERF `(-280)`); both sides from one tree, `md5sum` both.
-2. **Gates at the tip (PERF Baseline, the `(-280)`/`(-281)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
+2. **Gates at the tip (PERF Baseline, the `(-280)`..`(-282)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
    `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, fresh-seed dflt sweeps under the bound on cube 719..724 / all 713..718 / sealed
    713..718 (88,800 games) 0 cap / 0 stuck, `audit_panics.py` 0 bare; the debug-assertions grid last ran at the `(-279)` tip (0 failures).
 3. **This run:** `(-280)` TAKEN (the cast validator's target-slot stamp and the death chokepoint's push deep-copied the whole 1 KB `ResolutionScratch`
    on every dry-run clone — both fields moved to the plain-copied state, sealed -0.589 % / cube -0.595 % / fixed -0.885 %); `(-281)` TAKEN
-   (`haunt_pending` boxed, the scratch copy off the large-bin path, allocator rows -6.5 M sealed); the CoW unshare family READ by monomorphization
-   (candidates, first entry: every instance named by T, the residue is the floor). Traces identical throughout. No bugs found; no cards.
-4. **Next moves:** (a) the attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk,
-   gate it; (b) `robustness_grid.sh --wide` on fresh seeds 719+; (c) the engine self tables are the floor — the next engine lever is a *count* (a
+   (`haunt_pending` boxed, the scratch copy off the large-bin path, allocator rows -6.5 M sealed); `(-282)` TAKEN (`life_gain_flag_pending` as a
+   seat mask on the hot state — the dispatcher's cold-group unshare on every lifelink hit, sealed -0.382 % / cube -0.173 % / fixed -0.403 %); the
+   CoW unshare family READ by monomorphization (candidates, first entry). Traces identical throughout. No bugs found; no cards.
+4. **Next moves:** (a) `(-283)`: the ~10 per-turn registries an *effect* writes leave `ColdState` for a second small CoW group (PERF Log `(-282)`'s
+   tail has the census: ~2,000 unshares x ~3,300 Ir sealed, `(-217)`'s rule — move them together); (b) the attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk,
+   gate it; (c) `robustness_grid.sh --wide` on fresh seeds 719+; (d) the engine self tables are the floor — the next engine lever is a *count* (a
    sim memo across decisions, no census yet), not a row. Nothing half-wired on the branch; no open TODO/FIXME in code.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
