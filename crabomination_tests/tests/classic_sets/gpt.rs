@@ -461,7 +461,7 @@ fn ogre_savant_bounces_when_blue_spent() {
     g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).unwrap();
     assert!(g.battlefield_find(bear).is_some(), "no bounce without blue");
     // Blue spent → bounce.
-    g.battlefield_find_mut(ogre).unwrap().cast_mana_spent_by_color = vec![(Color::Blue, 1)];
+    g.battlefield_find_mut(ogre).unwrap().cast_mana_spent_by_color = [(Color::Blue, 1)].into_iter().collect();
     let mut ctx = EffectContext::for_spell_with_source(ogre, "Ogre Savant", 0, None, vec![], 0, 0, 0, 0);
     ctx.targets = vec![Target::Permanent(bear)];
     g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).unwrap();

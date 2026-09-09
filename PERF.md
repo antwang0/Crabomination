@@ -2798,16 +2798,16 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-280)`..`(-286)` — the CoW-group legs: closing state at the `(-286)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+### `(-280)`..`(-287)` — the CoW-group legs: closing state at the `(-287)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
-Seven engine legs after the `(-279)` closing state below (Log `(-280)`
-..`(-286)`; the CoW family read by monomorphization in the candidates).
+Eight engine legs after the `(-279)` closing state below (Log `(-280)`
+..`(-287)`; the CoW family read by monomorphization in the candidates).
 Behaviour-preserving — every trace identical, `--bench` counters
 identical — so the three totals below are the `(-279)` games, cheaper,
-and **the `(-286)` triple is the base for every later A/B: sealed
-2,516,623,276 / cube 2,433,990,363 / fixed 636,928,451** (cumulative
-against the re-taken base: sealed -1.823 % / cube -1.373 % / fixed
--2.283 %; paired wall clock base vs `(-285)` +6.67 % median, Log
+and **the `(-287)` triple is the base for every later A/B: sealed
+2,507,039,807 / cube 2,427,666,471 / fixed 633,484,026** (cumulative
+against the re-taken base: sealed -2.197 % / cube -1.629 % / fixed
+-2.812 %; paired wall clock base vs `(-285)` +6.67 % median, Log
 `(-286)`). ⚠ The base was RE-TAKEN on this box before the legs:
 sealed and cube reproduced the recorded `fix+` triple to within 1-3 k Ir,
 `fixed` did not (651,809,830 against the recorded 671,760,207 on identical
@@ -2832,6 +2832,8 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
          (-0.125 %); traces 120 / 120 identical against the (-284) binary; --bench counters identical; thread_determinism ok
   (-286) sealed 2,519,263,825 -> 2,516,623,276 (-0.105 %, 72 / 72); cube 2,436,152,756 -> 2,433,990,363 (-0.089 %, 48 / 48); fixed 637,265,047 -> 636,928,451
          (-0.053 %); traces 120 / 120 identical against the (-285) binary; --bench counters identical; thread_determinism ok
+  (-287) sealed 2,516,623,276 -> 2,507,039,807 (-0.381 %, 72 / 72); cube 2,433,990,363 -> 2,427,666,471 (-0.260 %, 48 / 48); fixed 636,928,451 -> 633,484,026
+         (-0.541 %); traces 120 / 120 identical against the (-286) binary; --bench counters identical; thread_determinism ok
 wall    bench_ab.py bl_base vs bl_285 (profiling-fast, system allocator, fixed --bench, 20 pairs): B/A median +6.67 % / mean +5.61 % (sd 6.27)
 --bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
@@ -4131,6 +4133,36 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-287)` TAKEN — `cast_mana_spent_by_color` leaves `CardCold` for an inline `CopyVec` on `CardData`: sealed default Ir **-0.381 %** / cube **-0.260 %** / fixed **-0.541 %**, 120 / 120 traces identical
+
+The stamp `(-286)` walked down to: every paid cast stores the per-color
+mana breakdown on the card, and as a `CardCold` `Vec` that store was
+the card's cold-group copy (776 Ir) on every cast probe that paid —
+8,482 a sealed six-game run — for a field that fails `CardCold`'s own
+membership rule ("written rarely is a measurement"). It is a
+`CopyVec<[(Color, u32); 5]>` on `CardData` now (five colors, never
+spills, +48 bytes on a group the cast has already unshared for
+`cast_from_hand`); `spent_by_color` collects straight into it, the two
+`EffectContext` stamps and the wire form take `to_vec()`.
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the (-286) tip:
+  sealed  2,516,623,276 -> 2,507,039,807 Ir   (-9,583,469, -0.381 %)   72 / 72 decided both sides
+  cube    2,433,990,363 -> 2,427,666,471 Ir   (-6,323,892, -0.260 %)   48 / 48
+  fixed     636,928,451 ->   633,484,026 Ir   (-3,444,425, -0.541 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed): make_mut_slow <- cast_spell_with_convoke 38,674 / 23.41 M -> 30,192 / 17.40 M (-8,482: the paid casts' CardCold copies); make_mut_slow
+               193,112 -> 186,200 calls; clone_from_ref_in self 63.95 -> 60.89 M; Arc::drop_slow 9.14 -> 8.12 M; from_iter 79.51 -> 78.66 M (the Vec
+               collect) against SmallVec::extend 15.56 -> 16.38 M (the CopyVec collect); __memcpy 52.32 -> 52.93 M (+48 B a CardData copy);
+               the allocator family -4.8 M
+--bench (profiling-fast, system allocator): 195,806 / 27.49 / 611.9 / 0 — counters identical; determinism ok; thread_determinism ok (3 vs 1)
+```
+
+What `cast_spell_with_convoke` still unshares (30,192 on sealed): the
+hand `Vec` (the card leaves it), `PlayerData` (the pool is paid) and
+`CardData` (`cast_from_hand` and the cast flags) — one each per cast
+probe, each a real write on a fresh clone; floor.
 
 ### `(-286)` TAKEN — the cast's two `CardCold` stamps behind a read: sealed default Ir **-0.105 %** / cube **-0.089 %** / fixed **-0.053 %**, 120 / 120 traces identical
 

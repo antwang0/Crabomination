@@ -23594,7 +23594,7 @@ impl GameState {
         ctx.cast_collected_evidence = card.cast_collected_evidence;
         ctx.entwined = card.entwined;
         ctx.spree_modes = card.spree_modes.clone();
-        ctx.mana_spent_by_color = card.cast_mana_spent_by_color.clone();
+        ctx.mana_spent_by_color = card.cast_mana_spent_by_color.to_vec();
         // Stamp the resolving spell's identity so source-aware damage
         // replacements (Torbran) can read its controller/colors while the
         // card is in no visible zone.

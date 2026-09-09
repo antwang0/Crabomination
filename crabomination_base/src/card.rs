@@ -6460,11 +6460,6 @@ pub struct CardCold {
     /// "Until end of turn" sibling of `granted_activated_abilities` — cleared
     /// by `clear_end_of_turn_effects` (Lightning Volley, Retraction Helix).
     pub granted_activated_eot: Vec<ActivatedAbility>,
-    /// CR 601 — per-color breakdown of the mana spent paying this spell's
-    /// cost, stamped at cast time. Read by `Predicate::ManaSpentOfColorAtLeast`
-    /// (Adamant, CR 702.137) and `Predicate::CastSpellNoColoredManaSpent`
-    /// (Void Mirror). Empty for free/uncast objects.
-    pub cast_mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
     /// One-shot cast-time rider: when this spell resolves as a permanent it
     /// enters with these counters (Noctis's graveyard-cast finality counter).
     /// Drained at ETB by the stack resolver; empty for ordinary casts.
@@ -7399,6 +7394,14 @@ pub struct CardData {
     /// empty on nearly every permanent and cloned on every CoW unshare, so
     /// their `Clone` tests the length first (PERF `(-200)`).
     pub damaged_by_this_turn: crate::copyvec::CopyVec<[CardId; 4]>,
+    /// CR 601 — per-color breakdown of the mana spent paying this spell's
+    /// cost, stamped at cast time. Read by `Predicate::ManaSpentOfColorAtLeast`
+    /// (Adamant, CR 702.137) and `Predicate::CastSpellNoColoredManaSpent`
+    /// (Void Mirror). Empty for free/uncast objects. Inline and here, not in
+    /// [`CardCold`]: it is written on every paid cast, and as a cold `Vec` the
+    /// stamp was the card's cold-group copy on every cast probe that paid
+    /// (PERF `(-287)`). Five colors, so it never spills.
+    pub cast_mana_spent_by_color: crate::copyvec::CopyVec<[(crate::mana::Color, u32); 5]>,
     /// Seats this permanent has dealt damage to this *game*, and the
     /// planeswalkers likewise (The Fallen). Never reset per turn.
     pub damaged_players_this_game: crate::oftenempty::OftenEmpty<usize>,
@@ -8225,6 +8228,7 @@ impl CardInstance {
             perm_toughness_bonus: 0,
             counters,
             damaged_by_this_turn: crate::copyvec::CopyVec::new(),
+            cast_mana_spent_by_color: crate::copyvec::CopyVec::new(),
             damaged_players_this_game: Default::default(),
             damaged_permanents_this_game: Default::default(),
             damage_by_source_name_this_turn: Default::default(),
@@ -9427,7 +9431,7 @@ impl serde::Serialize for CardInstance {
             squad_count: self.squad_count,
             cast_mana_spent: self.cast_mana_spent,
             cast_x_value: self.cast_x_value,
-            cast_mana_spent_by_color: self.cast_mana_spent_by_color.clone(),
+            cast_mana_spent_by_color: self.cast_mana_spent_by_color.to_vec(),
             bargained: self.bargained,
             pending_etb_counters: self.pending_etb_counters.clone(),
             spliced_effects: self.spliced_effects.clone(),
@@ -9555,7 +9559,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.squad_count = wire.squad_count;
         c.cast_mana_spent = wire.cast_mana_spent;
         c.cast_x_value = wire.cast_x_value;
-        c.cast_mana_spent_by_color = wire.cast_mana_spent_by_color;
+        c.cast_mana_spent_by_color = wire.cast_mana_spent_by_color.into_iter().collect();
         c.bargained = wire.bargained;
         c.pending_etb_counters = wire.pending_etb_counters.clone();
         c.spliced_effects = wire.spliced_effects.clone();

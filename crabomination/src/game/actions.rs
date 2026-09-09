@@ -766,7 +766,7 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
 fn spent_by_color(
     before: &crate::mana::ManaPool,
     after: &crate::mana::ManaPool,
-) -> Vec<(crate::mana::Color, u32)> {
+) -> crate::copyvec::CopyVec<[(crate::mana::Color, u32); 5]> {
     use crate::mana::Color;
     Color::ALL
         .iter()
@@ -3789,7 +3789,7 @@ impl GameState {
             ctx.kick_count = c.kick_count;
             ctx.bargained = c.bargained;
             ctx.cast_from_hand = c.cast_from_hand;
-            ctx.mana_spent_by_color = c.cast_mana_spent_by_color.clone();
+            ctx.mana_spent_by_color = c.cast_mana_spent_by_color.to_vec();
         }
         ctx
     }
@@ -17174,7 +17174,7 @@ impl GameState {
                 }
             };
             activation_mana_colors =
-                spent_by_color(&receipt.pool_before, &self.players[p].mana_pool);
+                spent_by_color(&receipt.pool_before, &self.players[p].mana_pool).to_vec();
             self.pay_life_cost(p, receipt.side_effects.life_lost);
             auto_mana_events = receipt.auto_events;
         }
