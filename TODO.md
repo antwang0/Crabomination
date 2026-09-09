@@ -28,20 +28,20 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas in **CLAUDE.md**, measurement in
-   **PERF's "Standing rules"**. ⚠ Fetch before every push. ⚠ `rm -rf target/debug/incremental` before an optimized build. ⚠ `nextest run -p <crate>`
-   re-unifies features — filter with `-E` under the workspace set. **A/B base: the `(-288)` triple (PERF Baseline, the second 2026-09-09 addendum),
-   taken on the SECOND box; the third box (calib 45-47) has no triple — RE-TAKE before any A/B.**
-2. **Gates at the tip (PERF Baseline, the third 2026-09-09 addendum):** suite 19,298 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical
-   to `2003d1cf`, determinism + thread_determinism ok, 427-462 games/s idle (a faster box, not code); 257,600 fresh-seed dflt games (cube 762..775,
-   sealed 754..767, all 745..758, sos 749..762, fixed 733..746) 0 abort / 0 stuck, 2 caps = Beacon (a), 12 draws = Flame Rift (c) in ENGINE_BACKLOG;
-   actor 20,000 games / 2.01 M rows / 0 stalls; grid + pilots at 766-767 (55 cells) and nine searching mirrors at 766-770 (10,540 games) clean.
-3. **This run:** no engine change — the candidates' engine side is the floor, the bot side is strength rounds — so ~460 k audit-build games, nothing
-   new; one card defect off the dropped-may audit's self-harm cluster (Detention Sphere, `b62d7c30`), the rest of the cluster triaged in INCOMPLETE_CARDS.
-4. **Next moves:** (a) dflt sweeps are past their yield (~880 k games / 3 bugs, the last ~460 k clean) — widen the *pilot* (`mcts` / `lookahead` /
-   `planner` / `abilarms` mirrors at `--games 400`) before more dflt seeds (next: cube 776, sealed 769, all 759, sos 763, fixed 747); (b) the populated
-   crack-back horizon is the one strength round left (38 % of the actor), gate it; (c) a decided draw scores 0 (fingerprint (c)) — right in expectation,
-   gate only beside (b); (d) the modal's prompt text the bot keys off (~0.1 % sealed) needs a `ChooseCards` cost flag, wire-visible, not next.
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas (the nextest `-E` filter, the
+   incremental dir) in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. ⚠ Fetch before every push. **A/B base: the `(-288)` triple (PERF
+   Baseline, the second 2026-09-09 addendum), taken on the SECOND box; the third box (calib 38-56) has no triple — RE-TAKE before any A/B.**
+2. **Gates at the tip (PERF Baseline, the third 2026-09-09 addendum):** suite 19,300 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical
+   to `2003d1cf`, determinism + thread_determinism ok, 427-543 games/s idle (a faster box, not code); 257,600 fresh-seed dflt games (cube 762..776,
+   sealed 754..769, all 745..759, sos 749..763, fixed 733..747) 0 abort / 0 stuck, 2 caps = Beacon (a), 12 draws = Flame Rift (c); actor 20,000 games /
+   2.01 M rows / 0 stalls; grid + pilots (55 cells), nine searching mirrors (10,540 games) and the wider cheap-pilot block (101,616 games) clean after the fix.
+3. **This run:** the fourth find (ENGINE_BACKLOG): the CR 732.3 activation watch was reset by the mana ability that paid for the loop, so Basalt
+   Monolith's tap-and-untap ran an `abilarms` game to the cap — mana abilities now leave the watch alone (`6b849f26`), a READ by construction. Plus
+   Detention Sphere's restored may (`b62d7c30`). No perf leg: the candidates' engine side is the floor, the bot side is strength rounds.
+4. **Next moves:** (a) the searching pilots found in 100 k games what 880 k dflt games did not — keep the finder there: `abilarms` / `mcts` mirrors at more
+   seeds and `--games 400` on the cheap pilots (next seeds: 774+; dflt next cube 777, sealed 770, all 760, sos 764, fixed 748); (b) the populated crack-back
+   horizon is the one strength round left (38 % of the actor), gate it; (c) a decided draw scores 0 (fingerprint (c)) — right in expectation, gate only
+   beside (b); (d) the modal's prompt text the bot keys off (~0.1 % sealed) needs a `ChooseCards` cost flag, wire-visible, not next.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

@@ -2806,22 +2806,35 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### 2026-09-09 (third run) — no code change: 257,600 fresh-seed dflt games, the actor and pilots legs, every gate at the `(-288)` tip on a third box
+### 2026-09-09 (third run) — the CR 732.3 guard's mana-ability reset, Detention Sphere, 257,600 fresh-seed dflt games, the actor / pilots / searching legs, every gate on a third box
 
-No perf leg and no engine change: the candidates queue's engine side reads
-floor (every open row is sub-0.2 % with a device, and the bot-side rows are
-strength rounds), so the run spent its budget on the cheapest bug finder and
-found nothing new. **The Ir base was NOT re-taken here** — this box is a
-different part (Xeon @ 2.10 GHz nominal, `host_calib_ms` 45-47 against the
-second run's 51-57) and no A/B was run on it; the next perf leg re-takes the
-triple first (Standing rules).
+No perf leg: the candidates queue's engine side reads floor (every open row
+is sub-0.2 % with a device, and the bot-side rows are strength rounds), so
+the run spent its budget on the bug finders. The dflt sweeps found nothing;
+the searching-pilot mirrors found one engine defect (ENGINE_BACKLOG "fourth
+find": a mana ability reset the CR 732.3 activation watch, so Basalt
+Monolith's paid tap-and-untap ran an `abilarms` game to the cap — fixed at
+`6b849f26`, the guard now skips mana abilities and the land fast path no
+longer resets it). **The Ir base was NOT re-taken here** — this box is a
+different part (Xeon @ 2.10 GHz nominal, `host_calib_ms` 38-56 across the
+run) and no A/B was run on it; the next perf leg re-takes the triple first
+(Standing rules). The guard change is a READ by construction, not measured:
+fewer instructions on the bot path (~24 k mana activations a six-game cube
+run no longer touch the watch, `ability_is_mana` was already computed) and
+`--bench` counters identical either side.
 
 ```text
+fix     at 9d5619bd (the guard + its test + the land_tap_fast_path carve-out retired): suite 19,300 / 0 / 5 (138.6 s); clippy 0; cargo check
+        --profile release-fast clean; --bench release-fast 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
+        thread_determinism ok (3 vs 1); bin_bytes 126,820,120 (+32,952 B); peak_rss_mib 31.0; 524.5 / 498.6 / 543.0 games/s at host_calib_ms 38 /
+        40 / 56 (the box's spread, see below); abilarms vs gang all 773 x 16: 272 decided / 0 undecided on release-fast (was cap 1), and 771..773
+        on the rebuilt audit binary (8m11s) 272 / 272 / 272 decided, 0 undecided
 sweep   scripts/fresh_seed_sweep.sh on the c93ee9ff audit build (target-audit/overflow, debug-assertions; 9m09s cold), dflt mirror x --games 400 x
         --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000 — block 1: cube 762..765 (12,800 games) 2 cap / 0 stuck / 4 draw; sealed 754..757
         (19,200) 0 / 0 / 0; all 745..748 (27,200) 0 / 0 / 0; sos 749..752 (8,000) 0 / 0 / 0; fixed 733..736 (6,400) 0 / 0 / 0 — block 2: cube 766..775
         (32,000) 0 / 0 / 12; sealed 758..767 (48,000) 0 / 0 / 0; all 749..758 (68,000) 0 / 0 / 2; sos 753..762 (20,000) 0 / 0 / 0; fixed 737..746
-        (16,000) 0 / 0 / 0 — 257,600 games, every rc 0, 0 stuck, 0 assertion. The 2 caps (cube 763) are ENGINE_BACKLOG's fingerprint (a), Beacon of
+        (16,000) 0 / 0 / 0 — 257,600 games, every rc 0, 0 stuck, 0 assertion; then on the audit binary rebuilt at the guard fix, one cell a pool
+        at cube 776 / sealed 769 / all 759 / sos 763 / fixed 747 (18,400 games) 0 / 0 / 0 — 276,000 dflt games this run. The 2 caps (cube 763) are ENGINE_BACKLOG's fingerprint (a), Beacon of
         Immortality: twin i32::MAX life totals, lib 1, stack 0, an Azorius board at turn 285 under the 6,000 cap. The 12 draws (cube 766, six pairings x
         both seat orders, archetypes 1 / 6 BR and 7 GR) are Flame Rift with both seats at <= 4 life — CR 104.4a, fingerprint (c) there; a strength
         question (the bot scores a draw at 0 against a board it reads as losing), not a defect. Cell cost on this box: cube ~40 s, sealed ~70 s,
@@ -2835,7 +2848,10 @@ grid    robustness_grid.sh --no-build --no-actor --pilots at FRESH SEEDS: the la
 search  searching-pilot mirrors on the same audit build (CRAB_MAX_ACTIONS=6000 CRAB_CAP_DIAG=4000, 3 threads): lookahead cube 767 x 200 (1,600 games,
         6 s) / all 768 x 200 (3,400, 11 s); planner sealed 768 x 200 (2,400, 6 s) / cube 769 x 200 (1,600, 5 s); abilarms vs gang cube 769 x 16 (128,
         1 s) / all 770 x 16 (272, 2 s); mcts-heur mirror cube 766 x 40 (320, 306 s); mcts x mcts cube 767 x 40 (320, 242 s) / sealed 768 x 40 (480,
-        321 s) — 10,540 games, all decided, 0 undecided, no assertion
+        321 s) — 10,540 games, all decided, 0 undecided, no assertion; then the cheap pilots wider: lookahead and planner mirrors x {all, cube,
+        sealed, sos} x seeds 771..773 x 400 (24 cells, 100,800 games, 5-22 s a cell) all decided, and abilarms vs gang all 771..773 x 16 (815
+        games): 1 cap — THE FOURTH FIND (ENGINE_BACKLOG), Basalt Monolith's paid untap loop at seed 773, fixed at 6b849f26; one planner cube 773 game
+        ran 4,553 actions to a decision on a Mirrorform board (Soulherder x12, fingerprint (d) there — the printed card)
 gate    --bench release-fast (mimalloc, 15m52s cold contended) at c93ee9ff: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
         determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,787,168 (identical to 0085bddf); peak_rss_mib 28.2-28.7; 426.6 / 456.6 /
         462.0 games/s idle at host_calib_ms 45-47 (315.5 contended by the 3-thread sweep at calib 45) — a faster box than the second run's
