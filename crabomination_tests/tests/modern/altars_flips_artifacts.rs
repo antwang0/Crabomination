@@ -464,6 +464,9 @@ fn leonin_relic_warder_exiles_then_returns_on_death() {
     let mut g = two_player_game();
     let relic = g.add_card_to_battlefield(1, catalog::ur_golems_eye());
     let warder = g.add_card_to_hand(0, catalog::leonin_relic_warder());
+    // "You may exile": the printed choice. Declined (the AutoDecider's
+    // answer) the artifact stays; taken, it goes.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.players[0].mana_pool.add(Color::White, 2);
     g.perform_action(GameAction::CastSpell {
         card_id: warder, target: Some(Target::Permanent(relic)), additional_targets: vec![], mode: None, x_value: None,
@@ -1214,3 +1217,20 @@ fn opportunity_draws_target_player_four() {
     assert_eq!(g.players[0].hand.len(), before - 1 + 4);
 }
 
+
+/// Leonin Relic-Warder's exile is "you may": declined (the AutoDecider's
+/// answer), the only artifact — its controller's own — stays put. Mandatory,
+/// this exact board was the first step of a game-length loop.
+#[test]
+fn leonin_relic_warder_may_leave_its_controllers_own_artifact_alone() {
+    let mut g = two_player_game();
+    let own = g.add_card_to_battlefield(0, catalog::portable_hole());
+    let warder = g.add_card_to_hand(0, catalog::leonin_relic_warder());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: warder, target: Some(Target::Permanent(own)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Leonin Relic-Warder castable for {W}{W}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(own).is_some(), "the declined exile leaves the Hole on the battlefield");
+    assert!(g.stack.is_empty() && g.game_over.is_none());
+}

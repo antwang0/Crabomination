@@ -25202,8 +25202,11 @@ pub fn icatian_javelineers() -> CardDefinition {
     }
 }
 
-/// Leonin Relic-Warder — {W}{W} 2/2 Cat Cleric. ETB exiles target artifact or
-/// enchantment until this leaves the battlefield (CR 603.6e).
+/// Leonin Relic-Warder — {W}{W} 2/2 Cat Cleric. "When this enters, you may
+/// exile target artifact or enchantment" (any controller's) until this leaves
+/// the battlefield (CR 603.6e). The "may" is load-bearing: mandatory, it was
+/// forced onto its controller's own Portable Hole and the two return links
+/// looped a game (found by the 2026-09-09 fresh-seed sweep).
 pub fn leonin_relic_warder() -> CardDefinition {
     use crate::card::ExileReturnZone;
     use crate::effect::shortcut::{etb, target_filtered};
@@ -25217,11 +25220,14 @@ pub fn leonin_relic_warder() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
-            what: target_filtered(
-                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-            ),
-            return_to: ExileReturnZone::Battlefield,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Exile target artifact or enchantment?".into(),
+            body: Box::new(Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            }),
         })],
         ..Default::default()
     }
