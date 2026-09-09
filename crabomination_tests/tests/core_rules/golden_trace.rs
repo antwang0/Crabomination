@@ -447,3 +447,25 @@ fn a_board_past_max_battlefield_ends_the_game_as_a_cap() {
     g.game_over = Some(Some(0));
     assert_eq!(stop_reason(&g, 0, 50_000, 0), Some(StopReason::GameOver));
 }
+
+/// The pair the 2026-09-09 fresh-seed sweep capped at 6,001 actions: seed
+/// 726's cube pool, archetype 6, pair seed 11400714845093003057 — two
+/// Portable Holes and a Leonin Relic-Warder cycling three boards. With the
+/// Warder's "you may" restored and the bot declining a removal aimed at its
+/// own permanent, the game decides; and if it ever loops again, the period
+/// watchdog draws it long before the cap.
+#[test]
+fn the_two_hole_relic_warder_pair_decides() {
+    use crabomination::cube::{cube_deck, random_color_pair};
+    use rand::SeedableRng;
+    let mut r = rand::rngs::StdRng::seed_from_u64(726 ^ 0xC0BE_5EED);
+    let mut deck = Vec::new();
+    for _ in 0..7 {
+        let colors = random_color_pair(&mut r);
+        deck = cube_deck(colors, &mut r);
+    }
+    assert!(deck.iter().any(|f| f().name == "Leonin Relic-Warder"), "the pool moved");
+    let t = trace_game(&deck, &deck, 11_400_714_845_093_003_057, 6_000);
+    assert!(t.lines.len() < 6_000, "ran to the cap again: {} lines", t.lines.len());
+    assert!(t.winner.is_some(), "not decided after {} lines, turn {}", t.lines.len(), t.turns);
+}

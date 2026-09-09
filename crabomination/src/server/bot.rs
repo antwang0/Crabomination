@@ -4079,10 +4079,45 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
         }
         return false;
     }
+    // A "you may exile / destroy / bounce target X" whose chosen target is the
+    // bot's own permanent is a self-cost the body cannot show — the target
+    // was picked when the trigger went on the stack and lives on the pending
+    // resume, not in the effect tree. Leonin Relic-Warder with its
+    // controller's Portable Hole as the only artifact on the board exiled it,
+    // and the two return links looped the game (fresh-seed sweep, 2026-09-09).
+    if body.is_some_and(|b| removal_targets_own_permanent(state, b)) {
+        return false;
+    }
     // Take it unless the body is self-costly; default to taking when the
     // body can't be introspected (most "you may" on your own permanents is
     // upside).
     body.map(|b| !effect_imposes_self_cost(b)).unwrap_or(true)
+}
+
+/// Is `body` a targeted removal whose slot-0 target, as chosen for the
+/// suspended trigger, is a permanent the trigger's controller controls?
+fn removal_targets_own_permanent(state: &GameState, body: &Effect) -> bool {
+    use crate::effect::{Selector, ZoneDest};
+    use crate::game::types::ResumeContext;
+    let what = match body {
+        Effect::ExileUntilSourceLeaves { what, .. }
+        | Effect::ExileWithSource { what }
+        | Effect::Exile { what }
+        | Effect::Destroy { what }
+        | Effect::DestroyNoRegen { what } => what,
+        Effect::Move { what, to } if !matches!(to, ZoneDest::Battlefield { .. }) => what,
+        _ => return false,
+    };
+    if !matches!(what, Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. }) {
+        return false;
+    }
+    let Some(pd) = &state.pending_decision else { return false };
+    let ResumeContext::Trigger { controller, target: Some(Target::Permanent(id)), .. } =
+        &pd.resume
+    else {
+        return false;
+    };
+    state.battlefield.find_by_id(*id).is_some_and(|c| c.controller == *controller)
 }
 
 /// Recursively find the optional-effect body whose prompt is `desc`. Both
@@ -22688,6 +22723,62 @@ mod stack_response_tests {
                     if card_id == blade && t == serra
             ),
             "Doom Blade answers the attacker before blocks, got {action:?}"
+        );
+    }
+
+    /// A "you may exile target artifact" whose chosen target is the bot's own
+    /// permanent is declined; the same prompt aimed at the opponent's is
+    /// taken. Leonin Relic-Warder exiling its controller's Portable Hole was
+    /// the found loop (fresh-seed sweep, 2026-09-09).
+    #[test]
+    fn optional_removal_aimed_at_own_permanent_is_declined() {
+        use crate::card::{CardType, ExileReturnZone, SelectionRequirement};
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::effect::shortcut::{etb, target_filtered};
+        use crate::game::TriggerPush;
+        let run = |own: bool| -> GameAction {
+            let mut g = two_player_game();
+            g.players[0].wants_ui = true;
+            let body = Effect::ExileUntilSourceLeaves {
+                what: target_filtered(SelectionRequirement::Artifact),
+                return_to: ExileReturnZone::Battlefield,
+            };
+            let maydo = Effect::MayDo {
+                description: "Exile target artifact?".to_string(),
+                body: Box::new(body),
+            };
+            let src_def = CardDefinition {
+                name: "Optional Warder",
+                card_types: vec![CardType::Creature],
+                power: 2,
+                toughness: 2,
+                triggered_abilities: vec![etb(maydo.clone())],
+                ..Default::default()
+            };
+            let src = g.add_card_to_battlefield(0, src_def);
+            let artifact =
+                g.add_card_to_battlefield(if own { 0 } else { 1 }, catalog::ur_golems_eye());
+            g.stack.push(
+                TriggerPush::new(src, 0, maydo).target(Some(Target::Permanent(artifact))).build(),
+            );
+            let mut fuel = 20;
+            while g.pending_decision.is_none() && fuel > 0 {
+                g.perform_action(GameAction::PassPriority).unwrap();
+                fuel -= 1;
+            }
+            assert!(matches!(
+                g.pending_decision.as_ref().map(|p| &p.decision),
+                Some(Decision::OptionalTrigger { .. })
+            ));
+            HeuristicBot::new().next_action(&g, 0).expect("bot answers")
+        };
+        assert!(
+            matches!(run(true), GameAction::SubmitDecision(DecisionAnswer::Bool(false))),
+            "exiling its own artifact is declined"
+        );
+        assert!(
+            matches!(run(false), GameAction::SubmitDecision(DecisionAnswer::Bool(true))),
+            "exiling the opponent's artifact is taken"
         );
     }
 
