@@ -2834,8 +2834,9 @@ sweep   fresh seeds on the df16ff62 audit build (target-audit/overflow, debug-as
         audits (a sick Wall of Roots, ENGINE_BACKLOG) — 66,800 clean games and the one defect; the aborting pair named by CRAB_DUMP_TRACES on one
         thread (3,008 traces written, job 0x7_00000345 pair 4 next) and pinned in golden_trace
         after the fix (audit build rebuilt at the (-288) tip): all 737 re-swept 6,800 / 0 undecided; all 738 (6,800) 0 / 0 / 0; cube 754..757 (12,800)
-        0 cap / 0 stuck / 2 draw; sealed 746, 747 (9,600) 0 / 0 / 0; sos 741..744 (8,000) 0 / 0 / 0; sealed 748, 749 (9,600) 0 / 0 / 0 — 53,600 more
-        games, every rc 0; 120,400 fresh-seed dflt games this run
+        0 cap / 0 stuck / 2 draw; sealed 746, 747 (9,600) 0 / 0 / 0; sos 741..744 (8,000) 0 / 0 / 0; sealed 748, 749 (9,600) 0 / 0 / 0; then on the (-288) tip's
+        audit binary cube 758..761 (12,800) 0 cap / 0 stuck / 2 draw; all 739, 740 (13,600) 0 / 0 / 0; sealed 752, 753 (9,600) 0 / 0 / 0; sos 745..748
+        (8,000) 0 / 0 / 0; all 741..744 (27,200) 0 / 0 / 0 — 124,800 more games, every rc 0; 191,600 fresh-seed dflt games this run
 grid    robustness_grid.sh --no-build --no-actor --pilots on the (-288) audit build, FRESH SEEDS: the ladder leg {fixed, cube, sos, sealed, all} x
         seeds 750, 751 x 120 = 10 cells / 11,040 games, 0 failures, 0 cap / 0 stuck / 0 draw; the pilots leg (45 policies vs gang, --decks all,
         seed 750, 12 games) 45 cells, 0 failures — no panic / assertion / overflow anywhere
