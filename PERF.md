@@ -2835,6 +2835,9 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
   (-287) sealed 2,516,623,276 -> 2,507,039,807 (-0.381 %, 72 / 72); cube 2,433,990,363 -> 2,427,666,471 (-0.260 %, 48 / 48); fixed 636,928,451 -> 633,484,026
          (-0.541 %); traces 120 / 120 identical against the (-286) binary; --bench counters identical; thread_determinism ok
 wall    bench_ab.py bl_base vs bl_285 (profiling-fast, system allocator, fixed --bench, 20 pairs): B/A median +6.67 % / mean +5.61 % (sd 6.27)
+actor   callgrind selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features, system allocator,
+        CRAB_NO_JITTER=1), the run's base b7bd9250 built in a worktree against the shared target dir (sources touched, md5 differs) vs the (-287) tip:
+        2,483,983,953 -> 2,436,453,201 Ir (-1.913 %), 60 games / 6,063 rows / 0 stalls both sides — the eight legs on the training path, one number
 gate    --bench release-fast (mimalloc) at the (-287) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok; thread_determinism
         ok (3 vs 1); bin_bytes 126,782,376 (+28,696 B against b746192b); 495.7 / 498.1 / 525.9 games/s, three single runs (host_calib_ms 44 / 54 / 40) — THIS BOX,
         not comparable to the 309 games/s recorded on the previous one; release-fast build 7m43s here

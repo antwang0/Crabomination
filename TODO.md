@@ -47,8 +47,8 @@ sixty-seventh pass, so don't re-take that.
    game-level pair log, sealed -0.134 % / cube -0.157 % / fixed -0.125 %); `(-286)` TAKEN (the cast's two `CardCold` stamps behind a read,
    sealed -0.105 % / cube -0.089 % / fixed -0.053 %); `(-287)` TAKEN (`cast_mana_spent_by_color` to an inline `CopyVec` on `CardData` — the
    paid cast's `CardCold` copy, sealed -0.381 % / cube -0.260 % / fixed -0.541 %); the CoW family READ by monomorphization (candidates, first
-   entry). Cumulative sealed -2.20 % / cube -1.63 % / fixed -2.81 %; paired wall clock base vs `(-285)` +6.67 % median (fixed, system
-   allocator); traces identical throughout. No bugs found; no cards.
+   entry). Cumulative sealed -2.20 % / cube -1.63 % / fixed -2.81 % / **actor -1.91 %** (selfplay_train, same 60 games); paired wall clock
+   base vs `(-285)` +6.67 % median (fixed, system allocator); traces identical throughout. No bugs found; no cards.
 4. **Next moves:** (a) the CoW residue is census questions under 0.1 % each (PERF Log `(-283)`'s tail: `discard_card` / `move_card_to` /
    `activate_ability_inner`'s remaining cold writes) — read `cg_contexts.py make_mut_slow` at three levels first; (b) the attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk,
    gate it; (c) the engine self tables are the floor — the next engine lever is a *count* (a
