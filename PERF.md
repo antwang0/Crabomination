@@ -2851,7 +2851,9 @@ search  searching-pilot mirrors on the same audit build (CRAB_MAX_ACTIONS=6000 C
         321 s) — 10,540 games, all decided, 0 undecided, no assertion; then the cheap pilots wider: lookahead and planner mirrors x {all, cube,
         sealed, sos} x seeds 771..773 x 400 (24 cells, 100,800 games, 5-22 s a cell) all decided, and abilarms vs gang all 771..773 x 16 (815
         games): 1 cap — THE FOURTH FIND (ENGINE_BACKLOG), Basalt Monolith's paid untap loop at seed 773, fixed at 6b849f26; one planner cube 773 game
-        ran 4,553 actions to a decision on a Mirrorform board (Soulherder x12, fingerprint (d) there — the printed card)
+        ran 4,553 actions to a decision on a Mirrorform board (Soulherder x12, fingerprint (d) there — the printed card); after the fix, on the
+        rebuilt audit binary: abilarms vs gang x {all, cube, sealed, sos} x seeds 774..789 (64 cells, 93 s all told), abilarms mirror all 774..777,
+        mcts cube 769 / all 770 / sos 771 and mcts-heur sealed 769 x 40 — 72 cells, 13,520 games, all decided, 0 caps
 gate    --bench release-fast (mimalloc, 15m52s cold contended) at c93ee9ff: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
         determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,787,168 (identical to 0085bddf); peak_rss_mib 28.2-28.7; 426.6 / 456.6 /
         462.0 games/s idle at host_calib_ms 45-47 (315.5 contended by the 3-thread sweep at calib 45) — a faster box than the second run's
