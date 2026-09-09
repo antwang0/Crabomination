@@ -2798,16 +2798,17 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-280)`..`(-285)` — the CoW-group legs: closing state at the `(-285)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+### `(-280)`..`(-286)` — the CoW-group legs: closing state at the `(-286)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
-Six engine legs after the `(-279)` closing state below (Log `(-280)`
-..`(-285)`; the CoW family read by monomorphization in the candidates).
+Seven engine legs after the `(-279)` closing state below (Log `(-280)`
+..`(-286)`; the CoW family read by monomorphization in the candidates).
 Behaviour-preserving — every trace identical, `--bench` counters
 identical — so the three totals below are the `(-279)` games, cheaper,
-and **the `(-285)` triple is the base for every later A/B: sealed
-2,519,263,825 / cube 2,436,152,756 / fixed 637,265,047** (cumulative
-against the re-taken base: sealed -1.720 % / cube -1.285 % / fixed
--2.231 %). ⚠ The base was RE-TAKEN on this box before the legs:
+and **the `(-286)` triple is the base for every later A/B: sealed
+2,516,623,276 / cube 2,433,990,363 / fixed 636,928,451** (cumulative
+against the re-taken base: sealed -1.823 % / cube -1.373 % / fixed
+-2.283 %; paired wall clock base vs `(-285)` +6.67 % median, Log
+`(-286)`). ⚠ The base was RE-TAKEN on this box before the legs:
 sealed and cube reproduced the recorded `fix+` triple to within 1-3 k Ir,
 `fixed` did not (651,809,830 against the recorded 671,760,207 on identical
 `--bench` counters and 24 / 24 decided — the recorded fixed number is the
@@ -2829,6 +2830,9 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
          (-0.557 %); traces 120 / 120 identical against the (-283) binary; --bench counters identical; thread_determinism ok
   (-285) sealed 2,522,639,673 -> 2,519,263,825 (-0.134 %, 72 / 72); cube 2,439,975,622 -> 2,436,152,756 (-0.157 %, 48 / 48); fixed 638,059,921 -> 637,265,047
          (-0.125 %); traces 120 / 120 identical against the (-284) binary; --bench counters identical; thread_determinism ok
+  (-286) sealed 2,519,263,825 -> 2,516,623,276 (-0.105 %, 72 / 72); cube 2,436,152,756 -> 2,433,990,363 (-0.089 %, 48 / 48); fixed 637,265,047 -> 636,928,451
+         (-0.053 %); traces 120 / 120 identical against the (-285) binary; --bench counters identical; thread_determinism ok
+wall    bench_ab.py bl_base vs bl_285 (profiling-fast, system allocator, fixed --bench, 20 pairs): B/A median +6.67 % / mean +5.61 % (sd 6.27)
 --bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
 sweeps  fresh seeds on the b7bd9250 tip binary (profiling-fast) BEFORE the leg, dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000:
@@ -4127,6 +4131,32 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-286)` TAKEN — the cast's two `CardCold` stamps behind a read: sealed default Ir **-0.105 %** / cube **-0.089 %** / fixed **-0.053 %**, 120 / 120 traces identical
+
+`cast_spell_with_convoke` stored `kicked_options` and `spree_modes` on
+the card unconditionally — an empty list over an empty list on nearly
+every cast, and both are `CardCold` fields, so the store was the card's
+cold-group copy (776 Ir). Guarded on either side being non-empty. **The
+ceiling was 10,164 and the leg took 1,682**: the paid casts write
+`cast_mana_spent_by_color` (also `CardCold`) after payment, so their copy
+walked down to that stamp; what the guard saves is the probes rejected
+before payment. The stamp itself is the `(-287)` question (below).
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the (-285) tip:
+  sealed  2,519,263,825 -> 2,516,623,276 Ir   (-2,640,549, -0.105 %)   72 / 72 decided both sides
+  cube    2,436,152,756 -> 2,433,990,363 Ir   (-2,162,393, -0.089 %)   48 / 48
+  fixed     637,265,047 ->   636,928,451 Ir     (-336,596, -0.053 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed): make_mut_slow <- cast_spell_with_convoke 40,356 / 24.75 M -> 38,674 / 23.41 M; make_mut_slow 194,794 -> 193,112 calls; clone_from_ref_in
+               self 64.95 -> 63.95 M; cast_spell_with_convoke self 15.46 -> 15.22 M; the allocator family -0.7 M
+--bench (profiling-fast, system allocator): 195,806 / 27.49 / 611.9 / 0 — counters identical; determinism ok; thread_determinism ok (3 vs 1)
+PAIRED WALL CLOCK, the base binary against the (-285) one (bench_ab.py, 20 pairs, profiling-fast --no-default-features = the system allocator, `fixed`
+  --bench): A median 425.75 / B 457.41 games/s, B/A median +6.67 % / mean +5.61 % (sd 6.27 points) — the six legs' Ir on fixed is -2.23 %, and the
+  wall clock moves more than the Ir because what left is allocator and memcpy work (~3-4 Ir-equivalents a cycle); the mimalloc build's ratio is
+  not measured (no release-fast base binary on this box).
+```
 
 ### `(-285)` TAKEN — `CardData::blocked_attackers_this_turn` deleted, the two readers take the game-level pair log: sealed default Ir **-0.134 %** / cube **-0.157 %** / fixed **-0.125 %**, 120 / 120 traces identical
 

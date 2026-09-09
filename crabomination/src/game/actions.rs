@@ -7037,7 +7037,13 @@ impl GameState {
                 || card.definition.kicker_action_cost.is_some()
                 || !kicker_options.is_empty());
         card.kicked = kicked;
-        card.kicked_options = kicker_options;
+        // Behind a read: `kicked_options` and `spree_modes` below are
+        // `CardCold` fields, and a store of an empty list over an empty list
+        // deep-copied the card's cold group on every cast — 10,164 a sealed
+        // six-game run, the group's one write on the cast path (PERF `(-286)`).
+        if !kicker_options.is_empty() || !card.kicked_options.is_empty() {
+            card.kicked_options = kicker_options;
+        }
         // CR 702.27 — opt-in Buyback; folded into the cost below and read
         // at resolution to return the spell to hand instead of the gy.
         let buyback = buyback && card.definition.has_buyback().is_some();
@@ -7046,7 +7052,9 @@ impl GameState {
         // exactly those at resolution. Their mana costs fold into the total
         // cost below.
         let spree_modes = take_opt_scratch!(self.pending_spree_modes).unwrap_or_default();
-        card.spree_modes = spree_modes.clone();
+        if !spree_modes.is_empty() || !card.spree_modes.is_empty() {
+            card.spree_modes = spree_modes.clone();
+        }
         // CR 702.41 — opt-in Entwine; only sticks when the card has it (either
         // a mana cost or a non-mana one — "Entwine—Sacrifice two lands").
         let entwine = entwine
