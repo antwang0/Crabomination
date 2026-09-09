@@ -1677,6 +1677,13 @@ impl GameState {
     /// loop.
     pub const MANDATORY_LOOP_DRAW_REPEATS: u32 = 400;
 
+    /// CR 104.4b / 732.4 — the longest loop, in trigger resolutions, the
+    /// watchdog can see: a chain that has not returned the fingerprint to its
+    /// anchor within this many resolutions re-anchors on its latest state.
+    /// The found loop (two Portable Holes and a mandatory Relic-Warder) has
+    /// period 3; two of each would be 6.
+    pub const MANDATORY_LOOP_MAX_PERIOD: u32 = 8;
+
     /// CR 732.3 — how many times the *same* free activation (`{0}:` with no
     /// cost line) may be repeated without the game-state fingerprint moving
     /// before it's rejected. A fragmented loop is broken by a different game
@@ -1769,18 +1776,31 @@ impl GameState {
         };
         let mut events = self.resolve_top_of_stack_inner()?;
         if was_trigger && self.game_over.is_none() {
+            // The watch holds an *anchor* fingerprint and counts the trigger
+            // resolutions that return the game to it. Comparing each
+            // resolution only with the one before it saw period-1 loops and
+            // nothing else: two Portable Holes and a mandatory Leonin
+            // Relic-Warder cycled three distinct boards for 6,000 actions
+            // (fresh-seed sweep, 2026-09-09) with the old watch resetting on
+            // every step. A chain that has not come back to the anchor within
+            // `MANDATORY_LOOP_MAX_PERIOD` resolutions is progress and
+            // re-anchors on its latest state.
             let fp = self.loop_fingerprint();
-            if fp == self.mandatory_loop_watch.0 {
-                self.mandatory_loop_watch.1 += 1;
-                if self.mandatory_loop_watch.1 >= Self::MANDATORY_LOOP_DRAW_REPEATS {
+            let (anchor, repeats, since) = self.mandatory_loop_watch;
+            if fp == anchor {
+                let repeats = repeats + 1;
+                self.mandatory_loop_watch = (anchor, repeats, 0);
+                if repeats >= Self::MANDATORY_LOOP_DRAW_REPEATS {
                     self.game_over = Some(None);
                     events.push(GameEvent::GameOver { winner: None });
                 }
+            } else if anchor == 0 || since >= Self::MANDATORY_LOOP_MAX_PERIOD {
+                self.mandatory_loop_watch = (fp, 0, 0);
             } else {
-                self.mandatory_loop_watch = (fp, 0);
+                self.mandatory_loop_watch.2 = since + 1;
             }
         } else {
-            self.mandatory_loop_watch = (0, 0);
+            self.mandatory_loop_watch = (0, 0, 0);
         }
         Ok(events)
     }

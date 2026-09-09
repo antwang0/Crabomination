@@ -210,3 +210,88 @@ fn cr_104_4b_progressing_trigger_chain_is_not_a_draw() {
     }
     assert!(g.game_over.is_none(), "a chain that gains life each time is progress");
 }
+
+/// CR 104.4b / 732.4 — a loop whose *period* is longer than one resolution
+/// (two states alternating) is still a mandatory loop. The watchdog anchors a
+/// fingerprint and counts returns to it, so a period-2 chain draws too.
+#[test]
+fn cr_104_4b_period_two_trigger_loop_draws_the_game() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gain = Effect::GainLife { who: Selector::You, amount: Value::ONE };
+    let lose = Effect::LoseLife { who: Selector::You, amount: Value::ONE };
+    for i in 0..(2 * GameState::MANDATORY_LOOP_DRAW_REPEATS + 4) {
+        if g.game_over.is_some() {
+            break;
+        }
+        let e = if i % 2 == 0 { gain.clone() } else { lose.clone() };
+        g.stack.push(TriggerPush::new(src, 0, e).build());
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert_eq!(g.game_over, Some(None), "a period-2 mandatory loop is a draw");
+}
+
+/// The loop the 2026-09-09 fresh-seed sweep found, played out: two Portable
+/// Holes and a *mandatory* "exile target artifact" ETB (Leonin Relic-Warder
+/// before its "you may" was restored). Hole A exiles Hole B, whose return link
+/// brings the Warder back; the Warder's ETB has only its controller's own
+/// Hole A to exile, which returns Hole B, whose ETB exiles the Warder, which
+/// returns Hole A — period 3, forever. The old watch reset on every step and
+/// the game ran to the action cap; it must end as a draw (CR 732.4).
+#[test]
+fn cr_732_4_two_portable_holes_and_a_mandatory_warder_end_as_a_draw() {
+    use crabomination::card::{CardDefinition, CardType, ExileReturnZone, SelectionRequirement};
+    use crabomination::effect::Effect;
+    use crabomination::effect::shortcut::{etb, target_filtered};
+    let warder = CardDefinition {
+        name: "Mandatory Relic-Warder",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    };
+    let mut g = main_phase();
+    let w = g.add_card_to_battlefield(0, warder);
+    // p1's Hole exiles the Warder (the only nonland MV<=2 permanent p0 has).
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    let hole_b = g.add_card_to_hand(1, catalog::portable_hole());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hole_b,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Hole B cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == w), "the Warder is under Hole B");
+    // p0's Hole exiles Hole B, and the loop begins.
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let hole_a = g.add_card_to_hand(0, catalog::portable_hole());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hole_a,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Hole A cast");
+    let mut fuel = 2 * 3 * (GameState::MANDATORY_LOOP_DRAW_REPEATS as usize + 4) + 50;
+    while g.game_over.is_none() && fuel > 0 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        fuel -= 1;
+    }
+    assert_eq!(g.game_over, Some(None), "the period-3 loop is a draw, not an action cap");
+    assert!(fuel > 0, "the draw arrives inside the watchdog's budget");
+}

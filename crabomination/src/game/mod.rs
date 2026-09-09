@@ -1705,14 +1705,16 @@ pub struct GameState {
     /// `None` while the game is ongoing; `Some(None)` for a draw;
     /// `Some(Some(i))` when player `i` has won.
     pub game_over: Option<Option<usize>>,
-    /// CR 104.4b / 732.4 — mandatory-loop watchdog. Holds the game-state
-    /// fingerprint seen after the last *triggered-ability* resolution and how
-    /// many consecutive trigger resolutions have left it unchanged. A loop of
-    /// mandatory triggers pins the fingerprint; the game is drawn once the
-    /// repeat count crosses `MANDATORY_LOOP_DRAW_REPEATS`. Any resolution that
-    /// changes the fingerprint (or any spell / player action) resets it.
+    /// CR 104.4b / 732.4 — mandatory-loop watchdog: `(anchor, repeats,
+    /// since)`. `anchor` is a game-state fingerprint seen after a
+    /// *triggered-ability* resolution, `repeats` how many later trigger
+    /// resolutions returned the state to it, `since` how many have passed
+    /// without doing so. A loop of mandatory triggers of any period up to
+    /// `MANDATORY_LOOP_MAX_PERIOD` keeps revisiting the anchor; the game is
+    /// drawn once `repeats` crosses `MANDATORY_LOOP_DRAW_REPEATS`. A chain
+    /// that stays away longer re-anchors; a spell / player action resets it.
     #[serde(default)]
-    pub mandatory_loop_watch: (u64, u32),
+    pub mandatory_loop_watch: (u64, u32, u32),
     /// CR 732.3 — fragmented-loop guard for *free* activations (`{0}:` with no
     /// cost line). Holds the state fingerprint, the `(source, ability index)`
     /// last activated for free, and how many times that pair has been
@@ -3380,7 +3382,7 @@ impl GameState {
             rng: rng::GameRng::default(),
             truce_until_turn: None,
             game_over: None,
-            mandatory_loop_watch: (0, 0),
+            mandatory_loop_watch: (0, 0, 0),
             free_activation_watch: (0, None, 0),
             priority: PriorityState::new(0),
             continuous_effects: Default::default(),
