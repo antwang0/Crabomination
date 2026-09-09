@@ -948,13 +948,6 @@ pub struct ColdState {
     /// `Effect::ExtraManaOnLandTapThisTurn` (Bubbling Muck). Cleared at cleanup.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) extra_mana_on_land_tap_this_turn: Vec<(crate::card::LandType, crate::mana::Color)>,
-    /// Transient: players whose `gained_life_earlier_this_turn` flag should
-    /// flip once the current trigger-dispatch batch finishes filter
-    /// evaluation (drained at the end of `push_ordered_trigger_candidates`,
-    /// so "first time each turn" filters inside the same batch still read
-    /// the pre-batch state — including across an order-triggers suspend).
-    #[serde(skip)]
-    pub(crate) life_gain_flag_pending: Vec<usize>,
     /// Transient: graveyard cards whose `FromYourGraveyard` combat-damage
     /// trigger already fired during the current combat-damage sub-step.
     /// "Whenever one or more creatures you control deal combat damage to a
@@ -2266,6 +2259,17 @@ pub struct GameState {
     /// scratch write (PERF `(-280)`).
     #[serde(skip)]
     pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool, Option<usize>)>,
+    /// Transient: seats (a [`seat_bit`] mask) whose
+    /// `gained_life_earlier_this_turn` flag should flip once the current
+    /// trigger-dispatch batch finishes filter evaluation (drained at the end
+    /// of `push_ordered_trigger_candidates`, so "first time each turn"
+    /// filters inside the same batch still read the pre-batch state —
+    /// including across an order-triggers suspend). A mask on the hot
+    /// state, not a `Vec` in [`ColdState`]: every `LifeGained` event on a
+    /// simulation clone was that clone's first cold write and paid the
+    /// group's ~3,300-Ir unshare for one push (PERF `(-282)`).
+    #[serde(skip)]
+    pub(crate) life_gain_flag_pending: u64,
     /// CR 505.1b — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
@@ -3139,6 +3143,7 @@ impl Clone for GameState {
             scratch: self.scratch.clone(),
             deaths: self.deaths.clone(),
             cold: self.cold.clone(),
+            life_gain_flag_pending: self.life_gain_flag_pending,
             attack_option: self.attack_option,
             range_of_influence: self.range_of_influence,
             attack_adjacent_only: self.attack_adjacent_only,
@@ -3448,6 +3453,7 @@ impl GameState {
             event_scratch: EventScratch::default(),
             target_slots_scratch: SmallVec::new(),
             pending_permanent_deaths: Vec::new(),
+            life_gain_flag_pending: 0,
             additional_combat_phases: 0,
             combat_chooser: None,
             additional_post_main_combats: 0,
@@ -20355,9 +20361,7 @@ impl GameState {
         for ev in events {
             match ev {
                 GameEvent::LifeGained { player, amount } => {
-                    if !self.life_gain_flag_pending.contains(player) {
-                        self.life_gain_flag_pending.push(*player);
-                    }
+                    self.life_gain_flag_pending |= seat_bit(*player);
                     if has_delayed_triggers {
                         self.fire_life_gained_watchers(*player, *amount);
                     }
@@ -20393,18 +20397,21 @@ impl GameState {
     /// Collector's "first time each turn" gate) once a batch's filter
     /// evaluation is done. Guarded: `life_gain_flag_pending` is a `ColdState`
     /// field, so the `take` reaches it through `GameState::deref_mut` and
-    /// deep-copies the whole cold group — once per trigger dispatch, on a
-    /// list that is empty unless someone gained life this batch. The
-    /// `PlayerCold` rule (PERF, twenty-ninth pass): a `clear`/`take` on a
-    /// periodic path needs an `is_empty` read in front of it.
+    /// deep-copied the whole cold group — once per trigger dispatch, on a
+    /// list that is empty unless someone gained life this batch. The list
+    /// is a seat mask on the hot state since PERF `(-282)`; the read in
+    /// front of the take stays (the `PlayerCold` rule, twenty-ninth pass).
     ///
     /// `inline(always)`: with plain `#[inline]` the first `(-244)` reading
     /// left this out of line on both callers — 77 k calls at ~18 Ir on
     /// `cube` for an `is_empty` read behind the cold group's `Deref`.
     #[inline(always)]
     fn flip_pending_life_gain_flags(&mut self) {
-        if !self.life_gain_flag_pending.is_empty() {
-            for p in std::mem::take(&mut self.life_gain_flag_pending) {
+        if self.life_gain_flag_pending != 0 {
+            let mut seats = std::mem::take(&mut self.life_gain_flag_pending);
+            while seats != 0 {
+                let p = seats.trailing_zeros() as usize;
+                seats &= seats - 1;
                 if let Some(pl) = self.players.get_mut(p) {
                     pl.gained_life_earlier_this_turn = true;
                 }

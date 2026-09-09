@@ -2798,15 +2798,16 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-280)` and `(-281)` — the scratch fields that left the CoW group, and the scratch copy that left the large-bin path: closing state at the `(-281)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+### `(-280)`..`(-282)` — the CoW-group legs: closing state at the `(-282)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
-Two engine legs after the `(-279)` closing state below (Log `(-280)`,
-`(-281)`; the CoW family read by monomorphization in the candidates).
-Behaviour-preserving — every trace identical, `--bench` counters
-identical — so the three totals below are the `(-279)` games, cheaper,
-and **the `(-281)` triple is the base for every later A/B: sealed
-2,545,847,904 / cube 2,452,405,764 / fixed 645,681,561** (the `(-280)`
-rows below are its base). ⚠ The base was RE-TAKEN on this box before the leg:
+Three engine legs after the `(-279)` closing state below (Log `(-280)`,
+`(-281)`, `(-282)`; the CoW family read by monomorphization in the
+candidates). Behaviour-preserving — every trace identical, `--bench`
+counters identical — so the three totals below are the `(-279)` games,
+cheaper, and **the `(-282)` triple is the base for every later A/B:
+sealed 2,536,118,264 / cube 2,448,171,416 / fixed 643,076,738**
+(cumulative against the re-taken base: sealed -1.063 % / cube -0.798 % /
+fixed -1.340 %). ⚠ The base was RE-TAKEN on this box before the legs:
 sealed and cube reproduced the recorded `fix+` triple to within 1-3 k Ir,
 `fixed` did not (651,809,830 against the recorded 671,760,207 on identical
 `--bench` counters and 24 / 24 decided — the recorded fixed number is the
@@ -2820,6 +2821,8 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
   size   GameState 1,520 -> 1,584 bytes (the two fields, 64 B); cow::tests::game_state_stays_small cap 1,536 -> 1,600
   (-281) sealed 2,548,270,297 -> 2,545,847,904 (-0.095 %, 72 / 72); cube 2,453,187,812 -> 2,452,405,764 (-0.032 %, 48 / 48); fixed 646,043,365 -> 645,681,561
          (-0.056 %); traces 120 / 120 identical against the (-280) binary; --bench counters identical; thread_determinism ok
+  (-282) sealed 2,545,847,904 -> 2,536,118,264 (-0.382 %, 72 / 72); cube 2,452,405,764 -> 2,448,171,416 (-0.173 %, 48 / 48); fixed 645,681,561 -> 643,076,738
+         (-0.403 %); traces 120 / 120 identical against the (-281) binary; --bench counters identical; thread_determinism ok; GameState 1,592 bytes
 --bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
 sweeps  fresh seeds on the b7bd9250 tip binary (profiling-fast) BEFORE the leg, dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000:
@@ -4118,6 +4121,46 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-282)` TAKEN — `life_gain_flag_pending` as a seat mask on the hot state: sealed default Ir **-0.382 %** / cube **-0.173 %** / fixed **-0.403 %**, 120 / 120 traces identical
+
+The `(-217)` device, one more time. The CoW read by monomorphization
+(candidates, first entry) put `ColdState`'s unshare (`hbc53`, ~3,300 Ir
+— ~85 container clones and a large-bin `Arc` allocation) at 4,650 calls
+/ 15.2 M on sealed, and **2,382 of them under
+`dispatch_triggers_for_events`**, whose only cold writes are the
+once-per-turn / per-subject trigger latches (rare) and
+`life_gain_flag_pending.push(seat)` on every `LifeGained` event — a
+lifelink hit on a simulation clone was that clone's first cold write.
+The `Vec<usize>` of seats is a `u64` [`seat_bit`] mask on `GameState`
+(8 bytes; 1,584 -> 1,592, under the 1,600 cap): the push is an `|=`,
+the `contains` dedup is free, the drain walks the set bits.
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the (-281) tip:
+  sealed  2,545,847,904 -> 2,536,118,264 Ir   (-9,729,640, -0.382 %)   72 / 72 decided both sides
+  cube    2,452,405,764 -> 2,448,171,416 Ir   (-4,234,348, -0.173 %)   48 / 48
+  fixed     645,681,561 ->   643,076,738 Ir   (-2,604,823, -0.403 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed): make_mut_slow <- dispatch_triggers_for_events 5,592 / 9.67 M -> 3,210 / 1.83 M (what is left there is the CardData write on a land-play probe,
+               3,210 = the accept_on land plays); make_mut_slow 203,870 -> 201,672 calls (184 of the 2,382 walked down to the action's next cold write —
+               cleanup_wear_off +62, run_effect +42, deal_damage_to_from +10); clone_from_ref_in self 74.92 -> 70.84 M; Vec::clone 21.30 -> 20.39 M;
+               Arc::drop_slow 11.20 -> 10.44 M; RawTable::clone 2.50 -> 2.11 M; the allocator family -3.3 M; GameState::clone +0.15 M (the 8 bytes)
+--bench (profiling-fast, system allocator): 195,806 / 27.49 / 611.9 / 0 — counters identical; determinism ok; thread_determinism ok (3 vs 1)
+```
+
+What is left of the `ColdState` unshare after this (sealed): ~2,000
+calls under `run_effect` (`permanents_gained_counter_this_turn.insert`
+x3, `cant_block_this_turn`, `prevention_shields`, the redirect lists),
+`deal_damage_to_from` (`damage_sources_this_turn.push`, the artifact /
+sorcery damage tallies, `dies_to_exile_eot`), `discard_card`
+(`last_discarded_colors`), `mint_token_with_counters`
+(`permanents_gained_counter_this_turn`) — ~6.6 M, 0.26 %. Per `(-217)`'s
+rule those move together or not at all: the next shape is a second
+small CoW group of the ~10 per-turn registries an *effect* writes
+(`TurnDeaths` is the precedent), so a resolution's first cold write copies
+~10 containers instead of ~85. Not built this run; the census above is
+the pricing.
 
 ### `(-281)` TAKEN — `haunt_pending` boxed, so the `ResolutionScratch` copy leaves glibc's large-bin path: sealed default Ir **-0.095 %** / cube **-0.032 %** / fixed **-0.056 %**, 120 / 120 traces identical; the allocator rows alone **-6.5 M** sealed
 
