@@ -2827,6 +2827,12 @@ sweep   fresh seeds on the (-287) audit build (target-audit/overflow, debug-asse
         (13,600) 0 / 0 / 0; sealed 729, 731 (9,600) 0 / 0 / 0 — 36,000 more games, every rc 0
 actor   target-audit/overflow/selfplay_train --actors 3 --steps 2: seeds 729 and 20260909 x 600 games (61,213 / 60,663 rows) and seed 731 x
         6,000 games (602,659 rows) — 0 stalls, no assertion; 49.4 / 51.1 / 54.7 games/s on the audit build
+        callgrind selfplay_train --actors 1 --games 60 --steps 1 --seed 7 (profiling-fast -p crabomination_ml --no-default-features, system
+        allocator confirmed, CRAB_NO_JITTER=1) at 9772ce0c: 2,436,997,853 Ir, 60 games / 6,063 rows / 0 stalls — +0.022 % against the (-287)
+        record (2,436,453,201, the same games): the watchdog triple, the own-target read and the per-ability sickness/tap skip, all told
+sweeps  more fresh seeds on the tip audit build, dflt mirror x 400 x 3 threads: sos 725..728 (8,000 games) 0 / 0 / 0; fixed 725..728 (6,400)
+        0 / 0 / 0; cube 734..737 (12,800) 0 cap / 0 stuck / 4 draw; pilots leg on --decks cube at seed 734 (45 policies vs gang, 12 games)
+        45 cells, 0 failures — 122,400 fresh-seed games this run, two defects, both fixed at the tip
 gate    --bench release-fast (mimalloc) at 2b834f38: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); bin_bytes 126,790,272 (+7,896 B against the (-287) tip); 293.8 / 290.1 / 296.7 / 286.9 games/s, four
         single runs, host_calib_ms 56-58 — THIS BOX (Xeon @ 2.80 GHz, calib 58) reads ~0.6x the previous one on the SAME base binary, see wall
@@ -7534,6 +7540,24 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**THE ACTOR RE-READ AT `9772ce0c` (2026-09-09; `cg.actor.out` in a
+scratchpad, the same `--actors 1 --games 60 --steps 1 --seed 7` recipe,
+system allocator confirmed: 2,436,997,853 Ir, +0.022 % against the
+`(-287)` record on the same games), so nobody re-takes it: FLAT, the
+recorded shape.** Self: `dispatch_triggers_for_events` 4.97 %, the
+allocator 9.7 % (`_int_free` 3.20, `malloc` 2.44, `_int_malloc` 2.14,
+`free` 2.00), `__memcpy` 3.52 %, `gather_continuous_effects_inner`
+2.93 %, `compute_permanent_pass` 2.75 %, `from_iter` 2.65 %,
+`check_state_based_actions_into` 2.36 % + `sba_board_scan` 1.48 %,
+`encode_state_inner` 2.36 % + `encode_printed_into` 0.90 % +
+`encode_instance_keywords_into` 0.65 %, the CoW unshare's
+`Arc::clone_from_ref_in` 2.20 %, `computed_permanent_hinted` 2.02 %,
+`Normal::sample` 1.72 % + `rand_chacha` 0.62 % (the net init, once a
+process), `rank_shape` 1.25 % (the deck builder), `available_mana` 0.70 %
+(one read a sweep, memoized in `SweepMana`; the tapped-permanent read
+added this run is a compare per tapped land inside it). Nothing above
+0.2 % with a device; the floor stands.
 
 **A SIM MEMO ACROSS DECISIONS — NEXT (c) at the `(-287)` tip — REFUTED BY
 READING, no build spent, so nobody builds the census.** The shape the
