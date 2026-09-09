@@ -2839,10 +2839,17 @@ sweep   fresh seeds on the df16ff62 audit build (target-audit/overflow, debug-as
 grid    robustness_grid.sh --no-build --no-actor --pilots on the (-288) audit build, FRESH SEEDS: the ladder leg {fixed, cube, sos, sealed, all} x
         seeds 750, 751 x 120 = 10 cells / 11,040 games, 0 failures, 0 cap / 0 stuck / 0 draw; the pilots leg (45 policies vs gang, --decks all,
         seed 750, 12 games) 45 cells, 0 failures — no panic / assertion / overflow anywhere
-actor   dev-build selfplay_train --actors 3 --games 150 --steps 1 --seed 20260909 with set_prompt_text(false) live: 150 games / 14,953 rows / 0 stalls
+actor   dev-build selfplay_train --actors 3 --games 150 --steps 1 --seed 20260909 with set_prompt_text(false) live: 150 games / 14,953 rows / 0 stalls;
+        target-audit/overflow/selfplay_train (debug-assertions, built 12m31s cold) --actors 3 --games 3000 --steps 2 at seeds 752 and 20260910:
+        301,615 / 304,020 rows, 0 stalls, no assertion, 68.1 / 54.7 games/s on the audit build
 gate    --bench release-fast (mimalloc) at the (-288) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); bin_bytes 126,787,640 (-1,736 B against 9772ce0c); 295.3 / 301.8 / 295.1 games/s, three single runs,
         host_calib_ms 51-57 (the previous addendum's 293.8-310.6 at calib 50-58 on the same box class — unmoved); peak_rss_mib 28.4
+        at the mode_texts tip 0085bddf: counters identical again; determinism ok; thread_determinism ok; bin_bytes 126,787,168; 294.0 / 297.2 games/s,
+        host_calib_ms 55 / 62
+search  searching-pilot mirrors on the (-288) audit build (CRAB_MAX_ACTIONS=6000, 3 threads): mcts x mcts cube 752 x 40 (320 games, 505 s, contended
+        by a build), mcts-heur mirror cube 753 x 40 (320, 444 s), lookahead mirror cube 754 x 200 (1,600, 7 s), planner mirror sealed 755 x 200
+        (2,400, 9 s), abilarms vs gang cube 756 x 16 (128, 2 s) — all decided, 0 undecided, no assertion
 suite   19,298 / 0 / 5 (two tests added: the sick Wall estimate, the seed-737 pair pinned; golden_trace 10 / 10); clippy 0; cargo check
         --profile release-fast (debug-assertions off) clean; audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare; audit_catalog_stats.py and
         audit_variant_coverage.py the documented residue (2 dead primitives)

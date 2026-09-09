@@ -35,7 +35,7 @@ sixty-seventh pass, so don't re-take that.
    — taken on THIS box (Xeon 2.80 GHz, 4 cores) at the tip; the `(-287)` triple predates the five 2026-09-09 sealed-moving commits. RE-TAKE on a new box.
 2. **Gates at the tip (PERF Baseline, the second 2026-09-09 addendum):** suite 19,298 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical to
    `2003d1cf` (195,806 / 27.49 / 611.9 / 0), determinism + thread_determinism ok, 295-302 games/s on this box; fresh-seed dflt sweeps 120,400 games
-   (cube 750..757, sealed 742..749, all 734..738, sos 737..744, fixed 729..732): one abort (fixed, re-swept clean), 0 cap / 0 stuck; the dev-build actor smoke (150 games / 14,953 rows) 0 stalls; 0 bare panics.
+   (cube 750..757, sealed 742..749, all 734..738, sos 737..744, fixed 729..732): one abort (fixed, re-swept clean), 0 cap / 0 stuck; the actor leg (audit build, 6,000 games / 605,635 rows) 0 stalls; searching-pilot mirrors (4,768 games) clean; 0 bare panics.
 3. **This run:** the sweep's third find (ENGINE_BACKLOG "third find"): the Crawler fix's sickness pre-check matched a bare `AddMana`, so a sick Wall
    of Roots' `Seq`-wrapped counter mana aborted the `AB_SAC` / `AB_SELF_COUNTER` gate audits — the pre-check now asks `effect_produced_colors`, the
    payer's own read (a pre-filter must be the gate's read). And `(-288)` (PERF Log): the two simulator binaries pose trigger picks without prompt
