@@ -2803,17 +2803,17 @@ Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
 ### 2026-09-09 — the period watchdog, the Relic-Warder loop and the own-target decline: addendum at the tip after `2b834f38`
 
-No perf leg. Four correctness commits after the `(-287)` closing state
+No perf leg. Five correctness commits after the `(-287)` closing state
 below (ENGINE_BACKLOG, the two "FIXED 2026-09-09" entries): the CR 104.4b
 watchdog anchors a fingerprint and counts returns to it
 (`mandatory_loop_watch` is a 16-byte triple, GameState 1,600 bytes
 unmoved), Leonin Relic-Warder is "you may exile", the bot declines a "you
 may" removal whose chosen target is its own permanent, and
-`available_mana` reads a summoning-sick creature's non-tap mana abilities
-(the `AB_DAMAGE` gate audit had aborted on a Crystalline Crawler). Both
-found by the fresh-seed sweep on the debug-assertions build — the first
-cap and the first abort in 154,000 sweep games across two runs. The
-`(-287)` triple stays the A/B base (re-take it on a new box).
+`available_mana` reads a summoning-sick or tapped permanent's non-tap
+mana abilities (the `AB_DAMAGE` gate audit had aborted on a Crystalline
+Crawler). Both found by the fresh-seed sweep on the debug-assertions
+build — the first cap and the first abort in 154,000 sweep games across
+two runs. The `(-287)` triple stays the A/B base (re-take it on a new box).
 
 ```text
 sweep   fresh seeds on the (-287) audit build (target-audit/overflow, debug-assertions, 8 assertion strings), dflt mirror x --games 400 x --threads 3,
@@ -2823,12 +2823,19 @@ sweep   fresh seeds on the (-287) audit build (target-audit/overflow, debug-asse
         after the loop fixes (audit build rebuilt): cube 726 re-swept 3,200 / 0 undecided; cube 729 ABORTED rc 134 on the AB_DAMAGE gate audit
         (the Crawler, below); cube 730 3,200 / 0; the script's default ladder 30 cells / 33,120 games 0 failures; pilots leg (45 policies vs
         gang, --decks all, seed 726, 12 games) 45 cells, 0 failures
+        after the Crawler fix (audit build rebuilt): cube 729 re-swept 3,200 / 0; cube 731..733 (9,600) 0 cap / 0 stuck / 2 draw; all 729, 731
+        (13,600) 0 / 0 / 0; sealed 729, 731 (9,600) 0 / 0 / 0 — 36,000 more games, every rc 0
+actor   target-audit/overflow/selfplay_train --actors 3 --steps 2: seeds 729 and 20260909 x 600 games (61,213 / 60,663 rows) and seed 731 x
+        6,000 games (602,659 rows) — 0 stalls, no assertion; 49.4 / 51.1 / 54.7 games/s on the audit build
 gate    --bench release-fast (mimalloc) at 2b834f38: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); bin_bytes 126,790,272 (+7,896 B against the (-287) tip); 293.8 / 290.1 / 296.7 / 286.9 games/s, four
         single runs, host_calib_ms 56-58 — THIS BOX (Xeon @ 2.80 GHz, calib 58) reads ~0.6x the previous one on the SAME base binary, see wall
+        at the run's tip 9772ce0c (the Crawler legs in): counters identical again; determinism ok; thread_determinism ok; bin_bytes 126,789,376;
+        310.6 / 301.2 / 308.2 games/s, host_calib_ms 50-53
 wall    bench_ab.py bl_base (d6348204, built in a worktree against the shared target dir, sources touched, md5 differs) vs bl_tip (2b834f38),
         release-fast, 16 pairs: A median 295.59 / B 299.23 games/s, paired B/A median +1.27 % / mean +1.71 % (sd 3.77) — inside the instrument's
-        noise; the change costs nothing the bench can see
+        noise; the change costs nothing the bench can see. bl_base vs 9772ce0c, 12 pairs: B median 306.95, paired B/A median +2.68 % / mean
+        +1.58 % (sd 4.10) — the same reading
 suite   19,294 / 0 / 5 after the loop fixes (five tests added: two watchdog loops, two Relic-Warder, the bot's own-target decline; one
         golden_trace pin of the found pair); 19,296 / 0 / 5 after the Crawler fix (the sick-Crawler estimate test, the seed-729 pair pinned);
         golden 8/8 identical both times; clippy 0; audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare; audit_catalog_stats.py 20 kw / 1 abil /
