@@ -30,29 +30,21 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code
    before tracker prose; ⚠ claim a candidate number at PUSH time — `(-287)` is the last claimed, `(-288)` next. Gotchas in **CLAUDE.md**, measurement
    in **PERF's "Standing rules"**. ⚠ Another session pushes here concurrently — fetch before every push, never rebase under a running `cargo build`.
-   This box: cold debug suite build 5m08s, cold `profiling-fast` bot_ladder 8m18s, warm engine rebuild 2m35s. **The A/B base is the `(-287)` triple
-   (PERF Baseline addendum): sealed 2,507,039,807 / cube 2,427,666,471 / fixed 633,484,026** — RE-TAKE it on a new box (the recorded fixed number
-   moved 3 % between boxes on identical games, PERF `(-280)`); both sides from one tree, `md5sum` both.
+   This box: cold debug suite build 5m08s, cold `profiling-fast` bot_ladder 8m18s, warm engine rebuild 2m35s (8m when `crabomination_base` moves).
+   **The A/B base is the `(-287)` triple (PERF Baseline addendum): sealed 2,507,039,807 / cube 2,427,666,471 / fixed 633,484,026** — RE-TAKE it on
+   a new box (the recorded fixed number moved 3 % between boxes on identical games, PERF `(-280)`); both sides from one tree, `md5sum` both.
 2. **Gates at the tip (PERF Baseline, the `(-280)`..`(-287)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
-   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, fresh-seed dflt sweeps under the bound on cube 719..724 / all 713..718 / sealed
-   713..718 (88,800 games) 0 cap / 0 stuck, `audit_panics.py` 0 bare; the debug-assertions grid at the `(-287)` tip: ladder on fresh seeds 719..721
-   (9 cells / 44,400) + the default 30 cells + 45 pilot cells, 0 failures.
-3. **This run:** `(-280)` TAKEN (the cast validator's target-slot stamp and the death chokepoint's push deep-copied the whole 1 KB `ResolutionScratch`
-   on every dry-run clone — both fields moved to the plain-copied state, sealed -0.589 % / cube -0.595 % / fixed -0.885 %); `(-281)` TAKEN
-   (`haunt_pending` boxed, the scratch copy off the large-bin path, allocator rows -6.5 M sealed); `(-282)` TAKEN (`life_gain_flag_pending` as a
-   seat mask on the hot state — the dispatcher's cold-group unshare on every lifelink hit, sealed -0.382 % / cube -0.173 % / fixed -0.403 %);
-   `(-283)` TAKEN (sixteen effect-written per-turn registries leave `ColdState` for `CowBox<TurnRegistries>`, `state.turn.<f>`, sealed -0.233 % /
-   cube -0.131 % / fixed -0.225 %); `(-284)` TAKEN (the two creature-resolution `mem::take`s behind a read — the `PlayerCold` copy per creature
-   resolution, sealed -0.299 % / cube -0.204 % / fixed -0.557 %); `(-285)` TAKEN (`CardData::blocked_attackers_this_turn` deleted for the
-   game-level pair log, sealed -0.134 % / cube -0.157 % / fixed -0.125 %); `(-286)` TAKEN (the cast's two `CardCold` stamps behind a read,
-   sealed -0.105 % / cube -0.089 % / fixed -0.053 %); `(-287)` TAKEN (`cast_mana_spent_by_color` to an inline `CopyVec` on `CardData` — the
-   paid cast's `CardCold` copy, sealed -0.381 % / cube -0.260 % / fixed -0.541 %); the CoW family READ by monomorphization (candidates, first
-   entry). Cumulative sealed -2.20 % / cube -1.63 % / fixed -2.81 % / **actor -1.91 %** (selfplay_train, same 60 games); paired wall clock
-   base vs `(-285)` +6.67 % median (fixed, system allocator); traces identical throughout. No bugs found; no cards.
-4. **Next moves:** (a) the CoW residue is census questions under 0.1 % each (PERF Log `(-283)`'s tail: `discard_card` / `move_card_to` /
-   `activate_ability_inner`'s remaining cold writes) — read `cg_contexts.py make_mut_slow` at three levels first; (b) the attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk,
-   gate it; (c) the engine self tables are the floor — the next engine lever is a *count* (a
-   sim memo across decisions, no census yet), not a row. Nothing half-wired on the branch; no open TODO/FIXME in code.
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0) on release-fast and profiling-fast, thread_determinism ok, fresh-seed dflt sweeps on cube 719..724 /
+   all 713..718 / sealed 713..718 (88,800 games) 0 cap / 0 stuck, the debug-assertions grid (9 fresh-seed cells + 30 default + 45 pilots) 0 failures,
+   `audit_panics.py` 0 bare.
+3. **This run:** eight CoW-group legs `(-280)`..`(-287)` (PERF Log; CLAUDE.md carries the rule): a first write on a clone deep-copied a whole cold
+   group for one stamp — scratch fields to the hot state, `haunt_pending` boxed, a seat mask, sixteen registries to `TurnRegistries`, two guarded
+   takes, a blocker list deleted, three cast stamps guarded or moved. Cumulative sealed -2.20 % / cube -1.63 % / fixed -2.81 % / actor -1.91 %;
+   paired wall clock +6.67 % median; traces identical throughout. The CoW residue is the per-clone floor (candidates, first entry). No bugs; no cards.
+4. **Next moves:** (a) the attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk,
+   gate it; (b) the server's wire `Deserialize` is the next build-time lever (PERF "Serde derives", 238 k IR lines the sim bins never run) — early in
+   a run, landed green or reverted; (c) engine self tables are the floor — the next engine lever is a *count* (a sim memo across decisions, no
+   census yet), not a row. Nothing half-wired on the branch; no open TODO/FIXME in code.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
