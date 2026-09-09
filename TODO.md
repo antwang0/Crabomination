@@ -28,21 +28,23 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code
-   before tracker prose; ⚠ claim a candidate number at PUSH time — `(-287)` is the last claimed, `(-288)` next. Gotchas in **CLAUDE.md**, measurement
+   before tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas in **CLAUDE.md**, measurement
    in **PERF's "Standing rules"**. ⚠ Fetch before every push. ⚠ `rm -rf target/debug/incremental` before an optimized build (16 GB after one suite).
-   **A/B base: the `(-287)` triple (PERF Baseline)** sealed 2,507,039,807 / cube 2,427,666,471 / fixed 633,484,026 — RE-TAKE on a new box (this
-   one reads the same base binary at ~0.6x the previous box's `--bench` games/s, PERF 2026-09-09 addendum); never compare across boxes.
-2. **Gates at the tip (PERF Baseline, the 2026-09-09 addendum):** suite 19,296 / 0 / 5, clippy 0, golden 8/8, `--bench` counters identical to
-   `2003d1cf`, thread_determinism ok, paired wall clock vs the pre-fix base +1.27 % (noise), fresh-seed dflt sweeps cube/all/sealed 725..728
-   (59,200 games): one cap and one abort, both fixed and re-swept with 36,000 more games; the default grid (30) + pilots leg (45) at seed 726
-   clean; the actor leg (`selfplay_train` audit build) at four seeds, 37,200 games / 3.75 M rows, 0 stalls; 0 bare panics.
-3. **This run (ENGINE_BACKLOG, two "FIXED 2026-09-09" entries):** the CR 104.4b watchdog only ever saw period-1 loops — two Portable Holes and a
-   mandatory Leonin Relic-Warder cycled three boards to the cap: now `(anchor, repeats, since)`, `MANDATORY_LOOP_MAX_PERIOD = 8`; the Warder is
-   "you may"; the bot declines a "you may" removal aimed at its own permanent. And `available_mana` skipped a sick or tapped permanent whole, so a
-   Crystalline Crawler's counter mana made the `AB_DAMAGE` gate audit abort — per-ability now. No perf leg (old (b) taken, (c) refuted).
-4. **Next moves:** (a) `scripts/fresh_seed_sweep.sh` on the audit build is the cheapest bug finder left (2 bugs / 154 k games; PERF's Baseline
-   lists the seeds taken — cube through 749, sos through 736, all through 733, sealed through 741); (b) the populated crack-back horizon is the one strength round left (38 % of the
-   actor), gate it; (c) engine self tables are the floor (the actor re-read at the tip, candidates). Nothing half-wired; no open TODO/FIXME.
+   ⚠ `cargo nextest run -p <one crate>` re-unifies features and rebuilds base + catalog from nothing — filter with `-E` under the workspace set.
+   **A/B base: the `(-288)` triple (PERF Baseline, the second 2026-09-09 addendum)** sealed 2,372,563,789 / cube 2,421,434,760 / fixed 633,480,850
+   — taken on THIS box (Xeon 2.80 GHz, 4 cores) at the tip; the `(-287)` triple predates the five 2026-09-09 sealed-moving commits. RE-TAKE on a new box.
+2. **Gates at the tip (PERF Baseline, the second 2026-09-09 addendum):** suite 19,298 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical to
+   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), determinism + thread_determinism ok, 295-302 games/s on this box; fresh-seed dflt sweeps 102,800 games
+   (cube 750..757, sealed 742..747, all 734..738, sos 737..740, fixed 729..732): one abort (fixed, re-swept clean), 0 cap / 0 stuck; the dev-build actor smoke (150 games / 14,953 rows) 0 stalls; 0 bare panics.
+3. **This run:** the sweep's third find (ENGINE_BACKLOG "third find"): the Crawler fix's sickness pre-check matched a bare `AddMana`, so a sick Wall
+   of Roots' `Seq`-wrapped counter mana aborted the `AB_SAC` / `AB_SELF_COUNTER` gate audits — the pre-check now asks `effect_produced_colors`, the
+   payer's own read (a pre-filter must be the gate's read). And `(-288)` (PERF Log): the two simulator binaries pose trigger picks without prompt
+   text (`game::set_prompt_text(false)`), sealed -0.296 % / cube -0.051 %, traces identical — the candidates' "prompt text" entry, taken.
+4. **Next moves:** (a) `scripts/fresh_seed_sweep.sh` on the audit build stays the cheapest bug finder (3 bugs / ~230 k games; seeds taken — cube
+   through 757, sos through 740, all through 738, sealed through 747, fixed through 732; take the next); (b) the populated crack-back horizon is the one
+   strength round left (38 % of the actor), gate it; (c) engine self tables are the floor; the last prompt text left is the modal's prompt the bot
+   keys "sacrifice" / "discard" off (1,088 walks / ~0.1 % sealed) — a structural cost flag on `ChooseCards` would free it, wire-visible, not next.
+   Nothing half-wired; no open TODO/FIXME.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

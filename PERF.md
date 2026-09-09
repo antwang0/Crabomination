@@ -2831,6 +2831,17 @@ sweep   fresh seeds on the df16ff62 audit build (target-audit/overflow, debug-as
         0 / 0 / 0; sos 737..740 (8,000) 0 / 0 / 0; fixed 729..732 (6,400) 0 / 0 / 0; all 737 ABORTED rc 134 on the AB_SELF_COUNTER and AB_SAC gate
         audits (a sick Wall of Roots, ENGINE_BACKLOG) — 66,800 clean games and the one defect; the aborting pair named by CRAB_DUMP_TRACES on one
         thread (3,008 traces written, job 0x7_00000345 pair 4 next) and pinned in golden_trace
+        after the fix (audit build rebuilt at the (-288) tip): all 737 re-swept 6,800 / 0 undecided; all 738 (6,800) 0 / 0 / 0; cube 754..757 (12,800)
+        0 cap / 0 stuck / 2 draw; sealed 746, 747 (9,600) 0 / 0 / 0 — 36,000 more games, every rc 0; 102,800 fresh-seed dflt games this run
+actor   dev-build selfplay_train --actors 3 --games 150 --steps 1 --seed 20260909 with set_prompt_text(false) live: 150 games / 14,953 rows / 0 stalls
+gate    --bench release-fast (mimalloc) at the (-288) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
+        thread_determinism ok (3 vs 1); bin_bytes 126,787,640 (-1,736 B against 9772ce0c); 295.3 / 301.8 / 295.1 games/s, three single runs,
+        host_calib_ms 51-57 (the previous addendum's 293.8-310.6 at calib 50-58 on the same box class — unmoved); peak_rss_mib 28.4
+suite   19,298 / 0 / 5 (two tests added: the sick Wall estimate, the seed-737 pair pinned; golden_trace 10 / 10); clippy 0; cargo check
+        --profile release-fast (debug-assertions off) clean; audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare; audit_catalog_stats.py and
+        audit_variant_coverage.py the documented residue (2 dead primitives)
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores, 15 GB; cold profiling-fast bot_ladder 17m00s CONTENDED (a 3-thread sweep
+        beside it), warm engine rebuild 4m15s; cold release-fast 17m31s contended; cold debug suite build ~9 min contended, 148 s run quiet
 ```
 
 ### 2026-09-09 — the period watchdog, the Relic-Warder loop and the own-target decline: addendum at the tip after `2b834f38`
