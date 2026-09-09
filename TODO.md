@@ -41,7 +41,7 @@ sixty-seventh pass, so don't re-take that.
    "you may"; the bot declines a "you may" removal aimed at its own permanent. And `available_mana` skipped a sick or tapped permanent whole, so a
    Crystalline Crawler's counter mana made the `AB_DAMAGE` gate audit abort — per-ability now. No perf leg (old (b) taken, (c) refuted).
 4. **Next moves:** (a) `scripts/fresh_seed_sweep.sh` on the audit build is the cheapest bug finder left (2 bugs / 154 k games; PERF's Baseline
-   lists the seeds taken — cube through 749, sos through 736); (b) the populated crack-back horizon is the one strength round left (38 % of the
+   lists the seeds taken — cube through 749, sos through 736, all / sealed through 733); (b) the populated crack-back horizon is the one strength round left (38 % of the
    actor), gate it; (c) engine self tables are the floor (the actor re-read at the tip, candidates). Nothing half-wired; no open TODO/FIXME.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

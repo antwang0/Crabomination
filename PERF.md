@@ -2837,7 +2837,11 @@ actor   target-audit/overflow/selfplay_train --actors 3 --steps 2: seeds 729 and
         record (2,436,453,201, the same games): the watchdog triple, the own-target read and the per-ability sickness/tap skip, all told
 sweeps  more fresh seeds on the tip audit build, dflt mirror x 400 x 3 threads: sos 725..728 (8,000 games) 0 / 0 / 0; fixed 725..728 (6,400)
         0 / 0 / 0; cube 734..737 (12,800) 0 cap / 0 stuck / 4 draw; pilots leg on --decks cube at seed 734 (45 policies vs gang, 12 games)
-        45 cells, 0 failures — 122,400 fresh-seed games this run, two defects, both fixed at the tip
+        45 cells, 0 failures; then cube 738..741 (12,800) 0 / 0 / 0; all 732, 733 (13,600) 0 / 0 / 0; sealed 732, 733 (9,600) 0 / 0 / 0;
+        sos 729..736 (16,000) 0 / 0 / 0; cube 742..749 (25,600) 0 / 0 / 0 — 200,000 fresh-seed dflt games this run, the two defects above
+        and nothing else. Searching-pilot mirrors on the same build (CRAB_MAX_ACTIONS=6000): mcts x mcts 100 games/arch on cube seed 740
+        (800 games, 766 s), mcts-heur mirror cube 741 (800, 1,000 s), lookahead mirror cube 742 (1,600, 8 s), planner mirror sealed 743
+        (2,400, 10 s), abilarms vs gang cube 744 x 16 (128, 2 s) — all decided, 0 undecided, no assertion
 gate    --bench release-fast (mimalloc) at 2b834f38: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); bin_bytes 126,790,272 (+7,896 B against the (-287) tip); 293.8 / 290.1 / 296.7 / 286.9 games/s, four
         single runs, host_calib_ms 56-58 — THIS BOX (Xeon @ 2.80 GHz, calib 58) reads ~0.6x the previous one on the SAME base binary, see wall
