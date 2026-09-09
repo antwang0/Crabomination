@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-09 (third find) — the sickness pre-check on the bot's mana estimate matched a bare `AddMana`, so a sick Wall of Roots' `Seq`-wrapped counter mana made the `AB_SAC` / `AB_SELF_COUNTER` gates unsound](#fixed-2026-09-09-third-find--the-sickness-pre-check-on-the-bots-mana-estimate-matched-a-bare-addmana-so-a-sick-wall-of-roots-seq-wrapped-counter-mana-made-the-ab_sac--ab_self_counter-gates-unsound) | 32 |
 | Bugs & robustness | [FIXED 2026-09-09 (second find) — the bot's mana estimate skipped a summoning-sick creature whole, so a Crystalline Crawler's counter mana made the `AB_DAMAGE` gate unsound](#fixed-2026-09-09-second-find--the-bots-mana-estimate-skipped-a-summoning-sick-creature-whole-so-a-crystalline-crawlers-counter-mana-made-the-ab_damage-gate-unsound) | 30 |
 | Bugs & robustness | [FIXED 2026-09-09 — the mandatory-loop watchdog saw only period-1 loops; two Portable Holes and a mandatory Leonin Relic-Warder cycled three boards to the action cap](#fixed-2026-09-09--the-mandatory-loop-watchdog-saw-only-period-1-loops-two-portable-holes-and-a-mandatory-leonin-relic-warder-cycled-three-boards-to-the-action-cap) | 40 |
 | Bugs & robustness | [FIXED 2026-09-08 (third run) — a permanent leaving the battlefield by dying or bouncing kept its damage, tap and attachment into its next zone (CR 400.7); a recast Golgari Thug died on entry every turn](#fixed-2026-09-08-third-run--a-permanent-leaving-the-battlefield-by-dying-or-bouncing-kept-its-damage-tap-and-attachment-into-its-next-zone-cr-4007-a-recast-golgari-thug-died-on-entry-every-turn) | 24 |
@@ -45,6 +46,37 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-09 (third find) — the sickness pre-check on the bot's mana estimate matched a bare `AddMana`, so a sick Wall of Roots' `Seq`-wrapped counter mana made the `AB_SAC` / `AB_SELF_COUNTER` gates unsound
+
+The same sweep on the next box, `all` seed 737 (the sixty-first cell of
+the run's 108,000 fresh-seed games): two gate audits aborted on one
+thread each — "`sink::AB_SELF_COUNTER` skipped a real action: Basking
+Broodscale ability 0, printed cost `{1}{G}`, available total 1 by_color
+[0, 0, 0, 0, 0]; board [... Wall of Roots (sick)]" and the `AB_SAC` twin on
+a Haywire Mite with `by_color [0, 2, 0, 1, 0]` and the same sick Wall. The
+Crawler fix above reads a sick or tapped permanent per ability, but put a
+cheap pre-check in front of the grant walk — "prints a non-tap
+`Effect::AddMana`" — and Wall of Roots' "put a -0/-1 counter: add {G}" is
+`Effect::Seq([PumpPT, AddMana])`: the wrapper failed the `matches!`, the
+Wall was skipped whole, green read zero, and the engine paid `{G}` off it
+(`effect_produced_colors` walks the `Seq`, which is how the payer saw it).
+
+Fix (one commit): the pre-check asks `effect_produced_colors` — the read
+the opaque arm and the payer already use — instead of matching the effect
+shape, so the two cannot disagree on a wrapper again; a tapped land's
+`{T}` ability still short-circuits on `tap_cost` before the walk. Priced:
+sealed +0.014 % / cube +0.010 % / fixed +0.018 % Ir, 120 / 120 traces
+identical (PERF, the 2026-09-09 second addendum). Tests:
+`server::bot::tests::available_mana_sick_wall_of_roots_makes_the_colour_
+budget_opaque` and `core_rules::golden_trace::the_sick_wall_of_roots_
+pair_passes_the_gate_audit` (archetype 3 of the seed-737 cube pool, pair
+seed 8709371159938462617, replayed under the suite's debug assertions).
+
+The lesson is the Crawler entry's, one level down: **a gate's pre-filter
+must be the same read as the gate**, or the pre-filter is a second walker
+of the same tree and the pair drifts on the first shape one of them does
+not name.
 
 ## FIXED 2026-09-09 (second find) — the bot's mana estimate skipped a summoning-sick creature whole, so a Crystalline Crawler's counter mana made the `AB_DAMAGE` gate unsound
 

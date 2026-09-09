@@ -12825,10 +12825,16 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         let no_tap = p.tapped || (p.summoning_sick && state.tap_ability_summoning_sick(p, seat));
         // The cheap read first: a tapped land has one `{T}` ability and no
         // business in the grant walk below, so only a permanent that prints
-        // a non-tap mana ability goes on.
+        // a non-tap mana ability goes on. The same read the opaque arm and
+        // the payer use, not a bare `AddMana` match: Wall of Roots' counter
+        // mana is a `Seq` around its `AddMana`, and matching the wrapper
+        // skipped a sick Wall whole while the engine paid `{G}` off it —
+        // the `AB_SAC` / `AB_SELF_COUNTER` gate audits at `all` seed 737
+        // (2026-09-09).
         if no_tap
             && !p.definition.activated_abilities.iter().any(|a| {
-                !a.tap_cost && matches!(a.effect, Effect::AddMana { .. })
+                !a.tap_cost
+                    && !crate::game::actions::effect_produced_colors(&a.effect).is_empty()
             })
         {
             continue;
@@ -19539,6 +19545,25 @@ mod tests {
         g.clear_sickness(elf);
         g.battlefield_find_mut(elf).unwrap().tapped = true;
         assert_eq!(available_mana(&g, 0).total, 0, "a tapped Elves makes nothing");
+    }
+
+    /// Wall of Roots' "put a -0/-1 counter: add {G}" is a `Seq` around its
+    /// `AddMana`, and the sickness pre-check matched the wrapper: a sick Wall
+    /// read as no green while the engine paid `{G}` off it — the `AB_SAC` and
+    /// `AB_SELF_COUNTER` gate audits at `all` seed 737 (2026-09-09). Sick or
+    /// tapped, the Wall makes the colour budget opaque and adds nothing to
+    /// `total`, exactly as the Crawler does.
+    #[test]
+    fn available_mana_sick_wall_of_roots_makes_the_colour_budget_opaque() {
+        let mut g = two_player_game();
+        let wall = g.add_card_to_battlefield(0, catalog::wall_of_roots());
+        assert!(g.battlefield_find(wall).unwrap().summoning_sick);
+        let have = available_mana(&g, 0);
+        assert_eq!(have.total, 0, "a counter-fed source is not spare mana");
+        assert_eq!(have.by_color, [u32::MAX; 5], "but it can cover green");
+        g.clear_sickness(wall);
+        g.battlefield_find_mut(wall).unwrap().tapped = true;
+        assert_eq!(available_mana(&g, 0).by_color, [u32::MAX; 5], "tapped, still opaque");
     }
 
     /// Reproducer for the "Vandalblast freeze" bug. The bot is in its main

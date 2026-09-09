@@ -489,3 +489,24 @@ fn the_sick_crawler_pair_passes_the_gate_audit() {
     let t = trace_game(&deck, &deck, 6_018_027_449_014_118_342, 6_000);
     assert!(t.winner.is_some(), "not decided after {} lines, turn {}", t.lines.len(), t.turns);
 }
+
+/// The pair the 2026-09-09 fresh-seed sweep aborted on the `AB_SELF_COUNTER`
+/// gate audit: `all` seed 737's cube pool, archetype 3 (job `0x7_00000345`,
+/// pair 4, seed 8709371159938462617) — a summoning-sick Wall of Roots paid
+/// `{G}` for a Basking Broodscale activation the bot's mana estimate had
+/// gated off, its `Seq`-wrapped counter mana invisible to a bare `AddMana`
+/// match. Same audit-in-the-test-binary shape as the Crawler pair above.
+#[test]
+fn the_sick_wall_of_roots_pair_passes_the_gate_audit() {
+    use crabomination::cube::{cube_deck, random_color_pair};
+    use rand::SeedableRng;
+    let mut r = rand::rngs::StdRng::seed_from_u64(737 ^ 0xC0BE_5EED);
+    let mut deck = Vec::new();
+    for _ in 0..4 {
+        let colors = random_color_pair(&mut r);
+        deck = cube_deck(colors, &mut r);
+    }
+    assert!(deck.iter().any(|f| f().name == "Wall of Roots"), "the pool moved");
+    let t = trace_game(&deck, &deck, 8_709_371_159_938_462_617, 6_000);
+    assert!(t.winner.is_some(), "not decided after {} lines, turn {}", t.lines.len(), t.turns);
+}
