@@ -2821,7 +2821,8 @@ sweep   fresh seeds on the (-278) tip binary (profiling-fast): {all, sealed} x s
         24 cells / 139,200 games, 0 panics, 0 cap, 0 stuck, 16 draws (all rc 0, the diag silent)
 grid    robustness_grid.sh on the debug-assertions overflow build (target-audit, 8 assertion strings) at the (-279) tip, FRESH SEEDS: ladder {all, sealed} x
         seeds 701..712 x 400 = 24 cells / 139,200 games, 0 failures, cap 0 / stuck 0 / draw 8; pilots leg (dflt + the script's 45) at seed 701, 46 cells, 0 failures;
-        actor leg (selfplay_train --actors 3 --games 600 --steps 2, seeds 1 / 7 / 23) at the board-cap tip: 3 cells, 0 failures, 35.0 / 36.1 / 63.7 games/s on the audit build
+        actor leg (selfplay_train --actors 3 --games 600 --steps 2, seeds 1 / 7 / 23) at the board-cap tip: 3 cells, 0 failures, 35.0 / 36.1 / 63.7 games/s on the audit build;
+        at the widened CR 400.7 tip (audit build rebuilt): cube seeds 702 / 43 x 400 (6,400 games) 0 failures, 0 cap / 8 draw; the 46-pilot leg on cube at seed 702, 0 failures
 guard   `MAX_BATTLEFIELD` (1,024, ENGINE_BACKLOG 2026-09-08 third run): the dflt cube mirror at seed 43, --games 1200 --threads 3, ran 62.5 s / 9,598 decided /
         2 cap (the Scute Swarm pair, capped at action 3,123 with 1,027 permanents) where the unguarded binary held one thread for 90+ minutes and was killed;
         sealed dflt callgrind with the guard 2,562,992,038 Ir (+14,288 / +0.0006 % against the (-279) base — one `len` compare an action); golden 8/8
