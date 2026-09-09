@@ -2835,6 +2835,10 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
   (-287) sealed 2,516,623,276 -> 2,507,039,807 (-0.381 %, 72 / 72); cube 2,433,990,363 -> 2,427,666,471 (-0.260 %, 48 / 48); fixed 636,928,451 -> 633,484,026
          (-0.541 %); traces 120 / 120 identical against the (-286) binary; --bench counters identical; thread_determinism ok
 wall    bench_ab.py bl_base vs bl_285 (profiling-fast, system allocator, fixed --bench, 20 pairs): B/A median +6.67 % / mean +5.61 % (sd 6.27)
+grid    robustness_grid.sh on the debug-assertions overflow build (target-audit, 8 assertion strings) at the (-287) tip, FRESH SEEDS: ladder {all, sealed, cube}
+        x seeds 719..721 x 400 = 9 cells / 44,400 games, 0 failures, cap 0 / stuck 0 / draw 0 (gang mirror, 26-68 s a cell on the audit build); the script's
+        default ladder (5 pools x seeds 1 3 7 11 23 97 x 120) 30 cells / 33,120 games, 0 failures; pilots leg (the script's 45 policies vs gang, --decks all,
+        seed 719, 12 games) 45 cells, 0 failures — no panic / assertion / overflow anywhere
 --bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
 sweeps  fresh seeds on the b7bd9250 tip binary (profiling-fast) BEFORE the leg, dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000:
@@ -7530,12 +7534,30 @@ of those bytes for a field set only while a haunt spell resolves.
 **TAKEN as `(-281)` (Log): boxed, the allocator family read -6.5 M
 sealed, the total -0.095 % under +4.2 M of unrelated codegen shift.**
 What is left of the scratch copy is its ~570-byte memcpy plus ~27 empty
-container clones on the clones that resolve — floor. `ColdState` (`he20b`, a `String` and
-five tables, 770 Ir) 5,250 / 4.0 M and `TurnDeaths` (`hbc53`, 3,279 Ir —
-`creature_deaths_this_turn` is a `Vec<CardInstance>`) 4,650 / 15.2 M
-under `dispatch_triggers_for_events` 2,382 / `run_effect` 1,012 /
-`cleanup_wear_off` 356: a death registry written per death, floor unless
-the registry's first write moves the same way.
+container clones on the clones that resolve — floor. `PlayerCold` (`he20b`,
+the seat's `String` name and five tables, 770 Ir) 5,250 / 4.0 M, 4,978 of
+them under `resolve_top_of_stack_inner` — TAKEN as `(-284)`; and
+`ColdState` (`hbc53`, two tables and six lists, 3,279 Ir — the
+`TurnDeaths` doc's "~3,700-Ir unshare") 4,650 / 15.2 M under
+`dispatch_triggers_for_events` 2,382 / `run_effect` 1,012 /
+`cleanup_wear_off` 356 — TAKEN as `(-282)` and `(-283)`. (`TurnDeaths`
+itself is one of the sub-0.1 % instances.) **What the run took off this
+table, in order:
+`(-280)` the two hot `ResolutionScratch` writers, `(-281)` its size,
+`(-282)` the dispatcher's `ColdState` write, `(-283)` sixteen effect-
+written registries to `TurnRegistries`, `(-284)` the two creature-
+resolution takes on `PlayerCold` / `PlayerData`, `(-285)` the blocker's
+`CardData` list, `(-286)`/`(-287)` the cast's three `CardCold` stamps —
+`make_mut_slow` 211,244 -> 186,200 calls on sealed, the family
+161.1 M -> ~125 M inclusive. What is left at the `(-287)` tip is the
+per-clone floor by design: the zone `Vec`, `PlayerData` and `CardData`
+copies a probe's own writes force (`cast_spell_with_convoke` 30,192 =
+hand + player + card per cast probe; `resolve_combat_into` 20,262 = the
+damaged cards; `determinize_hidden` 18,640 = the redeal), and the rows
+under 0.1 % each (`on_left_battlefield` 8,728, `find_by_id_mut` 10,432 —
+an activation's tap on a fresh clone's battlefield). The instrument that
+found all eight: `--demangle=no`, `cg_edges.py --callers make_mut_slow`
+per hash, then a grep of the caller's body for the group's field names.**
 
 **THE BLOCK SIM READ BY CONTEXT AT THE `(-278)` TIP (`--separate-callers=3`
 and `=6`, sealed dflt six games, `cg.sealed.sc.out` / `cg.sealed.sc6.out`

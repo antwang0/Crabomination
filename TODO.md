@@ -35,7 +35,8 @@ sixty-seventh pass, so don't re-take that.
    moved 3 % between boxes on identical games, PERF `(-280)`); both sides from one tree, `md5sum` both.
 2. **Gates at the tip (PERF Baseline, the `(-280)`..`(-287)` addendum):** suite 19,289 / 0 / 5, clippy, golden 8/8, `--bench` counters identical to
    `2003d1cf` (195,806 / 27.49 / 611.9 / 0), thread_determinism ok, fresh-seed dflt sweeps under the bound on cube 719..724 / all 713..718 / sealed
-   713..718 (88,800 games) 0 cap / 0 stuck, `audit_panics.py` 0 bare; the debug-assertions grid last ran at the `(-279)` tip (0 failures).
+   713..718 (88,800 games) 0 cap / 0 stuck, `audit_panics.py` 0 bare; the debug-assertions grid at the `(-287)` tip: ladder on fresh seeds 719..721
+   (9 cells / 44,400) + the default 30 cells + 45 pilot cells, 0 failures.
 3. **This run:** `(-280)` TAKEN (the cast validator's target-slot stamp and the death chokepoint's push deep-copied the whole 1 KB `ResolutionScratch`
    on every dry-run clone — both fields moved to the plain-copied state, sealed -0.589 % / cube -0.595 % / fixed -0.885 %); `(-281)` TAKEN
    (`haunt_pending` boxed, the scratch copy off the large-bin path, allocator rows -6.5 M sealed); `(-282)` TAKEN (`life_gain_flag_pending` as a
@@ -50,7 +51,7 @@ sixty-seventh pass, so don't re-take that.
    allocator); traces identical throughout. No bugs found; no cards.
 4. **Next moves:** (a) the CoW residue is census questions under 0.1 % each (PERF Log `(-283)`'s tail: `discard_card` / `move_card_to` /
    `activate_ability_inner`'s remaining cold writes) — read `cg_contexts.py make_mut_slow` at three levels first; (b) the attack-sim horizon on a *populated* crack-back is the remaining strength round (38 % of the actor) — a real loss risk,
-   gate it; (c) `robustness_grid.sh --wide` on fresh seeds 719+; (d) the engine self tables are the floor — the next engine lever is a *count* (a
+   gate it; (c) the engine self tables are the floor — the next engine lever is a *count* (a
    sim memo across decisions, no census yet), not a row. Nothing half-wired on the branch; no open TODO/FIXME in code.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
