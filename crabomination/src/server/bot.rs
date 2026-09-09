@@ -12800,7 +12800,7 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
                 _ => false,
             });
         }
-        if p.controller != seat || p.tapped {
+        if p.controller != seat {
             continue;
         }
         // CR 602.5g/h — every ability this loop counts has a `{T}` cost
@@ -12814,13 +12814,25 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         // treats `total` as a *budget*, so over-counting it does not make the
         // bot optimistic, it makes the engine reject the whole declaration.
         // One method with the engine, so the two cannot drift.
-        // Per ability, not per permanent: sickness stops the `{T}` abilities
-        // only. Crystalline Crawler's "remove a +1/+1 counter: add one mana
-        // of any color" fires the turn it enters, and a `continue` here read
-        // a board with a sick one as `by_color` zeros while the engine paid
-        // `{R}` off it — the `AB_DAMAGE` gate audit at cube seed 729
-        // (2026-09-09). Its non-tap abilities still reach the opaque arm.
-        let sick = p.summoning_sick && state.tap_ability_summoning_sick(p, seat);
+        // Per ability, not per permanent: a tap and sickness stop the `{T}`
+        // abilities only. Crystalline Crawler's "remove a +1/+1 counter: add
+        // one mana of any color" fires the turn it enters and after it has
+        // attacked, and a `continue` here read a board with a sick one as
+        // `by_color` zeros while the engine paid `{R}` off it — the
+        // `AB_DAMAGE` gate audit at cube seed 729 (2026-09-09). Its non-tap
+        // abilities still reach the opaque arm; a tapped land's one ability
+        // is a `{T}` and costs the loop one compare.
+        let no_tap = p.tapped || (p.summoning_sick && state.tap_ability_summoning_sick(p, seat));
+        // The cheap read first: a tapped land has one `{T}` ability and no
+        // business in the grant walk below, so only a permanent that prints
+        // a non-tap mana ability goes on.
+        if no_tap
+            && !p.definition.activated_abilities.iter().any(|a| {
+                !a.tap_cost && matches!(a.effect, Effect::AddMana { .. })
+            })
+        {
+            continue;
+        }
         // Printed abilities plus anything granted to it (Cryptolith Rite
         // turning creatures into mana sources, Urza's Saga chapters), so a
         // granted mana ability doesn't read as "no mana here".
@@ -12828,7 +12840,7 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         let mut best = 0u32;
         let mut mine = ColorSet::empty();
         for a in p.definition.activated_abilities.iter().chain(granted.iter().copied()) {
-            if sick && a.tap_cost {
+            if no_tap && a.tap_cost {
                 continue;
             }
             if !is_countable_mana_ability(a) {
@@ -19514,10 +19526,19 @@ mod tests {
         let have = available_mana(&g, 0);
         assert_eq!(have.total, 0, "a counter-fed source is not spare mana");
         assert_eq!(have.by_color, [u32::MAX; 5], "but it can cover any colour");
-        // A sick Llanowar Elves is the tap case: still nothing.
+        // Tapped (it attacked) is the same case: the counter ability is on.
         let mut g = two_player_game();
-        g.add_card_to_battlefield(0, catalog::llanowar_elves());
+        let crawler = g.add_card_to_battlefield(0, catalog::crystalline_crawler());
+        g.clear_sickness(crawler);
+        g.battlefield_find_mut(crawler).unwrap().tapped = true;
+        assert_eq!(available_mana(&g, 0).by_color, [u32::MAX; 5], "tapped, still any colour");
+        // A sick or tapped Llanowar Elves is the tap case: still nothing.
+        let mut g = two_player_game();
+        let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
         assert_eq!(available_mana(&g, 0).by_color, [0; 5]);
+        g.clear_sickness(elf);
+        g.battlefield_find_mut(elf).unwrap().tapped = true;
+        assert_eq!(available_mana(&g, 0).total, 0, "a tapped Elves makes nothing");
     }
 
     /// Reproducer for the "Vandalblast freeze" bug. The bot is in its main
