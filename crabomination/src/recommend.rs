@@ -2257,14 +2257,27 @@ fn cap_diagnosis(g: &GameState, actions: usize) -> String {
             p.mana_pool.total() + p.mana_pool.restricted_total(),
         );
     }
+    let name_of = |id: crate::card::CardId| {
+        g.find_card_anywhere(id)
+            .map(|c| c.definition.name.to_string())
+            .unwrap_or_else(|| format!("{id:?}"))
+    };
+    // The target rides along: a trigger that keeps re-targeting the same
+    // permanent names the loop (the two-Portable-Hole oscillation).
+    let target_of = |t: &Option<crate::game::Target>| match t {
+        Some(crate::game::Target::Permanent(id)) => format!(" -> {}", name_of(*id)),
+        Some(crate::game::Target::Player(p)) => format!(" -> p{p}"),
+        None => String::new(),
+    };
     let on_stack = tally(g.stack.iter().map(|it| match it {
-        StackItem::Spell { card, .. } => format!("spell {}", card.definition.name),
-        StackItem::Trigger { source, activated, .. } => format!(
-            "{} {}",
+        StackItem::Spell { card, target, .. } => {
+            format!("spell {}{}", card.definition.name, target_of(target))
+        }
+        StackItem::Trigger { source, activated, target, .. } => format!(
+            "{} {}{}",
             if *activated { "ability" } else { "trigger" },
-            g.find_card_anywhere(*source)
-                .map(|c| c.definition.name.to_string())
-                .unwrap_or_else(|| format!("{source:?}")),
+            name_of(*source),
+            target_of(target),
         ),
     }));
     if !on_stack.is_empty() {
@@ -2273,6 +2286,15 @@ fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     let board = tally(g.battlefield.iter().map(|c| c.definition.name.to_string()));
     if !board.is_empty() {
         let _ = write!(s, "\n  board: {}", render(&board));
+    }
+    // Linked exiles ("until ~ leaves") name their source: a card whose link
+    // points at a permanent that is itself linked back is a return loop.
+    let exiled = tally(g.exile.iter().map(|c| match &c.exiled_by {
+        Some(l) => format!("{} (until {} leaves)", c.definition.name, name_of(l.source)),
+        None => c.definition.name.to_string(),
+    }));
+    if !exiled.is_empty() {
+        let _ = write!(s, "\n  exile: {}", render(&exiled));
     }
     s
 }

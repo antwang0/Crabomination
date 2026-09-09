@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-09 — the mandatory-loop watchdog saw only period-1 loops; two Portable Holes and a mandatory Leonin Relic-Warder cycled three boards to the action cap](#fixed-2026-09-09--the-mandatory-loop-watchdog-saw-only-period-1-loops-two-portable-holes-and-a-mandatory-leonin-relic-warder-cycled-three-boards-to-the-action-cap) | 40 |
 | Bugs & robustness | [FIXED 2026-09-08 (third run) — a permanent leaving the battlefield by dying or bouncing kept its damage, tap and attachment into its next zone (CR 400.7); a recast Golgari Thug died on entry every turn](#fixed-2026-09-08-third-run--a-permanent-leaving-the-battlefield-by-dying-or-bouncing-kept-its-damage-tap-and-attachment-into-its-next-zone-cr-4007-a-recast-golgari-thug-died-on-entry-every-turn) | 24 |
 | Bugs & robustness | [FIXED 2026-09-08 (third run) — a token-doubling board had no bound: the simulator now ends a game whose battlefield passes 1,024 permanents as a cap](#fixed-2026-09-08-third-run--a-token-doubling-board-had-no-bound-the-simulator-now-ends-a-game-whose-battlefield-passes-1024-permanents-as-a-cap) | 26 |
 | Bugs & robustness | [FIXED 2026-09-08 (second run) — a combat-damage `dealer_filter` could never say `IsSource`, and "when you next attack this turn" had no primitive](#fixed-2026-09-08-second-run--a-combat-damage-dealer_filter-could-never-say-issource-and-when-you-next-attack-this-turn-had-no-primitive) | 38 |
@@ -43,6 +44,50 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-09 — the mandatory-loop watchdog saw only period-1 loops; two Portable Holes and a mandatory Leonin Relic-Warder cycled three boards to the action cap
+
+Found by the fresh-seed dflt sweep on the debug-assertions build: cube seed
+726 capped its archetype-6 mirror pair (pair seed 11400714845093003057) at
+6,001 actions on turn 11, `stack 1` throughout. `CRAB_CAP_DIAG` now prints
+the stack item's target and the linked exiles, and the replay read
+`trigger Portable Hole -> Portable Hole` over `exile: Leonin Relic-Warder
+(until Portable Hole leaves)`. The cycle, three resolutions long: Hole A
+exiles Hole B, whose return link brings the Warder back; the Warder's ETB
+has only its controller's own Hole A to exile, which returns Hole B, whose
+ETB exiles the Warder, which returns Hole A. Every state differs from the
+one before it, so `mandatory_loop_watch` — one fingerprint, compared with
+the previous resolution's — reset on every step and never fired.
+
+Three fixes, each its own commit:
+
+1. **The watchdog anchors a fingerprint and counts returns to it**
+   (`GameState::mandatory_loop_watch` is `(anchor, repeats, since)`;
+   `MANDATORY_LOOP_MAX_PERIOD = 8` resolutions before a chain that has not
+   come back re-anchors). A loop of any period up to eight is a draw after
+   `MANDATORY_LOOP_DRAW_REPEATS` returns; a progressing chain never returns
+   and re-anchors every eight. Same size as before, no clone cost. Tests:
+   `core_rules::cr_recent75::cr_104_4b_period_two_trigger_loop_draws_the_game`
+   and `::cr_732_4_two_portable_holes_and_a_mandatory_warder_end_as_a_draw`
+   (the found loop, played with an inline mandatory Warder).
+2. **Leonin Relic-Warder is "you may exile"** (`Effect::MayDo`), as printed
+   — any controller's artifact or enchantment, which the card does say.
+   Test `modern::altars_flips_artifacts::leonin_relic_warder_may_leave_its_
+   controllers_own_artifact_alone`; the existing exile test scripts the yes.
+3. **The bot declines a "you may" removal aimed at its own permanent.**
+   `optional_trigger_beneficial` could not see it: the target is chosen when
+   the trigger goes on the stack and lives on the pending `ResumeContext`,
+   not in the effect tree. `removal_targets_own_permanent` reads it there
+   for the exile / destroy / bounce shapes. Test
+   `server::bot::stack_response_tests::optional_removal_aimed_at_own_
+   permanent_is_declined`; the pair itself is pinned by
+   `core_rules::golden_trace::the_two_hole_relic_warder_pair_decides`.
+
+The class: the resolution watchdog and the announcement guard (CR 732.3)
+both compared a fingerprint with *one* predecessor, and a loop through
+several distinct boards is the common shape (any two "until ~ leaves"
+permanents with return links). The announcement guard is keyed on one
+ability's repeats and does not have the period problem.
 
 ## FIXED 2026-09-08 (third run) — a permanent leaving the battlefield by dying or bouncing kept its damage, tap and attachment into its next zone (CR 400.7); a recast Golgari Thug died on entry every turn
 

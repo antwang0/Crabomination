@@ -41,9 +41,12 @@ CRAB_THREAD_CHECK=1 cargo run --release --bin bot_ladder -- --bench
 # asked. Read once, on the capped game only, so the throughput path pays
 # nothing — the `CRAB_SBA_CENSUS` shape. Prints the action/turn count, the
 # stack depth, per-seat life/board/untapped/hand/graveyard/library/pool, and
-# two tallies by name: **what is on the stack** and **what is on the board**.
-# A runaway names itself in one of them — an unbounded stack is a trigger or
-# activation loop, an unbounded battlefield is a token loop; the pool and the
+# two tallies by name: **what is on the stack** (each item with its target)
+# and **what is on the board**, plus **the linked exiles** ("until ~ leaves")
+# with their sources. A runaway names itself in one of them — an unbounded
+# stack is a trigger or activation loop, an unbounded battlefield is a token
+# loop, a `trigger X -> Y` over `Y (until X leaves)` is a return-link cycle
+# (the 2026-09-09 Portable Hole / Relic-Warder loop); the pool and the
 # untapped count beside them say whether a repeated activation was *paid for*.
 # It found the Pentad Prism / Gravecrawler stall on its first run.
 CRAB_CAP_DIAG=1 target/profiling-fast/bot_ladder --a gang --b gang \
