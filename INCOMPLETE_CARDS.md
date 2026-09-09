@@ -798,7 +798,7 @@ Tasigur (Splice / Delve).
   ~10.** `scripts/audit_dropped_may.py` diffs every catalog definition against
   the offline Scryfall cache and flags the ones whose oracle says "you may"
   and whose definition carries no optional primitive: **349 of 11,094 cards
-  checked** (3,901 synthesized `(b###)` names are skipped — they have no
+  checked** (314 of 11,092 at 2026-09-09) (3,901 synthesized `(b###)` names are skipped — they have no
   oracle to be wrong against, which is why the hand-written list above was
   ten). Reminder text and "…rather than pay this spell's mana cost" are
   filtered out; the residue still contains false positives where the engine
@@ -813,7 +813,15 @@ Tasigur (Splice / Delve).
   Bounding Krasis and Pestermite followed (`Effect::TapOrUntap` inside a
   `MayDo`; Pestermite also carried a `SkipNextUntap` rider it does not
   print), and Chain Stasis / Thassa's Ire / Sword of the Paruns already had
-  the primitive.
+  the primitive. Detention Sphere (2026-09-09): mandatory *and* able to
+  target itself — the printed "not named Detention Sphere" is
+  `OtherThanSource` now, the may restored. The rest of that cluster, read
+  the same day: Fiend Hunter's filter is `ControlledByOpponent` (never its
+  own, so the may is moot in 1v1), Mistbreath Elder's bounce is printed
+  mandatory (the may is on the "otherwise" fallback the doc approximates),
+  Cloudstone Curio already carries `MayReturnSharingPermanentType` (the
+  auditor's token list does not see it), and Restoration Angel / Felidar
+  Guardian's blink of your own creature is a may the bot would always take.
 
   **The inverse audit was run and is not worth repeating: noise-dominated.**
   Definitions that are optional where the oracle has no "may" come back 37

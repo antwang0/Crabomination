@@ -36,6 +36,7 @@ CACHE = os.path.join(ROOT, "scripts", ".scryfall_cache.json")
 # Every way a definition can carry a printed choice.
 OPTIONAL = (
     "MayDo", "MayDoBy", "MayDoElse", "MayPay", "MayTap", "MayDiscard",
+    "MayReturn",
     "MayCast", "MayPayOrElse", "MayReveal", "MaySacrifice", "Optional",
     "ChooseMode", "ChooseN", "Escalate", "TapOrUntap", "may_", "_may",
     # Optionality the engine spells as a *shape* rather than a `May…` name.

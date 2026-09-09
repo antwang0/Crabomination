@@ -381,11 +381,12 @@ pub fn mage_hunter_defender() -> CardDefinition {
 
 // ── Detention Sphere (synthesised STX-flavor enchantment) ─────────────────
 
-/// Detention Sphere — {1}{W}{U} Enchantment. "When this enters, exile target
-/// nonland permanent until this leaves the battlefield." (The "all other
-/// permanents with the same name" multi-exile rider is approximated to the
-/// single target.) Tests: `detention_sphere_exiles_until_it_leaves`,
-/// `detention_sphere_is_a_three_mana_white_blue_enchantment`.
+/// Detention Sphere — {1}{W}{U} Enchantment. "When this enters, you may exile
+/// target nonland permanent not named Detention Sphere [and all other
+/// permanents with the same name] until this leaves the battlefield." The
+/// same-name rider is approximated to the single target; "not named" to
+/// `OtherThanSource`. Tests: `detention_sphere_exiles_until_it_leaves`,
+/// `detention_sphere_may_decline_and_never_targets_itself`.
 pub fn detention_sphere() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
@@ -394,11 +395,16 @@ pub fn detention_sphere() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ExileUntilSourceLeaves {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                ),
-                return_to: ExileReturnZone::Battlefield,
+            effect: Effect::MayDo {
+                description: "Exile target nonland permanent?".into(),
+                body: Box::new(Effect::ExileUntilSourceLeaves {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::Nonland)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    return_to: ExileReturnZone::Battlefield,
+                }),
             },
         }],
         ..Default::default()

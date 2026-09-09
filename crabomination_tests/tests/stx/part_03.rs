@@ -334,9 +334,12 @@ fn magecraft_scry_on_instant_cast() {
 
 #[test]
 fn detention_sphere_exiles_until_it_leaves() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::detention_sphere());
+    // "You may exile": taken here, declined in the test below.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
@@ -354,6 +357,43 @@ fn detention_sphere_exiles_until_it_leaves() {
     g.check_state_based_actions();
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bear), "bear returns when the Sphere leaves");
+}
+
+/// The printed "you may": declined, the target stays. And "not named
+/// Detention Sphere": with the Sphere the only nonland permanent, the
+/// trigger has no legal target and the Sphere does not exile itself
+/// (it did, before `OtherThanSource` — the dropped-may audit, 2026-09-09).
+#[test]
+fn detention_sphere_may_decline_and_never_targets_itself() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let cast = |g: &mut GameState, target: Option<Target>| {
+        let id = g.add_card_to_hand(0, catalog::detention_sphere());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Detention Sphere castable");
+        drain_stack(g);
+        id
+    };
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    cast(&mut g, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_some(), "declined, the bear stays");
+    assert!(g.exile.is_empty() && g.stack.is_empty());
+
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let id = cast(&mut g, None);
+    assert!(g.battlefield_find(id).is_some(), "the Sphere never exiles itself");
+    assert!(g.exile.is_empty() && g.stack.is_empty());
 }
 
 // ── ETB counters on friendly creatures, no target (table) ──────────────────
