@@ -2798,13 +2798,15 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### `(-280)` — the scratch fields that left the CoW group: closing state at the `(-280)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+### `(-280)` and `(-281)` — the scratch fields that left the CoW group, and the scratch copy that left the large-bin path: closing state at the `(-281)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
-One engine leg after the `(-279)` closing state below (Log `(-280)`; the
-CoW family read by monomorphization in the candidates). Behaviour-
-preserving — every trace identical, `--bench` counters identical — so the
-three totals below are the `(-279)` games, cheaper, and the base for
-every later A/B. ⚠ The base was RE-TAKEN on this box before the leg:
+Two engine legs after the `(-279)` closing state below (Log `(-280)`,
+`(-281)`; the CoW family read by monomorphization in the candidates).
+Behaviour-preserving — every trace identical, `--bench` counters
+identical — so the three totals below are the `(-279)` games, cheaper,
+and **the `(-281)` triple is the base for every later A/B: sealed
+2,545,847,904 / cube 2,452,405,764 / fixed 645,681,561** (the `(-280)`
+rows below are its base). ⚠ The base was RE-TAKEN on this box before the leg:
 sealed and cube reproduced the recorded `fix+` triple to within 1-3 k Ir,
 `fixed` did not (651,809,830 against the recorded 671,760,207 on identical
 `--bench` counters and 24 / 24 decided — the recorded fixed number is the
@@ -2816,6 +2818,8 @@ suspect one; see the Log entry). Both sides of the A/B are one tree.
   fixed  gang, same recipe:                                                     651,809,830 ->   646,043,365 Ir  (-0.885 %)
   traces CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 files, 0 differ
   size   GameState 1,520 -> 1,584 bytes (the two fields, 64 B); cow::tests::game_state_stays_small cap 1,536 -> 1,600
+  (-281) sealed 2,548,270,297 -> 2,545,847,904 (-0.095 %, 72 / 72); cube 2,453,187,812 -> 2,452,405,764 (-0.032 %, 48 / 48); fixed 646,043,365 -> 645,681,561
+         (-0.056 %); traces 120 / 120 identical against the (-280) binary; --bench counters identical; thread_determinism ok
 --bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
         thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
 sweeps  fresh seeds on the b7bd9250 tip binary (profiling-fast) BEFORE the leg, dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000:
@@ -4114,6 +4118,37 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-281)` TAKEN — `haunt_pending` boxed, so the `ResolutionScratch` copy leaves glibc's large-bin path: sealed default Ir **-0.095 %** / cube **-0.032 %** / fixed **-0.056 %**, 120 / 120 traces identical; the allocator rows alone **-6.5 M** sealed
+
+The `(-280)` candidates entry's lever: `Option<(CardId, Effect)>` was
+~456 of the struct's ~1 KB (an `Effect` is 448 bytes) for a field set
+only while a haunt spell resolves, and the CoW copy's `Arc` allocation
+sat past the small-bin ceiling — `__rust_alloc` 625 Ir a call on that
+instance against ~65 on every other. `Option<Box<(CardId, Effect)>>`, the
+one set site and the one take site. What the residue (the ~9.3 k
+unshares on clones that resolve something) now costs: `clone_from_ref_in`
+inclusive under `make_mut_slow` 115.08 M -> 107.62 M (-7.46 M).
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the (-280) tip:
+  sealed  2,548,270,297 -> 2,545,847,904 Ir   (-2,422,393, -0.095 %)   72 / 72 decided both sides
+  cube    2,453,187,812 -> 2,452,405,764 Ir     (-782,048, -0.032 %)   48 / 48
+  fixed     646,043,365 ->   645,681,561 Ir     (-361,804, -0.056 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed self): _int_malloc 55.82 -> 52.66 M, __memcpy 55.07 -> 53.91 M, _int_free_merge_chunk 8.98 -> 8.24 M, unlink_chunk 5.61 -> 5.11 M,
+               malloc_consolidate 10.33 -> 9.89 M, _int_free_maybe_consolidate 3.32 -> 3.06 M, malloc 65.63 -> 65.41 M — the allocator family -6.5 M,
+               which is the change; AGAINST it computed_permanent_hinted 45.30 -> 47.61 M and FnOnce::call_once 1.29 -> 3.18 M (+4.2 M, neither touched —
+               an inlining decision retaken, `(-182)`'s rule; cp_pool::alloc 14.26 M -> 0 with LocalKey::with 8.01 -> 22.08 M is the same shift, net -0.19 M)
+--bench (profiling-fast, system allocator): 195,806 / 27.49 / 611.9 / 0 — counters identical; determinism ok; thread_determinism ok (3 vs 1)
+```
+
+Taken on the isolated rows, not the total: the total is inside the
+codegen noise a layout change of this size makes, and the allocator rows
+are not. Under mimalloc (the shipped allocator) the copy also crosses its
+1 KB small-object limit the other way, which a paired `--bench` cannot
+resolve at this size; the struct is ~570 bytes now, and the next fat
+field in it brings a reading.
 
 ### `(-280)` TAKEN — the two hot-written `ResolutionScratch` fields leave the CoW group: sealed default Ir **-0.589 %** / cube **-0.595 %** / fixed **-0.885 %**, 120 / 120 traces identical
 
@@ -7268,16 +7303,16 @@ clone, not priced); **`ResolutionScratch` (`h6c77`, 1,761 Ir) 16,630 /
 is ~9.3 k unshares a sealed run on the clones that *resolve* something
 (`resolve_top_of_stack_inner` 13,630, the `resolving_spell_snapshot`
 stamp; `resolve_effect_into` 2,262), and those are the first scratch
-write of a resolution, not a stray.** The lever left on that residue is
-the copy's own price, not its count: the struct is past glibc's
+write of a resolution, not a stray.** The lever left on that residue was
+the copy's own price, not its count: the struct was past glibc's
 1,016-byte small-bin ceiling (`__rust_alloc` 625 Ir an allocation
 against ~65 for every other instance; mimalloc's small-object limit is
-1 KB too), and `haunt_pending: Option<(CardId, Effect)>` alone is ~456 of
-those bytes for a field set only while a haunt spell resolves. **Box it
-and re-read `h6c77`'s `__rust_alloc` Ir/call: the expected return is
-~0.2 % sealed (9.3 k x ~560 Ir), and a shrink that lands under the
-ceiling is worth a `--bench` pair too, since it is the allocator
-size-class and not Ir that moves.** `ColdState` (`he20b`, a `String` and
+1 KB too), and `haunt_pending: Option<(CardId, Effect)>` alone was ~456
+of those bytes for a field set only while a haunt spell resolves.
+**TAKEN as `(-281)` (Log): boxed, the allocator family read -6.5 M
+sealed, the total -0.095 % under +4.2 M of unrelated codegen shift.**
+What is left of the scratch copy is its ~570-byte memcpy plus ~27 empty
+container clones on the clones that resolve — floor. `ColdState` (`he20b`, a `String` and
 five tables, 770 Ir) 5,250 / 4.0 M and `TurnDeaths` (`hbc53`, 3,279 Ir —
 `creature_deaths_this_turn` is a `Vec<CardInstance>`) 4,650 / 15.2 M
 under `dispatch_triggers_for_events` 2,382 / `run_effect` 1,012 /

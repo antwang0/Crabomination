@@ -1432,7 +1432,11 @@ pub struct ResolutionScratch {
     /// Cleared once consumed. (Creature haunt is handled inline since the card
     /// is already in the graveyard when its dies-trigger resolves.)
     #[serde(skip)]
-    pub(crate) haunt_pending: Option<(CardId, crate::effect::Effect)>,
+    /// Boxed: an `Effect` is 448 bytes, and inline it was ~45 % of this
+    /// struct — enough to push the CoW copy's `Arc` allocation past glibc's
+    /// small-bin ceiling on every unshare, for a field set only while a
+    /// haunt spell resolves (PERF `(-281)`).
+    pub(crate) haunt_pending: Option<Box<(CardId, crate::effect::Effect)>>,
     /// Transient: the `CardId`s of cards discarded within the current
     /// effect resolution. Populated alongside the count fields above. Used
     /// by Mind Roots's "Put up to one land card discarded this way onto
@@ -23766,8 +23770,9 @@ impl GameState {
         // CR 702.55 — Haunt. `Effect::HauntCreature` set `haunt_pending` to the
         // creature this resolving instant/sorcery should haunt. Exile the spell
         // card (not the graveyard) and register the death-watch delayed trigger.
-        if let Some((haunted, body)) = take_opt_scratch!(self.haunt_pending) {
+        if let Some(pending) = take_opt_scratch!(self.haunt_pending) {
             use crate::game::types::{DelayedKind, DelayedTrigger};
+            let (haunted, body) = *pending;
             let src = card.id;
             self.exile.push(card);
             self.delayed_triggers.push(DelayedTrigger {

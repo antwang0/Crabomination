@@ -11367,7 +11367,7 @@ impl GameState {
                         expires_after_turn: None,
                     });
                 } else {
-                    self.scratch.haunt_pending = Some((haunted, (**body).clone()));
+                    self.scratch.haunt_pending = Some(Box::new((haunted, (**body).clone())));
                 }
                 Ok(())
             }
