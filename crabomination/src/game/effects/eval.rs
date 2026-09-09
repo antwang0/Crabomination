@@ -3593,7 +3593,7 @@ impl GameState {
                     },
                     Target::Player(p) => Some(*p),
                 };
-                match self.scratch.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
+                match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => ctrl_of(other).is_some() && ctrl_of(other) == ctrl_of(target),
                     None => true,
                 }

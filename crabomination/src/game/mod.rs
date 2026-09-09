@@ -1373,7 +1373,7 @@ fn serde_true() -> bool {
 /// The resolution-scratch collection group: the `Vec`/map/`Option<Vec>`
 /// fields that only mean anything *inside* an effect resolution, held behind
 /// one CoW handle so a probe that clones at priority and never writes them
-/// pays one `Arc` bump instead of ~29 container clones. The wide ~100-field
+/// pays one `Arc` bump instead of ~27 container clones. The wide ~100-field
 /// scratch group is deliberately NOT this struct: `(-138)`'s census says two
 /// probes in three write *something* in it (`finalize_cast` stamps
 /// `pending_cast_*`, `perform_action_inner` bumps a counter), while four in
@@ -1390,11 +1390,6 @@ pub struct ResolutionScratch {
     /// (Protective Sphere's "shares a color with the mana spent").
     #[serde(skip)]
     pub(crate) activation_mana_colors_scratch: Vec<(crate::mana::Color, u32)>,
-    /// Transient: the targets chosen for each slot of the cast / activation
-    /// currently being validated, so a cross-slot filter
-    /// (`SameControllerAsTargetSlot` — Barrin's Spite) can see its sibling.
-    #[serde(skip)]
-    pub(crate) target_slots_scratch: Vec<Option<Target>>,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -1595,19 +1590,6 @@ pub struct ResolutionScratch {
     /// (CR 118.8 / 119.3c) after the cast completes (CR 601.3e).
     #[serde(skip, default)]
     pub(crate) pending_cost_events: Vec<GameEvent>,
-    /// CR 700.4 — permanents that hit a graveyard from the battlefield since
-    /// the last trigger dispatch: `(card_id, last_controller, is_creature,
-    /// is_artifact, causer)`. `causer` is the `resolution_causer` at the time
-    /// of death, replayed over the dispatch so
-    /// `Predicate::CausedByOpponentSpellOrAbility` sees it (Sacred Ground).
-    /// Populated at the single raw removal chokepoint
-    /// (`remove_from_battlefield_to_graveyard_raw`); drained by
-    /// `dispatch_triggers_for_events` into `GameEvent::PermanentDied` so
-    /// "whenever a creature or artifact you control dies" triggers
-    /// (Judge Magister Gabranth, G'raha Tia) fire on non-creature deaths that
-    /// no `CreatureDied` event covers.
-    #[serde(skip, default)]
-    pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool, Option<usize>)>,
     /// Control changes since the last trigger dispatch: `(card_id, from, to)`.
     /// Recorded at the single `change_control` chokepoint and drained by
     /// `dispatch_triggers_for_events` into `GameEvent::ControlChanged`, so
@@ -2255,6 +2237,31 @@ pub struct GameState {
     /// one and refill from the thread's pool on their first take.
     #[serde(skip)]
     pub(crate) event_scratch: EventScratch,
+    /// Transient: the targets chosen for each slot of the cast / activation
+    /// currently being validated, so a cross-slot filter
+    /// (`SameControllerAsTargetSlot` — Barrin's Spite) can see its sibling.
+    /// Stamped and cleared inside one validation, so it is empty whenever a
+    /// state is cloned. Plain-copied, not in [`ResolutionScratch`]: the
+    /// stamp is every cast's first write on a dry-run clone, and there it
+    /// deep-copied the whole scratch group (PERF `(-280)`). Inline for the
+    /// one- and two-slot spells that are nearly every cast.
+    #[serde(skip)]
+    pub(crate) target_slots_scratch: SmallVec<[Option<Target>; 2]>,
+    /// CR 700.4 — permanents that hit a graveyard from the battlefield since
+    /// the last trigger dispatch: `(card_id, last_controller, is_creature,
+    /// is_artifact, causer)`. `causer` is the `resolution_causer` at the time
+    /// of death, replayed over the dispatch so
+    /// `Predicate::CausedByOpponentSpellOrAbility` sees it (Sacred Ground).
+    /// Populated at the single raw removal chokepoint
+    /// (`remove_from_battlefield_to_graveyard_raw`); drained by
+    /// `dispatch_triggers_for_events` into `GameEvent::PermanentDied` so
+    /// "whenever a creature or artifact you control dies" triggers
+    /// (Judge Magister Gabranth, G'raha Tia) fire on non-creature deaths that
+    /// no `CreatureDied` event covers. Plain-copied for the same reason as
+    /// the field above: a death in a simulation clone is that clone's first
+    /// scratch write (PERF `(-280)`).
+    #[serde(skip)]
+    pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool, Option<usize>)>,
     /// CR 505.1b — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
@@ -2566,7 +2573,9 @@ pub struct GameState {
     pub(crate) chosen_sector: Option<crate::card::Sector>,
     /// The resolution-scratch collections — see [`ResolutionScratch`].
     /// One CoW handle so a dry-run probe's clone bumps a refcount instead
-    /// of deep-copying 29 mostly-empty containers.
+    /// of deep-copying 27 mostly-empty containers. A field written on a
+    /// probe's common path does not belong here — see `target_slots_scratch`
+    /// and `pending_permanent_deaths` above, PERF `(-280)`.
     #[serde(flatten)]
     pub scratch: CowBox<ResolutionScratch>,
     /// The per-death registries — see [`TurnDeaths`].
@@ -3114,6 +3123,12 @@ impl Clone for GameState {
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
             event_scratch: EventScratch::default(),
+            // Always empty here (stamped and cleared inside one validation),
+            // and the `clone` is the cheaper spelling anyway: a
+            // `SmallVec::new()` in its place read +0.06..0.11 % on all three
+            // pools (PERF `(-280)`, the refuted arm).
+            target_slots_scratch: self.target_slots_scratch.clone(),
+            pending_permanent_deaths: self.pending_permanent_deaths.clone(),
             controlled_by: self.controlled_by.clone(),
             died_card_snapshots: clone_map(&self.died_card_snapshots),
             leaves_bf_lki: clone_map(&self.leaves_bf_lki),
@@ -3427,6 +3442,8 @@ impl GameState {
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
             event_scratch: EventScratch::default(),
+            target_slots_scratch: SmallVec::new(),
+            pending_permanent_deaths: Vec::new(),
             additional_combat_phases: 0,
             combat_chooser: None,
             additional_post_main_combats: 0,
@@ -18974,7 +18991,7 @@ impl GameState {
         // recorded at the raw removal chokepoint since the last dispatch, so
         // non-creature deaths (which emit no `CreatureDied`) still reach
         // "creature or artifact you control dies" triggers.
-        let deaths: Vec<_> = take_scratch!(self.pending_permanent_deaths);
+        let deaths: Vec<_> = std::mem::take(&mut self.pending_permanent_deaths);
         // CR 800.4 — control changes recorded at the `change_control`
         // chokepoint since the last dispatch (Risky Move's hand-off).
         let control_changes: Vec<_> = take_scratch!(self.pending_control_changes);

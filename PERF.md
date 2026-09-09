@@ -2798,6 +2798,34 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-280)` — the scratch fields that left the CoW group: closing state at the `(-280)` tip, THE NEW A/B BASE ON ALL THREE POOLS
+
+One engine leg after the `(-279)` closing state below (Log `(-280)`; the
+CoW family read by monomorphization in the candidates). Behaviour-
+preserving — every trace identical, `--bench` counters identical — so the
+three totals below are the `(-279)` games, cheaper, and the base for
+every later A/B. ⚠ The base was RE-TAKEN on this box before the leg:
+sealed and cube reproduced the recorded `fix+` triple to within 1-3 k Ir,
+`fixed` did not (651,809,830 against the recorded 671,760,207 on identical
+`--bench` counters and 24 / 24 decided — the recorded fixed number is the
+suspect one; see the Log entry). Both sides of the A/B are one tree.
+
+```text
+  sealed dflt, callgrind --games 6 --threads 1 --seed 1, UNTRACED, one tree:  2,563,361,428 -> 2,548,270,297 Ir  (-0.589 %, 72 / 72)
+  cube   dflt, same recipe:                                                   2,467,867,751 -> 2,453,187,812 Ir  (-0.595 %, 48 / 48)
+  fixed  gang, same recipe:                                                     651,809,830 ->   646,043,365 Ir  (-0.885 %)
+  traces CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 files, 0 differ
+  size   GameState 1,520 -> 1,584 bytes (the two fields, 64 B); cow::tests::game_state_stays_small cap 1,536 -> 1,600
+--bench profiling-fast (system allocator, the A/B binary) at the (-280) tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
+        thread_determinism ok (3 vs 1); 359.8 games/s single run (464.4 on the base binary the same hour — THE BOX, not the change: single runs are not a reading)
+sweeps  fresh seeds on the b7bd9250 tip binary (profiling-fast) BEFORE the leg, dflt mirror x --games 400 x --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000:
+        cube 719..724 (19,200 games) 0 cap / 0 stuck / 0 draw; all 713..718 (40,800) 0 / 0 / 6; sealed 713..718 (28,800) 0 / 0 / 0 — 88,800 games, every rc 0,
+        the diag silent; audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare
+suite   19,289 / 0 / 5 at the b7bd9250 tip (cold debug build 5m08s, 78.5 s run); the (-280) tree below
+rustc   1.95.0 (59807616e 2026-04-14); valgrind 3.22.0, glibc 2.39; Intel Xeon @ 2.10 GHz, 4 cores; cold profiling-fast bot_ladder 8m18s, warm engine rebuild
+        2m35s, cold debug suite build 5m08s
+```
+
 ### `(-279)` — the pooled event scratch: closing state at the `(-279)` tip, THE NEW A/B BASE ON ALL THREE POOLS
 
 One engine leg after the `(-278)` addendum below (Log `(-279)`; the
@@ -4086,6 +4114,59 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-280)` TAKEN — the two hot-written `ResolutionScratch` fields leave the CoW group: sealed default Ir **-0.589 %** / cube **-0.595 %** / fixed **-0.885 %**, 120 / 120 traces identical
+
+Off a `--demangle=no` read of `make_mut_slow` by monomorphization (the
+hundred-and-first pass's instrument, "How to measure"): the CoW unshare
+family was 211,244 calls / 161.1 M inclusive = 6.28 % of sealed, and the
+largest single context was `cast_spell_with_convoke <- cast_spell <-
+perform_action_inner`, 49,438 unshares / 40.9 M (1.59 %) — **3.7 an
+accepted cast**, one per CoW group the cast writes on a fresh dry-run
+clone: the hand (`Vec` clone, 338 Ir), `PlayerData` (778), `CardData`
+(776), the card's second group (610) and **`ResolutionScratch` at 1,761 Ir
+a copy** — five instances, each ~10,164 calls, and the scratch one
+(`h6c77`, 16,630 calls / 29.3 M program-wide = 1.14 %) was the fattest
+because the struct is past glibc's small-bin ceiling (`__rust_alloc` 625 Ir
+an allocation against ~65 for the others) and clones ~29 containers. Its
+two hot writers were one line each: the cast validator's cross-slot stamp
+(`target_slots_scratch = ...collect()`, every cast, cleared 24 lines
+later) and the death chokepoint's `pending_permanent_deaths.push` (every
+death in a simulation clone, 4,490 unshares / 8.1 M). Both fields moved
+into the plain-copied `GameState` — the stamp as a `SmallVec<[_; 2]>`, so
+the one- and two-slot spells that are nearly every cast never allocate,
+the deaths as the same `Vec` — and the two `clear_scratch!`/
+`take_scratch!` guards became plain calls. `GameState` 1,520 -> 1,584
+bytes; the `cow::tests::game_state_stays_small` cap 1,536 -> 1,600 with
+the reading in its comment.
+
+```text
+callgrind --a dflt --b dflt --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at b7bd9250 + the leg:
+  sealed  2,563,361,428 -> 2,548,270,297 Ir   (-15,091,131, -0.589 %)   72 / 72 decided both sides
+  cube    2,467,867,751 -> 2,453,187,812 Ir   (-14,679,939, -0.595 %)   48 / 48
+  fixed     651,809,830 ->   646,043,365 Ir    (-5,766,465, -0.885 %)   gang, the --bench pool
+  CRAB_DUMP_TRACES both sides, sealed + cube: 72 + 48 trace files, 0 differ
+rows (sealed): make_mut_slow <- cast_spell_with_convoke 49,438 / 40.87 M -> 40,356 / 25.05 M; <- remove_from_battlefield_to_graveyard_raw 4,490 / 8.09 M -> 178 / 0.06 M;
+               <- resolve_top_of_stack_inner 9,776 / 9.79 M -> 13,630 / 15.34 M and <- resolve_effect_into 110 / 0.20 M -> 2,262 / 4.42 M (the unshare MOVED to
+               the resolution's first scratch write on the clones that resolve something — see the candidates entry); make_mut_slow 211,244 -> 203,870 calls;
+               clone_from_ref_in self 80.47 -> 75.06 M; GameState::clone self 24.70 -> 26.57 M (+51 Ir a clone, the 40-byte SmallVec copy); SmallVec rows 12.96 -> 15.56 M
+REFUTED arm: `SmallVec::new()` in `GameState::clone` instead of `.clone()` (the field is always empty at a clone): sealed -0.533 % / cube -0.486 % / fixed -0.808 %
+             against the base — the clone itself read -0.76 M and the SmallVec rows -1.79 M, and the total was +1.42 M, an inlining decision retaken elsewhere
+             (`(-182)`'s rule). Reverted; the `.clone()` spelling is the committed one.
+--bench (profiling-fast, system allocator): 195,806 / 27.49 / 611.9 / 0 — counters identical; determinism ok; thread_determinism ok (3 vs 1)
+⚠ THE FIXED BASE: this box reads the b7bd9250 tip at 651,809,830 on `fixed`, not the recorded 671,760,207 — sealed and cube reproduce the recorded triple to
+  within 1-3 k Ir on the same binary, `--bench` counters are identical, and 24 / 24 decide, so the games are the same and the recorded fixed number is
+  suspect (a stale binary at the (-279) tip's fixed reading is the likely cause). The (-280) base is the triple above; the A/B is one tree, both sides.
+```
+
+The rule that fell out: **a CoW group is priced by its first write on a
+clone, not by the size of the field written.** `ResolutionScratch` was
+built so a probe that never resolves pays one refcount bump, and it
+still does — but every cast *validation* wrote a two-element `Vec` into
+it, so every dry-run cast paid the whole 1 KB copy for a stamp it
+cleared 24 lines later. Ask `cg_contexts.py make_mut_slow` after any
+change that adds a write to `scratch`, `cold` or a player's cold group;
+the census is one dump.
 
 ### `(-279)` TAKEN — the event scratch outlives the state through a thread-local pool, and the nested upkeep pass hands its buffer back: sealed default Ir **-0.378 %** / cube **-0.272 %** / fixed **-0.332 %**, 120 / 120 traces identical
 
@@ -7162,6 +7243,46 @@ change. The `LocalKey::with` row (405 k calls / 26.6 M self) is the
 `ComputedPermanent` Arc pool (`computed_permanent_hinted` 255 k takes,
 `Unfreeze::drop` 146 k puts, const-initialised already): ~65 Ir a take
 against malloc+free's ~150+, so the pool is the cheaper side; floor.**
+
+**THE CoW UNSHARE FAMILY, READ BY MONOMORPHIZATION AT THE `(-279)` TIP
+(`--demangle=no`, sealed dflt six games, `cg.base.sealed.nd.out` in a
+scratchpad; `(-280)` in the Log took the top row), so nobody re-takes
+it.** `make_mut_slow` 211,244 calls / 161.1 M inclusive (6.28 %), ten
+instances. By T (identified through each instance's clone helpers):
+`Vec<CardInstance>` zones 59,722 / 17.7 M (the hand / library / graveyard
+/ battlefield unshares — `Vec::clone` of `Arc` handles, 300 Ir each,
+floor); `PlayerData` (`h5507`, memcpy + one `RawTable`, 778 Ir) 41,632 /
+32.4 M, callers cast 9,864 / `determinize_hidden` 7,456 /
+`declare_attackers_banded` 5,746 / `adjust_life` 5,244 / `play_land`
+3,210 — every one a real write to the hot player group, floor;
+`CardData` (`h5c85`, memcpy only, 610 Ir) 55,538 / 33.9 M, callers
+`declare_blockers` 12,382 / cast 10,164 / `resolve_combat_into` 9,674 /
+`on_left_battlefield` 8,726 / `send_to_graveyard` 3,826 — the per-card
+CoW doing its job (a blocker's / a dying card's first write); the card's
+second group (`h0444`, two `Vec` clones + a `Keyword` clone, 776 Ir)
+16,558 / 12.9 M, cast 10,164 of them (the cast flags `cast_from_hand` /
+`kicked` / `spree_modes` ... on the card leaving the hand — moving them
+to the hot half would grow every `CardInstance` in every zone `Vec`
+clone, not priced); **`ResolutionScratch` (`h6c77`, 1,761 Ir) 16,630 /
+29.3 M — TAKEN as `(-280)` for its two hot writers; what is left after it
+is ~9.3 k unshares a sealed run on the clones that *resolve* something
+(`resolve_top_of_stack_inner` 13,630, the `resolving_spell_snapshot`
+stamp; `resolve_effect_into` 2,262), and those are the first scratch
+write of a resolution, not a stray.** The lever left on that residue is
+the copy's own price, not its count: the struct is past glibc's
+1,016-byte small-bin ceiling (`__rust_alloc` 625 Ir an allocation
+against ~65 for every other instance; mimalloc's small-object limit is
+1 KB too), and `haunt_pending: Option<(CardId, Effect)>` alone is ~456 of
+those bytes for a field set only while a haunt spell resolves. **Box it
+and re-read `h6c77`'s `__rust_alloc` Ir/call: the expected return is
+~0.2 % sealed (9.3 k x ~560 Ir), and a shrink that lands under the
+ceiling is worth a `--bench` pair too, since it is the allocator
+size-class and not Ir that moves.** `ColdState` (`he20b`, a `String` and
+five tables, 770 Ir) 5,250 / 4.0 M and `TurnDeaths` (`hbc53`, 3,279 Ir —
+`creature_deaths_this_turn` is a `Vec<CardInstance>`) 4,650 / 15.2 M
+under `dispatch_triggers_for_events` 2,382 / `run_effect` 1,012 /
+`cleanup_wear_off` 356: a death registry written per death, floor unless
+the registry's first write moves the same way.
 
 **THE BLOCK SIM READ BY CONTEXT AT THE `(-278)` TIP (`--separate-callers=3`
 and `=6`, sealed dflt six games, `cg.sealed.sc.out` / `cg.sealed.sc6.out`

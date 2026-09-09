@@ -7516,7 +7516,7 @@ impl GameState {
         // `card`) so a rejected cast can move the card back to hand.
         // Cross-slot filters (Barrin's Spite's "controlled by the same player")
         // read the whole chosen slot vector, not just their own target.
-        self.scratch.target_slots_scratch = std::iter::once(target.clone())
+        self.target_slots_scratch = std::iter::once(target.clone())
             .chain(additional_targets.iter().cloned().map(Some))
             .collect();
         let filter_violation = {
@@ -7540,7 +7540,7 @@ impl GameState {
                     .enumerate()
                     .any(|(idx, tgt)| slot_bad((idx + 1) as u8, tgt))
         };
-        clear_scratch!(self.target_slots_scratch);
+        self.target_slots_scratch.clear();
         if filter_violation {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);

@@ -6682,7 +6682,7 @@ impl GameState {
                 // synthesis (dispatch drains this into "creature or artifact
                 // you control dies" triggers). CreatureDied already covers
                 // creatures at every site; this backfills non-creature deaths.
-                self.scratch.pending_permanent_deaths.push((
+                self.pending_permanent_deaths.push((
                     id,
                     card.controller,
                     card.definition.is_creature(),

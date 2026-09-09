@@ -40,11 +40,13 @@ mod tests {
     /// on essentially every clone; boxing them halved the struct. This guard
     /// is what stops the next 800-byte field from landing inline unnoticed.
     /// Raise it only with a `--bench`/callgrind reading that says the field
-    /// has to be inline.
+    /// has to be inline. Raised 1,536 -> 1,600 at PERF `(-280)`: the two
+    /// hot-written scratch fields (64 bytes) left the CoW group, sealed
+    /// -0.59 % / cube -0.60 % / fixed -0.89 % Ir; the state is 1,584.
     #[test]
     fn game_state_stays_small() {
         let n = std::mem::size_of::<crate::game::GameState>();
-        assert!(n <= 1_536, "GameState grew to {n} bytes (cap 1,536) — see PERF (-144)");
+        assert!(n <= 1_600, "GameState grew to {n} bytes (cap 1,600) — see PERF (-144), (-280)");
     }
 
     #[test]

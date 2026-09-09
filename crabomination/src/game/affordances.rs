@@ -106,7 +106,7 @@ impl GameState {
         );
         let _ = write!(s, "{}|", self.scratch.names_this_resolution.len());
         let _ = write!(s, "{:?}|", self.scratch.activation_mana_colors_scratch);
-        let _ = write!(s, "{:?}|", self.scratch.target_slots_scratch);
+        let _ = write!(s, "{:?}|", self.target_slots_scratch);
         let _ = write!(s, "{:?}|", self.scratch.last_created_tokens);
         let _ = write!(s, "{:?}|", self.scratch.last_moved_cards);
         let _ = write!(s, "{:?}|", self.scratch.discarded_card_ids_this_resolution);
@@ -125,7 +125,7 @@ impl GameState {
         let _ = write!(s, "{:?}|", self.scratch.pending_ability_sac_any);
         let _ = write!(s, "{:?}|", self.scratch.resolution_answer_log);
         let _ = write!(s, "{:?}|", self.scratch.pending_cost_events);
-        let _ = write!(s, "{:?}|", self.scratch.pending_permanent_deaths);
+        let _ = write!(s, "{:?}|", self.pending_permanent_deaths);
         let _ = write!(s, "{:?}|", self.scratch.pending_control_changes);
         let _ = write!(s, "{:?}|", self.scratch.named_card_this_resolution);
         let _ = write!(s, "{:?}|", self.scratch.resolving_source);
