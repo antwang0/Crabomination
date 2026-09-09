@@ -27,24 +27,20 @@ sixty-seventh pass, so don't re-take that.
 
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
-1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code
-   before tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas in **CLAUDE.md**, measurement
-   in **PERF's "Standing rules"**. ⚠ Fetch before every push. ⚠ `rm -rf target/debug/incremental` before an optimized build (16 GB after one suite).
-   ⚠ `cargo nextest run -p <one crate>` re-unifies features and rebuilds base + catalog from nothing — filter with `-E` under the workspace set.
-   **A/B base: the `(-288)` tip triple (PERF Baseline, the second 2026-09-09 addendum)** sealed 2,371,809,802 / cube 2,420,971,650 / fixed 633,456,833
-   — taken on THIS box (Xeon 2.80 GHz, 4 cores) at the tip; the `(-287)` triple predates the five 2026-09-09 sealed-moving commits. RE-TAKE on a new box.
-2. **Gates at the tip (PERF Baseline, the second 2026-09-09 addendum):** suite 19,298 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical to
-   `2003d1cf` (195,806 / 27.49 / 611.9 / 0), determinism + thread_determinism ok, 295-302 games/s on this box; fresh-seed dflt sweeps 191,600 games
-   (cube 750..761, sealed 742..753, all 734..744, sos 737..748, fixed 729..732): one abort (fixed, re-swept clean), 0 cap / 0 stuck; the actor leg (audit build, 6,000 games / 605,635 rows) 0 stalls; searching-pilot mirrors (4,768 games) clean; 0 bare panics.
-3. **This run:** the sweep's third find (ENGINE_BACKLOG "third find"): the Crawler fix's sickness pre-check matched a bare `AddMana`, so a sick Wall
-   of Roots' `Seq`-wrapped counter mana aborted the `AB_SAC` / `AB_SELF_COUNTER` gate audits — the pre-check now asks `effect_produced_colors`, the
-   payer's own read (a pre-filter must be the gate's read). And `(-288)` (PERF Log): the two simulator binaries pose trigger picks without prompt
-   text (`game::set_prompt_text(false)`), sealed -0.296 % / cube -0.051 % (+ the mode picks' texts, -0.032 %), traces identical — the candidates'
-   "prompt text" entry, taken. Grid + pilots leg at fresh seeds (55 cells) clean.
-4. **Next moves:** (a) `scripts/fresh_seed_sweep.sh` on the audit build stays the cheapest bug finder (3 bugs / ~430 k games, the last 190 k clean; seeds taken — cube
-   through 761, sos through 748, all through 744, sealed through 753, fixed through 732, grid/pilots at 750-751; take the next); (b) the populated crack-back horizon is the one
-   strength round left (38 % of the actor), gate it; (c) engine self tables are the floor; the last prompt text left is the modal's prompt the bot
-   keys "sacrifice" / "discard" off (1,088 walks / ~0.1 % sealed) — a structural cost flag on `ChooseCards` would free it, wire-visible, not next.
+1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas in **CLAUDE.md**, measurement in
+   **PERF's "Standing rules"**. ⚠ Fetch before every push. ⚠ `rm -rf target/debug/incremental` before an optimized build. ⚠ `cargo nextest run -p <one
+   crate>` re-unifies features and rebuilds base + catalog — filter with `-E` under the workspace set. **A/B base: the `(-288)` triple (PERF Baseline,
+   the second 2026-09-09 addendum), taken on the SECOND box; the third box (calib 45-47) has no triple — RE-TAKE before any A/B.**
+2. **Gates at the tip (PERF Baseline, the third 2026-09-09 addendum):** suite 19,298 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical
+   to `2003d1cf`, determinism + thread_determinism ok, 427-462 games/s idle (a faster box, not code); 257,600 fresh-seed dflt games (cube 762..775,
+   sealed 754..767, all 745..758, sos 749..762, fixed 733..746) 0 abort / 0 stuck, 2 caps = Beacon (a), 12 draws = Flame Rift (c) in ENGINE_BACKLOG;
+   actor leg 20,000 games / 2.01 M rows / 0 stalls; grid + pilots at 766-767 (55 cells) clean; 0 bare panics; every no-build audit at its residue.
+3. **This run:** no code change — the candidates' engine side is the floor and its bot side is strength rounds, so ~450 k audit-build games; nothing new.
+4. **Next moves:** (a) dflt sweeps are past their yield (~880 k games / 3 bugs, the last ~450 k clean) — widen the *pilot* (`mcts` / `lookahead` /
+   `planner` / `abilarms` mirrors at `--games 400`) before more dflt seeds (next: cube 776, sealed 768, all 759, sos 763, fixed 747); (b) the populated
+   crack-back horizon is the one strength round left (38 % of the actor), gate it; (c) score a decided draw against the live board, not 0 (fingerprint
+   (c)), gate beside (b); (d) the modal's prompt text the bot keys off (~0.1 % sealed) needs a `ChooseCards` cost flag, wire-visible, not next.
    Nothing half-wired; no open TODO/FIXME.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

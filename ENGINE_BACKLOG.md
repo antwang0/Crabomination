@@ -814,6 +814,16 @@ board at turn 46, the printed landfall doubling. Every board walk is O(4,091),
 so 9,223 actions take 597 s. The game *decides* (the opponent is at −4,072), so
 **no undecided count can ever see it**; `CRAB_CAP_DIAG=5000` is what found it.
 
+**(c) A cell with a dozen `draw`s is Flame Rift (2026-09-09, cube seed 766:
+12 draws, six pairings x both seat orders, 0 elsewhere in 257,600 games).**
+"Flame Rift deals 4 damage to each player" with both seats at 4 life or
+less is a simultaneous loss, CR 104.4a. The trace ends `CastSpell { target:
+None }` → `life -1/0` → `= winner none`. The bot casts it because
+`eval_material_inner` scores a decided draw at 0 and the board it holds
+below that — a strength question for an ML session (a draw is worth 0 only
+when the alternative is worse), not an engine defect, and `draw` is already
+outside the sweep's failure count.
+
 ⚠ **The transferable half: a correct board can be quadratic.** An actor's
 throughput has a tail that is not a defect, and the two env-gated instruments
 above are how to tell one from the other before spending a build:

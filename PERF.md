@@ -2806,6 +2806,45 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-09 (third run) — no code change: 257,600 fresh-seed dflt games, the actor and pilots legs, every gate at the `(-288)` tip on a third box
+
+No perf leg and no engine change: the candidates queue's engine side reads
+floor (every open row is sub-0.2 % with a device, and the bot-side rows are
+strength rounds), so the run spent its budget on the cheapest bug finder and
+found nothing new. **The Ir base was NOT re-taken here** — this box is a
+different part (Xeon @ 2.10 GHz nominal, `host_calib_ms` 45-47 against the
+second run's 51-57) and no A/B was run on it; the next perf leg re-takes the
+triple first (Standing rules).
+
+```text
+sweep   scripts/fresh_seed_sweep.sh on the c93ee9ff audit build (target-audit/overflow, debug-assertions; 9m09s cold), dflt mirror x --games 400 x
+        --threads 3, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000 — block 1: cube 762..765 (12,800 games) 2 cap / 0 stuck / 4 draw; sealed 754..757
+        (19,200) 0 / 0 / 0; all 745..748 (27,200) 0 / 0 / 0; sos 749..752 (8,000) 0 / 0 / 0; fixed 733..736 (6,400) 0 / 0 / 0 — block 2: cube 766..775
+        (32,000) 0 / 0 / 12; sealed 758..767 (48,000) 0 / 0 / 0; all 749..758 (68,000) 0 / 0 / 2; sos 753..762 (20,000) 0 / 0 / 0; fixed 737..746
+        (16,000) 0 / 0 / 0 — 257,600 games, every rc 0, 0 stuck, 0 assertion. The 2 caps (cube 763) are ENGINE_BACKLOG's fingerprint (a), Beacon of
+        Immortality: twin i32::MAX life totals, lib 1, stack 0, an Azorius board at turn 285 under the 6,000 cap. The 12 draws (cube 766, six pairings x
+        both seat orders, archetypes 1 / 6 BR and 7 GR) are Flame Rift with both seats at <= 4 life — CR 104.4a, fingerprint (c) there; a strength
+        question (the bot scores a draw at 0 against a board it reads as losing), not a defect. Cell cost on this box: cube ~40 s, sealed ~70 s,
+        all ~100 s, sos ~25 s, fixed ~18 s (contended by a suite build and the actor build through most of it)
+actor   target-audit/overflow/selfplay_train (debug-assertions, 18m22s cold) --actors 3 --games 10000 --steps 2 at seeds 766 / 20260911:
+        1,011,148 / 1,003,659 rows, 0 stalls, no assertion, 92.4 / 91.5 games/s on the audit build (actors: line); stats.jsonl carries
+        games_per_s / rows_per_s per interval (68.0 / 6,859.5 on the first)
+grid    robustness_grid.sh --no-build --no-actor --pilots at FRESH SEEDS: the ladder leg {fixed, cube, sos, sealed, all} x seeds 766, 767 x 120 =
+        10 cells / 11,040 games, 0 failures, 0 cap / 0 stuck / 2 draw (cube 766, the Flame Rift pairings again); the pilots leg (45 policies vs gang,
+        --decks all, seed 766, 12 games) 45 cells, 0 failures — no panic / assertion / overflow anywhere
+gate    --bench release-fast (mimalloc, 15m52s cold contended) at c93ee9ff: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,787,168 (identical to 0085bddf); peak_rss_mib 28.2-28.7; 426.6 / 456.6 /
+        462.0 games/s idle at host_calib_ms 45-47 (315.5 contended by the 3-thread sweep at calib 45) — a faster box than the second run's
+        293.8-310.6 at calib 50-58, NOT a code movement: the counters say so
+suite   19,298 / 0 / 5 (152.6 s, contended; golden_trace 10 / 10 inside it); clippy --workspace --exclude crabomination_client --all-targets 0 warnings
+        (5m28s); cargo check --profile release-fast covered by the release-fast build itself; audit_panics.py 68 sites: 57 guarded / 11 lock /
+        0 bare; audit_variant_coverage.py 0 dead capability / 2 dead primitives (the documented pair); audit_catalog_stats.py 17,229 cards, every
+        nonzero cell (kw 20 / abil 1 / T-sac 3 / trig 6 / scope 3) a row INCOMPLETE_CARDS already lists as residue; audit_doc_drift 0 body wrong;
+        audit_keyword_value 0 wrong of 762; audit_bottom_random 0 / 0
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz nominal, 4 cores, 15 GB; cold debug suite build 9m08s contended, cold audit
+        bot_ladder 9m09s quiet
+```
+
 ### 2026-09-09 (second run) — the Wall of Roots pre-check and `(-288)`: closing state at the `(-288)` tip, THE NEW A/B BASE ON ALL THREE POOLS (a new box, the base RE-TAKEN)
 
 A new box (Xeon @ 2.80 GHz reads as 4 cores, 15 GB), so the three-pool
