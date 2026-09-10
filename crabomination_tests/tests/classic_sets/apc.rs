@@ -175,7 +175,9 @@ fn bloodfire_infusion_sweeps_for_the_hosts_power() {
     let theirs = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
     let aura = g.add_card_to_hand(0, catalog::bloodfire_infusion());
     cast(&mut g, 0, aura, Some(Target::Permanent(host)));
-    activate(&mut g, 0, host, 0, None);
+    // The Dragon's own firebreathing is ability 0; the granted sacrifice
+    // rides behind the printed abilities.
+    activate(&mut g, 0, host, 1, None);
     assert!(g.battlefield_find(theirs).is_none(), "5 damage killed it");
 }
 
