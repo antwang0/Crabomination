@@ -28,23 +28,19 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; **fetch before every push — two sessions shared the branch on
-   2026-09-10 and each rebased twice.** Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
-2. **Gates at the tip (PERF Baseline, the 2026-09-10 third- and fourth-run addenda):** suite green / clippy 0 / golden_trace 10/10 / `--bench`
-   counters identical to `2003d1cf` / determinism + thread_determinism ok at every commit of both runs; fresh-seed dflt sweeps cube 786..791,
-   sealed 779..781 + 789..791, all 769..771 + 789..791, sos 773..775 + 789..790, fixed 757..759 + 789..790: 0 cap / 0 stuck. 300-533.2 games/s on this box.
-3. **This run (third, `cnt`):** `audit_catalog_stats.py` opens the base crate's `effect::shortcut` helpers under every column and grew `cnt` (the
-   activated / triggered ability count against the oracle's lines) — **98 shipped cards fixed** in eight commits (INCOMPLETE_CARDS "The shortcut
-   helpers and the ability count"; the 130-row residue read to the card: `cnt` 62 = 14 one-edit + 23 primitive + 3 gate + engine-shape). Three
-   engine lines (`CreateTokenBlocking` off a blocks trigger, `MoveAllCounters` and `LastDamagerOf` off a card ref). **The fourth (concurrent):**
-   CR 603.3 — a cost-paid permanent's own dies / leaves triggers stack ABOVE the ability they paid for (ENGINE_BACKLOG "FIXED 2026-09-10 (fourth
-   find)"); Knowledge Vault re-shaped off it; `AlternativeCost::your_turn_only` and Mine Collapse; the cost-choice resume arms replay through
-   `perform_action` (fifth find — a `manual_mana` seat's replayed cast dispatched nothing); Severance Priest's Spirit. The full suite caught Mai draining the wrong
-   player — **run the touched test files, not only the new tests.** No trace or counter moved in either.
-4. **Next moves:** (a) the 14 one-edit `cnt` rows (INCOMPLETE_CARDS lists them; Emperor of Bones, Ersatz Gnomes, Barret first); (b) the three
-   graveyard gates (an attacking-with-a-Rat predicate, an enchantment-died-this-turn predicate, a drew-Nth-card event — ENGINE_BACKLOG "Triggers
-   that live in the graveyard"); (c) mirrors next: abilarms 920+, mirror 796+, mcts 775+, lookahead / planner 779+; dflt cube 791, sealed 791,
-   all 791, sos 790, fixed 790; (d) the crack-back horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF's candidates.
+   tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; **fetch before every push** (two sessions shared the branch on
+   2026-09-10). Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
+2. **Gates at the tip (PERF Baseline, the 2026-09-10 fifth-run addendum):** suite 19,380 / 0 / 5, clippy 0, golden_trace 10 / 10, `--bench` counters
+   identical to `2003d1cf`, determinism + thread_determinism ok; fresh-seed dflt sweeps cube / sealed / all 792..794, sos / fixed 791..792: 0 cap / 0 stuck;
+   abilarms 924..925, abilarms mirror 797, lookahead / planner 780, mcts 776 clean. ~308 games/s on this box (calib 50).
+3. **This run (fifth):** the dispatcher's graveyard walk had none of the battlefield walk's rules (ENGINE_BACKLOG "FIXED 2026-09-10 (sixth find)"):
+   `events::event_kind_fans_out` / `EventScope::from_graveyard()` are the one list / one predicate; `FromYourGraveyardAnyPlayer`, `YouAttack` from the
+   graveyard, `EventSpec::once_per_batch` ("one or more", all four walks, four cards migrated). Attuned Hunter was dead on the battlefield; Kami /
+   Sneaky Snacker (printed text) / Marshstalker / Barret shipped — every "missing gate" the backlog named already existed. `cnt` 62 -> 58.
+4. **Next moves:** (a) the 12 one-edit `cnt` rows left (INCOMPLETE_CARDS lists them; Emperor of Bones and Ersatz Gnomes are NOT one edit — the
+   entry says why); (b) the 23 `cnt` primitives (ENGINE_BACKLOG "The cnt triage's other primitives"); (c) mirrors next: abilarms 926+, mirror
+   798+, mcts 777+, lookahead / planner 781+; dflt cube / sealed / all 795+, sos / fixed 793+; (d) perf reads floor — the crack-back horizon
+   (38 % of the actor) is the one strength round left and is a ladder gate, not an Ir leg; prompt text stays in PERF's candidates.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

@@ -2806,6 +2806,50 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-10 (fifth run) — the graveyard walk under the battlefield walk's rules, `once_per_batch`, 68,384 fresh-seed games
+
+No perf leg (the queue's engine side still reads floor; the actor and
+sealed self tables above are unmoved since `9772ce0c`). One engine class
+fix off ENGINE_BACKLOG's graveyard-triggers entry: the dispatcher's
+graveyard walk had none of the battlefield walk's rules (no CR 603.6
+fan-out, no once-per-turn, no intervening-if gate before the slot, no
+replaced-death check); `events::event_kind_fans_out` is now the one list
+both walks read, `EventScope::from_graveyard()` the one scope predicate
+(seven hand-written sites, one of them a battlefield walk that fired a
+graveyard-scoped trigger — `declare_attackers`' YouAttack). Two primitives
+beside it: `FromYourGraveyardAnyPlayer` (the step walk visits every
+graveyard behind the lane) and `EventSpec::once_per_batch` ("one or more",
+honoured by all four walks; four shipped cards migrated off the
+once_per_turn approximation). Cards: Attuned Hunter (dead on the
+battlefield since it shipped), Kami of Transience's end-step return,
+Sneaky Snacker's printed third-draw return, Persistent Marshstalker's
+threshold return, Barret's begin-combat attach. `cnt` 62 -> 58.
+
+```text
+fix     eb215a98 (the graveyard walk, the scope predicate, the any-player step scope, the four cards) / 20832d4c (once_per_batch in
+        the two combat walks, four "one or more" migrations) / c406e7db (Barret): suite 19,380 / 0 / 5 (234 s, golden_trace 10 / 10
+        inside it) at 20832d4c; classic_sets 6,138 / 0 at c406e7db; audit_panics 0 bare (57 guarded / 11 lock-poison, unchanged)
+gate    --bench release-fast (mimalloc, 12m10s with deps warm) at c406e7db: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical
+        to 2003d1cf; determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,896,624 (+68,704 on the fourth run's tip);
+        peak_rss_mib 28.9; 307.7 games/s idle at host_calib_ms 50 (the third run's box class, not the fourth's)
+sweep   scripts/fresh_seed_sweep.sh on the eb215a98 audit build (target-audit/overflow, debug-assertions, 11m12s cold), dflt mirror
+        x --games 400 x --threads 3 beside a test build: cube 792 / 793, sealed 792 / 793, all 792 / 793 — 29,600 games, 0 cap /
+        0 stuck / 2 draws, 45-150 s a cell
+search  searching-pilot mirrors on the same build (CRAB_MAX_ACTIONS=6000 CRAB_CAP_DIAG=4000, 3 threads): abilarms vs gang x
+        {all, cube, sealed, sos} x 924 925 x 16 (8 cells, 1,344 games, 1-5 s each); abilarms mirror cube / sealed 797 x 16 (320);
+        lookahead and planner mirrors x {all, cube, sealed} x 780 x 200 (6 cells, 14,800 games, 8-21 s each); mcts mirror cube 776
+        x 40 (320 games, 791 s) — 16,784 games, every rc 0, 0 cap / 0 stuck
+final   audit build rebuilt at c406e7db (15m42s beside clippy): dflt mirror x 400 at cube 794 / sealed 794 / all 794 (14,800 games) and
+        sos 791 / 792, fixed 791 / 792 (7,200): 22,000 games, 0 cap / 0 stuck / 0 draws, 20-99 s a cell; clippy --workspace --exclude
+        crabomination_client --all-targets 0 warnings (6m47s; one `cloned_ref_to_slice_refs` in a new test fixed, core_rules 1,854 / 0 after)
+cost    the graveyard walk's extra work is per graveyard card with a graveyard trigger per dispatch (a filter read and a
+        `Vec::contains` on a list that is empty unless a once_per_turn graveyard trigger fired); the step walk reads one lane word
+        per non-active player per step; the YouAttack walk one lane word per declaration; `once_key` widens two tuple aliases by a
+        bool — not A/B'd, the counters and traces are the gate (no `fixed`-pool game holds a graveyard trigger of the new shapes)
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz nominal, 4 cores, 15 GB, calib 50; cold debug suite build ~10 min,
+        release-fast bot_ladder 12m10s with deps warm beside a sweep, audit bot_ladder 11m12s cold
+```
+
 ### 2026-09-10 (fourth run) — CR 603.3 for cost-paid death triggers, Mine Collapse's alternative cost, 51,600 fresh-seed games
 
 No perf leg (the queue's engine side still reads floor). Two engine fixes

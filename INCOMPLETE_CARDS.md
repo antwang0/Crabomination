@@ -1044,13 +1044,18 @@ full suite also caught Mai, Scornful Striker draining the *opponent*
 (`TriggerEventPlayer` is unbound on a SpellCast; `Triggerer` is the
 caster) — a trigger-column fix whose test had never run. Still one edit
 each: Touch the Spirit Realm's channel (the discard-activated body cannot
-target), Gideon's Company once a name-prefix requirement exists, Emperor
-of Bones, Ersatz Gnomes, Hauntwoods Shrieker, Eladamri, Pinnacle
-Starcage, Rydia, Diviner's Wand, Urborg Panther, Tephraderm's spell half,
-Skophos Maze-Warden, Shieldmage Elder, Iroh,
-Lumbering Laundry (Tephraderm's spell half, Hauntwoods Shrieker's reveal and
-Severance Priest's Spirit shipped the same day, with `LastDamagerOf` returning a departed damager —
-a resolved spell — as a card ref). The triage filed five cards as wanting a
+target), Gideon's Company once a name-prefix requirement exists, Hauntwoods
+Shrieker, Eladamri, Pinnacle Starcage, Rydia, Diviner's Wand, Urborg
+Panther, Tephraderm's spell half, Skophos Maze-Warden, Shieldmage Elder,
+Iroh, Lumbering Laundry (Tephraderm's spell half, Hauntwoods Shrieker's
+reveal and Severance Priest's Spirit shipped the same day, with
+`LastDamagerOf` returning a departed damager — a resolved spell — as a card
+ref; Barret's begin-combat attach the day after). Two read as one edit and
+are not: Emperor of Bones' counter-triggered deploy wants `DeployExiledCreature`
+to stamp `last_moved_cards` so a `Seq` can add the finality counter and
+`SacrificeAtNextEndStep { LastMoved }` behind it (a `ResolutionScratch`
+write — price it, CLAUDE.md's CoW rule); Ersatz Gnomes' spell half wants
+"target spell becomes colorless" (`SpellBecomesChosenColor` picks a colour). The triage filed five cards as wanting a
 graveyard trigger zone; `EventScope::FromYourGraveyard` is that zone, and
 two of them shipped as plain uses of it (Kozilek's Return, Afterburner
 Expert) — the other three (Kami of Transience, Sneaky Snacker, Persistent

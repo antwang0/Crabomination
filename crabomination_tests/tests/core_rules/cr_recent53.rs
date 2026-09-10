@@ -249,7 +249,7 @@ fn cr_603_4_a_failed_intervening_if_keeps_the_graveyard_once_per_turn_slot() {
     let c = g.add_card_to_library(0, catalog::forest());
     let draw = GameEvent::CardDrawn { player: 0, card_id: c };
     g.players[0].cards_drawn_this_turn = 2;
-    g.dispatch_triggers_for_events(&[draw.clone()]);
+    g.dispatch_triggers_for_events(std::slice::from_ref(&draw));
     assert!(g.stack.is_empty(), "the second draw is not the third");
     g.players[0].cards_drawn_this_turn = 3;
     g.dispatch_triggers_for_events(&[draw]);
