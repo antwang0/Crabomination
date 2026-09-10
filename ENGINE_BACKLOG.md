@@ -77,7 +77,14 @@ fund (`may_pay_prompt_affordable`: `find_maypay_cost` by description,
 never prices a body that cannot happen. Tests: `core_rules::cr_recent53::
 cr_605_3a_*` (two), `server::bot::tests::bot_declines_a_maypay_it_cannot_fund`.
 Golden traces unmoved (no traced game reaches a MayPay); the `--bench`
-counters are the gate for the `fixed` pool.
+counters are the gate for the `fixed` pool. **Still pool-only, by design
+for now:** the hand-initiated actions (`cycle_card`, `landcycle_card`,
+`reinforce_card`, `activate_discard_ability`, `offer_madness_cast`,
+`reconfigure`, `ninjutsu`, `player_casts_cheap_creature_free`) — the bot
+takes none of them (`rg 'GameAction::(Cycle|Ninjutsu|Reconfigure|Madness)'
+crabomination/src/server/bot.rs` is empty) and a client seat taps first
+under CR 601.2g proper tapping; give them `try_pay_with_auto_tap` when a
+bot learns one.
 
 ## FIXED 2026-09-10 (sixth find) — the graveyard walk had none of the battlefield walk's rules: no fan-out, no once-per-turn, no intervening-if gate; one step walk, one scope; Attuned Hunter dead on the battlefield
 
