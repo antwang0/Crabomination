@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Catalog-wide stat audit vs the real Scryfall cache (scripts/.scryfall_cache.json).
 
-Scans every card factory under crabomination_catalog/src/sets/ and checks four
-printed-stat dimensions against the cache: mana cost, power/toughness, creature
-subtypes, and keywords. Generalizes audit_stx_drift.py (cost+P/T, STX only) and
-audit_stx_types.py (type+keywords, STX only) to the whole catalog.
+Scans every card factory under crabomination_catalog/src/sets/ and checks the
+printed-stat columns against the cache: mana cost, power/toughness, creature
+subtypes, card / supertypes, keywords, activated-ability costs / timing /
+tap-sac halves, loyalty, token P/T, trigger events / scopes / filters, and
+the amounts an ability prints (`num`, INCOMPLETE_CARDS "Amounts").
+Generalizes audit_stx_drift.py (cost+P/T, STX only) and audit_stx_types.py
+(type+keywords, STX only) to the whole catalog.
 
   python3 scripts/audit_catalog_stats.py              # per-set summary table
   python3 scripts/audit_catalog_stats.py SET           # detail for one set (e.g. sos, thb)
@@ -118,6 +121,12 @@ def sym(call):
     if m: return "{%d/%s}" % (int(m.group(1)), COLOR[m.group(2)])
     m = re.match(r"phyrexian\(Color::(\w+)\)", call)
     if m: return "{%s/P}" % COLOR[m.group(1)]
+    # The spelled-out `ManaSymbol::` forms a `ManaCost::new(vec![..])` carries.
+    m = re.match(r"ManaSymbol::Generic\((\d+)\)", call)
+    if m: return "{%d}" % int(m.group(1))
+    m = re.match(r"ManaSymbol::Colored\(Color::(\w+)\)", call)
+    if m: return "{%s}" % COLOR[m.group(1)]
+    if call == "ManaSymbol::Colorless": return "{C}"
     return None
 
 def norm(mc):
@@ -1052,6 +1061,14 @@ def ability_mana_costs(body):
             out.append(norm("".join(syms)))
         elif re.match(r"mana_cost:\s*ManaCost::default\(\)", lit[found:]):
             out.append(())
+        elif (mn := re.match(r"mana_cost:\s*ManaCost::new\(vec!\[", lit[found:])):
+            # Blazing Rootwalla's shape (2026-09-10): the symbols spelled out.
+            a = found + mn.end() - 1
+            args = lit[a + 1:bracket_span(lit, a) - 1]
+            syms = [sym(c) for c in re.split(r",(?![^()]*\))", args) if c.strip()]
+            if not all(syms):
+                return None
+            out.append(norm("".join(syms)))
         else:
             return None
     return out
@@ -1080,6 +1097,177 @@ def ref_ability_mana_costs(card, face=None):
         syms = [s for s in re.findall(r"\{[^}]+\}", cost) if s not in ("{T}", "{Q}", "{E}")]
         out.append(norm("".join(syms)))
     return out
+
+# ── numbers ─────────────────────────────────────────────────────────────────
+# The amounts an ability prints ("deals 3 damage", "draw two cards", "put
+# two +1/+1 counters", "gets +2/+2") against the integer literals in the
+# code's literal for the same ability. Only an oracle number the code does
+# not carry anywhere in that literal is a row — the direction a wrong-amount
+# defect reads (Dynavolt Tower's 4 for a printed 3; Witch's Cauldron's "gain
+# the toughness" for a printed 1). Digits inside a mana symbol, a token's
+# N/N (the `tok` column), a loyalty prefix, reminder text and "Choose N —"
+# are not amounts. The word "one" is skipped: it is "one or more" / "one of
+# them" far more often than an amount, and the code's 1 is usually implicit.
+_NUM_WORDS = {"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+              "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+              "thirteen": 13, "fifteen": 15, "twenty": 20, "twice": 2}
+_CAMEL_NUM = {"Zero": 0, "One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5,
+              "Six": 6, "Seven": 7, "Eight": 8, "Nine": 9, "Ten": 10}
+
+def code_numbers(lit):
+    """Every integer the literal spells: bare literals, a trailing digit on an
+    identifier (`scry1`), and the number words of a CamelCase variant
+    (`PlusOnePlusOne` -> 1). The literal's own `mana_cost:` is not an amount."""
+    lit = re.sub(r"mana_cost:\s*cost\(&\[[^\]]*\]\)", "", lit)
+    lit = re.sub(r"//[^\n]*", "", lit)
+    nums = {int(n) for n in re.findall(r"(?<![\w.])-?\d+(?![\w.])", lit)}
+    nums |= {int(n) for n in re.findall(r"(?<=[a-z_])(\d+)\b", lit)}
+    # "Search your library for up to two ..." as two `search_*` calls.
+    searches = len(re.findall(r"\bsearch_\w+\(|Effect::Search\b", lit))
+    if searches > 1:
+        nums.add(searches)
+    for w, n in _CAMEL_NUM.items():
+        if re.search(rf"[A-Z][a-z]*{w}(?=[A-Z]|\b)|\b{w}(?=[A-Z])|::{w.upper()}\b|\b{w.lower()}_", lit):
+            nums.add(n)
+    # "two target creatures" as a second target slot.
+    nums |= {int(k) + 1 for k in re.findall(r"\bslot:\s*(\d+)", lit)}
+    return {abs(n) for n in nums}
+
+# Threshold clauses an ability word defines, met by a predicate helper
+# (`FormidableActive`, `delirium()`, `coven()`), and the alternative-cost
+# sentences a spell's `alternative_cost:` carries, not its `effect:`.
+_ORACLE_IDIOMS = [
+    r"four or more card types among cards in your graveyard",
+    r"three or more artifacts",
+    r"three or more creatures with different powers",
+    r"a creature with power 4 or greater",
+    r"(?:you have )?5 or less life",
+    r"two or more instant and/or sorcery cards in your graveyard",
+    r"creatures you control have total power 8 or greater",
+    r"seven or more cards in your graveyard",
+    r"[^.]*rather than pay[^.]*\.",
+    r"[^.]*costs? [^.]*less to cast[^.]*\.",
+    r"[^.]*for each [^.]*\.",
+    r"\bwith (?:one|two|three|four|five|\d+) or more \w+ counters?\b",
+    r"three or more poison counters",
+    r"two or more tapped creatures",
+    r"two or more nonland permanents entered the battlefield",
+    r"(?:if )?two or more [^,.]* (?:are )?tied\b",
+    r"(?:into|in) two piles",
+    r"(?:can't|cannot) be 0\b",
+    r"\bany number\b",
+    r"\bat least (?:two|three|four) other\b",
+    r"\bamong one, two, or three\b",
+    r"\btoxic \d\b",
+    r"\bcollect evidence \d+\b",
+    # A granted or token ability in quotes is a nested literal the token
+    # reader strips from the code.
+    r"\"[^\"]*\"",
+]
+
+def oracle_numbers(text, name=None):
+    """The amounts one oracle ability prints, as a set."""
+    if name:
+        text = text.replace(name, " ")
+    text = re.sub(r"\{[^}]*\}", " ", text)
+    text = re.sub(r"\bChoose (?:one|two|three|four|any number)\b[^.]*", " ", text)
+    for rx in _ORACLE_IDIOMS:
+        text = re.sub(rx, " ", text, flags=re.I)
+    # A token's or a face's N/N is the `tok` / `P/T` column; a signed +N/+M
+    # pump or counter is an amount.
+    text = re.sub(r"(?<![+\-−])\b\d+/\d+\b", " ", text)
+    text = re.sub(r"[+\-−](\d+)/[+\-−](\d+)", r" \1 \2 ", text)
+    text = re.sub(r"\b(\d+),(\d{3})\b", r"\1\2", text)
+    nums = {int(n) for n in re.findall(r"\b\d+\b", text)}
+    for w, n in _NUM_WORDS.items():
+        if re.search(rf"\b{w}\b", text, re.I):
+            nums.add(n)
+    return nums
+
+def _oracle_ability_lines(text):
+    """The oracle split into abilities: `(kind, effect text)` with kind
+    `act` for a `{cost}: effect` line, `trig` for a When / Whenever / At
+    line, `other` for the rest (keyword lines, statics, a spell's text). A
+    `•` mode bullet joins the line above it; loyalty and level lines drop."""
+    text = re.sub(r"\([^)]*\)", "", text)
+    lines = []
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("•") and lines:
+            lines[-1] = (lines[-1][0], lines[-1][1] + " " + line)
+            continue
+        if re.match(r"^(?:[+\-−]?\d+|0):", line) or line.upper().startswith("LEVEL "):
+            continue
+        # A keyword line with its number ("Suspend 4—{G}", "Dredge 3",
+        # "Casualty 3", "Awaken 4—{4}{W}", "Ward 2") is a `keywords:` entry.
+        if re.match(r"^(?:[A-Z][a-z]+(?: [a-z]+)? \d+\b|Cumulative upkeep|Kicker|Buyback|Cycling|Flashback|Overload|Escape|Prowl|Madness|Morph|Ninjutsu|Unearth|Bestow|Evoke|Equip|Fortify|Transmute|Channel|Splice|Recover|Retrace|Scavenge|Outlast|Dash|Surge|Emerge|Embalm|Eternalize|Jump-start|Spectacle|Afterlife|Riot|Mutate|Foretell|Boast|Disturb|Cleave|Blitz|Casualty|Prototype|Backup|Toxic|Craft|Plot|Offspring|Impending|Gift)\b", line):
+            continue
+        m = _ORACLE_ACT.match(line)
+        if m:
+            lines.append(("act", line[m.end():]))
+        elif _ORACLE_TRIG_LINE.match(line):
+            lines.append(("trig", line))
+        else:
+            lines.append(("other", line))
+    return lines
+
+def local_bindings(body):
+    """The card body's own `let name = ..;` and `fn name(..) { .. }` items
+    before its `CardDefinition`, as `name -> integer set`, so a literal that
+    reads `effect: shrink.clone()` or `effect: gain()` carries the numbers
+    the binding spells (Cabal Patriarch, Sangromancer)."""
+    head = body.split("CardDefinition {", 1)[0]
+    out = {}
+    for m in re.finditer(r"\b(?:let|fn)\s+(\w+)\b", head):
+        k = re.search(r"[\[({=]", head[m.end():])
+        if not k:
+            continue
+        start = m.end() + k.start()
+        if head[start] == "=":
+            span = re.search(r";\n", head[start:])
+            text = head[start: start + span.end()] if span else head[start:]
+        else:
+            text = head[start: bracket_span(head, start)]
+        out[m.group(1)] = code_numbers(text)
+    return out
+
+def with_bindings(lit, bindings):
+    nums = code_numbers(lit)
+    for name, n in bindings.items():
+        if re.search(rf"\b{name}\b", lit):
+            nums |= n
+    return nums
+
+def ability_numbers(body, kind):
+    """Per literal of the kind (`act` / `trig`), the integer set the code
+    spells (its own and its local bindings'); `None` when the vec has a
+    helper call."""
+    lits = ability_literals(body) if kind == "act" else trigger_literals(body)
+    if lits is None:
+        return None
+    b = local_bindings(body)
+    return [with_bindings(l, b) for l in lits]
+
+def spell_numbers(body):
+    """The integer set of an instant's or sorcery's whole body (its
+    `effect:`, a `gift:` / kicker branch, the local bindings), minus its
+    own `cost:` and name; `None` when the card has no `effect:` literal."""
+    if own_field(body, r"(?<![:\w])effect:(?!:)\s*(?:Some\()?") is None:
+        return None
+    body = re.sub(r"\bcost:\s*cost\(&\[[^\]]*\]\)", "", body)
+    body = re.sub(r"\bname:\s*\"[^\"]*\"", "", body)
+    return with_bindings(body, local_bindings(body))
+
+def numbers_mismatch(code, ref):
+    """No one-to-one assignment of literals to oracle abilities carries every
+    oracle amount in the literal it is assigned to."""
+    def fit(i, free):
+        if i == len(ref):
+            return True
+        return any(ref[i] <= code[j] and fit(i + 1, free - {j}) for j in free)
+    return not fit(0, frozenset(range(len(code))))
 
 def toplevel_keywords(body):
     """Same rule as `toplevel_cost_args`: the card's own literal, not a bound
@@ -1499,7 +1687,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -1662,6 +1850,23 @@ def audit():
             if fw is not None and ref_fw is not None and len(fw) == len(ref_fw):
                 if filter_mismatch(fw, ref_fw):
                     d["filt"].append((tag, [sorted(c[1]) if c is not None else "-" for c in fw], [sorted(f) if f is not None else "-" for f in ref_fw]))
+            # amounts: the oracle numbers of each activation / trigger line
+            # (and a spell's text) must appear in the literal assigned to
+            # it, one-to-one, same count gate. Statics are not read.
+            ref_lines = _oracle_ability_lines((face or card).get("oracle_text") or "")
+            cname = (face or card).get("name")
+            for kind in ("act", "trig"):
+                nums = ability_numbers(body, kind)
+                ref_nums = [oracle_numbers(t, cname) for k, t in ref_lines if k == kind]
+                if nums is not None and len(nums) == len(ref_nums) and any(ref_nums) \
+                        and numbers_mismatch(nums, ref_nums):
+                    d["num"].append((tag, [sorted(n) for n in nums], [sorted(n) for n in ref_nums]))
+            tl = (face or card).get("type_line") or ""
+            if re.search(r"\b(?:Instant|Sorcery)\b", tl):
+                sn = spell_numbers(body)
+                ref_sn = set().union(*[oracle_numbers(t, cname) for k, t in ref_lines if k == "other"]) if ref_lines else set()
+                if sn is not None and ref_sn and not ref_sn <= sn:
+                    d["num"].append((tag, sorted(sn), sorted(ref_sn)))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -1678,21 +1883,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}")
-        print("-" * 104)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}")
+        print("-" * 110)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 104)
+        print("-" * 110)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 
