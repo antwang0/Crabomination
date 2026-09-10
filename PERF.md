@@ -2836,6 +2836,13 @@ sweep   scripts/fresh_seed_sweep.sh on the tip audit build (target-audit/overflo
         --threads 3: cube 788 / sealed 781 / all 771 / sos 775 / fixed 759 (18,400 games, 0 cap / 0 stuck / 4 draws); cube 789 / sealed 789 /
         all 789 / sos 789 / fixed 789 (18,400, 0 / 0 / 0); cube 790 / sealed 790 / all 790 (14,800, 0 / 0 / 0) — 51,600 games, every rc 0,
         12-74 s a cell on this box
+search  searching-pilot mirrors on the same audit build (CRAB_MAX_ACTIONS=6000 CRAB_CAP_DIAG=4000, 3 threads): abilarms vs gang x {all, cube,
+        sealed, sos} x 920..923 x 16 (16 cells, 2,687 games) — ONE cap on all 922: 1,090 Goblins at 717 actions, two Krenko, Mob Boss under an
+        Ensnaring Bridge with both hands empty, the 1,024-permanent battlefield cap ending a true infinite (ENGINE_BACKLOG "FIXED 2026-09-08
+        (third run)"), not a defect; lookahead and planner mirrors x {all, cube, sealed} x 779 x 200 (6 cells, 14,800 games) clean; mcts
+        mirror cube 775 x 40 (320 games, 364 s) clean; abilarms mirror cube / sealed 796 x 16 (320) clean — 18,127 games, every rc 0
+actor   target-audit/overflow/selfplay_train (debug-assertions, 12m59s beside the mirrors) --actors 3 --steps 2 --games 4000 --seed 20260910:
+        403,838 rows, 0 stalls, no assertion, 97.4 games/s on the audit build (actors: line), 7,897 rows/s on the first interval
 cost    the deferral is one `stack.len()` compare per cost-side death plus an `is_empty` read at the dispatcher's top (beside
         `pending_cost_events`'); the scratch write happens only when the leaving permanent had a self trigger — not A/B'd, the counters
         and traces are the gate

@@ -1047,9 +1047,9 @@ each: Touch the Spirit Realm's channel (the discard-activated body cannot
 target), Gideon's Company once a name-prefix requirement exists, Emperor
 of Bones, Ersatz Gnomes, Hauntwoods Shrieker, Eladamri, Pinnacle
 Starcage, Rydia, Diviner's Wand, Urborg Panther, Tephraderm's spell half,
-Skophos Maze-Warden, Shieldmage Elder, Severance Priest's Spirit, Iroh,
-Lumbering Laundry (Tephraderm's spell half and Hauntwoods Shrieker's reveal
-shipped the same day, with `LastDamagerOf` returning a departed damager —
+Skophos Maze-Warden, Shieldmage Elder, Iroh,
+Lumbering Laundry (Tephraderm's spell half, Hauntwoods Shrieker's reveal and
+Severance Priest's Spirit shipped the same day, with `LastDamagerOf` returning a departed damager —
 a resolved spell — as a card ref). The triage filed five cards as wanting a
 graveyard trigger zone; `EventScope::FromYourGraveyard` is that zone, and
 two of them shipped as plain uses of it (Kozilek's Return, Afterburner
