@@ -612,12 +612,10 @@ impl GameState {
         let mut cursor = 0;
         let mut bounce: Vec<CardId> = Vec::new();
         for (id, owner_seat) in targets {
-            // Ask only when the pool could actually cover it (CR 118.6 — you
-            // can't choose to pay a cost you can't pay).
-            let can_pay = {
-                let mut probe = self.players[owner_seat].mana_pool.clone();
-                probe.pay(cost).is_ok()
-            };
+            // Ask only when the seat could actually cover it — pool plus
+            // untapped sources (CR 118.6 — you can't choose to pay a cost you
+            // can't pay).
+            let can_pay = self.could_pay_cost(owner_seat, cost);
             let paid = can_pay
                 && match self.ask_seat_bool(
                     &mut cursor,
@@ -629,9 +627,7 @@ impl GameState {
                     Some(yes) => yes,
                     None => return Ok(()),
                 };
-            if paid {
-                let _ = self.players[owner_seat].mana_pool.pay(cost);
-            } else {
+            if !(paid && self.pay_mana_cost_with_picks(owner_seat, cost, None, events)) {
                 bounce.push(id);
             }
         }
@@ -3606,7 +3602,7 @@ impl GameState {
                         return Ok(());
                     };
                     self.clear_answer_log();
-                    if yes && self.players[seat].mana_pool.pay(&surcharge).is_ok() {
+                    if yes && self.pay_mana_cost_with_picks(seat, &surcharge, None, events) {
                         enters
                     } else {
                         ZoneDest::Graveyard
@@ -5580,7 +5576,7 @@ impl GameState {
                     else {
                         return Ok(());
                     };
-                    if !yes || self.players[seat].mana_pool.pay(mana_cost).is_err() {
+                    if !yes || !self.pay_mana_cost_with_picks(seat, mana_cost, None, events) {
                         break;
                     }
                     self.run_effect(body, ctx, events)?;
@@ -5602,7 +5598,7 @@ impl GameState {
                 };
                 self.clear_answer_log();
                 let sub = EffectContext { controller: seat, ..ctx.clone() };
-                let pay = yes && self.players[seat].mana_pool.pay(mana_cost).is_ok();
+                let pay = yes && self.pay_mana_cost_with_picks(seat, mana_cost, None, events);
                 if pay {
                     self.run_effect(body, &sub, events)?;
                 } else if let Some(e) = else_ {
@@ -5628,13 +5624,15 @@ impl GameState {
                     return Ok(());
                 }
                 // Sibling to `MayDo`: ask yes/no, then *attempt* to pay
-                // mana. If the controller declines or can't afford the
-                // cost the body is skipped and `else_` (if any) runs.
-                // The cost is deducted from the controller's already-
-                // floated mana pool — we don't auto-tap lands inside an
-                // effect (mana abilities aren't activatable mid-resolve
-                // by default). A `wants_ui` controller gets the yes/no
-                // modal via the seat-routed suspend.
+                // mana — the floating pool first, then the controller's
+                // untapped sources (`pay_mana_cost_with_picks`, the echo /
+                // "unless pays" path; CR 605.3a lets mana abilities be
+                // activated while paying a cost mid-resolution). The
+                // pool-only form left every "you may pay" dead for a bot
+                // seat, whose pool is empty at resolution. If the controller
+                // declines or can't afford the cost the body is skipped and
+                // `else_` (if any) runs. A `wants_ui` controller gets the
+                // yes/no modal via the seat-routed suspend.
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
@@ -5647,8 +5645,7 @@ impl GameState {
                     return Ok(());
                 };
                 self.clear_answer_log();
-                let pay = yes
-                    && self.players[ctx.controller].mana_pool.pay(mana_cost).is_ok();
+                let pay = yes && self.pay_mana_cost_with_picks(ctx.controller, mana_cost, None, events);
                 if pay {
                     self.run_effect(body, ctx, events)?;
                 } else if let Some(e) = else_ {
@@ -5665,7 +5662,11 @@ impl GameState {
                 // body as `ctx.x_value`.
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
-                let pool_max = self.players[ctx.controller].mana_pool.total();
+                // The most X could be: the pool plus one per untapped source
+                // (a bound — a source adding two is under-counted; the payment
+                // below is the truth and a failed one runs nothing).
+                let pool_max = self.players[ctx.controller].mana_pool.total()
+                    + self.mana_source_candidates(ctx.controller).len() as u32;
                 if pool_max == 0 {
                     return Ok(());
                 }
@@ -5694,7 +5695,7 @@ impl GameState {
                     return Ok(());
                 }
                 let x_cost = crate::mana::ManaCost::new(vec![crate::mana::generic(n)]);
-                if self.players[ctx.controller].mana_pool.pay(&x_cost).is_err() {
+                if !self.pay_mana_cost_with_picks(ctx.controller, &x_cost, None, events) {
                     return Ok(());
                 }
                 let mut sub = ctx.clone();
@@ -7204,11 +7205,12 @@ impl GameState {
             }
 
             Effect::PayManaOrElse { mana_cost, otherwise } => {
-                // Mana sibling of PayEnergyOrElse — pay from the floating
-                // pool when able (AutoDecider keeps the permanent),
-                // otherwise resolve the fallback (sacrifice / bounce).
+                // Mana sibling of PayEnergyOrElse — pay from the pool and
+                // the untapped sources when able (AutoDecider keeps the
+                // permanent), otherwise resolve the fallback (sacrifice /
+                // bounce).
                 let p = ctx.controller;
-                if self.players[p].mana_pool.pay(mana_cost).is_err() {
+                if !self.pay_mana_cost_with_picks(p, mana_cost, None, events) {
                     self.run_effect(otherwise, ctx, events)?;
                 }
                 Ok(())

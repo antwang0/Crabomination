@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-10 (seventh find) — every "you may pay" / "pay or else" effect paid from the floating pool only, so a bot seat never paid: 149 `MayPay` sites dead in self-play](#fixed-2026-09-10-seventh-find--every-you-may-pay--pay-or-else-effect-paid-from-the-floating-pool-only-so-a-bot-seat-never-paid-149-maypay-sites-dead-in-self-play) | 26 |
 | Bugs & robustness | [FIXED 2026-09-10 (sixth find) — the graveyard walk had none of the battlefield walk's rules: no fan-out, no once-per-turn, no intervening-if gate; one step walk, one scope; Attuned Hunter dead on the battlefield](#fixed-2026-09-10-sixth-find--the-graveyard-walk-had-none-of-the-battlefield-walks-rules-no-fan-out-no-once-per-turn-no-intervening-if-gate-one-step-walk-one-scope-attuned-hunter-dead-on-the-battlefield) | 30 |
 | Bugs & robustness | [FIXED 2026-09-10 (fifth find) — a cast or activation resumed from a cost-choice prompt returned its events to nobody](#fixed-2026-09-10-fifth-find--a-cast-or-activation-resumed-from-a-cost-choice-prompt-returned-its-events-to-nobody) | 17 |
 | Bugs & robustness | [FIXED 2026-09-10 (fourth find) — a cost-paid permanent's own dies trigger stacked below the spell or ability it paid for; Mine Collapse's alternative cost](#fixed-2026-09-10-fourth-find--a-cost-paid-permanents-own-dies-trigger-stacked-below-the-spell-or-ability-it-paid-for-mine-collapses-alternative-cost) | 22 |
@@ -53,6 +54,30 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-10 (seventh find) — every "you may pay" / "pay or else" effect paid from the floating pool only, so a bot seat never paid: 149 `MayPay` sites dead in self-play
+
+`Effect::MayPay`, `MayPayBy`, `MayPayRepeatedly`, `MayPayX`, `PayManaOrElse`,
+`run_each_unless_pays` (the mass "pay to keep this permanent" walk) and
+Transmute Artifact's surcharge all ran `mana_pool.pay(cost)`
+— the pool and nothing else, with a comment saying mana abilities are not
+activatable mid-resolve. Echo, cumulative upkeep and every "unless [player]
+pays" already went through `try_pay_with_auto_tap` (CR 605.3a: a mana
+ability may be activated while paying a cost during resolution). A bot
+seat's pool is empty at trigger resolution (pools empty between steps and
+the bot taps as it casts), so Punishing Fire never came back, Horizon
+Spellbomb never drew, a Rhystic-style "pay {1} to deny" never denied, a
+"pay {2}: draw" never drew — the yes/no policy answered yes and the payment
+failed silently. Now every site pays through `pay_mana_cost_with_picks(
+payer, cost, None, events)` (pool first, then untapped sources, the
+payer holding priority for the taps) and `MayPayX`'s X bound is the pool
+plus one per untapped source. The bot screens a `MayPay` prompt it cannot
+fund (`may_pay_prompt_affordable`: `find_maypay_cost` by description,
+`can_afford_from` over `available_mana`) so the outcome second opinion
+never prices a body that cannot happen. Tests: `core_rules::cr_recent53::
+cr_605_3a_*` (two), `server::bot::tests::bot_declines_a_maypay_it_cannot_fund`.
+Golden traces unmoved (no traced game reaches a MayPay); the `--bench`
+counters are the gate for the `fixed` pool.
 
 ## FIXED 2026-09-10 (sixth find) — the graveyard walk had none of the battlefield walk's rules: no fan-out, no once-per-turn, no intervening-if gate; one step walk, one scope; Attuned Hunter dead on the battlefield
 

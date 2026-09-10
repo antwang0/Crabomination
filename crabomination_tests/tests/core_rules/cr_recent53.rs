@@ -7,6 +7,7 @@
 
 use crabomination::card::{CardType, CounterType};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::{Duration, Effect, Selector, Value};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
 use crabomination::game::*;
@@ -335,4 +336,34 @@ fn cr_603_2c_one_or_more_deaths_fires_once_a_batch_and_again_later_in_the_turn()
         2,
         "a later death fires again"
     );
+}
+
+// ── CR 605.3a / 118.3 — paying a "you may pay" mid-resolution ─────────────
+
+/// CR 605.3a — a "you may pay {R}" trigger resolving with an empty pool taps
+/// the controller's Mountain for it (the echo path), instead of silently
+/// failing the payment: Punishing Fire comes back to hand.
+#[test]
+fn cr_605_3a_a_you_may_pay_trigger_taps_a_land_when_the_pool_is_empty() {
+    let mut g = two_player_game();
+    let fire = g.add_card_to_graveyard(0, catalog::punishing_fire());
+    let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 1, amount: 2 }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == fire), "Punishing Fire returned");
+    assert!(g.battlefield_find(mountain).unwrap().tapped, "the Mountain paid for it");
+}
+
+/// CR 605.3a — with no source to tap the payment fails and the body is
+/// skipped, as before.
+#[test]
+fn cr_605_3a_an_unfundable_you_may_pay_runs_nothing() {
+    let mut g = two_player_game();
+    let fire = g.add_card_to_graveyard(0, catalog::punishing_fire());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 1, amount: 2 }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fire), "stays in the graveyard");
 }

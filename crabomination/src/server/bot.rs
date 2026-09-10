@@ -2951,8 +2951,9 @@ fn decide_pending_policy_inner(
                 // gates it off inside sims): sacrifice-for-value and
                 // pay-for-payoff bodies are exactly the trades a blanket
                 // decline can't judge. Strictly-better-or-keep-declining.
-                let take = optional_trigger_beneficial(state, *source, description);
-                if !take && eval_modes {
+                let affordable = may_pay_prompt_affordable(state, seat, *source, description);
+                let take = affordable && optional_trigger_beneficial(state, *source, description);
+                if !take && affordable && eval_modes {
                     decide_optional_by_outcome(state, seat, w).unwrap_or(false)
                 } else {
                     take
@@ -4005,35 +4006,7 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
 /// which means a bot would never take a beneficial "you may" (Provoke's
 /// "you may", Boast token riders, etc.); this makes those fire.
 pub fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &str) -> bool {
-    // Locate the source card's definition in any zone the bot can see.
-    let def = state
-        .battlefield
-        .iter()
-        .find(|c| c.id == source)
-        .map(|c| &c.definition)
-        .or_else(|| {
-            state
-                .players
-                .iter()
-                .flat_map(|p| p.graveyard.iter().chain(p.hand.iter()))
-                .find(|c| c.id == source)
-                .map(|c| &c.definition)
-        })
-        // A resolving SPELL lives on the stack — without this, any
-        // instant/sorcery's self-costly MayDo fell through to the
-        // blanket-true fallback below.
-        .or_else(|| {
-            state.stack.iter().find_map(|si| match si {
-                crate::game::types::StackItem::Spell { card, .. } if card.id == source => {
-                    Some(&card.definition)
-                }
-                _ => None,
-            })
-        })
-        // A Paradigm card prompts from EXILE (`CastFreeParadigmCopy`),
-        // as do other exile-resident recurrences.
-        .or_else(|| state.exile.iter().find(|c| c.id == source).map(|c| &c.definition));
-    let Some(def) = def else { return true };
+    let Some(def) = optional_trigger_def(state, source) else { return true };
     // Find the `MayDo` body whose description matches the prompt. Scan the
     // card's spell effect, its triggered abilities, and any static-ability
     // reflexive (`when_you_do`) — the prompt can originate from any of these
@@ -4118,6 +4091,80 @@ fn removal_targets_own_permanent(state: &GameState, body: &Effect) -> bool {
         return false;
     };
     state.battlefield.find_by_id(*id).is_some_and(|c| c.controller == *controller)
+}
+
+/// The prompting card's definition, in any zone the bot can see: the
+/// battlefield, a graveyard or hand, the stack (a resolving spell's own
+/// MayDo) or exile (a Paradigm card's `CastFreeParadigmCopy`).
+fn optional_trigger_def(state: &GameState, source: CardId) -> Option<&CardDefinition> {
+    state
+        .battlefield
+        .iter()
+        .find(|c| c.id == source)
+        .map(|c| &**c.definition)
+        .or_else(|| {
+            state
+                .players
+                .iter()
+                .flat_map(|p| p.graveyard.iter().chain(p.hand.iter()))
+                .find(|c| c.id == source)
+                .map(|c| &**c.definition)
+        })
+        .or_else(|| {
+            state.stack.iter().find_map(|si| match si {
+                crate::game::types::StackItem::Spell { card, .. } if card.id == source => {
+                    Some(&**card.definition)
+                }
+                _ => None,
+            })
+        })
+        .or_else(|| state.exile.iter().find(|c| c.id == source).map(|c| &**c.definition))
+}
+
+/// The mana cost behind a `MayPay` / `MayPayBy` / `MayPayRepeatedly` prompt
+/// keyed on `desc`, walking the same shapes as [`find_maydo_body`].
+fn find_maypay_cost<'a>(eff: &'a Effect, desc: &str) -> Option<&'a crate::mana::ManaCost> {
+    match eff {
+        Effect::MayPay { description, mana_cost, .. }
+        | Effect::MayPayBy { description, mana_cost, .. }
+        | Effect::MayPayRepeatedly { description, mana_cost, .. }
+            if description == desc =>
+        {
+            Some(mana_cost)
+        }
+        Effect::MayDo { body, .. }
+        | Effect::MayPay { body, .. }
+        | Effect::MayPayBy { body, .. }
+        | Effect::MayTap { then: body, .. }
+        | Effect::MayDiscard { then: body, .. }
+        | Effect::ForEach { body, .. } => find_maypay_cost(body, desc),
+        Effect::Seq(v) => v.iter().find_map(|e| find_maypay_cost(e, desc)),
+        Effect::ChooseMode(v)
+        | Effect::ChooseN { modes: v, .. }
+        | Effect::Escalate { modes: v, .. }
+        | Effect::EscalatingThisTurn { modes: v } => {
+            v.iter().find_map(|e| find_maypay_cost(e, desc))
+        }
+        Effect::If { then, else_, .. } => {
+            find_maypay_cost(then, desc).or_else(|| find_maypay_cost(else_, desc))
+        }
+        _ => None,
+    }
+}
+
+/// Can `seat` pay the mana a "you may pay" prompt asks for — pool plus
+/// untapped sources? The engine taps for the answer (the echo path), so a
+/// yes the seat cannot fund would tap nothing and run nothing; screening it
+/// here keeps the outcome second opinion from pricing a body that cannot
+/// happen. A prompt with no mana cost (a plain MayDo) is always affordable.
+fn may_pay_prompt_affordable(state: &GameState, seat: usize, source: CardId, desc: &str) -> bool {
+    let Some(def) = optional_trigger_def(state, source) else { return true };
+    let cost = find_maypay_cost(&def.effect, desc)
+        .or_else(|| def.triggered_abilities.iter().find_map(|t| find_maypay_cost(&t.effect, desc)));
+    match cost {
+        Some(c) => c.cmc() == 0 || can_afford_from(c, &available_mana(state, seat), 0, 0),
+        None => true,
+    }
 }
 
 /// Recursively find the optional-effect body whose prompt is `desc`. Both
@@ -16512,6 +16559,38 @@ mod tests {
         let id = g.add_card_to_battlefield(0, def);
         assert!(!optional_trigger_beneficial(&g, id, "you may pay"),
             "a MayPay whose body costs the bot 3 life is declined");
+    }
+
+    /// A "you may pay" the seat cannot fund from its pool and untapped sources
+    /// is declined; with the lands it is affordable and taken.
+    #[test]
+    fn bot_declines_a_maypay_it_cannot_fund() {
+        use crate::card::{CardType, TriggeredAbility};
+        use crate::effect::{EventKind, EventScope, EventSpec, Selector, Value};
+        let mut g = two_player_game();
+        let def = CardDefinition {
+            name: "PayForCards",
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayPay {
+                    description: "pay {3}: draw".to_string(),
+                    mana_cost: crate::mana::cost(&[crate::mana::generic(3)]),
+                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                    else_: None,
+                },
+            }],
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, def);
+        g.add_card_to_battlefield(0, crate::catalog::forest());
+        assert!(!may_pay_prompt_affordable(&g, 0, id, "pay {3}: draw"), "one land cannot pay {{3}}");
+        g.add_card_to_battlefield(0, crate::catalog::forest());
+        g.add_card_to_battlefield(0, crate::catalog::forest());
+        assert!(may_pay_prompt_affordable(&g, 0, id, "pay {3}: draw"), "three lands can");
+        assert!(optional_trigger_beneficial(&g, id, "pay {3}: draw"), "and a draw is upside");
     }
 
     /// Moving the source to exile/graveyard is a self-cost (decline); returning

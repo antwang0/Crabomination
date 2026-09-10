@@ -92,12 +92,15 @@ pub fn archway_commons() -> CardDefinition {
         name: "Archway Commons",
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add_any_color()],
+        // The tax after the tap in the list, so the tap resolves first: the
+        // engine's "enters tapped" is an ETB trigger, and a tax resolving on
+        // the still-untapped land would tap the land itself to pay it.
         triggered_abilities: vec![
-            etb_tap(),
             etb(Effect::PayManaOrElse {
                 mana_cost: cost(&[generic(1)]),
                 otherwise: Box::new(Effect::SacrificeSource),
             }),
+            etb_tap(),
         ],
         ..Default::default()
     }
