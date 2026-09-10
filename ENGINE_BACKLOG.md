@@ -2500,6 +2500,48 @@ the ability is on the stack) — a golden-trace change, so it needs its own
 commit and a bench. Found 2026-09-10 by the `cnt` audit column's Spellbomb
 fix; the test isolates the trigger instead of pinning the order.
 
+### Triggers that live in the graveyard — the scope exists; three gates do not
+
+`EventScope::FromYourGraveyard` is the graveyard-resident trigger (the
+dispatcher walks graveyards for it; 44 cards use it, on SpellCast,
+StepBegins, LandPlayed, ExhaustAbilityActivated, ..). The `cnt` triage
+(INCOMPLETE_CARDS, 2026-09-10) first filed five cards as wanting a zone
+field; two of them were plain uses of the scope and shipped the same day
+(Kozilek's Return, Afterburner Expert). The three left want a *gate*, not
+a zone: Persistent Marshstalker's "whenever you attack with one or more
+Rats" (no attacking-with-a-matching-creature predicate — only
+`AttackingWithAtLeast(n)`) and its "return tapped and attacking" for a
+card (only tokens enter attacking); Kami of Transience's "if an
+enchantment was put into your graveyard from the battlefield this turn"
+(`CreatureDiedThisTurnMatching` is creature-only); Sneaky Snacker's "when
+you draw your third card in a turn" (no drew-Nth-card event).
+
+### The cnt triage's other primitives
+
+One line each, from the same triage — the engine has nothing to spell
+them and each blocks one shipped card: a name-prefix requirement
+(`NameStartsWith("Gideon")`, Gideon's Company); "Curses attached to you"
+as a selector (Witchbane Orb); a spend restriction for Mount / Vehicle
+spells and one for casting from the graveyard (Intrepid Stablemaster,
+Rootcoil Creeper); a variable "tap X untapped artifacts" cost —
+`tap_n_filter` is fixed-N (Secluded Starforge); "whenever you *cast* a
+creature spell this turn" as a delayed watcher — only the entering variant
+exists, so Glimpse of Nature draws on tokens (a WRONG row, not a missing
+one); a kicked-cast trigger (Sowing Mycospawn); "an opponent gains control
+of a permanent from you" (Zidane); "all non-Wall creatures you control
+attack" (Mob Mentality); an Aura returning attached to what it enchanted
+(Takklemaggot); "crewed by this creature this turn" (Balthier and Fran);
+an excess-damage *event* — `Value::ExcessDamageDealtThisResolution` exists
+but nothing fires on it (Magmatic Galleon); craft (Market Gnome); claim
+the prize (The Most Dangerous Gamer); an outside-the-game zone (Spawnsire
+of Ulamog); copying a triggered ability on the stack (Firebender
+Ascension); Wickerwing Effigy's cast-from-library rewrite; Ghost Vacuum's
+mass return of the cards it exiled; Bloodthirsty Adversary's exile-and-
+copy of graveyard spells; Conduit of Worlds' cast-from-graveyard with a
+one-spell lockout. An Aura's granted keyword is invisible to
+`sacrifice_when` (it reads the instance's own and EOT-granted keywords):
+Floodgate under Flight stays.
+
 ### Replacement Effects
 The engine has no general replacement-effect primitive.  Many real cards need one:
 - ETB replacements (Containment Priest, Torpor Orb, Rest in Peace)

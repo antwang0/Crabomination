@@ -2806,6 +2806,53 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-10 (third run) — the shortcut helpers under every column, the ability-count column, 94 shipped cards, the residue read to the card
+
+No perf leg: the queue's engine side still reads floor, so the run stayed
+on the finders. Two reads: the base crate's `effect::shortcut` helpers
+(~140 `fn -> ActivatedAbility / TriggeredAbility`) joined the inliner, so
+every earlier column opened again (24 cards: four monstrosity prices,
+eleven wrong events, four "whenever you attack" scopes that fired for any
+attacker, two dropped halves, Skeletal Kathari's unearth); then a column
+the others' `len == len` gate had always skipped — `cnt`, the activated /
+triggered ability count against the oracle's lines — found 37 cards with an
+ability wholly absent or stood in for by an invented one (firebreathing,
+regenerate, the Spellbombs' dies-draw, Doomskar Titan's boast for an ETB),
+and reading its 130-row residue one card at a time (two read-only passes)
+gave 32 more with every primitive in hand (INCOMPLETE_CARDS "The shortcut
+helpers and the ability count"). Two engine lines under them:
+`CreateTokenBlocking` from a blocks trigger reads the blocked attacker
+(Brimaz), and `MoveAllCounters` reads its source as a card ref, the way a
+dies trigger binds the dying creature (Buzzard-Wasp Colony). The full
+suite caught one of the run's own trigger fixes draining the wrong player
+(Mai, Scornful Striker: `TriggerEventPlayer` is unbound on a SpellCast) —
+a test that had never run in the loop that shipped it; the loop now runs
+the touched test files. Two engine gaps filed, not fixed: a sacrifice-cost
+source's own dies trigger stacks below the ability, and triggers cannot
+live in the graveyard (ENGINE_BACKLOG). None of it sits in a traced or
+`fixed`-pool game: golden traces 10 / 10 and the `--bench` counters
+identical at every commit. **The Ir base was NOT re-taken** (no A/B leg;
+the next perf leg re-takes the triple first).
+
+```text
+fix     86905d22 (the reader) / 5674115e (24 cards) / 56324351 (21) / 01e966b7 (16) / a73eda5b (22 + the blocks line) / 2c9e652e (Mai)
+        / 40ddd69a (10 + the counters line) / a069bc80 (the reader's helper-call and delayed-trigger counts): suite
+        SUITE_PLACEHOLDER; clippy --workspace --exclude crabomination_client --all-targets 0 warnings (346 s at 01e966b7, CLIPPY_PLACEHOLDER
+        at the tip); cargo check --profile release-fast covered by the release-fast builds (1931 s at 01e966b7, RF_PLACEHOLDER at the tip)
+gate    --bench release-fast (mimalloc) at 01e966b7 and the tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; thread_determinism ok; bin_bytes 126,920,256 at 01e966b7, BIN_PLACEHOLDER at the tip; peak_rss_mib 28.4;
+        GAMES_PLACEHOLDER games/s idle at host_calib_ms CALIB_PLACEHOLDER
+sweep   scripts/fresh_seed_sweep.sh on the audit build (target-audit/overflow, debug-assertions), dflt mirror x --games 400 x --threads 3:
+        cube 786 / sealed 779 / all 769 / sos 773 / fixed 757 at 01e966b7 (18,400 games, 0 cap / 0 stuck / 0 draws); cube 787 / sealed 780 /
+        all 770 / sos 774 / fixed 758 at the tip (SWEEP_PLACEHOLDER) — every rc 0
+audit   audit_catalog_stats.py 17,229 cards: cnt 197 at the column's first run -> 130 after the three batches -> 109 after the triage's
+        22 -> 100 after the ten one-edit rows -> 65 once the reader counts the helper calls it leaves in `equipped_bonus` / station bands
+        and the engine's delayed / state-trigger spellings (the 65: 16 one-edit cards, 25 wanting a primitive, the rest engine-shape rows
+        the reader has no hook for — INCOMPLETE_CARDS);
+        kw 20 / abil 2 / T-sac 3 / ocost 5 / addl 1 / trig 9 / scope 3 / filt 8 / num 92 / stat 14 / timing 0 the documented residue
+rustc   1.95.0 (59807616e 2026-04-14); the same box as the second run (calib 62, ~300 games/s)
+```
+
 ### 2026-09-10 (second run) — helper-built abilities under every audit column, three new columns, 27 shipped cards, the paired A/B that priced the box
 
 No perf leg: the queue's engine side still reads floor, so the run went

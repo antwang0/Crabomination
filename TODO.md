@@ -30,19 +30,20 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
    tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; fetch before every push. Gotchas in **CLAUDE.md**, measurement in
    **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
-2. **Gates at the tip (PERF Baseline, the 2026-09-10 second-run addendum):** suite green / clippy 0 / golden_trace 10/10 / `--bench` counters identical
-   to `2003d1cf` / determinism + thread_determinism ok at every commit of the run; 73,600 fresh-seed dflt games (cube 782..785, sealed 775..778,
-   all 765..768, sos 769..772, fixed 753..756): 0 cap / stuck / assertion. Wall clock ~300 games/s on this box against 547-571 last run — the
-   paired A/B against the `4c8a61ae` binary is the verdict (PERF); the counters say the games are the same.
-3. **This run:** `audit_catalog_stats.py` now opens helper-built abilities under every column (`inline_ability_helpers`; ~2,000 abilities no column
-   had read) and grew three columns — `ocost` (the other cost halves), `addl` (additional cast costs), the timing `if` gate — **27 shipped cards
-   fixed** (INCOMPLETE_CARDS "Helper-built abilities", "The other cost halves", "Additional cast costs"), seven of them training-pool; two engine
-   halves under them (ENGINE_BACKLOG "FIXED 2026-09-10 (third find)": `EnchantedBySource` serves a non-death leave, `ReturnSelfAttachedToChoiceOf`
-   takes a filter); `OpponentMillExtra`. No trace or counter moved.
-4. **Next moves:** (a) more columns, no build: a helper defined in another file still hides its numbers (`shortcut::animate_land`); `PlayerRef` /
-   `StaticEffect` variants a resolver special-cases (`EnchantedPlayer` was one); Mine Collapse wants `AlternativeCost { sacrifice_filter,
-   your_turn_only }` (ENGINE_BACKLOG); (b) mirrors next: abilarms 920+, mirror 796+, mcts 775+, lookahead / planner 779+; dflt cube 786, sealed 779,
-   all 769, sos 773, fixed 757; (c) the crack-back horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF's candidates.
+2. **Gates at the tip (PERF Baseline, the 2026-09-10 third-run addendum):** suite green / clippy 0 / golden_trace 10/10 / `--bench` counters identical
+   to `2003d1cf` / determinism + thread_determinism ok at every commit; fresh-seed dflt sweeps cube 786..787, sealed 779..780, all 769..770,
+   sos 773..774, fixed 757..758: 0 cap / stuck. Wall clock ~300 games/s on this box (the second run's paired A/B priced it at 1.9x slower).
+3. **This run:** `audit_catalog_stats.py` opens the base crate's `effect::shortcut` helpers under every column and grew `cnt` (the activated /
+   triggered ability count against the oracle's lines) — **94 shipped cards fixed** in seven commits (INCOMPLETE_CARDS "The shortcut helpers and
+   the ability count"; the 130-row residue read to the card, the reader taught its classes: `cnt` 65 = 16 one-edit + 25 primitive + engine-shape). Two engine lines
+   (`CreateTokenBlocking` off a blocks trigger, `MoveAllCounters` off a card ref); two gaps filed (ENGINE_BACKLOG "Self-death triggers paid as a
+   cost", "Triggers that live in the graveyard"). The full suite caught Mai draining the wrong player — **run the touched test files, not only the
+   new tests.** No trace or counter moved.
+4. **Next moves:** (a) the 16 one-edit `cnt` rows (INCOMPLETE_CARDS lists them; Emperor of Bones, Ersatz Gnomes, Tephraderm's spell half first) and
+   the reader's 12 helper-call rows (`on_attack(..)` inside `equipped_bonus` / `StationBand`, `landfall(..)`); (b) `TriggerZone` for the five
+   graveyard-resident triggers; the sacrifice-cost dies-trigger order (a golden-trace commit); (c) mirrors next: abilarms 920+, mirror 796+,
+   mcts 775+, lookahead / planner 779+; dflt cube 788, sealed 781, all 771, sos 775, fixed 759; (d) the crack-back horizon (38 % of the actor) is
+   the one strength round left; prompt text stays in PERF's candidates.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

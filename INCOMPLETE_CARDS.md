@@ -1001,13 +1001,63 @@ rows; 37 real, two commits:
 | The wrong ability word | Doomskar Titan: `boast` for an ETB |
 
 Two false rows taught the reader: Magma Opus's discard is `discard_activated`
-(counted now), Secluded Starforge's robot was already there. Residue 130
-rows: Mazemind Tome's state trigger is an `If` inside each activation, the
-decks rows are the triage below, the rest obscure sets (STX extras, hml,
-leg, mir) where a dropped second ability is real but the card never sees a
-training game. The Horizon Spellbomb fix surfaced an engine order: a
-sacrifice-cost source's own dies trigger stacks below the ability
-(ENGINE_BACKLOG "Self-death triggers paid as a cost").
+(counted now), Secluded Starforge's robot was already there. The Horizon
+Spellbomb fix surfaced an engine order: a sacrifice-cost source's own dies
+trigger stacks below the ability (ENGINE_BACKLOG "Self-death triggers paid
+as a cost").
+
+The 130 rows left were then read one by one (two read-only passes, the
+training pool and the rest). 47 are the engine's shape — a static
+(`ExtraManaOnLandTap` for Mana Flare / Heartbeat of Spring / Nirkana
+Revenant / Dictate of Karametra, `CollectsLeaverCounters` for The Ozolith,
+`PumpSelfIf` for Borderland Marauder and Flummoxed Cyclops, `EtbTriggerTax`
+for Strict Proctor), a keyword (Lifelink for Exalted Angel and Paladin of
+Prahv, Deathtouch for Stinkweed Imp, `SuspendAccelerant` for Deep-Sea
+Kraken, Multikicker for Intrepid Adversary), a field (`sacrifice_when` for
+Last Laugh, `flip_when_has_keyword` for Student of Elements,
+`enters_under_opponent_control` for Akroan Horse, `exile_countdown` for All
+Hallow's Eve, `sacrifice_and_burn_when_stolen` for Bronze Bombshell), a
+delayed effect (`OnMatchingAttacksThisTurn`, `AtEachCombatThisTurn`,
+`CreaturesYouControlEnteringThisTurn`, `HauntCreature`,
+`ExileSpellWithDelayCounters`), or the state trigger folded into the
+activation that feeds it (Mazemind Tome, Dark Depths, Bomb Squad, Porphyry
+Nodes). 12 are the reader's: an `on_attack(..)` inside `equipped_bonus`
+or a `StationBand`, a `landfall(..)` — helper calls the count does not
+open. 71 were real, 63 with the ability wholly absent; 22 of those had
+every primitive in hand and were fixed the same day (Murderous Rider,
+Queen of Ice, Merchant of the Vale, Keys to the House, Overgrown Zealot,
+Chancellor of the Annex, Dai Li Agents, Badgermole Cub, Aang, Emrakul the
+Promised End, Shielded by Faith; Voltaic Brawler, Aetherstream Leopard,
+Riparian Tiger, Floodgate, Galvanic Iteration, Brimaz, Haywire Mite,
+Glacier Godmaw, Pain for All, Cavalry Pegasus, Cytoplast Root-Kin —
+`cnt` 130 → 109), then ten more that were one card-file edit each
+(Questing Beast's planeswalker damage, Edgar's Awakening's
+`discard_activated` — its body is targetless, so the creature card is
+chosen at resolution — Earthbender Ascension's landfall counters,
+Buzzard-Wasp Colony's counter move, Reaper of Night's hand-size gate and
+Harvest Fear's chosen discard, Shadow Urchin's exile-per-counter impulse
+with the engine's end-of-your-next-turn window, Earthrumbler, Alacrian
+Armory, Golos's free-play, Inkfathom Witch's 4/1 in place of an unprinted
+ETB discard — `cnt` 109 → 100). Two engine lines fell out: a blocks
+trigger's `CreateTokenBlocking` reads the blocked attacker (Brimaz), and
+`MoveAllCounters` reads its source as a card ref, since a dies trigger
+binds the dying creature that way (the LKI branch already found it). The
+full suite also caught Mai, Scornful Striker draining the *opponent*
+(`TriggerEventPlayer` is unbound on a SpellCast; `Triggerer` is the
+caster) — a trigger-column fix whose test had never run. Still one edit
+each: Touch the Spirit Realm's channel (the discard-activated body cannot
+target), Gideon's Company once a name-prefix requirement exists, Emperor
+of Bones, Ersatz Gnomes, Hauntwoods Shrieker, Eladamri, Pinnacle
+Starcage, Rydia, Diviner's Wand, Urborg Panther, Tephraderm's spell half,
+Skophos Maze-Warden, Shieldmage Elder, Severance Priest's Spirit, Iroh,
+Lumbering Laundry; the last 25 want a primitive (ENGINE_BACKLOG "Triggers
+that live in the graveyard" and "The cnt triage's other primitives"). The
+reader then learned the triage's own lesson — a helper call it leaves in
+`equipped_bonus` or a station band is an ability, the delayed-trigger
+effects and the state-trigger fields are trigger lines, "taps a land for
+mana" is a static — and `cnt` reads 65: those 41 plus the engine-shape
+rows it has no hook for (a keyword standing in for a trigger, a static
+`PumpSelfIf`, an `If` folded into an activation).
 
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
