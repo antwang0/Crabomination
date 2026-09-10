@@ -2837,14 +2837,15 @@ the next perf leg re-takes the triple first).
 ```text
 fix     86905d22 (the reader) / 5674115e (24 cards) / 56324351 (21) / 01e966b7 (16) / a73eda5b (22 + the blocks line) / 2c9e652e (Mai)
         / 40ddd69a (10 + the counters line) / a069bc80 (the reader's helper-call and delayed-trigger counts): suite
-        SUITE_PLACEHOLDER; clippy --workspace --exclude crabomination_client --all-targets 0 warnings (346 s at 01e966b7, CLIPPY_PLACEHOLDER
-        at the tip); cargo check --profile release-fast covered by the release-fast builds (1931 s at 01e966b7, RF_PLACEHOLDER at the tip)
+        19,364 / 0 / 5 at 40ddd69a (166.919 s run, 293 s with the build, golden_trace 10 / 10 inside it; the first full
+        run since 5674115e caught Mai); clippy --workspace --exclude crabomination_client --all-targets 0 warnings (346 s at 01e966b7,
+        556 s at 40ddd69a); cargo check --profile release-fast covered by the release-fast builds (1931 s at 01e966b7, RF_PLACEHOLDER at the tip)
 gate    --bench release-fast (mimalloc) at 01e966b7 and the tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
         determinism ok; thread_determinism ok; bin_bytes 126,920,256 at 01e966b7, BIN_PLACEHOLDER at the tip; peak_rss_mib 28.4;
         GAMES_PLACEHOLDER games/s idle at host_calib_ms CALIB_PLACEHOLDER
 sweep   scripts/fresh_seed_sweep.sh on the audit build (target-audit/overflow, debug-assertions), dflt mirror x --games 400 x --threads 3:
         cube 786 / sealed 779 / all 769 / sos 773 / fixed 757 at 01e966b7 (18,400 games, 0 cap / 0 stuck / 0 draws); cube 787 / sealed 780 /
-        all 770 / sos 774 / fixed 758 at the tip (SWEEP_PLACEHOLDER) — every rc 0
+        all 770 / sos 774 / fixed 758 at 40ddd69a (18,400, 0 / 0 / 0; 5m35s) — 36,800 games, every rc 0
 audit   audit_catalog_stats.py 17,229 cards: cnt 197 at the column's first run -> 130 after the three batches -> 109 after the triage's
         22 -> 100 after the ten one-edit rows -> 65 once the reader counts the helper calls it leaves in `equipped_bonus` / station bands
         and the engine's delayed / state-trigger spellings (the 65: 16 one-edit cards, 25 wanting a primitive, the rest engine-shape rows
