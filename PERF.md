@@ -2806,7 +2806,7 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### 2026-09-10 (fifth run) — the graveyard walk under the battlefield walk's rules, `once_per_batch`, 68,384 fresh-seed games
+### 2026-09-10 (fifth run) — the graveyard walk under the battlefield walk's rules, `once_per_batch`, the pool-only payments, 90,784 fresh-seed games
 
 No perf leg (the queue's engine side still reads floor; the actor and
 sealed self tables above are unmoved since `9772ce0c`). One engine class
@@ -2842,6 +2842,16 @@ search  searching-pilot mirrors on the same build (CRAB_MAX_ACTIONS=6000 CRAB_CA
 final   audit build rebuilt at c406e7db (15m42s beside clippy): dflt mirror x 400 at cube 794 / sealed 794 / all 794 (14,800 games) and
         sos 791 / 792, fixed 791 / 792 (7,200): 22,000 games, 0 cap / 0 stuck / 0 draws, 20-99 s a cell; clippy --workspace --exclude
         crabomination_client --all-targets 0 warnings (6m47s; one `cloned_ref_to_slice_refs` in a new test fixed, core_rules 1,854 / 0 after)
+later   333f75a0 (ENGINE_BACKLOG "FIXED 2026-09-10 (seventh find)"): the seven pool-only payment sites pay through `pay_mana_cost_with_picks`
+        — a bot seat's "you may pay" was never paid (149 `MayPay` sites); the bot declines a MayPay it cannot fund. Suite 19,383 / 0 / 5
+        (124 s; Archway Commons' tax then tapped the land to pay for itself — its enters-tapped trigger now precedes the tax); clippy 0
+        (5m32s); --bench release-fast rebuilt (10m11s): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical (no fixed-pool card
+        carries a pay-family effect, checked over the 34), determinism + thread_determinism ok, bin_bytes 126,897,968, 291.5 games/s at
+        calib 52; audit build rebuilt at 333f75a0 (bot_ladder 10m20s, selfplay_train after it), dflt mirror x 400 at cube / sealed / all
+        795 (14,800 games, 43-135 s a cell beside the suite) and sos / fixed 793 (3,600): 18,400 games, 0 cap / 0 stuck / 0 draws
+actor   target-audit/overflow/selfplay_train (debug-assertions, at 333f75a0) --actors 3 --steps 2 --games 4000 --seed 20260911: 399,403
+        rows, 0 stalls, no assertion, 30.6 games/s on the audit build beside the suite and the sweeps (actors: line), 2,449 rows/s on
+        the first interval; suite at the tip (the bot's MayPayX answer capped at the floating pool) 19,383 / 0 / 5 (227 s)
 cost    the graveyard walk's extra work is per graveyard card with a graveyard trigger per dispatch (a filter read and a
         `Vec::contains` on a list that is empty unless a once_per_turn graveyard trigger fired); the step walk reads one lane word
         per non-active player per step; the YouAttack walk one lane word per declaration; `once_key` widens two tuple aliases by a

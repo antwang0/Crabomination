@@ -3030,6 +3030,13 @@ fn decide_pending_policy_inner(
                 // Life payments: keep a buffer, never sink deep.
                 let spare = (state.effective_life(seat) - 10).max(0) as u32;
                 spare.min(*max).min(3)
+            } else if prompt.starts_with("Pay {X}") {
+                // A `MayPayX` mana prompt: the engine's `max` is the pool plus
+                // every untapped source, and a greedy `max` would tap out for
+                // an X the body may not even use (Tester of the Tangential
+                // moves at most the counters it has). Spend what floats; a
+                // sized answer is a strength round with a gate, not a default.
+                (*max).min(state.players[seat].mana_pool.total())
             } else {
                 *max
             };

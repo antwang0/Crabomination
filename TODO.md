@@ -31,15 +31,18 @@ sixty-seventh pass, so don't re-take that.
    tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; **fetch before every push** (two sessions shared the branch on
    2026-09-10). Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
 2. **Gates at the tip (PERF Baseline, the 2026-09-10 fifth-run addendum):** suite 19,380 / 0 / 5, clippy 0, golden_trace 10 / 10, `--bench` counters
-   identical to `2003d1cf`, determinism + thread_determinism ok; fresh-seed dflt sweeps cube / sealed / all 792..794, sos / fixed 791..792: 0 cap / 0 stuck;
-   abilarms 924..925, abilarms mirror 797, lookahead / planner 780, mcts 776 clean. ~308 games/s on this box (calib 50).
+   identical to `2003d1cf`, determinism + thread_determinism ok; fresh-seed dflt sweeps cube / sealed / all 792..795, sos / fixed 791..793: 0 cap / 0 stuck;
+   abilarms 924..925, abilarms mirror 797, lookahead / planner 780, mcts 776 clean; actor 4,000 games / 0 stalls. ~300 games/s on this box (calib 50).
 3. **This run (fifth):** the dispatcher's graveyard walk had none of the battlefield walk's rules (ENGINE_BACKLOG "FIXED 2026-09-10 (sixth find)"):
    `events::event_kind_fans_out` / `EventScope::from_graveyard()` are the one list / one predicate; `FromYourGraveyardAnyPlayer`, `YouAttack` from the
    graveyard, `EventSpec::once_per_batch` ("one or more", all four walks, four cards migrated). Attuned Hunter was dead on the battlefield; Kami /
    Sneaky Snacker (printed text) / Marshstalker / Barret shipped — every "missing gate" the backlog named already existed. `cnt` 62 -> 58.
+   **Seventh find:** every "you may pay" / "pay or else" paid from the floating pool only — 149 `MayPay` sites dead for bot seats; now auto-tap
+   (`pay_mana_cost_with_picks`), the bot declines what it cannot fund. Self-play's distribution moved (bots pay taxes and buybacks now): a
+   ladder read of the default against the pre-fix binary is the one open strength question this run left.
 4. **Next moves:** (a) the 12 one-edit `cnt` rows left (INCOMPLETE_CARDS lists them; Emperor of Bones and Ersatz Gnomes are NOT one edit — the
    entry says why); (b) the 23 `cnt` primitives (ENGINE_BACKLOG "The cnt triage's other primitives"); (c) mirrors next: abilarms 926+, mirror
-   798+, mcts 777+, lookahead / planner 781+; dflt cube / sealed / all 795+, sos / fixed 793+; (d) perf reads floor — the crack-back horizon
+   798+, mcts 777+, lookahead / planner 781+; dflt cube / sealed / all 796+, sos / fixed 794+; (d) perf reads floor — the crack-back horizon
    (38 % of the actor) is the one strength round left and is a ladder gate, not an Ir leg; prompt text stays in PERF's candidates.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
