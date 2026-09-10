@@ -1375,7 +1375,8 @@ def ability_mana_costs(body):
 # otherwise read as a {2} ability the code spells as a `cycling` field.
 _ORACLE_ACT = re.compile(r"^(?:[A-Z][a-z]+ — )?(\{[^:\n]*?):\s")
 _TRIG_MODELLED_ELSEWHERE = re.compile(
-    r"tapped? (?:a )?\w* ?for mana|leaves the battlefield, (?:each player )?returns?|becomes tapped, .{0,40}deals 1 damage to you|"
+    r"tapped? (?:a )?\w* ?for mana|taps? (?:a |an )?(?:basic )?(?:land|Swamp|Forest|Island|Mountain|Plains|Wastes) for |"
+    r"leaves the battlefield, (?:each player )?returns?|becomes tapped, .{0,40}deals 1 damage to you|"
     r"becomes the target of a spell (?:or ability )?an opponent controls, counter|"
     r"blocks or becomes blocked by .{0,40}destroy that creature at end of combat|^When(?:ever)? you cycle\b",
     re.I,
@@ -2230,6 +2231,13 @@ def expand_ability_helper(helper, args, lit):
     return text[best[0]: best[1]]
 
 
+def helper_calls_left(body, table):
+    """How many calls of the table's helpers the body still holds after the
+    inliner ran — the ones outside the card's own vec (an `equipped_bonus`,
+    a station band, a granted-ability list)."""
+    return sum(len(re.findall(r"\b" + re.escape(name) + r"\(", body)) for name in table)
+
+
 def inline_ability_helpers(body, table, field="activated_abilities:", lit="ActivatedAbility"):
     """Rewrite each helper-call element of the card's own `field` vec into
     the helper's literal. Elements the table cannot open are left as they
@@ -2500,11 +2508,27 @@ def audit():
                 n_code = body.count(lit + " {")
                 # Keyword-modelled activations ("{G}: Regenerate" is
                 # `Keyword::Regenerate(1)`) and a delayed trigger the spell
-                # itself sets up (the Pacts' `DelayUntil`).
+                # itself sets up (the Pacts' `DelayUntil`). A helper call the
+                # inliner left in place sits outside the card's own vec — an
+                # Equipment's `on_attack(..)` in `equipped_bonus`, a station
+                # band's — and is one ability each. The delayed-trigger effects
+                # (a spell's "whenever .. this turn", haunt, the delay-counter
+                # loop) and the state-trigger fields (`sacrifice_when`, a
+                # flip, an exile countdown) are the engine's spelling of a
+                # printed trigger line.
                 if kind == "act":
                     n_code += len(re.findall(r"Keyword::Regenerate\(|discard_activated:\s*Some", body))
+                    n_code += helper_calls_left(body, abilfns)
                 else:
                     n_code += len(re.findall(r"Effect::DelayUntil\b|\bDelayUntil \{", body))
+                    n_code += helper_calls_left(body, trigfns)
+                    n_code += len(re.findall(
+                        r"\b(?:OnMatchingAttacksThisTurn|AtEachCombatThisTurn|CreaturesYouControlEnteringThisTurn|HauntCreature|"
+                        r"OnYourNextInstantSorceryThisTurn|OnYourNextNamedSpellThisTurn|OnEachSpellCastThisTurn|AtEndOfCombat|"
+                        r"AtNextEndStep|ExileSpellWithDelayCounters)\b", body))
+                    n_code += len(re.findall(
+                        r"\b(?:sacrifice_when|state_trigger|flip_when_has_keyword|exile_countdown|sacrifice_and_burn_when_stolen)\s*:\s*Some",
+                        body))
                 if n_code < n_ref:
                     d["cnt"].append((tag, f"{kind} {n_code}", f"{kind} {n_ref}"))
             for kind in ("act", "trig"):
