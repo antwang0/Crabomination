@@ -949,6 +949,66 @@ already names it). Mine Collapse's alternative wants `AlternativeCost {
 sacrifice_filter, your_turn_only }` — a primitive, filed in ENGINE_BACKLOG's
 missing mechanics.
 
+### The shortcut helpers and the ability count — the thirteenth column (`cnt`), 2026-09-10: 61 shipped cards
+
+Two reads the same day. First, the base crate's `effect::shortcut` module
+(~140 `fn .. -> ActivatedAbility / TriggeredAbility` helpers every set file
+calls: `etb`, `landfall`, `monstrosity`, `on_you_attack`, `boast`, ..) had
+stayed outside the inliner's table — the last "helper in another file" —
+so every column above now opens those too (the inliner takes the outermost
+literal; a tribute's granted trigger is nested inside its own). Forecast
+and Boast riders read off their reminder text, and a trigger's
+self-reference ("this creature", the card's name) is not a subject filter.
+That opened `abil` 1 → 6, `timing` 0 → 13, `trig` 7 → 28, `scope` 3 → 9,
+`num` 76 → 101: 24 shipped cards, every one a helper-built ability nobody
+had read — four monstrosity prices (Ember Swallower `{5}{R}{R}`, Arbor
+Colossus `{3}{G}{G}{G}`, Ill-Tempered Cyclops and Stormbreath Dragon
+Monstrosity 3), eleven wrong events (Emperor's Vanguard and Lightning
+Skelemental on combat damage to a player, Murktide Regent on an instant or
+sorcery leaving the graveyard, Marsh Viper on any damage, Titania on a land
+of yours dying, Nulldrifter on the cast, Hopeful Vigil / Hopeless Nightmare
+/ Bitter Chill on `PermanentDied`, Duskworker and Groffskithur on becoming
+blocked, Custodi Lich on becoming the monarch, Mai on a player's noncreature
+cast, Wandering Mind's ETB dig, Cunning Rhetoric on an opponent's attack,
+Spitfire Lagac's landfall), four "whenever you attack" scopes that fired for
+any attacker (`on_you_attack` on Seedpod Squire, Waterspout Warden, Finneas,
+Civic Gardener), two dropped halves (Consul's Lieutenant's renowned pump,
+Shrieking Grotesque's ETB discard) and Skeletal Kathari's `{B}, sacrifice a
+creature: regenerate` (it shipped with unearth).
+
+Second, the column every one above skips behind its `len(..) == len(..)`
+gate: `cnt` counts the `ActivatedAbility { .. }` / `TriggeredAbility { .. }`
+literals the code spells (the card's own and the ones its Aura / Equipment
+grants; a keyword-modelled Regenerate, a `discard_activated`, a spell's
+`DelayUntil` count) against the oracle's `{cost}:` lines and its When /
+Whenever / At lines, one-way — fewer is a dropped ability, more is the
+engine's shape (a static modelled as a trigger, a reminder-text mana
+ability). Trigger lines the engine models as something else are not
+counted: "is tapped for mana" (a static), the O-Ring return (the linked
+exile), a pain land's tap damage, ward's counter-unless, the basilisk's
+end-of-combat destroy, "When you cycle". A helper the table cannot open
+(`cycling_land("..")`, a `..helper(..)` spread) is unread. First run 197
+rows; 37 real, two commits:
+
+| Shape | Cards |
+|---|---|
+| Firebreathing dropped | Shivan Dragon, Inferno Titan, Furnace Hellkite; Inkrise Infiltrator's `{3}{B}: +2/+2` |
+| Regenerate dropped | Servant of Tymaret, Twisted Abomination, Asphodel Wanderer, Experiment One (two counters) |
+| A second activation dropped | Cranial Plating's `{B}{B}` attach, Jack-o'-Lantern's graveyard mana, Seasoned Pyromancer's graveyard Elementals, Cloudgoat Ranger's tap-three-Kithkin flight, Triskaidekaphile's `{3}{U}` draw, Ride the Shoopuf's 7/7 Beast, Aquastrand Spider's reach and Plaxcaster Frogling's shroud grants |
+| Wrong amount under the count | Bogardan Hellkite 5 (was 4), Rathi Dragon two Mountains (was one), Festival Crasher +2/+0 until end of turn (was a permanent counter) |
+| A trigger dropped | Omnath, Locus of Rage's "another Elemental dies" burn; Bria's "noncreature cast: unblockable"; Prison Realm's scry; Sengir Autocrat's Serfs leaving with it; Lonis's counter per Clue sacrificed; Krydle's `{2}` on attack; Hexgold Slith's two energy on attack; Court Hussar's sacrifice without white; Lembas shuffling back; Pit Scorpion's Poisonous 1 (a keyword the engine has) |
+| A trigger stood in for by an invented activation | Nihil / Horizon Spellbomb (training pool): "when this dies, you may pay {B}/{G}: draw" shipped as a made-up `{W}, Sacrifice: draw` |
+| The wrong ability word | Doomskar Titan: `boast` for an ETB |
+
+Two false rows taught the reader: Magma Opus's discard is `discard_activated`
+(counted now), Secluded Starforge's robot was already there. Residue 130
+rows: Mazemind Tome's state trigger is an `If` inside each activation, the
+decks rows are the triage below, the rest obscure sets (STX extras, hml,
+leg, mir) where a dropped second ability is real but the card never sees a
+training game. The Horizon Spellbomb fix surfaced an engine order: a
+sacrifice-cost source's own dies trigger stacks below the ability
+(ENGINE_BACKLOG "Self-death triggers paid as a cost").
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|
