@@ -2847,6 +2847,10 @@ later   cccd1ab2 (ENGINE_BACKLOG "FIXED 2026-09-10 (fifth find)"): the two `subm
         by direct call now go through `perform_action`, so a `manual_mana` seat's cost-choice replay dispatches its events and sweeps;
         bot seats never pose those prompts — suite 19,372 / 0 / 5, no trace or counter can move. 94b5e35c: Severance Priest's Spirit
         (`ExileReturnZone::SpiritToken`; the Illusion gains its printed blue), suite 19,366 / 0 / 5 at that tip
+final   at the tip (b8682837, Galvanic Iteration's flashback {1}{U}{R} — audit_keyword_value 0 wrong of 763): suite 19,372 / 0 / 5 (88.1 s) (203 s
+        clippy, 0 warnings); --bench release-fast rebuilt (443 s): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical, determinism +
+        thread_determinism ok, bin_bytes 126,827,920, 533.2 games/s at host_calib_ms 57; audit build rebuilt, dflt mirror x 400 at cube 791 /
+        sealed 791 / all 791 / sos 790 / fixed 790: 18,400 games, 0 cap / 0 stuck / 0 draws
 cost    the deferral is one `stack.len()` compare per cost-side death plus an `is_empty` read at the dispatcher's top (beside
         `pending_cost_events`'); the scratch write happens only when the leaving permanent had a self trigger — not A/B'd, the counters
         and traces are the gate

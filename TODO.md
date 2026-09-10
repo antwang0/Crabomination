@@ -31,8 +31,8 @@ sixty-seventh pass, so don't re-take that.
    tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; **fetch before every push — two sessions shared the branch on
    2026-09-10 and each rebased twice.** Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
 2. **Gates at the tip (PERF Baseline, the 2026-09-10 third- and fourth-run addenda):** suite green / clippy 0 / golden_trace 10/10 / `--bench`
-   counters identical to `2003d1cf` / determinism + thread_determinism ok at every commit of both runs; fresh-seed dflt sweeps cube 786..790,
-   sealed 779..781 + 789..790, all 769..771 + 789..790, sos 773..775 + 789, fixed 757..759 + 789: 0 cap / 0 stuck. 300-483 games/s on this box.
+   counters identical to `2003d1cf` / determinism + thread_determinism ok at every commit of both runs; fresh-seed dflt sweeps cube 786..791,
+   sealed 779..781 + 789..791, all 769..771 + 789..791, sos 773..775 + 789..790, fixed 757..759 + 789..790: 0 cap / 0 stuck. 300-533.2 games/s on this box.
 3. **This run (third, `cnt`):** `audit_catalog_stats.py` opens the base crate's `effect::shortcut` helpers under every column and grew `cnt` (the
    activated / triggered ability count against the oracle's lines) — **98 shipped cards fixed** in eight commits (INCOMPLETE_CARDS "The shortcut
    helpers and the ability count"; the 130-row residue read to the card: `cnt` 62 = 14 one-edit + 23 primitive + 3 gate + engine-shape). Three
