@@ -2891,15 +2891,16 @@ the next perf leg re-takes the triple first).
 fix     86905d22 (the reader) / 5674115e (24 cards) / 56324351 (21) / 01e966b7 (16) / a73eda5b (22 + the blocks line) / 2c9e652e (Mai)
         / 40ddd69a (10 + the counters line) / a069bc80 (the reader's helper-call and delayed-trigger counts) / f4dc2500 (4 + the
         damager line, on top of the parallel session's 24ef0bd9 + 8008d8ba): suite
-        19,364 / 0 / 5 at 40ddd69a (166.919 s run, 293 s with the build, golden_trace 10 / 10 inside it; the first full
-        run since 5674115e caught Mai); clippy --workspace --exclude crabomination_client --all-targets 0 warnings (346 s at 01e966b7,
-        556 s at 40ddd69a); cargo check --profile release-fast covered by the release-fast builds (1931 s at 01e966b7, RF_PLACEHOLDER at the tip)
-gate    --bench release-fast (mimalloc) at 01e966b7 and the tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
-        determinism ok; thread_determinism ok; bin_bytes 126,920,256 at 01e966b7, BIN_PLACEHOLDER at the tip; peak_rss_mib 28.4;
-        GAMES_PLACEHOLDER games/s idle at host_calib_ms CALIB_PLACEHOLDER
+        19,364 / 0 / 5 at 40ddd69a (166.919 s run, 293 s with the build; the first full run since 5674115e caught Mai) and
+        19,370 / 0 / 5 at 77d0e552 (130.529 s run, 448 s with the engine rebuild), golden_trace 10 / 10 inside both; clippy
+        --workspace --exclude crabomination_client --all-targets 0 warnings (346 s at 01e966b7, 556 s at 40ddd69a, 812 s at 77d0e552); cargo check --profile release-fast covered by the release-fast builds (1931 s at 01e966b7, 2300 s at 77d0e552 beside the sweep)
+gate    --bench release-fast (mimalloc) at 01e966b7 and 77d0e552: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,920,256 at 01e966b7, 126,828,688 at 77d0e552 (the parallel
+        session's 603.3 re-shape in between); peak_rss_mib 28.4; 298 games/s idle at host_calib_ms 54 (62 at 01e966b7)
 sweep   scripts/fresh_seed_sweep.sh on the audit build (target-audit/overflow, debug-assertions), dflt mirror x --games 400 x --threads 3:
         cube 786 / sealed 779 / all 769 / sos 773 / fixed 757 at 01e966b7 (18,400 games, 0 cap / 0 stuck / 0 draws); cube 787 / sealed 780 /
-        all 770 / sos 774 / fixed 758 at 40ddd69a (18,400, 0 / 0 / 0; 5m35s) — 36,800 games, every rc 0
+        all 770 / sos 774 / fixed 758 at 40ddd69a (18,400, 0 / 0 / 0; 5m35s); cube 788 / sealed 781 / all 771 / sos 775 / fixed 759 at
+        77d0e552 (18,400, 0 cap / 0 stuck / 4 draws; cube 788 the fourth run's seed too) — 55,200 games, every rc 0
 audit   audit_catalog_stats.py 17,229 cards: cnt 197 at the column's first run -> 130 after the three batches -> 109 after the triage's
         22 -> 100 after the ten one-edit rows -> 65 once the reader counts the helper calls it leaves in `equipped_bonus` / station bands
         and the engine's delayed / state-trigger spellings -> 62 after the graveyard-scope pair, Tephraderm and the Shrieker (the 62: 14
