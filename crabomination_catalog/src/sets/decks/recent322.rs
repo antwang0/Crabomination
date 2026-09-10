@@ -410,7 +410,7 @@ pub fn cosmic_larva() -> CardDefinition {
                 EventScope::SelfSource,
             )
             .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
-            effect: Effect::SacrificeSourceUnlessSacrifice { filter: R::Land },
+            effect: Effect::SacrificeSourceUnlessSacrifice { count: 2, filter: R::Land },
         }],
         ..creature(
             "Cosmic Larva",

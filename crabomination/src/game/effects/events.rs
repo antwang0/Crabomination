@@ -612,6 +612,9 @@ fn event_matches_spec_rest(
         && spec.scope != EventScope::YourPermanentTargetedByOpponent
         && spec.scope != EventScope::YourCreatureTargeted
         && spec.scope != EventScope::AnyPlayer
+        // "When enchanted creature becomes the target": the subject is the
+        // Aura's host, matched by the scope arm below.
+        && spec.scope != EventScope::EnchantedBySource
     {
         return false;
     }
@@ -977,6 +980,14 @@ fn event_matches_spec_rest(
                 .battlefield_find(source.id)
                 .and_then(|a| a.attached_to_player)
                 .is_some_and(|seat| seat == *player),
+            // "When enchanted creature becomes the target of a spell or
+            // ability" (Sleeping Potion, Spinal Graft, Fractured Loyalty) —
+            // the host is still on the battlefield. Unmatched until
+            // 2026-09-10: the three shipped with a trigger that never fired.
+            GameEvent::BecameTarget { target, .. } => state
+                .battlefield_find(source.id)
+                .and_then(|a| a.attached_to)
+                .is_some_and(|host| host == *target),
             _ => false,
         },
         // "Whenever you tap …" — the tap must have been performed by an effect

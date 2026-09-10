@@ -384,6 +384,12 @@ impl Effect {
                 f(body);
                 f(else_);
             }
+            Effect::RevealTopThenIf { then, else_, .. } => {
+                f(then);
+                if let Some(e) = else_ {
+                    f(e);
+                }
+            }
             Effect::PlayerChoosesNumber { then, .. }
             | Effect::LifeBidding { then, .. }
             | Effect::PayEnergy { then, .. }
@@ -400,7 +406,6 @@ impl Effect {
             | Effect::RevealUntilNonlandThen { then, .. }
             | Effect::ChooseCreatureTypeThen { then, .. }
             | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
-            | Effect::RevealTopThenIf { then, .. }
             | Effect::RevealDrawnCardThenIf { then, .. }
             | Effect::Parley { then, .. }
             | Effect::RevealAnyNumberFromHand { then, .. }
@@ -1754,8 +1759,10 @@ impl Effect {
             | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 player_has_target(who)
             }
-            Effect::RevealTopThenIf { who, then, .. } => {
-                player_has_target(who) || then.requires_target()
+            Effect::RevealTopThenIf { who, then, else_, .. } => {
+                player_has_target(who)
+                    || then.requires_target()
+                    || else_.as_ref().is_some_and(|e| e.requires_target())
             }
             Effect::RevealTopOpponentChoosesToHand { .. }
             | Effect::ReturnFromGraveyardOpponentChooses { .. }

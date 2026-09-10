@@ -3197,6 +3197,11 @@ pub enum MillShareAxis {
     CardType,
 }
 
+/// `serde(default)` for a count field that reads 1 when absent.
+fn one_u32() -> u32 {
+    1
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Effect {
     // ── Combinators ──────────────────────────────────────────────────────────
@@ -7411,13 +7416,17 @@ pub enum Effect {
     /// Goryo, Apprentice Necromancer). The sacrificing player is each target's
     /// own controller.
     SacrificePermanent { what: Selector },
-    /// "Sacrifice this permanent unless you sacrifice a [filter]." (The Gitrog
-    /// Monster's upkeep cost.) The controller may sacrifice one permanent
-    /// matching `filter` they control to spare the source; if they have none —
-    /// or a UI seat declines — the source is sacrificed instead. AutoDecider
-    /// keeps the source by sacrificing the weakest matching permanent when one
-    /// is available.
-    SacrificeSourceUnlessSacrifice { filter: SelectionRequirement },
+    /// "Sacrifice this permanent unless you sacrifice [count] [filter]." (The
+    /// Gitrog Monster's upkeep cost; Cosmic Larva's two lands.) The controller
+    /// may sacrifice `count` permanents matching `filter` they control to
+    /// spare the source; with fewer than `count` — or a UI seat declining —
+    /// the source is sacrificed instead. AutoDecider keeps the source by
+    /// sacrificing the weakest matching permanents when enough are available.
+    SacrificeSourceUnlessSacrifice {
+        filter: SelectionRequirement,
+        #[serde(default = "one_u32")]
+        count: u32,
+    },
     /// "Sacrifice this permanent unless you return a [`filter`] you control to
     /// its owner's hand" (the Invasion-block Lair lands). The bounce sibling of
     /// `SacrificeSourceUnlessSacrifice`.
@@ -7595,13 +7604,16 @@ pub enum Effect {
     RevealTopCard { who: PlayerRef },
 
     /// Reveal the top card of `who`'s library; if it matches `filter`, run
-    /// `then`. The card stays on top either way. The CHK "Deceiver" cycle
-    /// (reveal top, if a land then pump/grant the source — Brutal/Cruel/Feral/
-    /// Callous Deceiver).
+    /// `then`, otherwise `else_` when there is one. The card stays on top
+    /// either way. The CHK "Deceiver" cycle (reveal top, if a land then
+    /// pump/grant the source — Brutal/Cruel/Feral/Callous Deceiver);
+    /// Paroxysm's "otherwise, it gets +3/+3".
     RevealTopThenIf {
         who: PlayerRef,
         filter: SelectionRequirement,
         then: Box<Effect>,
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
     },
 
     /// Reveal the top card of `who`'s library; if it's a permanent card, put it

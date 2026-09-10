@@ -135,7 +135,7 @@ pub fn sulfuric_vapors() -> CardDefinition {
 /// Contamination — {3}{B}. Every land taps for {B}; feed it a creature a turn.
 pub fn contamination() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![your_upkeep(Effect::SacrificeSourceUnlessSacrifice {
+        triggered_abilities: vec![your_upkeep(Effect::SacrificeSourceUnlessSacrifice { count: 1,
             filter: R::Creature,
         })],
         static_abilities: vec![StaticAbility {

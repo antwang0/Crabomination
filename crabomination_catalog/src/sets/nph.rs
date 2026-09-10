@@ -642,12 +642,17 @@ pub fn xenograft() -> CardDefinition {
 pub fn numbing_dose() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
+            // "At the beginning of the upkeep of enchanted permanent's
+            // controller": the documented shape (Wanderlust) — an
+            // `EnchantedBySource` scope never matches a step, so the drain
+            // never fired as shipped (2026-09-10).
             event: EventSpec::new(
                 EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
-                EventScope::EnchantedBySource,
-            ),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::ActivePlayerControls(Box::new(host()))),
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EnchantedPlayer),
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(host()))),
                 amount: Value::ONE,
             },
         }],
@@ -1328,7 +1333,10 @@ pub fn fresh_meat() -> CardDefinition {
 pub fn viridian_harvest() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::EnchantedBySource),
+            // "When enchanted artifact is put into a graveyard": the host
+            // leaving to the graveyard is `PermanentDied` (the graveyard kind
+            // is never matched under this scope; dead as shipped, 2026-09-10).
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::EnchantedBySource),
             effect: Effect::GainLife { who: Selector::You, amount: Value::Const(6) },
         }],
         ..aura("Viridian Harvest", cost(&[g()]), R::Artifact, EquipBonus::default())

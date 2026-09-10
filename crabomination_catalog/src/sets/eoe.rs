@@ -6755,24 +6755,25 @@ pub fn hardlight_containment() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Seq(vec![
-            Effect::Attach {
-                what: Selector::This,
-                to: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::Artifact
-                        .and(SelectionRequirement::ControlledByYou),
-                },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Artifact
+                    .and(SelectionRequirement::ControlledByYou),
             },
-            Effect::ExileUntilSourceLeaves {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
-                },
-                return_to: crate::card::ExileReturnZone::Battlefield,
+        },
+        // The entry half is an ETB trigger: an Aura's own `effect:` is its
+        // attach and nothing after it runs on the cast path (dead as shipped
+        // until 2026-09-10; the old test resolved the effect by hand).
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
             },
-        ]),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
         ..Default::default()
     }
 }
@@ -6790,24 +6791,25 @@ pub fn meltstriders_resolve() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Seq(vec![
-            Effect::Attach {
-                what: Selector::This,
-                to: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
             },
-            Effect::Fight {
-                attacker: Selector::Target(0),
-                defender: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
-                },
+        },
+        // The entry half is an ETB trigger: an Aura's own `effect:` is its
+        // attach and nothing after it runs on the cast path (dead as shipped
+        // until 2026-09-10; the old test resolved the effect by hand).
+        triggered_abilities: vec![etb(Effect::Fight {
+            attacker: Selector::AttachedTo(Box::new(Selector::This)),
+            defender: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
             },
-        ]),
+        })],
         ..Default::default()
     }
 }
@@ -6824,23 +6826,24 @@ pub fn pain_for_all() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Seq(vec![
-            Effect::Attach {
-                what: Selector::This,
-                to: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
             },
-            Effect::DealDamage {
-                to: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Any,
-                },
-                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+        },
+        // The entry half is an ETB trigger: an Aura's own `effect:` is its
+        // attach and nothing after it runs on the cast path (dead as shipped
+        // until 2026-09-10; the old test resolved the effect by hand).
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Any,
             },
-        ]),
+            amount: Value::PowerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
+        })],
         ..Default::default()
     }
 }

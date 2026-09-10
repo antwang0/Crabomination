@@ -496,7 +496,7 @@ pub fn mold_demon() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::SacrificeSourceUnlessSacrifice {
+            effect: Effect::SacrificeSourceUnlessSacrifice { count: 2,
                 filter: R::Land.and(R::HasLandType(LandType::Swamp)),
             },
         }],
@@ -773,29 +773,41 @@ pub fn lands_edge() -> CardDefinition {
 pub fn venarian_gold() -> CardDefinition {
     CardDefinition {
         cost: cost(&[crate::mana::x(), u(), u()]),
-        effect: Effect::Seq(vec![
-            Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-            Effect::Tap { what: host() },
-            Effect::AddCounter {
-                what: host(),
-                kind: CounterType::Sleep,
-                amount: Value::XFromCost,
+        // "When this Aura enters, tap enchanted creature and put X sleep
+        // counters on it": an ETB trigger — an Aura's own `effect:` is its
+        // attach and nothing after it runs (the tap and counters were dead
+        // as shipped, 2026-09-10).
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Tap { what: host() },
+                    Effect::AddCounter {
+                        what: host(),
+                        kind: CounterType::Sleep,
+                        amount: Value::XFromCost,
+                    },
+                ]),
             },
-        ]),
+            TriggeredAbility {
+                // "At the beginning of the upkeep of enchanted creature's
+                // controller" (the Wanderlust shape; under
+                // `EnchantedBySource` a step trigger never fired — 2026-09-10).
+                event: upkeep(EventScope::AnyPlayer)
+                    .with_filter(Predicate::ActivePlayerControls(Box::new(host()))),
+                effect: Effect::RemoveCounter {
+                    what: host(),
+                    kind: CounterType::Sleep,
+                    amount: Value::ONE,
+                },
+            },
+        ],
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature doesn't untap during its controller's untap step if \
                           it has a sleep counter on it.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: host(),
                 keyword: Keyword::DoesntUntapWhileCounter(CounterType::Sleep),
-            },
-        }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: upkeep(EventScope::EnchantedBySource),
-            effect: Effect::RemoveCounter {
-                what: host(),
-                kind: CounterType::Sleep,
-                amount: Value::ONE,
             },
         }],
         ..aura("Venarian Gold", cost(&[crate::mana::x(), u(), u()]), R::Creature)
@@ -858,7 +870,11 @@ pub fn imprison() -> CardDefinition {
 pub fn takklemaggot() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: upkeep(EventScope::EnchantedBySource),
+            // "At the beginning of the upkeep of enchanted creature's controller"
+            // (the Wanderlust shape; under `EnchantedBySource` a step trigger
+            // never fired — 2026-09-10).
+            event: upkeep(EventScope::AnyPlayer)
+                .with_filter(Predicate::ActivePlayerControls(Box::new(host()))),
             effect: Effect::AddCounter {
                 what: host(),
                 kind: CounterType::MinusZeroMinusOne,

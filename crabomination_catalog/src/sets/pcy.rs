@@ -249,7 +249,7 @@ pub fn bog_elemental() -> CardDefinition {
         keywords: vec![Keyword::Protection(crate::mana::Color::White)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: Effect::SacrificeSourceUnlessSacrifice { filter: R::Land },
+            effect: Effect::SacrificeSourceUnlessSacrifice { count: 1, filter: R::Land },
         }],
         ..creature("Bog Elemental", cost(&[generic(3), b(), b()]), vec![CreatureType::Elemental], 5, 4)
     }

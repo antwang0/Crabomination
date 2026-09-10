@@ -61,7 +61,7 @@ pub fn quest_for_ulas_temple() -> CardDefinition {
                     EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                     EventScope::YourControl,
                 ),
-                effect: Effect::RevealTopThenIf {
+                effect: Effect::RevealTopThenIf { else_: None,
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Creature,
                     then: Box::new(quest_counter_on_self()),

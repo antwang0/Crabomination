@@ -490,3 +490,68 @@ fn life_matrix_grants_the_regeneration_ability() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Matrix), 0, "the counter paid for the shield");
     assert!(g.battlefield_find(bear).unwrap().regeneration_shields > 0, "regeneration shield up");
 }
+
+/// Mold Demon enters and is sacrificed unless two Swamps are sacrificed;
+/// one Swamp is not enough (`SacrificeSourceUnlessSacrifice { count: 2 }`).
+#[test]
+fn mold_demon_demands_two_swamps() {
+    let mut g = main_phase();
+    let one = g.add_card_to_battlefield(0, catalog::swamp());
+    let demon = g.move_card_to_battlefield_for_test(0, catalog::mold_demon());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(demon).is_none(), "one Swamp is not two");
+    assert!(g.battlefield_find(one).is_some(), "the lone Swamp stays");
+
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::swamp());
+    let b = g.add_card_to_battlefield(0, catalog::swamp());
+    let demon = g.move_card_to_battlefield_for_test(0, catalog::mold_demon());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(demon).is_some(), "two Swamps keep it");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both Swamps sacrificed");
+}
+
+/// Takklemaggot and Venarian Gold act at the *enchanted creature's
+/// controller's* upkeep (both were step triggers under `EnchantedBySource`,
+/// which never fire — 2026-09-10).
+#[test]
+fn takklemaggot_and_venarian_gold_trigger_at_the_hosts_controllers_upkeep() {
+    let mut g = main_phase();
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let aura = g.add_card_to_hand(0, catalog::takklemaggot());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Takklemaggot castable for {2}{B}{B}");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::MinusZeroMinusOne), 0,
+        "nothing on the Aura owner's upkeep");
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::MinusZeroMinusOne), 1,
+        "a -0/-1 counter at the host controller's upkeep");
+
+    let mut g = main_phase();
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let aura = g.add_card_to_hand(0, catalog::venarian_gold());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("Venarian Gold castable at X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "the host is tapped on entry");
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::Sleep), 2, "X = 2 sleep counters");
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::Sleep), 1,
+        "one sleep counter removed at the host controller's upkeep");
+}

@@ -306,7 +306,7 @@ pub fn cho_arrim_bruiser() -> CardDefinition {
 /// Lithophage — {3}{R}{R} 7/7 that eats a Mountain each upkeep.
 pub fn lithophage() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![your_upkeep(Effect::SacrificeSourceUnlessSacrifice {
+        triggered_abilities: vec![your_upkeep(Effect::SacrificeSourceUnlessSacrifice { count: 1,
             filter: R::HasLandType(LandType::Mountain),
         })],
         ..creature(

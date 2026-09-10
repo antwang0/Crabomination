@@ -557,9 +557,11 @@ pub fn fractured_loyalty() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecameTarget, EventScope::EnchantedBySource),
+            // "That spell or ability's controller gains control": the
+            // targeting event's actor, not the Aura's controller.
             effect: Effect::GainControl {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
-                to: Some(PlayerRef::Triggerer),
+                to: Some(PlayerRef::TriggerEventPlayer),
                 duration: Duration::Permanent,
             },
         }],

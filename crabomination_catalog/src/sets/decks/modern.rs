@@ -27200,7 +27200,7 @@ pub fn the_gitrog_monster() -> CardDefinition {
                     EventKind::StepBegins(TurnStep::Upkeep),
                     EventScope::YourControl,
                 ),
-                effect: Effect::SacrificeSourceUnlessSacrifice {
+                effect: Effect::SacrificeSourceUnlessSacrifice { count: 1,
                     filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                 },
             },

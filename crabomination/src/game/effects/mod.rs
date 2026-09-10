@@ -19368,20 +19368,21 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SacrificeSourceUnlessSacrifice { filter } => {
-                // CR 701.16 — "Sacrifice this permanent unless you sacrifice a
-                // [filter]" (The Gitrog Monster's upkeep). The controller may
-                // spare the source by sacrificing one matching permanent; with
-                // no candidate (or a UI seat declining) the source is
-                // sacrificed instead.
+            Effect::SacrificeSourceUnlessSacrifice { filter, count } => {
+                // CR 701.16 — "Sacrifice this permanent unless you sacrifice
+                // [count] [filter]" (The Gitrog Monster's upkeep, Cosmic
+                // Larva's two lands). The controller may spare the source by
+                // sacrificing `count` matching permanents; with fewer (or a UI
+                // seat declining) the source is sacrificed instead.
                 let Some(src) = ctx.source else { return Ok(()); };
                 let p = ctx.controller;
+                let count = (*count).max(1) as usize;
                 let candidates = self.sacrifice_candidates(p, filter, Some(src));
                 // wants_ui seats get a real suspended yes/no (the old
                 // synchronous ask hit AutoDecider's "no" and killed a human's
                 // source every upkeep while bots kept theirs); non-UI seats
-                // keep the source by paying the weakest candidate.
-                let spare = if candidates.is_empty() {
+                // keep the source by paying the weakest candidates.
+                let spare = if candidates.len() < count {
                     false
                 } else if self.seat_suspends(p) {
                     let mut cursor = 0;
@@ -19400,7 +19401,7 @@ impl GameState {
                     true
                 };
                 if spare {
-                    let pick = self.auto_pick_sacrifices(&candidates, 1, Some(src), false, false);
+                    let pick = self.auto_pick_sacrifices(&candidates, count, Some(src), false, false);
                     for id in pick {
                         self.sacrifice_one(id, p, events);
                     }
@@ -25487,7 +25488,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopThenIf { who, filter, then } => {
+            Effect::RevealTopThenIf { who, filter, then, else_ } => {
                 let mut matched = false;
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };
@@ -25502,6 +25503,8 @@ impl GameState {
                 }
                 if matched {
                     self.run_effect(then, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
                 }
                 Ok(())
             }

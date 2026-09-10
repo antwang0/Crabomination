@@ -1162,10 +1162,17 @@ pub fn pandemonium() -> CardDefinition {
 pub fn paroxysm() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
+            // "At the beginning of the upkeep of enchanted creature's
+            // controller": the documented shape (Wanderlust) — an
+            // `EnchantedBySource` scope only matches death / exile / damage
+            // events, so the trigger never fired as shipped (2026-09-10).
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
-                EventScope::EnchantedBySource,
-            ),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::ActivePlayerControls(Box::new(Selector::AttachedTo(
+                Box::new(Selector::This),
+            )))),
             effect: Effect::RevealTopThenIf {
                 who: PlayerRef::ControllerOf(Box::new(Selector::AttachedTo(Box::new(
                     Selector::This,
@@ -1174,6 +1181,12 @@ pub fn paroxysm() -> CardDefinition {
                 then: Box::new(Effect::Destroy {
                     what: Selector::AttachedTo(Box::new(Selector::This)),
                 }),
+                else_: Some(Box::new(Effect::PumpPT {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                })),
             },
         }],
         ..aura("Paroxysm", cost(&[generic(1), r()]), EquipBonus::default())

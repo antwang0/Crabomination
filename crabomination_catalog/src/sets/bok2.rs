@@ -592,15 +592,15 @@ pub fn blessing_of_leeches() -> CardDefinition {
 /// away at the end step unless you control a Demon.
 pub fn mark_of_the_oni() -> CardDefinition {
     CardDefinition {
-        effect: Effect::Seq(vec![
-            Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-            Effect::GainControl {
-                what: target_filtered(R::Creature),
-                to: None,
-                duration: Duration::Permanent,
-            },
-        ]),
-        triggered_abilities: vec![TriggeredAbility {
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![
+            // "You control enchanted creature": the Persuasion / Confiscate
+            // shape — an Aura's own `effect:` is its attach and nothing after
+            // it runs on the cast path (dead as shipped until 2026-09-10).
+            crate::effect::shortcut::etb(Effect::GainControlWhileSourceRemains {
+                what: Selector::attached_to(Selector::This),
+            }),
+            TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
                 .with_filter(Predicate::Not(Box::new(Predicate::SelectorExists(
                     Selector::ControlledBy {

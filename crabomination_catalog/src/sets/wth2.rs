@@ -356,7 +356,7 @@ pub fn llanowar_druid() -> CardDefinition {
 /// Rogue Elephant — {G} 3/3 that costs a Forest off the battlefield.
 pub fn rogue_elephant() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessSacrifice {
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessSacrifice { count: 1,
             filter: R::HasLandType(LandType::Forest),
         })],
         ..creature("Rogue Elephant", cost(&[g()]), vec![CreatureType::Elephant], 3, 3)

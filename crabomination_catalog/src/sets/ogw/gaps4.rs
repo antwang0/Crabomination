@@ -353,7 +353,7 @@ pub fn deceiver_of_form() -> CardDefinition {
                 EventScope::YourControl,
             ),
             effect: Effect::Seq(vec![
-                Effect::RevealTopThenIf {
+                Effect::RevealTopThenIf { else_: None,
                     who: PlayerRef::You,
                     filter: R::Creature,
                     then: Box::new(Effect::MayDo {

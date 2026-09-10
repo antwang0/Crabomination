@@ -339,3 +339,107 @@ fn no_bare_env_lookup_on_a_simulator_path() {
         bad.join("\n  "),
     );
 }
+
+/// The dispatcher serves `EventScope::EnchantedBySource` for a fixed set of
+/// events (a death / exile / damage / attack / block / tap / face-up / draw /
+/// targeting of the host); any other kind under that scope is a trigger
+/// that can never fire. Paroxysm and Numbing Dose shipped an upkeep trigger
+/// that way, and Sleeping Potion, Spinal Graft and Fractured Loyalty a
+/// targeting one the matcher did not know (2026-09-10). Step triggers are
+/// the wider case: `fire_step_triggers` treats every event-based scope as
+/// "never", so a step trigger needs `AnyPlayer` / `ActivePlayer` /
+/// `YourControl` / `SelfSource` / `OpponentControl` and a filter.
+#[test]
+fn no_trigger_sits_under_a_scope_the_dispatcher_never_matches() {
+    use crabomination::card::{EventKind, EventScope};
+    let served_by_host = |kind: &EventKind| {
+        let name = format!("{kind:?}");
+        matches!(
+            kind,
+            EventKind::CreatureDied
+                | EventKind::PermanentDied
+                | EventKind::CreatureOrArtifactDied
+                | EventKind::PermanentLeavesBattlefield
+                | EventKind::CardExiled
+                | EventKind::Attacks
+                | EventKind::TurnedFaceUp
+                | EventKind::Tapped
+                | EventKind::CardDrawn
+                | EventKind::BecameTarget
+        ) || name.contains("Damage")
+            || name.contains("Block")
+    };
+    let event_based = |scope: &EventScope| {
+        matches!(
+            scope,
+            EventScope::EnchantedBySource
+                | EventScope::YourPermanentTargetedByOpponent
+                | EventScope::YourCreatureTargeted
+                | EventScope::YourSourceDamagedOpponent
+                | EventScope::OpponentSourceDamagedYou
+                | EventScope::YourOtherSourceDamagedOpponent
+                | EventScope::YouTapped
+                | EventScope::ControllerAttackedByOpponent
+                | EventScope::ControllerPlaneswalkerAttackedByOpponent
+        )
+    };
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut bad: Vec<String> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        for (i, ta) in def.triggered_abilities.iter().enumerate() {
+            let step = matches!(ta.event.kind, EventKind::StepBegins(_) | EventKind::TurnBegins);
+            if step && event_based(&ta.event.scope) {
+                bad.push(format!("{}: trigger {i} is a step trigger under {:?}", def.name, ta.event.scope));
+            } else if ta.event.scope == EventScope::EnchantedBySource && !served_by_host(&ta.event.kind) {
+                bad.push(format!("{}: trigger {i} on {:?} under EnchantedBySource", def.name, ta.event.kind));
+            }
+        }
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} trigger(s) sit under a scope the dispatcher never matches for their event:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}
+
+/// An Aura's own `effect:` is its attach; the cast path runs nothing after
+/// it. Six shipped Auras spelled an entry effect as `Seq([Attach, ..])` and
+/// their tails (a draw, a fight, an exile, a control change, X sleep
+/// counters) never ran in a game — their tests resolved the effect by hand
+/// (2026-09-10). The entry half is an ETB trigger (`etb(..)`).
+#[test]
+fn no_aura_spells_an_entry_effect_after_its_attach() {
+    use crabomination::card::EnchantmentSubtype;
+    use crabomination::effect::{Effect, Selector};
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut bad: Vec<String> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        if !def.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura) {
+            continue;
+        }
+        if let Effect::Seq(steps) = &def.effect
+            && steps.len() > 1
+            && matches!(steps.first(), Some(Effect::Attach { what: Selector::This, .. }))
+        {
+            bad.push(def.name.to_string());
+        }
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} Aura(s) spell an entry effect after their attach, which the cast path never runs — \
+         move it to an ETB trigger:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}

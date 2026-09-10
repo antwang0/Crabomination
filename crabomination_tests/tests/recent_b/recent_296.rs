@@ -152,6 +152,7 @@ fn shielding_plax_draws_and_grants_hexproof() {
     let hand = g.players[0].hand.len();
     let ctx = EffectContext::for_ability(aura, 0, Some(Target::Permanent(bear)));
     g.resolve_effect(&catalog::shielding_plax().effect, &ctx).unwrap();
+    g.resolve_effect(&catalog::shielding_plax().triggered_abilities[0].effect, &ctx).unwrap();
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof));
     assert_eq!(g.players[0].hand.len(), hand + 1, "ETB drew a card");
@@ -219,4 +220,24 @@ fn congregation_at_dawn_stacks_three_creatures_on_top() {
     // All three fetched creatures now sit on top of the library.
     let top3: Vec<_> = g.players[0].library.iter().rev().take(3).map(|c| c.id).collect();
     assert!([a, b, c].iter().all(|id| top3.contains(id)), "three creatures placed on top");
+}
+
+/// Shielding Plax's draw on the real cast path (an Aura's `effect:` after
+/// its attach).
+#[test]
+fn shielding_plax_draws_when_cast() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let aura = g.add_card_to_hand(0, catalog::shielding_plax());
+    let hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Shielding Plax castable for {2}{G/U}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(mine), "attached");
+    assert_eq!(g.players[0].hand.len(), hand, "cast (-1) and drew (+1)");
 }

@@ -259,7 +259,7 @@ pub fn territorial_dispute() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::SacrificeSourceUnlessSacrifice { filter: R::Land },
+            effect: Effect::SacrificeSourceUnlessSacrifice { count: 1, filter: R::Land },
         }],
         ..enchantment("Territorial Dispute", cost(&[generic(4), r(), r()]))
     }

@@ -1682,3 +1682,28 @@ fn duplicity_bins_its_pile_on_a_control_change() {
     assert!(g.exile.iter().all(|c| c.exiled_with != Some(dup)), "the pile left exile");
     assert_eq!(g.players[0].graveyard.len(), 5, "and landed in its owner's graveyard");
 }
+
+/// Spinal Graft's host is destroyed the moment anything targets it (the
+/// trigger never fired before 2026-09-10).
+#[test]
+fn spinal_graft_host_dies_when_targeted() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::spinal_graft());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spinal Graft castable for {1}{B}");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 5, "+3/+3");
+    let pump = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("target the host with your own pump");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "the host is destroyed on being targeted");
+}

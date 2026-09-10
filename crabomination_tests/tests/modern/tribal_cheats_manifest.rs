@@ -1140,6 +1140,7 @@ fn gitrog_upkeep_sacrifices_a_land_to_survive() {
     g.resolve_effect(
         &Effect::SacrificeSourceUnlessSacrifice {
             filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            count: 1,
         },
         &ctx,
     ).expect("upkeep cost resolves");

@@ -829,3 +829,49 @@ fn bludgeon_brawl_arms_every_artifact() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "2 + Sol Ring's mana value");
     assert_eq!(g.computed_permanent(bear).unwrap().toughness, 2);
 }
+
+/// Numbing Dose drains the enchanted permanent's controller at *their*
+/// upkeep, not the Aura owner's (the trigger never fired before 2026-09-10).
+#[test]
+fn numbing_dose_drains_at_the_enchanted_controllers_upkeep() {
+    let mut g = main_phase();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::numbing_dose());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Numbing Dose castable for {3}{U}{U}");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life, "nothing on the Aura owner's upkeep");
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "loses 1 at the enchanted controller's upkeep");
+}
+
+/// Viridian Harvest pays 6 life when the enchanted artifact hits a graveyard
+/// (the trigger sat on a graveyard kind the host scope never matched —
+/// 2026-09-10).
+#[test]
+fn viridian_harvest_gains_six_when_the_enchanted_artifact_dies() {
+    let mut g = main_phase();
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let aura = g.add_card_to_hand(0, catalog::viridian_harvest());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Viridian Harvest castable for {G}");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    let evs = g.remove_to_graveyard_with_triggers(rock);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 6, "gained 6 when the artifact was put into a graveyard");
+}

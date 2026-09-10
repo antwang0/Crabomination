@@ -2,7 +2,7 @@
 //! exile), Void (a nonland permanent left the battlefield or a spell was warped
 //! this turn), Lander tokens, and assorted card behaviors.
 
-use crabomination::card::{CardType, CounterType, Keyword};
+use crabomination::card::{CardDefinition, CardId, CardType, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::game::types::TurnStep;
 use crabomination::game::*;
@@ -2362,14 +2362,25 @@ fn cryoshatter_debuffs_and_destroys_on_tap() {
     assert!(g.battlefield_find(bear).is_none(), "destroyed when tapped");
 }
 
-/// Hardlight Containment exiles an opposing creature while it's attached.
+/// Resolve an attached Aura's ETB trigger (its entry half) at one target.
+fn resolve_aura_etb(g: &mut GameState, def: CardDefinition, host: CardId, target: CardId) {
+    use crabomination::game::types::Target;
+    let aura = g.add_card_to_battlefield(0, def.clone());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(host);
+    let ctx = crabomination::game::effects::EffectContext::for_ability(aura, 0, Some(Target::Permanent(target)));
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).unwrap();
+    drain_stack(g);
+}
+
+/// Hardlight Containment exiles an opposing creature while it's attached
+/// (the entry half is its ETB trigger — 2026-09-10).
 #[test]
 fn hardlight_containment_exiles_opponent_creature() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::melded_moxite()); // an artifact host
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let host = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Melded Moxite").unwrap().id;
-    resolve_targeted(&mut g, 0, catalog::hardlight_containment().effect.clone(), &[host, theirs]);
+    resolve_aura_etb(&mut g, catalog::hardlight_containment(), host, theirs);
     assert!(g.battlefield_find(theirs).is_none(), "opponent creature exiled");
 }
 
@@ -2379,7 +2390,7 @@ fn meltstriders_resolve_fights() {
     let mut g = two_player_game();
     let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
-    resolve_targeted(&mut g, 0, catalog::meltstriders_resolve().effect.clone(), &[mine, theirs]);
+    resolve_aura_etb(&mut g, catalog::meltstriders_resolve(), mine, theirs);
     assert!(g.battlefield_find(theirs).is_none(), "2/2 dies to the 4/4's fight");
 }
 
@@ -2389,7 +2400,7 @@ fn pain_for_all_pings_for_power() {
     let mut g = two_player_game();
     let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // power 4
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
-    resolve_targeted(&mut g, 0, catalog::pain_for_all().effect.clone(), &[mine, theirs]);
+    resolve_aura_etb(&mut g, catalog::pain_for_all(), mine, theirs);
     assert!(g.battlefield_find(theirs).is_none(), "4 damage kills the 2/2");
 }
 

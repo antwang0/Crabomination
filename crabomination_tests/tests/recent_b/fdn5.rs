@@ -213,7 +213,9 @@ fn composite_golem_makes_five_colors() {
     assert!(g.battlefield_find(golem).is_none());
 }
 
-/// Cosmic Larva eats two lands each upkeep, or itself.
+/// Cosmic Larva eats two lands each upkeep, or itself: one land is not
+/// enough (the `count: 2` on `SacrificeSourceUnlessSacrifice`, 2026-09-10 —
+/// it used to keep itself for one land).
 #[test]
 fn cosmic_larva_demands_lands() {
     let mut g = main_phase();
@@ -222,6 +224,25 @@ fn cosmic_larva_demands_lands() {
     let _ = g.advance_step(Vec::new());
     drain_stack(&mut g);
     assert!(g.battlefield_find(larva).is_none(), "no lands to feed it");
+
+    let mut g = main_phase();
+    let larva = g.add_card_to_battlefield(0, catalog::cosmic_larva());
+    let one = g.add_card_to_battlefield(0, catalog::forest());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(larva).is_none(), "one land is not two");
+    assert!(g.battlefield_find(one).is_some(), "the lone land is not eaten");
+
+    let mut g = main_phase();
+    let larva = g.add_card_to_battlefield(0, catalog::cosmic_larva());
+    let a = g.add_card_to_battlefield(0, catalog::forest());
+    let b = g.add_card_to_battlefield(0, catalog::forest());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(larva).is_some(), "fed, it stays");
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both lands eaten");
 }
 
 /// Fleshgrafter pitches an artifact for +2/+2.

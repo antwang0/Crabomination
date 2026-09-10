@@ -209,16 +209,17 @@ pub fn shielding_plax() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Seq(vec![
-            Effect::Attach {
-                what: Selector::This,
-                to: target_filtered(R::Creature),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::ONE,
-            },
-        ]),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        // The entry half is an ETB trigger: an Aura's own `effect:` is its
+        // attach and nothing after it runs on the cast path (dead as shipped
+        // until 2026-09-10; the old test resolved the effect by hand).
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Hexproof],
             ..Default::default()

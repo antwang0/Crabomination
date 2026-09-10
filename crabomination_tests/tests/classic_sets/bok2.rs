@@ -5,6 +5,7 @@ use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
+use crabomination::mana::Color;
 
 fn always_yes(g: &mut GameState) {
     g.decider = Box::new(ScriptedDecider::new(
@@ -639,4 +640,21 @@ fn neko_te_locks_down_noncombat_damage_victims() {
     );
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).unwrap().tapped);
+}
+
+/// Mark of the Oni takes the enchanted creature on the real cast path (its
+/// control half is an ETB trigger — 2026-09-10).
+#[test]
+fn mark_of_the_oni_takes_the_host_when_cast() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::mark_of_the_oni());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mark of the Oni castable for {2}{B}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "you control the enchanted creature");
 }

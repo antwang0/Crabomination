@@ -557,3 +557,29 @@ fn goblin_game_punishes_the_fewest_items() {
     assert_eq!(g.players[0].life, 9);
     assert_eq!(g.players[1].life, 9);
 }
+
+/// Sleeping Potion taps the host down and leaves when the host becomes the
+/// target of anything (the trigger never fired before 2026-09-10).
+#[test]
+fn sleeping_potion_leaves_when_the_host_is_targeted() {
+    let mut g = main_phase();
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let aura = g.add_card_to_hand(0, catalog::sleeping_potion());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sleeping Potion castable for {1}{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "the host is tapped on entry");
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Shock the host");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "the Potion sacrificed itself when the host was targeted");
+    assert!(g.battlefield_find(foe).is_some(), "the 3/3 host survives the Shock");
+}

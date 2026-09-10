@@ -1181,3 +1181,35 @@ fn crashing_boars_lets_the_defender_pick() {
     assert_eq!(g.battlefield_find(second).unwrap().must_block, Some(boars));
     assert_eq!(g.battlefield_find(first).unwrap().must_block, None, "the other stays free");
 }
+
+/// Paroxysm: at the enchanted creature's controller's upkeep, a land on top
+/// destroys it; anything else gives it +3/+3 (the `else_` branch of
+/// `RevealTopThenIf`, 2026-09-10 — the pump used to be dropped).
+#[test]
+fn paroxysm_destroys_on_a_land_and_pumps_otherwise() {
+    for (top, dies) in [(catalog::forest as fn() -> _, true), (catalog::lightning_bolt, false)] {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let aura = g.add_card_to_hand(0, catalog::paroxysm());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: aura, target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("Paroxysm castable for {1}{R}");
+        drain_stack(&mut g);
+        let id = g.add_card_to_library(0, top());
+        let at = g.players[0].library.iter().position(|c| c.id == id).expect("in library");
+        let card = g.players[0].library.remove(at);
+        g.players[0].library.insert(0, card);
+        g.step = TurnStep::Untap;
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+        if dies {
+            assert!(g.battlefield_find(bear).is_none(), "a land on top destroys the host");
+        } else {
+            let cp = g.computed_permanent(bear).unwrap();
+            assert_eq!((cp.power, cp.toughness), (5, 5), "a nonland on top: +3/+3");
+        }
+    }
+}

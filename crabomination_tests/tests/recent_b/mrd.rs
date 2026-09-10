@@ -2173,3 +2173,31 @@ fn spellweaver_helix_copies_the_other_imprint() {
         "the copied Divination drew two"
     );
 }
+
+/// Fractured Loyalty hands the host to whoever targets it (the trigger
+/// never fired before 2026-09-10).
+#[test]
+fn fractured_loyalty_gives_the_host_to_the_targeter() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let aura = g.add_card_to_hand(0, catalog::fractured_loyalty());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(giant)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fractured Loyalty castable for {1}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(giant), "attached");
+    // The opponent Shocks the 3/3: it survives, and it is theirs now.
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock, target: Some(Target::Permanent(giant)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("the opponent targets the host");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(giant).expect("the 3/3 survives 2 damage");
+    assert_eq!(c.controller, 1, "control passed to the targeting spell's controller");
+}

@@ -288,7 +288,7 @@ fn deceiver_abilities(then: Effect) -> Vec<ActivatedAbility> {
         ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             once_per_turn: true,
-            effect: Effect::RevealTopThenIf {
+            effect: Effect::RevealTopThenIf { else_: None,
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Land,
                 then: Box::new(then),
