@@ -3474,6 +3474,7 @@ fn mai_scornful_striker_taxes_noncreature_casts() {
     g.players[0].mana_pool.add(Color::Red, 1);
     cast_at(&mut g, bolt, Target::Player(1));
     assert_eq!(g.players[0].life, life0 - 2, "the caster loses 2 for a noncreature spell");
+    assert_eq!(g.players[1].life, 17, "the opponent only took the Bolt");
 }
 
 /// Tempest Angler grows on each noncreature spell you cast — it shipped with

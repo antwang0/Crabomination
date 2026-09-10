@@ -18438,8 +18438,11 @@ pub fn mai_scornful_striker() -> CardDefinition {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)),
             }),
+            // `Triggerer` is the caster of the spell bound as the trigger's
+            // source; `TriggerEventPlayer` is unbound on a SpellCast (the
+            // subject is the spell), and read as the opponent.
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::TriggerEventPlayer),
+                who: Selector::Player(PlayerRef::Triggerer),
                 amount: Value::Const(2),
             },
         }],
