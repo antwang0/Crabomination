@@ -601,8 +601,24 @@ fn barret_avalanche_makes_rebel_on_equipment() {
     let art = g.move_card_to_battlefield_for_test(0, catalog::bonesplitter());
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
     drain_stack(&mut g);
-    let rebels = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Rebel").count();
-    assert_eq!(rebels, 1, "an Equipment ETB minted one Rebel token");
+    let rebels: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.is_token && c.definition.name == "Rebel")
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(rebels.len(), 1, "an Equipment ETB minted one Rebel token");
+    // At the beginning of his controller's combat the Equipment attaches to
+    // a Rebel he controls (the token or Barret himself).
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    let host = g.battlefield_find(art).unwrap().attached_to.expect("Bonesplitter attached");
+    assert!(
+        g.battlefield_find(host).is_some_and(|c| c.definition.has_creature_type(crabomination::card::CreatureType::Rebel)),
+        "attached to a Rebel"
+    );
 }
 
 /// Edgar draws a card for each artifact he controls on entry.

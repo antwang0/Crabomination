@@ -1146,8 +1146,9 @@ pub fn aerith_last_ancient() -> CardDefinition {
 }
 
 /// Barret, Avalanche Leader — {2}{R}{G} 4/4 Human Rebel with reach. Whenever an
-/// Equipment you control enters, create a 2/2 red Rebel token. (The begin-combat
-/// auto-attach is omitted.)
+/// Equipment you control enters, create a 2/2 red Rebel token. At the beginning
+/// of combat on your turn, attach up to one target Equipment you control to
+/// target Rebel you control.
 pub fn barret_avalanche_leader() -> CardDefinition {
     let rebel = TokenDefinition {
         name: "Rebel".into(),
@@ -1173,18 +1174,41 @@ pub fn barret_avalanche_leader() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
-                }),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: Box::new(rebel),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                    }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Box::new(rebel),
+                },
             },
-        }],
+            // "Up to one target Equipment": both slots are picked when the
+            // board has them; with no Equipment or no Rebel the trigger has
+            // no legal target and is removed (CR 603.3d), the same outcome.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::Attach {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    to: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Rebel)
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                },
+            },
+        ],
         ..Default::default()
     }
 }
