@@ -3626,3 +3626,26 @@ fn fated_firepower_boosts_damage_by_fire_counters() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, before - 5, "3 damage + 2 fire counters = 5");
 }
+
+
+/// Dai Li Agents' "Whenever this creature attacks, each opponent loses X life
+/// and you gain X life, where X is the number of creatures you control with
+/// +1/+1 counters on them" shipped missing (the `cnt` audit column,
+/// 2026-09-10).
+#[test]
+fn dai_li_agents_drain_per_countered_creature_on_attack() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let agents = g.add_card_to_battlefield(0, catalog::dai_li_agents());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(b).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.clear_sickness(agents);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: agents, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "two creatures carry counters");
+    assert_eq!(g.players[0].life, 22);
+}

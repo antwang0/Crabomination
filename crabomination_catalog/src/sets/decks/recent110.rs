@@ -258,6 +258,16 @@ pub fn emrakul_the_promised_end() -> CardDefinition {
             description: "This spell costs {1} less to cast for each card type among cards in your graveyard.",
             effect: StaticEffect::SelfCostReducedPerCardTypeInGraveyard,
         }],
+        // "When you cast this spell, you gain control of target opponent
+        // during that player's next turn. After that turn, that player takes
+        // an extra turn" — shipped missing (the `cnt` audit column,
+        // 2026-09-10). The extra turn is queued now, so it is the turn the
+        // control lands on and the natural turn follows it: controlled turn,
+        // then their own, the printed sequence.
+        triggered_abilities: vec![crate::effect::shortcut::on_cast(Effect::Seq(vec![
+            Effect::ControlPlayerNextTurn { who: PlayerRef::EachOpponent },
+            Effect::TakeExtraTurn { who: PlayerRef::EachOpponent, count: Value::ONE },
+        ]))],
         ..Default::default()
     }
 }

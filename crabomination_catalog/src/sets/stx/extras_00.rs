@@ -1398,16 +1398,18 @@ pub fn galvanic_iteration() -> CardDefinition {
     CardDefinition {
         name: "Galvanic Iteration",
         cost: cost(&[u(), r()]),
-        exile_on_resolve: true,
         card_types: vec![CardType::Instant],
-        effect: Effect::CopySpell {
-            what: target_filtered(
-                SelectionRequirement::IsSpellOnStack.and(
-                    SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                ),
-            ),
-            count: Value::Const(1),
+        // "When you next cast an instant or sorcery spell this turn, copy that
+        // spell. You may choose new targets for the copy. Flashback {3}{U}{R}"
+        // — shipped as an immediate copy of a spell already on the stack with
+        // no flashback (the `cnt` audit column, 2026-09-10; Teach by Example's
+        // shape).
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), u(), r()]))],
+        effect: Effect::OnYourNextInstantSorceryThisTurn {
+            body: Box::new(Effect::CopySpellMayChooseTargets {
+                what: Selector::TriggerSource,
+                count: Value::Const(1),
+            }),
         },
         ..Default::default()
     }

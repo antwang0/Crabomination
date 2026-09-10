@@ -1072,3 +1072,32 @@ fn krenkos_command_makes_two_goblins() {
     assert_eq!(gobs, 2, "two 1/1 Goblins created");
 }
 
+
+
+/// Cavalry Pegasus's "Whenever Cavalry Pegasus attacks, each attacking Human
+/// gains flying until end of turn" shipped missing — it was a vanilla flier
+/// (the `cnt` audit column, 2026-09-10).
+#[test]
+fn cavalry_pegasus_gives_attacking_humans_flying() {
+    use crabomination::card::Keyword;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let pegasus = g.add_card_to_battlefield(0, catalog::cavalry_pegasus());
+    let human = g.add_card_to_battlefield(0, catalog::elite_vanguard());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let home = g.add_card_to_battlefield(0, catalog::elite_vanguard());
+    for id in [pegasus, human, bear, home] {
+        g.clear_sickness(id);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: pegasus, target: AttackTarget::Player(1) },
+        Attack { attacker: human, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    let flies = |g: &GameState, id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying);
+    assert!(flies(&g, human), "the attacking Human flies");
+    assert!(!flies(&g, bear), "the Bear is no Human");
+    assert!(!flies(&g, home), "the Human at home did not attack");
+}

@@ -120,6 +120,21 @@ pub fn cytoplast_root_kin() -> CardDefinition {
             }),
             crate::effect::shortcut::graft(),
         ],
+        // "{2}: Move a +1/+1 counter from target creature you control onto
+        // Cytoplast Root-Kin" — shipped missing (the `cnt` audit column,
+        // 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::MoveCounter {
+                from: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                to: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

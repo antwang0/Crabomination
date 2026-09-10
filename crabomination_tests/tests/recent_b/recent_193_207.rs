@@ -1565,3 +1565,39 @@ mod recent207 {
         assert!(g.computed_permanent(redcap).unwrap().keywords().contains(&Keyword::DoubleStrike));
     }
 }
+
+
+mod keys_to_the_house_cnt {
+    use crabomination::catalog;
+    use crabomination::game::types::Target;
+    use crabomination::game::*;
+    use crabomination::mana::Color;
+    use crabomination::TurnStep;
+
+    /// Keys to the House's "{3}, {T}, Sacrifice this artifact: Lock or unlock
+    /// a door of target Room you control" shipped missing (the `cnt` audit
+    /// column, 2026-09-10).
+    #[test]
+    fn keys_to_the_house_changes_a_door_of_a_room_you_control() {
+        let mut g = two_player_game();
+        let room = g.add_card_to_hand(0, catalog::mirror_room_fractured_realm());
+        for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            g.players[0].mana_pool.add(c, 12);
+        }
+        g.players[0].mana_pool.add_colorless(20);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false }).expect("cast the left door");
+        drain_stack(&mut g);
+        let before = g.battlefield_find(room).unwrap().unlocked_doors;
+        assert_eq!(before, 0b01, "one door open");
+        let keys = g.add_card_to_battlefield(0, catalog::keys_to_the_house());
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: keys, ability_index: 1, target: Some(Target::Permanent(room)), additional_targets: Vec::new(), x_value: None, mode: None,
+        }).expect("{{3}}, {{T}}, sacrifice: a door");
+        drain_stack(&mut g);
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == keys), "sacrificed");
+        let after = g.battlefield_find(room).unwrap().unlocked_doors;
+        assert_ne!(after, before, "a door was locked or unlocked");
+    }
+}

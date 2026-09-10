@@ -350,36 +350,52 @@ fn aether_poisoner_etb_energy_and_attack_servo() {
     );
 }
 
+/// "When this creature enters, you get {E}. Whenever it attacks, you may pay
+/// {E}. If you do, it gets +2/+0 until end of turn." Shipped with {E}{E} on
+/// entry and an invented "{E}{E}{E}{E}: unblockable" activation (the `cnt`
+/// audit column, 2026-09-10).
 #[test]
-fn aetherstream_leopard_pays_four_energy_for_unblockable() {
-    use crabomination::card::Keyword;
+fn aetherstream_leopard_pays_one_energy_on_attack_for_two_power() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::aetherstream_leopard());
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(2);
     cast_creature(&mut g, id);
-    assert_eq!(g.players[0].energy, 2);
-    g.players[0].energy = 4;
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("activatable");
+    assert_eq!(g.players[0].energy, 1, "ETB {{E}}");
+    assert!(g.battlefield_find(id).unwrap().definition.activated_abilities.is_empty(), "no invented activation");
+    g.clear_sickness(id);
+    while g.step != crabomination::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id, target: AttackTarget::Player(1),
+    }])).expect("attack");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].energy, 0);
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Unblockable));
+    assert_eq!(g.players[0].energy, 0, "the attack trigger spent it");
+    let after = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+    assert_eq!((after.power, after.toughness), (4, 3), "+2/+0 until end of turn");
 }
 
+/// "Whenever this creature attacks, you may pay {E}{E}. If you do, it gets
+/// +2/+2 until end of turn." Shipped as an invented "{E}{E}: hexproof"
+/// activation (the `cnt` audit column, 2026-09-10).
 #[test]
-fn riparian_tiger_pays_two_energy_for_hexproof() {
-    use crabomination::card::Keyword;
+fn riparian_tiger_pays_two_energy_on_attack_for_two_two() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::riparian_tiger());
+    assert!(g.battlefield_find(id).unwrap().definition.activated_abilities.is_empty(), "no invented activation");
+    g.clear_sickness(id);
     g.players[0].energy = 2;
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("activatable");
+    while g.step != crabomination::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id, target: AttackTarget::Player(1),
+    }])).expect("attack");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].energy, 0);
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Hexproof));
+    assert_eq!(g.players[0].energy, 0, "the attack trigger spent both");
+    let after = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+    assert_eq!((after.power, after.toughness), (6, 6), "+2/+2 until end of turn");
 }
 
 #[test]
@@ -629,4 +645,17 @@ fn servant_of_the_conduit_mana_ability_spends_energy() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 1, "spent one {{E}} of two");
     assert_eq!(g.players[0].mana_pool.total(), 1);
+}
+
+
+/// Voltaic Brawler's "When this creature enters, you get {E}{E}" shipped
+/// missing (the `cnt` audit column, 2026-09-10).
+#[test]
+fn voltaic_brawler_enters_with_two_energy() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::voltaic_brawler());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_creature(&mut g, id);
+    assert_eq!(g.players[0].energy, 2);
 }

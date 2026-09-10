@@ -1986,3 +1986,29 @@ mod recent110 {
         assert_eq!(g.players[1].life, life - 2, "4+ cards in hand → 2 damage");
     }
 }
+
+
+mod emrakul_cnt {
+    use crabomination::catalog;
+    use crabomination::game::*;
+
+    /// Emrakul, the Promised End's cast trigger — "you gain control of target
+    /// opponent during that player's next turn. After that turn, that player
+    /// takes an extra turn" — shipped missing (the `cnt` audit column,
+    /// 2026-09-10).
+    #[test]
+    fn emrakul_the_promised_end_cast_trigger_takes_the_next_turn_and_grants_an_extra_one() {
+        let mut g = two_player_game();
+        let emmy = g.add_card_to_hand(0, catalog::emrakul_the_promised_end());
+        g.players[0].mana_pool.add_colorless(13);
+        g.step = crabomination::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: emmy, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast for {{13}}");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(emmy).is_some());
+        assert!(g.pending_player_control.contains(&(1, 0)), "player 0 controls player 1's next turn");
+        assert_eq!(g.players[1].extra_turns, 1, "and they take an extra turn after it");
+    }
+}

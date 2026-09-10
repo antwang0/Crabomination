@@ -1198,11 +1198,40 @@ pub fn glacier_godmaw() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: Box::new(lander_token()),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(lander_token()),
+            }),
+            // "Landfall — Whenever a land you control enters, creatures you
+            // control get +1/+1 and gain vigilance and haste until end of
+            // turn" — shipped missing (the `cnt` audit column, 2026-09-10).
+            crate::effect::shortcut::landfall(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        ],
         ..Default::default()
     }
 }
@@ -6844,6 +6873,23 @@ pub fn pain_for_all() -> CardDefinition {
             },
             amount: Value::PowerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
         })],
+        // "Whenever enchanted creature is dealt damage, it deals that much
+        // damage to each opponent" — shipped missing (the `cnt` audit column,
+        // 2026-09-10). Granted to the host like an Equipment's trigger, so the
+        // damage comes from the creature (Tephraderm's shape).
+        equipped_bonus: Some(crate::card::EquipBonus {
+            triggered_abilities: vec![crate::card::TriggeredAbility {
+                event: crate::card::EventSpec::new(
+                    crate::card::EventKind::DealtDamage,
+                    crate::card::EventScope::SelfSource,
+                ),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::TriggerEventAmount,
+                },
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

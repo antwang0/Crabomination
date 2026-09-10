@@ -935,3 +935,23 @@ fn a_token_created_with_counters_has_them_before_it_enters() {
         assert!(added < entered, "counters are part of the entry, not a step after it");
     }
 }
+
+
+/// Cytoplast Root-Kin's "{2}: Move a +1/+1 counter from target creature you
+/// control onto Cytoplast Root-Kin" shipped missing (the `cnt` audit column,
+/// 2026-09-10).
+#[test]
+fn cytoplast_root_kin_pulls_a_counter_off_a_creature_you_control() {
+    let mut g = two_player_game();
+    let kin = g.add_card_to_battlefield(0, catalog::cytoplast_root_kin());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let before = g.battlefield_find(kin).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kin, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{{2}}: move a counter");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(kin).unwrap().counter_count(CounterType::PlusOnePlusOne), before + 1);
+}

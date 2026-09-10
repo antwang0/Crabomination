@@ -1300,23 +1300,33 @@ fn cathar_commando_sac_destroys_artifact() {
     assert!(!g.battlefield.iter().any(|c| c.id == opp_ring));
 }
 
+/// "When Haywire Mite dies, you gain 2 life. {G}, Sacrifice Haywire Mite:
+/// Exile target noncreature artifact or enchantment." Shipped as a destroy
+/// with 1 life folded in and no dies trigger (the `cnt` audit column,
+/// 2026-09-10).
 #[test]
-fn haywire_mite_sac_destroys_artifact_and_gains_life() {
+fn haywire_mite_sac_exiles_a_noncreature_artifact_and_its_death_gains_two() {
     let mut g = two_player_game();
     let opp_ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let opp_golem = g.add_card_to_battlefield(1, catalog::stonework_packbeast());
     let mite = g.add_card_to_battlefield(0, catalog::haywire_mite());
     g.clear_sickness(mite);
     g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
     let life_before = g.players[0].life;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: mite,
+        ability_index: 0,
+        target: Some(Target::Permanent(opp_golem)), additional_targets: Vec::new(), x_value: None , mode: None})
+    .is_err(), "an artifact creature is not a legal target");
     g.perform_action(GameAction::ActivateAbility {
         card_id: mite,
         ability_index: 0,
         target: Some(Target::Permanent(opp_ring)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Haywire Mite sac activates");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == mite));
-    assert!(!g.battlefield.iter().any(|c| c.id == opp_ring));
-    assert_eq!(g.players[0].life, life_before + 1);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mite), "sacrificed");
+    assert!(g.exile.iter().any(|c| c.id == opp_ring), "the ring is exiled, not destroyed");
+    assert_eq!(g.players[0].life, life_before + 2, "the dies trigger gained 2");
 }
 
 #[test]

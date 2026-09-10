@@ -640,6 +640,23 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Flying],
+        // "Whenever an opponent casts a spell, counter it unless that player
+        // pays {1}" — the battlefield half shipped missing; only the
+        // opening-hand reveal was modelled (the `cnt` audit column,
+        // 2026-09-10).
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(
+                crate::card::EventKind::SpellCast,
+                crate::card::EventScope::OpponentControl,
+            ),
+            effect: Effect::CounterUnlessPaid {
+                what: Selector::TriggerSource,
+                mana_cost: cost(&[generic(1)]),
+                exile: false,
+                extra_generic: None,
+                if_paid: None,
+            },
+        }],
         opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
             // Fire on the upkeep so the first spell each opponent casts
             // **next turn** is taxed (the engine fires this delayed

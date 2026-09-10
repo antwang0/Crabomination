@@ -2330,3 +2330,24 @@ fn consuls_lieutenant_pumps_the_other_attackers_once_renowned() {
     assert_eq!(bear_power_after_attack(false), (2, 2), "not renowned: no pump");
     assert_eq!(bear_power_after_attack(true), (3, 2), "renowned: the other attacker gets +1/+1, itself nothing");
 }
+
+
+/// Brimaz's "Whenever Brimaz blocks a creature, create a 1/1 white Cat Soldier
+/// creature token with vigilance that's blocking that creature" shipped
+/// missing (the `cnt` audit column, 2026-09-10).
+#[test]
+fn brimaz_makes_a_blocking_cat_token() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let brimaz = g.add_card_to_battlefield(1, catalog::brimaz_king_of_oreskos());
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.clear_sickness(giant);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: giant, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(brimaz, giant)])).expect("block");
+    drain_stack(&mut g);
+    let cat = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.name == "Cat Soldier").map(|c| c.id).expect("cat token");
+    assert!(g.block_map.get(&cat).is_some_and(|a| a.contains(&giant)), "the token blocks the Giant");
+}

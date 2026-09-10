@@ -2351,3 +2351,29 @@ fn reign_of_terror_costs_two_life_per_creature_destroyed() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Serra Angel"), "white one lives");
     assert_eq!(g.players[0].life, life - 4, "2 life per creature that died this way");
 }
+
+
+/// Floodgate's "When Floodgate has flying, sacrifice it" shipped missing (the
+/// `cnt` audit column, 2026-09-10).
+#[test]
+fn floodgate_is_sacrificed_when_it_gains_flying() {
+    let mut g = two_player_game();
+    let gate = g.add_card_to_battlefield(0, catalog::floodgate());
+    // A granted keyword (the `sacrifice_when` predicate reads the instance's
+    // own and granted keywords, not an Aura's static grant).
+    let ctx = crabomination::game::effects::EffectContext::for_ability(gate, 0, None);
+    g.resolve_effect(
+        &crabomination::effect::Effect::GrantKeyword {
+            what: crabomination::effect::Selector::This,
+            keyword: Keyword::Flying,
+            duration: crabomination::effect::Duration::EndOfTurn,
+        },
+        &ctx,
+    )
+    .unwrap();
+    assert!(g.battlefield_find(gate).unwrap().has_keyword(&Keyword::Flying));
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gate).is_none(), "sacrificed for having flying");
+}

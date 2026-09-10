@@ -1332,3 +1332,67 @@ fn flaxen_intruder_sacrifices_itself_to_destroy_an_artifact() {
     assert!(g.battlefield_find(intruder).is_none(), "sacrificed itself");
     assert!(g.battlefield_find(relic).is_none(), "and destroyed the artifact");
 }
+
+
+/// Murderous Rider's "When Murderous Rider dies, put it on the bottom of its
+/// owner's library" shipped missing (the `cnt` audit column, 2026-09-10).
+#[test]
+fn murderous_rider_dies_to_the_bottom_of_its_owners_library() {
+    let mut g = two_player_game();
+    let rider = g.add_card_to_battlefield(0, catalog::murderous_rider());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    let n = g.players[0].library.len();
+    let ev = g.remove_to_graveyard_with_triggers(rider);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == rider), "not left in the graveyard");
+    assert_eq!(g.players[0].library.len(), n + 1);
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(rider), "on the bottom");
+}
+
+/// Queen of Ice's creature half — "Whenever Queen of Ice deals combat damage
+/// to a creature, tap that creature. It doesn't untap during its controller's
+/// next untap step" — shipped with no abilities (the `cnt` audit column,
+/// 2026-09-10).
+#[test]
+fn queen_of_ice_taps_and_stuns_a_creature_it_deals_combat_damage_to() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let queen = g.add_card_to_battlefield(0, catalog::queen_of_ice());
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_omens()); // 0/4
+    g.clear_sickness(queen);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: queen, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, queen)])).expect("block");
+    drain_stack(&mut g);
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    let w = g.battlefield_find(wall).expect("the 0/4 survives 2");
+    assert!(w.tapped, "tapped by the trigger");
+    assert_eq!(w.counter_count(CounterType::Stun), 1, "and stunned");
+}
+
+/// Merchant of the Vale's creature half — "{2}{R}, Discard a card: Draw a
+/// card" — shipped with no abilities (the `cnt` audit column, 2026-09-10).
+#[test]
+fn merchant_of_the_vale_discards_a_card_to_draw() {
+    let mut g = two_player_game();
+    let merchant = g.add_card_to_battlefield(0, catalog::merchant_of_the_vale());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let (hand, library) = (g.players[0].hand.len(), g.players[0].library.len());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: merchant, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{{2}}{{R}}, discard a card: draw");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "the discard was the cost");
+    assert_eq!(g.players[0].library.len(), library - 1, "drew");
+    assert_eq!(g.players[0].hand.len(), hand, "one out, one in");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}

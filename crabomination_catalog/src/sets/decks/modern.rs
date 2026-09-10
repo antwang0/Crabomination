@@ -21689,6 +21689,15 @@ pub fn murderous_rider() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
+        // "When Murderous Rider dies, put it on the bottom of its owner's
+        // library" — shipped missing (the `cnt` audit column, 2026-09-10).
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Move {
+            what: Selector::This,
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: crate::effect::LibraryPosition::Bottom,
+            },
+        })],
         adventure: Some(Box::new(Adventure {
             name: "Swift End",
             cost: cost(&[generic(1), b(), b()]),
@@ -22021,6 +22030,17 @@ pub fn merchant_of_the_vale() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
+        // "{2}{R}, Discard a card: Draw a card" — the creature half shipped
+        // with no abilities (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
         adventure: Some(Box::new(Adventure {
             name: "Haggle",
             cost: cost(&[r()]),
@@ -22806,6 +22826,22 @@ pub fn queen_of_ice() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
+        // "Whenever Queen of Ice deals combat damage to a creature, tap that
+        // creature. It doesn't untap during its controller's next untap
+        // step" — the creature half shipped with no abilities (the `cnt`
+        // audit column, 2026-09-10). The dispatcher binds the damaged
+        // creature to target slot 0 (Soul Charmer).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
         adventure: Some(Box::new(Adventure {
             name: "Rage of Winter",
             cost: cost(&[generic(1), u()]),

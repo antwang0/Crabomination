@@ -2006,3 +2006,38 @@ mod recent117 {
         assert_eq!(g.computed_permanent(bear).unwrap().power, 6, "3 doubled to 6");
     }
 }
+
+
+mod shielded_by_faith_cnt {
+    use crabomination::catalog;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    use crabomination::game::*;
+    use crabomination::mana::Color;
+
+    /// "Whenever a creature enters, you may attach Shielded by Faith to that
+    /// creature" shipped missing (the `cnt` audit column, 2026-09-10).
+    #[test]
+    fn shielded_by_faith_may_move_to_a_creature_that_enters() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let aura = g.add_card_to_hand(0, catalog::shielded_by_faith());
+        g.players[0].mana_pool.add(Color::White, 2);
+        g.players[0].mana_pool.add_colorless(1);
+        cast_at(&mut g, aura, Target::Permanent(bear));
+        assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(bear));
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        let newcomer = g.add_card_to_hand(0, catalog::hill_giant());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.step = crabomination::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: newcomer, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("a creature enters");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(newcomer), "moved to the creature that entered");
+        assert!(g.computed_permanent(newcomer).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
+        assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
+    }
+}

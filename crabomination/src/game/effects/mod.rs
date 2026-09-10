@@ -9675,8 +9675,19 @@ impl GameState {
 
             // CR 509.4 — mint a token already blocking the targeted attacker.
             Effect::CreateTokenBlocking { definition, .. } => {
-                let Some(Target::Permanent(attacker)) = ctx.targets.first().cloned() else {
-                    return Ok(());
+                // A spell names the attacker as its target; a "whenever this
+                // creature blocks" trigger (Brimaz) carries none, and the
+                // attacker is the one the source blocks.
+                let attacker = match ctx.targets.first().cloned() {
+                    Some(Target::Permanent(a)) => a,
+                    _ => match self
+                        .resolve_selector(&crate::effect::Selector::BlockedAttacker, ctx)
+                        .iter()
+                        .find_map(|e| e.as_permanent_id())
+                    {
+                        Some(a) => a,
+                        None => return Ok(()),
+                    },
                 };
                 if !self.attacking.iter().any(|a| a.attacker == attacker) {
                     return Ok(());

@@ -3519,17 +3519,28 @@ fn quintorius_anthem_expires_when_he_leaves_battlefield() {
     assert_eq!(after.power, 2, "anthem evaporates without Quintorius");
 }
 
+/// "When you next cast an instant or sorcery spell this turn, copy that
+/// spell. You may choose new targets for the copy. Flashback {3}{U}{R}."
+/// Shipped as an immediate copy of a spell already on the stack that exiled
+/// itself, with no flashback (the `cnt` audit column, 2026-09-10).
 #[test]
-fn galvanic_iteration_copies_target_instant() {
+fn galvanic_iteration_copies_your_next_instant_this_turn() {
     let mut g = two_player_game();
-    // Seed cards: a Lightning Bolt as the original instant, Galvanic Iteration
-    // as the copy spell.
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     let gi = g.add_card_to_hand(0, catalog::galvanic_iteration());
-    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gi,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("galvanic iteration casts targetless");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == gi), "in the graveyard, flashback available");
 
-    // Cast Bolt targeting the opponent.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(1)),
@@ -3537,33 +3548,35 @@ fn galvanic_iteration_copies_target_instant() {
         mode: None,
         x_value: None,
     }).expect("bolt casts");
-    // Now cast Galvanic Iteration targeting the Bolt on the stack.
-    let bolt_target = g.stack.iter().find_map(|s| match s {
-        StackItem::Spell { card, .. } if card.definition.name == "Lightning Bolt" => Some(card.id),
-        _ => None,
-    }).expect("bolt on stack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 6, "Bolt plus Galvanic Iteration's copy");
+
+    // One-shot: a second Bolt is not copied.
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: gi,
-        target: Some(Target::Permanent(bolt_target)),
+        card_id: bolt2,
+        target: Some(Target::Player(1)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    }).expect("galvanic iteration casts");
+    }).expect("second bolt casts");
     drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 9, "the watcher was one-shot");
 
-    // Opponent took 3 (original Bolt) + 3 (Galvanic Iteration copy) = 6 damage.
-    assert_eq!(g.players[1].life, 20 - 6, "Galvanic Iteration copied the Bolt");
-
-    // Magecraft self-exile rider: casting Iteration is itself an instant
-    // cast, so the card routes to exile (not the graveyard) on resolution.
-    assert!(
-        g.exile.iter().any(|c| c.id == gi),
-        "Galvanic Iteration exiled itself on resolution (Magecraft rider)"
-    );
-    assert!(
-        !g.players[0].graveyard.iter().any(|c| c.id == gi),
-        "Galvanic Iteration is not in the graveyard"
-    );
+    // Flashback {3}{U}{R} from the graveyard.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: gi,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("flashback from the graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gi), "flashback exiles it");
 }
 
 #[test]

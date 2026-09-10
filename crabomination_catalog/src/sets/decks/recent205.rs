@@ -44,17 +44,34 @@ pub fn keys_to_the_house() -> CardDefinition {
         name: "Keys to the House",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(1)]),
-            tap_cost: true,
-            sac_cost: true,
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: R::IsBasicLand,
-                to: ZoneDest::Hand(PlayerRef::You),
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::IsBasicLand,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        }],
+            // "{3}, {T}, Sacrifice this artifact: Lock or unlock a door of
+            // target Room you control" — shipped missing (the `cnt` audit
+            // column, 2026-09-10).
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::LockOrUnlockRoomDoor {
+                    what: target_filtered(
+                        R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Room)
+                            .and(R::ControlledByYou),
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

@@ -546,6 +546,21 @@ pub fn shielded_by_faith() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(SelectionRequirement::Creature),
         },
+        // "Whenever a creature enters, you may attach Shielded by Faith to
+        // that creature" — shipped missing (the `cnt` audit column,
+        // 2026-09-10).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                },
+            ),
+            effect: Effect::MayDo {
+                description: "Attach Shielded by Faith to that creature".into(),
+                body: Box::new(Effect::AttachSourceTo { host: Selector::TriggerSource }),
+            },
+        }],
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Indestructible],
             ..Default::default()

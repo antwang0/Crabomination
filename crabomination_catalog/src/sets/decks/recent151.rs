@@ -68,14 +68,30 @@ pub fn overgrown_zealot() -> CardDefinition {
         },
         power: 0,
         toughness: 4,
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::ONE),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        }],
+            // "{T}: Add two mana of any one color. Spend this mana only to
+            // turn permanents face up" — shipped missing (the `cnt` audit
+            // column, 2026-09-10).
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::Const(2))),
+                        crate::mana::SpendRestriction::FaceDownSpellsOrTurnFaceUp,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

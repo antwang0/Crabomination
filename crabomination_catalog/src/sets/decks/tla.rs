@@ -2677,10 +2677,25 @@ pub fn dai_li_agents() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Earthbend { n: Value::ONE },
-            Effect::Earthbend { n: Value::ONE },
-        ]))],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Earthbend { n: Value::ONE },
+                Effect::Earthbend { n: Value::ONE },
+            ])),
+            // "Whenever this creature attacks, each opponent loses X life and
+            // you gain X life, where X is the number of creatures you control
+            // with +1/+1 counters on them" — shipped missing (the `cnt` audit
+            // column, 2026-09-10).
+            crate::effect::shortcut::on_attack(Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ))),
+            }),
+        ],
         ..Default::default()
     }
 }

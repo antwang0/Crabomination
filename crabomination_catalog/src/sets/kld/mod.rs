@@ -566,13 +566,11 @@ pub fn aether_poisoner() -> CardDefinition {
 /// {E}{E}{E}{E}: this creature can't be blocked this turn.
 pub fn aetherstream_leopard() -> CardDefinition {
     use crate::effect::Duration;
-    use crate::effect::shortcut::etb;
-    let mut sneak = pay_energy_counter(4);
-    sneak.effect = Effect::GrantKeyword {
-        what: Selector::This,
-        keyword: Keyword::Unblockable,
-        duration: Duration::EndOfTurn,
-    };
+    use crate::effect::shortcut::{etb, on_attack};
+    // "When this creature enters, you get {E}. Whenever it attacks, you may
+    // pay {E}. If you do, it gets +2/+0 until end of turn" — shipped with
+    // {E}{E} on entry and an invented "{E}{E}{E}{E}: unblockable" activation
+    // (the `cnt` audit column, 2026-09-10).
     CardDefinition {
         name: "Aetherstream Leopard",
         cost: cost(&[generic(2), g()]),
@@ -584,8 +582,18 @@ pub fn aetherstream_leopard() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
-        activated_abilities: vec![sneak],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(1))),
+            on_attack(Effect::PayEnergy {
+                amount: 1,
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+            }),
+        ],
         ..Default::default()
     }
 }
@@ -594,13 +602,10 @@ pub fn aetherstream_leopard() -> CardDefinition {
 /// this creature gains hexproof until end of turn.
 pub fn riparian_tiger() -> CardDefinition {
     use crate::effect::Duration;
-    use crate::effect::shortcut::etb;
-    let mut guard = pay_energy_counter(2);
-    guard.effect = Effect::GrantKeyword {
-        what: Selector::This,
-        keyword: Keyword::Hexproof,
-        duration: Duration::EndOfTurn,
-    };
+    use crate::effect::shortcut::{etb, on_attack};
+    // "Whenever this creature attacks, you may pay {E}{E}. If you do, it gets
+    // +2/+2 until end of turn" — shipped as an invented "{E}{E}: hexproof"
+    // activation (the `cnt` audit column, 2026-09-10).
     CardDefinition {
         name: "Riparian Tiger",
         cost: cost(&[generic(3), g(), g()]),
@@ -612,8 +617,18 @@ pub fn riparian_tiger() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
-        activated_abilities: vec![guard],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            on_attack(Effect::PayEnergy {
+                amount: 2,
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                }),
+            }),
+        ],
         ..Default::default()
     }
 }
@@ -634,7 +649,11 @@ pub fn voltaic_brawler() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![on_attack(Effect::PayEnergy {
+        triggered_abilities: vec![
+            // "When this creature enters, you get {E}{E}" — shipped missing
+            // (the `cnt` audit column, 2026-09-10).
+            crate::effect::shortcut::etb(Effect::AddEnergy(Value::Const(2))),
+            on_attack(Effect::PayEnergy {
             amount: 1,
             then: Box::new(Effect::Seq(vec![
                 Effect::PumpPT {
@@ -649,7 +668,8 @@ pub fn voltaic_brawler() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
             ])),
-        })],
+            }),
+        ],
         ..Default::default()
     }
 }

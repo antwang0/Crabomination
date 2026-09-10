@@ -605,36 +605,25 @@ pub fn haywire_mite() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
+        // "When Haywire Mite dies, you gain 2 life. {G}, Sacrifice Haywire
+        // Mite: Exile target noncreature artifact or enchantment" — shipped as
+        // a destroy of any artifact / enchantment / planeswalker with 1 life
+        // folded into it and no dies trigger (the `cnt` audit column,
+        // 2026-09-10).
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
             mana_cost: cost(&[g()]),
-            effect: Effect::Seq(vec![
-                Effect::Destroy {
-                    what: target_filtered(
-                        SelectionRequirement::Artifact
-                            .or(SelectionRequirement::Enchantment)
-                            .or(SelectionRequirement::Planeswalker),
-                    ),
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
-            once_per_turn: false,
-            sorcery_speed: false,
             sac_cost: true,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
+            effect: Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Enchantment)
+                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature))),
+                ),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -7870,8 +7859,8 @@ pub fn brimaz_king_of_oreskos() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![crate::effect::shortcut::on_attack(
-            Effect::CreateTokenAttacking {
+        triggered_abilities: vec![
+            crate::effect::shortcut::on_attack(Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 definition: Box::new(white_token(
@@ -7882,8 +7871,23 @@ pub fn brimaz_king_of_oreskos() -> CardDefinition {
                     vec![Keyword::Vigilance],
                 )),
                 cleanup: Default::default(),
-            },
-        )],
+            }),
+            // "Whenever Brimaz blocks a creature, create a 1/1 white Cat
+            // Soldier creature token with vigilance that's blocking that
+            // creature" — shipped missing (the `cnt` audit column,
+            // 2026-09-10). The token blocks an attacking creature; with one
+            // attacker blocked that is the one Brimaz blocks.
+            crate::effect::shortcut::blocks(Effect::CreateTokenBlocking {
+                definition: Box::new(white_token(
+                    "Cat Soldier",
+                    1,
+                    1,
+                    vec![CreatureType::Cat, CreatureType::Soldier],
+                    vec![Keyword::Vigilance],
+                )),
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            }),
+        ],
         ..Default::default()
     }
 }

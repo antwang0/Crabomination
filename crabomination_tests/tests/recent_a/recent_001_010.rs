@@ -11397,3 +11397,46 @@ fn refurbished_familiar_draws_for_an_opponent_with_an_empty_hand() {
     assert_eq!(g.players[0].hand.len(), hand, "the opponent discarded → no draw");
     assert!(g.players[1].hand.is_empty());
 }
+
+
+mod cnt_column_2026_09_10 {
+    use crabomination::card::Keyword;
+    use crabomination::catalog;
+    use crabomination::game::*;
+    use crabomination::TurnStep;
+
+    /// Badgermole Cub's "Whenever you tap a creature for mana, add an
+    /// additional {G}" shipped missing (the `cnt` audit column, 2026-09-10).
+    #[test]
+    fn badgermole_cub_adds_g_when_a_creature_is_tapped_for_mana() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::badgermole_cub());
+        let elves = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+        g.clear_sickness(elves);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: elves, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        }).expect("tap for {{G}}");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.total(), 2, "{{G}} plus the Cub's {{G}}");
+    }
+
+    /// Aang's "Whenever you cast a Lesson spell, Aang gains lifelink until end
+    /// of turn" shipped missing (the `cnt` audit column, 2026-09-10).
+    #[test]
+    fn aang_gains_lifelink_when_you_cast_a_lesson() {
+        let mut g = two_player_game();
+        let aang = g.add_card_to_battlefield(0, catalog::aang_the_last_airbender());
+        let lesson = g.add_card_to_hand(0, catalog::environmental_sciences());
+        g.add_card_to_library(0, catalog::forest());
+        g.players[0].mana_pool.add_colorless(2);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: lesson, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("a Lesson");
+        drain_stack(&mut g);
+        assert!(g.computed_permanent(aang).unwrap().keywords().contains(&Keyword::Lifelink), "lifelink until end of turn");
+        g.do_cleanup(&mut vec![]);
+        assert!(!g.computed_permanent(aang).unwrap().keywords().contains(&Keyword::Lifelink), "wore off");
+    }
+}

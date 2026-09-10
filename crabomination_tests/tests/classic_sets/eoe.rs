@@ -3410,3 +3410,44 @@ fn haliya_draws_when_a_countered_creature_connects() {
     assert_eq!(g.players[1].life, 15, "3 + 2 combat damage");
     assert_eq!(g.players[0].hand.len(), hand + 1, "one draw: only the countered creature counts");
 }
+
+
+/// Glacier Godmaw's landfall — "creatures you control get +1/+1 and gain
+/// vigilance and haste until end of turn" — shipped missing (the `cnt` audit
+/// column, 2026-09-10).
+#[test]
+fn glacier_godmaw_landfall_pumps_the_team() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::glacier_godmaw());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("land drop");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 3));
+    assert!(b.keywords().contains(&Keyword::Vigilance) && b.keywords().contains(&Keyword::Haste));
+}
+
+/// Pain for All's "Whenever enchanted creature is dealt damage, it deals that
+/// much damage to each opponent" shipped missing (the `cnt` audit column,
+/// 2026-09-10).
+#[test]
+fn pain_for_all_passes_damage_dealt_to_the_host_on_to_each_opponent() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let aura = g.add_card_to_battlefield(0, catalog::pain_for_all());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(mine);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt my own Angel");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "the 3 dealt to the Angel hit the opponent");
+    assert_eq!(g.players[0].life, 20);
+}

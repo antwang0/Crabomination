@@ -29,7 +29,23 @@ pub fn badgermole_cub() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Earthbend { n: Value::Const(1) })],
+        triggered_abilities: vec![
+            etb(Effect::Earthbend { n: Value::Const(1) }),
+            // "Whenever you tap a creature for mana, add an additional {G}" —
+            // shipped missing (the `cnt` audit column, 2026-09-10).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TappedForMana, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    },
+                ),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colors(vec![Color::Green]),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
@@ -274,14 +290,31 @@ pub fn aang_the_last_airbender() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::ApplyToTargets {
-            max_targets: 1,
-            min_targets: 0,
-            filter: SelectionRequirement::Nonland.and(SelectionRequirement::OtherThanSource),
-            effect: Box::new(Effect::Airbend {
-                what: Selector::Target(0),
+        triggered_abilities: vec![
+            etb(Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: SelectionRequirement::Nonland.and(SelectionRequirement::OtherThanSource),
+                effect: Box::new(Effect::Airbend {
+                    what: Selector::Target(0),
+                }),
             }),
-        })],
+            // "Whenever you cast a Lesson spell, Aang gains lifelink until end
+            // of turn" — shipped missing (the `cnt` audit column, 2026-09-10).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasSpellSubtype(crate::card::SpellSubtype::Lesson),
+                    },
+                ),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Lifelink,
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

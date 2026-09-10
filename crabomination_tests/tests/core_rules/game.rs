@@ -8678,3 +8678,34 @@ fn golgari_thug_recast_after_topdecking_itself_survives() {
     assert_eq!(g.computed_permanent(thug).unwrap().toughness, 1);
     assert!(g.battlefield_find(bear).is_some());
 }
+
+
+/// Chancellor of the Annex's battlefield half — "Whenever an opponent casts a
+/// spell, counter it unless that player pays {1}" — shipped missing; only the
+/// opening-hand reveal was modelled (the `cnt` audit column, 2026-09-10).
+#[test]
+fn chancellor_of_the_annex_taxes_an_opponents_spell() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::chancellor_of_the_annex());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("an instant at any priority");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "countered: the {{1}} could not be paid");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast again with the tax floating");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "paid the {{1}}: resolves");
+    assert_eq!(g.players[1].mana_pool.total(), 0, "the tax came out of the floating mana");
+}

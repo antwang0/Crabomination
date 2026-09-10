@@ -1782,3 +1782,32 @@ mod recent162 {
         assert!(g.battlefield_find(foe).is_none(), "destroyed the tapped creature");
     }
 }
+
+
+mod overgrown_zealot_cnt {
+    use crabomination::catalog;
+    use crabomination::game::*;
+
+    /// Overgrown Zealot's "{T}: Add two mana of any one color. Spend this mana
+    /// only to turn permanents face up" shipped missing (the `cnt` audit
+    /// column, 2026-09-10).
+    #[test]
+    fn overgrown_zealot_second_ability_adds_two_restricted_mana() {
+        let mut g = two_player_game();
+        let zealot = g.add_card_to_battlefield(0, catalog::overgrown_zealot());
+        g.clear_sickness(zealot);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: zealot, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        }).expect("the two-mana ability");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "two mana of one color, spend-restricted");
+        assert_eq!(g.players[0].mana_pool.total(), 0, "none of it is free mana");
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.step = crabomination::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        assert!(
+            g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None }).is_err(),
+            "restricted to turning permanents face up"
+        );
+    }
+}

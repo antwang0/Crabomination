@@ -408,6 +408,12 @@ pub fn sabertooth_cobra() -> CardDefinition {
 pub fn floodgate() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Defender],
+        // "When Floodgate has flying, sacrifice it" — shipped missing (the
+        // `cnt` audit column, 2026-09-10).
+        sacrifice_when: Some(Predicate::EntityMatches {
+            what: Selector::This,
+            filter: R::HasKeyword(Keyword::Flying),
+        }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {

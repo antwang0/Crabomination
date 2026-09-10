@@ -315,6 +315,18 @@ pub fn cavalry_pegasus() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
+        // "Whenever Cavalry Pegasus attacks, each attacking Human gains flying
+        // until end of turn" — shipped as a vanilla flier (the `cnt` audit
+        // column, 2026-09-10).
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::GrantKeyword {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::IsAttacking)
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
+            ),
+            keyword: Keyword::Flying,
+            duration: crate::effect::Duration::EndOfTurn,
+        })],
         ..Default::default()
     }
 }
