@@ -28,22 +28,19 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; fetch before every push. Gotchas in **CLAUDE.md**, measurement in
-   **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
-2. **Gates at the tip (PERF Baseline, the 2026-09-10 third-run addendum):** suite green / clippy 0 / golden_trace 10/10 / `--bench` counters identical
-   to `2003d1cf` / determinism + thread_determinism ok at every commit; fresh-seed dflt sweeps cube 786..787, sealed 779..780, all 769..770,
-   sos 773..774, fixed 757..758: 0 cap / stuck. Wall clock ~300 games/s on this box (the second run's paired A/B priced it at 1.9x slower).
-3. **This run:** `audit_catalog_stats.py` opens the base crate's `effect::shortcut` helpers under every column and grew `cnt` (the activated /
-   triggered ability count against the oracle's lines) — **94 shipped cards fixed** in seven commits (INCOMPLETE_CARDS "The shortcut helpers and
-   the ability count"; the 130-row residue read to the card, the reader taught its classes: `cnt` 65 = 16 one-edit + 25 primitive + engine-shape). Two engine lines
-   (`CreateTokenBlocking` off a blocks trigger, `MoveAllCounters` off a card ref); two gaps filed (ENGINE_BACKLOG "Self-death triggers paid as a
-   cost", "Triggers that live in the graveyard"). The full suite caught Mai draining the wrong player — **run the touched test files, not only the
-   new tests.** No trace or counter moved.
-4. **Next moves:** (a) the 16 one-edit `cnt` rows (INCOMPLETE_CARDS lists them; Emperor of Bones, Ersatz Gnomes, Tephraderm's spell half first) and
-   the reader's 12 helper-call rows (`on_attack(..)` inside `equipped_bonus` / `StationBand`, `landfall(..)`); (b) `TriggerZone` for the five
-   graveyard-resident triggers; the sacrifice-cost dies-trigger order (a golden-trace commit); (c) mirrors next: abilarms 920+, mirror 796+,
-   mcts 775+, lookahead / planner 779+; dflt cube 788, sealed 781, all 771, sos 775, fixed 759; (d) the crack-back horizon (38 % of the actor) is
-   the one strength round left; prompt text stays in PERF's candidates.
+   tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; **fetch before every push — two sessions shared the branch on
+   2026-09-10 and each rebased twice.** Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; RE-TAKE first.**
+2. **Gates at the tip (PERF Baseline, the 2026-09-10 fourth-run addendum):** suite 19,366 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters
+   identical to `2003d1cf`, determinism + thread_determinism ok; fresh-seed dflt sweeps cube 788..790, sealed 781 + 789..790, all 771 + 789..790,
+   sos 775 + 789, fixed 759 + 789: 51,600 games, 0 cap / 0 stuck. 483 games/s at calib 66 on this box (the previous box ~300).
+3. **This run (fourth):** CR 603.3 — a cost-paid permanent's own dies / leaves triggers now go on the stack ABOVE the spell or ability they paid
+   for (`remove_to_graveyard_as_cost`, `scratch.pending_cost_triggers`, drained at the dispatcher's top; ENGINE_BACKLOG "FIXED 2026-09-10 (fourth
+   find)"); Knowledge Vault re-shaped off it; `AlternativeCost::your_turn_only` and Mine Collapse's Mountain alternative. **The third run
+   (concurrent):** 94 `cnt` cards, its addendum's placeholders are that session's to fill. No trace or counter moved in either.
+4. **Next moves:** (a) the 16 one-edit `cnt` rows and the reader's 12 helper-call rows (INCOMPLETE_CARDS "The shortcut helpers and the ability
+   count"); (b) `TriggerZone` for the five graveyard-resident triggers (ENGINE_BACKLOG "Triggers that live in the graveyard"); (c) mirrors next:
+   abilarms 920+, mirror 796+, mcts 775+, lookahead / planner 779+; dflt cube 791, sealed 791, all 791, sos 790, fixed 790; (d) the crack-back
+   horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF's candidates.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

@@ -2806,6 +2806,43 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-10 (fourth run) — CR 603.3 for cost-paid death triggers, Mine Collapse's alternative cost, 51,600 fresh-seed games
+
+No perf leg (the queue's engine side still reads floor). Two engine fixes
+off ENGINE_BACKLOG's open entries: the death funnel pushed a cost-paid
+permanent's own dies / leaves triggers before the spell or ability was on
+the stack (Horizon Spellbomb's "pay {G}: draw" resolved after its search;
+every sacrifice cost, casualty, emerge, offering, Fireblast the same) —
+`remove_to_graveyard_as_cost` parks them on `scratch.pending_cost_triggers`
+and the dispatcher's top drains them above the spell (ENGINE_BACKLOG
+"FIXED 2026-09-10 (fourth find)"); the order re-shaped Knowledge Vault
+(its "{0}: Sacrifice this artifact. If you do" was a `sac_cost`). And
+`AlternativeCost::your_turn_only`, so Mine Collapse (training pool) casts
+for a Mountain on its controller's turn. Neither sits in a traced or
+`fixed`-pool game: golden traces 10 / 10 and the `--bench` counters
+identical. A concurrent session was on the branch the whole run (the
+third-run addendum below is its); rebased twice, the Mai fix it landed
+dropped from this side. **The Ir base was NOT re-taken.**
+
+```text
+fix     24ef0bd9 (CR 603.3: the cost funnel, ten sites; Knowledge Vault; Digsite Conservator's test order) / 8008d8ba (your_turn_only, Mine
+        Collapse): suite 19,366 / 0 / 5 (85.5 s, golden_trace 10 / 10 inside it) at the rebased tip; clippy --workspace --exclude
+        crabomination_client --all-targets 0 warnings (4m43s beside the sweep); cargo check --profile release-fast covered by the
+        release-fast build (7m23s, deps warm)
+gate    --bench release-fast (mimalloc) at the tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
+        thread_determinism ok (3 vs 1); bin_bytes 126,862,792; peak_rss_mib 29.5; 483.3 games/s idle at host_calib_ms 66 (a faster box
+        than the second and third runs' ~300 at calib 50-78: the counters say the games are the same)
+sweep   scripts/fresh_seed_sweep.sh on the tip audit build (target-audit/overflow, debug-assertions, 7m48s), dflt mirror x --games 400 x
+        --threads 3: cube 788 / sealed 781 / all 771 / sos 775 / fixed 759 (18,400 games, 0 cap / 0 stuck / 4 draws); cube 789 / sealed 789 /
+        all 789 / sos 789 / fixed 789 (18,400, 0 / 0 / 0); cube 790 / sealed 790 / all 790 (14,800, 0 / 0 / 0) — 51,600 games, every rc 0,
+        12-74 s a cell on this box
+cost    the deferral is one `stack.len()` compare per cost-side death plus an `is_empty` read at the dispatcher's top (beside
+        `pending_cost_events`'); the scratch write happens only when the leaving permanent had a self trigger — not A/B'd, the counters
+        and traces are the gate
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz nominal, 4 cores, 15 GB, calib 66; cold debug suite build ~10 min,
+        release-fast bot_ladder 7m23s with deps warm, audit bot_ladder 7m48s
+```
+
 ### 2026-09-10 (third run) — the shortcut helpers under every column, the ability-count column, 94 shipped cards, the residue read to the card
 
 No perf leg: the queue's engine side still reads floor, so the run stayed
