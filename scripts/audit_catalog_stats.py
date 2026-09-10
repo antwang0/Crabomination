@@ -276,9 +276,16 @@ def ref_ability_timing(card, face=None):
             continue
         flags = {flag for phrase, flag in _TIMING if phrase in line}
         # A Class's "{cost}: Level N" is sorcery-speed by CR 716.2b; the
-        # rider is in the reminder text this reader strips.
+        # rider is in the reminder text this reader strips — as are
+        # Forecast's ("only during your upkeep and only once each turn")
+        # and Boast's ("only if this creature attacked this turn and only
+        # once each turn").
         if _ORACLE_LEVEL.match(line.strip()[m.end():]):
             flags.add("sorcery")
+        if line.strip().startswith("Forecast — "):
+            flags.update(("upkeep", "your_turn", "once"))
+        if line.strip().startswith("Boast — "):
+            flags.update(("if", "once"))
         out.append(frozenset(flags))
     return out
 
@@ -1239,6 +1246,12 @@ def ref_trigger_filter_words(card, face=None):
     if text is None:
         return None
     text = re.sub(r"\([^)]*\)", "", text)
+    # "When this creature enters" / "When The Spirit Oasis enters" — the
+    # source's own type word or name is not a subject filter.
+    text = re.sub(r"\bthis (?:creature|enchantment|artifact|land|permanent|aura|equipment|planeswalker|token|spell)\b", "it", text, flags=re.I)
+    for nm in (card.get("name", ""), card.get("name", "").split(",")[0]):
+        if nm:
+            text = text.replace(nm, "it")
     out = []
     for line in text.split("\n"):
         line = line.strip()
@@ -1361,6 +1374,7 @@ def ability_mana_costs(body):
 # stripped first — "Cycling {2} ({2}, Discard this card: Draw a card.)" would
 # otherwise read as a {2} ability the code spells as a `cycling` field.
 _ORACLE_ACT = re.compile(r"^(?:[A-Z][a-z]+ — )?(\{[^:\n]*?):\s")
+_ORACLE_ACT_ANY = re.compile(r"^(?:[A-Z][a-z]+ — )?((?:\{|Sacrifice |Discard |Pay |Tap |Exile |Remove |Return |Put |Reveal |Unattach|Untap |Forage|Collect evidence)[^:\n]*?):\s")
 
 def ref_ability_mana_costs(card, face=None):
     """The mana-bearing activation costs the oracle prints, as `norm()`
@@ -1552,6 +1566,8 @@ def effect_fn_table(text):
         end = bracket_span(text, m.end() - 1)
         out[m.group(1)] = code_numbers(text[m.end(): end - 1])
     return out
+
+GLOBAL_EFFECT_FNS = effect_fn_table((REPO / "crabomination_base" / "src" / "effect" / "shortcut.rs").read_text())
 
 def ability_numbers(body, kind):
     """Per literal of the kind (`act` / `trig`), the integer set the code
@@ -2158,7 +2174,11 @@ def ability_helper_table(text, ret="ActivatedAbility"):
     return out
 
 
-_SETS_MOD = (SETS / "mod.rs").read_text()
+# `sets/mod.rs`'s four mana helpers and the base crate's `effect::shortcut`
+# module (`etb(..)`, `landfall(..)`, `upkeep(..)`, ~140 helpers every set
+# file calls) — the "helper in another file" that used to hide an ability.
+_SHORTCUT = REPO / "crabomination_base" / "src" / "effect" / "shortcut.rs"
+_SETS_MOD = (SETS / "mod.rs").read_text() + "\n" + _SHORTCUT.read_text()
 GLOBAL_ABIL_HELPERS = ability_helper_table(_SETS_MOD)
 GLOBAL_TRIG_HELPERS = ability_helper_table(_SETS_MOD, "TriggeredAbility")
 
@@ -2192,10 +2212,16 @@ def expand_ability_helper(helper, args, lit):
     for lm in re.finditer(r"\blet\s+(?:mut\s+)?(\w+)(?:\s*:[^=;]*)?\s*=\s*([^;]*);", hbody):
         mapping[lm.group(1)] = substitute_idents(lm.group(2), mapping).strip()
     text = substitute_idents(hbody, mapping)
-    k = text.rfind(lit + " {")
-    if k < 0:
+    # The outermost literal: the one whose span reaches the body's end (a
+    # `TriggeredAbility` a tribute helper grants sits nested inside its own).
+    best = None
+    for m in re.finditer(re.escape(lit) + r" \{", text):
+        end = bracket_span(text, m.end() - 1)
+        if best is None or end > best[1]:
+            best = (m.start(), end)
+    if best is None:
         return None
-    return text[k: bracket_span(text, k + len(lit) + 1)]
+    return text[best[0]: best[1]]
 
 
 def inline_ability_helpers(body, table, field="activated_abilities:", lit="ActivatedAbility"):
@@ -2240,7 +2266,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "ocost": [], "addl": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": [], "mana": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "ocost": [], "addl": [], "cnt": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": [], "mana": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -2249,7 +2275,7 @@ def audit():
         abilfns = {**GLOBAL_ABIL_HELPERS, **ability_helper_table(text)}
         trigfns = {**GLOBAL_TRIG_HELPERS, **ability_helper_table(text, "TriggeredAbility")}
         global FILE_EFFECT_FNS
-        FILE_EFFECT_FNS = effect_fn_table(text)
+        FILE_EFFECT_FNS = {**GLOBAL_EFFECT_FNS, **effect_fn_table(text)}
         for m in FUNC.finditer(text):
             nxt = FUNC.search(text, m.end()); body = text[m.end():nxt.start() if nxt else len(text)]
             # Stop at the next TOP-LEVEL `fn`, not only at the next `pub fn`:
@@ -2261,6 +2287,9 @@ def audit():
             cut = re.search(r"\n(?:pub(?:\([^)]*\))?\s+)?fn \w+", body)
             if cut:
                 body = body[: cut.start()]
+            # A bare `cycling_land("Barren Moor", ..)` body has no literal of
+            # its own: its abilities live in the helper (the count column).
+            bare_helper = "CardDefinition {" not in body
             raw_body = inline_helper_call(body, helpers, hconsts)
             body = strip_token_literals(body)
             body = inline_helper_call(body, helpers, hconsts)
@@ -2430,6 +2459,41 @@ def audit():
             # it, one-to-one, same count gate. Statics are not read.
             ref_lines = _oracle_ability_lines((face or card).get("oracle_text") or "")
             cname = (face or card).get("name")
+            # counts: the activated / triggered abilities the code spells
+            # against the oracle's `{cost}:` / When-Whenever-At lines — a
+            # dropped or invented ability, which every column above skips
+            # behind its `len(..) == len(..)` gate.
+            # One-way: the code spelling MORE (a static or keyword modelled
+            # as a trigger, a mana ability the oracle prints in reminder
+            # text) is the engine's shape; FEWER is a dropped ability. An
+            # activation line here is any `cost: effect` line whose cost
+            # starts with a mana symbol or a cost verb, wider than
+            # `_ORACLE_ACT`'s mana-only read.
+            oracle = re.sub(r"\([^)]*\)", "", (face or card).get("oracle_text") or "")
+            n_act = sum(1 for l in oracle.split("\n") if _ORACLE_ACT_ANY.match(l.strip()))
+            # The code count is every literal in the body — the card's own
+            # and the ones its Aura / Equipment grants (`equipped_bonus`, a
+            # different actor but the printed ability). A vec still holding a
+            # helper call the table could not open, or a card whose
+            # definition is a `..helper(..)` spread, is unread.
+            spread = bare_helper or re.search(r"\.\.(?!Default::default\(\))\w+(?:::\w+)*\(", body) is not None
+            for kind, n_ref, lit in (("act", n_act, "ActivatedAbility"), ("trig", sum(1 for k, _ in ref_lines if k == "trig"), "TriggeredAbility")):
+                lits = ability_literals(body) if kind == "act" else trigger_literals(body)
+                field = ("activated" if kind == "act" else "triggered") + r"_abilities:"
+                if lits is None and own_field(body, field) is not None:
+                    continue
+                if own_field(body, field) is None and spread:
+                    continue
+                n_code = body.count(lit + " {")
+                # Keyword-modelled activations ("{G}: Regenerate" is
+                # `Keyword::Regenerate(1)`) and a delayed trigger the spell
+                # itself sets up (the Pacts' `DelayUntil`).
+                if kind == "act":
+                    n_code += len(re.findall(r"Keyword::Regenerate\(", body))
+                else:
+                    n_code += len(re.findall(r"Effect::DelayUntil\b|\bDelayUntil \{", body))
+                if n_code < n_ref:
+                    d["cnt"].append((tag, f"{kind} {n_code}", f"{kind} {n_ref}"))
             for kind in ("act", "trig"):
                 nums = ability_numbers(body, kind)
                 ref_nums = [oracle_numbers(t, cname) for k, t in ref_lines if k == kind]
@@ -2465,21 +2529,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "addl", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "addl", "cnt", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "addl", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'ocost':>6}{'addl':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}{'mana':>6}")
-        print("-" * 134)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "addl", "cnt", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'ocost':>6}{'addl':>6}{'cnt':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}{'mana':>6}")
+        print("-" * 140)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 134)
+        print("-" * 140)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 
