@@ -258,10 +258,18 @@ def ref_ability_timing(card, face=None):
     text = re.sub(r"\([^)]*\)", "", text)
     out = []
     for line in text.split("\n"):
-        if not _ORACLE_ACT.match(line.strip()):
+        m = _ORACLE_ACT.match(line.strip())
+        if not m:
             continue
-        out.append(frozenset(flag for phrase, flag in _TIMING if phrase in line))
+        flags = {flag for phrase, flag in _TIMING if phrase in line}
+        # A Class's "{cost}: Level N" is sorcery-speed by CR 716.2b; the
+        # rider is in the reminder text this reader strips.
+        if _ORACLE_LEVEL.match(line.strip()[m.end():]):
+            flags.add("sorcery")
+        out.append(frozenset(flags))
     return out
+
+_ORACLE_LEVEL = re.compile(r"\s*Level \d+\s*$")
 
 def timing_mismatch(code, ref):
     """Multiset compare. A code `sorcery` no longer stands for a printed
@@ -1124,8 +1132,12 @@ def code_numbers(lit):
     # Not part of an identifier or a decimal; a `0.` sentence end is a 0.
     nums = {int(n) for n in re.findall(r"(?<!\w)(?<!\d\.)-?\d+(?!\w|\.\d)", lit)}
     nums |= {int(n) for n in re.findall(r"(?<=[a-z_])(\d+)\b", lit)}
-    # "Search your library for up to two ..." as two `search_*` calls.
-    searches = len(re.findall(r"\bsearch_\w+\(|Effect::Search\b", lit))
+    # "Search your library for up to two ..." as two `search_*` calls, two
+    # `Effect::Search` literals, or two calls of a `let search = || ..`
+    # closure (c21's `fetch_two_basics`).
+    searches = len(re.findall(r"\bsearch_\w+\(", lit)) + max(
+        len(re.findall(r"Effect::Search\b", lit)), len(re.findall(r"\bsearch\(", lit))
+    )
     if searches > 1:
         nums.add(searches)
     for w, n in _CAMEL_NUM.items():
@@ -1209,7 +1221,9 @@ def _oracle_ability_lines(text):
             continue
         m = _ORACLE_ACT.match(line)
         if m:
-            lines.append(("act", line[m.end():]))
+            # "{2}{U}: Level 2" — the N is the level's index (the code's
+            # `SourceClassLevelIs(N - 1)` gate), not an amount.
+            lines.append(("act", "" if _ORACLE_LEVEL.match(line[m.end():]) else line[m.end():]))
         elif _ORACLE_TRIG_LINE.match(line):
             lines.append(("trig", line))
         else:
@@ -1241,7 +1255,29 @@ def with_bindings(lit, bindings):
     for name, n in bindings.items():
         if re.search(rf"\b{name}\b", lit):
             nums |= n
+    for name, n in FILE_EFFECT_FNS.items():
+        if re.search(rf"(?<![\w:.]){name}\s*\(", lit):
+            nums |= n
     return nums
+
+EFFECT_FN_DEF = re.compile(
+    r"\n(?:pub(?:\([^)]*\))?\s+)?fn (\w+)\([^)]*\)\s*->\s*(?:crate::[a-z_:]+::)?"
+    r"(?:Effect|StaticAbility|StaticEffect|Predicate|Value|SelectionRequirement|R)\s*\{", re.S
+)
+# The current file's `fn name(..) -> Effect` (/ `StaticAbility` / `Predicate`
+# / `Value` / `SelectionRequirement`) helpers, as `name -> integer set` (set
+# per file by `audit`), so a literal that reads `effect: drain_two()` or
+# `fetch_two_basics()` carries the helper's numbers instead of hiding them
+# (Thunderscape Master, Blighted Woodland). One-way, like every code number:
+# a helper's extra integer is never a row.
+FILE_EFFECT_FNS = {}
+
+def effect_fn_table(text):
+    out = {}
+    for m in EFFECT_FN_DEF.finditer(text):
+        end = bracket_span(text, m.end() - 1)
+        out[m.group(1)] = code_numbers(text[m.end(): end - 1])
+    return out
 
 def ability_numbers(body, kind):
     """Per literal of the kind (`act` / `trig`), the integer set the code
@@ -1813,6 +1849,119 @@ def inline_helper_call(body, helpers, consts=None):
     at = cd + len("CardDefinition {")
     return body[:at] + "".join(fields) + body[at:]
 
+# ── Ability helpers ─────────────────────────────────────────────────────────
+#
+# A card whose `activated_abilities: vec![..]` (or `triggered_abilities`)
+# holds a helper call (`tap_add(Color::Green)`, `self_pump(cost(&[r()]), 1, 0)`,
+# `upkeep(effect)`) was unread by every ability column — `ability_literals` /
+# `trigger_literals` return `None` on any element that is not a literal. The
+# 85 file-local `fn .. -> ActivatedAbility` helpers (plus the four in
+# `sets/mod.rs`) and the 132 `fn .. -> TriggeredAbility` ones build ~2,000
+# such abilities. `inline_ability_helpers` rewrites each call into the
+# helper's own literal with the arguments (and the helper's simple `let`
+# bindings) substituted for its parameters, so the cost / timing / tap-sac /
+# event / scope / filter / num / mana readers see the ability the card ships.
+# A literal that spreads a helper (`ActivatedAbility { tap_cost: false,
+# ..helper(args) }`) keeps its override fields in front of the helper's.
+
+def helper_def_re(ret):
+    return re.compile(
+        r"\n(?:pub(?:\([^)]*\))?\s+)?fn (\w+)\(([^)]*)\)\s*->\s*(?:crate::card::)?" + ret + r"\s*\{", re.S
+    )
+
+
+def ability_helper_table(text, ret="ActivatedAbility"):
+    """`{name: (params, body)}` for every `fn name(..) -> <ret>` in `text`."""
+    out = {}
+    for m in helper_def_re(ret).finditer(text):
+        params = [
+            p.split(":")[0].strip()
+            for p in re.split(r",(?![^<>()]*[>)])", m.group(2))
+            if p.strip()
+        ]
+        end = bracket_span(text, m.end() - 1)
+        out[m.group(1)] = (params, text[m.end(): end - 1])
+    return out
+
+
+_SETS_MOD = (SETS / "mod.rs").read_text()
+GLOBAL_ABIL_HELPERS = ability_helper_table(_SETS_MOD)
+GLOBAL_TRIG_HELPERS = ability_helper_table(_SETS_MOD, "TriggeredAbility")
+
+
+def substitute_idents(text, mapping):
+    """Replace each bare identifier in `mapping` with its text. A `name:`
+    field, a `name(` call and a `::name` path segment are not the identifier;
+    a shorthand init `{ name,` is expanded to `name: name,` first so the
+    field survives the substitution."""
+    if not mapping:
+        return text
+    for k in mapping:
+        text = re.sub(
+            r"(?<=[{,])(\s*)" + re.escape(k) + r"(\s*[,}])",
+            lambda mm, k=k: f"{mm.group(1)}{k}: {k}{mm.group(2)}",
+            text,
+        )
+    alts = "|".join(re.escape(k) for k in sorted(mapping, key=len, reverse=True))
+    pat = re.compile(r"(?<![\w:.])(" + alts + r")\b(?!\s*[:(])")
+    return pat.sub(lambda mm: mapping[mm.group(1)], text)
+
+
+def expand_ability_helper(helper, args, lit):
+    """The helper's `<lit> { .. }` literal with `args` substituted for its
+    parameters; `None` when the arity or the body's shape defeats the
+    reader."""
+    params, hbody = helper
+    if len(args) != len(params):
+        return None
+    mapping = {p: a.strip() for p, a in zip(params, args)}
+    for lm in re.finditer(r"\blet\s+(?:mut\s+)?(\w+)(?:\s*:[^=;]*)?\s*=\s*([^;]*);", hbody):
+        mapping[lm.group(1)] = substitute_idents(lm.group(2), mapping).strip()
+    text = substitute_idents(hbody, mapping)
+    k = text.rfind(lit + " {")
+    if k < 0:
+        return None
+    return text[k: bracket_span(text, k + len(lit) + 1)]
+
+
+def inline_ability_helpers(body, table, field="activated_abilities:", lit="ActivatedAbility"):
+    """Rewrite each helper-call element of the card's own `field` vec into
+    the helper's literal. Elements the table cannot open are left as they
+    are, and the literal readers then answer `None` for the card exactly as
+    before."""
+    m = own_field(body, field)
+    if m is None:
+        return body
+    j = body.find("vec![", m.start())
+    if j < 0 or j - m.start() > 40:
+        return body
+    end = bracket_span(body, j + 4)
+    items, changed = [], False
+    for item in top_level_items(body[j + 5: end - 1]):
+        s = item.strip()
+        cm = re.fullmatch(r"(?:[\w:]+::)?(\w+)\s*\((.*)\)", s, re.S)
+        if cm and cm.group(1) in table:
+            new = expand_ability_helper(table[cm.group(1)], split_args(cm.group(2)), lit)
+            if new is not None:
+                items.append(new)
+                changed = True
+                continue
+        sm = re.search(r"\.\.(?:[\w:]+::)?(\w+)\s*\(", s)
+        if s.startswith(lit + " {") and sm and sm.group(1) in table:
+            a = sm.end() - 1
+            args = split_args(s[a + 1: bracket_span(s, a) - 1])
+            new = expand_ability_helper(table[sm.group(1)], args, lit)
+            if new is not None:
+                inner = new[len(lit) + 2: -1]
+                items.append(s[: sm.start()] + inner + s[bracket_span(s, a):])
+                changed = True
+                continue
+        items.append(item)
+    if not changed:
+        return body
+    return body[: j + 5] + ",".join(items) + body[end - 1:]
+
+
 def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
@@ -1823,6 +1972,10 @@ def audit():
         vecfns = vec_fn_table(text)
         kwfns = kw_fn_table(text)
         predfns = pred_fn_table(text)
+        abilfns = {**GLOBAL_ABIL_HELPERS, **ability_helper_table(text)}
+        trigfns = {**GLOBAL_TRIG_HELPERS, **ability_helper_table(text, "TriggeredAbility")}
+        global FILE_EFFECT_FNS
+        FILE_EFFECT_FNS = effect_fn_table(text)
         for m in FUNC.finditer(text):
             nxt = FUNC.search(text, m.end()); body = text[m.end():nxt.start() if nxt else len(text)]
             # Stop at the next TOP-LEVEL `fn`, not only at the next `pub fn`:
@@ -1837,6 +1990,8 @@ def audit():
             raw_body = inline_helper_call(body, helpers, hconsts)
             body = strip_token_literals(body)
             body = inline_helper_call(body, helpers, hconsts)
+            body = inline_ability_helpers(body, abilfns)
+            body = inline_ability_helpers(body, trigfns, "triggered_abilities:", "TriggeredAbility")
             nm = card_def_name(body)
             if not nm: continue
             card = CACHE_LC.get(nm.group(1).lower())
