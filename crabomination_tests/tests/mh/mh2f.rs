@@ -127,6 +127,35 @@ fn foundry_helix_artifact_rider() {
     assert_eq!(g.players[0].life, my_life, "creature fodder: no gain");
 }
 
+/// A cast suspended on its sacrifice choice (a `manual_mana` seat) resumes
+/// through the action pipeline: the sacrifice's death triggers, the cast
+/// trigger and the SBA sweep all run (the resume called `cast_spell`
+/// directly and dropped its events — nothing fired, 2026-09-10).
+#[test]
+fn foundry_helix_resumed_after_the_sacrifice_choice_fires_the_deaths_triggers() {
+    let mut g = two_player_game();
+    g.players[0].manual_mana = true;
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::mountain()); // two candidates: the choice is posed
+    let helix = g.add_card_to_hand(0, catalog::foundry_helix());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let (my_life, opp_life) = (g.players[0].life, g.players[1].life);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: helix, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("suspends on the sacrifice choice");
+    assert!(g.pending_decision.is_some(), "which permanent to sacrifice");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(bear))))
+        .expect("the choice resumes the cast");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "the Bears were sacrificed");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 4 - 1, "4 damage and Blood Artist's drain");
+    assert_eq!(g.players[0].life, my_life + 1, "Blood Artist's gain");
+}
+
 /// Diamond Lion converts hand + body into three mana of one color.
 #[test]
 fn diamond_lion_mana_burst() {

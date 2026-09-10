@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-10 (fifth find) — a cast or activation resumed from a cost-choice prompt returned its events to nobody](#fixed-2026-09-10-fifth-find--a-cast-or-activation-resumed-from-a-cost-choice-prompt-returned-its-events-to-nobody) | 17 |
 | Bugs & robustness | [FIXED 2026-09-10 (fourth find) — a cost-paid permanent's own dies trigger stacked below the spell or ability it paid for; Mine Collapse's alternative cost](#fixed-2026-09-10-fourth-find--a-cost-paid-permanents-own-dies-trigger-stacked-below-the-spell-or-ability-it-paid-for-mine-collapses-alternative-cost) | 22 |
 | Bugs & robustness | [FIXED 2026-09-10 (third find) — helper-built abilities were unread by every catalog column: 13 cards, a dead Steam Vines half, a dispatcher arm](#fixed-2026-09-10-third-find--helper-built-abilities-were-unread-by-every-catalog-column-13-cards-a-dead-steam-vines-half-a-dispatcher-arm) | 24 |
 | Bugs & robustness | [FIXED 2026-09-10 (second find) — an Aura's own `effect:` is its attach and the cast path runs nothing after it; six shipped Auras had a dead entry half](#fixed-2026-09-10-second-find--an-auras-own-effect-is-its-attach-and-the-cast-path-runs-nothing-after-it-six-shipped-auras-had-a-dead-entry-half) | 22 |
@@ -51,6 +52,23 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-10 (fifth find) — a cast or activation resumed from a cost-choice prompt returned its events to nobody
+
+`submit_decision`'s `CastAdditionalCost` and `ActivateAbilityChoice` arms
+replayed the suspended action by calling `cast_spell` / `activate_ability`
+directly and returning the result, where every other resume arm goes
+through `perform_action`. The events came back to `perform_action_inner`'s
+early `SubmitDecision` return, which dispatches nothing: a `manual_mana`
+seat's Foundry Helix fired no cast trigger and its sacrifice no death
+trigger (Blood Artist silent), and no SBA sweep followed the payment. Bot
+seats never pose these prompts (both are gated on `manual_mana`, the
+1-in-96 livelock fix), so the client seat was the only victim. Both arms
+now replay through `perform_action` (`replay_activation`), and the cost
+picks stashed for the replay are cleared after it — a failed replay
+restores the checkpoint, stash included. Tests:
+`mh::mh2f::foundry_helix_resumed_after_the_sacrifice_choice_fires_the_deaths_triggers`,
+`core_rules::game::a_sacrifice_cost_picked_through_the_prompt_still_fires_death_triggers`.
 
 ## FIXED 2026-09-10 (fourth find) — a cost-paid permanent's own dies trigger stacked below the spell or ability it paid for; Mine Collapse's alternative cost
 

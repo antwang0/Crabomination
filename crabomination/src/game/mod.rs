@@ -22059,12 +22059,24 @@ impl GameState {
                 // Priority is still the caster's (we never advanced it), so
                 // the cast reads the right actor. Any cost failure (e.g.
                 // mana shortfall) surfaces as a normal cast error. A kicked
-                // suspend replays kicked (CR 702.33).
-                let result = if kicked {
-                    self.cast_spell_kicked(card_id, target, additional_targets, mode, x_value)
+                // suspend replays kicked (CR 702.33). Through `perform_action`,
+                // like every other replay: a direct `cast_spell` returned its
+                // events to nobody, so the sacrifice's death triggers, the
+                // cast triggers and the SBA sweep never ran.
+                let action = if kicked {
+                    GameAction::CastSpellKicked { card_id, target, additional_targets, mode, x_value }
                 } else {
-                    self.cast_spell(card_id, target, additional_targets, mode, x_value)
+                    GameAction::CastSpell { card_id, target, additional_targets, mode, x_value }
                 };
+                let result = self.perform_action(action);
+                // A failed replay restores the checkpoint, stash included —
+                // it must not leak into the next cast.
+                if self.scratch.pending_cast_sacrifices.is_some() {
+                    self.scratch.pending_cast_sacrifices = None;
+                }
+                if self.scratch.pending_cast_discards.is_some() {
+                    self.scratch.pending_cast_discards = None;
+                }
                 // A prepare-spell copy that suspended here still needs its
                 // token-flag/unprepare bookkeeping (no-op otherwise).
                 return self.settle_prepare_after_cast(card_id, result);
@@ -22229,13 +22241,8 @@ impl GameState {
                         let DecisionAnswer::Amount(n) = answer else {
                             return Err(GameError::DecisionAnswerMismatch);
                         };
-                        return self.activate_ability(
-                            card_id,
-                            ability_index,
-                            target,
-                            additional_targets,
-                            Some(n),
-                            None,
+                        return self.replay_activation(
+                            card_id, ability_index, target, additional_targets, Some(n),
                         );
                     }
                     K::GraveyardTarget => {
@@ -22248,29 +22255,51 @@ impl GameState {
                         let Some(id) = ids.first().copied() else {
                             return Err(GameError::DecisionAnswerMismatch);
                         };
-                        return self.activate_ability(
-                            card_id,
-                            ability_index,
-                            Some(Target::Permanent(id)),
-                            additional_targets,
-                            x_value,
-                            None,
+                        return self.replay_activation(
+                            card_id, ability_index, Some(Target::Permanent(id)), additional_targets, x_value,
                         );
                     }
                 }
-                return self.activate_ability(
-                    card_id,
-                    ability_index,
-                    target,
-                    additional_targets,
-                    x_value,
-                    None,
-                );
+                return self.replay_activation(card_id, ability_index, target, additional_targets, x_value);
             }
         };
         self.check_state_based_actions_into(&mut events);
         self.dispatch_triggers_for_events(&events);
         Ok(events)
+    }
+
+    /// An `ActivateAbilityChoice` resume: the answered cost pick is stashed
+    /// on the state, and the activation replays through `perform_action`
+    /// like every other replay — a direct `activate_ability` returned its
+    /// events to nobody, so a sacrifice cost's death triggers and the SBA
+    /// sweep never ran. A failed replay restores the checkpoint, stash
+    /// included, so the picks are cleared here rather than leaking into the
+    /// next activation.
+    fn replay_activation(
+        &mut self,
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let r = self.perform_action(GameAction::ActivateAbility {
+            card_id,
+            ability_index,
+            target,
+            additional_targets,
+            x_value,
+            mode: None,
+        });
+        self.pending_ability_sac_other = None;
+        self.pending_ability_tap_other = None;
+        if self.scratch.pending_ability_exile_other.is_some() {
+            self.scratch.pending_ability_exile_other = None;
+        }
+        if self.scratch.pending_ability_sac_any.is_some() {
+            self.scratch.pending_ability_sac_any = None;
+        }
+        r
     }
 
     fn advance_mulligan(&mut self, next_player: Option<usize>) {

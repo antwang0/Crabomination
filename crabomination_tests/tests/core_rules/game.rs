@@ -8709,3 +8709,30 @@ fn chancellor_of_the_annex_taxes_an_opponents_spell() {
     assert_eq!(g.players[0].life, 17, "paid the {{1}}: resolves");
     assert_eq!(g.players[1].mana_pool.total(), 0, "the tax came out of the floating mana");
 }
+
+/// An activation suspended on its "sacrifice another creature" pick (a
+/// `manual_mana` seat) resumes through the action pipeline: the sacrifice's
+/// death triggers and the SBA sweep run (the resume called
+/// `activate_ability` directly and dropped its events, 2026-09-10).
+#[test]
+fn a_sacrifice_cost_picked_through_the_prompt_still_fires_death_triggers() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].manual_mana = true;
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let seer = g.add_card_to_battlefield(0, catalog::viscera_seer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let (my_life, opp_life) = (g.players[0].life, g.players[1].life);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seer, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("suspends on the sacrifice pick");
+    assert!(g.pending_decision.is_some(), "which creature to sacrifice");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(bear))))
+        .expect("the pick resumes the activation");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "the Bears were sacrificed");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 1, "Blood Artist's drain");
+    assert_eq!(g.players[0].life, my_life + 1, "Blood Artist's gain");
+}
