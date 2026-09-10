@@ -348,7 +348,10 @@ fn no_bare_env_lookup_on_a_simulator_path() {
 /// targeting one the matcher did not know (2026-09-10). Step triggers are
 /// the wider case: `fire_step_triggers` treats every event-based scope as
 /// "never", so a step trigger needs `AnyPlayer` / `ActivePlayer` /
-/// `YourControl` / `SelfSource` / `OpponentControl` and a filter.
+/// `YourControl` / `SelfSource` / `OpponentControl` and a filter. The other
+/// event-based scopes are read the same way: a targeting scope serves
+/// `BecameTarget`, a damage scope a damage kind, `YouTapped` a tap, the
+/// attacked scopes an attack (`FromYourGraveyard` steps are walked apart).
 #[test]
 fn no_trigger_sits_under_a_scope_the_dispatcher_never_matches() {
     use crabomination::card::{EventKind, EventScope};
@@ -392,10 +395,27 @@ fn no_trigger_sits_under_a_scope_the_dispatcher_never_matches() {
         }
         for (i, ta) in def.triggered_abilities.iter().enumerate() {
             let step = matches!(ta.event.kind, EventKind::StepBegins(_) | EventKind::TurnBegins);
+            let name = format!("{:?}", ta.event.kind);
+            // What each event-based scope's matcher arm serves (events.rs).
+            let served = match ta.event.scope {
+                EventScope::EnchantedBySource => served_by_host(&ta.event.kind),
+                EventScope::YourPermanentTargetedByOpponent | EventScope::YourCreatureTargeted => {
+                    ta.event.kind == EventKind::BecameTarget
+                }
+                EventScope::YourSourceDamagedOpponent
+                | EventScope::OpponentSourceDamagedYou
+                | EventScope::YourOtherSourceDamagedOpponent => name.contains("Damage"),
+                EventScope::YouTapped => ta.event.kind == EventKind::Tapped,
+                EventScope::ControllerAttackedByOpponent
+                | EventScope::ControllerPlaneswalkerAttackedByOpponent => {
+                    ta.event.kind == EventKind::Attacks
+                }
+                _ => true,
+            };
             if step && event_based(&ta.event.scope) {
                 bad.push(format!("{}: trigger {i} is a step trigger under {:?}", def.name, ta.event.scope));
-            } else if ta.event.scope == EventScope::EnchantedBySource && !served_by_host(&ta.event.kind) {
-                bad.push(format!("{}: trigger {i} on {:?} under EnchantedBySource", def.name, ta.event.kind));
+            } else if !served {
+                bad.push(format!("{}: trigger {i} on {:?} under {:?}", def.name, ta.event.kind, ta.event.scope));
             }
         }
     }
