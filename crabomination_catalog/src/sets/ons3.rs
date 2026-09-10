@@ -491,11 +491,27 @@ pub fn skittish_valesk() -> CardDefinition {
 /// Tephraderm — it hands back every point it takes.
 pub fn tephraderm() -> CardDefinition {
     CardDefinition {
+        // Two printed triggers on one event: a creature that damages it takes
+        // the damage back; a spell's damage goes to the spell's controller
+        // (the spell half shipped missing — the `cnt` audit column,
+        // 2026-09-10).
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
-            effect: Effect::DealDamage {
-                to: Selector::LastDamagerOf(Box::new(Selector::This)),
-                amount: Value::TriggerEventAmount,
+            effect: Effect::If {
+                cond: crate::card::Predicate::EntityMatches {
+                    what: Selector::LastDamagerOf(Box::new(Selector::This)),
+                    filter: R::Creature,
+                },
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::LastDamagerOf(Box::new(Selector::This)),
+                    amount: Value::TriggerEventAmount,
+                }),
+                else_: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::LastDamagerOf(
+                        Box::new(Selector::This),
+                    )))),
+                    amount: Value::TriggerEventAmount,
+                }),
             },
         }],
         ..creature("Tephraderm", cost(&[generic(4), r()]), vec![CreatureType::Beast], 4, 5)

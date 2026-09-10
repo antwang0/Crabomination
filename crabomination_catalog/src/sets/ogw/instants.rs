@@ -360,6 +360,36 @@ pub fn kozileks_return() -> CardDefinition {
                 amount: Value::Const(2),
             }),
         },
+        // "Whenever you cast an Eldrazi creature spell with mana value 7 or
+        // greater, you may exile Kozilek's Return from your graveyard. If you
+        // do, Kozilek's Return deals 5 damage to each creature" — shipped
+        // missing (the `cnt` audit column, 2026-09-10); the
+        // `FromYourGraveyard` scope is the graveyard-resident trigger.
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(
+                crate::card::EventKind::SpellCast,
+                crate::card::EventScope::FromYourGraveyard,
+            )
+            .with_filter(crate::card::Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(crate::card::CreatureType::Eldrazi))
+                    .and(SelectionRequirement::ManaValueAtLeast(7)),
+            }),
+            effect: Effect::MayDo {
+                description: "Exile Kozilek's Return from your graveyard: 5 damage to each creature?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Exile { what: Selector::This },
+                    Effect::ForEach {
+                        selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                        body: Box::new(Effect::DealDamage {
+                            to: Selector::TriggerSource,
+                            amount: Value::Const(5),
+                        }),
+                    },
+                ])),
+            },
+        }],
         ..Default::default()
     }
 }

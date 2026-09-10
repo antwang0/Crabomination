@@ -779,3 +779,23 @@ fn risky_move_changes_hands_and_gambles_a_creature() {
         "the lost flip gives the chosen creature to the opponent"
     );
 }
+
+
+/// Tephraderm's second trigger — "Whenever a spell deals damage to this
+/// creature, this creature deals that much damage to that spell's controller"
+/// — shipped missing (the `cnt` audit column, 2026-09-10).
+#[test]
+fn tephraderm_sends_spell_damage_to_the_spells_controller() {
+    let mut g = main_phase();
+    let derm = g.add_card_to_battlefield(0, catalog::tephraderm());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(derm)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the Beast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(derm).unwrap().damage, 3, "took the Bolt");
+    assert_eq!(g.players[1].life, 17, "and handed it back to the caster");
+    assert_eq!(g.players[0].life, 20);
+}

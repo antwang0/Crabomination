@@ -34205,14 +34205,23 @@ impl GameState {
             Selector::CostExiledCards => {
                 self.cost_exiled_cards.iter().map(|&cid| EntityRef::Card(cid)).collect()
             }
+            // A damager still on the battlefield is a permanent; one that has
+            // left — a resolved spell, a creature that died in the exchange —
+            // is a card ref, so "that spell's controller" (Tephraderm's
+            // second trigger) can still read it through `ControllerOf`.
             Selector::LastDamagerOf(inner) => self
                 .resolve_selector(inner, ctx)
                 .into_iter()
                 .filter_map(|e| e.as_permanent_id())
                 .filter_map(|id| self.battlefield_find(id))
                 .filter_map(|c| c.damaged_by_this_turn.last().copied())
-                .filter(|id| self.battlefield_find(*id).is_some())
-                .map(EntityRef::Permanent)
+                .map(|id| {
+                    if self.battlefield_find(id).is_some() {
+                        EntityRef::Permanent(id)
+                    } else {
+                        EntityRef::Card(id)
+                    }
+                })
                 .collect(),
             Selector::CreaturesInChosenSector => self
                 .battlefield

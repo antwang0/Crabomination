@@ -2988,3 +2988,30 @@ fn ogw_printed_shapes() {
         }
     }
 }
+
+
+/// Kozilek's Return's graveyard half — "Whenever you cast an Eldrazi creature
+/// spell with mana value 7 or greater, you may exile Kozilek's Return from
+/// your graveyard. If you do, it deals 5 damage to each creature" — shipped
+/// missing (the `cnt` audit column, 2026-09-10).
+#[test]
+fn kozileks_return_fires_from_the_graveyard_on_a_big_eldrazi_cast() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let kr = g.add_card_to_graveyard(0, catalog::kozileks_return());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let emmy = g.add_card_to_hand(0, catalog::emrakul_the_promised_end()); // Eldrazi, MV 13
+    g.players[0].mana_pool.add_colorless(13);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: emmy, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Eldrazi");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == kr), "exiled from the graveyard");
+    assert!(g.battlefield_find(giant).is_none(), "5 damage killed the 3/3");
+    assert!(g.battlefield_find(angel).is_none(), "and the 4/4");
+    assert!(g.battlefield_find(emmy).is_some(), "the 13/13 shrugs it off");
+}

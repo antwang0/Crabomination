@@ -1500,3 +1500,34 @@ fn built_to_smash_pumps_and_grants_trample_to_artifact() {
     assert!(cp.keywords().contains(&Keyword::Trample), "artifact creature gains trample");
 }
 
+
+
+/// Hauntwoods Shrieker's "{1}{G}: Reveal target face-down permanent. If it's a
+/// creature card, you may turn it face up" shipped missing (the `cnt` audit
+/// column, 2026-09-10).
+#[test]
+fn hauntwoods_shrieker_turns_a_manifested_creature_face_up() {
+    let mut g = two_player_game();
+    let shrieker = g.add_card_to_battlefield(0, catalog::hauntwoods_shrieker());
+    g.clear_sickness(shrieker);
+    let top = g.next_id();
+    g.players[0].library.insert(0, CardInstance::new(top, catalog::elder_gargaroth(), 0));
+    let second = g.next_id();
+    g.players[0].library.insert(1, CardInstance::new(second, catalog::forest(), 0));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: shrieker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(top).unwrap().face_down, "manifested face down");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shrieker, ability_index: 0, target: Some(Target::Permanent(top)), additional_targets: vec![], x_value: None, mode: None,
+    }).expect("{{1}}{{G}}: reveal it");
+    drain_stack(&mut g);
+    let up = g.battlefield_find(top).unwrap();
+    assert!(!up.face_down, "turned face up for free");
+    assert_eq!(up.definition.name, "Elder Gargaroth");
+}

@@ -4216,4 +4216,26 @@ mod cnt_column_2026_09_10 {
         drain_stack(&mut g);
         assert!(g.computed_permanent(rumbler).unwrap().card_types().contains(&CardType::Creature), "crewed for the turn");
     }
+
+    /// Afterburner Expert's "Whenever you activate an exhaust ability, return
+    /// this card from your graveyard to the battlefield" shipped missing (the
+    /// `cnt` audit column, 2026-09-10).
+    #[test]
+    fn afterburner_expert_returns_from_the_graveyard_on_an_exhaust_activation() {
+        let mut g = two_player_game();
+        let expert = g.add_card_to_graveyard(0, catalog::afterburner_expert());
+        let engineer = g.add_card_to_battlefield(0, catalog::draconautics_engineer());
+        g.clear_sickness(engineer);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        for c in [crabomination::mana::Color::Red, crabomination::mana::Color::Green, crabomination::mana::Color::Blue] {
+            g.players[0].mana_pool.add(c, 3);
+        }
+        g.players[0].mana_pool.add_colorless(6);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: engineer, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        }).expect("an exhaust activation");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(expert).is_some(), "the Expert came back");
+    }
 }

@@ -5655,6 +5655,17 @@ pub fn hauntwoods_shrieker() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        // "{1}{G}: Reveal target face-down permanent. If it's a creature card,
+        // you may turn it face up" — shipped missing (the `cnt` audit column,
+        // 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::TurnFaceUpFree {
+                what: target_filtered(SelectionRequirement::FaceDown),
+                if_cant: None,
+            },
+            ..Default::default()
+        }],
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::ManifestDread {
             who: crate::effect::PlayerRef::You,
         })],

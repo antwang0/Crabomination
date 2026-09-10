@@ -197,6 +197,20 @@ pub fn afterburner_expert() -> CardDefinition {
             },
             ..Default::default()
         }],
+        // "Whenever you activate an exhaust ability, return this card from
+        // your graveyard to the battlefield" — shipped missing (the `cnt`
+        // audit column, 2026-09-10); `FromYourGraveyard` is the
+        // graveyard-resident trigger.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::ExhaustAbilityActivated, EventScope::FromYourGraveyard),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: crate::effect::ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::You,
+                    tapped: false,
+                },
+            },
+        }],
         ..Default::default()
     }
 }

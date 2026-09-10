@@ -320,7 +320,8 @@ def ability_tap_sac(body):
                 flags.add(flag)
         # A self-sacrifice spelled as the effect's first step (the fetchlands'
         # `Move { This -> Graveyard }`) is the same shape as a cost here.
-        if re.search(r"Move \{\s*what: Selector::This,\s*to: ZoneDest::Graveyard|Sacrifice \{\s*what: Selector::This", lit):
+        if re.search(r"Move \{\s*what: Selector::This,\s*to: ZoneDest::Graveyard|Sacrifice \{\s*what: Selector::This|"
+                     r"effect: Effect::(?:Seq\(vec!\[\s*)?Effect::SacrificeSource|effect: Effect::SacrificeSource", lit):
             flags.add("sac")
         out.append(frozenset(flags))
     return out
