@@ -1522,6 +1522,20 @@ pub fn hexgold_slith() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![
+            // "Whenever this creature attacks, you may pay {E}{E}. If you do, it
+            // gains first strike until end of turn" — shipped missing (the `cnt` audit column, 2026-09-10).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::PayEnergy {
+                    amount: 2,
+                    then: Box::new(Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::FirstStrike,
+                        duration: crate::effect::Duration::EndOfTurn,
+                    }),
+                },
+            },
+            
             etb(Effect::AddEnergy(Value::Const(2))),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
@@ -1663,7 +1677,16 @@ pub fn pit_scorpion() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Poisonous(1)],
+        // "Whenever this creature deals damage to a player, that player gets a
+        // poison counter" — any damage, not only combat (it shipped as
+        // Poisonous 1; the `cnt` audit column, 2026-09-10).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddPoison {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(1),
+            },
+        }],
         ..Default::default()
     }
 }

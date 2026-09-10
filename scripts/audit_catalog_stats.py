@@ -1374,6 +1374,12 @@ def ability_mana_costs(body):
 # stripped first — "Cycling {2} ({2}, Discard this card: Draw a card.)" would
 # otherwise read as a {2} ability the code spells as a `cycling` field.
 _ORACLE_ACT = re.compile(r"^(?:[A-Z][a-z]+ — )?(\{[^:\n]*?):\s")
+_TRIG_MODELLED_ELSEWHERE = re.compile(
+    r"tapped? (?:a )?\w* ?for mana|leaves the battlefield, (?:each player )?returns?|becomes tapped, .{0,40}deals 1 damage to you|"
+    r"becomes the target of a spell (?:or ability )?an opponent controls, counter|"
+    r"blocks or becomes blocked by .{0,40}destroy that creature at end of combat|^When(?:ever)? you cycle\b",
+    re.I,
+)
 _ORACLE_ACT_ANY = re.compile(r"^(?:[A-Z][a-z]+ — )?((?:\{|Sacrifice |Discard |Pay |Tap |Exile |Remove |Return |Put |Reveal |Unattach|Untap |Forage|Collect evidence)[^:.\n]*?):\s")
 
 def ref_ability_mana_costs(card, face=None):
@@ -2477,7 +2483,14 @@ def audit():
             # helper call the table could not open, or a card whose
             # definition is a `..helper(..)` spread, is unread.
             spread = bare_helper or re.search(r"\.\.(?!Default::default\(\))\w+(?:::\w+)*\(", body) is not None
-            for kind, n_ref, lit in (("act", n_act, "ActivatedAbility"), ("trig", sum(1 for k, _ in ref_lines if k == "trig"), "TriggeredAbility")):
+            # Trigger lines the engine models as something else: a mana
+            # trigger ("is tapped for mana") is a static, the O-Ring return
+            # ("leaves the battlefield, return the exiled card") the linked
+            # exile, a pain land's "becomes tapped, deals 1 damage" a static,
+            # ward's counter-unless a keyword, the basilisk's end-of-combat
+            # destroy deathtouch, "When you cycle" the cycling keyword's rider.
+            n_trig = sum(1 for k, t in ref_lines if k == "trig" and not _TRIG_MODELLED_ELSEWHERE.search(t))
+            for kind, n_ref, lit in (("act", n_act, "ActivatedAbility"), ("trig", n_trig, "TriggeredAbility")):
                 lits = ability_literals(body) if kind == "act" else trigger_literals(body)
                 field = ("activated" if kind == "act" else "triggered") + r"_abilities:"
                 if lits is None and own_field(body, field) is not None:

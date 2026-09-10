@@ -92,7 +92,15 @@ pub fn court_hussar() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![
+            // "When this creature enters, sacrifice it unless {W} was spent to
+            // cast it" — shipped missing (the `cnt` audit column, 2026-09-10).
+            crate::effect::shortcut::etb(Effect::If {
+                cond: crate::card::Predicate::SourceCastWithColorSpent { color: crate::mana::Color::White, at_least: 1 },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::SacrificeSource),
+            }),
+            TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,

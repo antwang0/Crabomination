@@ -2022,7 +2022,17 @@ pub fn lembas() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Food],
             ..Default::default()
         },
-        triggered_abilities: vec![etb(Effect::Seq(vec![
+        triggered_abilities: vec![
+            // "When this artifact is put into a graveyard from the battlefield,
+            // its owner shuffles it into their library" — shipped missing (the `cnt` audit column, 2026-09-10).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Library { who: PlayerRef::OwnerOf(Box::new(Selector::This)), pos: crate::effect::LibraryPosition::Shuffled },
+                },
+            },
+            etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
                 amount: Value::Const(1),

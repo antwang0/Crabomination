@@ -2692,3 +2692,142 @@ fn more_activated_abilities_the_cnt_column_found() {
     activate_first(&mut g, frog, Some(Target::Permanent(plain))).expect("{{2}}: shroud");
     assert!(g.computed_permanent(plain).unwrap().keywords().contains(&Keyword::Shroud));
 }
+
+// ── Triggered abilities the `cnt` audit column found missing, 2026-09-10 ────
+
+/// Omnath's damage fires for "Omnath or another Elemental you control" dying
+/// (it shipped for itself only).
+#[test]
+fn omnath_locus_of_rage_burns_when_another_elemental_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::omnath_locus_of_rage());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("landfall: an Elemental");
+    drain_stack(&mut g);
+    let elemental = g.battlefield.iter().find(|c| c.definition.name == "Elemental").map(|c| c.id).expect("landfall token");
+    let life = g.players[1].life;
+    // Lethal damage: the SBA death path is the one that snapshots the dying
+    // token for Omnath's "another Elemental" filter.
+    g.battlefield_find_mut(elemental).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "the dying Elemental token dealt 3");
+
+    // The trigger is Omnath's, not the token's: a non-Elemental death is
+    // silent, and Omnath's own death counts.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "a Bear is not an Elemental");
+    let omnath = g.battlefield.iter().find(|c| c.definition.name == "Omnath, Locus of Rage").map(|c| c.id).unwrap();
+    let ev = g.remove_to_graveyard_with_triggers(omnath);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 6, "Omnath itself is an Elemental you control");
+}
+
+/// Bria's "Whenever you cast a noncreature spell, target creature you control
+/// can't be blocked this turn" shipped missing.
+#[test]
+fn bria_makes_a_creature_unblockable_on_a_noncreature_cast() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bria_riptide_rogue());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, bolt, Target::Player(1));
+    let unblockable = [bear].iter().any(|&id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Unblockable))
+        || g.battlefield.iter().filter(|c| c.controller == 0).any(|c| g.computed_permanent(c.id).unwrap().keywords().contains(&Keyword::Unblockable));
+    assert!(unblockable, "one of your creatures became unblockable");
+}
+
+/// Krydle's "Whenever you attack, you may pay {2}: target creature can't be
+/// blocked" and Hexgold Slith's "attacks: pay {E}{E} for first strike" shipped
+/// missing.
+#[test]
+fn attack_riders_the_cnt_column_found() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let krydle = g.add_card_to_battlefield(0, catalog::krydle_of_baldurs_gate());
+    let slith = g.add_card_to_battlefield(0, catalog::hexgold_slith());
+    g.clear_sickness(krydle);
+    g.clear_sickness(slith);
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].energy = 2;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: krydle, target: AttackTarget::Player(1) },
+        Attack { attacker: slith, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(slith).unwrap().keywords().contains(&Keyword::FirstStrike), "the Slith paid two energy for first strike");
+    assert_eq!(g.players[0].energy, 0);
+    assert!(g.battlefield.iter().filter(|c| c.controller == 0).any(|c| g.computed_permanent(c.id).unwrap().keywords().contains(&Keyword::Unblockable)), "Krydle paid {{2}} to make a creature unblockable");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+/// Court Hussar is sacrificed on entering unless {W} was spent to cast it —
+/// the half shipped missing.
+#[test]
+fn court_hussar_dies_without_white_mana() {
+    let cast_with = |white: u32, other: u32| {
+        let mut g = two_player_game();
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(0, catalog::island());
+        let hussar = g.add_card_to_hand(0, catalog::court_hussar());
+        g.players[0].mana_pool.add(Color::White, white);
+        g.players[0].mana_pool.add(Color::Blue, other);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        cast(&mut g, hussar);
+        g.battlefield_find(hussar).is_some()
+    };
+    assert!(!cast_with(0, 3), "{{U}}{{U}}{{U}}: no white spent, sacrificed");
+    assert!(cast_with(1, 2), "{{W}} in the payment: it stays");
+}
+
+/// Sengir Autocrat exiles its Serfs when it leaves; Lembas shuffles itself
+/// back when it dies; Lonis grows another creature when you sacrifice a Clue.
+#[test]
+fn leave_and_sacrifice_triggers_the_cnt_column_found() {
+    let mut g = two_player_game();
+    let autocrat = g.move_card_to_battlefield_for_test(0, catalog::sengir_autocrat());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Serf").count(), 3);
+    let ev = g.remove_to_graveyard_with_triggers(autocrat);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Serf").count(), 0, "the Serfs left with it");
+
+    let lembas = g.add_card_to_battlefield(0, catalog::lembas());
+    let library = g.players[0].library.len();
+    let ev = g.remove_to_graveyard_with_triggers(lembas);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.players[0].library.iter().any(|c| c.id == lembas), "shuffled back into the library");
+    assert_eq!(g.players[0].library.len(), library + 1);
+
+    let lonis = g.add_card_to_battlefield(0, catalog::lonis_genetics_expert());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let clue = g.add_card_to_battlefield(0, crabomination_base::tokens::token_to_card_definition(&crabomination_base::tokens::clue_token()));
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: clue, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("crack the Clue");
+    drain_stack(&mut g);
+    let _ = lonis;
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "the other creature got the counter");
+}

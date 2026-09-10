@@ -429,18 +429,18 @@ fn electrostatic_field_pings_on_instant() {
 
 /// Doomskar Titan's Boast pumps your team after it attacks.
 #[test]
-fn doomskar_titan_boast_pumps_team() {
+/// "When this creature enters, creatures you control get +1/+0 and gain haste
+/// until end of turn" — it shipped as a boast ability the card does not have
+/// (the `cnt` audit column, 2026-09-10).
+fn doomskar_titan_etb_pumps_and_hastes_the_team() {
+    use crabomination::card::Keyword;
     let mut g = two_player_game();
-    let titan = g.add_card_to_battlefield(0, catalog::doomskar_titan());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.battlefield_find_mut(titan).unwrap().attacked_this_turn = true;
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: titan, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
-    .expect("boast");
+    g.move_card_to_battlefield_for_test(0, catalog::doomskar_titan());
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "bear pumped +1/+0");
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 3, "bear pumped +1/+0");
+    assert!(c.keywords().contains(&Keyword::Haste), "and hasty");
 }
 
 // ── Spell-matters aggro ──────────────────────────────────────────────────────

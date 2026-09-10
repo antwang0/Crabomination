@@ -3112,7 +3112,23 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![
+            // "Whenever you attack, you may pay {2}. If you do, target creature
+            // can't be blocked this turn" — shipped missing (the `cnt` audit column, 2026-09-10).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
+                effect: Effect::MayPay {
+                    description: "Pay {2} to make a creature unblockable?".into(),
+                    mana_cost: cost(&[generic(2)]),
+                    body: Box::new(Effect::GrantKeyword {
+                        what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
+                        keyword: Keyword::Unblockable,
+                        duration: crate::effect::Duration::EndOfTurn,
+                    }),
+                    else_: None,
+                },
+            },
+            TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::LoseLife {

@@ -812,18 +812,35 @@ fn executioners_capsule_destroys_nonblack_creature() {
 }
 
 #[test]
-fn horizon_spellbomb_draw_mode_works() {
+/// "When this artifact is put into a graveyard from the battlefield, you may
+/// pay {G}. If you do, draw a card" — the Spellbombs shipped with a made-up
+/// "{W}, Sacrifice: draw" ability instead (the `cnt` audit column, 2026-09-10).
+fn horizon_spellbomb_pays_g_to_draw_when_it_dies() {
     let mut g = two_player_game();
     let bomb = g.add_card_to_battlefield(0, catalog::horizon_spellbomb());
-    g.add_card_to_library(0, catalog::island());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.priority.player_with_priority = 0;
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let hand = g.players[0].hand.len();
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: bomb, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
-        .expect("{W},Sac: draw a card");
+    // Any graveyard-bound exit fires it; the sacrifice half of the activated
+    // ability rides the same funnel (the engine stacks a cost-paid source's
+    // own dies trigger below the ability — ENGINE_BACKLOG "self-death
+    // triggers paid as a cost").
+    let ev = g.remove_to_graveyard_with_triggers(bomb);
+    g.dispatch_triggers_for_events(&ev);
     drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "paid {{G}}, drew");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{G}} was paid for the draw");
+
+    // Declining keeps the mana and draws nothing.
+    let bomb = g.add_card_to_battlefield(0, catalog::horizon_spellbomb());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let ev = g.remove_to_graveyard_with_triggers(bomb);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "declined: no draw");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "declined: {{G}} kept");
 }
 
 #[test]

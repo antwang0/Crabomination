@@ -1026,7 +1026,6 @@ pub fn kessig_flamebreather() -> CardDefinition {
 /// Doomskar Titan — {4}{R}{R} 4/4 Giant Warrior. Boast {1}{R}: creatures you
 /// control get +1/+0 until end of turn. Foretell {2}{R}.
 pub fn doomskar_titan() -> CardDefinition {
-    use crate::effect::shortcut::boast;
     CardDefinition {
         name: "Doomskar Titan",
         cost: cost(&[generic(4), r(), r()]),
@@ -1037,15 +1036,22 @@ pub fn doomskar_titan() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        activated_abilities: vec![boast(
-            cost(&[generic(1), r()]),
+        // "When this creature enters, creatures you control get +1/+0 and gain
+        // haste until end of turn" (it shipped as a boast ability the card does
+        // not have — the `cnt` audit column, 2026-09-10).
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
             Effect::PumpPT {
                 what: each_your_creature(),
                 power: Value::Const(1),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
-        )],
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         foretell_cost: Some(cost(&[generic(2), r()])),
         ..Default::default()
     }
@@ -16161,7 +16167,25 @@ pub fn lonis_genetics_expert() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![
+            // "Whenever you sacrifice a Clue, put a +1/+1 counter on another
+            // target creature you control" — shipped missing (the `cnt` audit column, 2026-09-10).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Clue),
+                }),
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
@@ -17761,7 +17785,17 @@ pub fn sengir_autocrat() -> CardDefinition {
                 // printed name with no modeled subtype.
                 ..Default::default()
             }),
-        })],
+        }),
+        // "When this creature leaves the battlefield, exile all Serf tokens" —
+        // shipped missing (the `cnt` audit column, 2026-09-10).
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Exile {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::IsToken.and(SelectionRequirement::HasName("Serf".into())),
+                ),
+            },
+        }],
         ..Default::default()
     }
 }
@@ -17896,11 +17930,10 @@ pub fn prison_realm() -> CardDefinition {
                 ),
                 return_to: crate::card::ExileReturnZone::Battlefield,
             },
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-        ]))],
+        ])), etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
         ..Default::default()
     }
 }
@@ -19901,14 +19934,7 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
             ..Default::default()
         },
         activated_abilities: vec![],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(3),
-            },
-        }],
-
+        triggered_abilities: vec![],
         static_abilities: vec![],
         ..Default::default()
     };
@@ -19923,14 +19949,30 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(elemental),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(elemental),
+                },
             },
-        }],
+            // "Whenever Omnath or another Elemental you control dies" — the
+            // other Elementals shipped missing (the `cnt` audit column,
+            // 2026-09-10). YourControl is self-inclusive, so Omnath's own
+            // death fires it too.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Elemental),
+                }),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
@@ -23152,19 +23194,19 @@ pub fn nihil_spellbomb() -> CardDefinition {
                     to: ZoneDest::Exile,
                 },
                 ..Default::default()
-            },
-            ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
-                mana_cost: cost(&[b()]),
-                sac_cost: true,
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                ..Default::default()
-            },
+            }
         ],
+        // "When this artifact is put into a graveyard from the battlefield, you
+        // may pay {B}. If you do, draw a card" — shipped missing (the `cnt` audit column, 2026-09-10).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {B} to draw a card?".into(),
+                mana_cost: cost(&[b()]),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: None,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -23568,19 +23610,19 @@ pub fn horizon_spellbomb() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 ..Default::default()
-            },
-            ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
-                mana_cost: cost(&[w()]),
-                sac_cost: true,
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                ..Default::default()
-            },
+            }
         ],
+        // "When this artifact is put into a graveyard from the battlefield, you
+        // may pay {G}. If you do, draw a card" — shipped missing (the `cnt` audit column, 2026-09-10).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {G} to draw a card?".into(),
+                mana_cost: cost(&[g()]),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: None,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -34749,6 +34791,19 @@ pub fn bria_riptide_rogue() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource),
                 ),
                 keyword: Keyword::Prowess,
+            },
+        }],
+        // "Whenever you cast a noncreature spell, target creature you control
+        // can't be blocked this turn" — shipped missing (the `cnt` audit column, 2026-09-10).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)),
+            }),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
             },
         }],
         ..Default::default()

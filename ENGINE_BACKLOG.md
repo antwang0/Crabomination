@@ -2485,6 +2485,21 @@ drops the alternative. Needs `sacrifice_filter: Option<SelectionRequirement>`
 and `your_turn_only: bool` on the struct, paid at cast beside `life_cost`
 (the `addl` audit column's residue names it).
 
+### Self-death triggers paid as a cost stack below the ability
+
+`remove_to_graveyard_with_triggers` pushes the leaving permanent's own
+dies / leaves triggers onto the stack the moment it leaves, and a `sac_cost`
+activation calls it while paying costs — before the ability itself is pushed.
+So "{2}, {T}, Sacrifice: search" + "when this dies, you may pay {G}: draw"
+(Horizon Spellbomb) resolves the search first and the draw second; CR 603.3
+puts the trigger on top. Harmless for every shipped Spellbomb / Chromatic
+Star (their orders commute) and for mana abilities; it matters only when the
+body reads what the trigger changed. The fix is to defer those pushes into
+the action's event batch (`dispatch_triggers_for_events` already runs after
+the ability is on the stack) — a golden-trace change, so it needs its own
+commit and a bench. Found 2026-09-10 by the `cnt` audit column's Spellbomb
+fix; the test isolates the trigger instead of pinning the order.
+
 ### Replacement Effects
 The engine has no general replacement-effect primitive.  Many real cards need one:
 - ETB replacements (Containment Priest, Torpor Orb, Rest in Peace)
