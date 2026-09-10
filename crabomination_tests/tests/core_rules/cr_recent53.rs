@@ -8,8 +8,9 @@
 use crabomination::card::{CardType, CounterType};
 use crabomination::catalog;
 use crabomination::effect::{Duration, Effect, Selector, Value};
-use crabomination::game::types::{GameAction, Target};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
 use crabomination::game::*;
+use crabomination::TurnStep;
 
 fn activate(g: &mut GameState, id: CardId, idx: usize) {
     g.perform_action(GameAction::ActivateAbility {
@@ -272,5 +273,66 @@ fn cr_603_2c_once_per_batch_fires_once_a_batch_and_again_next_batch() {
         g.battlefield_find(hunter).unwrap().counter_count(CounterType::PlusOnePlusOne),
         2,
         "a later batch fires again"
+    );
+}
+
+/// CR 603.2c — "whenever one or more creatures you control with flying deal
+/// combat damage to a player" (Mu Yanling, Wind Rider) fires once for two
+/// flyers connecting in one damage batch, not once per dealer.
+#[test]
+fn cr_603_2c_one_or_more_combat_damage_fires_once_a_damage_batch() {
+    let mut g = two_player_game();
+    let mu = g.add_card_to_battlefield(0, catalog::mu_yanling_wind_rider());
+    g.battlefield_find_mut(mu).unwrap().counters.insert(CounterType::Loyalty, 5);
+    let a = g.add_card_to_battlefield(0, catalog::suntail_hawk());
+    let b = g.add_card_to_battlefield(0, catalog::storm_crow());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand = g.players[0].hand.len();
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "both flyers connected");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one draw for the batch");
+}
+
+/// CR 603.2c — "whenever one or more other creatures you control die"
+/// (Vengeful Townsfolk) fires once for a batch of two deaths and again for a
+/// later death in the same turn: a batch cap, not a turn cap.
+#[test]
+fn cr_603_2c_one_or_more_deaths_fires_once_a_batch_and_again_later_in_the_turn() {
+    let mut g = two_player_game();
+    let vt = g.add_card_to_battlefield(0, catalog::vengeful_townsfolk());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[
+        GameEvent::CreatureDied { card_id: a },
+        GameEvent::CreatureDied { card_id: b },
+    ]);
+    assert_eq!(g.stack.len(), 1, "two deaths at once mint one trigger");
+    drain_stack(&mut g);
+    g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: a }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(vt).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "a later death fires again"
     );
 }

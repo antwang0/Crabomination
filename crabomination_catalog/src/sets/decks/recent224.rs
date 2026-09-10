@@ -156,7 +156,7 @@ pub fn mu_yanling_wind_rider() -> CardDefinition {
                 count: Value::ONE,
                 definition: Box::new(vehicle_3_2_crew1()),
             }),
-            // `once_per_turn` approximates "one or more … deal combat damage".
+            // "One or more … deal combat damage": one fire a damage batch.
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::DealsCombatDamageToPlayer,
@@ -166,7 +166,7 @@ pub fn mu_yanling_wind_rider() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::HasKeyword(Keyword::Flying),
                 })
-                .once_per_turn(),
+                .once_per_batch(),
                 effect: Effect::Draw {
                     who: Selector::You,
                     amount: Value::ONE,

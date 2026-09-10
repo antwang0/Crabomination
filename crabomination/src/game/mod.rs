@@ -1057,15 +1057,16 @@ pub struct ColdState {
     /// `Effect::ExtraManaOnLandTapThisTurn` (Bubbling Muck). Cleared at cleanup.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) extra_mana_on_land_tap_this_turn: Vec<(crate::card::LandType, crate::mana::Color)>,
-    /// Transient: graveyard cards whose `FromYourGraveyard` combat-damage
-    /// trigger already fired during the current combat-damage sub-step.
-    /// "Whenever one or more creatures you control deal combat damage to a
-    /// player" fires once per damage batch (CR 603.2), but the engine walks
-    /// attackers one at a time — this set dedupes the per-attacker walks.
-    /// Cleared at the top of each damage sub-step (first-strike and regular
-    /// damage are separate batches).
+    /// Transient: combat-damage triggers that already fired during the
+    /// current combat-damage sub-step — `(graveyard card, usize::MAX)` for a
+    /// `FromYourGraveyard` trigger, `(source, index)` for a printed
+    /// `once_per_batch` one. "Whenever one or more creatures you control deal
+    /// combat damage to a player" fires once per damage batch (CR 603.2c),
+    /// but the engine walks attackers one at a time — this set dedupes the
+    /// per-attacker walks. Cleared at the top of each damage sub-step
+    /// (first-strike and regular damage are separate batches).
     #[serde(skip)]
-    pub(crate) gy_combat_trigger_fired_this_step: Vec<CardId>,
+    pub(crate) combat_trigger_fired_this_step: Vec<(CardId, usize)>,
     /// Transient: `(chosen, other)` for the `Effect::SeparateIntoPiles`
     /// currently running its two bodies. Read by
     /// `Selector::SeparatedPile`; set and cleared inside one resolution.

@@ -43,11 +43,11 @@ pub fn vengeful_townsfolk() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        // "one or more other creatures you control die" is a batch trigger;
-        // `once_per_turn` approximates the once-per-death-event cap (a lone
-        // self-death is a no-op counter on the departing card, so no filter).
+        // "One or more other creatures you control die": one fire a death
+        // batch (a lone self-death is a no-op counter on the departing card,
+        // so no filter).
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).once_per_batch(),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

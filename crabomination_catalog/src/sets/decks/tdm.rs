@@ -1335,14 +1335,14 @@ pub fn frostcliff_siege() -> CardDefinition {
         enter_modes: Some(vec![
             EnterMode {
                 label: "Jeskai",
-                // `once_per_turn` approximates "one or more creatures … deal
-                // combat damage" — the per-creature dealer event would over-draw.
+                // "One or more creatures … deal combat damage": one fire a
+                // damage batch, however many connect.
                 triggered_abilities: vec![TriggeredAbility {
                     event: EventSpec::new(
                         EventKind::DealsCombatDamageToPlayer,
                         EventScope::YourControl,
                     )
-                    .once_per_turn(),
+                    .once_per_batch(),
                     effect: Effect::Draw {
                         who: Selector::You,
                         amount: Value::ONE,

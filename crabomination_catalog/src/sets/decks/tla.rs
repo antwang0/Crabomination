@@ -3588,7 +3588,7 @@ pub fn invasion_tactics() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Ally),
                 })
-                .once_per_turn(),
+                .once_per_batch(),
                 effect: Effect::Draw {
                     who: Selector::You,
                     amount: Value::ONE,

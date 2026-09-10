@@ -13,20 +13,24 @@ use smallvec::SmallVec;
 /// uses (`triggered_once_per_turn_used`), so a hook-fired trigger obeys the
 /// same gate — "one or more creatures you control deal combat damage" is
 /// one fire for the batch, not one per dealer.
-type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool, Option<usize>);
+type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool, Option<(usize, bool)>);
 
 /// One SelfSource Attacks trigger `declare_attackers_banded` pushes itself,
 /// before its filter runs post-batch: `(source, effect, controller, filter,
 /// once)` — `once` as in `DamageTrigger`, the CR 603.3d key of an "attacks
 /// for the first time each turn" trigger (Aurelia, Godo).
-type AttackTrigger = (CardId, Effect, usize, Option<crate::effect::Predicate>, Option<usize>);
+type AttackTrigger = (CardId, Effect, usize, Option<crate::effect::Predicate>, Option<(usize, bool)>);
 
 /// The `once` key of a printed trigger at index `idx`: `Some` only when the
 /// ability says "only once each turn" (a granted trigger passes `None`, as
 /// the dispatcher's `trig_idx < n_printed` rule does).
 #[inline]
-fn once_key(idx: Option<usize>, t: &crate::card::TriggeredAbility) -> Option<usize> {
-    idx.filter(|_| t.event.once_per_turn)
+/// The slot a printed trigger fires under: `(index, true)` once a turn (CR
+/// 603.3d), `(index, false)` once a batch ("one or more", CR 603.2c); `None`
+/// when uncapped or granted.
+fn once_key(idx: Option<usize>, t: &crate::card::TriggeredAbility) -> Option<(usize, bool)> {
+    idx.filter(|_| t.event.once_per_turn || t.event.once_per_batch)
+        .map(|i| (i, t.event.once_per_turn))
 }
 
 /// One attacker's granted Attacks triggers: the statics' (fired off the
@@ -1731,6 +1735,8 @@ impl GameState {
         // the dispatcher). The hardcoded `is_event_hardcoded` check only
         // marks SelfSource Attacks as already handled.
 
+        // "Whenever one or more …" slots spent by this declaration.
+        let mut batch_fired: Vec<(CardId, usize)> = Vec::new();
         for (source, effect, controller, filter, once) in triggers {
             // CR 603.2 + CR 506.5: evaluate the trigger's optional filter
             // predicate at fire-time, which for Attacks is "after the
@@ -1766,12 +1772,21 @@ impl GameState {
                     continue;
                 }
             }
-            // CR 603.3d — after the filter, so a declaration the filter
-            // rejects does not spend the slot (the dispatcher's order).
-            if let Some(i) = once
-                && !self.triggered_once_per_turn_used.insert((source, i))
-            {
-                continue;
+            // CR 603.3d / 603.2c — after the filter, so a declaration the
+            // filter rejects does not spend the slot (the dispatcher's order).
+            if let Some((i, per_turn)) = once {
+                let key = (source, i);
+                let spent = if per_turn {
+                    !self.triggered_once_per_turn_used.insert(key)
+                } else if batch_fired.contains(&key) {
+                    true
+                } else {
+                    batch_fired.push(key);
+                    false
+                };
+                if spent {
+                    continue;
+                }
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
@@ -3442,7 +3457,7 @@ impl GameState {
         // Each call is one combat-damage batch (first-strike and regular
         // damage are separate sub-steps): reset the "one or more creatures
         // you control deal combat damage" graveyard-trigger dedupe.
-        clear_cold!(self.gy_combat_trigger_fired_this_step);
+        clear_cold!(self.combat_trigger_fired_this_step);
 
         let computed_of =
             |id: CardId| -> Option<&ComputedPermanent> { computed.iter().find(|c| c.id == id) };
@@ -5824,7 +5839,7 @@ impl GameState {
         // you control deal combat damage to a player" — one fire per
         // damage batch (CR 603.2), so each graveyard card fires at most
         // once per sub-step even when several attackers connect
-        // (`gy_combat_trigger_fired_this_step` dedupes the per-attacker
+        // (`combat_trigger_fired_this_step` dedupes the per-attacker
         // walks; it's cleared at the top of each damage sub-step).
         //
         // This is the one walk that stays per-kind: the dedupe set is read and
@@ -5838,13 +5853,13 @@ impl GameState {
             && self.players[atk_controller].graveyard.has_graveyard_trigger()
         {
             for (i, kind) in kinds.iter().enumerate() {
-                let mut fired: Vec<CardId> = Vec::new();
+                let mut fired: Vec<(CardId, usize)> = Vec::new();
                 for player in &self.players {
                     if player.id.0 != atk_controller {
                         continue;
                     }
                     for gy_card in &player.graveyard {
-                        if self.gy_combat_trigger_fired_this_step.contains(&gy_card.id) {
+                        if self.combat_trigger_fired_this_step.iter().any(|(c, _)| *c == gy_card.id) {
                             continue;
                         }
                         for t in &gy_card.definition.triggered_abilities {
@@ -5857,14 +5872,14 @@ impl GameState {
                                     false,
                                     None,
                                 ));
-                                fired.push(gy_card.id);
+                                fired.push((gy_card.id, usize::MAX));
                             }
                         }
                     }
                 }
                 // Cold-group guard — see `clear_cold!`.
                 if !fired.is_empty() {
-                    self.gy_combat_trigger_fired_this_step.extend(fired);
+                    self.combat_trigger_fired_this_step.extend(fired);
                 }
             }
         }
@@ -5932,14 +5947,21 @@ impl GameState {
                     continue;
                 }
             }
-            // CR 603.3d — one fire a turn, checked after the filter: this
-            // hook runs once per dealer, so it is also what makes "one or
-            // more creatures you control deal combat damage" one trigger for
-            // the batch.
-            if let Some(i) = once
-                && !self.triggered_once_per_turn_used.insert((trig_source, i))
-            {
-                continue;
+            // CR 603.3d / 603.2c — one fire a turn, or one a damage batch
+            // ("one or more creatures you control deal combat damage"),
+            // checked after the filter. This hook runs once per dealer, so
+            // the batch slot lives on the per-sub-step set.
+            if let Some((i, per_turn)) = once {
+                let key = (trig_source, i);
+                if per_turn {
+                    if !self.triggered_once_per_turn_used.insert(key) {
+                        continue;
+                    }
+                } else if self.combat_trigger_fired_this_step.contains(&key) {
+                    continue;
+                } else {
+                    self.combat_trigger_fired_this_step.push(key);
+                }
             }
             // Most combat-damage triggers implicitly target the damaged player
             // (drain riders, "that player discards / loses life"). But some

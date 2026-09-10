@@ -73,10 +73,15 @@ replaces the seven hand-written `matches!(scope, FromYourGraveyard)` sites
 / dispatcher walks). Beside it:
 
 - **`EventSpec::once_per_batch`** — "whenever one or more …" (CR 603.2c):
-  one fire a batch, no turn cap. **Open, filed here:** ten "one or more"
-  triggers in nine catalog files spell that with `.once_per_turn()`, which
-  under-fires across batches (`rg -B14 'once_per_turn\(\)' | rg -i 'one or
-  more'`); migrate them to `.once_per_batch()` when a card test reads it.
+  one fire a batch, no turn cap, honoured by the dispatcher's two walks,
+  the `declare_attackers` Attacks walk (a local set) and the combat-damage
+  hook (the per-sub-step set, now `combat_trigger_fired_this_step`, keyed
+  `(source, index)`). The catalog's "one or more" census (`rg -B14
+  'once_per_turn\(\)' | rg -i 'one or more'`): four cards spelled the batch
+  cap with `.once_per_turn()` and under-fired across batches — Mu Yanling,
+  Wind Rider; Vengeful Townsfolk; Frostcliff Siege; Invasion Tactics —
+  migrated; the other six print "This ability triggers only once each
+  turn" and keep the turn cap.
 - **`EventScope::FromYourGraveyardAnyPlayer`** — the graveyard `AnyPlayer`:
   `fire_step_triggers` walked only the active player's graveyard, so no
   graveyard card could say "at the beginning of *each* end step" (Kami of
