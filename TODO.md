@@ -28,20 +28,20 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas (the nextest `-E` filter, the
-   incremental dir) in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. ⚠ Fetch before every push. **A/B base: the `(-288)` triple (PERF
-   Baseline, the second 2026-09-09 addendum), taken on the SECOND box; the third box (calib 38-56) has no triple — RE-TAKE before any A/B.**
-2. **Gates at the tip (PERF Baseline, the third 2026-09-09 addendum):** suite 19,300 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical
-   to `2003d1cf`, determinism + thread_determinism ok, 427-543 games/s idle (a faster box, not code); 257,600 fresh-seed dflt games (cube 762..776,
-   sealed 754..769, all 745..759, sos 749..763, fixed 733..747) 0 abort / 0 stuck, 2 caps = Beacon (a), 12 draws = Flame Rift (c); actor 20,000 games /
-   2.01 M rows / 0 stalls; grid + pilots (55 cells), searching mirrors, the cheap-pilot block and the post-fix abilarms / mcts blocks (~200 k games;
-   abilarms seeds 774..889, mirror 774..789, mcts 769..771) all clean — 0 caps after the fix.
-3. **This run:** the fourth find (ENGINE_BACKLOG): the CR 732.3 activation watch was reset by the mana ability paying for the loop (Basalt Monolith's
-   tap-and-untap capped an `abilarms` game) — mana abilities now leave it alone (`6b849f26`); Detention Sphere's may (`b62d7c30`). No perf leg: floor.
-4. **Next moves:** (a) the searching pilots found in 100 k games what 880 k dflt games did not — keep the finder there: `abilarms` / `mcts` mirrors at more
-   seeds and `--games 400` on the cheap pilots (abilarms next 890+, mirror 790+, mcts 772+; dflt next cube 777, sealed 770, all 760, sos 764, fixed 748);
-   (b) the populated crack-back horizon is the one strength round left (38 % of the actor), gate it; (c) a decided draw scores 0 (fingerprint (c)) —
-   right in expectation, gate only beside (b); the modal prompt-text residue is in PERF's candidates ("prompt text"), wire-visible, not next.
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas in **CLAUDE.md**, measurement in
+   **PERF's "Standing rules"**. ⚠ Fetch before every push. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
+2. **Gates at the tip (PERF Baseline, the 2026-09-10 addendum):** suite 19,301 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical to
+   `2003d1cf`, determinism + thread_determinism ok, 547 games/s idle at calib 68 (a box, not code); 36,800 fresh-seed dflt games (cube 777..778,
+   sealed 770..771, all 760..761, sos 764..765, fixed 748..749) + 120 k searching-pilot games (abilarms 890..905, mirror 790..795, lookahead /
+   planner 774..775, mcts 772..774) 0 cap / 0 stuck / 0 assertion; the post-fix block (71,774 games) and the actor leg (24,000 games /
+   2.42 M rows / 0 stalls) on the rebuilt audit binaries likewise.
+3. **This run:** a new bug-class finder, not a sweep — `audit_catalog_stats.py`'s `num` / `stat` columns (an ability's printed amounts against its
+   literal's integers) found **41 shipped cards at the wrong number**, six of them training-pool cards (Languish -2/-2, Searing Wind 5, Fatal Push
+   without revolt, Abrupt Decay MV 2, ...): INCOMPLETE_CARDS "Amounts" has the table and the 80 + 16 residue rows. No trace or bench counter moved.
+4. **Next moves:** (a) the columns are the cheapest finder on the branch (no build); the residue's real shapes are engine gaps — `RevealTopThenIf`
+   has no else (Paroxysm), `SacrificeSourceUnlessSacrifice` no count (Cosmic Larva), "mill plus N" (The Water Crystal) — and a `mana` column (an
+   `AddMana` literal against "{T}: Add ..") is unread; (b) searching mirrors next: abilarms 914+, mirror 796+, mcts 775+; dflt cube 781, sealed 774,
+   all 764, sos 768, fixed 752; (c) the crack-back horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF's candidates.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

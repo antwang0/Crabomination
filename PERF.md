@@ -2806,6 +2806,49 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-10 — the `num` / `stat` audit columns and the 41 wrong-amount cards, the searching / dflt sweeps at fresh seeds, every gate on a fourth box
+
+No perf leg: the queue's engine side still reads floor and the bot-side
+rows are strength rounds, so the run went to the bug finders. The new
+finder is a catalog column, not a sweep: `audit_catalog_stats.py`'s `num`
+reads each ability's printed amounts against its literal's integers
+(INCOMPLETE_CARDS "Amounts") and found 39 shipped cards at the wrong
+number — Languish -2/-2, Searing Wind 5, Fatal Push without revolt, Abrupt
+Decay at mana value 2, six of them training-pool cards — plus two more
+off the `stat` reader (Carapace Forger, Elvish Reclaimer). None sits in a
+traced or `fixed`-pool game: golden traces 10 / 10 and the `--bench`
+counters identical. The sweeps found nothing. **The Ir base was NOT
+re-taken** (no A/B this run; the next perf leg re-takes the triple first).
+
+```text
+fix     8e71332c (the column) / cdc2ffbd (39 cards, 22 tests re-pinned + Fatal Push's revolt test) / 70f037b1 (stat, 2 cards): suite
+        19,301 / 0 / 5 (170 s contended; golden_trace 10 / 10 inside it); clippy --workspace --exclude crabomination_client --all-targets
+        0 warnings (4m59s); cargo check --profile release-fast covered by the release-fast build (9m19s cold)
+gate    --bench release-fast (mimalloc) at cdc2ffbd: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf; determinism ok;
+        thread_determinism ok (3 vs 1); bin_bytes 126,875,528 (+55,408 B on the catalog); peak_rss_mib 28.7; 547.3 games/s idle at
+        host_calib_ms 68 — a different box again (calib 68 against the third box's 38-56), NOT a code movement: the counters say so
+sweep   scripts/fresh_seed_sweep.sh on the e36d38fe audit build (target-audit/overflow, debug-assertions; 8m04s cold), dflt mirror x
+        --games 400 x --threads 3: cube 777..778 (6,400 games) 0 cap / 0 stuck / 0 draw; sealed 770..771 (9,600) 0 / 0 / 0; all 760..761
+        (13,600) 0 / 0 / 2; sos 764..765 (4,000) 0 / 0 / 0; fixed 748..749 (3,200) 0 / 0 / 0 — 36,800 dflt games, every rc 0
+search  searching-pilot mirrors on the same build (CRAB_MAX_ACTIONS=6000 CRAB_CAP_DIAG=4000, 3 threads): abilarms vs gang x {all, cube,
+        sealed, sos} x seeds 890..905 x 16 (64 cells, 12,240 games) 1 draw; abilarms mirror x the four pools x 790..795 (24 cells,
+        4,590 games) clean; lookahead and planner mirrors x the four pools x 774..775 x 400 (16 cells, 55,200 games) 6 draws; mcts mirror
+        cube 772 x 40 (320, 203 s) / all 773 x 40 (680, 578 s) and mcts-heur sealed 774 x 40 (480, 522 s) all decided — 120,255 games
+        decided, 9 draws, 0 cap / 0 stuck / 0 assertion across the block (~45 min on 3 threads beside the builds)
+post    the audit build rebuilt at 70f037b1 (6m30s): abilarms vs gang x the four pools x 906..913 x 16 (32 cells), lookahead and planner
+        mirrors x {all, cube, sealed} x 776..777 x 200 (12 cells), dflt mirror x 400 at cube 779..780 / sealed 772..773 / all 762..763 / sos
+        766..767 / fixed 750..751 (10 cells, 36,800 games) — 71,774 games decided, 2 draws (all 763), 0 cap / 0 stuck / 0 assertion
+actor   target-audit/overflow/selfplay_train (debug-assertions, 9m46s cold) --actors 3 --steps 2 at --games 4000 --seed 20260910 and
+        --games 20000 --seed 767: 403,907 / 2,016,374 rows, 0 stalls, no assertion, 89.7 / 121.4 games/s on the audit build (actors: line);
+        stats.jsonl carries games_per_s / rows_per_s per interval (90.5 / 9,192.8 and 100.1 / 10,201.0 on the first)
+final   suite 19,300 / 0 / 5 (81.2 s idle, golden_trace 10 / 10; +1 revolt test, -1 test written for a synthesised Pest Control)
+suite   audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare; audit_doc_drift 0 body wrong; audit_keyword_value 0 wrong of 762;
+        audit_bottom_random 0 / 0; audit_catalog_stats.py 17,229 cards: kw 20 / abil 1 / T-sac 3 / trig 6 / scope 3 the documented
+        residue, num 80 / stat 16 (INCOMPLETE_CARDS "Amounts" names the shapes)
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz nominal, 4 cores, 15 GB; cold debug suite build 5m59s quiet, cold
+        release-fast bot_ladder 9m19s, cold audit bot_ladder 8m04s
+```
+
 ### 2026-09-09 (third run) — the CR 732.3 guard's mana-ability reset, Detention Sphere, 257,600 fresh-seed dflt games, the actor / pilots / searching legs, every gate on a third box
 
 No perf leg: the candidates queue's engine side reads floor (every open row
