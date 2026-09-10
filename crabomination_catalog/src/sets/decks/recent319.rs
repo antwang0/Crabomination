@@ -7,7 +7,7 @@ use crate::card::{
     Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes,
     TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{blocks, etb, on_dies, target_filtered};
+use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{
     CounteredSpellZone, DelayedTriggerKind, Duration, Effect, LibraryPosition, PlayerRef,
     StaticEffect, ZoneDest,
@@ -668,7 +668,9 @@ pub fn living_hive() -> CardDefinition {
 /// Groffskithur — becomes blocked and may buy back a second copy.
 pub fn groffskithur() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![blocks(Effect::MayDo {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::MayDo {
             description: "Return a Groffskithur from your graveyard to your hand?".into(),
             body: Box::new(Effect::Move {
                 what: Selector::TargetFiltered {
@@ -677,7 +679,8 @@ pub fn groffskithur() -> CardDefinition {
                 },
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
-        })],
+        },
+        }],
         ..creature(
             "Groffskithur",
             cost(&[generic(5), g()]),

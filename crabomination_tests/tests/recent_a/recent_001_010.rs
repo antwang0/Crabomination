@@ -6180,17 +6180,26 @@ mod recent {
     }
 
     #[test]
-    fn skeletal_kathari_unearths_a_flyer() {
+    /// "{B}, Sacrifice a creature: Regenerate this creature" — it shipped with
+    /// an unearth ability the card does not have (the abil column, 2026-09-10).
+    fn skeletal_kathari_regenerates_off_a_sacrifice() {
         let mut g = two_player_game();
-        let k = g.add_card_to_graveyard(0, catalog::skeletal_kathari());
+        let k = g.add_card_to_battlefield(0, catalog::skeletal_kathari());
+        assert!(g.computed_permanent(k).unwrap().keywords().contains(&Keyword::Flying));
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
         g.players[0].mana_pool.add(Color::Black, 1);
-        g.players[0].mana_pool.add_colorless(2);
-        g.perform_action(GameAction::ActivateAbility {
+        let activate = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
             card_id: k, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
-        }).expect("unearth {2}{B}");
+        });
+        assert!(activate(&mut g).is_err(), "no other creature to sacrifice");
+        let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        activate(&mut g).expect("{B}, sacrifice the bear");
         drain_stack(&mut g);
-        let cp = g.computed_permanent(k).expect("on battlefield");
-        assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::Haste));
+        assert!(g.battlefield_find(fodder).is_none(), "the bear was the cost");
+        g.battlefield_find_mut(k).unwrap().damage = 99;
+        g.check_state_based_actions();
+        assert!(g.battlefield_find(k).is_some(), "regenerated instead of dying");
     }
 
     #[test]

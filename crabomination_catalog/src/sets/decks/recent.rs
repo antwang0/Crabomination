@@ -4911,7 +4911,7 @@ pub fn hopeful_vigil() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(
-                    EventKind::PermanentLeavesBattlefield,
+                    EventKind::PermanentDied,
                     EventScope::SelfSource,
                 ),
                 effect: Effect::Scry {
@@ -4952,7 +4952,7 @@ pub fn hopeless_nightmare() -> CardDefinition {
             ])),
             TriggeredAbility {
                 event: EventSpec::new(
-                    EventKind::PermanentLeavesBattlefield,
+                    EventKind::PermanentDied,
                     EventScope::SelfSource,
                 ),
                 effect: Effect::Scry {
@@ -8246,7 +8246,6 @@ pub fn viscera_dragger() -> CardDefinition {
 
 /// Skeletal Kathari — {4}{B} 3/2 Bird Skeleton. Flying. Unearth {2}{B}.
 pub fn skeletal_kathari() -> CardDefinition {
-    use crate::effect::shortcut::unearth;
     CardDefinition {
         name: "Skeletal Kathari",
         cost: cost(&[generic(4), b()]),
@@ -8258,7 +8257,14 @@ pub fn skeletal_kathari() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        activated_abilities: vec![unearth(cost(&[generic(2), b()]))],
+        // "{B}, Sacrifice a creature: Regenerate this creature" (it shipped
+        // with an unearth ability the card does not have).
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

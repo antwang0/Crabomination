@@ -4347,7 +4347,6 @@ pub fn tishanas_wayfinder() -> CardDefinition {
 /// Emperor's Vanguard — {3}{G} 4/3 Human Scout. Whenever it attacks, it
 /// explores.
 pub fn emperors_vanguard() -> CardDefinition {
-    use crate::effect::shortcut::on_attack;
     CardDefinition {
         name: "Emperor's Vanguard",
         cost: cost(&[generic(3), g()]),
@@ -4358,7 +4357,10 @@ pub fn emperors_vanguard() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
-        triggered_abilities: vec![on_attack(explore())],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: explore(),
+        }],
         ..Default::default()
     }
 }
@@ -4429,7 +4431,7 @@ pub fn ember_swallower() -> CardDefinition {
         },
         power: 4,
         toughness: 5,
-        activated_abilities: vec![monstrosity(cost(&[generic(3), r(), r()]), 3)],
+        activated_abilities: vec![monstrosity(cost(&[generic(5), r(), r()]), 3)],
         triggered_abilities: vec![on_becomes_monstrous(Effect::Sacrifice {
             who: Selector::Player(PlayerRef::EachPlayer),
             count: Value::Const(3),
@@ -4454,7 +4456,7 @@ pub fn arbor_colossus() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Reach],
-        activated_abilities: vec![monstrosity(cost(&[generic(6), g()]), 3)],
+        activated_abilities: vec![monstrosity(cost(&[generic(3), g(), g(), g()]), 3)],
         triggered_abilities: vec![on_becomes_monstrous(Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -4480,7 +4482,7 @@ pub fn ill_tempered_cyclops() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Trample],
-        activated_abilities: vec![monstrosity(cost(&[generic(3), r()]), 2)],
+        activated_abilities: vec![monstrosity(cost(&[generic(5), r()]), 3)],
         ..Default::default()
     }
 }
@@ -8892,7 +8894,6 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
 /// Enters with two +1/+1 counters; whenever you cast an instant or sorcery
 /// spell, put a +1/+1 counter on it.
 pub fn murktide_regent() -> CardDefinition {
-    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Murktide Regent",
         cost: cost(&[generic(5), u(), u()]),
@@ -8905,11 +8906,17 @@ pub fn murktide_regent() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Delve],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCardType(CardType::Instant).or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            }),
+            effect: Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
-        })],
+        },
+        }],
         ..Default::default()
     }
 }
@@ -18347,7 +18354,6 @@ pub fn chainers_edict() -> CardDefinition {
 /// Synthesised body for the ⏳ cube row. Menace evasion + life-drip
 /// payoff fills the 2-drop curve in B aggro shells.
 pub fn mai_scornful_striker() -> CardDefinition {
-    use crate::effect::shortcut::on_attack;
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         name: "Mai, Scornful Striker",
@@ -18360,10 +18366,18 @@ pub fn mai_scornful_striker() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        triggered_abilities: vec![on_attack(Effect::LoseLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(1),
-        })],
+        // "Whenever a player casts a noncreature spell, they lose 2 life" (it
+        // shipped as an attack trigger draining 1).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)),
+            }),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::TriggerEventPlayer),
+                amount: Value::Const(2),
+            },
+        }],
         ..Default::default()
     }
 }
@@ -27748,7 +27762,14 @@ pub fn marsh_viper() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![crate::effect::shortcut::poisonous(2)],
+        // "deals damage to a player" — not only combat damage (poisonous's kind).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddPoison {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+            },
+        }],
         ..Default::default()
     }
 }
@@ -39270,7 +39291,7 @@ pub fn stormbreath_dragon() -> CardDefinition {
             Keyword::Haste,
             Keyword::Protection(Color::White),
         ],
-        activated_abilities: vec![monstrosity(cost(&[generic(5), r()]), 5)],
+        activated_abilities: vec![monstrosity(cost(&[generic(5), r(), r()]), 3)],
         triggered_abilities: vec![on_becomes_monstrous(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::HandSizeOf(PlayerRef::EachOpponent),
@@ -47883,7 +47904,11 @@ pub fn titania_protector_of_argoth() -> CardDefinition {
                 },
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::LandPutIntoGraveyard, EventScope::YourControl),
+                // "put into a graveyard from the battlefield" — a milled land is not one.
+                event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
@@ -48225,7 +48250,6 @@ pub fn flare_of_denial() -> CardDefinition {
 /// on arrival (cast trigger modeled as ETB), Evoke {2}{U}.
 pub fn nulldrifter() -> CardDefinition {
     use crate::card::AlternativeCost;
-    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Nulldrifter",
         cost: cost(&[generic(7)]),
@@ -48237,10 +48261,13 @@ pub fn nulldrifter() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Annihilator(1)],
-        triggered_abilities: vec![etb(Effect::Draw {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::Draw {
             who: Selector::You,
             amount: Value::Const(2),
-        })],
+        },
+        }],
         alternative_cost: Some(AlternativeCost {
             awaken: false,
             mana_cost: cost(&[generic(2), u()]),
@@ -50257,11 +50284,14 @@ pub fn lightning_skelemental() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Trample, Keyword::Haste],
         triggered_abilities: vec![
-            etb(Effect::Discard {
-                who: target_filtered(SelectionRequirement::Player),
-                amount: Value::Const(2),
-                random: false,
-            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Discard {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(2),
+                    random: false,
+                },
+            },
             sacrifice_at_end_step(),
         ],
         ..Default::default()

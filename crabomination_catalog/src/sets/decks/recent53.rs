@@ -1127,11 +1127,14 @@ pub fn custodi_lich() -> CardDefinition {
             etb(Effect::BecomeMonarch {
                 who: PlayerRef::You,
             }),
-            etb(Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::ONE,
-                filter: R::Creature,
-            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameMonarch, EventScope::YourControl),
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::ONE,
+                    filter: R::Creature,
+                },
+            },
         ],
         ..Default::default()
     }

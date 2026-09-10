@@ -6,7 +6,7 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility, Value, WardCost,
 };
-use crate::effect::shortcut::{on_you_attack, target_filtered};
+use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{Effect, Predicate, Selector};
 use crate::mana::{b, cost, g, r, w};
 
@@ -26,7 +26,7 @@ pub fn finneas_ace_archer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance, Keyword::Reach],
-        triggered_abilities: vec![on_you_attack(Effect::Seq(vec![
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
             Effect::AddCounter {
                 what: Selector::EachPermanent(
                     R::Creature

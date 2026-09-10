@@ -95,13 +95,28 @@ pub fn shrieking_grotesque() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![on_dies(Effect::HauntCreature {
+        triggered_abilities: vec![
+            // "When this creature enters, if {B} was spent to cast it, target
+            // player discards a card" (the half shipped missing — the `cnt`
+            // audit column, 2026-09-10; the haunted creature's death half is
+            // still the Haunt trigger's alone).
+            crate::effect::shortcut::etb(Effect::If {
+                cond: crate::card::Predicate::SourceCastWithColorSpent { color: Color::Black, at_least: 1 },
+                then: Box::new(Effect::Discard {
+                    who: crate::effect::shortcut::target_filtered(crate::card::SelectionRequirement::Player),
+                    amount: Value::Const(1),
+                    random: false,
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+            on_dies(Effect::HauntCreature {
             body: Box::new(Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
                 random: false,
             }),
-        })],
+        }),
+        ],
         ..Default::default()
     }
 }

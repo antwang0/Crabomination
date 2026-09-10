@@ -610,7 +610,8 @@ fn murktide_regent_enters_with_two_counters_and_grows_on_spellcast() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "3/3 base + two +1/+1 counters");
-    // Cast an instant; the magecraft trigger adds a counter.
+    // "Whenever an instant or sorcery card leaves your graveyard" — a cast
+    // does nothing (it shipped as magecraft; the trigger columns, 2026-09-10).
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
@@ -618,8 +619,16 @@ fn murktide_regent_enters_with_two_counters_and_grows_on_spellcast() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Lightning Bolt");
     drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 5, "a cast is not the trigger");
+    let gy_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::CardLeftGraveyard { player: 0, card_id: gy_bear }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 5, "a creature card leaving is not it either");
+    let gy_bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.dispatch_triggers_for_events(&[GameEvent::CardLeftGraveyard { player: 0, card_id: gy_bolt }]);
+    drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
-    assert_eq!((cp.power, cp.toughness), (6, 6), "instant cast grows Murktide to 6/6");
+    assert_eq!((cp.power, cp.toughness), (6, 6), "an instant leaving the graveyard grows Murktide to 6/6");
 }
 
 #[test]

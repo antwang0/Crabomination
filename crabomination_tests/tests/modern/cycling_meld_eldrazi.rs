@@ -980,8 +980,20 @@ fn lightning_skelemental_discards_and_sacrifices() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Red, 2);
     cast_at(&mut g, skel, Target::Player(1));
-    assert_eq!(g.players[1].hand.len(), 0, "discarded two");
+    assert_eq!(g.players[1].hand.len(), 2, "entering is not the trigger");
+    // "Whenever this creature deals combat damage to a player, that player
+    // discards two cards" (it shipped as an ETB discard; the trigger columns,
+    // 2026-09-10).
     g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: skel, target: AttackTarget::Player(1),
+    }])).expect("haste attacks");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "discarded two on combat damage");
     g.step = TurnStep::End;
     g.priority.player_with_priority = 0;
     g.fire_step_triggers(TurnStep::End);

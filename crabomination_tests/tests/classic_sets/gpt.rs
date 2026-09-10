@@ -1790,3 +1790,25 @@ fn mimeofacture_steals_a_copy_from_their_library() {
         "the library copy came down under the caster"
     );
 }
+
+/// Shrieking Grotesque: "When this creature enters, if {B} was spent to cast
+/// it, target player discards a card" — the half shipped missing beside its
+/// Haunt (the `cnt` audit column, 2026-09-10).
+#[test]
+fn shrieking_grotesque_makes_a_player_discard_when_black_was_spent() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(1, catalog::forest());
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let grotesque = g.add_card_to_hand(0, catalog::shrieking_grotesque());
+    let cards = |g: &GameState| g.players[0].hand.len() + g.players[1].hand.len();
+    let before = cards(&g) - 1;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: grotesque, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with {B} in the payment");
+    drain_stack(&mut g);
+    assert_eq!(cards(&g), before - 1, "black was spent: the targeted player discarded a card");
+}

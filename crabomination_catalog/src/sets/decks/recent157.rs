@@ -6,7 +6,7 @@ use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, Predicate, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_dies, on_you_attack, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, on_dies, on_you_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect};
 use crate::game::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, hybrid, r, u};
@@ -216,7 +216,7 @@ pub fn seedpod_squire() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![on_you_attack(Effect::PumpPT {
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
             what: target_filtered(
                 R::Creature
                     .and(R::ControlledByYou)
@@ -333,7 +333,7 @@ pub fn waterspout_warden() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![on_you_attack(Effect::If {
+        triggered_abilities: vec![on_attack(Effect::If {
             cond: Predicate::AnotherCreatureEnteredThisTurn {
                 who: PlayerRef::You,
             },

@@ -14,7 +14,7 @@ use crate::card::{
     Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    etb_drain, etb_gain_life, landfall, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
     target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
@@ -1331,9 +1331,9 @@ pub fn spitfire_lagac() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![magecraft(Effect::DealDamage {
+        triggered_abilities: vec![landfall(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(2),
+            amount: Value::Const(1),
         })],
         ..Default::default()
     }

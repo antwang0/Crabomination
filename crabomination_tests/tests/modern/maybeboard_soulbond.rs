@@ -2305,3 +2305,28 @@ fn dethrone_silent_when_attacking_lower_life_player() {
         "Dethrone is silent against a non-highest-life player");
 }
 
+
+/// Consul's Lieutenant: "Whenever this creature attacks, if it's renowned,
+/// other attacking creatures you control get +1/+1" — the half shipped
+/// missing (the `cnt` audit column, 2026-09-10).
+#[test]
+fn consuls_lieutenant_pumps_the_other_attackers_once_renowned() {
+    let bear_power_after_attack = |renowned: bool| {
+        let mut g = two_player_game();
+        let lt = g.add_card_to_battlefield(0, catalog::consuls_lieutenant());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(lt);
+        g.clear_sickness(bear);
+        g.battlefield_find_mut(lt).unwrap().renowned = renowned;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: lt, target: AttackTarget::Player(1) },
+            Attack { attacker: bear, target: AttackTarget::Player(1) },
+        ])).expect("attack");
+        drain_stack(&mut g);
+        (g.computed_permanent(bear).unwrap().power, g.computed_permanent(lt).unwrap().power)
+    };
+    assert_eq!(bear_power_after_attack(false), (2, 2), "not renowned: no pump");
+    assert_eq!(bear_power_after_attack(true), (3, 2), "renowned: the other attacker gets +1/+1, itself nothing");
+}

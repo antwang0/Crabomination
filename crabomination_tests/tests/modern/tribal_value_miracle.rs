@@ -1024,15 +1024,16 @@ fn stormbreath_dragon_becomes_monstrous_burns_by_hand() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::stormbreath_dragon());
     for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
-    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(5);
     let opp_life = g.players[1].life;
     let opp_hand = g.players[1].hand.len() as i32;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("monstrosity activatable");
+    }).expect("Monstrosity 3 activatable for {5}{R}{R} (it shipped as Monstrosity 5 for {5}{R})");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_life - opp_hand, "burned by opponent's hand size");
+    assert_eq!(g.computed_permanent(id).unwrap().power, 4 + 3, "three counters, not five");
 }
 
 #[test]

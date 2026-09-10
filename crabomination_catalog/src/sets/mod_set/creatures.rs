@@ -6220,7 +6220,27 @@ pub fn consuls_lieutenant() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
-        triggered_abilities: vec![crate::effect::shortcut::renown(1)],
+        triggered_abilities: vec![
+            crate::effect::shortcut::renown(1),
+            // "Whenever this creature attacks, if it's renowned, other
+            // attacking creatures you control get +1/+1 until end of turn"
+            // (the half shipped missing — the `cnt` audit column, 2026-09-10).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                    .with_filter(crate::effect::Predicate::SourceIsRenowned),
+                effect: Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::IsAttacking)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

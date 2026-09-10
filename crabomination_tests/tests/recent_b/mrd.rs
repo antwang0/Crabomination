@@ -2201,3 +2201,32 @@ fn fractured_loyalty_gives_the_host_to_the_targeter() {
     let c = g.battlefield_find(giant).expect("the 3/3 survives 2 damage");
     assert_eq!(c.controller, 1, "control passed to the targeting spell's controller");
 }
+
+/// Duskworker and Groffskithur trigger when they BECOME blocked, not when they
+/// block (both shipped on `Blocks`; the trigger columns, 2026-09-10).
+#[test]
+fn duskworker_and_groffskithur_trigger_on_becoming_blocked() {
+    let mut g = main_phase();
+    let worker = g.add_card_to_battlefield(0, catalog::duskworker());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Blocking is not it.
+    g.dispatch_triggers_for_events(&[GameEvent::BlockerDeclared { blocker: worker, attacker: blocker }]);
+    drain_stack(&mut g);
+    g.battlefield_find_mut(worker).unwrap().damage = 99;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(worker).is_none(), "no regeneration shield from blocking");
+
+    let worker = g.add_card_to_battlefield(0, catalog::duskworker());
+    g.dispatch_triggers_for_events(&[GameEvent::BlockerDeclared { blocker, attacker: worker }]);
+    drain_stack(&mut g);
+    g.battlefield_find_mut(worker).unwrap().damage = 99;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(worker).is_some(), "becoming blocked regenerates it");
+
+    let groff = g.add_card_to_battlefield(0, catalog::groffskithur());
+    let in_gy = g.add_card_to_graveyard(0, catalog::groffskithur());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
+    g.dispatch_triggers_for_events(&[GameEvent::BlockerDeclared { blocker, attacker: groff }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == in_gy), "becoming blocked returns the graveyard Groffskithur");
+}

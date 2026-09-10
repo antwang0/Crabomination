@@ -43,7 +43,7 @@ pub fn bitter_chill() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(
-                    EventKind::PermanentLeavesBattlefield,
+                    EventKind::PermanentDied,
                     EventScope::SelfSource,
                 ),
                 effect: Effect::MayPay {

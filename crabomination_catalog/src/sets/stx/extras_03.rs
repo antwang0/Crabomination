@@ -1078,10 +1078,21 @@ pub fn wandering_mind() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![magecraft(Effect::Scry {
+        // "When this creature enters, look at the top six cards of your
+        // library. You may reveal a noncreature, nonland card from among them
+        // and put it into your hand. Put the rest on the bottom in a random
+        // order." (it shipped as a magecraft scry).
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
-            amount: Value::Const(1),
-        })],
+            count: Value::Const(6),
+            pick_filter: Some(
+                SelectionRequirement::Not(Box::new(SelectionRequirement::Creature))
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land))),
+            ),
+            take: Some(Value::Const(1)),
+            ..Default::default()
+        })))],
         ..Default::default()
     }
 }
@@ -2113,7 +2124,7 @@ pub fn cunning_rhetoric() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
             effect: Effect::Drain {
                 from: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
                 to: Selector::You,

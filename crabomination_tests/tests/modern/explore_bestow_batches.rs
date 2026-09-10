@@ -196,11 +196,11 @@ fn ember_swallower_monstrous_trigger_sacrifices_lands() {
         }
     }
     g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(5);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Monstrosity 3 activatable for {3}{R}{R}");
+    }).expect("Monstrosity 3 activatable for {5}{R}{R} (it shipped at {3}{R}{R})");
     drain_stack(&mut g);
     for p in 0..2 {
         let lands = g.battlefield.iter()
@@ -241,9 +241,15 @@ fn emperors_vanguard_explores_on_attack() {
     g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }])
         .expect("attack declared");
     drain_stack(&mut g);
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).unwrap().power, 4, "the attack alone is not the trigger");
+    // "Whenever this creature deals combat damage to a player, it explores"
+    // (it shipped on the attack; the trigger columns, 2026-09-10).
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
     let view = g.compute_battlefield();
     let v = view.iter().find(|c| c.id == id).unwrap();
-    assert_eq!((v.power, v.toughness), (5, 4), "attack-trigger explore grew it");
+    assert_eq!((v.power, v.toughness), (5, 4), "combat damage: explore grew it");
 }
 
 #[test]
@@ -269,12 +275,12 @@ fn arbor_colossus_monstrous_destroys_a_flier() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::arbor_colossus());
     let flier = g.add_card_to_battlefield(1, catalog::serra_angel()); // flying
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(6);
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(3);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Monstrosity 3 activatable");
+    }).expect("Monstrosity 3 activatable for {3}{G}{G}{G} (it shipped at {6}{G})");
     drain_stack(&mut g);
     let view = g.compute_battlefield();
     assert_eq!(view.iter().find(|c| c.id == id).unwrap().power, 9, "6/6 + 3 = 9/9");
@@ -378,15 +384,15 @@ fn ill_tempered_cyclops_monstrosity() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::ill_tempered_cyclops());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(5);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Monstrosity 2 activatable for {3}{R}");
+    }).expect("Monstrosity 3 activatable for {5}{R} (it shipped as Monstrosity 2 for {3}{R})");
     drain_stack(&mut g);
     let view = g.compute_battlefield();
     let c = view.iter().find(|c| c.id == id).unwrap();
-    assert_eq!((c.power, c.toughness), (5, 5), "3/3 + two +1/+1 counters");
+    assert_eq!((c.power, c.toughness), (6, 6), "3/3 + three +1/+1 counters");
 }
 
 #[test]
@@ -1083,3 +1089,24 @@ fn hopeful_eidolon_bestow_grants_lifelink_to_host() {
         "bestowed Hopeful Eidolon is not a creature");
 }
 
+
+/// Titania's Elemental comes from "a land you control is put into a graveyard
+/// from the battlefield" — a land discarded from hand is not one (it shipped
+/// on the any-zone kind; the trigger columns, 2026-09-10).
+#[test]
+fn titania_makes_an_elemental_only_for_a_land_dying() {
+    let mut g = two_player_game();
+    let _titania = g.add_card_to_battlefield(0, catalog::titania_protector_of_argoth());
+    let elementals = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Elemental" && c.controller == 0).count();
+    let in_hand = g.add_card_to_hand(0, catalog::forest());
+    let mut ev = Vec::new();
+    g.discard_card(0, in_hand, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(elementals(&g), 0, "a discarded land is not the trigger");
+    let on_bf = g.add_card_to_battlefield(0, catalog::forest());
+    let ev = g.remove_to_graveyard_with_triggers(on_bf);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(elementals(&g), 1, "a land of yours dying is");
+}

@@ -3455,21 +3455,25 @@ fn mossborn_hydra_enters_with_one_counter_and_doubles_on_landfall() {
 }
 
 #[test]
-fn mai_scornful_striker_drains_opp_on_attack() {
+/// "Whenever a player casts a noncreature spell, they lose 2 life" — the
+/// caster, creature spells exempt (it shipped as an attack trigger draining
+/// the opponent for 1; the trigger columns, 2026-09-10).
+fn mai_scornful_striker_taxes_noncreature_casts() {
     use crabomination::card::Keyword;
-    use crabomination::game::types::{AttackTarget, TurnStep};
     let mut g = two_player_game();
-    let attacker = g.add_card_to_battlefield(0, catalog::mai_scornful_striker());
-    g.clear_sickness(attacker);
-    let mai = g.battlefield_find(attacker).expect("Mai on bf");
-    assert!(mai.has_keyword(&Keyword::FirstStrike), "Has first strike");
-    let life1_before = g.players[1].life;
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker, target: AttackTarget::Player(1),
-    }])).expect("attacker declared");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life1_before - 1, "opp -1 life on attack");
+    let mai = g.add_card_to_battlefield(0, catalog::mai_scornful_striker());
+    assert!(g.battlefield_find(mai).unwrap().has_keyword(&Keyword::FirstStrike), "Has first strike");
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life0 = g.players[0].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bear);
+    assert_eq!(g.players[0].life, life0, "a creature spell is free");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.players[0].life, life0 - 2, "the caster loses 2 for a noncreature spell");
 }
 
 /// Tempest Angler grows on each noncreature spell you cast — it shipped with

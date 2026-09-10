@@ -4375,30 +4375,20 @@ fn leyline_invocation_creates_fractal_with_counter_per_land() {
 }
 
 #[test]
-fn spitfire_lagac_magecraft_burns_each_opp() {
+/// "Landfall — Whenever a land you control enters, this creature deals 1
+/// damage to each opponent" (it shipped as magecraft for 2; the trigger
+/// columns, 2026-09-10).
+fn spitfire_lagac_landfall_burns_each_opp() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::spitfire_lagac());
     let p1_life_before = g.players[1].life;
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Bolt castable");
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
     drain_stack(&mut g);
-
-    // Bolt itself does 3 to P1, plus magecraft burns 2 more from Lagac.
-    assert_eq!(
-        g.players[1].life,
-        p1_life_before - 3 - 2,
-        "P1 took 5 damage (Bolt 3 + Lagac magecraft 2)"
-    );
+    assert_eq!(g.players[1].life, p1_life_before - 1, "landfall: 1 to the opponent");
     // Confirm Lagac is a 3/3 Lizard.
     let lagac = g
         .battlefield
@@ -5539,4 +5529,22 @@ fn venerable_warsinger_x_scales_with_damage_dealt() {
     // 5 damage → X=5 → the MV-5 Angel is reanimatable.
     assert!(g.battlefield.iter().any(|c| c.id == big),
         "MV-5 creature reanimated off a 5-damage hit");
+}
+
+/// Wandering Mind digs six for a noncreature, nonland card on entering (it
+/// shipped as a magecraft scry — the trigger columns, 2026-09-10).
+#[test]
+fn wandering_mind_digs_six_for_a_noncreature_nonland_card() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::wandering_mind());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "the one noncreature, nonland card came to hand");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
 }

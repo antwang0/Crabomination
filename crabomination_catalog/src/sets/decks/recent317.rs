@@ -7,7 +7,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, StaticAbility, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{blocks, etb, target_any, target_filtered};
+use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
@@ -305,9 +305,12 @@ pub fn needlebug() -> CardDefinition {
 /// Duskworker — regenerates when blocked; {3} pumps its power.
 pub fn duskworker() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![blocks(Effect::Regenerate {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::Regenerate {
             what: Selector::This,
-        })],
+        },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::PumpPT {

@@ -7,7 +7,7 @@ use crate::card::{
     TriggeredAbility,
 };
 use crate::card::{EventKind, EventScope, EventSpec, Predicate};
-use crate::effect::shortcut::{etb, on_you_attack, target_filtered};
+use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{LookPick, Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -88,7 +88,7 @@ pub fn civic_gardener() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![on_you_attack(Effect::Untap {
+        triggered_abilities: vec![on_attack(Effect::Untap {
             what: target_filtered(R::Creature.or(R::Land)),
             up_to: None,
         })],

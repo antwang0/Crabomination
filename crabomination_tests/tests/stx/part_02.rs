@@ -4484,28 +4484,25 @@ fn scry_inversion_scrys_and_draws_two() {
 // ── Cunning Rhetoric ───────────────────────────────────────────────────────
 
 #[test]
-fn cunning_rhetoric_drains_on_opp_cast() {
+/// "Whenever an opponent attacks you .." — the trigger is the attack, not a
+/// cast (it shipped on `SpellCast`; the trigger columns, 2026-09-10). The
+/// payload is still this file's placeholder drain.
+fn cunning_rhetoric_triggers_when_an_opponent_attacks_you() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
     let mut g = two_player_game();
     let _rhetoric = g.add_card_to_battlefield(0, catalog::cunning_rhetoric());
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
     let life_us_before = g.players[0].life;
     let life_opp_before = g.players[1].life;
-
-    // Opp casts a spell (switch active player to opp)
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
     g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(crabomination::game::types::Target::Player(0)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }])).expect("attack");
     drain_stack(&mut g);
-
-    // After bolt and drain trigger:
-    // Bolt: 3 dmg to us = life_us -3
-    // Drain: us gain 1, opp loses 1
-    assert_eq!(g.players[0].life, life_us_before - 3 + 1, "drain gain 1");
+    assert_eq!(g.players[0].life, life_us_before + 1, "drain gain 1 on being attacked");
     assert_eq!(g.players[1].life, life_opp_before - 1, "drain loss 1");
 }
 
