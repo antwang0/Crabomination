@@ -2843,7 +2843,7 @@ rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz nominal, 4 cores, 1
         release-fast bot_ladder 7m23s with deps warm, audit bot_ladder 7m48s
 ```
 
-### 2026-09-10 (third run) — the shortcut helpers under every column, the ability-count column, 94 shipped cards, the residue read to the card
+### 2026-09-10 (third run) — the shortcut helpers under every column, the ability-count column, 98 shipped cards, the residue read to the card
 
 No perf leg: the queue's engine side still reads floor, so the run stayed
 on the finders. Two reads: the base crate's `effect::shortcut` helpers
@@ -2856,11 +2856,16 @@ triggered ability count against the oracle's lines — found 37 cards with an
 ability wholly absent or stood in for by an invented one (firebreathing,
 regenerate, the Spellbombs' dies-draw, Doomskar Titan's boast for an ETB),
 and reading its 130-row residue one card at a time (two read-only passes)
-gave 32 more with every primitive in hand (INCOMPLETE_CARDS "The shortcut
-helpers and the ability count"). Two engine lines under them:
+gave 36 more with every primitive in hand (INCOMPLETE_CARDS "The shortcut
+helpers and the ability count"). Three engine lines under them:
 `CreateTokenBlocking` from a blocks trigger reads the blocked attacker
-(Brimaz), and `MoveAllCounters` reads its source as a card ref, the way a
-dies trigger binds the dying creature (Buzzard-Wasp Colony). The full
+(Brimaz), `MoveAllCounters` reads its source as a card ref, the way a
+dies trigger binds the dying creature (Buzzard-Wasp Colony), and
+`LastDamagerOf` keeps a damager that has left as a card ref (Tephraderm's
+spell half). A parallel session on the branch closed one of the two gaps
+filed here — a cost-paid permanent's own dies trigger now stacks above
+the ability (24ef0bd9, CR 603.3) — and shipped Mine Collapse's your-turn
+alternative cost (8008d8ba); the tip's gates below include both. The full
 suite caught one of the run's own trigger fixes draining the wrong player
 (Mai, Scornful Striker: `TriggerEventPlayer` is unbound on a SpellCast) —
 a test that had never run in the loop that shipped it; the loop now runs
@@ -2873,7 +2878,8 @@ the next perf leg re-takes the triple first).
 
 ```text
 fix     86905d22 (the reader) / 5674115e (24 cards) / 56324351 (21) / 01e966b7 (16) / a73eda5b (22 + the blocks line) / 2c9e652e (Mai)
-        / 40ddd69a (10 + the counters line) / a069bc80 (the reader's helper-call and delayed-trigger counts): suite
+        / 40ddd69a (10 + the counters line) / a069bc80 (the reader's helper-call and delayed-trigger counts) / f4dc2500 (4 + the
+        damager line, on top of the parallel session's 24ef0bd9 + 8008d8ba): suite
         19,364 / 0 / 5 at 40ddd69a (166.919 s run, 293 s with the build, golden_trace 10 / 10 inside it; the first full
         run since 5674115e caught Mai); clippy --workspace --exclude crabomination_client --all-targets 0 warnings (346 s at 01e966b7,
         556 s at 40ddd69a); cargo check --profile release-fast covered by the release-fast builds (1931 s at 01e966b7, RF_PLACEHOLDER at the tip)
@@ -2885,8 +2891,9 @@ sweep   scripts/fresh_seed_sweep.sh on the audit build (target-audit/overflow, d
         all 770 / sos 774 / fixed 758 at 40ddd69a (18,400, 0 / 0 / 0; 5m35s) — 36,800 games, every rc 0
 audit   audit_catalog_stats.py 17,229 cards: cnt 197 at the column's first run -> 130 after the three batches -> 109 after the triage's
         22 -> 100 after the ten one-edit rows -> 65 once the reader counts the helper calls it leaves in `equipped_bonus` / station bands
-        and the engine's delayed / state-trigger spellings (the 65: 16 one-edit cards, 25 wanting a primitive, the rest engine-shape rows
-        the reader has no hook for — INCOMPLETE_CARDS);
+        and the engine's delayed / state-trigger spellings -> 62 after the graveyard-scope pair, Tephraderm and the Shrieker (the 62: 14
+        one-edit cards, 23 wanting a primitive, three wanting a gate, the rest engine-shape rows the reader has no hook for —
+        INCOMPLETE_CARDS);
         kw 20 / abil 2 / T-sac 3 / ocost 5 / addl 1 / trig 9 / scope 3 / filt 8 / num 92 / stat 14 / timing 0 the documented residue
 rustc   1.95.0 (59807616e 2026-04-14); the same box as the second run (calib 62, ~300 games/s)
 ```

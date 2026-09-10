@@ -1048,12 +1048,18 @@ target), Gideon's Company once a name-prefix requirement exists, Emperor
 of Bones, Ersatz Gnomes, Hauntwoods Shrieker, Eladamri, Pinnacle
 Starcage, Rydia, Diviner's Wand, Urborg Panther, Tephraderm's spell half,
 Skophos Maze-Warden, Shieldmage Elder, Severance Priest's Spirit, Iroh,
-Lumbering Laundry; the last 25 want a primitive (ENGINE_BACKLOG "Triggers
-that live in the graveyard" and "The cnt triage's other primitives"). The
-reader then learned the triage's own lesson — a helper call it leaves in
+Lumbering Laundry (Tephraderm's spell half and Hauntwoods Shrieker's reveal
+shipped the same day, with `LastDamagerOf` returning a departed damager —
+a resolved spell — as a card ref). The triage filed five cards as wanting a
+graveyard trigger zone; `EventScope::FromYourGraveyard` is that zone, and
+two of them shipped as plain uses of it (Kozilek's Return, Afterburner
+Expert) — the other three want a gate, not a zone (ENGINE_BACKLOG
+"Triggers that live in the graveyard"); the last 23 want a primitive
+(ENGINE_BACKLOG "The cnt triage's other primitives"). The reader then
+learned the triage's own lesson — a helper call it leaves in
 `equipped_bonus` or a station band is an ability, the delayed-trigger
 effects and the state-trigger fields are trigger lines, "taps a land for
-mana" is a static — and `cnt` reads 65: those 41 plus the engine-shape
+mana" is a static — and `cnt` reads 62: those 37 plus the engine-shape
 rows it has no hook for (a keyword standing in for a trigger, a static
 `PumpSelfIf`, an `If` folded into an activation).
 
