@@ -30708,22 +30708,27 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ReturnSelfAttachedToChoiceOf { chooser } => {
-                // Necrotic Plague — the dead host's controller picks a creature
-                // they don't control and the Aura hops onto it.
+            Effect::ReturnSelfAttachedToChoiceOf { chooser, filter } => {
+                // Necrotic / Traveling Plague — the departed host's controller
+                // picks a permanent from the pool and the Aura hops onto it,
+                // out of the graveyard or (Steam Vines, still on the
+                // battlefield beside its destroyed land) in place.
                 let Some(src) = ctx.source else { return Ok(()) };
-                let Some(owner) =
-                    self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == src))
-                else {
+                let owner =
+                    self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == src));
+                if owner.is_none() && self.battlefield_find(src).is_none() {
                     return Ok(());
-                };
+                }
                 let Some(&picker) = self.resolve_players(chooser, ctx).first() else {
                     return Ok(());
                 };
                 let candidates: Vec<(CardId, String)> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.definition.is_creature() && c.controller != picker)
+                    .filter(|c| {
+                        c.id != src
+                            && self.evaluate_requirement_static_on(filter, c, picker, Some(src))
+                    })
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() {
@@ -30731,7 +30736,7 @@ impl GameState {
                 }
                 let Some(pick) = self.ask_seat_cards(
                     picker,
-                    "Choose a creature you don't control".into(),
+                    "Choose a permanent to attach this to".into(),
                     src,
                     candidates,
                     1,
@@ -30741,12 +30746,14 @@ impl GameState {
                     return Ok(());
                 };
                 let Some(&host) = pick.first() else { return Ok(()) };
-                self.move_card_to(
-                    src,
-                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false },
-                    ctx,
-                    events,
-                );
+                if let Some(owner) = owner {
+                    self.move_card_to(
+                        src,
+                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false },
+                        ctx,
+                        events,
+                    );
+                }
                 if let Some(c) = self.battlefield_find_mut(src) {
                     c.attached_to = Some(host);
                 }

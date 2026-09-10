@@ -729,3 +729,42 @@ mod gaps1 {
         assert_eq!(g.players[1].life, 19);
     }
 }
+
+/// Eiganjo Castle's shield is "{W}, {T}: Prevent the next 2 damage that would
+/// be dealt to target legendary creature this turn". It shipped as `{2}{W}`
+/// with no tap (the helper-inlining audit column, 2026-09-10).
+#[test]
+fn eiganjo_castle_shields_a_legend_for_w_and_a_tap() {
+    let mut g = two_player_game();
+    let castle = g.add_card_to_battlefield(0, catalog::eiganjo_castle());
+    let konda = g.add_card_to_battlefield(0, catalog::konda_lord_of_eiganjo());
+    g.step = crabomination::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    act!(g, castle, 1, Some(Target::Permanent(konda)));
+    assert!(g.battlefield_find(castle).unwrap().tapped, "{{T}} is in the cost");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{W}} is the whole mana cost");
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(konda), 3, None, &mut evs,
+    );
+    assert_eq!(g.battlefield_find(konda).unwrap().damage, 1, "the next 2 of 3 prevented");
+}
+
+/// Matsu-Tribe Sniper's lock fires on ANY damage it deals to a creature — its
+/// own `{T}` ping included (the other Snakes print "combat damage"). It shipped
+/// on the combat kind (the helper-inlining audit column, 2026-09-10).
+#[test]
+fn matsu_tribe_sniper_locks_the_flier_it_pings() {
+    let mut g = two_player_game();
+    let sniper = g.add_card_to_battlefield(0, catalog::matsu_tribe_sniper());
+    g.clear_sickness(sniper);
+    let djinn = g.add_card_to_battlefield(1, catalog::mahamoti_djinn());
+    g.step = crabomination::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    act!(g, sniper, 0, Some(Target::Permanent(djinn)));
+    let d = g.battlefield_find(djinn).unwrap();
+    assert_eq!(d.damage, 1, "pinged");
+    assert!(d.tapped, "tapped by the trigger");
+    assert!(d.skip_next_untap, "and it skips its next untap");
+}

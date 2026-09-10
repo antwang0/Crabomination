@@ -7650,9 +7650,9 @@ pub fn summoners_grimoire() -> CardDefinition {
 }
 
 /// The Water Crystal — {2}{U}{U} Legendary Artifact. Blue spells you cast cost
-/// {1} less. Opponents mill extra. {4}{U}{U}, {T}: each opponent mills cards
-/// equal to the number of cards in your hand.
-/// (The printed "mill that many plus four" is approximated as mill-doubling.)
+/// {1} less. If an opponent would mill one or more cards, they mill that many
+/// plus four instead. {4}{U}{U}, {T}: each opponent mills cards equal to the
+/// number of cards in your hand.
 pub fn the_water_crystal() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
@@ -7669,8 +7669,8 @@ pub fn the_water_crystal() -> CardDefinition {
                 },
             },
             StaticAbility {
-                description: "If an opponent would mill one or more cards, they mill extra.",
-                effect: StaticEffect::OpponentMillDoubled,
+                description: "If an opponent would mill one or more cards, they mill that many plus four instead.",
+                effect: StaticEffect::OpponentMillExtra { count: 4 },
             },
         ],
         activated_abilities: vec![ActivatedAbility {

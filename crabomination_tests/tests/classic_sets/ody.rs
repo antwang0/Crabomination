@@ -1667,11 +1667,33 @@ fn traveling_plague_grows_each_upkeep() {
     assert_eq!((cp.power, cp.toughness), (1, 1), "one plague counter");
 }
 
-/// Steam Vines blows up the land it sits on when it taps.
+/// "When enchanted creature leaves the battlefield" — a bounced host returns
+/// the Plague from the graveyard too, not only a dead one (it shipped on the
+/// death kind; the helper-inlining audit column, 2026-09-10).
+#[test]
+fn traveling_plague_returns_when_its_host_is_bounced() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let plague = g.add_card_to_hand(0, catalog::traveling_plague());
+    cast(&mut g, 0, plague, Some(Target::Permanent(bear)));
+    let unsummon = g.add_card_to_hand(0, catalog::unsummon());
+    mana(&mut g, 0);
+    cast(&mut g, 0, unsummon, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none(), "the host left");
+    let p = g.battlefield_find(plague).expect("the Plague came back");
+    assert_eq!(p.attached_to, Some(other), "onto the creature its host's controller chose (their only one)");
+}
+
+/// Steam Vines blows up the land it sits on when it taps, and "that player
+/// attaches Steam Vines to a land of their choice" — the re-attach half was
+/// dead (the effect wanted a graveyard source and a creature pool) until the
+/// pool took a filter, 2026-09-10.
 #[test]
 fn steam_vines_destroys_the_land_it_taps() {
     let mut g = main_phase();
     let land = g.add_card_to_battlefield(1, catalog::forest());
+    let next = g.add_card_to_battlefield(1, catalog::forest());
     let vines = g.add_card_to_hand(0, catalog::steam_vines());
     cast(&mut g, 0, vines, Some(Target::Permanent(land)));
     g.priority.player_with_priority = 1;
@@ -1687,6 +1709,11 @@ fn steam_vines_destroys_the_land_it_taps() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "the land burned");
     assert_eq!(g.players[1].life, 19);
+    assert_eq!(
+        g.battlefield_find(vines).and_then(|v| v.attached_to),
+        Some(next),
+        "and the Vines moved to the burned land's controller's other land"
+    );
 }
 
 // ── Wave 12 ─────────────────────────────────────────────────────────────────

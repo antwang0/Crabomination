@@ -123,6 +123,26 @@ mod recent42 {
         );
     }
 
+    /// The printed cost is `{2}, Sacrifice` — no `{T}` (Ratchet Bomb's has
+    /// one), so a tapped Explosives still detonates. It shipped with the
+    /// helper's tap (the helper-inlining audit column, 2026-09-10).
+    #[test]
+    fn engineered_explosives_detonates_while_tapped() {
+        let mut g = two_player_game();
+        let bomb = g.add_card_to_battlefield(0, catalog::engineered_explosives());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        {
+            let b = g.battlefield_find_mut(bomb).unwrap();
+            b.add_counters(CounterType::Charge, 2);
+            b.tapped = true;
+        }
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
+        activate(&mut g, bomb, 0);
+        assert!(g.battlefield_find(bear).is_none(), "MV-2 creature destroyed");
+        assert!(g.battlefield_find(bomb).is_none(), "sacrificed itself");
+        assert_eq!(g.players[0].mana_pool.total(), 0, "{{2}} paid");
+    }
+
     #[test]
     fn sphere_of_the_suns_taps_for_any_color_off_a_charge_counter() {
         let mut g = two_player_game();

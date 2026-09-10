@@ -1353,7 +1353,12 @@ pub fn matsu_tribe_sniper() -> CardDefinition {
         ]),
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![snake_tap_lock()],
+        // "Whenever this creature deals damage to a creature" — its own ping
+        // counts (the other Snakes say "combat damage").
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamageToCreature, EventScope::SelfSource),
+            ..snake_tap_lock()
+        }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
@@ -1389,8 +1394,10 @@ pub fn eiganjo_castle() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             crate::sets::tap_add(crate::mana::Color::White),
+            // Printed "{W}, {T}" (shipped as "{2}{W}" with no tap).
             ActivatedAbility {
-                mana_cost: cost(&[generic(2), w()]),
+                mana_cost: cost(&[w()]),
+                tap_cost: true,
                 effect: Effect::PreventNextDamage {
                     target: target_filtered(
                         SelectionRequirement::Creature

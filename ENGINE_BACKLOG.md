@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-10 (third find) — helper-built abilities were unread by every catalog column: 13 cards, a dead Steam Vines half, a dispatcher arm](#fixed-2026-09-10-third-find--helper-built-abilities-were-unread-by-every-catalog-column-13-cards-a-dead-steam-vines-half-a-dispatcher-arm) | 24 |
 | Bugs & robustness | [FIXED 2026-09-10 (second find) — an Aura's own `effect:` is its attach and the cast path runs nothing after it; six shipped Auras had a dead entry half](#fixed-2026-09-10-second-find--an-auras-own-effect-is-its-attach-and-the-cast-path-runs-nothing-after-it-six-shipped-auras-had-a-dead-entry-half) | 22 |
 | Bugs & robustness | [FIXED 2026-09-10 — step triggers and targeting triggers under `EventScope::EnchantedBySource` never fired: nine shipped Auras](#fixed-2026-09-10--step-triggers-and-targeting-triggers-under-eventscopeenchantedbysource-never-fired-nine-shipped-auras) | 30 |
 | Bugs & robustness | [FIXED 2026-09-09 (fourth find) — the CR 732.3 activation guard was reset by the mana ability that paid for the loop, so Basalt Monolith's tap-and-untap ran an `abilarms` game to the action cap](#fixed-2026-09-09-fourth-find--the-cr-7323-activation-guard-was-reset-by-the-mana-ability-that-paid-for-the-loop-so-basalt-monoliths-tap-and-untap-ran-an-abilarms-game-to-the-action-cap) | 40 |
@@ -49,6 +50,37 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-10 (third find) — helper-built abilities were unread by every catalog column: 13 cards, a dead Steam Vines half, a dispatcher arm
+
+`audit_catalog_stats.py`'s nine ability columns each answered `None` for a
+card whose ability vec held a helper call, and ~2,000 abilities are built
+that way. Inlining the helper (INCOMPLETE_CARDS "Helper-built abilities")
+read them for the first time and found thirteen shipped cards at the wrong
+cost / tap / event / scope / amount — three of them training-pool cards
+(Stonework Packbeast's `{T}` for a printed `{2}`, Engineered Explosives'
+tap, the end-step Elementals on `YourControl`). Two engine halves under
+them:
+
+- `EventScope::EnchantedBySource` served a death, an exile, a damage, an
+  attack, a block, a tap, a face-up, a draw and a targeting of the host, but
+  not a non-death leave: a `PermanentLeavesBattlefield` trigger under it
+  (Traveling Plague, re-shaped from `CreatureDied`) fired on a death and
+  never on a bounce. The arm now matches `PermanentLeftBattlefield` — the
+  Aura is still attached at dispatch (the orphaning SBA runs after), the
+  `auras_at_death` snapshot is the fallback (`traveling_plague_returns_when_
+  its_host_is_bounced`).
+- `Effect::ReturnSelfAttachedToChoiceOf` was Necrotic Plague's shape only
+  (a graveyard source, a creature the chooser doesn't control), so Steam
+  Vines' "attaches to a land of their choice" — an on-battlefield source, a
+  land pool — was a no-op every time it ran. It takes a `filter` read from
+  the chooser's seat and re-attaches an on-battlefield source in place
+  (`steam_vines_destroys_the_land_it_taps` pins both halves).
+
+The finder generalises: every column now reads a helper-built ability, and
+the number readers a file's `fn -> Effect / StaticAbility / Predicate /
+Value` helpers. What still hides a number is a helper in *another* file
+(`shortcut::animate_land`'s +1/+1 — Rootwise Survivor's row).
 
 ## FIXED 2026-09-10 (second find) — an Aura's own `effect:` is its attach and the cast path runs nothing after it; six shipped Auras had a dead entry half
 

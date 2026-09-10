@@ -5321,12 +5321,14 @@ pub enum Effect {
     /// that creature" — the trigger-source sibling of
     /// [`Effect::ReturnSelfAttachedToTarget`] (the Scourge Dragon Auras).
     ReturnSelfAttachedToTrigger,
-    /// "Its controller chooses a creature they don't control. Return this card
-    /// from its owner's graveyard to the battlefield attached to that
-    /// creature" (Necrotic Plague). `chooser` picks; the pool is every creature
-    /// that player doesn't control. No-op if the source isn't in a graveyard or
-    /// the pool is empty.
-    ReturnSelfAttachedToChoiceOf { chooser: PlayerRef },
+    /// "[Chooser] chooses a [filter] permanent. Return this card from its
+    /// owner's graveyard to the battlefield attached to it" — Necrotic Plague
+    /// (a creature they don't control), Traveling Plague (any creature). A
+    /// source still on the battlefield, orphaned by its host's destruction, is
+    /// re-attached in place (Steam Vines' land). `filter` is read from the
+    /// chooser's seat, so "they don't control" is `Not(ControlledByYou)`.
+    /// No-op on an empty pool.
+    ReturnSelfAttachedToChoiceOf { chooser: PlayerRef, filter: crate::card::SelectionRequirement },
     /// "Return the top creature card of `who`'s graveyard to the battlefield."
     /// Top = most recently put into the graveyard (Mistmoon Griffin). No-op if
     /// the graveyard holds no creature card.

@@ -2059,7 +2059,12 @@ pub fn bloodchief_ascension() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
-            ascension_quest(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            // "if an opponent lost 2 or more life this turn" — the max over
+            // opponents, not "lost any life".
+            ascension_quest(Predicate::ValueAtLeast(
+                Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+                Value::Const(2),
+            )),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::OpponentControl)
                     .with_filter(Predicate::SourceHasCountersAtLeast {

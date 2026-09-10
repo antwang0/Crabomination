@@ -837,6 +837,47 @@ scope (a step, a targeting, a graveyard kind), and six Auras whose entry
 half was spelled after the attach in `effect:`, which the cast path never
 runs. Fifteen cards, one test each, no residue.
 
+### Helper-built abilities — the tenth read, 2026-09-10: every column opened, 13 shipped cards
+
+Every activation and trigger column above answered `None` for a card whose
+`activated_abilities` / `triggered_abilities` vec held a helper call
+(`tap_add(Color::Green)`, `self_pump(cost(&[r()]), 1, 0)`, `upkeep(effect)`,
+`returns_to_hand()`) — 85 file-local `fn .. -> ActivatedAbility` helpers plus
+the four in `sets/mod.rs`, 132 `fn .. -> TriggeredAbility`, ~2,000 abilities
+unread by nine columns. `inline_ability_helpers` now rewrites the call into
+the helper's own literal with the arguments (and its simple `let` bindings)
+substituted for the parameters, a spread (`ActivatedAbility { tap_cost:
+false, ..helper(args) }`) keeping its override fields in front; and the
+number readers consult a per-file table of `fn .. -> Effect / StaticAbility
+/ Predicate / Value / SelectionRequirement` helpers, so `effect: drain_two()`
+carries the helper's amounts. Three reader rules fell out: a Class's
+"{cost}: Level N" is sorcery-speed (CR 716.2b, the rider is in stripped
+reminder text) and its N is the level index, not an amount; `search()` as a
+called closure counts like `search_*()`. Thirteen real rows, one commit each
+class:
+
+| Card | Was | Printed |
+|---|---|---|
+| Stonework Packbeast (training pool) | `{T}: Add one mana of any color` | `{2}:` — no tap; a sick Packbeast activates |
+| Eiganjo Castle | `{2}{W}`, no tap: prevent 2 to a legend | `{W}, {T}` |
+| Engineered Explosives (training pool) | `{2}, {T}, Sacrifice` (the Ratchet Bomb helper's tap) | `{2}, Sacrifice` |
+| Brilliant Halo, Despondency, Launch, Fiery Mantle, Fortitude | return to hand on any leave (exile included) | "put into a graveyard from the battlefield" (`PermanentDied`) |
+| Matsu-Tribe Sniper | lock on combat damage (the Snake helper) | "deals damage to a creature" — its own `{T}` ping locks |
+| Traveling Plague | return when the host dies | "leaves the battlefield" — a bounce too (the dispatcher's `EnchantedBySource` arm now serves the non-death leave; the pool was "a creature they don't control", now any creature) |
+| Ball Lightning, Spark Elemental, Groundbreaker, Hellspark Elemental, Lightning Skelemental (training pool) | sacrificed at your end step | "the end step" — an opponent's too |
+| Bloodchief Ascension | quest counter on any life lost | "2 or more" (`ValueAtLeast(LifeLostThisTurn(EachOpponent), 2)`) |
+
+Two more the same effect re-shape found: Steam Vines' "that player attaches
+Steam Vines to a land of their choice" was dead (`ReturnSelfAttachedToChoiceOf`
+wanted a graveyard source and a creature pool; it now takes a `filter` and
+re-attaches an on-battlefield source in place), and The Water Crystal's
+"mill that many plus four" shipped as mill-doubling (`OpponentMillExtra {
+count }`, the `stat` column's one non-custom row). Residue after the read:
+`trig` 7 / `scope` 3 the documented rows (Whirling Dervish, Skizzik), `num`
+76 / `stat` 15 (Thunderscape Master and Blighted Woodland's helper rows
+closed; the rest the approximations above), `T-sac` 3, `abil` 1 (Wizard's
+Rockets' `{X}`).
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

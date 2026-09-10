@@ -1154,6 +1154,7 @@ pub fn necrotic_plague() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
             effect: Effect::ReturnSelfAttachedToChoiceOf {
                 chooser: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                filter: R::Creature.and(R::Not(Box::new(R::ControlledByYou))),
             },
         }],
         ..Default::default()

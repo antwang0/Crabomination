@@ -2492,6 +2492,11 @@ pub enum StaticEffect {
     /// twice that many cards instead." (Bruvac the Grandiloquent.) Consulted
     /// by `GameState::mill_count_for` at every mill site.
     OpponentMillDoubled,
+    /// CR 614.5 — "If an opponent would mill one or more cards, they mill
+    /// that many plus `count` instead." (The Water Crystal.) Consulted with
+    /// the doubling at `GameState::mill_count_for`; the milling player orders
+    /// the replacements (CR 616.1), so the doubling applies first.
+    OpponentMillExtra { count: u32 },
     /// CR 701.19c — "If an opponent would search a library, that player
     /// searches the top `count` cards of that library instead." Consulted by
     /// `Effect::Search`: an opponent of this static's controller only sees

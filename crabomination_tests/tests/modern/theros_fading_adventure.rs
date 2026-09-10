@@ -962,6 +962,30 @@ fn ball_lightning_is_six_one_and_self_sacrifices() {
     assert!(g.battlefield_find(id).is_none(), "sacrificed at end step");
 }
 
+/// "At the beginning of the end step" is every end step: the cycle goes at
+/// an opponent's end step too (it shipped on `YourControl`; the
+/// helper-inlining audit column, 2026-09-10).
+#[test]
+fn end_step_elementals_go_at_an_opponents_end_step_too() {
+    for def in [
+        catalog::ball_lightning(),
+        catalog::spark_elemental(),
+        catalog::groundbreaker(),
+        catalog::hellspark_elemental(),
+        catalog::lightning_skelemental(),
+    ] {
+        let name = def.name;
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, def);
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 1;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(id).is_none(), "{name} sacrificed at the opponent's end step");
+    }
+}
+
 /// Hellspark Elemental prints **Unearth {1}{R}** (CR 702.84), not Flashback.
 /// It shipped with the Flashback — which recasts the card as a spell with no
 /// exile clause, a strictly different card (`audit_keyword_drift.py`) — and

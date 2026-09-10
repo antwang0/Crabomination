@@ -8038,27 +8038,27 @@ impl GameState {
         (redirects, void, stamped_by)
     }
 
-    /// CR 614.5 — the actual mill count for `p` after doubling replacements
-    /// (Bruvac the Grandiloquent: an opponent's mill is doubled, once per
-    /// active static). 0 stays 0 (no event to replace).
+    /// CR 614.5 — the actual mill count for `p` after the opposing mill
+    /// replacements: doubled once per `OpponentMillDoubled` (Bruvac the
+    /// Grandiloquent), then plus every `OpponentMillExtra` (The Water
+    /// Crystal) — the milling player orders them (CR 616.1) and doubling
+    /// first is the smaller mill. 0 stays 0 (no event to replace).
     pub(crate) fn mill_count_for(&self, p: usize, n: usize) -> usize {
         use crate::effect::StaticEffect;
         if n == 0 {
             return 0;
         }
-        let doublers = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::OpponentMillDoubled))
-                    && !self.same_team(c.controller, p)
-            })
-            .count()
-            .min(16);
-        n << doublers
+        let (mut doublers, mut extra) = (0usize, 0usize);
+        for c in self.battlefield.iter().filter(|c| !self.same_team(c.controller, p)) {
+            for sa in &c.definition.static_abilities {
+                match sa.effect {
+                    StaticEffect::OpponentMillDoubled => doublers += 1,
+                    StaticEffect::OpponentMillExtra { count } => extra += count as usize,
+                    _ => {}
+                }
+            }
+        }
+        (n << doublers.min(16)) + extra
     }
 
     /// CR 701.19c (Aven Mindcensor) — the number of cards from the top of
@@ -25990,6 +25990,7 @@ fn static_effect_to_effects(
             | StaticEffect::YourColorSpellDamageDoubled { .. }
             | StaticEffect::ControlledCreatureTypesDealExtraDamage { .. }
             | StaticEffect::OpponentMillDoubled
+            | StaticEffect::OpponentMillExtra { .. }
             // GrantAffinityToISSpells / GrantAffinityToSpells — read at cast
             // time by `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }

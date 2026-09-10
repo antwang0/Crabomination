@@ -1223,6 +1223,25 @@ fn stonework_packbeast_is_a_changeling_and_fills_a_party() {
     assert_eq!(tokens, 2, "Commander (Warrior) + Packbeast (Changeling) is a party of two");
 }
 
+/// Stonework Packbeast's mana ability is "{2}: Add one mana of any color" —
+/// a mana cost with no `{T}`, so a summoning-sick Packbeast activates it and
+/// stays untapped. It shipped as `{T}` (the helper-inlining audit column,
+/// 2026-09-10).
+#[test]
+fn stonework_packbeast_adds_mana_for_two_with_no_tap() {
+    let mut g = two_player_game();
+    let pb = g.add_card_to_battlefield(0, catalog::stonework_packbeast());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("a sick Packbeast activates: no tap in the cost");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "{{2}} paid, one mana added");
+    assert!(!g.battlefield_find(pb).unwrap().tapped, "no tap in the cost");
+}
+
 /// Cleric of Chill Depths stuns what it blocks.
 #[test]
 fn cleric_of_chill_depths_stuns_blocked() {

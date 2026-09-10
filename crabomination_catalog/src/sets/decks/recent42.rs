@@ -71,7 +71,8 @@ pub fn engineered_explosives() -> CardDefinition {
         cost: cost(&[x()]),
         card_types: vec![CardType::Artifact],
         keywords: vec![Keyword::Sunburst],
-        activated_abilities: vec![charge_bomb_detonate(2)],
+        // No `{T}` in the printed cost (Ratchet Bomb's has one).
+        activated_abilities: vec![ActivatedAbility { tap_cost: false, ..charge_bomb_detonate(2) }],
         ..Default::default()
     }
 }

@@ -22274,11 +22274,14 @@ pub fn rosethorn_acolyte() -> CardDefinition {
 
 /// End-step self-sacrifice trigger ("At the beginning of the end step,
 /// sacrifice this") shared by the Ball Lightning family.
+/// "At the beginning of the end step, sacrifice this creature" — every end
+/// step, not only its controller's (a flashed-in or reanimated Ball Lightning
+/// on an opponent's turn goes at that turn's end).
 fn sacrifice_at_end_step() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(
             EventKind::StepBegins(crate::game::TurnStep::End),
-            EventScope::YourControl,
+            EventScope::AnyPlayer,
         ),
         effect: Effect::SacrificeSource,
     }
@@ -32876,7 +32879,13 @@ pub fn stonework_packbeast() -> CardDefinition {
         // makes it every other type
         // (`every_card_has_the_subtypes_its_printing_has`).
         keywords: vec![Keyword::Changeling],
-        activated_abilities: vec![crate::catalog::sets::tap_add_any_color()],
+        // Printed "{2}: Add one mana of any color" — a mana cost, no tap
+        // (it shipped as `{T}` until the helper-inlining audit column read it).
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2)]),
+            ..crate::catalog::sets::tap_add_any_color()
+        }],
         ..Default::default()
     }
 }

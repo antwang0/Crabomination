@@ -165,10 +165,13 @@ pub fn traveling_plague() -> CardDefinition {
                     amount: Value::ONE,
                 },
             ),
+            // "When enchanted creature leaves the battlefield" — a bounce or
+            // exile returns the Plague too, not only a death.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::EnchantedBySource),
                 effect: Effect::ReturnSelfAttachedToChoiceOf {
                     chooser: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                    filter: R::Creature,
                 },
             },
         ],
@@ -200,8 +203,10 @@ pub fn steam_vines() -> CardDefinition {
                     amount: Value::ONE,
                 },
                 Effect::Destroy { what: Selector::attached_to(Selector::This) },
+                // "That player attaches Steam Vines to a land of their choice."
                 Effect::ReturnSelfAttachedToChoiceOf {
                     chooser: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                    filter: R::Land,
                 },
             ]),
         }],

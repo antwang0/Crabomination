@@ -4194,8 +4194,9 @@ fn the_water_crystal_mills_scaled_by_hand() {
         card_id: crystal, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
-    // 3 (hand) doubled by the crystal's own replacement = 6 milled.
-    assert_eq!(g.players[1].graveyard.len(), gy1 + 6, "milled 3×2 = 6");
+    // 3 (hand) plus four from the crystal's own replacement = 7 milled (it
+    // shipped as a doubler: 6).
+    assert_eq!(g.players[1].graveyard.len(), gy1 + 7, "milled 3 + 4 = 7");
 }
 
 /// The Wandering Minstrel's activated pump scales with Towns you control, and

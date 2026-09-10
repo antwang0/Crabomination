@@ -944,6 +944,18 @@ fn event_matches_spec_rest(
                 .auras_at_death
                 .get(card_id)
                 .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id)),
+            // "When enchanted creature leaves the battlefield" (Traveling
+            // Plague) on a non-death leave: the Aura is still attached at
+            // dispatch time (the SBA that orphans it runs after), with the
+            // snapshot as the fallback. Unmatched until 2026-09-10.
+            GameEvent::PermanentLeftBattlefield { card_id: cid, .. } => state
+                .battlefield_find(source.id)
+                .and_then(|a| a.attached_to)
+                .is_some_and(|host| host == *cid)
+                || state
+                    .auras_at_death
+                    .get(cid)
+                    .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id)),
             // CR 603.2 — the trigger condition is checked when the damage is
             // dealt, before the lethal-damage SBA. When the host died to that
             // same damage the Aura is already orphaned, so fall back to the

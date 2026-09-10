@@ -832,6 +832,25 @@ fn archmage_ascension_replaces_draws_at_six() {
     assert!(g.players[0].hand.iter().any(|c| c.id == deep), "tutored from deeper in the deck");
 }
 
+/// The quest counter needs "an opponent lost 2 or more life this turn" — one
+/// is not enough (it shipped on any loss; the helper-inlining audit column,
+/// 2026-09-10).
+#[test]
+fn bloodchief_ascension_quests_only_on_two_life_lost() {
+    let quested = |lost: u32| {
+        let mut g = two_player_game();
+        always_yes(&mut g);
+        let asc = g.add_card_to_battlefield(0, catalog::bloodchief_ascension());
+        g.players[1].life_lost_this_turn = lost;
+        g.step = TurnStep::End;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest)
+    };
+    assert_eq!(quested(1), 0, "one life lost is not enough");
+    assert_eq!(quested(2), 1, "two is");
+}
+
 /// Bloodchief Ascension only drains once it has three quest counters.
 #[test]
 fn bloodchief_ascension_drains_at_three() {

@@ -125,9 +125,13 @@ fn creature_aura(name: &'static str, c: crate::mana::ManaCost, bonus: EquipBonus
 
 /// "When this Aura is put into a graveyard from the battlefield, return it to
 /// its owner's hand" — the USG Halo/Embrace recursion cycle.
+/// "When this Aura is put into a graveyard from the battlefield, return it to
+/// its owner's hand" (Brilliant Halo, Despondency, Launch, Fiery Mantle,
+/// Fortitude). A bounced or exiled Aura stays where it went: `PermanentDied`,
+/// not the any-leave kind it shipped with.
 fn returns_to_hand() -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+        event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
         effect: Effect::Move {
             what: Selector::This,
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),

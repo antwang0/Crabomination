@@ -190,18 +190,43 @@ fn bravado_excludes_its_own_host() {
     assert_eq!((cp.power, cp.toughness), (3, 3), "one other creature, not two");
 }
 
-/// The Halo/Embrace recursion cycle returns to hand when the Aura dies.
+/// The Halo/Embrace recursion cycle: "When this Aura is put into a graveyard
+/// from the battlefield, return it to its owner's hand". Destroying it returns
+/// it; exiling it does not (it shipped on the any-leave kind and came back
+/// from exile too — the helper-inlining audit column, 2026-09-10).
 #[test]
-fn brilliant_halo_returns_to_its_owners_hand() {
-    let mut g = two_player_game();
-    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let aura = g.add_card_to_hand(0, catalog::brilliant_halo());
-    mana(&mut g, 0);
-    cast(&mut g, aura, Some(Target::Permanent(host)));
-    assert_eq!(g.computed_permanent(host).unwrap().toughness, 4);
-    g.destroy_permanent(aura, false, &mut vec![]);
-    drain_stack(&mut g);
-    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Brilliant Halo"));
+fn halo_cycle_returns_to_hand_from_the_graveyard_only() {
+    use crabomination::effect::{Effect, Selector, ZoneDest};
+    use crabomination::game::effects::EffectContext;
+    for (def, exiled) in [
+        (catalog::brilliant_halo(), false),
+        (catalog::despondency(), false),
+        (catalog::launch(), false),
+        (catalog::fiery_mantle(), false),
+        (catalog::fortitude(), false),
+        (catalog::brilliant_halo(), true),
+        (catalog::fortitude(), true),
+    ] {
+        let name = def.name;
+        let mut g = two_player_game();
+        let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let aura = g.add_card_to_hand(0, def);
+        mana(&mut g, 0);
+        cast(&mut g, aura, Some(Target::Permanent(host)));
+        assert!(g.battlefield_find(aura).is_some(), "{name} attached");
+        if exiled {
+            let ctx = EffectContext::for_ability(host, 0, Some(Target::Permanent(aura)));
+            let evs = g
+                .resolve_effect(&Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }, &ctx)
+                .expect("exile");
+            g.dispatch_triggers_for_events(&evs);
+        } else {
+            g.destroy_permanent(aura, false, &mut vec![]);
+        }
+        drain_stack(&mut g);
+        let in_hand = g.players[0].hand.iter().any(|c| c.id == aura);
+        assert_eq!(in_hand, !exiled, "{name}: returns from the graveyard, stays in exile");
+    }
 }
 
 /// Torch Song banks verse counters each upkeep and cashes them in for damage.
