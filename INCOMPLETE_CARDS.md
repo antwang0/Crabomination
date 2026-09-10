@@ -878,6 +878,50 @@ count }`, the `stat` column's one non-custom row). Residue after the read:
 closed; the rest the approximations above), `T-sac` 3, `abil` 1 (Wizard's
 Rockets' `{X}`).
 
+### The other cost halves — the eleventh column (`ocost`), 2026-09-10: seven cards paying a cost as an effect
+
+`T/sac` reads `{T}` and the self-sacrifice; every other half of an activation's
+cost had no column — "Sacrifice a creature", "Discard a card", "Pay 2 life",
+"Pay {E}", "Exile a card from your graveyard", "Remove a counter", "Tap an
+untapped Elf", "Return this to its owner's hand", "Put a page counter on
+this". `ocost` reads them as a flag set per activation line against the
+literal's cost fields grouped by what they pay (`sac_other_filter` and its
+kin, `discard_*`, `life_cost`, `energy_cost`, `exile_*`, `remove_counter_*`,
+`tap_*`, `bounce_*`, `add_counter_cost`, ...). Two catalog shapes are read
+as the cost they stand for: `SacrificeAndRemember` as the effect's first
+step (the bot's legality reads it as a cost) and a `RemoveCounter` behind a
+`condition: ValueAtLeast(CountersOn ..)` gate, or one that removes them all.
+First run 51 rows; the reader rules above and seven real ones, every one a
+cost paid inside the effect — so the ability could be activated with nothing
+to pay and, for the bot, was priced as free:
+
+| Card | Was | Printed |
+|---|---|---|
+| Wishclaw Talisman (training pool) | `RemoveCounter` as the first effect step, ungated — a tutor with no wish counters | "Remove a wish counter" (`remove_counter_cost`) |
+| Dynavolt Tower | a pay-if-able `PayEnergy { 5 }` inside the effect | "Pay {E}{E}{E}{E}{E}" (`energy_cost: 5`) |
+| Prismatic Vista | "Pay 1 life" as a `LoseLife` step | `life_cost: 1` |
+| Bomat Courier, Connecting the Dots | "Discard your hand" as a `Discard` step | `discard_hand_cost` |
+| Mazemind Tome, Bloodletter Quill | the page / blood counter added inside the effect | `add_counter_cost` |
+
+And the timing column grew an `if` flag the same day: a printed "Activate
+only if .." against a `condition:` naming anything beyond the turn / step
+riders (one-way — a code gate with no printed one is the catalog's device
+for a Class level or a counter to remove; "only if this card is in your
+graveyard" is `from_graveyard`). Two cards had no gate at all: Dreadlight
+Monstrosity's "only if you own a card in exile" and Skitterskin's "only if
+you control another colorless creature" — both `SelectorCountAtLeast`. Zero
+residue.
+
+Residue of `ocost`, five rows, each a shape the engine cannot spell yet or a
+deliberate order: Krasis Incubation (its "Return this Aura to its owner's hand" cost
+runs last, so "enchanted creature" still has a referent — no LKI for a
+bounced Aura's host), Legion's Initiative (the self-exile after the
+`ExileLinked` that must see the source), Mercurial Chemister ("equal to the
+discarded card's mana value" — no value reads a cost's discard), Geometric
+Nexus (the removed count through a helper), Anthroplasm (the reverse: its
+"remove all counters" *effect* spelled as `remove_all_counters_cost`, the
+same outcome).
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

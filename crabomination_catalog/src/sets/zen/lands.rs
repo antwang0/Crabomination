@@ -113,11 +113,8 @@ pub fn prismatic_vista() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
+            life_cost: 1,
             effect: Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::You,
-                    amount: Value::ONE,
-                },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Graveyard,

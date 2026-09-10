@@ -2066,15 +2066,25 @@ fn wanderlight_spirit_blocks_only_flying() {
     );
 }
 
-/// Dreadlight Monstrosity's ability makes it unblockable for the turn.
+/// Dreadlight Monstrosity's ability makes it unblockable for the turn —
+/// "Activate only if you own a card in exile" (the gate was missing until
+/// 2026-09-10).
 #[test]
 fn dreadlight_monstrosity_unblockable() {
     let mut g = two_player_game();
     let mon = g.add_card_to_battlefield(0, catalog::dreadlight_monstrosity());
-    g.resolve_effect(
-        &catalog::dreadlight_monstrosity().activated_abilities[0].effect,
-        &EffectContext::for_ability(mon, 0, None),
-    ).unwrap();
+    g.clear_sickness(mon);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let activate = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
+        card_id: mon, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    });
+    assert!(activate(&mut g).is_err(), "nothing of yours in exile: no activation");
+    g.add_card_to_exile(0, catalog::island());
+    activate(&mut g).expect("a card in exile unlocks it");
+    drain_stack(&mut g);
     assert!(g.computed_permanent(mon).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 

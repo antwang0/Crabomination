@@ -166,12 +166,20 @@ pub fn salvage_drone() -> CardDefinition {
 /// Regenerate this creature. (The "only if you control another colorless
 /// creature" gate is dropped — colorless-matters filter gap.)
 pub fn skitterskin() -> CardDefinition {
-    use crate::card::ActivatedAbility;
+    use crate::card::{ActivatedAbility, SelectionRequirement as R};
     use crate::effect::Selector;
     CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::CantBlock],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
+            // "Activate only if you control another colorless creature" (the
+            // gate was missing — the timing column's `if` flag, 2026-09-10).
+            condition: Some(crate::effect::Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::Colorless).and(R::OtherThanSource),
+                ),
+                n: crate::card::Value::Const(1),
+            }),
             effect: Effect::Regenerate {
                 what: Selector::This,
             },

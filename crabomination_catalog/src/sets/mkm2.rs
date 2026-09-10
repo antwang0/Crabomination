@@ -612,19 +612,13 @@ pub fn connecting_the_dots() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             sac_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::CardsInHandMatching { who: PlayerRef::You, filter: R::Any },
-                    random: false,
-                },
-                Effect::Move {
-                    what: Selector::CardExiledWithSource,
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(
-                        Selector::CardExiledWithSource,
-                    ))),
-                },
-            ]),
+            discard_hand_cost: true,
+            effect: Effect::Move {
+                what: Selector::CardExiledWithSource,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(
+                    Selector::CardExiledWithSource,
+                ))),
+            },
             ..Default::default()
         }],
         ..Default::default()

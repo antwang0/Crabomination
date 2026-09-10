@@ -210,6 +210,11 @@ _TIMING = (
     # "no more than twice each turn" (Vampire Bats) — `max_activations_per_turn: Some(2)`.
     ("no more than twice each turn", "twice"),
     ("no more than three times each turn", "max3"),
+    # "Activate only if you control three or more artifacts" — any printed
+    # gate is a `condition:` naming a predicate beyond the turn / step riders.
+    ("only if", "if"),
+    # "Activate only if this card is in your graveyard" is `from_graveyard`.
+    ("only if this card is in your graveyard", "gy"),
 )
 
 def ability_timing(body):
@@ -226,6 +231,9 @@ def ability_timing(body):
         k = literal_depth1_field(lit, "once_per_turn:")
         if k is not None and re.match(r"once_per_turn:\s*true", lit[k:]):
             flags.add("once")
+        k = literal_depth1_field(lit, "from_graveyard:")
+        if k is not None and re.match(r"from_graveyard:\s*true", lit[k:]):
+            flags.update(("gy", "if"))
         k = literal_depth1_field(lit, "max_activations_per_turn:")
         if k is not None:
             m = re.match(r"max_activations_per_turn:\s*Some\((\d+)\)", lit[k:])
@@ -247,6 +255,11 @@ def ability_timing(body):
                     flags.add("upkeep")
                 if "upkeep_only()" in cond:  # atq.rs: IsTurnOf(You) + the upkeep step
                     flags.add("your_turn")
+                # What is left once the turn / step riders are removed is a
+                # printed "only if" gate.
+                rest = re.sub(r"(?:Not\(Box::new\()?(?:crate::effect::)?Predicate::IsTurnOf\((?:crate::effect::)?PlayerRef::\w+\)\)?\)?|(?:crate::effect::)?Predicate::CurrentStepIs\([^)]*\)|upkeep_only\(\)|Predicate::All\(vec!\[|Predicate::Any\(vec!\[|Some\(|[\[\](),\s]|Box::new", "", cond)
+                if rest:
+                    flags.add("if")
         out.append(frozenset(flags))
     return out
 
@@ -278,6 +291,11 @@ def timing_mismatch(code, ref):
     # declared" — Cao Cao) is not an upkeep rider.
     if not any("upkeep" in f for f in ref):
         code = [frozenset(x for x in f if x != "upkeep") for f in code]
+    # A `condition:` with no printed "only if" is the catalog's gating device
+    # (a Class level, a counter to remove, Birthing Pod's fodder): one-way.
+    for flag in ("if", "gy"):
+        if not any(flag in f for f in ref):
+            code = [frozenset(x for x in f if x != flag) for f in code]
     return sorted(sorted(f) for f in code) != sorted(sorted(f) for f in ref)
 
 def ability_tap_sac(body):
@@ -329,6 +347,128 @@ def ref_ability_tap_sac(card, face=None):
         effect = line.strip()[m.end():]
         if re.match(self_sac, effect):
             flags.add("sac")
+        out.append(frozenset(flags))
+    return out
+
+# ── The other cost halves ───────────────────────────────────────────────────
+# The T/sac column reads `{T}` and the self-sacrifice; every other half of an
+# activation's cost ("Sacrifice a creature", "Discard a card", "Pay 2 life",
+# "Exile a card from your graveyard", "Remove a counter", "Tap an untapped
+# Elf") had no column. `ocost` reads them as a flag set per line, code
+# fields grouped by what they pay.
+_OCOST_FIELDS = (
+    (r"untap_self_cost:\s*true", "untap"),
+    (r"(?:sac_other_filter|sac_all_matching_cost|sac_any_number_filter):\s*(?:Some|[a-z_]+\()|sac_other_x:\s*true|sac_attachment_cost:\s*true", "sac_other"),
+    (r"discard_cost:\s*Some|discard_(?:cost_same_name|cost_random|hand_cost|self_cost|cost_matches_target_mv):\s*true", "discard"),
+    (r"life_cost:\s*[1-9]|(?:half_life_cost|x_life_cost):\s*true", "life"),
+    (r"energy_cost:\s*[1-9]|energy_x_cost:\s*true", "energy"),
+    (r"exile_self_cost:\s*true", "exile_self"),
+    (r"(?:exile_other_filter|exile_from_hand_cost|exile_permanent_cost|exile_spell_cost|craft_exile_cost):\s*Some|(?:exile_other_x|exile_other_top|exile_attachment_cost):\s*true|exile_top_cost:\s*[1-9]", "exile_other"),
+    (r"(?:remove_counter_cost|remove_all_counters_cost|remove_counter_x|remove_counter_among_x|remove_counter_among_kinds|remove_counter_among_filter):\s*Some", "counter"),
+    (r"(?:tap_other_filter|tap_n_filter|tap_others_cost|tap_permanents_cost):\s*Some", "tap_other"),
+    (r"(?:bounce_other_filter|return_permanent_cost):\s*Some|(?:bounce_self_cost|return_self_cost):\s*true", "bounce"),
+    (r"add_counter_cost:\s*Some", "add_counter"),
+    (r"unattach_cost:\s*true", "unattach"),
+    (r"put_hand_on_library_cost:\s*true", "hand_to_library"),
+    (r"collect_evidence_cost:\s*Some", "evidence"),
+)
+
+def ability_other_costs(body):
+    """Per literal, the non-mana, non-tap, non-self-sacrifice cost halves it
+    declares (`_OCOST_FIELDS`), as a flag set."""
+    lits = ability_literals(body)
+    if lits is None:
+        return None
+    out = []
+    for lit in lits:
+        flags = set()
+        for rx, flag in _OCOST_FIELDS:
+            # Depth-1 fields only — a nested effect's field cannot claim a
+            # half of the ability's cost.
+            depth = 0
+            i = len("ActivatedAbility {")
+            while i < len(lit):
+                c = lit[i]
+                if c in "{[(":
+                    depth += 1
+                elif c in "}])":
+                    depth -= 1
+                elif depth == 0 and (i == 0 or not (lit[i - 1].isalnum() or lit[i - 1] == "_")):
+                    m = re.match(rx, lit[i:])
+                    if m:
+                        flags.add(flag)
+                        break
+                i += 1
+        # A half spelled as the effect's first step — the catalog's shape for
+        # "Sacrifice a creature: [do something with its stats]"
+        # (`SacrificeAndRemember`, which the bot's legality reads as a cost)
+        # and for a counter paid by a gated `RemoveCounter` (`condition:
+        # ValueAtLeast(CountersOn ..)` in front of it). An ungated removal
+        # stays a row: the ability activates with nothing to pay (Wishclaw
+        # Talisman). A discard or an added counter as a first step is not
+        # read — too often the effect itself (Magus of the Wheel).
+        k = literal_depth1_field(lit, "effect:")
+        first = re.match(r"effect:\s*(?:Effect::|E::)?Seq\(vec!\[\s*(?:Effect::|E::)?(\w+)", lit[k:]) if k is not None else None
+        first = first.group(1) if first else None
+        if first == "SacrificeAndRemember":
+            flags.add("sac_other")
+        # "Remove all .. counters" (Molten Hydra, Geometric Nexus) is legal
+        # at zero, so an all-of-them removal needs no gate and may sit after
+        # the step that counts them.
+        if (first == "RemoveCounter" and literal_depth1_field(lit, "condition:") is not None and "CountersOn" in lit) or (
+            k is not None
+            and re.search(r"RemoveCounter \{\s*what: Selector::This,[^}]*amount:\s*Value::(?:Total)?CountersOn", lit[k:])
+        ):
+            flags.add("counter")
+        out.append(frozenset(flags))
+    return out
+
+_NUM_WORD = r"(?:a|an|another|two|three|four|five|six|seven|eight|nine|ten|X|\d+|any number of|one or more|all)"
+_OCOST_WORDS = (
+    (r"\{Q\}", "untap"),
+    (r"\b[Ss]acrifice " + _NUM_WORD + r"\b", "sac_other"),
+    (r"\b[Dd]iscard\b", "discard"),
+    (r"\b[Pp]ay (?:\d+|X|half your) life\b|\b[Pp]ay .* life\b", "life"),
+    (r"\{E\}", "energy"),
+    (r"\b[Ee]xile (?:this card|~) from your graveyard\b", "exile_self"),
+    (r"\b[Ee]xile " + _NUM_WORD + r"\b|\b[Ee]xile the top\b", "exile_other"),
+    (r"\b[Rr]emove " + _NUM_WORD + r" [^:,]*counters?\b", "counter"),
+    (r"\b[Tt]ap " + _NUM_WORD + r" untapped\b", "tap_other"),
+    (r"\b[Rr]eturn " + _NUM_WORD + r"\b[^:]*\bto (?:its|their) owner's hand\b|\b[Rr]eturn (?:this|~)\b[^:]*\bto its owner's hand\b", "bounce"),
+    (r"\b[Pp]ut (?:a|an|two|three|X) [^:,]*counters? on\b", "add_counter"),
+    (r"\b[Uu]nattach\b", "unattach"),
+    (r"\b[Pp]ut (?:a card|two cards|three cards|X cards) from your hand on (?:top|the bottom) of your library\b", "hand_to_library"),
+    (r"\b[Cc]ollect evidence\b", "evidence"),
+)
+
+def ref_ability_other_costs(card, face=None):
+    """Per oracle activation line, the same halves read off the cost (the
+    text before the colon)."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    short = re.escape(card.get("name", "\0").split(",")[0])
+    out = []
+    for line in text.split("\n"):
+        m = _ORACLE_ACT.match(line.strip())
+        if not m:
+            continue
+        cost = m.group(1)
+        # The self-sacrifice is the T/sac column's; "Sacrifice this and a
+        # creature" is both.
+        cost = re.sub(r"[Ss]acrifice (?:this \w+|~|" + short + r")\b", "", cost)
+        # "Return Rootha to its owner's hand" / "Exile Relic of Progenitus"
+        # — the card's own name is `this`.
+        cost = re.sub(r"\b" + short + r"\b", "this", cost)
+        # "Exile Balthor:" — a legend's first name before a colon or comma.
+        first = re.escape(card.get("name", "\0").split(",")[0].split(" ")[0])
+        cost = re.sub(r"\b" + first + r"\b(?=\s*[:,]|\s+to\b|\s*$)", "this", cost)
+        flags = {flag for rx, flag in _OCOST_WORDS if re.search(rx, cost)}
+        # "Exile this enchantment", "Exile two cards from your graveyard and
+        # this creature" — the source itself is a half of the cost.
+        if re.search(r"\b[Ee]xile this\b(?! card from your graveyard)|\b[Ee]xile [^:]*\band this\b", cost):
+            flags.add("exile_self")
         out.append(frozenset(flags))
     return out
 
@@ -1966,7 +2106,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": [], "mana": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "ocost": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": [], "mana": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -2098,6 +2238,11 @@ def audit():
             if ts is not None and ref_ts is not None and len(ts) == len(ref_ts):
                 if sorted(sorted(f) for f in ts) != sorted(sorted(f) for f in ref_ts):
                     d["tapsac"].append((tag, [sorted(f) or ["-"] for f in ts], [sorted(f) or ["-"] for f in ref_ts]))
+            oc = ability_other_costs(body)
+            ref_oc = ref_ability_other_costs(card, face)
+            if oc is not None and ref_oc is not None and len(oc) == len(ref_oc):
+                if sorted(sorted(f) for f in oc) != sorted(sorted(f) for f in ref_oc):
+                    d["ocost"].append((tag, [sorted(f) or ["-"] for f in oc], [sorted(f) or ["-"] for f in ref_oc]))
             # loyalty: the signed costs as a multiset plus the base loyalty.
             loy = loyalty_costs(body)
             ref_loy = ref_loyalty_costs(card, face)
@@ -2182,21 +2327,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}{'mana':>6}")
-        print("-" * 122)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'ocost':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}{'mana':>6}")
+        print("-" * 128)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 122)
+        print("-" * 128)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 

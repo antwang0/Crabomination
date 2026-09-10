@@ -73,11 +73,6 @@ pub fn mazemind_tome() -> CardDefinition {
         ])),
         else_: Box::new(Effect::Noop),
     };
-    let add_page = || Effect::AddCounter {
-        what: Selector::This,
-        kind: CounterType::Page,
-        amount: Value::ONE,
-    };
     CardDefinition {
         name: "Mazemind Tome",
         cost: cost(&[generic(2)]),
@@ -87,10 +82,11 @@ pub fn mazemind_tome() -> CardDefinition {
             ..Default::default()
         },
         activated_abilities: vec![
+            // "Put a page counter on this artifact" is a cost on both.
             ActivatedAbility {
                 tap_cost: true,
+                add_counter_cost: Some((CounterType::Page, 1)),
                 effect: Effect::Seq(vec![
-                    add_page(),
                     Effect::Scry {
                         who: PlayerRef::You,
                         amount: Value::ONE,
@@ -102,8 +98,8 @@ pub fn mazemind_tome() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
+                add_counter_cost: Some((CounterType::Page, 1)),
                 effect: Effect::Seq(vec![
-                    add_page(),
                     Effect::Draw {
                         who: Selector::You,
                         amount: Value::ONE,

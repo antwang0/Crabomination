@@ -227,12 +227,8 @@ pub fn bloodletter_quill() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
+                add_counter_cost: Some((CounterType::Blood, 1)),
                 effect: Effect::Seq(vec![
-                    Effect::AddCounter {
-                        what: Selector::This,
-                        kind: CounterType::Blood,
-                        amount: Value::ONE,
-                    },
                     Effect::Draw {
                         who: Selector::Player(PlayerRef::You),
                         amount: Value::ONE,

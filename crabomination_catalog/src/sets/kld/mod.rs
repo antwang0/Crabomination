@@ -264,15 +264,14 @@ pub fn dynavolt_tower() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![magecraft(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
+            // "Pay {E}{E}{E}{E}{E}" is a cost: four energy is no activation
+            // (it shipped as a pay-if-able step inside the effect).
+            energy_cost: 5,
             discard_cost: None,
             tap_cost: true,
-                        effect: Effect::PayEnergy {
-                amount: 5,
-                then: Box::new(Effect::DealDamage {
-                    to: target_any(),
-                    amount: Value::Const(3),
-                }),
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(3),
             },
             once_per_turn: false,
             sorcery_speed: false,

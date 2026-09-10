@@ -180,6 +180,21 @@ fn dynavolt_tower_pays_mana_and_energy_to_burn() {
     assert_eq!(g.players[0].energy, 0, "spent five {{E}}");
 }
 
+/// Five {E} is the cost, so four is no activation (it shipped as a
+/// pay-if-able step inside the effect — the `ocost` audit column, 2026-09-10).
+#[test]
+fn dynavolt_tower_needs_all_five_energy_to_activate() {
+    let mut g = two_player_game();
+    let tower = g.add_card_to_battlefield(0, catalog::dynavolt_tower());
+    g.players[0].energy = 4;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: tower, ability_index: 0,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).is_err(), "four energy cannot pay {{E}}{{E}}{{E}}{{E}}{{E}}");
+    assert_eq!(g.players[0].energy, 4, "nothing spent");
+}
+
 #[test]
 fn dynavolt_tower_gains_energy_on_instant_cast() {
     let mut g = two_player_game();

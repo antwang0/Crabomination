@@ -15554,12 +15554,10 @@ pub fn wishclaw_talisman() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
+            // "Remove a wish counter" is a cost: no counter, no activation (it
+            // shipped as an ungated effect step — the `ocost` audit column).
+            remove_counter_cost: Some((CounterType::Charge, 1)),
             effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::Charge,
-                    amount: Value::Const(1),
-                },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Any,
@@ -44937,17 +44935,11 @@ pub fn bomat_courier() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
             sac_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(100),
-                    random: false,
-                },
-                Effect::Move {
-                    what: Selector::CardExiledWithSource,
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
-            ]),
+            discard_hand_cost: true,
+            effect: Effect::Move {
+                what: Selector::CardExiledWithSource,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         ..Default::default()

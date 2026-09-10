@@ -4535,6 +4535,16 @@ pub fn dreadlight_monstrosity() -> CardDefinition {
         keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u(), u()]),
+            // "Activate only if you own a card in exile" (the gate was
+            // missing — the timing column's `if` flag, 2026-09-10).
+            condition: Some(Predicate::SelectorCountAtLeast {
+                sel: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Exile,
+                    filter: SelectionRequirement::Any,
+                },
+                n: Value::Const(1),
+            }),
             effect: Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: Keyword::Unblockable,

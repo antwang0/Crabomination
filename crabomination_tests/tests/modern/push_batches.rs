@@ -2840,6 +2840,20 @@ fn wishclaw_talisman_enters_with_three_charge_counters() {
 }
 
 #[test]
+/// "Remove a wish counter" is a cost: no counter, no activation (it shipped
+/// as an ungated effect step — the `ocost` audit column, 2026-09-10).
+#[test]
+fn wishclaw_talisman_without_a_counter_cannot_activate() {
+    let mut g = two_player_game();
+    let wishclaw = g.add_card_to_battlefield(0, catalog::wishclaw_talisman());
+    g.clear_sickness(wishclaw);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: wishclaw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).is_err(), "no wish counter to remove");
+}
+
+#[test]
 fn wishclaw_talisman_searches_and_consumes_a_charge_counter() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();

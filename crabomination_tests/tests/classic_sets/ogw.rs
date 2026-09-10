@@ -284,7 +284,9 @@ fn salvage_drone_may_draw_on_death() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on death");
 }
 
-/// Skitterskin regenerates for {1}{B} and can't block.
+/// Skitterskin regenerates for {1}{B} — "only if you control another
+/// colorless creature" (the gate was missing until 2026-09-10) — and can't
+/// block.
 #[test]
 fn skitterskin_regenerates() {
     let mut g = two_player_game();
@@ -292,6 +294,10 @@ fn skitterskin_regenerates() {
     assert!(catalog::skitterskin().keywords.contains(&crabomination::card::Keyword::CantBlock));
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).is_err(), "no other colorless creature: no activation");
+    g.add_card_to_battlefield(0, catalog::skitterskin()); // a second devoid body
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("set up regen shield");
