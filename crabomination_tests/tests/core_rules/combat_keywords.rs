@@ -605,7 +605,7 @@ fn frenzied_arynx_pump_ability_grows_it() {
     }).expect("pump ability activatable");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
-    assert_eq!((c.power(), c.toughness()), (5, 5), "Frenzied Arynx pumps to 6/5");
+    assert_eq!((c.power(), c.toughness()), (6, 3), "Frenzied Arynx pumps +3/+0 to 6/3");
 }
 
 // ── ClientView.activatable_permanents (legal-plays hint) ─────────────────────

@@ -1458,7 +1458,7 @@ fn ingenious_mastery_full_cost_draws_x() {
 // ── Acolyte of Affliction (STX) ────────────────────────────────────────────
 
 #[test]
-fn acolyte_of_affliction_mills_each_player_three() {
+fn acolyte_of_affliction_mills_you_two() {
     let mut g = two_player_game();
     for _ in 0..10 {
         g.add_card_to_library(0, catalog::island());
@@ -1475,16 +1475,8 @@ fn acolyte_of_affliction_mills_each_player_three() {
     .expect("Acolyte of Affliction castable for {3}{B}{B}");
     drain_stack(&mut g);
 
-    assert_eq!(
-        g.players[0].library.len(),
-        p0_lib_before - 3,
-        "Acolyte ETB mills P0 three cards"
-    );
-    assert_eq!(
-        g.players[1].library.len(),
-        p1_lib_before - 3,
-        "Acolyte ETB mills P1 three cards"
-    );
+    assert_eq!(g.players[0].library.len(), p0_lib_before - 2, "Acolyte ETB mills you two cards");
+    assert_eq!(g.players[1].library.len(), p1_lib_before, "the opponent is not milled");
 }
 
 // ── Skywarp Skaab (STX) ────────────────────────────────────────────────────
@@ -2319,37 +2311,29 @@ fn pigment_storm_deals_four_damage_to_target_creature() {
 
 // ── Step Through (STA reprint) ──────────────────────────────────────────────
 
+/// Step Through returns two target creatures to their owners' hands.
 #[test]
-fn step_through_tutors_instant_or_sorcery_from_library() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+fn step_through_bounces_two_creatures() {
     let mut g = two_player_game();
-    let target_card = g.add_card_to_library(0, catalog::lightning_bolt());
-    g.add_card_to_library(0, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
     let id = g.add_card_to_hand(0, catalog::step_through());
-    let hand_before = g.players[0].hand.len();
-
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target_card))]));
 
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: None,
-        additional_targets: vec![],
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
         mode: None,
         x_value: None,
     })
-    .expect("Step Through castable for {U}");
+    .expect("Step Through castable for {3}{U}{U}");
     drain_stack(&mut g);
 
-    // The Lightning Bolt should land in the caster's hand.
-    assert!(
-        g.players[0].hand.iter().any(|c| c.id == target_card),
-        "tutored Lightning Bolt into hand"
-    );
-    // Hand size: -1 (cast Step Through) +1 (tutored card) = 0 net relative
-    // to pre-cast hand size.
-    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "your creature returns to your hand");
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "theirs returns to their hand");
+    assert!(g.battlefield.is_empty(), "both left the battlefield");
 }
 
 // ── Inkfathom Witch ─────────────────────────────────────────────────────────
@@ -2421,8 +2405,8 @@ fn inscription_of_ruin_destroys_creature_and_discards() {
 fn choose_n_decider_overrides_the_default_mode_picks() {
     // CR 700.2d — a ScriptedDecider can pick modes other than the card's
     // default. Inscription of Ruin defaults to [discard, destroy]; scripting
-    // mode [1] (reanimate only) returns a creature from gy and leaves the
-    // opponent's creature alive.
+    // mode [1] (reanimate only) returns a creature from gy to the battlefield
+    // and leaves the opponent's creature alive.
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::game::Target;
     let mut g = two_player_game();
@@ -2439,8 +2423,8 @@ fn choose_n_decider_overrides_the_default_mode_picks() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(opp_bear).is_some(),
         "destroy mode was NOT chosen — opponent's creature survives");
-    assert!(g.players[0].hand.iter().any(|c| c.id == gy_bear),
-        "reanimate mode ran — the gy creature is back in hand");
+    assert!(g.battlefield.iter().any(|c| c.id == gy_bear && c.controller == 0),
+        "reanimate mode ran — the gy creature is back on the battlefield");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == gy_bear),
         "the reanimated creature left the graveyard");
 }
@@ -3483,25 +3467,27 @@ fn frostpyre_arcanist_costs_one_less_with_a_wizard_out() {
 
 // ── Inkfathom Divers (modern_decks push) ──────────────────────────────────
 
+/// Inkfathom Divers' ETB looks at the top four cards and puts them back:
+/// nothing leaves the library and nobody's hand moves.
 #[test]
-fn inkfathom_divers_etb_strips_opp_nonland_from_hand() {
+fn inkfathom_divers_etb_looks_at_top_four() {
     let mut g = two_player_game();
-    // Seed opp's hand with a nonland card.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::inkfathom_divers());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
+    let lib_before = g.players[0].library.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Inkfathom Divers castable");
     drain_stack(&mut g);
 
-    // Bolt stripped from hand.
-    let bolt_in_hand = g.players[1].hand.iter().any(|c| c.id == bolt);
-    let bolt_in_gy = g.players[1].graveyard.iter().any(|c| c.id == bolt);
-    assert!(!bolt_in_hand, "Bolt removed from opp's hand");
-    assert!(bolt_in_gy, "Bolt in opp's graveyard");
+    assert_eq!(g.players[0].library.len(), lib_before, "the four cards go back on top");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "the opponent's hand is untouched");
 }
 
 // ── Quandrix Quickener (modern_decks push) ─────────────────────────────────

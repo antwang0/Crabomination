@@ -3244,8 +3244,8 @@ pub fn augur_of_autumn() -> CardDefinition {
     }
 }
 
-/// Secrets of the Key — {U} Instant. Investigate. Flashback {3}{U}. (The
-/// "investigate twice if cast from a graveyard" rider is omitted.)
+/// Secrets of the Key — {U} Instant. Investigate; twice if this spell was
+/// cast from a graveyard (`CastFromGraveyard`). Flashback {3}{U}.
 pub fn secrets_of_the_key() -> CardDefinition {
     CardDefinition {
         name: "Secrets of the Key",
@@ -3253,7 +3253,11 @@ pub fn secrets_of_the_key() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
-            count: Value::Const(1),
+            count: Value::IfPred {
+                pred: Box::new(Predicate::CastFromGraveyard),
+                then: Box::new(Value::Const(2)),
+                else_: Box::new(Value::ONE),
+            },
             definition: Box::new(crabomination_base::tokens::clue_token()),
         },
         keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],

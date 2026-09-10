@@ -657,15 +657,18 @@ fn blazing_rootwalla_madness_zero_and_pump() {
     // Madness {0}: the keyword is present so a discard offers a free cast.
     assert!(g.battlefield_find(rw).unwrap().definition.keywords
         .iter().any(|k| matches!(k, Keyword::Madness(_))), "carries Madness");
-    // {1}{R}: +1/+1 until end of turn.
-    g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Red, 1);
+    // {R}: +2/+0 until end of turn, once each turn.
+    g.players[0].mana_pool.add(Color::Red, 2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: rw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pump activates");
     drain_stack(&mut g);
     let pumped = g.computed_permanent(rw).unwrap();
-    assert_eq!((pumped.power, pumped.toughness), (2, 2), "1/1 → 2/2 after +1/+1");
+    assert_eq!((pumped.power, pumped.toughness), (3, 1), "1/1 → 3/1 after +2/+0");
+    let again = g.perform_action(GameAction::ActivateAbility {
+        card_id: rw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    });
+    assert!(again.is_err(), "activate only once each turn");
 }
 
 // ── Push XIX: cube creature tests ──────────────────────────────────────

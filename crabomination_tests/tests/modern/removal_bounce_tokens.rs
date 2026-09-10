@@ -1220,13 +1220,14 @@ fn dragonmaster_outcast_makes_dragon_with_six_lands() {
         "makes a 5/5 Dragon at six lands");
 }
 
-/// Languish: every creature gets -2/-2 EOT — sweeps 2/2s, leaves 4/4s alive.
+/// Languish: every creature gets -4/-4 EOT — sweeps 4/4s, leaves 5/5s alive.
 #[test]
 fn languish_sweeps_small_but_leaves_big_creatures() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     let lions = g.add_card_to_battlefield(0, catalog::savannah_lions()); // 2/1
     let serra = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
     let id = g.add_card_to_hand(0, catalog::languish());
     g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(2);
@@ -1237,11 +1238,13 @@ fn languish_sweeps_small_but_leaves_big_creatures() {
     drain_stack(&mut g);
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear (2/2) should die to -2/-2");
+        "Bear (2/2) should die to -4/-4");
     assert!(!g.battlefield.iter().any(|c| c.id == lions),
-        "Savannah Lions (2/1) should die to -2/-2");
-    assert!(g.battlefield.iter().any(|c| c.id == serra),
-        "Serra (4/4) should survive — 4-2 = 2 toughness left");
+        "Savannah Lions (2/1) should die to -4/-4");
+    assert!(!g.battlefield.iter().any(|c| c.id == serra),
+        "Serra (4/4) should die to -4/-4");
+    assert!(!g.battlefield.iter().any(|c| c.id == wurm),
+        "Craw Wurm (6/4) should die to -4/-4");
 }
 
 /// Lay Down Arms exiles a creature whose MV ≤ Plains you control, the

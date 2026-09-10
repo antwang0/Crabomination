@@ -716,14 +716,8 @@ pub fn frostpyre_arcanist() -> CardDefinition {
 // ── Inkfathom Divers (STX-flavor U/B uncommon creature) ─────────────────────
 
 /// Inkfathom Divers — {3}{U}{U}, 3/3 Merfolk Rogue.
-/// "Flying / When this creature enters, look at target opponent's hand
-/// and choose a nonland card from it. That player discards that card."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Targeted hand-attack body —
-/// scry-into-discard for Silverquill / Witherbloom shells. Wired via
-/// `Effect::DiscardChosen` with a nonland filter. Tests:
-/// `inkfathom_divers_etb_strips_opp_nonland_from_hand`,
-/// `inkfathom_divers_is_a_four_mana_three_two_flying_merfolk_rogue`.
+/// "Islandwalk / When this creature enters, look at the top four cards
+/// of your library, then put them back in any order." (`LookAtTop`.)
 pub fn inkfathom_divers() -> CardDefinition {
     CardDefinition {
         name: "Inkfathom Divers",
@@ -738,10 +732,9 @@ pub fn inkfathom_divers() -> CardDefinition {
         keywords: vec![Keyword::Landwalk(LandType::Island)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Nonland,
+            effect: Effect::LookAtTop {
+                who: PlayerRef::You,
+                amount: Value::Const(4),
             },
         }],
         ..Default::default()
@@ -862,16 +855,11 @@ pub fn fervent_strike() -> CardDefinition {
 // ── Waker of Waves (STX Quandrix rare creature) ────────────────────────────
 
 /// Waker of Waves — {5}{U}{U}, 7/7 Elemental (STX 2021, Quandrix rare).
-/// "When this creature enters, draw two cards, then discard two cards.
-/// / {2}{U}{U}, Exile this card from your graveyard: Target creature
-/// gets +5/+5 and gains trample until end of turn."
-///
-/// Push (modern_decks, NEW, `stx::extras`): 5/5 Quandrix body for 5
-/// mana with an ETB loot-2 + a gy-recursion combat-trick activation.
-/// Wired via the existing `from_graveyard: true` + `exile_self_cost:
-/// true` activated-ability fields (same as Eternal Student / Stone
-/// Docent). The activated ability `+5/+5 + trample EOT` is a strong
-/// late-game pump that survives the body's death.
+/// "Creatures your opponents control get -1/-0. / {1}{U}, Discard this
+/// card: Look at the top two cards of your library. Put one of them into
+/// your hand and the other into your graveyard." The activation is the
+/// channel shape (`from_hand` + `discard_self_cost`), its body a
+/// `LookPick` of two with the rest to the graveyard.
 /// Tests: `waker_of_waves_is_a_five_mana_five_five_elemental`,
 /// `waker_of_waves_etb_loots_two`,
 /// `waker_of_waves_gy_exile_activation_pumps_target_by_five_five`.
@@ -891,31 +879,26 @@ pub fn waker_of_waves() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1), u()]),
-            effect: Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    power: Value::Const(5),
-                    toughness: Value::Const(5),
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::GrantKeyword {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    keyword: Keyword::Trample,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            effect: Effect::LookPickToHand(Box::new(LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                rest_to_graveyard: true,
+                take: Some(Value::ONE),
+                ..Default::default()
+            })),
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
             condition: None,
             life_cost: 0,
-            from_graveyard: true,
-            exile_self_cost: true,
+            from_graveyard: false,
+            exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
             tap_other_filter: None,
-            from_hand: false,
+            from_hand: true,
+            discard_self_cost: true,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {

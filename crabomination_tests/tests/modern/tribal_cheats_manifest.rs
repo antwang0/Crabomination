@@ -1475,7 +1475,7 @@ fn gingerbrute_evasion_only_haste_can_block() {
         "a non-haste creature can't block Gingerbrute after its evasion ability");
 }
 
-/// Built to Smash: +2/+2 to an attacker; an artifact creature also gains trample.
+/// Built to Smash: +3/+3 to an attacker; an artifact creature also gains trample.
 #[test]
 fn built_to_smash_pumps_and_grants_trample_to_artifact() {
     use crabomination::card::Keyword;
@@ -1495,7 +1495,7 @@ fn built_to_smash_pumps_and_grants_trample_to_artifact() {
     }).expect("castable");
     drain_stack(&mut g);
     let cp = g.computed_permanent(thopter).expect("alive");
-    assert_eq!((cp.power, cp.toughness), (2, 4), "+2/+2");
+    assert_eq!((cp.power, cp.toughness), (3, 5), "+3/+3");
     assert!(cp.keywords().contains(&Keyword::Trample), "artifact creature gains trample");
 }
 

@@ -735,6 +735,82 @@ three literals, so the reader is at its useful floor. Still unread: a
 `let` filter inside the card body (Valley Questcaller's `typal()`), a
 `Not` of a creature type.
 
+### Amounts — the ninth column, 2026-09-10: 39 shipped cards at the wrong number
+
+`num` reads the amounts an ability prints — "deals 3 damage", "draw two
+cards", "mana value 3 or less", "+2/+0", "surveil 3" — against the integer
+literals in the code for the same ability (its `ActivatedAbility` /
+`TriggeredAbility` literal, or a spell's whole body: `Const(n)`, `ONE` /
+`ZERO`, a `PlusOnePlusOne`, a trailing `slot: 1`, the numbers of a
+`let`-bound helper), one-to-one under the same count gate, and lists an
+oracle amount the code carries nowhere. Mana symbols, a token's or a
+face's N/N, loyalty and keyword lines ("Suspend 4"), reminder and quoted
+text, "Choose two", the ability-word thresholds a predicate helper meets
+(delirium's four card types, metalcraft's three artifacts, coven, ferocious,
+fateful hour, corrupted, celebration) and the alternative / additional-cost
+sentences a spell's other fields carry are not amounts. First run 838
+rows; twelve reader rules later 64, thirty-nine real, all fixed in one
+commit (tests re-pinned to the printed numbers; every doc comment had
+agreed with the wrong code, so `audit_doc_drift` could not see any):
+
+| Card | Was | Printed |
+|---|---|---|
+| Languish | -2/-2 | -4/-4 |
+| Searing Wind | 5 damage | 10 damage |
+| Built to Smash | +2/+2 | +3/+3 |
+| Frenzied Arynx | +2/+2 | +3/+0 |
+| Blazing Rootwalla | `{1}{R}`: +1/+1 | `{R}`: +2/+0 |
+| Foundry Street Denizen, Violent Outburst | +1/+1 | +1/+0 |
+| Abrupt Decay | mana value 2 or less | 3 or less |
+| Unearth | mana value 1 or less | 3 or less |
+| Sigardian Savior | mana value 3 or less | 2 or less |
+| Pest Control | mana value ≤ the converged value (a synthesised text) | 1 or less |
+| Fatal Push | 2 or less, always | 4 or less under Revolt (`RevoltActive`, checked on resolution) |
+| Wrangle | any creature | power 4 or less |
+| General Kudro of Drannith | destroy any creature | power 4 or greater |
+| Ezuri, Claw of Progress | power 1 or less | power 2 or less |
+| Jaya's Greeting | scry 2 | scry 1 |
+| Grim Flayer | surveil 2 | surveil 3 |
+| Oust | 5 life | 3 life |
+| Chevill, Bane of Monsters | gain 1 | gain 3 |
+| Sweettooth Witch | loses 3 | loses 2 |
+| Mine Collapse | 4 damage to any target | 5 damage to target creature or planeswalker |
+| Searing Blaze | 3 and 3, always | 1 and 1; 3 and 3 under landfall (`LandsPlayedThisTurn`) |
+| Gather the Townsfolk | two tokens | five at 5 or less life (`PlayerLifeAtMost`) |
+| Secrets of the Key | one Clue | two if cast from a graveyard (`CastFromGraveyard`) |
+| Blasphemous Edict | each player sacrifices one | thirteen |
+| Genemorph Imago | 5/5 at six lands | 6/6 |
+| Mercurial Chemister | draw a card | draw two |
+| Brood Butcher | -1/-1 | -2/-2 |
+| Sacred Fire | 3 damage, 3 life, Flashback `{5}{R}{W}` | 2, 2, `{4}{R}{W}` |
+| Sparkmage Apprentice | 2 damage | 1 damage |
+| Magmatic Sinkhole | surveil 2, 4 damage | 5 damage |
+| Reduce to Ashes | 4 damage (creature or planeswalker) | 5 damage to target creature |
+| Acolyte of Affliction | each player mills three, return from any graveyard | you mill two, return from yours |
+| Shore Up | untap any permanent + hexproof | +1/+1, hexproof, untap — a creature you control |
+| Inkfathom Divers | ETB: opponent discards a nonland card (a different card) | look at the top four, put them back (`LookAtTop`) |
+| Waker of Waves | `{1}{U}`, exile from graveyard: +5/+5 trample (a different card) | `{1}{U}`, discard this: look at two, one to hand, one to graveyard (the channel shape) |
+| Step Through | tutor an instant or sorcery (a different card) | return two target creatures; Wizardcycling `{2}` |
+| Inscription of Ruin | mode 2 any creature card to hand; mode 3 any creature | mana value 2 or less to the battlefield; mana value 3 or less |
+| Cathartic Pyre | discard any number; target creature | up to two; creature or planeswalker |
+
+Six of the seven `decks/modern.rs` rows are training-pool cards, which is
+the column's point: the pool the nets learn on had a -2/-2 Languish and a
+half-strength Searing Wind. Residue, 64 rows, each an approximation a doc
+already names (multi-target "up to N" collapsed to one slot: Conduct
+Electricity, Trick Shot, Heartless Act's counters, Secret Tunnel; a
+missing conditional branch: Systems Override's counters, The Necrobloom's
+Zombie, Agency Coroner's suspect, Paroxysm's pump; an alternative or
+additional cost the engine does not price: Bitter Triumph, Redirect
+Lightning, Blasphemous Edict's `{B}`; a custom `Effect` whose numbers are
+in the engine: Allure of the Unknown, Guild Feud, Mana Clash) or an
+oracle number that is not an amount the reader can tell apart ("two or
+more" ties, "second from the top", Black Waltz No. 3's own name). The
+reader's rules: a helper defined in another file hides its numbers, so a
+row on `fetch()` / `sweep()` is not a finding until the helper is read; a
+number in a `//` comment is not code; and the direction is one-way — an
+extra number in the code (a `slot: 1`, a `max_targets`) is never a row.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

@@ -583,15 +583,9 @@ pub fn mystical_dispute() -> CardDefinition {
     }
 }
 
-/// Pest Control — {W}{B} Sorcery — Convoke. Destroy each nonland permanent
-/// with mana value less than or equal to the spell's converged value.
-///
-/// Convoke lets the caster tap creatures to contribute generic mana toward
-/// the cost. Converge counts distinct colors of mana spent — at minimum 2
-/// (one white + one black pip) when cast for {W}{B}, but if the caster
-/// also pays the generic part with red/blue/green mana, the converged
-/// value scales up. Effect uses `ForEach + If` over `Nonland` permanents,
-/// destroying any whose `ManaValueOf` is ≤ `Value::ConvergedValue`.
+/// Pest Control — {W}{B} Sorcery. "Destroy all nonland permanents with mana
+/// value 1 or less. / Cycling {2}." `ForEach + If` over `Nonland`
+/// permanents, destroying any whose `ManaValueOf` is ≤ 1.
 pub fn pest_control() -> CardDefinition {
     use crate::card::Keyword;
     CardDefinition {
@@ -605,7 +599,7 @@ pub fn pest_control() -> CardDefinition {
             body: Box::new(Effect::If {
                 cond: Predicate::ValueAtMost(
                     Value::ManaValueOf(Box::new(Selector::TriggerSource)),
-                    Value::ConvergedValue,
+                    Value::ONE,
                 ),
                 then: Box::new(Effect::Destroy {
                     what: Selector::TriggerSource,

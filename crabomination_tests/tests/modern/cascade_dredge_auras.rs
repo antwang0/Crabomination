@@ -989,7 +989,7 @@ fn violent_outburst_pumps_team_and_cascades() {
     cast(&mut g, vo);
     let view = g.compute_battlefield();
     let c = view.iter().find(|c| c.id == mine).unwrap();
-    assert_eq!((c.power, c.toughness), (3, 3), "your creatures get +1/+1");
+    assert_eq!((c.power, c.toughness), (3, 2), "your creatures get +1/+0");
 }
 
 #[test]

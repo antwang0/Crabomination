@@ -1782,13 +1782,13 @@ pub fn verdant_mastery() -> CardDefinition {
 
 // ── Sacred Fire ─────────────────────────────────────────────────────────────
 
-/// Sacred Fire — {R}{W} Sorcery. "Deals 3 damage to any target. You gain
-/// 3 life. / Flashback {5}{R}{W}" (re-cast from graveyard via `cast_flashback`).
+/// Sacred Fire — {R}{W} Sorcery. "Deals 2 damage to any target. You gain
+/// 2 life. / Flashback {4}{R}{W}" (re-cast from graveyard via `cast_flashback`).
 pub fn sacred_fire() -> CardDefinition {
     use crate::mana::{ManaCost, ManaSymbol};
     let flashback_cost = ManaCost {
         symbols: vec![
-            ManaSymbol::Generic(5),
+            ManaSymbol::Generic(4),
             ManaSymbol::Colored(Color::Red),
             ManaSymbol::Colored(Color::White),
         ],
@@ -1805,11 +1805,11 @@ pub fn sacred_fire() -> CardDefinition {
                         .or(SelectionRequirement::Player)
                         .or(SelectionRequirement::Planeswalker),
                 ),
-                amount: Value::Const(3),
+                amount: Value::Const(2),
             },
             Effect::GainLife {
                 who: Selector::You,
-                amount: Value::Const(3),
+                amount: Value::Const(2),
             },
         ]),
         ..Default::default()
@@ -1861,7 +1861,7 @@ pub fn codespell_cleric() -> CardDefinition {
 // ── Sparkmage Apprentice ────────────────────────────────────────────────────
 
 /// Sparkmage Apprentice — {1}{R} Creature — Human Wizard, 1/1.
-/// "When this creature enters, it deals 2 damage to any target."
+/// "When this creature enters, it deals 1 damage to any target."
 ///
 /// Pinpoint Prismari ETB removal. Wired with a standard
 /// `EntersBattlefield / SelfSource` trigger and a creature-or-player-
@@ -1885,7 +1885,7 @@ pub fn sparkmage_apprentice() -> CardDefinition {
                         .or(SelectionRequirement::Player)
                         .or(SelectionRequirement::Planeswalker),
                 ),
-                amount: Value::Const(2),
+                amount: Value::ONE,
             },
         }],
         ..Default::default()

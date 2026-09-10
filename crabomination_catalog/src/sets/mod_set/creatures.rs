@@ -3008,8 +3008,8 @@ pub fn kingpins_pet() -> CardDefinition {
     }
 }
 
-/// Frenzied Arynx — {2}{R}{G} 3/3 Cat Beast with Riot and Trample. {3}{R}{G}:
-/// it gets +2/+2 until end of turn.
+/// Frenzied Arynx — {2}{R}{G} 3/3 Cat Beast with Riot and Trample. {4}{R}{G}:
+/// it gets +3/+0 until end of turn.
 pub fn frenzied_arynx() -> CardDefinition {
     CardDefinition {
         name: "Frenzied Arynx",
@@ -3029,8 +3029,8 @@ pub fn frenzied_arynx() -> CardDefinition {
             mana_cost: cost(&[generic(4), r(), g()]),
             effect: Effect::PumpPT {
                 what: Selector::This,
-                power: Value::Const(2),
-                toughness: Value::Const(2),
+                power: Value::Const(3),
+                toughness: Value::ZERO,
                 duration: crate::effect::Duration::EndOfTurn,
             },
             ..Default::default()

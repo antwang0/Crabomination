@@ -975,7 +975,7 @@ fn collector_ouphe_locks_artifact_abilities_but_not_mana() {
 }
 
 #[test]
-fn oust_tucks_creature_and_owner_gains_five() {
+fn oust_tucks_creature_and_owner_gains_three() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let oust = g.add_card_to_hand(0, catalog::oust());
@@ -988,7 +988,7 @@ fn oust_tucks_creature_and_owner_gains_five() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature left battlefield");
     assert!(g.players[1].library.iter().any(|c| c.id == bear), "tucked into owner's library");
-    assert_eq!(g.players[1].life, owner_life + 5, "its owner gains 5 life");
+    assert_eq!(g.players[1].life, owner_life + 3, "its controller gains 3 life");
 }
 
 #[test]

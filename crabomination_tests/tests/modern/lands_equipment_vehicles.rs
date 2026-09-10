@@ -834,7 +834,8 @@ fn thoughtseize_discards_nonland_and_costs_two_life() {
     assert_eq!(g.players[0].life, p0_life - 2, "caster loses 2 life");
 }
 
-/// Searing Blaze kills a small creature and burns its controller.
+/// Searing Blaze deals 1 and 1 without a land drop; 3 and 3 under
+/// landfall.
 #[test]
 fn searing_blaze_burns_creature_and_player() {
     let mut g = two_player_game();
@@ -847,8 +848,20 @@ fn searing_blaze_burns_creature_and_player() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Searing Blaze castable for {R}{R}");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 dies to 3 damage");
-    assert_eq!(g.players[1].life, p1_life - 3, "opp takes 3");
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "2/2 survives 1 damage");
+    assert_eq!(g.players[1].life, p1_life - 1, "opp takes 1");
+    // Landfall: a land played this turn makes it 3 and 3.
+    let mountain = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::PlayLand(mountain)).expect("land drop");
+    let id = g.add_card_to_hand(0, catalog::searing_blaze());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Searing Blaze castable for {R}{R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 dies to 3 damage under landfall");
+    assert_eq!(g.players[1].life, p1_life - 4, "opp takes 1 + 3");
 }
 
 /// Inquisition of Kozilek makes an opponent discard a chosen nonland card

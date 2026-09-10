@@ -1027,7 +1027,7 @@ fn void_grafter_grants_hexproof_on_etb() {
 }
 
 /// Brood Butcher mints a Scion on ETB and can sacrifice a creature to give a
-/// target -1/-1.
+/// target -2/-2.
 #[test]
 fn brood_butcher_sacrifices_to_shrink_target() {
     let mut g = two_player_game();
@@ -1037,7 +1037,7 @@ fn brood_butcher_sacrifices_to_shrink_target() {
     g.players[0].mana_pool.add_colorless(3);
     crabomination::game::cast(&mut g, bb); // ETB makes a Scion
     let scion = g.battlefield.iter().find(|c| c.definition.name == "Eldrazi Scion").unwrap().id;
-    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
@@ -1047,7 +1047,7 @@ fn brood_butcher_sacrifices_to_shrink_target() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == scion), "Scion sacrificed as cost");
     let cp = g.computed_permanent(victim).unwrap();
-    assert_eq!((cp.power, cp.toughness), (1, 1), "2/2 with -1/-1");
+    assert_eq!((cp.power, cp.toughness), (1, 1), "3/3 with -2/-2");
 }
 
 /// Lifespring Druid taps for one mana of any color.

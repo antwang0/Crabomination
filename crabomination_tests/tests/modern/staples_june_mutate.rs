@@ -3780,14 +3780,14 @@ fn chevill_bounty_then_payoff() {
     assert_eq!(
         g.battlefield_find(prey).unwrap().counters.get(&CounterType::Bounty).copied().unwrap_or(0),
         1, "bounty counter placed on opponent creature");
-    // It dies → Chevill's controller draws and gains a life.
+    // It dies → Chevill's controller draws and gains 3 life.
     let life = g.players[0].life;
     let hand = g.players[0].hand.len();
     g.battlefield_find_mut(prey).unwrap().damage = 99;
     let events = g.check_state_based_actions();
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life + 1, "gained 1 on bounty death");
+    assert_eq!(g.players[0].life, life + 3, "gained 3 on bounty death");
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew on bounty death");
 }
 

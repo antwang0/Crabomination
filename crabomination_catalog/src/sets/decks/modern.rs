@@ -1352,7 +1352,8 @@ pub fn archons_glory() -> CardDefinition {
     }
 }
 
-/// Wrangle — {1}{R} Sorcery. Gain control of target creature until end of turn,
+/// Wrangle — {1}{R} Sorcery. Gain control of target creature with power 4 or less
+/// until end of turn,
 /// untap it, and it gains haste.
 pub fn wrangle() -> CardDefinition {
     CardDefinition {
@@ -1361,7 +1362,9 @@ pub fn wrangle() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::GainControl {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(4)),
+                ),
                 to: None,
                 duration: Duration::EndOfTurn,
             },
@@ -1883,11 +1886,11 @@ pub fn sylvan_scrying() -> CardDefinition {
 }
 
 /// Abrupt Decay — {B}{G} Instant. This spell can't be countered. Destroy
-/// target nonland permanent with mana value 2 or less.
+/// target nonland permanent with mana value 3 or less.
 ///
 /// Uses the existing `Keyword::CantBeCountered` (consumed by
 /// `caster_grants_uncounterable` in all three cast paths) and a target
-/// filter of `Nonland ∧ ManaValueAtMost(2)` validated at cast time.
+/// filter of `Nonland ∧ ManaValueAtMost(3)` validated at cast time.
 pub fn abrupt_decay() -> CardDefinition {
     CardDefinition {
         name: "Abrupt Decay",
@@ -1896,7 +1899,7 @@ pub fn abrupt_decay() -> CardDefinition {
         keywords: vec![Keyword::CantBeCountered],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Nonland.and(SelectionRequirement::ManaValueAtMost(2)),
+                SelectionRequirement::Nonland.and(SelectionRequirement::ManaValueAtMost(3)),
             ),
         },
         ..Default::default()
@@ -2894,12 +2897,11 @@ pub fn orcish_lumberjack() -> CardDefinition {
 }
 
 /// Mine Collapse — {3}{R} Sorcery. As an additional cost, sacrifice a
-/// Mountain. Mine Collapse deals 4 damage to any target.
+/// Mountain. Mine Collapse deals 5 damage to target creature or planeswalker.
 ///
 /// "Sacrifice a Mountain" is folded into the resolved effect's first
 /// step (cost-as-first-step approximation) — same pattern Crop Rotation,
-/// Thud, and Cephalid Coliseum use. The damage step is targeted via the
-/// standard `Selector::Target(0)` slot.
+/// Thud, and Cephalid Coliseum use.
 pub fn mine_collapse() -> CardDefinition {
     CardDefinition {
         name: "Mine Collapse",
@@ -2914,8 +2916,10 @@ pub fn mine_collapse() -> CardDefinition {
                 )),
             },
             Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::Const(4),
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(5),
             },
         ]),
         ..Default::default()
@@ -4187,10 +4191,10 @@ pub fn cloud_of_faeries() -> CardDefinition {
     }
 }
 
-/// Languish — {2}{B}{B} Sorcery. All creatures get -2/-2 until end of turn.
+/// Languish — {2}{B}{B} Sorcery. All creatures get -4/-4 until end of turn.
 ///
-/// Modal sweeper: shrink everyone by -2/-2 EOT, killing X/2-and-below
-/// creatures while leaving X/3-and-above bodies on the board. Built as
+/// Sweeper: shrink everyone by -4/-4 EOT, killing X/4-and-below
+/// creatures while leaving X/5-and-above bodies on the board. Built as
 /// `ForEach(EachPermanent(Creature))` + per-creature PumpPT (negative).
 pub fn languish() -> CardDefinition {
     CardDefinition {
@@ -4201,8 +4205,8 @@ pub fn languish() -> CardDefinition {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
             body: Box::new(Effect::PumpPT {
                 what: Selector::TriggerSource,
-                power: Value::Const(-2),
-                toughness: Value::Const(-2),
+                power: Value::Const(-4),
+                toughness: Value::Const(-4),
                 duration: Duration::EndOfTurn,
             }),
         },
@@ -5915,11 +5919,10 @@ pub fn lava_coil() -> CardDefinition {
 }
 
 /// Jaya's Greeting — {1}{R} Instant. Jaya's Greeting deals 3 damage to
-/// target creature. Scry 2.
+/// target creature. Scry 1.
 ///
 /// Slight upgrade on Volcanic Hammer at the cost of a creature-only
-/// filter. Pairs the burn with Scry 2 (functionally a card-selection
-/// rider — Magma Jet's shape).
+/// filter. Pairs the burn with Scry 1.
 pub fn jayas_greeting() -> CardDefinition {
     CardDefinition {
         name: "Jaya's Greeting",
@@ -5932,7 +5935,7 @@ pub fn jayas_greeting() -> CardDefinition {
             },
             Effect::Scry {
                 who: PlayerRef::You,
-                amount: Value::Const(2),
+                amount: Value::ONE,
             },
         ]),
         ..Default::default()
@@ -6667,7 +6670,7 @@ pub fn bloodthrone_vampire() -> CardDefinition {
     }
 }
 
-/// Unearth — {B} Sorcery. Return target creature card with mana value 1 or
+/// Unearth — {B} Sorcery. Return target creature card with mana value 3 or
 /// less from your graveyard to the battlefield.
 pub fn unearth() -> CardDefinition {
     CardDefinition {
@@ -6676,7 +6679,7 @@ pub fn unearth() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(1))
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3))
                     .from_your_graveyard(),
             ),
             to: ZoneDest::Battlefield {
@@ -9362,8 +9365,8 @@ pub fn midnight_haunting() -> CardDefinition {
 }
 
 /// Gather the Townsfolk — {1}{W} Sorcery. Create two 1/1 white Human creature
-/// tokens. (Fateful hour — "five instead if you have ≤5 life" — collapses to
-/// the base two.)
+/// tokens; Fateful hour — five instead if you have 5 or less life
+/// (`PlayerLifeAtMost`).
 pub fn gather_the_townsfolk() -> CardDefinition {
     CardDefinition {
         name: "Gather the Townsfolk",
@@ -9371,7 +9374,11 @@ pub fn gather_the_townsfolk() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
-            count: Value::Const(2),
+            count: Value::IfPred {
+                pred: Box::new(Predicate::PlayerLifeAtMost { who: PlayerRef::You, life: 5 }),
+                then: Box::new(Value::Const(5)),
+                else_: Box::new(Value::Const(2)),
+            },
             definition: Box::new(TokenDefinition {
                 name: "Human".into(),
                 power: 1,
@@ -9451,7 +9458,7 @@ pub fn captain_of_the_watch() -> CardDefinition {
 }
 
 /// Foundry Street Denizen — {R} 1/1 Goblin. Whenever another red creature
-/// enters under your control, this gets +1/+1 until end of turn.
+/// enters under your control, this gets +1/+0 until end of turn.
 pub fn foundry_street_denizen() -> CardDefinition {
     CardDefinition {
         name: "Foundry Street Denizen",
@@ -9472,7 +9479,7 @@ pub fn foundry_street_denizen() -> CardDefinition {
             effect: Effect::PumpPT {
                 what: Selector::This,
                 power: Value::Const(1),
-                toughness: Value::Const(1),
+                toughness: Value::ZERO,
                 duration: Duration::EndOfTurn,
             },
         }],
@@ -16992,7 +16999,7 @@ pub fn bituminous_blast() -> CardDefinition {
     }
 }
 
-/// Violent Outburst — {1}{R}{G} Instant. "Creatures you control get +1/+1
+/// Violent Outburst — {1}{R}{G} Instant. "Creatures you control get +1/+0
 /// until end of turn. Cascade."
 pub fn violent_outburst() -> CardDefinition {
     use crate::effect::shortcut::cascade;
@@ -17005,7 +17012,7 @@ pub fn violent_outburst() -> CardDefinition {
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             power: Value::Const(1),
-            toughness: Value::Const(1),
+            toughness: Value::ZERO,
             duration: Duration::EndOfTurn,
         },
         triggered_abilities: vec![cascade(3)],
@@ -18989,7 +18996,7 @@ pub fn basking_rootwalla() -> CardDefinition {
 }
 
 /// Blazing Rootwalla — {R} Creature — Lizard. 1/1. Madness {0}.
-/// "{1}{R}: Blazing Rootwalla gets +1/+1 until end of turn. Activate only
+/// "{R}: Blazing Rootwalla gets +2/+0 until end of turn. Activate only
 /// once each turn." The red sibling of Basking Rootwalla.
 pub fn blazing_rootwalla() -> CardDefinition {
     use crate::card::{ActivatedAbility, Keyword};
@@ -19007,14 +19014,11 @@ pub fn blazing_rootwalla() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            mana_cost: ManaCost::new(vec![
-                ManaSymbol::Generic(1),
-                ManaSymbol::Colored(Color::Red),
-            ]),
+            mana_cost: ManaCost::new(vec![ManaSymbol::Colored(Color::Red)]),
             effect: Effect::PumpPT {
                 what: Selector::This,
-                power: Value::Const(1),
-                toughness: Value::Const(1),
+                power: Value::Const(2),
+                toughness: Value::ZERO,
                 duration: Duration::EndOfTurn,
             },
             once_per_turn: true,
@@ -19726,7 +19730,7 @@ pub fn omnath_locus_of_creation() -> CardDefinition {
 // ── modern_decks-17: new supplement cards ────────────────────────────────────
 
 /// Grim Flayer — {B}{G} Creature 2/2 Human Warrior. Trample.
-/// Whenever this deals combat damage to a player, surveil 2.
+/// Whenever this deals combat damage to a player, surveil 3.
 pub fn grim_flayer() -> CardDefinition {
     CardDefinition {
         name: "Grim Flayer",
@@ -19743,7 +19747,7 @@ pub fn grim_flayer() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Surveil {
                 who: PlayerRef::You,
-                amount: Value::Const(2),
+                amount: Value::Const(3),
             },
         }],
         ..Default::default()
@@ -20637,9 +20641,20 @@ pub fn eldrazi_confluence() -> CardDefinition {
     }
 }
 
-/// Searing Blaze — {R}{R} Instant. Deal 3 damage to target creature and
-/// 3 damage to that creature's controller (approx: 3 to creature + 3 to
-/// each opponent).
+/// Searing Blaze — {R}{R} Instant. 1 damage to target creature and 1 to
+/// its controller; 3 and 3 instead under landfall (approx: the player half
+/// is each opponent).
+fn landfall_3_else_1() -> Value {
+    Value::IfPred {
+        pred: Box::new(Predicate::ValueAtLeast(
+            Value::LandsPlayedThisTurn(PlayerRef::You),
+            Value::ONE,
+        )),
+        then: Box::new(Value::Const(3)),
+        else_: Box::new(Value::ONE),
+    }
+}
+
 pub fn searing_blaze() -> CardDefinition {
     CardDefinition {
         name: "Searing Blaze",
@@ -20648,11 +20663,11 @@ pub fn searing_blaze() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(3),
+                amount: landfall_3_else_1(),
             },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(3),
+                amount: landfall_3_else_1(),
             },
         ]),
         ..Default::default()
@@ -24944,7 +24959,7 @@ pub fn uncaged_fury() -> CardDefinition {
     }
 }
 
-/// Built to Smash — {R} Instant. "Target attacking creature gets +2/+2 until
+/// Built to Smash — {R} Instant. "Target attacking creature gets +3/+3 until
 /// end of turn. If it's an artifact creature, it gains trample until end of turn."
 pub fn built_to_smash() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
@@ -24957,8 +24972,8 @@ pub fn built_to_smash() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
                 ),
-                power: Value::Const(2),
-                toughness: Value::Const(2),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
                 duration: Duration::EndOfTurn,
             },
             Effect::If {
@@ -25624,7 +25639,8 @@ pub fn rabid_bite() -> CardDefinition {
 }
 
 /// Oust — {W} Sorcery. "Put target creature into its owner's library second
-/// from the top. Its owner gains 5 life."
+/// from the top. Its controller gains 3 life." (The gain goes to the owner: the
+/// card has left the battlefield by then, and the two coincide off a steal.)
 pub fn oust() -> CardDefinition {
     use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
     CardDefinition {
@@ -25634,7 +25650,7 @@ pub fn oust() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-                amount: Value::Const(5),
+                amount: Value::Const(3),
             },
             Effect::Move {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -64859,7 +64875,8 @@ pub fn fiend_artisan() -> CardDefinition {
 
 /// General Kudro of Drannith — {1}{W}{B} 3/3 Human Soldier. Other Humans get
 /// +1/+1; this or another Human entering exiles a card from an opponent's
-/// graveyard; {2}, Sacrifice two Humans: destroy target creature.
+/// graveyard; {2}, Sacrifice two Humans: destroy target creature with
+/// power 4 or greater.
 pub fn general_kudro_of_drannith() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
@@ -64909,7 +64926,9 @@ pub fn general_kudro_of_drannith() -> CardDefinition {
                 2,
             )),
             effect: Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                ),
             },
             ..Default::default()
         }],
@@ -65046,7 +65065,7 @@ pub fn skycat_sovereign() -> CardDefinition {
 
 /// Chevill, Bane of Monsters — {B}{G} 1/3 legendary, Deathtouch. Upkeep: if no
 /// opponent permanent has a bounty counter, bounty an opponent creature/PW. A
-/// bounty-countered creature dying draws you a card and gains 1 life.
+/// bounty-countered creature dying draws you a card and gains 3 life.
 pub fn chevill_bane_of_monsters() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
@@ -65099,7 +65118,7 @@ pub fn chevill_bane_of_monsters() -> CardDefinition {
                     },
                     Effect::GainLife {
                         who: Selector::You,
-                        amount: Value::Const(1),
+                        amount: Value::Const(3),
                     },
                 ]),
             },

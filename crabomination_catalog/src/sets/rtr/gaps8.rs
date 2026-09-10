@@ -140,7 +140,7 @@ pub fn destroy_the_evidence() -> CardDefinition {
     }
 }
 
-/// Mercurial Chemister — {3}{U}{R} 2/3 Human Wizard. {U}, {T}: Draw a card.
+/// Mercurial Chemister — {3}{U}{R} 2/3 Human Wizard. {U}, {T}: Draw two cards.
 /// {R}, {T}, Exile an instant or sorcery card from your graveyard: deals damage
 /// equal to the exiled card's mana value to any target.
 pub fn mercurial_chemister() -> CardDefinition {
@@ -160,7 +160,7 @@ pub fn mercurial_chemister() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::Draw {
                     who: Selector::You,
-                    amount: Value::ONE,
+                    amount: Value::Const(2),
                 },
                 ..Default::default()
             },

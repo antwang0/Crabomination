@@ -306,7 +306,7 @@ pub fn jewel_thief() -> CardDefinition {
 }
 
 /// Sweettooth Witch — {2}{B} 3/2 Human Warlock. ETB create a Food token.
-/// {2}, Sacrifice a Food: target player loses 3 life.
+/// {2}, Sacrifice a Food: target player loses 2 life.
 pub fn sweettooth_witch() -> CardDefinition {
     use crate::card::{ActivatedAbility, ArtifactSubtype, SelectionRequirement};
     CardDefinition {
@@ -332,7 +332,7 @@ pub fn sweettooth_witch() -> CardDefinition {
             )),
             effect: Effect::LoseLife {
                 who: target_filtered(SelectionRequirement::Player),
-                amount: Value::Const(3),
+                amount: Value::Const(2),
             },
             ..Default::default()
         }],

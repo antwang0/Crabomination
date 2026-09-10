@@ -6,7 +6,7 @@ use super::*;
 
 
 #[test]
-fn sacred_fire_deals_three_and_gains_three_life() {
+fn sacred_fire_deals_two_and_gains_two_life() {
     let mut g = two_player_game();
     let initial_life = g.players[0].life;
     let id = g.add_card_to_hand(0, catalog::sacred_fire());
@@ -20,12 +20,12 @@ fn sacred_fire_deals_three_and_gains_three_life() {
     }).expect("Sacred Fire castable for {R}{W}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, 20 - 3, "opponent took 3");
-    assert_eq!(g.players[0].life, initial_life + 3, "you gained 3");
+    assert_eq!(g.players[1].life, 20 - 2, "opponent took 2");
+    assert_eq!(g.players[0].life, initial_life + 2, "you gained 2");
 }
 
 #[test]
-fn sparkmage_apprentice_etb_deals_two_to_target() {
+fn sparkmage_apprentice_etb_deals_one_to_target() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::sparkmage_apprentice());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -38,7 +38,7 @@ fn sparkmage_apprentice_etb_deals_two_to_target() {
     }).expect("Sparkmage Apprentice castable for {1}{R}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, 20 - 2, "ETB dealt 2 damage to opponent");
+    assert_eq!(g.players[1].life, 20 - 1, "ETB dealt 1 damage to opponent");
 }
 
 #[test]

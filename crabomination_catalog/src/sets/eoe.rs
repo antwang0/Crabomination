@@ -4202,7 +4202,7 @@ pub fn hemosymbic_mite() -> CardDefinition {
 /// the 3/3 set.)
 /// 5 if you control six or more lands, else 3 — Genemorph Imago's landfall
 /// base-P/T set.
-fn six_lands_5_else_3() -> Value {
+fn six_lands_6_else_3() -> Value {
     Value::IfPred {
         pred: Box::new(Predicate::SelectorCountAtLeast {
             sel: Selector::EachPermanent(
@@ -4210,7 +4210,7 @@ fn six_lands_5_else_3() -> Value {
             ),
             n: Value::Const(6),
         }),
-        then: Box::new(Value::Const(5)),
+        then: Box::new(Value::Const(6)),
         else_: Box::new(Value::Const(3)),
     }
 }
@@ -4233,11 +4233,11 @@ pub fn genemorph_imago() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Land,
                 }),
-            // Base 3/3, or 5/5 instead if you control six or more lands.
+            // Base 3/3, or 6/6 instead if you control six or more lands.
             effect: Effect::SetBasePT {
                 what: target_filtered(SelectionRequirement::Creature),
-                power: six_lands_5_else_3(),
-                toughness: six_lands_5_else_3(),
+                power: six_lands_6_else_3(),
+                toughness: six_lands_6_else_3(),
                 duration: Duration::EndOfTurn,
             },
         }],

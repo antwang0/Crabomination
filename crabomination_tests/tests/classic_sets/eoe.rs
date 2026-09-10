@@ -1351,7 +1351,7 @@ fn dark_endurance_blocking_discount_and_pump() {
     assert!(cp.keywords().contains(&Keyword::Indestructible));
 }
 
-/// Genemorph Imago's landfall sets a creature to base 3/3, or 5/5 once you
+/// Genemorph Imago's landfall sets a creature to base 3/3, or 6/6 once you
 /// control six or more lands. Drives the card's real landfall effect.
 #[test]
 fn genemorph_imago_landfall_scales_with_lands() {
@@ -1362,10 +1362,10 @@ fn genemorph_imago_landfall_scales_with_lands() {
     for _ in 0..5 { g.add_card_to_battlefield(0, catalog::forest()); }
     resolve_targeted(&mut g, 0, landfall(), &[target]);
     assert_eq!(g.computed_permanent(target).unwrap().power, 3, "five lands → base 3/3");
-    // Sixth land flips it to 5/5.
+    // Sixth land flips it to 6/6.
     g.add_card_to_battlefield(0, catalog::forest());
     resolve_targeted(&mut g, 0, landfall(), &[target]);
-    assert_eq!(g.computed_permanent(target).unwrap().power, 5, "six lands → base 5/5");
+    assert_eq!(g.computed_permanent(target).unwrap().power, 6, "six lands → base 6/6");
 }
 
 /// Shattered Wings destroys a flying creature (and would hit artifacts /

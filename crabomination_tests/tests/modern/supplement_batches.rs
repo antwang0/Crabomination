@@ -229,18 +229,24 @@ fn abrupt_decay_destroys_low_cmc_nonland() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
 }
 
-/// Abrupt Decay refuses to target a CMC-3-or-higher permanent at cast time.
+/// Abrupt Decay refuses to target a mana-value-4-or-higher permanent at
+/// cast time (and takes a mana value 3 one: Phyrexian Arena).
 #[test]
 fn abrupt_decay_rejects_high_cmc_target() {
     let mut g = two_player_game();
-    // Tarmogoyf is base {1}{G} → CMC 2 — but the engine validates the cast-
-    // time `ManaValueAtMost(2)` against the *definition* CMC. Use a
-    // 3-CMC card for the rejection test: Cankerbloom is {1}{G}{G}? Actually
-    // it's {1}{G} = 2. Let's use Soul-Guide Lantern which is {1} = 1. Let's
-    // pick something CMC ≥ 3: Pact of Negation is {0}, no good. Let's use
-    // mana_leak ({1}{U} = 2). Use phyrexian_arena ({1}{B}{B} = 3). Yes.
-    let arena = g.add_card_to_battlefield(1, catalog::phyrexian_arena());
+    let arena = g.add_card_to_battlefield(1, catalog::phyrexian_arena()); // {1}{B}{B}
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // {3}{W}{W}
     let id = g.add_card_to_hand(0, catalog::abrupt_decay());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(angel)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(res.is_err(), "Abrupt Decay should reject a mana value 5 target");
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
 
@@ -251,8 +257,9 @@ fn abrupt_decay_rejects_high_cmc_target() {
         mode: None,
         x_value: None,
     });
-    assert!(res.is_err(),
-        "Abrupt Decay should reject a CMC-3 permanent target");
+    assert!(res.is_ok(), "Abrupt Decay takes a mana value 3 target");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == arena), "Phyrexian Arena destroyed");
 }
 
 /// Abrupt Decay is uncounterable via Keyword::CantBeCountered.
@@ -1726,26 +1733,34 @@ fn orcish_lumberjack_cannot_activate_without_a_forest() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0, "no mana made");
 }
 
-/// Mine Collapse: {2}{R} sorcery, sacrifice a Mountain on resolution,
-/// deal 4 damage to the target.
+/// Mine Collapse: {3}{R} sorcery, sacrifice a Mountain on resolution,
+/// deal 5 damage to the target creature or planeswalker.
 #[test]
-fn mine_collapse_sacrifices_mountain_and_deals_four() {
+fn mine_collapse_sacrifices_mountain_and_deals_five() {
     let mut g = two_player_game();
     let mtn = g.add_card_to_battlefield(0, catalog::mountain());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
     let mc = g.add_card_to_hand(0, catalog::mine_collapse());
     g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
+    g.players[0].mana_pool.add_colorless(3);
+    let err = g.perform_action(GameAction::CastSpell {
         card_id: mc,
         target: Some(Target::Player(1)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Mine Collapse castable for {{2}}{{R}}");
+    });
+    assert!(err.is_err(), "a player is not a legal target");
+    g.perform_action(GameAction::CastSpell {
+        card_id: mc,
+        target: Some(Target::Permanent(angel)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Mine Collapse castable for {3}{R}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == mtn),
         "Mountain should be sacrificed on resolution");
-    assert_eq!(g.players[1].life, 16,
-        "Target player should take 4 damage");
+    assert!(!g.battlefield.iter().any(|c| c.id == angel),
+        "the 4/4 dies to 5 damage");
 }
 
 /// Satyr Wayfinder: ETB reveals 4, takes a land to hand, rest to graveyard.

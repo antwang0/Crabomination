@@ -32,14 +32,14 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Sigardian Savior — {3}{W}{W}, 3/3 Angel (synthesised STX
 /// white-tribal flavor). "Flying. When this creature enters, return
-/// up to two target creature cards with mana value 3 or less from
+/// up to two target creature cards with mana value 2 or less from
 /// your graveyard to the battlefield."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A 5-mana flying body
 /// with a 2-for-1 reanimation rider. The "up to two" multi-target is
 /// approximated as a single target return (engine-wide multi-target
 /// gap). Wired via ETB `Effect::Move` against a creature card in
-/// your graveyard with `ManaValueAtMost(3)`. Tests:
+/// your graveyard with `ManaValueAtMost(2)`. Tests:
 /// `sigardian_savior_is_a_five_mana_four_four_flying_angel`,
 /// `sigardian_savior_etb_returns_low_mv_creature_card`.
 pub fn sigardian_savior() -> CardDefinition {
@@ -61,7 +61,7 @@ pub fn sigardian_savior() -> CardDefinition {
                     who: PlayerRef::You,
                     zone: crate::card::Zone::Graveyard,
                     filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
                 }),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

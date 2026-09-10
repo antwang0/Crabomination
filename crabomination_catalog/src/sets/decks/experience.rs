@@ -45,7 +45,7 @@ pub fn mizzix_of_the_izmagnus() -> CardDefinition {
 }
 
 /// Ezuri, Claw of Progress — {2}{G}{U} 3/3 Legendary Elf Warrior. Creature with
-/// power 1 or less enters under your control → get an experience counter. At
+/// power 2 or less enters under your control → get an experience counter. At
 /// beginning of combat on your turn, put X +1/+1 counters on target creature
 /// (X = your experience).
 pub fn ezuri_claw_of_progress() -> CardDefinition {
@@ -65,7 +65,7 @@ pub fn ezuri_claw_of_progress() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
-                        filter: R::Creature.and(R::PowerAtMost(1)),
+                        filter: R::Creature.and(R::PowerAtMost(2)),
                     }),
                 effect: Effect::AddExperience(Value::Const(1)),
             },

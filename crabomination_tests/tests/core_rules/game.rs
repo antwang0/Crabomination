@@ -2668,9 +2668,9 @@ fn pest_control_destroys_low_cmc_nonland_permanents() {
     let forest = g.add_card_to_battlefield(0, catalog::forest());
     // Mana value 1 — should die.
     let llanowar = g.add_card_to_battlefield(1, catalog::llanowar_elves());
-    // Mana value 2 — should die.
+    // Mana value 2 — survives (the printed bound is 1 or less).
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // Mana value 5 — survives.
+    // Mana value 6 — survives.
     let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
 
     let pest = g.add_card_to_hand(0, catalog::pest_control());
@@ -2690,10 +2690,10 @@ fn pest_control_destroys_low_cmc_nonland_permanents() {
         "Lands shouldn't be destroyed by Pest Control");
     assert!(!g.battlefield.iter().any(|c| c.id == llanowar),
         "1-CMC creature should die");
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "2-CMC creature should die");
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "mana value 2 creature should survive");
     assert!(g.battlefield.iter().any(|c| c.id == dragon),
-        "5-CMC creature should survive");
+        "mana value 6 creature should survive");
 }
 
 #[test]
@@ -3454,38 +3454,6 @@ fn convoke_taps_creature_to_pay_one_generic() {
         "the convoked creature is tapped",
     );
     assert!(g.battlefield.iter().any(|c| c.id == small), "fetched the MV-1 creature");
-}
-
-#[test]
-fn pest_control_at_converge_three_destroys_higher_cmc() {
-    // Pest Control cost is {W}{B}, but we'll inject extra mana of a third
-    // color to bump converge to 3. This should now destroy 3-CMC nonland
-    // permanents (e.g. anything with three pips of cost).
-    let mut g = two_player_game();
-    // 3-CMC opponent permanent — Goblin Guide (1R) is 1-CMC, Lightning
-    // Bolt is instant (no permanent on battlefield). Use Serra Angel
-    // (3WW = 5 CMC). Hmm we need a 3-CMC creature. Use Black Knight (BB)?
-    // 2-CMC. Use a 3-CMC one. The catalog has shivan_dragon (4RR = 6).
-    // Let's just use Shivan Dragon and verify converge=3 doesn't kill it.
-    // For converge=2 leaving a 3-CMC creature, we need… let's just add
-    // a 3-CMC permanent via a test card. Use catalog::serra_angel which
-    // is 3WW = CMC 5. Hmm.
-    //
-    // Simpler: use Grizzly Bears (CMC 2) to confirm converge=3 still
-    // destroys it (it covers 1-3) and converge=2 also destroys it.
-    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let pest = g.add_card_to_hand(0, catalog::pest_control());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: pest, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Pest Control castable for {W}{B}");
-    drain_stack(&mut g);
-
-    assert!(!g.battlefield.iter().any(|c| c.id == opp),
-        "Pest Control at converge=2 destroys 2-CMC creatures");
 }
 
 #[test]

@@ -9,13 +9,13 @@ use crate::effect::shortcut::{deal, target};
 use crate::effect::{Effect, Selector, Value};
 use crate::mana::{cost, g, generic, r, x};
 
-/// Searing Wind — {8}{R} Sorcery. Deals 5 damage to any target.
+/// Searing Wind — {8}{R} Sorcery. Deals 10 damage to any target.
 pub fn searing_wind() -> CardDefinition {
     CardDefinition {
         name: "Searing Wind",
         cost: cost(&[generic(8), r()]),
         card_types: vec![CardType::Instant],
-        effect: deal(5, target()),
+        effect: deal(10, target()),
         ..Default::default()
     }
 }

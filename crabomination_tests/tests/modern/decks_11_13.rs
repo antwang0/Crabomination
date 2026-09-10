@@ -409,7 +409,7 @@ fn captain_of_the_watch_anthems_soldiers_and_makes_three() {
 fn foundry_street_denizen_grows_when_a_red_creature_enters() {
     let mut g = two_player_game();
     let denizen = g.add_card_to_battlefield(0, catalog::foundry_street_denizen());
-    // Cast a red creature (Mons's Goblin Raiders is red) → +1/+1 EOT.
+    // Cast a red creature (Mons's Goblin Raiders is red) → +1/+0 EOT.
     let gob = g.add_card_to_hand(0, catalog::mons_goblin_raiders());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
@@ -417,7 +417,7 @@ fn foundry_street_denizen_grows_when_a_red_creature_enters() {
     }).expect("cast a red creature");
     drain_stack(&mut g);
     let s = g.battlefield_find(denizen).unwrap();
-    assert_eq!((s.power(), s.toughness()), (2, 2), "Denizen grew when a red creature entered");
+    assert_eq!((s.power(), s.toughness()), (2, 1), "Denizen grew when a red creature entered");
 }
 
 /// "another red *creature*" — a red enchantment entering did it too (filter

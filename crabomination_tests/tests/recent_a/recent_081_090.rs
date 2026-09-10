@@ -911,14 +911,14 @@ mod recent88 {
     }
 
     #[test]
-    fn searing_wind_deals_five() {
+    fn searing_wind_deals_ten() {
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, catalog::searing_wind());
         g.players[0].mana_pool.add(Color::Red, 1);
         g.players[0].mana_pool.add_colorless(8);
         let life = g.players[1].life;
         cast(&mut g, id, Some(Target::Player(1)), vec![], None);
-        assert_eq!(g.players[1].life, life - 5);
+        assert_eq!(g.players[1].life, life - 10);
     }
 
     #[test]

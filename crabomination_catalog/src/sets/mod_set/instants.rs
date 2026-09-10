@@ -94,19 +94,28 @@ pub fn redirect() -> CardDefinition {
     }
 }
 
-/// Fatal Push — {B} Instant. Destroy target creature with mana value 2 or
-/// less. (Revolt clause — destroying a creature with mana value 4 or less
-/// if a permanent left the battlefield this turn — is omitted; the base
-/// half is what matters for the bulk of plays.)
+/// Fatal Push — {B} Instant. Destroy target creature if it has mana value 2 or
+/// less; 4 or less under Revolt (`RevoltActive`). Any creature is a legal
+/// target; the mana-value check is on resolution (CR 608.2b is not a
+/// fizzle here — the spell just does nothing).
 pub fn fatal_push() -> CardDefinition {
     CardDefinition {
         name: "Fatal Push",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(2)),
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ManaValueOf(Box::new(Selector::Target(0))),
+                Value::IfPred {
+                    pred: Box::new(Predicate::RevoltActive { who: PlayerRef::You }),
+                    then: Box::new(Value::Const(4)),
+                    else_: Box::new(Value::Const(2)),
+                },
             ),
+            then: Box::new(Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            }),
+            else_: Box::new(Effect::Noop),
         },
         ..Default::default()
     }

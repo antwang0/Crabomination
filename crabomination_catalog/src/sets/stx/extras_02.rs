@@ -599,11 +599,17 @@ pub fn cathartic_pyre() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
                 amount: Value::Const(3),
             },
             Effect::Seq(vec![
-                Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any , max: None},
+                Effect::DiscardAnyNumber {
+                    who: Selector::You,
+                    filter: SelectionRequirement::Any,
+                    max: Some(Value::Const(2)),
+                },
                 Effect::Draw {
                     who: Selector::You,
                     amount: Value::CardsDiscardedThisEffect,
@@ -864,14 +870,11 @@ pub fn ingenious_mastery() -> CardDefinition {
 // ── Acolyte of Affliction (STX) ────────────────────────────────────────────
 
 /// Acolyte of Affliction — {2}{B}{G} Creature — Zombie Cleric, 2/3 (STX
-/// 2021). "When this creature enters, each player mills three cards.
-/// Return up to one target permanent card from a graveyard to its
-/// owner's hand."
+/// 2021). "When this creature enters, mill two cards, then you may return a
+/// permanent card from your graveyard to your hand."
 ///
-/// ✅ ETB wired as `Seq(Mill 3 → EachPlayer, Move(target perm card in
-/// any graveyard → owner's hand))`. The "up to one" rider is honored by
-/// the target being optional at cast time (a single-target spell can
-/// be cast without picking a target creature card).
+/// ETB wired as `Seq(Mill 2 → You, Move(target permanent card in your
+/// graveyard → hand))`; the "you may" is the target being optional.
 pub fn acolyte_of_affliction() -> CardDefinition {
     CardDefinition {
         name: "Acolyte of Affliction",
@@ -887,12 +890,14 @@ pub fn acolyte_of_affliction() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::Mill {
-                    who: Selector::Player(PlayerRef::EachPlayer),
-                    amount: Value::Const(3),
+                    who: Selector::You,
+                    amount: Value::Const(2),
                 },
                 Effect::Move {
-                    what: target_filtered(SelectionRequirement::Permanent),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
                 },
             ]),
         }],
@@ -932,12 +937,8 @@ pub fn damnable_pact() -> CardDefinition {
 // ── Shore Up (STA reprint, Modern Horizons) ────────────────────────────────
 
 /// Shore Up — {U} Instant (STA reprint, originally Modern Horizons).
-/// "Untap target permanent. It gains hexproof until end of turn. /
-/// Flashback {3}{U}."
-///
-/// ✅ Body: `Seq(Untap target permanent, GrantKeyword(Hexproof EOT))`.
-/// Flashback {3}{U} wired via `Keyword::Flashback`. A cheap counterspell-
-/// dodge for an utility creature on a critical turn.
+/// "Target creature you control gets +1/+1 and gains hexproof until end
+/// of turn. Untap it."
 pub fn shore_up() -> CardDefinition {
     CardDefinition {
         name: "Shore Up",
@@ -945,14 +946,22 @@ pub fn shore_up() -> CardDefinition {
         card_types: vec![CardType::Instant],
         // Shore Up prints no Flashback (`audit_keyword_drift.py`).
         effect: Effect::Seq(vec![
-            Effect::Untap {
-                what: target_filtered(SelectionRequirement::Permanent),
-                up_to: None,
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Hexproof,
                 duration: Duration::EndOfTurn,
+            },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
             },
         ]),
         ..Default::default()
@@ -992,8 +1001,8 @@ pub fn symbol_of_strength() -> CardDefinition {
 
 // ── Magmatic Sinkhole (STA reprint, Modern Horizons 2) ─────────────────────
 
-/// Magmatic Sinkhole — {5}{R} Sorcery with Delve. "Surveil 2, then it deals
-/// 4 damage to target creature or planeswalker." Delve exiles graveyard cards
+/// Magmatic Sinkhole — {5}{R} Sorcery with Delve. "It deals 5 damage to target
+/// creature or planeswalker." Delve exiles graveyard cards
 /// to pay the generic part of the cost (`Keyword::Delve` + `CastSpellDelve`).
 pub fn magmatic_sinkhole() -> CardDefinition {
     CardDefinition {
@@ -1001,18 +1010,12 @@ pub fn magmatic_sinkhole() -> CardDefinition {
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Delve],
-        effect: Effect::Seq(vec![
-            Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(4),
-            },
-        ]),
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(5),
+        },
         ..Default::default()
     }
 }
@@ -1654,48 +1657,34 @@ pub fn pigment_storm() -> CardDefinition {
 
 // ── Step Through (STA reprint, originally Stronghold) ───────────────────────
 
-/// Step Through — {3}{U}{U} Sorcery (STA reprint).
-///
-/// "Search your library for an instant or sorcery card named Step
-/// Through. Reveal it, put it into your hand, then shuffle."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Approximated as a tutor
-/// for any Instant or Sorcery card from the library — the printed
-/// "named Step Through" is a flavor-of-the-cycle joke (the card is
-/// useless self-tutoring; the printing was actually a meme card from
-/// Saviors of Kamigawa's Spiritcraft theme). To make the spell
-/// playable we generalize to any IS card; the printed-Oracle
-/// degenerate case is preserved (if no other IS card exists, this
-/// finds itself). Multi-target prompt to pick the chosen IS card is
-/// the standard `Search` decision.
+/// Step Through — {3}{U}{U} Sorcery. "Return two target creatures to
+/// their owners' hands. / Wizardcycling {2}" (`Keyword::Typecycling`).
 pub fn step_through() -> CardDefinition {
     CardDefinition {
         name: "Step Through",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::HasCardType(CardType::Instant)
-                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-            to: ZoneDest::Hand(PlayerRef::You),
-        },
+        keywords: vec![Keyword::Typecycling(Box::new((
+            cost(&[generic(2)]),
+            SelectionRequirement::HasCreatureType(CreatureType::Wizard),
+        )))],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(1)))),
+            },
+        ]),
         ..Default::default()
     }
 }
 
-// ── Inkling Summoning Mascot (STX 2021 - simplified) ────────────────────────
-
-/// Inkfathom Witch — {1}{U/B}, 1/1 Inkling Spectre (homage to the
-/// Mystery Booster spectre-style designs).
-///
-/// "Flying / When this creature enters, target opponent reveals their
-/// hand. You choose a nonland card from it. That player discards that
-/// card."
-///
-/// Push (modern_decks, NEW, `stx::extras`): A targeted hand-attack on
-/// a Flying body — same Inkling tribal as Promising Duskmage and
-/// Tenured Inkcaster. Wired via `DiscardChosen` against an opp's
-/// nonland card.
 pub fn inkfathom_witch() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
@@ -1726,18 +1715,18 @@ pub fn inkfathom_witch() -> CardDefinition {
 /// Inscription of Ruin — {2}{B} Sorcery (STX 2021).
 ///
 /// "Choose one or more. If this spell was kicked, you may choose two or
-/// three instead. / • Target player discards two cards. / • Return up
-/// to two target creature cards from your graveyard to your hand. / •
-/// Destroy target creature."
+/// three instead. / • Target opponent discards two cards. / • Return
+/// target creature card with mana value 2 or less from your graveyard
+/// to the battlefield. / • Destroy target creature with mana value 3 or
+/// less."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): Wired via the engine's
 /// `Effect::ChooseN { picks: [0, 2], modes }` — auto-picks discard +
 /// destroy at the regular {2}{B}{B} cost (the two highest-impact
 /// modes against a typical board). The Kicker {3}{B} alt-cost for the
 /// "choose two or three" upgrade is engine-wide ⏳ (same Kicker gap
-/// as Burst Lightning). Mode 1 reanimation collapses to a single
-/// graveyard target (multi-target prompt for slot 1+ is the engine-
-/// wide gap shared with all multi-target instants/sorceries).
+/// as Burst Lightning). Mode 1 reanimates one creature card of mana
+/// value 2 or less, picked by the decider.
 pub fn inscription_of_ruin() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
@@ -1753,18 +1742,26 @@ pub fn inscription_of_ruin() -> CardDefinition {
                     amount: Value::Const(2),
                     random: false,
                 },
-                // Mode 1: return up to one creature card from gy to hand.
+                // Mode 1: return a creature card with mana value 2 or less
+                // from your graveyard to the battlefield.
                 Effect::Move {
                     what: Selector::CardsInZone {
                         who: PR::You,
                         zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::Creature,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ManaValueAtMost(2)),
                     },
-                    to: ZoneDest::Hand(PR::You),
+                    to: ZoneDest::Battlefield {
+                        controller: PR::You,
+                        tapped: false,
+                    },
                 },
-                // Mode 2: destroy target creature.
+                // Mode 2: destroy target creature with mana value 3 or less.
                 Effect::Destroy {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                    ),
                 },
             ],
         },

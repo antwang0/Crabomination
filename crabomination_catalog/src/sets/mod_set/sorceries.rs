@@ -227,10 +227,10 @@ pub fn fell() -> CardDefinition {
     }
 }
 
-/// Blasphemous Edict — {3}{B}{B} Sorcery. Each player sacrifices a creature.
-/// Reuses `Effect::Sacrifice` with `Selector::Player(EachPlayer)`; the
-/// resolver iterates each alive seat and forces one creature sacrifice
-/// per player matching the filter.
+/// Blasphemous Edict — {3}{B}{B} Sorcery. Each player sacrifices thirteen
+/// creatures of their choice (`Effect::Sacrifice` over `EachPlayer`, which
+/// stops at an empty board). The {B} alternative cost at thirteen or more
+/// creatures is not modelled.
 pub fn blasphemous_edict() -> CardDefinition {
     CardDefinition {
         name: "Blasphemous Edict",
@@ -238,7 +238,7 @@ pub fn blasphemous_edict() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Sacrifice {
             who: Selector::Player(PlayerRef::EachPlayer),
-            count: Value::Const(1),
+            count: Value::Const(13),
             filter: SelectionRequirement::Creature,
         },
         ..Default::default()

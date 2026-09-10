@@ -768,20 +768,47 @@ fn fatal_push_destroys_low_cmc_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear));
 }
 
+/// Any creature is a legal target; the mana-value check is on resolution
+/// ("destroy target creature IF it has mana value 2 or less"), so a Serra
+/// Angel is targeted and survives.
 #[test]
 fn fatal_push_rejects_high_cmc_creature() {
     let mut g = two_player_game();
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     let push = g.add_card_to_hand(0, catalog::fatal_push());
     g.players[0].mana_pool.add(Color::Black, 1);
-    let err = g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpell {
         card_id: push,
         target: Some(Target::Permanent(angel)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    });
-    assert!(err.is_err(), "Fatal Push should reject Serra Angel (CMC 5)");
+    })
+    .expect("Fatal Push targets any creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == angel), "Serra Angel (MV 5) survives");
+}
+
+/// Revolt: a permanent left the battlefield under your control this turn,
+/// so a mana value 4 creature is destroyed.
+#[test]
+fn fatal_push_revolt_reaches_mana_value_four() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant()); // MV 4
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_to_graveyard_with_triggers(mine);
+    let push = g.add_card_to_hand(0, catalog::fatal_push());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: push,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Fatal Push castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == giant), "Hill Giant (MV 4) dies under revolt");
 }
 
 #[test]

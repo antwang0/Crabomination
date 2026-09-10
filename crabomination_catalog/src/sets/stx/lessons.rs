@@ -765,11 +765,10 @@ pub fn test_of_patience() -> CardDefinition {
 }
 
 /// Reduce to Ashes — {4}{R} Sorcery — Lesson.
-/// Synthesised Oracle: "Deals 4 damage to target creature or planeswalker.
-/// If that creature or planeswalker would die this turn, exile it instead."
-/// The exile-on-death rider rides the Lava-Coil pattern: a creature with
-/// toughness ≤ 4 (lethal) is exiled instead of damaged; anything else
-/// (big creatures, planeswalkers) takes the 4 damage.
+/// "Deals 5 damage to target creature. If that creature would die this
+/// turn, exile it instead." The exile-on-death rider rides the Lava-Coil
+/// pattern: a creature with toughness ≤ 5 (lethal) is exiled instead of
+/// damaged; anything else takes the 5 damage.
 pub fn reduce_to_ashes() -> CardDefinition {
     use crate::card::Predicate;
     CardDefinition {
@@ -788,17 +787,15 @@ pub fn reduce_to_ashes() -> CardDefinition {
                 },
                 Predicate::ValueAtMost(
                     Value::ToughnessOf(Box::new(Selector::Target(0))),
-                    Value::Const(4),
+                    Value::Const(5),
                 ),
             ]),
             then: Box::new(Effect::Exile {
                 what: target_filtered(SelectionRequirement::Creature),
             }),
             else_: Box::new(Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(4),
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(5),
             }),
         },
         ..Default::default()

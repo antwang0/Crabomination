@@ -1116,7 +1116,7 @@ pub fn void_grafter() -> CardDefinition {
 }
 
 /// Brood Butcher — {3}{B}{G} 3/3 Eldrazi Drone. Devoid; ETB make a Scion;
-/// {B}{G}, sacrifice a creature: target creature gets -1/-1 until end of turn.
+/// {B}{G}, sacrifice a creature: target creature gets -2/-2 until end of turn.
 pub fn brood_butcher() -> CardDefinition {
     use crate::card::{ActivatedAbility, SelectionRequirement};
     use crate::effect::shortcut::pump_target;
@@ -1129,7 +1129,7 @@ pub fn brood_butcher() -> CardDefinition {
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 1,
             )),
-            effect: pump_target(-1, -1),
+            effect: pump_target(-2, -2),
             ..Default::default()
         }],
         ..drone("Brood Butcher", cost(&[generic(3), b(), g()]), 3, 3)

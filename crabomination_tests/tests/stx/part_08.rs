@@ -930,7 +930,7 @@ fn cr_107_1c_x_zero_for_x_cost_spell_resolves_cleanly() {
 }
 
 #[test]
-fn reduce_to_ashes_burns_creature_for_four() {
+fn reduce_to_ashes_exiles_a_lethal_target() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     drain_stack(&mut g);
@@ -938,7 +938,7 @@ fn reduce_to_ashes_burns_creature_for_four() {
     flood_mana!(g);
     cast!(g, id, crabomination::game::types::Target::Permanent(bear));
     drain_stack(&mut g);
-    // 2/2 bear (toughness ≤ 4 = would die) is exiled, not sent to graveyard.
+    // 2/2 bear (toughness ≤ 5 = would die) is exiled, not sent to graveyard.
     assert!(g.exile.iter().any(|c| c.id == bear), "lethal target is exiled");
     assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear));
 }
@@ -951,8 +951,8 @@ fn reduce_to_ashes_only_damages_a_tall_creature() {
     flood_mana!(g);
     cast!(g, id, crabomination::game::types::Target::Permanent(hulk));
     drain_stack(&mut g);
-    let card = g.battlefield_find(hulk).expect("6-toughness survives 4 damage");
-    assert_eq!(card.damage, 4, "takes 4 damage, not exiled (toughness > 4)");
+    let card = g.battlefield_find(hulk).expect("6-toughness survives 5 damage");
+    assert_eq!(card.damage, 5, "takes 5 damage, not exiled (toughness > 5)");
     assert!(!g.exile.iter().any(|c| c.id == hulk));
 }
 
