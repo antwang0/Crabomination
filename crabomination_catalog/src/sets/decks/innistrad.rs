@@ -5099,6 +5099,15 @@ pub fn jack_o_lantern() -> CardDefinition {
                 },
             ]),
             ..Default::default()
+        },
+        // "{1}, Exile this card from your graveyard: Add one mana of any
+        // color" — shipped missing (the `cnt` audit column, 2026-09-10).
+        ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: crate::effect::shortcut::add_any_one_color(1),
+            ..Default::default()
         }],
         ..Default::default()
     }

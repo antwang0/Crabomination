@@ -1135,8 +1135,13 @@ fn festival_crasher_grows_on_spells() {
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
     cast_at(&mut g, bolt, Target::Player(1));
-    let c = g.battlefield_find(fc).unwrap();
-    assert_eq!((c.power(), c.toughness()), (2, 4), "permanent +1/+1 counter");
+    // "+2/+0 until end of turn" — it shipped growing by a permanent +1/+1
+    // counter (the num column, 2026-09-10).
+    let c = g.computed_permanent(fc).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "+2/+0 this turn");
+    g.do_cleanup(&mut vec![]);
+    let c = g.computed_permanent(fc).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 3), "and gone at cleanup");
 }
 
 // ── CR 509.1b block-restriction keywords ────────────────────────────────────

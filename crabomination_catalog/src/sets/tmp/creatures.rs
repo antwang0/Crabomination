@@ -1440,7 +1440,8 @@ pub fn opportunist() -> CardDefinition {
 pub fn rathi_dragon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessSacrifice { count: 1,
+        // "unless you sacrifice two Mountains" (it shipped asking one).
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessSacrifice { count: 2,
             filter: R::HasLandType(LandType::Mountain),
         })],
         ..creature("Rathi Dragon", cost(&[generic(2), r(), r()]), vec![CreatureType::Dragon], 5, 5)

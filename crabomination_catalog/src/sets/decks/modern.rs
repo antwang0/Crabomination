@@ -8972,6 +8972,31 @@ pub fn seasoned_pyromancer() -> CardDefinition {
                 }),
             },
         ]))],
+        // "{3}{R}{R}, Exile this card from your graveyard: Create two 1/1 red
+        // Elemental creature tokens" — shipped missing (the `cnt` audit column,
+        // 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r(), r()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: Box::new(TokenDefinition {
+                    name: "Elemental".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Elemental],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -10488,6 +10513,13 @@ pub fn servant_of_tymaret() -> CardDefinition {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
             },
+        }],
+        // "{2}{B}: Regenerate this creature" — the ability shipped missing (the
+        // `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -19387,6 +19419,31 @@ pub fn cloudgoat_ranger() -> CardDefinition {
                 definition: Box::new(kithkin),
             },
         }],
+        // "Tap three untapped Kithkin you control: This creature gets +2/+0 and
+        // gains flying until end of turn" — shipped missing (the `cnt` audit
+        // column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Kithkin))
+                    .and(SelectionRequirement::ControlledByYou),
+                3,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -22111,10 +22168,13 @@ pub fn festival_crasher() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
+        // "gets +2/+0 until end of turn" (it shipped growing by a permanent
+        // +1/+1 counter — the num column, 2026-09-10).
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
         })],
         ..Default::default()
     }
@@ -23961,6 +24021,15 @@ pub fn cranial_plating() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        // "{B}{B}: Attach this Equipment to target creature you control" — the
+        // instant-speed equip shipped missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b(), b()]),
+            effect: Effect::AttachSourceTo {
+                host: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+            },
+            ..Default::default()
+        }],
         equipped_bonus: Some(EquipBonus {
             power: 0,
             toughness: 0,
@@ -30713,6 +30782,13 @@ pub fn twisted_abomination() -> CardDefinition {
         power: 5,
         toughness: 3,
         keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Swamp)],
+        // "{B}: Regenerate this creature" — the ability shipped missing (the
+        // `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -39534,11 +39610,13 @@ pub fn bogardan_hellkite() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flash, Keyword::Flying],
+        // "5 damage divided as you choose among any number of targets" (it
+        // shipped dealing 4 — the num column, 2026-09-10).
         triggered_abilities: vec![etb(Effect::DealDamageDivided {
             retaliate_to_source: false,
-            total: Value::Const(4),
+            total: Value::Const(5),
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
-            max_targets: 4,
+            max_targets: 5,
         })],
         ..Default::default()
     }

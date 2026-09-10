@@ -42,6 +42,20 @@ pub fn aquastrand_spider() -> CardDefinition {
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         triggered_abilities: vec![crate::effect::shortcut::graft()],
+        // "{G}: Target creature with a +1/+1 counter on it gains reach until
+        // end of turn" — shipped missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            effect: Effect::GrantKeyword {
+                what: crate::effect::shortcut::target_filtered(
+                    crate::card::SelectionRequirement::Creature
+                        .and(crate::card::SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                keyword: Keyword::Reach,
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -58,6 +72,20 @@ pub fn plaxcaster_frogling() -> CardDefinition {
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
         triggered_abilities: vec![crate::effect::shortcut::graft()],
+        // "{2}: Target creature with a +1/+1 counter on it gains shroud until
+        // end of turn" — shipped missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::GrantKeyword {
+                what: crate::effect::shortcut::target_filtered(
+                    crate::card::SelectionRequirement::Creature
+                        .and(crate::card::SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                keyword: Keyword::Shroud,
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

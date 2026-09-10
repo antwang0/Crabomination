@@ -1284,6 +1284,13 @@ pub fn triskaidekaphile() -> CardDefinition {
                 effect: Effect::WinGame { who: PR::You },
             },
         ],
+        // "{3}{U}: Draw a card" — shipped missing (the `cnt` audit column,
+        // 2026-09-10).
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

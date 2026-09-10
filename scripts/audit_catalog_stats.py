@@ -1374,7 +1374,7 @@ def ability_mana_costs(body):
 # stripped first — "Cycling {2} ({2}, Discard this card: Draw a card.)" would
 # otherwise read as a {2} ability the code spells as a `cycling` field.
 _ORACLE_ACT = re.compile(r"^(?:[A-Z][a-z]+ — )?(\{[^:\n]*?):\s")
-_ORACLE_ACT_ANY = re.compile(r"^(?:[A-Z][a-z]+ — )?((?:\{|Sacrifice |Discard |Pay |Tap |Exile |Remove |Return |Put |Reveal |Unattach|Untap |Forage|Collect evidence)[^:\n]*?):\s")
+_ORACLE_ACT_ANY = re.compile(r"^(?:[A-Z][a-z]+ — )?((?:\{|Sacrifice |Discard |Pay |Tap |Exile |Remove |Return |Put |Reveal |Unattach|Untap |Forage|Collect evidence)[^:.\n]*?):\s")
 
 def ref_ability_mana_costs(card, face=None):
     """The mana-bearing activation costs the oracle prints, as `norm()`
@@ -2489,7 +2489,7 @@ def audit():
                 # `Keyword::Regenerate(1)`) and a delayed trigger the spell
                 # itself sets up (the Pacts' `DelayUntil`).
                 if kind == "act":
-                    n_code += len(re.findall(r"Keyword::Regenerate\(", body))
+                    n_code += len(re.findall(r"Keyword::Regenerate\(|discard_activated:\s*Some", body))
                 else:
                     n_code += len(re.findall(r"Effect::DelayUntil\b|\bDelayUntil \{", body))
                 if n_code < n_ref:

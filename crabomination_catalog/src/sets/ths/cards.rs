@@ -485,6 +485,13 @@ pub fn asphodel_wanderer() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
+        // "{2}{B}: Regenerate this creature" — the ability shipped missing (the
+        // `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

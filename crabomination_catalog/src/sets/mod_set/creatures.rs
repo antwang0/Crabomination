@@ -4441,6 +4441,18 @@ pub fn inferno_titan() -> CardDefinition {
                 effect: burn,
             },
         ],
+        // "{R}: This creature gets +1/+0 until end of turn" — the ability
+        // shipped missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -5748,6 +5760,13 @@ pub fn experiment_one() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![evolve()],
+        // "Remove two +1/+1 counters from this creature: Regenerate it" —
+        // shipped missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 2)),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

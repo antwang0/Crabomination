@@ -486,6 +486,18 @@ pub fn furnace_hellkite() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
+        // "{R}: This creature gets +1/+0 until end of turn" — the ability
+        // shipped missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -2221,6 +2233,18 @@ pub fn inkrise_infiltrator() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
+        // "{3}{B}: This creature gets +2/+2 until end of turn" — shipped missing
+        // (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

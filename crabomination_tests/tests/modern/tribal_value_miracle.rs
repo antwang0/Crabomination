@@ -1187,13 +1187,15 @@ fn hornet_queen_etb_makes_four_deathtouch_insects() {
 }
 
 #[test]
-fn bogardan_hellkite_etb_deals_four_damage() {
+/// "5 damage divided as you choose" — it shipped dealing 4 (the num column,
+/// 2026-09-10).
+fn bogardan_hellkite_etb_deals_five_damage() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::bogardan_hellkite());
     let opp_life = g.players[1].life;
     g.fire_self_etb_triggers(id, 0);
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_life - 4, "dealt 4 damage on ETB");
+    assert_eq!(g.players[1].life, opp_life - 5, "dealt 5 damage on ETB");
 }
 
 #[test]
@@ -2540,3 +2542,153 @@ fn sicarian_infiltrator_squad_draws_per_copy() {
         .filter(|c| c.definition.name == "Sicarian Infiltrator").count(), 2);
 }
 
+
+// ── Activated abilities the `cnt` audit column found missing, 2026-09-10 ────
+
+fn activate_first(g: &mut GameState, id: CardId, target: Option<Target>) -> Result<Vec<GameEvent>, GameError> {
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target, additional_targets: Vec::new(), x_value: None, mode: None,
+    });
+    drain_stack(g);
+    r
+}
+
+/// "{R}: +1/+0" (Shivan Dragon, Inferno Titan, Furnace Hellkite) and Inkrise
+/// Infiltrator's "{3}{B}: +2/+2" — every one shipped without the ability.
+#[test]
+fn firebreathing_pumps_the_cnt_column_found() {
+    for (def, mana, pump) in [
+        (catalog::shivan_dragon(), (Color::Red, 1, 0), (1, 0)),
+        (catalog::inferno_titan(), (Color::Red, 1, 0), (1, 0)),
+        (catalog::furnace_hellkite(), (Color::Red, 1, 0), (1, 0)),
+        (catalog::inkrise_infiltrator(), (Color::Black, 1, 3), (2, 2)),
+    ] {
+        let name = def.name;
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, def);
+        let (p, t) = { let c = g.computed_permanent(id).unwrap(); (c.power, c.toughness) };
+        g.players[0].mana_pool.add(mana.0, mana.1);
+        g.players[0].mana_pool.add_colorless(mana.2);
+        activate_first(&mut g, id, None).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+        let c = g.computed_permanent(id).unwrap();
+        assert_eq!((c.power, c.toughness), (p + pump.0, t + pump.1), "{name} pumped");
+    }
+}
+
+/// "{cost}: Regenerate this creature" — Servant of Tymaret {2}{B}, Twisted
+/// Abomination {B}, Asphodel Wanderer {2}{B}, Experiment One (remove two
+/// +1/+1 counters) — every one shipped without the ability.
+#[test]
+fn regenerate_abilities_the_cnt_column_found() {
+    for (def, black, generic, counters) in [
+        (catalog::servant_of_tymaret(), 1, 2, 0),
+        (catalog::twisted_abomination(), 1, 0, 0),
+        (catalog::asphodel_wanderer(), 1, 2, 0),
+        (catalog::experiment_one(), 0, 0, 2),
+    ] {
+        let name = def.name;
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, def);
+        g.players[0].mana_pool.add(Color::Black, black);
+        g.players[0].mana_pool.add_colorless(generic);
+        if counters > 0 {
+            g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, counters);
+        }
+        activate_first(&mut g, id, None).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+        if counters > 0 {
+            assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "{name}: the counters were the cost");
+        }
+        g.battlefield_find_mut(id).unwrap().damage = 99;
+        g.check_state_based_actions();
+        assert!(g.battlefield_find(id).is_some(), "{name} regenerated instead of dying");
+    }
+}
+
+/// Cranial Plating's "{B}{B}: Attach this Equipment to target creature you
+/// control" shipped missing.
+#[test]
+fn cranial_plating_attaches_for_bb() {
+    let mut g = two_player_game();
+    let plating = g.add_card_to_battlefield(0, catalog::cranial_plating());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    activate_first(&mut g, plating, Some(Target::Permanent(bear))).expect("{{B}}{{B}}: attach");
+    assert_eq!(g.battlefield_find(plating).unwrap().attached_to, Some(bear));
+}
+
+/// Jack-o'-Lantern's graveyard mana and Seasoned Pyromancer's graveyard
+/// Elementals shipped missing.
+#[test]
+fn graveyard_abilities_the_cnt_column_found() {
+    let mut g = two_player_game();
+    let lantern = g.add_card_to_graveyard(0, catalog::jack_o_lantern());
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lantern, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{{1}}, exile from graveyard: add one mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "the {{1}} became one mana of a colour");
+    assert!(g.exile.iter().any(|c| c.id == lantern), "exiled as the cost");
+
+    let pyro = g.add_card_to_graveyard(0, catalog::seasoned_pyromancer());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    activate_first(&mut g, pyro, None).expect("{{3}}{{R}}{{R}}, exile from graveyard");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Elemental" && c.controller == 0).count(), 2);
+}
+
+/// Cloudgoat Ranger's "Tap three untapped Kithkin you control: +2/+0 and
+/// flying" shipped missing.
+#[test]
+fn cloudgoat_ranger_taps_three_kithkin_to_fly() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let ranger = g.add_card_to_battlefield(0, catalog::cloudgoat_ranger());
+    assert!(activate_first(&mut g, ranger, None).is_err(), "no Kithkin to tap");
+    g.move_card_to_battlefield_for_test(0, catalog::cloudgoat_ranger());
+    drain_stack(&mut g); // three Kithkin Soldier tokens
+    activate_first(&mut g, ranger, None).expect("tap three Kithkin");
+    let c = g.computed_permanent(ranger).unwrap();
+    assert_eq!(c.power, 5, "+2/+0");
+    assert!(c.keywords().contains(&Keyword::Flying), "and flying");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Kithkin Soldier" && c.tapped).count(), 3);
+}
+
+/// Triskaidekaphile's "{3}{U}: Draw a card", Ride the Shoopuf's "{5}{G}{G}:
+/// becomes a 7/7 Beast", Aquastrand Spider's reach and Plaxcaster Frogling's
+/// shroud grants shipped missing.
+#[test]
+fn more_activated_abilities_the_cnt_column_found() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let tris = g.add_card_to_battlefield(0, catalog::triskaidekaphile());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    activate_first(&mut g, tris, None).expect("{{3}}{{U}}: draw");
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+
+    let shoopuf = g.add_card_to_battlefield(0, catalog::ride_the_shoopuf());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    activate_first(&mut g, shoopuf, None).expect("{{5}}{{G}}{{G}}: animate");
+    let c = g.computed_permanent(shoopuf).unwrap();
+    assert!(c.card_types().contains(&CardType::Creature) && (c.power, c.toughness) == (7, 7), "a 7/7 Beast");
+
+    let spider = g.add_card_to_battlefield(0, catalog::aquastrand_spider());
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(plain).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    activate_first(&mut g, spider, Some(Target::Permanent(plain))).expect("{{G}}: reach");
+    assert!(g.computed_permanent(plain).unwrap().keywords().contains(&Keyword::Reach));
+
+    let frog = g.add_card_to_battlefield(0, catalog::plaxcaster_frogling());
+    g.players[0].mana_pool.add_colorless(2);
+    activate_first(&mut g, frog, Some(Target::Permanent(plain))).expect("{{2}}: shroud");
+    assert!(g.computed_permanent(plain).unwrap().keywords().contains(&Keyword::Shroud));
+}

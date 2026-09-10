@@ -204,6 +204,18 @@ pub fn shivan_dragon() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
+        // "{R}: This creature gets +1/+0 until end of turn" — the ability
+        // shipped missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

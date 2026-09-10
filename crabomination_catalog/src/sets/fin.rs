@@ -2842,6 +2842,21 @@ pub fn ride_the_shoopuf() -> CardDefinition {
                 amount: Value::ONE,
             },
         }],
+        // "{5}{G}{G}: This enchantment becomes a 7/7 Beast creature in addition
+        // to its other types" — shipped missing (the `cnt` audit column,
+        // 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), g(), g()]),
+            effect: Effect::BecomeCreature {
+                what: Selector::This,
+                power: Value::Const(7),
+                toughness: Value::Const(7),
+                creature_types: vec![CreatureType::Beast],
+                keywords: vec![],
+                duration: crate::effect::Duration::Permanent,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
