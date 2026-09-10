@@ -2806,7 +2806,7 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### 2026-09-10 — the `num` / `stat` audit columns and the 41 wrong-amount cards, the searching / dflt sweeps at fresh seeds, every gate on a fourth box
+### 2026-09-10 — the `num` / `stat` / `mana` audit columns and the 43 wrong-amount cards, the searching / dflt sweeps at fresh seeds, every gate on a fourth box
 
 No perf leg: the queue's engine side still reads floor and the bot-side
 rows are strength rounds, so the run went to the bug finders. The new
@@ -2815,7 +2815,8 @@ reads each ability's printed amounts against its literal's integers
 (INCOMPLETE_CARDS "Amounts") and found 39 shipped cards at the wrong
 number — Languish -2/-2, Searing Wind 5, Fatal Push without revolt, Abrupt
 Decay at mana value 2, six of them training-pool cards — plus two more
-off the `stat` reader (Carapace Forger, Elvish Reclaimer). None sits in a
+off the `stat` reader (Carapace Forger, Elvish Reclaimer) and two off
+`mana` (The Great Henge's `{G}`, Cultivator Drone's `{C}{C}`). None sits in a
 traced or `fixed`-pool game: golden traces 10 / 10 and the `--bench`
 counters identical. The sweeps found nothing. **The Ir base was NOT
 re-taken** (no A/B this run; the next perf leg re-takes the triple first).
@@ -2844,7 +2845,7 @@ actor   target-audit/overflow/selfplay_train (debug-assertions, 9m46s cold) --ac
 final   suite 19,300 / 0 / 5 (81.2 s idle, golden_trace 10 / 10; +1 revolt test, -1 test written for a synthesised Pest Control)
 suite   audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare; audit_doc_drift 0 body wrong; audit_keyword_value 0 wrong of 762;
         audit_bottom_random 0 / 0; audit_catalog_stats.py 17,229 cards: kw 20 / abil 1 / T-sac 3 / trig 6 / scope 3 the documented
-        residue, num 80 / stat 16 (INCOMPLETE_CARDS "Amounts" names the shapes)
+        residue, num 80 / stat 16 / mana 0 (INCOMPLETE_CARDS "Amounts" names the shapes)
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz nominal, 4 cores, 15 GB; cold debug suite build 5m59s quiet, cold
         release-fast bot_ladder 9m19s, cold audit bot_ladder 8m04s
 ```

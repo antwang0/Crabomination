@@ -821,6 +821,15 @@ whose amount lives in the engine (`ControllerDrawsDoubled`,
 or, in one case, a different shape: The Water Crystal's "mill that many
 plus four" ships as `OpponentMillDoubled`.
 
+And a `mana` column the same day — an `AddMana` activation literal's
+payload (a `Colors` list or its repeat form, `Colorless` / `OfColor` /
+`AnyOneColor` at a literal count, the parts of a `Seq` summed, an `If`'s
+`else_` branch as the printed base) against the oracle's "{cost}: Add .."
+lines as symbol multisets — read 8 rows, two real: The Great Henge tapped
+for `{G}` (printed `{G}{G}`) and Cultivator Drone for `{C}{C}` (printed
+`{C}`). Zero residue; mana abilities built through a helper are not
+compared.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

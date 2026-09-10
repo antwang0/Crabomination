@@ -156,7 +156,7 @@ fn incubator_and_catacomb_sifter_make_scions() {
     assert_eq!(scion_count(&g), 2, "Catacomb Sifter adds a second Scion");
 }
 
-/// Warden of Geometries taps for {C}; Cultivator Drone taps for {C}{C}.
+/// Warden of Geometries and Cultivator Drone each tap for {C}.
 #[test]
 fn devoid_mana_dorks_tap_for_colorless() {
     let mut g = two_player_game();
@@ -170,7 +170,7 @@ fn devoid_mana_dorks_tap_for_colorless() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: c, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("cultivator taps");
-    assert_eq!(g.players[0].mana_pool.colorless_amount(), 3, "{{C}} + {{C}}{{C}}");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "{{C}} + {{C}}");
 }
 
 /// Oblivion Strike exiles a creature; Complete Disregard only hits power ≤3.

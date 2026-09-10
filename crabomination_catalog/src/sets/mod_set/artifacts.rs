@@ -1400,8 +1400,8 @@ pub fn birthing_pod() -> CardDefinition {
 }
 
 /// The Great Henge — {7}{G}{G} Artifact. "This spell costs {X} less to cast,
-/// where X is the greatest power among creatures you control." "{T}: Add {G} and
-/// you gain 2 life." "Whenever a nontoken creature you control enters, draw a
+/// where X is the greatest power among creatures you control." "{T}: Add {G}{G}. You
+/// gain 2 life." "Whenever a nontoken creature you control enters, draw a
 /// card and put a +1/+1 counter on that creature."
 pub fn the_great_henge() -> CardDefinition {
     use crate::card::{CounterType, StaticAbility, StaticEffect};
@@ -1421,7 +1421,7 @@ pub fn the_great_henge() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::Colors(vec![Color::Green]),
+                    pool: ManaPayload::Colors(vec![Color::Green, Color::Green]),
                 },
                 Effect::GainLife {
                     who: Selector::You,

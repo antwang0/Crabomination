@@ -253,19 +253,19 @@ fn the_great_henge_mana_life_and_etb_payoff() {
     let mut g = two_player_game();
     let henge = g.add_card_to_battlefield(0, catalog::the_great_henge());
     g.clear_sickness(henge);
-    // {T}: add {G}, gain 2 life.
+    // {T}: add {G}{G}, gain 2 life.
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: henge, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap Henge for mana + life");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added {{G}}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "added {{G}}{{G}}");
     assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
     // Nontoken creature ETB → draw + counter.
     g.add_card_to_library(0, catalog::shock()); // something to draw
     let lib_before = g.players[0].library.len();
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add_colorless(1); // {G} already floating from the tap
+    // {G}{G} is already floating from the tap.
     g.perform_action(GameAction::CastSpell {
         card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast a nontoken creature");

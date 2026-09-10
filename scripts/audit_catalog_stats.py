@@ -5,7 +5,8 @@ Scans every card factory under crabomination_catalog/src/sets/ and checks the
 printed-stat columns against the cache: mana cost, power/toughness, creature
 subtypes, card / supertypes, keywords, activated-ability costs / timing /
 tap-sac halves, loyalty, token P/T, trigger events / scopes / filters, and
-the amounts an ability prints (`num`, INCOMPLETE_CARDS "Amounts").
+the amounts an ability prints (`num` / `stat`) and the mana an activation
+adds (`mana`) — INCOMPLETE_CARDS "Amounts".
 Generalizes audit_stx_drift.py (cost+P/T, STX only) and audit_stx_types.py
 (type+keywords, STX only) to the whole catalog.
 
@@ -1277,6 +1278,118 @@ def static_numbers(body):
     body = re.sub(r"\bname:\s*\"[^\"]*\"", "", body)
     return with_bindings(body, local_bindings(body))
 
+# ── mana produced ───────────────────────────────────────────────────────────
+# An `AddMana` literal's payload against the oracle's "{cost}: Add .." line,
+# as a multiset of symbols: a colour letter, `C`, `*` for "one mana of any
+# color", `?` for a choice among named colours ("Add {R} or {G}").
+_MANA_LETTER = {"White": "W", "Blue": "U", "Black": "B", "Red": "R", "Green": "G"}
+
+def _payload_count(v):
+    v = v.strip()
+    if v in ("Value::ONE", "ONE"):
+        return 1
+    if v in ("Value::ZERO", "ZERO"):
+        return 0
+    m = re.fullmatch(r"(?:Value::)?Const\((\d+)\)", v)
+    return int(m.group(1)) if m else None
+
+def payload_symbols(text):
+    """The symbol multiset of one `ManaPayload::..` expression, or `None`
+    when the variant or its count is not a literal the reader can price."""
+    m = re.search(r"ManaPayload::(\w+)", text)
+    if not m:
+        return None
+    kind = m.group(1)
+    rest = text[m.end():]
+    if kind == "Restricted":
+        return payload_symbols(rest)
+    if kind == "Colors":
+        k = rest.find("[")
+        inner = rest[k + 1: bracket_span(rest, k) - 1] if k >= 0 else ""
+        # `vec![Color::Green; 3]` is the repeat form.
+        rep = re.fullmatch(r"\s*Color::(\w+)\s*;\s*(\d+)\s*", inner)
+        if rep:
+            return _MANA_LETTER[rep.group(1)] * int(rep.group(2))
+        return "".join(sorted(_MANA_LETTER[c] for c in re.findall(r"Color::(\w+)", inner)))
+    if kind in ("Colorless", "AnyOneColor", "AnyColors"):
+        k = rest.find("(")
+        n = _payload_count(rest[k + 1: bracket_span(rest, k) - 1]) if k == 0 else None
+        return None if n is None else {"Colorless": "C", "AnyOneColor": "*", "AnyColors": "*"}[kind] * n
+    if kind == "OfColor":
+        mm = re.match(r"\(Color::(\w+),\s*([^)]*)\)", rest)
+        n = _payload_count(mm.group(2)) if mm else None
+        return None if n is None else _MANA_LETTER[mm.group(1)] * n
+    if kind == "OfColors":
+        k = rest.find("[")
+        if k < 0:
+            return None
+        end = bracket_span(rest, k)
+        n = _payload_count(rest[end:].lstrip(" ,").rstrip(") "))
+        return None if n is None else "?" * n
+    return None
+
+def ability_mana(body):
+    """Per `AddMana` activation literal, its payload symbols; `None` when the
+    vec has a helper call or a payload is not readable."""
+    lits = ability_literals(body)
+    if lits is None:
+        return None
+    out = []
+    for lit in lits:
+        if "Effect::AddMana" not in lit:
+            continue
+        # A conditional's `then:` branch is the upgrade (Ilysian Caryatid's
+        # two mana at power 4); the printed base line is the `else_:`.
+        k = lit.find("then: Box::new(")
+        if k >= 0:
+            e = lit.find("else_:", k)
+            lit = lit[:k] + (lit[e:] if e >= 0 else "")
+        syms = []
+        for m in re.finditer(r"Effect::AddMana\b", lit):
+            end = bracket_span(lit, lit.find("{", m.end()))
+            sym = payload_symbols(lit[m.end(): end])
+            if sym is None:
+                return None
+            syms.append(sym)
+        out.append("".join(sorted("".join(syms))))
+    return out
+
+_ORACLE_ADD = re.compile(r"^Add (.*)$")
+
+def ref_ability_mana(card, face=None):
+    """Per oracle activation line that reads "Add ..", its symbol multiset;
+    `None` when a line is not a fixed amount ("for each", "X", "equal to")."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    out = []
+    for line in text.split("\n"):
+        m = _ORACLE_ACT.match(line.strip())
+        if not m:
+            continue
+        eff = line.strip()[m.end():].split(".")[0].strip()
+        a = _ORACLE_ADD.match(eff)
+        if not a:
+            continue
+        what = a.group(1)
+        if re.search(r"\bfor each\b|\bX\b|\bequal to\b|\bthat many\b|\bchosen\b|\bcould produce\b|\bcombination\b", what):
+            return None
+        syms = re.findall(r"\{([WUBRGC])\}", what)
+        if syms:
+            if re.search(r"\bor\b|/", what):
+                out.append("?" * (1 if len(syms) else 0))
+            else:
+                out.append("".join(sorted(syms)))
+            continue
+        w = re.match(r"(one|two|three|four|five|\d+) mana of any (?:one )?color", what)
+        if w:
+            n = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}.get(w.group(1)) or int(w.group(1))
+            out.append("*" * n)
+            continue
+        return None
+    return out
+
 def numbers_mismatch(code, ref):
     """No one-to-one assignment of literals to oracle abilities carries every
     oracle amount in the literal it is assigned to."""
@@ -1704,7 +1817,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": [], "mana": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -1867,6 +1980,13 @@ def audit():
             if fw is not None and ref_fw is not None and len(fw) == len(ref_fw):
                 if filter_mismatch(fw, ref_fw):
                     d["filt"].append((tag, [sorted(c[1]) if c is not None else "-" for c in fw], [sorted(f) if f is not None else "-" for f in ref_fw]))
+            # mana produced: each AddMana activation literal's payload
+            # against the oracle's "Add .." lines, as multisets, same gate.
+            mana = ability_mana(body)
+            ref_mana = ref_ability_mana(card, face)
+            if mana is not None and ref_mana is not None and mana and len(mana) == len(ref_mana):
+                if sorted(mana) != sorted(ref_mana):
+                    d["mana"].append((tag, mana, ref_mana))
             # amounts: the oracle numbers of each activation / trigger line
             # (and a spell's text) must appear in the literal assigned to
             # it, one-to-one, same count gate. Statics are not read.
@@ -1907,21 +2027,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num", "stat"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num", "stat")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}")
-        print("-" * 116)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}{'mana':>6}")
+        print("-" * 122)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 116)
+        print("-" * 122)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 

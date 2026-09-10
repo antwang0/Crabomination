@@ -119,8 +119,9 @@ pub fn warden_of_geometries() -> CardDefinition {
     }
 }
 
-/// Cultivator Drone — {2}{U} 2/3 Eldrazi Drone. Devoid, {T}: Add {C}{C}.
-/// (The "spend only to cast colorless spells" restriction is dropped.)
+/// Cultivator Drone — {2}{U} 2/3 Eldrazi Drone. Devoid, {T}: Add {C}.
+/// (The "spend only on colorless spells / abilities / {C} costs"
+/// restriction is dropped.)
 pub fn cultivator_drone() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::{ManaPayload, PlayerRef, Value};
@@ -129,7 +130,7 @@ pub fn cultivator_drone() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::Const(2)),
+                pool: ManaPayload::Colorless(Value::ONE),
             },
             ..Default::default()
         }],
