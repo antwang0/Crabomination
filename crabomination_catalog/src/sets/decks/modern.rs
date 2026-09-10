@@ -22005,7 +22005,19 @@ pub fn reaper_of_night() -> CardDefinition {
         },
         power: 4,
         toughness: 5,
-        keywords: vec![Keyword::Flying],
+        // "Whenever Reaper of Night attacks, if defending player has two or
+        // fewer cards in hand, it gains flying until end of turn" — shipped as
+        // printed flying, and Harvest Fear's discard as a random one (the
+        // `cnt` audit column, 2026-09-10).
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::If {
+            cond: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::EachOpponent), Value::Const(2)),
+            then: Box::new(Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
         adventure: Some(Box::new(Adventure {
             name: "Harvest Fear",
             cost: cost(&[generic(3), b()]),
@@ -22013,7 +22025,7 @@ pub fn reaper_of_night() -> CardDefinition {
             effect: Effect::Discard {
                 who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),
-                random: true,
+                random: false,
             },
         })),
         ..Default::default()

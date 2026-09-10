@@ -11439,4 +11439,81 @@ mod cnt_column_2026_09_10 {
         g.do_cleanup(&mut vec![]);
         assert!(!g.computed_permanent(aang).unwrap().keywords().contains(&Keyword::Lifelink), "wore off");
     }
+
+    /// Questing Beast's "Whenever Questing Beast deals combat damage to an
+    /// opponent, it deals that much damage to target planeswalker that player
+    /// controls" shipped missing (the `cnt` audit column, 2026-09-10).
+    #[test]
+    fn questing_beast_passes_combat_damage_to_a_planeswalker() {
+        use crabomination::card::CounterType;
+        use crabomination::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let beast = g.add_card_to_battlefield(0, catalog::questing_beast());
+        let walker = g.add_card_to_battlefield(1, catalog::liliana_of_the_veil());
+        let loyalty = g.battlefield_find(walker).unwrap().counter_count(CounterType::Loyalty);
+        g.clear_sickness(beast);
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: beast, target: AttackTarget::Player(1) }])).expect("attack");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareBlockers;
+        g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+        drain_stack(&mut g);
+        g.step = TurnStep::CombatDamage;
+        g.resolve_combat().expect("combat damage");
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, 16, "4 to the player");
+        match g.battlefield_find(walker) {
+            Some(w) => assert_eq!(w.counter_count(CounterType::Loyalty), loyalty - 4, "and 4 to the planeswalker"),
+            None => assert!(loyalty <= 4, "the planeswalker died to the 4"),
+        }
+    }
+
+    /// Earthbender Ascension's landfall — a quest counter, then at four a
+    /// +1/+1 counter and trample on up to one target creature — shipped
+    /// missing (the `cnt` audit column, 2026-09-10).
+    #[test]
+    fn earthbender_ascension_landfall_quest_counters_pay_off_at_four() {
+        use crabomination::card::CounterType;
+        let mut g = two_player_game();
+        let asc = g.add_card_to_battlefield(0, catalog::earthbender_ascension());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, 2);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let land = g.add_card_to_hand(0, catalog::forest());
+        g.perform_action(GameAction::PlayLand(land)).expect("land drop");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest), 3);
+        assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "three is not four");
+        g.players[0].lands_played_this_turn = 0;
+        let land = g.add_card_to_hand(0, catalog::forest());
+        g.perform_action(GameAction::PlayLand(land)).expect("second land drop");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest), 4);
+        assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "the fourth pays off");
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
+    }
+
+    /// Shadow Urchin's "Whenever a creature you control with one or more
+    /// counters on it dies, exile that many cards from the top of your
+    /// library. Until your next end step, you may play those cards" shipped
+    /// missing (the `cnt` audit column, 2026-09-10).
+    #[test]
+    fn shadow_urchin_exiles_as_many_cards_as_the_dead_creature_had_counters() {
+        use crabomination::card::CounterType;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::shadow_urchin());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let (library, exile) = (g.players[0].library.len(), g.exile.len());
+        g.battlefield_find_mut(bear).unwrap().damage = 99;
+        let evs = g.check_state_based_actions();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].library.len(), library - 2, "two counters, two cards");
+        assert_eq!(g.exile.len(), exile + 2);
+    }
 }

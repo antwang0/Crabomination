@@ -307,7 +307,31 @@ pub fn shadow_urchin() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        triggered_abilities: vec![on_attack(Effect::Blight { n: Value::ONE })],
+        triggered_abilities: vec![
+            on_attack(Effect::Blight { n: Value::ONE }),
+            // "Whenever a creature you control with one or more counters on it
+            // dies, exile that many cards from the top of your library. Until
+            // your next end step, you may play those cards" — shipped missing
+            // (the `cnt` audit column, 2026-09-10). The permission's window is
+            // the engine's "end of your next turn", a step longer.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::WithAnyCounter,
+                    },
+                ),
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::TotalCountersOn { what: Box::new(Selector::TriggerSource) },
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    max_mana_value: None,
+                    pay_own_cost: true,
+                    uncast_penalty: None,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

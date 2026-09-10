@@ -2535,3 +2535,21 @@ fn crawling_infestation_spawns_insect() {
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Insect"), 1, "creature-to-graveyard spawns an Insect");
 }
+
+
+/// Edgar's Awakening's "When you discard this card, you may pay {B}. When you
+/// do, return target creature card from your graveyard to your hand" shipped
+/// missing (the `cnt` audit column, 2026-09-10).
+#[test]
+fn edgars_awakening_discarded_for_b_returns_a_creature_card() {
+    let mut g = two_player_game();
+    let edgar = g.add_card_to_hand(0, catalog::edgars_awakening());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateDiscardAbility { card_id: edgar }).expect("discard it for {{B}}");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == edgar), "discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the Bear came back to hand");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}

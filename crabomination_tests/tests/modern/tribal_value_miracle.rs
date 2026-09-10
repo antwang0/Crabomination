@@ -2831,3 +2831,36 @@ fn leave_and_sacrifice_triggers_the_cnt_column_found() {
     let _ = lonis;
     assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "the other creature got the counter");
 }
+
+
+/// Golos, Tireless Pilgrim's "{2}{W}{U}{B}{R}{G}: Exile the top three cards of
+/// your library. You may play them this turn without paying their mana costs"
+/// shipped missing (the `cnt` audit column, 2026-09-10).
+#[test]
+fn golos_exiles_three_to_play_free_this_turn() {
+    let mut g = two_player_game();
+    let golos = g.add_card_to_battlefield(0, catalog::golos_tireless_pilgrim());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let (library, exile) = (g.players[0].library.len(), g.exile.len());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: golos, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{{2}}{{W}}{{U}}{{B}}{{R}}{{G}}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), library - 3);
+    assert_eq!(g.exile.len(), exile + 3);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    let playable = g.exile.iter().filter(|c| c.owner == 0 && c.may_play_until.is_some()).count();
+    assert_eq!(playable, 3, "all three playable this turn");
+    assert!(
+        g.exile.iter().filter(|c| c.may_play_until.is_some()).all(|c| c.granted_alt_cast_cost_eot.is_none()),
+        "without paying their mana costs"
+    );
+}

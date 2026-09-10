@@ -3311,6 +3311,18 @@ pub fn edgars_awakening() -> CardDefinition {
                 tapped: false,
             },
         },
+        // "When you discard this card, you may pay {B}. When you do, return
+        // target creature card from your graveyard to your hand" — shipped
+        // missing (the `cnt` audit column, 2026-09-10). The discard-activated
+        // slot is the engine's "discard this: .." shape; its reflexive body is
+        // targetless, so the card is chosen at resolution.
+        discard_activated: Some(Box::new(crate::card::DiscardActivated {
+            cost: cost(&[b()]),
+            effect: Effect::ReturnGraveyardCardsToHand {
+                filter: SelectionRequirement::Creature,
+                max: Value::ONE,
+            },
+        })),
         ..Default::default()
     }
 }

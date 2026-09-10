@@ -3649,3 +3649,27 @@ fn dai_li_agents_drain_per_countered_creature_on_attack() {
     assert_eq!(g.players[1].life, 18, "two creatures carry counters");
     assert_eq!(g.players[0].life, 22);
 }
+
+
+/// Buzzard-Wasp Colony's "Whenever another creature you control dies, if it
+/// had counters on it, put its counters on this creature" shipped missing (the
+/// `cnt` audit column, 2026-09-10).
+#[test]
+fn buzzard_wasp_colony_inherits_a_dead_creatures_counters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let colony = g.add_card_to_battlefield(0, catalog::buzzard_wasp_colony());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(colony).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "the counters moved over");
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(plain).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(colony).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "a counterless death adds nothing");
+}

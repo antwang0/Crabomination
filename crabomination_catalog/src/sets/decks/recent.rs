@@ -2884,6 +2884,22 @@ pub fn questing_beast() -> CardDefinition {
             description: "Combat damage that would be dealt by creatures you control can't be prevented.",
             effect: StaticEffect::ControllerCreaturesCombatDamageCantBePrevented,
         }],
+        // "Whenever Questing Beast deals combat damage to an opponent, it
+        // deals that much damage to target planeswalker that player controls"
+        // — shipped missing (the `cnt` audit column, 2026-09-10; Mordant
+        // Dragon's shape).
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(
+                crate::card::EventKind::DealsCombatDamageToPlayer,
+                crate::card::EventScope::SelfSource,
+            ),
+            effect: Effect::DealDamage {
+                to: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::Planeswalker.and(SelectionRequirement::ControlledByTriggerPlayer),
+                ),
+                amount: Value::TriggerEventAmount,
+            },
+        }],
         ..Default::default()
     }
 }

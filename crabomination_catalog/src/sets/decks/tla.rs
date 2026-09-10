@@ -2402,17 +2402,28 @@ pub fn buzzard_wasp_colony() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::MaySacrifice {
-            description: "Sacrifice an artifact or creature?".into(),
-            filter: SelectionRequirement::HasCardType(CardType::Artifact)
-                .or(SelectionRequirement::Creature),
-            count: Value::ONE,
-            then: Box::new(Effect::Draw {
-                who: Selector::You,
-                amount: Value::ONE,
+        triggered_abilities: vec![
+            etb(Effect::MaySacrifice {
+                description: "Sacrifice an artifact or creature?".into(),
+                filter: SelectionRequirement::HasCardType(CardType::Artifact)
+                    .or(SelectionRequirement::Creature),
+                count: Value::ONE,
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
+                else_: None,
             }),
-            else_: None,
-        })],
+            // "Whenever another creature you control dies, if it had counters
+            // on it, put its counters on this creature" — shipped missing (the
+            // `cnt` audit column, 2026-09-10). The intervening "if" is the
+            // move itself: a counterless death moves nothing (the move reads
+            // the dying creature's LKI).
+            crate::effect::shortcut::on_other_dies(Effect::MoveAllCounters {
+                from: Selector::TriggerSource,
+                to: Selector::This,
+            }),
+        ],
         ..Default::default()
     }
 }

@@ -1693,7 +1693,9 @@ pub fn step_through() -> CardDefinition {
 }
 
 pub fn inkfathom_witch() -> CardDefinition {
-    use crate::effect::PlayerRef as PR;
+    // "{2}{U}{B}: Each unblocked creature has base power and toughness 4/1
+    // until end of turn" — shipped as an unprinted ETB discard with the
+    // activation missing (the `cnt` audit column, 2026-09-10).
     CardDefinition {
         name: "Inkfathom Witch",
         cost: cost(&[generic(1), hybrid(Color::Blue, Color::Black)]),
@@ -1705,13 +1707,17 @@ pub fn inkfathom_witch() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Fear],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DiscardChosen {
-                from: Selector::Player(PR::EachOpponent),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Nonland,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u(), b()]),
+            effect: Effect::SetBasePT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::IsUnblocked),
+                ),
+                power: Value::Const(4),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
             },
+            ..Default::default()
         }],
         ..Default::default()
     }

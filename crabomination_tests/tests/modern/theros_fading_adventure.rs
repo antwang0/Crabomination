@@ -1396,3 +1396,34 @@ fn merchant_of_the_vale_discards_a_card_to_draw() {
     assert_eq!(g.players[0].hand.len(), hand, "one out, one in");
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
+
+
+/// Reaper of Night's "Whenever Reaper of Night attacks, if defending player
+/// has two or fewer cards in hand, it gains flying until end of turn" shipped
+/// as printed flying (the `cnt` audit column, 2026-09-10).
+#[test]
+fn reaper_of_night_flies_only_into_an_emptying_hand() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let reaper = g.add_card_to_battlefield(0, catalog::reaper_of_night());
+    assert!(!g.computed_permanent(reaper).unwrap().keywords().contains(&Keyword::Flying), "no printed flying");
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    g.clear_sickness(reaper);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: reaper, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(reaper).unwrap().keywords().contains(&Keyword::Flying), "three cards in hand: no flying");
+
+    let mut g = two_player_game();
+    let reaper = g.add_card_to_battlefield(0, catalog::reaper_of_night());
+    for _ in 0..2 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    g.clear_sickness(reaper);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: reaper, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(reaper).unwrap().keywords().contains(&Keyword::Flying), "two cards in hand: flying until end of turn");
+}

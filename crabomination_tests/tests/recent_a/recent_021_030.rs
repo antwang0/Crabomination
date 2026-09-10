@@ -4175,3 +4175,45 @@ mod recent30 {
         assert!(cp.keywords().contains(&Keyword::StartYourEngines));
     }
 }
+
+
+mod cnt_column_2026_09_10 {
+    use crabomination::card::CardType;
+    use crabomination::catalog;
+    use crabomination::game::*;
+    use crabomination::TurnStep;
+
+    /// Earthrumbler's "Exile an artifact or creature card from your graveyard:
+    /// This Vehicle becomes an artifact creature until end of turn" shipped
+    /// missing (the `cnt` audit column, 2026-09-10).
+    #[test]
+    fn earthrumbler_animates_by_exiling_a_graveyard_card() {
+        let mut g = two_player_game();
+        let rumbler = g.add_card_to_battlefield(0, catalog::earthrumbler());
+        let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        assert!(!g.computed_permanent(rumbler).unwrap().card_types().contains(&CardType::Creature));
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: rumbler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        }).expect("exile the Bear from the graveyard");
+        drain_stack(&mut g);
+        assert!(g.exile.iter().any(|c| c.id == bear), "the cost");
+        let r = g.computed_permanent(rumbler).unwrap();
+        assert!(r.card_types().contains(&CardType::Creature), "an artifact creature until end of turn");
+        assert_eq!((r.power, r.toughness), (7, 6));
+    }
+
+    /// Alacrian Armory's "At the beginning of combat on your turn, choose up to
+    /// one target Mount or Vehicle you control. Until end of turn, it becomes
+    /// saddled or crewed and becomes an artifact creature" shipped missing
+    /// (the `cnt` audit column, 2026-09-10).
+    #[test]
+    fn alacrian_armory_crews_a_vehicle_at_the_beginning_of_combat() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::alacrian_armory());
+        let rumbler = g.add_card_to_battlefield(0, catalog::earthrumbler());
+        assert!(!g.computed_permanent(rumbler).unwrap().card_types().contains(&CardType::Creature));
+        g.fire_step_triggers(TurnStep::BeginCombat);
+        drain_stack(&mut g);
+        assert!(g.computed_permanent(rumbler).unwrap().card_types().contains(&CardType::Creature), "crewed for the turn");
+    }
+}

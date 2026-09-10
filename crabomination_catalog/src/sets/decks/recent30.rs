@@ -314,6 +314,20 @@ pub fn earthrumbler() -> CardDefinition {
         power: 7,
         toughness: 6,
         keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Crew(3)],
+        // "Exile an artifact or creature card from your graveyard: This
+        // Vehicle becomes an artifact creature until end of turn" — shipped
+        // missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            exile_other_filter: Some((
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                1,
+            )),
+            effect: Effect::AnimateAsCreature {
+                what: Selector::This,
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -649,6 +663,30 @@ pub fn alacrian_armory() -> CardDefinition {
                 },
             },
         ],
+        // "At the beginning of combat on your turn, choose up to one target
+        // Mount or Vehicle you control. Until end of turn, it becomes saddled
+        // or crewed and becomes an artifact creature in addition to its other
+        // types" — shipped missing (the `cnt` audit column, 2026-09-10).
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(
+                crate::card::EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                crate::card::EventScope::ActivePlayer,
+            ),
+            effect: Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Mount)
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+                    .and(SelectionRequirement::ControlledByYou),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::SetSaddled { what: Selector::Target(0) },
+                    Effect::AnimateAsCreature {
+                        what: Selector::Target(0),
+                        duration: crate::effect::Duration::EndOfTurn,
+                    },
+                ])),
+            },
+        }],
         ..Default::default()
     }
 }

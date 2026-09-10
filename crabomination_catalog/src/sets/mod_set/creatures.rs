@@ -5417,6 +5417,22 @@ pub fn golos_tireless_pilgrim() -> CardDefinition {
                 }),
             },
         }],
+        // "{2}{W}{U}{B}{R}{G}: Exile the top three cards of your library. You
+        // may play them this turn without paying their mana costs" — shipped
+        // missing (the `cnt` audit column, 2026-09-10).
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), u(), b(), r(), g()]),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: false,
+                uncast_penalty: None,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

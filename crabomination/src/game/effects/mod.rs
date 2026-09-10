@@ -15829,8 +15829,12 @@ impl GameState {
             }
 
             Effect::MoveAllCounters { from, to } => {
-                // CR 122.5 — relocation, not creation (no doublers).
-                let src = self.resolve_selector(from, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                // CR 122.5 — relocation, not creation (no doublers). The
+                // source may be a card already off the battlefield — a dies
+                // trigger binds the dying creature as a `Card` ref (Buzzard-Wasp
+                // Colony's "put its counters on this creature") — so read the
+                // id through `as_card_id` and let the LKI branch below find it.
+                let src = self.resolve_selector(from, ctx).into_iter().find_map(|e| e.as_card_id());
                 let dst = self.resolve_selector(to, ctx).into_iter().find_map(|e| e.as_permanent_id());
                 if let (Some(src), Some(dst)) = (src, dst)
                     && src != dst

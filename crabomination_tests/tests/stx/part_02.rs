@@ -2338,32 +2338,36 @@ fn step_through_bounces_two_creatures() {
 
 // ── Inkfathom Witch ─────────────────────────────────────────────────────────
 
+/// "{2}{U}{B}: Each unblocked creature has base power and toughness 4/1
+/// until end of turn." Shipped as an unprinted ETB discard with the
+/// activation missing (the `cnt` audit column, 2026-09-10).
 #[test]
-fn inkfathom_witch_etb_makes_opp_discard_a_nonland_card() {
+fn inkfathom_witch_makes_unblocked_creatures_4_1() {
+    use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();
-    // Seed opp hand with a creature card so we have something to discard.
-    g.add_card_to_hand(1, catalog::grizzly_bears());
-    let opp_hand_before = g.players[1].hand.len();
-
-    let id = g.add_card_to_hand(0, catalog::inkfathom_witch());
+    let witch = g.add_card_to_battlefield(0, catalog::inkfathom_witch());
+    assert!(g.battlefield_find(witch).unwrap().definition.triggered_abilities.is_empty(), "no ETB discard");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let home = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Inkfathom Witch castable for {3}{U}{B}");
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: witch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{{2}}{{U}}{{B}}");
     drain_stack(&mut g);
-
-    assert_eq!(
-        g.players[1].hand.len(),
-        opp_hand_before - 1,
-        "opp discarded one nonland card"
-    );
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 1), "the unblocked attacker is 4/1");
+    let h = g.computed_permanent(home).unwrap();
+    assert_eq!((h.power, h.toughness), (2, 2), "the creature at home is untouched");
 }
 
 // ── Inscription of Ruin ─────────────────────────────────────────────────────
