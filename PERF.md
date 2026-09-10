@@ -2843,6 +2843,10 @@ search  searching-pilot mirrors on the same audit build (CRAB_MAX_ACTIONS=6000 C
         mirror cube 775 x 40 (320 games, 364 s) clean; abilarms mirror cube / sealed 796 x 16 (320) clean — 18,127 games, every rc 0
 actor   target-audit/overflow/selfplay_train (debug-assertions, 12m59s beside the mirrors) --actors 3 --steps 2 --games 4000 --seed 20260910:
         403,838 rows, 0 stalls, no assertion, 97.4 games/s on the audit build (actors: line), 7,897 rows/s on the first interval
+later   cccd1ab2 (ENGINE_BACKLOG "FIXED 2026-09-10 (fifth find)"): the two `submit_decision` resume arms that replayed a cast / activation
+        by direct call now go through `perform_action`, so a `manual_mana` seat's cost-choice replay dispatches its events and sweeps;
+        bot seats never pose those prompts — suite 19,372 / 0 / 5, no trace or counter can move. 94b5e35c: Severance Priest's Spirit
+        (`ExileReturnZone::SpiritToken`; the Illusion gains its printed blue), suite 19,366 / 0 / 5 at that tip
 cost    the deferral is one `stack.len()` compare per cost-side death plus an `is_empty` read at the dispatcher's top (beside
         `pending_cost_events`'); the scratch write happens only when the leaving permanent had a self trigger — not A/B'd, the counters
         and traces are the gate

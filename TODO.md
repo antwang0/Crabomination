@@ -38,7 +38,8 @@ sixty-seventh pass, so don't re-take that.
    helpers and the ability count"; the 130-row residue read to the card: `cnt` 62 = 14 one-edit + 23 primitive + 3 gate + engine-shape). Three
    engine lines (`CreateTokenBlocking` off a blocks trigger, `MoveAllCounters` and `LastDamagerOf` off a card ref). **The fourth (concurrent):**
    CR 603.3 — a cost-paid permanent's own dies / leaves triggers stack ABOVE the ability they paid for (ENGINE_BACKLOG "FIXED 2026-09-10 (fourth
-   find)"); Knowledge Vault re-shaped off it; `AlternativeCost::your_turn_only` and Mine Collapse. The full suite caught Mai draining the wrong
+   find)"); Knowledge Vault re-shaped off it; `AlternativeCost::your_turn_only` and Mine Collapse; the cost-choice resume arms replay through
+   `perform_action` (fifth find — a `manual_mana` seat's replayed cast dispatched nothing); Severance Priest's Spirit. The full suite caught Mai draining the wrong
    player — **run the touched test files, not only the new tests.** No trace or counter moved in either.
 4. **Next moves:** (a) the 14 one-edit `cnt` rows (INCOMPLETE_CARDS lists them; Emperor of Bones, Ersatz Gnomes, Barret first); (b) the three
    graveyard gates (an attacking-with-a-Rat predicate, an enchantment-died-this-turn predicate, a drew-Nth-card event — ENGINE_BACKLOG "Triggers
