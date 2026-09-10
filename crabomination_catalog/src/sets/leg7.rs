@@ -123,6 +123,9 @@ pub fn equinox() -> CardDefinition {
 
 /// Knowledge Vault — bank the top of your library face down, then trade your
 /// hand for the whole stash. It burns if the Vault leaves any other way.
+/// "{0}: Sacrifice this artifact. If you do, .." — the sacrifice is the
+/// effect's first step, not a cost: as a cost its leaves trigger would go on
+/// the stack above the ability (CR 603.3) and burn the stash first.
 pub fn knowledge_vault() -> CardDefinition {
     CardDefinition {
         name: "Knowledge Vault",
@@ -141,8 +144,8 @@ pub fn knowledge_vault() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
-                sac_cost: true,
                 effect: Effect::Seq(vec![
+                    Effect::SacrificeSource,
                     Effect::Discard {
                         who: Selector::You,
                         amount: Value::Const(100),

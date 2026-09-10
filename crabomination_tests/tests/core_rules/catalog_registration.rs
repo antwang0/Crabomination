@@ -893,6 +893,7 @@ const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
     ("Flowstone Hellion", "printed `{0}: This creature gets +1/-1 until end of turn.`"),
     ("Frenetic Efreet", "printed `{0}: Flip a coin. …`"),
     ("Hopping Automaton", "printed `{0}: This creature gets -1/-1 and gains flying …`"),
+    ("Knowledge Vault", "printed `{0}: Sacrifice this artifact. If you do, …` — the sacrifice is its first step"),
     ("Lancers en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
     ("Mist Dragon", "printed `{0}: gains flying` / `{0}: loses flying`"),
     ("Nomads en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),

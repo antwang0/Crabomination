@@ -1003,8 +1003,8 @@ rows; 37 real, two commits:
 Two false rows taught the reader: Magma Opus's discard is `discard_activated`
 (counted now), Secluded Starforge's robot was already there. The Horizon
 Spellbomb fix surfaced an engine order: a sacrifice-cost source's own dies
-trigger stacks below the ability (ENGINE_BACKLOG "Self-death triggers paid
-as a cost").
+trigger stacked below the ability — fixed the same day (ENGINE_BACKLOG
+"FIXED 2026-09-10 (fourth find)").
 
 The 130 rows left were then read one by one (two read-only passes, the
 training pool and the rest). 47 are the engine's shape — a static

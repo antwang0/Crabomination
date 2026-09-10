@@ -4739,7 +4739,7 @@ impl GameState {
             .map(|c| c.id)
         {
             events.push(GameEvent::PermanentSacrificed { card_id: fid, who: p });
-            let mut die = self.remove_to_graveyard_with_triggers(fid);
+            let mut die = self.remove_to_graveyard_as_cost(fid);
             events.append(&mut die);
         }
         events.push(GameEvent::Foraged { player: p });
@@ -4957,8 +4957,9 @@ impl GameState {
         if !sac_ok {
             return Err(GameError::InvalidTarget);
         }
-        // Pay the casualty cost (CR 601.2b additional cost): sacrifice now, so
-        // its death triggers go on the stack under the spell.
+        // Pay the casualty cost (CR 601.2b additional cost): sacrifice now; its
+        // own death triggers are parked and go on the stack above the spell
+        // (CR 603.3).
         if let Some(c) = self.dying_snapshot(sacrifice) {
             self.died_card_snapshots.insert(sacrifice, c);
         }
@@ -4967,7 +4968,7 @@ impl GameState {
             GameEvent::CreatureDied { card_id: sacrifice },
             GameEvent::PermanentSacrificed { card_id: sacrifice, who: p },
         ];
-        let mut die = self.remove_to_graveyard_with_triggers(sacrifice);
+        let mut die = self.remove_to_graveyard_as_cost(sacrifice);
         events.append(&mut die);
         // Cast the spell normally, then copy it on the stack (CR 702.153a).
         let mut cast_events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
@@ -5282,7 +5283,7 @@ impl GameState {
             events.push(GameEvent::CreatureSacrificed { card_id: *sac, who: p });
             events.push(GameEvent::CreatureDied { card_id: *sac });
             events.push(GameEvent::PermanentSacrificed { card_id: *sac, who: p });
-            let mut die = self.remove_to_graveyard_with_triggers(*sac);
+            let mut die = self.remove_to_graveyard_as_cost(*sac);
             events.append(&mut die);
         }
         // Stamp the transient reduction, cast through the normal path, clear.
@@ -5468,7 +5469,7 @@ impl GameState {
                 self.died_card_snapshots.insert(sac, c);
             }
             events.push(GameEvent::PermanentSacrificed { card_id: sac, who: p });
-            let mut die = self.remove_to_graveyard_with_triggers(sac);
+            let mut die = self.remove_to_graveyard_as_cost(sac);
             events.append(&mut die);
             if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
                 c.bargained = true;
@@ -8488,7 +8489,7 @@ impl GameState {
                             events.push(GameEvent::CreatureDied { card_id: id });
                         }
                         events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
-                        let mut die = self.remove_to_graveyard_with_triggers(id);
+                        let mut die = self.remove_to_graveyard_as_cost(id);
                         events.append(&mut die);
                     }
                 }
@@ -11147,7 +11148,7 @@ impl GameState {
             && self.battlefield_find(sac_cid).is_some()
         {
             auto_events.push(GameEvent::PermanentSacrificed { card_id: sac_cid, who: p });
-            let mut die_evs = self.remove_to_graveyard_with_triggers(sac_cid);
+            let mut die_evs = self.remove_to_graveyard_as_cost(sac_cid);
             auto_events.append(&mut die_evs);
         }
 
@@ -11157,7 +11158,7 @@ impl GameState {
             && self.battlefield_find(*sac_cid).is_some()
         {
             auto_events.push(GameEvent::PermanentSacrificed { card_id: *sac_cid, who: p });
-            let mut die_evs = self.remove_to_graveyard_with_triggers(*sac_cid);
+            let mut die_evs = self.remove_to_graveyard_as_cost(*sac_cid);
             auto_events.append(&mut die_evs);
         }
 
@@ -11193,7 +11194,7 @@ impl GameState {
         for sac_cid in &sacrifice_picks {
             if self.battlefield_find(*sac_cid).is_some() {
                 auto_events.push(GameEvent::PermanentSacrificed { card_id: *sac_cid, who: p });
-                let mut die_evs = self.remove_to_graveyard_with_triggers(*sac_cid);
+                let mut die_evs = self.remove_to_graveyard_as_cost(*sac_cid);
                 auto_events.append(&mut die_evs);
             }
         }
@@ -17533,7 +17534,7 @@ impl GameState {
             // artifact / enchantment / land sacrifices alongside
             // creatures.
             events.push(GameEvent::PermanentSacrificed { card_id, who: sac_who });
-            let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
+            let mut die_evs = self.remove_to_graveyard_as_cost(card_id);
             events.append(&mut die_evs);
         }
         // Bounce-self-as-cost (CR 602.5b "…and return it to its owner's hand:"
@@ -17660,7 +17661,7 @@ impl GameState {
                 events.push(GameEvent::CreatureDied { card_id: other_cid });
             }
             events.push(GameEvent::PermanentSacrificed { card_id: other_cid, who: sac_who });
-            let mut die_evs = self.remove_to_graveyard_with_triggers(other_cid);
+            let mut die_evs = self.remove_to_graveyard_as_cost(other_cid);
             events.append(&mut die_evs);
         }
 

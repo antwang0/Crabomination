@@ -823,9 +823,7 @@ fn horizon_spellbomb_pays_g_to_draw_when_it_dies() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let hand = g.players[0].hand.len();
     // Any graveyard-bound exit fires it; the sacrifice half of the activated
-    // ability rides the same funnel (the engine stacks a cost-paid source's
-    // own dies trigger below the ability — ENGINE_BACKLOG "self-death
-    // triggers paid as a cost").
+    // ability rides the same funnel (the order is pinned below).
     let ev = g.remove_to_graveyard_with_triggers(bomb);
     g.dispatch_triggers_for_events(&ev);
     drain_stack(&mut g);
@@ -841,6 +839,36 @@ fn horizon_spellbomb_pays_g_to_draw_when_it_dies() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "declined: no draw");
     assert_eq!(g.players[0].mana_pool.total(), 1, "declined: {{G}} kept");
+}
+
+/// CR 603.3 — a permanent sacrificed as a cost has its own dies trigger put
+/// on the stack after the ability it paid for, so the trigger resolves first
+/// (it shipped below the ability — ENGINE_BACKLOG "Self-death triggers paid as
+/// a cost", 2026-09-10).
+#[test]
+fn a_sacrifice_costs_own_dies_trigger_stacks_above_the_ability() {
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::horizon_spellbomb());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // top: the draw
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{2}, {T}, Sacrifice: search");
+    assert!(matches!(g.stack.first(), Some(StackItem::Trigger { activated: true, .. })),
+        "the ability below");
+    assert!(matches!(g.stack.last(), Some(StackItem::Trigger { activated: false, source, .. }) if *source == bomb),
+        "its dies trigger on top");
+    let hand = g.players[0].hand.len();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the draw and the Forest");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "the trigger drew first");
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "then the search found the Forest");
 }
 
 #[test]

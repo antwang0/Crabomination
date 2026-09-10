@@ -7031,6 +7031,21 @@ impl GameState {
         }
     }
 
+    /// The death funnel for a permanent leaving as a COST (CR 603.3): its own
+    /// dies / leaves triggers are parked on `scratch.pending_cost_triggers`
+    /// instead of the stack, so the next dispatch puts them above the spell
+    /// or ability being paid for. Horizon Spellbomb's "pay {G}: draw" resolves
+    /// before its search, not after.
+    pub(crate) fn remove_to_graveyard_as_cost(&mut self, id: CardId) -> Vec<GameEvent> {
+        let mark = self.stack.len();
+        let events = self.remove_to_graveyard_with_triggers(id);
+        if self.stack.len() > mark {
+            let parked: Vec<StackItem> = self.stack.drain(mark..).collect();
+            self.scratch.pending_cost_triggers.extend(parked);
+        }
+        events
+    }
+
     pub fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
         // Collect both `CreatureDied` and `PermanentLeavesBattlefield`
         // self-source triggers off the leaving permanent. CreatureDied

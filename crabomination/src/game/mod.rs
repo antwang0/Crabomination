@@ -1614,6 +1614,13 @@ pub struct ResolutionScratch {
     /// (CR 118.8 / 119.3c) after the cast completes (CR 601.3e).
     #[serde(skip, default)]
     pub(crate) pending_cost_events: Vec<GameEvent>,
+    /// CR 603.3 — the own dies / leaves triggers of a permanent that left as a
+    /// COST (a sacrifice cost, an emerge / offering / casualty sacrifice).
+    /// The death funnel pushes them at once; `remove_to_graveyard_as_cost`
+    /// parks them here so the next dispatch puts them on the stack after the
+    /// spell or ability they paid for — above it, resolving first.
+    #[serde(skip, default)]
+    pub(crate) pending_cost_triggers: Vec<StackItem>,
     /// Control changes since the last trigger dispatch: `(card_id, from, to)`.
     /// Recorded at the single `change_control` chokepoint and drained by
     /// `dispatch_triggers_for_events` into `GameEvent::ControlChanged`, so
@@ -19062,6 +19069,13 @@ impl GameState {
         if !self.scratch.pending_cost_events.is_empty() {
             let pending = std::mem::take(&mut self.scratch.pending_cost_events);
             self.dispatch_triggers_for_events(&pending);
+        }
+        // CR 603.3 — a cost-paid permanent's own death triggers go on the
+        // stack now, above the spell or ability they paid for and below this
+        // batch's triggers.
+        if !self.scratch.pending_cost_triggers.is_empty() {
+            let parked = std::mem::take(&mut self.scratch.pending_cost_triggers);
+            self.stack.extend(parked);
         }
         // CR 700.4 — fold in `PermanentDied` events synthesized from the deaths
         // recorded at the raw removal chokepoint since the last dispatch, so

@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-10 (fourth find) — a cost-paid permanent's own dies trigger stacked below the spell or ability it paid for; Mine Collapse's alternative cost](#fixed-2026-09-10-fourth-find--a-cost-paid-permanents-own-dies-trigger-stacked-below-the-spell-or-ability-it-paid-for-mine-collapses-alternative-cost) | 22 |
 | Bugs & robustness | [FIXED 2026-09-10 (third find) — helper-built abilities were unread by every catalog column: 13 cards, a dead Steam Vines half, a dispatcher arm](#fixed-2026-09-10-third-find--helper-built-abilities-were-unread-by-every-catalog-column-13-cards-a-dead-steam-vines-half-a-dispatcher-arm) | 24 |
 | Bugs & robustness | [FIXED 2026-09-10 (second find) — an Aura's own `effect:` is its attach and the cast path runs nothing after it; six shipped Auras had a dead entry half](#fixed-2026-09-10-second-find--an-auras-own-effect-is-its-attach-and-the-cast-path-runs-nothing-after-it-six-shipped-auras-had-a-dead-entry-half) | 22 |
 | Bugs & robustness | [FIXED 2026-09-10 — step triggers and targeting triggers under `EventScope::EnchantedBySource` never fired: nine shipped Auras](#fixed-2026-09-10--step-triggers-and-targeting-triggers-under-eventscopeenchantedbysource-never-fired-nine-shipped-auras) | 30 |
@@ -50,6 +51,32 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-10 (fourth find) — a cost-paid permanent's own dies trigger stacked below the spell or ability it paid for; Mine Collapse's alternative cost
+
+- CR 603.3: the death funnel (`remove_to_graveyard_with_triggers`) pushes
+  the leaving permanent's own dies / leaves triggers the moment it leaves,
+  and every sacrifice COST called it before the spell or ability was on the
+  stack — so Horizon Spellbomb's "pay {G}: draw" resolved after its search,
+  a casualty / emerge / offering / Fireblast sacrifice's own trigger after
+  the spell. `remove_to_graveyard_as_cost` (the ten cost sites: `sac_cost`,
+  `sac_other`, casualty, bargain, forage, the additional-cost and
+  alternative-cost sacrifices) parks what the funnel pushed on
+  `scratch.pending_cost_triggers`; the dispatcher's top drains it onto the
+  stack, above the spell and below the batch's own triggers. Resolution
+  deaths (Destroy, the SBA sweeps) are untouched. Test:
+  `modern::devotion_theros::a_sacrifice_costs_own_dies_trigger_stacks_above_the_ability`.
+  Residue: a sacrifice cost picked through a `pending_decision` resume goes
+  through the same funnel and the same drain. The order moved two suite
+  tests: Digsite Conservator's discover trigger now asks first, and
+  Knowledge Vault's "{0}: Sacrifice this artifact. If you do, .." was a
+  `sac_cost` that only worked under the wrong order — re-shaped as the
+  effect's first step (`SacrificeSource`), the printed shape.
+- `AlternativeCost` had a sacrifice half (`sacrifice_permanents`, Fireblast)
+  and a `not_your_turn_only` gate but no your-turn gate; `your_turn_only`
+  mirrors it at the cast and in the client view, and Mine Collapse (training
+  pool) casts for a Mountain on its controller's turn
+  (`modern::supplement_batches::mine_collapse_sacrifices_a_mountain_on_your_turn_only`).
 
 ## FIXED 2026-09-10 (third find) — helper-built abilities were unread by every catalog column: 13 cards, a dead Steam Vines half, a dispatcher arm
 
@@ -2474,31 +2501,6 @@ old abilities, so a Sea's Claim on a tri-land made it tap for four colours.
 Song of the Dryads had `remove_abilities: true` throughout.
 
 
-
-### Sacrifice-as-alternative-cost
-
-`AlternativeCost` has a mana / life / exile half and a `not_your_turn_only`
-gate, no sacrifice half and no your-turn gate. Mine Collapse's "if it's your
-turn, you may sacrifice a Mountain rather than pay this spell's mana cost"
-shipped as a mandatory sacrifice on top of {3}{R} until 2026-09-10 and now
-drops the alternative. Needs `sacrifice_filter: Option<SelectionRequirement>`
-and `your_turn_only: bool` on the struct, paid at cast beside `life_cost`
-(the `addl` audit column's residue names it).
-
-### Self-death triggers paid as a cost stack below the ability
-
-`remove_to_graveyard_with_triggers` pushes the leaving permanent's own
-dies / leaves triggers onto the stack the moment it leaves, and a `sac_cost`
-activation calls it while paying costs — before the ability itself is pushed.
-So "{2}, {T}, Sacrifice: search" + "when this dies, you may pay {G}: draw"
-(Horizon Spellbomb) resolves the search first and the draw second; CR 603.3
-puts the trigger on top. Harmless for every shipped Spellbomb / Chromatic
-Star (their orders commute) and for mana abilities; it matters only when the
-body reads what the trigger changed. The fix is to defer those pushes into
-the action's event batch (`dispatch_triggers_for_events` already runs after
-the ability is on the stack) — a golden-trace change, so it needs its own
-commit and a bench. Found 2026-09-10 by the `cnt` audit column's Spellbomb
-fix; the test isolates the trigger instead of pinning the order.
 
 ### Triggers that live in the graveyard — the scope exists; three gates do not
 

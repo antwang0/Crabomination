@@ -1890,7 +1890,9 @@ fn digsite_conservator_exiles_graveyard() {
     let mut ids = vec![];
     for _ in 0..3 { ids.push(g.add_card_to_graveyard(1, catalog::grizzly_bears())); }
     let dig = g.add_card_to_battlefield(0, catalog::digsite_conservator());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(ids)]));
+    // CR 603.3 — the sacrificed source's own dies trigger (pay {4}: discover)
+    // resolves before the ability it paid for; decline it, then pick the exile.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Cards(ids)]));
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
