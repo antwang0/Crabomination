@@ -5213,6 +5213,10 @@ pub struct AlternativeCost {
     /// (Force of Negation, Foundation Breaker, Force of Vigor, etc.). The
     /// engine rejects the alt cast when the caster *is* the active player.
     pub not_your_turn_only: bool,
+    /// The mirror gate: legal only on the caster's own turn (Mine Collapse's
+    /// "if it's your turn, you may sacrifice a Mountain rather than pay").
+    #[serde(default)]
+    pub your_turn_only: bool,
     /// Optional extra target filter applied **only** on the alt-cast path.
     /// Lets a spell expose a cheaper alt cost that's restricted to a
     /// narrower set of targets (e.g. Mystical Dispute's "{U} less if blue":

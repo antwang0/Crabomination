@@ -1215,6 +1215,7 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                 && sac_ok
                 && tap_ok
                 && !(a.not_your_turn_only && st.active_player_idx == card.owner)
+                && !(a.your_turn_only && st.active_player_idx != card.owner)
         }),
         back_face_name: card
             .definition

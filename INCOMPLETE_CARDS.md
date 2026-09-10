@@ -942,12 +942,10 @@ Artifact, Dredge) reads as a sacrifice. First run 62 rows; three real:
 |---|---|---|
 | Morkrut Behemoth | no additional cost | "sacrifice a creature or pay {1}{B}" (`SacrificeOrPay`; the variant prices the alternative in generic mana, so {2}) |
 | Caustic Exhale | no additional cost | "behold a Dragon or pay {1}" (`RevealFromHandOrPay`; the "choose a Dragon you control" half of behold is not read) |
-| Mine Collapse (training pool) | a MANDATORY Mountain sacrifice on top of {3}{R} | "you may sacrifice a Mountain rather than pay this spell's mana cost" on your turn — an alternative `AlternativeCost` cannot spell (no sacrifice half, no your-turn gate); the rider is dropped rather than charged |
+| Mine Collapse (training pool) | a MANDATORY Mountain sacrifice on top of {3}{R}, then the alternative dropped | "you may sacrifice a Mountain rather than pay this spell's mana cost" on your turn — `AlternativeCost { sacrifice_permanents, your_turn_only }` (the gate added 2026-09-10, third run) |
 
 Residue one row: Redirect Lightning's "pay 5 life" (the Amounts residue
-already names it). Mine Collapse's alternative wants `AlternativeCost {
-sacrifice_filter, your_turn_only }` — a primitive, filed in ENGINE_BACKLOG's
-missing mechanics.
+already names it).
 
 ### The shortcut helpers and the ability count — the thirteenth column (`cnt`), 2026-09-10: 61 shipped cards
 

@@ -2902,22 +2902,20 @@ pub fn orcish_lumberjack() -> CardDefinition {
     }
 }
 
-/// Mine Collapse — {3}{R} Sorcery. As an additional cost, sacrifice a
-/// Mountain. Mine Collapse deals 5 damage to target creature or planeswalker.
-///
-/// "Sacrifice a Mountain" is folded into the resolved effect's first
-/// step (cost-as-first-step approximation) — same pattern Crop Rotation,
-/// Thud, and Cephalid Coliseum use.
+/// Mine Collapse — {3}{R} Instant. If it's your turn, you may sacrifice a
+/// Mountain rather than pay this spell's mana cost. 5 damage to target
+/// creature or planeswalker.
 pub fn mine_collapse() -> CardDefinition {
+    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Mine Collapse",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Instant],
-        // "If it's your turn, you may sacrifice a Mountain rather than pay
-        // this spell's mana cost" is an alternative cost `AlternativeCost`
-        // cannot spell (no sacrifice half, no your-turn gate); it shipped as a
-        // MANDATORY Mountain sacrifice on top of {3}{R}. The alternative is
-        // dropped instead (INCOMPLETE_CARDS "Additional cast costs").
+        alternative_cost: Some(AlternativeCost {
+            sacrifice_permanents: Some((SelectionRequirement::HasLandType(LandType::Mountain), 1)),
+            your_turn_only: true,
+            ..Default::default()
+        }),
         effect: Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),

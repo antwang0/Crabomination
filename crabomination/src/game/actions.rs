@@ -10664,6 +10664,9 @@ impl GameState {
         if alt.not_your_turn_only && self.active_player_idx == p {
             return Err(GameError::NoAlternativeCost);
         }
+        if alt.your_turn_only && self.active_player_idx != p {
+            return Err(GameError::NoAlternativeCost);
+        }
 
         // Optional cast-time predicate gate. Used by
         // SOS Wilt in the Heat's "{2} less if cards left your graveyard

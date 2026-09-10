@@ -1766,6 +1766,30 @@ fn mine_collapse_deals_five_for_its_mana_cost() {
         "the 4/4 dies to 5 damage");
 }
 
+/// Mine Collapse: on your turn a Mountain pays the whole cost; on the
+/// opponent's turn the alternative is not offered (`your_turn_only`,
+/// 2026-09-10 — the alternative shipped dropped).
+#[test]
+fn mine_collapse_sacrifices_a_mountain_on_your_turn_only() {
+    let mut g = two_player_game();
+    let mtn = g.add_card_to_battlefield(0, catalog::mountain());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let mc = g.add_card_to_hand(0, catalog::mine_collapse());
+    let alt = |mc| GameAction::CastSpellAlternative {
+        card_id: mc, pitch_card: None, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    };
+    g.active_player_idx = 1;
+    assert_eq!(g.perform_action(alt(mc)).unwrap_err(), GameError::NoAlternativeCost,
+        "not on the opponent's turn");
+    g.active_player_idx = 0;
+    g.perform_action(alt(mc)).expect("a Mountain pays for Mine Collapse on your turn");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == mtn), "the Mountain is sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == angel), "the 4/4 dies to 5 damage");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no mana was spent");
+}
+
 /// Satyr Wayfinder: ETB reveals 4, takes a land to hand, rest to graveyard.
 #[test]
 fn satyr_wayfinder_etb_takes_a_land_rest_to_graveyard() {
