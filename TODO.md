@@ -30,18 +30,19 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
    tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; fetch before every push. Gotchas in **CLAUDE.md**, measurement in
    **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
-2. **Gates at the tip (PERF Baseline, the 2026-09-10 addendum):** suite 19,312 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical to
-   `2003d1cf` at the engine tip, determinism + thread_determinism ok, 547-571 games/s idle at calib 68-77 (a box, not code); 36,800 fresh-seed dflt
-   games (cube 777..778, sealed 770..771, all 760..761, sos 764..765, fixed 748..749) + 120 k searching-pilot games (abilarms 890..905, mirror 790..795,
-   lookahead / planner 774..775, mcts 772..774), two post-fix blocks (109 k) and an actor leg (24 k / 2.42 M rows): 0 cap / stuck / assertion / stall.
-3. **This run:** bug-class finders, not sweeps — `audit_catalog_stats.py`'s `num` / `stat` / `mana` columns found **43 shipped cards at the wrong
-   number** (six training-pool cards: Languish -2/-2, Searing Wind 5, Fatal Push without revolt, ...; INCOMPLETE_CARDS "Amounts"); then two
-   dispatcher classes (ENGINE_BACKLOG 2026-09-10): 15 Auras with a trigger the scope never matched or an entry effect the cast path never ran —
-   now two `structural_audit` gates; `RevealTopThenIf { else_ }`, `SacrificeSourceUnlessSacrifice { count }`. No trace or counter moved.
-4. **Next moves:** (a) the columns and gates are the cheapest finders (no build); left: "mill plus N" (The Water Crystal), helper-built mana
-   abilities (unread by every column), and the same read for `PlayerRef` / `StaticEffect` variants a resolver special-cases (`EnchantedPlayer` was
-   one); (b) mirrors next: abilarms 920+, mirror 796+, mcts 775+, lookahead / planner 779+; dflt cube 782, sealed 775, all 765, sos 769, fixed 753;
-   (c) the crack-back horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF's candidates.
+2. **Gates at the tip (PERF Baseline, the 2026-09-10 second-run addendum):** suite green / clippy 0 / golden_trace 10/10 / `--bench` counters identical
+   to `2003d1cf` / determinism + thread_determinism ok at every commit of the run; 73,600 fresh-seed dflt games (cube 782..785, sealed 775..778,
+   all 765..768, sos 769..772, fixed 753..756): 0 cap / stuck / assertion. Wall clock ~300 games/s on this box against 547-571 last run — the
+   paired A/B against the `4c8a61ae` binary is the verdict (PERF); the counters say the games are the same.
+3. **This run:** `audit_catalog_stats.py` now opens helper-built abilities under every column (`inline_ability_helpers`; ~2,000 abilities no column
+   had read) and grew three columns — `ocost` (the other cost halves), `addl` (additional cast costs), the timing `if` gate — **27 shipped cards
+   fixed** (INCOMPLETE_CARDS "Helper-built abilities", "The other cost halves", "Additional cast costs"), seven of them training-pool; two engine
+   halves under them (ENGINE_BACKLOG "FIXED 2026-09-10 (third find)": `EnchantedBySource` serves a non-death leave, `ReturnSelfAttachedToChoiceOf`
+   takes a filter); `OpponentMillExtra`. No trace or counter moved.
+4. **Next moves:** (a) more columns, no build: a helper defined in another file still hides its numbers (`shortcut::animate_land`); `PlayerRef` /
+   `StaticEffect` variants a resolver special-cases (`EnchantedPlayer` was one); Mine Collapse wants `AlternativeCost { sacrifice_filter,
+   your_turn_only }` (ENGINE_BACKLOG); (b) mirrors next: abilarms 920+, mirror 796+, mcts 775+, lookahead / planner 779+; dflt cube 786, sealed 779,
+   all 769, sos 773, fixed 757; (c) the crack-back horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF's candidates.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

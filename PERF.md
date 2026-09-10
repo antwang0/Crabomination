@@ -2806,6 +2806,57 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-10 (second run) — helper-built abilities under every audit column, three new columns, 27 shipped cards, the paired A/B that priced the box
+
+No perf leg: the queue's engine side still reads floor, so the run went
+to the finders. `audit_catalog_stats.py` had answered `None` for every
+activated or triggered ability built through a helper call (`tap_add(..)`,
+`self_pump(..)`, `upkeep(..)`, `returns_to_hand()` — 85 + 4 + 132 helpers,
+~2,000 abilities), so nine columns had never read them; `inline_ability_
+helpers` opens them, the number readers consult a file's `fn -> Effect /
+StaticAbility / Predicate / Value` helpers, and three columns were added:
+`ocost` (the other cost halves), `addl` (additional cast costs), the timing
+`if` gate. 27 shipped cards fixed across four commits (INCOMPLETE_CARDS
+"Helper-built abilities", "The other cost halves", "Additional cast costs";
+seven training-pool cards: Stonework Packbeast's `{T}` for `{2}`, Engineered
+Explosives' tap, the five end-step Elementals on `YourControl`, Wishclaw
+Talisman tutoring with no counter, Mine Collapse's mandatory Mountain), two
+engine halves under them (ENGINE_BACKLOG "FIXED 2026-09-10 (third find)"),
+`OpponentMillExtra` for The Water Crystal. None sits in a traced or
+`fixed`-pool game: golden traces 10 / 10 and the `--bench` counters
+identical at every commit.
+
+**The box priced.** `--bench` read 290-315 games/s at calib 50-78 where the
+last run read 547-571 at 68-77 — with identical counters. The `4c8a61ae`
+binary rebuilt from a worktree (`bin_bytes` 126,736,488, the record's
+figure to the byte) reads the same 289 median on this box, and the paired
+A/B against the tip is **-0.30 % median / -0.93 % mean (sd 5.23, 16
+pairs)**: inside the instrument's noise, the box is ~1.9x slower than the
+last one. **The Ir base was NOT re-taken** (no A/B leg; the next perf leg
+re-takes the triple first).
+
+```text
+fix     3a55c00e (the inliner) / 1da8050f (13 cards, the dispatcher arm, the effect filter, OpponentMillExtra) / 8dd9a891 (ocost + if: 9 cards)
+        / ce3e4520 (addl: 3 cards): suite 19,319 / 0 / 5 at 1da8050f (670 s cold, golden_trace 10 / 10 inside it), 226 s warm at 8dd9a891,
+        19,321 / 0 / 5 at the tip (119.787 s run, 416 s cold build after the incremental purge); clippy --workspace --exclude
+        crabomination_client --all-targets 0 warnings at every commit (1049 / 452 / 728 s); cargo check --profile release-fast covered by
+        the release-fast builds (2712 s cold, 2000-2122 s warm)
+gate    --bench release-fast (mimalloc) at 1da8050f, 8dd9a891 and the tip: 195,806 / 27.49 / 611.9 / 0 stalls — counters identical to 2003d1cf;
+        determinism ok; thread_determinism ok (3 vs 1); bin_bytes 126,764,640 -> 126,794,152 -> 126,872,088 (+135,112 B on the catalog and
+        the arm); peak_rss_mib 28.4-29.0; 283-315 games/s idle at host_calib_ms 50-78
+a/b     scripts/bench_ab.py target-base (4c8a61ae, 126,736,488 B) vs target (8dd9a891) x 16 pairs: A median 288.93 / mean 292.81 / sd 14.82,
+        B median 294.73 / mean 289.96 / sd 18.87, paired B/A median -0.30 % / mean -0.93 % / sd 5.23 — flat; the box is the 1.9x
+sweep   scripts/fresh_seed_sweep.sh on the audit build (target-audit/overflow, debug-assertions; 7m35s at the base tip, 31m contended at
+        1da8050f, 19m52s at 8dd9a891), dflt mirror x --games 400 x --threads 3, one seed set per tip: cube 782 / sealed 775 / all 765 / sos 769 /
+        fixed 753 at 4c8a61ae (18,400 games, 0 / 0 / 0); cube 783 / sealed 776 / all 766 / sos 770 / fixed 754 at 1da8050f (18,400, 0 cap / 0
+        stuck / 8 draws on all 766); cube 784 / sealed 777 / all 767 / sos 771 / fixed 755 at 8dd9a891 (18,400, 0 / 0 / 0); cube 785 / sealed 778 /
+        all 768 / sos 772 / fixed 756 at the tip (18,400, 0 / 0 / 4 draws on all 768) — 73,600 games, every rc 0
+audit   audit_catalog_stats.py 17,229 cards: kw 20 / abil 1 / T-sac 3 / trig 7 / scope 3 the documented residue; num 76 / stat 15 (the
+        helper-hidden rows closed), ocost 5, addl 1, timing 0 (INCOMPLETE_CARDS names every residue row); a run is ~1m45s, no build
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz nominal, 4 cores, 15 GB — a slower box (calib 50-78, 289 games/s on the
+        base binary), cold debug suite build 670 s, cold release-fast bot_ladder ~45 min beside a suite build, 33 min alone
+```
+
 ### 2026-09-10 — the `num` / `stat` / `mana` audit columns and the 43 wrong-amount cards, the searching / dflt sweeps at fresh seeds, every gate on a fourth box
 
 No perf leg: the queue's engine side still reads floor and the bot-side

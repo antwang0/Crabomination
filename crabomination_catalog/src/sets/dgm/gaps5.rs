@@ -247,8 +247,10 @@ pub fn legions_initiative() -> CardDefinition {
         cost: cost(&[r(), w()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![anthem(Color::Red, 1, 0), anthem(Color::White, 0, 1)],
-        // The self-exile runs in the effect rather than as a cost (an
-        // `exile_self_cost` activation is graveyard-only today).
+        // The self-exile runs in the effect rather than as `exile_self_cost`
+        // (which a battlefield source pays too, since 2026-09): the linked
+        // exile of the creatures must run while the source is still on the
+        // battlefield, so the order is deliberate.
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r(), w()]),
             effect: Effect::Seq(vec![
