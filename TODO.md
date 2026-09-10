@@ -35,12 +35,12 @@ sixty-seventh pass, so don't re-take that.
    sealed 770..771, all 760..761, sos 764..765, fixed 748..749) + 120 k searching-pilot games (abilarms 890..905, mirror 790..795, lookahead /
    planner 774..775, mcts 772..774) 0 cap / 0 stuck / 0 assertion; the post-fix block (71,774 games) and the actor leg (24,000 games /
    2.42 M rows / 0 stalls) on the rebuilt audit binaries likewise.
-3. **This run:** a new bug-class finder, not a sweep — `audit_catalog_stats.py`'s `num` / `stat` / `mana` columns (an ability's printed amounts and
-   mana against its literal) found **43 shipped cards at the wrong number**, six of them training-pool cards (Languish -2/-2, Searing Wind 5, Fatal
-   Push without revolt, The Great Henge's {G}, ...): INCOMPLETE_CARDS "Amounts" has the table and the 80 + 16 residue rows. No trace or counter moved.
-4. **Next moves:** (a) the columns are the cheapest finder on the branch (no build); the residue's real shapes are engine gaps — `RevealTopThenIf`
-   has no else (Paroxysm), `SacrificeSourceUnlessSacrifice` no count (Cosmic Larva), "mill plus N" (The Water Crystal) — and the helper-built
-   mana abilities (`lord()`, the land helpers) are still unread by every column; (b) searching mirrors next: abilarms 914+, mirror 796+, mcts 775+; dflt cube 781, sealed 774,
+3. **This run:** bug-class finders, not sweeps — `audit_catalog_stats.py`'s `num` / `stat` / `mana` columns found **43 shipped cards at the wrong
+   number** (six training-pool cards: Languish -2/-2, Searing Wind 5, Fatal Push without revolt, ...; INCOMPLETE_CARDS "Amounts"); then two
+   dispatcher classes (ENGINE_BACKLOG 2026-09-10): 15 Auras with a trigger the scope never matched or an entry effect the cast path never ran,
+   now two suite gates in `structural_audit`. `RevealTopThenIf { else_ }`, `SacrificeSourceUnlessSacrifice { count }`. No trace or counter moved.
+4. **Next moves:** (a) the columns and gates are the cheapest finders on the branch (no build); left: "mill plus N" (The Water Crystal), the
+   helper-built mana abilities (unread by every column), and a gate per remaining event-based scope (which kinds each serves); (b) searching mirrors next: abilarms 914+, mirror 796+, mcts 775+; dflt cube 781, sealed 774,
    all 764, sos 768, fixed 752; (c) the crack-back horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF's candidates.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

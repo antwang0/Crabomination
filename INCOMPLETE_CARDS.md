@@ -830,6 +830,13 @@ for `{G}` (printed `{G}{G}`) and Cultivator Drone for `{C}{C}` (printed
 `{C}`). Zero residue; mana abilities built through a helper are not
 compared.
 
+Two more classes the same day, both now suite gates rather than columns
+(ENGINE_BACKLOG "FIXED 2026-09-10"): nine Auras whose trigger sat under
+`EnchantedBySource` on an event the dispatcher never matches for that
+scope (a step, a targeting, a graveyard kind), and six Auras whose entry
+half was spelled after the attach in `effect:`, which the cast path never
+runs. Fifteen cards, one test each, no residue.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

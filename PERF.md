@@ -2843,6 +2843,10 @@ actor   target-audit/overflow/selfplay_train (debug-assertions, 9m46s cold) --ac
         --games 20000 --seed 767: 403,907 / 2,016,374 rows, 0 stalls, no assertion, 89.7 / 121.4 games/s on the audit build (actors: line);
         stats.jsonl carries games_per_s / rows_per_s per interval (90.5 / 9,192.8 and 100.1 / 10,201.0 on the first)
 final   suite 19,300 / 0 / 5 (81.2 s idle, golden_trace 10 / 10; +1 revolt test, -1 test written for a synthesised Pest Control)
+later   the two dispatcher classes (ENGINE_BACKLOG "FIXED 2026-09-10", two entries): nine Auras with a trigger under EnchantedBySource on an
+        event the scope never matches, six Auras with an entry effect after their attach — 15 cards re-shaped, `RevealTopThenIf { else_ }`,
+        `SacrificeSourceUnlessSacrifice { count }`, the BecameTarget arm and the implicit-source exemption in events.rs, two suite gates in
+        structural_audit; suite 19,312 / 0 / 5 (153 s contended, golden_trace 10 / 10), clippy 0 warnings; traces and --bench counters untouched (no fixed-pool card among the 15)
 suite   audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare; audit_doc_drift 0 body wrong; audit_keyword_value 0 wrong of 762;
         audit_bottom_random 0 / 0; audit_catalog_stats.py 17,229 cards: kw 20 / abil 1 / T-sac 3 / trig 6 / scope 3 the documented
         residue, num 80 / stat 16 / mana 0 (INCOMPLETE_CARDS "Amounts" names the shapes)

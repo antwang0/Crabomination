@@ -19,6 +19,8 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-10 (second find) — an Aura's own `effect:` is its attach and the cast path runs nothing after it; six shipped Auras had a dead entry half](#fixed-2026-09-10-second-find--an-auras-own-effect-is-its-attach-and-the-cast-path-runs-nothing-after-it-six-shipped-auras-had-a-dead-entry-half) | 22 |
+| Bugs & robustness | [FIXED 2026-09-10 — step triggers and targeting triggers under `EventScope::EnchantedBySource` never fired: nine shipped Auras](#fixed-2026-09-10--step-triggers-and-targeting-triggers-under-eventscopeenchantedbysource-never-fired-nine-shipped-auras) | 30 |
 | Bugs & robustness | [FIXED 2026-09-09 (fourth find) — the CR 732.3 activation guard was reset by the mana ability that paid for the loop, so Basalt Monolith's tap-and-untap ran an `abilarms` game to the action cap](#fixed-2026-09-09-fourth-find--the-cr-7323-activation-guard-was-reset-by-the-mana-ability-that-paid-for-the-loop-so-basalt-monoliths-tap-and-untap-ran-an-abilarms-game-to-the-action-cap) | 40 |
 | Bugs & robustness | [FIXED 2026-09-09 (third find) — the sickness pre-check on the bot's mana estimate matched a bare `AddMana`, so a sick Wall of Roots' `Seq`-wrapped counter mana made the `AB_SAC` / `AB_SELF_COUNTER` gates unsound](#fixed-2026-09-09-third-find--the-sickness-pre-check-on-the-bots-mana-estimate-matched-a-bare-addmana-so-a-sick-wall-of-roots-seq-wrapped-counter-mana-made-the-ab_sac--ab_self_counter-gates-unsound) | 32 |
 | Bugs & robustness | [FIXED 2026-09-09 (second find) — the bot's mana estimate skipped a summoning-sick creature whole, so a Crystalline Crawler's counter mana made the `AB_DAMAGE` gate unsound](#fixed-2026-09-09-second-find--the-bots-mana-estimate-skipped-a-summoning-sick-creature-whole-so-a-crystalline-crawlers-counter-mana-made-the-ab_damage-gate-unsound) | 30 |
@@ -47,6 +49,54 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-10 (second find) — an Aura's own `effect:` is its attach and the cast path runs nothing after it; six shipped Auras had a dead entry half
+
+Found while re-shaping Venarian Gold (below): its "tap enchanted creature and
+put X sleep counters on it" was spelled as `effect: Seq([Attach, Tap,
+AddCounter])`, and a cast Venarian Gold attached and did nothing else — the
+resolving Aura permanent enters attached to its cast target (stack.rs, CR
+303.4f) and its `effect:` is never run. A census of the shape (an Aura whose
+`effect` is a `Seq` whose first step is `Attach { what: This }`) found five
+more: Hardlight Containment (the exile), Meltstrider's Resolve (the fight),
+Pain for All (the ping), Mark of the Oni (the control change), Shielding Plax
+(the draw). Every one had a test — resolving the `effect` by hand through
+`resolve_effect`, which is why the suite was green.
+
+Fix (`70f037b1`..): the entry half is an ETB trigger (`etb(..)`, the
+Persuasion / Confiscate / Sleeping Potion shape), the six cards re-shaped,
+their tests moved to the trigger (and cast-based ones added for Shielding
+Plax, Mark of the Oni, Venarian Gold), and a suite gate
+(`core_rules::structural_audit::no_aura_spells_an_entry_effect_after_its_attach`)
+refuses the shape. The lesson: **a test that resolves a definition's effect
+by hand tests the effect, not the card** — the cast path is the card.
+
+## FIXED 2026-09-10 — step triggers and targeting triggers under `EventScope::EnchantedBySource` never fired: nine shipped Auras
+
+`fire_step_triggers` treats every event-based scope as "never" (they are
+matched per event), and the `EnchantedBySource` matcher served deaths,
+exiles, damage, attacks, blocks, taps, face-ups and draws of the host — not
+a step, and not `BecameTarget`. So "at the beginning of the upkeep of
+enchanted creature's controller" spelled with that scope was dead: Paroxysm
+(also missing its "otherwise +3/+3" — `RevealTopThenIf` had no `else_`),
+Numbing Dose (whose `PlayerRef::EnchantedPlayer` is the enchanted *player*,
+`None` on a creature host), Takklemaggot, Venarian Gold; "when enchanted
+creature becomes the target" was dead too: Sleeping Potion, Spinal Graft,
+Fractured Loyalty (which also named the Aura's controller, not the
+targeting spell's — `TriggerEventPlayer` is the stamped actor); and Viridian
+Harvest listened on `PutIntoGraveyard`, a kind the host scope never carried
+(`PermanentDied` is the host leaving to the graveyard).
+
+Fix: the step triggers take the documented Wanderlust shape (`AnyPlayer` +
+`ActivePlayerControls(host)`); the matcher gains the `BecameTarget` arm and
+the implicit "source is the target" rule exempts the host scope; `RevealTopThenIf`
+gains `else_`; `SacrificeSourceUnlessSacrifice` gains `count` (Cosmic Larva's
+and Mold Demon's "two lands / two Swamps" sacrificed one). One test per card,
+and a suite gate (`no_trigger_sits_under_a_scope_the_dispatcher_never_matches`)
+that reads every catalog trigger against the served kinds — it found the
+last three (Takklemaggot, Venarian Gold, Viridian Harvest) the moment it
+existed. The lesson is the audit-column one again: **a scope the dispatcher
+special-cases is a column nobody had read**; the gate reads it every run.
 
 ## FIXED 2026-09-09 (fourth find) — the CR 732.3 activation guard was reset by the mana ability that paid for the loop, so Basalt Monolith's tap-and-untap ran an `abilarms` game to the action cap
 
