@@ -2475,6 +2475,16 @@ Song of the Dryads had `remove_abilities: true` throughout.
 
 
 
+### Sacrifice-as-alternative-cost
+
+`AlternativeCost` has a mana / life / exile half and a `not_your_turn_only`
+gate, no sacrifice half and no your-turn gate. Mine Collapse's "if it's your
+turn, you may sacrifice a Mountain rather than pay this spell's mana cost"
+shipped as a mandatory sacrifice on top of {3}{R} until 2026-09-10 and now
+drops the alternative. Needs `sacrifice_filter: Option<SelectionRequirement>`
+and `your_turn_only: bool` on the struct, paid at cast beside `life_cost`
+(the `addl` audit column's residue names it).
+
 ### Replacement Effects
 The engine has no general replacement-effect primitive.  Many real cards need one:
 - ETB replacements (Containment Priest, Torpor Orb, Rest in Peace)

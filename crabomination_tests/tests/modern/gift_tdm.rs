@@ -2052,7 +2052,9 @@ fn desperate_measures_draws_when_target_dies() {
 
 // ── Exhale cycle ────────────────────────────────────────────────────────────
 
-/// Caustic Exhale gives a creature -3/-3.
+/// Caustic Exhale gives a creature -3/-3 — for {B} plus the {1} its
+/// "behold a Dragon or pay {1}" additional cost adds with no Dragon to
+/// reveal (the cost shipped absent; the `addl` audit column, 2026-09-10).
 #[test]
 fn caustic_exhale_shrinks_creature() {
     let mut g = two_player_game();
@@ -2061,6 +2063,11 @@ fn caustic_exhale_shrinks_creature() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(Color::Black, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "{{B}} alone: no Dragon to behold and no {{1}} to pay instead");
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,

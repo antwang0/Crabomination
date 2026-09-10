@@ -2482,6 +2482,14 @@ pub fn caustic_exhale() -> CardDefinition {
         name: "Caustic Exhale",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
+        // "As an additional cost, behold a Dragon or pay {1}" — a Dragon card
+        // revealed from hand, else {1} (the "choose a Dragon you control" half
+        // of behold is not read; it shipped with no cost at all — the `addl`
+        // audit column, 2026-09-10).
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::RevealFromHandOrPay {
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Dragon),
+            pay: 1,
+        }],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-3),

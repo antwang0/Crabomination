@@ -1736,7 +1736,7 @@ fn orcish_lumberjack_cannot_activate_without_a_forest() {
 /// Mine Collapse: {3}{R} sorcery, sacrifice a Mountain on resolution,
 /// deal 5 damage to the target creature or planeswalker.
 #[test]
-fn mine_collapse_sacrifices_mountain_and_deals_five() {
+fn mine_collapse_deals_five_for_its_mana_cost() {
     let mut g = two_player_game();
     let mtn = g.add_card_to_battlefield(0, catalog::mountain());
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
@@ -1757,8 +1757,11 @@ fn mine_collapse_sacrifices_mountain_and_deals_five() {
         mode: None, x_value: None,
     }).expect("Mine Collapse castable for {3}{R}");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == mtn),
-        "Mountain should be sacrificed on resolution");
+    // The printed Mountain sacrifice is an alternative to the mana cost on
+    // your turn, not a rider on it: paid in mana, the Mountain stays (it
+    // shipped sacrificing one on top of {3}{R} — 2026-09-10).
+    assert!(g.battlefield.iter().any(|c| c.id == mtn),
+        "the Mountain stays when the mana cost is paid");
     assert!(!g.battlefield.iter().any(|c| c.id == angel),
         "the 4/4 dies to 5 damage");
 }

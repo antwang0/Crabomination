@@ -2907,21 +2907,17 @@ pub fn mine_collapse() -> CardDefinition {
         name: "Mine Collapse",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Land.and(SelectionRequirement::HasLandType(
-                    crate::card::LandType::Mountain,
-                )),
-            },
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(5),
-            },
-        ]),
+        // "If it's your turn, you may sacrifice a Mountain rather than pay
+        // this spell's mana cost" is an alternative cost `AlternativeCost`
+        // cannot spell (no sacrifice half, no your-turn gate); it shipped as a
+        // MANDATORY Mountain sacrifice on top of {3}{R}. The alternative is
+        // dropped instead (INCOMPLETE_CARDS "Additional cast costs").
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(5),
+        },
         ..Default::default()
     }
 }

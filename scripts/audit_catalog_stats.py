@@ -472,6 +472,140 @@ def ref_ability_other_costs(card, face=None):
         out.append(frozenset(flags))
     return out
 
+# ── Additional cast costs ───────────────────────────────────────────────────
+# "As an additional cost to cast this spell, sacrifice a creature" against
+# the definition's `additional_cast_cost` variants (and
+# `additional_cost_pay_x_life`), as a sorted list of kinds. The optional
+# forms ("you may ..") and the ones no variant spells (choose, waterbend, a
+# mana surcharge) leave the card unread.
+_ADDL_VARIANT = {
+    "SacrificePermanent": "sac", "SacrificeAnyNumber": "sac", "SacrificeAll": "sac",
+    "SacrificeOrPay": "sac", "SacrificeOrPayLife": "sac",
+    "Discard": "discard", "DiscardRandom": "discard", "DiscardXFromCost": "discard",
+    "DiscardXRandomFromCost": "discard",
+    "ExileFromGraveyardXFromCost": "exile", "ExileFromGraveyard": "exile",
+    "ExileFromGraveyardOrPay": "exile", "ProcessExile": "exile", "ExilePermanent": "exile",
+    "RevealFromHandOrPay": "reveal", "RevealFromHand": "reveal", "ChooseOrRevealCreature": "reveal",
+    "ReturnToHand": "bounce", "TapPermanents": "tap", "PayLife": "life",
+    "CollectEvidence": "evidence",
+}
+
+def addl_costs(body):
+    """The kinds the card's own `additional_cast_cost: vec![..]` spells, plus
+    `additional_cost_pay_x_life`; `None` when it has neither."""
+    m = own_field(body, r"additional_cast_cost:")
+    # A card built through a `instant("Name", cost, effect)` / `dreams(..)`
+    # helper carries its cost and effect in the call: unread.
+    if m is None and re.search(r"^\s*(?:\.\.)?\w+\(\s*\n?\s*\"", body, re.M) and own_field(body, r"(?<![:\w])effect:(?!:)") is None:
+        return "skip"
+    out = []
+    if m is not None:
+        vec = vec_after(body, m.start())
+        if vec is None:
+            return None
+        for item in top_level_items(vec):
+            v = re.match(r"\s*(?:[\w:]+::)?AdditionalCastCost::(\w+)", item)
+            if not v:
+                return None
+            if v.group(1) in _ADDL_VARIANT:
+                out.append(_ADDL_VARIANT[v.group(1)])
+            elif v.group(1) in ("ForageOrPay", "OpponentGainsLife"):
+                return None
+    if own_field(body, r"additional_cost_pay_x_life:\s*true") is not None:
+        out.append("life")
+    # The catalog's cost-as-first-step shape: `effect: Seq([SacrificeAndRemember
+    # / Discard { who: You } / LoseLife { who: You }, ..])` (Fling, Tormenting
+    # Voice, Toxic Deluge). The bot's legality reads the sacrifice as a cost;
+    # the others resolve as the effect's first step.
+    soft = []
+    stripped = re.sub(r"//[^\n]*", "", body)
+    e = own_field(stripped, r"(?<![:\w])effect:(?!:)\s*(?:Effect::|E::)?(?:Seq\(vec!\[\s*)?")
+    if e is not None:
+        first = re.match(r"(?:Effect::|E::)?(\w+)\s*\{([^}]*)", stripped[e.end():])
+        if first:
+            k, args = first.group(1), first.group(2)
+            yours = re.search(r"who:\s*(?:PlayerRef|Selector)::You\b", args) or "who:" not in args
+            if k in ("SacrificeAndRemember", "SacrificeAnyNumber") and yours:
+                out.append("sac")
+            elif k == "Sacrifice" and yours:
+                soft.append("sac")
+            elif k == "CollectEvidenceX":
+                out.append("evidence")
+            # A first-step discard or life loss is the cost only when the
+            # oracle prints one (Vampiric Tutor's "you lose 2 life" is the
+            # effect): `soft`, read against the reference by the caller.
+            elif k == "Discard" and "Selector::You" in args:
+                soft.append("discard")
+            elif k == "LoseLife" and "Selector::You" in args:
+                soft.append("life")
+        # "sacrifice a creature or discard a card" as a `ChooseMode` whose
+        # arms are the halves (Bone Shards, Lethal Throwdown).
+        cm = re.match(r"(?:Effect::|E::)?ChooseMode\(vec!\[", stripped[e.end():])
+        if cm:
+            a = e.end() + cm.end() - 1
+            arms = [x.strip() for x in top_level_items(stripped[a + 1: bracket_span(stripped, a) - 1]) if x.strip()]
+            kinds = []
+            for arm in arms:
+                head = re.match(r"(?:Effect::|E::)?(?:Seq\(vec!\[\s*)?(?:Effect::|E::)?(Sacrifice\w*|Discard) \{\s*who: (?:Selector|PlayerRef)::You", arm)
+                kinds.append({"Discard": "discard"}.get(head.group(1), "sac") if head else None)
+            # Every arm a cost half, or it is a charm's modes; soft, since a
+            # synthesised card's modes can be exactly that (Borrowed Knowledge).
+            if arms and all(kinds):
+                soft.append("|".join(sorted(set(kinds))))
+    if m is None and not out and not soft:
+        return None
+    return (sorted(out), soft)
+
+def addl_mismatch(code, ref):
+    """`code` is `(kinds, soft)`; a soft kind counts only when the oracle
+    prints it; an oracle "sacrifice an artifact or discard a card" is met by
+    either kind."""
+    kinds, soft = code
+    kinds = sorted(kinds + [k for k in soft if any(set(k.split("|")) & set(r.split("|")) for r in ref)])
+    if len(kinds) != len(ref):
+        return True
+    return any(set(k.split("|")) - set(r.split("|")) for k, r in zip(kinds, sorted(ref)))
+
+_ADDL_WORDS = (
+    # "pay {4} or sacrifice .." / "pay 5 life or sacrifice .." are the
+    # `SacrificeOrPay` / `SacrificeOrPayLife` variants; "choose a creature you
+    # control or reveal .." is `ChooseOrRevealCreature`; "put a card an
+    # opponent owns from exile .." is `ProcessExile`.
+    (r"^pay [^.]* or sacrifice\b", "sac"), (r"^sacrifice\b", "sac"),
+    (r"^discard\b", "discard"), (r"^(?:reveal|behold|choose a creature you control or reveal)\b", "reveal"),
+    (r"^(?:exile|put a card an opponent owns from exile)\b", "exile"),
+    (r"^pay (?:\d+|X|half) ", "life"), (r"^return\b", "bounce"),
+    (r"^tap\b", "tap"), (r"^collect evidence\b", "evidence"),
+)
+
+def ref_addl_costs(card, face=None):
+    """`None` for a card with no mandatory additional cost, an optional one
+    ("you may ..", which no comparison should see), or a kind no variant
+    spells; an oracle whose first sentence is "Sacrifice a .." (the older
+    wording Transmute Artifact, Dredge and Mana Seism carry) reads as `sac`."""
+    text = (face or card).get("oracle_text")
+    if text is None:
+        return None
+    text = re.sub(r"\([^)]*\)", "", text)
+    if re.search(r"As an additional cost to cast this spell, you may\b", text):
+        return "skip"
+    out = []
+    for m in re.finditer(r"As an additional cost to cast this spell, ([^.]*)\.", text):
+        for what in re.split(r"\band\b(?! (?:discard|sacrifice)ing)", m.group(1).strip()):
+            alts = []
+            for alt in re.split(r"\bor\b", what.strip()):
+                alt = alt.strip()
+                kind = next((k for rx, k in _ADDL_WORDS if re.match(rx, alt, re.I)), None)
+                if kind is None and alts:
+                    continue
+                if kind is None:
+                    return "skip"
+                alts.append(kind)
+            out.append("|".join(sorted(set(alts))))
+    if not out and re.match(r"Sacrifice (?:a|an|any number of)[^:.\n]*\.", text):
+        out.append("sac")
+    return sorted(out) if out else None
+
 _ORACLE_LOY = re.compile(r"^([+\u2212-]?)(\d+|X):\s")
 
 def loyalty_costs(body):
@@ -2106,7 +2240,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "ocost": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": [], "mana": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "ocost": [], "addl": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": [], "mana": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -2243,6 +2377,10 @@ def audit():
             if oc is not None and ref_oc is not None and len(oc) == len(ref_oc):
                 if sorted(sorted(f) for f in oc) != sorted(sorted(f) for f in ref_oc):
                     d["ocost"].append((tag, [sorted(f) or ["-"] for f in oc], [sorted(f) or ["-"] for f in ref_oc]))
+            ad = addl_costs(body)
+            ref_ad = ref_addl_costs(card, face)
+            if "skip" not in (ad, ref_ad) and (ad or ref_ad) is not None and addl_mismatch(ad or ([], []), ref_ad or []):
+                d["addl"].append((tag, ad[0] if ad else [], ref_ad or []))
             # loyalty: the signed costs as a multiset plus the base loyalty.
             loy = loyalty_costs(body)
             ref_loy = ref_loyalty_costs(card, face)
@@ -2327,21 +2465,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "addl", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'ocost':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}{'mana':>6}")
-        print("-" * 128)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "addl", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'ocost':>6}{'addl':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}{'mana':>6}")
+        print("-" * 134)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 128)
+        print("-" * 134)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 

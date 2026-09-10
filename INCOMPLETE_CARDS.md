@@ -922,6 +922,33 @@ Nexus (the removed count through a helper), Anthroplasm (the reverse: its
 "remove all counters" *effect* spelled as `remove_all_counters_cost`, the
 same outcome).
 
+### Additional cast costs — the twelfth column (`addl`), 2026-09-10: three cards, one of them the reverse defect
+
+"As an additional cost to cast this spell, sacrifice a creature / discard a
+card / pay N life / reveal .." against the definition's `additional_cast_cost`
+variants (and `additional_cost_pay_x_life`), as kinds. The catalog's usual
+shape for the mandatory ones is the effect's first step — a
+`SacrificeAndRemember` / `SacrificeAnyNumber` (the bot's legality reads the
+sacrifice as a cost), a `Sacrifice` / `Discard` / `LoseLife` of yours, a
+`ChooseMode` whose every arm is such a step — and the reader takes it as
+the cost when the oracle prints one (one-way: Vampiric Tutor's "you lose 2
+life" is its effect). The optional forms ("you may ..") and a helper-built
+spell (`instant("Name", ..)`) are unread; "pay {4} or sacrifice" is
+`SacrificeOrPay`, "sacrifice an artifact or discard a card" is met by either
+kind, and the older "Sacrifice an artifact. If you do .." wording (Transmute
+Artifact, Dredge) reads as a sacrifice. First run 62 rows; three real:
+
+| Card | Was | Printed |
+|---|---|---|
+| Morkrut Behemoth | no additional cost | "sacrifice a creature or pay {1}{B}" (`SacrificeOrPay`; the variant prices the alternative in generic mana, so {2}) |
+| Caustic Exhale | no additional cost | "behold a Dragon or pay {1}" (`RevealFromHandOrPay`; the "choose a Dragon you control" half of behold is not read) |
+| Mine Collapse (training pool) | a MANDATORY Mountain sacrifice on top of {3}{R} | "you may sacrifice a Mountain rather than pay this spell's mana cost" on your turn — an alternative `AlternativeCost` cannot spell (no sacrifice half, no your-turn gate); the rider is dropped rather than charged |
+
+Residue one row: Redirect Lightning's "pay 5 life" (the Amounts residue
+already names it). Mine Collapse's alternative wants `AlternativeCost {
+sacrifice_filter, your_turn_only }` — a primitive, filed in ENGINE_BACKLOG's
+missing mechanics.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

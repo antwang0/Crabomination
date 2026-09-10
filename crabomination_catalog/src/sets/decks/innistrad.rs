@@ -2561,6 +2561,14 @@ pub fn morkrut_behemoth() -> CardDefinition {
         power: 7,
         toughness: 6,
         keywords: vec![Keyword::Menace],
+        // "As an additional cost to cast this spell, sacrifice a creature or
+        // pay {1}{B}" — the variant prices the alternative in generic mana,
+        // so {1}{B} is {2} here (it shipped with no additional cost at all —
+        // the `addl` audit column, 2026-09-10).
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificeOrPay {
+            filter: SelectionRequirement::Creature,
+            pay: 2,
+        }],
         ..Default::default()
     }
 }
