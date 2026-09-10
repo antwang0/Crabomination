@@ -1400,11 +1400,11 @@ pub fn galvanic_iteration() -> CardDefinition {
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Instant],
         // "When you next cast an instant or sorcery spell this turn, copy that
-        // spell. You may choose new targets for the copy. Flashback {3}{U}{R}"
+        // spell. You may choose new targets for the copy. Flashback {1}{U}{R}"
         // — shipped as an immediate copy of a spell already on the stack with
         // no flashback (the `cnt` audit column, 2026-09-10; Teach by Example's
-        // shape).
-        keywords: vec![Keyword::Flashback(cost(&[generic(3), u(), r()]))],
+        // shape), then with flashback at {3} (`audit_keyword_value.py`).
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), u(), r()]))],
         effect: Effect::OnYourNextInstantSorceryThisTurn {
             body: Box::new(Effect::CopySpellMayChooseTargets {
                 what: Selector::TriggerSource,
