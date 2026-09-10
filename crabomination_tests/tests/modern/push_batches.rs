@@ -2839,7 +2839,6 @@ fn wishclaw_talisman_enters_with_three_charge_counters() {
         "Enters with three charge counters");
 }
 
-#[test]
 /// "Remove a wish counter" is a cost: no counter, no activation (it shipped
 /// as an ungated effect step — the `ocost` audit column, 2026-09-10).
 #[test]
