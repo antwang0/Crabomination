@@ -939,9 +939,11 @@ fn frontline_rush_mode_makes_two_goblins() {
     assert_eq!(goblins, 2, "two 1/1 Goblin tokens");
 }
 
-/// Severance Priest exiles a card from an opponent's hand until it leaves.
+/// Severance Priest exiles a card from an opponent's hand; when it leaves, the
+/// card's owner gets an X/X white Spirit instead of the card (it shipped
+/// returning the card — the `cnt` column, 2026-09-10).
 #[test]
-fn severance_priest_exiles_from_hand_until_it_leaves() {
+fn severance_priest_exiles_from_hand_and_leaves_a_spirit_behind() {
     let mut g = two_player_game();
     let stolen = g.add_card_to_hand(1, catalog::grizzly_bears());
     let priest = g.add_card_to_hand(0, catalog::severance_priest());
@@ -953,9 +955,14 @@ fn severance_priest_exiles_from_hand_until_it_leaves() {
     cast(&mut g, priest); // resolves the creature + its ETB exile trigger
     assert!(g.exile.iter().any(|c| c.id == stolen), "opponent's card is exiled");
     assert!(g.players[1].hand.iter().all(|c| c.id != stolen), "and out of their hand");
-    // When the Priest leaves, the card returns to its owner's hand.
+    // When the Priest leaves, the card stays exiled and its owner gets a 2/2
+    // white Spirit (Grizzly Bears' mana value).
     g.remove_from_battlefield_to_graveyard_raw(priest);
-    assert!(g.players[1].hand.iter().any(|c| c.id == stolen), "card returns when Priest leaves");
+    assert!(g.exile.iter().any(|c| c.id == stolen), "the card stays in exile");
+    let spirit = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.name == "Spirit")
+        .expect("the owner got a Spirit");
+    assert_eq!((spirit.power(), spirit.toughness()), (2, 2));
+    assert_eq!(spirit.definition.printed_colors(), vec![Color::White]);
 }
 
 /// Naga Fleshcrafter's Renew adds a +1/+1 counter from the graveyard.

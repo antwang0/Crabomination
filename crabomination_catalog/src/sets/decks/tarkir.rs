@@ -713,7 +713,9 @@ pub fn frontline_rush() -> CardDefinition {
 }
 
 /// Severance Priest — {W}{B}{G} 3/3 Djinn Cleric with Deathtouch. ETB exile a
-/// nonland card from a target opponent's hand until this leaves the battlefield.
+/// nonland card from a target opponent's hand; when this leaves the battlefield
+/// the card's owner gets an X/X white Spirit (X = its mana value), not the card
+/// (it shipped returning the card to hand — the `cnt` column, 2026-09-10).
 pub fn severance_priest() -> CardDefinition {
     use crate::card::ExileReturnZone;
     CardDefinition {
@@ -731,7 +733,7 @@ pub fn severance_priest() -> CardDefinition {
             from: Selector::Player(PlayerRef::EachOpponent),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland,
-            return_to: ExileReturnZone::Hand,
+            return_to: ExileReturnZone::SpiritToken,
         })],
         ..Default::default()
     }

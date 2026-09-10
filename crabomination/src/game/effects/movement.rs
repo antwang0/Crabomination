@@ -2857,22 +2857,30 @@ impl GameState {
             let Some(pos) = self.exile.iter().position(|c| c.id == cid) else {
                 continue;
             };
-            // Skyclave Apparition: the card stays in exile; its owner gets
-            // an X/X blue Illusion (X = the card's mana value) instead.
-            if self.exile[pos].exiled_by.map(|l| l.return_to)
-                == Some(ExileReturnZone::IllusionToken)
-            {
+            // Skyclave Apparition / Severance Priest: the card stays in exile;
+            // its owner gets an X/X token (X = the card's mana value) instead.
+            let token = match self.exile[pos].exiled_by.map(|l| l.return_to) {
+                Some(ExileReturnZone::IllusionToken) => {
+                    Some(("Illusion", crate::card::CreatureType::Illusion, crate::mana::Color::Blue))
+                }
+                Some(ExileReturnZone::SpiritToken) => {
+                    Some(("Spirit", crate::card::CreatureType::Spirit, crate::mana::Color::White))
+                }
+                _ => None,
+            };
+            if let Some((name, creature_type, color)) = token {
                 let owner = self.exile[pos].owner;
                 let mv = self.exile[pos].definition.cost.cmc() as i32;
                 self.exile[pos].exiled_by = None;
                 let def = crate::card::CardDefinition {
-                    name: "Illusion",
+                    name,
                     cost: crate::mana::ManaCost::default(),
                     card_types: vec![crate::card::CardType::Creature],
                     subtypes: crate::card::Subtypes {
-                        creature_types: vec![crate::card::CreatureType::Illusion],
+                        creature_types: vec![creature_type],
                         ..Default::default()
                     },
+                    color_indicator: vec![color],
                     power: mv,
                     toughness: mv,
                     ..Default::default()

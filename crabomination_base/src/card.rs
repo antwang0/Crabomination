@@ -6346,6 +6346,8 @@ pub enum ExileReturnZone {
     /// Illusion token, X = the exiled card's mana value (Skyclave
     /// Apparition).
     IllusionToken,
+    /// The same with an X/X white Spirit (Severance Priest).
+    SpiritToken,
     /// Return to its owner's graveyard (Gravegouger).
     Graveyard,
 }
