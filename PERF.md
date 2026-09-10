@@ -2848,7 +2848,10 @@ later   the two dispatcher classes (ENGINE_BACKLOG "FIXED 2026-09-10", two entri
         `SacrificeSourceUnlessSacrifice { count }`, the BecameTarget arm and the implicit-source exemption in events.rs, two suite gates in
         structural_audit; suite 19,312 / 0 / 5 (153 s contended, golden_trace 10 / 10), clippy 0 warnings; --bench release-fast rebuilt at
         39371ea1 (6m44s): 195,806 / 27.49 / 611.9 / 0 stalls — counters identical, determinism + thread_determinism ok, bin_bytes 126,736,488,
-        570.9 games/s at host_calib_ms 77; the gate then read the other event-based scopes too (targeting / damage / tap / attacked kinds), clean
+        570.9 games/s at host_calib_ms 77; the gate then read the other event-based scopes too (targeting / damage / tap / attacked kinds), clean;
+        audit build rebuilt at 39371ea1 (7m12s): abilarms vs gang x the four pools x 914..919 x 16 (24 cells), lookahead / planner mirrors x
+        {all, cube, sealed} x 778 x 200 (6 cells), dflt mirror x 400 at cube 781 / sealed 774 / all 764 / sos 768 / fixed 752 (5 cells, 18,400
+        games) — 37,230 games decided, 2 draws (cube 781), 0 cap / 0 stuck / 0 assertion (one 4,247-action abilarms game on all 914 decided at turn 45)
 suite   audit_panics.py 68 sites: 57 guarded / 11 lock / 0 bare; audit_doc_drift 0 body wrong; audit_keyword_value 0 wrong of 762;
         audit_bottom_random 0 / 0; audit_catalog_stats.py 17,229 cards: kw 20 / abil 1 / T-sac 3 / trig 6 / scope 3 the documented
         residue, num 80 / stat 16 / mana 0 (INCOMPLETE_CARDS "Amounts" names the shapes)
