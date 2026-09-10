@@ -28,6 +28,7 @@ pub fn harnesser_of_storms() -> CardDefinition {
         triggered_abilities: vec![crate::card::TriggeredAbility {
             event: EventSpec {
                 once_per_turn: true,
+                once_per_batch: false,
                 ..EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,

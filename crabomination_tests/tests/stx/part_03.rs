@@ -76,24 +76,26 @@ fn reanimation_spells_return_creature_to_battlefield() {
 
 // ── Sneaky Snacker ─────────────────────────────────────────────────────────
 
+/// "When you draw your third card in a turn, return this card from your
+/// graveyard to the battlefield tapped" — the third draw, not the second.
 #[test]
-fn sneaky_snacker_recurs_from_graveyard_to_hand() {
+fn sneaky_snacker_returns_tapped_on_the_third_draw_of_a_turn() {
     let mut g = two_player_game();
     let id = g.add_card_to_graveyard(0, catalog::sneaky_snacker());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    // sorcery-speed activation requires main-phase priority on our turn.
-    assert_eq!(g.active_player_idx, 0);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id,
-        ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Snacker recurs from graveyard");
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let mut events = Vec::new();
+    for _ in 0..2 {
+        g.draw_one(0, &mut events);
+    }
+    g.dispatch_triggers_for_events(&events);
+    assert!(g.stack.is_empty(), "two draws: no trigger");
+    events.clear();
+    g.draw_one(0, &mut events);
+    g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
-    assert!(g.players[0].hand.iter().any(|c| c.id == id), "snacker in hand");
-    assert!(
-        !g.players[0].graveyard.iter().any(|c| c.id == id),
-        "snacker removed from gy"
-    );
+    assert!(g.battlefield_find(id).is_some_and(|c| c.tapped), "snacker back, tapped");
 }
 
 // ── Targeted removal (table) ───────────────────────────────────────────────

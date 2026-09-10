@@ -786,6 +786,7 @@ mod recent95 {
 mod recent96 {
     use crabomination::catalog;
     use crabomination::card::{CounterType, Keyword};
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     use crabomination::game::two_player_game;
     use crabomination::game::*;
 
@@ -816,6 +817,28 @@ mod recent96 {
         }).expect("cast an enchantment");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(kami).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    }
+
+    /// Kami of Transience returns from the graveyard at the *opponent's* end
+    /// step once an enchantment of yours went to your graveyard from the
+    /// battlefield this turn (`EventScope::FromYourGraveyardAnyPlayer`).
+    #[test]
+    fn kami_of_transience_returns_at_each_end_step_after_an_enchantment_died() {
+        let mut g = two_player_game();
+        let kami = g.add_card_to_graveyard(0, catalog::kami_of_transience());
+        let ench = g.add_card_to_battlefield(0, catalog::golden_tail_disciple());
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.step = TurnStep::PostCombatMain;
+        g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+        let mut events = Vec::new();
+        g.destroy_permanent(ench, false, &mut events);
+        for _ in 0..10 {
+            if g.players[0].hand.iter().any(|c| c.id == kami) { break; }
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        drain_stack(&mut g);
+        assert!(g.players[0].hand.iter().any(|c| c.id == kami), "Kami back in hand at P1's end step");
     }
 
     /// Rabbit Battery grants +1/+1 and haste when attached.

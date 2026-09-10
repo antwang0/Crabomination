@@ -155,6 +155,36 @@ mod recent {
         assert_eq!(g.computed_permanent(stalker).unwrap().power, 4, "+1 for the other Rat");
     }
 
+    /// Threshold: a Rat attack with seven cards in the graveyard returns the
+    /// Marshstalker tapped and attacking for {2}{B} (`YouAttack` fires from
+    /// the graveyard, `JoinCombatAttacking` on the returned card).
+    #[test]
+    fn persistent_marshstalker_returns_attacking_on_a_rat_attack_at_threshold() {
+        let mut g = two_player_game();
+        let rat = g.add_card_to_battlefield(0, catalog::persistent_marshstalker());
+        g.clear_sickness(rat);
+        let stalker = g.add_card_to_graveyard(0, catalog::persistent_marshstalker());
+        for _ in 0..6 {
+            g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        }
+        g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+        while g.step != TurnStep::DeclareAttackers {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        // After the step change: the pool empties between steps (CR 500.4).
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: rat,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack with a Rat");
+        drain_stack(&mut g);
+        let back = g.battlefield_find(stalker).expect("Marshstalker returned");
+        assert!(back.tapped, "returns tapped");
+        assert!(g.attacking.iter().any(|a| a.attacker == stalker), "and attacking");
+    }
+
     /// Nightbird's Clutches stops up to two creatures from blocking and has flashback.
     #[test]
     fn nightbirds_clutches_grants_cant_block() {

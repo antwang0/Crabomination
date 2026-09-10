@@ -470,6 +470,54 @@ fn lethal_noncombat_from_your_source(
 /// dispatcher's graveyard walk in `game/mod.rs`, which decides whose printed
 /// abilities are even looked at. A kind admitted by one and rejected by the
 /// other is a trigger that can never fire and never errors.
+/// CR 603.6 — "whenever X happens" kinds fire ONCE PER MATCHING EVENT in a
+/// batch (a board wipe's deaths, a draw-three's draws, one effect tapping
+/// several). Other kinds (ETB, StepBegins, …) fire at most once per (source,
+/// trigger) a batch. One list for the battlefield walk and the graveyard walk
+/// of `dispatch_triggers_for_events`, so the two cannot drift.
+pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
+    matches!(
+        kind,
+        EventKind::Attacks
+            | EventKind::CreatureDied
+            | EventKind::CreatureOrArtifactDied
+            | EventKind::PermanentDied
+            | EventKind::CreatureSacrificed
+            | EventKind::PermanentSacrificed
+            | EventKind::PermanentLeavesBattlefield
+            // The untap step untaps a board at once and one effect taps
+            // several; "whenever a permanent becomes untapped / tapped"
+            // (Mesmeric Orb, Verity Circle) fires per permanent.
+            | EventKind::BecomesUntapped
+            | EventKind::Tapped
+            | EventKind::CardDrawn
+            | EventKind::CardDiscarded
+            // Its twin: Spiritual Focus pays per card an opponent's spell
+            // takes, and Mind Rot takes two.
+            | EventKind::OpponentCausedYouToDiscard
+            | EventKind::CardLeftGraveyard
+            | EventKind::CounterAdded(_)
+            | EventKind::AnyCounterAdded
+            | EventKind::Blocks
+            | EventKind::BecomesBlocked
+            | EventKind::BlocksNOrMore(_)
+            | EventKind::BecomesBlockedByNOrMore(_)
+            | EventKind::AttacksAndIsntBlocked
+            | EventKind::LifeGained
+            | EventKind::LifeLost
+            | EventKind::EnergyGained
+            | EventKind::WonCoinFlip
+            | EventKind::LostCoinFlip
+            | EventKind::RolledDice
+            | EventKind::BecameTarget
+            // Enrage fires once per instance of damage (CR 702.130a).
+            | EventKind::DealtDamage
+            // A Tekuthal-doubled proliferate emits two events in one batch;
+            // payoffs fire once per proliferation.
+            | EventKind::Proliferated
+    )
+}
+
 pub(crate) fn is_graveyard_self_source_kind(kind: &EventKind) -> bool {
     matches!(
         kind,
@@ -873,6 +921,7 @@ fn event_matches_spec_rest(
         // opponent actor (Punishing Fire's "whenever an opponent gains life")
         // wants the opposite side, so defer entirely to the `actor_is_opponent`
         // rider below.
+        EventScope::FromYourGraveyardAnyPlayer => true,
         EventScope::FromYourGraveyard => {
             spec.actor_is_opponent
                 || event_actor(state, event)
@@ -1356,6 +1405,7 @@ pub(crate) fn emblem_event_matches(
             GameEvent::PermanentTapped { actor: Some(a), .. } if state.same_team(*a, controller)
         ),
         EventScope::FromYourGraveyard
+        | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::YourPermanentTargetedByOpponent
         | EventScope::YourCreatureTargeted
         | EventScope::EnchantedBySource

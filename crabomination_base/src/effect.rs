@@ -2969,6 +2969,11 @@ pub enum EventScope {
     /// for triggers with this scope; the trigger's effective controller
     /// is the graveyard owner.
     FromYourGraveyard,
+    /// [`FromYourGraveyard`](Self::FromYourGraveyard) on **any** player's
+    /// event — the graveyard analogue of `AnyPlayer`: a step trigger fires on
+    /// every player's step, not only its owner's (Kami of Transience's "at
+    /// the beginning of each end step, if …, return this card").
+    FromYourGraveyardAnyPlayer,
     /// A `PlayerDamaged` event whose source is controlled by the trigger's
     /// controller and whose damaged player is an opponent of them ("a source
     /// you control deals damage to an opponent" — Quest for Pure Flame).
@@ -3020,6 +3025,15 @@ pub enum EventScope {
     YouTapped,
 }
 
+impl EventScope {
+    /// The trigger functions only while its card is in its owner's graveyard
+    /// (CR 603.3d zone scoping) — the one predicate every graveyard walk and
+    /// the battlefield walk's skip read, so they cannot disagree.
+    pub fn from_graveyard(&self) -> bool {
+        matches!(self, Self::FromYourGraveyard | Self::FromYourGraveyardAnyPlayer)
+    }
+}
+
 /// A structural filter over the unified `GameEvent` stream. The trigger fires
 /// when an event of `kind` arrives, scoped per `scope`, and the optional
 /// `filter` predicate holds in the post-event game state.
@@ -3036,6 +3050,11 @@ pub struct EventSpec {
     /// to false via `#[serde(default)]` for snapshot back-compat. Dramatic Finale.
     #[serde(default)]
     pub once_per_turn: bool,
+    /// "Whenever one or more …" (CR 603.2c): one trigger per batch of
+    /// simultaneous events, however many match, with no per-turn cap
+    /// (Attuned Hunter's "one or more cards leave your graveyard").
+    #[serde(default)]
+    pub once_per_batch: bool,
     /// "This ability triggers only N times each turn" counted per event
     /// subject (Nadu's granted trigger is per creature). `None` = uncapped.
     #[serde(default)]
@@ -3079,6 +3098,7 @@ impl EventSpec {
             scope,
             filter: None,
             once_per_turn: false,
+            once_per_batch: false,
             per_subject_cap: None,
             actor_is_opponent: false,
             exclude_attacker_taps: false,
@@ -3120,6 +3140,11 @@ impl EventSpec {
     /// Mark this trigger "only once each turn" (CR 603.3d).
     pub fn once_per_turn(mut self) -> Self {
         self.once_per_turn = true;
+        self
+    }
+    /// "Whenever one or more …" — once per batch of simultaneous events.
+    pub fn once_per_batch(mut self) -> Self {
+        self.once_per_batch = true;
         self
     }
     /// Cap how many times this trigger fires per distinct subject per turn

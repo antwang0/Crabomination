@@ -18659,6 +18659,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                     Value::Const(100),
                 )),
                 once_per_turn: false,
+                once_per_batch: false,
                 per_subject_cap: None,
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
@@ -55047,6 +55048,7 @@ pub fn the_ozolith() -> CardDefinition {
                 scope: EventScope::YourControl,
                 filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
                 once_per_turn: false,
+                once_per_batch: false,
                 per_subject_cap: None,
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
@@ -55086,6 +55088,7 @@ pub fn nadu_winged_wisdom() -> CardDefinition {
                 scope: EventScope::YourCreatureTargeted,
                 filter: None,
                 once_per_turn: false,
+                once_per_batch: false,
                 per_subject_cap: Some(2),
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
@@ -64931,6 +64934,7 @@ pub fn ominous_seas() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
                 once_per_turn: true,
+                once_per_batch: false,
                 ..EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
             },
             effect: Effect::Seq(vec![

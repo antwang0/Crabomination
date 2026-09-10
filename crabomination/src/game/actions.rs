@@ -12225,9 +12225,7 @@ impl GameState {
         if gy.has_graveyard_trigger() {
             for c in gy.iter() {
                 for t in &c.definition.triggered_abilities {
-                    if t.event.kind == EventKind::SpellCast
-                        && matches!(t.event.scope, EventScope::FromYourGraveyard)
-                    {
+                    if t.event.kind == EventKind::SpellCast && t.event.scope.from_graveyard() {
                         candidates.push((c.id, controller, t.effect.clone(), t.event.filter.clone(), usize::MAX, false));
                     }
                 }

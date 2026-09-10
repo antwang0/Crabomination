@@ -619,6 +619,7 @@ pub fn godo_bandit_warlord() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec {
                     once_per_turn: true,
+                    once_per_batch: false,
                     ..EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
                 },
                 effect: Effect::Seq(vec![
@@ -1699,6 +1700,7 @@ pub fn tide_of_war() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
                 once_per_turn: false,
+                once_per_batch: false,
                 ..EventSpec::new(EventKind::BlocksNOrMore(1), EventScope::AnyPlayer)
             },
             effect: Effect::FlipCoin {

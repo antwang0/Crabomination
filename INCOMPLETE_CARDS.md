@@ -1053,8 +1053,9 @@ Severance Priest's Spirit shipped the same day, with `LastDamagerOf` returning a
 a resolved spell — as a card ref). The triage filed five cards as wanting a
 graveyard trigger zone; `EventScope::FromYourGraveyard` is that zone, and
 two of them shipped as plain uses of it (Kozilek's Return, Afterburner
-Expert) — the other three want a gate, not a zone (ENGINE_BACKLOG
-"Triggers that live in the graveyard"); the last 23 want a primitive
+Expert) — the other three (Kami of Transience, Sneaky Snacker, Persistent
+Marshstalker) wanted the graveyard *walks*, not a gate, and shipped with
+them (ENGINE_BACKLOG "FIXED 2026-09-10 (sixth find)"); the last 23 want a primitive
 (ENGINE_BACKLOG "The cnt triage's other primitives"). The reader then
 learned the triage's own lesson — a helper call it leaves in
 `equipped_bonus` or a station band is an ability, the delayed-trigger

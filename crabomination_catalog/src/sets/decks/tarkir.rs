@@ -236,6 +236,7 @@ pub fn kishla_skimmer() -> CardDefinition {
                 scope: EventScope::YourControl,
                 filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
                 once_per_turn: true,
+                once_per_batch: false,
                 per_subject_cap: None,
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
@@ -2348,8 +2349,12 @@ pub fn attuned_hunter() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::FromYourGraveyard)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            // A battlefield trigger about *your graveyard*, not a
+            // graveyard-resident one: `FromYourGraveyard` scope left it dead
+            // on the battlefield (the walk there skips that scope).
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::You))
+                .once_per_batch(),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

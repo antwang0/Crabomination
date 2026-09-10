@@ -36,10 +36,10 @@ const GY_LANE_TRIGGER: u32 = 6;
 /// the two combat/step walkers need, which is the sound direction for them.
 fn card_has_graveyard_trigger(c: &CardInstance) -> bool {
     use crate::effect::EventScope;
-    c.definition.triggered_abilities.iter().any(|t| match t.event.scope {
-        EventScope::FromYourGraveyard => true,
-        EventScope::SelfSource => crate::game::effects::is_graveyard_self_source_kind(&t.event.kind),
-        _ => false,
+    c.definition.triggered_abilities.iter().any(|t| {
+        t.event.scope.from_graveyard()
+            || (t.event.scope == EventScope::SelfSource
+                && crate::game::effects::is_graveyard_self_source_kind(&t.event.kind))
     })
 }
 

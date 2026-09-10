@@ -569,6 +569,7 @@ pub fn scourge_of_the_throne() -> CardDefinition {
         triggered_abilities: vec![dethrone(), TriggeredAbility {
             event: EventSpec {
                 once_per_turn: true,
+                once_per_batch: false,
                 ..EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
                     Predicate::PlayerHasMostLife { who: PlayerRef::DefendingPlayer },
                 )

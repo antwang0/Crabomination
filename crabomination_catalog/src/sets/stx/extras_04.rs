@@ -75,16 +75,10 @@ pub fn sigardian_savior() -> CardDefinition {
 
 // ── Sneaky Snacker (synthesised STX Witherbloom common) ───────────────────
 
-/// Sneaky Snacker — {U}{B}, 2/1 Rat Rogue (synthesised STX Witherbloom
-/// flavor). "Menace. {2}{B}: Return Sneaky Snacker from your
-/// graveyard to your hand. Activate only as a sorcery."
-///
-/// Push (modern_decks, NEW, `stx::extras`): One-mana evasive body
-/// with built-in graveyard recursion. Wired via a `from_graveyard:
-/// true` activated ability (engine primitive added in push XVII for
-/// Summoned Dromedary) with `sorcery_speed: true`. Tests:
-/// `sneaky_snacker_is_a_one_mana_rat_with_menace`,
-/// `sneaky_snacker_recurs_from_graveyard_to_hand`.
+/// Sneaky Snacker — {U}{B} 2/1 Faerie Rogue, flying. When you draw your third
+/// card in a turn, return this card from your graveyard to the battlefield
+/// tapped. (Shipped as a synthesised "{2}{B}: return to hand" until the
+/// graveyard walk learned once-per-turn; the printed card since.)
 pub fn sneaky_snacker() -> CardDefinition {
     CardDefinition {
         name: "Sneaky Snacker",
@@ -97,28 +91,14 @@ pub fn sneaky_snacker() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
-            mana_cost: cost(&[generic(2), b()]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::You, n: 3 })
+                .once_per_turn(),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
             },
-            once_per_turn: false,
-            sorcery_speed: true,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: true,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
-            ..Default::default()
         }],
         ..Default::default()
     }

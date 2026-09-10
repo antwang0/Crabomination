@@ -19645,7 +19645,7 @@ impl GameState {
                 // its card is in a graveyard (CR 603.3d zone-scoping —
                 // Bloodghast, Voidwing Hybrid); the graveyard walk below
                 // gathers those. Skip them on the battlefield.
-                if matches!(ta.event.scope, crate::effect::EventScope::FromYourGraveyard) {
+                if ta.event.scope.from_graveyard() {
                     continue;
                 }
                 // CR 603.3d — "triggers only once each turn": skip if it has
@@ -19658,59 +19658,13 @@ impl GameState {
                 {
                     continue;
                 }
-                // For batch-fanout-friendly event kinds (Attacks,
-                // CreatureDied, CardDrawn, CardDiscarded, CardLeftGraveyard,
-                // CounterAdded, BlockerDeclared, AttackerWentUnblocked,
-                // CardMilled, LifeGained, LifeLost) the trigger fires
-                // ONCE PER MATCHING EVENT — CR 603.6 "whenever X happens"
-                // fan-out. For other event kinds (ETB, StepBegins, …) we
-                // fire at most once per (source, trigger) pair because
-                // they don't naturally produce duplicate events in a
-                // single batch.
-                let fanout = matches!(
-                    ta.event.kind,
-                    crate::effect::EventKind::Attacks
-                        | crate::effect::EventKind::CreatureDied
-                        | crate::effect::EventKind::CreatureOrArtifactDied
-                        | crate::effect::EventKind::PermanentDied
-                        | crate::effect::EventKind::CreatureSacrificed
-                        | crate::effect::EventKind::PermanentSacrificed
-                        | crate::effect::EventKind::PermanentLeavesBattlefield
-                        // The untap step untaps a board at once and one effect
-                        // taps several; "whenever a permanent becomes untapped /
-                        // tapped" (Mesmeric Orb, Verity Circle) fires per permanent.
-                        | crate::effect::EventKind::BecomesUntapped
-                        | crate::effect::EventKind::Tapped
-                        | crate::effect::EventKind::CardDrawn
-                        | crate::effect::EventKind::CardDiscarded
-                        // Its twin: Spiritual Focus pays per card an
-                        // opponent's spell takes, and Mind Rot takes two.
-                        | crate::effect::EventKind::OpponentCausedYouToDiscard
-                        | crate::effect::EventKind::CardLeftGraveyard
-                        | crate::effect::EventKind::CounterAdded(_)
-                        | crate::effect::EventKind::AnyCounterAdded
-                        | crate::effect::EventKind::Blocks
-                        | crate::effect::EventKind::BecomesBlocked
-                        | crate::effect::EventKind::BlocksNOrMore(_)
-                        | crate::effect::EventKind::BecomesBlockedByNOrMore(_)
-                        | crate::effect::EventKind::AttacksAndIsntBlocked
-                        | crate::effect::EventKind::LifeGained
-                        | crate::effect::EventKind::LifeLost
-                        | crate::effect::EventKind::EnergyGained
-                        | crate::effect::EventKind::WonCoinFlip
-                        | crate::effect::EventKind::LostCoinFlip
-                        | crate::effect::EventKind::RolledDice
-                        | crate::effect::EventKind::BecameTarget
-                        // Enrage fires once per instance of damage
-                        // (CR 702.130a) — fan out across the batch.
-                        | crate::effect::EventKind::DealtDamage
-                        // A Tekuthal-doubled proliferate emits two events in
-                        // one batch; payoffs fire once per proliferation.
-                        | crate::effect::EventKind::Proliferated
-                );
-                // "Only once each turn" overrides fan-out: a single batch of
-                // simultaneous events mints one trigger, not one per event.
-                let fanout = fanout && !ta.event.once_per_turn;
+                // CR 603.6 fan-out by kind (`event_kind_fans_out`); "only
+                // once each turn" and "one or more" override it: a single
+                // batch of simultaneous events mints one trigger, not one
+                // per event.
+                let fanout = crate::game::effects::events::event_kind_fans_out(&ta.event.kind)
+                    && !ta.event.once_per_turn
+                    && !ta.event.once_per_batch;
                 // CR 509.3a/509.3c — "whenever this creature blocks" and
                 // "whenever this creature becomes blocked" fire once per
                 // creature, even under a multi-block (one blocker on several
@@ -20061,16 +20015,20 @@ impl GameState {
         // while this runs on every dispatch — a definition deref per
         // graveyard card per dispatch on a zone that holds one such card in
         // a few games out of six.
+        //
+        // The battlefield walk's rules apply here too, so the two cannot
+        // drift: the intervening filter is read before any once-per-turn
+        // slot is spent (CR 603.4), the kind decides fan-out (CR 603.6),
+        // "once each turn" / "one or more" cap a batch at one fire, and a
+        // replaced or suppressed death never happened.
+        let mut gy_once_fired: Vec<(CardId, usize)> = Vec::new();
         for player in &self.players {
             if !player.graveyard.has_graveyard_trigger() {
                 continue;
             }
             for card in &player.graveyard {
-                for ta in &card.definition.triggered_abilities {
-                    let from_gy_scope = matches!(
-                        ta.event.scope,
-                        crate::effect::EventScope::FromYourGraveyard
-                    );
+                for (trig_idx, ta) in card.definition.triggered_abilities.iter().enumerate() {
+                    let from_gy_scope = ta.event.scope.from_graveyard();
                     // The graveyard-resident `SelfSource` family — cycling,
                     // milling, discarding, "put into a graveyard from
                     // anywhere". The list lives with the scope arm that has
@@ -20085,20 +20043,69 @@ impl GameState {
                     if !from_gy_scope && !gy_self {
                         continue;
                     }
+                    let once_key = (card.id, trig_idx);
+                    if ta.event.once_per_turn
+                        && (self.triggered_once_per_turn_used.contains(&once_key)
+                            || gy_once_fired.contains(&once_key))
+                    {
+                        continue;
+                    }
+                    let fanout = crate::game::effects::events::event_kind_fans_out(&ta.event.kind)
+                        && !ta.event.once_per_turn
+                        && !ta.event.once_per_batch;
                     for ev in events {
                         if is_event_hardcoded(ev, &ta.event) {
                             continue;
                         }
-                        if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
-                            candidates.push(TriggerCandidate {
-                            actor: None,
-                                source: card.id,
-                                effect: ta.effect.clone(),
+                        if !crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                            continue;
+                        }
+                        if let GameEvent::CreatureDied { card_id } = ev
+                            && (dies_suppressed || self.death_was_replaced(*card_id))
+                        {
+                            continue;
+                        }
+                        let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
+                        if let Some(filter) = &ta.event.filter {
+                            let ctx = crate::game::effects::EffectContext {
                                 controller: card.owner,
-                                filter: ta.event.filter.clone(),
-                                subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                                source: Some(card.id),
+                                targets: vec![],
+                                trigger_source: subject,
+                                mode: 0,
+                                x_value: 0,
+                                converged_value: 0,
+                                mana_spent: 0,
+                                mana_spent_by_color: Vec::new(),
+                                source_name: None,
+                                cast_from_hand: true,
                                 event_amount: self.event_amount_for(ev),
-                                triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
+                                kicked: false,
+                                kicked_options: Vec::new(),
+                                kick_count: 0,
+                                bargained: false,
+                                cast_via_mayhem: false,
+                                cast_via_waterbend: false,
+                                cast_collected_evidence: false,
+                                entwined: false,
+                                spree_modes: Vec::new(),
+                            };
+                            if !self.evaluate_predicate(filter, &ctx) {
+                                if !fanout {
+                                    break;
+                                }
+                                continue;
+                            }
+                        }
+                        candidates.push(TriggerCandidate {
+                            actor: crate::game::effects::events::event_actor(self, ev),
+                            source: card.id,
+                            effect: ta.effect.clone(),
+                            controller: card.owner,
+                            filter: ta.event.filter.clone(),
+                            subject,
+                            event_amount: self.event_amount_for(ev),
+                            triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                             triggered_by_death: matches!(
                                 ev,
                                 GameEvent::CreatureDied { .. }
@@ -20111,12 +20118,19 @@ impl GameState {
                                     | GameEvent::ManaAdded { .. }
                                     | GameEvent::ColorlessManaAdded { .. }
                             ),
-                            });
+                        });
+                        if ta.event.once_per_turn {
+                            gy_once_fired.push(once_key);
+                        }
+                        if !fanout {
                             break;
                         }
                     }
                 }
             }
+        }
+        for key in gy_once_fired {
+            self.triggered_once_per_turn_used.insert(key);
         }
         // CR 902.5 / 901.7 — a Vanguard avatar's and a face-up plane's triggers
         // fire from the command zone. A plane's controller is the planar

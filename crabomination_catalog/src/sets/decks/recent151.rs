@@ -237,6 +237,7 @@ pub fn moonstone_harbinger() -> CardDefinition {
     let on_life = |kind| TriggeredAbility {
         event: EventSpec {
             once_per_turn: true,
+            once_per_batch: false,
             ..EventSpec::new(kind, EventScope::YourControl).with_filter(crate::effect::Predicate::IsTurnOf(crate::effect::PlayerRef::You))
         },
         effect: payoff(),

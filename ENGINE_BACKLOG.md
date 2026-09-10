@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-10 (sixth find) — the graveyard walk had none of the battlefield walk's rules: no fan-out, no once-per-turn, no intervening-if gate; one step walk, one scope; Attuned Hunter dead on the battlefield](#fixed-2026-09-10-sixth-find--the-graveyard-walk-had-none-of-the-battlefield-walks-rules-no-fan-out-no-once-per-turn-no-intervening-if-gate-one-step-walk-one-scope-attuned-hunter-dead-on-the-battlefield) | 30 |
 | Bugs & robustness | [FIXED 2026-09-10 (fifth find) — a cast or activation resumed from a cost-choice prompt returned its events to nobody](#fixed-2026-09-10-fifth-find--a-cast-or-activation-resumed-from-a-cost-choice-prompt-returned-its-events-to-nobody) | 17 |
 | Bugs & robustness | [FIXED 2026-09-10 (fourth find) — a cost-paid permanent's own dies trigger stacked below the spell or ability it paid for; Mine Collapse's alternative cost](#fixed-2026-09-10-fourth-find--a-cost-paid-permanents-own-dies-trigger-stacked-below-the-spell-or-ability-it-paid-for-mine-collapses-alternative-cost) | 22 |
 | Bugs & robustness | [FIXED 2026-09-10 (third find) — helper-built abilities were unread by every catalog column: 13 cards, a dead Steam Vines half, a dispatcher arm](#fixed-2026-09-10-third-find--helper-built-abilities-were-unread-by-every-catalog-column-13-cards-a-dead-steam-vines-half-a-dispatcher-arm) | 24 |
@@ -52,6 +53,55 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-10 (sixth find) — the graveyard walk had none of the battlefield walk's rules: no fan-out, no once-per-turn, no intervening-if gate; one step walk, one scope; Attuned Hunter dead on the battlefield
+
+`dispatch_triggers_for_events`' graveyard walk (`FromYourGraveyard` and the
+graveyard `SelfSource` kinds) pushed one candidate per (card, trigger) per
+batch and `break`ed — no CR 603.6 fan-out (Punishing Fire fired once for
+two life gains in a batch; Furious Forebear once for a board wipe), no CR
+603.3d `once_per_turn` (no shipped card combined the two, so latent), no
+CR 603.4 intervening-if before the slot, no `died_card_snapshots` /
+Hushbringer death checks, and `actor: None` where the battlefield walk binds
+the event's player. The fan-out kind list was an inline `matches!` in the
+battlefield walk that nothing else could read. Now: `events::
+event_kind_fans_out` is the one list both walks read; the graveyard walk
+reads the filter before spending a once-per-turn slot, fans out by kind,
+and skips a replaced or suppressed death. `EventScope::from_graveyard()`
+replaces the seven hand-written `matches!(scope, FromYourGraveyard)` sites
+(the battlefield skip, the lane predicate, the step / cast / combat-damage
+/ dispatcher walks). Beside it:
+
+- **`EventSpec::once_per_batch`** — "whenever one or more …" (CR 603.2c):
+  one fire a batch, no turn cap. **Open, filed here:** ten "one or more"
+  triggers in nine catalog files spell that with `.once_per_turn()`, which
+  under-fires across batches (`rg -B14 'once_per_turn\(\)' | rg -i 'one or
+  more'`); migrate them to `.once_per_batch()` when a card test reads it.
+- **`EventScope::FromYourGraveyardAnyPlayer`** — the graveyard `AnyPlayer`:
+  `fire_step_triggers` walked only the active player's graveyard, so no
+  graveyard card could say "at the beginning of *each* end step" (Kami of
+  Transience). The walk now visits every graveyard behind the lane and
+  admits `FromYourGraveyard` on the owner's step, the new scope on any.
+- **`YouAttack` from the graveyard** — `declare_attackers`' "whenever you
+  attack" walk read the battlefield only; Persistent Marshstalker's
+  threshold return could never fire. The attacking player's graveyard joins
+  it behind the lane.
+- **Attuned Hunter** was a *battlefield* trigger about your graveyard
+  written with the graveyard scope — dead on the battlefield since it
+  shipped (the walk there skips the scope), and firing only while the
+  Hunter was itself in the graveyard, where its counter is a no-op. Now
+  `YourControl` + `once_per_batch`.
+- Kami of Transience's end-step return, Sneaky Snacker's printed "third
+  card" return (its synthesised `{2}{B}` activation replaced) and
+  Persistent Marshstalker's threshold return shipped on the primitives
+  above — every one was already spellable except the walks
+  (`AttackedWithCreatureMatching`, `PlayerDrewAtLeastThisTurn`,
+  `PutIntoGraveyardFromBattlefieldThisTurn`, `JoinCombatAttacking` all
+  existed; the "Triggers that live in the graveyard" entry below misread
+  the gates). Tests: `core_rules::cr_recent53::cr_603_*` (four),
+  `recent_a::recent_091_100::kami_of_transience_returns_at_each_end_step_after_an_enchantment_died`,
+  `recent_a::recent_001_010::persistent_marshstalker_returns_attacking_on_a_rat_attack_at_threshold`,
+  `stx::part_03::sneaky_snacker_returns_tapped_on_the_third_draw_of_a_turn`.
 
 ## FIXED 2026-09-10 (fifth find) — a cast or activation resumed from a cost-choice prompt returned its events to nobody
 
@@ -2520,21 +2570,17 @@ Song of the Dryads had `remove_abilities: true` throughout.
 
 
 
-### Triggers that live in the graveyard — the scope exists; three gates do not
+### ~~Triggers that live in the graveyard — the scope exists; three gates do not~~ — CLOSED 2026-09-10 (sixth find)
 
 `EventScope::FromYourGraveyard` is the graveyard-resident trigger (the
-dispatcher walks graveyards for it; 44 cards use it, on SpellCast,
-StepBegins, LandPlayed, ExhaustAbilityActivated, ..). The `cnt` triage
-(INCOMPLETE_CARDS, 2026-09-10) first filed five cards as wanting a zone
-field; two of them were plain uses of the scope and shipped the same day
-(Kozilek's Return, Afterburner Expert). The three left want a *gate*, not
-a zone: Persistent Marshstalker's "whenever you attack with one or more
-Rats" (no attacking-with-a-matching-creature predicate — only
-`AttackingWithAtLeast(n)`) and its "return tapped and attacking" for a
-card (only tokens enter attacking); Kami of Transience's "if an
-enchantment was put into your graveyard from the battlefield this turn"
-(`CreatureDiedThisTurnMatching` is creature-only); Sneaky Snacker's "when
-you draw your third card in a turn" (no drew-Nth-card event).
+dispatcher walks graveyards for it; 44 cards use it). The `cnt` triage
+filed three cards as wanting a gate; every gate already existed
+(`AttackedWithCreatureMatching`, `PutIntoGraveyardFromBattlefieldThisTurn`
+as a requirement over `CardsInGraveyardMatching`, `PlayerDrewAtLeastThisTurn`
++ `once_per_turn`, `JoinCombatAttacking` for "tapped and attacking") — what
+was missing was the *walks*: `YouAttack` and any-player step triggers from
+the graveyard, and once-per-turn in the dispatcher's graveyard walk. All
+three cards shipped with the fix above.
 
 ### The cnt triage's other primitives
 

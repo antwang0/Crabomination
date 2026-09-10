@@ -274,6 +274,7 @@ pub fn elvish_archivist() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec {
                     once_per_turn: true,
+                    once_per_batch: false,
                     ..EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                         .with_filter(Predicate::EntityMatches {
                             what: Selector::TriggerSource,
@@ -289,6 +290,7 @@ pub fn elvish_archivist() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec {
                     once_per_turn: true,
+                    once_per_batch: false,
                     ..EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                         .with_filter(Predicate::EntityMatches {
                             what: Selector::TriggerSource,

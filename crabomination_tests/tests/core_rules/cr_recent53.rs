@@ -5,7 +5,7 @@
 //!   anyway and applies once that permanent becomes a creature.
 //! - CR 611.2c — "for as long as this remains tapped" continuous effects.
 
-use crabomination::card::CardType;
+use crabomination::card::{CardType, CounterType};
 use crabomination::catalog;
 use crabomination::effect::{Duration, Effect, Selector, Value};
 use crabomination::game::types::{GameAction, Target};
@@ -203,4 +203,74 @@ fn cr_308_2_kindred_permanents_carry_creature_types_without_being_creatures() {
     assert!(cp.card_types().contains(&CardType::Artifact));
     assert!(!cp.card_types().contains(&CardType::Creature), "a kindred artifact isn't a creature");
     assert!(cp.subtypes().creature_types.contains(&CreatureType::Lhurgoyf), "but it has the type");
+}
+
+// ── CR 603.2c / 603.3d / 603.4 / 603.6 — the graveyard walk ──────────────────
+// `dispatch_triggers_for_events` walks graveyards for `FromYourGraveyard`
+// triggers under the battlefield walk's rules: fan-out by kind, "once each
+// turn" capping a batch at one fire and spending its slot only when the
+// intervening if holds, "one or more" capping a batch without a turn cap.
+
+/// CR 603.6 — a graveyard-resident "whenever an opponent gains life" fires
+/// once per life-gain event in a batch, as it would from the battlefield.
+#[test]
+fn cr_603_6_a_graveyard_trigger_fans_out_per_matching_event() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::punishing_fire());
+    g.dispatch_triggers_for_events(&[
+        GameEvent::LifeGained { player: 1, amount: 2 },
+        GameEvent::LifeGained { player: 1, amount: 3 },
+    ]);
+    assert_eq!(g.stack.len(), 2, "one Punishing Fire trigger per life gain");
+}
+
+/// CR 603.3d — a graveyard-resident "once each turn" trigger fires once for a
+/// batch of three draws and not again that turn.
+#[test]
+fn cr_603_3d_a_graveyard_once_per_turn_trigger_fires_once_a_batch_and_once_a_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::sneaky_snacker());
+    let c = g.add_card_to_library(0, catalog::forest());
+    g.players[0].cards_drawn_this_turn = 3;
+    let draw = GameEvent::CardDrawn { player: 0, card_id: c };
+    g.dispatch_triggers_for_events(&[draw.clone(), draw.clone(), draw.clone()]);
+    assert_eq!(g.stack.len(), 1, "a draw-three batch mints one trigger");
+    g.dispatch_triggers_for_events(&[draw]);
+    assert_eq!(g.stack.len(), 1, "the slot is spent for the turn");
+}
+
+/// CR 603.4 — a failed intervening if does not spend the once-per-turn slot:
+/// the second draw fails Sneaky Snacker's "your third card", the third fires.
+#[test]
+fn cr_603_4_a_failed_intervening_if_keeps_the_graveyard_once_per_turn_slot() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::sneaky_snacker());
+    let c = g.add_card_to_library(0, catalog::forest());
+    let draw = GameEvent::CardDrawn { player: 0, card_id: c };
+    g.players[0].cards_drawn_this_turn = 2;
+    g.dispatch_triggers_for_events(&[draw.clone()]);
+    assert!(g.stack.is_empty(), "the second draw is not the third");
+    g.players[0].cards_drawn_this_turn = 3;
+    g.dispatch_triggers_for_events(&[draw]);
+    assert_eq!(g.stack.len(), 1, "the third draw fires");
+}
+
+/// CR 603.2c — "whenever one or more cards leave your graveyard" fires once
+/// for a batch of two and again for the next batch (no per-turn cap).
+#[test]
+fn cr_603_2c_once_per_batch_fires_once_a_batch_and_again_next_batch() {
+    let mut g = two_player_game();
+    let hunter = g.add_card_to_battlefield(0, catalog::attuned_hunter());
+    let c = g.add_card_to_library(0, catalog::forest());
+    let left = GameEvent::CardLeftGraveyard { player: 0, card_id: c };
+    g.dispatch_triggers_for_events(&[left.clone(), left.clone()]);
+    assert_eq!(g.stack.len(), 1, "two cards leaving at once mint one trigger");
+    drain_stack(&mut g);
+    g.dispatch_triggers_for_events(&[left]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(hunter).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "a later batch fires again"
+    );
 }

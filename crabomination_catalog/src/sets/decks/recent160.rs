@@ -27,6 +27,7 @@ pub fn erudite_wizard() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
                 once_per_turn: true,
+                once_per_batch: false,
                 ..EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
                     Predicate::PlayerDrewAtLeastThisTurn {
                         who: PlayerRef::You,

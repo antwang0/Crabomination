@@ -837,6 +837,7 @@ pub fn kheru_goldkeeper() -> CardDefinition {
                 scope: EventScope::YourControl,
                 filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
                 once_per_turn: true,
+                once_per_batch: false,
                 per_subject_cap: None,
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,

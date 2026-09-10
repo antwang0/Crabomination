@@ -3362,7 +3362,10 @@ pub fn crystal_barricade() -> CardDefinition {
 }
 
 /// Persistent Marshstalker — {1}{B} 3/1 Rat Berserker. Gets +1/+0 for each
-/// other Rat you control. (Its threshold attack-recursion is omitted.)
+/// other Rat you control. Threshold — whenever you attack with one or more
+/// Rats, if there are seven or more cards in your graveyard, you may pay
+/// {2}{B}; if you do, return this card from your graveyard to the battlefield
+/// tapped and attacking.
 pub fn persistent_marshstalker() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
@@ -3382,6 +3385,36 @@ pub fn persistent_marshstalker() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
                 per_power: 1,
                 per_toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::YouAttack, EventScope::FromYourGraveyard).with_filter(
+                Predicate::All(vec![
+                    Predicate::AttackedWithCreatureMatching {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Rat),
+                    },
+                    Predicate::ValueAtLeast(
+                        Value::CardsInGraveyardMatching {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::Any,
+                        },
+                        Value::Const(7),
+                    ),
+                ]),
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {2}{B} to return Persistent Marshstalker tapped and attacking?"
+                    .into(),
+                mana_cost: cost(&[generic(2), b()]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    },
+                    Effect::JoinCombatAttacking { what: Selector::This },
+                ])),
+                else_: None,
             },
         }],
         ..Default::default()

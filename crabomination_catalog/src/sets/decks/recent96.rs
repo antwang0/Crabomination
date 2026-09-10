@@ -156,8 +156,9 @@ pub fn colossal_skyturtle() -> CardDefinition {
 }
 
 /// Kami of Transience — {1}{G} 2/2 Spirit, trample. Whenever you cast an
-/// enchantment spell, put a +1/+1 counter on it. (The graveyard-recursion end-
-/// step trigger is dropped.)
+/// enchantment spell, put a +1/+1 counter on it. At the beginning of each end
+/// step, if an enchantment was put into your graveyard from the battlefield
+/// this turn, you may return this card from your graveyard to your hand.
 pub fn kami_of_transience() -> CardDefinition {
     CardDefinition {
         name: "Kami of Transience",
@@ -170,19 +171,42 @@ pub fn kami_of_transience() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::Enchantment,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Enchantment,
+                    },
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
                 },
-            ),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::FromYourGraveyardAnyPlayer,
+                )
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: R::Enchantment.and(R::PutIntoGraveyardFromBattlefieldThisTurn),
+                    },
+                    Value::Const(1),
+                )),
+                effect: Effect::MayDo {
+                    description: "Return Kami of Transience from your graveyard to your hand?"
+                        .into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

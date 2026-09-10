@@ -893,7 +893,8 @@ impl GameState {
             }
             EventScope::OpponentControl => controller != active,
             EventScope::AnotherOfYours => false,
-            EventScope::FromYourGraveyard => false, // walked separately below
+            // Walked separately below.
+            EventScope::FromYourGraveyard | EventScope::FromYourGraveyardAnyPlayer => false,
             EventScope::YourPermanentTargetedByOpponent
             | EventScope::YourCreatureTargeted
             | EventScope::EnchantedBySource
@@ -1005,20 +1006,26 @@ impl GameState {
                 }
             }
         }
-        // Walk the active player's graveyard for `FromYourGraveyard`
-        // step triggers (Ichorid's "at the beginning of your upkeep").
+        // Walk the graveyards for graveyard-scoped step triggers:
+        // `FromYourGraveyard` on its owner's step (Ichorid's "at the
+        // beginning of your upkeep"), `FromYourGraveyardAnyPlayer` on every
+        // player's (Kami of Transience's "each end step").
         // Behind the zone's lane (the `(-210)` one; its predicate is the
         // scope, whatever the kind): a graveyard grows all game and this
         // fires on every step, so the walk was a definition deref per
         // graveyard card per step for a card 44 printings carry (PERF `(-218)`).
-        if let Some(player) = self.players.get(active)
-            && player.graveyard.has_graveyard_trigger()
-        {
+        for (seat, player) in self.players.iter().enumerate() {
+            if !player.graveyard.has_graveyard_trigger() {
+                continue;
+            }
             for c in &player.graveyard {
                 for t in &c.definition.triggered_abilities {
-                    if t.event.kind == kind
-                        && matches!(t.event.scope, EventScope::FromYourGraveyard)
-                    {
+                    let fires = match t.event.scope {
+                        EventScope::FromYourGraveyard => seat == active,
+                        EventScope::FromYourGraveyardAnyPlayer => true,
+                        _ => false,
+                    };
+                    if t.event.kind == kind && fires {
                         candidates.push((c.id, t.effect.clone(), c.owner, t.event.filter.clone()));
                     }
                 }

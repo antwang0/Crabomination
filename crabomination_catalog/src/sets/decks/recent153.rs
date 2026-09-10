@@ -104,6 +104,7 @@ pub fn baron_bertram_graywater() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
                 once_per_turn: true,
+                once_per_batch: false,
                 filter: Some(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::IsToken,

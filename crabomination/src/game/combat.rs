@@ -1808,8 +1808,12 @@ impl GameState {
             // over the trigger member list for the same reason as `listeners`.
             let mut you_attack: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> =
                 Vec::new();
+            // A graveyard-scoped "whenever you attack" (Persistent
+            // Marshstalker) functions only from the graveyard (CR 603.3d);
+            // its battlefield copy is walked below, not here.
             let listens = |t: &crate::card::TriggeredAbility, ctrl: usize| {
                 t.event.kind == EventKind::YouAttack
+                    && !t.event.scope.from_graveyard()
                     && (ctrl == ap || t.event.scope == crate::effect::EventScope::AnyPlayer)
             };
             let visit = |c: &crate::card::CardInstance| {
@@ -1826,6 +1830,18 @@ impl GameState {
                 }
             };
             self.battlefield.for_each_triggerer_or_all(own_you_attack_grant, visit);
+            // "Whenever you attack" from the attacking player's graveyard
+            // (Persistent Marshstalker's threshold return), behind the
+            // zone's lane like the step and combat-damage walks.
+            if self.players[ap].graveyard.has_graveyard_trigger() {
+                for c in &self.players[ap].graveyard {
+                    for t in &c.definition.triggered_abilities {
+                        if t.event.kind == EventKind::YouAttack && t.event.scope.from_graveyard() {
+                            you_attack.push((c.id, c.owner, t.effect.clone(), t.event.filter.clone()));
+                        }
+                    }
+                }
+            }
             for (src, ctrl, effect, filter) in you_attack {
                 // CR 603.2 — the "whenever you attack with …" rider is a
                 // trigger-time gate read off the finished attack declaration.
@@ -5832,12 +5848,7 @@ impl GameState {
                             continue;
                         }
                         for t in &gy_card.definition.triggered_abilities {
-                            if t.event.kind == *kind
-                                && matches!(
-                                    t.event.scope,
-                                    crate::effect::EventScope::FromYourGraveyard
-                                )
-                            {
+                            if t.event.kind == *kind && t.event.scope.from_graveyard() {
                                 by_kind[i].push((
                                     gy_card.id,
                                     t.effect.clone(),

@@ -8661,6 +8661,7 @@ pub fn torgal_a_fine_hound() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
                 once_per_turn: true,
+                once_per_batch: false,
                 ..EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                     Predicate::CastSpellMatches(SelectionRequirement::HasCreatureType(
                         CreatureType::Human,
@@ -9121,6 +9122,7 @@ pub fn vaan_street_thief() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec {
                     once_per_turn: true,
+                    once_per_batch: false,
                     ..EventSpec::new(
                         EventKind::DealsCombatDamageToPlayer,
                         EventScope::YourControl,
@@ -9527,6 +9529,7 @@ pub fn choco_seeker_of_paradise() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec {
                     once_per_turn: true,
+                    once_per_batch: false,
                     ..EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
                         Predicate::EntityMatches {
                             what: Selector::TriggerSource,
