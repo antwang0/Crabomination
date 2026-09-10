@@ -8094,14 +8094,14 @@ pub fn chaos_warp() -> CardDefinition {
     }
 }
 
-/// Elvish Reclaimer — {G} Creature — Human Druid. 1/2.
-/// {T}, Sacrifice a land: Search your library for a land card and put it
-/// onto the battlefield.
+/// Elvish Reclaimer — {G} Creature — Elf Warrior. 1/2.
+/// {2}, {T}, Sacrifice a land: Search your library for a land card and put
+/// it onto the battlefield tapped.
 ///
 /// Land-tutor activated ability. The "Sacrifice a land" cost is a proper
 /// pre-resolution activation cost (`sac_other_filter: Some((Land, 1))`),
 /// with the body `Search(Land → BF)`; activation is rejected with no land
-/// to sacrifice. Threshold: +2/+2 (→ 3/4) with seven or more cards in your
+/// to sacrifice. +2/+2 (→ 3/4) with three or more land cards in your
 /// graveyard.
 pub fn elvish_reclaimer() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -8125,7 +8125,7 @@ pub fn elvish_reclaimer() -> CardDefinition {
                 filter: SelectionRequirement::Land,
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
-                    tapped: false,
+                    tapped: true,
                 },
             },
             once_per_turn: false,
@@ -8144,11 +8144,15 @@ pub fn elvish_reclaimer() -> CardDefinition {
             ..Default::default()
         }],
         static_abilities: vec![StaticAbility {
-            description: "Threshold — +2/+2 with seven or more cards in your graveyard.",
+            description: "+2/+2 as long as there are three or more land cards in your graveyard.",
             effect: StaticEffect::PumpSelfIf {
                 condition: Predicate::ValueAtLeast(
-                    Value::GraveyardSizeOf(PlayerRef::You),
-                    Value::Const(7),
+                    Value::count(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Land,
+                    }),
+                    Value::Const(3),
                 ),
                 power: 2,
                 toughness: 2,
@@ -41526,7 +41530,7 @@ pub fn sojourners_companion() -> CardDefinition {
 }
 
 /// Carapace Forger — {1}{G} 2/2 Artifact Creature — Insect. Affinity for
-/// artifacts. As long as you control three or more artifacts, this gets +1/+1.
+/// artifacts. As long as you control three or more artifacts, this gets +2/+2.
 pub fn carapace_forger() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::{Predicate, StaticEffect};
@@ -41542,7 +41546,7 @@ pub fn carapace_forger() -> CardDefinition {
         toughness: 2,
         affinity_filter: Some(SelectionRequirement::Artifact),
         static_abilities: vec![StaticAbility {
-            description: "As long as you control three or more artifacts, this gets +1/+1.",
+            description: "As long as you control three or more artifacts, this gets +2/+2.",
             effect: StaticEffect::PumpSelfIf {
                 condition: Predicate::ValueAtLeast(
                     Value::CountOf(Box::new(Selector::EachPermanent(
@@ -41550,8 +41554,8 @@ pub fn carapace_forger() -> CardDefinition {
                     ))),
                     Value::Const(3),
                 ),
-                power: 1,
-                toughness: 1,
+                power: 2,
+                toughness: 2,
                 keywords: vec![],
             },
         }],

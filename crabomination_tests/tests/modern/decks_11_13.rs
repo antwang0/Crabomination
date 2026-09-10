@@ -1832,14 +1832,20 @@ fn elvish_reclaimer_threshold_pumps_to_three_four() {
     // Base 1/2 with an empty graveyard.
     let c = g.compute_battlefield();
     let r = c.iter().find(|c| c.id == reclaimer).unwrap();
-    assert_eq!((r.power, r.toughness), (1, 2), "base 1/2 below Threshold");
-    // Seven cards in your graveyard → Threshold pump to 3/4.
+    assert_eq!((r.power, r.toughness), (1, 2), "base 1/2 with no lands in the graveyard");
+    // Seven nonland cards do nothing; three land cards pump it to 3/4.
     for _ in 0..7 {
         g.add_card_to_graveyard(0, catalog::lightning_bolt());
     }
     let c = g.compute_battlefield();
     let r = c.iter().find(|c| c.id == reclaimer).unwrap();
-    assert_eq!((r.power, r.toughness), (3, 4), "+2/+2 with seven+ in graveyard");
+    assert_eq!((r.power, r.toughness), (1, 2), "nonland cards do not count");
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    let c = g.compute_battlefield();
+    let r = c.iter().find(|c| c.id == reclaimer).unwrap();
+    assert_eq!((r.power, r.toughness), (3, 4), "+2/+2 with three land cards in the graveyard");
 }
 
 #[test]

@@ -1120,7 +1120,8 @@ def code_numbers(lit):
     (`PlusOnePlusOne` -> 1). The literal's own `mana_cost:` is not an amount."""
     lit = re.sub(r"mana_cost:\s*cost\(&\[[^\]]*\]\)", "", lit)
     lit = re.sub(r"//[^\n]*", "", lit)
-    nums = {int(n) for n in re.findall(r"(?<![\w.])-?\d+(?![\w.])", lit)}
+    # Not part of an identifier or a decimal; a `0.` sentence end is a 0.
+    nums = {int(n) for n in re.findall(r"(?<!\w)(?<!\d\.)-?\d+(?!\w|\.\d)", lit)}
     nums |= {int(n) for n in re.findall(r"(?<=[a-z_])(\d+)\b", lit)}
     # "Search your library for up to two ..." as two `search_*` calls.
     searches = len(re.findall(r"\bsearch_\w+\(|Effect::Search\b", lit))
@@ -1158,6 +1159,7 @@ _ORACLE_IDIOMS = [
     r"\bany number\b",
     r"\bat least (?:two|three|four) other\b",
     r"\bamong one, two, or three\b",
+    r"\btwice (?:that|as) (?:many|much)\b",
     r"\btoxic \d\b",
     r"\bcollect evidence \d+\b",
     # A granted or token ability in quotes is a nested literal the token
@@ -1256,6 +1258,21 @@ def spell_numbers(body):
     own `cost:` and name; `None` when the card has no `effect:` literal."""
     if own_field(body, r"(?<![:\w])effect:(?!:)\s*(?:Some\()?") is None:
         return None
+    body = re.sub(r"\bcost:\s*cost\(&\[[^\]]*\]\)", "", body)
+    body = re.sub(r"\bname:\s*\"[^\"]*\"", "", body)
+    return with_bindings(body, local_bindings(body))
+
+def static_numbers(body):
+    """A permanent's whole body minus its own `cost:`, `name:` and top-level
+    `power:` / `toughness:` — the statics, keywords, `equipped_bonus`,
+    `enters_with` and the local bindings — as an integer set; `None` when
+    the card has no `static_abilities:`."""
+    if own_field(body, r"static_abilities:") is None:
+        return None
+    for field in ("power", "toughness"):
+        m = own_field(body, rf"{field}:\s*-?\d+")
+        if m:
+            body = body[: m.start()] + body[m.end():]
     body = re.sub(r"\bcost:\s*cost\(&\[[^\]]*\]\)", "", body)
     body = re.sub(r"\bname:\s*\"[^\"]*\"", "", body)
     return with_bindings(body, local_bindings(body))
@@ -1687,7 +1704,7 @@ def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": [], "abil": [], "timing": [], "tapsac": [], "loy": [], "tok": [], "trig": [], "scope": [], "filt": [], "num": [], "stat": []})
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
@@ -1862,11 +1879,18 @@ def audit():
                         and numbers_mismatch(nums, ref_nums):
                     d["num"].append((tag, [sorted(n) for n in nums], [sorted(n) for n in ref_nums]))
             tl = (face or card).get("type_line") or ""
+            ref_sn = set().union(*[oracle_numbers(t, cname) for k, t in ref_lines if k == "other"]) if ref_lines else set()
             if re.search(r"\b(?:Instant|Sorcery)\b", tl):
                 sn = spell_numbers(body)
-                ref_sn = set().union(*[oracle_numbers(t, cname) for k, t in ref_lines if k == "other"]) if ref_lines else set()
                 if sn is not None and ref_sn and not ref_sn <= sn:
                     d["num"].append((tag, sorted(sn), sorted(ref_sn)))
+            else:
+                # A permanent's static lines against its whole body: the
+                # anthem / conditional-pump / cost amounts (Carapace Forger's
+                # +1/+1 for a printed +2/+2, Elvish Reclaimer's threshold).
+                sn = static_numbers(body)
+                if sn is not None and ref_sn and not ref_sn <= sn:
+                    d["stat"].append((tag, sorted(sn), sorted(ref_sn)))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -1883,21 +1907,21 @@ def main():
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num"):
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num", "stat"):
             print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
             for tag, got, ref in d[dim]:
                 print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
     else:
-        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num")
-        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}")
-        print("-" * 110)
+        dims = ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "loy", "tok", "trig", "scope", "filt", "num", "stat")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}{'abil':>6}{'tim':>6}{'T/sac':>6}{'loy':>6}{'tok':>6}{'trig':>6}{'scope':>6}{'filt':>6}{'num':>6}{'stat':>6}")
+        print("-" * 116)
         tot = {"checked": 0, **{k: 0 for k in dims}}
         for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
             d = per_set[s]
             if not d["checked"]: continue
             for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
             print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-        print("-" * 110)
+        print("-" * 116)
         print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
         print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 

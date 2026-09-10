@@ -811,6 +811,16 @@ row on `fetch()` / `sweep()` is not a finding until the helper is read; a
 number in a `//` comment is not code; and the direction is one-way — an
 extra number in the code (a `slot: 1`, a `max_targets`) is never a row.
 
+The same reader over a permanent's static lines (`stat`: the whole body
+minus its own cost, name and P/T, so an `equipped_bonus` and a local
+binding count) found two more the same day — Carapace Forger's +1/+1 for
+a printed +2/+2 and Elvish Reclaimer's "seven or more cards" for "three or
+more land cards" — and left 16 rows, every one a custom `StaticEffect`
+whose amount lives in the engine (`ControllerDrawsDoubled`,
+`ManaProductionTripled`, `NonAuraEnchantmentsAreCreatures { requires_five }`)
+or, in one case, a different shape: The Water Crystal's "mill that many
+plus four" ships as `OpponentMillDoubled`.
+
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|

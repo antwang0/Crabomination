@@ -730,7 +730,7 @@ fn broodstar_pt_scales_with_artifacts() {
     assert_eq!((c.power, c.toughness), (3, 3), "*/* = artifacts you control");
 }
 
-/// Carapace Forger gets +1/+1 while you control three or more artifacts.
+/// Carapace Forger gets +2/+2 while you control three or more artifacts.
 #[test]
 fn carapace_forger_grows_with_artifacts() {
     let mut g = two_player_game();
@@ -739,7 +739,7 @@ fn carapace_forger_grows_with_artifacts() {
     // count itself (it shipped as one until 2026-08-30).
     assert_eq!(g.computed_permanent(cf).unwrap().power, 2, "no artifacts yet");
     for _ in 0..3 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
-    assert_eq!(g.computed_permanent(cf).unwrap().power, 3, "three artifacts → +1/+1");
+    assert_eq!(g.computed_permanent(cf).unwrap().power, 4, "three artifacts → +2/+2");
 }
 
 /// Qumulox's Affinity drops its {7}{U} to {U} with seven artifacts.
