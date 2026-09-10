@@ -28,21 +28,20 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-288)` is the last claimed, `(-289)` next. Gotchas in **CLAUDE.md**, measurement in
-   **PERF's "Standing rules"**. ⚠ Fetch before every push. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
+   tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; fetch before every push. Gotchas in **CLAUDE.md**, measurement in
+   **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
 2. **Gates at the tip (PERF Baseline, the 2026-09-10 addendum):** suite 19,312 / 0 / 5, clippy 0, golden_trace 10/10, `--bench` counters identical to
    `2003d1cf` at the engine tip, determinism + thread_determinism ok, 547-571 games/s idle at calib 68-77 (a box, not code); 36,800 fresh-seed dflt
-   games (cube 777..778, sealed 770..771, all 760..761, sos 764..765, fixed 748..749) + 120 k searching-pilot games (abilarms 890..905, mirror
-   790..795, lookahead / planner 774..775, mcts 772..774) 0 cap / 0 stuck / 0 assertion; the two post-fix blocks (71,774 + 37,230 games) and
-   the actor leg (24,000 games / 2.42 M rows / 0 stalls) on the rebuilt audit binaries likewise.
+   games (cube 777..778, sealed 770..771, all 760..761, sos 764..765, fixed 748..749) + 120 k searching-pilot games (abilarms 890..905, mirror 790..795,
+   lookahead / planner 774..775, mcts 772..774), two post-fix blocks (109 k) and an actor leg (24 k / 2.42 M rows): 0 cap / stuck / assertion / stall.
 3. **This run:** bug-class finders, not sweeps — `audit_catalog_stats.py`'s `num` / `stat` / `mana` columns found **43 shipped cards at the wrong
    number** (six training-pool cards: Languish -2/-2, Searing Wind 5, Fatal Push without revolt, ...; INCOMPLETE_CARDS "Amounts"); then two
-   dispatcher classes (ENGINE_BACKLOG 2026-09-10): 15 Auras with a trigger the scope never matched or an entry effect the cast path never ran,
-   now two suite gates in `structural_audit`. `RevealTopThenIf { else_ }`, `SacrificeSourceUnlessSacrifice { count }`. No trace or counter moved.
-4. **Next moves:** (a) the columns and gates are the cheapest finders on the branch (no build); left: "mill plus N" (The Water Crystal), the
-   helper-built mana abilities (unread by every column), and the same read for `StaticEffect` / `PlayerRef` variants a resolver special-cases
-   (`EnchantedPlayer` was one); (b) searching mirrors next: abilarms 920+, mirror 796+, mcts 775+, lookahead / planner 779+; dflt cube 782,
-   sealed 775, all 765, sos 769, fixed 753; (c) the crack-back horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF.
+   dispatcher classes (ENGINE_BACKLOG 2026-09-10): 15 Auras with a trigger the scope never matched or an entry effect the cast path never ran —
+   now two `structural_audit` gates; `RevealTopThenIf { else_ }`, `SacrificeSourceUnlessSacrifice { count }`. No trace or counter moved.
+4. **Next moves:** (a) the columns and gates are the cheapest finders (no build); left: "mill plus N" (The Water Crystal), helper-built mana
+   abilities (unread by every column), and the same read for `PlayerRef` / `StaticEffect` variants a resolver special-cases (`EnchantedPlayer` was
+   one); (b) mirrors next: abilarms 920+, mirror 796+, mcts 775+, lookahead / planner 779+; dflt cube 782, sealed 775, all 765, sos 769, fixed 753;
+   (c) the crack-back horizon (38 % of the actor) is the one strength round left; prompt text stays in PERF's candidates.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
