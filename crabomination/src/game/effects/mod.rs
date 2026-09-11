@@ -23375,10 +23375,35 @@ impl GameState {
             }
 
             Effect::KindleTheCarnage => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let p = ctx.controller;
                 let src = ctx.source.unwrap_or(CardId(0));
-                for _ in 0..1000 {
+                // The repeat is the controller's and went straight to
+                // `self.decider`, so a `wants_ui` seat was never asked. Routed
+                // through the seat, with `TradeSecrets`' accounting: the round's
+                // random discard and its damage happen BEFORE the ask, so they
+                // cannot be moved after it — instead, one logged answer is one
+                // round already performed, and the re-run skips those rounds
+                // rather than repeating them (which would also re-draw the RNG
+                // that picked the discard).
+                let spent = self.scratch.resolution_answer_log.len();
+                let mut cursor = 0;
+                for round in 0..1000 {
+                    if round > 0 {
+                        let Some(again) = self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            "Repeat Kindle the Carnage?".to_string(),
+                            src,
+                            effect,
+                            OptionalKind::Neutral,
+                        ) else {
+                            return Ok(());
+                        };
+                        if !again {
+                            break;
+                        }
+                    }
+                    if round < spent { continue; }
                     if self.players[p].hand.is_empty() { break; }
                     // Discard a card at random.
                     use rand::seq::SliceRandom;
@@ -23396,17 +23421,15 @@ impl GameState {
                             self.deal_damage_to_from(EntityRef::Permanent(tgt), mv, ctx.source, events);
                         }
                     }
-                    // "You may repeat this process any number of times."
-                    let again = matches!(
-                        self.decider.decide(&Decision::OptionalTrigger {
-                            source: src,
-                            description: "Repeat Kindle the Carnage?".into(),
-                            kind: OptionalKind::Neutral,
-                        }),
-                        DecisionAnswer::Bool(true)
-                    );
-                    if !again { break; }
+                    // An empty hand makes the next round a no-op, so do not pose
+                    // the question at all. (The old shape asked and then broke at
+                    // the top of the next iteration; with a seat-routed ask that
+                    // is a round trip for nothing.)
+                    if self.players[p].hand.is_empty() {
+                        break;
+                    }
                 }
+                self.clear_answer_log();
                 Ok(())
             }
 

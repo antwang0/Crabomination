@@ -2026,6 +2026,42 @@ fn kindle_the_carnage_repeats_board_burn() {
     assert_eq!(g.players[0].hand.len(), 0, "both hand cards discarded across two rounds");
 }
 
+/// …and a UI seat is the one asked, one round at a time. The repeat went
+/// straight to `self.decider`, so a `wants_ui` controller — every training seat
+/// — never saw it. The round's random discard and its damage happen BEFORE the
+/// ask, so the arm counts the answers already in the channel as rounds already
+/// performed rather than repeating them on the re-run.
+#[test]
+fn kindle_the_carnage_asks_the_ui_seat_once_per_round() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2
+    let spell = g.add_card_to_hand(0, catalog::kindle_the_carnage());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Kindle the Carnage");
+    drain_stack(&mut g);
+    // One round is in: one card gone, 2 damage on each 2/2, and the ask is up.
+    assert!(g.pending_decision.is_some(), "the UI seat is asked whether to repeat");
+    assert_eq!(g.players[0].hand.len(), 1, "exactly one card discarded so far");
+    assert!(g.battlefield_find(a).is_some(), "2 damage is not lethal to a 2/2");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("repeat once");
+    assert!(g.pending_decision.is_none(), "an empty hand ends it without another ask");
+    assert_eq!(g.players[0].hand.len(), 0, "the second round took the other card");
+    assert!(
+        g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(),
+        "two rounds of 2 = 4 damage burned both 2/2s down"
+    );
+}
+
 /// Bronze Bombshell's CR 603.8 state trigger: when an opponent steals it, they
 /// sacrifice it and take 7 damage.
 #[test]
