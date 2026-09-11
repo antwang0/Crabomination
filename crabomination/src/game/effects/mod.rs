@@ -8166,7 +8166,7 @@ impl GameState {
                                 Some((*id, c.definition.cost.cmc()))
                             })
                             .collect();
-                        ranked.sort_by(|a, b| b.1.cmp(&a.1));
+                        ranked.sort_by_key(|r| std::cmp::Reverse(r.1));
                         DecisionAnswer::Cards(
                             ranked.into_iter().map(|(id, _)| id).take(take as usize).collect(),
                         )
@@ -16365,6 +16365,7 @@ impl GameState {
                 if candidates.is_empty() {
                     return Ok(());
                 }
+                // The headless answer — decline — is deliberate; see above.
                 let pick = match self.decider.decide(&Decision::ChooseCards {
                     source: ctx.source.unwrap_or(CardId(0)),
                     prompt: "Return a permanent sharing a type?".to_string(),
@@ -25242,7 +25243,7 @@ impl GameState {
                             Some((*id, c.definition.cost.cmc()))
                         })
                         .collect();
-                    ranked.sort_by(|a, b| b.1.cmp(&a.1));
+                    ranked.sort_by_key(|r| std::cmp::Reverse(r.1));
                     ranked.into_iter().map(|(id, _)| id).take(1).collect()
                 };
                 let Some(picked) = self.choose_up_to_cards(
