@@ -8129,14 +8129,42 @@ impl GameState {
                 let mut taken = 0usize;
                 if take > 0 && !cands.is_empty() {
                     let source = ctx.source.unwrap_or(CardId(0));
-                    let answer = self.decider.decide(&Decision::ChooseCards {
-                        source,
-                        prompt: "Put which cards milled this way into your hand?".to_string(),
-                        candidates: cands,
-                        min: 0,
-                        max: take,
-                        eligible: None,
-                    });
+                    // The mill already happened, so this ask cannot suspend —
+                    // a re-run would mill again — and the installed decider
+                    // answers even for a `wants_ui` seat (a dedicated pending
+                    // state is a TODO.md follow-up). What it must not do is
+                    // inherit `AutoDecider`'s blanket empty answer: the mill is
+                    // the cost and taking nothing made nine cards (Gather the
+                    // Pack, Grisly Salvage, Commune with the Gods, …) pure
+                    // self-mill for every bot seat. Auto default: the priciest
+                    // eligible card, `decide_choose_cards`' own rule for a
+                    // beneficial pick.
+                    let answer = if matches!(
+                        self.decider.kind(),
+                        crate::decision::DeciderKind::Auto
+                    ) {
+                        let mut ranked: Vec<(CardId, u32)> = cands
+                            .iter()
+                            .filter_map(|(id, _)| {
+                                let c =
+                                    self.players[p].graveyard.iter().find(|c| c.id == *id)?;
+                                Some((*id, c.definition.cost.cmc()))
+                            })
+                            .collect();
+                        ranked.sort_by(|a, b| b.1.cmp(&a.1));
+                        DecisionAnswer::Cards(
+                            ranked.into_iter().map(|(id, _)| id).take(take as usize).collect(),
+                        )
+                    } else {
+                        self.decider.decide(&Decision::ChooseCards {
+                            source,
+                            prompt: "Put which cards milled this way into your hand?".to_string(),
+                            candidates: cands,
+                            min: 0,
+                            max: take,
+                            eligible: None,
+                        })
+                    };
                     if let DecisionAnswer::Cards(picked) = answer {
                         for cid in picked.into_iter().take(take as usize) {
                             if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid)
@@ -16358,6 +16386,14 @@ impl GameState {
             Effect::MayReturnSharingPermanentType { with } => {
                 // Cloudstone Curio. "Permanent type" = the entering permanent's
                 // card types intersected with the candidate's.
+                //
+                // The ask stays synchronous and the headless answer — decline —
+                // is the deliberate one: every candidate is a permanent *we*
+                // control, so the pick is a cost paid for a re-entry payoff the
+                // engine cannot see, and `decide_choose_cards`' battlefield
+                // branch declines an all-own board at `min: 0` too. Plumbing it
+                // would buy a suspend round-trip per nonland ETB and the same
+                // answer.
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(entered) = self
                     .resolve_selector(with, ctx)
@@ -16576,14 +16612,31 @@ impl GameState {
                 if candidates.is_empty() {
                     return Ok(());
                 }
-                let pick = match self.decider.decide(&Decision::ChooseCards {
-                    source: src,
-                    prompt: "Put a creature onto the battlefield blocking?".to_string(),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max: 1, eligible: None }) {
-                    DecisionAnswer::Cards(ids) => ids.into_iter().next(),
-                    _ => None,
+                // The source is already back in hand, so this ask cannot
+                // suspend — a re-run would bounce it twice. Auto default: the
+                // best blocker in hand (highest toughness, then power).
+                // `AutoDecider`'s empty answer left Aetherplasm bouncing itself
+                // for nothing, which is the whole card.
+                let pick = if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+                    let mut ranked: Vec<(CardId, i32, i32)> = candidates
+                        .iter()
+                        .filter_map(|(id, _)| {
+                            let c = self.players[ctx.controller].hand.iter().find(|c| c.id == *id)?;
+                            Some((*id, c.definition.toughness, c.definition.power))
+                        })
+                        .collect();
+                    ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
+                    ranked.first().map(|(id, ..)| *id)
+                } else {
+                    match self.decider.decide(&Decision::ChooseCards {
+                        source: src,
+                        prompt: "Put a creature onto the battlefield blocking?".to_string(),
+                        candidates: candidates.clone(),
+                        min: 0,
+                        max: 1, eligible: None }) {
+                        DecisionAnswer::Cards(ids) => ids.into_iter().next(),
+                        _ => None,
+                    }
                 };
                 let Some(cid) = pick.filter(|id| candidates.iter().any(|(c, _)| c == id)) else {
                     return Ok(());
@@ -20090,9 +20143,15 @@ impl GameState {
 
             Effect::Champion { filter } => self.resolve_champion(filter, ctx, events),
 
-            Effect::ExileUpToNFromGraveyards { count, of, single } => {
-                self.resolve_exile_up_to_n_from_graveyards(count, of.as_ref(), *single, ctx, events)
-            }
+            Effect::ExileUpToNFromGraveyards { count, of, single } => self
+                .resolve_exile_up_to_n_from_graveyards(
+                    count,
+                    of.as_ref(),
+                    *single,
+                    ctx,
+                    events,
+                    effect,
+                ),
 
             Effect::ExileTopMintPerChosenColor { who, amount, token } => {
                 self.resolve_exile_top_mint_per_chosen_color(who, amount, token, ctx, events)
@@ -25207,7 +25266,6 @@ impl GameState {
             }
 
             Effect::PutAuraFromHandAttachedTo { host } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(anchor) =
                     self.resolve_selector(host, ctx).into_iter().find_map(|e| e.as_permanent_id())
                 else {
@@ -25222,16 +25280,33 @@ impl GameState {
                 if candidates.is_empty() {
                     return Ok(());
                 }
-                let pick = match self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: "Put an Aura from your hand onto the battlefield attached to this"
-                        .into(),
-                    candidates,
-                    min: 0,
-                    max: 1, eligible: None }) {
-                    DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
-                    _ => return Ok(()),
+                // Nothing has moved yet, so the pick plumbs: a `wants_ui` seat
+                // (every bot seat) gets the real `decide_choose_cards` hand
+                // policy instead of `AutoDecider`'s empty answer, which put no
+                // Aura down at all. Headless default: the priciest Aura.
+                let auto_default: Vec<CardId> = {
+                    let mut ranked: Vec<(CardId, u32)> = candidates
+                        .iter()
+                        .filter_map(|(id, _)| {
+                            let c = self.players[ctx.controller].hand.iter().find(|c| c.id == *id)?;
+                            Some((*id, c.definition.cost.cmc()))
+                        })
+                        .collect();
+                    ranked.sort_by(|a, b| b.1.cmp(&a.1));
+                    ranked.into_iter().map(|(id, _)| id).take(1).collect()
                 };
+                let Some(picked) = self.choose_up_to_cards(
+                    ctx.controller,
+                    "Put an Aura from your hand onto the battlefield attached to this".to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates,
+                    1,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
+                let Some(pick) = picked.first().copied() else { return Ok(()) };
                 self.move_card_to(
                     pick,
                     &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
@@ -29308,17 +29383,42 @@ impl GameState {
                     return Ok(());
                 }
                 let max = candidates.len() as u32;
-                let picks: Vec<CardId> = match self.decider.decide(&Decision::ChooseCards {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    prompt: "Shuffle which cards into your library?".to_string(),
-                    candidates: candidates.clone(),
-                    min: 0,
-                    max, eligible: None }) {
-                    DecisionAnswer::Cards(ids) => ids
-                        .into_iter()
-                        .filter(|id| candidates.iter().any(|(c, _)| c == id))
-                        .collect(),
-                    _ => Vec::new(),
+                // Auto default: the cards this seat cannot cast (mana value
+                // above its land count), so a rummage that fires trades the
+                // uncastable half of the hand. `AutoDecider`'s empty answer
+                // shuffled nothing and drew nothing — the activation, its {2}
+                // and the artifact for a no-op. The ask deliberately does NOT
+                // go through `choose_up_to_cards`: the bot's generic hand
+                // policy reads an "any number" prompt as a beneficial pick and
+                // takes the *biggest* cards up to the cap, i.e. the whole hand.
+                let picks: Vec<CardId> = if matches!(
+                    self.decider.kind(),
+                    crate::decision::DeciderKind::Auto
+                ) {
+                    let lands =
+                        self.battlefield.iter().filter(|c| c.controller == p && c.definition.is_land()).count()
+                            as u32;
+                    self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| c.definition.cost.cmc() > lands)
+                        .map(|c| c.id)
+                        .collect()
+                } else {
+                    match self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Shuffle which cards into your library?".to_string(),
+                        candidates: candidates.clone(),
+                        min: 0,
+                        max,
+                        eligible: None,
+                    }) {
+                        DecisionAnswer::Cards(ids) => ids
+                            .into_iter()
+                            .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                            .collect(),
+                        _ => Vec::new(),
+                    }
                 };
                 let n = picks.len() as i32;
                 for id in picks {
@@ -35758,7 +35858,18 @@ impl GameState {
     }
 
     /// Exile up to `count` cards from any graveyards, chosen by the
-    /// controller's decider (Faerie Macabre). Optional — bots take none.
+    /// controller's decider (Faerie Macabre).
+    ///
+    /// Every shipped user is graveyard hate aimed at somebody else (Rag Dealer,
+    /// Shred Memory, Carrion Beetles, Erebos's Intervention, …), so the pick
+    /// goes through [`choose_up_to_cards`](Self::choose_up_to_cards): a
+    /// `wants_ui` seat — which every bot seat is — gets a real pending decision
+    /// and `decide_choose_cards`' hostile-graveyard-first policy, and a headless
+    /// one takes the auto default below. It used to ask the installed decider
+    /// directly, so `AutoDecider`'s blanket empty answer exiled **nothing** for
+    /// every bot seat: eighteen cards resolved as a no-op and Soul-Shackled
+    /// Zombie's "if a creature card was exiled this way" rider never fired.
+    #[allow(clippy::too_many_arguments)]
     fn resolve_exile_up_to_n_from_graveyards(
         &mut self,
         count: &crate::effect::Value,
@@ -35766,8 +35877,8 @@ impl GameState {
         single: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) -> Result<(), GameError> {
-        use crate::decision::{Decision, DecisionAnswer};
         let n = self.evaluate_value(count, ctx).max(0) as u32;
         if n == 0 {
             return Ok(());
@@ -35785,32 +35896,53 @@ impl GameState {
         if candidates.is_empty() {
             return Ok(());
         }
-        let answer = self.decider.decide(&Decision::ChooseCards {
-            source: ctx.source.unwrap_or(CardId(0)),
-            prompt: format!("Exile up to {n} cards from graveyards"),
-            candidates: candidates.iter().map(|(id, n, _)| (*id, n.clone())).collect(),
-            min: 0,
-            max: n,
-            eligible: None,
-        });
-        if let DecisionAnswer::Cards(ids) = answer {
-            // `single` restricts all picks to one graveyard: the first pick's
-            // owner locks the choice, later off-graveyard picks are dropped.
-            // Exiled cards land on `Selector::LastMoved` so a follow-up can
-            // gate on "if a creature card was exiled this way" (Soul-Shackled
-            // Zombie) via `EntityMatchesAny`.
-            self.scratch.last_moved_cards.clear();
-            let mut lock: Option<usize> = None;
-            for cid in ids.into_iter().take(n as usize) {
-                let Some((_, _, owner)) = candidates.iter().find(|(c, _, _)| *c == cid) else {
-                    continue;
-                };
-                if single && *lock.get_or_insert(*owner) != *owner {
-                    continue;
-                }
-                self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
-                self.scratch.last_moved_cards.push(cid);
+        // Auto default: hostile graveyards only (exiling our own cards is a
+        // cost, not an effect), creature cards first — they are what a
+        // graveyard recurs, and what the "exiled this way" riders read — then
+        // by mana value. `single` is enforced below, so ranking across
+        // graveyards is safe.
+        let mut ranked: Vec<(CardId, bool, u32, usize)> = candidates
+            .iter()
+            .filter(|(_, _, owner)| !self.same_team(*owner, ctx.controller))
+            .filter_map(|(id, _, owner)| {
+                let c = self.players[*owner].graveyard.iter().find(|c| c.id == *id)?;
+                Some((*id, c.definition.is_creature(), c.definition.cost.cmc(), *owner))
+            })
+            .collect();
+        ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
+        let auto_default: Vec<CardId> = match (single, ranked.first().map(|r| r.3)) {
+            (true, Some(lock)) => {
+                ranked.iter().filter(|r| r.3 == lock).map(|r| r.0).take(n as usize).collect()
             }
+            _ => ranked.iter().map(|r| r.0).take(n as usize).collect(),
+        };
+        let Some(ids) = self.choose_up_to_cards(
+            ctx.controller,
+            format!("Exile up to {n} cards from graveyards"),
+            ctx.source.unwrap_or(CardId(0)),
+            candidates.iter().map(|(id, name, _)| (*id, name.clone())).collect(),
+            n,
+            effect,
+            auto_default,
+        ) else {
+            return Ok(());
+        };
+        // `single` restricts all picks to one graveyard: the first pick's
+        // owner locks the choice, later off-graveyard picks are dropped.
+        // Exiled cards land on `Selector::LastMoved` so a follow-up can
+        // gate on "if a creature card was exiled this way" (Soul-Shackled
+        // Zombie) via `EntityMatchesAny`.
+        self.scratch.last_moved_cards.clear();
+        let mut lock: Option<usize> = None;
+        for cid in ids.into_iter().take(n as usize) {
+            let Some((_, _, owner)) = candidates.iter().find(|(c, _, _)| *c == cid) else {
+                continue;
+            };
+            if single && *lock.get_or_insert(*owner) != *owner {
+                continue;
+            }
+            self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+            self.scratch.last_moved_cards.push(cid);
         }
         Ok(())
     }
