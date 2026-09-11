@@ -1949,82 +1949,134 @@ impl GameState {
         ctx: &EffectContext,
         out: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
+        self.resolve_effect_into_kind(effect, ctx, out, false)
+    }
+
+    /// [`resolve_effect_into`] for a **continuation**: the effect is the tail of
+    /// a resolution that suspended, so the per-resolution scratch the first pass
+    /// built is kept rather than reset. Only `submit_decision`'s three resolution
+    /// resumes pass `true` — see the reset block below for the bug that wanted
+    /// it. A `bool` argument rather than a `GameState` flag because the state is
+    /// `memcpy`ed on every probe clone and one more inline byte costs it eight
+    /// (`cow::tests::game_state_stays_small`).
+    pub(crate) fn resolve_effect_resumed_into(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+        out: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        self.resolve_effect_into_kind(effect, ctx, out, true)
+    }
+
+    /// `resolve_effect_resumed_into`'s `Vec`-returning sibling.
+    pub(crate) fn resolve_effect_resumed(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = Vec::new();
+        self.resolve_effect_resumed_into(effect, ctx, &mut events)?;
+        Ok(events)
+    }
+
+    fn resolve_effect_into_kind(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+        out: &mut Vec<GameEvent>,
+        resuming: bool,
+    ) -> Result<(), GameError> {
         let mark = out.len();
         let mut events = std::mem::take(out);
+        // A RESUMED resolution is the same resolution: the arm that suspended is
+        // being re-run and everything before it already happened, so the resets
+        // below must not hide it. `Selector::LastMoved` read an *empty* set after
+        // a suspend, which is why Bind to Life ("mill seven, then put a creature
+        // card from among them onto the battlefield") milled seven and put
+        // nothing onto the battlefield for every seat that suspends — i.e. every
+        // bot and UI seat, the whole training path. The resume-channel census
+        // found it: the arm returned on its empty candidate list before reaching
+        // its ask, leaving the stashed answer behind (`CRAB_ANSWER_LOG=strict`,
+        // `--decks cube --seed 890`). Only the outermost call of the
+        // continuation is flagged, so the nested resolutions it runs still
+        // reset normally.
         // Reset sacrificed-power / sacrificed-toughness / sacrificed-mana-value
         // scratch for this independent resolution.
-        self.sacrificed_power = None;
-        self.sacrificed_total_power = 0;
-        self.sacrificed_count = 0;
-        self.sacrificed_toughness = None;
-        self.sacrificed_mana_value = None;
-        self.last_discarded_mana_value = None;
-        self.last_revealed_from_hand = None;
-        self.tapped_for_cost_power = None;
-        // Everything this resolution causes is caused by this spell/ability
-        // (Pure Intentions' discard, Sacred Ground's land destruction).
+        if !resuming {
+            self.sacrificed_power = None;
+            self.sacrificed_total_power = 0;
+            self.sacrificed_count = 0;
+            self.sacrificed_toughness = None;
+            self.sacrificed_mana_value = None;
+            self.last_discarded_mana_value = None;
+            self.last_revealed_from_hand = None;
+            self.tapped_for_cost_power = None;
+            // Reset last-created-token scratch — `Selector::LastCreatedToken`
+            // (singular) and `Selector::LastCreatedTokens` (plural) only refer
+            // to tokens created by *this* resolution.
+            self.last_created_token = None;
+            clear_scratch!(self.last_created_tokens);
+            self.chosen_creature_type_scratch = None;
+            // Reset last-moved-cards scratch — `Selector::LastMoved` only
+            // refers to cards moved by *this* resolution (Practiced
+            // Scrollsmith's ETB chains Move → GrantMayPlay on the same
+            // moved card via this scratch).
+            clear_scratch!(self.last_moved_cards);
+            // Reset cards-discarded scratch — `Value::CardsDiscardedThisEffect`
+            // only counts discards from *this* resolution (Borrowed Knowledge
+            // mode 1's "draw cards equal to the number discarded this way").
+            self.cards_discarded_this_resolution = 0;
+            self.cards_drawn_this_resolution = 0;
+            self.energy_paid_this_resolution = 0;
+            self.permanents_returned_this_resolution = 0;
+            self.permanents_tapped_this_resolution = 0;
+            self.cards_revealed_this_resolution = 0;
+            self.creature_cards_discarded_this_resolution = 0;
+            self.greatest_discarded_mv_this_resolution = 0;
+            // Dropped, not cleared: a cleared map keeps its buffer, and
+            // `GameState::clone` then allocates and memcpys it on every
+            // checkpoint and probe for the rest of the game. Assigning an empty
+            // map costs two stores when it is already empty (neither hashbrown's
+            // nor `Vec`'s `new` allocates) and the next discard rebuilds it.
+            // Both are `IdMap`s now (PERF `(-148)`), so the buffer is a `Vec`.
+            if self.scratch.cards_discarded_per_player_this_resolution.capacity() > 0 {
+                self.scratch.cards_discarded_per_player_this_resolution = Default::default();
+            }
+            if self.scratch.nonland_cards_discarded_per_player_this_resolution.capacity() > 0 {
+                self.scratch.nonland_cards_discarded_per_player_this_resolution = Default::default();
+            }
+            clear_scratch!(self.discarded_card_ids_this_resolution);
+            clear_scratch!(self.exiled_card_ids_this_resolution);
+            self.permanents_destroyed_this_resolution = 0;
+            clear_scratch!(self.destroyed_this_resolution);
+            self.excess_damage_this_resolution = 0;
+            // Deaths caused by this resolution are tallied for the OUTERMOST
+            // resolution only — a sweeper's own kills can re-enter `resolve_effect`
+            // (replacements, death triggers) and would otherwise zero the running
+            // count mid-sweep (Hellfire).
+            if self.resolution_depth == 0 {
+                self.creatures_died_this_resolution = 0;
+            }
+            self.damage_dealt_this_resolution = 0;
+            clear_scratch!(self.damaged_this_resolution);
+            self.countered_spell_mana_spent = 0;
+            self.countered_spell_controller = None;
+            self.counters_removed_this_effect = 0;
+            self.countered_spell_mana_value = 0;
+            clear_scratch!(self.players_sacrificed_this_resolution);
+            clear_scratch!(self.cards_sacrificed_this_resolution);
+            clear_opt_scratch!(self.named_card_this_resolution);
+            clear_scratch!(self.names_this_resolution);
+        }
+        // Stamps rather than resets, so they run on a continuation too:
+        // everything this resolution causes is caused by this spell or ability
+        // (Pure Intentions' discard, Sacred Ground's land destruction), and
+        // "tokens created with this permanent" (Saproling Burst) stamps the
+        // resolving source on every token it mints.
         self.resolution_causer = Some(ctx.controller);
         self.source_name_scratch = ctx.source_name;
-        // Reset last-created-token scratch — `Selector::LastCreatedToken`
-        // (singular) and `Selector::LastCreatedTokens` (plural) only refer
-        // to tokens created by *this* resolution.
-        self.last_created_token = None;
-        clear_scratch!(self.last_created_tokens);
-        // "Tokens created with this permanent" (Saproling Burst) — stamp the
-        // resolving source on every token this resolution mints.
         self.token_minting_source = ctx.source;
-        self.chosen_creature_type_scratch = None;
-        // Reset last-moved-cards scratch — `Selector::LastMoved` only
-        // refers to cards moved by *this* resolution (Practiced
-        // Scrollsmith's ETB chains Move → GrantMayPlay on the same
-        // moved card via this scratch).
-        clear_scratch!(self.last_moved_cards);
-        // Reset cards-discarded scratch — `Value::CardsDiscardedThisEffect`
-        // only counts discards from *this* resolution (Borrowed Knowledge
-        // mode 1's "draw cards equal to the number discarded this way").
-        self.cards_discarded_this_resolution = 0;
-        self.cards_drawn_this_resolution = 0;
-        self.energy_paid_this_resolution = 0;
-        self.permanents_returned_this_resolution = 0;
-        self.permanents_tapped_this_resolution = 0;
-        self.cards_revealed_this_resolution = 0;
-        self.creature_cards_discarded_this_resolution = 0;
-        self.greatest_discarded_mv_this_resolution = 0;
-        // Dropped, not cleared: a cleared map keeps its buffer, and
-        // `GameState::clone` then allocates and memcpys it on every
-        // checkpoint and probe for the rest of the game. Assigning an empty
-        // map costs two stores when it is already empty (neither hashbrown's
-        // nor `Vec`'s `new` allocates) and the next discard rebuilds it.
-        // Both are `IdMap`s now (PERF `(-148)`), so the buffer is a `Vec`.
-        if self.scratch.cards_discarded_per_player_this_resolution.capacity() > 0 {
-            self.scratch.cards_discarded_per_player_this_resolution = Default::default();
-        }
-        if self.scratch.nonland_cards_discarded_per_player_this_resolution.capacity() > 0 {
-            self.scratch.nonland_cards_discarded_per_player_this_resolution = Default::default();
-        }
-        clear_scratch!(self.discarded_card_ids_this_resolution);
-        clear_scratch!(self.exiled_card_ids_this_resolution);
-        self.permanents_destroyed_this_resolution = 0;
-        clear_scratch!(self.destroyed_this_resolution);
-        self.excess_damage_this_resolution = 0;
-        // Deaths caused by this resolution are tallied for the OUTERMOST
-        // resolution only — a sweeper's own kills can re-enter `resolve_effect`
-        // (replacements, death triggers) and would otherwise zero the running
-        // count mid-sweep (Hellfire).
-        if self.resolution_depth == 0 {
-            self.creatures_died_this_resolution = 0;
-        }
         self.resolution_depth += 1;
-        self.damage_dealt_this_resolution = 0;
-        clear_scratch!(self.damaged_this_resolution);
-        self.countered_spell_mana_spent = 0;
-        self.countered_spell_controller = None;
-        self.counters_removed_this_effect = 0;
-        self.countered_spell_mana_value = 0;
-        clear_scratch!(self.players_sacrificed_this_resolution);
-        clear_scratch!(self.cards_sacrificed_this_resolution);
-        clear_opt_scratch!(self.named_card_this_resolution);
-        clear_scratch!(self.names_this_resolution);
         // Most resolutions target nothing, and an empty `collect()` is still
         // a `Vec::from_iter` call with its size-hint dance — see PERF's (-45).
         let new_targets: Vec<CardId> = if ctx.targets.is_empty() {

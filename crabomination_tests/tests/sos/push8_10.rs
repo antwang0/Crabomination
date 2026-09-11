@@ -2813,6 +2813,55 @@ fn vastlands_scavenger_prepare_spell_mills_seven_and_reanimates() {
         "a pre-existing graveyard creature is not eligible");
 }
 
+// The same card on the path every training seat takes. A `wants_ui` seat
+// SUSPENDS for the "from among them" pick, and a resumed resolution used to
+// start with the per-resolution scratch cleared — `Selector::LastMoved` then
+// resolved to nothing, the arm returned on an empty candidate list, and the card
+// milled seven and put NOTHING onto the battlefield. The test above passes
+// either way because a headless seat answers synchronously and never re-runs the
+// arm. Found by the resume-channel census: the unclaimed stashed answer
+// (`CRAB_ANSWER_LOG=strict`, `--decks cube --seed 890`).
+#[test]
+fn bind_to_life_still_reanimates_when_the_pick_suspends() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let id = prepared_on_battlefield(&mut g, 0, catalog::vastlands_scavenger());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let lib_before = g.players[0].library.len();
+
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bind to Life castable for {4}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].library.len(), lib_before - 7, "milled 7 cards");
+    let bear = match &g.pending_decision.as_ref().expect("the pick suspends for a UI seat").decision
+    {
+        Decision::ChooseCards { candidates, .. } => candidates
+            .iter()
+            .find(|(_, n)| n == "Grizzly Bears")
+            .map(|(id, _)| *id)
+            .expect("the milled creature is offered"),
+        other => panic!("expected ChooseCards for the milled creature, got {other:?}"),
+    };
+    g.submit_decision(DecisionAnswer::Cards(vec![bear])).expect("pick accepted");
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear),
+        "the picked creature reaches the battlefield through the resume, not just          through the synchronous path",
+    );
+}
+
 // Adventurous Eater // Have a Bite — +1/+1 counter + gain 1 life.
 #[test]
 fn adventurous_eater_prepare_spell_adds_counter_and_gains_life() {

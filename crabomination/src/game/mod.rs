@@ -17314,7 +17314,7 @@ impl GameState {
         self.players[seat].mana_pool.pay(&cost).map_err(GameError::Mana)?;
         let mut events = vec![];
         self.discard_card(seat, card_id, &mut events);
-        self.continue_ability_resolution_x_into(card_id, seat, &effect, None, 0, &mut events)?;
+        self.continue_ability_resolution_x_into(card_id, seat, &effect, None, 0, false, &mut events)?;
         Ok(events)
     }
 
@@ -22048,7 +22048,7 @@ impl GameState {
                 self.continue_trigger_resolution_with_source_into(
                     source, controller, remaining, target, mode, x_value, converged_value,
                     mana_spent, trigger_source_ent, event_amount, trigger_player,
-                    additional_targets, &mut evs,
+                    additional_targets, true, &mut evs,
                 )?;
                 evs
             }
@@ -22061,7 +22061,7 @@ impl GameState {
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 self.continue_ability_resolution_x_into(
-                    source, controller, &remaining, target, 0, &mut evs,
+                    source, controller, &remaining, target, 0, true, &mut evs,
                 )?;
                 evs
             }
@@ -23951,7 +23951,13 @@ impl GameState {
             card.definition.printed_colors(),
             card.definition.card_types.clone(),
         ));
-        let res = self.resolve_effect(effect, &ctx);
+        // A continuation (`override_effect`) is the same resolution as the pass
+        // that suspended, so it keeps that pass's per-resolution scratch.
+        let res = if is_initial_pass {
+            self.resolve_effect(effect, &ctx)
+        } else {
+            self.resolve_effect_resumed(effect, &ctx)
+        };
         self.scratch.resolving_source = prev_src;
         let mut events = res?;
         // CR 702.165 — a promised gift is given as the spell resolves its
@@ -24312,6 +24318,7 @@ impl GameState {
             event_amount,
             trigger_player,
             additional_targets,
+            false,
             &mut events,
         )?;
         Ok(events)
@@ -24335,6 +24342,9 @@ impl GameState {
         event_amount: u32,
         trigger_player: Option<usize>,
         additional_targets: Vec<Target>,
+        // True when this is the continuation of a trigger resolution that
+        // suspended: the per-resolution scratch the first pass built is kept.
+        resuming: bool,
         out: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         // Event-amount-relative filters re-checked at resolution
@@ -24400,7 +24410,11 @@ impl GameState {
         }
         ctx.mana_spent = mana_spent;
         ctx.event_amount = event_amount;
-        self.resolve_effect_into(&effect, &ctx, out)?;
+        if resuming {
+            self.resolve_effect_resumed_into(&effect, &ctx, out)?;
+        } else {
+            self.resolve_effect_into(&effect, &ctx, out)?;
+        }
         if self.drop_pending_choices_if_game_over() {
             return Ok(());
         }
@@ -24440,11 +24454,18 @@ impl GameState {
         effect: &crate::effect::Effect,
         target: Option<Target>,
         x_value: u32,
+        // True when this is the continuation of an ability resolution that
+        // suspended: the per-resolution scratch the first pass built is kept.
+        resuming: bool,
         out: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let mut ctx = EffectContext::for_ability(source, controller, target.clone());
         ctx.x_value = x_value;
-        self.resolve_effect_into(effect, &ctx, out)?;
+        if resuming {
+            self.resolve_effect_resumed_into(effect, &ctx, out)?;
+        } else {
+            self.resolve_effect_into(effect, &ctx, out)?;
+        }
         if self.drop_pending_choices_if_game_over() {
             return Ok(());
         }

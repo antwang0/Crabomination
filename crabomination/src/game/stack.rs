@@ -2834,6 +2834,7 @@ impl GameState {
                     event_amount,
                     trigger_player,
                     additional_targets,
+                    false,
                     &mut events,
                 )?;
                 if had_lki {

@@ -15085,6 +15085,7 @@ impl GameState {
             effect,
             None,
             x_value.unwrap_or(0),
+            false,
             events,
         );
         self.mana_production_multiplier = 1;
@@ -18230,6 +18231,7 @@ impl GameState {
                 effect,
                 target.clone(),
                 x_value.unwrap_or(0),
+                false,
                 events,
             );
             self.mana_production_multiplier = 1;
