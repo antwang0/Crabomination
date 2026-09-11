@@ -71,6 +71,112 @@ FN = re.compile(r"^\s*(?:pub(?:\(crate\))?\s+)?(?:async\s+)?fn ([a-z_0-9]+)")
 ARM = re.compile(r"^\s{8,20}(?:\|\s*)?(Effect|StaticEffect|GameAction)::([A-Za-z0-9_]+)")
 
 
+# `AutoDecider`'s answer per `Decision` variant, for the variants whose answer
+# makes the asking effect do **nothing** — the population the MayPay find was
+# in. The value is the default, so a reader can see why the row is degenerate;
+# `None` means the default is a real answer (the site plays worse, not dead).
+DEGENERATE = {
+    "OptionalTrigger": "Bool(false) — declines",
+    "ChooseAmount": "Amount(0) — pays/takes nothing",
+    "ChooseCards": "the first `min` (empty when min = 0)",
+    "ChooseTarget": None,
+    "ChooseMode": None,
+    "ChooseModes": None,
+    "ChooseColor": None,
+    "ChooseOption": None,
+    "ChooseCreatureType": None,
+    "ChooseCreatureTypePair": None,
+    "Discard": None,
+    "PutOnLibrary": None,
+    "Scry": None,
+    "SearchLibrary": None,
+    "NameCard": None,
+    "CoinFlip": None,
+    "DieRoll": None,
+    "CombatDamageOrder": None,
+    "AssignCombatDamage": None,
+    "OrderTriggers": None,
+    "DivideDamage": None,
+    "ChooseLegendToKeep": None,
+    "CommanderRedirect": None,
+    "Mulligan": None,
+    "Learn": None,
+    "?": None,
+}
+DECISION = re.compile(r"\bDecision::([A-Za-z0-9_]+)")
+# A site that *names* the headless answer in a comment beside the ask has
+# chosen it on purpose (Nameless Race pays as much as it can survive on a 0).
+ACK = re.compile(r"AutoDecider|auto\b|headless|printed default|no opinion|synchronous")
+# A degenerate answer *inside a loop* usually declines a **repetition**, not the
+# effect: Kindle the Carnage discards and damages once before it asks "again?",
+# so a `false` leaves the printed minimum done. Worth a different column from a
+# gate in front of the whole body — the loop shape is the one the 2026-07 audit
+# over-counted.
+LOOP = re.compile(r"^\s*(?:\}\s*)?(?:for |while |loop\s*\{|'[a-z_]+: loop)")
+
+
+def in_loop(lines, i):
+    """True when the ask on line `i` gates a *repetition*.
+
+    Walks up while the indentation is shrinking, stopping at the enclosing
+    `match` arm or `fn`. A loop found on the way only counts when its body runs
+    a statement **before** the ask — Kindle the Carnage discards and damages,
+    then asks "again?". A loop whose ask is its first statement (Fasting's
+    per-offer prompt) gates that iteration's whole body, so it stays DEAD.
+    """
+    indent = len(lines[i]) - len(lines[i].lstrip())
+    for j in range(i - 1, max(0, i - 120), -1):
+        l = lines[j]
+        if not l.strip():
+            continue
+        ind = len(l) - len(l.lstrip())
+        if ind >= indent:
+            continue
+        indent = ind
+        if LOOP.match(l):
+            body = ind + 4
+            heads = [
+                k
+                for k in range(j + 1, i + 1)
+                if lines[k].strip()
+                and not lines[k].lstrip().startswith("//")
+                and len(lines[k]) - len(lines[k].lstrip()) == body
+            ]
+            if len(heads) > 1:
+                return True
+            # The other repeat shape: the ask is the loop's first statement but
+            # guarded off the loop counter, so iteration 0 runs unasked
+            # (`if i > 0 && !yes { break }` — MayRepeat, Trade Secrets).
+            var = re.match(r"^\s*for (\w+) in ", l)
+            prefix = "\n".join(lines[j : i + 1])
+            return bool(var and re.search(rf"\b{var.group(1)}\s*>\s*0", prefix))
+        if FN.match(l) or ARM.match(l):
+            return False
+    return False
+
+
+def decision_kind(lines, i):
+    """`(variant, degenerate, acknowledged)` for the ask on line `i`.
+
+    The variant is read forward from the call — `decide(&Decision::X {` is the
+    shape in ~90 % of sites — then backward for the `let d = Decision::X`
+    two-statement form.
+    """
+    fwd = "\n".join(lines[i : i + 4])
+    m = DECISION.search(fwd)
+    if not m:
+        m = DECISION.search("\n".join(lines[max(0, i - 12) : i + 1]))
+    kind = m.group(1) if m else "?"
+    body = "\n".join(lines[max(0, i - 8) : i + 12])
+    degenerate = DEGENERATE.get(kind, "unknown variant")
+    if kind == "ChooseCards" and re.search(r"min:\s*(?!0)[1-9a-z_]", body):
+        degenerate = None  # a forced "choose exactly N" auto-picks the N
+    comment = "\n".join(
+        l for l in lines[max(0, i - 20) : i + 1] if l.lstrip().startswith("//")
+    )
+    return kind, degenerate, bool(ACK.search(comment)), in_loop(lines, i)
+
+
 def rust_files():
     seen = set()
     for root in DIRS:
@@ -124,15 +230,32 @@ def main() -> int:
                 continue
             window = "\n".join(lines[max(0, i - LOOKBACK) : i + 1])
             hit = [m for m in MARKERS if m in window]
-            entry = (path, i + 1, owner(i), hit)
+            entry = (path, i + 1, owner(i), hit, *decision_kind(lines, i))
             (plumbed if hit else bare).append(entry)
 
     total = len(bare) + len(plumbed)
     print(f"{total} `decider.decide` sites: {len(plumbed)} plumbed, {len(bare)} bare")
-    for path, ln, fn, _ in bare:
-        print(f"    BARE  {path}:{ln}  in {fn}")
+    degen = [e for e in bare if e[5]]
+    gates = [e for e in degen if not e[7] and not e[6]]
+    print(
+        f"of the bare: {len(degen)} have a degenerate headless default — "
+        f"{len(gates)} of those gate a whole effect body (DEAD), "
+        f"{len([e for e in degen if e[7]])} gate a loop repetition (the printed "
+        f"minimum still happens), {len([e for e in degen if e[6]])} name the "
+        f"headless answer in a comment beside the ask"
+    )
+    for kind in sorted({e[4] for e in degen}):
+        rows = [e for e in degen if e[4] == kind]
+        print(f"\n--- {kind} -> {DEGENERATE[kind]}: {len(rows)}")
+        for path, ln, fn, _, _, _, ack, loop in rows:
+            tag = "repeat" if loop else "ack   " if ack else "DEAD  "
+            print(f"    {tag}  {path}:{ln}  in {fn}")
+    print("\n--- bare, non-degenerate default (quality of play, not a no-op)")
+    for path, ln, fn, _, kind, _, _, _ in bare:
+        if not DEGENERATE.get(kind):
+            print(f"    bare  {path}:{ln}  in {fn}  [{kind}]")
     if verbose:
-        for path, ln, fn, hit in plumbed:
+        for path, ln, fn, hit, *_ in plumbed:
             print(f"    ok    {path}:{ln}  in {fn}  ({', '.join(hit)})")
     return 0
 
