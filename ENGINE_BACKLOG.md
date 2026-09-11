@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (eleventh find) — CR 608.2b was re-checked on every resume, so a spell that killed its own target stopped mid-effect](#fixed-2026-09-11-eleventh-find--cr-6082b-was-re-checked-on-every-resume-so-a-spell-that-killed-its-own-target-stopped-mid-effect) | 18 |
 | Bugs & robustness | [FIXED 2026-09-11 (what the census found in 28 seconds) — a RESUMED resolution reset its own scratch, so every "from among them" pick after a suspend read an empty set: Bind to Life milled seven and put nothing onto the battlefield](#fixed-2026-09-11-what-the-census-found-in-28-seconds--a-resumed-resolution-reset-its-own-scratch-so-every-from-among-them-pick-after-a-suspend-read-an-empty-set-bind-to-life-milled-seven-and-put-nothing-onto-the-battlefield) | 85 |
 | Bugs & robustness | [FIXED 2026-09-11 (the tenth find's production half) — both resume channels leaked: two arms never cleared, no arm clears on an error unwind, and the stash had no guard at all; the RESOLUTION owns them now](#fixed-2026-09-11-the-tenth-finds-production-half--both-resume-channels-leaked-two-arms-never-cleared-no-arm-clears-on-an-error-unwind-and-the-stash-had-no-guard-at-all-the-resolution-owns-them-now) | 70 |
 | Bugs & robustness | [FIXED 2026-09-11 (tenth find) — one resolution's leftover answer stranded the next arm's ask for ever: the seed-835 Karn stall](#fixed-2026-09-11-tenth-find--one-resolutions-leftover-answer-stranded-the-next-arms-ask-for-ever-the-seed-835-karn-stall) | 46 |
@@ -59,6 +60,30 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-11 (eleventh find) — CR 608.2b was re-checked on every resume, so a spell that killed its own target stopped mid-effect
+
+`continue_spell_resolution` ran the CR 608.2b target-legality fizzle on the
+resume pass as well as the initial one. A resume pass is the same resolution
+continuing after a player choice, and CR 608.2b is checked **once, as the spell
+begins to resolve**. Lash Out deals 3 to a creature, clashes, and suspends for
+the clash question; the creature is in the graveyard by the time the answer
+arrives, so the re-entry fizzled the spell — no clash, no reveal, no on-win
+damage. Only `wants_ui` seats reach it (every bot seat, every UI seat); the
+synchronous `AutoDecider` path never suspends, which is why the shipped Lash
+Out test was green — the eighth find's lesson a third time.
+
+Both fizzle blocks are gated on `is_initial_pass` now. Test:
+`core_rules::cr_recent103::a_resumed_spell_does_not_fizzle_on_the_target_it_killed_itself`
+(fails without the gate).
+
+**Same function, same family, NOT fixed:** the fused-split second pass
+(`card.split_cast == Some(2)`) sits below the `resolve_effect` call and is not
+gated on `is_initial_pass`, so a fused split whose LEFT half suspends resolves
+its right half twice — once before the answer (wrong order) and once on the
+resume. Gating it on `is_initial_pass` alone makes the resume drop it instead,
+which is worse; the right half has to become part of what the continuation
+carries.
 
 ## FIXED 2026-09-11 (what the census found in 28 seconds) — a RESUMED resolution reset its own scratch, so every "from among them" pick after a suspend read an empty set: Bind to Life milled seven and put nothing onto the battlefield
 

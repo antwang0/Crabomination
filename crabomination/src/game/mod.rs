@@ -23843,8 +23843,19 @@ impl GameState {
         // resolution (per-mode), not through this single-`mode` fizzle path;
         // the chosen modes aren't encoded in `mode`, so a slot-0 filter here
         // could belong to an unchosen mode. Skip the blanket fizzle for Spree.
+        // CR 608.2b is checked ONCE, as the spell *begins* to resolve. A
+        // resume pass (`override_effect`) is the same resolution continuing
+        // after a player choice, not a new one, so re-running the check there
+        // stopped a spell mid-effect because of damage it dealt itself: Lash
+        // Out deals 3 to a creature, clashes, and asks the clash question; the
+        // creature is dead by the time the answer arrives, so the resume
+        // fizzled the spell and the clash never happened. Only a `wants_ui`
+        // seat suspends, so the shipped Lash Out test never saw it; the
+        // abandoned resolution's stranded answer log is what named the arm
+        // (`CRAB_ANSWER_LOG=strict`).
         let is_spree = matches!(effect, Effect::Spree { .. } | Effect::Tiered { .. });
-        if !is_spree
+        if is_initial_pass
+            && !is_spree
             && additional_targets.is_empty()
             && let Some(t) = &target
         {
@@ -23881,7 +23892,8 @@ impl GameState {
                 }
                 return Ok(events);
             }
-        } else if !is_spree
+        } else if is_initial_pass
+            && !is_spree
             && card.cast_target_was_battlefield
             && let Some(t0) = &target
         {
