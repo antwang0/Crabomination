@@ -2235,6 +2235,58 @@ fn wandering_archaic_copies_when_opp_cannot_afford_two() {
         life_before - g.players[0].life);
 }
 
+/// The {2} is the CASTER's to decline, and it is paid like a cost. The ask went
+/// to the resolving seat's decider, so a `wants_ui` caster — every training
+/// seat — was never asked; and the payment came off the floating pool only, so
+/// even a "yes" could not pay with lands, which is the seventh find's bug still
+/// live at this one site.
+#[test]
+fn wandering_archaic_asks_the_caster_and_taps_lands_for_the_two() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    let _arch = g.add_card_to_battlefield(0, catalog::wandering_archaic());
+
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1); // the Bolt's own cost
+    for _ in 0..2 {
+        g.add_card_to_battlefield(1, catalog::mountain());
+    }
+    let life_before = g.players[0].life;
+
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("opp casts Bolt");
+    // Drain by hand: the trigger suspends while the Bolt is still on the stack,
+    // and `drain_stack` unwraps the `DecisionPending` that follows.
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+
+    assert!(g.pending_decision.is_some(), "the caster is asked, and a UI caster suspends");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("pay the two");
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.pending_decision.is_none(), "nothing else to answer");
+    assert_eq!(g.players[0].life, life_before - 3, "paid, so no copy");
+    assert_eq!(
+        g.battlefield
+            .iter()
+            .filter(|c| c.controller == 1 && c.definition.is_land() && c.tapped)
+            .count(),
+        2,
+        "and the two came off lands, not an empty pool"
+    );
+}
+
 // ── New STX cards (claude/modern_decks push) ────────────────────────────────
 
 /// Take Up the Shield: a +1/+1 **counter** on target creature, plus lifelink

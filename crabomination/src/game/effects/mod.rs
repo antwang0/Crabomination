@@ -29304,7 +29304,6 @@ impl GameState {
                 // yes + affordable pool, deduct + skip copy; (4) on no
                 // or unaffordable, fall through to the same copy path as
                 // `Effect::CopySpell`.
-                use crate::decision::{Decision, DecisionAnswer};
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
                     return Ok(());
@@ -29328,6 +29327,14 @@ impl GameState {
                         })
                         .collect(),
                 };
+                // TWO PASSES, and a seat-routed ask. The question belongs to the
+                // spell's CASTER, and it went to `self.decider` — the resolving
+                // seat's — so the affected player was never asked and a
+                // `wants_ui` caster could not answer at all. `ask_seat_bool`
+                // routes it; the split is `run_each_unless_pays`'s, because the
+                // payment and the copy are mutations inside the ask loop.
+                let mut cursor = 0;
+                let mut answers: Vec<(CardId, usize, bool)> = Vec::with_capacity(candidate_ids.len());
                 for cid in candidate_ids {
                     let stack_idx = self.stack.iter().rposition(|s| {
                         matches!(s, crate::game::types::StackItem::Spell { card, .. }
@@ -29348,23 +29355,30 @@ impl GameState {
                     // Ask the *caster* of the spell whether they want to
                     // pay the tax. Bot's AutoDecider defaults to false
                     // (let the copy happen — saves the {2}).
-                    let answer = self.decider.decide(&Decision::OptionalTrigger {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        description: "Pay {2} to prevent Wandering Archaic's copy?"
-                            .to_string(),
-                        kind: OptionalKind::PayMana {
-                            cost: Some(crate::mana::cost(&[crate::mana::generic(2)])),
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        caster_for_pay,
+                        "Pay {2} to prevent Wandering Archaic's copy?".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                        OptionalKind::PayMana {
+                            cost: Some(mana_cost.clone()),
                             purpose: PayFor::DenyEffect,
                         },
-                    });
-                    if matches!(answer, DecisionAnswer::Bool(true)) {
-                        // Try to deduct from the payer's pool.
-                        let pool = &mut self.players[caster_for_pay].mana_pool;
-                        if pool.pay(mana_cost).is_ok() {
-                            // Paid — skip the copy.
-                            continue;
-                        }
-                        // Couldn't afford; fall through to copy.
+                    ) else {
+                        return Ok(());
+                    };
+                    answers.push((cid, caster_for_pay, yes));
+                }
+                self.clear_answer_log();
+                for (cid, payer, yes) in answers {
+                    // `pay_mana_cost_with_picks`, not the floating pool: CR
+                    // 605.3a lets mana abilities be activated while paying a
+                    // cost mid-resolution, and a bot seat's pool is empty at
+                    // resolution — the pool-only form was the seventh find's
+                    // whole bug, and this site still had it.
+                    if yes && self.pay_mana_cost_with_picks(payer, mana_cost, None, events) {
+                        continue;
                     }
                     // Unpaid (declined or unaffordable) → copy `n` times
                     // through the shared copy funnel (CR 707 CantBeCopied
