@@ -25529,6 +25529,17 @@ impl GameState {
                     };
                     if yes {
                         self.clear_answer_log();
+                        // `accepting_player` is ambient resolution state, and
+                        // restoring it here would hand a body that SUSPENDED a
+                        // re-run with `AcceptingPlayer = None`. It is safe only
+                        // because every `accepted` body that can suspend
+                        // concretizes the seat into its own continuation first
+                        // (`Effect::Sacrifice`'s `per_seat_continuation` writes
+                        // `PlayerRef::Seat(q)`), which
+                        // `worms_of_the_earth_still_costs_two_lands_when_the_
+                        // sacrifice_suspends` is the guard for. A future body
+                        // that suspends WITHOUT concretizing needs the seat
+                        // carried, not this restore.
                         let prev = self.accepting_player.replace(seat);
                         let out = self.run_effect(accepted, ctx, events);
                         self.accepting_player = prev;

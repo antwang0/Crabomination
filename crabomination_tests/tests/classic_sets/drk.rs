@@ -947,6 +947,52 @@ fn worms_of_the_earth_stops_lands_by_every_route() {
     assert!(g.battlefield_find(land).is_none());
 }
 
+/// The acceptor survives a suspend inside the `accepted` body.
+/// `AnyPlayerMayAccept` keeps the acceptor in ambient state
+/// (`PlayerRef::AcceptingPlayer`) and restores it as soon as the body returns,
+/// so a body that returned only because it SUSPENDED would be re-run with no
+/// acceptor at all — Worms of the Earth would sacrifice nothing and destroy
+/// itself for free. It does not, because `Effect::Sacrifice` concretizes the
+/// seat into its own continuation before suspending; this pins that, on the
+/// suspending path the headless tests never take.
+#[test]
+fn worms_of_the_earth_still_costs_two_lands_when_the_sacrifice_suspends() {
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let worms = g.add_card_to_battlefield(0, catalog::worms_of_the_earth());
+    let a = g.add_card_to_battlefield(1, catalog::mountain());
+    let b = g.add_card_to_battlefield(1, catalog::mountain());
+    // Three lands for a two-land cost, so the pick is a genuine choice and
+    // therefore suspends (`Effect::Sacrifice` auto-picks when it is not).
+    g.add_card_to_battlefield(1, catalog::mountain());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    // The controller is offered first and declines; the opponent accepts.
+    assert!(g.pending_decision.is_some(), "the offer suspended for the UI seat");
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("controller declines");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("opponent accepts");
+    // The sacrifice pick then suspends in its turn.
+    for _ in 0..4 {
+        if g.pending_decision.is_none() {
+            break;
+        }
+        g.submit_decision(DecisionAnswer::Cards(vec![a, b])).expect("pick the lands");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert!(g.battlefield_find(worms).is_none(), "the acceptor destroyed it");
+    assert!(
+        g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(),
+        "and paid two lands for it"
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 1).count(),
+        1,
+        "exactly two of the three lands went"
+    );
+}
+
 #[test]
 fn festival_calls_off_the_combat() {
     let mut g = main_phase();
