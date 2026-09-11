@@ -28630,42 +28630,72 @@ impl GameState {
             }
 
             Effect::ExileUntilDuplicateName { who } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let source = ctx.source.unwrap_or(CardId(0));
-                let mut seen: Vec<String> = Vec::new();
-                loop {
-                    if self.players[p].library.is_empty() {
-                        break;
-                    }
-                    let card = &self.players[p].library[0];
-                    let cid = card.id;
-                    let name = card.definition.name.to_string();
-                    let dup = seen.contains(&name);
-                    // Exile the top card (face up).
-                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
-                    if dup {
-                        // Same name as a card already exiled this way → the
-                        // process ends with this card exiled, none to hand.
-                        break;
-                    }
-                    seen.push(name);
+                // "Exiled this way" is stamped, not remembered: the dig's ask is
+                // the controller's and went straight to `self.decider`, so a
+                // `wants_ui` seat was never asked; routing it means the arm can
+                // suspend, and the re-run has to know which cards THIS
+                // resolution exiled. A local `Vec` cannot survive that, so the
+                // exiles carry `exiled_with = source` — which is exactly what
+                // the printed "exiled this way" means — and both the seen-names
+                // list and the round's own card are read back off the zone.
+                //
+                // The rest is `TradeSecrets`' accounting: one logged answer is
+                // one round already performed (the exile happens BEFORE the ask
+                // it is about), so replay the answers in place and re-derive
+                // those rounds instead of repeating them.
+                let mut done: Vec<(CardId, String)> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(source))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let mut cursor = 0;
+                for round in 0..1000 {
+                    let cid = if let Some((cid, _)) = done.get(round) {
+                        *cid
+                    } else {
+                        if self.players[p].library.is_empty() {
+                            break;
+                        }
+                        let card = &self.players[p].library[0];
+                        let cid = card.id;
+                        let name = card.definition.name.to_string();
+                        let dup = done.iter().any(|(_, n)| *n == name);
+                        // Exile the top card (face up), stamped so a later pass
+                        // can tell it from anything else in the zone.
+                        self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                        if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                            c.exiled_with = Some(source);
+                        }
+                        if dup {
+                            // Same name as a card already exiled this way → the
+                            // process ends with this card exiled, none to hand.
+                            break;
+                        }
+                        done.push((cid, name));
+                        cid
+                    };
                     // Unique name → the controller may take it into hand
                     // (ending the process) or keep digging. AutoDecider takes
                     // it; a `Bool(true)` answer declines and continues.
-                    let keep_digging = matches!(
-                        self.decider.decide(&Decision::OptionalTrigger {
-                            source,
-                            description: "Tainted Pact: decline this card and keep digging?".to_string(),
-                            kind: OptionalKind::Neutral,
-                        }),
-                        DecisionAnswer::Bool(true)
-                    );
+                    let Some(keep_digging) = self.ask_seat_bool(
+                        &mut cursor,
+                        p,
+                        "Tainted Pact: decline this card and keep digging?".to_string(),
+                        source,
+                        effect,
+                        OptionalKind::Neutral,
+                    ) else {
+                        return Ok(());
+                    };
                     if !keep_digging {
                         self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::You), ctx, events);
                         break;
                     }
                 }
+                self.clear_answer_log();
                 Ok(())
             }
 

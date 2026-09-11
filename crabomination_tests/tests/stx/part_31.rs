@@ -178,6 +178,52 @@ fn tainted_pact_digs_until_duplicate_name() {
     }
 }
 
+/// …and the dig is the controller's call, one card at a time. The ask went
+/// straight to `self.decider`, so a `wants_ui` seat was never asked. Routing it
+/// means the arm can suspend, and a suspended pass has to know which cards THIS
+/// resolution exiled — a local list cannot survive the re-run, so they carry
+/// `exiled_with` (the printed "exiled this way") and are read back off the zone.
+#[test]
+fn tainted_pact_asks_the_ui_seat_before_each_dig() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    // Library top → bottom: Forest, Grizzly Bears, Island.
+    let island = g.next_id();
+    g.players[0].add_to_library_top(island, catalog::island());
+    let bear = g.next_id();
+    g.players[0].add_to_library_top(bear, catalog::grizzly_bears());
+    let forest = g.next_id();
+    g.players[0].add_to_library_top(forest, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::tainted_pact());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tainted Pact");
+    drain_stack(&mut g);
+
+    // The Forest is exiled and the seat is asked whether to keep digging.
+    assert!(g.pending_decision.is_some(), "the UI seat is asked");
+    assert!(g.exile.iter().any(|c| c.id == forest), "the Forest is exiled");
+    assert!(g.exile.iter().all(|c| c.id != bear), "and only the Forest so far");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("dig past the Forest");
+
+    // One more card, one more question — and the re-run did NOT re-exile the
+    // Forest or lose track of it.
+    assert!(g.pending_decision.is_some(), "asked again about the Bear");
+    assert!(g.exile.iter().filter(|c| c.id == forest).count() == 1, "the Forest exiled once");
+    assert!(g.exile.iter().any(|c| c.id == bear), "the Bear is exiled too");
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("take the Bear");
+
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the Bear reached hand");
+    assert!(g.exile.iter().all(|c| c.id != bear), "and left exile");
+    assert!(g.players[0].library.iter().any(|c| c.id == island), "the dig stopped there");
+}
+
 /// Mizzix's Mastery exiles the targeted instant from the graveyard and
 /// free-casts it (the copy auto-targets the opponent).
 #[test]
