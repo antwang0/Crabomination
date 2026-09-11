@@ -2806,7 +2806,7 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### 2026-09-11 (seventh run) — the eighth find's BOT half, and `(-289)` off the premise it removed; A THIRD BOX, so the A/B base was RE-TAKEN
+### 2026-09-11 (seventh run) — two prose-sniff class fixes and the two perf legs they uncovered (`(-289)`, `(-290)`); A THIRD BOX, so the A/B base was RE-TAKEN
 
 **A new box (Xeon @ 2.10 GHz nominal, 4 cores, 15 GB), so the three-pool base
 does not transfer and was re-taken at this run's first tip before anything was
@@ -2814,8 +2814,8 @@ measured against it.** The host reads 517-542 `--bench` games/s here against
 294-310 on the second box at the same `host_calib_ms`, on byte-identical
 counters — one more reason the counters and not the wall clock are the gate.
 
-Two legs, both built from one tree so they separate. The **fix** is the bot half
-of the eighth find: `decide_choose_cards` recovered "does picking cost us
+Four legs, each built from one tree so they separate. The **first fix** is the
+bot half of the eighth find: `decide_choose_cards` recovered "does picking cost us
 something?" from the prompt prose (`contains("sacrifice") ||
 contains("discard")`), so every cost-shaped prompt that says *exile* read as
 upside and the hand branch handed over the bot's biggest card, and "choose N
@@ -2833,25 +2833,41 @@ gone, `drain_trigger_queue`'s off-board `ChooseCards` prompt goes behind the
 same `text` flag its `ChooseTarget` sibling already uses. A census over the base
 dump priced it at 0.1299 % before the build and it measured -0.129 %.
 
+The **third leg came out of `(-289)`'s own census table**, not off the queue:
+asking "who calls `format_inner`?" to price a prompt turned up the *bot* as the
+second row — `combat_instant_candidates` deduped its candidate `GameAction`s by
+rendering each through `Debug` into a `String` and running `seen.contains(&key)`.
+`GameAction: PartialEq` and `out.contains(&a)` is `(-290)`, and it is the
+largest of the three. The **fourth** is the ninth find, the same prose sniff one
+family over: `ChooseAmount` answered `max` for everything its three patterns
+missed, and `Effect::SacrificeAnyNumber`'s `max` is your whole board — so every
+Devour card and God-Eternal Bontu sacrificed the bot's board. `AmountKind` on
+the ask; every other site keeps the answer the prose gave it.
+
 ```text
   base   9bc5759a, profiling-fast --no-default-features, system allocator, callgrind --games 6 --threads 1 --seed 1, UNTRACED:
          sealed dflt 2,504,802,413 / cube dflt 2,324,345,454 / fixed gang 635,593,661   <- THE NEW A/B BASE ON THIS BOX
   (-289) sealed 2,504,802,413 -> 2,501,572,700 (-0.129 %); cube 2,324,345,454 -> 2,324,784,178 (+0.019 %, ceiling 0.006 % — codegen shift);
          fixed 635,593,661 -> 635,598,781 (+0.001 %, the site never fires on `gang`); CRAB_DUMP_TRACES both sides x three pools, 144 files, 0 differ
-         **THE BASE FOR THE NEXT RUN: sealed 2,501,572,700 / cube 2,324,784,178 / fixed 635,598,781**
-gate    --bench release-fast (mimalloc), twice — at the fix tip 9bc5759a and at the (-289) tip fa61eb1e: both **195,806 / 27.49 / 611.9 /
+  (-290) cube 2,324,784,178 -> 2,319,033,889 (-0.247 %); sealed 2,501,572,700 -> 2,499,426,437 (-0.086 %); fixed 635,598,781 -> 635,516,542
+         (-0.013 %); 144 files, 0 differ. Every pool improves — the only three-pool win of the run
+         **THE BASE FOR THE NEXT RUN: sealed 2,499,426,437 / cube 2,319,033,889 / fixed 635,516,542** (the ninth find lands after it and
+         poses no ChooseAmount on any of the three pools' six-game runs; re-take before trusting the fourth decimal)
+gate    --bench release-fast (mimalloc), four times — at 9bc5759a, fa61eb1e, 482c93b4 and 540d3cde: all four **195,806 / 27.49 / 611.9 /
         0 stalls, counters identical to 2003d1cf**, determinism ok (all pairs split), thread_determinism ok (3 vs 1 threads identical).
-        bin_bytes 128,497,792 then 128,497,800 (128,480,576 before: the PickValue field and enum); peak_rss_mib 29.0 / 28.6;
-        541.6 then 516.8 games/s at host_calib_ms 53 / 61 — a 5 % spread on identical counters, i.e. the host.
-        Suite **19,406 / 0 / 5** at both tips (three new bot tests), golden_trace 10 / 10 inside it and unmoved — no traced deck poses a
-        ChooseCards. clippy --workspace --exclude crabomination_client --all-targets: **0**. cargo check --profile release-fast
-        -p crabomination --bin bot_ladder (debug-assertions OFF) clean. audit_decision_plumbing **178 / 104 / 74, DEAD 0**;
+        bin_bytes 128,497,792 / 128,497,800 / 128,472,048 / 128,458,968 (128,480,576 before the run); peak_rss_mib 29.0 / 28.6 / 29.0 / 30.8;
+        541.6 / 516.8 / 521.1 / 493.1 games/s at host_calib_ms 53 / 61 / 70 / 57 — a 10 % spread on byte-identical counters, i.e. the host.
+        Suite **19,406 / 0 / 5** through (-290) and **19,407 / 0 / 5** after the ninth find (four new bot tests across the run), golden_trace
+        10 / 10 inside it and unmoved at every tip. clippy --workspace --exclude crabomination_client --all-targets: **0** (one
+        `too_many_arguments` on `ask_seat_amount`'s eighth parameter, allowed like its three siblings). cargo check --profile release-fast
+        -p crabomination --bin bot_ladder (debug-assertions OFF) clean at every tip. audit_decision_plumbing **178 / 104 / 74, DEAD 0**;
         audit_variant_coverage the documented 2 dead primitives. **No fresh-seed sweep and no actor leg this run** — the 2026-09-10 readings stand.
-cost    the fix: one `PickValue` byte on the decision and a `matches!` where a `to_lowercase()` + two `contains` used to be, so the policy got
-        cheaper, not dearer; no `fixed`-pool archetype poses a ChooseCards, which is why the counters are the gate there.
-        (-289): none — it removes two calls and adds a branch already in the same function.
+cost    the two bug fixes: one byte on each decision and a `match` where a `to_lowercase()` + `contains` chain used to be, so both policies got
+        cheaper, not dearer; no `fixed`-pool archetype poses a ChooseCards or a ChooseAmount, which is why the counters are the gate there.
+        (-289) and (-290): none, both delete work.
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz nominal, 4 cores, 15 GB; cold release-fast bot_ladder ~35 min, warm engine
-        rebuild ~6 min; cold profiling-fast ~30 min, warm engine rebuild **2m58s**; a three-pool callgrind sweep ~90 s
+        rebuild ~6 min (31 s for a `cargo check`); cold profiling-fast ~30 min, warm engine rebuild **2m58s-3m13s**; a three-pool callgrind
+        sweep ~90 s; the debug suite 88-92 s once built
 ```
 
 ### 2026-09-11 (sixth run) — the bare resolution-time asks, ~105 cards; no perf leg

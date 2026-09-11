@@ -28,24 +28,26 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ `(-289)` is the last claimed candidate, `(-290)` next; **fetch before every push** (two sessions shared the branch on 2026-09-10).
-   Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: RE-TAKEN on the THIRD box at `fa61eb1e` — sealed 2,501,572,700 /
-   cube 2,324,784,178 / fixed 635,598,781 (PERF Baseline, the seventh-run addendum). Every later box: RE-TAKE FIRST, three boxes have disagreed.**
-2. **Gates at the tip:** suite 19,406 / 0 / 5, clippy 0, golden_trace 10 / 10 unmoved, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls — counters
-   identical to `2003d1cf`, determinism + thread_determinism ok; `audit_decision_plumbing` 178 / 104 / 74 with **DEAD 0** (a gate);
+   tracker prose; ⚠ `(-290)` is the last claimed candidate, `(-291)` next; **fetch before every push** (two sessions shared the branch on 2026-09-10).
+   Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: RE-TAKEN on the THIRD box — sealed 2,499,426,437 /
+   cube 2,319,033,889 / fixed 635,516,542 at `482c93b4` (PERF Baseline, seventh-run addendum). Every later box: RE-TAKE FIRST; three boxes have disagreed.**
+2. **Gates at the tip:** suite 19,407 / 0 / 5, clippy 0, golden_trace 10 / 10 unmoved, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls — counters
+   identical to `2003d1cf` at all four tips, determinism + thread_determinism ok; `audit_decision_plumbing` 178 / 104 / 74 with **DEAD 0** (a gate);
    `audit_variant_coverage` the documented 2 dead primitives. **No fresh-seed sweep and no actor leg this run** — the 2026-09-10 readings stand.
-3. **This run (seventh), two legs.** (a) The eighth find's BOT half (ENGINE_BACKLOG "FIXED 2026-09-11 — the bot side"): `Decision::ChooseCards`
-   carries `value: PickValue` and `decide_choose_cards` reads it instead of the prompt prose. A struct literal has no default for the field, so a
-   new ask cannot skip it — **104 asks, 39 `Gain`.** It killed two live defects: every "exile a card from your hand"-shaped cost handed over the
-   BIGGEST card, and "choose N permanents to keep" kept the worst. (b) **`(-289)`** — that fix removed `(-288)`'s own boundary ("the bot reads the
-   modal's prompt"), so the off-board trigger pick's prompt joins the elided half: **sealed -0.129 %**, predicted to 0.001 pt by one census.
-4. **Next moves, in order.** (a) **The same prose sniff, one family over, and it is both a bug fix and a perf leg**: `ChooseAmount` branches on
-   `contains("destroy all creatures with power")` / `"life"` / `starts_with("Pay {X}")` (22 sites) and `OptionalTrigger` on `description` (57).
-   Put the question on the ask as `PickValue` did; that unblocks the last of `(-288)`'s prompt-text elision. (b) The shape `PickValue` does NOT
-   reach — an "any number" pick needing a *computed* set: **collect evidence declines for every bot seat**, Fateseal and Stronghold Gambit the
-   same (ENGINE_BACKLOG). (c) `BecomeChosenColor` picks per source, not per target. (d) mirrors: abilarms 926+, mirror 798+, mcts 777+,
-   lookahead / planner 781+; dflt cube / sealed / all 796+, sos / fixed 794+. (e) the engine's perf queue still reads floor — `(-289)` came off a
-   *bug fix*, not off the queue, which is the transferable half: **a correctness change can delete a perf premise, so re-read the blocked entries.**
+3. **This run (seventh), four legs, and one rule connects them.** Two class fixes of the same shape — a bot policy recovering from *prompt prose*
+   what the ask never stated — and each one then deleted a perf premise. (a) `PickValue` on `Decision::ChooseCards` (104 asks): the "exile a card
+   from your hand" costs handed over the biggest card, "choose N permanents to keep" kept the worst. (b) **`(-289)`** sealed -0.129 %: with the
+   prose read gone, the off-board trigger pick's prompt joins `(-288)`'s elided half. (c) **`(-290)`** cube -0.247 % / sealed -0.086 % / fixed
+   -0.013 %, found in `(-289)`'s own census table: `combat_instant_candidates` deduped candidates with `format!("{:?}")` into a `Vec<String>`.
+   (d) `AmountKind` on `Decision::ChooseAmount` (18 asks): "Sacrifice how many?" matched none of the three prose patterns, so **every Devour card
+   and God-Eternal Bontu sacrificed the bot's whole board.**
+4. **Next moves, in order.** (a) **The last prose-keyed family is `OptionalTrigger`'s `description`** (57 sites, three bot reads). Same treatment;
+   it is also the last thing between `(-288)`'s flag and "no UI text built in a simulator at all". (b) The shape neither flag reaches — an ask
+   needing a *computed* answer: **collect evidence declines for every bot seat**, `AmountKind::Cost` should give up the tokens rather than
+   decline, Fateseal and Stronghold Gambit the same (ENGINE_BACKLOG). (c) `BecomeChosenColor` picks per source, not per target. (d) mirrors:
+   abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+; dflt cube / sealed / all 796+, sos / fixed 794+. (e) **The method that paid
+   twice this run: a correctness change can delete a perf premise, and a caller table is a census of the whole program, not of the row you came
+   for.** Re-read `(-288)`'s blocked half and the `format_inner` / `__rust_alloc` caller tables after any policy change.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
