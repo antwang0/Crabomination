@@ -2897,7 +2897,8 @@ sweep3  **the wide one, and the point of it: `scripts/audit_answer_log.py`'s ins
         change cannot produce infinite life, but say so rather than implying the stronger check
 suite2  after the `run_each_unless_pays` split: **19,417 / 0 / 5** under `CRAB_ANSWER_LOG=strict`, golden_trace 10 / 10 still
         unmoved, clippy **0** (one `too_many_arguments` on `continue_ability_resolution_x_into`'s eighth parameter, allowed like
-        its two `continue_*` siblings — the eighth is the `resuming` flag)
+        its two `continue_*` siblings — the eighth is the `resuming` flag). And **re-run on the MERGED tip `e60206c5`**, because a
+        rebase over the other session's CR 608.2b fix is a tree neither of us had tested: **19,418 / 0 / 5, clippy 0**
 cost    three reads (`resolution_depth`, `suspend_signal`, the log's len) per outermost resolution, and nothing at all per nested
         one; the park is two `Vec` moves per answered decision and only when the channel is non-empty. The census and the leak
         namer are compiled out of every optimized profile
