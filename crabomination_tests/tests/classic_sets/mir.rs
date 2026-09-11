@@ -2377,3 +2377,31 @@ fn floodgate_is_sacrificed_when_it_gains_flying() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(gate).is_none(), "sacrificed for having flying");
 }
+
+/// Sirocco charges its 4 life once per kept card even when the asks suspend.
+/// The payment sat inside the ask loop, so the re-run a suspend forces paid for
+/// every card asked about before it a second time — correct headless, wrong for
+/// every seat that suspends.
+#[test]
+fn sirocco_charges_the_life_once_per_card_when_the_asks_suspend() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    let first = g.add_card_to_hand(1, catalog::counterspell());
+    let second = g.add_card_to_hand(1, catalog::counterspell());
+    let spell = g.add_card_to_hand(0, catalog::sirocco());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, Some(Target::Player(1))).expect("sirocco");
+    drain_stack(&mut g);
+    for _ in 0..4 {
+        if g.pending_decision.is_none() {
+            break;
+        }
+        g.submit_decision(DecisionAnswer::Bool(true)).expect("pay to keep");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert_eq!(g.players[1].life, 12, "four life per kept card, charged once each");
+    assert!(g.players[1].hand.iter().any(|c| c.id == first), "kept");
+    assert!(g.players[1].hand.iter().any(|c| c.id == second), "kept");
+}

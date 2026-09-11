@@ -814,3 +814,33 @@ fn cr_729_shahrazad_bleeds_every_player_who_does_not_win_the_subgame() {
         assert_eq!(g.players[p].life, 10);
     }
 }
+
+/// `MayPayRepeatedly` charges once per "yes", even when the seat suspends.
+/// The loop asks, pays and runs its body *between* asks, so the re-run a
+/// suspend forces used to replay an answer it had already spent and pay for it
+/// again — quadratically: with `k` suspends the first iteration's cost was paid
+/// `k` times. Headless seats never suspend, so only the training path saw it.
+#[test]
+fn magnetic_mountain_charges_once_per_yes_when_the_ask_suspends() {
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::magnetic_mountain());
+    let blue = g.add_card_to_battlefield(0, catalog::air_elemental());
+    g.battlefield_find_mut(blue).unwrap().tapped = true;
+    // Two repeats' worth of mana: one "yes" then one "no" must leave half of it.
+    g.players[0].mana_pool.add_colorless(8);
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_some(), "the untap offer suspended for the UI seat");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("pay once");
+    assert!(g.pending_decision.is_some(), "and the loop offers again");
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("decline the second");
+    assert!(g.pending_decision.is_none(), "the loop ended on the decline");
+    assert!(!g.battlefield_find(blue).unwrap().tapped, "the one payment untapped it");
+    assert_eq!(
+        g.players[0].mana_pool.total(),
+        4,
+        "four paid once, not once per resume"
+    );
+}

@@ -351,3 +351,44 @@ fn thieves_auction_redistributes_the_board() {
     assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
     assert!(g.battlefield_find(theirs).unwrap().tapped, "claimed tapped");
 }
+
+/// CR 705.1 — one flip is one event. Crooked Scales flips *before* the repeat
+/// ask, so for a seat that suspends the arm's re-run used to re-roll the coin
+/// the player had just been told about (and re-pay every repeat cost behind
+/// it). The flip takes a slot in the replay log now, so a resume reads the
+/// result back instead of drawing a second one.
+#[test]
+fn crooked_scales_does_not_re_flip_the_coin_it_already_lost() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let scales = g.add_card_to_battlefield(0, catalog::crooked_scales());
+    g.clear_sickness(scales);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Flip one loses, flip two wins. A re-roll on the resume would hand the
+    // *first* flip the win and end the loop without ever paying the repeat.
+    script(&mut g, vec![DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]);
+    // Four to activate, three for the one repeat, nothing spare.
+    g.players[0].mana_pool.add_colorless(7);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scales,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![Target::Permanent(mine)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_some(), "the repeat offer suspended for the UI seat");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("pay the repeat");
+    assert!(g.pending_decision.is_none(), "the second flip won and ended the loop");
+    assert!(g.battlefield_find(theirs).is_none(), "the won flip destroyed theirs");
+    assert!(g.battlefield_find(mine).is_some(), "mine survived");
+    assert_eq!(
+        g.players[0].mana_pool.total(),
+        0,
+        "four to activate and three for the one repeat"
+    );
+}

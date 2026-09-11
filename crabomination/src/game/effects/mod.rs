@@ -744,6 +744,56 @@ impl GameState {
         Some(b)
     }
 
+    /// True when the answer at `cursor` was already **acted on** by an earlier
+    /// pass, for the two arms whose side effects cannot be moved after their
+    /// final ask (`MayPayRepeatedly`, `CoinFlipDestroyLoop` — each ask exists
+    /// only because the previous payment succeeded).
+    ///
+    /// The test is "something was logged after it", and only the arm continuing
+    /// past an answer can log anything after it. The **last** entry is the
+    /// answer this pass was resumed with: it is replayed for the first time
+    /// here, so its side effects are still owed. Getting that off by one skips
+    /// the payment the seat just agreed to.
+    ///
+    /// Only sound for an arm whose every ask is unconditional — a gate before an
+    /// ask would re-evaluate against the already-mutated state and shift which
+    /// slot holds which question. Arms with a gate take the two-pass split
+    /// instead (`run_each_unless_pays`).
+    fn answer_already_acted_on(&self, cursor: usize) -> bool {
+        cursor + 1 < self.scratch.resolution_answer_log.len()
+    }
+
+    /// CR 705.1 — a coin flip that happens **once**, even when the arm that
+    /// flipped it later suspends.
+    ///
+    /// An arm that flips before an ask has no way to keep that side effect
+    /// "after its final ask": the flip is what the ask is *about*. So the flip's
+    /// result takes a slot in the replay log, exactly like an answer. The first
+    /// pass flips and logs; the re-run reads the logged result back instead of
+    /// drawing a second one. Without this, a suspending seat re-rolled every
+    /// flip it had already been told about on every resume (Crooked Scales), so
+    /// one flip became `k + 1` of them and a re-run that won destroyed a
+    /// creature nobody had been asked about.
+    ///
+    /// Slots interleave with the arm's own asks (`[flip, answer, flip, ...]`),
+    /// so pass the arm's single `cursor` here too, and only ever call it in a
+    /// position the re-run reaches in the same order.
+    ///
+    /// The event is the caller's: it fires only on a real flip, because a
+    /// replayed one was already reported on the pass that drew it.
+    pub(crate) fn flip_one_coin_logged(&mut self, cursor: &mut usize, player: usize) -> (bool, bool) {
+        use crate::decision::DecisionAnswer;
+        self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Bool(_)));
+        if let Some(&DecisionAnswer::Bool(b)) = self.scratch.resolution_answer_log.get(*cursor) {
+            *cursor += 1;
+            return (b, false);
+        }
+        let b = self.flip_one_coin(player);
+        self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(b));
+        *cursor += 1;
+        (b, true)
+    }
+
     /// "Destroy each [filter] unless its controller pays `life` life" — the
     /// life-paying sibling of [`run_return_each_unless_pays`](Self::run_return_each_unless_pays).
     /// Giant Albatross.
@@ -771,10 +821,19 @@ impl GameState {
             .map(|c| (c.id, c.controller))
             .collect();
         let mut cursor = 0;
-        let mut doomed: Vec<CardId> = Vec::new();
+        // TWO PASSES, for `run_each_unless_pays`'s reason: a suspend re-runs this
+        // arm from the top, so life paid inside the ask loop is paid AGAIN on
+        // every later victim's suspend. Pass 1 asks and mutates nothing; pass 2
+        // pays. Unlike the mana sibling the gate loses nothing to the split —
+        // `budget` carries the life each seat has already committed, so CR 118.6
+        // is applied to exactly the total the single-pass loop would have seen.
+        // (It prices the *intended* payment; a replacement effect that alters an
+        // earlier payment is not reflected, which the live read would have been.)
+        let mut budget: Vec<i32> = self.players.iter().map(|p| p.life).collect();
+        let mut answers: Vec<(CardId, usize, bool)> = Vec::with_capacity(victims.len());
         for (id, seat) in victims {
             // CR 118.6 — a player can't choose to pay life they don't have.
-            let paid = self.players[seat].life > life as i32
+            let paid = budget[seat] > life as i32
                 && match self.ask_seat_bool(
                     &mut cursor,
                     seat,
@@ -787,6 +846,14 @@ impl GameState {
                     None => return Ok(()),
                 };
             if paid {
+                budget[seat] -= life as i32;
+            }
+            answers.push((id, seat, paid));
+        }
+        self.clear_answer_log();
+        let mut doomed: Vec<CardId> = Vec::new();
+        for (id, seat, paid) in answers {
+            if paid {
                 let applied = self.adjust_life_applied(seat, -(life as i32));
                 if applied < 0 {
                     events.push(GameEvent::LifeLost { player: seat, amount: (-applied) as u32 });
@@ -795,7 +862,6 @@ impl GameState {
                 doomed.push(id);
             }
         }
-        self.clear_answer_log();
         for id in doomed {
             self.destroy_permanent(id, no_regen, events);
         }
@@ -1217,6 +1283,16 @@ impl GameState {
     /// A mismatch on slot 0 is always the leftover, never this arm's own
     /// answer: drop it and let the ask suspend normally. It costs one round
     /// trip where it fires, instead of the cap.
+    fn drop_stale_answer_log(
+        &mut self,
+        cursor: usize,
+        want: fn(&crate::decision::DecisionAnswer) -> bool,
+    ) {
+        if cursor == 0 && self.scratch.resolution_answer_log.first().is_some_and(|a| !want(a)) {
+            self.clear_answer_log();
+        }
+    }
+
     /// Name the arm that left answers in `resolution_answer_log` — the card and
     /// the top-level effect variant of the resolution that just ended. Off
     /// unless `CRAB_ANSWER_LOG` is set, debug builds only, cold path only (see
@@ -1239,16 +1315,6 @@ impl GameState {
         );
         assert!(mode < 2, "{msg}");
         eprintln!("{msg}");
-    }
-
-    fn drop_stale_answer_log(
-        &mut self,
-        cursor: usize,
-        want: fn(&crate::decision::DecisionAnswer) -> bool,
-    ) {
-        if cursor == 0 && self.scratch.resolution_answer_log.first().is_some_and(|a| !want(a)) {
-            self.clear_answer_log();
-        }
     }
 
     /// CR 707.10 — push `n` copies of the spell `cid` (if it's on the
@@ -2869,6 +2935,14 @@ impl GameState {
             Effect::AnteTopOfLibrary { who, optional, then, else_ } => {
                 let seats = self.resolve_players(who, ctx);
                 let mut cursor = 0usize;
+                // TWO PASSES, for `run_each_unless_pays`'s reason: a suspend
+                // re-runs this arm from the top, so an ante taken inside the ask
+                // loop — and the `then` branch it ran — happen again for every
+                // seat asked after it. Nothing gates the ask, so the split is
+                // exact: the same seats are asked the same question in the same
+                // order. (A `then` that suspends still drops the seats behind it;
+                // that is the nested-continuation gap, not this one.)
+                let mut answers: Vec<(usize, bool)> = Vec::with_capacity(seats.len());
                 for seat in seats {
                     let anted = if *optional {
                         let Some(yes) = self.ask_seat_bool(
@@ -2885,6 +2959,10 @@ impl GameState {
                     } else {
                         true
                     };
+                    answers.push((seat, anted));
+                }
+                self.clear_answer_log();
+                for (seat, anted) in answers {
                     let moved = anted && self.ante_top_card(seat);
                     let branch = if moved { then } else { else_ };
                     if let Some(inner) = branch {
@@ -5788,7 +5866,25 @@ impl GameState {
                 let mut cursor = 0;
                 // Bounded so a decider that always says yes can't spin; the
                 // pool runs out long before this in practice.
+                //
+                // The ask / pay / body interleaving is the one shape the
+                // two-pass recipe (see `run_each_unless_pays`) cannot take: the
+                // next ask exists only because the previous payment succeeded.
+                // So skip instead. A suspend re-runs this arm from the top and
+                // `ask_seat_bool` replays the earlier answers — but the
+                // iterations those answers belong to ALREADY paid and ALREADY
+                // ran the body, and the state they left is the state we are
+                // re-running in. Repeating them charged the seat again for every
+                // "yes" it had already given: with `k` suspends the first
+                // iteration's cost was paid `k` times (Magnetic Mountain, Dream
+                // Tides — "Pay {2} to untap a tapped creature?" in an upkeep
+                // loop, so only ever wrong for a seat that suspends, which is
+                // every training seat). `answer_already_acted_on` is what
+                // separates the answers this pass owes from the ones it has
+                // already spent, and nothing gates the ask itself, so skipping a
+                // spent one cannot shift which question slot 1, 2, 3 ... holds.
                 for _ in 0..32 {
+                    let replayed = self.answer_already_acted_on(cursor);
                     let Some(yes) =
                         self.ask_seat_bool(
                             &mut cursor,
@@ -5801,7 +5897,13 @@ impl GameState {
                     else {
                         return Ok(());
                     };
-                    if !yes || !self.pay_mana_cost_with_picks(seat, mana_cost, None, events) {
+                    if !yes {
+                        break;
+                    }
+                    if replayed {
+                        continue;
+                    }
+                    if !self.pay_mana_cost_with_picks(seat, mana_cost, None, events) {
                         break;
                     }
                     self.run_effect(body, ctx, events)?;
@@ -9350,16 +9452,33 @@ impl GameState {
                 };
                 let (theirs, mine) = (pick(self, win), pick(self, lose));
                 let mut cursor = 0;
+                // Every side effect here sits BEFORE an ask — the flip is what
+                // the ask is about, and the repeat cost is what buys the next
+                // flip — so the two-pass recipe (`run_each_unless_pays`) does not
+                // apply and both are carried across the suspend instead.
+                // `flip_one_coin_logged` gives the flip its own replay slot (CR
+                // 705.1: one flip, one event), and a replayed answer marks an
+                // iteration that already paid, so its payment is skipped rather
+                // than made again. Before this, a `wants_ui` controller re-rolled
+                // every earlier flip and re-paid every earlier repeat cost on
+                // each resume.
+                //
                 // Backstop against a rigged decider that always loses.
                 for _ in 0..64 {
-                    if self.flip_one_coin(ctx.controller) {
-                        events.push(GameEvent::CoinFlipWon { player: ctx.controller });
+                    let (won, flipped) = self.flip_one_coin_logged(&mut cursor, ctx.controller);
+                    if won {
+                        if flipped {
+                            events.push(GameEvent::CoinFlipWon { player: ctx.controller });
+                        }
                         if let Some(cid) = theirs {
                             self.destroy_permanent(cid, false, events);
                         }
                         break;
                     }
-                    events.push(GameEvent::CoinFlipLost { player: ctx.controller });
+                    if flipped {
+                        events.push(GameEvent::CoinFlipLost { player: ctx.controller });
+                    }
+                    let paid_already = self.answer_already_acted_on(cursor);
                     let Some(again) = self.ask_seat_bool(
                         &mut cursor,
                         ctx.controller,
@@ -9370,6 +9489,12 @@ impl GameState {
                     ) else {
                         return Ok(());
                     };
+                    if paid_already {
+                        // An "again" an earlier pass already spent bought a flip
+                        // that is logged after it; a decline or a failed payment
+                        // ends the loop, so a spent one is always a yes.
+                        continue;
+                    }
                     if again && self.try_pay_with_auto_tap(ctx.controller, repeat_cost).is_ok() {
                         continue;
                     }
@@ -21755,6 +21880,15 @@ impl GameState {
                 );
                 let mut cursor = 0usize;
                 let mut denied: Vec<CardId> = Vec::new();
+                // TWO PASSES, for `run_each_unless_pays`'s reason: a suspend
+                // re-runs this arm from the top, so life paid inside the ask loop
+                // is paid again for every card an opponent is asked about after
+                // it. `budget` carries what each opponent has already committed,
+                // so CR 119.4's gate sees the same totals the single-pass loop
+                // did; only the `LifeLost` events move, from interleaved with the
+                // asks to all together before the cards change zones.
+                let mut budget: Vec<i32> = self.players.iter().map(|q| q.life).collect();
+                let mut payers: Vec<usize> = Vec::new();
                 for cid in &top {
                     let name = self.players[p].library.iter()
                         .find(|c| c.id == *cid)
@@ -21762,7 +21896,7 @@ impl GameState {
                         .unwrap_or_default();
                     for &opp in &opponents {
                         // CR 119.4 — can't offer a payment the player can't make.
-                        if self.players[opp].life < life_amt { continue; }
+                        if budget[opp] < life_amt { continue; }
                         let Some(yes) = self.ask_seat_bool(
                             &mut cursor,
                             opp,
@@ -21772,16 +21906,20 @@ impl GameState {
                             OptionalKind::PayLife { life: life_amt as u32, purpose: PayFor::DenyEffect },
                         ) else { return Ok(()); };
                         if yes {
-                            let applied = self.adjust_life_applied(opp, -life_amt);
-                            if applied < 0 {
-                                events.push(GameEvent::LifeLost { player: opp, amount: (-applied) as u32 });
-                            }
+                            budget[opp] -= life_amt;
+                            payers.push(opp);
                             denied.push(*cid);
                             break;
                         }
                     }
                 }
                 self.clear_answer_log();
+                for opp in payers {
+                    let applied = self.adjust_life_applied(opp, -life_amt);
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: opp, amount: (-applied) as u32 });
+                    }
+                }
                 for cid in &top {
                     let Some(card) = Self::take_card(&mut self.players[p].library, *cid) else { continue };
                     if denied.contains(cid) {
@@ -22311,6 +22449,15 @@ impl GameState {
                     .collect();
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
+                // TWO PASSES, for `run_each_unless_pays`'s reason: a suspend
+                // re-runs this arm from the top, so life paid — and cards
+                // discarded — inside the ask loop happen again for every hit
+                // asked about after them. `budget` carries what the seat has
+                // already committed, so the payability gate sees the running
+                // total the single-pass loop saw, and pass 2 does one thing per
+                // hit in the same order, so the event stream is unchanged.
+                let mut budget = self.players[seat].life;
+                let mut answers: Vec<(crate::card::CardId, bool)> = Vec::with_capacity(hits.len());
                 for id in hits {
                     let name = self.players[seat]
                         .hand
@@ -22328,8 +22475,15 @@ impl GameState {
                     ) else {
                         return Ok(());
                     };
-                    let payable = self.players[seat].life >= *life as i32;
-                    if pay && payable {
+                    let kept = pay && budget >= *life as i32;
+                    if kept {
+                        budget -= *life as i32;
+                    }
+                    answers.push((id, kept));
+                }
+                self.clear_answer_log();
+                for (id, kept) in answers {
+                    if kept {
                         let applied = self.adjust_life_applied(seat, -(*life as i32));
                         if applied < 0 {
                             events.push(GameEvent::LifeLost {
@@ -22341,7 +22495,6 @@ impl GameState {
                         self.discard_card(seat, id, events);
                     }
                 }
-                self.clear_answer_log();
                 Ok(())
             }
 

@@ -4592,3 +4592,29 @@ fn followed_footsteps_copies_at_upkeep() {
     assert_eq!(bears, 2, "a token copy of the enchanted Bears was made");
 }
 
+
+/// Sword-Point Diplomacy charges each denial once even when the asks suspend.
+/// The life was paid inside the ask loop, so the re-run a suspend forces paid
+/// again for every card already denied: three denials cost 18 life instead of
+/// 9 for a UI seat, and only for a UI seat.
+#[test]
+fn sword_point_diplomacy_charges_each_denial_once_when_the_asks_suspend() {
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    let ids: Vec<_> = (0..3).map(|_| g.add_card_to_library(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::sword_point_diplomacy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    for _ in 0..5 {
+        if g.pending_decision.is_none() {
+            break;
+        }
+        g.submit_decision(DecisionAnswer::Bool(true)).expect("deny");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert_eq!(g.players[1].life, 11, "three denials at 3 life each, charged once each");
+    for cid in ids {
+        assert!(g.exile.iter().any(|c| c.id == cid), "denied card exiled");
+    }
+}
