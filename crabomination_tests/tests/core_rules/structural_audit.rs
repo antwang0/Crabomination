@@ -463,3 +463,153 @@ fn no_aura_spells_an_entry_effect_after_its_attach() {
         bad.join("\n  "),
     );
 }
+/// The resolution answer log is ONE channel per resolution, and a nested
+/// asking arm does not get a fresh one: `run_effect` recursion keeps the same
+/// `resolution_depth`, so an inner arm's `cursor = 0` replays whatever the outer
+/// arm logged, and `ask_seat_bool` accepts any answer *kind*. That is the half
+/// the resolution-exit net cannot cover (ENGINE_BACKLOG, "the tenth find's
+/// production half"), so the gate is structural: no shipped card may nest one
+/// log-using effect inside another.
+///
+/// The variant list is the 57 `Effect` arms that ask inline plus the 8 that reach
+/// an asking helper (65 in all, from 63 `let mut cursor = 0` blocks) — regenerate
+/// it with `scripts/audit_answer_log.py --variants`.
+#[test]
+fn no_shipped_card_nests_two_answer_log_arms() {
+    use serde_json::Value;
+
+    const LOG_ARMS: &[&str] = &[
+        "AnteTopOfLibrary",
+        "AnyPlayerMayAccept",
+        "AnyPlayerMayExileFromGraveyard",
+        "BidLifeToCounterTargetSpell",
+        "ClashWithOpponent",
+        "CoinFlipDestroyLoop",
+        "CounterOnMatchingOfEachColor",
+        "CounterUnless",
+        "CounterUnlessPaid",
+        "CumulativeUpkeepPayOrSacrifice",
+        "DamageTargetPlayerMayRedirect",
+        "DestroyEachUnlessPaysLife",
+        "DiscardUnlessPutCardOnTop",
+        "EachPlayerChoosesNumberHighestLoses",
+        "EachPlayerDrawsUpToElseGainsLife",
+        "EachPlayerMayExileAnyNumberFromGraveyard",
+        "EchoPayOrSacrifice",
+        "ExileHandThenReclaimLinked",
+        "ExileTokensCreatedBySourceForCounters",
+        "Forage",
+        "GoblinGame",
+        "GuessColorCountInHand",
+        "Learn",
+        "LifeBidding",
+        "LookTopMayBottomAllElse",
+        "MayDealPowerThenNoCombatDamage",
+        "MayDiscard",
+        "MayDiscardMatching",
+        "MayDoBy",
+        "MayExileSelfReturnNextUpkeepHaste",
+        "MayExileSelfThen",
+        "MayPay",
+        "MayPayBy",
+        "MayPayLife",
+        "MayPayRepeatedly",
+        "MaySacrifice",
+        "MaySacrificeSource",
+        "MayTap",
+        "MoveChosenKeyword",
+        "OtherPlayerMayPayToCounter",
+        "PlayerMayPayLifeElse",
+        "PlayerReturnsPermanentUnlessPaysLife",
+        "PlayersMayAccept",
+        "Process",
+        "RemoveCountersToCreateTokens",
+        "ReturnEachUnlessPays",
+        "ReturnFromGraveyardOpponentChooses",
+        "RevealHandDiscardMatchingUnlessPayLife",
+        "RevealTopAndDrawIf",
+        "RevealTopMayPutOntoBattlefield",
+        "RevealTopOpponentChoosesToHand",
+        "RevealTopPayOrTake",
+        "RevealTopToHandLoseLifeRepeat",
+        "SacrificeEachUnlessPays",
+        "SacrificeSourceUnlessCost",
+        "SacrificeSourceUnlessPay",
+        "SacrificeSourceUnlessReturn",
+        "SacrificeSourceUnlessSacrifice",
+        "SacrificeSourceUnlessSacrificeTotalPower",
+        "SeparateIntoPiles",
+        "TemptingOffer",
+        "TransmuteArtifact",
+        "Tribute",
+        "UnlessPlayerPays",
+        "Vote",
+    ];
+
+    fn walk(v: &Value, outer: Option<&str>, hits: &mut Vec<String>) {
+        match v {
+            Value::Object(map) => {
+                for (k, inner) in map {
+                    if LOG_ARMS.contains(&k.as_str()) {
+                        if let Some(o) = outer {
+                            hits.push(format!("{o} > {k}"));
+                        }
+                        walk(inner, Some(k), hits);
+                    } else {
+                        walk(inner, outer, hits);
+                    }
+                }
+            }
+            Value::Array(a) => {
+                for x in a {
+                    walk(x, outer, hits);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut flagged: Vec<String> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        let v = serde_json::to_value(&def).expect("CardDefinition serializes");
+        let mut hits = Vec::new();
+        walk(&v, None, &mut hits);
+        hits.sort();
+        hits.dedup();
+        for h in hits {
+            flagged.push(format!("{}: {h}", def.name));
+        }
+    }
+    // The seven shipped nestings, each a real defect and none of them fixable by
+    // the obvious clear-before-the-body: the outer arm's `cursor` keeps counting
+    // and `MayPayRepeatedly` asks again *after* its body, so a clear mid-arm
+    // strands its own replay. ENGINE_BACKLOG prices the redesign. This list is
+    // the allowlist, not an endorsement: a NEW nesting fails here.
+    const KNOWN: &[&str] = &[
+        "Conspiracy Theorist: MayPay > MayDiscard",
+        "Emberwilde Djinn: MayPayBy > MayPayLife",
+        "Forbidden Ritual: MaySacrifice > UnlessPlayerPays",
+        "Giant Albatross: MayPay > DestroyEachUnlessPaysLife",
+        "Rottenmouth Viper: MaySacrifice > MayDiscard",
+        "Skirk Drill Sergeant: MayPay > RevealTopMayPutOntoBattlefield",
+        "Worms of the Earth: AnyPlayerMayAccept > AnyPlayerMayAccept",
+    ];
+    flagged.sort();
+    let fresh: Vec<&String> = flagged.iter().filter(|f| !KNOWN.contains(&f.as_str())).collect();
+    assert!(
+        fresh.is_empty(),
+        "{} card(s) nest one answer-log arm inside another, so the inner arm \
+         replays the outer's answers (they share one channel and `ask_seat_bool` \
+         reads any kind):\n  {:#?}",
+        fresh.len(),
+        fresh,
+    );
+    // And the allowlist must not rot: a fixed card has to leave it.
+    let gone: Vec<&&str> = KNOWN.iter().filter(|k| !flagged.iter().any(|f| f == *k)).collect();
+    assert!(gone.is_empty(), "allowlisted nesting(s) no longer exist — drop them: {gone:#?}");
+}

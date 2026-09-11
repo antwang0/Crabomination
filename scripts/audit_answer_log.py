@@ -30,6 +30,7 @@ Reading at the eleventh find: **63 arms, 0 NO-CLEAR, 2 ERR?.**
 """
 
 import re
+import sys
 
 PATH = "crabomination/src/game/effects/mod.rs"
 ASK = re.compile(
@@ -39,6 +40,47 @@ ASK = re.compile(
 CLEAR = re.compile(r"\bclear_answer_log\(\)")
 DECL = re.compile(r"^(\s*)let mut cursor = 0")
 FN = re.compile(r"\s*(?:pub(?:\(crate\))?\s+)?(?:async\s+)?fn (\w+)")
+
+
+ARM = re.compile(r"^\s*(?:\|\s*)?Effect::([A-Za-z0-9_]+)")
+# The arms that reach an asking helper instead of asking inline; the helper name
+# is not an `Effect` variant, so the walk up from its `cursor` stops at the `fn`.
+HELPER_ARMS = {
+    "run_destroy_each_unless_pays_life": ["DestroyEachUnlessPaysLife"],
+    "run_discard_unless_put_on_top": [
+        "DiscardUnlessPutCardOnTop",
+        "SacrificeSourceUnlessSacrificeTotalPower",
+    ],
+    "run_each_unless_pays": ["ReturnEachUnlessPays", "SacrificeEachUnlessPays"],
+    "run_look_top_may_bottom_all": ["LookTopMayBottomAllElse"],
+    "run_pay_or_sacrifice_source": ["SacrificeSourceUnlessPay"],
+    "run_separate_into_piles": ["SeparateIntoPiles"],
+}
+
+
+def log_arm_variants(lines):
+    """Every `Effect` variant whose arm uses the answer log.
+
+    `--variants` prints it as the Rust list that
+    `core_rules::answer_log_nesting::no_shipped_card_nests_two_answer_log_arms`
+    gates on: the log is one channel per resolution and `run_effect` recursion
+    does not open a new one, so a card nesting two of these has its inner arm
+    replay the outer's answers.
+    """
+    out = set()
+    for i, l in enumerate(lines):
+        if not DECL.match(l):
+            continue
+        for j in range(i - 1, max(0, i - 400), -1):
+            m = ARM.match(lines[j])
+            if m:
+                out.add(m.group(1))
+                break
+            f = FN.match(lines[j])
+            if f:
+                out.update(HELPER_ARMS.get(f.group(1), []))
+                break
+    return sorted(out)
 
 
 def enclosing_fn(lines):
@@ -64,6 +106,12 @@ def block_end(lines, start, indent):
 
 def main():
     lines = open(PATH).read().split("\n")
+    if "--variants" in sys.argv:
+        names = log_arm_variants(lines)
+        print(f"    // {len(names)} arms, from scripts/audit_answer_log.py --variants")
+        for n in names:
+            print(f'        "{n}",')
+        return
     fn_at = enclosing_fn(lines)
     rows = []
     for i, l in enumerate(lines):
