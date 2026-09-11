@@ -32,10 +32,10 @@ sixty-seventh pass, so don't re-take that.
    "Standing rules"**. ⚠⚠ **TWO SESSIONS SHARED THIS BRANCH on 2026-09-11**, landed the same fix twice and half of one commit was dropped as duplicate
    work on the rebase — read `git log` first, and fetch again before every push. **A/B base: RE-TAKEN at the merged tip `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331 (PERF Baseline, with the
    self table at that base). Ir crosses boxes, wall clock does not: the four-box `--bench` spread is 289.72 to 542 games/s on byte-identical counters.
-2. **Gates at the tip `0b5a135d`:** suite **19,438 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
+2. **Gates at the tip `2f433047`:** suite **19,441 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
    the ten-channel one-shot census assertions on every test), clippy 0, golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls**
    + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / **6** suspicious (from 10, all four remaining MIDs are tail
-   calls), `audit_panics` **0 bare**, `audit_decision_plumbing` 176 / 105 / 71 **DEAD 0**. **Fresh seeds 853..1012 swept, ~1.02 M games — next is 1013**
+   calls), `audit_panics` **0 bare**, `audit_decision_plumbing` 173 / 107 / 66 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0. **Fresh seeds 853..1012 swept, ~1.02 M games — next is 1013**
    (899..910 were swept twice, once over the resume fixes: 60 cells / 220,800 games / 0 failures / 0 cap / 0 stuck; the closing
    grids 991..1000 through `scripts/fresh_seed_sweep.sh` with `CRAB_ANSWER_LOG=strict` are 50 cells / 138,000 games, 0 failures, 0 cap / 0 stuck /
    4 draws).
@@ -48,10 +48,10 @@ sixty-seventh pass, so don't re-take that.
 4. **Next:** (a) **sweep first and sweep wide**, from 1013, with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself) and read its `cap / stuck / draw` line, not the bare undecided total: **only cap and stuck are defects**. Do NOT hand-roll the loop.
    (b) ⚠ **The seven-card nesting is RETIRED — do NOT build the parking redesign** (~60 sites in 38 arms): taken on the suspending path, all three
-   differing shapes are correct, because every outer arm clears the channel before its body AND has no work after it. The gate stays. (c) Open residue
-   of the class, all needing `MayRepeat`'s continuation splice rather than a plain ask: `KindleTheCarnage`, `TradeSecrets` (the repeat belongs to the
-   OPPONENT) and Tainted Pact (whose local `seen` list no continuation can rebuild). **And the rule the sixteenth find earned: a loop over seats may not
-   ask through the single-slot channel** — two sites still do, safe only because their `who` resolves to one player today.
+   differing shapes are correct, because every outer arm clears the channel before its body AND has no work after it. The gate stays. (c) `audit_decision_plumbing`'s
+   "gates a loop repetition" column is **CLOSED — 0 rows, from 7**; the recipe for an ask about doing the ROUND again is *one logged answer is one round
+   already performed*, replayed in place (ENGINE_BACKLOG). `scripts/audit_stash_in_loop.py` is the new gate for the rule the sixteenth find earned:
+   **a loop over seats may not ask through the single-slot channel** (1 hit, allowlisted, structural).
    (d) **The `MayBody` lead is WITHDRAWN on a measurement** — its hazard was two `May*` nodes sharing a description, and a catalog
    scan reads 2 of 21,756 definitions with any repeated `description:` literal, both static-ability text (PERF candidates; the scan is ten lines).
    (d2) **The fourteenth column is open and half-read**: `scripts/audit_printed_body.py` prices a card's OWN printed cost, body and type line off the

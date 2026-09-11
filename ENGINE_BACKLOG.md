@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED 2026-09-11 (sixteenth find) — an effect that suspends OFF the stack was a silent no-op, and the signal it left behind is not inert](#fixed-2026-09-11-sixteenth-find--an-effect-that-suspends-off-the-stack-was-a-silent-no-op-and-the-signal-it-left-behind-is-not-inert) | 60 |
-| Bugs & robustness | [FIXED 2026-09-11 (the plumbing column, worked one by one) — three asks answered by the wrong player](#fixed-2026-09-11-the-plumbing-column-worked-one-by-one--three-asks-answered-by-the-wrong-player) | 30 |
+| Bugs & robustness | [FIXED 2026-09-11 (the plumbing column, worked one by one) — six asks answered by the wrong player, and the column's repeat rows are CLOSED](#fixed-2026-09-11-the-plumbing-column-worked-one-by-one--six-asks-answered-by-the-wrong-player-and-the-columns-repeat-rows-are-closed) | 48 |
 | Bugs & robustness | [FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight](#fixed-2026-09-11-fifteenth-find--mayrepeats-loop-was-abandoned-the-moment-its-body-suspended-forbidden-ritual-took-one-permanent-of-eight) | 37 |
 | Bugs & robustness | [FIXED 2026-09-11 (fourteenth find) — a suspended trigger is the SAME trigger, and its dying source's LKI was torn down at the suspend](#fixed-2026-09-11-fourteenth-find--a-suspended-trigger-is-the-same-trigger-and-its-dying-sources-lki-was-torn-down-at-the-suspend) | 45 |
 | Bugs & robustness | [FIXED 2026-09-11 (thirteenth find) — six more arms mutated inside the loop that asks, so a suspend did it again](#fixed-2026-09-11-thirteenth-find--six-more-arms-mutated-inside-the-loop-that-asks-so-a-suspend-did-it-again) | 63 |
@@ -127,7 +127,7 @@ and are safe only because their `who` resolves to one player today —
 `ShuffleGraveyardCardsIntoLibrary` (`You` / `Target(0)` in all six callers) and
 `MayRepeat`'s own repeat question, whose continuation consumes the slot itself.
 
-## FIXED 2026-09-11 (the plumbing column, worked one by one) — three asks answered by the wrong player
+## FIXED 2026-09-11 (the plumbing column, worked one by one) — six asks answered by the wrong player, and the column's repeat rows are CLOSED
 
 `audit_decision_plumbing`'s "gates a loop repetition" rows, taken after
 `MayRepeat` turned out to be a live defect rather than a cosmetic one.
@@ -149,13 +149,29 @@ and take the two-pass split. The headless defaults are unchanged, so no headless
 outcome moves; what changes is that a seat that suspends is asked, and answers
 for itself.
 
-**Still open, same column, none of them taken on the suspending path:**
-`KindleTheCarnage`, `TradeSecrets` (the repeat belongs to the OPPONENT, not the
-controller) and `ExileUntilDuplicateName` (Tainted Pact) each ask their repeat
-question through the raw decider, so a `wants_ui` seat is never asked. All three
-mutate before the ask, so routing them needs `MayRepeat`'s continuation splice,
-not a plain `ask_seat_bool` — and Tainted Pact additionally carries a local
-`seen` list that no continuation can rebuild.
+**And then the other three, which closed the column: `audit_decision_plumbing`
+reads 0 "gates a loop repetition" rows now, from 7.** Each asks about doing the
+round AGAIN, so the round's own mutation is before the ask and cannot be moved
+after it — the two-pass recipe does not apply. The accounting that does:
+
+> **One logged answer is one round already performed.** The arm suspends before
+> its answer exists, so at entry the channel holds exactly as many answers as
+> there are rounds behind it. Replay them in place, skip those rounds, and let
+> the newest answer pay for the round this pass performs.
+
+* **Trade Secrets** — the repeat belongs to the OPPONENT ("then that player may
+  repeat this process") and the resolving seat's decider was answering it. The
+  first draft of the fix drew a round and *then* read the "no"; a decline has to
+  replay as a decline and stop before drawing anything.
+* **Kindle the Carnage** — the controller's repeat, never asked. Skipping the
+  replayed rounds also keeps the RNG that picks the random discard from being
+  re-drawn. One prompt is gone on purpose: an empty hand makes the next round a
+  no-op, so the arm breaks instead of posing it.
+* **Tainted Pact** (`ExileUntilDuplicateName`) — needed one more thing, because
+  a local `Vec<String>` of the names it had exiled cannot survive the re-run and
+  the cards sit in a zone with everyone else's. They carry `exiled_with =
+  source` now — which is what the printed "exiled this way" means — and both the
+  seen-names list and the round's own card are read back off the zone.
 
 ## FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight
 

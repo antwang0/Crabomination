@@ -2859,12 +2859,16 @@ fix     `MayRepeat`'s loop abandoned when its body suspended (`48b9867a`). One s
         spliced in behind the body's continuation as `Seq[tail, MayDo{repeat what is left}]` (`MayRepeat`'s own first
         iteration is unconditional, so a bare one would run a body for free). The repeat question is routed to the seat
         too — it went straight to `decider.decide`, so a `wants_ui` controller was never asked at all.
-fix     three more asks answered by the wrong player (`4cf09169`, `f901a557`), off `audit_decision_plumbing`'s
-        "gates a loop repetition" column: Mind Bomb ("each player may discard up to three") and Borderland Explorer
+fix     SIX asks answered by the wrong player, and `audit_decision_plumbing`'s "gates a loop repetition" column
+        CLOSED — 0 rows, from 7 (`4cf09169`, `f901a557`, `f0b3a82f`, `64fdcb16`, `2f433047`). First three: Mind Bomb ("each player may discard up to three") and Borderland Explorer
         routed every seat's offer through the RESOLVER's decider, whose headless default for a min-0 `ChooseCards` is
         the empty pick — so nobody ever discarded and Mind Bomb always dealt its full three; Wandering Archaic asked
         the resolving seat instead of the CASTER and then paid with `pool.pay`, the seventh find's pool-only bug still
-        live at that one site. All three take the two-pass split as well.
+        live at that one site. All three take the two-pass split as well. The other three ask about doing the ROUND
+        again, so the mutation is before the ask and no split applies — the accounting instead is "one logged answer
+        is one round already performed", replayed in place: Trade Secrets (the repeat is the OPPONENT's), Kindle the
+        Carnage (also keeps the random discard's RNG from being re-drawn) and Tainted Pact, which additionally needed
+        `exiled_with = source` — the printed "exiled this way" — because a local name list cannot survive the re-run.
 fix     an effect that suspends OFF the stack was a silent no-op (`912c889f`, `0b5a135d`). No stack item means nowhere
         to park a continuation: the signal went into a field nobody there reads and the body stopped — Words of Wind
         returned NOTHING, the three draw-diggers never dug, 40 `as_enters_effect` cards' choice never happened. And the
@@ -2878,11 +2882,13 @@ fix     a seat loop asking through the SINGLE-slot channel (`912c889f`). `Player
 perf    none. Nothing here is on a hot path — every one of these arms is a per-card resolution behind a suspend.
 ```
 
-**Gates at `0b5a135d`** (this box): suite **19,438 / 0 / 5** with
+**Gates at `2f433047`** (this box): suite **19,441 / 0 / 5** with
 `CRAB_ANSWER_LOG=strict` exported, clippy 0, `cargo check --profile
 release-fast` clean, `golden_trace` 10 / 10 unmoved, `audit_answer_log`
 **63 arms / 6 suspicious** (from 10 — 0 NO-CLEAR, 1 ERR?, 1 PRE, 4 MID, and
 every one of those four is a tail call that returns out of its loop).
+`audit_decision_plumbing` **173 / 107 / 66, DEAD 0 and repeat 0**, and
+`audit_stash_in_loop` (new) 1 / 1 allowlisted / 0 unexplained.
 `--bench` at `ad641aff`, `release-fast`: **195,806 decisions / 27.49 turns /
 611.9 decisions-per-game / 0 stalls** — the committed counters, byte-identical
 — `determinism ok`, `thread_determinism ok (3 vs 1)`, `games_per_s` 309.94,
