@@ -2857,14 +2857,17 @@ stalls**, `games_per_s` 465.1, peak RSS 28.8 MiB — the counters identical to
 / 74, DEAD 0; `audit_variant_coverage` the documented 2 dead primitives;
 `audit_panics` 0 bare; `audit_doc_drift` 0.
 
-**Sweeps, seeds 853..965 (the next fresh seed is 966).** Five pools x 120
+**Sweeps, seeds 853..994 (the next fresh seed is 995).** Five pools x 120
 games/archetype a cell. 853..885 (165 cells / 182,160 games) and 886..905 (100
 / 110,400) on the `OptionalKind` tip; 906..935 (150 / 165,600) and 936..965
 (150 / 165,600) after the resume fixes — **0 panics, 0 stuck, 0 undecided
 except caps and draws**, and the last block is 0 caps as well.
 `overflow` + `debug-assertions` grids: {835, 853, 860, 870, 885, 891} (30
 cells / 27,120 games) and {922, 936, 941, 954, 961} (25 / 22,600), both
-0 panics / 0 assertions / 0 overflows.
+0 panics / 0 assertions / 0 overflows. **Closing grid at the merged tip
+through `scripts/fresh_seed_sweep.sh` with `CRAB_ANSWER_LOG=strict`, seeds
+991..994 x five pools: 20 cells / 55,200 games, 0 failures, cap 0 / stuck 0 /
+draw 4.**
 
 **A SECOND DOCUMENTED CAP CLASS, and it is not the `i32::MAX` life board.**
 `CRAB_CAP_DIAG=1` on `--decks cube --seed 922` names a **1,533-Goblin
@@ -2873,11 +2876,15 @@ under an Ensnaring Bridge, 1,565 permanents at turn 64), ended by
 `MAX_BATTLEFIELD` in 1,662 actions. Cheap and bounded, not a stall — but read
 the diag before filing a cap as the Beacon board again.
 
-⚠ **`undecided` is not `cap`.** The sweep line's `undecided_by cap N / stuck N
-/ draw N` is the reading that matters: seeds 906, 923, 934, 941, 954, 961 each
-report undecided games that are **draws** (CR 104.4), a legitimate outcome. A
-sweep script that prints only the undecided total re-raises a false alarm every
-time; this run's does print the split.
+⚠ **USE `scripts/fresh_seed_sweep.sh`, and `undecided` is not `cap`.** This run
+hand-rolled a sweep loop in a scratchpad before finding the committed script,
+printed only the bare undecided total, and spent a diagnostic run re-deriving
+what that script's header already says: the split is `undecided_by cap N /
+stuck N / draw N`, **only `cap` and `stuck` are defects, and `draw` is a rules
+outcome** (CR 104.4). Seeds 906, 923, 934, 941, 954, 961, 971 and 984 each
+report undecided games that are all draws. The committed script also sets
+`CRAB_MAX_ACTIONS` and `CRAB_CAP_DIAG` so a cap names its own board in the log,
+which the hand-rolled one did not — the same diagnostic, one run later.
 
 **A/B BASE RE-TAKEN AT THE MERGED TIP `4311b872`** — same recipe as the
 seventh run's (`profiling-fast -p crabomination --bin bot_ladder

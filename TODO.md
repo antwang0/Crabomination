@@ -35,7 +35,7 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the tip `b07e0329`:** suite **19,419 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
    the ten-channel one-shot census assertions on every test), clippy 0, golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls**
    + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / 0 NO-CLEAR / 2 ERR?, `audit_panics` **0 bare**,
-   `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..965 swept, ~624 k games — next is 966.**
+   `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..994 swept, ~817 k games — next is 995.**
 3. **This run, and the sentence both sessions earned:** *the suite tests the path that does not suspend, and the training path is the one that does.*
    (a) **`OptionalKind` on `Decision::OptionalTrigger`** — the last prose-keyed decision family. Five `starts_with` branches and a blanket YES for
    everything else meant ~90 engine asks were an unconditional accept (ante your library, exile your graveyard, sacrifice a permanent, pay any life at
@@ -44,8 +44,9 @@ sixty-seventh pass, so don't re-take that.
    put nothing onto the battlefield). (d) **CR 608.2b re-checked on the resume** fizzled Lash Out's clash. (e) **The spell's TAIL replayed on every
    resume** — `ResumeContext::Spell.tail_stage` (0 main / 1 fused right half / 2 + i splice); Far // Away fused took TWO creatures, and a right half
    that suspended resumed with the LEFT half's target. (f) Fade Away charged the first seat twice: the ask loop paid inside itself.
-4. **Next:** (a) **sweep first and sweep wide**, from 966, `CRAB_ANSWER_LOG=strict` exported; read `undecided_by cap / stuck / draw`, not the undecided
-   total — **draws are a legitimate outcome** and were re-raised as a false alarm this run. (b) **The channel's open half is LIVE on seven cards** —
+4. **Next:** (a) **sweep first and sweep wide**, from 995, with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+   yourself) and read its `cap / stuck / draw` line, not the bare undecided total: **only cap and stuck are defects**. Do NOT hand-roll the loop; this
+   run did and paid a diagnostic run for it. (b) **The channel's open half is LIVE on seven cards** —
    `structural_audit::no_shipped_card_nests_two_answer_log_arms` allowlists them: the inner arm's `cursor = 0` replays the OUTER arm's yes. The fix is
    parking the channel at the nesting boundary (~60 nested call sites inside the **38** asking arms); ENGINE_BACKLOG sketches it and says why
    provenance, clearing, offsetting and a one-site park inside `run_effect` all fail. (c) **Ten more arms mutate inside the loop that asks** (Crooked
