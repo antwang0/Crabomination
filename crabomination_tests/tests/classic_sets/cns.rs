@@ -606,6 +606,40 @@ fn custodi_squire_returns_the_voted_card() {
     assert!(g.players[0].hand.iter().any(|c| c.id == relic), "returned to hand");
 }
 
+/// …and each seat casts its OWN ballot. CR 701.31 gives every player a vote, and
+/// every one of them went to `self.decider` — the resolving seat's — so the
+/// controller's policy voted for the whole council. Each ballot is routed to its
+/// voter now, through the cursor-indexed channel because this is a loop over
+/// seats. Two candidates and two UI seats: the split makes the tie, and a tie
+/// moves BOTH.
+#[test]
+fn custodi_squire_asks_each_seat_for_its_own_ballot() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::custodi_squire());
+    cast(&mut g, 0, id, None);
+    // Ballot one is the controller's, ballot two the opponent's; each votes for
+    // a different card, and the tie sends both back.
+    let mut voted: Vec<CardId> = Vec::new();
+    for want in [bear, ring] {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let Decision::ChooseTarget { legal, .. } = &pending.decision else {
+            panic!("expected a ballot, got {:?}", pending.decision)
+        };
+        assert!(legal.contains(&Target::Permanent(want)), "both cards are on the ballot");
+        voted.push(want);
+        g.submit_decision(DecisionAnswer::Target(Target::Permanent(want))).expect("vote");
+    }
+    assert_eq!(voted.len(), 2, "both seats were asked, one ballot each");
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the tie returns both");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ring));
+}
+
 /// Dack Fayden's −2 steals an artifact outright.
 #[test]
 fn dack_fayden_steals_an_artifact() {

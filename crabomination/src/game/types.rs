@@ -1455,6 +1455,7 @@ impl PendingEffectState {
             PendingEffectState::SeatAmountAnswerPending { player, .. } => Some(*player),
             PendingEffectState::CardsAnswerPending { player } => Some(*player),
             PendingEffectState::SeatCardsAnswerPending { player } => Some(*player),
+            PendingEffectState::SeatTargetAnswerPending { player } => Some(*player),
             PendingEffectState::MayCastExiledPending { player, .. } => Some(*player),
             PendingEffectState::StashNamePending { player } => Some(*player),
             _ => None,
@@ -2282,6 +2283,11 @@ pub enum PendingEffectState {
     /// `GameState.scratch.resolution_answer_log` so the arm can ask more questions
     /// after it (`ask_seat_cards_logged` — the pile split's pick-then-choose).
     SeatCardsAnswerPending { player: usize },
+    /// A `Target` pick routed to a seat that is NOT the resolving controller,
+    /// appended to `GameState.scratch.resolution_answer_log` so a loop can ask
+    /// one per seat (`ask_seat_target_logged` — the council ballots, Cuombajj
+    /// Witches' opponent aiming the damage).
+    SeatTargetAnswerPending { player: usize },
     /// Suspended on a "cast the exiled card without paying?" offer after a
     /// dig already mutated state (Cascade, Discover, Possibility Storm,
     /// Ripple, Amped Raptor). Completion-style — no re-run: the answer

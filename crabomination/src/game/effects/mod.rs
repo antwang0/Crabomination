@@ -763,6 +763,66 @@ impl GameState {
         cursor + 1 < self.scratch.resolution_answer_log.len()
     }
 
+    /// Ask `seat` to pick one of `legal`, replaying `resolution_answer_log`
+    /// first — the `Target` sibling of [`ask_seat_bool`](Self::ask_seat_bool),
+    /// and the one that lets a LOOP route a pick per seat.
+    ///
+    /// The single-slot channel cannot do that (see
+    /// `scripts/audit_stash_in_loop.py`), and a bare `decider.decide` is worse
+    /// than either: it hands the resolving seat's policy a choice the card gives
+    /// to someone else — a council ballot, or the opponent aiming Cuombajj
+    /// Witches' second point at whatever the CONTROLLER's decider likes.
+    ///
+    /// Returns `None` on a suspend, and the caller must keep its side effects
+    /// after its final ask and `clear_answer_log()` on every completing path,
+    /// exactly as for the other logged asks.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn ask_seat_target_logged(
+        &mut self,
+        cursor: &mut usize,
+        seat: usize,
+        description: String,
+        source: CardId,
+        legal: Vec<Target>,
+        effect: &Effect,
+    ) -> Option<Target> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let fallback = legal.first().cloned()?;
+        let sane = |t: &Target| -> Target {
+            if legal.contains(t) { t.clone() } else { fallback.clone() }
+        };
+        self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Target(_)));
+        if let Some(DecisionAnswer::Target(t)) = self.scratch.resolution_answer_log.get(*cursor) {
+            let t = sane(t);
+            *cursor += 1;
+            return Some(t);
+        }
+        let decision = Decision::ChooseTarget {
+            optional: false,
+            extra_cast_slot: false,
+            source,
+            legal: legal.clone(),
+            source_name: String::new(),
+            description,
+        };
+        if self.seat_suspends(seat) {
+            self.suspend_signal = Some(Box::new((
+                decision,
+                PendingEffectState::SeatTargetAnswerPending { player: seat },
+                effect.clone(),
+            )));
+            return None;
+        }
+        let picked = match self.decider.decide(&decision) {
+            DecisionAnswer::Target(t) => sane(&t),
+            _ => fallback,
+        };
+        // Log synchronous answers too, so a later suspend's re-run replays them.
+        self.scratch.resolution_answer_log.push(DecisionAnswer::Target(picked.clone()));
+        *cursor += 1;
+        Some(picked)
+    }
+
     /// CR 705.1 — a coin flip that happens **once**, even when the arm that
     /// flipped it later suspends.
     ///
@@ -877,29 +937,39 @@ impl GameState {
         to: &ZoneDest,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &Effect,
     ) {
         let Some(&first) = candidates.first() else { return };
         let mut seats = vec![ctx.controller];
         seats.extend(self.opponents_of(ctx.controller));
         let legal: Vec<Target> = candidates.iter().map(|id| Target::Permanent(*id)).collect();
         let mut tally: crate::fxhash::HashMap<CardId, u32> = crate::fxhash::HashMap::default();
+        // Every ballot went to `self.decider` — the resolving seat's — so the
+        // controller's policy cast the whole council's votes. Routed to the
+        // voter now, through the cursor-indexed channel because this is a loop
+        // over seats (`scripts/audit_stash_in_loop.py`); the tally and the move
+        // are already after every ask.
+        let mut cursor = 0;
         for seat in seats {
             // CR 701.38 — a vote-control grant answers every ballot.
             let asked = self.vote_controller_this_turn.unwrap_or(seat);
-            let answer = self.decider.decide(&crate::decision::Decision::ChooseTarget {
-                optional: false,
-                extra_cast_slot: false,
-                source: ctx.source.unwrap_or(CardId(0)),
-                legal: legal.clone(),
-                source_name: ctx.source_name.unwrap_or("").to_string(),
-                description: format!("P{asked}: vote for a card on P{seat}'s behalf"),
-            });
+            let Some(answer) = self.ask_seat_target_logged(
+                &mut cursor,
+                asked,
+                format!("P{asked}: vote for a card on P{seat}'s behalf"),
+                ctx.source.unwrap_or(CardId(0)),
+                legal.clone(),
+                effect,
+            ) else {
+                return;
+            };
             let voted = match answer {
-                DecisionAnswer::Target(Target::Permanent(id)) if candidates.contains(&id) => id,
+                Target::Permanent(id) if candidates.contains(&id) => id,
                 _ => first,
             };
             *tally.entry(voted).or_insert(0) += 1;
         }
+        self.clear_answer_log();
         let best = tally.values().copied().max().unwrap_or(0);
         let winners: Vec<CardId> = candidates
             .iter()
@@ -12307,7 +12377,7 @@ impl GameState {
                     .into_iter()
                     .filter_map(|e| e.as_card_id())
                     .collect();
-                self.run_council_card_vote(&ids, to, ctx, events);
+                self.run_council_card_vote(&ids, to, ctx, events, effect);
                 Ok(())
             }
 
@@ -12389,7 +12459,7 @@ impl GameState {
                         _ => None,
                     })
                     .collect();
-                self.run_council_card_vote(&candidates, &ZoneDest::Exile, ctx, events);
+                self.run_council_card_vote(&candidates, &ZoneDest::Exile, ctx, events, effect);
                 Ok(())
             }
 
@@ -30347,18 +30417,24 @@ impl GameState {
                     chooser,
                     Some(source),
                 );
-                let Some(pick) = candidates.first().cloned() else { return Ok(()) };
-                let pick = match self.decider.decide(&crate::decision::Decision::ChooseTarget {
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                // The printed card gives this pick to the OPPONENT, and it went
+                // to `self.decider` — the resolving seat's — so the controller's
+                // policy aimed the opponent's damage. Routed to them.
+                let mut cursor = 0;
+                let Some(pick) = self.ask_seat_target_logged(
+                    &mut cursor,
+                    chooser,
+                    "Choose a target for the opponent's damage".to_string(),
                     source,
-                    legal: candidates.clone(),
-                    source_name: String::new(),
-                    description: "Choose a target for the opponent's damage".to_string(),
-                    optional: false,
-                    extra_cast_slot: false,
-                }) {
-                    crate::decision::DecisionAnswer::Target(t) if candidates.contains(&t) => t,
-                    _ => pick,
+                    candidates.clone(),
+                    effect,
+                ) else {
+                    return Ok(());
                 };
+                self.clear_answer_log();
                 let sub = EffectContext { targets: vec![pick], ..ctx.clone() };
                 self.run_effect(
                     &Effect::DealDamage {

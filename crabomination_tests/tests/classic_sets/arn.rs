@@ -515,6 +515,40 @@ fn cuombajj_witches_hand_the_opponent_the_second_point() {
     assert_eq!(g.players[0].life, 19, "and the opponent's, aimed back");
 }
 
+/// …and the opponent is the one who aims it. The pick went to `self.decider` —
+/// the RESOLVING seat's — so the controller's policy chose where the opponent's
+/// point landed. A `wants_ui` opponent is asked now (`ask_seat_target_logged`,
+/// the `Target` sibling of the seat-routed yes/no).
+#[test]
+fn cuombajj_witches_ask_the_opponent_where_their_point_goes() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = main_phase();
+    g.players[1].wants_ui = true;
+    let witches = g.add_card_to_battlefield(0, catalog::cuombajj_witches());
+    g.clear_sickness(witches);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: witches,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.pending_decision.is_some(), "the opponent is asked, not the controller");
+    g.submit_decision(DecisionAnswer::Target(Target::Player(0))).expect("aim it back");
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert_eq!(g.players[1].life, 19, "the controller's point");
+    assert_eq!(g.players[0].life, 19, "and the opponent's, aimed where THEY chose");
+}
+
 #[test]
 fn metamorphosis_turns_a_body_into_creature_only_mana() {
     let mut g = main_phase();

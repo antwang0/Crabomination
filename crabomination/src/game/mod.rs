@@ -23696,6 +23696,14 @@ impl GameState {
                 self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(*b));
                 Ok(Vec::new())
             }
+            PendingEffectState::SeatTargetAnswerPending { .. } => {
+                let DecisionAnswer::Target(t) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Raw append — the re-run checks it against its own legal set.
+                self.scratch.resolution_answer_log.push(DecisionAnswer::Target(t.clone()));
+                Ok(Vec::new())
+            }
             PendingEffectState::DivisionAnswerPending => {
                 let DecisionAnswer::DamageDivision(v) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
