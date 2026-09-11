@@ -626,6 +626,37 @@ fn trade_secrets_runs_once_when_declined() {
     assert_eq!(g.players[0].hand.len(), 4);
 }
 
+/// …and the repeat is the OPPONENT's call, not the resolving seat's. The ask
+/// went straight to `self.decider`, so the controller's decider answered for
+/// them and a `wants_ui` opponent was never asked at all. It is routed to the
+/// seat now, one round per answer — the draws come BEFORE the ask, so the arm
+/// takes its cursor from the answers already in the channel instead of a
+/// two-pass split.
+#[test]
+fn trade_secrets_lets_the_opponent_choose_each_repeat() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = main_phase();
+    g.players[1].wants_ui = true;
+    for _ in 0..30 {
+        g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let secrets = g.add_card_to_hand(0, catalog::trade_secrets());
+    cast(&mut g, 0, secrets, Some(Target::Player(1)));
+    // Round one has happened and the opponent is asked whether to repeat.
+    assert!(g.pending_decision.is_some(), "the opponent is the one asked");
+    assert_eq!(g.players[1].hand.len(), 2, "two for them");
+    assert_eq!(g.players[0].hand.len(), 4, "four for me");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("repeat once");
+    assert_eq!(g.players[1].hand.len(), 4, "one more round, not two");
+    assert_eq!(g.players[0].hand.len(), 8);
+    assert!(g.pending_decision.is_some(), "and they are asked again");
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("stop");
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert_eq!(g.players[1].hand.len(), 4, "the decline drew nobody anything");
+    assert_eq!(g.players[0].hand.len(), 8);
+}
+
 /// Animal Magnetism deploys the creature and bins the rest.
 #[test]
 fn animal_magnetism_deploys_a_revealed_creature() {

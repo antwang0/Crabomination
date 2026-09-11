@@ -34,9 +34,25 @@ the runtime half is the authority: this one trades a false negative there for a
 readable list. The two `ERR?` rows are listed, not fixed per arm — the net at the
 resolution's exit is what makes an unwind harmless, for all 63 arms at once.
 
-Reading after `run_each_unless_pays` was split into two passes (the worked
-example): **63 arms, 10 suspicious — 0 NO-CLEAR, 2 ERR?, 1 PRE, 10 MID.** It was
-11 MID before that fix.
+Reading at the seventeenth pass, with the whole MID census worked:
+**69 arms, 7 suspicious — 0 NO-CLEAR, 1 ERR?, 1 PRE, 6 MID.** It was 63 arms /
+10 suspicious before, and 11 MID before the worked example.
+
+Every remaining row is explained, which is the point of quoting the number:
+
+  * four MIDs (`OtherPlayerMayPayToCounter`, `PlayersMayAccept`,
+    `AnyPlayerMayExileFromGraveyard`, `AnyPlayerMayAccept`) are TAIL CALLS that
+    `return` out of the loop, so nothing they mutate precedes a later ask;
+  * `CoinFlipDestroyLoop`'s PRE and MID are terminal `break`s, and its flip and
+    repeat cost are carried across the suspend instead (`flip_one_coin_logged`
+    plus `answer_already_acted_on`) — the static walk cannot see either;
+  * `TradeSecrets`' two MIDs are its draws, which are what the ask is ABOUT, so
+    they cannot move after it; the arm skips the rounds its channel says are
+    already performed;
+  * the one ERR? is an unwind, which the net at the resolution's exit makes
+    harmless for all 69 arms at once.
+
+So a NEW row is the signal, not the count.
 """
 
 import re

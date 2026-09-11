@@ -27211,23 +27211,42 @@ impl GameState {
             // Trade Secrets — the opponent decides how many times to run the
             // "they draw 2, you draw up to 4" loop.
             Effect::TradeSecrets { who } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(v) = self.resolve_player(who, ctx) else { return Ok(()); };
-                // The printed loop is unbounded; stop once a library is empty
-                // so a decider that always accepts still terminates.
+                // "Then THAT PLAYER may repeat this process" — the repeat is the
+                // opponent's call, and it went to `self.decider`, the resolving
+                // seat's. So the wrong player decided, and a `wants_ui` opponent
+                // was never asked at all.
+                //
+                // Routing it means the arm can suspend, and its draws happen
+                // BEFORE the ask — the shape no two-pass split can fix, because
+                // the ask is about whether to do it all again. The `for` bound
+                // is only the headless chain's backstop; a suspending chain ends
+                // on an empty library, which is where the printed (unbounded)
+                // loop ends too.
+                // One logged answer is one round already performed: the arm
+                // suspends before the answer exists, so at entry the channel
+                // holds exactly as many answers as there are rounds behind us.
+                // Replay them in place and skip their draws.
+                let spent = self.scratch.resolution_answer_log.len();
+                let mut cursor = 0;
                 for round in 0..32 {
                     if round > 0 {
-                        let accepted = matches!(
-                            self.decider.decide(&Decision::OptionalTrigger {
-                                source: ctx.source.unwrap_or(CardId(0)),
-                                description: "Repeat Trade Secrets?".to_string(),
-                                kind: OptionalKind::Neutral,
-                            }),
-                            DecisionAnswer::Bool(true)
-                        );
-                        if !accepted {
+                        let Some(again) = self.ask_seat_bool(
+                            &mut cursor,
+                            v,
+                            "Repeat Trade Secrets?".to_string(),
+                            ctx.source.unwrap_or(CardId(0)),
+                            effect,
+                            OptionalKind::Neutral,
+                        ) else {
+                            return Ok(());
+                        };
+                        if !again {
                             break;
                         }
+                    }
+                    if round < spent {
+                        continue;
                     }
                     if self.players[v].library.is_empty()
                         || self.players[ctx.controller].library.is_empty()
@@ -27241,6 +27260,7 @@ impl GameState {
                         self.draw_one(ctx.controller, events);
                     }
                 }
+                self.clear_answer_log();
                 Ok(())
             }
 
