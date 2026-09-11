@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (tenth find) — one resolution's leftover answer stranded the next arm's ask for ever: the seed-835 Karn stall](#fixed-2026-09-11-tenth-find--one-resolutions-leftover-answer-stranded-the-next-arms-ask-for-ever-the-seed-835-karn-stall) | 46 |
 | Bugs & robustness | [FIXED 2026-09-11 (ninth find) — the same prose sniff one family over: Devour sacrificed the bot's whole board](#fixed-2026-09-11-ninth-find--the-same-prose-sniff-one-family-over-devour-sacrificed-the-bots-whole-board) | 40 |
 | Bugs & robustness | [FIXED 2026-09-11 (eighth find) — the bare resolution-time asks: six "up to N" picks resolved as a no-op and every "choose a color" named White](#fixed-2026-09-11-eighth-find--the-bare-resolution-time-asks-six-up-to-n-picks-resolved-as-a-no-op-and-every-choose-a-color-named-white) | 55 |
 | Bugs & robustness | [FIXED 2026-09-10 (seventh find) — every "you may pay" / "pay or else" effect paid from the floating pool only, so a bot seat never paid: 149 `MayPay` sites dead in self-play](#fixed-2026-09-10-seventh-find--every-you-may-pay--pay-or-else-effect-paid-from-the-floating-pool-only-so-a-bot-seat-never-paid-149-maypay-sites-dead-in-self-play) | 26 |
@@ -56,6 +57,52 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-11 (tenth find) — one resolution's leftover answer stranded the next arm's ask for ever: the seed-835 Karn stall
+
+Found by a fresh-seed sweep, not by a filed lead. `--decks cube --seed 835`
+capped **12 of 1,600 games** (and `all` 14 of 3,400), and the boards were
+nothing like the recorded Beacon of Immortality fingerprint: turn 13-25, an
+empty stack, ordinary life totals, ~460 actions a turn. `CRAB_DUMP_TRACES`
+named the loop in one line — `p0 SubmitDecision(Cards([CardId(106)]))` repeated
+5,600 times with the board byte-identical between them.
+
+**The mechanism.** `scratch.resolution_answer_log` is the replay channel for an
+arm that asks more than one question: the arm suspends, the seat's answer is
+appended, the effect re-runs from the top and each ask replays its slot by
+`cursor`. It is a *per-resolution* channel and every arm that uses it is
+supposed to `clear_answer_log()` on each completing path — one that returns
+without doing so leaves its answers in it. The next arm's first ask then finds
+the wrong **kind** of answer in slot 0, and the kind-matched replays
+(`ask_seat_amount`, `ask_seat_option`, `ask_seat_cards_logged`) MISS on it:
+the ask re-suspends, the answer is appended *behind* the stale one, slot 0 never
+changes, and the arm re-asks until the action cap. A probe printed the log as
+`[Bool(true), Cards([97]), Cards([97]), Cards([97]), …]` — a leftover `Bool`
+from an earlier `ask_seat_bool`, then one `Cards` per re-ask. `ask_seat_bool`
+reads any kind, so the same poison made it answer "no" to a "may" instead of
+looping — quieter and just as wrong.
+
+**The fix is the class, not the leaker.** `drop_stale_answer_log` runs before
+all four replays: a kind mismatch on the arm's FIRST slot (`cursor == 0`) is
+always a previous resolution's leftover, never this arm's own answer, so it
+drops the log and lets the ask suspend normally. One extra round trip where it
+fires, instead of a capped game — and it holds for every arm that leaks, found
+or not. Slots past 0 are left alone: a mismatch there would be this arm's own
+sequence and clearing it could strand the arm a different way.
+
+Karn, Scion of Urza's +1 (`RevealTopOpponentChoosesToHand`, the "an opponent
+chooses one of them" ask) is the card that exposed it; the leak is upstream and
+in some other arm, so the card is not the bug. **Not caused by this run** —
+`--decks cube --seed 835` reproduces the same 12 caps on `38b05af8`, the branch
+tip this run started from.
+After: cube 835 and all 835 both **0 undecided**; the caps left on `all` 804 /
+812 / 819 are the documented Beacon board (turn 210, `i32::MAX` life).
+Tests: `game::answer_log_tests::a_stale_answer_log_entry_does_not_strand_the_next_ask`.
+
+⚠ **The transferable half is the instrument, and it is nearly free on this
+box.** A 3,200-game `cube` sweep cell is 7 s on the release-fast binary; this
+stall sat in a pool the branch has swept for months because nobody had taken
+seeds past 761. Sweep wider.
 
 ## FIXED 2026-09-11 (ninth find) — the same prose sniff one family over: Devour sacrificed the bot's whole board
 

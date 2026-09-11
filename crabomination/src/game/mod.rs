@@ -393,6 +393,64 @@ impl Drop for EventScratch {
 }
 
 #[cfg(test)]
+mod answer_log_tests {
+    use super::*;
+    use crate::card::CardId;
+    use crate::decision::{DecisionAnswer, PickValue};
+    use crate::effect::Effect;
+    use crate::player::Player;
+
+    /// A previous resolution's leftover in slot 0 used to make every
+    /// kind-matched replay MISS: the ask re-suspended, the answer was
+    /// appended *behind* the stale entry, and the arm re-asked for ever
+    /// (`--decks cube --seed 835`, dflt mirror — Karn, Scion of Urza's +1,
+    /// 12 of 1,600 games to the action cap). The first ask drops it.
+    #[test]
+    fn a_stale_answer_log_entry_does_not_strand_the_next_ask() {
+        let mut g = GameState::new(vec![Player::new(0, "Alice"), Player::new(1, "Bob")]);
+        g.players[0].wants_ui = true;
+        // Left behind by an arm that returned without `clear_answer_log()`.
+        g.scratch.resolution_answer_log.push(DecisionAnswer::Bool(true));
+        let cands = vec![(CardId(1), "Card".to_string())];
+        let mut cursor = 0usize;
+        let asked = g.ask_seat_cards_logged(
+            &mut cursor,
+            0,
+            "Choose a revealed card for its owner".to_string(),
+            CardId(0),
+            cands.clone(),
+            1,
+            1,
+            PickValue::Cost,
+            &Effect::Noop,
+            vec![CardId(1)],
+        );
+        assert!(asked.is_none(), "a wants_ui seat suspends");
+        assert!(
+            g.scratch.resolution_answer_log.is_empty(),
+            "the leftover is dropped, so the seat's answer lands in slot 0"
+        );
+        // The seat answers; the re-run must replay it instead of re-asking.
+        g.scratch.resolution_answer_log.push(DecisionAnswer::Cards(vec![CardId(1)]));
+        let mut cursor = 0usize;
+        let replayed = g.ask_seat_cards_logged(
+            &mut cursor,
+            0,
+            "Choose a revealed card for its owner".to_string(),
+            CardId(0),
+            cands,
+            1,
+            1,
+            PickValue::Cost,
+            &Effect::Noop,
+            vec![CardId(1)],
+        );
+        assert_eq!(replayed, Some(vec![CardId(1)]), "the replay hits");
+        assert_eq!(cursor, 1);
+    }
+}
+
+#[cfg(test)]
 mod event_scratch_tests {
     use super::*;
 

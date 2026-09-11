@@ -697,6 +697,7 @@ impl GameState {
         effect: &Effect,
     ) -> Option<bool> {
         use crate::decision::{Decision, DecisionAnswer};
+        self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Bool(_)));
         if let Some(a) = self.scratch.resolution_answer_log.get(*cursor) {
             *cursor += 1;
             return Some(matches!(a, DecisionAnswer::Bool(true)));
@@ -860,6 +861,7 @@ impl GameState {
         effect: &Effect,
     ) -> Option<u32> {
         use crate::decision::{Decision, DecisionAnswer};
+        self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Amount(_)));
         if let Some(DecisionAnswer::Amount(n)) = self.scratch.resolution_answer_log.get(*cursor) {
             let n = (*n).min(max);
             *cursor += 1;
@@ -898,6 +900,7 @@ impl GameState {
     ) -> Option<usize> {
         use crate::decision::{Decision, DecisionAnswer};
         let last = options.len().saturating_sub(1);
+        self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Amount(_)));
         if let Some(DecisionAnswer::Amount(n)) = self.scratch.resolution_answer_log.get(*cursor) {
             let n = (*n as usize).min(last);
             *cursor += 1;
@@ -1042,6 +1045,7 @@ impl GameState {
                 .take(max as usize)
                 .collect()
         };
+        self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Cards(_)));
         if let Some(DecisionAnswer::Cards(v)) = self.scratch.resolution_answer_log.get(*cursor) {
             let v = sane(v);
             *cursor += 1;
@@ -1156,6 +1160,35 @@ impl GameState {
     /// reaches any completing path (see `ask_seat_bool`).
     pub(crate) fn clear_answer_log(&mut self) {
         clear_scratch!(self.resolution_answer_log);
+    }
+
+    /// Drop a *previous* resolution's leftover answers before an arm's first
+    /// ask replays slot 0.
+    ///
+    /// The log is a per-resolution channel and every arm that uses it is
+    /// supposed to [`clear_answer_log`](Self::clear_answer_log) on each
+    /// completing path. One that returns without doing so leaves its answers
+    /// behind, and the next arm's first ask then finds the wrong *kind* of
+    /// answer in slot 0. The kind-matched replays (`ask_seat_amount`,
+    /// `ask_seat_option`, `ask_seat_cards_logged`) MISS on that, so the ask
+    /// re-suspends, the seat answers, the answer is appended *behind* the
+    /// stale one, and the arm re-asks for ever — a game that runs to the
+    /// action cap (`--decks cube --seed 835`, dflt mirror: Karn, Scion of
+    /// Urza's +1 re-asked "Choose a revealed card for its owner" ~5,600 times
+    /// in 12 of 1,600 games). `ask_seat_bool` reads any kind, so it silently
+    /// answered "no" to a "may" instead.
+    ///
+    /// A mismatch on slot 0 is always the leftover, never this arm's own
+    /// answer: drop it and let the ask suspend normally. It costs one round
+    /// trip where it fires, instead of the cap.
+    fn drop_stale_answer_log(
+        &mut self,
+        cursor: usize,
+        want: fn(&crate::decision::DecisionAnswer) -> bool,
+    ) {
+        if cursor == 0 && self.scratch.resolution_answer_log.first().is_some_and(|a| !want(a)) {
+            self.clear_answer_log();
+        }
     }
 
     /// CR 707.10 — push `n` copies of the spell `cid` (if it's on the
