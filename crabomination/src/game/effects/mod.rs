@@ -3727,20 +3727,68 @@ impl GameState {
 
             Effect::MayRepeat { description, body, max } => {
                 use crate::decision::{Decision, DecisionAnswer};
-                for i in 0..(*max).max(1) {
-                    if i > 0
-                        && !matches!(
-                            self.decider.decide(&Decision::OptionalTrigger {
-                                source: ctx.source.unwrap_or(CardId(0)),
-                                description: description.clone(),
-                                kind: OptionalKind::MayBody,
-                            }),
-                            DecisionAnswer::Bool(true)
-                        )
-                    {
-                        break;
+                let n = (*max).max(1);
+                // "Ask, then repeat whatever is left" — the continuation both
+                // exits below hand back, and the reason this arm can suspend at
+                // all. `MayRepeat`'s own first iteration is unconditional, so a
+                // bare `MayRepeat` continuation would run one body for free;
+                // wrapping it in `MayDo` puts the question back in front of it.
+                let tail_after = |left: u32| Effect::MayDo {
+                    description: description.clone(),
+                    body: Box::new(Effect::MayRepeat {
+                        description: description.clone(),
+                        body: body.clone(),
+                        max: left,
+                    }),
+                };
+                for i in 0..n {
+                    if i > 0 {
+                        // The repeat question is the controller's. It went
+                        // straight to the decider before, so a `wants_ui`
+                        // controller — every training seat — was never asked and
+                        // the `AutoDecider` answered for them. `MayDo`'s ask is
+                        // inlined rather than delegated so the loop stays a loop:
+                        // `run_effect`'s frame is fat enough that `max` nested
+                        // ones are a stack risk (see `SearchUpToN`).
+                        let decision = Decision::OptionalTrigger {
+                            source: ctx.source.unwrap_or(CardId(0)),
+                            description: description.clone(),
+                            kind: OptionalKind::MayBody,
+                        };
+                        let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
+                            Some(a) => a,
+                            None if self.players[ctx.controller].wants_ui => {
+                                self.suspend_signal = Some(Box::new((
+                                    decision,
+                                    PendingEffectState::MayDoAnswerPending,
+                                    tail_after(n - i),
+                                )));
+                                return Ok(());
+                            }
+                            None => self.decider.decide(&decision),
+                        };
+                        if !matches!(answer, DecisionAnswer::Bool(true)) {
+                            break;
+                        }
                     }
                     self.run_effect(body, ctx, events)?;
+                    // A body that suspends carries only its OWN effect, so this
+                    // loop was simply abandoned: Forbidden Ritual — the one card
+                    // that builds this arm — sacrificed exactly one permanent of
+                    // its eight for any seat whose sacrifice pick suspends, which
+                    // is every seat the training actors run. Splice the
+                    // outstanding repetitions in behind the body's own
+                    // continuation, the way `SearchUpToN` does.
+                    if let Some((d, p, tail)) = self.suspend_signal.take().map(|b| *b) {
+                        let left = n - i - 1;
+                        let after = if left == 0 {
+                            tail
+                        } else {
+                            Effect::Seq(vec![tail, tail_after(left)])
+                        };
+                        self.suspend_signal = Some(Box::new((d, p, after)));
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }

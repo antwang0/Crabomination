@@ -32,26 +32,26 @@ sixty-seventh pass, so don't re-take that.
    "Standing rules"**. ⚠⚠ **TWO SESSIONS SHARED THIS BRANCH on 2026-09-11**, landed the same fix twice and half of one commit was dropped as duplicate
    work on the rebase — read `git log` first, and fetch again before every push. **A/B base: RE-TAKEN at the merged tip `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331 (PERF Baseline, with the
    self table at that base). Ir crosses boxes, wall clock does not: the four-box `--bench` spread is 289.72 to 542 games/s on byte-identical counters.
-2. **Gates at the tip `b07e0329`:** suite **19,419 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
+2. **Gates at the tip `ad641aff`:** suite **19,427 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
    the ten-channel one-shot census assertions on every test), clippy 0, golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls**
-   + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / 0 NO-CLEAR / 2 ERR?, `audit_panics` **0 bare**,
-   `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..994 swept, ~817 k games — next is 995.**
-3. **This run, and the sentence both sessions earned:** *the suite tests the path that does not suspend, and the training path is the one that does.*
-   (a) **`OptionalKind` on `Decision::OptionalTrigger`** — the last prose-keyed decision family. Five `starts_with` branches and a blanket YES for
-   everything else meant ~90 engine asks were an unconditional accept (ante your library, exile your graveyard, sacrifice a permanent, pay any life at
-   any total, skip your own draw); `may_pay_prompt_affordable` and the Exploit prose branch are gone with it. (b) Both resume channels leaked and the
-   RESOLUTION drops them now; the ten one-shot channels are censused. (c) A **resumed** resolution reset its own per-resolution scratch (Bind to Life
-   put nothing onto the battlefield). (d) **CR 608.2b re-checked on the resume** fizzled Lash Out's clash. (e) **The spell's TAIL replayed on every
-   resume** — `ResumeContext::Spell.tail_stage` (0 main / 1 fused right half / 2 + i splice); Far // Away fused took TWO creatures, and a right half
-   that suspended resumed with the LEFT half's target. (f) Fade Away charged the first seat twice: the ask loop paid inside itself.
+   + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / **6** suspicious (from 10, all four remaining MIDs are tail
+   calls), `audit_panics` **0 bare**, `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..994 swept, ~817 k games — next is 995**
+   (899..910 were swept twice, once over the resume fixes: 60 cells / 220,800 games / 0 failures / 0 cap / 0 stuck).
+3. **This run, and the sentence both sessions earned:** *the suite tests the path that does not suspend, and the training path is the one that does*
+   (`build_match_template` sets `wants_ui` on both actor seats). Fifteen finds, all in ENGINE_BACKLOG: `OptionalKind` retired the last prose-keyed
+   decision family (~90 asks were an unconditional YES); both resume channels leaked and the RESOLUTION drops them now; and then SEVEN instances of one
+   shape — **state the first pass built or spent does not survive into the continuation**: the per-resolution scratch (Bind to Life put nothing onto
+   the battlefield), CR 608.2b re-checked (Lash Out's clash fizzled the spell), the spell's TAIL replayed (Far // Away fused took two creatures), the
+   dying source's LKI torn down (Giant Albatross's victim list came back empty — the card did nothing), `MayRepeat`'s loop abandoned when its body
+   suspended (Forbidden Ritual sacrificed one permanent of eight), and seven ask loops that mutated inside the loop and so did it again per resume
+   (Fade Away, Sirocco and Giant Albatross double-charged, Sword-Point charged 18 life for three denials, Magnetic Mountain re-paid quadratically,
+   Crooked Scales re-rolled the coin, Rebirth re-anted).
 4. **Next:** (a) **sweep first and sweep wide**, from 995, with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
-   yourself) and read its `cap / stuck / draw` line, not the bare undecided total: **only cap and stuck are defects**. Do NOT hand-roll the loop; this
-   run did and paid a diagnostic run for it. (b) **The channel's open half is LIVE on seven cards** —
-   `structural_audit::no_shipped_card_nests_two_answer_log_arms` allowlists them: the inner arm's `cursor = 0` replays the OUTER arm's yes. The fix is
-   parking the channel at the nesting boundary (~60 nested call sites inside the **38** asking arms); ENGINE_BACKLOG sketches it and says why
-   provenance, clearing, offsetting and a one-site park inside `run_effect` all fail. (c) **Ten more arms mutate inside the loop that asks** (Crooked
-   Scales re-flips its coin, `MayPayRepeatedly` re-pays quadratically, three life payments, the ante) — Fade Away is the worked example; each needs its
-   own test on the suspending path. (d) **`MayBody` is the last prose read**: `optional_trigger_beneficial` walks the whole `CardDefinition` comparing
+   yourself) and read its `cap / stuck / draw` line, not the bare undecided total: **only cap and stuck are defects**. Do NOT hand-roll the loop; a run
+   did and paid a diagnostic run for it. (b) ⚠ **The seven-card nesting is RETIRED — do NOT build the parking redesign** (~60 sites in 38 arms). It was
+   reasoned from the static walk and never taken; taken on the suspending path for the three shapes that differ, all three are correct, because every
+   outer arm clears the channel before its body AND has no work after it. The gate stays, guarding a new nesting whose outer arm keeps working after
+   its body. (c) **The MID census is CLOSED**: six arms fixed with tests on the suspending path, four benign with a checked reason. (d) **`MayBody` is the last prose read**: `optional_trigger_beneficial` walks the whole `CardDefinition` comparing
    `description` strings on every ask (~4 a game) and two `May*` nodes sharing a description screen the wrong body — put the verdict on the ask (PERF
    candidates). (e) `BecomeChosenColor` picks per source, not per target. (f) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
    (g) Perf reads floor and the queue has no device above 0.2 %: both of the seventh run's perf legs came off a bug fix, not off the queue.

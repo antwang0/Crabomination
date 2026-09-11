@@ -19,6 +19,8 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (fourteenth find) — a suspended trigger is the SAME trigger, and its dying source's LKI was torn down at the suspend](#fixed-2026-09-11-fourteenth-find--a-suspended-trigger-is-the-same-trigger-and-its-dying-sources-lki-was-torn-down-at-the-suspend) | 45 |
+| Bugs & robustness | [FIXED 2026-09-11 (thirteenth find) — six more arms mutated inside the loop that asks, so a suspend did it again](#fixed-2026-09-11-thirteenth-find--six-more-arms-mutated-inside-the-loop-that-asks-so-a-suspend-did-it-again) | 63 |
 | Bugs & robustness | [FIXED 2026-09-11 (twelfth find) — a spell's TAIL (the fused right half, the spliced effects) re-ran on every resume: Far // Away took two creatures](#fixed-2026-09-11-twelfth-find--a-spells-tail-the-fused-right-half-the-spliced-effects-re-ran-on-every-resume-far--away-took-two-creatures) | 26 |
 | Bugs & robustness | [FIXED 2026-09-11 (eleventh find) — CR 608.2b was re-checked on every resume, so a spell that killed its own target stopped mid-effect](#fixed-2026-09-11-eleventh-find--cr-6082b-was-re-checked-on-every-resume-so-a-spell-that-killed-its-own-target-stopped-mid-effect) | 18 |
 | Bugs & robustness | [FIXED 2026-09-11 (what the census found in 28 seconds) — a RESUMED resolution reset its own scratch, so every "from among them" pick after a suspend read an empty set: Bind to Life milled seven and put nothing onto the battlefield](#fixed-2026-09-11-what-the-census-found-in-28-seconds--a-resumed-resolution-reset-its-own-scratch-so-every-from-among-them-pick-after-a-suspend-read-an-empty-set-bind-to-life-milled-seven-and-put-nothing-onto-the-battlefield) | 85 |
@@ -61,6 +63,112 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-11 (fourteenth find) — a suspended trigger is the SAME trigger, and its dying source's LKI was torn down at the suspend
+
+Third instance at a third layer of the class this branch keeps finding: state
+scoped to "this resolution" is dismantled when the resolution suspends, so the
+continuation runs without it. The scratch was the first (`f6bad006`), CR
+608.2b's target-legality check the second (`c2cb8c30`), and the spell's tail the
+twelfth find; this is CR 603.10's leaves-battlefield LKI.
+
+`resolve_trigger` arms `resolving_lki_source` / `resolving_lki_subject` and
+drops the `leaves_bf_lki` entries when the body returns — **including when it
+returned only because it suspended**. A "when this dies" body that asks anything
+therefore re-derives, on the resume, against a board with no dying object in it:
+
+* **Giant Albatross.** `DestroyEachUnlessPaysLife` filters on
+  `DealtDamageToSourceThisTurn`, which reads the dead source's own damage log
+  off its LKI. First pass: two victims, ask the first, suspend. Resume: LKI
+  gone, filter matches nothing, empty victim list — **the creatures that killed
+  the Albatross walk away free, and the card does nothing at all** for every
+  seat that suspends. The headless test covering it passes either way.
+
+The fix keeps the entries across the suspend and lets whichever pass finishes
+without suspending remove them; the scoping FLAGS stay per-pass (dropped at the
+suspend, re-armed by `submit_decision`'s `ResumeContext::Trigger` arm) because
+between the two passes nothing of this resolution is running and the flags must
+not colour what is. Nothing else resolves while a decision is pending, which is
+what makes that safe.
+
+**The neighbouring ambient state was audited at the same time and is clean, for
+reasons worth keeping:**
+
+* `accepting_player` (`AnyPlayerMayAccept`) is restored the moment the body
+  returns, suspended or not — which would hand the continuation
+  `AcceptingPlayer = None` and let Worms of the Earth destroy itself without
+  the two lands. It does not, because `Effect::Sacrifice` writes
+  `PlayerRef::Seat(q)` into its own continuation (`per_seat_continuation`)
+  before suspending, so the re-run never consults the ambient state. Pinned by
+  `drk::worms_of_the_earth_still_costs_two_lands_when_the_sacrifice_suspends`.
+  A future `accepted` body that suspends WITHOUT concretizing needs the seat
+  carried, not the restore.
+* `separated_piles` (`run_separate_into_piles`) has the identical shape and its
+  doc already requires its bodies to stay non-interactive.
+* All 13 suspend sites inside a loop build a `rest` continuation for the seats
+  or items they have not reached (`per_seat_continuation` and friends), so the
+  "a suspend drops the rest of the loop" shape does not exist today.
+
+## FIXED 2026-09-11 (thirteenth find) — six more arms mutated inside the loop that asks, so a suspend did it again
+
+The Fade Away commit's class, worked to the bottom of the census. An arm that
+suspends re-runs from the top, so any mutation before the ask it suspended on
+happens a second time: correct headless, wrong for every seat that suspends
+(which is every training seat — `build_match_template` sets `wants_ui` on both),
+and invisible to a suite whose tests are all headless. Two shapes, because one
+recipe does not fit both.
+
+**Two passes — ask everything, then mutate — where the asks are independent:**
+
+| arm | card | what repeated |
+| --- | --- | --- |
+| `DestroyEachUnlessPaysLife` | Giant Albatross | the life each earlier victim's controller paid |
+| `RevealTopPayOrTake` | Sword-Point Diplomacy | the life per denial: three denials cost 18, not 9 |
+| `RevealHandDiscardMatchingUnlessPayLife` | Sirocco | the life, and the discards |
+| `AnteTopOfLibrary` | Rebirth (the only multi-seat ante, `ante_only`) | the ante and the `then` it ran |
+
+Unlike the mana sibling, the life arms lose **nothing** to the split: a `budget`
+vector carries what each seat has already committed, so CR 118.6 / 119.4 see the
+same running totals the single-pass loop saw and no prompt moves. Sirocco's
+pass 2 does one thing per hit in the same order, so even its event stream is
+unchanged; Sword-Point's `LifeLost` events move from interleaved with the asks
+to all together before the cards change zones.
+
+**Skip what an earlier pass already spent**, where the next ask exists only
+because the previous payment succeeded and no split is possible:
+
+| arm | card | what repeated |
+| --- | --- | --- |
+| `MayPayRepeatedly` | Magnetic Mountain, Dream Tides | the mana, **quadratically** — with `k` suspends iteration 1's cost was paid `k` times |
+| `CoinFlipDestroyLoop` | Crooked Scales | the repeat cost, and the coin |
+
+`answer_already_acted_on(cursor)` is the test and it is **"something was logged
+after this answer"**: only the arm continuing past an answer can log anything
+after it, and the LAST entry is the one this pass was resumed with, still owed.
+Off by one there skips the payment the seat has just agreed to. It is sound only
+because both arms ask unconditionally — a gate before an ask would re-evaluate
+against the already-mutated state and shift which slot holds which question,
+which is exactly why the other four take the split.
+
+Crooked Scales also flips **before** its ask, and a flip cannot be moved after
+the ask it is about. `flip_one_coin_logged` gives the flip a slot in the replay
+log beside the answers (`[flip, answer, flip, …]`, one shared cursor), so a
+resume reads the result back instead of drawing a second one — CR 705.1, one
+flip is one event. Before it, a suspending controller re-rolled every flip it
+had been told about and a re-run that won destroyed a creature nobody had been
+asked about.
+
+**The four the census called "probably benign" are now benign with a reason**,
+checked rather than assumed: `PlayersMayAccept`, `AnyPlayerMayAccept` and
+`AnyPlayerMayExileFromGraveyard` return out of the loop on the first acceptor,
+so nothing they mutate precedes a later ask; `OtherPlayerMayPayToCounter`'s
+failed payment is rolled back by `try_pay_after_snapshot_mode`'s snapshot (pool
+and tapped flags) and a successful one returns. `scripts/audit_answer_log.py`
+reads **63 arms / 6 suspicious**, down from 10, and every remaining MID is one
+of those tail calls or a terminal `break` the static walk cannot see.
+
+Each fix has a regression test on the **suspending** path, and every one of them
+fails without its fix.
 
 ## FIXED 2026-09-11 (twelfth find) — a spell's TAIL (the fused right half, the spliced effects) re-ran on every resume: Far // Away took two creatures
 
@@ -163,14 +271,46 @@ caught it**: one inline byte cost the struct eight (1,608 against
 byte-sized region was exactly full. An argument costs nothing per probe clone —
 and PERF `(-144)`'s guard is why the wrong version never shipped.
 
-### The same census's structural finding: seven cards nest two answer-log arms
+### The same census's structural finding: seven cards nest two answer-log arms — RETIRED 2026-09-11 as a hazard, not a defect, and the redesign below is NOT work
+
+⚠ **Read this box before the rest of the section, which is preserved as the
+reasoning that led here and is wrong about the severity.** The redesign it
+prices — `run_effect` -> `run_effect_parked` at ~60 sites inside 38 asking arms
+— **is not needed and should not be done.** The seven nestings were reasoned
+about from the static walk and never taken; taken, on the suspending path, for
+the three shapes that differ, all three are correct:
+
+* `stx::part_03::conspiracy_theorist_nested_asks_pay_once_when_both_suspend`
+  (a nested pair on one seat, `MayPay > MayDiscard`),
+* `vis::forbidden_ritual_nested_asks_each_take_their_own_answer_when_both_suspend`
+  (three levels asking two different seats, `MayRepeat > MaySacrifice >
+  UnlessPlayerPays`),
+* `hml::giant_albatross_charges_each_creature_once_when_the_asks_suspend`
+  (the loop arm).
+
+The reason generalizes to all five outer arms, and it is two properties, both
+needed: **each clears the channel before running its body**, so the inner arm's
+`cursor = 0` never sees the outer's answers; and **none has any work after the
+body**, so a suspend inside the body re-entering at the INNER arm (the suspend
+signal carries the inner effect) loses nothing. Neither is structural, so the
+gate stays and the allowlist stays one line per card — what it is guarding
+against is a new nesting whose outer arm keeps working after its body, or asks
+again after it (the `MayPayRepeatedly` shape), not the nesting as such. The
+gate's own doc comment now says that.
+
+Also noted while taking those paths, open and cheap: **`Effect::MayRepeat` asks
+its repeat question through the raw decider rather than `ask_seat_bool`**, so a
+`wants_ui` seat is never asked and never suspends there — the AutoDecider
+answers for a human. Forbidden Ritual and every other `MayRepeat` card.
+
+---
 
 `core_rules::structural_audit::no_shipped_card_nests_two_answer_log_arms` (new)
 walks every card and flags one log-using effect inside another. The log is one
 channel per resolution and `run_effect` recursion does not open a new one, so the
 inner arm's `cursor = 0` replays the **outer** arm's answers — and
 `ask_seat_bool` reads any kind, so it silently inherits the outer "yes" instead
-of asking. Seven shipped cards do it:
+of asking. Seven shipped cards do it (each safe today, per the box above):
 
 | card | nesting | what the inner ask inherits |
 | --- | --- | --- |
@@ -243,17 +383,22 @@ ask" a checkable property, and `scripts/audit_answer_log.py` checks it now
 **And that second census — "a mutation inside the loop that asks" — reads 11 of
 the 63 arms**, which makes this the widest open member of the class:
 
-| arm | what repeats per suspend |
-| --- | --- |
-| `run_each_unless_pays` (Fade Away, Cut the Tethers) | **FIXED here**: the mana each earlier seat paid |
-| `run_destroy_each_unless_pays_life` (Giant Albatross) | the life each earlier seat paid |
-| `Effect::AnteTopOfLibrary` | the ante, and the `then` branch it ran |
-| `Effect::MayPayRepeatedly` (Magnetic Mountain, Dream Tides) | the mana, quadratically |
-| `Effect::CoinFlipDestroyLoop` (Crooked Scales) | the coin flip AND the repeat cost |
-| `Effect::RevealTopPayOrTake` | the life paid |
-| `Effect::RevealHandDiscardMatchingUnlessPayLife` | the life paid |
-| `Effect::OtherPlayerMayPayToCounter` | the mana paid |
-| `Effect::PlayersMayAccept`, `AnyPlayerMayExileFromGraveyard`, `AnyPlayerMayAccept` | a tail-call `run_effect`, so probably benign — each returns out of the loop |
+| arm | what repeats per suspend | status |
+| --- | --- | --- |
+| `run_each_unless_pays` (Fade Away, Cut the Tethers) | the mana each earlier seat paid | FIXED (the worked example) |
+| `run_destroy_each_unless_pays_life` (Giant Albatross) | the life each earlier seat paid | FIXED, two passes + `budget` |
+| `Effect::RevealTopPayOrTake` (Sword-Point Diplomacy) | the life paid: three denials cost 18, not 9 | FIXED, two passes + `budget` |
+| `Effect::RevealHandDiscardMatchingUnlessPayLife` (Sirocco) | the life, and the discards | FIXED, two passes + `budget` |
+| `Effect::AnteTopOfLibrary` (Rebirth) | the ante, and the `then` branch it ran | FIXED, two passes |
+| `Effect::MayPayRepeatedly` (Magnetic Mountain, Dream Tides) | the mana, quadratically | FIXED, `answer_already_acted_on` |
+| `Effect::CoinFlipDestroyLoop` (Crooked Scales) | the coin flip AND the repeat cost | FIXED, `flip_one_coin_logged` + the same skip |
+| `Effect::OtherPlayerMayPayToCounter` | — | BENIGN: a failed payment is rolled back by `try_pay_after_snapshot_mode`'s snapshot (pool + tapped flags); a successful one returns |
+| `Effect::PlayersMayAccept`, `AnyPlayerMayExileFromGraveyard`, `AnyPlayerMayAccept` | — | BENIGN: each returns out of the loop on the first acceptor, so nothing it mutates precedes a later ask |
+
+**Closed 2026-09-11 (thirteenth find)** — see that section for the two recipes
+and why one does not fit both. The audit now reads 63 arms / 6 suspicious
+(from 10), and every remaining MID is one of the tail calls above or a terminal
+`break` the static walk cannot see. The prose below is the recipe, kept.
 
 The fix is the same two passes every time — ask everyone first, mutate second —
 and each one needs its own regression test **on the suspending path**, because the

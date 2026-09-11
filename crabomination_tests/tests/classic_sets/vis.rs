@@ -1823,14 +1823,60 @@ fn forbidden_ritual_nested_asks_each_take_their_own_answer_when_both_suspend() {
         g.submit_decision(answer).expect("answer the nested ask");
     }
     assert!(g.pending_decision.is_none(), "every arm finished");
-    // The controller's own "yes" sacrificed one of theirs; the target's "yes"
-    // paid with a permanent rather than the 2 life.
-    assert!(
-        g.battlefield.iter().filter(|c| c.controller == 0).count() < 2,
+    // Each seat's own "yes" went to its own arm: the controller fed the ritual
+    // both of theirs, and the target answered the ward separately — paying with
+    // their one permanent the first time round and the 2 life the second.
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count(),
+        0,
         "the controller sacrificed for the ritual"
     );
-    assert!(g.battlefield_find(theirs).is_none(), "the target paid a permanent");
-    assert_eq!(g.players[1].life, 20, "so they did not lose the 2 life");
+    assert!(g.battlefield_find(theirs).is_none(), "the target paid a permanent once");
+    assert_eq!(g.players[1].life, 18, "and the 2 life the time they had none");
+}
+
+/// Forbidden Ritual repeats for a seat that suspends. `MayRepeat` runs its body
+/// and asks again, and a body that suspends carries only its own effect — so
+/// the loop was simply abandoned and the card sacrificed exactly ONE permanent
+/// of its eight for every seat whose sacrifice pick suspends (which is every
+/// seat the training actors run). The outstanding repetitions are spliced in
+/// behind the body's continuation now, and the repeat question itself is routed
+/// to the seat instead of straight to the decider.
+#[test]
+fn forbidden_ritual_keeps_repeating_after_the_sacrifice_suspends() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::forbidden_ritual());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, spell, Some(Target::Player(1))).expect("cast");
+    drain_stack(&mut g);
+    // Yes to every offer: sacrifice, repeat, sacrifice, repeat ...
+    for _ in 0..40 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::ChooseCards { candidates, min, .. } => DecisionAnswer::Cards(
+                candidates.iter().take((*min).max(1) as usize).map(|(id, _)| *id).collect(),
+            ),
+            Decision::ChooseTarget { legal, .. } => {
+                DecisionAnswer::Target(legal.first().cloned().expect("a legal pick"))
+            }
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count(),
+        0,
+        "all four were fed to the ritual, not just the first"
+    );
+    // The target has no permanents, so each iteration costs them 2 life.
+    assert_eq!(g.players[1].life, 12, "four iterations at 2 life each");
 }
 
 /// Breathstealer's Crypt bins a drawn creature when the toll goes unpaid.

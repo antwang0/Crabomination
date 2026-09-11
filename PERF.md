@@ -2823,6 +2823,51 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-11 (the resume-class session, third of the day) — the MID census closed, the dying source's LKI, and a filed 60-site redesign retired; no perf leg
+
+```text
+fix     six more arms mutated inside the loop that asks (`4d165eda`). Two recipes, because one does not fit both.
+        TWO PASSES (ask everything, then mutate), asks independent: `DestroyEachUnlessPaysLife` (Giant Albatross),
+        `RevealTopPayOrTake` (Sword-Point Diplomacy — three denials charged 18 life, not 9),
+        `RevealHandDiscardMatchingUnlessPayLife` (Sirocco), `AnteTopOfLibrary` (Rebirth). A `budget` vector carries what
+        each seat has committed, so CR 118.6 / 119.4 see the same running totals and no prompt moves — the life arms lose
+        nothing to the split, unlike the mana one.
+        SKIP WHAT AN EARLIER PASS SPENT, where the next ask exists only because the last payment succeeded:
+        `MayPayRepeatedly` (Magnetic Mountain, Dream Tides — quadratic: with k suspends iteration 1 paid k times) and
+        `CoinFlipDestroyLoop` (Crooked Scales). `answer_already_acted_on` is "something was logged after this answer";
+        the LAST entry is the one this pass was resumed with and is still owed, and off by one there skips the payment
+        the seat just agreed to. Crooked Scales also flips BEFORE its ask, so `flip_one_coin_logged` gives the flip its
+        own replay slot beside the answers (CR 705.1 — one flip, one event).
+fix     the dying source's LKI torn down at the suspend (`4311b872`). `resolve_trigger` dropped `leaves_bf_lki` when the
+        body returned, including when it returned only because it suspended, so Giant Albatross's
+        `DealtDamageToSourceThisTurn` filter matched NOTHING on the resume: empty victim list, the killers walk free,
+        the card does nothing at all for a suspending seat. The entries survive now; the scoping flags stay per-pass and
+        `submit_decision`'s Trigger arm re-arms them. Third instance at a third layer of the same class.
+retire  the seven-card nesting redesign (`ad641aff`), ~60 `run_effect` -> `run_effect_parked` sites in 38 asking arms,
+        filed as "each a real defect". Reasoned from the static walk, never taken. Taken on the SUSPENDING path for the
+        three shapes that differ (Conspiracy Theorist, Forbidden Ritual, Giant Albatross): all three correct, because
+        every outer arm clears the channel before its body AND has no work after it. Gate and allowlist stay.
+audit   the neighbouring ambient state, all clean with a reason: `accepting_player` survives only because
+        `Effect::Sacrifice` concretizes `PlayerRef::Seat(q)` into its own continuation (pinned by a new test, and the
+        speculative fix was tested, refused and left out of the diff); `separated_piles` documents its bodies as
+        non-interactive; all 13 in-loop suspend sites build a `rest` continuation, so "a suspend drops the rest of the
+        loop" does not exist today.
+perf    none. Nothing here is on a hot path — every one of these arms is a per-card resolution behind a suspend.
+```
+
+**Gates at `ad641aff`** (this box): suite **19,427 / 0 / 5** with
+`CRAB_ANSWER_LOG=strict` exported, clippy 0, `cargo check --profile
+release-fast` clean, `golden_trace` 10 / 10 unmoved, `audit_answer_log`
+**63 arms / 6 suspicious** (from 10 — 0 NO-CLEAR, 1 ERR?, 1 PRE, 4 MID, and
+every one of those four is a tail call that returns out of its loop).
+
+**Sweeps, seeds 899..910** — five pools x 120 games/archetype a cell, two
+blocks of 30 cells / 110,400 games, `CRAB_ANSWER_LOG=strict`, `overflow` +
+`debug-assertions`: **0 failures, 0 cap, 0 stuck** on both (the first at
+`5d8cf7dc`, the second over the fixes at `4311b872`; 0 draws and 6 draws
+respectively, and a draw is CR 104.4, not a defect). These overlap the
+`OptionalKind` session's 886..935 — take **966** next, per NEXT.
+
 ### 2026-09-11 (the `OptionalKind` session) — the last prose-keyed decision family, and three resume defects; no perf leg
 
 ⚠ **Two sessions shared `claude/modern_decks` this afternoon.** Fetch before
