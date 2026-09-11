@@ -30,9 +30,8 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
    tracker prose; fetch before every push; `(-290)` is the last claimed candidate, `(-291)` next. Gotchas in **CLAUDE.md**, measurement in **PERF's
    "Standing rules"**. ⚠⚠ **TWO SESSIONS SHARED THIS BRANCH on 2026-09-11**, landed the same fix twice and half of one commit was dropped as duplicate
-   work on the rebase — read `git log` first, and fetch again before every push. **A/B base: RE-TAKE. Four boxes disagree** — the seventh run's triple
-   is the third box's (`a057ca0a`), the box after it reads 289.72 `--bench` games/s against that box's 517-542 **on byte-identical counters**, and six
-   correctness commits since move what a `wants_ui` seat plays. No wall-clock or Ir row crosses between boxes.
+   work on the rebase — read `git log` first, and fetch again before every push. **A/B base: RE-TAKEN at the merged tip `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331 (PERF Baseline, with the
+   self table at that base). Ir crosses boxes, wall clock does not: the four-box `--bench` spread is 289.72 to 542 games/s on byte-identical counters.
 2. **Gates at the tip `b07e0329`:** suite **19,419 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
    the ten-channel one-shot census assertions on every test), clippy 0, golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls**
    + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / 0 NO-CLEAR / 2 ERR?, `audit_panics` **0 bare**,

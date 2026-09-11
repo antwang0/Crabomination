@@ -2879,9 +2879,42 @@ report undecided games that are **draws** (CR 104.4), a legitimate outcome. A
 sweep script that prints only the undecided total re-raises a false alarm every
 time; this run's does print the split.
 
-**A/B base: NOT re-taken this run** (no perf leg). The seventh run's base at
-`a057ca0a` predates six correctness commits from two sessions, at least three
-of which move what a `wants_ui` seat plays; **re-take it before the next A/B.**
+**A/B BASE RE-TAKEN AT THE MERGED TIP `4311b872`** — same recipe as the
+seventh run's (`profiling-fast -p crabomination --bin bot_ladder
+--no-default-features`, system allocator confirmed by `nm | grep -cE " (T|t)
+(_)?mi_" = 0` and `grep -c 'fn=.*mi_' = 0` on all three dumps, callgrind
+`--games 6 --threads 1 --seed 1`, untraced):
+
+```text
+  sealed dflt   2,548,564,763     (a057ca0a: 2,495,934,457, +2.108 %)
+  cube   dflt   2,330,452,847     (a057ca0a: 2,318,840,923, +0.501 %)
+  fixed  gang     635,813,331     (a057ca0a:   635,516,815, +0.047 %)   <- THE BASE FOR THE NEXT A/B
+```
+
+**The deltas are real and they are the correctness work, not drift.** Ir is
+box-independent and the toolchain is pinned, so these cross the box boundary
+the wall-clock rows cannot: **11 engine commits and 0 catalog commits** lie
+between the two readings, and the pools order exactly as what they changed —
+`fixed`/`gang` never suspends and is flat at +0.05 %; `cube`/`dflt` suspends
+rarely, +0.50 %; `sealed`/`dflt` is the pilot pool where every resume fix
+bites, +2.11 %. Two passes where there was one, a `tail_stage` the resume
+carries, a resolution that keeps its own scratch, an answer log dropped at the
+resolution's exit: each one does strictly more work than the version that got
+the rules wrong. **Do not open a perf leg against this as a regression** — the
+comparison a perf leg needs is against THIS triple.
+
+**And the sealed self table at the new base is the recorded shape, so nobody
+re-reads it hunting for the 2 %.** `cg_edges.py` on `cg.sealed.tip.out`:
+`dispatch_triggers_for_events` 6.41 %, `gather_continuous_effects_inner`
+3.43 %, the glibc allocator 9.8 % (`_int_free` 3.25 / `malloc` 2.47 /
+`_int_malloc` 1.89 / `free` 2.05), `from_iter` 3.11 %, `compute_permanent_pass`
+3.10 %, `check_state_based_actions_into` 3.08 % + `sba_board_scan` 1.94 %, the
+CoW unshare's `Arc::clone_from_ref_in` 2.44 %, `__memcpy` 2.08 %,
+`fire_combat_damage_triggers` 1.93 %, `computed_permanent_hinted` 1.90 %,
+`perform_action_inner` 1.83 %. Every row is where `(-271)`/`(-287)` left it
+and nothing above 0.2 % is new — the delta is **spread across the whole
+resolution path**, which is what "two passes where there was one" looks like,
+not a row anyone can take back.
 
 ### 2026-09-11 (a session sharing the branch with the `OptionalKind` one) — both resume channels netted and censused, the resumed resolution's own scratch, the ask loops that paid inside themselves, the actors' jitter pinned; no perf leg, and a FOURTH box
 
@@ -8381,14 +8414,18 @@ at all. Eliding their `description` means making ~90 call sites build their
 prompt lazily (`impl FnOnce() -> String`), for a family `(-288)` priced at
 ≤ 0.2 % of the ~0.5 % prompt-text total *before* it was split three ways.
 `--bench` counters are identical across the change, which is the same reading
-from the other side. **What IS still a lead in that census is `MayBody`**: it
-is the most frequent kind and the one prose read left — `optional_trigger_
-beneficial` walks the whole `CardDefinition` (spell effect, every triggered
-ability, the statics) comparing `description` strings on every ask, and two
-`May*` nodes sharing a description on one card screen the wrong body. The
-device is the ask carrying the verdict instead of the key, which needs
-`effect_imposes_self_cost` to move out of `server::bot`; ~4 asks a game, so it
-is a correctness lead with a perf rider, not the other way round.
+from the other side. **And `MayBody`, the one prose read left, is NOT a lead
+either — measured, not assumed.** `optional_trigger_beneficial` walks the whole
+`CardDefinition` (spell effect, every triggered ability, the statics) comparing
+`description` strings on every ask, so two `May*` nodes sharing a description on
+one card would screen the wrong body. A scan of the catalog
+(`pub fn <card>() -> CardDefinition` blocks against their `description:`
+literals) reads **2 of 21,756 definitions with any repeated description, and
+both are static-ability text, not a `May*` prompt** — Training Drone and
+Platinum Emperion. So the hazard is not live, the walk is ~4 asks a game, and
+the device (the ask carrying the verdict, which needs `effect_imposes_self_cost`
+out of `server::bot`) has nothing to buy. Re-run the scan before re-opening it;
+it is ten lines.
 
 **THE ACTOR RE-READ AT `9772ce0c` (2026-09-09; `cg.actor.out` in a
 scratchpad, the same `--actors 1 --games 60 --steps 1 --seed 7` recipe,
