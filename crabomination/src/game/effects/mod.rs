@@ -34,6 +34,7 @@ use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef,
     Selector, ZoneDest, ZoneRef,
 };
+use crate::decision::PickValue;
 use crate::game::layers::EffectDuration;
 use crate::mana::Color;
 
@@ -463,6 +464,7 @@ impl GameState {
                 pool,
                 0,
                 max,
+                PickValue::Cost,
                 effect,
             )
             .unwrap_or_default()
@@ -934,6 +936,7 @@ impl GameState {
         candidates: Vec<(CardId, String)>,
         min: u32,
         max: u32,
+        value: PickValue,
         effect: &Effect,
     ) -> Option<Vec<CardId>> {
         use crate::decision::{Decision, DecisionAnswer};
@@ -945,7 +948,7 @@ impl GameState {
                     prompt,
                     candidates: candidates.clone(),
                     min,
-                    max, eligible: None };
+                    max, eligible: None, value };
                 // Scripted deciders answer synchronously even for wants_ui
                 // seats — tests script UI players' picks without a suspend
                 // round-trip. Only live (Auto) games suspend.
@@ -996,13 +999,14 @@ impl GameState {
         source: CardId,
         candidates: Vec<(CardId, String)>,
         max: u32,
+        value: PickValue,
         effect: &Effect,
         auto_default: Vec<CardId>,
     ) -> Option<Vec<CardId>> {
         if self.players.get(seat).is_some_and(|p| p.wants_ui)
             || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
         {
-            self.ask_seat_cards(seat, prompt, source, candidates, 0, max, effect)
+            self.ask_seat_cards(seat, prompt, source, candidates, 0, max, value, effect)
         } else {
             let mut auto = auto_default;
             auto.truncate(max as usize);
@@ -1024,6 +1028,7 @@ impl GameState {
         candidates: Vec<(CardId, String)>,
         min: u32,
         max: u32,
+        value: PickValue,
         effect: &Effect,
         auto_default: Vec<CardId>,
     ) -> Option<Vec<CardId>> {
@@ -1040,7 +1045,7 @@ impl GameState {
             *cursor += 1;
             return Some(v);
         }
-        let decision = Decision::ChooseCards { source, prompt, candidates: candidates.clone(), min, max, eligible: None };
+        let decision = Decision::ChooseCards { source, prompt, candidates: candidates.clone(), min, max, eligible: None, value };
         if self.seat_suspends(seat) {
             self.suspend_signal = Some(Box::new((
                 decision,
@@ -1113,6 +1118,7 @@ impl GameState {
             candidates,
             0,
             n,
+            PickValue::Cost,
             effect,
             auto,
         ) else {
@@ -1508,6 +1514,7 @@ impl GameState {
             min: 1,
             max: 1,
             eligible: None,
+            value: PickValue::Gain,
         });
         let source = match &answer {
             crate::decision::DecisionAnswer::Cards(picked) => picked
@@ -3268,6 +3275,11 @@ impl GameState {
                     .iter()
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
+                // Exiling is the mechanism, not the price: every card exiled
+                // is one more card seen off the top, and the picks come back
+                // on top of the library in the order they were named. A
+                // `Cost` here would decline at `min: 0` and the activation
+                // would do nothing.
                 let picks = match self.ask_seat_cards(
                     p,
                     "Exile any number of cards from your hand".into(),
@@ -3275,6 +3287,7 @@ impl GameState {
                     hand,
                     0,
                     self.players[p].hand.len() as u32,
+                    PickValue::Gain,
                     effect,
                 ) {
                     Some(v) => v,
@@ -3315,6 +3328,7 @@ impl GameState {
                     cands.clone(),
                     1,
                     1,
+                    PickValue::Cost,
                     effect,
                 ) {
                     Some(v) => v,
@@ -3582,6 +3596,7 @@ impl GameState {
                     candidates,
                     0,
                     1,
+                    PickValue::Gain,
                     effect,
                 ) else {
                     return Ok(());
@@ -4376,6 +4391,7 @@ impl GameState {
                         ctx.source.unwrap_or(CardId(0)),
                         candidates,
                         1,
+                        PickValue::Gain,
                         effect,
                         auto,
                     ) else {
@@ -4426,6 +4442,7 @@ impl GameState {
                     ctx.source.unwrap_or(CardId(0)),
                     candidates,
                     n,
+                    PickValue::Gain,
                     effect,
                     auto,
                 ) else {
@@ -8098,6 +8115,7 @@ impl GameState {
                     min: 1,
                     max: 1,
                     eligible: None,
+                    value: PickValue::Gain,
                 });
                 // The pick lands on `Selector::LastMoved` (cleared first, so a
                 // declined pick leaves nothing stale) for "if you put a [Town]
@@ -8178,6 +8196,7 @@ impl GameState {
                             min: 0,
                             max: take,
                             eligible: None,
+                            value: PickValue::Gain,
                         })
                     };
                     if let DecisionAnswer::Cards(picked) = answer {
@@ -8493,7 +8512,7 @@ impl GameState {
                         prompt: "Choose a card in your hand".to_string(),
                         candidates: candidates.clone(),
                         min: 1,
-                        max: 1, eligible: None }) {
+                        max: 1, eligible: None, value: PickValue::Cost }) {
                         DecisionAnswer::Cards(v) => v
                             .into_iter()
                             .find(|id| candidates.iter().any(|(c, _)| c == id))
@@ -8751,6 +8770,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     if let DecisionAnswer::Cards(picked) = answer
                         && let Some(cid) = picked.first()
@@ -8792,6 +8812,7 @@ impl GameState {
                         min: want as u32,
                         max: want as u32,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     if let DecisionAnswer::Cards(picked) = answer {
                         for cid in picked.iter().take(want) {
@@ -8845,6 +8866,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     if let DecisionAnswer::Cards(picked) = answer
                         && let Some(cid) = picked.first()
@@ -8891,6 +8913,7 @@ impl GameState {
                         min: keep as u32,
                         max: keep as u32,
                         eligible: None,
+                        value: PickValue::Gain,
                     });
                     let kept = match answer {
                         DecisionAnswer::Cards(picked) => picked,
@@ -8929,6 +8952,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     picks.push(match answer {
                         DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
@@ -8979,6 +9003,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     picks.push(match answer {
                         DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
@@ -9158,7 +9183,7 @@ impl GameState {
                         prompt: "Thieves' Auction: claim a card".into(),
                         candidates: candidates.clone(),
                         min: 1,
-                        max: 1, eligible: None }) {
+                        max: 1, eligible: None, value: PickValue::Gain }) {
                         DecisionAnswer::Cards(v) => {
                             v.into_iter().find(|id| candidates.iter().any(|(c, _)| c == id))
                         }
@@ -9558,7 +9583,7 @@ impl GameState {
                         prompt: "Discard a card to search for a basic land?".to_string(),
                         candidates: hand,
                         min: 0,
-                        max: 1, eligible: None }) {
+                        max: 1, eligible: None, value: PickValue::Cost }) {
                         DecisionAnswer::Cards(ids) => ids,
                         _ => vec![],
                     };
@@ -9603,7 +9628,7 @@ impl GameState {
                             prompt: format!("Discard up to {max} cards to prevent that much damage?"),
                             candidates: hand,
                             min: 0,
-                            max: cap as u32, eligible: None }) {
+                            max: cap as u32, eligible: None, value: PickValue::Cost }) {
                             DecisionAnswer::Cards(ids) => ids,
                             _ => vec![],
                         }
@@ -9877,6 +9902,7 @@ impl GameState {
                     source,
                     peek,
                     n as u32,
+                    PickValue::Cost,
                     effect,
                     auto_default,
                 ) else {
@@ -9922,6 +9948,7 @@ impl GameState {
                     source,
                     top.clone(),
                     top_len,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -10068,6 +10095,7 @@ impl GameState {
                             candidates,
                             1,
                             1,
+                            PickValue::Cost,
                             effect,
                         )
                         .and_then(|v| v.first().copied())
@@ -11470,6 +11498,7 @@ impl GameState {
                     source,
                     candidates.clone(),
                     max,
+                    PickValue::Cost,
                     effect,
                     auto_default,
                 ) else {
@@ -11530,6 +11559,7 @@ impl GameState {
                     source,
                     candidates.clone(),
                     max,
+                    PickValue::Cost,
                     effect,
                     auto_default,
                 ) else {
@@ -11964,6 +11994,7 @@ impl GameState {
                     source,
                     candidates,
                     max,
+                    PickValue::Cost,
                     effect,
                     auto,
                 ) else {
@@ -12265,6 +12296,7 @@ impl GameState {
                         candidates.clone(),
                         1,
                         1,
+                        PickValue::Cost,
                         effect,
                     ) else {
                         return Ok(());
@@ -12307,6 +12339,7 @@ impl GameState {
                     src,
                     candidates,
                     1,
+                    PickValue::Gain,
                     effect,
                     auto,
                 ) else {
@@ -12351,6 +12384,7 @@ impl GameState {
                     source,
                     candidates.clone(),
                     n_cands,
+                    PickValue::Cost,
                     effect,
                     auto_default,
                 ) else {
@@ -12392,6 +12426,7 @@ impl GameState {
                     source,
                     candidates.clone(),
                     n_cands,
+                    PickValue::Cost,
                     effect,
                     auto_default,
                 ) else {
@@ -12451,6 +12486,7 @@ impl GameState {
                     source,
                     candidates.clone(),
                     n_cands,
+                    PickValue::Cost,
                     effect,
                     auto_default,
                 ) else {
@@ -12650,6 +12686,7 @@ impl GameState {
                     ctx.source.unwrap_or(CardId(0)),
                     candidates.clone(),
                     candidates.len() as u32,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -12689,6 +12726,7 @@ impl GameState {
                     ctx.source.unwrap_or(CardId(0)),
                     candidates.clone(),
                     count_cap as u32,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -12760,6 +12798,7 @@ impl GameState {
                     ctx.source.unwrap_or(CardId(0)),
                     candidates,
                     n_cands,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -12816,6 +12855,7 @@ impl GameState {
                         ctx.source.unwrap_or(CardId(0)),
                         candidates.clone(),
                         n_cands,
+                        PickValue::Gain,
                         effect,
                         auto_default,
                     ) else {
@@ -13053,6 +13093,7 @@ impl GameState {
                     ctx.source.unwrap_or(CardId(0)),
                     candidates.clone(),
                     candidates.len() as u32,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -13142,6 +13183,7 @@ impl GameState {
                         candidates.clone(),
                         1,
                         1,
+                        PickValue::Gain,
                         effect,
                     )
                     .and_then(|ids| ids.first().copied())
@@ -13193,6 +13235,7 @@ impl GameState {
                         candidates.clone(),
                         0,
                         n,
+                        PickValue::Gain,
                         effect,
                     ) else {
                         return Ok(());
@@ -13243,6 +13286,7 @@ impl GameState {
                             candidates.clone(),
                             0,
                             n,
+                            PickValue::Gain,
                             effect,
                         ) else {
                             return Ok(());
@@ -13294,6 +13338,7 @@ impl GameState {
                         ctx.source.unwrap_or(CardId(0)),
                         permanents.clone(),
                         n_perm,
+                        PickValue::Gain,
                         effect,
                         auto_default,
                     ) {
@@ -13343,6 +13388,7 @@ impl GameState {
                     min: min_pick,
                     max: n,
                     eligible: None,
+                    value: PickValue::Cost,
                 });
                 let mut chosen: Vec<CardId> = match answer {
                     crate::decision::DecisionAnswer::Cards(ids) => ids
@@ -15393,6 +15439,7 @@ impl GameState {
                         candidates,
                         1,
                         1,
+                        PickValue::Cost,
                         effect,
                         auto,
                     ) else {
@@ -16008,6 +16055,7 @@ impl GameState {
                     candidates,
                     0,
                     max,
+                    PickValue::Cost,
                     effect,
                 ) else {
                     return Ok(());
@@ -16213,7 +16261,7 @@ impl GameState {
                     prompt: "Exile any number of these".to_string(),
                     candidates: top.clone(),
                     min: 0,
-                    max: top.len() as u32, eligible: None }) {
+                    max: top.len() as u32, eligible: None, value: PickValue::Cost }) {
                     DecisionAnswer::Cards(ids) if !ids.is_empty() => ids,
                     // Headless: strip the priciest nonland card, the usual
                     // reason to cast this at an opponent.
@@ -16371,7 +16419,7 @@ impl GameState {
                     prompt: "Return a permanent sharing a type?".to_string(),
                     candidates: candidates.clone(),
                     min: 0,
-                    max: 1, eligible: None }) {
+                    max: 1, eligible: None, value: PickValue::Cost }) {
                     DecisionAnswer::Cards(ids) => ids.into_iter().next(),
                     _ => None,
                 };
@@ -16580,7 +16628,7 @@ impl GameState {
                         prompt: "Put a creature onto the battlefield blocking?".to_string(),
                         candidates: candidates.clone(),
                         min: 0,
-                        max: 1, eligible: None }) {
+                        max: 1, eligible: None, value: PickValue::Gain }) {
                         DecisionAnswer::Cards(ids) => ids.into_iter().next(),
                         _ => None,
                     }
@@ -17280,7 +17328,12 @@ impl GameState {
                         },
                         candidates: candidates.clone(),
                         min: 1,
-                        max: 1, eligible: None }) {
+                        max: 1,
+                        eligible: None,
+                        // The victim keeps the exiled card; the controller
+                        // picking it is binning the rest of that hand.
+                        value: if victims_turn { PickValue::Gain } else { PickValue::Cost },
+                    }) {
                         DecisionAnswer::Cards(ids) => ids
                             .into_iter()
                             .find(|id| candidates.iter().any(|(c, _)| c == id))
@@ -17608,6 +17661,7 @@ impl GameState {
                     source,
                     candidates,
                     1,
+                    PickValue::Cost,
                     effect,
                     vec![ids[0]],
                 ) else {
@@ -19138,6 +19192,7 @@ impl GameState {
                                 min: n as u32,
                                 max: n as u32,
                                 eligible: None,
+                                value: PickValue::Cost,
                             }
                         };
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::Sacrifice {
@@ -19185,6 +19240,21 @@ impl GameState {
                 // decision min equals the pick count so the auto decider
                 // keeps maximizing; a UI/scripted decider may under-pick on
                 // "up to" cards.
+                // Which way the pick cuts is the destination: a card landing
+                // in the chooser's hand or on their battlefield is upside
+                // (Divergent Equation's return-to-hand, Bind to Life), a card
+                // leaving for a graveyard, exile or a library is a cost
+                // (Emeritus of Ideation's "exile eight cards from your
+                // graveyard").
+                let value = match to {
+                    crate::effect::ZoneDest::Hand(who)
+                    | crate::effect::ZoneDest::Battlefield { controller: who, .. }
+                        if self.resolve_player(who, ctx) == Some(ctx.controller) =>
+                    {
+                        PickValue::Gain
+                    }
+                    _ => PickValue::Cost,
+                };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
                     return Ok(());
@@ -19230,6 +19300,7 @@ impl GameState {
                         ctx.source.unwrap_or(CardId(0)),
                         candidates.clone(),
                         cap as u32,
+                        value,
                         effect,
                         auto_default,
                     ) else {
@@ -19256,6 +19327,7 @@ impl GameState {
                             candidates.clone(),
                             cap as u32,
                             cap as u32,
+                            value,
                             effect,
                         ) else {
                             return Ok(());
@@ -19325,6 +19397,7 @@ impl GameState {
                             cand_named,
                             min,
                             n as u32,
+                            PickValue::Cost,
                             effect,
                         ) else {
                             return Ok(());
@@ -19797,6 +19870,7 @@ impl GameState {
                     source,
                     candidates,
                     max,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -19928,6 +20002,7 @@ impl GameState {
                     source,
                     candidates,
                     1,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -20254,7 +20329,7 @@ impl GameState {
                     prompt: "Shuffle which cards into your library?".into(),
                     candidates: candidates.clone(),
                     min: 0,
-                    max: n.min(candidates.len()) as u32, eligible: None }) {
+                    max: n.min(candidates.len()) as u32, eligible: None, value: PickValue::Gain }) {
                     DecisionAnswer::Cards(ids) if !ids.is_empty() => ids,
                     _ => {
                         let mut by_cost: Vec<CardId> = self.players[p]
@@ -20339,6 +20414,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Gain,
                     });
                     match answer {
                         DecisionAnswer::Cards(v) if !v.is_empty() => v[0],
@@ -20663,6 +20739,7 @@ impl GameState {
                     ctx.source.unwrap_or(crate::card::CardId(0)),
                     candidates,
                     max,
+                    PickValue::Gain,
                     effect,
                     all,
                 ) else {
@@ -21078,6 +21155,7 @@ impl GameState {
                     ctx.source.unwrap_or(CardId(0)),
                     candidates.clone(),
                     *count,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -21119,6 +21197,7 @@ impl GameState {
                     min: n_chosen as u32,
                     max: n_chosen as u32,
                     eligible: None,
+                    value: PickValue::Cost,
                 });
                 let mut chosen: Vec<crate::card::CardId> = match answer {
                     crate::decision::DecisionAnswer::Cards(ids) => ids
@@ -21223,6 +21302,7 @@ impl GameState {
                         // five equally-selectable cards and an illegal pick
                         // was silently dropped by the resolver.
                         eligible: eligible.clone(),
+                        value: PickValue::Gain,
                     }
                 } else {
                     Decision::SearchLibrary {
@@ -22500,6 +22580,7 @@ impl GameState {
                     min: 0,
                     max: revealed.len() as u32,
                     eligible: None,
+                    value: PickValue::Gain,
                 };
                 let pending = PendingEffectState::TakeOnePerTypePending { player: p, revealed: revealed.clone() };
                 if self.players[p].wants_ui {
@@ -22986,6 +23067,7 @@ impl GameState {
                         candidates,
                         0,
                         distinct as u32,
+                        PickValue::Cost,
                         effect,
                     ) {
                         Some(v) => v,
@@ -23396,6 +23478,7 @@ impl GameState {
                         min: n as u32,
                         max: n as u32,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     let mut chosen: Vec<crate::card::CardId> = match answer {
                         DecisionAnswer::Cards(ids) => {
@@ -23463,6 +23546,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     let pick = match answer {
                         DecisionAnswer::Cards(ids) => {
@@ -23503,6 +23587,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     let pick = match answer {
                         DecisionAnswer::Cards(ids) => {
@@ -23558,6 +23643,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     });
                     let pick = match answer {
                         DecisionAnswer::Cards(ids) => ids.into_iter().next(),
@@ -24123,6 +24209,7 @@ impl GameState {
                     candidates,
                     1,
                     1,
+                    PickValue::Cost,
                     effect,
                     vec![matches[0].0],
                 ) else {
@@ -24175,6 +24262,7 @@ impl GameState {
                         candidates,
                         1,
                         1,
+                        PickValue::Cost,
                         effect,
                         vec![eligible[0].0],
                     ) else {
@@ -24666,6 +24754,7 @@ impl GameState {
                         candidates,
                         0,
                         max,
+                        PickValue::Cost,
                         effect,
                         Vec::new(),
                     ) else {
@@ -24813,6 +24902,7 @@ impl GameState {
                     src,
                     candidates,
                     max,
+                    PickValue::Cost,
                     effect,
                     all,
                 ) else {
@@ -24857,6 +24947,7 @@ impl GameState {
                     ctx.source.unwrap_or(CardId(0)),
                     candidates,
                     n,
+                    PickValue::Gain,
                     effect,
                     mine,
                 ) else {
@@ -24885,6 +24976,7 @@ impl GameState {
                     candidates,
                     0,
                     1,
+                    PickValue::Cost,
                     effect,
                 ) else {
                     return Ok(());
@@ -25154,6 +25246,7 @@ impl GameState {
                     min: 1,
                     max: 1,
                     eligible: None,
+                    value: PickValue::Gain,
                 };
                 let picked = match self.decider.decide(&decision) {
                     DecisionAnswer::Cards(ids) => ids.first().copied(),
@@ -25252,6 +25345,7 @@ impl GameState {
                     ctx.source.unwrap_or(CardId(0)),
                     candidates,
                     1,
+                    PickValue::Gain,
                     effect,
                     auto_default,
                 ) else {
@@ -26429,6 +26523,7 @@ impl GameState {
                     min: n as u32,
                     max: n as u32,
                     eligible: None,
+                    value: PickValue::Cost,
                 });
                 let mut picks: Vec<CardId> = match answer {
                     DecisionAnswer::Cards(ids) => {
@@ -29091,7 +29186,7 @@ impl GameState {
                     prompt: "Sacrifice any number of creatures".to_string(),
                     candidates: cands.clone(),
                     min: 0,
-                    max: cands.len() as u32, eligible: None }) {
+                    max: cands.len() as u32, eligible: None, value: PickValue::Cost }) {
                     DecisionAnswer::Cards(ids) => {
                         ids.into_iter().filter(|id| cands.iter().any(|(c, _)| c == id)).collect()
                     }
@@ -29149,6 +29244,7 @@ impl GameState {
                     min: 1,
                     max: 1,
                     eligible: None,
+                    value: PickValue::Cost,
                 });
                 let picked = match answer {
                     DecisionAnswer::Cards(v) => v.into_iter().next(),
@@ -29360,6 +29456,7 @@ impl GameState {
                         min: 0,
                         max,
                         eligible: None,
+                        value: PickValue::Cost,
                     }) {
                         DecisionAnswer::Cards(ids) => ids
                             .into_iter()
@@ -29825,6 +29922,7 @@ impl GameState {
                         candidates,
                         min,
                         max,
+                        PickValue::Gain,
                         effect,
                     ) else {
                         return Ok(());
@@ -30042,6 +30140,7 @@ impl GameState {
                     src,
                     candidates,
                     take as u32,
+                    PickValue::Cost,
                     effect,
                     auto,
                 ) else {
@@ -30172,6 +30271,7 @@ impl GameState {
                     src,
                     candidates,
                     take as u32,
+                    PickValue::Gain,
                     effect,
                     auto,
                 ) else {
@@ -30297,6 +30397,7 @@ impl GameState {
                         candidates,
                         0,
                         1,
+                        PickValue::Cost,
                         effect,
                     ) else {
                         return Ok(());
@@ -30806,6 +30907,7 @@ impl GameState {
                     candidates,
                     1,
                     1,
+                    PickValue::Gain,
                     effect,
                 ) else {
                     return Ok(());
@@ -31607,6 +31709,7 @@ impl GameState {
                             top.clone(),
                             1,
                             1,
+                            PickValue::Cost,
                             effect,
                         ) {
                             Some(p) => p,
@@ -31854,6 +31957,7 @@ impl GameState {
                     min: 1,
                     max: 1,
                     eligible: None,
+                    value: PickValue::Cost,
                 });
                 // Auto seats bury the priciest of the two.
                 let pick = match answer {
@@ -32162,6 +32266,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Gain,
                     });
                     match answer {
                         DecisionAnswer::Cards(ids) => ids.first().copied(),
@@ -32770,6 +32875,7 @@ impl GameState {
                         candidates,
                         0,
                         n_cands,
+                        PickValue::Cost,
                         effect,
                     ) else {
                         return Ok(());
@@ -32856,6 +32962,7 @@ impl GameState {
                         candidates,
                         0,
                         n_cands,
+                        PickValue::Cost,
                         effect,
                     ) else {
                         return Ok(());
@@ -33267,6 +33374,7 @@ impl GameState {
                         candidates.clone(),
                         0,
                         1,
+                        PickValue::Gain,
                         effect,
                     ) else {
                         return Ok(());
@@ -33290,7 +33398,7 @@ impl GameState {
                             prompt: "Cast which spell without paying its mana cost?".to_string(),
                             candidates: candidates.clone(),
                             min: 0,
-                            max: 1, eligible: None }) {
+                            max: 1, eligible: None, value: PickValue::Gain }) {
                             DecisionAnswer::Cards(ids) => ids,
                             _ => Vec::new(),
                         },
@@ -33845,6 +33953,7 @@ impl GameState {
             min: 1,
             max: 1,
             eligible: None,
+            value: PickValue::Cost,
         });
         match answer {
             DecisionAnswer::Cards(v) if !v.is_empty() => Some(v[0]),
@@ -35544,7 +35653,7 @@ impl GameState {
                         prompt: "Exchange control of which permanent?".into(),
                         candidates: cands,
                         min: 1,
-                        max: 1, eligible: None }) {
+                        max: 1, eligible: None, value: PickValue::Cost }) {
                         DecisionAnswer::Cards(ids) => {
                             ids.into_iter().find(|id| candidates.contains(id)).unwrap_or(first)
                         }
@@ -35870,6 +35979,7 @@ impl GameState {
             ctx.source.unwrap_or(CardId(0)),
             candidates.iter().map(|(id, name, _)| (*id, name.clone())).collect(),
             n,
+            PickValue::Cost,
             effect,
             auto_default,
         ) else {
@@ -36065,7 +36175,7 @@ impl GameState {
                         prompt: "Put which card into your hand?".into(),
                         candidates: cands,
                         min: 1,
-                        max: 1, eligible: None }) {
+                        max: 1, eligible: None, value: PickValue::Gain }) {
                         DecisionAnswer::Cards(ids) => ids
                             .first()
                             .copied()
@@ -36161,7 +36271,7 @@ impl GameState {
             if n == 1 { "" } else { "s" },
         );
         self.ask_seat_cards_logged(
-            cursor, payer, prompt, source, eligible, 0, n as u32, effect, auto_default,
+            cursor, payer, prompt, source, eligible, 0, n as u32, PickValue::Cost, effect, auto_default,
         )
         .map(Some)
     }
@@ -36292,6 +36402,7 @@ impl GameState {
             candidates,
             0,
             max,
+            PickValue::Cost,
             effect,
             auto_default,
         )

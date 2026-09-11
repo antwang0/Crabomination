@@ -537,8 +537,8 @@ pub struct EvalWeights {
     /// returned 0 cards in 221 of 221 casts and Bind to Life put no creature
     /// onto the battlefield (2026-09-06 deck work, 1,200 search replays).
     /// With this on, an optional pick whose candidates are all in our own
-    /// graveyard and whose prompt is not a cost ("exile", "sacrifice",
-    /// "discard") takes up to `max` of them, priciest first. Gated
+    /// graveyard and whose ask says `PickValue::Gain` takes up to `max` of
+    /// them, priciest first. Gated
     /// 2026-09-06 with ZERO incidence everywhere it was measured: the
     /// converge gauntlet with the card already cut reads the default to
     /// the hundredth, and both sealed-ladder mirrors split every pair —
@@ -2971,8 +2971,8 @@ fn decide_pending_policy_inner(
         }
         // AutoDecider chooses nothing; the bot exiles opponents'
         // graveyard cards (deny graveyard value) up to the cap.
-        crate::decision::Decision::ChooseCards { prompt, candidates, min, max, .. } => {
-            decide_choose_cards(w, state, seat, prompt, candidates, *min, *max)
+        crate::decision::Decision::ChooseCards { candidates, min, max, value, .. } => {
+            decide_choose_cards(w, state, seat, *value, candidates, *min, *max)
         }
         // London mulligan bottoming (CR 103.5) and "put N cards
         // from your hand on top/bottom" effects. `AutoDecider`
@@ -4737,24 +4737,34 @@ pub(crate) fn rank_library_search(
         .collect()
 }
 
-/// Bot heuristic for `Decision::ChooseCards`. Two cases:
-/// - **Put-onto-battlefield from hand** (Sneak Attack / Elvish Piper / Goblin
-///   Lackey): every candidate is in the bot's own hand. Cheat in the single
-///   biggest creature (highest mana value, then power) — that's the whole point
-///   of the effect. Without this the AutoDecider min-0 default declines and the
-///   bot never uses the card.
-/// - **Exile from graveyards** (Collect Evidence / Fateseal-style): exile every
-///   offered card an opponent owns, up to `max`, skipping the bot's own.
+/// Bot heuristic for `Decision::ChooseCards`, dispatched on the zone the
+/// candidates live in and on [`PickValue`] — what the ask says the pick costs
+/// or gains the seat. That last part used to be recovered from the prompt
+/// prose (`contains("sacrifice") || contains("discard")`), so the cost-shaped
+/// prompts that say "exile a card from your hand" or "put a card from your
+/// hand on top of your library" read as upside and the hand branch handed
+/// over the bot's best card.
+/// - **Hand**: `Gain` cheats in the biggest card(s) up to `max` (Sneak Attack
+///   / Elvish Piper / Goblin Lackey — without this the min-0 default declines
+///   and the bot never uses the card); `Cost` sheds the least useful and only
+///   as many as `min` forces.
+/// - **Battlefield**: `Cost` hits an opponent's biggest (Archipelagore's tap)
+///   and falls back to our least valuable when the list is all ours; `Gain`
+///   keeps ours best-first (the "choose N to keep" / untap / attach shape),
+///   then anyone else's.
+/// - **Graveyards**: exile every offered card an opponent owns, up to `max`;
+///   a `Gain` pick over our own graveyard takes the biggest.
 fn decide_choose_cards(
     w: &EvalWeights,
     state: &GameState,
     seat: usize,
-    prompt: &str,
+    value: crate::decision::PickValue,
     candidates: &[(crate::card::CardId, String)],
     min: u32,
     max: u32,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
+    let gain = matches!(value, crate::decision::PickValue::Gain);
     // **An answer shorter than `min` is rejected, and a rejected answer ends
     // the match**: `drive_bots` counts only accepted actions as progress, so a
     // seat that can only propose one illegal answer stops proposing anything.
@@ -4777,19 +4787,13 @@ fn decide_choose_cards(
         }
         DecisionAnswer::Cards(chosen)
     };
-    // A sacrifice/discard prompt is a COST — the pick should minimize what
-    // we give up, not maximize it. Everything else (draft into hand, tap
-    // opposing creatures, exile from graveyards) is upside and keeps the
-    // biggest-first / most-hostile-first behavior below.
-    let prompt_lc = prompt.to_lowercase();
-    let detrimental = prompt_lc.contains("sacrifice") || prompt_lc.contains("discard");
     // Hand-source pick.
     let all_in_hand = !candidates.is_empty()
         && candidates
             .iter()
             .all(|(id, _)| state.players[seat].hand.iter().any(|c| c.id == *id));
     if all_in_hand {
-        if detrimental {
+        if !gain {
             // Shed the least useful cards, and only as many as forced.
             let chosen: Vec<_> = hand_worst_first(state, seat, candidates)
                 .into_iter()
@@ -4813,8 +4817,8 @@ fn decide_choose_cards(
     // Battlefield-source pick (Archipelagore's "tap up to X target creatures",
     // and similar resolution-time multi-target taps): the AutoDecider declines,
     // so the bot would tap nothing. Prefer opponents' untapped creatures — the
-    // biggest threats first — up to the cap. A sacrifice prompt (or a forced
-    // pick over only our own permanents) instead gives up the least valuable.
+    // biggest threats first — up to the cap. A `Cost` pick over only our own
+    // permanents instead gives up the least valuable.
     let all_on_battlefield = candidates
         .iter()
         .all(|(id, _)| state.battlefield.iter().any(|c| c.id == *id));
@@ -4830,9 +4834,25 @@ fn decide_choose_cards(
             own.sort_by_key(|(_, v)| *v);
             own.into_iter().map(|(id, _)| id).collect()
         };
-        if detrimental {
+        // A `Gain` pick keeps what it names — "choose N permanents to keep",
+        // untap, attach. Ours first, best first; an opponent's only once ours
+        // run out (the `Clone` shape), because the enemy-first ranking below
+        // would otherwise untap or keep *their* board.
+        if gain {
+            let mut ranked: Vec<(crate::card::CardId, bool, i32)> = candidates
+                .iter()
+                .filter_map(|(id, _)| {
+                    let c = state.battlefield.iter().find(|c| c.id == *id)?;
+                    Some((
+                        *id,
+                        state.same_team(c.controller, seat),
+                        sacrifice_keep_value(state, c.id, w),
+                    ))
+                })
+                .collect();
+            ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
             let chosen: Vec<_> =
-                own_least_valuable_first().into_iter().take(min as usize).collect();
+                ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
             return fill_to_min(chosen);
         }
         let mut ranked: Vec<(crate::card::CardId, i32)> = candidates
@@ -4876,18 +4896,13 @@ fn decide_choose_cards(
         .collect();
     // Our own effect over our own graveyard (Divergent Equation's "return up
     // to X", Bind to Life's "put a creature from among them onto the
-    // battlefield"): the optional pick is upside, take it. A cost-shaped
-    // prompt keeps the hostile-exile reading above.
+    // battlefield"): a `Gain` pick is upside, take it. A `Cost` one keeps the
+    // hostile-exile reading above.
     let all_own_graveyard = !candidates.is_empty()
         && candidates
             .iter()
             .all(|(id, _)| state.players[seat].graveyard.iter().any(|c| c.id == *id));
-    if w.own_graveyard_picks
-        && chosen.is_empty()
-        && all_own_graveyard
-        && !detrimental
-        && !prompt_lc.contains("exile")
-    {
+    if w.own_graveyard_picks && chosen.is_empty() && all_own_graveyard && gain {
         let mut own: Vec<(crate::card::CardId, i32)> = candidates
             .iter()
             .filter_map(|(id, _)| {
@@ -20512,7 +20527,7 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&EvalWeights::default(), &g, 0, "Put a creature onto the battlefield?", &candidates, 0, 1) {
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, crate::decision::PickValue::Gain, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot picks the highest-cmc creature to cheat in"),
             other => panic!("expected Cards, got {other:?}"),
@@ -20767,8 +20782,9 @@ mod tests {
 
     /// An optional "choose up to N" pick over the bot's OWN graveyard
     /// (Divergent Equation's return-to-hand, Bind to Life's put-onto-the-
-    /// battlefield) is upside: with `own_graveyard_picks` the bot takes up to
-    /// N, priciest first; the default's hostile-exile reading takes nothing.
+    /// battlefield) is `PickValue::Gain`: with `own_graveyard_picks` the bot
+    /// takes up to N, priciest first; the default's hostile-exile reading
+    /// takes nothing.
     #[test]
     fn bot_choose_cards_takes_own_graveyard_with_flag() {
         use crate::decision::DecisionAnswer;
@@ -20779,17 +20795,17 @@ mod tests {
             (cheap, "Lightning Bolt".to_string()),
             (pricey, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&EvalWeights::own_graveyard_picks_on(), &g, 0, "Choose up to 1 cards to move", &candidates, 0, 1) {
+        match decide_choose_cards(&EvalWeights::own_graveyard_picks_on(), &g, 0, crate::decision::PickValue::Gain, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![pricey], "flag on: take the priciest own card"),
             other => panic!("expected Cards, got {other:?}"),
         }
-        match decide_choose_cards(&EvalWeights::round67_off(), &g, 0, "Choose up to 1 cards to move", &candidates, 0, 1) {
+        match decide_choose_cards(&EvalWeights::round67_off(), &g, 0, crate::decision::PickValue::Gain, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert!(v.is_empty(), "flag off: the hostile-exile reading picks nothing"),
             other => panic!("expected Cards, got {other:?}"),
         }
-        // A cost-shaped prompt keeps the old reading even with the flag.
-        match decide_choose_cards(&EvalWeights::own_graveyard_picks_on(), &g, 0, "Exile up to 1 cards from graveyards", &candidates, 0, 1) {
-            DecisionAnswer::Cards(v) => assert!(v.is_empty(), "an exile prompt is not taken as upside"),
+        // A `Cost` pick keeps the hostile-exile reading even with the flag.
+        match decide_choose_cards(&EvalWeights::own_graveyard_picks_on(), &g, 0, crate::decision::PickValue::Cost, &candidates, 0, 1) {
+            DecisionAnswer::Cards(v) => assert!(v.is_empty(), "a Cost pick is not taken as upside"),
             other => panic!("expected Cards, got {other:?}"),
         }
     }
@@ -20808,15 +20824,15 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&EvalWeights::default(), &g, 0, "Tap which creatures?", &candidates, 0, 1) {
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, crate::decision::PickValue::Cost, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot taps the opponent's biggest creature, not its own"),
             other => panic!("expected Cards, got {other:?}"),
         }
     }
 
-    /// A sacrifice `ChooseCards` prompt is a cost: give up the least
-    /// valuable permanent, and only as many as forced.
+    /// A `PickValue::Cost` `ChooseCards` over our own board gives up the
+    /// least valuable permanent, and only as many as forced.
     #[test]
     fn bot_choose_cards_sacrifices_the_worst() {
         use crate::decision::DecisionAnswer;
@@ -20827,9 +20843,108 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&EvalWeights::default(), &g, 0, "Sacrifice a creature", &candidates, 1, 1) {
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, crate::decision::PickValue::Cost, &candidates, 1, 1) {
             DecisionAnswer::Cards(v) => {
                 assert_eq!(v, vec![small], "bot sacrifices the smaller creature")
+            }
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// A `PickValue::Cost` pick over our own HAND sheds the least useful card.
+    /// The prompts this fixes say "exile", not "sacrifice" or "discard"
+    /// (Ravenous Trap's "Exile a card from your hand", Scroll Rack's "Exile
+    /// any number of cards from your hand", "Choose a card to put on the
+    /// bottom"), so the prose sniff read them as upside and handed over the
+    /// Shivan Dragon. ENGINE_BACKLOG, the eighth find's bot half.
+    #[test]
+    fn bot_choose_cards_cost_over_hand_sheds_the_worst() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        // Five lands in play, so the surplus-land rule is not what picks.
+        for _ in 0..5 {
+            g.add_card_to_battlefield(0, catalog::mountain());
+        }
+        let cheap = g.add_card_to_hand(0, catalog::lightning_bolt()); // cmc 1
+        let big = g.add_card_to_hand(0, catalog::shivan_dragon()); // cmc 6
+        let candidates =
+            vec![(cheap, "Lightning Bolt".to_string()), (big, "Shivan Dragon".to_string())];
+        match decide_choose_cards(
+            &EvalWeights::default(),
+            &g,
+            0,
+            crate::decision::PickValue::Cost,
+            &candidates,
+            1,
+            1,
+        ) {
+            DecisionAnswer::Cards(v) => {
+                assert_eq!(v, vec![big], "the priciest spell is the one pitched")
+            }
+            other => panic!("expected Cards, got {other:?}"),
+        }
+        // The same list as an "any number" cost is declined outright.
+        match decide_choose_cards(
+            &EvalWeights::default(),
+            &g,
+            0,
+            crate::decision::PickValue::Cost,
+            &candidates,
+            0,
+            2,
+        ) {
+            DecisionAnswer::Cards(v) => assert!(v.is_empty(), "an optional cost is declined"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// "Choose N permanents to keep" is a `Gain` over our OWN board: keep the
+    /// best. The enemy-first ranking found no candidate and the min-fill then
+    /// kept the *worst* permanent of the pair.
+    #[test]
+    fn bot_choose_cards_gain_keeps_own_best_permanent() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        let big = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+        let candidates =
+            vec![(small, "Grizzly Bears".to_string()), (big, "Shivan Dragon".to_string())];
+        match decide_choose_cards(
+            &EvalWeights::default(),
+            &g,
+            0,
+            crate::decision::PickValue::Gain,
+            &candidates,
+            1,
+            1,
+        ) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![big], "keep the bigger creature"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// A `Gain` over a mixed board takes ours before theirs — an untap or an
+    /// attach that ranked by raw value alone would hand the opponent the
+    /// better half of "Untap which permanents?".
+    #[test]
+    fn bot_choose_cards_gain_prefers_our_own_permanents() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        let theirs = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+        let candidates =
+            vec![(theirs, "Shivan Dragon".to_string()), (mine, "Grizzly Bears".to_string())];
+        match decide_choose_cards(
+            &EvalWeights::default(),
+            &g,
+            0,
+            crate::decision::PickValue::Gain,
+            &candidates,
+            1,
+            1,
+        ) {
+            DecisionAnswer::Cards(v) => {
+                assert_eq!(v, vec![mine], "ours first, even against a bigger enemy")
             }
             other => panic!("expected Cards, got {other:?}"),
         }

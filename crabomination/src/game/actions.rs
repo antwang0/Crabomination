@@ -1,5 +1,6 @@
 use super::*;
 use crate::card::{CardType, Keyword};
+use crate::decision::PickValue;
 use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 use smallvec::SmallVec;
@@ -4469,6 +4470,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     },
                     resume: crate::game::types::ResumeContext::CastSlot0TargetPick {
                         caster: p,
@@ -15955,6 +15957,7 @@ impl GameState {
                     min: 1,
                     max: 1,
                     eligible: None,
+                    value: PickValue::Cost,
                 },
                 resume: crate::game::types::ResumeContext::CastSlot0TargetPick {
                     caster: p,
@@ -16107,6 +16110,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     },
                     resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                         activator: p,
@@ -16254,6 +16258,7 @@ impl GameState {
                         min: count as u32,
                         max: count as u32,
                         eligible: None,
+                        value: PickValue::Cost,
                     },
                     resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                         activator: p,
@@ -16470,7 +16475,7 @@ impl GameState {
                             prompt: format!("{source_name}: sacrifice any number of them"),
                             candidates: named,
                             min: 0,
-                            max, eligible: None },
+                            max, eligible: None, value: PickValue::Cost },
                         resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                             activator: p,
                             card_id,

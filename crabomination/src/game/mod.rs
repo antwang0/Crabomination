@@ -228,6 +228,7 @@ use crate::game::layers::{
     PtSublayer, mod_families,
 };
 use crate::card::gather_spec;
+use crate::decision::PickValue;
 use crate::cow::CowBox;
 use crate::effect::static_effect_strips_abilities;
 use crate::player::Player;
@@ -7073,7 +7074,7 @@ impl GameState {
                     prompt: "Sacrifice a land (Land Equilibrium)".to_string(),
                     candidates: candidates.clone(),
                     min: 1,
-                    max: 1, eligible: None }) {
+                    max: 1, eligible: None, value: PickValue::Cost }) {
                     crate::decision::DecisionAnswer::Cards(v) => v.first().copied(),
                     _ => None,
                 }
@@ -20953,6 +20954,7 @@ impl GameState {
                         min: 1,
                         max: 1,
                         eligible: None,
+                        value: PickValue::Cost,
                     }
                 } else {
                     Decision::ChooseTarget {
@@ -21499,6 +21501,7 @@ impl GameState {
                     min: 1,
                     max: 1,
                     eligible: None,
+                    value: PickValue::Cost,
                 },
                 resume: ResumeContext::CastSlot0TargetPick {
                     caster: p,

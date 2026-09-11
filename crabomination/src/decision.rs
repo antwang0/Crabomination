@@ -57,6 +57,30 @@ pub const EXTRA_CAST_TARGET_PROMPT: &str = "choose an additional target";
 /// two sides can't drift.
 pub const OFFBOARD_TARGET_PROMPT_SUFFIX: &str = ": choose a card to target";
 
+/// Which way a [`Decision::ChooseCards`] pick cuts for the seat being asked —
+/// does picking *more* help the chooser or cost it something?
+///
+/// The engine writes the prompt and every headless policy used to recover
+/// this from it (`prompt.contains("sacrifice") || prompt.contains("discard")`
+/// in `decide_choose_cards`), so a reworded prompt silently flipped a policy
+/// and the eight cost-shaped prompts that say "exile" instead read as upside:
+/// the bot handed over its best cards. The ask states it now; the field has
+/// no default in a struct literal, so a new site cannot skip it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PickValue {
+    /// The picked cards are lost or harmed — sacrificed, discarded, exiled,
+    /// tapped, destroyed, bounced, buried. Pick an opponent's when the list
+    /// offers them; over our own, give up the least and only as many as
+    /// `min` forces. The conservative default.
+    #[default]
+    Cost,
+    /// Picking is the upside — the chooser gains or keeps what it names
+    /// (drawn into hand, returned from a graveyard, cheated onto the
+    /// battlefield, "choose N to keep"), or the pick *is* the mechanism and
+    /// a wider one digs deeper (Scroll Rack). Take the best, up to `max`.
+    Gain,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Decision {
     /// Pick a target satisfying the ability's selector.
@@ -395,6 +419,11 @@ pub enum Decision {
         /// is legal.
         #[serde(default)]
         eligible: Option<Vec<CardId>>,
+        /// Whether picking costs the asked seat something or gains it
+        /// something — see [`PickValue`]. Read by headless policies in
+        /// place of pattern-matching `prompt`.
+        #[serde(default)]
+        value: PickValue,
     },
 }
 

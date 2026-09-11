@@ -2635,7 +2635,7 @@ impl From<&Decision> for DecisionWire {
                 prompt: prompt.clone(),
                 options: options.clone(),
             },
-            Decision::ChooseCards { source, prompt, candidates, min, max, eligible } => {
+            Decision::ChooseCards { source, prompt, candidates, min, max, eligible, value: _ } => {
                 DecisionWire::ChooseCards {
                     source: *source,
                     prompt: prompt.clone(),

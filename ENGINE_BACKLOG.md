@@ -104,7 +104,7 @@ that grant now counts hands too. The "choose a basic land type" asks
 decision and fell through to Forest; they take the hand's mana need, and
 `basic_land_type_for` replaces four hand-written colour→type tables.
 
-### The bot side of the same find, PRICED so nobody builds the wrong size of it
+### FIXED 2026-09-11 — the bot side: `PickValue` on the ask, and the prose sniff gone
 
 `decide_choose_cards` decides cost-vs-upside by **sniffing the prompt prose**:
 `detrimental = prompt.contains("sacrifice") || prompt.contains("discard")`. The
@@ -128,19 +128,75 @@ land on the right answer for an own-side pick:
   "Exile any number of cards from your hand", "Exile a card from your hand",
   and "Choose a card to put on the bottom" — **three or four sites, not 87.**
 
-So the flag is worth adding for the class (a prompt reworded today silently flips
-a policy), but the live defect it fixes is small, and Credit Voucher — the one
-this run found — is already answered engine-side because its ask is bare. Price
-it that way rather than as a 54-site win.
+**Built at the size the census priced, not the 54-site one.**
+`Decision::ChooseCards` carries a `value: PickValue` (`Cost` | `Gain`, `Cost` the
+serde default) and `decide_choose_cards` reads it instead of
+`prompt.contains("sacrifice") || prompt.contains("discard")`. A struct literal
+has no default for it and the three shared asks (`ask_seat_cards`,
+`ask_seat_cards_logged`, `choose_up_to_cards`) take it positionally, so a new ask
+cannot skip the question — that is what makes it a class kill rather than eight
+patches. **104 asks; 39 say `Gain` outright and three more decide it from the
+board**: `MoveChosen`'s two read the destination zone (a card landing in the
+chooser's hand or on their battlefield is `Gain`, one leaving for a graveyard,
+exile or library is `Cost` — Divergent Equation against Emeritus of Ideation),
+and the "exile a card from the revealed hand" ask flips on `victims_turn`,
+because the victim exiling one is keeping it.
 
-Residue, filed not fixed: `BecomeChosenColor` picks per *source* rather than per
+What actually moved is the hand and own-board half the census named:
+
+* The cost-shaped prompts that say **"exile"** rather than "sacrifice" or
+  "discard" — "Exile a card from your hand", "Exile a card from your hand or a
+  permanent you control", Scroll Rack's "Exile any number of cards from your
+  hand", "Choose a creature you control to exile" — plus the two library asks
+  ("Put which card from your hand on top of your library?", "…on the bottom…").
+  All read as upside and handed over the biggest card in hand; they shed the
+  least useful now, and an optional one (`min: 0`) declines outright.
+* **"Choose N permanents to keep" kept the worst.** The battlefield branch ranks
+  *enemy* creatures, found none on an own board, and the min-fill then gave up
+  the least valuable — i.e. kept it. `Gain` over the battlefield ranks ours
+  first, best first; the same arm fixes "Untap which permanents?" (which had
+  been untapping the opponent's biggest, the candidate list being every tapped
+  permanent) and "Choose a permanent to attach this to".
+* Retraced Image's reveal puts the card onto the battlefield, so it is `Gain`,
+  as are the graveyard-recursion asks ("Put up to N cards on top of your
+  library", the sideboard wish).
+
+Tests: `server::bot::tests::bot_choose_cards_cost_over_hand_sheds_the_worst`,
+`…_gain_keeps_own_best_permanent`, `…_gain_prefers_our_own_permanents`.
+
+**The shape a two-valued flag does not reach, found by classifying all 104:**
+an "any number" pick where picking *is* the mechanism and declining wastes the
+whole action. Scroll Rack is one (exile any number, draw that many, the exiled
+cards go back on top in the order named) and reads `Gain` — a wider pick digs
+deeper and the order is the library order. The ones that need a *computed* set
+and so are still dead for a `wants_ui` seat, filed not fixed:
+
+* **Collect evidence declines for every bot seat.** `CollectEvidence` /
+  `CollectEvidenceX` branch on `players[p].wants_ui`, and a bot seat is
+  `wants_ui`, so the ask goes to `decide_choose_cards`; the candidates are our
+  own graveyard, the ask is a `Cost` at `min: 0`, and the answer is empty —
+  `picked < need`, decline. (It declined before this run too, on the "exile"
+  word.) The Auto branch beside it already computes the cheapest qualifying
+  set; what the bot needs is the *threshold*, which no `PickValue` carries.
+* **Fateseal** ("put which cards on the bottom?") and **Stronghold Gambit**
+  ("choose a card in your hand", where the cheapest revealed creature enters)
+  are the same shape one step further: the right answer is a computed set
+  (their engine-side `auto` defaults have it), not "the best" or "the least".
+
+Residue, unchanged: `BecomeChosenColor` picks per *source* rather than per
 *target*, so it cannot yet dodge a specific hoser on the board; Cloudstone
 Curio's decline is deliberate (every candidate is ours, and the bot's
-battlefield branch declines an all-own board at `min: 0` too) and Credit
-Voucher's auto default is "the part of the hand we cannot cast" because the
-bot's generic hand policy reads an "any number" prompt as beneficial and would
-ship the whole hand — a real gap in `decide_choose_cards`, not in the engine.
-Tests: `core_rules::cr_recent101` (8), `core_rules::cr_recent102` (6).
+battlefield branch declines an all-own board at `min: 0` too); Credit Voucher
+still bypasses `choose_up_to_cards` for its computed "the part of the hand we
+cannot cast", for the same reason Scroll Rack could not. **The same prose
+sniff is still live one family over** — `Decision::ChooseAmount` branches on
+`prompt.contains("destroy all creatures with power")` / `"life"` /
+`starts_with("Pay {X}")` and `OptionalTrigger` on `description`, both of which
+`(-288)` deliberately kept readable for exactly that reason. That is the next
+member of this class, and it wants the same treatment: put the question on the
+ask.
+Earlier tests for the engine half: `core_rules::cr_recent101` (8),
+`core_rules::cr_recent102` (6).
 
 ## FIXED 2026-09-10 (seventh find) — every "you may pay" / "pay or else" effect paid from the floating pool only, so a bot seat never paid: 149 `MayPay` sites dead in self-play
 
