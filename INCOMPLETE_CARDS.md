@@ -1045,12 +1045,37 @@ full suite also caught Mai, Scornful Striker draining the *opponent*
 caster) — a trigger-column fix whose test had never run. Still one edit
 each: Touch the Spirit Realm's channel (the discard-activated body cannot
 target), Gideon's Company once a name-prefix requirement exists, Hauntwoods
-Shrieker, Eladamri, Pinnacle Starcage, Rydia, Diviner's Wand, Urborg
-Panther, Tephraderm's spell half, Skophos Maze-Warden, Shieldmage Elder,
-Iroh, Lumbering Laundry (Tephraderm's spell half, Hauntwoods Shrieker's
+Shrieker, Eladamri, Pinnacle Starcage, Rydia, ~~Diviner's Wand~~, Urborg
+Panther, Tephraderm's spell half, ~~Skophos Maze-Warden~~, ~~Shieldmage
+Elder~~, Iroh, Lumbering Laundry (Tephraderm's spell half, Hauntwoods Shrieker's
 reveal and Severance Priest's Spirit shipped the same day, with
 `LastDamagerOf` returning a departed damager — a resolved spell — as a card
-ref; Barret's begin-combat attach the day after). Two read as one edit and
+ref; Barret's begin-combat attach the day after). **Three shipped 2026-09-11
+and all three were one edit as filed:** Diviner's Wand, which shipped as a flat
++2/+1 and flying where the printed card is blank until you draw and then grows
+once per draw (`EquipBonus` already carries `triggered_abilities` and
+`activated_abilities`, and `AttachSourceTo` behind a `MayDo` is the
+Shielded-by-Faith shape, so the Wizard-attach rider came with it); Shieldmage
+Elder's Wizard half —
+`PreventAllDamageByTargetThisTurn` already takes a card id and
+`R::IsSpellOnStack` already names a spell — and Skophos Maze-Warden's
+Labyrinth fight, where `EventSpec::caused_by` gates on the object that
+*declared* the target and an activated ability's is the permanent it came
+from, so "an ability of a land you control named X" needed no primitive.
+**Eladamri's own doc comment is stale in the way this file's caveat warns
+about**: it says the activated ability is "omitted for want of a
+tap-two-creatures cost", and `ActivatedAbility::tap_n_filter` is exactly that
+cost — Shieldmage Elder uses it twice. What Eladamri still wants is the body
+("reveal a card from your hand **or** the top card of your library"), a
+two-zone reveal nothing spells. **Three of the rest are not one edit, and the
+reason is worth having before someone re-reads them:** Urborg Panther's second
+ability is a sacrifice cost naming *three specific cards* (no multi-named
+sacrifice cost exists);
+Lumbering Laundry's `{2}` is information-only ("you may look at face-down
+creatures you don't control") plus Disguise, so there is nothing for the
+engine to model until face-down information is modelled; Touch the Spirit
+Realm's channel is the filed blocker (a discard-activated body cannot
+target). Two read as one edit and
 are not: Emperor of Bones' counter-triggered deploy wants `DeployExiledCreature`
 to stamp `last_moved_cards` so a `Seq` can add the finality counter and
 `SacrificeAtNextEndStep { LastMoved }` behind it (a `ResolutionScratch`

@@ -117,13 +117,26 @@ pub fn glarecaster() -> CardDefinition {
 /// Shieldmage Elder — two Clerics buy a damage-prevention shield.
 pub fn shieldmage_elder() -> CardDefinition {
     CardDefinition {
-        activated_abilities: vec![ActivatedAbility {
-            tap_n_filter: Some((R::Creature.and(R::HasCreatureType(CreatureType::Cleric)), 2)),
-            effect: Effect::PreventAllDamageByTargetThisTurn {
-                target: target_filtered(R::Creature),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_n_filter: Some((R::Creature.and(R::HasCreatureType(CreatureType::Cleric)), 2)),
+                effect: Effect::PreventAllDamageByTargetThisTurn {
+                    target: target_filtered(R::Creature),
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        }],
+            // The printed second half: "Tap two untapped Wizards you control:
+            // Prevent all damage target spell would deal this turn." Same
+            // primitive — it takes an `EntityRef::Card`, and `IsSpellOnStack`
+            // is the filter that names one.
+            ActivatedAbility {
+                tap_n_filter: Some((R::Creature.and(R::HasCreatureType(CreatureType::Wizard)), 2)),
+                effect: Effect::PreventAllDamageByTargetThisTurn {
+                    target: target_filtered(R::IsSpellOnStack),
+                },
+                ..Default::default()
+            },
+        ],
         ..creature(
             "Shieldmage Elder",
             cost(&[generic(5), w()]),

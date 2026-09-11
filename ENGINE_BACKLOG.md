@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (eighth find) — the bare resolution-time asks: six "up to N" picks resolved as a no-op and every "choose a color" named White](#fixed-2026-09-11-eighth-find--the-bare-resolution-time-asks-six-up-to-n-picks-resolved-as-a-no-op-and-every-choose-a-color-named-white) | 55 |
 | Bugs & robustness | [FIXED 2026-09-10 (seventh find) — every "you may pay" / "pay or else" effect paid from the floating pool only, so a bot seat never paid: 149 `MayPay` sites dead in self-play](#fixed-2026-09-10-seventh-find--every-you-may-pay--pay-or-else-effect-paid-from-the-floating-pool-only-so-a-bot-seat-never-paid-149-maypay-sites-dead-in-self-play) | 26 |
 | Bugs & robustness | [FIXED 2026-09-10 (sixth find) — the graveyard walk had none of the battlefield walk's rules: no fan-out, no once-per-turn, no intervening-if gate; one step walk, one scope; Attuned Hunter dead on the battlefield](#fixed-2026-09-10-sixth-find--the-graveyard-walk-had-none-of-the-battlefield-walks-rules-no-fan-out-no-once-per-turn-no-intervening-if-gate-one-step-walk-one-scope-attuned-hunter-dead-on-the-battlefield) | 30 |
 | Bugs & robustness | [FIXED 2026-09-10 (fifth find) — a cast or activation resumed from a cost-choice prompt returned its events to nobody](#fixed-2026-09-10-fifth-find--a-cast-or-activation-resumed-from-a-cost-choice-prompt-returned-its-events-to-nobody) | 17 |
@@ -54,6 +55,63 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-11 (eighth find) — the bare resolution-time asks: six "up to N" picks resolved as a no-op and every "choose a color" named White
+
+Same shape as the seventh find, one layer up: the *decision*, not the payment.
+`AutoDecider`'s blanket answers are `ChooseCards` -> the first `min` (nothing at
+`min: 0`), `ChooseAmount` -> 0, `ChooseColor` -> the first legal colour. Bot
+seats set `wants_ui`, so a **bare** `decider.decide` never reaches
+`decide_pending_policy`: every such site is answered by the blanket default for
+every seat in the training path.
+
+`scripts/audit_decision_plumbing.py` now sorts its bare sites by what the
+default does — *DEAD* (in front of a whole effect body), *repeat* (a loop gate;
+the printed minimum still happens, which is what the 2026-07 audit miscounted)
+and *ack* (a comment beside the ask names the headless answer). It read
+**195 sites / 99 plumbed / 96 bare — 11 DEAD, 7 repeat, 15 ack** before this run
+and **178 / 104 / 74 — 0 DEAD, 7 repeat, 17 ack** after; the site count falls
+because fourteen hand-rolled colour asks became one helper call. **The DEAD
+column is a gate now that it is zero**; the other two are a triage population.
+
+The DEAD half, fixed: `ExileUpToNFromGraveyards` (18 cards, and Soul-Shackled
+Zombie's "if a creature card was exiled this way" rider with them) and
+`PutAuraFromHandAttachedTo` are plumbed through `choose_up_to_cards`, so a
+`wants_ui` seat gets `decide_choose_cards`' real policy; `MillThenToHandN`
+(9 cards — Gather the Pack milled five and took nothing),
+`ReturnSelfDeployBlocker` (Aetherplasm bounced itself and deployed nobody) and
+`ShuffleAnyNumberFromHandThenDraw` stay synchronous **because the arm has
+already mutated the board when it asks** — a suspend re-runs the arm from the
+top, so it would mill or bounce twice — and take a computed default instead.
+That is the general rule for this family: *plumb when nothing has moved yet,
+give the headless seat a real default when something has.*
+
+The colour half: `Effect::ChooseColorForSelf` is one choice shared by 42 cards
+whose answer is read off **either** side of the table — Ward Sliver's protection
+and Iona's lock off theirs, Heraldic Banner's anthem and Caged Sun's mana off
+ours — and the split is about 21/21, so no single blanket answer was better than
+a coin flip. It keys on the card's own consumer now
+(`CardDefinition::chosen_color_aimed_at_opponents`, a bit in the `debug_flags`
+word: the hostile markers are `GrantProtectionFromChosenColor`,
+`OpponentsCantCastChosenColor`, `RedirectChosenColorSpellDamageToController`,
+`PermanentsOfChosenColorOpponentsControl`, `HasChosenColorOfSource` and
+`PreventAllDamageFromChosenColor`). The two censuses behind it are
+`densest_color_of_among` / `densest_color_among_opponents_of`, both over
+`color_weights` — **three hand-written copies of the opposing census are gone**,
+one of them (`GrantProtectionFromChosenColor`, 41 cards) battlefield-only, so
+that grant now counts hands too. The "choose a basic land type" asks
+(Realmwright, Terraformer, Vision Charm, Land Tax's basic) rode the same
+decision and fell through to Forest; they take the hand's mana need, and
+`basic_land_type_for` replaces four hand-written colour→type tables.
+
+Residue, filed not fixed: `BecomeChosenColor` picks per *source* rather than per
+*target*, so it cannot yet dodge a specific hoser on the board; Cloudstone
+Curio's decline is deliberate (every candidate is ours, and the bot's
+battlefield branch declines an all-own board at `min: 0` too) and Credit
+Voucher's auto default is "the part of the hand we cannot cast" because the
+bot's generic hand policy reads an "any number" prompt as beneficial and would
+ship the whole hand — a real gap in `decide_choose_cards`, not in the engine.
+Tests: `core_rules::cr_recent101` (8), `core_rules::cr_recent102` (6).
 
 ## FIXED 2026-09-10 (seventh find) — every "you may pay" / "pay or else" effect paid from the floating pool only, so a bot seat never paid: 149 `MayPay` sites dead in self-play
 

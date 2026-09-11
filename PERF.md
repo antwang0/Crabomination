@@ -2806,6 +2806,38 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-11 (sixth run) — the bare resolution-time asks, ~105 cards; no perf leg
+
+The queue's engine side still reads floor and no candidate was pulled, so there
+is no A/B row this run. One class fix off the decision-plumbing audit, which
+grew the triage it never had: `scripts/audit_decision_plumbing.py` sorts its
+bare `decider.decide` sites by what `AutoDecider`'s answer *does* — *DEAD* (in
+front of a whole effect body), *repeat* (a loop gate, so the printed minimum
+still happens — the 2026-07 audit counted these as bugs) and *ack* (a comment
+beside the ask names the headless answer). **195 / 99 plumbed / 96 bare — 11
+DEAD, 7 repeat, 15 ack** before, **178 / 104 / 74 — 0 DEAD, 7 repeat, 17 ack**
+after. Bot seats set `wants_ui`, so a bare ask never reaches
+`decide_pending_policy`: the DEAD rows were dead in self-play. ENGINE_BACKLOG
+"FIXED 2026-09-11 (eighth find)" has the list and the rule that fell out —
+**plumb the ask when nothing has moved yet, give the headless seat a computed
+default when the arm has already mutated the board** (a suspend re-runs the arm
+from the top, so a plumbed mill would mill twice). Three one-edit `cnt` cards
+came off the back of it (Diviner's Wand, Skophos Maze-Warden, Shieldmage Elder).
+
+```text
+fix     d0d9b042 (six "up to N" no-ops: ExileUpToNFromGraveyards' 18 cards, MillThenToHandN's 9, Aetherplasm, Academy Researchers,
+        Credit Voucher, Cloudstone Curio's documented decline) / 8e45667f (the colour choice: ChooseColorForSelf's 42 cards keyed on
+        `chosen_color_aimed_at_opponents`, GrantProtectionFromChosenColor's 41 off the shared census, the basic-land-type asks, Mox
+        Amber) / PENDING-4 (the engine-path asks: Chorus of the Conclave, Moonring Mirror, Breathstealer's Crypt, Fasting) /
+        PENDING-5 (the colour picks' WUBRG tie-break and BecomeChosenColor's legal set)
+gate    PENDING
+cost    one cached `debug_flags` bit read per "choose a colour" (already warm — the same word answers `wants_converge`), one
+        `color_weights` walk per such pick (hand + battlefield of one seat, or of the opponents), and a pending-decision round trip
+        per graveyard-exile / Aura-deploy resolution for a `wants_ui` seat. No `fixed`-pool archetype and no golden-trace deck
+        carries an affected effect, so the `--bench` counters and the ten traces are the gate rather than a measurement
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz nominal, 4 cores, 15 GB
+```
+
 ### 2026-09-10 (fifth run) — the graveyard walk under the battlefield walk's rules, `once_per_batch`, the pool-only payments, 90,784 fresh-seed games
 
 No perf leg (the queue's engine side still reads floor; the actor and

@@ -30,20 +30,24 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
    tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; **fetch before every push** (two sessions shared the branch on
    2026-09-10). Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
-2. **Gates at the tip (PERF Baseline, the 2026-09-10 fifth-run addendum):** suite 19,380 / 0 / 5, clippy 0, golden_trace 10 / 10, `--bench` counters
-   identical to `2003d1cf`, determinism + thread_determinism ok; fresh-seed dflt sweeps cube / sealed / all 792..795, sos / fixed 791..793: 0 cap / 0 stuck;
-   abilarms 924..925, abilarms mirror 797, lookahead / planner 780, mcts 776 clean; actor 4,000 games / 0 stalls. ~300 games/s on this box (calib 50).
-3. **This run (fifth):** the dispatcher's graveyard walk had none of the battlefield walk's rules (ENGINE_BACKLOG "FIXED 2026-09-10 (sixth find)"):
-   `events::event_kind_fans_out` / `EventScope::from_graveyard()` are the one list / one predicate; `FromYourGraveyardAnyPlayer`, `YouAttack` from the
-   graveyard, `EventSpec::once_per_batch` ("one or more", all four walks, four cards migrated). Attuned Hunter was dead on the battlefield; Kami /
-   Sneaky Snacker (printed text) / Marshstalker / Barret shipped — every "missing gate" the backlog named already existed. `cnt` 62 -> 58.
-   **Seventh find:** every "you may pay" / "pay or else" paid from the floating pool only — 149 `MayPay` sites dead for bot seats; now auto-tap
-   (`pay_mana_cost_with_picks`), the bot declines what it cannot fund. Self-play's distribution moved (bots pay taxes and buybacks now): a
-   ladder read of the default against the pre-fix binary is the one open strength question this run left.
-4. **Next moves:** (a) the 12 one-edit `cnt` rows left (INCOMPLETE_CARDS lists them; Emperor of Bones and Ersatz Gnomes are NOT one edit — the
-   entry says why); (b) the 23 `cnt` primitives (ENGINE_BACKLOG "The cnt triage's other primitives"); (c) mirrors next: abilarms 926+, mirror
-   798+, mcts 777+, lookahead / planner 781+; dflt cube / sealed / all 796+, sos / fixed 794+; (d) perf reads floor — the crack-back horizon
-   (38 % of the actor) is the one strength round left and is a ladder gate, not an Ir leg; prompt text stays in PERF's candidates.
+2. **Gates at the tip (PERF Baseline, the 2026-09-11 sixth-run addendum):** suite GATE_SUITE, clippy GATE_CLIPPY, golden_trace 10 / 10, `--bench` counters
+   GATE_BENCH; the 2026-09-10 sweeps still stand as the last fresh-seed reading (dflt cube / sealed / all 795, sos / fixed 793, 18,400 games, 0 cap /
+   0 stuck; abilarms 924..925, mirror 797, lookahead / planner 780, mcts 776; actor 4,000 games / 0 stalls) — **this run did not re-sweep.**
+3. **This run (sixth) — the eighth find, ENGINE_BACKLOG "FIXED 2026-09-11":** the *decisions*, one layer above the seventh find's payments.
+   `audit_decision_plumbing.py` now sorts its bare `decider.decide` sites by what `AutoDecider`'s answer does: **195 / 96 bare / 11 DEAD before,
+   178 / 74 / 0 DEAD after** (7 repeat, 17 ack — the DEAD column is a gate now). All eleven are fixed: six "up to N" picks that resolved as a no-op (`ExileUpToNFromGraveyards` 18 cards, `MillThenToHandN` 9, Aetherplasm,
+   Academy Researchers, Credit Voucher) and the four asks the step / draw / cast machinery owns (Chorus of the Conclave, Breathstealer's Crypt,
+   Fasting, Moonring Mirror). **The rule:** plumb when nothing has moved yet, compute a default when the arm already mutated the board.
+   Beside it, every bare "choose a color" named White: `ChooseColorForSelf`'s 42 cards key on `chosen_color_aimed_at_opponents` (a `debug_flags` bit;
+   the two halves are ~21/21), `GrantProtectionFromChosenColor`'s 41 share the one census — three hand-written copies gone, one battlefield-only.
+4. **Next moves:** (a) the audit's remaining rows are bot-side, not engine-side: `decide_choose_cards` has no cost-shaped reading of an "any number"
+   prompt (Credit Voucher) and declines an all-own battlefield at `min: 0` (Cloudstone Curio); the 7 *repeat* rows decline every repetition for a bot
+   seat (Forbidden Ritual, Kindle the Carnage, Fiery Gambit) — a policy question. (b) `BecomeChosenColor` picks per source, not per target, so it
+   cannot dodge a named hoser. (c) the one-edit `cnt` rows: **Diviner's Wand, Skophos Maze-Warden and Shieldmage Elder shipped this run**; Urborg Panther /
+   Lumbering Laundry / Touch the Spirit Realm are *not* one edit and Eladamri's "no tap-two cost" note was stale (INCOMPLETE_CARDS says why for each);
+   then the 23 `cnt` primitives. (d) mirrors: abilarms
+   926+, mirror 798+, mcts 777+, lookahead / planner 781+; dflt cube / sealed / all 796+, sos / fixed 794+. (e) perf reads floor — the crack-back
+   horizon (38 % of the actor) is the one strength round left and is a ladder gate, not an Ir leg. The seventh find's ladder read is still open.
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

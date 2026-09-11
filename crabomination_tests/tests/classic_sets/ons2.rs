@@ -426,6 +426,32 @@ fn shieldmage_elder_taps_two_clerics() {
     assert_eq!(g.players[0].life, 20, "all of its damage is prevented");
 }
 
+/// The printed second half: two Wizards blank a *spell*'s damage. Same
+/// primitive as the Cleric half — it takes a card id, and a spell on the stack
+/// is one — so the ability was one catalog edit, not a missing feature.
+#[test]
+fn shieldmage_elder_taps_two_wizards_to_blank_a_spell() {
+    let mut g = main_phase();
+    let elder = g.add_card_to_battlefield(0, catalog::shieldmage_elder());
+    let wizard = g.add_card_to_battlefield(0, catalog::shieldmage_elder());
+    g.clear_sickness(elder);
+    g.clear_sickness(wizard);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    mana(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt the controller");
+    activate(&mut g, 0, elder, 1, Some(Target::Permanent(bolt)));
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the spell's damage is prevented");
+}
+
 /// Backslide only offers creatures with a morph ability as targets.
 #[test]
 fn backslide_needs_a_morph_ability() {

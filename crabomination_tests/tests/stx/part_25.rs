@@ -1062,8 +1062,12 @@ fn cr_122_1d_stun_counter_persists_through_untap() {
         "untaps normally once the stun counters are gone");
 }
 
+/// The printed Wand is blank until you draw, then grows once per draw — it
+/// shipped as a flat +2/+1 and flying, which is the `cnt` audit's one-edit
+/// column. `EquipBonus` already carried `triggered_abilities`, so the grant is
+/// a catalog edit.
 #[test]
-fn diviners_wand_equips_for_three_and_buffs() {
+fn diviners_wand_grows_the_equipped_creature_on_each_draw() {
     let mut g = two_player_game();
     let wand = g.add_card_to_battlefield(0, catalog::diviners_wand());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -1071,8 +1075,42 @@ fn diviners_wand_equips_for_three_and_buffs() {
     g.perform_action(GameAction::Equip { equipment: wand, target: bear })
         .expect("Diviner's Wand equips for {3}");
     let cp = g.computed_permanent(bear).unwrap();
-    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1 over a 2/2 bear");
-    assert!(cp.keywords().contains(&Keyword::Flying), "grants flying");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "blank until a card is drawn");
+    assert!(!cp.keywords().contains(&Keyword::Flying));
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 on the first draw");
+    assert!(cp.keywords().contains(&Keyword::Flying), "and flying with it");
+    g.draw_one(0, &mut evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.computed_permanent(bear).map(|cp| (cp.power, cp.toughness)),
+        Some((4, 4)),
+        "once per draw, not a one-shot"
+    );
+}
+
+/// The Wand's own trigger: a Wizard entering may pull the Equipment onto it.
+#[test]
+fn diviners_wand_attaches_itself_to_an_entering_wizard() {
+    let mut g = two_player_game();
+    let wand = g.add_card_to_battlefield(0, catalog::diviners_wand());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    // The trigger is on the Wand, not the entering creature, so the entry has
+    // to go through the real zone change rather than a self-ETB fire.
+    let wizard = g.move_card_to_battlefield_for_test(0, catalog::shieldmage_elder());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(wand).and_then(|c| c.attached_to),
+        Some(wizard),
+        "the Wand attached without an equip cost"
+    );
 }
 
 #[test]

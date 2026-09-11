@@ -6363,8 +6363,9 @@ pub fn ashiok_nightmare_muse() -> CardDefinition {
 // ── THB batch (modern_decks): missing commons/uncommons on existing primitives ──
 
 /// Skophos Maze-Warden — {3}{R} 3/4 Minotaur Warrior. {1}: this gets +1/-1
-/// until end of turn. (The Labyrinth-of-Skophos fight rider is dropped — it
-/// keys off a specific named land's targeted ability.)
+/// until end of turn. Whenever another creature becomes the target of an
+/// ability of a land you control named Labyrinth of Skophos, you may have this
+/// creature fight it.
 pub fn skophos_maze_warden() -> CardDefinition {
     CardDefinition {
         name: "Skophos Maze-Warden",
@@ -6385,6 +6386,28 @@ pub fn skophos_maze_warden() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()
+        }],
+        // `causer_filter` gates on the object that *declared* the target, which
+        // for an activated ability is the permanent it was activated from — the
+        // Labyrinth. The targeted creature rides in as `TriggerSource`.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                })
+                .caused_by(
+                    SelectionRequirement::HasName("Labyrinth of Skophos".to_string())
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+            effect: Effect::MayDo {
+                description: "Fight the creature the Labyrinth targeted?".into(),
+                body: Box::new(Effect::Fight {
+                    attacker: Selector::This,
+                    defender: Selector::TriggerSource,
+                }),
+            },
         }],
         ..Default::default()
     }

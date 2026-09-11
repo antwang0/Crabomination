@@ -3376,6 +3376,51 @@ fn skophos_maze_warden_pumps() {
     assert_eq!((cp.power, cp.toughness), (4, 3), "3/4 → 4/3");
 }
 
+/// The Labyrinth rider: the Warden fights whatever an ability of a land you
+/// control named Labyrinth of Skophos targets. `EventSpec::caused_by` gates on
+/// the object that declared the target, which for an activated ability is the
+/// permanent it came from — so the named-land clause needed no new primitive.
+#[test]
+fn skophos_maze_warden_fights_what_the_labyrinth_targets() {
+    let mut g = two_player_game();
+    // The Labyrinth's ability only targets an attacking or blocking creature,
+    // so the rider needs a real combat: seat 1 attacks, seat 0 aims it.
+    g.active_player_idx = 1;
+    let warden = g.add_card_to_battlefield(0, catalog::skophos_maze_warden()); // 3/4
+    let maze = g.add_card_to_battlefield(0, catalog::labyrinth_of_skophos());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(warden);
+    g.clear_sickness(victim);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: victim,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("the bear attacks");
+    drain_stack(&mut g);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.players[0].mana_pool.add_colorless(4);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: maze,
+        ability_index: 1,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("aim the Labyrinth at the attacker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the 2/2 lost the fight");
+    assert_eq!(
+        g.battlefield_find(warden).map(|c| c.damage),
+        Some(2),
+        "and took two back"
+    );
+}
+
 /// Incendiary Oracle exiles a creature it kills in combat instead of letting
 /// it die.
 #[test]

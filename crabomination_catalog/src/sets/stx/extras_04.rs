@@ -818,10 +818,19 @@ pub fn pop_quiz_recital() -> CardDefinition {
     }
 }
 
-// ── Diviner's Wand (synthesised STX-flavor Equipment) ─────────────────────
+// ── Diviner's Wand ────────────────────────────────────────────────────────
 
-/// Diviner's Wand — {3} Artifact — Equipment (synthesised STX-flavor).
-/// Equipped creature gets +2/+1 and has flying. Equip {3}.
+/// Diviner's Wand — {3} Artifact — Wizard Equipment. Equipped creature has
+/// "Whenever you draw a card, this creature gets +1/+1 and gains flying until
+/// end of turn" and "{4}: Draw a card"; whenever a Wizard creature enters, you
+/// may attach the Wand to it. Equip {3}.
+///
+/// Shipped as a flat +2/+1 and flying (the `cnt` audit's one-edit column):
+/// `EquipBonus` already carries `triggered_abilities` and
+/// `activated_abilities`, and `AttachSourceTo` behind a `MayDo` is the
+/// Shielded-by-Faith shape, so the printed card needed no new primitive. The
+/// difference is not cosmetic — the printed Wand is blank until you draw, and
+/// then grows once per draw rather than sitting at +2/+1.
 pub fn diviners_wand() -> CardDefinition {
     CardDefinition {
         name: "Diviner's Wand",
@@ -829,15 +838,45 @@ pub fn diviners_wand() -> CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Kindred],
         subtypes: Subtypes {
             artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            creature_types: vec![CreatureType::Wizard],
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Wizard)),
+                },
+            ),
+            effect: Effect::MayDo {
+                description: "Attach Diviner's Wand to that Wizard?".into(),
+                body: Box::new(Effect::AttachSourceTo { host: Selector::TriggerSource }),
+            },
+        }],
         equipped_bonus: Some(crate::card::EquipBonus {
-            power: 2,
-            toughness: 1,
-            keywords: vec![Keyword::Flying],
-            scale: None,
-            triggered_abilities: vec![],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::ONE,
+                        toughness: Value::ONE,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Flying,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            }],
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ..Default::default()
+            }],
             ..Default::default()
         }),
         ..Default::default()
