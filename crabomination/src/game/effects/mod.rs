@@ -9985,8 +9985,22 @@ impl GameState {
             // Mind Bomb — each player trades cards for damage.
             Effect::EachPlayerMayDiscardThenTutorBasic => {
                 use crate::card::Supertype;
-                use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
+                // The ask was a bare `decider.decide`, so it went to the
+                // RESOLVER's decider for every seat: a `wants_ui` player was
+                // never offered the rummage at all. Routed through the seat now
+                // (`ask_seat_cards_logged`, the cursor-indexed channel — the
+                // single-slot one cannot hold more than one seat's answer), with
+                // the headless default left as the empty pick the bare ask
+                // produced, so no headless outcome moves.
+                //
+                // TWO PASSES, for `run_each_unless_pays`'s reason: the discard,
+                // the tutor and the shuffle are mutations inside the ask loop,
+                // so a later seat's suspend would repeat them. The gate (an
+                // empty hand) is per-seat and pass 1 mutates nothing, so it
+                // reads the same either way.
+                let mut cursor = 0;
+                let mut answers: Vec<(usize, CardId)> = Vec::with_capacity(self.players.len());
                 for p in self.apnap_sort((0..self.players.len()).collect()) {
                     let hand: Vec<(CardId, String)> = self.players[p]
                         .hand
@@ -9996,16 +10010,27 @@ impl GameState {
                     if hand.is_empty() {
                         continue;
                     }
-                    let picked = match self.decider.decide(&Decision::ChooseCards {
+                    let picked = match self.ask_seat_cards_logged(
+                        &mut cursor,
+                        p,
+                        "Discard a card to search for a basic land?".to_string(),
                         source,
-                        prompt: "Discard a card to search for a basic land?".to_string(),
-                        candidates: hand,
-                        min: 0,
-                        max: 1, eligible: None, value: PickValue::Cost }) {
-                        DecisionAnswer::Cards(ids) => ids,
-                        _ => vec![],
+                        hand,
+                        0,
+                        1,
+                        PickValue::Cost,
+                        effect,
+                        Vec::new(),
+                    ) {
+                        Some(ids) => ids,
+                        None => return Ok(()),
                     };
-                    let Some(cid) = picked.first().copied() else { continue };
+                    if let Some(cid) = picked.first().copied() {
+                        answers.push((p, cid));
+                    }
+                }
+                self.clear_answer_log();
+                for (p, cid) in answers {
                     self.discard_card(p, cid, events);
                     let basic = self.players[p]
                         .library
@@ -10029,8 +10054,17 @@ impl GameState {
             }
 
             Effect::EachPlayerMayDiscardUpToThenDamage { max } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
+                // Same two fixes as `EachPlayerMayDiscardThenTutorBasic` above:
+                // the ask went to the resolver's decider for every seat, so a
+                // `wants_ui` player was never offered the trade and Mind Bomb
+                // always dealt its full three; and the discards and the damage
+                // are mutations inside the ask loop, so a later seat's suspend
+                // would repeat them. A seat's own hand is the only thing its
+                // cap reads, and no earlier seat's discard touches it, so the
+                // split does not move the cap.
+                let mut cursor = 0;
+                let mut answers: Vec<(usize, Vec<CardId>)> = Vec::with_capacity(self.players.len());
                 for p in 0..self.players.len() {
                     let hand: Vec<(CardId, String)> = self.players[p]
                         .hand
@@ -10039,18 +10073,28 @@ impl GameState {
                         .collect();
                     let cap = (*max as usize).min(hand.len());
                     let picked = if cap == 0 {
-                        vec![]
+                        Vec::new()
                     } else {
-                        match self.decider.decide(&Decision::ChooseCards {
+                        match self.ask_seat_cards_logged(
+                            &mut cursor,
+                            p,
+                            format!("Discard up to {max} cards to prevent that much damage?"),
                             source,
-                            prompt: format!("Discard up to {max} cards to prevent that much damage?"),
-                            candidates: hand,
-                            min: 0,
-                            max: cap as u32, eligible: None, value: PickValue::Cost }) {
-                            DecisionAnswer::Cards(ids) => ids,
-                            _ => vec![],
+                            hand,
+                            0,
+                            cap as u32,
+                            PickValue::Cost,
+                            effect,
+                            Vec::new(),
+                        ) {
+                            Some(ids) => ids,
+                            None => return Ok(()),
                         }
                     };
+                    answers.push((p, picked));
+                }
+                self.clear_answer_log();
+                for (p, picked) in answers {
                     for cid in &picked {
                         self.discard_card(p, *cid, events);
                     }

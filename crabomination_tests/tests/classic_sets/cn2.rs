@@ -537,6 +537,38 @@ fn borderland_explorer_rummages_for_a_basic() {
     assert!(g.players[0].hand.iter().any(|c| c.id == forest), "and fetched a basic");
 }
 
+/// …and "anyone" means each player answering for themselves. The ask was a bare
+/// `decider.decide`, so every seat's rummage was decided by the RESOLVER's
+/// decider and a `wants_ui` opponent was never offered it. The discard, the
+/// tutor and the shuffle also sat inside the ask loop, so a later seat's
+/// suspend repeated them.
+#[test]
+fn borderland_explorer_offers_the_rummage_to_each_seat_itself() {
+    use crabomination::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let my_pitch = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let their_pitch = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let my_forest = g.add_card_to_library(0, catalog::forest());
+    let their_forest = g.add_card_to_library(1, catalog::forest());
+    g.move_card_to_battlefield_for_test(0, catalog::borderland_explorer());
+    drain_stack(&mut g);
+    for _ in 0..4 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let Decision::ChooseCards { candidates, .. } = &pending.decision else {
+            panic!("expected a discard pick, got {:?}", pending.decision)
+        };
+        let first = candidates.first().map(|(id, _)| *id).expect("a candidate");
+        g.submit_decision(DecisionAnswer::Cards(vec![first])).expect("rummage");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == my_pitch), "I discarded");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == their_pitch), "so did they");
+    assert!(g.players[0].hand.iter().any(|c| c.id == my_forest), "I fetched");
+    assert!(g.players[1].hand.iter().any(|c| c.id == their_forest), "so did they");
+}
+
 /// Animus of Predation wears every keyword it noted while removing cards from
 /// the draft, and nothing it didn't.
 #[test]

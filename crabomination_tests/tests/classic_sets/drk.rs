@@ -1039,6 +1039,41 @@ fn mind_bomb_hits_for_three_when_nobody_discards() {
     assert_eq!(g.players[1].life, 17);
 }
 
+/// …and each player gets to make that trade themselves. The ask was a bare
+/// `decider.decide`, so it went to the RESOLVER's decider for every seat: a
+/// `wants_ui` player was never offered the discard at all and Mind Bomb always
+/// dealt its full three. The discards and the damage also sat inside the ask
+/// loop, so a later seat's suspend repeated them.
+#[test]
+fn mind_bomb_offers_each_seat_its_own_trade_when_the_asks_suspend() {
+    use crabomination::decision::Decision;
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let mine: Vec<CardId> =
+        (0..3).map(|_| g.add_card_to_hand(0, catalog::grizzly_bears())).collect();
+    let theirs = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let bomb = g.add_card_to_hand(0, catalog::mind_bomb());
+    cast(&mut g, 0, bomb, None);
+    // Each seat pitches its whole hand: three cards prevents all three, one
+    // card prevents one.
+    for _ in 0..4 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let Decision::ChooseCards { candidates, .. } = &pending.decision else {
+            panic!("expected a discard pick, got {:?}", pending.decision)
+        };
+        let ids: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+        g.submit_decision(DecisionAnswer::Cards(ids)).expect("discard");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert_eq!(g.players[0].life, 20, "three pitched, three prevented");
+    assert_eq!(g.players[1].life, 18, "one pitched, two through");
+    for id in mine {
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "pitched once");
+    }
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == theirs));
+}
+
 #[test]
 fn leviathan_pays_two_islands_to_attack() {
     let mut g = main_phase();
