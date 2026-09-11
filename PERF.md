@@ -2922,10 +2922,14 @@ games/archetype a cell. 853..885 (165 cells / 182,160 games) and 886..905 (100
 except caps and draws**, and the last block is 0 caps as well.
 `overflow` + `debug-assertions` grids: {835, 853, 860, 870, 885, 891} (30
 cells / 27,120 games) and {922, 936, 941, 954, 961} (25 / 22,600), both
-0 panics / 0 assertions / 0 overflows. **Closing grid at the merged tip
+0 panics / 0 assertions / 0 overflows. **Closing grids at the merged tip
 through `scripts/fresh_seed_sweep.sh` with `CRAB_ANSWER_LOG=strict`, seeds
-991..994 x five pools: 20 cells / 55,200 games, 0 failures, cap 0 / stuck 0 /
-draw 4.**
+991..1000 x five pools: 50 cells / 138,000 games, 0 failures, cap 0 / stuck 0 /
+draw 4.** Last gate at `d24456b1`: suite 19,432 / 0 / 5 under
+`CRAB_ANSWER_LOG=strict`, clippy 0, release-fast check clean, `--bench`
+195,806 / 27.49 / 611.9 / 0 stalls (`games_per_s` 476.9, peak RSS 28.7 MiB),
+determinism + thread_determinism ok, `audit_decision_plumbing` 176 / 105 / 71
+DEAD 0, `audit_panics` 0 bare, `audit_printed_body` 0 / 0 / 0 / 0.
 
 **A SECOND DOCUMENTED CAP CLASS, and it is not the `i32::MAX` life board.**
 `CRAB_CAP_DIAG=1` on `--decks cube --seed 922` names a **1,533-Goblin

@@ -32,11 +32,13 @@ sixty-seventh pass, so don't re-take that.
    "Standing rules"**. ⚠⚠ **TWO SESSIONS SHARED THIS BRANCH on 2026-09-11**, landed the same fix twice and half of one commit was dropped as duplicate
    work on the rebase — read `git log` first, and fetch again before every push. **A/B base: RE-TAKEN at the merged tip `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331 (PERF Baseline, with the
    self table at that base). Ir crosses boxes, wall clock does not: the four-box `--bench` spread is 289.72 to 542 games/s on byte-identical counters.
-2. **Gates at the tip `ad641aff`:** suite **19,427 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
+2. **Gates at the tip `d24456b1`:** suite **19,432 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
    the ten-channel one-shot census assertions on every test), clippy 0, golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls**
    + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / **6** suspicious (from 10, all four remaining MIDs are tail
-   calls), `audit_panics` **0 bare**, `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..994 swept, ~817 k games — next is 995**
-   (899..910 were swept twice, once over the resume fixes: 60 cells / 220,800 games / 0 failures / 0 cap / 0 stuck).
+   calls), `audit_panics` **0 bare**, `audit_decision_plumbing` 176 / 105 / 71 **DEAD 0**. **Fresh seeds 853..1000 swept, ~900 k games — next is 1001**
+   (899..910 were swept twice, once over the resume fixes: 60 cells / 220,800 games / 0 failures / 0 cap / 0 stuck; the closing
+   grids 991..1000 through `scripts/fresh_seed_sweep.sh` with `CRAB_ANSWER_LOG=strict` are 50 cells / 138,000 games, 0 failures, 0 cap / 0 stuck /
+   4 draws).
 3. **This run, and the sentence both sessions earned:** *the suite tests the path that does not suspend, and the training path is the one that does*
    (`build_match_template` sets `wants_ui` on both actor seats). Fifteen finds, all in ENGINE_BACKLOG: `OptionalKind` retired the last prose-keyed
    decision family (~90 asks were an unconditional YES); both resume channels leaked and the RESOLUTION drops them now; and then SEVEN instances of one
@@ -51,9 +53,12 @@ sixty-seventh pass, so don't re-take that.
    did and paid a diagnostic run for it. (b) ⚠ **The seven-card nesting is RETIRED — do NOT build the parking redesign** (~60 sites in 38 arms). It was
    reasoned from the static walk and never taken; taken on the suspending path for the three shapes that differ, all three are correct, because every
    outer arm clears the channel before its body AND has no work after it. The gate stays, guarding a new nesting whose outer arm keeps working after
-   its body. (c) **The MID census is CLOSED**: six arms fixed with tests on the suspending path, four benign with a checked reason. (d) **`MayBody` is the last prose read**: `optional_trigger_beneficial` walks the whole `CardDefinition` comparing
-   `description` strings on every ask (~4 a game) and two `May*` nodes sharing a description screen the wrong body — put the verdict on the ask (PERF
-   candidates). (e) `BecomeChosenColor` picks per source, not per target. (f) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
+   its body. (c) **The MID census is CLOSED**: six arms fixed with tests on the suspending path, four benign with a checked reason. (d) **The `MayBody` lead is WITHDRAWN on a measurement** — its hazard was two `May*` nodes sharing a description, and a catalog
+   scan reads 2 of 21,756 definitions with any repeated `description:` literal, both static-ability text (PERF candidates; the scan is ten lines).
+   (d2) **The fourteenth column is open and half-read**: `scripts/audit_printed_body.py` prices a card's OWN printed cost, body and type line off the
+   `CardDefinition` literal — it found **seven cards castable for free** (Profane Tutor, Mox Tantalite, Sol Talisman, Ragnarok, Asmoranomardicadais-
+   taculdacar, Urza Planeswalker, Resurgent Belief: no `no_mana_cost`, CR 202.1b) and is clean at 0/0/0/0 now over **10,270 factories**. The gap is
+   **219 real spells** behind ~40 bespoke per-file helpers (`zubera("X", r(), ..)`); the subtype columns are unopened. (e) `BecomeChosenColor` picks per source, not per target. (f) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
    (g) Perf reads floor and the queue has no device above 0.2 %: both of the seventh run's perf legs came off a bug fix, not off the queue.
 
 
