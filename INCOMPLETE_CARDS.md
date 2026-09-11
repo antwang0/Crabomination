@@ -972,6 +972,13 @@ castable from hand **for free**:
 | Urza, Planeswalker | a free 7-loyalty walker | uncastable (a meld result) |
 | Resurgent Belief | castable for an invented `{3}{W}` | suspend only |
 
+**Coverage, so nobody re-derives it: 10,270 factories priced.** The gap is
+helper-built factories whose helper takes the cost in its own shape
+(`zubera("Name", r(), ..)`, `echo_creature("Name", &[generic(3), r()], ..)`) —
+**219 real spells over ~40 bespoke per-file helpers**, i.e. 2 % of the catalog
+for 40 signatures. The rest of the skips are schemes, Vanguards and tokens,
+which print no mana cost by design.
+
 Resurgent Belief also carried a `flashback_additional_cost` for a Flashback it
 does not have — the comment two lines below it already said "Suspend 2—{1}{W},
 not Flashback".

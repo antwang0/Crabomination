@@ -15,6 +15,15 @@ column assumes is right.
     python3 scripts/audit_printed_body.py            # the table
     python3 scripts/audit_printed_body.py --rows 0   # every row
 
+COVERAGE, 2026-09-11: **10,270 factories compared**. The skip counts are
+printed; the one that is a real gap is `nonliteral`, and reading it is worth a
+line here rather than a re-derivation. Most of it is helper-built factories
+whose helper takes the cost in its own shape (`zubera("Name", r(), ..)`,
+`echo_creature("Name", &[generic(3), r()], ..)`) — **219 of them are real
+spells** the audit does not price, spread over ~40 bespoke per-file helpers, so
+closing it is 40 signatures for 2 % of the catalog. The rest is schemes,
+Vanguards and tokens, which print no mana cost by design.
+
 ⚠ SKIPPED, with the reason, and the skip counts are printed:
   * multi-face cards (`card_faces` in the oracle) — the factory's `cost:` is
     the front face and the comparison needs a face the body does not name;
@@ -47,6 +56,7 @@ LITERAL = re.compile(r"(?:[A-Za-z_]+::)*CardDefinition \{")
 ANYNAME = re.compile(r'"((?:[^"\\]|\\.)*)"')
 NAME = re.compile(r'^name: "((?:[^"\\]|\\.)*)",', re.M)
 COST = re.compile(r"^cost: cost\(&\[([^\]]*)\]\),", re.M)
+HELPER = re.compile(r'"(?:[^"\\]|\\.)*",\s*(?:crate::mana::)?cost\(&\[([^\]]*)\]\)')
 POWER = re.compile(r"^power: (-?\d+),", re.M)
 TOUGH = re.compile(r"^toughness: (-?\d+),", re.M)
 
@@ -187,12 +197,19 @@ def main() -> int:
                 continue
             nm = NAME.search(body) if body is not None else None
             # A helper-built factory (`sorcery("Name", cost(..), ..)`) has no
-            # `name:` field, so take the first string literal — but only from
-            # the first few lines, or the first TOKEN a factory defines is read
-            # as the card ("Spirit" and "Centaur" both showed up that way).
-            head = "\n".join(raw.split("\n")[:4])
-            name = nm.group(1) if nm else (ANYNAME.search(head).group(1)
-                                           if ANYNAME.search(head) else None)
+            # `name:` field, so take a string literal from its head — but check
+            # it against the FUNCTION NAME, or the first token a factory defines
+            # is read as the card ("Spirit" and "Centaur" both showed up that
+            # way, and a 4-line window to dodge them lost 3,900 real factories).
+            name = nm.group(1) if nm else None
+            if name is None:
+                head = "\n".join(raw.split("\n")[:14])
+                slug = fname.replace("_", "")
+                for cand in ANYNAME.findall(head):
+                    if re.sub(r"[^a-z0-9]", "", cand.lower()).startswith(slug[:10]) \
+                       or slug.startswith(re.sub(r"[^a-z0-9]", "", cand.lower())[:10]):
+                        name = cand
+                        break
             if name is None:
                 skip["noname"] += 1
                 continue
@@ -228,10 +245,11 @@ def main() -> int:
                              (body_cost(shipped.group(1)) or "?") if shipped
                              else "{} and castable for free",
                              "no printed mana cost"))
-            if body is None:
-                skip["nonliteral"] += 1
-                continue
-            cm = COST.search(body)
+            # A helper-built factory passes the cost positionally:
+            # `sorcery("Name", cost(&[generic(2), r()]), effect)`. Read that
+            # form too, or 6,312 factories — most of the older sets — are
+            # audited by nobody.
+            cm = COST.search(body) if body is not None else HELPER.search(raw)
             if not cm:
                 skip["nonliteral"] += 1
                 continue
@@ -244,6 +262,8 @@ def main() -> int:
             if norm(got) != norm(want):
                 wrong_cost += 1
                 rows.append(("cost", name, f"{path.name}::{fname}", got or "{}", want or "{}"))
+            if body is None:
+                continue  # helper form: only the cost is positional here
             op, ot = card.get("power"), card.get("toughness")
             pm, tm = POWER.search(body), TOUGH.search(body)
             if op is None or ot is None or pm is None or tm is None:
