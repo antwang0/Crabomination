@@ -17096,7 +17096,6 @@ impl GameState {
                 // ability on the stack. The new target must be legal for the
                 // ability; the retargeter picks it (headless: the first legal
                 // target that isn't the current one).
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(id) = self
                     .resolve_selector(what, ctx)
                     .into_iter()
@@ -17146,20 +17145,25 @@ impl GameState {
                 if legal.is_empty() {
                     return Ok(());
                 }
-                let chosen = match self.decider.decide(&Decision::ChooseTarget {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    legal: legal.clone(),
-                    source_name: "Reroute".to_string(),
-                    description: "Retarget the ability".to_string(),
-                    optional: false,
-                    extra_cast_slot: false,
-                }) {
-                    DecisionAnswer::Target(t) if legal.contains(&t) => t,
-                    _ => legal[0].clone(),
+                // TWO PASSES, and the split is what lets the asks be routed at
+                // all. Both `legal` sets are computed against the stack item as
+                // it stands: the primary's excludes the CURRENT target, and each
+                // extra slot's excludes that slot's current one. Writing a pick
+                // before the next ask would move the next ask's legal set, so a
+                // re-run after a suspend would pose a different question in the
+                // same cursor slot. Ask everything, then write.
+                let mut cursor = 0;
+                let Some(chosen) = self.ask_seat_target_logged(
+                    &mut cursor,
+                    ctx.controller,
+                    "Retarget the ability".to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    legal,
+                    effect,
+                ) else {
+                    return Ok(());
                 };
-                if let StackItem::Trigger { target, .. } = &mut self.stack[pos] {
-                    *target = Some(chosen);
-                }
+                let mut extras: Vec<(usize, Target)> = Vec::new();
                 // CR 115.7c — repoint each additional slot against its own
                 // filter (slot n is validated by the ability's slot-n filter).
                 for slot in 0..extra_count {
@@ -17186,17 +17190,23 @@ impl GameState {
                     if options.is_empty() {
                         continue;
                     }
-                    let pick = match self.decider.decide(&Decision::ChooseTarget {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        legal: options.clone(),
-                        source_name: "Reroute".to_string(),
-                        description: format!("Retarget slot {}", slot + 1),
-                        optional: false,
-                        extra_cast_slot: false,
-                    }) {
-                        DecisionAnswer::Target(t) if options.contains(&t) => t,
-                        _ => options[0].clone(),
+                    let Some(pick) = self.ask_seat_target_logged(
+                        &mut cursor,
+                        ctx.controller,
+                        format!("Retarget slot {}", slot + 1),
+                        ctx.source.unwrap_or(CardId(0)),
+                        options,
+                        effect,
+                    ) else {
+                        return Ok(());
                     };
+                    extras.push((slot, pick));
+                }
+                self.clear_answer_log();
+                if let StackItem::Trigger { target, .. } = &mut self.stack[pos] {
+                    *target = Some(chosen);
+                }
+                for (slot, pick) in extras {
                     if let StackItem::Trigger { additional_targets, .. } = &mut self.stack[pos] {
                         additional_targets[slot] = pick;
                     }

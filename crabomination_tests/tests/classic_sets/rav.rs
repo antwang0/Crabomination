@@ -2890,6 +2890,56 @@ fn reroute_retargets_an_activated_ability() {
     assert_eq!(g.battlefield_find(mine).map(|c| c.damage), Some(0));
 }
 
+/// …and the retargeter is asked, rather than the decider answering for them.
+/// The pick went to `self.decider`, so a `wants_ui` caster — every training seat
+/// — was never asked where the ability went. Routing it needed the arm split
+/// first: both legal sets are computed against the stack item as it stands
+/// (the primary's excludes the CURRENT target), so writing a pick before the
+/// next ask would move the next ask's legal set and a re-run would pose a
+/// different question in the same cursor slot.
+#[test]
+fn reroute_asks_the_caster_where_the_ability_goes() {
+    use crabomination::decision::DecisionAnswer;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let prodigal = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+    g.clear_sickness(prodigal);
+    g.add_card_to_library(0, catalog::forest());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prodigal, ability_index: 0, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("ping my bear");
+    // Cast by hand: `cast21` drains, and the Reroute resolution suspends with
+    // the Pyromancer's ping still on the stack — which `drain_stack` unwraps.
+    let spell = g.add_card_to_hand(0, catalog::reroute());
+    g.players[0].mana_pool.add_colorless(20);
+    for c in Color::ALL {
+        g.players[0].mana_pool.add(c, 10);
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(prodigal)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Reroute");
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.pending_decision.is_some(), "the caster is asked");
+    g.submit_decision(DecisionAnswer::Target(Target::Player(1))).expect("send it upstairs");
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert_eq!(g.players[1].life, 19, "the ping went where the CASTER chose");
+    assert_eq!(g.battlefield_find(mine).map(|c| c.damage), Some(0));
+}
+
 /// Warp World shuffles everyone's board away and redeploys off the top.
 #[test]
 fn warp_world_redeploys_from_the_library() {
