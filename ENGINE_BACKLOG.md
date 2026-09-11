@@ -19,6 +19,8 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (sixteenth find) — an effect that suspends OFF the stack was a silent no-op, and the signal it left behind is not inert](#fixed-2026-09-11-sixteenth-find--an-effect-that-suspends-off-the-stack-was-a-silent-no-op-and-the-signal-it-left-behind-is-not-inert) | 60 |
+| Bugs & robustness | [FIXED 2026-09-11 (the plumbing column, worked one by one) — three asks answered by the wrong player](#fixed-2026-09-11-the-plumbing-column-worked-one-by-one--three-asks-answered-by-the-wrong-player) | 30 |
 | Bugs & robustness | [FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight](#fixed-2026-09-11-fifteenth-find--mayrepeats-loop-was-abandoned-the-moment-its-body-suspended-forbidden-ritual-took-one-permanent-of-eight) | 37 |
 | Bugs & robustness | [FIXED 2026-09-11 (fourteenth find) — a suspended trigger is the SAME trigger, and its dying source's LKI was torn down at the suspend](#fixed-2026-09-11-fourteenth-find--a-suspended-trigger-is-the-same-trigger-and-its-dying-sources-lki-was-torn-down-at-the-suspend) | 45 |
 | Bugs & robustness | [FIXED 2026-09-11 (thirteenth find) — six more arms mutated inside the loop that asks, so a suspend did it again](#fixed-2026-09-11-thirteenth-find--six-more-arms-mutated-inside-the-loop-that-asks-so-a-suspend-did-it-again) | 63 |
@@ -64,6 +66,96 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-11 (sixteenth find) — an effect that suspends OFF the stack was a silent no-op, and the signal it left behind is not inert
+
+The class's last shape, and the first where the suspension had nowhere to go
+rather than the wrong thing in it.
+
+A suspend only means something where something above can park the continuation
+and hand the answer back — a stack item, through `pending_decision`. A card
+effect resolved off that path sets `suspend_signal` into a field nobody there
+reads, returns, and never runs the rest of the body. For a `wants_ui` seat —
+every seat the training actors run — the whole body is a NO-OP. And the signal
+stays set: the next `continue_*_resolution` takes whatever is in the field, so a
+stray ask surfaces inside an unrelated spell carrying the wrong continuation.
+
+`GameState::resolve_effect_driven` answers those asks through the installed
+decider instead — the same answer the same decider gives a seat without
+`wants_ui` — and clears the field. It is safe to call anywhere: at
+`resolution_depth > 0` there IS something above that can park a continuation, so
+it leaves the signal to propagate and behaves exactly like `resolve_effect`.
+A real UI prompt would be better and needs the call site to be able to park a
+continuation; this is the floor.
+
+`game::answer_log_tests::an_off_stack_ask_is_driven_instead_of_dropped` resolves
+one asking effect off the stack twice and asserts both halves directly.
+
+**The population, all card-defined effects that can contain any arm:**
+
+| site | what it runs |
+| --- | --- |
+| `draw_one`'s `next_draw_replacements` | the Words cycle (CR 614) — **Words of Wind returned nothing at all** |
+| `draw_one`'s three draw-diggers | `LookPickToHand` (Tomorrow, Azami's Familiar), `Search`, `RevealUntilFind` — each a no-op, and the draw it replaced did not happen either |
+| `apply_as_enters_effect` | 40 shipped cards, routinely an ask (`NameCreatureType`, `ChooseColorForSelf`, `ChooseBasicLandTypeForSource`, `SacrificeAnyNumber`, Devour) |
+| the Shapeshifter copy pick | `BecomeCopyOf` off a replacement |
+| `movement.rs`'s shield rider | a reflexive trigger on a prevention shield |
+| `stack.rs`'s Gift | the gifted half as the permanent enters |
+| `mod.rs`'s fuse payoff, Gemstone Caverns' extra, the CR 605.4a triggered mana ability | |
+
+Every `as_enters_effect` card today enters through a spell resolution, so that
+site is the guard's no-op case in practice — and stops being one the moment a
+permanent enters off a resolution (a Leyline starting on the battlefield, a
+put-onto-the-battlefield outside a resolution).
+
+### The second defect underneath it: a seat loop asking through the SINGLE-slot channel
+
+Driving the Words body is what made this visible.
+`Effect::PlayerReturnsPermanentsToHand` loops over SEATS and asked through
+`ask_seat_cards`, whose channel is `stashed_resolution_answer` — one slot, no
+cursor. Seat 0's ask ran again on every one of seat 1's resumes, swallowed the
+answer seat 1 had just given (none of whose cards are seat 0's), and the
+forced-pick shortfall auto-filled it: **seat 0 bounced another of its own
+permanents per round trip, and with three it emptied its board.** `Words of
+Wind` is the shipped `EachPlayer` case; Silverquill Command and Mono-white's
+sweep use `EachOpponent`, one seat in a duel, and were safe by accident.
+
+`ask_seat_cards_logged` (cursor-indexed) gives each seat its own slot, and the
+moves move after every ask. **The rule the audit should carry: a loop over seats
+may not ask through the single-slot channel.** Two other sites use it in a loop
+and are safe only because their `who` resolves to one player today —
+`ShuffleGraveyardCardsIntoLibrary` (`You` / `Target(0)` in all six callers) and
+`MayRepeat`'s own repeat question, whose continuation consumes the slot itself.
+
+## FIXED 2026-09-11 (the plumbing column, worked one by one) — three asks answered by the wrong player
+
+`audit_decision_plumbing`'s "gates a loop repetition" rows, taken after
+`MayRepeat` turned out to be a live defect rather than a cosmetic one.
+
+* **Mind Bomb** (`EachPlayerMayDiscardUpToThenDamage`) — "each player may
+  discard up to three cards; this deals 3 minus that to them". Routed through
+  the RESOLVER's decider, whose headless default for a `min 0` `ChooseCards` is
+  the empty pick: nobody ever discarded and the card always dealt its full
+  three. A `wants_ui` seat was never offered the trade at all.
+* **Borderland Explorer** (`EachPlayerMayDiscardThenTutorBasic`) — same, for
+  "each player may discard a card to search for a basic land".
+* **Wandering Archaic** (`CopySpellUnlessPaid`) — the {2} is the CASTER's to
+  decline and the ask went to the resolving seat's decider; **and** the payment
+  was `pool.pay`, the seventh find's floating-pool-only bug still live at this
+  one site, so even a "yes" could not pay with lands.
+
+All three also had the thirteenth find's shape (mutations inside the ask loop)
+and take the two-pass split. The headless defaults are unchanged, so no headless
+outcome moves; what changes is that a seat that suspends is asked, and answers
+for itself.
+
+**Still open, same column, none of them taken on the suspending path:**
+`KindleTheCarnage`, `TradeSecrets` (the repeat belongs to the OPPONENT, not the
+controller) and `ExileUntilDuplicateName` (Tainted Pact) each ask their repeat
+question through the raw decider, so a `wants_ui` seat is never asked. All three
+mutate before the ask, so routing them needs `MayRepeat`'s continuation splice,
+not a plain `ask_seat_bool` — and Tainted Pact additionally carries a local
+`seen` list that no continuation can rebuild.
 
 ## FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight
 

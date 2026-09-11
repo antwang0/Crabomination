@@ -2859,10 +2859,26 @@ fix     `MayRepeat`'s loop abandoned when its body suspended (`48b9867a`). One s
         spliced in behind the body's continuation as `Seq[tail, MayDo{repeat what is left}]` (`MayRepeat`'s own first
         iteration is unconditional, so a bare one would run a body for free). The repeat question is routed to the seat
         too — it went straight to `decider.decide`, so a `wants_ui` controller was never asked at all.
+fix     three more asks answered by the wrong player (`4cf09169`, `f901a557`), off `audit_decision_plumbing`'s
+        "gates a loop repetition" column: Mind Bomb ("each player may discard up to three") and Borderland Explorer
+        routed every seat's offer through the RESOLVER's decider, whose headless default for a min-0 `ChooseCards` is
+        the empty pick — so nobody ever discarded and Mind Bomb always dealt its full three; Wandering Archaic asked
+        the resolving seat instead of the CASTER and then paid with `pool.pay`, the seventh find's pool-only bug still
+        live at that one site. All three take the two-pass split as well.
+fix     an effect that suspends OFF the stack was a silent no-op (`912c889f`, `0b5a135d`). No stack item means nowhere
+        to park a continuation: the signal went into a field nobody there reads and the body stopped — Words of Wind
+        returned NOTHING, the three draw-diggers never dug, 40 `as_enters_effect` cards' choice never happened. And the
+        signal is not inert: the next `continue_*_resolution` takes whatever is in the field, so a stray ask surfaces
+        inside an unrelated spell with the wrong continuation. `resolve_effect_driven` answers through the decider and
+        clears the field, and no-ops at `resolution_depth > 0` where something above CAN park.
+fix     a seat loop asking through the SINGLE-slot channel (`912c889f`). `PlayerReturnsPermanentsToHand` used
+        `ask_seat_cards`, so seat 0's ask swallowed seat 1's answer on every resume and the forced-pick shortfall
+        auto-filled it: Words of Wind emptied the controller's board one permanent per round trip. The rule:
+        **a loop over seats may not ask through the single-slot channel.**
 perf    none. Nothing here is on a hot path — every one of these arms is a per-card resolution behind a suspend.
 ```
 
-**Gates at `48b9867a`** (this box): suite **19,428 / 0 / 5** with
+**Gates at `0b5a135d`** (this box): suite **19,438 / 0 / 5** with
 `CRAB_ANSWER_LOG=strict` exported, clippy 0, `cargo check --profile
 release-fast` clean, `golden_trace` 10 / 10 unmoved, `audit_answer_log`
 **63 arms / 6 suspicious** (from 10 — 0 NO-CLEAR, 1 ERR?, 1 PRE, 4 MID, and
@@ -2874,12 +2890,13 @@ peak RSS 28.9 MiB, `bin_bytes` 128,855,768. Another box, another wall clock:
 that reading is not comparable to the 465.1 or the 542 above it, and the
 counters are why it does not need to be.
 
-**Sweeps, seeds 899..910** — five pools x 120 games/archetype a cell, two
-blocks of 30 cells / 110,400 games, `CRAB_ANSWER_LOG=strict`, `overflow` +
-`debug-assertions`: **0 failures, 0 cap, 0 stuck** on both (the first at
-`5d8cf7dc`, the second over the fixes at `4311b872`; 0 draws and 6 draws
-respectively, and a draw is CR 104.4, not a defect). These overlap the
-`OptionalKind` session's 886..935 — take **966** next, per NEXT.
+**Sweeps, seeds 899..910 and 1001..1006** — five pools x 120 games/archetype a
+cell, three blocks of 30 cells / 110,400 games each, `CRAB_ANSWER_LOG=strict`,
+`overflow` + `debug-assertions`: **0 failures, 0 cap, 0 stuck** on all three
+(899..910 at `5d8cf7dc` and again over the fixes at `4311b872`; 1001..1006 at
+`d92c76fa`). Draws 0 / 6 / 0, and a draw is CR 104.4, not a defect. The 899..910
+block overlaps the `OptionalKind` session's 886..935; the seed frontier is in
+NEXT.
 
 ### 2026-09-11 (the `OptionalKind` session) — the last prose-keyed decision family, and three resume defects; no perf leg
 
