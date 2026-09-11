@@ -28,28 +28,26 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ `(-290)` is the last claimed candidate, `(-291)` next; **fetch before every push** (two sessions shared the branch on 2026-09-10).
-   Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: RE-TAKEN on the THIRD box — sealed 2,499,426,437 /
-   cube 2,319,033,889 / fixed 635,516,542 at `482c93b4` (PERF Baseline, seventh-run addendum). Every later box: RE-TAKE FIRST; three boxes have disagreed.**
-2. **Gates at the tip:** suite 19,407 / 0 / 5, clippy 0, golden_trace 10 / 10 unmoved, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls — counters
-   identical to `2003d1cf` at all four tips, determinism + thread_determinism ok; `audit_decision_plumbing` 178 / 104 / 74 with **DEAD 0** (a gate);
-   `audit_variant_coverage` the documented 2 dead primitives; **fresh-seed sweep 180,800 games (seeds 796..805, five pools), cap 8 / stuck 0,
-   every cap the documented Beacon of Immortality board.** No actor leg this run. ⚠ The sweep is ~100x cheaper on this box than the record
-   implies (a 3,200-game `cube` cell is 7 s on the release-fast binary): sweep wider than the recorded cell counts.
-3. **This run (seventh), four legs, and one rule connects them.** Two class fixes of the same shape — a bot policy recovering from *prompt prose*
-   what the ask never stated — and each one then deleted a perf premise. (a) `PickValue` on `Decision::ChooseCards` (104 asks): the "exile a card
-   from your hand" costs handed over the biggest card, "choose N permanents to keep" kept the worst. (b) **`(-289)`** sealed -0.129 %: with the
-   prose read gone, the off-board trigger pick's prompt joins `(-288)`'s elided half. (c) **`(-290)`** cube -0.247 % / sealed -0.086 % / fixed
-   -0.013 %, found in `(-289)`'s own census table: `combat_instant_candidates` deduped candidates with `format!("{:?}")` into a `Vec<String>`.
-   (d) `AmountKind` on `Decision::ChooseAmount` (18 asks): "Sacrifice how many?" matched none of the three prose patterns, so **every Devour card
-   and God-Eternal Bontu sacrificed the bot's whole board.**
-4. **Next moves, in order.** (a) **The last prose-keyed family is `OptionalTrigger`'s `description`** (57 sites, three bot reads). Same treatment;
-   it is also the last thing between `(-288)`'s flag and "no UI text built in a simulator at all". (b) The shape neither flag reaches — an ask
-   needing a *computed* answer: **collect evidence declines for every bot seat**, `AmountKind::Cost` should give up the tokens rather than
-   decline, Fateseal and Stronghold Gambit the same (ENGINE_BACKLOG). (c) `BecomeChosenColor` picks per source, not per target. (d) mirrors:
-   abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+; **fresh dflt seeds start at 806** (796..805 taken this run). (e) **The method that paid
-   twice this run: a correctness change can delete a perf premise, and a caller table is a census of the whole program, not of the row you came
-   for.** Re-read `(-288)`'s blocked half and the `format_inner` / `__rust_alloc` caller tables after any policy change.
+   tracker prose; ⚠ `(-290)` is the last claimed candidate, `(-291)` next; **fetch before every push**. Gotchas in **CLAUDE.md**, measurement in
+   **PERF's "Standing rules"**. **A/B base: RE-TAKEN on the THIRD box — sealed 2,499,426,437 / cube 2,319,033,889 / fixed 635,516,542 at `482c93b4`
+   (PERF Baseline, seventh-run addendum). Every later box: RE-TAKE FIRST; three boxes have disagreed.**
+2. **Gates at the tip:** suite 19,408 / 0 / 5, clippy 0, golden_trace 10 / 10 unmoved, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls — counters
+   identical to `2003d1cf` at every tip this run, determinism + thread_determinism ok; `audit_decision_plumbing` 178 / 104 / 74, **DEAD 0** (a gate);
+   `audit_variant_coverage` the documented 2 dead primitives; **fresh-seed sweep 514,400 games, seeds 796..836 — next fresh seed is 837.**
+3. **This run (seventh), five legs.** Two class fixes of the same shape — a bot policy recovering from *prompt prose* what the ask never stated —
+   each of which then deleted a perf premise. (a) `PickValue` on `ChooseCards` (104 asks): "exile a card from your hand" costs handed over the
+   biggest card; "choose N permanents to keep" kept the worst. (b) **`(-289)`** sealed -0.129 %: the off-board trigger pick's prompt joins
+   `(-288)`'s elided half. (c) **`(-290)`** cube -0.247 %, found in `(-289)`'s own census table: `combat_instant_candidates` deduped with
+   `format!("{:?}")` into a `Vec<String>`. (d) `AmountKind` on `ChooseAmount` (18 asks): **every Devour card and God-Eternal Bontu sacrificed the
+   bot's whole board.** (e) The sweep found a stall nobody had seen: a leftover `resolution_answer_log` entry made the next arm's first ask MISS
+   its replay for ever (12 of 1,600 games on `cube` seed 835, capped). Pre-existing — it reproduces on `38b05af8`.
+4. **Next moves, in order.** (a) **Sweep FIRST and sweep WIDE** — a 3,200-game `cube` cell is 7 s here, and the tenth find had been sitting in the
+   default pool because nobody took seeds past 761. Start at 837. (b) **The last prose-keyed family is `OptionalTrigger`'s `description`** (57
+   sites, three bot reads plus `may_pay_prompt_affordable`'s cost parse); the same treatment finishes `(-288)`'s elision. (c) The shape neither
+   flag reaches — an ask needing a *computed* answer: collect evidence declines for every bot seat, `AmountKind::Cost` should give up the tokens
+   rather than decline. (d) `BecomeChosenColor` picks per source, not per target. (e) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead /
+   planner 781+. (f) **The two methods that paid this run: a correctness change can delete a perf premise, and a caller table is a census of the
+   whole program, not of the row you came for.** Both perf legs came off a bug fix, not off the queue.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

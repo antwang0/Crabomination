@@ -2806,7 +2806,7 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### 2026-09-11 (seventh run) — two prose-sniff class fixes and the two perf legs they uncovered (`(-289)`, `(-290)`); A THIRD BOX, so the A/B base was RE-TAKEN
+### 2026-09-11 (seventh run) — two prose-sniff class fixes, the two perf legs they uncovered (`(-289)`, `(-290)`), and a stall the sweep found; A THIRD BOX, so the A/B base was RE-TAKEN
 
 **A new box (Xeon @ 2.10 GHz nominal, 4 cores, 15 GB), so the three-pool base
 does not transfer and was re-taken at this run's first tip before anything was
@@ -2814,7 +2814,7 @@ measured against it.** The host reads 517-542 `--bench` games/s here against
 294-310 on the second box at the same `host_calib_ms`, on byte-identical
 counters — one more reason the counters and not the wall clock are the gate.
 
-Four legs, each built from one tree so they separate. The **first fix** is the
+Five legs, each built from one tree so they separate. The **first fix** is the
 bot half of the eighth find: `decide_choose_cards` recovered "does picking cost us
 something?" from the prompt prose (`contains("sacrifice") ||
 contains("discard")`), so every cost-shaped prompt that says *exile* read as
@@ -2842,7 +2842,11 @@ largest of the three. The **fourth** is the ninth find, the same prose sniff one
 family over: `ChooseAmount` answered `max` for everything its three patterns
 missed, and `Effect::SacrificeAnyNumber`'s `max` is your whole board — so every
 Devour card and God-Eternal Bontu sacrificed the bot's board. `AmountKind` on
-the ask; every other site keeps the answer the prose gave it.
+the ask; every other site keeps the answer the prose gave it. The **fifth**
+came out of the sweep that was supposed to be only a gate: a leftover
+`resolution_answer_log` entry from one resolution made the next arm's first ask
+MISS its replay for ever, so the arm re-asked to the action cap (the tenth
+find). It predates this run and is fixed at the tip.
 
 ```text
   base   9bc5759a, profiling-fast --no-default-features, system allocator, callgrind --games 6 --threads 1 --seed 1, UNTRACED:
@@ -2862,14 +2866,24 @@ gate    --bench release-fast (mimalloc), four times — at 9bc5759a, fa61eb1e, 4
         `too_many_arguments` on `ask_seat_amount`'s eighth parameter, allowed like its three siblings). cargo check --profile release-fast
         -p crabomination --bin bot_ladder (debug-assertions OFF) clean at every tip. audit_decision_plumbing **178 / 104 / 74, DEAD 0**;
         audit_variant_coverage the documented 2 dead primitives. **No actor leg this run** — the 2026-09-10 reading stands.
-sweep   FRESH SEEDS on the release-fast tip (not the audit build — no debug assertions, so this is a stall gate, not an assertion one):
-        dflt mirror x --games 400 x 3 threads, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000. {cube, sealed, all, sos} x seeds 796, 797 =
-        8 cells / 33,600 games, 0 cap / 0 stuck / 0 draw; {cube, sealed, all, sos, fixed} x seeds 798..805 = 40 cells / 147,200 games,
-        **cap 8 / stuck 0 / draw 2** — 180,800 fresh-seed games, and every cap is the DOCUMENTED board: `life 2147483569` / `2147483647`
-        with Beacon of Immortality on the stack (cube 804 x4, all 798 x2, all 804 x2), the fingerprint ENGINE_BACKLOG closed as "a correct
-        card doing what it prints". 0.0054 % against the recorded 4-in-183,600; not a regression and nothing new.
-        ⚠ **This sweep is ~100x cheaper on this box than the record implies**: a 3,200-game `cube` cell is 7 s on the release-fast binary
-        against the minutes the audit build takes. 40 cells ran in under four minutes. Sweep wider than the recorded cell counts.
+sweep   FRESH SEEDS, dflt mirror x --games 400 x 3 threads, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000, on the release-fast binary (a stall
+        gate, not an assertion one) and on a debug-assertions + overflow-checks audit build beside it. **This is the leg that found the
+        tenth find** (ENGINE_BACKLOG: a leftover answer-log entry stranding the next arm's ask), so the numbers are before / after.
+        BEFORE, release-fast: {cube, sealed, all, sos} x 796, 797 = 8 cells / 33,600 games, 0 cap / 0 stuck; {+fixed} x 798..805 =
+        40 cells / 147,200 games, **cap 8** — every one the DOCUMENTED board (`life 2147483569` / `2147483647`, Beacon of Immortality on
+        the stack: cube 804 x4, all 798 x2, all 804 x2), the fingerprint ENGINE_BACKLOG closed as "a correct card doing what it prints";
+        x 806..820 = 75 cells / 276,000 games, cap 0 / stuck 0 / draw 10.
+        BEFORE, audit build (`RUSTFLAGS=-C debug-assertions=yes CARGO_TARGET_DIR=target-audit cargo build --profile overflow`; the header's
+        `strings | grep -c "memo is stale"` reads 9, i.e. > 0, so the flags reached the crate): {cube, sealed, all, sos} x 821..824 =
+        16 cells / 33,600 games, 0 failures; x 825..836 at --games 200 = 48 cells / 100,800 games, **cap 26 / stuck 0 — 26 of them on seed
+        835 alone.** That is a board shape the branch had never seen (turn 13-25, empty stack, ordinary life, ~460 actions a turn) and it is
+        the find; `CRAB_DUMP_TRACES` named the repeating action in one line.
+        AFTER, at the tenth find's tip: cube 835 **0 undecided** (was 12 caps of 1,600) and all 835 **0** (was 14 of 3,400); the caps left on
+        all 804 / 812 / 819 are the Beacon board (turn 210). **Seed 835 reproduces the same 12 caps on `38b05af8`, so the stall predates
+        this run.** 514,400 fresh-seed games this run, seeds 796..836; the next fresh seed is 837.
+        ⚠ **The sweep is ~100x cheaper on this box than the record implies**: a 3,200-game `cube` cell is 7 s on the release-fast binary
+        against the minutes the audit build takes. That is why 39 seeds fitted in one run — and why the stall had gone unseen: nobody had
+        taken seeds past 761. **Sweep wider than the recorded cell counts.**
 cost    the two bug fixes: one byte on each decision and a `match` where a `to_lowercase()` + `contains` chain used to be, so both policies got
         cheaper, not dearer; no `fixed`-pool archetype poses a ChooseCards or a ChooseAmount, which is why the counters are the gate there.
         (-289) and (-290): none, both delete work.
