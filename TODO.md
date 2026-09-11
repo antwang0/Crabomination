@@ -35,7 +35,7 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the tip `e266a964`:** suite **19,444 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel
    one-shot census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, release-fast check clean, `--bench` **195,806 /
    27.49 / 611.9 / 0 stalls** + determinism + thread_determinism, `audit_answer_log` 66 / 6 suspicious, `audit_panics` **0 bare**,
-   `audit_decision_plumbing` 173 / 107 / 66 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1018 swept — next
+   `audit_decision_plumbing` 170 / 108 / 62 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1018 swept — next
    is 1019** (the two sessions' blocks overlap between 995 and 1012; this one's three blocks over three tips are **72 cells / 355,200 games / 0 failures /
    **2 cap** / 0 stuck**, and the cap is diagnosed — see (a) below. The grid is in PERF).
 3. **This run, and the sentence both sessions earned:** *the suite tests the path that does not suspend, and the training path is the one that does* —
@@ -61,9 +61,10 @@ sixty-seventh pass, so don't re-take that.
    "gates a loop repetition" column is **CLOSED — 0 rows, from 7**; the recipe for an ask about doing the ROUND again is *one logged answer is one round
    already performed*, replayed in place (ENGINE_BACKLOG). `scripts/audit_stash_in_loop.py` is the new gate for the rule the sixteenth find earned:
    **a loop over seats may not ask through the single-slot channel** (1 hit, allowlisted, structural). `Target` was the last answer kind with no
-   seat-routed ask (`ask_seat_target_logged` now — Cuombajj Witches' opponent and Will of the Council's ballots were answered by the RESOLVER); of the
-   66 bare sites left, the four worth taking next are the ones whose card NAMES a chooser who is not the resolver —
-   `EachPlayerDestroysChosenFromLeftNeighbor`, `ChangeTargetOfAbility` x2, `Blight`.
+   seat-routed ask (`ask_seat_target_logged` now — Cuombajj Witches' opponent and Will of the Council's ballots were answered by the RESOLVER); the named-chooser
+   rows are all taken now (Grenzo's Rebuttal, Blight, and the two above) and the bare column reads **62 sites, DEAD 0 and repeat 0**, from 74.
+   One row is deliberately left: `ChangeTargetOfAbility` (Reroute) writes its new target BETWEEN its two asks, so routing it needs the two-pass split
+   first or the second ask's legal set shifts under the first ask's write.
    (d) **The next walker in the target family is `accepts_player_target` itself**: the two call sites are patched, the classifier still says
    "permanent-targeting" for those 26 bodies, and a third call site would reintroduce the bug. Fold `is_player_only` into the function once someone can
    price the extra `target_filter_for_slot(0)` walk it costs on the picker's path.

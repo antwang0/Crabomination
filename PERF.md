@@ -2958,7 +2958,9 @@ fix     the last answer kind without a seat-routed ask (`e8fac7c6`). `ask_seat_t
         `SeatTargetAnswerPending`, on the LOG rather than the single slot, and the two sites that had no better option
         than a bare `decider.decide`: Cuombajj Witches ("an OPPONENT chooses a target" — the controller's decider was
         choosing where the opponent's point landed) and Will of the Council's ballots (CR 701.31 — every player votes,
-        and the controller's decider cast every ballot, vote-control grant and all).
+        and the controller's decider cast every ballot, vote-control grant and all). Then Grenzo's Rebuttal (each player
+        strips their LEFT-HAND NEIGHBOUR; the resolver picked for everyone) and Blight (right player, missing prompt)
+        — `audit_decision_plumbing` 170 / 108 / 62, from 178 / 104 / 74 at the start of the run, DEAD 0 and repeat 0.
 perf    none. Nothing here is on a hot path — every one of these arms is a per-card resolution behind a suspend.
 ```
 

@@ -342,12 +342,28 @@ the single slot (`scripts/audit_stash_in_loop.py`'s rule).
   two UI seats: one ballot each, and the tie moves BOTH, which is only
   observable if the ballots came from two seats.
 
-**What is left in the bare column is 66 sites, 15 with a degenerate headless
-default, 0 DEAD and 0 repeat.** The remaining ones are mode / colour / die-roll
-picks whose default is a real choice rather than a no-op; the ones worth taking
-next are the other four where the card names a chooser who is not the resolver
-(`EachPlayerDestroysChosenFromLeftNeighbor`, `ChangeTargetOfAbility` x2,
-`Blight`).
+Then the rest of the named-chooser rows, with the same helper:
+
+* **Grenzo's Rebuttal** (`EachPlayerDestroysChosenFromLeftNeighbor`) — EACH
+  player strips their left-hand neighbour and the resolving seat's decider made
+  every pick. Per seat now, cursor-indexed (a loop over seats); the destroys
+  were already after the loop and `doomed` rebuilds identically from the
+  replayed answers, so no seat's legal set moves on a re-run.
+* **Blight** (CR 701.68a) — the chooser was right (the controller) and only the
+  prompt was missing.
+
+**What is left in the bare column is 62 sites** (from 74 at the start of the
+run), 15 with a degenerate headless default, **0 DEAD and 0 repeat**. They are
+mode / colour / die-roll picks whose default is a real choice rather than a
+no-op, plus one named-chooser row deliberately NOT taken:
+
+* `ChangeTargetOfAbility` (Reroute) — the chooser is the controller, so it is a
+  missing prompt rather than a wrong player, and it WRITES the new target
+  between its two asks. Routing it needs the two-pass split first (collect the
+  primary and every additional slot, then write them all), or the second ask's
+  `legal` set shifts under the first ask's write and the cursor desyncs. That
+  gate-stability rule is the same one that decides between the two recipes
+  everywhere else in this section.
 
 ## FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight
 
