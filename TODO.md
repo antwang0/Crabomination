@@ -28,28 +28,25 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; **fetch before every push** (two sessions shared the branch on
-   2026-09-10). Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
-2. **Gates at the tip (PERF Baseline, the 2026-09-11 sixth-run addendum):** suite 19,403 / 0 / 5, clippy 0, golden_trace 10 / 10, `--bench` 195,806 /
-   27.49 / 611.9 / 0 stalls — counters identical to `2003d1cf` — determinism ok, `audit_decision_plumbing` DEAD 0 (a gate now);
-   the 2026-09-10 sweeps still stand as the last fresh-seed reading (dflt cube / sealed / all 795, sos / fixed 793, 18,400 games, 0 cap /
-   0 stuck; abilarms 924..925, mirror 797, lookahead / planner 780, mcts 776; actor 4,000 games / 0 stalls) — **this run did not re-sweep.**
-3. **This run (sixth) — the eighth find, ENGINE_BACKLOG "FIXED 2026-09-11":** the *decisions*, one layer above the seventh find's payments.
-   `audit_decision_plumbing.py` now sorts its bare `decider.decide` sites by what `AutoDecider`'s answer does: **195 / 96 bare / 11 DEAD before,
-   178 / 74 / 0 DEAD after** (7 repeat, 17 ack — the DEAD column is a gate now). All eleven are fixed: six "up to N" picks that resolved as a no-op (`ExileUpToNFromGraveyards` 18 cards, `MillThenToHandN` 9, Aetherplasm,
-   Academy Researchers, Credit Voucher) and the four asks the step / draw / cast machinery owns (Chorus of the Conclave, Breathstealer's Crypt,
-   Fasting, Moonring Mirror). **The rule:** plumb when nothing has moved yet, compute a default when the arm already mutated the board.
-   Beside it, every bare "choose a color" named White: `ChooseColorForSelf`'s 42 cards key on `chosen_color_aimed_at_opponents` (a `debug_flags` bit;
-   the two halves are ~21/21), `GrantProtectionFromChosenColor`'s 41 share the one census — three hand-written copies gone, one battlefield-only.
-4. **Next moves:** (a) the audit's remaining rows are bot-side and **already priced — read ENGINE_BACKLOG's "bot side of the same find" before
-   building it**: `decide_choose_cards` sniffs the prompt prose for cost-vs-upside, which looks like a 54-site fix and is a 3-4-site one (the
-   battlefield and own-graveyard branches already decline an own-side pick). The 7 *repeat* rows decline every repetition for a bot seat
-   (Forbidden Ritual, Kindle the Carnage, Fiery Gambit) — a policy question, and Fiery Gambit's is a real gamble. (b) `BecomeChosenColor` picks per source, not per target, so it
-   cannot dodge a named hoser. (c) the one-edit `cnt` rows: **Diviner's Wand, Skophos Maze-Warden and Shieldmage Elder shipped this run**; Urborg Panther /
-   Lumbering Laundry / Touch the Spirit Realm are *not* one edit and Eladamri's "no tap-two cost" note was stale (INCOMPLETE_CARDS says why for each);
-   then the 23 `cnt` primitives. (d) mirrors: abilarms
-   926+, mirror 798+, mcts 777+, lookahead / planner 781+; dflt cube / sealed / all 796+, sos / fixed 794+. (e) perf reads floor — the crack-back
-   horizon (38 % of the actor) is the one strength round left and is a ladder gate, not an Ir leg. The seventh find's ladder read is still open.
+   tracker prose; ⚠ `(-289)` is the last claimed candidate, `(-290)` next; **fetch before every push** (two sessions shared the branch on 2026-09-10).
+   Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: RE-TAKEN on the THIRD box at `fa61eb1e` — sealed 2,501,572,700 /
+   cube 2,324,784,178 / fixed 635,598,781 (PERF Baseline, the seventh-run addendum). Every later box: RE-TAKE FIRST, three boxes have disagreed.**
+2. **Gates at the tip:** suite 19,406 / 0 / 5, clippy 0, golden_trace 10 / 10 unmoved, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls — counters
+   identical to `2003d1cf`, determinism + thread_determinism ok; `audit_decision_plumbing` 178 / 104 / 74 with **DEAD 0** (a gate);
+   `audit_variant_coverage` the documented 2 dead primitives. **No fresh-seed sweep and no actor leg this run** — the 2026-09-10 readings stand.
+3. **This run (seventh), two legs.** (a) The eighth find's BOT half (ENGINE_BACKLOG "FIXED 2026-09-11 — the bot side"): `Decision::ChooseCards`
+   carries `value: PickValue` and `decide_choose_cards` reads it instead of the prompt prose. A struct literal has no default for the field, so a
+   new ask cannot skip it — **104 asks, 39 `Gain`.** It killed two live defects: every "exile a card from your hand"-shaped cost handed over the
+   BIGGEST card, and "choose N permanents to keep" kept the worst. (b) **`(-289)`** — that fix removed `(-288)`'s own boundary ("the bot reads the
+   modal's prompt"), so the off-board trigger pick's prompt joins the elided half: **sealed -0.129 %**, predicted to 0.001 pt by one census.
+4. **Next moves, in order.** (a) **The same prose sniff, one family over, and it is both a bug fix and a perf leg**: `ChooseAmount` branches on
+   `contains("destroy all creatures with power")` / `"life"` / `starts_with("Pay {X}")` (22 sites) and `OptionalTrigger` on `description` (57).
+   Put the question on the ask as `PickValue` did; that unblocks the last of `(-288)`'s prompt-text elision. (b) The shape `PickValue` does NOT
+   reach — an "any number" pick needing a *computed* set: **collect evidence declines for every bot seat**, Fateseal and Stronghold Gambit the
+   same (ENGINE_BACKLOG). (c) `BecomeChosenColor` picks per source, not per target. (d) mirrors: abilarms 926+, mirror 798+, mcts 777+,
+   lookahead / planner 781+; dflt cube / sealed / all 796+, sos / fixed 794+. (e) the engine's perf queue still reads floor — `(-289)` came off a
+   *bug fix*, not off the queue, which is the transferable half: **a correctness change can delete a perf premise, so re-read the blocked entries.**
+
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 

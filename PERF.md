@@ -2806,6 +2806,54 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-11 (seventh run) — the eighth find's BOT half, and `(-289)` off the premise it removed; A THIRD BOX, so the A/B base was RE-TAKEN
+
+**A new box (Xeon @ 2.10 GHz nominal, 4 cores, 15 GB), so the three-pool base
+does not transfer and was re-taken at this run's first tip before anything was
+measured against it.** The host reads 517-542 `--bench` games/s here against
+294-310 on the second box at the same `host_calib_ms`, on byte-identical
+counters — one more reason the counters and not the wall clock are the gate.
+
+Two legs, both built from one tree so they separate. The **fix** is the bot half
+of the eighth find: `decide_choose_cards` recovered "does picking cost us
+something?" from the prompt prose (`contains("sacrifice") ||
+contains("discard")`), so every cost-shaped prompt that says *exile* read as
+upside and the hand branch handed over the bot's biggest card, and "choose N
+permanents to keep" kept the worst of the pair. `Decision::ChooseCards` carries
+`value: PickValue` now; a struct literal has no default for the field and the
+three shared asks take it positionally, so a new ask cannot skip the question —
+**104 asks, 39 `Gain`, three more derived from the board.** ENGINE_BACKLOG
+"FIXED 2026-09-11 — the bot side" has the list and the shape a two-valued flag
+does not reach (an "any number" pick needing a *computed* set: collect evidence
+declines for every bot seat because of it).
+
+The **perf leg is the premise that fix removed**. `(-288)` had filed "the
+modal's prompt stays, the bot reads it" as its own boundary; with the prose read
+gone, `drain_trigger_queue`'s off-board `ChooseCards` prompt goes behind the
+same `text` flag its `ChooseTarget` sibling already uses. A census over the base
+dump priced it at 0.1299 % before the build and it measured -0.129 %.
+
+```text
+  base   9bc5759a, profiling-fast --no-default-features, system allocator, callgrind --games 6 --threads 1 --seed 1, UNTRACED:
+         sealed dflt 2,504,802,413 / cube dflt 2,324,345,454 / fixed gang 635,593,661   <- THE NEW A/B BASE ON THIS BOX
+  (-289) sealed 2,504,802,413 -> 2,501,572,700 (-0.129 %); cube 2,324,345,454 -> 2,324,784,178 (+0.019 %, ceiling 0.006 % — codegen shift);
+         fixed 635,593,661 -> 635,598,781 (+0.001 %, the site never fires on `gang`); CRAB_DUMP_TRACES both sides x three pools, 144 files, 0 differ
+         **THE BASE FOR THE NEXT RUN: sealed 2,501,572,700 / cube 2,324,784,178 / fixed 635,598,781**
+gate    --bench release-fast (mimalloc), twice — at the fix tip 9bc5759a and at the (-289) tip fa61eb1e: both **195,806 / 27.49 / 611.9 /
+        0 stalls, counters identical to 2003d1cf**, determinism ok (all pairs split), thread_determinism ok (3 vs 1 threads identical).
+        bin_bytes 128,497,792 then 128,497,800 (128,480,576 before: the PickValue field and enum); peak_rss_mib 29.0 / 28.6;
+        541.6 then 516.8 games/s at host_calib_ms 53 / 61 — a 5 % spread on identical counters, i.e. the host.
+        Suite **19,406 / 0 / 5** at both tips (three new bot tests), golden_trace 10 / 10 inside it and unmoved — no traced deck poses a
+        ChooseCards. clippy --workspace --exclude crabomination_client --all-targets: **0**. cargo check --profile release-fast
+        -p crabomination --bin bot_ladder (debug-assertions OFF) clean. audit_decision_plumbing **178 / 104 / 74, DEAD 0**;
+        audit_variant_coverage the documented 2 dead primitives. **No fresh-seed sweep and no actor leg this run** — the 2026-09-10 readings stand.
+cost    the fix: one `PickValue` byte on the decision and a `matches!` where a `to_lowercase()` + two `contains` used to be, so the policy got
+        cheaper, not dearer; no `fixed`-pool archetype poses a ChooseCards, which is why the counters are the gate there.
+        (-289): none — it removes two calls and adds a branch already in the same function.
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz nominal, 4 cores, 15 GB; cold release-fast bot_ladder ~35 min, warm engine
+        rebuild ~6 min; cold profiling-fast ~30 min, warm engine rebuild **2m58s**; a three-pool callgrind sweep ~90 s
+```
+
 ### 2026-09-11 (sixth run) — the bare resolution-time asks, ~105 cards; no perf leg
 
 The queue's engine side still reads floor and no candidate was pulled, so there
