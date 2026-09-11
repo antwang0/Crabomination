@@ -33,7 +33,9 @@ sixty-seventh pass, so don't re-take that.
    cube 2,319,033,889 / fixed 635,516,542 at `482c93b4` (PERF Baseline, seventh-run addendum). Every later box: RE-TAKE FIRST; three boxes have disagreed.**
 2. **Gates at the tip:** suite 19,407 / 0 / 5, clippy 0, golden_trace 10 / 10 unmoved, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls — counters
    identical to `2003d1cf` at all four tips, determinism + thread_determinism ok; `audit_decision_plumbing` 178 / 104 / 74 with **DEAD 0** (a gate);
-   `audit_variant_coverage` the documented 2 dead primitives. **No fresh-seed sweep and no actor leg this run** — the 2026-09-10 readings stand.
+   `audit_variant_coverage` the documented 2 dead primitives; **fresh-seed sweep 180,800 games (seeds 796..805, five pools), cap 8 / stuck 0,
+   every cap the documented Beacon of Immortality board.** No actor leg this run. ⚠ The sweep is ~100x cheaper on this box than the record
+   implies (a 3,200-game `cube` cell is 7 s on the release-fast binary): sweep wider than the recorded cell counts.
 3. **This run (seventh), four legs, and one rule connects them.** Two class fixes of the same shape — a bot policy recovering from *prompt prose*
    what the ask never stated — and each one then deleted a perf premise. (a) `PickValue` on `Decision::ChooseCards` (104 asks): the "exile a card
    from your hand" costs handed over the biggest card, "choose N permanents to keep" kept the worst. (b) **`(-289)`** sealed -0.129 %: with the
@@ -45,7 +47,7 @@ sixty-seventh pass, so don't re-take that.
    it is also the last thing between `(-288)`'s flag and "no UI text built in a simulator at all". (b) The shape neither flag reaches — an ask
    needing a *computed* answer: **collect evidence declines for every bot seat**, `AmountKind::Cost` should give up the tokens rather than
    decline, Fateseal and Stronghold Gambit the same (ENGINE_BACKLOG). (c) `BecomeChosenColor` picks per source, not per target. (d) mirrors:
-   abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+; dflt cube / sealed / all 796+, sos / fixed 794+. (e) **The method that paid
+   abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+; **fresh dflt seeds start at 806** (796..805 taken this run). (e) **The method that paid
    twice this run: a correctness change can delete a perf premise, and a caller table is a census of the whole program, not of the row you came
    for.** Re-read `(-288)`'s blocked half and the `format_inner` / `__rust_alloc` caller tables after any policy change.
 

@@ -2861,7 +2861,15 @@ gate    --bench release-fast (mimalloc), four times — at 9bc5759a, fa61eb1e, 4
         10 / 10 inside it and unmoved at every tip. clippy --workspace --exclude crabomination_client --all-targets: **0** (one
         `too_many_arguments` on `ask_seat_amount`'s eighth parameter, allowed like its three siblings). cargo check --profile release-fast
         -p crabomination --bin bot_ladder (debug-assertions OFF) clean at every tip. audit_decision_plumbing **178 / 104 / 74, DEAD 0**;
-        audit_variant_coverage the documented 2 dead primitives. **No fresh-seed sweep and no actor leg this run** — the 2026-09-10 readings stand.
+        audit_variant_coverage the documented 2 dead primitives. **No actor leg this run** — the 2026-09-10 reading stands.
+sweep   FRESH SEEDS on the release-fast tip (not the audit build — no debug assertions, so this is a stall gate, not an assertion one):
+        dflt mirror x --games 400 x 3 threads, CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000. {cube, sealed, all, sos} x seeds 796, 797 =
+        8 cells / 33,600 games, 0 cap / 0 stuck / 0 draw; {cube, sealed, all, sos, fixed} x seeds 798..805 = 40 cells / 147,200 games,
+        **cap 8 / stuck 0 / draw 2** — 180,800 fresh-seed games, and every cap is the DOCUMENTED board: `life 2147483569` / `2147483647`
+        with Beacon of Immortality on the stack (cube 804 x4, all 798 x2, all 804 x2), the fingerprint ENGINE_BACKLOG closed as "a correct
+        card doing what it prints". 0.0054 % against the recorded 4-in-183,600; not a regression and nothing new.
+        ⚠ **This sweep is ~100x cheaper on this box than the record implies**: a 3,200-game `cube` cell is 7 s on the release-fast binary
+        against the minutes the audit build takes. 40 cells ran in under four minutes. Sweep wider than the recorded cell counts.
 cost    the two bug fixes: one byte on each decision and a `match` where a `to_lowercase()` + `contains` chain used to be, so both policies got
         cheaper, not dearer; no `fixed`-pool archetype poses a ChooseCards or a ChooseAmount, which is why the counters are the gate there.
         (-289) and (-290): none, both delete work.
