@@ -2829,8 +2829,16 @@ fix     d0d9b042 (six "up to N" no-ops: ExileUpToNFromGraveyards' 18 cards, Mill
         Credit Voucher, Cloudstone Curio's documented decline) / 8e45667f (the colour choice: ChooseColorForSelf's 42 cards keyed on
         `chosen_color_aimed_at_opponents`, GrantProtectionFromChosenColor's 41 off the shared census, the basic-land-type asks, Mox
         Amber) / PENDING-4 (the engine-path asks: Chorus of the Conclave, Moonring Mirror, Breathstealer's Crypt, Fasting) /
-        PENDING-5 (the colour picks' WUBRG tie-break and BecomeChosenColor's legal set)
-gate    PENDING
+        6f2dd178 (the engine-path asks: Chorus of the Conclave, Moonring Mirror, Breathstealer's Crypt, Fasting; plus the colour
+        picks' WUBRG tie-break and BecomeChosenColor's legal set) / cdf3e4de (two `sort_by` lints, the last ack) / 4e0479fd
+        (three one-edit `cnt` cards: Diviner's Wand, Skophos Maze-Warden, Shieldmage Elder)
+gate    --bench release-fast at 6f2dd178 (10m44s with deps warm): 195,806 / 27.49 / 611.9 / 0 stalls — **counters identical to
+        2003d1cf**, determinism ok (all pairs split); bin_bytes 126,800,920 (-97,048 on the fifth run's tip); peak_rss_mib 28.8;
+        315.0 games/s at host_calib_ms 50. Suite 19,402 / 1 / 5 at 6f2dd178 — the one failure was this run's own new Skophos test
+        aiming the Labyrinth at a creature that was neither attacking nor blocking (the ability's printed target), rewritten with a
+        real combat; golden_trace 10 / 10 inside that run, and no traced deck carries an affected effect. clippy --workspace
+        --exclude crabomination_client --all-targets: 2 warnings, both `sort_by` in this run's own new defaults, fixed at cdf3e4de.
+        `audit_decision_plumbing` DEAD 11 -> 0. **No fresh-seed sweep and no actor leg this run**; the 2026-09-10 readings stand
 cost    one cached `debug_flags` bit read per "choose a colour" (already warm — the same word answers `wants_converge`), one
         `color_weights` walk per such pick (hand + battlefield of one seat, or of the opponents), and a pending-decision round trip
         per graveyard-exile / Aura-deploy resolution for a `wants_ui` seat. No `fixed`-pool archetype and no golden-trace deck

@@ -30,8 +30,9 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
    tracker prose; ⚠ `(-288)` is the last claimed candidate, `(-289)` next; **fetch before every push** (two sessions shared the branch on
    2026-09-10). Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: the `(-288)` triple, taken on the SECOND box; every later box — RE-TAKE first.**
-2. **Gates at the tip (PERF Baseline, the 2026-09-11 sixth-run addendum):** suite GATE_SUITE, clippy GATE_CLIPPY, golden_trace 10 / 10, `--bench` counters
-   GATE_BENCH; the 2026-09-10 sweeps still stand as the last fresh-seed reading (dflt cube / sealed / all 795, sos / fixed 793, 18,400 games, 0 cap /
+2. **Gates at the tip (PERF Baseline, the 2026-09-11 sixth-run addendum):** suite 19,402 at `6f2dd178` (+4 card tests at the tip), clippy 0, golden_trace 10 / 10, `--bench` 195,806 /
+   27.49 / 611.9 / 0 stalls — counters identical to `2003d1cf` — determinism ok, `audit_decision_plumbing` DEAD 0 (a gate now);
+   the 2026-09-10 sweeps still stand as the last fresh-seed reading (dflt cube / sealed / all 795, sos / fixed 793, 18,400 games, 0 cap /
    0 stuck; abilarms 924..925, mirror 797, lookahead / planner 780, mcts 776; actor 4,000 games / 0 stalls) — **this run did not re-sweep.**
 3. **This run (sixth) — the eighth find, ENGINE_BACKLOG "FIXED 2026-09-11":** the *decisions*, one layer above the seventh find's payments.
    `audit_decision_plumbing.py` now sorts its bare `decider.decide` sites by what `AutoDecider`'s answer does: **195 / 96 bare / 11 DEAD before,
