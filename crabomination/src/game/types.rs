@@ -557,7 +557,10 @@ pub struct Attack {
     pub target: AttackTarget,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+// `PartialEq` is load-bearing, not decoration: the bot's combat-instant
+// enumerator used to dedupe its candidates by `format!("{a:?}")` into a
+// `Vec<String>` — 0.21 % of a `cube` run in `format_inner` alone. PERF `(-290)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GameAction {
     PlayLand(CardId),
     /// Play a modal-double-faced-card land using its **back face**. The

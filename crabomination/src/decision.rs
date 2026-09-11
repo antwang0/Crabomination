@@ -439,7 +439,10 @@ pub enum LearnChoice {
 }
 
 /// The decider's answer to a `Decision`. Variants must match the decision kind.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+///
+/// `PartialEq` is here because `GameAction::SubmitDecision` carries one and the
+/// bot dedupes its candidate actions by value — see PERF `(-290)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DecisionAnswer {
     Target(Target),
     /// Abandon the action whose *replay* this decision is gathering input

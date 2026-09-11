@@ -15205,11 +15205,13 @@ fn combat_instant_candidates(
     use crate::card::CardType;
     let have = SweepMana::new(state, seat);
     let mut out: Vec<GameAction> = Vec::new();
-    let mut seen: Vec<String> = Vec::new();
-    let mut push = |a: GameAction, out: &mut Vec<GameAction>| {
-        let key = format!("{a:?}");
-        if !seen.contains(&key) {
-            seen.push(key);
+    // Dedupe by value. This was `format!("{a:?}")` into a `Vec<String>` —
+    // a Debug render and an allocation per candidate, and a string compare
+    // per pair — which read 0.21 % of a `cube` run in `format_inner` alone
+    // (PERF `(-290)`). `GameAction: PartialEq` short-circuits on the
+    // discriminant, and the list is a handful of entries.
+    let push = |a: GameAction, out: &mut Vec<GameAction>| {
+        if !out.contains(&a) {
             out.push(a);
         }
     };

@@ -4682,6 +4682,39 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-290)` TAKEN — the combat-instant enumerator deduped its candidates with `format!("{:?}")`: cube **-0.247 %**, sealed **-0.086 %**, fixed **-0.013 %**, 144 / 144 traces identical
+
+Found in `(-289)`'s own census table, not on the queue. Having asked
+"who calls `format_inner`?" to price a prompt, the answer's second row
+was the *bot*: `combat_instant_candidates` rendered every candidate
+`GameAction` through `Debug` into a `String`, pushed it onto a
+`Vec<String>`, and asked `seen.contains(&key)` per candidate — a Debug
+walk plus an allocation per action and a string compare per pair, to
+answer "have I already got this one?". `GameAction` now derives
+`PartialEq` (and `DecisionAnswer` with it, for `SubmitDecision`) and the
+dedupe is `out.contains(&a)`: a discriminant compare that short-circuits,
+over a list a handful of entries long.
+
+```text
+callgrind --a dflt/dflt (gang on fixed) --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree at the (-289) tip:
+  cube    2,324,784,178 -> 2,319,033,889 Ir   (-5,750,289, -0.247 %)
+  sealed  2,501,572,700 -> 2,499,426,437 Ir   (-2,146,263, -0.086 %)
+  fixed     635,598,781 ->   635,516,542 Ir   (-82,239, -0.013 %)
+  CRAB_DUMP_TRACES both sides, all three pools: 144 files, 0 differ
+rows  format_inner callers, cube: combat_instant_candidates 876 calls / 3.93 M + its closure 192 / 0.86 M -> both absent
+      (sealed 328 / 1.48 M + 98 / 0.47 M -> absent). The cube win is 5.75 M against 4.79 M of `format_inner`: the balance is the
+      `String` allocation and free per candidate and the `Vec<String>` compares, which the dump books elsewhere.
+```
+
+**The transferable half is the reading order.** `(-289)` needed one
+question — "who builds strings?" — and the table that answered it had a
+second caller nobody had looked at, three times the size of the row that
+prompted the question. A caller table is a census of the whole program,
+not of the one row you came for; read all of it. The same table still
+holds `debug_flags` (113 calls / 6.4 M sealed, 261 / 14.9 M cube), which
+is `wants_converge`'s once-per-*name* cache — a process-lifetime cost, not
+a per-game one, and not a lead.
+
 ### `(-289)` TAKEN — the off-board trigger pick's prompt joins the elided half: sealed default Ir **-0.129 %**, cube **+0.019 %**, fixed **+0.001 %**, 144 / 144 traces identical
 
 `(-288)`'s own refutation was "the modal's prompt stays, the bot reads
