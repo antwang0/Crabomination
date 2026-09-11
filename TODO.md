@@ -35,23 +35,27 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the tip:** suite **19,414 / 0 / 5 with `CRAB_ANSWER_LOG=strict` exported** — which makes both resume-channel nets and the ten-channel
    one-shot census assertions on every test, and is how to run it from now on — clippy 0, golden_trace 10 / 10, `--bench` **195,806 / 27.49 / 611.9 /
    0 stalls** + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / 0 NO-CLEAR / 2 ERR?, `audit_panics` **0 bare**,
-   `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..891, 282,560 completed games (two cells aborted on the find below and are `ok` after it) — next is 892.**
+   `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..898, 402,960 completed games** (two cells aborted on the find below and read `ok` after it; the only caps on record are the documented `i32::MAX`-life board) — **next is 899.**
 3. **This run, and the sentence it earned:** *an instrument that names a leak finds the bug the leak was a symptom of.* Both resume channels leaked
    (two arms never cleared, no arm clears on an error unwind) and the RESOLUTION drops them at its outermost exit now; the ten other one-shot channels
    are **censused, not netted** (0 stale in the suite, 0 in 100,400 swept games). Then the census's first strict sweep cell aborted on **Bind to Life**: a
    *resumed* resolution reset its own per-resolution scratch, so `Selector::LastMoved` read an empty set and "mill seven, then put a creature card from
    among them onto the battlefield" put **nothing** onto the battlefield for every seat that suspends — the whole training path, invisible to the
-   suite's headless test. `resuming_resolution` fixes it for every scratch-reading selector at once. And the actors' jitter is pinned per game, so a
+   suite's headless test. The `resuming` flag on the resolution entry fixes it for every scratch-reading selector at once — **and
+   the session sharing the branch immediately found the same shape one layer up** (`c2cb8c30`: CR 608.2b's target-legality fizzle
+   was re-checked on the resume, so Lash Out's clash fizzled the spell), with its own residue filed: a fused split whose LEFT half
+   suspends resolves its RIGHT half twice. And the actors' jitter is pinned per game, so a
    recorded self-play game replays from its seed (item 7, ML_NOTES — different games after it, no retrain).
-4. **Next:** (a) **sweep first and sweep wide**, from 892, `CRAB_ANSWER_LOG=strict` exported. (b) **The channel's open half is LIVE on seven cards** —
+4. **Next:** (a) **sweep first and sweep wide**, from 899, `CRAB_ANSWER_LOG=strict` exported (853..898 are spent). (b) **The channel's open half is LIVE on seven cards** —
    `structural_audit::no_shipped_card_nests_two_answer_log_arms` allowlists them (Conspiracy Theorist, Emberwilde Djinn, Forbidden Ritual, Giant
    Albatross, Rottenmouth Viper, Skirk Drill Sergeant, Worms of the Earth): the inner arm's `cursor = 0` replays the OUTER arm's yes. **The fix is parking the channel at the
    nesting boundary**: a `run_effect_parked` at the ~60 nested-effect call sites inside the **38** asking arms, restoring only
    when the body did NOT suspend. ENGINE_BACKLOG sketches it and says why provenance, clearing, offsetting and a one-site park
-   inside `run_effect` all fail (the last one reintroduces the tenth find's stall). Beside it, the audit's new **PRE** column
-   (a mutation before the arm's first ask, which the re-run repeats) reads 63 / 1: **Crooked Scales re-flips its coin on every
-   resume**, and `MayPayRepeatedly` re-pays **quadratically** (Magnetic Mountain, Dream Tides). All three are correct headless and
-   wrong for every seat that suspends — the run's recurring shape. (c) Read the census before netting what it does not
+   inside `run_effect` all fail (the last one reintroduces the tenth find's stall). Beside it, the widest open member of the class:
+   **11 of the 63 arms mutate inside the loop that asks**, so a suspend repeats it — Fade Away charged the first seat twice and is
+   FIXED here as the worked example (ask everyone, then pay); the other ten are listed in ENGINE_BACKLOG with what repeats
+   (Crooked Scales re-flips its coin, `MayPayRepeatedly` re-pays quadratically, three life-payment arms, the ante). Every one is
+   correct headless and wrong for every seat that suspends, and each needs its own test on the suspending path. (c) Read the census before netting what it does not
    name. (d) `BecomeChosenColor` picks per source, not per target. (e) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
    (f) Perf reads floor — the crack-back horizon is a ladder gate, and both of the seventh run's perf legs came off a bug fix, not off the queue.
 

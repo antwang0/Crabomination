@@ -216,7 +216,46 @@ ask" a checkable property, and `scripts/audit_answer_log.py` checks it now
 * `Effect::MayPayRepeatedly` (**Magnetic Mountain**, **Dream Tides**) — the
   quadratic re-payment above. The audit's `PRE` column does not flag it because
   its payment is *after* the first ask, inside the loop; the loop is what repeats
-  it. Worth a second column keyed on "a mutation between two asks of one arm".
+  it.
+
+**And that second census — "a mutation inside the loop that asks" — reads 11 of
+the 63 arms**, which makes this the widest open member of the class:
+
+| arm | what repeats per suspend |
+| --- | --- |
+| `run_each_unless_pays` (Fade Away, Cut the Tethers) | **FIXED here**: the mana each earlier seat paid |
+| `run_destroy_each_unless_pays_life` (Giant Albatross) | the life each earlier seat paid |
+| `Effect::AnteTopOfLibrary` | the ante, and the `then` branch it ran |
+| `Effect::MayPayRepeatedly` (Magnetic Mountain, Dream Tides) | the mana, quadratically |
+| `Effect::CoinFlipDestroyLoop` (Crooked Scales) | the coin flip AND the repeat cost |
+| `Effect::RevealTopPayOrTake` | the life paid |
+| `Effect::RevealHandDiscardMatchingUnlessPayLife` | the life paid |
+| `Effect::OtherPlayerMayPayToCounter` | the mana paid |
+| `Effect::PlayersMayAccept`, `AnyPlayerMayExileFromGraveyard`, `AnyPlayerMayAccept` | a tail-call `run_effect`, so probably benign — each returns out of the loop |
+
+The fix is the same two passes every time — ask everyone first, mutate second —
+and each one needs its own regression test **on the suspending path**, because the
+headless path is correct in all of them and the suite only tests that. The
+`run_each_unless_pays` commit is the worked example, and the shape is mechanical:
+
+```text
+  let mut answers = Vec::with_capacity(targets.len());   // pass 1: ASK ONLY
+  for (id, seat) in targets {
+      let paid = gate && match self.ask_seat_bool(..) { Some(y) => y, None => return Ok(()) };
+      answers.push((id, seat, paid));                    // no mutation in here
+  }
+  self.clear_answer_log();
+  for (id, seat, paid) in answers {                      // pass 2: MUTATE
+      if !(paid && self.pay(..)) { doomed.push(id); }
+  }
+```
+
+The one thing to check per arm is the *gate* in pass 1 (`could_pay_cost`, a life
+total, an emptiness test): it is now evaluated before any payment, so a seat with
+two affected permanents is asked about both before either is paid for. Where the
+gate is per-seat and the payments are per-permanent that changes which prompt is
+posed but not which permanent leaves — say so in the commit, as the worked example
+does.
 
 Both are the same shape as the seven: correct for a headless seat, wrong for
 every seat that suspends. Neither is fixed here — the flip wants its outcome

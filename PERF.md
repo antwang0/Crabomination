@@ -48,7 +48,7 @@ CRAB_THREAD_CHECK=1 cargo run --release --bin bot_ladder -- --bench
 # cell's log). **It found Bind to Life in its first 28-second cell** — a resumed
 # resolution reset its own scratch, so `Selector::LastMoved` came back empty and
 # the card put nothing onto the battlefield for every seat that suspends.
-# Export it for the suite too: every one of the 19,416 tests then asserts both
+# Export it for the suite too: every one of the suite's ~19.4 k tests then asserts both
 # nets and the census.
 CRAB_ANSWER_LOG=strict scripts/fresh_seed_sweep.sh "cube all" "890" 400
 CRAB_ANSWER_LOG=strict cargo nextest run --workspace --exclude crabomination_client
@@ -2823,7 +2823,7 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### 2026-09-11 (a session sharing the branch with the `OptionalKind` one) — both resume channels netted, the ten one-shot channels censused, the actors' jitter pinned; no perf leg, and a FOURTH box
+### 2026-09-11 (a session sharing the branch with the `OptionalKind` one) — both resume channels netted and censused, the resumed resolution's own scratch, the ask loops that paid inside themselves, the actors' jitter pinned; no perf leg, and a FOURTH box
 
 ⚠ **Two sessions were on `claude/modern_decks` at the same time this afternoon**
 (this leg's `b7dc6de5` rebased onto `68dceaaa` three minutes after it landed;
@@ -2887,6 +2887,17 @@ bench   --bench release-fast twice, at `99d19420` and again at `f6bad006` (the r
         split), thread_determinism ok (3 vs 1 threads identical), bin_bytes 128,488,008 / 128,490,672, peak_rss_mib 28.9 / 31.1,
         289.72 / 306.55 games/s at host_calib_ms 58 / 52. Both nets and both instruments are `cfg(debug_assertions)` or on the
         cold side of an emptiness test, and the scratch fix reaches no `fixed`-pool card, so this is the expected reading
+sweep3  **the wide one, and the point of it: `scripts/audit_answer_log.py`'s instrument makes a sweep sharper than it was.**
+        Five pools x seeds 892..897 x `--games 400` on the audit build, `CRAB_ANSWER_LOG=strict`: **30 cells, 110,400 games, 0
+        failures, 0 cap / 0 stuck / 2 draws.** Then, after the `run_each_unless_pays` split, a smoke pair at seed 898: `cube` ok,
+        `all` **6 capped games — all of them the documented `i32::MAX`-life board** (`life 2147483647` on both seats at turn
+        258-288, stack 0, boards of lands and Faeries), which is the fingerprint ENGINE_BACKLOG closed as "a correct card doing
+        what it prints". ⚠ Unlike the 2026-09-11 `OptionalKind` run I could NOT re-run the base binary on that cell (the audit
+        binary was rebuilt over), so the count is attributed by fingerprint rather than by an A/B — a mana-payment *ordering*
+        change cannot produce infinite life, but say so rather than implying the stronger check
+suite2  after the `run_each_unless_pays` split: **19,417 / 0 / 5** under `CRAB_ANSWER_LOG=strict`, golden_trace 10 / 10 still
+        unmoved, clippy **0** (one `too_many_arguments` on `continue_ability_resolution_x_into`'s eighth parameter, allowed like
+        its two `continue_*` siblings — the eighth is the `resuming` flag)
 cost    three reads (`resolution_depth`, `suspend_signal`, the log's len) per outermost resolution, and nothing at all per nested
         one; the park is two `Vec` moves per answered decision and only when the channel is non-empty. The census and the leak
         namer are compiled out of every optimized profile
