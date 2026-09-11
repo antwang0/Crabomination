@@ -1360,6 +1360,54 @@ fn conspiracy_theorist_activation_succeeds_with_empty_hand() {
         "discarded LAND must not be exiled by the nonland trigger");
 }
 
+/// The same trigger with a `wants_ui` controller, so BOTH asks suspend.
+/// `MayPay > MayDiscard` is one of the seven shipped cards that nest two
+/// answer-log arms, and the log is one channel per resolution: the inner arm's
+/// cursor starts at 0 over whatever the outer left. It works — the outer clears
+/// the channel before running its body, and the resume re-enters at the INNER
+/// arm, whose own answer is then the only thing in it — but the structural gate
+/// that allowlists those seven is a static walk over the catalog and cannot see
+/// any of that. This takes the path.
+#[test]
+fn conspiracy_theorist_nested_asks_pay_once_when_both_suspend() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
+    g.clear_sickness(ct);
+    let hand_island = g.add_card_to_hand(0, catalog::island());
+    let lib_card = g.add_card_to_library(0, catalog::lightning_bolt());
+    // One spare mana, so a second charge would show up as an empty pool.
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.step = crabomination::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crabomination::game::Attack {
+        attacker: ct,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }]))
+    .expect("Conspiracy Theorist attacks");
+    drain_stack(&mut g);
+
+    // Answer every ask the two nested arms pose, in the order they pose them.
+    for _ in 0..6 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::ChooseCards { candidates, min, .. } => DecisionAnswer::Cards(
+                candidates.iter().take((*min).max(1) as usize).map(|(id, _)| *id).collect(),
+            ),
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer the nested ask");
+    }
+    assert!(g.pending_decision.is_none(), "both arms finished");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == hand_island),
+        "the island was discarded"
+    );
+    assert!(g.players[0].hand.iter().any(|c| c.id == lib_card), "and a card was drawn");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "the payment was made once, not twice");
+}
+
 /// Printed oracle, both abilities chained: attacking and paying {1} +
 /// discarding a NONLAND card draws a card, then the discard trigger
 /// lets you exile the discarded card from your graveyard and cast it

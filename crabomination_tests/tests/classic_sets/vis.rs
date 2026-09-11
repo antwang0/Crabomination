@@ -1786,6 +1786,53 @@ fn forbidden_ritual_trades_permanents_for_life() {
     assert_eq!(g.players[1].life, 18, "and they had nothing to pay with");
 }
 
+/// The same card with both seats on the UI path, so both nested asks suspend.
+/// Forbidden Ritual stacks three arms in one resolution — `MayRepeat` over
+/// `MaySacrifice` over `UnlessPlayerPays` — and the middle and inner ones share
+/// the resolution's single replay channel, asking DIFFERENT seats. It holds
+/// because `MaySacrifice` clears the channel before it runs its body and has no
+/// work left after it, so the resume re-enters at the inner arm with only the
+/// inner arm's answer in the log. Pinned here because the structural gate that
+/// allowlists the nesting is a static walk and cannot see any of that.
+#[test]
+fn forbidden_ritual_nested_asks_each_take_their_own_answer_when_both_suspend() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::forbidden_ritual());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, spell, Some(Target::Player(1))).expect("cast");
+    drain_stack(&mut g);
+    // Say yes to everything either seat is offered.
+    for _ in 0..12 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::ChooseCards { candidates, min, .. } => DecisionAnswer::Cards(
+                candidates.iter().take((*min).max(1) as usize).map(|(id, _)| *id).collect(),
+            ),
+            Decision::ChooseTarget { legal, .. } => {
+                DecisionAnswer::Target(legal.first().cloned().expect("a legal pick"))
+            }
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer the nested ask");
+    }
+    assert!(g.pending_decision.is_none(), "every arm finished");
+    // The controller's own "yes" sacrificed one of theirs; the target's "yes"
+    // paid with a permanent rather than the 2 life.
+    assert!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count() < 2,
+        "the controller sacrificed for the ritual"
+    );
+    assert!(g.battlefield_find(theirs).is_none(), "the target paid a permanent");
+    assert_eq!(g.players[1].life, 20, "so they did not lose the 2 life");
+}
+
 /// Breathstealer's Crypt bins a drawn creature when the toll goes unpaid.
 #[test]
 fn breathstealers_crypt_taxes_drawn_creatures() {

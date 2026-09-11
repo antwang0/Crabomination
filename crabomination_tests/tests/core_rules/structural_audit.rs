@@ -471,6 +471,18 @@ fn no_aura_spells_an_entry_effect_after_its_attach() {
 /// production half"), so the gate is structural: no shipped card may nest one
 /// log-using effect inside another.
 ///
+/// The seven allowlisted below are a HAZARD, not a live defect — a claim now
+/// tested rather than assumed, on the suspending path, for the three shapes
+/// that differ (`conspiracy_theorist_nested_asks_pay_once_when_both_suspend`,
+/// `forbidden_ritual_nested_asks_each_take_their_own_answer_when_both_suspend`,
+/// `giant_albatross_charges_each_creature_once_when_the_asks_suspend`). Two
+/// properties hold for all five outer arms, and both are needed: each clears
+/// the channel before running its body, and none has any work left after it, so
+/// a suspend inside the body re-enters at the INNER arm with only the inner
+/// arm's own answers in the log. A new nesting whose outer arm keeps working
+/// after its body — or asks again after it, the `MayPayRepeatedly` shape —
+/// breaks both, which is what this gate exists to catch.
+///
 /// The variant list is the 57 `Effect` arms that ask inline plus the 8 that reach
 /// an asking helper (65 in all, from 63 `let mut cursor = 0` blocks) — regenerate
 /// it with `scripts/audit_answer_log.py --variants`.
@@ -585,11 +597,12 @@ fn no_shipped_card_nests_two_answer_log_arms() {
             flagged.push(format!("{}: {h}", def.name));
         }
     }
-    // The seven shipped nestings, each a real defect and none of them fixable by
-    // the obvious clear-before-the-body: the outer arm's `cursor` keeps counting
-    // and `MayPayRepeatedly` asks again *after* its body, so a clear mid-arm
-    // strands its own replay. ENGINE_BACKLOG prices the redesign. This list is
-    // the allowlist, not an endorsement: a NEW nesting fails here.
+    // The seven shipped nestings. Each is safe for the reason in this test's
+    // doc comment — the outer arm clears before its body and has nothing left
+    // to do after it — and not one of them is safe by construction, which is
+    // why they are listed one by one rather than waved through by shape. This
+    // list is the allowlist, not an endorsement: a NEW nesting fails here and
+    // has to prove the same two properties before it joins.
     const KNOWN: &[&str] = &[
         "Conspiracy Theorist: MayPay > MayDiscard",
         "Emberwilde Djinn: MayPayBy > MayPayLife",
