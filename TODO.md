@@ -32,7 +32,7 @@ sixty-seventh pass, so don't re-take that.
    this one. Read `git log` first. `(-290)` is the last claimed candidate, `(-291)` next. Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing
    rules"**. **A/B base: RE-TAKEN at `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331 (PERF Baseline, with the self table at
    that base). Ir crosses boxes, wall clock does not: the four-box `--bench` spread is 289.72 to 542 games/s on byte-identical counters.
-2. **Gates at the tip `7acd7497`:** suite **19,442 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel
+2. **Gates at the tip `e266a964`:** suite **19,444 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel
    one-shot census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, release-fast check clean, `--bench` **195,806 /
    27.49 / 611.9 / 0 stalls** + determinism + thread_determinism, `audit_answer_log` 66 / 6 suspicious, `audit_panics` **0 bare**,
    `audit_decision_plumbing` 173 / 107 / 66 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1018 swept — next
@@ -60,7 +60,10 @@ sixty-seventh pass, so don't re-take that.
    differing shapes are correct, because every outer arm clears the channel before its body AND has no work after it. The gate stays. (c) `audit_decision_plumbing`'s
    "gates a loop repetition" column is **CLOSED — 0 rows, from 7**; the recipe for an ask about doing the ROUND again is *one logged answer is one round
    already performed*, replayed in place (ENGINE_BACKLOG). `scripts/audit_stash_in_loop.py` is the new gate for the rule the sixteenth find earned:
-   **a loop over seats may not ask through the single-slot channel** (1 hit, allowlisted, structural).
+   **a loop over seats may not ask through the single-slot channel** (1 hit, allowlisted, structural). `Target` was the last answer kind with no
+   seat-routed ask (`ask_seat_target_logged` now — Cuombajj Witches' opponent and Will of the Council's ballots were answered by the RESOLVER); of the
+   66 bare sites left, the four worth taking next are the ones whose card NAMES a chooser who is not the resolver —
+   `EachPlayerDestroysChosenFromLeftNeighbor`, `ChangeTargetOfAbility` x2, `Blight`.
    (d) **The next walker in the target family is `accepts_player_target` itself**: the two call sites are patched, the classifier still says
    "permanent-targeting" for those 26 bodies, and a third call site would reintroduce the bug. Fold `is_player_only` into the function once someone can
    price the extra `target_filter_for_slot(0)` walk it costs on the picker's path.
