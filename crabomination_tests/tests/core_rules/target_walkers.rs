@@ -1190,3 +1190,30 @@ fn the_shared_recursion_names_every_effect_wrapper() {
          written."
     );
 }
+
+/// A "target player's graveyard / library" slot is a **player** slot.
+///
+/// `requires_target` walked `CardsInZone` / `TopOfLibrary` / `BottomOfLibrary`
+/// for a `PlayerRef::Target`; `target_filter_for_slot` did not, so slot 0 came
+/// back `None`, `primary_target_filter` fell through to the *card* filter
+/// beside it, and Mudhole offered a **land permanent** for "target player"
+/// (Drafna's Restoration an artifact) — a pick the `PlayerRef` cannot resolve,
+/// so the spell did nothing. `selector_player_ref` is the one list both walks
+/// read now.
+#[test]
+fn a_target_players_zone_is_a_player_slot() {
+    use crabomination::card::SelectionRequirement as R;
+    for def in [
+        catalog::mudhole(),
+        catalog::drafnas_restoration(),
+        catalog::rats_feast(),
+    ] {
+        assert_eq!(
+            def.effect.target_filter_for_slot(0),
+            Some(&R::Player),
+            "{} targets a player's graveyard",
+            def.name,
+        );
+        assert_eq!(def.effect.primary_target_filter(), Some(&R::Player), "{}", def.name);
+    }
+}

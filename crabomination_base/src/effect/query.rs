@@ -144,6 +144,28 @@ fn implicit_player_for_bare_player_slot(
         .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
+/// The `PlayerRef` a selector reads a player out of, if any.
+///
+/// **One list, two readers.** `requires_target`'s census and
+/// `target_filter_for_slot`'s filter walk both have to know which selectors
+/// can name a player slot, and they drifted: the census walked
+/// `CardsInZone`/`TopOfLibrary`/`BottomOfLibrary` and the filter walk did
+/// not, so `Effect::Move { what: CardsInZone { who: Target(0), .. } }`
+/// reported no slot-0 filter, `primary_target_filter` fell through to the
+/// *card* filter beside it, and Mudhole aimed "target player's graveyard" at
+/// a **land permanent** (Drafna's Restoration at an artifact). A pick the
+/// `PlayerRef` cannot resolve, so the spell did nothing.
+fn selector_player_ref(s: &Selector) -> Option<&PlayerRef> {
+    match s {
+        Selector::TopOfLibrary { who, .. }
+        | Selector::BottomOfLibrary { who, .. }
+        | Selector::CardsInZone { who, .. }
+        | Selector::ControlledBy { who, .. }
+        | Selector::Player(who) => Some(who),
+        _ => None,
+    }
+}
+
 /// `Some(&Player)` when a bare `PlayerRef::Target(n)` fills `slot` — effects
 /// that target a player directly through a `PlayerRef` field
 /// (`ExilePlayerGraveyard`, `ExileHand`, `DiscardUnlessKind`).
@@ -565,12 +587,7 @@ impl Effect {
                         || value_has_target(cap)
                         || value_has_target(value_of_each)
                 }
-                Selector::TopOfLibrary { who, .. }
-                | Selector::BottomOfLibrary { who, .. }
-                | Selector::CardsInZone { who, .. }
-                | Selector::ControlledBy { who, .. }
-                | Selector::Player(who) => player_has_target(who),
-                _ => false,
+                _ => selector_player_ref(s).is_some_and(player_has_target),
             }
         }
         fn player_has_target(p: &PlayerRef) -> bool {
@@ -3806,7 +3823,9 @@ impl Effect {
             // A `ControlledBy { who: Target(n) }` selector declares slot `n`
             // as a *player* target (How to Start a Riot's "creatures target
             // player controls get +2/+0"). Surface a Player filter so the
-            // cast/auto-target walk prompts for that slot.
+            // cast/auto-target walk prompts for that slot. `selector_player_ref`
+            // is the shared list of selectors that read a player, so this walk
+            // and `requires_target`'s census cannot disagree about which ones.
             const PLAYER: SelectionRequirement = SelectionRequirement::Player;
             match s {
                 Selector::TargetFiltered { slot: s2, filter } if *s2 == slot => Some(filter),
@@ -3814,15 +3833,6 @@ impl Effect {
                     who: PlayerRef::Target(s2),
                     ..
                 } if *s2 == slot => Some(&PLAYER),
-                Selector::ControlledBy {
-                    who: PlayerRef::Target(s2),
-                    ..
-                } if *s2 == slot => Some(&PLAYER),
-                // A bare `Player(Target(n))` selector declares slot `n` as a
-                // player target — e.g. Lord of the Void's "exile the top seven
-                // of that player's library" (`ExileTopOfLibrary { who:
-                // Player(Target(0)) }`).
-                Selector::Player(PlayerRef::Target(s2)) if *s2 == slot => Some(&PLAYER),
                 // "the controller/owner **of** X" declares whatever X does —
                 // Parallectric Feedback's slot 0 is the *spell*, reached
                 // through `Player(ControllerOf(TargetFiltered))`.
@@ -3841,7 +3851,11 @@ impl Effect {
                     sel_find(inner, slot)
                 }
                 Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
-                _ => None,
+                // A bare `PlayerRef::Target(n)` inside any player-reading
+                // selector declares slot `n` as a player target — Lord of the
+                // Void's `Player(Target(0))`, Mudhole's `CardsInZone { who:
+                // Target(0) }` ("target player's graveyard").
+                _ => selector_player_ref(s).and_then(|w| implicit_player_for_ref_slot(w, slot)),
             }
         }
         // A target slot can hide inside a `Value` sub-tree — Rabid Bite
