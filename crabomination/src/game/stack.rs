@@ -2417,7 +2417,7 @@ impl GameState {
                             caster, target.clone(), 0, 0,
                         );
                         ctx.source = Some(card_id);
-                        if let Ok(mut sub) = self.resolve_effect(&gifted, &ctx) {
+                        if let Ok(mut sub) = self.resolve_effect_driven(&gifted, &ctx) {
                             events.append(&mut sub);
                         }
                     }

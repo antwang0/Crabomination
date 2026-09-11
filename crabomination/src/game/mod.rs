@@ -400,6 +400,41 @@ mod answer_log_tests {
     use crate::effect::Effect;
     use crate::player::Player;
 
+    /// An effect that runs OFF the stack has nowhere to park a continuation, so
+    /// a suspension inside it used to be dropped: the choice never happened AND
+    /// the signal was left in the field for the next resolution's `take()` to
+    /// find. `resolve_effect_driven` answers it through the decider instead.
+    #[test]
+    fn an_off_stack_ask_is_driven_instead_of_dropped() {
+        use crate::effect::Selector;
+        use crate::game::effects::EffectContext;
+        let mut g = GameState::new(vec![Player::new(0, "Alice"), Player::new(1, "Bob")]);
+        g.players[0].wants_ui = true;
+        let cannon = g.add_card_to_battlefield(0, crate::catalog::doom_cannon());
+        let ctx = EffectContext::for_ability(cannon, 0, None);
+        let effect = Effect::NameCreatureType { what: Selector::This };
+
+        // Plain: the ask suspends into a field nobody off the stack reads.
+        g.resolve_effect(&effect, &ctx).expect("resolves");
+        assert!(
+            g.battlefield_find(cannon).expect("on the battlefield").chosen_creature_type.is_none(),
+            "the choice never happened"
+        );
+        assert!(
+            g.suspend_signal.is_some(),
+            "and the signal is left behind for the next resolution to take"
+        );
+        g.suspend_signal = None;
+
+        // Driven: answered through the decider, and nothing is left behind.
+        g.resolve_effect_driven(&effect, &ctx).expect("resolves");
+        assert!(
+            g.battlefield_find(cannon).expect("on the battlefield").chosen_creature_type.is_some(),
+            "a type was named"
+        );
+        assert!(g.suspend_signal.is_none(), "and the channel is clean");
+    }
+
     /// A previous resolution's leftover in slot 0 used to make every
     /// kind-matched replay MISS: the ask re-suspended, the answer was
     /// appended *behind* the stale entry, and the arm re-asked for ever
@@ -7123,7 +7158,7 @@ impl GameState {
             let owner = card.owner;
             self.players[owner].graveyard.push(card);
             let ctx = crate::game::effects::EffectContext::for_ability(id, owner, None);
-            if let Ok(mut evs) = self.resolve_effect(&fuse.effect, &ctx) {
+            if let Ok(mut evs) = self.resolve_effect_driven(&fuse.effect, &ctx) {
                 events.append(&mut evs);
             }
         }
@@ -21257,7 +21292,7 @@ impl GameState {
                 Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
                 _ => None,
             };
-            let mut evs = self.resolve_effect(&effect, &ctx).unwrap_or_default();
+            let mut evs = self.resolve_effect_driven(&effect, &ctx).unwrap_or_default();
             self.trigger_event_player_scratch = None;
             if !evs.is_empty() {
                 let batch = std::mem::take(&mut evs);
@@ -22649,7 +22684,7 @@ impl GameState {
                                 let ctx = crate::game::effects::EffectContext::for_ability(
                                     cid, p, None,
                                 );
-                                let _ = self.resolve_effect(&extra, &ctx);
+                                let _ = self.resolve_effect_driven(&extra, &ctx);
                             }
                             // Fire any self-source ETB triggers (the same hook
                             // play_land uses), so static-as-replaced abilities

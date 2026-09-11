@@ -1691,7 +1691,7 @@ impl GameState {
             Some(Target::Permanent(source)),
             0,
         );
-        if let Ok(evs) = self.resolve_effect(
+        if let Ok(evs) = self.resolve_effect_driven(
             &Effect::BecomeCopyOf {
                 what: crate::effect::Selector::This,
                 source: crate::effect::Selector::Target(0),
@@ -1761,7 +1761,13 @@ impl GameState {
         // The replacement reads the cast's own `{X}` (Frankenstein's Monster).
         let mut ctx = EffectContext::for_ability(card_id, controller, None);
         ctx.x_value = x;
-        let _ = self.resolve_effect(&effect, &ctx);
+        // `_driven`: this runs inside the battlefield hop, with no stack item to
+        // park a continuation on, and `as_enters_effect` is routinely an ASK
+        // (`NameCreatureType`, `ChooseColorForSelf`, `ChooseBasicLandTypeForSource`,
+        // `SacrificeAnyNumber`, Devour — 40 shipped cards). Dropping the
+        // suspension meant the choice never happened: Cavern of Souls entered
+        // with NO creature type named for every `wants_ui` seat.
+        let _ = self.resolve_effect_driven(&effect, &ctx);
     }
 
     /// CR 701.28 — resolve the face a permanent just turned to's

@@ -423,7 +423,7 @@ impl GameState {
                     rctx.source = Some(src);
                     rctx.trigger_source = Some(EntityRef::Permanent(src));
                     rctx.event_amount = amount;
-                    if let Ok(mut sub) = self.resolve_effect(&rider, &rctx) {
+                    if let Ok(mut sub) = self.resolve_effect_driven(&rider, &rctx) {
                         events.append(&mut sub);
                     }
                 }

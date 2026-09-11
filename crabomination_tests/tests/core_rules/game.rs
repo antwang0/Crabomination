@@ -3808,6 +3808,33 @@ fn elesh_norn_suppresses_opponent_etb_triggers() {
     assert!(!g.exile.iter().any(|c| c.id == p0_creature));
 }
 
+/// Cavern's "as this enters, choose a creature type" is an ETB TRIGGER, so it
+/// goes on the stack and its ask can suspend properly — a UI seat is asked, and
+/// the type it names is the one that sticks. (The `as_enters_effect` field is
+/// the other route into the same choice; `an_off_stack_ask_is_driven_instead_of_
+/// dropped` covers that one, where there is no stack item to park on.)
+#[test]
+fn cavern_of_souls_names_the_type_a_ui_seat_picks() {
+    use crabomination::card::CreatureType;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let cavern = g.add_card_to_hand(0, catalog::cavern_of_souls());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(cavern)).expect("play the land");
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.pending_decision.is_some(), "the UI seat is asked for the type");
+    g.submit_decision(DecisionAnswer::CreatureType(CreatureType::Bear)).expect("name Bear");
+    assert_eq!(
+        g.battlefield_find(cavern).expect("on the battlefield").chosen_creature_type,
+        Some(CreatureType::Bear),
+        "the named type is the one that stuck"
+    );
+}
+
 #[test]
 fn cavern_of_souls_makes_creatures_uncounterable() {
     // Spending Cavern's chosen-type mana on a matching creature spell
