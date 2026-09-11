@@ -2961,10 +2961,18 @@ fix     the last answer kind without a seat-routed ask (`e8fac7c6`). `ask_seat_t
         and the controller's decider cast every ballot, vote-control grant and all). Then Grenzo's Rebuttal (each player
         strips their LEFT-HAND NEIGHBOUR; the resolver picked for everyone) and Blight (right player, missing prompt)
         — `audit_decision_plumbing` 170 / 108 / 62, from 178 / 104 / 74 at the start of the run, DEAD 0 and repeat 0.
+fix     `MayDoBy` re-derived the seat it asks (`cfef051f`). Caught by `CRAB_ANSWER_LOG=strict` aborting a sweep cell
+        (`all` 1024, 10 leaks / 400 games, deterministic): Ghost Quarter and Volatile Fault are
+        `Seq[Destroy target land, MayDoBy{ControllerOf(Target(0)), …}]`, so the re-run after the victim's ask resolved
+        `who` through a selector over a land already in the graveyard — the arm returned at its own `let Some(seat)`
+        with the replayed answer still in the channel, and the compensation search NEVER happened for a `wants_ui`
+        controller. The continuation carries `PlayerRef::Seat` now; the repro goes 10 leaks -> 0.
+        `scripts/audit_seat_from_selector.py` (new) is the gate: 27 arms have the shape, 0 demonstrated, and the
+        catalog scan that says so is written down in its docstring.
 perf    none. Nothing here is on a hot path — every one of these arms is a per-card resolution behind a suspend.
 ```
 
-**Gates at `e266a964`** (the merged tip, this box): suite **19,444 / 0 / 5** with
+**Gates at `cfef051f`** (this box): suite **19,447 / 0 / 5** with
 `CRAB_ANSWER_LOG=strict` exported, clippy 0, `cargo check --profile
 release-fast` clean, `golden_trace` 10 / 10 unmoved, `audit_answer_log`
 **63 arms / 6 suspicious** (from 10 — 0 NO-CLEAR, 1 ERR?, 1 PRE, 4 MID, and
@@ -2985,6 +2993,11 @@ cell, three blocks of 30 cells / 110,400 games each, `CRAB_ANSWER_LOG=strict`,
 `d92c76fa`). Draws 0 / 6 / 0, and a draw is CR 104.4, not a defect. The 899..910
 block overlaps the `OptionalKind` session's 886..935; the seed frontier is in
 NEXT.
+
+A fifth block, **1019..1024 at `c9452d0e`** (30 cells), is the one that EARNED
+its keep: `all` 1024 aborted under `CRAB_ANSWER_LOG=strict` on the `MayDoBy` leak
+above — the run's only sweep FAIL, and a real defect. The other 29 cells are 0 cap
+/ 0 stuck / 2 draws.
 
 A fourth block, **1013..1018 at `2f433047`** (30 cells / 110,400 games), reads
 **cap 2 / stuck 0 / draw 10** — and both caps are the already-diagnosed

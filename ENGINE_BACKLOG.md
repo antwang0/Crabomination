@@ -23,6 +23,7 @@ the handoff.
 | Bugs & robustness | [FIXED 2026-09-11 (nineteenth find) — twenty-six shipped bodies enumerated ZERO legal targets: a player-only slot 0 classified by its BODY, not by its slot](#fixed-2026-09-11-nineteenth-find--twenty-six-shipped-bodies-enumerated-zero-legal-targets-a-player-only-slot-0-classified-by-its-body-not-by-its-slot) | 41 |
 | Bugs & robustness | [FIXED 2026-09-11 (eighteenth find) — "target player's graveyard" was not a player slot: the two walkers disagreed about which selectors read a player](#fixed-2026-09-11-eighteenth-find--target-players-graveyard-was-not-a-player-slot-the-two-walkers-disagreed-about-which-selectors-read-a-player) | 29 |
 | Bugs & robustness | [FIXED 2026-09-11 (seventeenth find) — a target slot declared *bare* above slot 0 is unaimable, and five shipped cards declared one](#fixed-2026-09-11-seventeenth-find--a-target-slot-declared-bare-above-slot-0-is-unaimable-and-five-shipped-cards-declared-one) | 36 |
+| Bugs & robustness | [FIXED 2026-09-11 (seventeenth find) — `MayDoBy` re-derived the seat it asks from the land the same resolution had just destroyed](#fixed-2026-09-11-seventeenth-find--maydoby-re-derived-the-seat-it-asks-from-the-land-the-same-resolution-had-just-destroyed) | 40 |
 | Bugs & robustness | [FIXED 2026-09-11 (sixteenth find) — an effect that suspends OFF the stack was a silent no-op, and the signal it left behind is not inert](#fixed-2026-09-11-sixteenth-find--an-effect-that-suspends-off-the-stack-was-a-silent-no-op-and-the-signal-it-left-behind-is-not-inert) | 60 |
 | Bugs & robustness | [FIXED 2026-09-11 (the plumbing column, worked one by one) — six asks answered by the wrong player, and the column's repeat rows are CLOSED](#fixed-2026-09-11-the-plumbing-column-worked-one-by-one--six-asks-answered-by-the-wrong-player-and-the-columns-repeat-rows-are-closed) | 48 |
 | Bugs & robustness | [FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight](#fixed-2026-09-11-fifteenth-find--mayrepeats-loop-was-abandoned-the-moment-its-body-suspended-forbidden-ritual-took-one-permanent-of-eight) | 37 |
@@ -218,6 +219,46 @@ The gate skips the two shapes whose slots are not the root's to fill: a
 kicked-only branch (asked for again with `kicked = true`) and a `Reflexive` /
 `ReflexiveTrigger` body (CR 603.7, targeted at push time) — the same
 `RESOLUTION_TIME_TARGETING` list the neighbouring gates use.
+## FIXED 2026-09-11 (seventeenth find) — `MayDoBy` re-derived the seat it asks from the land the same resolution had just destroyed
+
+`CRAB_ANSWER_LOG=strict` aborted a sweep cell (`all` seed 1024, 10 leaks in 400
+games, deterministic) with *"1 logged answer left by <no source> / MayDoBy"*. The
+instrument was one field short of naming the arm, so it prints the leftovers'
+kinds and the head of the effect's `Debug` now — which turned the second run into
+an identification rather than a third round of guessing:
+
+```text
+  left: [Bool(true)]
+  effect: MayDoBy { who: ControllerOf(Target(0)),
+                    description: "Search for a basic land?",
+                    body: Search { .. } }
+```
+
+**Ghost Quarter and Volatile Fault.** Both are `Seq[Destroy/Move target land,
+MayDoBy{ ControllerOf(Target(0)), … }]`, so the arm resolves `who` through a
+selector over the land the SAME resolution has already destroyed. That works on
+the first pass and can resolve to NOTHING on the re-run after the victim's ask
+suspends: the arm returned at its own `let Some(seat)` with the replayed answer
+still in the channel, and **the compensation search never happened at all** for a
+`wants_ui` land controller. The leak was the symptom; the lost search was the bug.
+
+The continuation carries `PlayerRef::Seat(seat)` now instead of the selector that
+found it — `Effect::Sacrifice`'s `per_seat_continuation` trick, one arm over. The
+repro goes 10 leaks -> 0 on the same seed and pool.
+
+**The rule, and the gate for it.** *A resume must not re-derive anything from an
+object the first pass consumed* — the same rule as the fourteenth find (the dying
+source's LKI), one selector out. `scripts/audit_seat_from_selector.py` flags every
+asking arm whose seat comes from `resolve_player(who…)` while its continuation is
+the bare `effect`: **27 arms, 0 demonstrated.** `MayDoBy` is absent because it is
+fixed, and it was the only one a shipped card actually reaches — a catalog scan
+for "an earlier `Destroy`/`Exile`/`Sacrifice` of the slot an ask's `who` reads"
+finds nothing among the other 26 (most such cards feed `Effect::Search`, whose
+resume applies the pick rather than re-running the arm). That is a fact about the
+CATALOG, not about the code, so they are listed rather than allowlisted: a new
+card pairing any of them with an earlier Destroy of the same slot ends the
+reprieve, and the fix is six lines per arm.
+
 ## FIXED 2026-09-11 (sixteenth find) — an effect that suspends OFF the stack was a silent no-op, and the signal it left behind is not inert
 
 The class's last shape, and the first where the suspension had nowhere to go
