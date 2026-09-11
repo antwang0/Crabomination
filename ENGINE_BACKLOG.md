@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (twelfth find) — a spell's TAIL (the fused right half, the spliced effects) re-ran on every resume: Far // Away took two creatures](#fixed-2026-09-11-twelfth-find--a-spells-tail-the-fused-right-half-the-spliced-effects-re-ran-on-every-resume-far--away-took-two-creatures) | 26 |
 | Bugs & robustness | [FIXED 2026-09-11 (eleventh find) — CR 608.2b was re-checked on every resume, so a spell that killed its own target stopped mid-effect](#fixed-2026-09-11-eleventh-find--cr-6082b-was-re-checked-on-every-resume-so-a-spell-that-killed-its-own-target-stopped-mid-effect) | 18 |
 | Bugs & robustness | [FIXED 2026-09-11 (what the census found in 28 seconds) — a RESUMED resolution reset its own scratch, so every "from among them" pick after a suspend read an empty set: Bind to Life milled seven and put nothing onto the battlefield](#fixed-2026-09-11-what-the-census-found-in-28-seconds--a-resumed-resolution-reset-its-own-scratch-so-every-from-among-them-pick-after-a-suspend-read-an-empty-set-bind-to-life-milled-seven-and-put-nothing-onto-the-battlefield) | 85 |
 | Bugs & robustness | [FIXED 2026-09-11 (the tenth find's production half) — both resume channels leaked: two arms never cleared, no arm clears on an error unwind, and the stash had no guard at all; the RESOLUTION owns them now](#fixed-2026-09-11-the-tenth-finds-production-half--both-resume-channels-leaked-two-arms-never-cleared-no-arm-clears-on-an-error-unwind-and-the-stash-had-no-guard-at-all-the-resolution-owns-them-now) | 70 |
@@ -61,6 +62,31 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-11 (twelfth find) — a spell's TAIL (the fused right half, the spliced effects) re-ran on every resume: Far // Away took two creatures
+
+`continue_spell_resolution` resolves the main effect, then — in the same
+function, below it — a fused split's right half (CR 709 / 702.102) and each
+spliced effect (CR 702.47b). Neither was gated on which pass this is, so a
+suspension **anywhere in the spell** replayed the whole tail every time the
+answer came back.
+
+Far // Away fused bounces a creature (Far) and makes its controller sacrifice
+one (Away). Away's sacrifice pick suspends for a `wants_ui` seat — every bot
+seat, every UI seat — and the resume re-entered the fused-right block:
+**two creatures sacrificed, not one** (`core_rules::cr_recent103::
+a_fused_split_resolves_its_right_half_once`, three creatures down to zero
+without the fix). The mirror case is a left half that suspends: the right half
+then ran once *before* the answer and again after it. Fifteen shipped cards
+carry `fuse: true`; every spliced cast has the same shape with `k + 1`
+resolutions of each spliced effect.
+
+`ResumeContext::Spell` carries a `tail_stage` now — 0 the main effect, 1 the
+fused right half, 2 + i spliced effect `i` — and the continuation runs in
+**that part's own context** (the right half reads `additional_targets[0]`, not
+the main `target`), which the old shape could not do at all: a right half that
+suspended resumed with the left half's target. `#[serde(default)]`, so a
+snapshot taken before it resumes at stage 0 as before.
+
 ## FIXED 2026-09-11 (eleventh find) — CR 608.2b was re-checked on every resume, so a spell that killed its own target stopped mid-effect
 
 `continue_spell_resolution` ran the CR 608.2b target-legality fizzle on the
@@ -77,13 +103,9 @@ Both fizzle blocks are gated on `is_initial_pass` now. Test:
 `core_rules::cr_recent103::a_resumed_spell_does_not_fizzle_on_the_target_it_killed_itself`
 (fails without the gate).
 
-**Same function, same family, NOT fixed:** the fused-split second pass
-(`card.split_cast == Some(2)`) sits below the `resolve_effect` call and is not
-gated on `is_initial_pass`, so a fused split whose LEFT half suspends resolves
-its right half twice — once before the answer (wrong order) and once on the
-resume. Gating it on `is_initial_pass` alone makes the resume drop it instead,
-which is worse; the right half has to become part of what the continuation
-carries.
+**Same function, same family — FIXED beside it, see the twelfth find below:**
+the fused-split second pass and the spliced effects sit BELOW the main
+`resolve_effect` in the same function and were replayed on every resume.
 
 ## FIXED 2026-09-11 (what the census found in 28 seconds) — a RESUMED resolution reset its own scratch, so every "from among them" pick after a suspend read an empty set: Bind to Life milled seven and put nothing onto the battlefield
 

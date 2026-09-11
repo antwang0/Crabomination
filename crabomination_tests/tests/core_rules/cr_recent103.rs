@@ -42,3 +42,48 @@ fn a_resumed_spell_does_not_fizzle_on_the_target_it_killed_itself() {
     assert_eq!(g.players[1].life, 17, "clash won: 3 to the dead bear's controller");
     assert!(g.pending_decision.is_none(), "and the resolution finished");
 }
+
+/// A fused split's right half runs once, not once per suspension. Far // Away
+/// bounces a creature (Far) and makes its controller sacrifice one (Away); the
+/// sacrificer is `wants_ui`, so Away suspends, and every resume of the spell
+/// re-entered the fused-right block below the main `resolve_effect`.
+#[test]
+fn a_fused_split_resolves_its_right_half_once() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    let bounce = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let fa = g.add_card_to_hand(0, catalog::far_away());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: fa,
+        target: Some(Target::Permanent(bounce)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("fused cast");
+    drain_stack(&mut g);
+    // Answer whatever the sacrifice asks, then let the spell finish.
+    for _ in 0..8 {
+        let Some(pd) = g.pending_decision.clone() else { break };
+        let answer = match &pd.decision {
+            Decision::ChooseCards { candidates, min, .. } => DecisionAnswer::Cards(
+                candidates.iter().take((*min).max(1) as usize).map(|(id, _)| *id).collect(),
+            ),
+            Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+            Decision::ChooseTarget { legal, .. } => {
+                DecisionAnswer::Target(legal.first().cloned().expect("a legal sacrifice"))
+            }
+            other => panic!("unexpected ask: {other:?}"),
+        };
+        g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+        drain_stack(&mut g);
+    }
+    let left = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert_eq!(left, 1, "three creatures, one bounced and one sacrificed");
+}

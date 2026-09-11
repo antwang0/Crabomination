@@ -1644,6 +1644,15 @@ pub enum ResumeContext {
         mana_spent: u32,
         in_progress: PendingEffectState,
         remaining: Effect,
+        /// Which part of the spell `remaining` belongs to: 0 the main effect,
+        /// 1 a fused split's right half (CR 709 / 702.102), 2 + i spliced
+        /// effect `i` (CR 702.47b). The tail runs BELOW the main effect in
+        /// `continue_spell_resolution`, so without this a suspension anywhere
+        /// in the spell replayed the whole tail on every resume — Far // Away
+        /// took two creatures instead of one. Defaults to 0 for snapshot
+        /// back-compat and for every spell with no tail.
+        #[serde(default)]
+        tail_stage: u8,
     },
     Trigger {
         source: CardId,

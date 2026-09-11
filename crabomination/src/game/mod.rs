@@ -22013,6 +22013,7 @@ impl GameState {
                 mana_spent,
                 in_progress,
                 remaining,
+                tail_stage,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 let mut more = self.continue_spell_resolution(
@@ -22025,6 +22026,7 @@ impl GameState {
                     converged_value,
                     mana_spent,
                     Some(remaining),
+                    tail_stage,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -23794,6 +23796,7 @@ impl GameState {
         converged_value: u32,
         mana_spent: u32,
         override_effect: Option<Effect>,
+        resume_stage: u8,
     ) -> Result<Vec<GameEvent>, GameError> {
         let is_initial_pass = override_effect.is_none();
         // Borrow the resolving effect rather than deep-copying it. Every
@@ -23932,60 +23935,77 @@ impl GameState {
                 return Ok(events);
             }
         }
-        let mut ctx = EffectContext::for_spell_with_source_and_origin(
-            card.id,
-            card.definition.name,
-            caster,
-            target.clone(),
-            additional_targets.clone(),
-            mode,
-            x_value,
-            converged_value,
-            mana_spent,
-            card.cast_from_hand,
-        );
-        ctx.kicked = card.kicked;
-        ctx.kicked_options = card.kicked_options.clone();
-        ctx.kick_count = card.kick_count;
-        ctx.bargained = card.bargained;
-        ctx.cast_via_mayhem = card.cast_via_mayhem;
-        ctx.cast_via_waterbend = card.cast_via_waterbend;
-        ctx.cast_collected_evidence = card.cast_collected_evidence;
-        ctx.entwined = card.entwined;
-        ctx.spree_modes = card.spree_modes.clone();
-        ctx.mana_spent_by_color = card.cast_mana_spent_by_color.to_vec();
-        // Stamp the resolving spell's identity so source-aware damage
-        // replacements (Torbran) can read its controller/colors while the
-        // card is in no visible zone.
-        let prev_src = self.scratch.resolving_source.replace((
-            card.id,
-            caster,
-            card.definition.printed_colors(),
-            card.definition.card_types.clone(),
-        ));
-        // A continuation (`override_effect`) is the same resolution as the pass
-        // that suspended, so it keeps that pass's per-resolution scratch.
-        let res = if is_initial_pass {
-            self.resolve_effect(effect, &ctx)
-        } else {
-            self.resolve_effect_resumed(effect, &ctx)
-        };
-        self.scratch.resolving_source = prev_src;
-        let mut events = res?;
-        // CR 702.165 — a promised gift is given as the spell resolves its
-        // gifted effect. Emit once on the initial pass so "whenever you give a
-        // gift" payoffs (Jolly Gerbils) can trigger.
-        if is_initial_pass && card.gift_promised && card.definition.gift.is_some() {
-            events.push(GameEvent::GiftGiven { player: caster });
+        // WHICH PART OF THE SPELL THIS PASS IS RESOLVING. A fused split's right
+        // half (CR 709 / 702.102) and every spliced effect (CR 702.47b) run
+        // *after* the main effect, in this function, below — so before
+        // `tail_stage` existed a suspension anywhere in the spell replayed all
+        // of them on every resume: Far // Away bounced one creature and made
+        // its controller sacrifice TWO, because Away suspends on the sacrifice
+        // pick and the resume re-entered the fused-right block. 0 is the main
+        // effect (or its continuation), 1 the fused right half, 2 + i spliced
+        // effect `i`; the resume carries the stage it suspended in and the
+        // continuation runs in THAT part's own context, not the main one.
+        let stage = if is_initial_pass { 0 } else { resume_stage };
+        let mut events = Vec::new();
+        if stage == 0 {
+            let mut ctx = EffectContext::for_spell_with_source_and_origin(
+                card.id,
+                card.definition.name,
+                caster,
+                target.clone(),
+                additional_targets.clone(),
+                mode,
+                x_value,
+                converged_value,
+                mana_spent,
+                card.cast_from_hand,
+            );
+            ctx.kicked = card.kicked;
+            ctx.kicked_options = card.kicked_options.clone();
+            ctx.kick_count = card.kick_count;
+            ctx.bargained = card.bargained;
+            ctx.cast_via_mayhem = card.cast_via_mayhem;
+            ctx.cast_via_waterbend = card.cast_via_waterbend;
+            ctx.cast_collected_evidence = card.cast_collected_evidence;
+            ctx.entwined = card.entwined;
+            ctx.spree_modes = card.spree_modes.clone();
+            ctx.mana_spent_by_color = card.cast_mana_spent_by_color.to_vec();
+            // Stamp the resolving spell's identity so source-aware damage
+            // replacements (Torbran) can read its controller/colors while the
+            // card is in no visible zone.
+            let prev_src = self.scratch.resolving_source.replace((
+                card.id,
+                caster,
+                card.definition.printed_colors(),
+                card.definition.card_types.clone(),
+            ));
+            // A continuation (`override_effect`) is the same resolution as the
+            // pass that suspended, so it keeps that pass's per-resolution
+            // scratch.
+            let res = if is_initial_pass {
+                self.resolve_effect(effect, &ctx)
+            } else {
+                self.resolve_effect_resumed(effect, &ctx)
+            };
+            self.scratch.resolving_source = prev_src;
+            events = res?;
+            // CR 702.165 — a promised gift is given as the spell resolves its
+            // gifted effect. Emit once on the initial pass so "whenever you
+            // give a gift" payoffs (Jolly Gerbils) can trigger.
+            if is_initial_pass && card.gift_promised && card.definition.gift.is_some() {
+                events.push(GameEvent::GiftGiven { player: caster });
+            }
         }
+        // Where a suspension below belongs, for the resume to pick up after.
+        let mut tail_stage = stage;
         // CR 709 / 702.102 — a fused split cast resolves its right half in a
         // second pass, reading its target from `additional_targets` slot 0
         // (the left half consumed `target`). Fusable halves are single-target.
-        if card.split_cast == Some(2)
+        if self.suspend_signal.is_none()
+            && stage <= 1
+            && card.split_cast == Some(2)
             && let Some(split) = card.definition.split.as_ref()
         {
-            // Borrowed for the same reason as the main effect above.
-            let right_effect = &split.right.effect;
             let right_ctx = EffectContext::for_spell_with_source_and_origin(
                 card.id,
                 card.definition.name,
@@ -23998,27 +24018,49 @@ impl GameState {
                 mana_spent,
                 card.cast_from_hand,
             );
-            let mut right_events = self.resolve_effect(right_effect, &right_ctx)?;
-            events.append(&mut right_events);
+            let res = if stage == 1 {
+                self.resolve_effect_resumed(effect, &right_ctx)
+            } else {
+                // Borrowed for the same reason as the main effect above.
+                self.resolve_effect(&split.right.effect, &right_ctx)
+            };
+            events.append(&mut res?);
+            if self.suspend_signal.is_some() {
+                tail_stage = 1;
+            }
         }
         // CR 702.47b — spliced rules text resolves after the main spell's
         // effect; spliced effect `i` reads its target from
         // `additional_targets[i]`.
-        for (i, spliced) in card.spliced_effects.clone().into_iter().enumerate() {
-            let splice_ctx = EffectContext::for_spell_with_source_and_origin(
-                card.id,
-                card.definition.name,
-                caster,
-                additional_targets.get(i).cloned(),
-                Vec::new(),
-                mode,
-                x_value,
-                converged_value,
-                mana_spent,
-                card.cast_from_hand,
-            );
-            let mut splice_events = self.resolve_effect(&spliced, &splice_ctx)?;
-            events.append(&mut splice_events);
+        if self.suspend_signal.is_none() {
+            let resumed_splice = (stage >= 2).then(|| (stage - 2) as usize);
+            let start = resumed_splice.unwrap_or(0);
+            for (i, spliced) in
+                card.spliced_effects.clone().into_iter().enumerate().skip(start)
+            {
+                let splice_ctx = EffectContext::for_spell_with_source_and_origin(
+                    card.id,
+                    card.definition.name,
+                    caster,
+                    additional_targets.get(i).cloned(),
+                    Vec::new(),
+                    mode,
+                    x_value,
+                    converged_value,
+                    mana_spent,
+                    card.cast_from_hand,
+                );
+                let res = if Some(i) == resumed_splice {
+                    self.resolve_effect_resumed(effect, &splice_ctx)
+                } else {
+                    self.resolve_effect(&spliced, &splice_ctx)
+                };
+                events.append(&mut res?);
+                if self.suspend_signal.is_some() {
+                    tail_stage = 2 + i as u8;
+                    break;
+                }
+            }
         }
         if self.drop_pending_choices_if_game_over() {
             return Ok(events);
@@ -24037,6 +24079,7 @@ impl GameState {
                     mana_spent,
                     in_progress,
                     remaining,
+                    tail_stage,
                 },
             }));
             return Ok(events);

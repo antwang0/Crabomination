@@ -2743,6 +2743,7 @@ impl GameState {
                         converged_value,
                         mana_spent,
                         None,
+                        0,
                     )?;
                     self.resolving_spell_lifelink_seat = None;
                     self.resolving_spell_deathtouch_seat = None;
