@@ -877,23 +877,28 @@ pub fn tenth_district_hero() -> CardDefinition {
 /// total mana value, then destroy one each of artifact, creature, enchantment,
 /// and planeswalker.
 pub fn urgent_necropsy() -> CardDefinition {
-    let slot = |n: u8, f: R| Effect::ApplyToTargets {
-        min_targets: 0,
-        max_targets: 1,
-        filter: f,
-        effect: Box::new(Effect::Destroy { what: target_n(n) }),
+    // One `ApplyToTargets` per mode rebound the target list to a single
+    // element, so `Target(1..3)` resolved to nothing and only the artifact
+    // mode ever fired. `OptionalTargets` declares four declinable slots
+    // instead and each `Destroy` reads its own; `min: 0` approximates
+    // "choose one or more" (the engine has no at-least-one modal target rule).
+    let slot = |n: u8, f: R| Effect::Destroy {
+        what: Selector::TargetFiltered { slot: n, filter: f },
     };
     CardDefinition {
         name: "Urgent Necropsy",
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::CollectEvidenceX {
-            then: Box::new(Effect::Seq(vec![
-                slot(0, R::Artifact),
-                slot(1, R::Creature),
-                slot(2, R::Enchantment),
-                slot(3, R::Planeswalker),
-            ])),
+            then: Box::new(Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Seq(vec![
+                    slot(0, R::Artifact),
+                    slot(1, R::Creature),
+                    slot(2, R::Enchantment),
+                    slot(3, R::Planeswalker),
+                ])),
+            }),
         },
         ..Default::default()
     }

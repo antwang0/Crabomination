@@ -1191,6 +1191,105 @@ fn the_shared_recursion_names_every_effect_wrapper() {
     );
 }
 
+/// The **bare** half of `every_declared_target_slot_is_answerable`: a slot
+/// declared as `Selector::Target(n)` / `PlayerRef::Target(n)`, with no filter
+/// of its own anywhere in the tree.
+///
+/// The two gates above census `Selector::TargetFiltered` only, so a bare slot
+/// was invisible to both — and a bare slot above 0 is unaimable by
+/// construction: `auto_extra_distinct_slot_targets` breaks the moment
+/// `target_filter_for_slot(slot)` is `None`, and `primary_target_filter`'s
+/// fallback only ever answers slot 0. The slot then resolves to nothing:
+/// `resolve_selector` gives an empty set, a `Value` over it reads 0, and
+/// nothing is logged.
+///
+/// **Slot 0 is deliberately not gated.** A bare `Selector::Target(0)` is the
+/// right shape for "any target" (Lightning Bolt) and 414 shipped cards use
+/// it; `IMPLICIT_ANY_TARGET` / `IMPLICIT_CREATURE_TARGET` are the answer
+/// there, and `an_any_target_burn_spell_offers_no_land` is its test.
+///
+/// Five cards failed the first run, three shapes. A bare `Target(1)` where
+/// the printed card names a filter: Shifting Borders' second land, Hunter's
+/// Edge's victim ("target creature you don't control"), Prismari Tideflame
+/// (b171)'s opponent. And two bodies under `Effect::ApplyToTargets`, which
+/// rebinds `ctx.targets` to ONE element per iteration — so every slot above 0
+/// inside it is dead by construction: Curse of the Werefox's fight had no
+/// defender (and its attacker was the opponent's creature), and Urgent
+/// Necropsy ran one mode of four. Both are `OptionalTargets` now, which
+/// declares declinable slots without rebinding.
+#[test]
+fn every_bare_target_slot_above_zero_is_aimable() {
+    /// Slots reachable as a bare `Target(n)`, skipping the same nested and
+    /// resolution-time bodies `declared_slots` skips.
+    fn bare_slots(v: &Value, out: &mut Vec<u8>) {
+        match v {
+            Value::Object(map) => {
+                if is_nested_ability(map) {
+                    return;
+                }
+                for (k, inner) in map {
+                    if RESOLUTION_TIME_TARGETING.contains(&k.as_str()) {
+                        continue;
+                    }
+                    match (k.as_str(), inner) {
+                        ("Target", Value::Number(n)) => {
+                            if let Some(n) = n.as_u64() {
+                                out.push(n as u8);
+                            }
+                        }
+                        _ => bare_slots(inner, out),
+                    }
+                }
+            }
+            Value::Array(items) => items.iter().for_each(|x| bare_slots(x, out)),
+            _ => {}
+        }
+    }
+
+    let mut bad: Vec<String> = Vec::new();
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let mut bodies: Vec<(&'static str, &crabomination::effect::Effect)> =
+            vec![("spell", &def.effect)];
+        for a in &def.activated_abilities {
+            bodies.push(("activated", &a.effect));
+        }
+        for t in &def.triggered_abilities {
+            bodies.push(("triggered", &t.effect));
+        }
+        for l in &def.loyalty_abilities {
+            bodies.push(("loyalty", &l.effect));
+        }
+        for (kind, body) in bodies {
+            let json = serde_json::to_value(body).expect("Effect serializes");
+            let mut slots = Vec::new();
+            bare_slots(&json, &mut slots);
+            slots.sort_unstable();
+            slots.dedup();
+            for slot in slots.into_iter().filter(|s| *s > 0) {
+                let mut modes = (0..8).map(Some).chain(std::iter::once(None));
+                let answered = modes.any(|m| {
+                    body.target_filter_for_slot_in_mode_kicked(slot, m, false).is_some()
+                        || body.target_filter_for_slot_in_mode_kicked(slot, m, true).is_some()
+                });
+                if !answered {
+                    bad.push(format!("{} ({kind}) slot {slot}", def.name));
+                }
+            }
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} effect bodies declare a bare target slot above 0 that no walker can aim, so the \
+         slot resolves to nothing — give it a `Selector::TargetFiltered` with the printed \
+         filter, or move it out of a wrapper that rebinds the target list:\n  {}",
+        bad.len(),
+        bad.join("\n  ")
+    );
+}
+
 /// A "target player's graveyard / library" slot is a **player** slot.
 ///
 /// `requires_target` walked `CardsInZone` / `TopOfLibrary` / `BottomOfLibrary`

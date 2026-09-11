@@ -10025,11 +10025,14 @@ pub fn prismari_tideflame_b171() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: Selector::Target(0),
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
             Effect::DealDamage {
-                to: Selector::Target(1),
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::OpponentPlayer,
+                },
                 amount: Value::Const(2),
             },
         ]),

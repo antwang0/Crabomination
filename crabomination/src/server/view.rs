@@ -2855,7 +2855,12 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         // "You may pay {X}" (Well of Lost Dreams) — surface the paid-for body.
         Effect::MayPayGenericUpTo { body, .. } => ability_effect_label(body),
         // Reflexive / optional-cost wrappers surface the payoff they gate.
-        Effect::Reflexive { body } | Effect::MayPayX { body, .. } => ability_effect_label(body),
+        // `OptionalTargets` is a targeting-walk wrapper only (its evaluation
+        // just runs `body`), so it must be transparent here too or a card
+        // whose whole effect sits under one reads "Activate".
+        Effect::Reflexive { body }
+        | Effect::MayPayX { body, .. }
+        | Effect::OptionalTargets { body, .. } => ability_effect_label(body),
         Effect::MayDiscard { then, .. }
         | Effect::MayTap { then, .. }
         | Effect::MaySacrifice { then, .. }

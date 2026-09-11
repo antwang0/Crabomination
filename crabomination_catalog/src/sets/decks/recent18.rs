@@ -386,12 +386,20 @@ pub fn hunters_edge() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
-                what: Selector::Target(0),
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
                 kind: crate::card::CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
             Effect::DealDamage {
-                to: Selector::Target(1),
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),

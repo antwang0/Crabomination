@@ -1720,7 +1720,7 @@ pub fn shifting_borders() -> CardDefinition {
             cost(&[generic(3), u()]),
             Effect::ExchangeControl {
                 a: target_filtered(R::Land),
-                b: Selector::Target(1),
+                b: Selector::TargetFiltered { slot: 1, filter: R::Land },
             },
         )
     }

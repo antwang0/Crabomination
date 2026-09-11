@@ -315,21 +315,26 @@ pub fn curse_of_the_werefox() -> CardDefinition {
         name: "Curse of the Werefox",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::CreateTokenAttachedTo {
-                target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: Box::new(monster_role()),
-            },
-            Effect::ApplyToTargets {
-                max_targets: 1,
-                min_targets: 0,
-                filter: R::Creature.and(R::ControlledByOpponent),
-                effect: Box::new(Effect::Fight {
+        // `OptionalTargets`, not `ApplyToTargets`: the latter rebinds the
+        // target list to one element per iteration, so the fight's
+        // `Target(1)` resolved to nothing and its `Target(0)` was the
+        // opponent's creature — the card fought itself, or nothing.
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::CreateTokenAttachedTo {
+                    target: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    definition: Box::new(monster_role()),
+                },
+                Effect::Fight {
                     attacker: Selector::Target(0),
-                    defender: Selector::Target(1),
-                }),
-            },
-        ]),
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByOpponent),
+                    },
+                },
+            ])),
+        },
         ..Default::default()
     }
 }
