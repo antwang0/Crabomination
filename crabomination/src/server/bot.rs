@@ -4926,8 +4926,11 @@ fn decide_choose_cards(
         own.sort_by_key(|b| std::cmp::Reverse(b.1));
         chosen = own.into_iter().take(max as usize).map(|(id, _)| id).collect();
     }
-    // A mandatory pick (min ≥ 1) over our own graveyard — Cache Grab's "put a
-    // permanent card milled this way into your hand". Keep the biggest one.
+    // A mandatory pick (min ≥ 1) over our own graveyard. `Gain` keeps the
+    // biggest (Cache Grab's "put a permanent card milled this way into your
+    // hand"); `Cost` gives up the cheapest that still fills `min`, which for
+    // collect evidence's "total mana value N or greater" floor is exactly the
+    // set the engine's own auto-pick takes.
     if chosen.len() < min as usize {
         let mut own: Vec<(crate::card::CardId, i32)> = candidates
             .iter()
@@ -4936,7 +4939,7 @@ fn decide_choose_cards(
                 Some((*id, c.definition.cost.cmc() as i32))
             })
             .collect();
-        own.sort_by_key(|b| std::cmp::Reverse(b.1));
+        own.sort_by_key(|b| if gain { -b.1 } else { b.1 });
         chosen = own.into_iter().take((min as usize).max(1)).map(|(id, _)| id).collect();
     }
     fill_to_min(chosen)
@@ -20961,6 +20964,44 @@ mod tests {
             DecisionAnswer::Cards(v) => {
                 assert_eq!(v, vec![mine], "ours first, even against a bigger enemy")
             }
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// A forced `Cost` pick over our own graveyard gives up the CHEAPEST cards
+    /// that fill `min` — collect evidence's floor is the size of the cheapest
+    /// qualifying set, so the answer is exactly the set the engine's own
+    /// auto-pick takes. `Gain` keeps the biggest (Cache Grab).
+    #[test]
+    fn bot_choose_cards_cost_over_own_graveyard_gives_up_the_cheapest() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let cheap = g.add_card_to_graveyard(0, catalog::lightning_bolt()); // cmc 1
+        let pricey = g.add_card_to_graveyard(0, catalog::shivan_dragon()); // cmc 6
+        let candidates =
+            vec![(pricey, "Shivan Dragon".to_string()), (cheap, "Lightning Bolt".to_string())];
+        match decide_choose_cards(
+            &EvalWeights::default(),
+            &g,
+            0,
+            crate::decision::PickValue::Cost,
+            &candidates,
+            1,
+            2,
+        ) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![cheap], "the cheapest fills the floor"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+        match decide_choose_cards(
+            &EvalWeights::default(),
+            &g,
+            0,
+            crate::decision::PickValue::Gain,
+            &candidates,
+            1,
+            1,
+        ) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![pricey], "a Gain keeps the biggest"),
             other => panic!("expected Cards, got {other:?}"),
         }
     }

@@ -263,13 +263,21 @@ cards go back on top in the order named) and reads `Gain` — a wider pick digs
 deeper and the order is the library order. The ones that need a *computed* set
 and so are still dead for a `wants_ui` seat, filed not fixed:
 
-* **Collect evidence declines for every bot seat.** `CollectEvidence` /
-  `CollectEvidenceX` branch on `players[p].wants_ui`, and a bot seat is
-  `wants_ui`, so the ask goes to `decide_choose_cards`; the candidates are our
-  own graveyard, the ask is a `Cost` at `min: 0`, and the answer is empty —
-  `picked < need`, decline. (It declined before this run too, on the "exile"
-  word.) The Auto branch beside it already computes the cheapest qualifying
-  set; what the bot needs is the *threshold*, which no `PickValue` carries.
+* ~~**Collect evidence declines for every bot seat.**~~ **FIXED the same day.**
+  `CollectEvidence` / `CollectEvidenceX` branch on `players[p].wants_ui`, and a
+  bot seat is `wants_ui`, so the ask went to `decide_choose_cards`: own
+  graveyard, `Cost`, `min: 0` — answer empty, `picked < need`, decline, on all
+  17 catalog users. The threshold is not something a generic policy can size,
+  so the *ask* carries it now: `CollectEvidence`'s `min` is the size of the
+  cheapest qualifying set (the same set the `else` branch auto-picks, and that
+  branch already collects whenever it can, so the two sides agree rather than a
+  "may" becoming mandatory), and `CollectEvidenceX` is a `Gain` because X *is*
+  the total exiled — a wider pick is strictly better, which is why the Auto
+  branch exiles the whole graveyard. Beside it, `decide_choose_cards`' forced
+  own-graveyard fill now gives up the **cheapest** cards under `Cost` and keeps
+  the biggest under `Gain` (it took the biggest either way), so the bot's
+  answer to a collect-evidence floor is exactly the engine's auto set.
+  Tests: `server::bot::tests::bot_choose_cards_cost_over_own_graveyard_gives_up_the_cheapest`.
 * **Fateseal** ("put which cards on the bottom?") and **Stronghold Gambit**
   ("choose a card in your hand", where the cheapest revealed creature enters)
   are the same shape one step further: the right answer is a computed set

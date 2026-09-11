@@ -32922,6 +32922,27 @@ impl GameState {
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
                     let n_cands = candidates.len() as u32;
+                    // The ask's floor is the cheapest qualifying SET SIZE, not
+                    // zero. A `min: 0` ask is answered empty by every headless
+                    // policy — the threshold is not a thing `decide_choose_cards`
+                    // can size — so `picked < need` and collect evidence was
+                    // dead for every bot seat, the one branch of this arm that
+                    // reaches them. With the floor the `Cost` policy gives up
+                    // its cheapest `min` cards, which is exactly the set the
+                    // `else` branch below auto-picks. (The Auto branch already
+                    // collects whenever it can, so a floor here makes the two
+                    // sides agree rather than making a "may" mandatory.)
+                    let floor = {
+                        let (mut acc, mut n) = (0u32, 0usize);
+                        for &(_, mv) in &gy {
+                            if acc >= need {
+                                break;
+                            }
+                            acc += mv;
+                            n += 1;
+                        }
+                        n as u32
+                    };
                     let Some(chosen) = self.ask_seat_cards(
                         p,
                         format!(
@@ -32930,7 +32951,7 @@ impl GameState {
                         ),
                         src,
                         candidates,
-                        0,
+                        floor,
                         n_cands,
                         PickValue::Cost,
                         effect,
@@ -33010,6 +33031,11 @@ impl GameState {
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
                     let n_cands = candidates.len() as u32;
+                    // X *is* the total exiled, so a wider pick is strictly
+                    // better and the `else` branch below already exiles the
+                    // whole graveyard for that reason. As a `Cost` at `min: 0`
+                    // every headless policy answered empty and X was never
+                    // collected — the same hole the sibling arm had.
                     let Some(ids) = self.ask_seat_cards(
                         p,
                         "Collect evidence X: exile any cards from your \
@@ -33019,7 +33045,7 @@ impl GameState {
                         candidates,
                         0,
                         n_cands,
-                        PickValue::Cost,
+                        PickValue::Gain,
                         effect,
                     ) else {
                         return Ok(());
