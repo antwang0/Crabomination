@@ -640,6 +640,61 @@ fn custodi_squire_asks_each_seat_for_its_own_ballot() {
     assert!(g.players[0].hand.iter().any(|c| c.id == ring));
 }
 
+/// Grenzo's Rebuttal has EACH player strip their left-hand neighbour, and every
+/// one of those picks went to `self.decider` — the resolving seat's. Routed per
+/// seat now; the prompt names the seat, which is what this reads, and the picks
+/// are deliberately the LAST legal object so a decider default (the first)
+/// cannot pass for an answer.
+#[test]
+fn grenzos_rebuttal_asks_each_seat_for_its_own_pick() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let mine_first = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mine_last = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs_first = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let theirs_last = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::grenzos_rebuttal());
+    cast(&mut g, 0, spell, None);
+
+    let mut prompts: Vec<String> = Vec::new();
+    let mut picked: Vec<CardId> = Vec::new();
+    let mut defaults: Vec<CardId> = Vec::new();
+    for _ in 0..8 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let Decision::ChooseTarget { legal, description, .. } = &pending.decision else {
+            panic!("expected a destroy pick, got {:?}", pending.decision)
+        };
+        prompts.push(description.clone());
+        if let Some(Target::Permanent(id)) = legal.first() {
+            defaults.push(*id);
+        }
+        let pick = legal.last().cloned().expect("a legal object");
+        if let Target::Permanent(id) = pick {
+            picked.push(id);
+        }
+        g.submit_decision(DecisionAnswer::Target(pick)).expect("pick");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert!(prompts.iter().any(|d| d.starts_with("P0:")), "the controller was asked");
+    assert!(prompts.iter().any(|d| d.starts_with("P1:")), "and so was the opponent");
+    for id in &picked {
+        assert!(g.battlefield_find(*id).is_none(), "every object a seat picked died");
+    }
+    assert!(
+        defaults.iter().any(|id| g.battlefield_find(*id).is_some()),
+        "and a first-legal default survived, so the answers were the seats' own"
+    );
+    // Nothing was stripped that nobody picked.
+    for id in [mine_first, mine_last, theirs_first, theirs_last] {
+        assert!(
+            picked.contains(&id) == g.battlefield_find(id).is_none(),
+            "only the picks left the battlefield"
+        );
+    }
+}
+
 /// Dack Fayden's −2 steals an artifact outright.
 #[test]
 fn dack_fayden_steals_an_artifact() {

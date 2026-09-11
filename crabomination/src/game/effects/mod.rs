@@ -12406,6 +12406,13 @@ impl GameState {
             Effect::EachPlayerDestroysChosenFromLeftNeighbor { filters } => {
                 let n = self.players.len();
                 let source = ctx.source.unwrap_or(CardId(0));
+                // Each SEAT picks from its left neighbour's board, and every one
+                // of those picks went to `self.decider` — the resolving seat's.
+                // Routed per seat, on the cursor-indexed channel because this is
+                // a loop over seats; the destroys were already after the loop,
+                // and `doomed` rebuilds identically from the replayed answers, so
+                // no seat's legal set moves on a re-run.
+                let mut cursor = 0;
                 let mut doomed: Vec<CardId> = Vec::new();
                 for i in 0..n {
                     let seat = (ctx.controller + i) % n;
@@ -12425,25 +12432,25 @@ impl GameState {
                             })
                             .map(|c| Target::Permanent(c.id))
                             .collect();
-                        let Some(first) = legal.first().cloned() else { continue };
-                        let picked = match self.decider.decide(
-                            &crate::decision::Decision::ChooseTarget {
-                                optional: false,
-                                extra_cast_slot: false,
-                                source,
-                                legal: legal.clone(),
-                                source_name: ctx.source_name.unwrap_or("").to_string(),
-                                description: format!("P{seat}: choose a permanent to destroy"),
-                            },
-                        ) {
-                            DecisionAnswer::Target(t) if legal.contains(&t) => t,
-                            _ => first,
+                        if legal.is_empty() {
+                            continue;
+                        }
+                        let Some(picked) = self.ask_seat_target_logged(
+                            &mut cursor,
+                            seat,
+                            format!("P{seat}: choose a permanent to destroy"),
+                            source,
+                            legal,
+                            effect,
+                        ) else {
+                            return Ok(());
                         };
                         if let Target::Permanent(id) = picked {
                             doomed.push(id);
                         }
                     }
                 }
+                self.clear_answer_log();
                 for id in doomed {
                     self.destroy_permanent(id, false, events);
                 }
@@ -15575,7 +15582,6 @@ impl GameState {
             }
 
             Effect::Blight { n } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let amt = self.evaluate_value(n, ctx).max(0);
                 if amt == 0 { return Ok(()); }
                 // CR 701.68a/b — the controller chooses one creature they
@@ -15587,19 +15593,26 @@ impl GameState {
                     .map(|c| c.id)
                     .collect();
                 if candidates.is_empty() { return Ok(()); }
+                // CR 701.68a — the choice is the controller's own, and it went
+                // to the decider rather than to the seat, so a `wants_ui`
+                // controller was never asked which of their creatures takes it.
                 let chosen = if candidates.len() == 1 {
                     candidates[0]
                 } else {
-                    let answer = self.decider.decide(&Decision::ChooseTarget {
-                        optional: false,
-                        extra_cast_slot: false,
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
-                        source_name: ctx.source_name.unwrap_or("").to_string(),
-                        description: format!("blight {amt}: choose a creature you control"),
-                    });
-                    match answer {
-                        DecisionAnswer::Target(Target::Permanent(id)) if candidates.contains(&id) => id,
+                    let mut cursor = 0;
+                    let Some(picked) = self.ask_seat_target_logged(
+                        &mut cursor,
+                        ctx.controller,
+                        format!("blight {amt}: choose a creature you control"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    match picked {
+                        Target::Permanent(id) if candidates.contains(&id) => id,
                         _ => candidates[0],
                     }
                 };
