@@ -104,6 +104,35 @@ that grant now counts hands too. The "choose a basic land type" asks
 decision and fell through to Forest; they take the hand's mana need, and
 `basic_land_type_for` replaces four hand-written colour→type tables.
 
+### The bot side of the same find, PRICED so nobody builds the wrong size of it
+
+`decide_choose_cards` decides cost-vs-upside by **sniffing the prompt prose**:
+`detrimental = prompt.contains("sacrifice") || prompt.contains("discard")`. The
+engine writes those strings and the bot pattern-matches them, which is the
+walker-drift shape one level up — so the fix looks like "put the flag on
+`Decision::ChooseCards` instead of inferring it", ~54 construction sites.
+
+**Censused first, and it is much smaller than it looks.** 95 distinct
+ChooseCards-family prompts reach the engine; 8 carry a cost word and 87 do not.
+But 87 is not the bug surface, because two of the three source branches already
+land on the right answer for an own-side pick:
+
+* **battlefield-source** ranks *enemy* creatures only, so an own-board cost
+  finds no candidate and, at `min: 0`, answers empty — a decline, which is what
+  a cost wants (Cloudstone Curio, "Return any number of permanents you control",
+  the convoke-shaped "Tap any number of untapped creatures you control").
+* **own-graveyard** is gated on `!prompt.contains("exile")`, and every
+  cost-shaped graveyard prompt says "exile" — so those decline too.
+* **hand-source** is the live one: not-detrimental means "take the biggest
+  card(s) up to `max`", i.e. hand over the best cards. That is Scroll Rack's
+  "Exile any number of cards from your hand", "Exile a card from your hand",
+  and "Choose a card to put on the bottom" — **three or four sites, not 87.**
+
+So the flag is worth adding for the class (a prompt reworded today silently flips
+a policy), but the live defect it fixes is small, and Credit Voucher — the one
+this run found — is already answered engine-side because its ask is bare. Price
+it that way rather than as a 54-site win.
+
 Residue, filed not fixed: `BecomeChosenColor` picks per *source* rather than per
 *target*, so it cannot yet dodge a specific hoser on the board; Cloudstone
 Curio's decline is deliberate (every candidate is ours, and the bot's

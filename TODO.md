@@ -41,9 +41,10 @@ sixty-seventh pass, so don't re-take that.
    Fasting, Moonring Mirror). **The rule:** plumb when nothing has moved yet, compute a default when the arm already mutated the board.
    Beside it, every bare "choose a color" named White: `ChooseColorForSelf`'s 42 cards key on `chosen_color_aimed_at_opponents` (a `debug_flags` bit;
    the two halves are ~21/21), `GrantProtectionFromChosenColor`'s 41 share the one census — three hand-written copies gone, one battlefield-only.
-4. **Next moves:** (a) the audit's remaining rows are bot-side, not engine-side: `decide_choose_cards` has no cost-shaped reading of an "any number"
-   prompt (Credit Voucher) and declines an all-own battlefield at `min: 0` (Cloudstone Curio); the 7 *repeat* rows decline every repetition for a bot
-   seat (Forbidden Ritual, Kindle the Carnage, Fiery Gambit) — a policy question. (b) `BecomeChosenColor` picks per source, not per target, so it
+4. **Next moves:** (a) the audit's remaining rows are bot-side and **already priced — read ENGINE_BACKLOG's "bot side of the same find" before
+   building it**: `decide_choose_cards` sniffs the prompt prose for cost-vs-upside, which looks like a 54-site fix and is a 3-4-site one (the
+   battlefield and own-graveyard branches already decline an own-side pick). The 7 *repeat* rows decline every repetition for a bot seat
+   (Forbidden Ritual, Kindle the Carnage, Fiery Gambit) — a policy question, and Fiery Gambit's is a real gamble. (b) `BecomeChosenColor` picks per source, not per target, so it
    cannot dodge a named hoser. (c) the one-edit `cnt` rows: **Diviner's Wand, Skophos Maze-Warden and Shieldmage Elder shipped this run**; Urborg Panther /
    Lumbering Laundry / Touch the Spirit Realm are *not* one edit and Eladamri's "no tap-two cost" note was stale (INCOMPLETE_CARDS says why for each);
    then the 23 `cnt` primitives. (d) mirrors: abilarms
