@@ -2806,7 +2806,7 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
-### 2026-09-11 (seventh run) — two prose-sniff class fixes, the two perf legs they uncovered (`(-289)`, `(-290)`), and a stall the sweep found; A THIRD BOX, so the A/B base was RE-TAKEN
+### 2026-09-11 (seventh run) — two prose-sniff class fixes, the two perf legs they uncovered (`(-289)`, `(-290)`), a stall the sweep found, and the asks that had to carry their own arithmetic; A THIRD BOX, so the A/B base was RE-TAKEN
 
 **A new box (Xeon @ 2.10 GHz nominal, 4 cores, 15 GB), so the three-pool base
 does not transfer and was re-taken at this run's first tip before anything was
@@ -2814,7 +2814,7 @@ measured against it.** The host reads 517-542 `--bench` games/s here against
 294-310 on the second box at the same `host_calib_ms`, on byte-identical
 counters — one more reason the counters and not the wall clock are the gate.
 
-Five legs, each built from one tree so they separate. The **first fix** is the
+Seven legs, each built from one tree so they separate. The **first fix** is the
 bot half of the eighth find: `decide_choose_cards` recovered "does picking cost us
 something?" from the prompt prose (`contains("sacrifice") ||
 contains("discard")`), so every cost-shaped prompt that says *exile* read as
@@ -2846,7 +2846,12 @@ the ask; every other site keeps the answer the prose gave it. The **fifth**
 came out of the sweep that was supposed to be only a gate: a leftover
 `resolution_answer_log` entry from one resolution made the next arm's first ask
 MISS its replay for ever, so the arm re-asked to the action cap (the tenth
-find). It predates this run and is fixed at the tip.
+find). It predates this run and is fixed at the tip. The **sixth and seventh**
+finish what the fourth's residue filed — **an ask that needs a computed answer
+has to carry the computation**: collect evidence's `min` is the cheapest
+qualifying set's size (all 17 CR 701.59 cards declined for every bot seat
+before), and `AmountKind::Cost { free }` carries the count of leading tokens, so
+a Devour creature takes the spare tokens instead of the board or nothing.
 
 ```text
   base   9bc5759a, profiling-fast --no-default-features, system allocator, callgrind --games 6 --threads 1 --seed 1, UNTRACED:
@@ -2878,9 +2883,14 @@ sweep   FRESH SEEDS, dflt mirror x --games 400 x 3 threads, CRAB_CAP_DIAG=4000 C
         16 cells / 33,600 games, 0 failures; x 825..836 at --games 200 = 48 cells / 100,800 games, **cap 26 / stuck 0 — 26 of them on seed
         835 alone.** That is a board shape the branch had never seen (turn 13-25, empty stack, ordinary life, ~460 actions a turn) and it is
         the find; `CRAB_DUMP_TRACES` named the repeating action in one line.
-        AFTER, at the tenth find's tip: cube 835 **0 undecided** (was 12 caps of 1,600) and all 835 **0** (was 14 of 3,400); the caps left on
-        all 804 / 812 / 819 are the Beacon board (turn 210). **Seed 835 reproduces the same 12 caps on `38b05af8`, so the stall predates
-        this run.** 514,400 fresh-seed games this run, seeds 796..836; the next fresh seed is 837.
+        AFTER, at the tenth find's tip: cube 835 **0 undecided** (was 12 caps of 1,600) and all 835 **0** (was 14 of 3,400); a re-sweep of
+        seeds 798..836 over cube + sealed + all (91 cells / 400,370 games) reads **cap 8 in three cells — cube 804, all 798, all 804,
+        exactly the three the BEFORE run flagged as the Beacon board.** **Seed 835 reproduces the same 12 caps on `38b05af8`, so the stall
+        predates this run.**
+        AT THE FINAL TIP (collect evidence and `Cost { free }` live, i.e. the bot now exiles graveyards and sacrifices its spare tokens):
+        {cube, sealed, all, sos, fixed} x 837..846 = 50 cells / 184,000 games **cap 0 / stuck 0** and x 847..852 = 30 cells / 110,400 games
+        **cap 4 / stuck 0** — the four are `life 2147483647` at turn 241, the Beacon board again.
+        **~1.29 M fresh-seed games this run, seeds 796..852; the next fresh seed is 853.**
         ⚠ **The sweep is ~100x cheaper on this box than the record implies**: a 3,200-game `cube` cell is 7 s on the release-fast binary
         against the minutes the audit build takes. That is why 39 seeds fitted in one run — and why the stall had gone unseen: nobody had
         taken seeds past 761. **Sweep wider than the recorded cell counts.**
