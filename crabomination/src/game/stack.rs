@@ -346,13 +346,26 @@ impl GameState {
             })
             .collect();
         for (id, name, life) in offers {
-            let yes = matches!(
-                self.decider.decide(&crate::decision::Decision::OptionalTrigger {
-                    source: id,
-                    description: format!("Skip your draw step to gain {life} life ({name})?"),
-                }),
-                crate::decision::DecisionAnswer::Bool(true)
-            );
+            // The step machinery has no `Effect` to stash, so this cannot
+            // suspend and a bot seat reaches `AutoDecider`, whose blanket no
+            // took the skip never — and Fasting's third line destroys it on the
+            // *next* draw, so declining once throws the enchantment away having
+            // gained nothing. Take the skip on an empty library, where drawing
+            // loses the game outright, and while the hand is already wide enough
+            // that the card may not be castable before cleanup discards it
+            // (5 of the 7-card limit); a thin hand wants the card over two life.
+            let yes = if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+                self.players[active].library.is_empty()
+                    || self.players[active].hand.len() >= 5
+            } else {
+                matches!(
+                    self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                        source: id,
+                        description: format!("Skip your draw step to gain {life} life ({name})?"),
+                    }),
+                    crate::decision::DecisionAnswer::Bool(true)
+                )
+            };
             if yes {
                 let applied = self.adjust_life_applied(active, life as i32);
                 if applied > 0 {
@@ -3594,6 +3607,13 @@ impl GameState {
             crate::fxhash::HashMap::default();
         // CR 502.1 — ask each `MayChooseNotToUntap` permanent's controller
         // before the loop (which borrows the battlefield mutably).
+        //
+        // The headless answer here — untap it — is the deliberate one, not an
+        // inherited default: "you may choose not to untap" is printed for the
+        // combos that want a permanent held tapped (an Icy Manipulator locked on
+        // a blocker, a vigilance-less attacker kept out of the untap step), and
+        // the engine cannot see the plan. A bot untapping everything is the
+        // ordinary line, so this stays a bare ask on purpose.
         let may_decline: crate::fxhash::HashSet<crate::card::CardId> = {
             let mut asking: Vec<(crate::card::CardId, usize, &'static str)> = Vec::new();
             for c in &self.battlefield {

@@ -14471,13 +14471,21 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    // The headless pick was a flat Green. Keying it on the
-                    // source's own consumer names the colour this seat is
-                    // invested in, which is what a colour-matters payoff wants;
-                    // picking per *target* (dodging a specific hoser on the
-                    // board) is a follow-up, tracked in ENGINE_BACKLOG.
-                    let color =
-                        self.chosen_color_for_source(ctx.controller, Some(source), &Color::ALL);
+                    // The bare ask read White (`legal[0]`), and the unreachable
+                    // fallback beside it said Green. The effect exists to
+                    // *change* a colour, so the legal set drops what the target
+                    // already is and the seat's own investment picks from the
+                    // rest — a repaint to the colour it already had is the one
+                    // answer that cannot be right. Picking to dodge a specific
+                    // hoser on the board is a follow-up (ENGINE_BACKLOG).
+                    let already = self
+                        .computed_permanent(cid)
+                        .map(|cp| cp.colors.to_vec())
+                        .unwrap_or_default();
+                    let legal: Vec<Color> =
+                        Color::ALL.iter().copied().filter(|c| !already.contains(c)).collect();
+                    let legal = if legal.is_empty() { Color::ALL.to_vec() } else { legal };
+                    let color = self.chosen_color_for_source(ctx.controller, Some(source), &legal);
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
@@ -17128,16 +17136,25 @@ impl GameState {
                 // Moonring Mirror's upkeep. "If you do" — declining leaves the
                 // stash alone; an empty hand still counts as doing it (CR
                 // 701.x: exiling zero cards succeeds).
-                use crate::decision::{Decision, DecisionAnswer};
+                //
+                // Nothing has moved when the offer is made, so it plumbs: a
+                // `wants_ui` seat (every bot seat) gets a real pending decision
+                // and the bot's `OptionalTrigger` policy, which prices this one
+                // by outcome. It used to inherit `AutoDecider`'s blanket no, so
+                // the Mirror's second ability never ran in self-play at all.
                 let Some(src) = ctx.source else { return Ok(()) };
                 let p = ctx.controller;
-                let willing = match self.decider.decide(&Decision::OptionalTrigger {
-                    source: src,
-                    description: "Exile your hand to reclaim the cards under this?".to_string(),
-                }) {
-                    DecisionAnswer::Bool(b) => b,
-                    _ => false,
+                let mut cursor = 0usize;
+                let Some(willing) = self.ask_seat_bool(
+                    &mut cursor,
+                    p,
+                    "Exile your hand to reclaim the cards under this?".to_string(),
+                    src,
+                    effect,
+                ) else {
+                    return Ok(());
                 };
+                self.clear_answer_log();
                 if !willing {
                     return Ok(());
                 }

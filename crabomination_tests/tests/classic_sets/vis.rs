@@ -1794,8 +1794,19 @@ fn breathstealers_crypt_taxes_drawn_creatures() {
     let bears = g.add_card_to_library(1, catalog::grizzly_bears());
     let mut evs = Vec::new();
     g.draw_one(1, &mut evs);
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears), "discarded, unpaid");
-    assert_eq!(g.players[1].life, 20);
+    // The toll is the drawer's choice, and the ask sits inside `draw_one`, which
+    // has no `Effect` to stash — so it cannot suspend and a bot seat reaches
+    // `AutoDecider`. Its blanket no discarded every creature either player drew;
+    // the auto policy pays while the toll leaves a real buffer (the same
+    // "> 10 after paying" rule the bot's own Rhystic tax uses).
+    assert!(g.players[1].hand.iter().any(|c| c.id == bears), "kept, paid for at 20");
+    assert_eq!(g.players[1].life, 17);
+
+    g.players[1].life = 8;
+    let doomed = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.draw_one(1, &mut evs);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == doomed), "discarded down here");
+    assert_eq!(g.players[1].life, 8, "no toll paid on a thin life total");
 }
 
 /// Pygmy Hippo drains the defender's lands into your next main phase.

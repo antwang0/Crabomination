@@ -17761,14 +17761,24 @@ impl GameState {
                 .is_some_and(|c| self.evaluate_requirement_on_card(&filter, c, p));
             if matches {
                 use crate::decision::{Decision, DecisionAnswer};
-                let pays = self.effective_life(p) > life as i32
-                    && matches!(
-                        self.decider.decide(&Decision::OptionalTrigger {
-                            source: drawn,
-                            description: format!("Pay {life} life to keep the revealed card?"),
-                        }),
-                        DecisionAnswer::Bool(true)
-                    );
+                // This runs inside `draw_one`, which has no `Effect` to stash,
+                // so the ask cannot suspend and a bot seat reaches
+                // `AutoDecider`. Its blanket no discarded every creature either
+                // player drew while a Crypt was out. Pay while the toll leaves a
+                // real buffer — the same "> 10 after paying" rule the bot's own
+                // Rhystic-tax policy uses, so the two agree.
+                let pays = if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+                    self.effective_life(p) - (life as i32) > 10
+                } else {
+                    self.effective_life(p) > life as i32
+                        && matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: drawn,
+                                description: format!("Pay {life} life to keep the revealed card?"),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        )
+                };
                 if pays {
                     let applied = self.adjust_life_applied(p, -(life as i32));
                     if applied < 0 {

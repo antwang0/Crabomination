@@ -4,6 +4,23 @@ use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 use smallvec::SmallVec;
 
+/// The heaviest colour in a `color_weights`-shaped table, restricted to `legal`.
+///
+/// Ties break toward the **first** colour in the table (WUBRG), which matters
+/// more than it looks: on a board with no coloured pips at all every weight is
+/// zero, and `max_by_key` would hand back the *last* tie — turning "no
+/// information" into Green. White is what every one of these picks answered
+/// before they were needs-aware, so a no-information board keeps answering it.
+fn pick_densest(table: &[(ManaColor, u32)], legal: &[ManaColor]) -> ManaColor {
+    let mut best: Option<(ManaColor, u32)> = None;
+    for &(c, n) in table {
+        if legal.contains(&c) && best.is_none_or(|(_, b)| n > b) {
+            best = Some((c, n));
+        }
+    }
+    best.map(|(c, _)| c).unwrap_or_else(|| legal.first().copied().unwrap_or(ManaColor::White))
+}
+
 /// Per-pick snapshot of a permanent sacrificed to an additional cost:
 /// `(id, power, is_creature, toughness, mana_value, is_artifact, is_vehicle,
 /// colors)`. Stamped onto the resolution scratch so the spell body can read
@@ -2989,11 +3006,7 @@ impl crate::game::GameState {
     /// set is rejected.
     pub(crate) fn densest_color_of_among(&self, p: usize, legal: &[ManaColor]) -> ManaColor {
         let w = self.color_weights(p);
-        w.iter()
-            .filter(|(c, _)| legal.contains(c))
-            .max_by_key(|(_, n)| *n)
-            .map(|(c, _)| *c)
-            .unwrap_or_else(|| legal.first().copied().unwrap_or(ManaColor::White))
+        pick_densest(&w, legal)
     }
 
     /// The color `p` is least invested in — what you want an opponent's
@@ -3033,12 +3046,7 @@ impl crate::game::GameState {
                 totals[i].1 += n;
             }
         }
-        totals
-            .iter()
-            .filter(|(c, _)| legal.contains(c))
-            .max_by_key(|(_, n)| *n)
-            .map(|(c, _)| *c)
-            .unwrap_or_else(|| legal.first().copied().unwrap_or(ManaColor::White))
+        pick_densest(&totals, legal)
     }
 
     /// The colour a "choose a color" carried by `source` names.
@@ -8104,13 +8112,26 @@ impl GameState {
         {
             let floating = self.players[p].mana_pool.total();
             if floating > 0 {
-                let extra = match self.decider.decide(&crate::decision::Decision::ChooseAmount {
-                    source: card_id,
-                    prompt: "Pay extra mana for +1/+1 counters?".to_string(),
-                    max: floating,
-                }) {
-                    crate::decision::DecisionAnswer::Amount(n) => n.min(floating),
-                    _ => 0,
+                // `AutoDecider`'s 0 made Chorus of the Conclave's own ability
+                // dead for every headless seat. The whole floating pool is the
+                // right answer and not a judgement call: the printed cost is
+                // already paid, the bot taps as it casts (so what is left is
+                // leftover), and the pool empties at the end of the step
+                // anyway — every unspent point is a +1/+1 counter thrown away.
+                let extra = if matches!(
+                    self.decider.kind(),
+                    crate::decision::DeciderKind::Auto
+                ) {
+                    floating
+                } else {
+                    match self.decider.decide(&crate::decision::Decision::ChooseAmount {
+                        source: card_id,
+                        prompt: "Pay extra mana for +1/+1 counters?".to_string(),
+                        max: floating,
+                    }) {
+                        crate::decision::DecisionAnswer::Amount(n) => n.min(floating),
+                        _ => 0,
+                    }
                 };
                 if extra > 0 {
                     self.players[p].mana_pool.spend_generic(extra);

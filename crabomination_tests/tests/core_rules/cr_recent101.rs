@@ -139,6 +139,10 @@ fn put_aura_from_hand_attached_to_brings_the_priciest_aura() {
 /// Credit Voucher shuffled nothing and drew nothing — the activation, its {2}
 /// and the artifact for a no-op. The auto default ships the part of the hand
 /// this seat cannot cast (mana value above its land count).
+///
+/// Asserted on the events, not on which card came back: the redraw happens
+/// *after* the shuffle so a shuffled card may return (the arm's own comment),
+/// which makes the resulting hand a function of the seed rather than of the fix.
 #[test]
 fn shuffle_any_number_from_hand_ships_the_uncastable_half() {
     let mut g = two_player_game();
@@ -147,16 +151,24 @@ fn shuffle_any_number_from_hand_ships_the_uncastable_half() {
     g.players[0].library.clear();
     g.add_card_to_library(0, bear("Fresh", 1, 1, 1));
     let cheap = g.add_card_to_hand(0, bear("Cheap", 1, 1, 1));
-    let dear = g.add_card_to_hand(0, bear("Dear", 8, 8, 8));
+    g.add_card_to_hand(0, bear("Dear", 8, 8, 8));
     let ctx = EffectContext::for_ability(voucher, 0, None);
-    g.resolve_effect(
-        &Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You },
-        &ctx,
-    )
-    .unwrap();
-    assert!(g.players[0].hand.iter().any(|c| c.id == cheap), "the castable card stays");
-    assert!(!g.players[0].hand.iter().any(|c| c.id == dear), "the 8-drop is shuffled away");
-    assert_eq!(g.players[0].hand.len(), 2, "and one card is drawn back");
+    let events = g
+        .resolve_effect(
+            &Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You },
+            &ctx,
+        )
+        .unwrap();
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::LibraryShuffled { player: 0 })),
+        "the 8-drop went back and the library was shuffled: {events:?}"
+    );
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::CardDrawn { player: 0, .. })),
+        "and one card came back for it: {events:?}"
+    );
+    assert!(g.players[0].hand.iter().any(|c| c.id == cheap), "the castable card never moved");
+    assert_eq!(g.players[0].hand.len(), 2, "one shipped, one drawn");
 }
 
 /// The audit's other half: a degenerate default that gates a *repetition* is
@@ -201,4 +213,82 @@ fn exile_up_to_n_from_graveyards_honours_a_pinned_scope() {
     assert_eq!(g.exile.len(), 2, "both opposing graveyard cards are gone");
     assert!(g.players[1].graveyard.is_empty());
     assert_eq!(g.players[0].graveyard.len(), 1, "the pinned scope excluded ours");
+}
+
+// ── The same find's other half: asks the step and draw machinery own, which
+// have no `Effect` to stash and so cannot suspend at all ─────────────────────
+
+/// Chorus of the Conclave's own ability ("as an additional cost to cast creature
+/// spells, you may pay any amount of mana") read `ChooseAmount` -> 0, so it
+/// never added a counter for a headless seat. Every unspent point is a counter
+/// thrown away — the printed cost is paid and the pool empties at end of step —
+/// so the auto answer is the whole floating pool.
+#[test]
+fn chorus_of_the_conclave_spends_the_whole_floating_pool() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::chorus_of_the_conclave());
+    let bear = g.add_card_to_hand(0, bear("Bear", 2, 2, 2));
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the bear");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).expect("bear resolved");
+    assert_eq!((cp.power, cp.toughness), (5, 5), "2/2 plus three counters");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the whole pool went in");
+}
+
+/// Fasting's own third line destroys it when you draw, so declining the skip
+/// throws the enchantment away for nothing — which is what `AutoDecider`'s
+/// blanket no did every turn. Auto takes the skip while there are cards to play.
+#[test]
+fn fasting_takes_the_draw_step_skip() {
+    let mut g = two_player_game();
+    let fast = g.add_card_to_battlefield(0, catalog::fasting());
+    for n in ["A", "B", "C", "D", "E"] {
+        g.add_card_to_hand(0, spell(n, 2));
+    }
+    g.add_card_to_library(0, spell("Top", 1));
+    g.active_player_idx = 0;
+    g.step = crabomination::TurnStep::Upkeep;
+    // CR 103.8a's "the starting player skips their first draw step" would
+    // pre-empt the offer, and the offer is only made when the step would happen.
+    g.skip_first_draw = false;
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    g.advance_step(Vec::new()).expect("into the draw step");
+    assert_eq!(g.players[0].hand.len(), hand, "the draw step was skipped");
+    assert_eq!(g.players[0].life, life + 2, "and the two life paid for it");
+    assert!(g.battlefield_find(fast).is_some(), "so Fasting survives its own clause");
+}
+
+/// Moonring Mirror's upkeep offer is asked before anything moves, so it plumbs:
+/// a `wants_ui` seat — which every bot seat is — gets a real pending decision
+/// instead of `AutoDecider`'s blanket no, which is why the Mirror's second
+/// ability never ran in self-play.
+#[test]
+fn moonring_mirrors_upkeep_offer_reaches_a_ui_seat() {
+    let mut g = two_player_game();
+    let mirror = g.add_card_to_battlefield(0, catalog::moonring_mirror());
+    g.add_card_to_hand(0, spell("Held", 2));
+    g.players[0].wants_ui = true;
+    g.active_player_idx = 0;
+    g.step = crabomination::TurnStep::Upkeep;
+    g.fire_step_triggers(crabomination::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let pending = g.pending_decision.as_ref().expect("the offer is posed, not auto-declined");
+    assert!(
+        matches!(
+            &pending.decision,
+            crabomination::decision::Decision::OptionalTrigger { source, .. } if *source == mirror
+        ),
+        "{:?}",
+        pending.decision
+    );
+    assert_eq!(g.players[0].hand.len(), 1, "and nothing moved while it waits");
 }
