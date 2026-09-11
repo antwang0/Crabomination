@@ -2860,8 +2860,11 @@ a Devour creature takes the spare tokens instead of the board or nothing.
          fixed 635,593,661 -> 635,598,781 (+0.001 %, the site never fires on `gang`); CRAB_DUMP_TRACES both sides x three pools, 144 files, 0 differ
   (-290) cube 2,324,784,178 -> 2,319,033,889 (-0.247 %); sealed 2,501,572,700 -> 2,499,426,437 (-0.086 %); fixed 635,598,781 -> 635,516,542
          (-0.013 %); 144 files, 0 differ. Every pool improves — the only three-pool win of the run
-         **THE BASE FOR THE NEXT RUN: sealed 2,499,426,437 / cube 2,319,033,889 / fixed 635,516,542** (the ninth find lands after it and
-         poses no ChooseAmount on any of the three pools' six-game runs; re-take before trusting the fourth decimal)
+  tip    the five correctness commits after `(-290)` re-read at `a057ca0a`, same recipe, one build: sealed 2,499,426,437 -> **2,495,934,457**
+         (-0.140 %); cube 2,319,033,889 -> **2,318,840,923** (-0.008 %); fixed 635,516,542 -> **635,516,815** (+0.000 %). The bug fixes are
+         net *cheaper*: a `match` on an enum where a `to_lowercase()` + `contains` chain used to be, and no prompt built for a family that
+         no longer reads one. **THE BASE FOR THE NEXT RUN, measured at the tip and not inferred:
+         sealed 2,495,934,457 / cube 2,318,840,923 / fixed 635,516,815.**
 gate    --bench release-fast (mimalloc), four times — at 9bc5759a, fa61eb1e, 482c93b4 and 540d3cde: all four **195,806 / 27.49 / 611.9 /
         0 stalls, counters identical to 2003d1cf**, determinism ok (all pairs split), thread_determinism ok (3 vs 1 threads identical).
         bin_bytes 128,497,792 / 128,497,800 / 128,472,048 / 128,458,968 (128,480,576 before the run); peak_rss_mib 29.0 / 28.6 / 29.0 / 30.8;

@@ -29,8 +29,9 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
    tracker prose; ⚠ `(-290)` is the last claimed candidate, `(-291)` next; **fetch before every push**. Gotchas in **CLAUDE.md**, measurement in
-   **PERF's "Standing rules"**. **A/B base: RE-TAKEN on the THIRD box — sealed 2,499,426,437 / cube 2,319,033,889 / fixed 635,516,542 at `482c93b4`
-   (PERF Baseline, seventh-run addendum). Every later box: RE-TAKE FIRST; three boxes have disagreed.**
+   **PERF's "Standing rules"**. **A/B base: RE-TAKEN on the THIRD box AT THE RUN'S TIP `a057ca0a` — sealed 2,495,934,457 / cube 2,318,840,923 /
+   fixed 635,516,815** (PERF Baseline, seventh-run addendum: the correctness commits move the sealed and cube games, so a base taken before
+   them does not transfer). **Every later box: RE-TAKE FIRST; three boxes have disagreed.**
 2. **Gates at the tip:** suite 19,409 / 0 / 5, clippy 0, golden_trace 10 / 10 unmoved, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls — counters
    identical to `2003d1cf` at every tip this run, determinism + thread_determinism ok; `audit_decision_plumbing` 178 / 104 / 74, **DEAD 0** (a gate);
    `audit_variant_coverage` the documented 2 dead primitives. **Fresh-seed sweeps ~1.29 M games, seeds 796..852 — the next fresh seed is 853**; the
