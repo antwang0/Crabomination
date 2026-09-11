@@ -48,6 +48,25 @@ pub fn set_jitter_seed(seed: Option<u64>) {
     });
 }
 
+/// Install `seed` only if this thread has no jitter stream yet; `true` when it
+/// did install one, so the caller can clear it again.
+///
+/// The self-play game loop pins per game (`selfplay::play_recorded_game_mcts`)
+/// so a training game is replayable from its seed. A caller that has already
+/// pinned the stream — the ladder's seat-salted antithetic pairs,
+/// `selfplay_train --feature-census` — keeps its own, because its whole point is
+/// sharing one stream across two games this one knows nothing about.
+pub fn install_jitter_seed_if_unset(seed: u64) -> bool {
+    JITTER.with(|j| {
+        let mut slot = j.borrow_mut();
+        if slot.is_some() {
+            return false;
+        }
+        *slot = Some(StdRng::seed_from_u64(seed));
+        true
+    })
+}
+
 /// `CRAB_NO_JITTER=1` pins every tie-break draw to 0, read once.
 ///
 /// A measurement switch, not a play mode. The scored pickers draw one

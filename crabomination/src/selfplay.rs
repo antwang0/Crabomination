@@ -8,10 +8,11 @@
 //! defined once, next to the encoder it feeds.
 //!
 //! Determinism: pools, builds, and shuffles are derived from the seeds
-//! the caller passes, matching the ladder/recommender convention. The
-//! games themselves are not replayable — [`HeuristicBot`]'s candidate jitter
-//! draws from the thread RNG by design — which the training loop doesn't
-//! need; the jitter is the exploration noise that diversifies the data.
+//! the caller passes, matching the ladder/recommender convention — and so
+//! is [`HeuristicBot`]'s candidate jitter, which
+//! [`play_recorded_game_mcts`] pins per game. The exploration noise is
+//! still noise (a different stream per game), it is just *this* game's
+//! noise, so a recorded game can be re-run from its seed.
 
 use rand::RngExt;
 use rand::SeedableRng;
@@ -440,6 +441,41 @@ pub fn play_recorded_game_mcts(
     mcts_iterations: u32,
     mcts_gumbel: bool,
 ) -> RecordedGame {
+    // Pin the bot's tie-break / sampling stream to this game's seed, so the
+    // game is a replay of itself: TODO item 7's open question, answered by the
+    // standing goal it sits under (cross-process determinism under a fixed
+    // seed) and by `sample_scored_index`'s own doc, which already promises
+    // "drawing from the jitter stream (seeded ⇒ reproducible)" — the actors
+    // were the one path that never installed one, so a panic at game 400 k
+    // could not be re-run even with its seed in hand. Per game, from the
+    // per-game seed, so nothing about the distribution narrows: every game
+    // still gets its own stream. A caller that pinned the stream itself (the
+    // antithetic pairs, `--feature-census`) keeps it.
+    let pinned = crate::server::bot::install_jitter_seed_if_unset(seed ^ 0x11_7737_5EED_0001);
+    let out = play_recorded_game_mcts_inner(
+        template,
+        weights,
+        seed,
+        max_actions,
+        vocab,
+        mcts_iterations,
+        mcts_gumbel,
+    );
+    if pinned {
+        crate::server::bot::set_jitter_seed(None);
+    }
+    out
+}
+
+fn play_recorded_game_mcts_inner(
+    template: &GameState,
+    weights: [EvalWeights; 2],
+    seed: u64,
+    max_actions: usize,
+    vocab: &Vocab,
+    mcts_iterations: u32,
+    mcts_gumbel: bool,
+) -> RecordedGame {
     let mut g = template.clone();
     // Profile settings the ENGINE reads off the seat, not the bot — the
     // same push `recommend::play_seeded_game` and `deck_gauntlet` make.
@@ -462,15 +498,13 @@ pub fn play_recorded_game_mcts(
     // same seed. Derived rather than drawn, so the explore draw below keeps
     // its old position in the stream.
     //
-    // **This is not yet a full replay.** `bot::jitter_below`'s tie-break
-    // stream is a thread-local that nothing seeds on this path, so a
-    // re-run of the same `seed` plays a *different* game: two runs of
-    // `--feature-census 8 --seed 5` disagreed by 12 positions and 515
-    // encoded objects out of 820 / 29,143 (2026-08-29). Setting
-    // `bot::set_jitter_seed` here would close it — see TODO's open question
-    // under ML, which is deliberately not decided here because it changes
-    // what every training run generates. `CRAB_NO_JITTER=1` pins it for a
-    // measurement in the meantime, and `feature_census` pins it per game.
+    // **A re-run of this `seed` now plays the same game**: the wrapper above
+    // pins `bot::jitter_below`'s tie-break stream per game, which used to be an
+    // unseeded thread-local — two runs of `--feature-census 8 --seed 5`
+    // disagreed by 12 positions and 515 encoded objects out of 820 / 29,143
+    // (2026-08-29). What is still *not* reproducible is a whole net-in-the-loop
+    // run: which actor thread plays game `n` varies, so the learner's weights at
+    // game `n` do too. `CRAB_NO_JITTER=1` pins the draws to 0 for a measurement.
     g.rng.reseed(seed ^ 0x5EED_600D_C0DE_1234);
     g.start_mulligan_phase();
     // Opening-move exploration. Both seats otherwise play the same
@@ -808,8 +842,8 @@ mod tests {
         let first = &rec.rows[0];
         let last = &rec.rows[rec.rows.len() - 1];
         assert!(first.game_len > last.game_len);
-        // Pools and builds ARE seed-determined (games are not — the bot's
-        // candidate jitter is thread-RNG exploration noise by design).
+        // Pools and builds are seed-determined, and so is the game now that
+        // the wrapper pins the bot's jitter stream per game.
         let pool_again = sealed_pool(0xA11CE);
         let names = |d: &[CardFactory]| d.iter().map(|f| f().name).collect::<Vec<_>>();
         assert_eq!(names(&pool_again), names(&pool_a));
@@ -817,5 +851,32 @@ mod tests {
             names(&heuristic_sealed_build(&pool_again, 1)),
             names(&deck_a)
         );
+    }
+
+    /// A recorded game is a replay of itself. The bot's tie-break and
+    /// softmax-sampling draws used to come from an unseeded thread-local on this
+    /// path, so the same seed played a *different* game every time and a panic
+    /// at game 400 k of a training run could not be re-run with its seed in
+    /// hand. `play_recorded_game_mcts` pins the stream per game.
+    #[test]
+    fn the_same_seed_records_the_same_game() {
+        let vocab = Vocab::sos_sealed();
+        let deck_a = heuristic_sealed_build(&sealed_pool(0xA11CE), 1);
+        let deck_b = heuristic_sealed_build(&sealed_pool(0xB0B), 2);
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let play = || {
+            play_recorded_game(
+                &template,
+                [EvalWeights::default(), EvalWeights::default()],
+                77,
+                4000,
+                &vocab,
+            )
+        };
+        let a = play();
+        let b = play();
+        assert_eq!((a.winner, a.turns, a.rows.len()), (b.winner, b.turns, b.rows.len()));
+        assert!(a.rows == b.rows, "every recorded position replays identically");
+        assert!(a.heur == b.heur, "so does every heuristic row");
     }
 }
