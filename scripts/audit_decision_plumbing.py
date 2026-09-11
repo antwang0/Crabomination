@@ -106,7 +106,9 @@ DEGENERATE = {
 DECISION = re.compile(r"\bDecision::([A-Za-z0-9_]+)")
 # A site that *names* the headless answer in a comment beside the ask has
 # chosen it on purpose (Nameless Race pays as much as it can survive on a 0).
-ACK = re.compile(r"AutoDecider|auto\b|headless|printed default|no opinion|synchronous")
+ACK = re.compile(
+    r"AutoDecider|auto\b|headless|printed default|no opinion|synchronous", re.I
+)
 # A degenerate answer *inside a loop* usually declines a **repetition**, not the
 # effect: Kindle the Carnage discards and damages once before it asks "again?",
 # so a `false` leaves the printed minimum done. Worth a different column from a
@@ -171,8 +173,10 @@ def decision_kind(lines, i):
     degenerate = DEGENERATE.get(kind, "unknown variant")
     if kind == "ChooseCards" and re.search(r"min:\s*(?!0)[1-9a-z_]", body):
         degenerate = None  # a forced "choose exactly N" auto-picks the N
+    # The comment that names the headless answer sits either above the ask or
+    # on the `_ =>` fallback arm a few lines below it.
     comment = "\n".join(
-        l for l in lines[max(0, i - 20) : i + 1] if l.lstrip().startswith("//")
+        l for l in lines[max(0, i - 20) : i + 12] if l.lstrip().startswith("//")
     )
     return kind, degenerate, bool(ACK.search(comment)), in_loop(lines, i)
 
