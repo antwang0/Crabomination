@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight](#fixed-2026-09-11-fifteenth-find--mayrepeats-loop-was-abandoned-the-moment-its-body-suspended-forbidden-ritual-took-one-permanent-of-eight) | 37 |
 | Bugs & robustness | [FIXED 2026-09-11 (fourteenth find) — a suspended trigger is the SAME trigger, and its dying source's LKI was torn down at the suspend](#fixed-2026-09-11-fourteenth-find--a-suspended-trigger-is-the-same-trigger-and-its-dying-sources-lki-was-torn-down-at-the-suspend) | 45 |
 | Bugs & robustness | [FIXED 2026-09-11 (thirteenth find) — six more arms mutated inside the loop that asks, so a suspend did it again](#fixed-2026-09-11-thirteenth-find--six-more-arms-mutated-inside-the-loop-that-asks-so-a-suspend-did-it-again) | 63 |
 | Bugs & robustness | [FIXED 2026-09-11 (twelfth find) — a spell's TAIL (the fused right half, the spliced effects) re-ran on every resume: Far // Away took two creatures](#fixed-2026-09-11-twelfth-find--a-spells-tail-the-fused-right-half-the-spliced-effects-re-ran-on-every-resume-far--away-took-two-creatures) | 26 |
@@ -63,6 +64,45 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight
+
+Same class again, one layer out: a body that suspends carries only its OWN
+effect, so an arm that was iterating around it never iterates again. The twelfth
+find was the spell's tail, this is a loop.
+
+`Effect::MayRepeat` is "run the body, ask, run it again, …", and exactly one
+shipped card builds it: **Forbidden Ritual** ("sacrifice another nontoken
+permanent; repeat, up to eight"). Its body is a `MaySacrifice` whose pick
+suspends for a `wants_ui` seat — every seat the training actors run
+(`build_match_template` sets it on both) — so the loop was dropped after the
+first body and the card sacrificed **one** permanent of eight, every time. The
+`UnlessPlayerPays` ward it feeds charged the opponent once instead of up to
+eight times. Four bears in, one bear out.
+
+Two changes, both in the arm:
+
+* the outstanding repetitions are spliced in behind the body's own continuation
+  (`SearchUpToN`'s shape) as `Seq[tail, MayDo{repeat what is left}]`.
+  `MayRepeat`'s own first iteration is unconditional, so a bare `MayRepeat`
+  continuation would run one body for free; wrapping it in `MayDo` puts the
+  question back in front of it, which is what the loop does between iterations
+  anyway.
+* the repeat question is routed to the seat. It went straight to
+  `decider.decide`, so a `wants_ui` controller was **never asked** and the
+  `AutoDecider` answered for them — one of the seven "gates a loop repetition"
+  rows in `audit_decision_plumbing`'s bare column. The suspend carries
+  `MayDoAnswerPending` and the same continuation, so iterations already run are
+  not run again.
+
+`MayDo`'s ask is inlined rather than delegated so the loop stays a loop:
+`run_effect`'s frame is fat enough that `max` nested ones are a stack risk,
+which is why `SearchUpToN` iterates too.
+
+**The remaining six rows of that plumbing column are the same shape waiting to
+be checked** — an ask that gates a loop repetition and goes straight to the
+decider. This one turned out to be a live defect; the others have not been
+taken on the suspending path.
 
 ## FIXED 2026-09-11 (fourteenth find) — a suspended trigger is the SAME trigger, and its dying source's LKI was torn down at the suspend
 

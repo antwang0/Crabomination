@@ -2852,14 +2852,27 @@ audit   the neighbouring ambient state, all clean with a reason: `accepting_play
         speculative fix was tested, refused and left out of the diff); `separated_piles` documents its bodies as
         non-interactive; all 13 in-loop suspend sites build a `rest` continuation, so "a suspend drops the rest of the
         loop" does not exist today.
+fix     `MayRepeat`'s loop abandoned when its body suspended (`48b9867a`). One shipped card builds the arm — Forbidden
+        Ritual, "sacrifice another nontoken permanent; repeat up to eight" — and its body is a `MaySacrifice` whose pick
+        suspends for a `wants_ui` seat, so the loop was dropped after the FIRST body: one permanent of eight, every
+        time, and the ward it feeds charged the opponent once instead of eight times. The outstanding repetitions are
+        spliced in behind the body's continuation as `Seq[tail, MayDo{repeat what is left}]` (`MayRepeat`'s own first
+        iteration is unconditional, so a bare one would run a body for free). The repeat question is routed to the seat
+        too — it went straight to `decider.decide`, so a `wants_ui` controller was never asked at all.
 perf    none. Nothing here is on a hot path — every one of these arms is a per-card resolution behind a suspend.
 ```
 
-**Gates at `ad641aff`** (this box): suite **19,427 / 0 / 5** with
+**Gates at `48b9867a`** (this box): suite **19,428 / 0 / 5** with
 `CRAB_ANSWER_LOG=strict` exported, clippy 0, `cargo check --profile
 release-fast` clean, `golden_trace` 10 / 10 unmoved, `audit_answer_log`
 **63 arms / 6 suspicious** (from 10 — 0 NO-CLEAR, 1 ERR?, 1 PRE, 4 MID, and
 every one of those four is a tail call that returns out of its loop).
+`--bench` at `ad641aff`, `release-fast`: **195,806 decisions / 27.49 turns /
+611.9 decisions-per-game / 0 stalls** — the committed counters, byte-identical
+— `determinism ok`, `thread_determinism ok (3 vs 1)`, `games_per_s` 309.94,
+peak RSS 28.9 MiB, `bin_bytes` 128,855,768. Another box, another wall clock:
+that reading is not comparable to the 465.1 or the 542 above it, and the
+counters are why it does not need to be.
 
 **Sweeps, seeds 899..910** — five pools x 120 games/archetype a cell, two
 blocks of 30 cells / 110,400 games, `CRAB_ANSWER_LOG=strict`, `overflow` +
