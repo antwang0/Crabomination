@@ -24459,6 +24459,7 @@ impl GameState {
     /// activation's chosen X, so an inline-resolving mana ability's body can
     /// read `Value::XFromCost` (the MMQ storage lands' "remove any number of
     /// storage counters: add that much mana").
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_ability_resolution_x_into(
         &mut self,
         source: CardId,
