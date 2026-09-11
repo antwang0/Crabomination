@@ -4634,6 +4634,48 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-289)` TAKEN — the off-board trigger pick's prompt joins the elided half: sealed default Ir **-0.129 %**, cube **+0.019 %**, fixed **+0.001 %**, 144 / 144 traces identical
+
+`(-288)`'s own refutation was "the modal's prompt stays, the bot reads
+it" — `decide_choose_cards` keyed "sacrifice" / "discard" off the effect
+text. It does not any more: `PickValue` is on the ask (`9bc5759a`), so
+the last bot policy that read a `ChooseCards` prompt is gone and
+`drain_trigger_queue`'s off-board branch can build its prompt behind the
+same `text` flag its sibling already uses. Three lines.
+
+**The census predicted the number before the build, off the base dump**
+(`cg_edges.py --callees drain_trigger_queue`): `effect_short_text` 1,440
+calls / 1,754,046 Ir and `format_inner` 1,440 / 1,499,490 on sealed, i.e.
+3,253,536 Ir = **0.1299 %** — against a measured **-0.129 %**. Both rows
+are absent from the candidate dump. That is the `(-87)` device again and
+the reason to keep using it: **a census over one dump priced a three-line
+change to the third decimal for the cost of no build at all.**
+
+```text
+callgrind --a dflt/dflt (gang on fixed) --games 6 --threads 1 --seed 1, profiling-fast, system allocator, UNTRACED, one tree:
+  sealed  2,504,802,413 -> 2,501,572,700 Ir   (-3,229,713, -0.129 %)
+  cube    2,324,345,454 -> 2,324,784,178 Ir   (+438,724, +0.019 %)   the site fires 70 times a cube run, ceiling 0.006 % — this is codegen shift
+  fixed     635,593,661 ->   635,598,781 Ir   (+5,120, +0.001 %)     the site never fires: no `gang` trigger targets an off-board card
+  CRAB_DUMP_TRACES both sides, all three pools: 144 files, 0 differ
+rows (sealed, callees of drain_trigger_queue): effect_short_text 1,440 / 1.75 M -> absent; format_inner 1,440 / 1.50 M -> absent
+```
+
+**Not a pool split, and the arithmetic says why**: the entry's whole
+ceiling on cube is 0.006 %, so the +0.019 % there cannot be this change
+undoing itself — it is the unrelated layout move a rebuilt engine makes
+(`(-281)` carried +4.2 M of the same on a win it kept). Sealed is a pool
+the training loop plays and is where the off-board trigger targets live.
+
+**What is left of the prompt family, priced on the same dump so nobody
+re-reads it:** `run_effect` builds 1,812 `format!`s a sealed run
+(1.60 M), but they are mostly `ChooseTarget` / `ChooseMode` /
+`ChooseAmount` prompts, which the bot still reads — and the
+`ask_seat_cards` / `choose_up_to_cards` family does not appear in the self
+table at all, so the `ChooseCards` share of that 1.60 M is small. Wrapping
+all 104 asks in a lazy prompt is ~104 edits for well under 0.05 %; the
+`debug_flags` row above it (113 calls / 6.42 M) is `wants_converge`'s
+once-per-name cache, once a process, and is not a lead.
+
 ### `(-288)` TAKEN — a simulator process poses its trigger picks without prompt text: sealed default Ir **-0.296 %** / cube **-0.051 %** / fixed **-0.000 %**, 120 / 120 traces identical
 
 The candidates' "prompt text for headless seats" entry, taken in the
@@ -8607,6 +8649,11 @@ which is the read the map itself had not done:**
   -0.051 %, the `ChooseTarget` text and the modal's candidate names off a
   process flag the two simulator binaries set; the modal's prompt and the
   `OptionalTrigger` / `ChooseAmount` text stay, the bot reads them.
+  **The modal's prompt half then CAME UNBLOCKED and is `(-289)` (Log,
+  sealed -0.129 %)** — `PickValue` on the ask took the prose read out of
+  `decide_choose_cards`, so a bug fix removed a perf premise. Two families
+  are left, `OptionalTrigger`'s `description` and `ChooseAmount`'s prompt;
+  the same move (put the question on the ask) unblocks both.
   AND THE PREMISE IS HALF WRONG.** `drain_trigger_queue` builds
   `effect_short_text` + `format!` + the source name for every targeted
   trigger's `Decision::ChooseTarget` / `ChooseCards` (2,880 a run, ~10 M

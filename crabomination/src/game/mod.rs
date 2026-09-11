@@ -2657,17 +2657,18 @@ fn life_watch_threshold() -> Option<i32> {
     })
 }
 
-/// Whether a posed `Decision::ChooseTarget` carries its prompt text.
+/// Whether a posed decision carries its prompt text.
 ///
-/// `source_name` / `description` exist for a UI seat's "<name> — <text>"
-/// prompt; no bot reads them (the bot's text-keyed policies are
-/// `OptionalTrigger`, `ChooseCards` and `ChooseAmount`, whose text stays).
-/// A simulator process clears the flag once at startup and every targeted
-/// trigger the queue poses skips its `effect_short_text` walk and its name
-/// lookups (a modal keeps its prompt, which the bot keys off, and loses its
-/// candidate names). On by default: the server and the suite never touch
+/// `source_name` / `description` / a `ChooseCards` prompt exist for a UI
+/// seat's "<name> — <text>" modal; no bot reads them. The text-keyed bot
+/// policies left are `OptionalTrigger` and `ChooseAmount`, whose text stays —
+/// `ChooseCards` joined the elided half when `PickValue` landed on the ask
+/// (`(-289)`), because `decide_choose_cards` no longer pattern-matches the
+/// prose. A simulator process clears the flag once at startup and every
+/// targeted trigger the queue poses then skips its `effect_short_text` walks
+/// and its name lookups. On by default: the server and the suite never touch
 /// it, and a golden trace carries actions and boards, not prompts. PERF
-/// `(-288)`.
+/// `(-288)`, `(-289)`.
 static PROMPT_TEXT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
 
 /// Turn the prompt text of posed target picks on or off, process-wide.
@@ -20924,10 +20925,11 @@ impl GameState {
                     continue;
                 }
                 let remaining: Vec<PendingTriggerPush> = iter.collect();
-                // The modal's prompt is read by the bot (`decide_choose_cards`
-                // keys "sacrifice" / "discard" off the effect text); its
-                // candidate names and the target pick's text are UI-only, so
-                // a simulator process skips those walks and lookups.
+                // Every string here is UI-only, so a simulator process skips
+                // the walks and lookups that build them: the candidate names,
+                // the target pick's text, and — since `PickValue` landed on
+                // the ask and no bot policy reads a `ChooseCards` prompt any
+                // more — the off-board pick's prompt too. PERF `(-289)`.
                 let text = prompt_text();
                 let name_of = |id: CardId| {
                     if !text {
@@ -20946,10 +20948,13 @@ impl GameState {
                             Target::Player(_) => None,
                         })
                         .collect();
-                    let description = pending.effect.effect_short_text();
                     Decision::ChooseCards {
                         source: pending.source,
-                        prompt: format!("{source_name}: {description}"),
+                        prompt: if text {
+                            format!("{source_name}: {}", pending.effect.effect_short_text())
+                        } else {
+                            String::new()
+                        },
                         candidates,
                         min: 1,
                         max: 1,
