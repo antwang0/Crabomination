@@ -8098,7 +8098,10 @@ pub fn tellah_great_sage() -> CardDefinition {
 pub fn ragnarok_divine_deliverance() -> CardDefinition {
     CardDefinition {
         name: "Ragnarok, Divine Deliverance",
+        // CR 202.1b — no printed mana cost, so an empty `cost` here is "cannot
+        // be cast", not "costs {0}".
         cost: cost(&[]),
+        no_mana_cost: true,
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

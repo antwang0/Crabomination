@@ -563,7 +563,10 @@ pub fn sol_talisman() -> CardDefinition {
     use crate::effect::ManaPayload;
     CardDefinition {
         name: "Sol Talisman",
+        // CR 202.1b — no printed mana cost, so it cannot be cast by paying
+        // one; suspend is the only way in.
         cost: ManaCost::default(),
+        no_mana_cost: true,
         card_types: vec![CardType::Artifact],
         keywords: vec![Keyword::Suspend(3, cost(&[generic(1)]))],
         activated_abilities: vec![ActivatedAbility {

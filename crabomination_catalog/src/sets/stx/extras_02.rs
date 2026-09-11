@@ -400,11 +400,12 @@ pub fn inspired_idea() -> CardDefinition {
 pub fn resurgent_belief() -> CardDefinition {
     CardDefinition {
         name: "Resurgent Belief",
-        flashback_additional_cost: vec![AdditionalCastCost::ExileFromGraveyard {
-            filter: SelectionRequirement::Any,
-            count: 1,
-        }],
-        cost: cost(&[generic(3), w()]),
+        // CR 202.1b — no printed mana cost; Suspend 2—{1}{W} is the only way
+        // in. It shipped at {3}{W}, i.e. castable for four mana. The
+        // `flashback_additional_cost` went with it: the card has no Flashback,
+        // as the comment below already said.
+        cost: crate::mana::ManaCost::default(),
+        no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         // Suspend 2—{1}{W}, not Flashback (`audit_keyword_drift.py`).
         keywords: vec![Keyword::Suspend(2, cost(&[generic(1), w()]))],

@@ -20,6 +20,7 @@
 use crabomination::audit::{DeadCapability, dead_capabilities};
 use crabomination::catalog::all_known_factories;
 use std::collections::HashSet;
+use crabomination::game::*;
 
 #[test]
 fn no_shipped_card_has_a_dead_ability() {
@@ -625,4 +626,68 @@ fn no_shipped_card_nests_two_answer_log_arms() {
     // And the allowlist must not rot: a fixed card has to leave it.
     let gone: Vec<&&str> = KNOWN.iter().filter(|k| !flagged.iter().any(|f| f == *k)).collect();
     assert!(gone.is_empty(), "allowlisted nesting(s) no longer exist — drop them: {gone:#?}");
+}
+
+/// CR 202.1b / 601.3e — a card that prints NO mana cost can't be cast by
+/// paying one, and the engine enforces that off `CardDefinition.no_mana_cost`.
+/// Seven shipped cards were missing the flag and four of them had no `cost:`
+/// either, so the catalog's only free tutor, a free Mox, a free mana rock and
+/// a free 7/6 were all castable from hand for nothing; Resurgent Belief went
+/// the other way and shipped at an invented `{3}{W}`. `scripts/
+/// audit_printed_body.py` is the oracle-backed finder (it reads the printed
+/// cost and body of every literal `CardDefinition` factory); this is the
+/// regression, listed by name because the suite has no Scryfall.
+#[test]
+fn every_card_that_prints_no_mana_cost_says_so() {
+    use crabomination::catalog as c;
+    type Factory = fn() -> crabomination::card::CardDefinition;
+    let cards: &[(&str, Factory)] = &[
+        ("Ancestral Vision", c::ancestral_vision),
+        ("Asmoranomardicadaistinaculdacar", c::asmoranomardicadaistinaculdacar),
+        ("Crashing Footfalls", c::crashing_footfalls),
+        ("Gaea's Will", c::gaeas_will),
+        ("Glimpse of Tomorrow", c::glimpse_of_tomorrow),
+        ("Hypergenesis", c::hypergenesis),
+        ("Inevitable Betrayal", c::inevitable_betrayal),
+        ("Living End", c::living_end),
+        ("Lotus Bloom", c::lotus_bloom),
+        ("Mox Tantalite", c::mox_tantalite),
+        ("Profane Tutor", c::profane_tutor),
+        ("Ragnarok, Divine Deliverance", c::ragnarok_divine_deliverance),
+        ("Restore Balance", c::restore_balance),
+        ("Resurgent Belief", c::resurgent_belief),
+        ("Sol Talisman", c::sol_talisman),
+        ("Urza, Planeswalker", c::urza_planeswalker),
+        ("Wheel of Fate", c::wheel_of_fate),
+    ];
+    let mut bad: Vec<String> = Vec::new();
+    for (name, factory) in cards {
+        let def = factory();
+        assert_eq!(def.name, *name, "the factory moved off this card");
+        if !def.no_mana_cost {
+            bad.push(format!("{name}: castable from hand for {:?}", def.cost.summary()));
+        }
+    }
+    assert!(bad.is_empty(), "card(s) printing no mana cost but castable:\n  {bad:#?}");
+}
+
+/// The flag is not decoration: the cast path refuses it. Profane Tutor is
+/// "search your library for a card, put it into your hand" and shipped
+/// castable for free.
+#[test]
+fn a_card_with_no_mana_cost_cannot_be_cast_from_hand() {
+    let mut g = two_player_game();
+    let tutor = g.add_card_to_hand(0, crabomination::catalog::profane_tutor());
+    g.players[0].mana_pool.add_colorless(6);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: tutor,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(
+        matches!(err, Err(GameError::NoManaCost)),
+        "a card with no printed mana cost is not castable from hand: {err:?}",
+    );
 }

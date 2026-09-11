@@ -947,6 +947,48 @@ Artifact, Dredge) reads as a sacrifice. First run 62 rows; three real:
 Residue one row: Redirect Lightning's "pay 5 life" (the Amounts residue
 already names it).
 
+### The card's OWN cost and body — the fourteenth column (`scripts/audit_printed_body.py`), 2026-09-11: seven free spells
+
+Every column above reads an *ability's* field. This one reads the field they
+all assume is right: the card's printed mana cost and P/T, straight off the
+`CardDefinition` literal rather than off the doc comment (which is what
+`audit_doc_drift.py` compares, so it audits only the factories whose doc states
+a cost in the `Name — {2}{R} 3/3` shape).
+
+**10,268 factories compared against the oracle: 0 wrong P/T, 1 wrong cost, and
+7 cards missing `no_mana_cost`** — the last of which is the finding. CR 202.1b
+/ 601.3e: a card that prints NO mana cost cannot be cast by paying one, and the
+engine enforces exactly that off `CardDefinition.no_mana_cost`. Seven shipped
+cards did not set it, and four of them had no `cost:` either, so they were
+castable from hand **for free**:
+
+| card | was | is |
+| --- | --- | --- |
+| Profane Tutor | free "search your library for a card, put it into your hand" | suspend only |
+| Mox Tantalite | a free Mox | suspend only |
+| Sol Talisman | a free `{T}: add {C}{C}` rock | suspend only |
+| Ragnarok, Divine Deliverance | a free 7/6 vigilance menace trample reach haste | uncastable |
+| Asmoranomardicadaistinaculdacar | free from hand (its `{B/R}` alternative cost was already modelled) | the alternative cost only |
+| Urza, Planeswalker | a free 7-loyalty walker | uncastable (a meld result) |
+| Resurgent Belief | castable for an invented `{3}{W}` | suspend only |
+
+Resurgent Belief also carried a `flashback_additional_cost` for a Flashback it
+does not have — the comment two lines below it already said "Suspend 2—{1}{W},
+not Flashback".
+
+Two rules the pass yields. *One:* **a filter that reads a factory BLOCK reads
+the tokens inside it.** The first run of this audit reported 117 wrong P/T;
+every one was a `let token = TokenDefinition { power: 1, .. }` defined above
+the card, at the same indent. Brace-match the `CardDefinition` literal and read
+its own depth-1 fields — and count braces only, skipping string literals, or
+`cost(&[generic(4), w()])` and every prompt containing `{2}` break it in turn.
+*Two:* **an empty `ManaCost` is two different cards.** Ornithopter prints `{0}`
+and is castable; Living End prints nothing and is not. The engine tells them
+apart by `no_mana_cost` alone, so the suite's regression for this class is a
+by-name table (`structural_audit::every_card_that_prints_no_mana_cost_says_so`,
+17 cards) plus one behaviour test that the cast path refuses; the oracle-backed
+finder stays in `scripts/`.
+
 ### The shortcut helpers and the ability count — the thirteenth column (`cnt`), 2026-09-10: 61 shipped cards
 
 Two reads the same day. First, the base crate's `effect::shortcut` module

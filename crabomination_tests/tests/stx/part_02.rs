@@ -854,15 +854,30 @@ fn resurgent_belief_returns_each_enchantment_from_graveyard() {
     // A non-enchantment in gy.
     let _bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::resurgent_belief());
+    // CR 202.1b — the card prints NO mana cost, so suspend is the only way in.
+    // It used to ship at an invented `{3}{W}` and this test cast it that way
+    // (`structural_audit::every_card_that_prints_no_mana_cost_says_so`).
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
-
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "no printed mana cost: not castable from hand",
+    );
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("Suspend 2—{1}{W}");
     let gy_size_before = g.players[0].graveyard.len();
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Resurgent Belief castable for {3}{W}");
-    drain_stack(&mut g);
+    // Two upkeeps remove the two time counters; the last removal casts it.
+    for _ in 0..2 {
+        g.active_player_idx = 0;
+        g.step = TurnStep::Untap;
+        g.priority.player_with_priority = 0;
+        while g.step != TurnStep::Upkeep {
+            g.perform_action(GameAction::PassPriority).expect("pass priority");
+        }
+        drain_stack(&mut g);
+    }
 
     // Both enchantments left graveyard (Living History each has an ETB
     // Spirit token rider, so the battlefield can grow by 2 to 4). We

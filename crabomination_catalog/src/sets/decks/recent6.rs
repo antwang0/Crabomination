@@ -453,7 +453,9 @@ pub fn faerie_mastermind() -> CardDefinition {
 pub fn profane_tutor() -> CardDefinition {
     CardDefinition {
         name: "Profane Tutor",
+        // CR 202.1b — no printed mana cost; suspend is the only way in.
         cost: ManaCost::default(),
+        no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(2, cost(&[generic(1), b()]))],
         effect: Effect::Search {

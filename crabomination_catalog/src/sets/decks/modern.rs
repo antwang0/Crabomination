@@ -20363,6 +20363,8 @@ pub fn urza_planeswalker() -> CardDefinition {
         .or(SelectionRequirement::HasCardType(CardType::Sorcery));
     CardDefinition {
         name: "Urza, Planeswalker",
+        // CR 202.1b — the meld result prints no mana cost.
+        no_mana_cost: true,
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
         subtypes: Subtypes {

@@ -108,6 +108,8 @@ pub fn sphere_of_the_suns() -> CardDefinition {
 pub fn mox_tantalite() -> CardDefinition {
     CardDefinition {
         name: "Mox Tantalite",
+        // CR 202.1b — no printed mana cost; Suspend 3—{0} is the only way in.
+        no_mana_cost: true,
         card_types: vec![CardType::Artifact],
         keywords: vec![Keyword::Suspend(3, ManaCost::default())],
         activated_abilities: vec![ActivatedAbility {
