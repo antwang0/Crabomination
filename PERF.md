@@ -2823,6 +2823,66 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+### 2026-09-11 (the `OptionalKind` session) — the last prose-keyed decision family, and three resume defects; no perf leg
+
+⚠ **Two sessions shared `claude/modern_decks` this afternoon.** Fetch before
+every push and read `git log` before starting anything off NEXT: the other
+session landed the answer-log invariant (`b7dc6de5`) and the resumed-resolution
+scratch fix (`f6bad006`) while this one was building the same clear, and half
+of this session's second commit was dropped on the rebase as duplicate work.
+
+```text
+fix     `OptionalKind` on `Decision::OptionalTrigger` (`68dceaaa`). The bot recovered the question from the prompt prose —
+        five `starts_with` branches and a blanket YES for everything else — so ~90 engine-authored asks were an unconditional
+        accept: ante the top of your library, exile your graveyard, sacrifice a permanent, pay any amount of life at any life
+        total, skip your own draw step. Twelve variants, each a trade and not a card; `ask_seat_bool` takes it as a REQUIRED
+        argument because the blanket yes was invisible at the call site. `may_pay_prompt_affordable` + `find_maypay_cost`
+        (a definition walk for a cost the ask now carries) deleted, and the Exploit branch reads the body's SHAPE
+        (a leading self-`Sacrifice` in a `Seq`) instead of `description.starts_with("Exploit")`.
+fix     CR 608.2b re-checked on every resume (`c2cb8c30`): Lash Out killed its own target, clashed, suspended for the clash
+        question, and the resume fizzled the spell — no clash, no reveal, no on-win damage.
+fix     the spell's TAIL replayed on every resume (`b07e0329`): `ResumeContext::Spell.tail_stage` (0 main / 1 fused right half
+        / 2 + i splice). Far // Away fused took TWO creatures; a right half that suspended also resumed with the LEFT half's
+        target, which the old shape could not express.
+perf    none. The candidates list has no entry with a device above 0.2 %; the remaining levers are bot-side (sim count,
+        horizon — strength questions) or the build (PGO, opt-in).
+```
+
+**Gates at the merged tip `b07e0329`** (`release-fast`, this box): suite
+**19,419 / 0 / 5**, clippy 0, `cargo check --profile release-fast` clean,
+`--bench` **195,806 decisions / 27.49 turns / 611.9 decisions-per-game / 0
+stalls**, `games_per_s` 465.1, peak RSS 28.8 MiB — the counters identical to
+`2003d1cf` at every tip this run, `determinism ok`, `thread_determinism ok
+(3 vs 1)`, `golden_trace` 10 / 10 unmoved. `audit_decision_plumbing` 178 / 104
+/ 74, DEAD 0; `audit_variant_coverage` the documented 2 dead primitives;
+`audit_panics` 0 bare; `audit_doc_drift` 0.
+
+**Sweeps, seeds 853..965 (the next fresh seed is 966).** Five pools x 120
+games/archetype a cell. 853..885 (165 cells / 182,160 games) and 886..905 (100
+/ 110,400) on the `OptionalKind` tip; 906..935 (150 / 165,600) and 936..965
+(150 / 165,600) after the resume fixes — **0 panics, 0 stuck, 0 undecided
+except caps and draws**, and the last block is 0 caps as well.
+`overflow` + `debug-assertions` grids: {835, 853, 860, 870, 885, 891} (30
+cells / 27,120 games) and {922, 936, 941, 954, 961} (25 / 22,600), both
+0 panics / 0 assertions / 0 overflows.
+
+**A SECOND DOCUMENTED CAP CLASS, and it is not the `i32::MAX` life board.**
+`CRAB_CAP_DIAG=1` on `--decks cube --seed 922` names a **1,533-Goblin
+runaway** (Birgi, God of Storytelling / Molten-Core Maestro / Path of Discovery
+under an Ensnaring Bridge, 1,565 permanents at turn 64), ended by
+`MAX_BATTLEFIELD` in 1,662 actions. Cheap and bounded, not a stall — but read
+the diag before filing a cap as the Beacon board again.
+
+⚠ **`undecided` is not `cap`.** The sweep line's `undecided_by cap N / stuck N
+/ draw N` is the reading that matters: seeds 906, 923, 934, 941, 954, 961 each
+report undecided games that are **draws** (CR 104.4), a legitimate outcome. A
+sweep script that prints only the undecided total re-raises a false alarm every
+time; this run's does print the split.
+
+**A/B base: NOT re-taken this run** (no perf leg). The seventh run's base at
+`a057ca0a` predates six correctness commits from two sessions, at least three
+of which move what a `wants_ui` seat plays; **re-take it before the next A/B.**
+
 ### 2026-09-11 (a session sharing the branch with the `OptionalKind` one) — both resume channels netted and censused, the resumed resolution's own scratch, the ask loops that paid inside themselves, the actors' jitter pinned; no perf leg, and a FOURTH box
 
 ⚠ **Two sessions were on `claude/modern_decks` at the same time this afternoon**
@@ -8309,6 +8369,26 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**THE PROMPT-TEXT ELISION'S LAST FAMILY — PRICED AND NOT BUILT, so nobody
+re-opens it off `(-288)`'s "two families are left".** `OptionalKind`
+(`68dceaaa`) took the bot's prose read out of `OptionalTrigger`, which is the
+premise `(-288)` wanted; the elision itself is not worth the churn. A census
+at the policy (temporary counters, every 100th ask, reverted) over **2,040
+`all` games**: MayBody ~8,400, PayMana ~2,500, CastFree ~2,300, TemptingOffer
+~200 — **~4 asks a game**, and the eight other kinds do not fire in these pools
+at all. Eliding their `description` means making ~90 call sites build their
+prompt lazily (`impl FnOnce() -> String`), for a family `(-288)` priced at
+≤ 0.2 % of the ~0.5 % prompt-text total *before* it was split three ways.
+`--bench` counters are identical across the change, which is the same reading
+from the other side. **What IS still a lead in that census is `MayBody`**: it
+is the most frequent kind and the one prose read left — `optional_trigger_
+beneficial` walks the whole `CardDefinition` (spell effect, every triggered
+ability, the statics) comparing `description` strings on every ask, and two
+`May*` nodes sharing a description on one card screen the wrong body. The
+device is the ask carrying the verdict instead of the key, which needs
+`effect_imposes_self_cost` to move out of `server::bot`; ~4 asks a game, so it
+is a correctness lead with a perf rider, not the other way round.
 
 **THE ACTOR RE-READ AT `9772ce0c` (2026-09-09; `cg.actor.out` in a
 scratchpad, the same `--actors 1 --games 60 --steps 1 --seed 7` recipe,

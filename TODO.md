@@ -29,35 +29,32 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
    tracker prose; fetch before every push; `(-290)` is the last claimed candidate, `(-291)` next. Gotchas in **CLAUDE.md**, measurement in **PERF's
-   "Standing rules"**. ⚠⚠ **TWO SESSIONS SHARED THIS BRANCH on 2026-09-11 and one nearly rebuilt the other's landed work — read `git log` first.**
-   **A/B base: RE-TAKE. Four boxes disagree** — the seventh run's triple is the third box's (`a057ca0a`), and the box after it reads 289.72 `--bench`
-   games/s against that box's 517-542 **on byte-identical counters**, so no wall-clock or Ir row crosses between them.
-2. **Gates at the tip:** suite **19,414 / 0 / 5 with `CRAB_ANSWER_LOG=strict` exported** — which makes both resume-channel nets and the ten-channel
-   one-shot census assertions on every test, and is how to run it from now on — clippy 0, golden_trace 10 / 10, `--bench` **195,806 / 27.49 / 611.9 /
-   0 stalls** + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / 0 NO-CLEAR / 2 ERR?, `audit_panics` **0 bare**,
-   `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..898, 402,960 completed games** (two cells aborted on the find below and read `ok` after it; the only caps on record are the documented `i32::MAX`-life board) — **next is 899.**
-3. **This run, and the sentence it earned:** *an instrument that names a leak finds the bug the leak was a symptom of.* Both resume channels leaked
-   (two arms never cleared, no arm clears on an error unwind) and the RESOLUTION drops them at its outermost exit now; the ten other one-shot channels
-   are **censused, not netted** (0 stale in the suite, 0 in 100,400 swept games). Then the census's first strict sweep cell aborted on **Bind to Life**: a
-   *resumed* resolution reset its own per-resolution scratch, so `Selector::LastMoved` read an empty set and "mill seven, then put a creature card from
-   among them onto the battlefield" put **nothing** onto the battlefield for every seat that suspends — the whole training path, invisible to the
-   suite's headless test. The `resuming` flag on the resolution entry fixes it for every scratch-reading selector at once — **and
-   the session sharing the branch immediately found the same shape one layer up** (`c2cb8c30`: CR 608.2b's target-legality fizzle
-   was re-checked on the resume, so Lash Out's clash fizzled the spell), with its own residue filed: a fused split whose LEFT half
-   suspends resolves its RIGHT half twice. And the actors' jitter is pinned per game, so a
-   recorded self-play game replays from its seed (item 7, ML_NOTES — different games after it, no retrain).
-4. **Next:** (a) **sweep first and sweep wide**, from 899, `CRAB_ANSWER_LOG=strict` exported (853..898 are spent). (b) **The channel's open half is LIVE on seven cards** —
-   `structural_audit::no_shipped_card_nests_two_answer_log_arms` allowlists them (Conspiracy Theorist, Emberwilde Djinn, Forbidden Ritual, Giant
-   Albatross, Rottenmouth Viper, Skirk Drill Sergeant, Worms of the Earth): the inner arm's `cursor = 0` replays the OUTER arm's yes. **The fix is parking the channel at the
-   nesting boundary**: a `run_effect_parked` at the ~60 nested-effect call sites inside the **38** asking arms, restoring only
-   when the body did NOT suspend. ENGINE_BACKLOG sketches it and says why provenance, clearing, offsetting and a one-site park
-   inside `run_effect` all fail (the last one reintroduces the tenth find's stall). Beside it, the widest open member of the class:
-   **11 of the 63 arms mutate inside the loop that asks**, so a suspend repeats it — Fade Away charged the first seat twice and is
-   FIXED here as the worked example (ask everyone, then pay); the other ten are listed in ENGINE_BACKLOG with what repeats
-   (Crooked Scales re-flips its coin, `MayPayRepeatedly` re-pays quadratically, three life-payment arms, the ante). Every one is
-   correct headless and wrong for every seat that suspends, and each needs its own test on the suspending path. (c) Read the census before netting what it does not
-   name. (d) `BecomeChosenColor` picks per source, not per target. (e) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
-   (f) Perf reads floor — the crack-back horizon is a ladder gate, and both of the seventh run's perf legs came off a bug fix, not off the queue.
+   "Standing rules"**. ⚠⚠ **TWO SESSIONS SHARED THIS BRANCH on 2026-09-11**, landed the same fix twice and half of one commit was dropped as duplicate
+   work on the rebase — read `git log` first, and fetch again before every push. **A/B base: RE-TAKE. Four boxes disagree** — the seventh run's triple
+   is the third box's (`a057ca0a`), the box after it reads 289.72 `--bench` games/s against that box's 517-542 **on byte-identical counters**, and six
+   correctness commits since move what a `wants_ui` seat plays. No wall-clock or Ir row crosses between boxes.
+2. **Gates at the tip `b07e0329`:** suite **19,419 / 0 / 5** (run it with `CRAB_ANSWER_LOG=strict` exported — that makes both resume-channel nets and
+   the ten-channel one-shot census assertions on every test), clippy 0, golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls**
+   + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / 0 NO-CLEAR / 2 ERR?, `audit_panics` **0 bare**,
+   `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..965 swept, ~624 k games — next is 966.**
+3. **This run, and the sentence both sessions earned:** *the suite tests the path that does not suspend, and the training path is the one that does.*
+   (a) **`OptionalKind` on `Decision::OptionalTrigger`** — the last prose-keyed decision family. Five `starts_with` branches and a blanket YES for
+   everything else meant ~90 engine asks were an unconditional accept (ante your library, exile your graveyard, sacrifice a permanent, pay any life at
+   any total, skip your own draw); `may_pay_prompt_affordable` and the Exploit prose branch are gone with it. (b) Both resume channels leaked and the
+   RESOLUTION drops them now; the ten one-shot channels are censused. (c) A **resumed** resolution reset its own per-resolution scratch (Bind to Life
+   put nothing onto the battlefield). (d) **CR 608.2b re-checked on the resume** fizzled Lash Out's clash. (e) **The spell's TAIL replayed on every
+   resume** — `ResumeContext::Spell.tail_stage` (0 main / 1 fused right half / 2 + i splice); Far // Away fused took TWO creatures, and a right half
+   that suspended resumed with the LEFT half's target. (f) Fade Away charged the first seat twice: the ask loop paid inside itself.
+4. **Next:** (a) **sweep first and sweep wide**, from 966, `CRAB_ANSWER_LOG=strict` exported; read `undecided_by cap / stuck / draw`, not the undecided
+   total — **draws are a legitimate outcome** and were re-raised as a false alarm this run. (b) **The channel's open half is LIVE on seven cards** —
+   `structural_audit::no_shipped_card_nests_two_answer_log_arms` allowlists them: the inner arm's `cursor = 0` replays the OUTER arm's yes. The fix is
+   parking the channel at the nesting boundary (~60 nested call sites inside the **38** asking arms); ENGINE_BACKLOG sketches it and says why
+   provenance, clearing, offsetting and a one-site park inside `run_effect` all fail. (c) **Ten more arms mutate inside the loop that asks** (Crooked
+   Scales re-flips its coin, `MayPayRepeatedly` re-pays quadratically, three life payments, the ante) — Fade Away is the worked example; each needs its
+   own test on the suspending path. (d) **`MayBody` is the last prose read**: `optional_trigger_beneficial` walks the whole `CardDefinition` comparing
+   `description` strings on every ask (~4 a game) and two `May*` nodes sharing a description screen the wrong body — put the verdict on the ask (PERF
+   candidates). (e) `BecomeChosenColor` picks per source, not per target. (f) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
+   (g) Perf reads floor and the queue has no device above 0.2 %: both of the seventh run's perf legs came off a bug fix, not off the queue.
 
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
