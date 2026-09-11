@@ -19,6 +19,10 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable](#open-2026-09-11--the-first-capped-board-in-13-m-swept-games-diagnosed-and-not-a-rules-defect-beacon-of-immortality-makes-a-wg-cube-mirror-unwinnable) | 42 |
+| Bugs & robustness | [FIXED 2026-09-11 (nineteenth find) — twenty-six shipped bodies enumerated ZERO legal targets: a player-only slot 0 classified by its BODY, not by its slot](#fixed-2026-09-11-nineteenth-find--twenty-six-shipped-bodies-enumerated-zero-legal-targets-a-player-only-slot-0-classified-by-its-body-not-by-its-slot) | 41 |
+| Bugs & robustness | [FIXED 2026-09-11 (eighteenth find) — "target player's graveyard" was not a player slot: the two walkers disagreed about which selectors read a player](#fixed-2026-09-11-eighteenth-find--target-players-graveyard-was-not-a-player-slot-the-two-walkers-disagreed-about-which-selectors-read-a-player) | 29 |
+| Bugs & robustness | [FIXED 2026-09-11 (seventeenth find) — a target slot declared *bare* above slot 0 is unaimable, and five shipped cards declared one](#fixed-2026-09-11-seventeenth-find--a-target-slot-declared-bare-above-slot-0-is-unaimable-and-five-shipped-cards-declared-one) | 36 |
 | Bugs & robustness | [FIXED 2026-09-11 (sixteenth find) — an effect that suspends OFF the stack was a silent no-op, and the signal it left behind is not inert](#fixed-2026-09-11-sixteenth-find--an-effect-that-suspends-off-the-stack-was-a-silent-no-op-and-the-signal-it-left-behind-is-not-inert) | 60 |
 | Bugs & robustness | [FIXED 2026-09-11 (the plumbing column, worked one by one) — six asks answered by the wrong player, and the column's repeat rows are CLOSED](#fixed-2026-09-11-the-plumbing-column-worked-one-by-one--six-asks-answered-by-the-wrong-player-and-the-columns-repeat-rows-are-closed) | 48 |
 | Bugs & robustness | [FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight](#fixed-2026-09-11-fifteenth-find--mayrepeats-loop-was-abandoned-the-moment-its-body-suspended-forbidden-ritual-took-one-permanent-of-eight) | 37 |
@@ -67,6 +71,153 @@ the handoff.
 
 # Bugs & robustness
 
+## OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable
+
+`cube` seed **1018**, archetype 0 (`cube WG`), 2 games of 3,200 — the only
+`cap` the last three sweep blocks produced (355,200 games). Reproduce with
+`target-audit/overflow/bot_ladder --a dflt --b dflt --games 400 --threads 3
+--seed 1018 --decks cube`; it is deterministic, and `CRAB_CAP_DIAG=4000` prints
+the board.
+
+```text
+  cap: 6001 actions, turn 243, stack 0
+    p0: life 2147483647 bf 30 hand 5 gy 22 lib 1
+    p1: life 2147483641 bf 30 hand 5 gy 22 lib 1
+```
+
+Both seats at `i32::MAX`, both libraries at **one card**, for two hundred
+turns. The cause is one card in the deck: **Beacon of Immortality** — "double
+target player's life total, then shuffle Beacon of Immortality into its owner's
+library". It is a mirror, so both seats hold one, and each turn a seat draws its
+Beacon (library 0), casts it on itself (library 1 again), and doubles. Thirty-
+odd casts saturate the life total; after that the doubling is a no-op, neither
+seat can ever deck out, and no amount of damage can kill either. The game is
+genuinely unwinnable and the action cap is the backstop doing its job.
+
+**Nothing here is a rules bug**, and the two obvious "fixes" are not fixes:
+life saturating instead of overflowing is the robustness filter working (the
+`overflow` profile has `overflow-checks = true` and did **not** panic), and the
+self-shuffle is the printed card. What is left is two real but separate
+questions, both out of scope for a bug fix:
+
+* **Adjudication.** CR 104.4b calls a loop nobody can break a draw; the engine
+  reports `cap`. `TODO.md`'s "early adjudication of stalled games via
+  `eval_material`" is the lever, and it is a *training-data* decision (it
+  changes what the actors record), not a correctness one.
+* **Encoding.** A saturated life total is an `i32::MAX` feature going into
+  `encode_state_inner` and `eval_material`. Nobody has checked what the net
+  does with it. Cheap to check, and the encoding caution in `TODO.md` applies
+  to any change that follows.
+
+The bot-strength half — casting a life-doubling spell at maximum life is a
+strictly wasted action — is real and small, and is the one arm that would
+shorten the game without touching the rules.
+
+## FIXED 2026-09-11 (nineteenth find) — twenty-six shipped bodies enumerated ZERO legal targets: a player-only slot 0 classified by its BODY, not by its slot
+
+The eighteenth find made `target_filter_for_slot(0)` answer `Player` for a
+zone selector's `who`. That exposed the next walker in the chain, and this one
+is not a census gap — it is the wrong question.
+
+`accepts_player_target()` classifies by what the effect *does*:
+`Effect::Move`, `Effect::Attach`, `Effect::PumpPT`, `Effect::GrantKeyword`,
+`Effect::BecomeCreature` and friends are "permanent-targeting", which is right
+for Regrowth (an `Any`-filtered `Move` must not offer the caster as a player
+and fizzle) and wrong for "return all artifacts **target player** owns". Both
+of its call sites — the auto-picker and `enumerate_legal_targets` — use it to
+drop every `Target::Player` candidate, so those bodies had **no legal target at
+all**. Measured, not argued: `enumerate_legal_targets` on a two-player board
+returned an empty list for Mudhole, Hurkyl's Recall, Curse of the Pierced Heart
+and Arms of Hadar. Uncastable, and nothing logged.
+
+Twenty-six bodies: the seven "enchant player" Curses (Cruel Reality, Curse of
+Bloodletting / Death's Hold / Exhaustion / the Pierced Heart, Grievous Wound,
+Psychic Possession), six `Move`s (Drafna's Restoration, Hurkyl's Recall,
+Mudhole, Raven Guild Master, River's Rebuke, Tormod's Cryptkeeper), and
+Jolrael, Incite War, Primeval Light, Instigator, Marsh Casualties, Ink-Eyes,
+Arms of Hadar, Corrosion, Equipoise, Jace the Mind Sculptor's −1, Mogg
+Infestation, Practiced Offense and Tsabo's Decree.
+
+The fix is at the two call sites, not in the classifier: both already hold slot
+0's own filter (`req`), so both now OR `SelectionRequirement::is_player_only`
+into the body's classification — **no extra walk**. `is_player_only` is the
+narrow half of `can_match_player` (which answers "could a player match" and so
+says yes to `Any`); `can_match_player` was missing `OpponentPlayer` /
+`YouPlayer` and defers to it now.
+
+Gate: `core_rules::target_walkers::a_player_only_slot_zero_enumerates_a_player`
+asserts the end-to-end behaviour — every body whose slot 0 is a *bare* player
+face enumerates a player on a two-player board — over a population of 566, with
+the floor asserted beside the finding list. It is end-to-end deliberately: the
+walker internals are what was fooled. A conjunct condition
+(`Player.and(CastSorceryThisTurn)` — Backdraft, Fire and Brimstone, Wicked
+Akuba) is legitimately unsatisfiable on a bare board and is out of the
+population.
+
+## FIXED 2026-09-11 (eighteenth find) — "target player's graveyard" was not a player slot: the two walkers disagreed about which selectors read a player
+
+The `requires_target` / `target_filter_for_slot` pair again, and this time the
+drift is one list written twice. `requires_target`'s selector census walks
+`TopOfLibrary` / `BottomOfLibrary` / `CardsInZone` / `ControlledBy` / `Player`
+for a `PlayerRef::Target`; the slot-filter walk had arms for only the last two.
+
+So `Effect::Move { what: CardsInZone { who: Target(0), zone: Graveyard, filter:
+Land } }` reported **no** slot-0 filter, `primary_target_filter` fell through to
+its own subject walk, and that returned `CardsInZone`'s **card** filter — so
+**Mudhole** ("exile all land cards from target player's graveyard") offered a
+*land permanent* for its player slot and **Drafna's Restoration** an artifact.
+A pick the `PlayerRef` cannot resolve: `resolve_selector` gives nothing and the
+spell does nothing at all. Exactly the shape the file already records for
+Feedback Bolt and Reins of Power, one selector family over.
+
+The fix is the list, not the arms: `selector_player_ref(&Selector) ->
+Option<&PlayerRef>` is written once and both walks read it, so a new
+player-carrying selector joins both censuses at the same time. Value-identical
+for the two arms it replaced (`IMPLICIT_PLAYER_TARGET` *is*
+`SelectionRequirement::Player`).
+
+Test: `core_rules::target_walkers::a_target_players_zone_is_a_player_slot`.
+**What did not catch it**, and this is the useful half:
+`every_reachable_target_player_is_visible_to_the_player_gate` censuses
+`Selector::Player(PlayerRef::Target(_))` only, so a player reached through a
+zone selector's `who` was invisible to it. Widening that census to any `who`
+holding a bare `Target` is the next move on this family (NEXT).
+
+## FIXED 2026-09-11 (seventeenth find) — a target slot declared *bare* above slot 0 is unaimable, and five shipped cards declared one
+
+`core_rules::target_walkers` holds "every `Selector::TargetFiltered` slot is
+answerable" at 0 and `unbound_target_slots` holds "every such slot is bound" at
+0 — but **both census `TargetFiltered` only**, so a slot written as a bare
+`Selector::Target(n)` was invisible to the pair. Above slot 0 that is fatal by
+construction: `auto_extra_distinct_slot_targets` breaks the moment
+`target_filter_for_slot(slot)` is `None`, and `primary_target_filter`'s
+fallback only ever answers slot 0. The slot resolves to nothing, a `Value` over
+it reads 0, and nothing is logged. (Slot 0 itself is *correct* bare — "any
+target", 414 shipped cards.)
+
+The new gate (`every_bare_target_slot_above_zero_is_aimable`) found five cards
+in three shapes:
+
+* **A bare `Target(1)` where the printed card names a filter.** Shifting
+  Borders' second land, Hunter's Edge's victim ("target creature you don't
+  control" — and slot 0's "creature you control" was bare too), Prismari
+  Tideflame (b171)'s "target opponent". Each is one `Selector::TargetFiltered`.
+* **A body under `Effect::ApplyToTargets` reading `Target(1..3)`.** That effect
+  rebinds `ctx.targets` to **one** element per iteration, so every slot above 0
+  inside it is dead by construction — and slot 0 inside it is whatever the
+  wrapper's own filter picked, not what the author meant. **Curse of the
+  Werefox** fought *with* the opponent's creature and *against* nothing;
+  **Urgent Necropsy** ran one mode of four (the artifact), because its three
+  other `ApplyToTargets` wrappers destroyed `Target(1..3)`, which was empty.
+  Both are `Effect::OptionalTargets` now — it declares declinable slots and
+  runs its body on the enclosing target list rather than rebinding it. Urgent
+  Necropsy takes `min: 0` as the approximation of "choose one or more"; the
+  engine has no at-least-one modal target rule.
+
+The gate skips the two shapes whose slots are not the root's to fill: a
+kicked-only branch (asked for again with `kicked = true`) and a `Reflexive` /
+`ReflexiveTrigger` body (CR 603.7, targeted at push time) — the same
+`RESOLUTION_TIME_TARGETING` list the neighbouring gates use.
 ## FIXED 2026-09-11 (sixteenth find) — an effect that suspends OFF the stack was a silent no-op, and the signal it left behind is not inert
 
 The class's last shape, and the first where the suspension had nowhere to go

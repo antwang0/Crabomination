@@ -2823,6 +2823,81 @@ values are gone the floor of the current shape is ~60 KB.
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
 
+The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
+in this file is on that compiler unless its own block says otherwise; a pin
+bump invalidates the Ir columns and has to re-take the A/B base.
+
+### 2026-09-11 (the target-walker session, the day's other concurrent one) — the bare-slot gate, the player-slot list, five shipped cards; no perf leg
+
+```text
+fix     "target player's graveyard" was not a player slot (`618191c3`). `requires_target`'s selector census walks
+        `TopOfLibrary` / `BottomOfLibrary` / `CardsInZone` / `ControlledBy` / `Player` for a `PlayerRef::Target`;
+        the slot-filter walk had arms for the last two only. Mudhole's `Move { what: CardsInZone { who: Target(0) } }`
+        therefore reported NO slot-0 filter, `primary_target_filter` fell through to its own subject walk, and that
+        returned the CARD filter beside it — so the spell offered a *land permanent* for its player slot (Drafna's
+        Restoration an artifact). A pick the `PlayerRef` cannot resolve: both cards did nothing at all.
+        `selector_player_ref` is one list and both walks read it now; value-identical for the arms it replaced.
+gate    `every_bare_target_slot_above_zero_is_aimable` (`d24456b1`). The two whole-catalog target gates census
+        `Selector::TargetFiltered` only, so a BARE `Selector::Target(n)` was invisible to both — and above slot 0
+        that is fatal by construction (`auto_extra_distinct_slot_targets` breaks on the first `None`; the primary
+        walker's fallback only ever answers slot 0). Slot 0 bare is CORRECT — "any target", 414 shipped cards — so
+        the gate starts at 1. Five cards, three shapes: a bare `Target(1)` where the card names a filter (Shifting
+        Borders, Hunter's Edge, Prismari Tideflame (b171)); and two bodies under `Effect::ApplyToTargets`, which
+        rebinds `ctx.targets` to ONE element per iteration, so every slot above 0 inside one is dead — Curse of the
+        Werefox fought with the opponent's creature and against nothing, Urgent Necropsy ran one mode of four.
+        Both are `Effect::OptionalTargets` now.
+fix     `ability_effect_label` had no `OptionalTargets` arm, so a card whose whole effect sits under one read
+        "Activate" — live for the ten catalog cards already built that way, surfaced when Curse of the Werefox
+        joined them.
+fix     twenty-six bodies enumerated ZERO legal targets. The seventeenth find made slot 0 answer `Player` for a zone
+        selector's `who`, which exposed the next walker: `accepts_player_target` classifies by what the effect DOES
+        (`Move` / `Attach` / `PumpPT` / `GrantKeyword` are "permanent-targeting"), and both its call sites use it to
+        drop every `Target::Player` candidate. Measured, not argued: `enumerate_legal_targets` on a two-player board
+        returned an EMPTY list for Mudhole, Hurkyl's Recall, Curse of the Pierced Heart and Arms of Hadar —
+        uncastable. Seven "enchant player" Curses, six `Move`s, Jace's -1, Tsabo's Decree, Mogg Infestation and
+        eleven more. Fixed at the two call sites, which already hold slot 0's filter: `req.is_player_only() ||
+        eff.accepts_player_target()`, **no extra walk**. Gate: `a_player_only_slot_zero_enumerates_a_player`,
+        end-to-end over 566 bodies (the internals are what was fooled), with the population floor beside it.
+perf    none. Every one of these is a cast-time targeting walk or a per-card definition; the `--bench` counters are
+        byte-identical across the run, which is the reading from the other side.
+```
+
+**Gates at `7acd7497`** (the merged tip, with the concurrent session's
+ten commits of the day under it, `bb89ed73` last): suite **19,442 / 0 / 5** with `CRAB_ANSWER_LOG=strict`
+exported, clippy **0** over the workspace (`--all-targets`), `golden_trace`
+10 / 10 unmoved, `cargo check --profile release-fast` clean,
+`audit_answer_log` 66 / 6 suspicious, `audit_panics` **0 bare**,
+`audit_decision_plumbing` 175 / 105 / 70 **DEAD 0**, `audit_variant_coverage`
+0 dead capability. `--bench` on the `overflow` binary at the tip: **195,806
+decisions / 27.49 turns / 611.9 decisions-per-game / 0 stalls** —
+byte-identical to the committed counters — `determinism ok`,
+`thread_determinism ok (3 vs 1)`. **Wall clock is NOT a reading here**: the
+`overflow` + `debug-assertions` binary prints `games_per_s 73.96` and says so
+itself ("DEBUG (numbers meaningless) build"). None of this run's cards is in
+the `fixed` pool, which is why the counters could not move.
+
+**Sweeps** — three pools (`cube` / `all` / `sealed`) x 400 games per archetype
+a cell, `CRAB_ANSWER_LOG=strict`, `overflow` + `debug-assertions`:
+
+```text
+  seeds        tip         cells   games     failures  cap  stuck  draw
+  995..1006    05d69c7f      36    177,600      0       0     0      0
+  1007..1014   d24456b1      24    118,400      0       0     0     22
+  1015..1018   7acd7497      12     59,200      2       2     0      8
+```
+
+Seed frontier **1019** — the concurrent session swept its own blocks to 1012
+the same afternoon, so 995..1012 is covered twice on different tips and the
+frontier is the union. The draw column moved and the seeds moved with it, so
+the two are not separable; `draw` is CR 104.4 and only `cap` and `stuck` are
+defects. **The two caps are one board, `cube` seed 1018, and they are
+diagnosed, deterministic and NOT a rules defect** — see ENGINE_BACKLOG's OPEN
+section. Both seats at `i32::MAX` life with one-card libraries at turn 243:
+the WG mirror holds **Beacon of Immortality**, which doubles its caster's life
+and shuffles itself back, so each seat redraws and recasts it every turn,
+never decks, and saturates. The action cap is the backstop working. First
+`cap` in the last three blocks (355,200 games).
+
 ### 2026-09-11 (the resume-class session, third of the day) — the MID census closed, the dying source's LKI, and a filed 60-site redesign retired; no perf leg
 
 ```text
