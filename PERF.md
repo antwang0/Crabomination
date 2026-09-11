@@ -2954,10 +2954,15 @@ fix     a seat loop asking through the SINGLE-slot channel (`912c889f`). `Player
         `ask_seat_cards`, so seat 0's ask swallowed seat 1's answer on every resume and the forced-pick shortfall
         auto-filled it: Words of Wind emptied the controller's board one permanent per round trip. The rule:
         **a loop over seats may not ask through the single-slot channel.**
+fix     the last answer kind without a seat-routed ask (`e8fac7c6`). `ask_seat_target_logged` +
+        `SeatTargetAnswerPending`, on the LOG rather than the single slot, and the two sites that had no better option
+        than a bare `decider.decide`: Cuombajj Witches ("an OPPONENT chooses a target" — the controller's decider was
+        choosing where the opponent's point landed) and Will of the Council's ballots (CR 701.31 — every player votes,
+        and the controller's decider cast every ballot, vote-control grant and all).
 perf    none. Nothing here is on a hot path — every one of these arms is a per-card resolution behind a suspend.
 ```
 
-**Gates at `2f433047`** (this box): suite **19,441 / 0 / 5** with
+**Gates at `e266a964`** (the merged tip, this box): suite **19,444 / 0 / 5** with
 `CRAB_ANSWER_LOG=strict` exported, clippy 0, `cargo check --profile
 release-fast` clean, `golden_trace` 10 / 10 unmoved, `audit_answer_log`
 **63 arms / 6 suspicious** (from 10 — 0 NO-CLEAR, 1 ERR?, 1 PRE, 4 MID, and
@@ -2978,6 +2983,12 @@ cell, three blocks of 30 cells / 110,400 games each, `CRAB_ANSWER_LOG=strict`,
 `d92c76fa`). Draws 0 / 6 / 0, and a draw is CR 104.4, not a defect. The 899..910
 block overlaps the `OptionalKind` session's 886..935; the seed frontier is in
 NEXT.
+
+A fourth block, **1013..1018 at `2f433047`** (30 cells / 110,400 games), reads
+**cap 2 / stuck 0 / draw 10** — and both caps are the already-diagnosed
+**Beacon of Immortality board at `cube` seed 1018** (twin `i32::MAX` life,
+library 1, turn 243), which is the same seed ENGINE_BACKLOG documents. Not a new
+defect, and worth noting that a sweep re-derived it independently.
 
 ### 2026-09-11 (the `OptionalKind` session) — the last prose-keyed decision family, and three resume defects; no perf leg
 

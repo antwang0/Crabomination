@@ -324,6 +324,31 @@ after it — the two-pass recipe does not apply. The accounting that does:
   source` now — which is what the printed "exiled this way" means — and both the
   seen-names list and the round's own card are read back off the zone.
 
+### The last answer kind without a seat-routed helper: `Target`
+
+Two sites had no better option than a bare `decider.decide` because there was no
+cursor-indexed `Target` ask, so the resolving seat's policy answered a choice the
+card gives to someone else. `ask_seat_target_logged` +
+`PendingEffectState::SeatTargetAnswerPending` close that, on the LOG rather than
+the single slot (`scripts/audit_stash_in_loop.py`'s rule).
+
+* **Cuombajj Witches** (`OpponentChoosesTargetForDamage`) — "an opponent chooses
+  a target" for the second point, and the CONTROLLER's decider was choosing
+  where it landed: the one thing the card exists to prevent.
+* **Will of the Council** (`run_council_card_vote`, CR 701.31 — Custodi Squire
+  and Custodi Lich) — every player votes and the controller's decider cast every
+  ballot. Routed per voter, through the CR 701.38 vote-control grant that
+  `asked` already computed and nothing consumed. The test is two candidates and
+  two UI seats: one ballot each, and the tie moves BOTH, which is only
+  observable if the ballots came from two seats.
+
+**What is left in the bare column is 66 sites, 15 with a degenerate headless
+default, 0 DEAD and 0 repeat.** The remaining ones are mode / colour / die-roll
+picks whose default is a real choice rather than a no-op; the ones worth taking
+next are the other four where the card names a chooser who is not the resolver
+(`EachPlayerDestroysChosenFromLeftNeighbor`, `ChangeTargetOfAbility` x2,
+`Blight`).
+
 ## FIXED 2026-09-11 (fifteenth find) — `MayRepeat`'s loop was abandoned the moment its body suspended: Forbidden Ritual took one permanent of eight
 
 Same class again, one layer out: a body that suspends carries only its OWN
