@@ -46,8 +46,9 @@ sixty-seventh pass, so don't re-take that.
 4. **Next:** (a) **sweep first and sweep wide**, from 892, `CRAB_ANSWER_LOG=strict` exported. (b) **The channel's open half is LIVE on seven cards** —
    `structural_audit::no_shipped_card_nests_two_answer_log_arms` allowlists them (Conspiracy Theorist, Emberwilde Djinn, Forbidden Ritual, Giant
    Albatross, Rottenmouth Viper, Skirk Drill Sergeant, Worms of the Earth): the inner arm's `cursor = 0` replays the OUTER arm's yes. **The fix is parking the channel at the
-   nesting boundary** — a `with_parked_answer_log` helper in the four outer arms, restoring only when the body did NOT suspend;
-   ENGINE_BACKLOG sketches it and says why provenance, clearing and offsetting cannot work. Beside it, the audit's new **PRE** column
+   nesting boundary**: a `run_effect_parked` at the ~60 nested-effect call sites inside the **38** asking arms, restoring only
+   when the body did NOT suspend. ENGINE_BACKLOG sketches it and says why provenance, clearing, offsetting and a one-site park
+   inside `run_effect` all fail (the last one reintroduces the tenth find's stall). Beside it, the audit's new **PRE** column
    (a mutation before the arm's first ask, which the re-run repeats) reads 63 / 1: **Crooked Scales re-flips its coin on every
    resume**, and `MayPayRepeatedly` re-pays **quadratically** (Magnetic Mountain, Dream Tides). All three are correct headless and
    wrong for every seat that suspends — the run's recurring shape. (c) Read the census before netting what it does not

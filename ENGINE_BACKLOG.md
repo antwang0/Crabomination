@@ -158,9 +158,21 @@ used by the four outer arms (`MayPay`, `MayPayBy`, `MaySacrifice`,
 `AnyPlayerMayAccept`) takes the log before the body and, on return, **restores it
 only if the body did not suspend** — if it did, the resume re-runs the *body's*
 arm (the suspend signal carries the inner arm's effect), so the parked outer
-entries are dead and must be dropped rather than restored. Park it at the arm,
-not inside `run_effect`: the dispatcher runs for every node of every effect tree
-and the four arms are the whole population the gate reports. That closes the
+entries are dead and must be dropped rather than restored. **Park it at the arm, never inside `run_effect`** — and not only for the cost:
+the dispatcher cannot tell "the arm I am about to run is the one these answers
+belong to" from "a different arm". A resume re-enters as
+`run_effect(Seq[the suspended arm's effect, rest])`, so a park at that outer call
+would hide the arm's own replay from it and re-ask for ever — the tenth find's
+stall, reintroduced. Inside an arm, after its own asks, the distinction is free:
+whatever the callee logs is not this arm's.
+
+**The population is bigger than the seven cards.** 38 asking arms run a nested
+effect (~60 `run_effect` call sites after their own first ask — the census is a
+`run_effect` grep inside each `let mut cursor = 0` block); the seven are just the
+cards whose nested body happens to be another asking arm *today*, and the gate is
+what keeps a new catalog entry from quietly joining them. So the change is a
+mechanical `run_effect` -> `run_effect_parked` at those sites, and it is worth
+doing in one commit with the gate's allowlist emptied in the same breath. That closes the
 seven; the two `MayPayRepeatedly` cards need the *other* half (asks separated
 from payments) and are not fixed by it.
 
