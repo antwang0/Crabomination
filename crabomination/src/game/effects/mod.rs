@@ -26278,10 +26278,19 @@ impl GameState {
                 let max = candidates.len() as u32;
                 if max == 0 { return Ok(()); }
                 let source = ctx.source.unwrap_or(CardId(0));
+                // The sort above puts tokens first, so the leading run of them
+                // is what a sacrifice-for-value pick can take for no card
+                // loss. Only this arm knows that order, so the ask carries the
+                // count: a headless seat answers it instead of giving up the
+                // board (`max`) or nothing at all.
+                let free = candidates
+                    .iter()
+                    .take_while(|id| self.battlefield_find(**id).is_some_and(|c| c.is_token))
+                    .count() as u32;
                 let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Sacrifice how many?".to_string(),
-                    kind: AmountKind::Cost,
+                    kind: AmountKind::Cost { free },
                     max,
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {

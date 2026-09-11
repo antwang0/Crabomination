@@ -101,7 +101,15 @@ pub enum AmountKind {
     /// The number is a count of the chooser's OWN permanents given up
     /// (Devour, God-Eternal Bontu): `max` is the whole board and the payoff
     /// is linear in what is lost.
-    Cost,
+    ///
+    /// `free` is how many of the ask's candidates, in the order the effect
+    /// will take them, cost the chooser next to nothing — the tokens, which
+    /// a sacrifice payoff turns into counters or cards for no card loss. It
+    /// is the ask's own count because only the effect knows the order it
+    /// sacrifices in; a headless policy answers it, and answered `0` before,
+    /// so Devour was a no-op for a bot seat once `max` stopped being the
+    /// answer.
+    Cost { free: u32 },
     /// A life payment — pay only out of a healthy buffer.
     Life,
     /// A mana payment out of the floating pool (`MayPayX`), which is not the

@@ -3047,10 +3047,11 @@ fn decide_pending_policy_inner(
                 // Devour and God-Eternal Bontu: `max` is every permanent we
                 // control and the payoff is linear in what we give up, so the
                 // greedy answer sacrifices the board for one big creature.
-                // Declining is the conservative answer; "give up the tokens
-                // and nothing else" is the better one and needs the candidate
-                // ordering on the ask (ENGINE_BACKLOG).
-                AmountKind::Cost => 0,
+                // The ask counts the candidates that cost us nothing real —
+                // the tokens it would take first — and we give up exactly
+                // those: counters or cards for no card loss, and the board
+                // stays.
+                AmountKind::Cost { free } => (*free).min(*max),
                 AmountKind::Upside => *max,
             };
             crate::decision::DecisionAnswer::Amount(amount)
@@ -21028,7 +21029,16 @@ mod tests {
             DecisionAnswer::Amount(n) => n,
             other => panic!("expected Amount, got {other:?}"),
         };
-        assert_eq!(amount(ask(AmountKind::Cost, 2)), 0, "a Devour sacrifice is declined");
+        assert_eq!(
+            amount(ask(AmountKind::Cost { free: 0 }, 2)),
+            0,
+            "a Devour sacrifice over real cards is declined"
+        );
+        assert_eq!(
+            amount(ask(AmountKind::Cost { free: 1 }, 2)),
+            1,
+            "the tokens the ask counts are given up, and nothing else"
+        );
         assert_eq!(amount(ask(AmountKind::Upside, 2)), 2, "generic upside still takes max");
         // 20 life, so the buffer rule pays at most 3.
         assert_eq!(amount(ask(AmountKind::Life, 9)), 3, "life payments keep a buffer");

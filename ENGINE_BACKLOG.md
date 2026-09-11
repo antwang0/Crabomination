@@ -137,11 +137,14 @@ chapter, i.e. skip the saga to its final ability — the audit lists this one as
 `ack`, so it is deliberate). `"Pay how much?"`'s `max` is already capped to the
 floating pool, so `Mana` is what it was doing anyway.
 
-Residue, filed not fixed: **the better answer for `Cost` is "give up the tokens
-and nothing else"** — the engine already sorts the candidates tokens-first, so
-the number is free to compute there, but `ChooseAmount` carries only `max` and
-the bot cannot see the ordering. Declining is the conservative answer, not the
-right one. **And one family is still prose-keyed**: `OptionalTrigger`'s
+Residue, **the `Cost` half fixed the same day**: "give up the tokens and nothing
+else" is the right answer and only the effect knows the order it sacrifices in,
+so the ask carries the count — `AmountKind::Cost { free }`, where
+`SacrificeAnyNumber` counts the leading run of tokens in its own
+tokens-first / cheapest-first ordering and the bot answers exactly that. A
+Devour creature now enters with counters for the chooser's spare tokens and the
+board survives; before this run it ate the board, and between the two it did
+nothing. **And one family is still prose-keyed**: `OptionalTrigger`'s
 `description` (57 sites), which the bot branches on in three places
 (`starts_with("Pay ") && contains(" life to deny ")`, `starts_with("Reveal the
 top card (")`, and the generic upside screen). It is the last thing standing
