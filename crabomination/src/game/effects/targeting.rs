@@ -148,7 +148,13 @@ impl GameState {
         // permanents/stack — without this, an `Any`-filtered Move (Regrowth)
         // auto-targets the caster as a player and silently fizzles since
         // `Effect::Move` only consumes Permanent / Card entity refs.
-        let accepts_player = eff.accepts_player_target();
+        // Slot 0's own filter wins when it is player-only: the *slot* is a
+        // player even when the effect body operates on permanents (Mudhole's
+        // `Move { what: CardsInZone { who: Target(0) } }`, the "enchant
+        // player" Curses). `accepts_player_target` classifies by the body, so
+        // twenty-six shipped bodies enumerated zero legal targets without
+        // this. `req` is already slot 0's filter, so it costs no extra walk.
+        let accepts_player = req.is_player_only() || eff.accepts_player_target();
         let primary_player = if prefer_friendly { controller } else { opp };
         let secondary_player = if prefer_friendly { opp } else { controller };
 
@@ -456,7 +462,9 @@ impl GameState {
         let offboard = eff.may_target_offboard_card() || req.mentions_offboard_zone();
         self.legal_targets_for_filter_scoped(
             req,
-            eff.accepts_player_target(),
+            // See the picker's note: a player-only slot 0 is a player slot
+            // whatever the body does with it.
+            req.is_player_only() || eff.accepts_player_target(),
             controller,
             source,
             offboard,

@@ -3280,6 +3280,26 @@ impl SelectionRequirement {
             Self::And(a, b) => a.can_match_player() && b.can_match_player(),
             Self::Or(a, b) => a.can_match_player() || b.can_match_player(),
             Self::Not(_) => true,
+            _ => self.is_player_only(),
+        }
+    }
+
+    /// True when **only** a player can satisfy this requirement — the three
+    /// player faces and their combinations.
+    ///
+    /// The narrower half of [`can_match_player`](Self::can_match_player),
+    /// which answers "could a player match" and says yes to `Any`. A slot
+    /// whose filter is player-only is a player slot whatever the effect does
+    /// with the player it names, which is what the target enumerator needs:
+    /// `Effect::Move { what: CardsInZone { who: Target(0) } }` is classified
+    /// permanent-targeting by `accepts_player_target`, and Mudhole, Hurkyl's
+    /// Recall, the seven "enchant player" Curses and twenty more enumerated
+    /// **zero** legal targets because of it — uncastable, with nothing logged.
+    pub fn is_player_only(&self) -> bool {
+        match self {
+            Self::Player | Self::OpponentPlayer | Self::YouPlayer => true,
+            Self::And(a, b) => a.is_player_only() || b.is_player_only(),
+            Self::Or(a, b) => a.is_player_only() && b.is_player_only(),
             _ => false,
         }
     }

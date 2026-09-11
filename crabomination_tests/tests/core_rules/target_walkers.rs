@@ -1316,3 +1316,87 @@ fn a_target_players_zone_is_a_player_slot() {
         assert_eq!(def.effect.primary_target_filter(), Some(&R::Player), "{}", def.name);
     }
 }
+
+/// A slot-0 filter only a player can satisfy **is** a player slot, whatever
+/// the effect's body does with the player it names.
+///
+/// `accepts_player_target` classifies by the body — `Effect::Move`,
+/// `Effect::Attach`, `Effect::PumpPT` and friends are "permanent-targeting",
+/// which is right for Regrowth and wrong for "return all artifacts target
+/// player owns". So the enumerator dropped every player candidate and the
+/// slot had **no** legal target at all: Mudhole, Hurkyl's Recall, River's
+/// Rebuke, Arms of Hadar, Tsabo's Decree, Mogg Infestation, Jace's −1, the
+/// seven "enchant player" Curses and twelve more enumerated ZERO targets on a
+/// two-player board — uncastable, and nothing logged. Twenty-six bodies.
+///
+/// Both call sites already hold slot 0's filter (`req`), so they now OR
+/// `SelectionRequirement::is_player_only` into the body's classification at no
+/// extra walk. This asserts the end-to-end behaviour rather than the walker's
+/// internals, because the internals are what was fooled.
+#[test]
+fn a_player_only_slot_zero_enumerates_a_player() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::game::two_player_game;
+    use crabomination::game::types::Target;
+
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::forest());
+
+    let mut bad: Vec<String> = Vec::new();
+    let mut covered = 0usize;
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let mut bodies: Vec<(&'static str, &crabomination::effect::Effect)> =
+            vec![("spell", &def.effect)];
+        for a in &def.activated_abilities {
+            bodies.push(("activated", &a.effect));
+        }
+        for t in &def.triggered_abilities {
+            bodies.push(("triggered", &t.effect));
+        }
+        for l in &def.loyalty_abilities {
+            bodies.push(("loyalty", &l.effect));
+        }
+        for (kind, body) in bodies {
+            // A *bare* player face only: a conjunct condition
+            // (`Player.and(CastSorceryThisTurn)` — Backdraft, Fire and
+            // Brimstone, Wicked Akuba) is legitimately unsatisfiable on this
+            // board, and building one board per condition would test the
+            // conditions rather than the slot.
+            if !body.target_filter_for_slot(0).is_some_and(|f| {
+                matches!(
+                    f,
+                    SelectionRequirement::Player
+                        | SelectionRequirement::OpponentPlayer
+                        | SelectionRequirement::YouPlayer
+                )
+            }) {
+                continue;
+            }
+            covered += 1;
+            let legal = g.enumerate_legal_targets(body, 0);
+            if !legal.iter().any(|t| matches!(t, Target::Player(_))) {
+                bad.push(format!("{} ({kind})", def.name));
+            }
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} bodies declare a player-only slot 0 and enumerate no player for it, so the slot has \
+         no legal target at all:\n  {}",
+        bad.len(),
+        bad.join("\n  ")
+    );
+    // The population, asserted with the finding list: a gate that looks at
+    // nothing reports nothing. It was 566 when written.
+    assert!(
+        covered >= 500,
+        "the player-only slot-0 invariant is looking at only {covered} bodies — it has gone \
+         vacuous. It was 566 when written; re-derive the shape before lowering this."
+    );
+}
