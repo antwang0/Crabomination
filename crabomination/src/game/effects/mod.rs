@@ -13780,6 +13780,15 @@ impl GameState {
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let n = self.evaluate_value(max, ctx).max(0) as u32;
                 if n == 0 { return Ok(()); }
+                // The cursor-indexed channel, not the single slot: this loop is
+                // over SEATS, and `who` is `You` or `Target(0)` in every shipped
+                // caller only by accident of the catalog. A single-slot ask here
+                // would hand seat 0's replay whatever seat 1 answered
+                // (`scripts/audit_stash_in_loop.py`, and Words of Wind is what
+                // that looks like). Mutations stay after the loop for the same
+                // reason.
+                let mut cursor = 0;
+                let mut answers: Vec<(usize, Vec<CardId>)> = Vec::new();
                 for p in self.resolve_players(who, ctx) {
                     let candidates: Vec<(CardId, String)> = self.players[p]
                         .graveyard
@@ -13794,7 +13803,8 @@ impl GameState {
                     // wants_ui seats suspend for a real pick (the old
                     // synchronous ask whiffed for them).
                     let chosen: Vec<CardId> = if self.players[p].wants_ui {
-                        let Some(ids) = self.ask_seat_cards(
+                        let Some(ids) = self.ask_seat_cards_logged(
+                            &mut cursor,
                             p,
                             if *to_top {
                                 format!("Put up to {n} cards on top of your library")
@@ -13807,6 +13817,7 @@ impl GameState {
                             n,
                             PickValue::Gain,
                             effect,
+                            Vec::new(),
                         ) else {
                             return Ok(());
                         };
@@ -13821,6 +13832,10 @@ impl GameState {
                         matches.into_iter().take(n as usize).map(|c| c.id).collect()
                     };
                     if chosen.is_empty() { continue; }
+                    answers.push((p, chosen));
+                }
+                self.clear_answer_log();
+                for (p, chosen) in answers {
                     let pos = if *to_top { LibraryPosition::Top } else { LibraryPosition::Shuffled };
                     let dest = ZoneDest::Library { who: PlayerRef::Seat(p), pos };
                     for cid in chosen {
