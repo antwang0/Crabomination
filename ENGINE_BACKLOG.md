@@ -19,6 +19,8 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (what the census found in 28 seconds) — a RESUMED resolution reset its own scratch, so every "from among them" pick after a suspend read an empty set: Bind to Life milled seven and put nothing onto the battlefield](#fixed-2026-09-11-what-the-census-found-in-28-seconds--a-resumed-resolution-reset-its-own-scratch-so-every-from-among-them-pick-after-a-suspend-read-an-empty-set-bind-to-life-milled-seven-and-put-nothing-onto-the-battlefield) | 85 |
+| Bugs & robustness | [FIXED 2026-09-11 (the tenth find's production half) — both resume channels leaked: two arms never cleared, no arm clears on an error unwind, and the stash had no guard at all; the RESOLUTION owns them now](#fixed-2026-09-11-the-tenth-finds-production-half--both-resume-channels-leaked-two-arms-never-cleared-no-arm-clears-on-an-error-unwind-and-the-stash-had-no-guard-at-all-the-resolution-owns-them-now) | 70 |
 | Bugs & robustness | [FIXED 2026-09-11 (tenth find) — one resolution's leftover answer stranded the next arm's ask for ever: the seed-835 Karn stall](#fixed-2026-09-11-tenth-find--one-resolutions-leftover-answer-stranded-the-next-arms-ask-for-ever-the-seed-835-karn-stall) | 46 |
 | Bugs & robustness | [FIXED 2026-09-11 (ninth find) — the same prose sniff one family over: Devour sacrificed the bot's whole board](#fixed-2026-09-11-ninth-find--the-same-prose-sniff-one-family-over-devour-sacrificed-the-bots-whole-board) | 40 |
 | Bugs & robustness | [FIXED 2026-09-11 (eighth find) — the bare resolution-time asks: six "up to N" picks resolved as a no-op and every "choose a color" named White](#fixed-2026-09-11-eighth-find--the-bare-resolution-time-asks-six-up-to-n-picks-resolved-as-a-no-op-and-every-choose-a-color-named-white) | 55 |
@@ -57,6 +59,188 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-11 (what the census found in 28 seconds) — a RESUMED resolution reset its own scratch, so every "from among them" pick after a suspend read an empty set: Bind to Life milled seven and put nothing onto the battlefield
+
+**The instrument paid for itself on its first sweep cell.** `--decks cube --seed
+890` under `CRAB_ANSWER_LOG=strict` aborted with
+
+```text
+answer-log leak: 0 logged + 1 stashed answer(s) left by Bind to Life / MoveChosen
+  resolve_effect_into <- continue_spell_resolution <- submit_decision_inner
+```
+
+and `--decks all --seed 890` gave the identical line. An unclaimed *stashed*
+answer means the arm never reached its ask on the re-run, and the reason is one
+line at the top of `resolve_effect_into`: it resets the per-resolution scratch.
+
+**A resumed resolution is the same resolution.** `submit_decision` →
+`continue_spell_resolution` re-enters `resolve_effect_into` with the suspended
+arm's effect, and that call cleared `last_moved_cards`, `last_created_token(s)`,
+`named_card_this_resolution`, every per-resolution tally — the state the *first*
+pass built. Bind to Life is "Mill seven cards. Then put a creature card **from
+among them** onto the battlefield": the pick is `Selector::LastMoved` over the
+seven just-milled cards, so after the suspend `ids` came back **empty**, the arm
+returned on `if ids.is_empty()`, and the card milled seven and put nothing onto
+the battlefield. The stranded stash is only the fingerprint; the lost creature is
+the bug.
+
+**And it was invisible in the suite**, because a headless seat answers
+synchronously and never re-runs the arm:
+`sos::vastlands_scavenger_prepare_spell_mills_seven_and_reanimates` passes on
+both sides of this fix. The eighth find's lesson again — *the suite tests the
+path that does not suspend, and the training path is the one that does* — so the
+regression test sets `wants_ui` and drives the resume:
+`sos::bind_to_life_still_reanimates_when_the_pick_suspends`.
+
+**The fix is the resolution's own knowledge, not the card.**
+`resolve_effect_into_kind` carries a `resuming` flag and
+`resolve_effect_resumed_into` is the entry a continuation uses: spells already
+knew (`override_effect.is_some()` is the resume), and the trigger and ability
+paths take a `resuming` argument that is `false` at their five ordinary call
+sites. Only the outermost call of a continuation is flagged, so the nested
+resolutions it runs still reset normally. Every scratch-reading selector and
+`Value` after a suspend is fixed at once (`LastMoved`, `LastCreatedToken(s)`,
+`NamedBySource`, `CardsDiscardedThisEffect`, `DamageDealtThisResolution`, the
+sacrifice tallies …), not just this card's.
+
+Verified on the cells that found it: the same recipe at `cube 890` and `all 890`
+under `CRAB_ANSWER_LOG=strict` reads **2 cells / 10,000 games / 0 failures / 0 cap
+/ 0 stuck** after the fix, against two rc-134 aborts before it. The suite is
+19,416 / 0 / 5 with the flag exported and **golden_trace 10 / 10 unmoved** — the
+fix changes behaviour only where the bug fired, and no committed trace reaches it.
+
+⚠ **The first version of this fix was a `GameState` bool, and the size guard
+caught it**: one inline byte cost the struct eight (1,608 against
+`cow::tests::game_state_stays_small`'s 1,600 cap), because the state's
+byte-sized region was exactly full. An argument costs nothing per probe clone —
+and PERF `(-144)`'s guard is why the wrong version never shipped.
+
+### The same census's structural finding: seven cards nest two answer-log arms
+
+`core_rules::structural_audit::no_shipped_card_nests_two_answer_log_arms` (new)
+walks every card and flags one log-using effect inside another. The log is one
+channel per resolution and `run_effect` recursion does not open a new one, so the
+inner arm's `cursor = 0` replays the **outer** arm's answers — and
+`ask_seat_bool` reads any kind, so it silently inherits the outer "yes" instead
+of asking. Seven shipped cards do it:
+
+| card | nesting | what the inner ask inherits |
+| --- | --- | --- |
+| Conspiracy Theorist | `MayPay > MayDiscard` | the payment's yes |
+| Emberwilde Djinn | `MayPayBy > MayPayLife` | the payment's yes |
+| Forbidden Ritual | `MaySacrifice > UnlessPlayerPays` | the sacrifice's yes |
+| Giant Albatross | `MayPay > DestroyEachUnlessPaysLife` | the payment's yes |
+| Rottenmouth Viper | `MaySacrifice > MayDiscard` | the sacrifice's yes |
+| Skirk Drill Sergeant | `MayPay > RevealTopMayPutOntoBattlefield` | the payment's yes |
+| Worms of the Earth | `AnyPlayerMayAccept > AnyPlayerMayAccept` | the outer vote |
+
+**Allowlisted, not fixed, and the reason is worth reading before anyone tries.**
+Clearing the log before the outer arm runs its body strands the outer arm's own
+`cursor`, which keeps counting; `MayPayRepeatedly` asks again *after* its body,
+so it cannot clear at all; and a per-arm base offset into the log cannot be
+recovered on a re-run without answer provenance, which the channel does not
+carry. The same arm also shows the *other* half of that shape:
+`MayPayRepeatedly` pays mana and runs its body **between** asks, so every suspend
+re-pays and re-runs them on the re-run — the "keep all side effects after the
+final ask" contract is violated there today. A redesign that carries provenance
+(which arm logged each answer) closes both; the gate keeps the population from
+growing in the meantime.
+
+## FIXED 2026-09-11 (the tenth find's production half) — both resume channels leaked: two arms never cleared, no arm clears on an error unwind, and the stash had no guard at all; the RESOLUTION owns them now
+
+The tenth find closed the *consumption* half of this class (a kind mismatch on
+slot 0 is dropped, so a leftover cannot strand the next ask for ever). It left
+the production half open and said so: *"the leak is upstream and in some other
+arm"*. This names the arms and removes the leak.
+
+**The instrument first, because the arms were invisible without it.**
+`CRAB_ANSWER_LOG=warn` (or `=strict`, which panics) prints the card and the
+top-level effect variant of any resolution that ends without suspending and
+leaves `scratch.resolution_answer_log` non-empty — the point where the channel
+is provably garbage. Debug builds only, one `OnceLock` read, and the whole check
+is three reads on the cold side of `!log.is_empty()`, so it costs an untraced
+build nothing. One `CRAB_ANSWER_LOG=strict` suite run (19,409 tests as the suite
+stood then, 128 s) named both leakers, and a static census over the 63
+`let mut cursor = 0` arms
+(`scripts/audit_answer_log.py`) agreed and added the two shapes a test run
+cannot reach:
+
+* `Effect::EachPlayerChoosesNumberHighestLoses` (Menacing Ogre) — **no
+  `clear_answer_log()` anywhere in the arm.** Every seat's sealed bid stayed in
+  the channel, and the arm then runs `on_you_win` as a nested resolution.
+* `Effect::MoveChosenKeyword` (Phyrexian Splicer) — same, one ask, then two
+  nested resolutions (`LoseKeyword` / `GrantKeyword`) with its answer still in.
+* `Effect::AnteTopOfLibrary` and `Effect::MayPayRepeatedly` — both clear on the
+  normal path and both propagate a `GameError` past the ask with `?`. **No arm
+  clears on an error unwind**, so every asking arm leaks on that path.
+
+**The fix is the lifetime, not the four arms.** The channel belongs to the
+resolution, so `resolve_effect_into` drops it at the outermost exit when nothing
+suspended — the `Err` path included, which is what makes the unwind leak
+unreachable rather than patched four times. `drop_stale_answer_log` stays as the
+*within*-resolution guard; the two arms' missing clears are fixed too, because
+inside one resolution the net cannot help (below).
+
+**And the same net over the other channel, which had no guard at all.**
+`scratch.stashed_resolution_answer` is the single-slot sibling (`MayDo`,
+`ChooseMode`, `Amount`, `Cards`, `CreatureType`, the damage division — every
+`take_opt_scratch!` site): written by `apply_pending_effect_answer`, taken by the
+re-running arm, and **cleared by nothing**. An arm that suspends and then never
+reaches its take — the game ends, an `?` unwinds, the re-run takes another
+branch — leaves it for the next arm of the *same answer kind* to consume as its
+own, and there is no `drop_stale_answer_log` equivalent to catch the mismatch:
+the take removes it, so a wrong-kind leftover self-heals in one round trip and a
+right-kind one is silently the wrong answer. It is dropped at the same exit. No
+park is needed for it: the engine surfaces one decision at a time, so a value
+sitting there while a *new* answer is applied can only be a leftover.
+
+**The one hazard, and why the park exists.** `apply_pending_effect_answer` runs
+*outside* any resolution on the resume path (`submit_decision`), and two of its
+arms resolve effects of their own — `ImpulsePending` and `MayCastExiledPending`,
+i.e. **outermost** resolutions whose exit would drop the suspended arm's live
+replay. The log is parked across that call and the arm's own pushes are appended
+behind it, so ordering is unchanged. In-resolution callers (28 sites in
+`effects/mod.rs`, the synchronous non-`wants_ui` path) are at depth > 0 and the
+net never fires for them.
+
+**What the net does NOT cover — the per-arm clears stay load-bearing.** Inside
+one resolution the channel is shared: a `Seq` of two asking arms, and an arm and
+the nested resolution it runs. A nested arm's `cursor` starts at 0 and replays
+whatever the outer arm logged. `Effect::MayPayRepeatedly` is the live shape — it
+asks, pays, runs `body` as a nested resolution, and asks again — so the answers
+must survive the nested resolution and parking them per resolution is *not*
+obviously safe: a suspend inside the nested resolution re-runs from the nested
+arm's own effect (`ask_seat_bool` stores the asking arm's `effect`), so a parked
+outer log would have to be either discarded or restored and the two choices
+differ. Left open deliberately, priced here so nobody parks it blind.
+
+**The family is bigger than these two channels, so the instrument covers it
+too — CENSUS, not a net.** Ten one-shot channels have the identical shape: set
+by a `submit_decision` resume just before it replays a cast or an activation,
+`take()`n by that replay, cleared by nothing — `stashed_resolution_answer`,
+`pending_cast_sacrifices`, `pending_cast_discards`, `pending_spree_modes`,
+`pending_ability_exile_other`, `pending_ability_sac_any`,
+`pending_cast_spend_float`, `pending_landcycle_pick`,
+`pending_ability_sac_other`, `pending_ability_tap_other`. A replay that returns
+early (an unaffordable cost, an illegal target, an error) never reaches its take,
+and the pick then waits for the next cast or activation *of the same shape* to
+consume as its own — a player's sacrifice pick paying for someone else's spell.
+`submit_decision` now names any that survive a round trip which left nothing
+pending (`CRAB_ANSWER_LOG`, debug builds, behind a "something is Some" test).
+**First reading: 0 stale channels across the 19,414-test suite under
+`CRAB_ANSWER_LOG=strict`, and 0 across the 100,400 fresh-seed self-play games the sweeps completed.** So
+the shape is there and nothing exercises it yet — which is the same sentence the
+`OptionalKind` find ended on about its eight unsampled kinds, and the reason to
+leave the instrument in rather than net a path no evidence names. **Nothing is
+netted for these on purpose**: the channels legitimately span several
+`submit_decision` calls while a decision stays pending (pick the sacrifices, then
+tap for mana manually), so a drop has to be keyed on "nothing pending", and the
+census is what would justify keying it.
+
+Tests: `game::answer_log_tests::a_finished_resolution_drops_whatever_was_left_in_the_answer_log`,
+`::a_finished_resolution_drops_a_stash_no_arm_came_back_for`,
+`::applying_an_answer_appends_it_behind_the_parked_replay`.
 
 ## FIXED 2026-09-11 (tenth find) — one resolution's leftover answer stranded the next arm's ask for ever: the seed-835 Karn stall
 

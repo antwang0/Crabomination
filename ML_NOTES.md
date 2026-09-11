@@ -4657,3 +4657,47 @@ and it wins 40 % of the time.
 
 **Not adopted.** `EvalWeights::default_const()` is unchanged; golden
 traces and `--bench` untouched.
+
+## The actors' jitter stream is pinned per game (2026-09-11) — TODO item 7's open question, ANSWERED
+
+`HeuristicBot`'s tie-break nudge (`jitter_below`) and the actors' live
+softmax sampling (`sample_scored_index`) both draw from one thread-local
+stream. Two callers install a seed on it: the ladder's antithetic pairs (salted
+by seat, which is why `--bench` is byte-identical run to run) and
+`selfplay_train --feature-census`. **The training actors installed nothing**, so
+they drew from the unseeded thread RNG and a recorded game was not a replay of
+itself — two runs of `--feature-census 8 --seed 5` disagreed by 12 positions and
+515 encoded objects out of 820 / 29,143 before the census pinned its own games
+(2026-08-29). `selfplay.rs`'s own module header called that "by design … the
+training loop doesn't need [replayability]", and TODO item 7 carried it as
+"open, not unilateral".
+
+It is decided by the goal it sits under, not by preference: **cross-process
+determinism under a fixed seed is a standing requirement, and "a panic at game
+400 k kills a training run" is only actionable if that game can be re-run.**
+Before this, it could not be — not even with the seed in hand. And the
+mechanism was already there and already documented as the hook:
+`sample_scored_index`'s doc says "drawing from the jitter stream (seeded ⇒
+reproducible)". The actor path was the one that never installed one.
+
+So `play_recorded_game_mcts` pins `seed ^ 0x11_7737_5EED_0001` for the length of
+the game and clears it after, **only when the thread has no stream installed** —
+a caller whose whole point is sharing one stream across two games (the
+antithetic pairs, the census) keeps its own. Per game, from the per-game seed,
+so nothing narrows: game `n`'s salt is unchanged, every game still gets its own
+noise, and the exploration temperature works exactly as before.
+
+⚠ **A training run started after this generates different games than one
+started before it** — same distribution, different draws. No encoding, pool or
+`TrainRow` change, so **no net needs a retrain** and no in-flight comparison is
+invalidated on the label side; but an A/B whose two arms straddle this commit is
+comparing different game streams and should be re-run on one side of it.
+
+What is still NOT reproducible is a whole net-in-the-loop run: `n` comes off a
+shared atomic, so which actor thread plays game `n` — and therefore which
+learner weights it sees — varies between runs. One *game* replays from
+(template, seed, weights); a whole run does not, and that is a different
+problem (a per-game weight snapshot) than this one.
+
+Test: `selfplay::tests::the_same_seed_records_the_same_game` plays one sealed
+game twice and compares every recorded row.

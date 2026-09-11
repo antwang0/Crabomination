@@ -36,6 +36,23 @@ cargo run --release --bin bot_ladder -- --bench
 # filter 23 (`1c304384`).
 CRAB_THREAD_CHECK=1 cargo run --release --bin bot_ladder -- --bench
 
+# WHICH ARM LEAKED A RESUME CHANNEL, AND WHETHER ANY ONE-SHOT PICK OUTLIVED ITS
+# REPLAY. Debug builds only and read on the cold side of a "the channel is not
+# empty" test, so an unset run pays nothing and the optimized profiles do not
+# compile it at all. `warn` names the card and the top-level effect variant of
+# any resolution that ends without suspending and leaves
+# `scratch.resolution_answer_log` or `stashed_resolution_answer` behind, plus any
+# of the ten one-shot channels (`pending_cast_sacrifices` & co.) still set when
+# `submit_decision` returns with nothing pending; `strict` panics instead, which
+# is what makes it a sweep gate under `panic = "abort"` (rc 134, message in the
+# cell's log). **It found Bind to Life in its first 28-second cell** — a resumed
+# resolution reset its own scratch, so `Selector::LastMoved` came back empty and
+# the card put nothing onto the battlefield for every seat that suspends.
+# Export it for the suite too: every one of the 19,416 tests then asserts both
+# nets and the census.
+CRAB_ANSWER_LOG=strict scripts/fresh_seed_sweep.sh "cube all" "890" 400
+CRAB_ANSWER_LOG=strict cargo nextest run --workspace --exclude crabomination_client
+
 # WHAT A CAPPED GAME WAS DOING. `undecided_by cap N` names the count and stops
 # there, so "which board, which loop" has cost a rebuild every time it has been
 # asked. Read once, on the capped game only, so the throughput path pays
@@ -2805,6 +2822,80 @@ values are gone the floor of the current shape is ~60 KB.
 ## Baseline
 
 Closing states from the `(-185)` tip down are in `PERF_ARCHIVE.md`, verbatim.
+
+### 2026-09-11 (a session sharing the branch with the `OptionalKind` one) — both resume channels netted, the ten one-shot channels censused, the actors' jitter pinned; no perf leg, and a FOURTH box
+
+⚠ **Two sessions were on `claude/modern_decks` at the same time this afternoon**
+(this leg's `b7dc6de5` rebased onto `68dceaaa` three minutes after it landed;
+then `1d9eddc6` and `99d19420`). Read `git log` before starting anything off
+NEXT, and fetch before every push — the `OptionalKind` refactor this session was
+about to start had already landed upstream, and only the fetch showed it.
+
+```text
+fix     the tenth find left the *production* half of the answer-log class open ("the leak is upstream and in some other arm").
+        `CRAB_ANSWER_LOG=warn|strict` (debug builds, cold path only: three reads on the far side of `!log.is_empty()`) names any
+        resolution that ends without suspending and leaves the channel non-empty, which is where it is provably garbage. One strict
+        suite run named both leakers — `EachPlayerChoosesNumberHighestLoses` (Menacing Ogre) and `MoveChosenKeyword` (Phyrexian
+        Splicer), neither of which clears at all, both of which then run nested resolutions — and `scripts/audit_answer_log.py`
+        (new, static, 63 arms) agreed and added the shape no test run reaches: **no arm clears on an error unwind**, and two
+        (`AnteTopOfLibrary`, `MayPayRepeatedly`) propagate a `GameError` past their ask. So the *resolution* drops the channel at
+        its outermost exit, `Err` path included; `drop_stale_answer_log` stays as the within-resolution guard. **The same net
+        covers the other resume channel, which had no guard of any kind**: `stashed_resolution_answer` (every
+        `take_opt_scratch!` site — `MayDo`, `ChooseMode`, `Amount`, `Cards`, `CreatureType`, the damage division) is written by
+        `apply_pending_effect_answer`, taken by the re-running arm, and was cleared by nothing, so an arm that never reached its
+        take left it for the next arm of the same answer *kind* to consume as its own. The one hazard is
+        `apply_pending_effect_answer`, which runs OUTSIDE any resolution on the resume path and whose `ImpulsePending` /
+        `MayCastExiledPending` arms resolve effects of their own: the replay is parked across that call and the arm's own pushes are
+        appended behind it. ENGINE_BACKLOG has the half this does NOT cover (one resolution's arms share the channel, and
+        `MayPayRepeatedly` asks again after running its body, so parking per resolution is not obviously safe), and the CENSUS
+        that says whether the same shape leaks in the other **ten** one-shot channels (`pending_cast_sacrifices`,
+        `pending_ability_sac_other`, `pending_landcycle_pick`, …): `submit_decision` names any that survive a round trip which
+        left nothing pending. Instrument first — none of those is netted yet, because a pick legitimately spans several
+        `submit_decision` calls while a decision stays pending (choose the sacrifices, then tap for mana by hand)
+gate    suite **19,416 / 0 / 5** with `CRAB_ANSWER_LOG=strict` exported, so every one of those tests is an assertion on both nets
+        AND on the ten-channel census: **0 leaks and 0 stale one-shots anywhere the suite reaches**. Six new tests (the log drop,
+        the stash drop, the park's ordering, the self-play replay, Bind to Life on the suspending path, and the nesting gate).
+        golden_trace **10 / 10 unmoved through every commit of this session, the resumed-resolution fix included** — it changes
+        behaviour only where the bug fired and no committed trace reaches it. clippy --workspace
+        --exclude crabomination_client --all-targets **0**, `cargo check --profile release-fast -p crabomination --bin
+        bot_ladder` (debug-assertions OFF) clean in 2m03s, `audit_answer_log` 63 arms / 0 NO-CLEAR / 2 ERR?,
+        `audit_panics` **68 sites / 57 guarded / 11 lock-poison / 0 bare**, `audit_decision_plumbing` 178 / 104 / 74 DEAD 0,
+        `audit_variant_coverage` the documented 2 dead primitives
+sweep   `scripts/fresh_seed_sweep.sh "cube sealed all sos fixed" "886 887 888 889" 400` on a fresh audit build at `b7dc6de5`
+        (`target-audit/overflow`, debug-assertions, 3m08s warm, 8 assertion strings) **with `CRAB_ANSWER_LOG=strict` exported, so
+        every leak is an abort**: 20 cells, **73,600 games, 0 failures, 0 cap / 0 stuck / 0 draw** (20-87 s a cell). That is the
+        real reading on the fix — the suite reaches the two leaking arms, and 73,600 games say no third arm leaks on any path
+        self-play takes. Seeds 853..885 were the `OptionalKind` commit's
+sweep2  **the same recipe at seeds 890..891 ABORTED two cells, and that is the run's biggest find**: `cube 890` at 28 s and
+        `all 890` at 55 s both printed `1 stashed answer(s) left by Bind to Life / MoveChosen`. An unclaimed *stash* means the arm
+        never reached its ask on the re-run — because `resolve_effect_into` reset the per-resolution scratch on a *continuation*,
+        so `Selector::LastMoved` came back empty and "mill seven, then put a creature card from among them onto the battlefield"
+        put nothing onto the battlefield for every seat that suspends. ENGINE_BACKLOG has the mechanism; the fix is a `resuming`
+        argument on the resolution entry (a `GameState` bool cost the struct eight bytes and blew
+        `cow::tests::game_state_stays_small` at 1,608 / 1,600 — `(-144)`'s guard earning its keep). The two cells re-read
+        **`ok` / 10,000 games / 0 failures** after it, strict flag still armed. **8 of 10 cells clean
+        (26,800 games counted — an aborted cell tallies none), and both aborting cells read `ok` after the fix**; every
+        scratch-reading selector and `Value` after a suspend is fixed with them, not just this card's
+det     the training actors' jitter stream: `play_recorded_game_mcts` installs one per game (from the game's own seed, only when
+        the thread has none) so a recorded game replays. **TODO item 7's "open, not unilateral" question, decided by the standing
+        goal it sits under** — cross-process determinism under a fixed seed — and by `sample_scored_index`'s own doc, which
+        already promised "drawing from the jitter stream (seeded => reproducible)". Nothing in any gate goes through that path, so
+        traces and `--bench` cannot move; ML_NOTES has the reasoning and the retrain question it does NOT raise (no encoding,
+        pool, `Vocab` or `TrainRow` change — but a run started after it generates different games than one started before)
+bench   --bench release-fast twice, at `99d19420` and again at `f6bad006` (the resumed-resolution fix): **both 195,806 / 27.49 /
+        611.9 / 0 stalls — counters byte-identical to `2003d1cf` and to the `OptionalKind` commit**, determinism ok (all pairs
+        split), thread_determinism ok (3 vs 1 threads identical), bin_bytes 128,488,008 / 128,490,672, peak_rss_mib 28.9 / 31.1,
+        289.72 / 306.55 games/s at host_calib_ms 58 / 52. Both nets and both instruments are `cfg(debug_assertions)` or on the
+        cold side of an emptiness test, and the scratch fix reaches no `fixed`-pool card, so this is the expected reading
+cost    three reads (`resolution_depth`, `suspend_signal`, the log's len) per outermost resolution, and nothing at all per nested
+        one; the park is two `Vec` moves per answered decision and only when the channel is non-empty. The census and the leak
+        namer are compiled out of every optimized profile
+⚠ box   **A FOURTH BOX.** `host_cpu Intel(R) Xeon(R) Processor @ 2.80GHz`, `host_calib_ms 58`, **289.72 games/s** on the committed
+        `--bench` against the third box's 517-542 at the same calibration and the same byte-identical counters. So no Ir or
+        wall-clock number from the seventh run's block transfers here, the A/B triple would have to be RE-TAKEN before any leg,
+        and the "a 3,200-game `cube` cell is 7 s" claim is that box's: the same cell is 37-52 s here on the audit build. The
+        counters are the gate precisely because they are the only column that crossed all four boxes unchanged
+```
 
 ### 2026-09-11 (seventh run) — two prose-sniff class fixes, the two perf legs they uncovered (`(-289)`, `(-290)`), a stall the sweep found, and the asks that had to carry their own arithmetic; A THIRD BOX, so the A/B base was RE-TAKEN
 

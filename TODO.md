@@ -28,28 +28,29 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; ⚠ `(-290)` is the last claimed candidate, `(-291)` next; **fetch before every push**. Gotchas in **CLAUDE.md**, measurement in
-   **PERF's "Standing rules"**. **A/B base: RE-TAKEN on the THIRD box AT THE RUN'S TIP `a057ca0a` — sealed 2,495,934,457 / cube 2,318,840,923 /
-   fixed 635,516,815** (PERF Baseline, seventh-run addendum: the correctness commits move the sealed and cube games, so a base taken before
-   them does not transfer). **Every later box: RE-TAKE FIRST; three boxes have disagreed.**
-2. **Gates at the tip:** suite 19,409 / 0 / 5, clippy 0, golden_trace 10 / 10 unmoved, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls — counters
-   identical to `2003d1cf` at every tip this run, determinism + thread_determinism ok; `audit_decision_plumbing` 178 / 104 / 74, **DEAD 0** (a gate);
-   `audit_variant_coverage` the documented 2 dead primitives. **Fresh-seed sweeps ~1.29 M games, seeds 796..852 — the next fresh seed is 853**; the
-   only caps left are the documented Beacon of Immortality board. No actor leg this run.
-3. **This run (seventh), seven legs, one rule.** *A policy that recovers from prose, or cannot do arithmetic the ask never gave it, is a bug — and
-   fixing it deletes a perf premise.* (a) `PickValue` on `ChooseCards` (104 asks): "exile a card from your hand" costs handed over the biggest card;
-   "choose N to keep" kept the worst. (b) **`(-289)`** sealed -0.129 %: the off-board trigger prompt joins `(-288)`'s elided half. (c) **`(-290)`**
-   cube -0.247 %, found in `(-289)`'s own census table: `combat_instant_candidates` deduped with `format!("{:?}")`. (d) `AmountKind` on
-   `ChooseAmount`: **every Devour card sacrificed the bot's whole board.** (e) A leftover `resolution_answer_log` entry made the next arm's first ask
-   MISS its replay for ever (12 of 1,600 `cube` 835 games capped) — pre-existing, reproduces on `38b05af8`. (f) collect evidence declined for every
-   bot seat (17 cards); the ask carries its threshold now. (g) `AmountKind::Cost { free }`: Devour takes the spare tokens, not the board.
-4. **Next moves, in order.** (a) **Sweep FIRST and sweep WIDE** — a 3,200-game `cube` cell is 7 s here and (e) had been sitting in the default pool
-   because nobody took seeds past 761. Start at 853. (b) **The last prose-keyed family is `OptionalTrigger`'s `description`** — 57 sites, three bot
-   branches plus `may_pay_prompt_affordable`'s cost parse; the same treatment finishes `(-288)`'s elision and is the biggest remaining member of
-   the class. (c) **Find the arm that leaks the answer log** — `drop_stale_answer_log` makes the failure benign, not absent; a debug assertion on a
-   non-empty log at the start of a fresh resolution would name it. (d) `BecomeChosenColor` picks per source, not per target. (e) mirrors: abilarms
-   926+, mirror 798+, mcts 777+, lookahead / planner 781+. (f) **The two methods that paid: a correctness change can delete a perf premise, and a
-   caller table is a census of the whole program, not of the row you came for.** Both perf legs came off a bug fix, not off the queue.
+   tracker prose; fetch before every push; `(-290)` is the last claimed candidate, `(-291)` next. Gotchas in **CLAUDE.md**, measurement in **PERF's
+   "Standing rules"**. ⚠⚠ **TWO SESSIONS SHARED THIS BRANCH on 2026-09-11 and one nearly rebuilt the other's landed work — read `git log` first.**
+   **A/B base: RE-TAKE. Four boxes disagree** — the seventh run's triple is the third box's (`a057ca0a`), and the box after it reads 289.72 `--bench`
+   games/s against that box's 517-542 **on byte-identical counters**, so no wall-clock or Ir row crosses between them.
+2. **Gates at the tip:** suite **19,414 / 0 / 5 with `CRAB_ANSWER_LOG=strict` exported** — which makes both resume-channel nets and the ten-channel
+   one-shot census assertions on every test, and is how to run it from now on — clippy 0, golden_trace 10 / 10, `--bench` **195,806 / 27.49 / 611.9 /
+   0 stalls** + determinism + thread_determinism, release-fast check clean, `audit_answer_log` 63 / 0 NO-CLEAR / 2 ERR?, `audit_panics` **0 bare**,
+   `audit_decision_plumbing` 178 / 104 / 74 **DEAD 0**. **Fresh seeds 853..891, 282,560 completed games (two cells aborted on the find below and are `ok` after it) — next is 892.**
+3. **This run, and the sentence it earned:** *an instrument that names a leak finds the bug the leak was a symptom of.* Both resume channels leaked
+   (two arms never cleared, no arm clears on an error unwind) and the RESOLUTION drops them at its outermost exit now; the ten other one-shot channels
+   are **censused, not netted** (0 stale in the suite, 0 in 100,400 swept games). Then the census's first strict sweep cell aborted on **Bind to Life**: a
+   *resumed* resolution reset its own per-resolution scratch, so `Selector::LastMoved` read an empty set and "mill seven, then put a creature card from
+   among them onto the battlefield" put **nothing** onto the battlefield for every seat that suspends — the whole training path, invisible to the
+   suite's headless test. `resuming_resolution` fixes it for every scratch-reading selector at once. And the actors' jitter is pinned per game, so a
+   recorded self-play game replays from its seed (item 7, ML_NOTES — different games after it, no retrain).
+4. **Next:** (a) **sweep first and sweep wide**, from 892, `CRAB_ANSWER_LOG=strict` exported. (b) **The channel's open half is LIVE on seven cards** —
+   `structural_audit::no_shipped_card_nests_two_answer_log_arms` allowlists them (Conspiracy Theorist, Emberwilde Djinn, Forbidden Ritual, Giant
+   Albatross, Rottenmouth Viper, Skirk Drill Sergeant, Worms of the Earth): the inner arm's `cursor = 0` replays the OUTER arm's yes. **The fix is
+   answer provenance in the channel** — ENGINE_BACKLOG says why clearing, offsetting and parking all fail, and the same redesign fixes
+   `MayPayRepeatedly`, which re-pays and re-runs its body on every re-run today. (c) Read the census before netting what it does not
+   name. (d) `BecomeChosenColor` picks per source, not per target. (e) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
+   (f) Perf reads floor — the crack-back horizon is a ladder gate, and both of the seventh run's perf legs came off a bug fix, not off the queue.
+
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
@@ -250,10 +251,9 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    did not move over ~29 k encoded objects. Use it on anything touching
    `encode.rs` (item 4's caution had no such check before). It was
    *not* reproducible until the ninety-sixth pass — the census's own games
-   left `bot::jitter_below` unseeded. **The same hole is still open on the
-   training actors** (item 7's question), and the comment over
-   `play_recorded_game_mcts`' reseed now says so instead of claiming exact
-   replay. **And PERF's "Profile of record" now carries the ACTOR's profile**
+   left `bot::jitter_below` unseeded. **That hole is closed on the training
+   actors too now** (item 7): `play_recorded_game_mcts` pins the stream per game,
+   so the census's own pin is belt-and-braces and any recorded game replays. **And PERF's "Profile of record" now carries the ACTOR's profile**
    — three of its top rows (`encode_state` 5.7 %, deck building 1.8 %,
    `__memcpy` at twice `cube`'s share) have no row in any `bot_ladder`
    profile at all. Then: `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
@@ -308,8 +308,16 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    `determinism ok` / `thread_determinism ok 3 vs 1`).
 6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
    Card audits clean — see INCOMPLETE_CARDS.
-7. **ML** — ML_NOTES. Open, not unilateral: should `selfplay` seed
-   `jitter_below` from `--seed`?
+7. **ML** — ML_NOTES. ~~Open: should `selfplay` seed `jitter_below` from
+   `--seed`?~~ **ANSWERED YES (2026-09-11)**: `play_recorded_game_mcts` pins the
+   stream per game, so a recorded game replays from its seed —
+   `sample_scored_index` already documented the seeded stream as the
+   reproducibility hook and the actors were the one path that installed none.
+   ⚠ **Runs started after this generate different games than runs before it**
+   (same distribution, different draws; no encoding / pool / `TrainRow` change,
+   so **no retrain**). A whole net-in-the-loop run is still not reproducible —
+   `n` comes off a shared atomic, so the weights game `n` sees vary. ML_NOTES
+   has the reasoning and the test.
 7b. **Test suite** — `find_data_tests.sh` was wrong **five ways** and is
    fixed; its output is a DELETE list and every bug put live engine tests on
    it. Bugs 4 and 5 are the ninety-third pass's. **(4)** is bug 1 one function
