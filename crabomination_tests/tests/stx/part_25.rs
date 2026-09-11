@@ -1079,13 +1079,17 @@ fn diviners_wand_grows_the_equipped_creature_on_each_draw() {
     assert!(!cp.keywords().contains(&Keyword::Flying));
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::island());
+    // `draw_one` collects the `CardDrawn` event; the caller dispatches it.
     let mut evs = Vec::new();
     g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 on the first draw");
     assert!(cp.keywords().contains(&Keyword::Flying), "and flying with it");
+    evs.clear();
     g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     assert_eq!(
         g.computed_permanent(bear).map(|cp| (cp.power, cp.toughness)),
@@ -1102,9 +1106,10 @@ fn diviners_wand_attaches_itself_to_an_entering_wizard() {
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
         crabomination::decision::DecisionAnswer::Bool(true),
     ]));
-    // The trigger is on the Wand, not the entering creature, so the entry has
-    // to go through the real zone change rather than a self-ETB fire.
-    let wizard = g.move_card_to_battlefield_for_test(0, catalog::shieldmage_elder());
+    // The trigger is on the Wand, not the entering creature, so the ETB event
+    // has to reach the dispatcher rather than the entering card's own hook.
+    let wizard = g.add_card_to_battlefield(0, catalog::shieldmage_elder());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: wizard }]);
     drain_stack(&mut g);
     assert_eq!(
         g.battlefield_find(wand).and_then(|c| c.attached_to),

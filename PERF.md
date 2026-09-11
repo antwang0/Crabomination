@@ -2828,13 +2828,17 @@ came off the back of it (Diviner's Wand, Skophos Maze-Warden, Shieldmage Elder).
 fix     d0d9b042 (six "up to N" no-ops: ExileUpToNFromGraveyards' 18 cards, MillThenToHandN's 9, Aetherplasm, Academy Researchers,
         Credit Voucher, Cloudstone Curio's documented decline) / 8e45667f (the colour choice: ChooseColorForSelf's 42 cards keyed on
         `chosen_color_aimed_at_opponents`, GrantProtectionFromChosenColor's 41 off the shared census, the basic-land-type asks, Mox
-        Amber) / PENDING-4 (the engine-path asks: Chorus of the Conclave, Moonring Mirror, Breathstealer's Crypt, Fasting) /
+        Amber) /
         6f2dd178 (the engine-path asks: Chorus of the Conclave, Moonring Mirror, Breathstealer's Crypt, Fasting; plus the colour
         picks' WUBRG tie-break and BecomeChosenColor's legal set) / cdf3e4de (two `sort_by` lints, the last ack) / 4e0479fd
         (three one-edit `cnt` cards: Diviner's Wand, Skophos Maze-Warden, Shieldmage Elder)
-gate    --bench release-fast at 6f2dd178 (10m44s with deps warm): 195,806 / 27.49 / 611.9 / 0 stalls — **counters identical to
-        2003d1cf**, determinism ok (all pairs split); bin_bytes 126,800,920 (-97,048 on the fifth run's tip); peak_rss_mib 28.8;
-        315.0 games/s at host_calib_ms 50. Suite 19,402 / 1 / 5 at 6f2dd178 — the one failure was this run's own new Skophos test
+gate    --bench release-fast, twice: at 6f2dd178 (10m44s with deps warm) and rebuilt at the card tip 4e0479fd (9m41s) — both
+        **195,806 / 27.49 / 611.9 / 0 stalls, counters identical to 2003d1cf**, determinism ok (all pairs split),
+        thread_determinism ok (3 vs 1 threads identical). bin_bytes 126,800,920 -> 128,480,576 (the three cards); peak_rss_mib
+        28.8 / 29.2; 315.0 then 298.4 games/s at host_calib_ms 50 — a 5 % single-run spread on identical counters, i.e. the host,
+        which is why the counters and not the wall clock are the gate here (How to measure: 212-407 across a day on one binary).
+        The second reading is the one that matters: the first binary predated the card edits, caught by re-running the build (it
+        recompiled rather than saying "Finished in 0.1s"). Suite 19,402 / 1 / 5 at 6f2dd178 — the one failure was this run's own new Skophos test
         aiming the Labyrinth at a creature that was neither attacking nor blocking (the ability's printed target), rewritten with a
         real combat; golden_trace 10 / 10 inside that run, and no traced deck carries an affected effect. clippy --workspace
         --exclude crabomination_client --all-targets: 2 warnings, both `sort_by` in this run's own new defaults, fixed at cdf3e4de.
