@@ -19,6 +19,9 @@ completing paths that can leave the channel dirty —
   NO-CLEAR  the arm never clears at all (Menacing Ogre, Phyrexian Splicer)
   ERR?      a `?` propagates a `GameError` past an ask, which no arm clears on
   RET       some other early return past the ask with no clear before it
+  PRE       a MUTATION before the arm's first ask — the re-run repeats it, so a
+            suspending seat pays, flips or destroys twice (`MayPayRepeatedly`
+            re-pays quadratically; `CoinFlipDestroyLoop` re-rolls its coin)
 
 The suspend path (the `None` / `else` arm of an ask, a few lines below it) is
 NOT a leak — the log is the resume's replay — and is filtered out, which is why
@@ -26,7 +29,7 @@ the runtime half is the authority: this one trades a false negative there for a
 readable list. The two `ERR?` rows are listed, not fixed per arm — the net at the
 resolution's exit is what makes an unwind harmless, for all 63 arms at once.
 
-Reading at the eleventh find: **63 arms, 0 NO-CLEAR, 2 ERR?.**
+Reading at the eleventh find: **63 arms, 0 NO-CLEAR, 2 ERR?, 1 PRE.**
 """
 
 import re
@@ -38,6 +41,17 @@ ASK = re.compile(
     r"|ask_seat_cards|choose_up_to_cards|ask_ward_discards|ask_mana_sources)\b"
 )
 CLEAR = re.compile(r"\bclear_answer_log\(\)")
+# A re-run repeats everything the arm did before the ask it suspended on, so a
+# mutation there happens again — `MayPayRepeatedly` pays its mana between asks and
+# re-pays once per suspend. These are the engine's own mutators, matched on the
+# call and not on the receiver, so a helper that mutates through one of them is
+# caught too.
+MUTATE = re.compile(
+    r"\b(move_card_to|destroy_permanent|adjust_life|adjust_life_applied|pay_mana_cost"
+    r"|pay_mana_cost_with_picks|shuffle_library|draw_cards|draw_one|mill_cards"
+    r"|add_counters|remove_counters|send_to_graveyard|exile_card|sacrifice_permanent"
+    r"|tap_permanent|untap_permanent|run_effect|create_token|ante_top_card)\s*\("
+)
 DECL = re.compile(r"^(\s*)let mut cursor = 0")
 FN = re.compile(r"\s*(?:pub(?:\(crate\))?\s+)?(?:async\s+)?fn (\w+)")
 
@@ -125,7 +139,13 @@ def main():
         if not asks:
             rows.append((i + 1, fn_at[i], "NO-ASK", 0, 0, []))
             continue
-        risky = []
+        # Mutations BEFORE the first ask: the re-run repeats them.
+        pre = [
+            (i + 1 + k, body[k].strip()[:88])
+            for k in range(asks[0])
+            if MUTATE.search(body[k]) and not body[k].lstrip().startswith("//")
+        ]
+        risky = [(ln, "PRE   " + t) for ln, t in pre]
         for k in range(asks[0], len(body)):
             s = body[k]
             if k in asks:

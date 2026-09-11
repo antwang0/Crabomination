@@ -45,9 +45,12 @@ sixty-seventh pass, so don't re-take that.
    recorded self-play game replays from its seed (item 7, ML_NOTES — different games after it, no retrain).
 4. **Next:** (a) **sweep first and sweep wide**, from 892, `CRAB_ANSWER_LOG=strict` exported. (b) **The channel's open half is LIVE on seven cards** —
    `structural_audit::no_shipped_card_nests_two_answer_log_arms` allowlists them (Conspiracy Theorist, Emberwilde Djinn, Forbidden Ritual, Giant
-   Albatross, Rottenmouth Viper, Skirk Drill Sergeant, Worms of the Earth): the inner arm's `cursor = 0` replays the OUTER arm's yes. **The fix is
-   answer provenance in the channel** — ENGINE_BACKLOG says why clearing, offsetting and parking all fail, and the same redesign fixes
-   `MayPayRepeatedly`, which re-pays and re-runs its body on every re-run today. (c) Read the census before netting what it does not
+   Albatross, Rottenmouth Viper, Skirk Drill Sergeant, Worms of the Earth): the inner arm's `cursor = 0` replays the OUTER arm's yes. **The fix is parking the channel at the
+   nesting boundary** — a `with_parked_answer_log` helper in the four outer arms, restoring only when the body did NOT suspend;
+   ENGINE_BACKLOG sketches it and says why provenance, clearing and offsetting cannot work. Beside it, the audit's new **PRE** column
+   (a mutation before the arm's first ask, which the re-run repeats) reads 63 / 1: **Crooked Scales re-flips its coin on every
+   resume**, and `MayPayRepeatedly` re-pays **quadratically** (Magnetic Mountain, Dream Tides). All three are correct headless and
+   wrong for every seat that suspends — the run's recurring shape. (c) Read the census before netting what it does not
    name. (d) `BecomeChosenColor` picks per source, not per target. (e) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
    (f) Perf reads floor — the crack-back horizon is a ladder gate, and both of the seventh run's perf legs came off a bug fix, not off the queue.
 

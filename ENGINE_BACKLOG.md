@@ -143,9 +143,49 @@ recovered on a re-run without answer provenance, which the channel does not
 carry. The same arm also shows the *other* half of that shape:
 `MayPayRepeatedly` pays mana and runs its body **between** asks, so every suspend
 re-pays and re-runs them on the re-run — the "keep all side effects after the
-final ask" contract is violated there today. A redesign that carries provenance
-(which arm logged each answer) closes both; the gate keeps the population from
-growing in the meantime.
+final ask" contract is violated there today, **quadratically**: with `k` suspends
+the first iteration's cost is paid `k` times. Two shipped cards reach it, both
+upkeep loops — **Magnetic Mountain** (`arn/gaps.rs`) and **Dream Tides**
+(`vis2.rs`), each "Pay {2} to untap a tapped creature?" — and both only for a
+seat that suspends, so the suite's headless tests cannot see it. The arm cannot
+be fixed by clearing (see above): it needs the asks separated from the payments,
+which is the same provenance redesign. **The design that does work, sketched so the next run does not re-derive it.**
+Provenance is the wrong axis — the arm's `effect` is *cloned* into the suspend
+signal, so no pointer or identity survives the re-run. What does work is parking
+the channel at the nesting boundary, which is where the two logs are known to be
+different: a helper `with_parked_answer_log(|s| s.run_effect(body, ctx, events))`
+used by the four outer arms (`MayPay`, `MayPayBy`, `MaySacrifice`,
+`AnyPlayerMayAccept`) takes the log before the body and, on return, **restores it
+only if the body did not suspend** — if it did, the resume re-runs the *body's*
+arm (the suspend signal carries the inner arm's effect), so the parked outer
+entries are dead and must be dropped rather than restored. Park it at the arm,
+not inside `run_effect`: the dispatcher runs for every node of every effect tree
+and the four arms are the whole population the gate reports. That closes the
+seven; the two `MayPayRepeatedly` cards need the *other* half (asks separated
+from payments) and are not fixed by it.
+
+### The other half, now a column: a MUTATION before the arm's first ask
+
+The re-run repeats everything the arm did before the ask it suspended on, so any
+mutation there happens again — which makes "keep all side effects after the final
+ask" a checkable property, and `scripts/audit_answer_log.py` checks it now
+(`PRE`, matched on the engine's own mutators). **Reading: 63 arms, 1 PRE.**
+
+* `Effect::CoinFlipDestroyLoop` (**Crooked Scales**) — it **flips a coin** before
+  the ask and pays the repeat cost between asks. A suspending seat therefore
+  re-flips on every resume: the coin the player was told about is re-rolled, and
+  a re-run that wins destroys the opponent's creature without ever replaying the
+  answer. CR 705.1 makes a flip one event; this makes it `k + 1` of them.
+* `Effect::MayPayRepeatedly` (**Magnetic Mountain**, **Dream Tides**) — the
+  quadratic re-payment above. The audit's `PRE` column does not flag it because
+  its payment is *after* the first ask, inside the loop; the loop is what repeats
+  it. Worth a second column keyed on "a mutation between two asks of one arm".
+
+Both are the same shape as the seven: correct for a headless seat, wrong for
+every seat that suspends. Neither is fixed here — the flip wants its outcome
+carried across the suspend (the answer log can hold it: the re-run must replay
+the flip, not re-roll it), and the payment wants the asks separated from the
+effects.
 
 ## FIXED 2026-09-11 (the tenth find's production half) — both resume channels leaked: two arms never cleared, no arm clears on an error unwind, and the stash had no guard at all; the RESOLUTION owns them now
 
