@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::{Keyword, Supertype};
-use crate::decision::{Decision, DecisionAnswer};
+use crate::decision::{AmountKind, Decision, DecisionAnswer};
 use crate::effect::{Effect, EventKind, EventScope};
 use crate::game::types::{DelayedKind, DelayedTrigger};
 
@@ -1283,6 +1283,7 @@ impl GameState {
             source: card_id,
             max: final_ch,
             prompt: "Read ahead — choose a starting chapter".into(),
+            kind: AmountKind::Upside,
         };
         let chosen = match self.decider.decide(&decision) {
             crate::decision::DecisionAnswer::Amount(n) => n.clamp(1, final_ch),

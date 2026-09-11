@@ -2625,7 +2625,7 @@ impl From<&Decision> for DecisionWire {
                     duplicates: duplicates.clone(),
                 }
             }
-            Decision::ChooseAmount { source, prompt, max } => DecisionWire::ChooseAmount {
+            Decision::ChooseAmount { source, prompt, max, kind: _ } => DecisionWire::ChooseAmount {
                 source: *source,
                 prompt: prompt.clone(),
                 max: *max,

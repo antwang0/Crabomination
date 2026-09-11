@@ -228,7 +228,7 @@ use crate::game::layers::{
     PtSublayer, mod_families,
 };
 use crate::card::gather_spec;
-use crate::decision::PickValue;
+use crate::decision::{AmountKind, PickValue};
 use crate::cow::CowBox;
 use crate::effect::static_effect_strips_abilities;
 use crate::player::Player;
@@ -2660,11 +2660,12 @@ fn life_watch_threshold() -> Option<i32> {
 /// Whether a posed decision carries its prompt text.
 ///
 /// `source_name` / `description` / a `ChooseCards` prompt exist for a UI
-/// seat's "<name> — <text>" modal; no bot reads them. The text-keyed bot
-/// policies left are `OptionalTrigger` and `ChooseAmount`, whose text stays —
+/// seat's "<name> — <text>" modal; no bot reads them. The one text-keyed bot
+/// policy left is `OptionalTrigger`'s `description`, whose text stays —
 /// `ChooseCards` joined the elided half when `PickValue` landed on the ask
-/// (`(-289)`), because `decide_choose_cards` no longer pattern-matches the
-/// prose. A simulator process clears the flag once at startup and every
+/// (`(-289)`) and `ChooseAmount` when `AmountKind` did, because neither
+/// policy pattern-matches prose any more. A simulator process clears the flag
+/// once at startup and every
 /// targeted trigger the queue poses then skips its `effect_short_text` walks
 /// and its name lookups. On by default: the server and the suite never touch
 /// it, and a golden trace carries actions and boards, not prompts. PERF
@@ -21449,6 +21450,7 @@ impl GameState {
                     source: card_id,
                     max,
                     prompt: format!("{source_name}: choose X"),
+                    kind: AmountKind::Upside,
                 },
                 resume: ResumeContext::CastXPick {
                     caster: p,

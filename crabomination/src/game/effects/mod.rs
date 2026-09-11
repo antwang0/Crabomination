@@ -34,7 +34,7 @@ use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef,
     Selector, ZoneDest, ZoneRef,
 };
-use crate::decision::PickValue;
+use crate::decision::{AmountKind, PickValue};
 use crate::game::layers::EffectDuration;
 use crate::mana::Color;
 
@@ -848,6 +848,7 @@ impl GameState {
     /// Shares `ask_seat_bool`'s replay-log contract — pass one `cursor` per
     /// run, keep side effects after the final ask, and `clear_answer_log()`
     /// on every completing path.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn ask_seat_amount(
         &mut self,
         cursor: &mut usize,
@@ -855,6 +856,7 @@ impl GameState {
         prompt: String,
         source: CardId,
         max: u32,
+        kind: AmountKind,
         effect: &Effect,
     ) -> Option<u32> {
         use crate::decision::{Decision, DecisionAnswer};
@@ -863,7 +865,7 @@ impl GameState {
             *cursor += 1;
             return Some(n);
         }
-        let decision = Decision::ChooseAmount { source, prompt, max };
+        let decision = Decision::ChooseAmount { source, prompt, max, kind };
         if self.seat_suspends(seat) {
             self.suspend_signal = Some(Box::new((
                 decision,
@@ -3658,6 +3660,7 @@ impl GameState {
                     format!("Remove how many {kind:?} counters?"),
                     source,
                     have,
+                    AmountKind::Upside,
                     effect,
                 ) else {
                     return Ok(());
@@ -3699,6 +3702,7 @@ impl GameState {
                     "Exile how many of its tokens?".to_string(),
                     source,
                     tokens.len() as u32,
+                    AmountKind::Upside,
                     effect,
                 ) else {
                     return Ok(());
@@ -3733,6 +3737,7 @@ impl GameState {
                             "How many items do you hide?".to_string(),
                             source,
                             5,
+                            AmountKind::Upside,
                             effect,
                         )
                         .unwrap_or(1)
@@ -4718,6 +4723,7 @@ impl GameState {
                     source: src,
                     prompt: "Flip how many coins?".into(),
                     max: *max,
+                    kind: AmountKind::Upside,
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
@@ -5706,6 +5712,7 @@ impl GameState {
                     source,
                     prompt: description.clone(),
                     max: pool_max,
+                    kind: AmountKind::Mana,
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
@@ -5788,6 +5795,7 @@ impl GameState {
                     source,
                     prompt: "Pay how much?".to_string(),
                     max: cap,
+                    kind: AmountKind::Mana,
                 };
                 // Suspend for wants_ui seats; the bare AutoDecider ask paid
                 // 0 for everyone, making every "you may pay {X}" a no-op.
@@ -7126,6 +7134,7 @@ impl GameState {
                                     source,
                                     prompt: "Pay how much {E}?".to_string(),
                                     max: avail,
+                                    kind: AmountKind::Upside,
                                 },
                                 PendingEffectState::AmountAnswerPending { max: avail },
                                 effect.clone(),
@@ -10945,6 +10954,7 @@ impl GameState {
                 let decision = Decision::ChooseAmount {
                     source: ctx.source.unwrap_or(CardId(0)),
                     prompt: "Choose a number; destroy all creatures with power ≥ it".to_string(),
+                    kind: AmountKind::DestroyPowerCutoff,
                     max: *max,
                 };
                 // Suspend for a wants_ui seat — the AutoDecider default of 0
@@ -12185,7 +12195,7 @@ impl GameState {
                 let cap = self.evaluate_value(max, ctx).max(0) as u32;
                 let src = ctx.source.unwrap_or(CardId(0));
                 let Some(n) =
-                    self.ask_seat_amount(&mut 0, seat, prompt.clone(), src, cap, effect)
+                    self.ask_seat_amount(&mut 0, seat, prompt.clone(), src, cap, AmountKind::Upside, effect)
                 else {
                     return Ok(());
                 };
@@ -12217,6 +12227,7 @@ impl GameState {
                     "Open the bidding with how much life?".to_string(),
                     src,
                     u32::from(u16::MAX),
+                    AmountKind::Upside,
                     effect,
                 ) else {
                     return Ok(());
@@ -12234,6 +12245,7 @@ impl GameState {
                             format!("Top the bid of {high} life? (0 to pass)"),
                             src,
                             u32::from(u16::MAX),
+                            AmountKind::Upside,
                             effect,
                         ) else {
                             return Ok(());
@@ -15183,6 +15195,7 @@ impl GameState {
                         format!("Put up to {cap} {kind:?} counters"),
                         source,
                         cap,
+                        AmountKind::Upside,
                         effect,
                     ) else {
                         return Ok(());
@@ -16184,6 +16197,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(CardId(0)),
                     prompt: "Choose a number greater than 0".to_string(),
                     max: 60,
+                    kind: AmountKind::Upside,
                 }) {
                     DecisionAnswer::Amount(n) if n > 0 => n as usize,
                     _ => 1,
@@ -17602,6 +17616,7 @@ impl GameState {
                         format!("Top the bid of {high} life? (0 passes)"),
                         source,
                         cap,
+                        AmountKind::Upside,
                         effect,
                     ) else {
                         return Ok(());
@@ -24307,6 +24322,7 @@ impl GameState {
                         "Secretly choose a number".to_string(),
                         source,
                         *max,
+                        AmountKind::Upside,
                         effect,
                     ) else {
                         return Ok(());
@@ -26232,6 +26248,7 @@ impl GameState {
                 let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Sacrifice how many?".to_string(),
+                    kind: AmountKind::Cost,
                     max,
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
@@ -26280,6 +26297,7 @@ impl GameState {
                 let decision = Decision::ChooseAmount {
                     source: ctx.source.unwrap_or(CardId(0)),
                     prompt: "Pay how much life? (draw that many)".to_string(),
+                    kind: AmountKind::Life,
                     max: life,
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
@@ -26744,6 +26762,7 @@ impl GameState {
                 let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Pay how much life?".to_string(),
+                    kind: AmountKind::Life,
                     max: life,
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
@@ -26797,6 +26816,7 @@ impl GameState {
                 let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Pay how much life?".to_string(),
+                    kind: AmountKind::Life,
                     max: life,
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
@@ -28947,6 +28967,7 @@ impl GameState {
                     source,
                     prompt: "Choose a number".to_string(),
                     max: *max,
+                    kind: AmountKind::Upside,
                 };
                 let n = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),
@@ -29145,6 +29166,7 @@ impl GameState {
                 let n = match self.decider.decide(&Decision::ChooseAmount {
                     source,
                     prompt: "Pay any amount of life".to_string(),
+                    kind: AmountKind::Life,
                     max: cap,
                 }) {
                     DecisionAnswer::Amount(n) if n > 0 => n.min(cap),
@@ -30431,6 +30453,7 @@ impl GameState {
                         format!("Draw up to {max} cards"),
                         source,
                         *max,
+                        AmountKind::Upside,
                         effect,
                     ) else {
                         return Ok(());
@@ -30578,6 +30601,7 @@ impl GameState {
                     "Choose a number greater than 0".to_string(),
                     src,
                     *max,
+                    AmountKind::Upside,
                     effect,
                 ) else {
                     return Ok(());

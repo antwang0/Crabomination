@@ -3020,25 +3020,38 @@ fn decide_pending_policy_inner(
         }
         // AutoDecider answers every amount with 0, which turns
         // "choose up to X" payoffs into no-ops and (worse) reads
-        // as "power ≥ 0" on destroy-cutoff wraths. Default to
-        // the max for generic upside prompts; prompt families
-        // with a real downside get their own rule.
-        crate::decision::Decision::ChooseAmount { prompt, max, .. } => {
-            let amount = if prompt.contains("destroy all creatures with power") {
-                best_destroy_power_cutoff(state, seat, *max, w)
-            } else if prompt.to_lowercase().contains("life") {
-                // Life payments: keep a buffer, never sink deep.
-                let spare = (state.effective_life(seat) - 10).max(0) as u32;
-                spare.min(*max).min(3)
-            } else if prompt.starts_with("Pay {X}") {
-                // A `MayPayX` mana prompt: the engine's `max` is the pool plus
-                // every untapped source, and a greedy `max` would tap out for
-                // an X the body may not even use (Tester of the Tangential
-                // moves at most the counters it has). Spend what floats; a
-                // sized answer is a strength round with a gate, not a default.
-                (*max).min(state.players[seat].mana_pool.total())
-            } else {
-                *max
+        // as "power ≥ 0" on destroy-cutoff wraths. `max` is the
+        // default; the families with a real downside say so on
+        // the ask. This used to be recovered from the prompt
+        // prose, and everything the three patterns missed got
+        // `max` — including Devour's "Sacrifice how many?", whose
+        // `max` is the whole board.
+        crate::decision::Decision::ChooseAmount { max, kind, .. } => {
+            use crate::decision::AmountKind;
+            let amount = match kind {
+                AmountKind::DestroyPowerCutoff => best_destroy_power_cutoff(state, seat, *max, w),
+                AmountKind::Life => {
+                    // Life payments: keep a buffer, never sink deep.
+                    let spare = (state.effective_life(seat) - 10).max(0) as u32;
+                    spare.min(*max).min(3)
+                }
+                AmountKind::Mana => {
+                    // A `MayPayX` mana prompt: the engine's `max` is the pool
+                    // plus every untapped source, and a greedy `max` would tap
+                    // out for an X the body may not even use (Tester of the
+                    // Tangential moves at most the counters it has). Spend what
+                    // floats; a sized answer is a strength round with a gate,
+                    // not a default.
+                    (*max).min(state.players[seat].mana_pool.total())
+                }
+                // Devour and God-Eternal Bontu: `max` is every permanent we
+                // control and the payoff is linear in what we give up, so the
+                // greedy answer sacrifices the board for one big creature.
+                // Declining is the conservative answer; "give up the tokens
+                // and nothing else" is the better one and needs the candidate
+                // ordering on the ask (ENGINE_BACKLOG).
+                AmountKind::Cost => 0,
+                AmountKind::Upside => *max,
             };
             crate::decision::DecisionAnswer::Amount(amount)
         }
@@ -20950,6 +20963,36 @@ mod tests {
             }
             other => panic!("expected Cards, got {other:?}"),
         }
+    }
+
+    /// Devour's "Sacrifice how many?" is `AmountKind::Cost` and its `max` is
+    /// every permanent we control: the prose match recognised none of the
+    /// three families it knew, fell through to `max`, and sacrificed the whole
+    /// board for one big creature. `Upside` still takes `max`, and `Life` and
+    /// `Mana` keep the rules they had.
+    #[test]
+    fn bot_choose_amount_reads_the_kind_not_the_prompt() {
+        use crate::decision::{AmountKind, Decision, DecisionAnswer};
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(0, catalog::shivan_dragon());
+        let w = EvalWeights::default();
+        let ask = |kind, max| Decision::ChooseAmount {
+            source: crate::card::CardId(0),
+            prompt: "Sacrifice how many?".to_string(),
+            max,
+            kind,
+        };
+        let amount = |d| match decide_pending_policy(&g, 0, &w, &d, false) {
+            DecisionAnswer::Amount(n) => n,
+            other => panic!("expected Amount, got {other:?}"),
+        };
+        assert_eq!(amount(ask(AmountKind::Cost, 2)), 0, "a Devour sacrifice is declined");
+        assert_eq!(amount(ask(AmountKind::Upside, 2)), 2, "generic upside still takes max");
+        // 20 life, so the buffer rule pays at most 3.
+        assert_eq!(amount(ask(AmountKind::Life, 9)), 3, "life payments keep a buffer");
+        // Empty pool, so a MayPayX spends nothing rather than tapping out.
+        assert_eq!(amount(ask(AmountKind::Mana, 5)), 0, "MayPayX spends what floats");
     }
 
     /// Pure temp-pump instants are combat tricks; burn and creatures are not.

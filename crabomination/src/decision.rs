@@ -81,6 +81,37 @@ pub enum PickValue {
     Gain,
 }
 
+/// What a [`Decision::ChooseAmount`]'s number buys — the half a headless policy
+/// cannot read off the prompt prose.
+///
+/// `decide_pending_policy` used to recover it with
+/// `prompt.contains("destroy all creatures with power")`,
+/// `prompt.to_lowercase().contains("life")` and
+/// `prompt.starts_with("Pay {X}")`, and everything those three missed
+/// answered `max` — which is right for "how many extra counters?" and is
+/// **your whole board** for Devour's "sacrifice any number". Same failure as
+/// [`PickValue`]'s, one family over; the ask states it now.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AmountKind {
+    /// More is better for the chooser — extra counters, extra cards, a bigger
+    /// X. Take `max`. The historical answer for everything the prose match
+    /// did not recognise, and still the right one for most asks.
+    #[default]
+    Upside,
+    /// The number is a count of the chooser's OWN permanents given up
+    /// (Devour, God-Eternal Bontu): `max` is the whole board and the payoff
+    /// is linear in what is lost.
+    Cost,
+    /// A life payment — pay only out of a healthy buffer.
+    Life,
+    /// A mana payment out of the floating pool (`MayPayX`), which is not the
+    /// same as the ask's `max`: that is a bound over untapped sources too.
+    Mana,
+    /// "Choose a number; destroy all creatures with power N or greater" —
+    /// the cutoff that kills the most of theirs and the least of ours.
+    DestroyPowerCutoff,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Decision {
     /// Pick a target satisfying the ability's selector.
@@ -380,6 +411,10 @@ pub enum Decision {
         prompt: String,
         /// Inclusive upper bound (creatures you control, current life, …).
         max: u32,
+        /// What the number buys or costs — see [`AmountKind`]. Read by
+        /// headless policies in place of matching `prompt`.
+        #[serde(default)]
+        kind: AmountKind,
     },
     /// CR 701.38 — pick one option from a named ballot. Answered as
     /// `Amount(i)`, the index into `options`, so it shares

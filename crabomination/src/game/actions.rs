@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::{CardType, Keyword};
-use crate::decision::PickValue;
+use crate::decision::{AmountKind, PickValue};
 use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 use smallvec::SmallVec;
@@ -4402,6 +4402,7 @@ impl GameState {
                         source: card_id,
                         max,
                         prompt: format!("{source_name}: choose X"),
+                        kind: AmountKind::Upside,
                     },
                     resume: crate::game::types::ResumeContext::CastXPick {
                         caster: p,
@@ -8130,6 +8131,7 @@ impl GameState {
                         source: card_id,
                         prompt: "Pay extra mana for +1/+1 counters?".to_string(),
                         max: floating,
+                        kind: AmountKind::Upside,
                     }) {
                         crate::decision::DecisionAnswer::Amount(n) => n.min(floating),
                         _ => 0,
@@ -9749,6 +9751,7 @@ impl GameState {
                     source: card_id,
                     max,
                     prompt: format!("{source_name}: choose X"),
+                    kind: AmountKind::Upside,
                 },
                 resume: crate::game::types::ResumeContext::CastXPick {
                     caster: p,
@@ -15516,6 +15519,7 @@ impl GameState {
                     source: card_id,
                     max,
                     prompt: format!("{source_name}: choose X"),
+                    kind: AmountKind::Upside,
                 },
                 resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
                     activator: p,

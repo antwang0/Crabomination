@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-11 (ninth find) — the same prose sniff one family over: Devour sacrificed the bot's whole board](#fixed-2026-09-11-ninth-find--the-same-prose-sniff-one-family-over-devour-sacrificed-the-bots-whole-board) | 40 |
 | Bugs & robustness | [FIXED 2026-09-11 (eighth find) — the bare resolution-time asks: six "up to N" picks resolved as a no-op and every "choose a color" named White](#fixed-2026-09-11-eighth-find--the-bare-resolution-time-asks-six-up-to-n-picks-resolved-as-a-no-op-and-every-choose-a-color-named-white) | 55 |
 | Bugs & robustness | [FIXED 2026-09-10 (seventh find) — every "you may pay" / "pay or else" effect paid from the floating pool only, so a bot seat never paid: 149 `MayPay` sites dead in self-play](#fixed-2026-09-10-seventh-find--every-you-may-pay--pay-or-else-effect-paid-from-the-floating-pool-only-so-a-bot-seat-never-paid-149-maypay-sites-dead-in-self-play) | 26 |
 | Bugs & robustness | [FIXED 2026-09-10 (sixth find) — the graveyard walk had none of the battlefield walk's rules: no fan-out, no once-per-turn, no intervening-if gate; one step walk, one scope; Attuned Hunter dead on the battlefield](#fixed-2026-09-10-sixth-find--the-graveyard-walk-had-none-of-the-battlefield-walks-rules-no-fan-out-no-once-per-turn-no-intervening-if-gate-one-step-walk-one-scope-attuned-hunter-dead-on-the-battlefield) | 30 |
@@ -55,6 +56,50 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-11 (ninth find) — the same prose sniff one family over: Devour sacrificed the bot's whole board
+
+The eighth find's bot half took the prose read out of `decide_choose_cards`;
+this is the family the residue named as next, and it had a live defect the size
+of a board wipe. `decide_pending_policy`'s `ChooseAmount` arm recovered what the
+number was *for* from the prompt — `contains("destroy all creatures with
+power")`, `to_lowercase().contains("life")`, `starts_with("Pay {X}")` — and
+everything those three missed answered **`max`**.
+
+`Effect::SacrificeAnyNumber` poses `"Sacrifice how many?"` with
+`max = every permanent the filter matches that you control`, sorted weakest
+first, and runs `per_each` once per sacrifice. It matches none of the three
+patterns. **Every bot seat sacrificed its entire board**: the whole Devour
+family (22 catalog users — Devouring Hellion, `devour`/`devour_filter`, Famished
+Worldsire's "devour land") and God-Eternal Bontu, whose ETB then drew that many.
+A linear payoff for the board is a bad trade at any size, and at `max` it is the
+game.
+
+`Decision::ChooseAmount` carries `kind: AmountKind` now — `Upside` (the
+historical `max`, and still right for "how many extra counters?"), `Cost`
+(the chooser's own permanents; the bot declines), `Life`, `Mana`,
+`DestroyPowerCutoff`. Eighteen asks and the `ask_seat_amount` helper; the field
+has no default in a struct literal, so a new ask cannot skip it. Every other
+site keeps exactly the answer the prose match gave it, so the only behaviour
+that moves is the Devour one.
+
+**Two more prompts were falling through to `max` and are worth knowing about
+even though this run left their answers alone:** `"Pay how much {E}?"` (spend
+all energy) and `"Read ahead — choose a starting chapter"` (start at the LAST
+chapter, i.e. skip the saga to its final ability — the audit lists this one as
+`ack`, so it is deliberate). `"Pay how much?"`'s `max` is already capped to the
+floating pool, so `Mana` is what it was doing anyway.
+
+Residue, filed not fixed: **the better answer for `Cost` is "give up the tokens
+and nothing else"** — the engine already sorts the candidates tokens-first, so
+the number is free to compute there, but `ChooseAmount` carries only `max` and
+the bot cannot see the ordering. Declining is the conservative answer, not the
+right one. **And one family is still prose-keyed**: `OptionalTrigger`'s
+`description` (57 sites), which the bot branches on in three places
+(`starts_with("Pay ") && contains(" life to deny ")`, `starts_with("Reveal the
+top card (")`, and the generic upside screen). It is the last thing standing
+between `(-288)`'s flag and "no UI text built in a simulator at all".
+Tests: `server::bot::tests::bot_choose_amount_reads_the_kind_not_the_prompt`.
 
 ## FIXED 2026-09-11 (eighth find) — the bare resolution-time asks: six "up to N" picks resolved as a no-op and every "choose a color" named White
 
