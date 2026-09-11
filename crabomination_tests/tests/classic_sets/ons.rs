@@ -2786,3 +2786,45 @@ fn ons_chain_smog_and_plasma() {
     cast(&mut g, 0, spell, Some(Target::Player(1)));
     assert_eq!(g.players[1].life, life - 3);
 }
+
+/// Words of Wind turns a draw into a symmetrical bounce — **one** permanent
+/// each — and two separate things were stopping it.
+///
+/// The replacement body runs inside `draw_one`, which has no stack item to park
+/// a continuation on: a body that suspended set the signal into a field nobody
+/// there reads and the rest of it never ran, so for a `wants_ui` seat (every
+/// training seat) the bounce returned NOTHING. `resolve_effect_driven` answers
+/// those asks through the decider instead of dropping them.
+///
+/// Under that, the arm itself: a loop over SEATS asking through the
+/// single-slot resume channel. Seat 0's ask ran again on every one of seat 1's
+/// resumes and swallowed the answer seat 1 had just given (none of whose cards
+/// are seat 0's), and the forced-pick shortfall auto-filled it — so seat 0 kept
+/// bouncing its own permanents one per round trip. It emptied the controller's
+/// board. The cursor-indexed channel gives each seat its own slot, and the
+/// moves happen after every ask.
+#[test]
+fn words_of_wind_bounces_one_permanent_each_when_both_asks_suspend() {
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let words = g.add_card_to_battlefield(0, catalog::words_of_wind());
+    for seat in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        }
+    }
+    activate(&mut g, 0, words, 0, None);
+    let count = |g: &GameState, seat: usize| {
+        g.battlefield.iter().filter(|c| c.controller == seat).count()
+    };
+    let (before0, before1) = (count(&g, 0), count(&g, 1));
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    assert!(
+        g.pending_decision.is_none(),
+        "a draw replacement has nowhere to park a continuation, so it is driven headlessly"
+    );
+    assert_eq!(count(&g, 0), before0 - 1, "the controller returned exactly one permanent");
+    assert_eq!(count(&g, 1), before1 - 1, "and so did the opponent");
+}

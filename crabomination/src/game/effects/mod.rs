@@ -2060,6 +2060,50 @@ impl GameState {
         Ok(events)
     }
 
+    /// [`resolve_effect`](Self::resolve_effect) for an effect that runs OFF the
+    /// stack, answering any suspension it raises through the installed decider
+    /// rather than dropping it.
+    ///
+    /// A suspend only means anything where something can hold the continuation
+    /// and hand the answer back — a stack item, through `pending_decision`. Off
+    /// that path (a draw replacement, a cost rider, a state-based rebuild) the
+    /// signal is set into a field nobody reads, and the rest of the effect
+    /// never runs: the body is a silent NO-OP for a `wants_ui` seat, which is
+    /// every seat the training actors run. Words of Wind's symmetric bounce
+    /// returned nothing at all that way.
+    ///
+    /// Driving it here gives those seats the headless answer — the same answer
+    /// the same decider gives a seat without `wants_ui` — instead of nothing.
+    /// A UI prompt would be better still, and needs the call site to be able to
+    /// park a continuation; this is the floor, not the ceiling.
+    pub(crate) fn resolve_effect_driven(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = self.resolve_effect(effect, ctx)?;
+        // Safe to call from anywhere: inside a resolution there IS something
+        // above that can park the continuation, so the signal is left to
+        // propagate and this behaves exactly like `resolve_effect`.
+        if self.resolution_depth > 0 {
+            return Ok(events);
+        }
+        // Bounded: each round consumes exactly one ask, and an arm that asks
+        // for ever is a defect the resume-channel guards catch — the cap keeps
+        // it from becoming a hang here.
+        for _ in 0..64 {
+            let Some(sig) = self.suspend_signal.take() else { break };
+            let (decision, pending, remaining) = *sig;
+            let answer = self.decider.decide(&decision);
+            events.append(&mut self.apply_pending_effect_answer(pending, &answer)?);
+            events.append(&mut self.resolve_effect_resumed(&remaining, ctx)?);
+        }
+        // Whatever is left could not be driven; dropping it is what happened
+        // before this existed, and leaving it set would strand the next ask.
+        self.suspend_signal = None;
+        Ok(events)
+    }
+
     fn resolve_effect_into_kind(
         &mut self,
         effect: &Effect,
@@ -19857,12 +19901,27 @@ impl GameState {
                     return Ok(());
                 }
                 let players: Vec<usize> = self.resolve_players(who, ctx);
-                for p in players {
+                // A loop over SEATS needs the cursor-indexed resume channel, not
+                // the single slot: `ask_seat_cards` has one, so on every resume
+                // this loop re-ran from the top, seat 0's ask swallowed the
+                // answer seat 1 had just given (none of whose cards are seat
+                // 0's), and the forced-pick shortfall auto-filled it — seat 0
+                // bounced another of its own permanents per round trip while
+                // seat 1 was still being asked. `Words of Wind` is the shipped
+                // `EachPlayer` case, and it emptied the controller's board.
+                // Two passes for the usual reason: the moves are mutations
+                // inside the ask loop. Each seat's candidates are its own
+                // permanents and no other seat's move touches them, so the
+                // split does not change any gate.
+                let mut cursor = 0;
+                let mut answers: Vec<Vec<CardId>> = Vec::with_capacity(players.len());
+                for &p in &players {
                     let candidates = self.sacrifice_candidates(p, filter, ctx.source);
                     if candidates.is_empty() {
+                        answers.push(Vec::new());
                         continue;
                     }
-                    let ids = if self.players[p].wants_ui {
+                    let picked = if self.players[p].wants_ui {
                         // Real suspended pick, routed to the affected player.
                         // (The old synchronous ask hit AutoDecider: `up_to`
                         // choosers bounced nothing, forced ones bounced the
@@ -19875,7 +19934,8 @@ impl GameState {
                             })
                             .collect();
                         let min = if *up_to { 0 } else { n.min(candidates.len()) as u32 };
-                        let Some(ids) = self.ask_seat_cards(
+                        let Some(ids) = self.ask_seat_cards_logged(
+                            &mut cursor,
                             p,
                             format!("Return up to {n} permanents to hand"),
                             ctx.source.unwrap_or(CardId(0)),
@@ -19884,6 +19944,7 @@ impl GameState {
                             n as u32,
                             PickValue::Cost,
                             effect,
+                            Vec::new(),
                         ) else {
                             return Ok(());
                         };
@@ -19896,6 +19957,10 @@ impl GameState {
                     } else {
                         self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false)
                     };
+                    answers.push(picked);
+                }
+                self.clear_answer_log();
+                for ids in answers {
                     for id in ids {
                         self.move_card_to(id, &ZoneDest::Hand(PlayerRef::OwnerOfMoved), ctx, events);
                     }

@@ -17735,7 +17735,13 @@ impl GameState {
                 .flatten();
             let mut ctx = crate::game::effects::EffectContext::for_ability(src, p, target);
             ctx.x_value = x;
-            if let Ok(mut evs) = self.resolve_effect(&body, &ctx) {
+            // `_driven`, not plain: this runs inside `draw_one`, which has no
+            // stack item to park a continuation on. A body that suspended set
+            // the signal into a field nobody here reads and the rest of it
+            // never ran — Words of Wind's "each player returns a permanent"
+            // returned NOTHING for a `wants_ui` seat, which is every training
+            // seat, and the whole Words cycle is that shape.
+            if let Ok(mut evs) = self.resolve_effect_driven(&body, &ctx) {
                 events.append(&mut evs);
             }
             return true;
@@ -18017,9 +18023,16 @@ impl GameState {
             }
             // Tomorrow, Azami's Familiar — look at the top N, keep one,
             // bottom the rest. Mandatory.
+            //
+            // `_driven` for the same reason as the `next_draw_replacements`
+            // body above: these run inside `draw_one`, with no stack item to
+            // park a continuation on, and `LookPickToHand` / `Search` /
+            // `RevealUntilFind` all suspend for a `wants_ui` seat — so each of
+            // them was a silent no-op for every training seat, and the draw it
+            // replaced simply did not happen.
             DrawDig::LookN => {
                 let Some(n) = self.look_instead_of_drawing(p) else { return false };
-                if let Ok(mut evs) = self.resolve_effect(
+                if let Ok(mut evs) = self.resolve_effect_driven(
                     &crate::effect::Effect::LookPickToHand(Box::new(crate::effect::LookPick {
                         who: crate::effect::PlayerRef::Seat(p),
                         count: crate::effect::Value::Const(n as i32),
@@ -18039,7 +18052,7 @@ impl GameState {
                 {
                     return false;
                 }
-                if let Ok(mut evs) = self.resolve_effect(
+                if let Ok(mut evs) = self.resolve_effect_driven(
                     &crate::effect::Effect::Search {
                         who: crate::effect::PlayerRef::Seat(p),
                         filter: crate::card::SelectionRequirement::Any,
@@ -18068,7 +18081,7 @@ impl GameState {
                 } else {
                     crate::card::SelectionRequirement::Nonland
                 };
-                if let Ok(mut evs) = self.resolve_effect(
+                if let Ok(mut evs) = self.resolve_effect_driven(
                     &crate::effect::Effect::RevealUntilFind {
                         who: crate::effect::PlayerRef::Seat(p),
                         find: filter,
