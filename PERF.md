@@ -2838,9 +2838,11 @@ gate    --bench release-fast, twice: at 6f2dd178 (10m44s with deps warm) and reb
         28.8 / 29.2; 315.0 then 298.4 games/s at host_calib_ms 50 — a 5 % single-run spread on identical counters, i.e. the host,
         which is why the counters and not the wall clock are the gate here (How to measure: 212-407 across a day on one binary).
         The second reading is the one that matters: the first binary predated the card edits, caught by re-running the build (it
-        recompiled rather than saying "Finished in 0.1s"). Suite 19,402 / 1 / 5 at 6f2dd178 — the one failure was this run's own new Skophos test
-        aiming the Labyrinth at a creature that was neither attacking nor blocking (the ability's printed target), rewritten with a
-        real combat; golden_trace 10 / 10 inside that run, and no traced deck carries an affected effect. clippy --workspace
+        recompiled rather than saying "Finished in 0.1s"). Suite at the tip 385218df: **19,403 / 0 / 5 (118 s)**, golden_trace 10 / 10
+        inside it and no traced deck carries an affected effect. Three of this run's own new tests failed first and all three were
+        the test, not the card: the Skophos one aimed the Labyrinth at a creature that was neither attacking nor blocking (its
+        printed target), and both Diviner's Wand ones asserted against a granted trigger without handing the event to
+        `dispatch_triggers_for_events` — `draw_one` collects `CardDrawn` and its caller dispatches it. clippy --workspace
         --exclude crabomination_client --all-targets: 2 warnings, both `sort_by` in this run's own new defaults, fixed at cdf3e4de.
         `audit_decision_plumbing` DEAD 11 -> 0. **No fresh-seed sweep and no actor leg this run**; the 2026-09-10 readings stand
 cost    one cached `debug_flags` bit read per "choose a colour" (already warm — the same word answers `wants_converge`), one
