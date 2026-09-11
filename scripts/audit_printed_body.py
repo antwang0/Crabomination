@@ -57,6 +57,15 @@ ANYNAME = re.compile(r'"((?:[^"\\]|\\.)*)"')
 NAME = re.compile(r'^name: "((?:[^"\\]|\\.)*)",', re.M)
 COST = re.compile(r"^cost: cost\(&\[([^\]]*)\]\),", re.M)
 HELPER = re.compile(r'"(?:[^"\\]|\\.)*",\s*(?:crate::mana::)?cost\(&\[([^\]]*)\]\)')
+# ⚠ ALIAS-TOLERANT ON PURPOSE. The catalog spells these three ways —
+# `CardType::Creature`, an aliased `CT::Creature` / `Sup::Legendary`, and a
+# helper (`supertypes: legendary()`, `subtypes: types(vec![..])`). A matcher
+# keyed on `Supertype::` reported 49 wrong type lines and every one was an
+# alias or a helper, clustered in two files, which is the tell.
+TYPES = re.compile(r"^card_types: (.*)$", re.M)
+SUPER = re.compile(r"^supertypes: (.*)$", re.M)
+WORD = re.compile(r"\b([A-Z][a-z]+)\b")
+HELPERS = {"legendary": "Legendary", "basic": "Basic", "snow": "Snow"}
 POWER = re.compile(r"^power: (-?\d+),", re.M)
 TOUGH = re.compile(r"^toughness: (-?\d+),", re.M)
 
@@ -106,6 +115,10 @@ def top_fields(block: str):
     return "\n".join(out)
 
 
+CARD_TYPES = {"Land", "Creature", "Artifact", "Enchantment", "Planeswalker",
+              "Battle", "Instant", "Sorcery", "Kindred", "Tribal", "Scheme",
+              "Vanguard"}
+SUPERTYPES = {"Basic", "Legendary", "Snow", "World", "Ongoing"}
 NOT_A_SPELL = ("Token", "Vanguard", "Scheme", "Plane ", "Phenomenon",
                "Conspiracy", "Emblem", "Dungeon", "Attraction", "Stickers")
 SYM = re.compile(r"(\w+)\(([^()]*)\)")
@@ -181,7 +194,7 @@ def main() -> int:
     ap.add_argument("--rows", type=int, default=40)
     args = ap.parse_args()
 
-    checked = wrong_cost = wrong_pt = missing_flag = 0
+    checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
     skip = {"nocache": 0, "faces": 0, "split": 0, "star": 0, "nonliteral": 0,
             "noname": 0, "notaspell": 0}
     rows = []
@@ -264,6 +277,30 @@ def main() -> int:
                 rows.append(("cost", name, f"{path.name}::{fname}", got or "{}", want or "{}"))
             if body is None:
                 continue  # helper form: only the cost is positional here
+            # The printed TYPE LINE. A Sorcery shipped as an Instant is castable
+            # at instant speed; a missing Legendary is a legend rule that never
+            # fires. Subtypes are left alone — the enums are per-kind and the
+            # mapping is a second audit.
+            line = (card.get("type_line") or "").split("—")[0]
+            want_t = {w for w in line.replace("//", " ").split() if w in CARD_TYPES}
+            want_s = {w for w in line.split() if w in SUPERTYPES}
+            tm, sm = TYPES.search(body), SUPER.search(body)
+            if tm:
+                got_t = {w for w in WORD.findall(tm.group(1)) if w in CARD_TYPES}
+                got_t = {"Kindred" if t == "Tribal" else t for t in got_t}
+                if got_t != want_t and want_t:
+                    wrong_types += 1
+                    rows.append(("types", name, f"{path.name}::{fname}",
+                                 " ".join(sorted(got_t)), " ".join(sorted(want_t))))
+            got_s = set()
+            if sm:
+                got_s = {w for w in WORD.findall(sm.group(1)) if w in SUPERTYPES}
+                got_s |= {v for k, v in HELPERS.items() if k + "()" in sm.group(1)}
+            if got_s != want_s:
+                wrong_types += 1
+                rows.append(("super", name, f"{path.name}::{fname}",
+                             " ".join(sorted(got_s)) or "(none)",
+                             " ".join(sorted(want_s)) or "(none)"))
             op, ot = card.get("power"), card.get("toughness")
             pm, tm = POWER.search(body), TOUGH.search(body)
             if op is None or ot is None or pm is None or tm is None:
@@ -283,7 +320,7 @@ def main() -> int:
         print(f"  ... {len(rows) - len(shown)} more (--rows 0)")
     print(f"# {checked} factories compared against the oracle: "
           f"**{wrong_cost} wrong cost, {wrong_pt} wrong P/T, "
-          f"{missing_flag} missing `no_mana_cost`**")
+          f"{missing_flag} missing `no_mana_cost`, {wrong_types} wrong type line**")
     print("# skipped — " + ", ".join(f"{k} {v}" for k, v in sorted(skip.items())))
     return 0
 

@@ -972,6 +972,16 @@ castable from hand **for free**:
 | Urza, Planeswalker | a free 7-loyalty walker | uncastable (a meld result) |
 | Resurgent Belief | castable for an invented `{3}{W}` | suspend only |
 
+**The TYPE LINE, read in the same pass, is CLEAN: 0 of 10,270.** Card types
+and supertypes against the oracle's type line — a Sorcery shipped as an Instant
+is castable at instant speed, a missing Legendary is a legend rule that never
+fires, and neither was audited anywhere. The first cut said 49 wrong, all
+missing `Legendary`, clustered in two files: `Sup::Legendary` behind an alias
+import and `supertypes: legendary()` behind a helper. The matcher is
+alias- and helper-tolerant now, and it is proved by injection rather than by
+its own zero — breaking Karn, Scion of Urza to `{3}`, `Creature`, no supertype
+reports all three rows.
+
 **Coverage, so nobody re-derives it: 10,270 factories priced.** The gap is
 helper-built factories whose helper takes the cost in its own shape
 (`zubera("Name", r(), ..)`, `echo_creature("Name", &[generic(3), r()], ..)`) —
