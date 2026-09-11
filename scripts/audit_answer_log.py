@@ -20,8 +20,13 @@ completing paths that can leave the channel dirty —
   ERR?      a `?` propagates a `GameError` past an ask, which no arm clears on
   RET       some other early return past the ask with no clear before it
   PRE       a MUTATION before the arm's first ask — the re-run repeats it, so a
-            suspending seat pays, flips or destroys twice (`MayPayRepeatedly`
-            re-pays quadratically; `CoinFlipDestroyLoop` re-rolls its coin)
+            suspending seat pays, flips or destroys twice
+  MID       a MUTATION inside the LOOP that asks, which is the same defect one
+            level in: each suspend repeats every earlier iteration's mutation
+            (Fade Away charged the first seat once per later seat's suspend;
+            `MayPayRepeatedly` re-pays quadratically; `CoinFlipDestroyLoop`
+            re-rolls its coin). The fix is two passes — ask everyone, then
+            mutate; ENGINE_BACKLOG has the recipe and the per-arm list
 
 The suspend path (the `None` / `else` arm of an ask, a few lines below it) is
 NOT a leak — the log is the resume's replay — and is filtered out, which is why
@@ -29,7 +34,9 @@ the runtime half is the authority: this one trades a false negative there for a
 readable list. The two `ERR?` rows are listed, not fixed per arm — the net at the
 resolution's exit is what makes an unwind harmless, for all 63 arms at once.
 
-Reading at the eleventh find: **63 arms, 0 NO-CLEAR, 2 ERR?, 1 PRE.**
+Reading after `run_each_unless_pays` was split into two passes (the worked
+example): **63 arms, 10 suspicious — 0 NO-CLEAR, 2 ERR?, 1 PRE, 10 MID.** It was
+11 MID before that fix.
 """
 
 import re
@@ -41,6 +48,7 @@ ASK = re.compile(
     r"|ask_seat_cards|choose_up_to_cards|ask_ward_discards|ask_mana_sources)\b"
 )
 CLEAR = re.compile(r"\bclear_answer_log\(\)")
+LOOP = re.compile(r"^\s*(for |while |loop\s*\{|'[a-z_]+: loop)")
 # A re-run repeats everything the arm did before the ask it suspended on, so a
 # mutation there happens again — `MayPayRepeatedly` pays its mana between asks and
 # re-pays once per suspend. These are the engine's own mutators, matched on the
@@ -146,6 +154,28 @@ def main():
             if MUTATE.search(body[k]) and not body[k].lstrip().startswith("//")
         ]
         risky = [(ln, "PRE   " + t) for ln, t in pre]
+        # MID: the innermost loop enclosing the first ask, and any mutation in it
+        # after that ask — every suspend re-runs the arm, so each earlier
+        # iteration's mutation happens again.
+        loop_at = None
+        aind = len(body[asks[0]]) - len(body[asks[0]].lstrip())
+        for j in range(asks[0] - 1, -1, -1):
+            if LOOP.match(body[j]) and (len(body[j]) - len(body[j].lstrip())) < aind:
+                loop_at = (j, len(body[j]) - len(body[j].lstrip()))
+                break
+        if loop_at is not None:
+            j, li = loop_at
+            stop = len(body)
+            for k in range(j + 1, len(body)):
+                t = body[k]
+                if t.strip() and (len(t) - len(t.lstrip())) <= li:
+                    stop = k
+                    break
+            risky += [
+                (i + 1 + k, "MID   " + body[k].strip()[:88])
+                for k in range(asks[0] + 1, stop)
+                if MUTATE.search(body[k]) and not body[k].lstrip().startswith("//")
+            ]
         for k in range(asks[0], len(body)):
             s = body[k]
             if k in asks:

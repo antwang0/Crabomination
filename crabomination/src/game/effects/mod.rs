@@ -629,7 +629,18 @@ impl GameState {
             seat_order.iter().position(|s| s == seat).unwrap_or(usize::MAX)
         });
         let mut cursor = 0;
-        let mut bounce: Vec<CardId> = Vec::new();
+        // TWO PASSES, and the split is the fix rather than a style: a suspend
+        // re-runs this arm from the top, so a payment made inside the ask loop is
+        // made AGAIN on every later seat's suspend. With two `wants_ui` seats —
+        // i.e. every self-play game — the seat that answered first paid twice for
+        // one permanent and then could not cover the second charge, so its
+        // permanent left anyway (`exo::fade_away_charges_each_controller_once_
+        // when_both_asks_suspend`). Pass 1 asks and mutates nothing; pass 2 pays.
+        // One prompt changes shape: a seat with two affected permanents is now
+        // asked about both before either is paid for, so the second ask is posed
+        // and then fails to pay instead of being suppressed by `could_pay_cost` —
+        // the board outcome is the same permanent leaving either way.
+        let mut answers: Vec<(CardId, usize, bool)> = Vec::with_capacity(targets.len());
         for (id, owner_seat) in targets {
             // Ask only when the seat could actually cover it — pool plus
             // untapped sources (CR 118.6 — you can't choose to pay a cost you
@@ -647,11 +658,15 @@ impl GameState {
                     Some(yes) => yes,
                     None => return Ok(()),
                 };
+            answers.push((id, owner_seat, paid));
+        }
+        self.clear_answer_log();
+        let mut bounce: Vec<CardId> = Vec::new();
+        for (id, owner_seat, paid) in answers {
             if !(paid && self.pay_mana_cost_with_picks(owner_seat, cost, None, events)) {
                 bounce.push(id);
             }
         }
-        self.clear_answer_log();
         if sacrifice {
             // One sacrifice per unpaid permanent, chosen by its controller.
             let seats: Vec<usize> = bounce

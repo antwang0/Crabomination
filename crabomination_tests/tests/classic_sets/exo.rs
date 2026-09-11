@@ -1122,6 +1122,40 @@ fn fade_away_taxes_a_permanent_per_creature() {
     );
 }
 
+/// The same card on the path every training seat takes: BOTH seats suspend for
+/// their "pay to keep it?" ask, and the arm used to pay inside the ask loop — so
+/// the seat that answered first paid again on every later seat's suspend (a
+/// re-run repeats everything before the ask it suspended on). Two bots, one
+/// creature each, and seat 0 was charged twice for one Bear.
+#[test]
+fn fade_away_charges_each_controller_once_when_both_asks_suspend() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::fade_away());
+    // {2}{U} for the spell and {1} for my own Bear, with nothing spare: a second
+    // charge cannot be paid, so it shows up as my Bear dying.
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.players[1].mana_pool.add_colorless(2);
+    cast(&mut g, spell, None).expect("fade away");
+    drain_stack(&mut g);
+
+    // Answer every ask the resolution poses, in the order it poses them.
+    for _ in 0..4 {
+        if g.pending_decision.is_none() {
+            break;
+        }
+        g.submit_decision(DecisionAnswer::Bool(true)).expect("pay");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert!(g.battlefield_find(mine).is_some(), "my Bear was paid for ONCE and lives");
+    assert!(g.battlefield_find(theirs).is_some(), "so was theirs");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "three for the spell and one for the Bear");
+    assert_eq!(g.players[1].mana_pool.total(), 1, "one paid, one spare");
+}
+
 /// Dominating Licid steals its host while it's attached and hands it back on
 /// detach.
 #[test]
