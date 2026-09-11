@@ -78,6 +78,21 @@ pub(crate) fn map_effect_duration(
     }
 }
 
+/// The basic land type that produces `c`. Basics map 1:1 onto colours, which is
+/// why every "choose a basic land type" rides `Decision::ChooseColor`; four
+/// sites spelled this table out by hand.
+pub(crate) fn basic_land_type_for(c: crate::mana::Color) -> crate::card::LandType {
+    use crate::card::LandType;
+    use crate::mana::Color;
+    match c {
+        Color::White => LandType::Plains,
+        Color::Blue => LandType::Island,
+        Color::Black => LandType::Swamp,
+        Color::Red => LandType::Mountain,
+        Color::Green => LandType::Forest,
+    }
+}
+
 /// Rank card names by frequency (descending, ties by first appearance),
 /// deduped — the heuristic feed for `Decision::NameCard` suggestions.
 pub(crate) fn rank_names_by_frequency<'a>(
@@ -9007,16 +9022,12 @@ impl GameState {
             }
 
             Effect::ChooseColorThenDiscardMatching { who } => {
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(victim) = self.resolve_player(who, ctx) else { return Ok(()) };
                 let source = ctx.source.unwrap_or(CardId(0));
-                let color = match self.decider.decide(&Decision::ChooseColor {
-                    source,
-                    legal: Color::ALL.to_vec(),
-                }) {
-                    DecisionAnswer::Color(c) => c,
-                    _ => Color::Black,
-                };
+                // A discard tax reads the colour off *their* hand, always —
+                // the fallback used to be a flat Black.
+                let color =
+                    self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true);
                 // The reveal is public to the chooser for the rest of the game.
                 if !self.hands_revealed_to.contains(&(ctx.controller, victim)) {
                     self.hands_revealed_to.push((ctx.controller, victim));
@@ -9518,19 +9529,10 @@ impl GameState {
             }
 
             Effect::AllLandsProduceChosenColorThisTurn { chooser } => {
-                use crate::decision::{Decision, DecisionAnswer};
-                use crate::mana::Color;
                 let Some(seat) = self.resolve_player(chooser, ctx) else { return Ok(()) };
-                let legal =
-                    vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
-                let color = match self.decider.decide(&Decision::ChooseColor {
-                    source: ctx.source.unwrap_or(CardId(0)),
-                    legal,
-                }) {
-                    DecisionAnswer::Color(c) => c,
-                    _ => Color::White,
-                };
-                let _ = seat;
+                // The chooser is the one whose mana it fixes, so the colour is
+                // read off *their* investment, not the resolver's.
+                let color = self.chosen_color_for_source(seat, ctx.source, &Color::ALL);
                 for p in self.players.iter_mut() {
                     p.lands_produce_color_this_turn = Some(color);
                 }
@@ -10506,19 +10508,14 @@ impl GameState {
                             }
                         }
                         if !legal.is_empty() {
+                            // The one "add one mana of a colour of your choice"
+                            // chooser. This branch was the last `AddMana` site
+                            // still on the `legal[0]` fallback after the 2026-08
+                            // sweep took the other seven.
                             let color = if legal.len() == 1 {
                                 legal[0]
                             } else {
-                                match self.decider.decide(
-                                    &crate::decision::Decision::ChooseColor {
-                                        source: ctx.source.unwrap_or(CardId(0)),
-                                        legal: legal.clone(),
-                                    },
-                                ) {
-                                    crate::decision::DecisionAnswer::Color(c)
-                                        if legal.contains(&c) => c,
-                                    _ => legal[0],
-                                }
+                                self.chosen_mana_color(p, &legal, ctx.source)
                             };
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
@@ -14470,20 +14467,17 @@ impl GameState {
             }
 
             Effect::BecomeChosenColor { what, duration } => {
-                use crate::decision::{Decision, DecisionAnswer};
-                use crate::mana::Color;
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    let legal = vec![
-                        Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
-                    ];
-                    let answer = self.decider.decide(&Decision::ChooseColor { source: cid, legal });
-                    let color = match answer {
-                        DecisionAnswer::Color(c) => c,
-                        _ => Color::Green,
-                    };
+                    // The headless pick was a flat Green. Keying it on the
+                    // source's own consumer names the colour this seat is
+                    // invested in, which is what a colour-matters payoff wants;
+                    // picking per *target* (dodging a specific hoser on the
+                    // board) is a follow-up, tracked in ENGINE_BACKLOG.
+                    let color =
+                        self.chosen_color_for_source(ctx.controller, Some(source), &Color::ALL);
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
@@ -14594,24 +14588,16 @@ impl GameState {
                 // legal `from` set is narrowed to the color words the target
                 // actually prints, so an auto seat can't waste the rewrite on
                 // a word that isn't there (CR 612.2).
-                use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
-                let all = vec![
-                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
-                ];
+                let all = Color::ALL.to_vec();
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let present = self.printed_color_words(cid);
                     let legal = if present.is_empty() { all.clone() } else { present };
-                    let from = match self.decider.decide(&Decision::ChooseColor {
-                        source: cid,
-                        legal: legal.clone(),
-                    }) {
-                        DecisionAnswer::Color(c) => c,
-                        _ => legal[0],
-                    };
+                    let head = legal[0];
+                    let from = self.chosen_color_or(Some(cid), &legal, head);
                     // Rewriting a foe's protection is only useful when the new
                     // word names a color the rewriter *doesn't* attack with.
                     let friendly = self
@@ -14624,13 +14610,7 @@ impl GameState {
                     } else {
                         self.sparsest_color_of(ctx.controller)
                     };
-                    let to = match self.decider.decide(&Decision::ChooseColor {
-                        source: cid,
-                        legal: vec![want],
-                    }) {
-                        DecisionAnswer::Color(c) => c,
-                        _ => want,
-                    };
+                    let to = self.chosen_color_or(Some(cid), &Color::ALL, want);
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
@@ -14652,15 +14632,7 @@ impl GameState {
                 // auto seat rewrites a type line that exists; `to` follows the
                 // rewriter's own mana needs.
                 use crate::card::LandType;
-                use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
-                let land_for = |c: Color| match c {
-                    Color::White => LandType::Plains,
-                    Color::Blue => LandType::Island,
-                    Color::Black => LandType::Swamp,
-                    Color::Red => LandType::Mountain,
-                    Color::Green => LandType::Forest,
-                };
                 let color_for = |l: LandType| match l {
                     LandType::Plains => Color::White,
                     LandType::Island => Color::Blue,
@@ -14670,9 +14642,7 @@ impl GameState {
                 };
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
-                let all = vec![
-                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
-                ];
+                let all = Color::ALL.to_vec();
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     let present: Vec<Color> = self
@@ -14687,13 +14657,12 @@ impl GameState {
                         })
                         .unwrap_or_default();
                     let legal = if present.is_empty() { all.clone() } else { present };
-                    let from = match self.decider.decide(&Decision::ChooseColor {
-                        source: cid,
-                        legal: legal.clone(),
-                    }) {
-                        DecisionAnswer::Color(c) => land_for(c),
-                        _ => land_for(legal[0]),
-                    };
+                    let head = legal[0];
+                    let from = basic_land_type_for(self.chosen_color_or(
+                        Some(cid),
+                        &legal,
+                        head,
+                    ));
                     // A land you control should start producing what your hand
                     // wants; an opponent's should stop producing their densest.
                     let friendly = self
@@ -14706,13 +14675,8 @@ impl GameState {
                     } else {
                         self.sparsest_color_of(ctx.controller)
                     };
-                    let to = match self.decider.decide(&Decision::ChooseColor {
-                        source: cid,
-                        legal: vec![want],
-                    }) {
-                        DecisionAnswer::Color(c) => land_for(c),
-                        _ => land_for(want),
-                    };
+                    let to =
+                        basic_land_type_for(self.chosen_color_or(Some(cid), &Color::ALL, want));
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
@@ -14814,16 +14778,14 @@ impl GameState {
             }
 
             Effect::ChooseColorForSelf => {
-                use crate::decision::{Decision, DecisionAnswer};
-                use crate::mana::Color;
+                // 42 cards share this one choice and its answer is read off
+                // either side of the table, so the pick keys on the card's own
+                // consumer (`chosen_color_for_source`). It used to name White
+                // for every headless seat, which is Ward Sliver protected from
+                // nothing and Heraldic Banner anthem-ing a colour we don't run.
                 let Some(source) = ctx.source else { return Ok(()); };
-                let legal = vec![
-                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
-                ];
-                let color = match self.decider.decide(&Decision::ChooseColor { source, legal }) {
-                    DecisionAnswer::Color(c) => c,
-                    _ => Color::White,
-                };
+                let color =
+                    self.chosen_color_for_source(ctx.controller, Some(source), &Color::ALL);
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.chosen_color = Some(color);
                 }
@@ -14831,18 +14793,16 @@ impl GameState {
             }
 
             Effect::ChooseTwoColorsForSource => {
-                use crate::decision::{Decision, DecisionAnswer};
-                use crate::mana::Color;
                 let Some(source) = ctx.source else { return Ok(()); };
-                let all = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
                 let mut picked: Vec<Color> = Vec::new();
                 for _ in 0..2 {
-                    let legal: Vec<Color> = all.iter().copied().filter(|c| !picked.contains(c)).collect();
-                    let color = match self.decider.decide(&Decision::ChooseColor { source, legal: legal.clone() }) {
-                        DecisionAnswer::Color(c) if legal.contains(&c) => c,
-                        _ => legal[0],
-                    };
-                    picked.push(color);
+                    let legal: Vec<Color> =
+                        Color::ALL.iter().copied().filter(|c| !picked.contains(c)).collect();
+                    picked.push(self.chosen_color_for_source(
+                        ctx.controller,
+                        Some(source),
+                        &legal,
+                    ));
                 }
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.chosen_colors = picked;
@@ -14882,38 +14842,16 @@ impl GameState {
                 // The controller picks a color; each target gains
                 // protection from it for `duration` (EOT today). Mother of
                 // Runes / Gods Willing.
-                use crate::decision::{Decision, DecisionAnswer};
-                use crate::mana::Color;
+                //
+                // Protection exists to dodge their threats, so the pick is
+                // always the hostile one — first-legal chose White, and Mother
+                // of Runes died to every red/black removal spell she was meant
+                // to blank. The census used to be a fourth hand-written copy
+                // here, battlefield-only; it is `densest_color_among_opponents`
+                // now, which counts hands too.
                 let source = ctx.source.unwrap_or(CardId(0));
-                let legal = vec![
-                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
-                ];
-                // Auto default: the color most represented among OPPONENTS'
-                // permanents — protection exists to dodge their threats;
-                // first-legal always chose White, so Mother of Runes died to
-                // every red/black removal spell she was meant to blank.
-                let color = match self.decider.kind() {
-                    crate::decision::DeciderKind::Auto => {
-                        let mut counts = [0u32; 5];
-                        for c in self
-                            .battlefield
-                            .iter()
-                            .filter(|c| !self.same_team(c.controller, ctx.controller))
-                        {
-                            for col in crate::draft::colors_of_cost(&c.definition.cost) {
-                                counts[col as usize] += 1;
-                            }
-                        }
-                        [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
-                            .into_iter()
-                            .max_by_key(|c| counts[*c as usize])
-                            .unwrap_or(Color::White)
-                    }
-                    _ => match self.decider.decide(&Decision::ChooseColor { source, legal }) {
-                        DecisionAnswer::Color(c) => c,
-                        _ => Color::White,
-                    },
-                };
+                let color =
+                    self.chosen_color_aimed(ctx.controller, Some(source), &Color::ALL, true);
                 let kw = Keyword::Protection(color);
                 let ids: Vec<_> = self
                     .resolve_selector(what, ctx)
@@ -20264,15 +20202,10 @@ impl GameState {
             }
 
             Effect::BasicLandFromOutsideGameToHand => {
-                use crate::decision::{Decision, DecisionAnswer};
-                use crate::mana::Color;
-                let source = ctx.source.unwrap_or(CardId(0));
-                let legal =
-                    vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
-                let color = match self.decider.decide(&Decision::ChooseColor { source, legal }) {
-                    DecisionAnswer::Color(c) => c,
-                    _ => Color::Green,
-                };
+                // A fetched basic is mana for what we are holding, so this one
+                // asks `chosen_mana_color` (hand pips) rather than the
+                // whole-investment census; the old fallback was a flat Green.
+                let color = self.chosen_mana_color(ctx.controller, &Color::ALL, ctx.source);
                 let def = crate::draft::basic_land_arc(color);
                 let id = CardId(self.next_id);
                 self.next_id = self.next_id.saturating_add(1);
@@ -28137,31 +28070,41 @@ impl GameState {
                 // basics map 1:1 onto colors — as in ReplaceBasicLandType),
                 // then apply the BecomeBasicLand layer stack to every picked
                 // land. Terraformer.
-                use crate::card::LandType;
-                use crate::decision::{Decision, DecisionAnswer};
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, Layer, Modification,
                 };
                 use crate::mana::Color;
                 let source = ctx.source.unwrap_or(CardId(0));
-                let pick_basic = |st: &mut Self| match st.decider.decide(&Decision::ChooseColor {
-                    source,
-                    legal: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
-                }) {
-                    DecisionAnswer::Color(Color::White) => LandType::Plains,
-                    DecisionAnswer::Color(Color::Blue) => LandType::Island,
-                    DecisionAnswer::Color(Color::Black) => LandType::Swamp,
-                    DecisionAnswer::Color(Color::Red) => LandType::Mountain,
-                    _ => LandType::Forest,
-                };
-                // Vision Charm — the source type is picked first and narrows
-                // which lands change.
-                let from = from_chosen_basic.then(|| pick_basic(self));
                 let mut lands: Vec<CardId> = self
                     .resolve_selector(what, ctx)
                     .into_iter()
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
+                // Vision Charm — the source type is picked first and narrows
+                // which lands change. Headless: whichever basic type the
+                // candidates carry most of, so the charm moves the most lands
+                // it can rather than always reading Forest.
+                let from = from_chosen_basic.then(|| {
+                    let mut best = (0usize, Color::Green);
+                    for c in Color::ALL {
+                        let lt = basic_land_type_for(c);
+                        let n = lands
+                            .iter()
+                            .filter(|id| {
+                                self.computed_permanent(**id)
+                                    .is_some_and(|cp| cp.subtypes().land_types.contains(&lt))
+                            })
+                            .count();
+                        if n > best.0 {
+                            best = (n, c);
+                        }
+                    }
+                    basic_land_type_for(self.chosen_color_or(
+                        Some(source),
+                        &Color::ALL,
+                        best.1,
+                    ))
+                });
                 if let Some(from) = from {
                     lands.retain(|id| {
                         self.computed_permanent(*id)
@@ -28171,18 +28114,14 @@ impl GameState {
                 if lands.is_empty() {
                     return Ok(());
                 }
-                let land_type = match self.decider.decide(&Decision::ChooseColor {
-                    source,
-                    legal: vec![
-                        Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
-                    ],
-                }) {
-                    DecisionAnswer::Color(Color::White) => LandType::Plains,
-                    DecisionAnswer::Color(Color::Blue) => LandType::Island,
-                    DecisionAnswer::Color(Color::Black) => LandType::Swamp,
-                    DecisionAnswer::Color(Color::Red) => LandType::Mountain,
-                    _ => LandType::Forest,
-                };
+                // The type they become: the mana this seat wants. Turning an
+                // opponent's land into a type they don't run shuts it off just
+                // as well, so one rule serves Terraformer and Vision Charm.
+                let land_type = basic_land_type_for(self.chosen_mana_color(
+                    ctx.controller,
+                    &Color::ALL,
+                    Some(source),
+                ));
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 for cid in lands {
                     let affected = AffectedPermanents::just(cid);
@@ -28213,22 +28152,13 @@ impl GameState {
                 // "As [this] enters, choose a basic land type." Rides the
                 // ChooseColor decision (basics map 1:1 onto colors) and stamps
                 // the source; the paired static reads it. Realmwright.
-                use crate::card::LandType;
-                use crate::decision::{Decision, DecisionAnswer};
-                use crate::mana::Color;
+                // The type the seat's own mana wants, not a flat Forest.
                 let Some(source) = ctx.source else { return Ok(()) };
-                let land_type = match self.decider.decide(&Decision::ChooseColor {
-                    source,
-                    legal: vec![
-                        Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
-                    ],
-                }) {
-                    DecisionAnswer::Color(Color::White) => LandType::Plains,
-                    DecisionAnswer::Color(Color::Blue) => LandType::Island,
-                    DecisionAnswer::Color(Color::Black) => LandType::Swamp,
-                    DecisionAnswer::Color(Color::Red) => LandType::Mountain,
-                    _ => LandType::Forest,
-                };
+                let land_type = basic_land_type_for(self.chosen_mana_color(
+                    ctx.controller,
+                    &Color::ALL,
+                    Some(source),
+                ));
                 if let Some(inst) = self.battlefield_find_mut(source) {
                     inst.chosen_land_type = Some(land_type);
                 }

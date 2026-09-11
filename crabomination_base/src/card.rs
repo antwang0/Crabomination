@@ -5362,6 +5362,10 @@ pub(crate) mod debug_flag {
     /// it this turn (`Value::DamageToSourceThisTurnFromOthersNamedSame` —
     /// Blazing Effigy).
     pub const DAMAGE_BY_NAME: u8 = 1 << 3;
+    /// The card's "choose a color" is read off the **opponents'** side — a
+    /// protection grant, a cast lock, a damage prevention or redirect, a P/T
+    /// counting their permanents of the colour.
+    pub const CHOSEN_COLOR_HOSTILE: u8 = 1 << 4;
 }
 
 impl CardDefinition {
@@ -5890,6 +5894,23 @@ impl CardDefinition {
         self.debug_flags() & debug_flag::DAMAGE_BY_NAME != 0
     }
 
+    /// Whether this card's "choose a color" is aimed at the **opponents** —
+    /// protection from it (Voice of All, Ward Sliver), a cast lock on it
+    /// (Iona), a prevention or redirect gated on it (Story Circle, Teferi's
+    /// Moat, Harsh Judgment), a P/T counting their permanents of it (Chameleon
+    /// Spirit) — rather than at its controller's own board (Heraldic Banner's
+    /// anthem, Caged Sun, every "name a colour" mana source, Diamond Mare's
+    /// "whenever **you** cast a spell of the chosen colour").
+    ///
+    /// The split is what a headless seat's pick keys on, and it has to be a
+    /// text question: the choice is one `Effect::ChooseColorForSelf` shared by
+    /// 42 cards, so the consumer is on the card and nowhere else. Both halves
+    /// are ~21 cards, which is why picking one side for all of them — first
+    /// legal, i.e. White — was wrong for about half the catalog.
+    pub fn chosen_color_aimed_at_opponents(&self) -> bool {
+        self.debug_flags() & debug_flag::CHOSEN_COLOR_HOSTILE != 0
+    }
+
     /// The `{:?}`-derived per-definition flags, all answered by **one** scan
     /// behind **one** cache.
     ///
@@ -5939,6 +5960,23 @@ impl CardDefinition {
                 }
                 if dbg.contains("DamageToSourceThisTurnFromOthersNamedSame") {
                     v |= debug_flag::DAMAGE_BY_NAME;
+                }
+                // `HasChosenColorOfSource` carries the whole prevention /
+                // prohibition family in one string (Story Circle, Prismatic
+                // Circle, Teferi's Moat, Wash Out, Searing Rays, Psychic
+                // Allergy, Zombie Boa, Root Greevil, Jihad).
+                if [
+                    "GrantProtectionFromChosenColor",
+                    "OpponentsCantCastChosenColor",
+                    "RedirectChosenColorSpellDamageToController",
+                    "PermanentsOfChosenColorOpponentsControl",
+                    "HasChosenColorOfSource",
+                    "PreventAllDamageFromChosenColor",
+                ]
+                .iter()
+                .any(|m| dbg.contains(m))
+                {
+                    v |= debug_flag::CHOSEN_COLOR_HOSTILE;
                 }
                 cache.write().unwrap().insert(name.to_string(), v);
                 v

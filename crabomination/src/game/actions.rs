@@ -2981,8 +2981,19 @@ impl crate::game::GameState {
 
     /// The color `p` is most invested in (ties break in WUBRG order).
     pub(crate) fn densest_color_of(&self, p: usize) -> ManaColor {
+        self.densest_color_of_among(p, &ManaColor::ALL)
+    }
+
+    /// [`densest_color_of`](Self::densest_color_of) restricted to `legal` — the
+    /// form a `Decision::ChooseColor` needs, since answering outside the legal
+    /// set is rejected.
+    pub(crate) fn densest_color_of_among(&self, p: usize, legal: &[ManaColor]) -> ManaColor {
         let w = self.color_weights(p);
-        w.iter().max_by_key(|(_, n)| *n).map(|(c, _)| *c).unwrap_or(ManaColor::White)
+        w.iter()
+            .filter(|(c, _)| legal.contains(c))
+            .max_by_key(|(_, n)| *n)
+            .map(|(c, _)| *c)
+            .unwrap_or_else(|| legal.first().copied().unwrap_or(ManaColor::White))
     }
 
     /// The color `p` is least invested in — what you want an opponent's
@@ -2995,6 +3006,18 @@ impl crate::game::GameState {
     /// The color `p`'s opponents are most invested in — what you want your own
     /// creature's protection rewritten *to*.
     pub(crate) fn densest_color_among_opponents(&self, p: usize) -> ManaColor {
+        self.densest_color_among_opponents_of(p, &ManaColor::ALL)
+    }
+
+    /// [`densest_color_among_opponents`](Self::densest_color_among_opponents)
+    /// restricted to `legal`. **The one opposing-colour census** — three sites
+    /// had hand-written copies of it, one of them battlefield-only, which is
+    /// the walker-drift class this repo keeps closing.
+    pub(crate) fn densest_color_among_opponents_of(
+        &self,
+        p: usize,
+        legal: &[ManaColor],
+    ) -> ManaColor {
         let mut totals = [
             (ManaColor::White, 0u32),
             (ManaColor::Blue, 0),
@@ -3010,7 +3033,77 @@ impl crate::game::GameState {
                 totals[i].1 += n;
             }
         }
-        totals.iter().max_by_key(|(_, n)| *n).map(|(c, _)| *c).unwrap_or(ManaColor::White)
+        totals
+            .iter()
+            .filter(|(c, _)| legal.contains(c))
+            .max_by_key(|(_, n)| *n)
+            .map(|(c, _)| *c)
+            .unwrap_or_else(|| legal.first().copied().unwrap_or(ManaColor::White))
+    }
+
+    /// The colour a "choose a color" carried by `source` names.
+    ///
+    /// A real decider is asked and its answer is authoritative. A headless one
+    /// — and **every bot seat**, because a bare `decider.decide` never reaches
+    /// `decide_pending_policy` — keys on what the card does with the answer
+    /// (`CardDefinition::chosen_color_aimed_at_opponents`): the colour the
+    /// opponents are most invested in when the card reads it off their side,
+    /// this seat's own densest when it reads it off ours. Both sides are
+    /// `color_weights`, the one census.
+    ///
+    /// Every site that used to fall back to `legal[0]` named **White**, for
+    /// about a hundred cards: Voice of All's protection, Iona's lock, Story
+    /// Circle's prevention and Heraldic Banner's anthem all on the same word.
+    pub(crate) fn chosen_color_for_source(
+        &mut self,
+        p: usize,
+        source: Option<CardId>,
+        legal: &[ManaColor],
+    ) -> ManaColor {
+        let hostile = source
+            .and_then(|s| self.find_card_anywhere(s))
+            .is_some_and(|c| c.definition.chosen_color_aimed_at_opponents());
+        self.chosen_color_aimed(p, source, legal, hostile)
+    }
+
+    /// [`chosen_color_for_source`](Self::chosen_color_for_source) with the
+    /// aim given explicitly, for the sites where the effect itself says which
+    /// side the colour is read off (a discard tax is always theirs).
+    pub(crate) fn chosen_color_aimed(
+        &mut self,
+        p: usize,
+        source: Option<CardId>,
+        legal: &[ManaColor],
+        hostile: bool,
+    ) -> ManaColor {
+        let want = if hostile {
+            self.densest_color_among_opponents_of(p, legal)
+        } else {
+            self.densest_color_of_among(p, legal)
+        };
+        self.chosen_color_or(source, legal, want)
+    }
+
+    /// Ask a real decider for a colour out of `legal`; answer a headless one
+    /// with `want`. The bottom of the three — the sites whose own body already
+    /// knows the answer it wants (the most-common basic type among the lands a
+    /// charm can move) call this directly.
+    pub(crate) fn chosen_color_or(
+        &mut self,
+        source: Option<CardId>,
+        legal: &[ManaColor],
+        want: ManaColor,
+    ) -> ManaColor {
+        if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            return want;
+        }
+        match self.decider.decide(&crate::decision::Decision::ChooseColor {
+            source: source.unwrap_or(CardId(0)),
+            legal: legal.to_vec(),
+        }) {
+            crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
+            _ => want,
+        }
     }
 
     /// The color words a permanent actually prints (CR 612.2) — today the
