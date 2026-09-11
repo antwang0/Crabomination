@@ -22047,11 +22047,45 @@ impl GameState {
                 additional_targets,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
+                // CR 603.10 — re-arm the dying object's LKI scope for the
+                // continuation. `resolve_trigger` kept the `leaves_bf_lki`
+                // entries alive across the suspend precisely so this pass can
+                // read them, but the scoping flags are per-pass: without them a
+                // "when this dies" body reads the live board instead of the
+                // object that died, and whichever pass finishes without
+                // suspending is the one that drops the entries.
+                let had_lki = self.leaves_bf_lki.contains_key(&source);
+                if had_lki {
+                    self.resolving_lki_source = Some(source);
+                }
+                let lki_subject = match trigger_source_ent {
+                    Some(crate::game::effects::EntityRef::Card(c))
+                    | Some(crate::game::effects::EntityRef::Permanent(c))
+                        if c != source && self.leaves_bf_lki.contains_key(&c) =>
+                    {
+                        self.resolving_lki_subject = Some(c);
+                        Some(c)
+                    }
+                    _ => None,
+                };
                 self.continue_trigger_resolution_with_source_into(
                     source, controller, remaining, target, mode, x_value, converged_value,
                     mana_spent, trigger_source_ent, event_amount, trigger_player,
                     additional_targets, true, &mut evs,
                 )?;
+                let suspended_again = self.pending_decision.is_some();
+                if had_lki {
+                    self.resolving_lki_source = None;
+                    if !suspended_again {
+                        self.leaves_bf_lki.remove(&source);
+                    }
+                }
+                if let Some(sid) = lki_subject {
+                    self.resolving_lki_subject = None;
+                    if !suspended_again {
+                        self.leaves_bf_lki.remove(&sid);
+                    }
+                }
                 evs
             }
             ResumeContext::Ability {

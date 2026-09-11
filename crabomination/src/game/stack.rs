@@ -2838,15 +2838,29 @@ impl GameState {
                     false,
                     &mut events,
                 )?;
+                // CR 603.10 — a suspended resolution is the SAME resolution, so
+                // its continuation still has to read the dying object. Tearing
+                // the LKI down here left Giant Albatross's "each creature that
+                // dealt damage to it" matching nothing on the resume: the arm
+                // asked its first victim, suspended, and came back to an empty
+                // victim list. The continuation removes it instead (see
+                // `submit_decision`'s Trigger arm) — only the scoping flags are
+                // dropped now, because nothing of this resolution runs until
+                // the answer arrives and the flags must not colour what does.
+                let suspended = self.pending_decision.is_some();
                 if had_lki {
                     self.resolving_lki_source = None;
-                    self.leaves_bf_lki.remove(&source);
+                    if !suspended {
+                        self.leaves_bf_lki.remove(&source);
+                    }
                 }
                 if let Some(sid) = lki_subject {
                     self.resolving_lki_subject = None;
-                    self.leaves_bf_lki.remove(&sid);
+                    if !suspended {
+                        self.leaves_bf_lki.remove(&sid);
+                    }
                 }
-                if self.pending_decision.is_some() {
+                if suspended {
                     return Ok(events);
                 }
             }

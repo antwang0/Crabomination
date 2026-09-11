@@ -1213,3 +1213,34 @@ fn rysorian_badger_eats_the_defenders_graveyard() {
             .contains(&Keyword::DealsNoCombatDamage)
     );
 }
+
+/// Giant Albatross charges each victim's controller once per creature, even
+/// when their asks suspend. `DestroyEachUnlessPaysLife` paid inside the ask
+/// loop, so the re-run a suspend forces re-paid for every creature asked about
+/// before it — the same shape as Fade Away's mana, in life.
+#[test]
+fn giant_albatross_charges_each_creature_once_when_the_asks_suspend() {
+    let mut g = main_phase();
+    g.players[1].wants_ui = true;
+    let bird = g.add_card_to_battlefield(0, catalog::giant_albatross());
+    let first = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let second = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Yes to the {1}{U}; seat 1's two asks suspend and are answered below.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    mana(&mut g, 0);
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(bird), 1, Some(first), &mut events);
+    g.deal_damage_to_from(EntityRef::Permanent(bird), 1, Some(second), &mut events);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    for _ in 0..4 {
+        if g.pending_decision.is_none() {
+            break;
+        }
+        g.submit_decision(DecisionAnswer::Bool(true)).expect("pay the 2 life");
+    }
+    assert!(g.pending_decision.is_none(), "the resolution finished");
+    assert!(g.battlefield_find(first).is_some(), "paid for once, so it lives");
+    assert!(g.battlefield_find(second).is_some(), "and so does the other");
+    assert_eq!(g.players[1].life, 16, "2 life per creature, charged once each");
+}
