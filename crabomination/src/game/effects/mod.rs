@@ -34,7 +34,7 @@ use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef,
     Selector, ZoneDest, ZoneRef,
 };
-use crate::decision::{AmountKind, PickValue};
+use crate::decision::{AmountKind, OptionalKind, PayFor, PickValue};
 use crate::game::layers::EffectDuration;
 use crate::mana::Color;
 
@@ -504,6 +504,7 @@ impl GameState {
                 "Put a card from your hand on top of your library instead of discarding?".into(),
                 src,
                 effect,
+                OptionalKind::FreeUpside,
             )
             .unwrap_or(false);
         self.clear_answer_log();
@@ -559,6 +560,7 @@ impl GameState {
             "Put those cards on the bottom of the library?".into(),
             source,
             effect,
+            OptionalKind::Neutral,
         ) else {
             return Ok(());
         };
@@ -640,6 +642,7 @@ impl GameState {
                     "Pay to keep this permanent?".into(),
                     source,
                     effect,
+                    OptionalKind::PayMana { cost: Some(cost.clone()), purpose: PayFor::KeepSource },
                 ) {
                     Some(yes) => yes,
                     None => return Ok(()),
@@ -688,6 +691,12 @@ impl GameState {
     /// The caller must keep all side effects *after* its final ask (the
     /// re-run repeats everything before the suspension point) and call
     /// `clear_answer_log()` on every completing path.
+    ///
+    /// `kind` states the question for a headless policy — see
+    /// [`OptionalKind`](crate::decision::OptionalKind). It is a required
+    /// argument, not a defaulted field, because the blanket-yes it replaces
+    /// was invisible at the call site.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn ask_seat_bool(
         &mut self,
         cursor: &mut usize,
@@ -695,6 +704,7 @@ impl GameState {
         description: String,
         source: CardId,
         effect: &Effect,
+        kind: crate::decision::OptionalKind,
     ) -> Option<bool> {
         use crate::decision::{Decision, DecisionAnswer};
         self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Bool(_)));
@@ -702,7 +712,7 @@ impl GameState {
             *cursor += 1;
             return Some(matches!(a, DecisionAnswer::Bool(true)));
         }
-        let decision = Decision::OptionalTrigger { source, description };
+        let decision = Decision::OptionalTrigger { source, description, kind };
         if self.players.get(seat).is_some_and(|p| p.wants_ui) {
             self.suspend_signal = Some(Box::new((
                 decision,
@@ -756,6 +766,7 @@ impl GameState {
                     format!("Pay {life} life to keep this creature?"),
                     source,
                     effect,
+                    OptionalKind::PayLife { life, purpose: PayFor::KeepSource },
                 ) {
                     Some(yes) => yes,
                     None => return Ok(()),
@@ -1142,7 +1153,14 @@ impl GameState {
         };
         let prompt =
             format!("Choose the first pile [{}]? (No takes [{}])", names(&first), names(&second));
-        let Some(take_first) = self.ask_seat_bool(&mut cursor, choose_seat, prompt, source, effect)
+        let Some(take_first) = self.ask_seat_bool(
+            &mut cursor,
+            choose_seat,
+            prompt,
+            source,
+            effect,
+            OptionalKind::Neutral,
+        )
         else {
             return Ok(());
         };
@@ -2700,6 +2718,7 @@ impl GameState {
                         self.decider.decide(&crate::decision::Decision::OptionalTrigger {
                             source: ctx.source.unwrap_or(id),
                             description: format!("Pay {life} life to bin the top card?"),
+                            kind: OptionalKind::PayLife { life: *life, purpose: PayFor::DenyEffect },
                         }),
                         crate::decision::DecisionAnswer::Bool(true)
                     ),
@@ -2741,6 +2760,7 @@ impl GameState {
                             "Ante the top card of your library?".into(),
                             ctx.source.unwrap_or(CardId(0)),
                             effect,
+                            OptionalKind::SelfCost,
                         ) else {
                             return Ok(());
                         };
@@ -2840,6 +2860,7 @@ impl GameState {
                         format!("Pay {cost} life?"),
                         ctx.source.unwrap_or(CardId(0)),
                         effect,
+                        OptionalKind::PayLife { life: cost.max(0) as u32, purpose: PayFor::DenyEffect },
                     ) else {
                         return Ok(());
                     };
@@ -3514,6 +3535,7 @@ impl GameState {
                             self.decider.decide(&Decision::OptionalTrigger {
                                 source: ctx.source.unwrap_or(CardId(0)),
                                 description: description.clone(),
+                                kind: OptionalKind::MayBody,
                             }),
                             DecisionAnswer::Bool(true)
                         )
@@ -3663,6 +3685,7 @@ impl GameState {
                         format!("Pay {{{diff}}} to put it onto the battlefield?"),
                         source,
                         effect,
+                        OptionalKind::PayMana { cost: Some(surcharge.clone()), purpose: PayFor::Payoff },
                     ) else {
                         return Ok(());
                     };
@@ -4935,6 +4958,7 @@ impl GameState {
                             self.decider.decide(&Decision::OptionalTrigger {
                                 source: src,
                                 description: "Flip again?".into(),
+                                kind: OptionalKind::Neutral,
                             }),
                             DecisionAnswer::Bool(true)
                         );
@@ -5509,6 +5533,7 @@ impl GameState {
                     description.clone(),
                     ctx.source.unwrap_or(CardId(0)),
                     effect,
+                    OptionalKind::MayBody,
                 ) else {
                     return Ok(());
                 };
@@ -5541,6 +5566,7 @@ impl GameState {
                 let decision = Decision::OptionalTrigger {
                     source,
                     description: description.clone(),
+                    kind: OptionalKind::MayBody,
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
@@ -5583,6 +5609,7 @@ impl GameState {
                     format!("Process up to {count} card(s) from exile?"),
                     source,
                     effect,
+                    OptionalKind::FreeUpside,
                 ) else {
                     return Ok(());
                 };
@@ -5643,7 +5670,14 @@ impl GameState {
                 // pool runs out long before this in practice.
                 for _ in 0..32 {
                     let Some(yes) =
-                        self.ask_seat_bool(&mut cursor, seat, description.clone(), source, effect)
+                        self.ask_seat_bool(
+                            &mut cursor,
+                            seat,
+                            description.clone(),
+                            source,
+                            effect,
+                            OptionalKind::PayMana { cost: Some(mana_cost.clone()), purpose: PayFor::Payoff },
+                        )
                     else {
                         return Ok(());
                     };
@@ -5663,7 +5697,14 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let Some(yes) =
-                    self.ask_seat_bool(&mut cursor, seat, description.clone(), source, effect)
+                    self.ask_seat_bool(
+                        &mut cursor,
+                        seat,
+                        description.clone(),
+                        source,
+                        effect,
+                        OptionalKind::PayMana { cost: Some(mana_cost.clone()), purpose: PayFor::Payoff },
+                    )
                 else {
                     return Ok(());
                 };
@@ -5712,6 +5753,7 @@ impl GameState {
                     description.clone(),
                     source,
                     effect,
+                    OptionalKind::PayMana { cost: Some(mana_cost.clone()), purpose: PayFor::Payoff },
                 ) else {
                     return Ok(());
                 };
@@ -5788,6 +5830,7 @@ impl GameState {
                     description.clone(),
                     source,
                     effect,
+                    OptionalKind::PayLife { life: amt, purpose: PayFor::Payoff },
                 ) else {
                     return Ok(());
                 };
@@ -5902,6 +5945,7 @@ impl GameState {
                     description.clone(),
                     source,
                     effect,
+                    OptionalKind::SacrificeForPayoff,
                 ) else {
                     return Ok(());
                 };
@@ -5937,6 +5981,7 @@ impl GameState {
                     description.clone(),
                     source,
                     effect,
+                    OptionalKind::SacrificeForPayoff,
                 ) else {
                     return Ok(());
                 };
@@ -5981,7 +6026,12 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
-                    &mut cursor, ctx.controller, description.clone(), source, effect,
+                    &mut cursor,
+                    ctx.controller,
+                    description.clone(),
+                    source,
+                    effect,
+                    OptionalKind::MayBody,
                 ) else {
                     return Ok(());
                 };
@@ -6023,7 +6073,12 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
-                    &mut cursor, ctx.controller, description.clone(), source, effect,
+                    &mut cursor,
+                    ctx.controller,
+                    description.clone(),
+                    source,
+                    effect,
+                    OptionalKind::MayBody,
                 ) else {
                     return Ok(());
                 };
@@ -6068,7 +6123,12 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
-                    &mut cursor, ctx.controller, description.clone(), source, effect,
+                    &mut cursor,
+                    ctx.controller,
+                    description.clone(),
+                    source,
+                    effect,
+                    OptionalKind::DiscardForPayoff { count: n as u32 },
                 ) else {
                     return Ok(());
                 };
@@ -7308,7 +7368,14 @@ impl GameState {
                     None => format!("Discard a card for {name}'s echo? (sacrifice it otherwise)"),
                 };
                 let mut cursor = 0usize;
-                let Some(pay) = self.ask_seat_bool(&mut cursor, p, label, id, effect) else {
+                let Some(pay) = self.ask_seat_bool(
+                    &mut cursor,
+                    p,
+                    label,
+                    id,
+                    effect,
+                    OptionalKind::PayMana { cost: mana_cost.clone(), purpose: PayFor::KeepSource },
+                ) else {
                     return Ok(()); // suspended for the seat's answer
                 };
                 self.clear_answer_log();
@@ -7359,7 +7426,14 @@ impl GameState {
                     cost.summary(),
                 );
                 let mut cursor = 0usize;
-                let Some(pay) = self.ask_seat_bool(&mut cursor, p, label, id, effect) else {
+                let Some(pay) = self.ask_seat_bool(
+                    &mut cursor,
+                    p,
+                    label,
+                    id,
+                    effect,
+                    OptionalKind::PayMana { cost: None, purpose: PayFor::KeepSource },
+                ) else {
                     return Ok(()); // suspended for the seat's answer
                 };
                 self.clear_answer_log();
@@ -7706,6 +7780,7 @@ impl GameState {
                             description: format!(
                                 "Pay {{E}}×{energy} to cast the exiled card without paying its mana cost?"
                             ),
+                            kind: OptionalKind::CastFree,
                         }),
                         DecisionAnswer::Bool(true)
                     ),
@@ -7827,6 +7902,7 @@ impl GameState {
                             format!("Return {name} to the battlefield instead of learning?"),
                             card_id,
                             effect,
+                            OptionalKind::Neutral,
                         ) else {
                             return Ok(());
                         };
@@ -7841,6 +7917,7 @@ impl GameState {
                                     description: format!(
                                         "Return {name} to the battlefield instead of learning?"
                                     ),
+                                    kind: OptionalKind::Neutral,
                                 }),
                                 DecisionAnswer::Bool(true)
                             ),
@@ -8320,6 +8397,10 @@ impl GameState {
                                 self.decider.decide(&Decision::OptionalTrigger {
                                     source,
                                     description: format!("Pay {life} life to keep {name}?"),
+                                    kind: OptionalKind::PayLife {
+                                        life: *life,
+                                        purpose: PayFor::Payoff,
+                                    },
                                 }),
                                 DecisionAnswer::Bool(true)
                             ));
@@ -9030,6 +9111,7 @@ impl GameState {
                             format!("Pay {life} life to keep your permanents?"),
                             source,
                             effect,
+                            OptionalKind::PayLife { life: *life, purpose: PayFor::KeepSource },
                         ) {
                             Some(yes) => yes,
                             None => return Ok(()),
@@ -9164,6 +9246,7 @@ impl GameState {
                         "Pay the repeat cost to flip again?".to_string(),
                         ctx.source.unwrap_or(CardId(0)),
                         effect,
+                        OptionalKind::PayMana { cost: Some(repeat_cost.clone()), purpose: PayFor::Payoff },
                     ) else {
                         return Ok(());
                     };
@@ -10067,6 +10150,7 @@ impl GameState {
                         format!("Reveal the top card ({name}, lose {mv} life)?"),
                         source,
                         effect,
+                        OptionalKind::RevealTopLoseLife,
                     ) else {
                         return Ok(()); // suspended; the resume re-runs this arm
                     };
@@ -11384,6 +11468,7 @@ impl GameState {
                         "Exile this and return it at your next upkeep?".to_string(),
                         cid,
                         effect,
+                        OptionalKind::Neutral,
                     ) else {
                         return Ok(());
                     };
@@ -11398,6 +11483,7 @@ impl GameState {
                             self.decider.decide(&Decision::OptionalTrigger {
                                 source: cid,
                                 description: "Exile this and return it at your next upkeep?".to_string(),
+                                kind: OptionalKind::Neutral,
                             }),
                             DecisionAnswer::Bool(true)
                         ),
@@ -12694,6 +12780,7 @@ impl GameState {
                             self.decider.decide(&Decision::OptionalTrigger {
                                 source: src,
                                 description: "Put the exiled card onto the battlefield? (else into hand)".to_string(),
+                                kind: OptionalKind::FreeUpside,
                             }),
                             DecisionAnswer::Bool(true)
                         ),
@@ -14975,6 +15062,7 @@ impl GameState {
                     self.decider.decide(&Decision::OptionalTrigger {
                         source,
                         description: "Endure: create an N/N Spirit instead of counters?".into(),
+                        kind: OptionalKind::Neutral,
                     }),
                     DecisionAnswer::Bool(true)
                 );
@@ -16818,6 +16906,7 @@ impl GameState {
                             self.decider.decide(&Decision::OptionalTrigger {
                                 source: src,
                                 description: "Have them draw instead of a token?".to_string(),
+                                kind: OptionalKind::Neutral,
                             }),
                             DecisionAnswer::Bool(true)
                         );
@@ -17247,6 +17336,7 @@ impl GameState {
                     "Exile your hand to reclaim the cards under this?".to_string(),
                     src,
                     effect,
+                    OptionalKind::Neutral,
                 ) else {
                     return Ok(());
                 };
@@ -18500,6 +18590,7 @@ impl GameState {
                                         self.decider.decide(&crate::decision::Decision::OptionalTrigger {
                                             source: cid,
                                             description: "Put countered spell on top of library? (no = bottom)".into(),
+                                            kind: OptionalKind::Neutral,
                                         }),
                                         crate::decision::DecisionAnswer::Bool(true)
                                     ),
@@ -18623,6 +18714,7 @@ impl GameState {
                         format!("Pay {} or this spell is countered?", cost.summary()),
                         src,
                         effect,
+                        OptionalKind::PayMana { cost: Some(cost.clone()), purpose: PayFor::SaveSpell },
                     ) {
                         Some(b) => b,
                         None => return Ok(()),
@@ -18784,7 +18876,14 @@ impl GameState {
                         cost.label(),
                         if is_spell { "the spell" } else { "the ability" },
                     );
-                    match self.ask_seat_bool(&mut cursor, affected_controller, prompt, src, effect)
+                    match self.ask_seat_bool(
+                        &mut cursor,
+                        affected_controller,
+                        prompt,
+                        src,
+                        effect,
+                        OptionalKind::PayMana { cost: None, purpose: PayFor::SaveSpell },
+                    )
                     {
                         // Suspended for the modal — resumes through this same
                         // arm with the answer replayed off the answer log.
@@ -18844,6 +18943,7 @@ impl GameState {
                     "Pay the tax to prevent the triggered effect?".to_string(),
                     ctx.source.unwrap_or(CardId(0)),
                     effect,
+                    OptionalKind::PayMana { cost: None, purpose: PayFor::DenyEffect },
                 ) else {
                     return Ok(());
                 };
@@ -19539,6 +19639,7 @@ impl GameState {
                         "Sacrifice a permanent to keep this one?".to_string(),
                         src,
                         effect,
+                        OptionalKind::KeepByGivingUp,
                     ) else {
                         return Ok(());
                     };
@@ -19572,6 +19673,7 @@ impl GameState {
                         "Pay the cost to keep this permanent?".to_string(),
                         src,
                         effect,
+                        OptionalKind::PayMana { cost: None, purpose: PayFor::KeepSource },
                     ) else {
                         return Ok(());
                     };
@@ -19637,6 +19739,7 @@ impl GameState {
                         "Return a land to your hand to keep this one?".to_string(),
                         src,
                         effect,
+                        OptionalKind::KeepByGivingUp,
                     ) else {
                         return Ok(());
                     };
@@ -20863,6 +20966,7 @@ impl GameState {
                         "Pay this spell's mana cost to counter it?".to_string(),
                         ctx.source.unwrap_or(CardId(0)),
                         effect,
+                        OptionalKind::PayMana { cost: Some(cost.clone()), purpose: PayFor::DenyEffect },
                     ) else {
                         return Ok(());
                     };
@@ -21545,6 +21649,7 @@ impl GameState {
                             format!("Pay {life_amt} life to deny {name}?"),
                             source,
                             &me,
+                            OptionalKind::PayLife { life: life_amt as u32, purpose: PayFor::DenyEffect },
                         ) else { return Ok(()); };
                         if yes {
                             let applied = self.adjust_life_applied(opp, -life_amt);
@@ -21666,6 +21771,7 @@ impl GameState {
                         "Accept the tempting offer?".to_string(),
                         source,
                         effect,
+                        OptionalKind::TemptingOffer,
                     ) else {
                         return Ok(());
                     };
@@ -21694,7 +21800,14 @@ impl GameState {
                 let mut cursor = 0;
                 for p in self.resolve_players(who, ctx) {
                     let Some(yes) =
-                        self.ask_seat_bool(&mut cursor, p, description.clone(), source, effect)
+                        self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            description.clone(),
+                            source,
+                            effect,
+                            OptionalKind::MayBody,
+                        )
                     else {
                         return Ok(());
                     };
@@ -21867,6 +21980,7 @@ impl GameState {
                     self.decider.decide(&Decision::OptionalTrigger {
                         source: ctx.source.unwrap_or(CardId(0)),
                         description: format!("Is a card named {named} in their hand?"),
+                        kind: OptionalKind::Neutral,
                     }),
                     DecisionAnswer::Bool(true)
                 );
@@ -22090,6 +22204,7 @@ impl GameState {
                         format!("Pay {life} life to keep {name}?"),
                         source,
                         effect,
+                        OptionalKind::PayLife { life: *life, purpose: PayFor::DenyEffect },
                     ) else {
                         return Ok(());
                     };
@@ -22835,6 +22950,7 @@ impl GameState {
                         self.decider.decide(&Decision::OptionalTrigger {
                             source: src,
                             description: "Repeat Kindle the Carnage?".into(),
+                            kind: OptionalKind::Neutral,
                         }),
                         DecisionAnswer::Bool(true)
                     );
@@ -23388,6 +23504,7 @@ impl GameState {
                     let decision = Decision::OptionalTrigger {
                         source,
                         description: "Reveal the top card and put it into your hand?".to_string(),
+                        kind: OptionalKind::FreeUpside,
                     };
                     let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                         Some(a) => a,
@@ -24748,6 +24865,7 @@ impl GameState {
                         format!("Exile {n} card(s) from your graveyard?"),
                         ctx.source.unwrap_or(CardId(0)),
                         effect,
+                        OptionalKind::ExileGraveyard { count: n as u32 },
                     ) else {
                         return Ok(());
                     };
@@ -25129,6 +25247,7 @@ impl GameState {
                         prompt.clone(),
                         ctx.source.unwrap_or(CardId(0)),
                         effect,
+                        OptionalKind::MayBody,
                     ) else {
                         return Ok(());
                     };
@@ -25187,6 +25306,7 @@ impl GameState {
                         format!("Redirect {n} damage to a creature you control?"),
                         ctx.source.unwrap_or(CardId(0)),
                         effect,
+                        OptionalKind::Neutral,
                     ) else {
                         return Ok(());
                     };
@@ -25640,6 +25760,7 @@ impl GameState {
                             format!("Revealed {card_name} — put it into your graveyard?"),
                             ctx.source.unwrap_or(CardId(0)),
                             effect,
+                            OptionalKind::Neutral,
                         ) {
                             Some(b) => b,
                             None => return Ok(()),
@@ -25742,6 +25863,7 @@ impl GameState {
                         format!("Put {name} onto the battlefield?"),
                         ctx.source.unwrap_or(CardId(0)),
                         effect,
+                        OptionalKind::FreeUpside,
                     ) else {
                         return Ok(());
                     };
@@ -26433,7 +26555,14 @@ impl GameState {
                         "Clash: you revealed {}. Put it on the bottom?",
                         top.definition.name
                     );
-                    let Some(b) = self.ask_seat_bool(&mut cursor, p, prompt, source, effect)
+                    let Some(b) = self.ask_seat_bool(
+                        &mut cursor,
+                        p,
+                        prompt,
+                        source,
+                        effect,
+                        OptionalKind::Neutral,
+                    )
                     else {
                         return Ok(());
                     };
@@ -26627,6 +26756,7 @@ impl GameState {
                             self.decider.decide(&Decision::OptionalTrigger {
                                 source: ctx.source.unwrap_or(CardId(0)),
                                 description: "Repeat Trade Secrets?".to_string(),
+                                kind: OptionalKind::Neutral,
                             }),
                             DecisionAnswer::Bool(true)
                         );
@@ -27523,6 +27653,7 @@ impl GameState {
                     let decision = Decision::OptionalTrigger {
                         source: src,
                         description: format!("Knowledge Pool: cast {name} without paying its mana cost?"),
+                        kind: OptionalKind::CastFree,
                     };
                     let cast = match self.decider.kind() {
                         crate::decision::DeciderKind::Auto => true,
@@ -27616,6 +27747,7 @@ impl GameState {
                             description: "Possibility Storm: cast the exiled card without \
                                           paying its mana cost?"
                                 .to_string(),
+                            kind: OptionalKind::CastFree,
                         };
                         if self.seat_suspends(caster) {
                             self.suspend_signal = Some(Box::new((
@@ -28017,6 +28149,7 @@ impl GameState {
                         self.decider.decide(&Decision::OptionalTrigger {
                             source,
                             description: "Tainted Pact: decline this card and keep digging?".to_string(),
+                            kind: OptionalKind::Neutral,
                         }),
                         DecisionAnswer::Bool(true)
                     );
@@ -28539,6 +28672,7 @@ impl GameState {
                     self.decider.decide(&Decision::OptionalTrigger {
                         source,
                         description: "Copy this spell and choose a new target?".to_string(),
+                        kind: OptionalKind::FreeUpside,
                     }),
                     DecisionAnswer::Bool(true)
                 );
@@ -28839,6 +28973,10 @@ impl GameState {
                         source: ctx.source.unwrap_or(CardId(0)),
                         description: "Pay {2} to prevent Wandering Archaic's copy?"
                             .to_string(),
+                        kind: OptionalKind::PayMana {
+                            cost: Some(crate::mana::cost(&[crate::mana::generic(2)])),
+                            purpose: PayFor::DenyEffect,
+                        },
                     });
                     if matches!(answer, DecisionAnswer::Bool(true)) {
                         // Try to deduct from the payer's pool.
@@ -29757,6 +29895,7 @@ impl GameState {
                     "Deal damage equal to its power instead of combat damage?".to_string(),
                     src,
                     effect,
+                    OptionalKind::Neutral,
                 ) else {
                     return Ok(());
                 };
@@ -30566,6 +30705,7 @@ impl GameState {
                     "Exile this card?".to_string(),
                     src,
                     effect,
+                    OptionalKind::FreeUpside,
                 ) else {
                     return Ok(());
                 };
@@ -31475,6 +31615,7 @@ impl GameState {
                 let decision = Decision::OptionalTrigger {
                     source: ctx.source.unwrap_or(CardId(0)),
                     description: format!("Is the chosen card's mana value greater than {threshold}?"),
+                    kind: OptionalKind::Neutral,
                 };
                 let _ = guesser;
                 let guess = matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true));
@@ -32611,6 +32752,7 @@ impl GameState {
                             source: src,
                             description: "Cascade: cast the exiled card without paying its mana cost?"
                                 .to_string(),
+                            kind: OptionalKind::CastFree,
                         };
                         // wants_ui: real suspended offer (the bare ask hit
                         // AutoDecider's "no" — cascade never cast anything).
@@ -32716,6 +32858,7 @@ impl GameState {
                                 description:
                                     "Ripple: cast the revealed copy without paying its mana cost?"
                                         .to_string(),
+                                kind: OptionalKind::CastFree,
                             }),
                             DecisionAnswer::Bool(true)
                         ),
@@ -32803,6 +32946,7 @@ impl GameState {
                                 "Discover: cast the exiled card without paying its mana cost? \
                                  (Otherwise put it into your hand.)"
                                     .to_string(),
+                            kind: OptionalKind::CastFree,
                         };
                         // wants_ui: real suspended offer (the old bare ask
                         // hit AutoDecider's "no" — the free-cast half of
@@ -32985,6 +33129,7 @@ impl GameState {
                                     "Collect evidence {need}? (exile cards from your graveyard \
                                      with total mana value {need} or greater)"
                                 ),
+                                kind: OptionalKind::ExileGraveyard { count: 0 },
                             }),
                             DecisionAnswer::Bool(true)
                         ),
@@ -33072,6 +33217,7 @@ impl GameState {
                                 description: "Collect evidence X? (exile cards from your \
                                               graveyard; X = their total mana value)"
                                     .into(),
+                                kind: OptionalKind::ExileGraveyard { count: 0 },
                             }),
                             DecisionAnswer::Bool(true)
                         ),
@@ -33149,6 +33295,7 @@ impl GameState {
                          or sacrifice a Food)".to_string(),
                         src,
                         effect,
+                        OptionalKind::ExileGraveyard { count: if food.is_some() { 0 } else { 3 } },
                     ) else {
                         return Ok(());
                     };
@@ -33164,6 +33311,9 @@ impl GameState {
                                 source: src,
                                 description: "Forage? (exile three cards from your graveyard \
                                     or sacrifice a Food)".into(),
+                                kind: OptionalKind::ExileGraveyard {
+                                    count: if food.is_some() { 0 } else { 3 },
+                                },
                             }),
                             DecisionAnswer::Bool(true)
                         ),
@@ -33246,6 +33396,7 @@ impl GameState {
                             } else {
                                 "Cast without paying?".to_string()
                             },
+                            kind: OptionalKind::CastFree,
                         }),
                         DecisionAnswer::Bool(true)
                     ),
@@ -33400,6 +33551,7 @@ impl GameState {
                                     description: format!(
                                         "Cast {name} without paying? (declined cards are re-offered)"
                                     ),
+                                    kind: OptionalKind::CastFree,
                                 }),
                                 DecisionAnswer::Bool(true)
                             ),
@@ -33540,6 +33692,7 @@ impl GameState {
                     format!("Pay tribute: put {n} +1/+1 counter(s) on it?"),
                     source,
                     effect,
+                    OptionalKind::Neutral,
                 ) else {
                     return Ok(());
                 };
@@ -33609,6 +33762,7 @@ impl GameState {
                 let decision = Decision::OptionalTrigger {
                     source,
                     description: format!("Cast a copy of {}?", def.name),
+                    kind: OptionalKind::CastFree,
                 };
                 let take = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => matches!(a, DecisionAnswer::Bool(true)),
@@ -33684,6 +33838,7 @@ impl GameState {
                         self.decider.decide(&Decision::OptionalTrigger {
                             source,
                             description: "Cipher: encode this spell on a creature you control?".into(),
+                            kind: OptionalKind::FreeUpside,
                         }),
                         DecisionAnswer::Bool(true)
                     ),
@@ -36433,6 +36588,7 @@ impl GameState {
                 format!("Pay {} to keep this permanent?", cost.summary()),
                 source,
                 effect,
+                OptionalKind::PayMana { cost: Some(cost.clone()), purpose: PayFor::KeepSource },
             ) {
                 Some(b) => b,
                 None => return Ok(()),

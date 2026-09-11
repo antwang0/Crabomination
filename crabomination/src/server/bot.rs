@@ -2646,9 +2646,9 @@ impl HeuristicBot {
                 // so it answers here; every other decision goes through
                 // [`decide_pending_policy`], the same table simulations
                 // use.
-                if let crate::decision::Decision::OptionalTrigger { source, description } =
+                if let crate::decision::Decision::OptionalTrigger { source, kind, .. } =
                     &pending.decision
-                    && description.starts_with("Reveal the top card (")
+                    && matches!(kind, crate::decision::OptionalKind::RevealTopLoseLife)
                 {
                     let (cards, life_committed) = match &self.reveal_commit {
                         Some((s, c, l)) if *s == *source => (*c, *l),
@@ -2897,69 +2897,13 @@ fn decide_pending_policy_inner(
         // Unlike AutoDecider (which declines *every* "you may"
         // trigger), the bot takes an optional trigger whose body
         // is pure upside — so Provoke's "you may", Boast token
-        // riders, etc. actually fire under bot play. It still
-        // declines bodies that impose a self-cost (lose life /
-        // sacrifice / discard). Engine-authored prompt families the
-        // generic screen can't introspect (no MayDo body) each get a
-        // real policy instead of the blanket-yes fallback.
-        crate::decision::Decision::OptionalTrigger { source, description } => {
-            let take = if description.starts_with("Pay ")
-                && description.contains(" life to deny ")
-            {
-                // Rhystic-style life tax: pay only with a healthy
-                // buffer. Parse the printed amount.
-                let n: i32 = description
-                    .split_whitespace()
-                    .nth(1)
-                    .and_then(|w| w.parse().ok())
-                    .unwrap_or(2);
-                state.effective_life(seat) - n > 10
-            } else if description.starts_with("Accept the tempting offer") {
-                // Tempting offers reward the caster; decline.
-                false
-            } else if description.starts_with("Pay echo ")
-                || description.starts_with("Pay cumulative upkeep ")
-                || description.starts_with("Discard a card for ")
-            {
-                // Pay while the permanent is worth keeping; let
-                // cheap chaff die to its own upkeep.
-                state
-                    .battlefield_find(*source)
-                    .map(|c| permanent_value(state, c.id, w) >= 4 * w.unit)
-                    .unwrap_or(false)
-            } else if description.starts_with("Cast a copy of ") {
-                // Paradigm recurrence (SOS): a free copy is pure
-                // upside unless the spell's own body drains life
-                // the bot can't spare — Decorum Dissertation's
-                // draw-2-lose-2 recurs every main phase, and the
-                // blanket yes played it straight into the
-                // state-based loss.
-                let loss = state
-                    .exile
-                    .iter()
-                    .find(|c| c.id == *source)
-                    .map(|c| self_life_loss(&c.definition.effect))
-                    .unwrap_or(0);
-                state.effective_life(seat) - loss > 5
-            } else if description.starts_with("Reveal the top card (") {
-                // Stateful family (see `next_action`); in a sim, decline.
-                false
-            } else {
-                // Introspection screen first (pure upside → yes, self-cost
-                // → no). A "no" from the self-cost rule gets a second
-                // opinion by OUTCOME at the real decision (`eval_modes`
-                // gates it off inside sims): sacrifice-for-value and
-                // pay-for-payoff bodies are exactly the trades a blanket
-                // decline can't judge. Strictly-better-or-keep-declining.
-                let affordable = may_pay_prompt_affordable(state, seat, *source, description);
-                let take = affordable && optional_trigger_beneficial(state, *source, description);
-                if !take && affordable && eval_modes {
-                    decide_optional_by_outcome(state, seat, w).unwrap_or(false)
-                } else {
-                    take
-                }
-            };
-            crate::decision::DecisionAnswer::Bool(take)
+        // riders, etc. actually fire under bot play. What a yes costs
+        // comes off the ask's `kind`, never off the prompt prose: see
+        // [`decide_optional_trigger`].
+        crate::decision::Decision::OptionalTrigger { source, description, kind } => {
+            crate::decision::DecisionAnswer::Bool(decide_optional_trigger(
+                state, seat, *source, kind, description, w, eval_modes,
+            ))
         }
         // AutoDecider always names Demon; the bot instead names the
         // creature type it has the most of across its battlefield +
@@ -4021,6 +3965,163 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
     best.map(|(id, _)| id)
 }
 
+/// Bot policy for `Decision::OptionalTrigger`, dispatched on the ask's
+/// [`OptionalKind`](crate::decision::OptionalKind).
+///
+/// Before the kind existed this was five `starts_with` branches over the
+/// prompt and a blanket **yes** for everything else, so ninety engine-authored
+/// asks — ante your library, exile your graveyard, sacrifice a permanent, pay
+/// any amount of life at any life total — were an unconditional accept, and a
+/// reworded prompt dropped one of the five branches back into that default
+/// with nothing to notice it. The prose is not read here at all any more; the
+/// one string still passed through is the `May*` node's own key, which is how
+/// [`optional_trigger_beneficial`] finds the body to screen.
+#[allow(clippy::too_many_arguments)]
+pub fn decide_optional_trigger(
+    state: &GameState,
+    seat: usize,
+    source: CardId,
+    kind: &crate::decision::OptionalKind,
+    description: &str,
+    w: &EvalWeights,
+    eval_modes: bool,
+) -> bool {
+    use crate::decision::{OptionalKind as K, PayFor};
+    // The echo / cumulative-upkeep rule: pay for a permanent worth keeping,
+    // let cheap chaff die to its own upkeep.
+    let source_worth_keeping = || {
+        state
+            .battlefield_find(source)
+            .map(|c| permanent_value(state, c.id, w) >= 4 * w.unit)
+            .unwrap_or(false)
+    };
+    // The engine taps for a yes, so a yes it cannot fund taps nothing and runs
+    // nothing; screening it here keeps the outcome second opinion from pricing
+    // a body that cannot happen. `None` is a cost only the engine can total
+    // (cumulative upkeep's N-fold, a tax summed over the board).
+    let affordable = |cost: &Option<crate::mana::ManaCost>| match cost {
+        None => true,
+        Some(c) => c.cmc() == 0 || can_afford_from(c, &available_mana(state, seat), 0, 0),
+    };
+    let life_after = |life: u32| state.effective_life(seat) - life as i32;
+    // A trade the outcome sim can price gets a second opinion on a "no"
+    // (`eval_modes` gates it off inside sims); a flat cost or a flat upside
+    // does not — there is nothing to weigh.
+    let (take, priced) = match kind {
+        K::MayBody => (optional_trigger_beneficial(state, source, description), true),
+        K::PayMana { cost, purpose } => {
+            let ok = affordable(cost)
+                && match purpose {
+                    PayFor::KeepSource => source_worth_keeping(),
+                    PayFor::SaveSpell | PayFor::DenyEffect => true,
+                    PayFor::Payoff => optional_trigger_beneficial(state, source, description),
+                };
+            (ok, matches!(purpose, PayFor::Payoff) && affordable(cost))
+        }
+        K::PayLife { life, purpose } => {
+            let ok = match purpose {
+                // Losing the permanent is the alternative, so the buffer can
+                // be thinner than the Rhystic-tax one.
+                PayFor::KeepSource => life_after(*life) > 5,
+                PayFor::SaveSpell | PayFor::DenyEffect => life_after(*life) > 10,
+                PayFor::Payoff => {
+                    life_after(*life) > 10
+                        && optional_trigger_beneficial(state, source, description)
+                }
+            };
+            (ok, matches!(purpose, PayFor::Payoff) && life_after(*life) > 0)
+        }
+        // CR 702.105 (Exploit) and the reflexive "you may sacrifice ~; if you
+        // do" family: accept with a spare body — a token, or one of several
+        // creatures so the payoff need not eat the source itself. Card
+        // advantage off a token is a clean win; the whole board is not.
+        K::SacrificeForPayoff => {
+            let ok = sacrifice_fodder_available(state, seat)
+                && optional_trigger_beneficial(state, source, description);
+            (ok, true)
+        }
+        K::DiscardForPayoff { count } => {
+            let spare = state.players[seat].hand.len() > *count as usize + 2;
+            (spare && optional_trigger_beneficial(state, source, description), true)
+        }
+        // Declining sacrifices `source` anyway, so the trade is only good
+        // when something cheaper can go instead.
+        K::KeepByGivingUp => (cheaper_permanent_than(state, seat, source, w), true),
+        // A free cast is pure upside unless the card's own body drains life
+        // the bot can't spare — Decorum Dissertation's draw-2-lose-2 recurs
+        // every main phase, and a blanket yes played it straight into the
+        // state-based loss.
+        K::CastFree => {
+            let loss = optional_trigger_def(state, source)
+                .map(|d| self_life_loss(&d.effect))
+                .unwrap_or(0);
+            (state.effective_life(seat) - loss > 5, false)
+        }
+        // The `AutoDecider` arms of Forage / collect evidence use the same
+        // rule: pay out of a graveyard with spare depth.
+        K::ExileGraveyard { count } => {
+            let gy = state.players.get(seat).map(|p| p.graveyard.len()).unwrap_or(0);
+            (*count == 0 || gy >= *count as usize * 2, false)
+        }
+        K::SelfCost | K::TemptingOffer => (false, false),
+        K::FreeUpside | K::Neutral => (true, false),
+        // The one stateful family: answered on the bot struct in
+        // `next_action`, which tracks the reveals committed so far. A sim
+        // reaching it has no series to track, so it declines.
+        K::RevealTopLoseLife => (false, false),
+    };
+    if !take && priced && eval_modes {
+        decide_optional_by_outcome(state, seat, w).unwrap_or(false)
+    } else {
+        take
+    }
+}
+
+/// Is `body` "sacrifice something of yours, then get paid" — Exploit's shape?
+/// The leading sacrifice is the cost of the rest, so the self-cost screen must
+/// not read it as a reason to decline.
+fn is_sacrifice_then_payoff(body: &Effect) -> bool {
+    use crate::effect::{PlayerRef, Selector};
+    let Effect::Seq(v) = body else { return false };
+    v.len() > 1
+        && matches!(
+            v.first(),
+            Some(Effect::Sacrifice { who, .. })
+                if matches!(who, Selector::You | Selector::Player(PlayerRef::You))
+        )
+}
+
+/// Does `seat` have a permanent it can feed a sacrifice payoff without giving
+/// up the payoff's own source — a token, or more than one creature?
+fn sacrifice_fodder_available(state: &GameState, seat: usize) -> bool {
+    let mut creatures = 0usize;
+    for c in state.battlefield.iter().filter(|c| c.controller == seat) {
+        if c.is_token {
+            return true;
+        }
+        if c.definition.is_creature() {
+            creatures += 1;
+            if creatures > 1 {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Does `seat` control a permanent worth strictly less than `source`? That is
+/// the whole question behind "sacrifice another permanent / return a land to
+/// keep this one": declining loses `source`, so the swap is only good when
+/// something cheaper can go instead.
+fn cheaper_permanent_than(state: &GameState, seat: usize, source: CardId, w: &EvalWeights) -> bool {
+    let Some(mine) = state.battlefield_find(source) else { return false };
+    let keep = permanent_value(state, mine.id, w);
+    state
+        .battlefield
+        .iter()
+        .any(|c| c.controller == seat && c.id != source && permanent_value(state, c.id, w) < keep)
+}
+
 /// Bot policy for `Decision::OptionalTrigger`: take the trigger unless its
 /// matching `MayDo` body imposes a clear self-cost (lose life / sacrifice /
 /// discard on the bot). `AutoDecider` declines *every* optional trigger,
@@ -4053,25 +4154,19 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
             }
         }
     }
-    // Exploit (CR 702.105 — "Exploit: sacrifice a creature?"): the body is a
-    // Sacrifice that the generic self-cost screen would always decline. Accept
-    // it when the controller has a spare creature to feed it — a token, or the
-    // exploiter is one of several creatures so it can sacrifice the weakest (or
-    // itself for a strong ETB payoff). Card advantage off a token is a clean win.
-    if description.starts_with("Exploit") {
-        let ctrl = state.battlefield.find_by_id(source).map(|c| c.controller);
-        if let Some(seat) = ctrl {
-            let creatures: Vec<&crate::card::CardInstance> = state
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == seat && c.definition.is_creature())
-                .collect();
-            let has_token = creatures.iter().any(|c| c.is_token);
-            // Accept with a sacrificial token, or when there's more than one
-            // creature so we don't have to give up the exploiter itself.
-            return has_token || creatures.len() > 1;
-        }
-        return false;
+    // Exploit (CR 702.105) and its shape-alikes: a body that *starts* with a
+    // self-sacrifice and then pays off is a cost-for-value trade, which the
+    // generic self-cost screen below would always decline. Accept it when the
+    // controller has a spare body to feed it — a token, or one of several
+    // creatures so the exploiter itself need not go. Card advantage off a
+    // token is a clean win. Read off the body's shape, not off the prompt:
+    // the branch used to be `description.starts_with("Exploit")`, one rename
+    // away from silently reverting every exploiter to a blanket decline.
+    if body.is_some_and(is_sacrifice_then_payoff) {
+        let Some(ctrl) = state.battlefield.find_by_id(source).map(|c| c.controller) else {
+            return false;
+        };
+        return sacrifice_fodder_available(state, ctrl);
     }
     // A "you may exile / destroy / bounce target X" whose chosen target is the
     // bot's own permanent is a self-cost the body cannot show — the target
@@ -4140,52 +4235,6 @@ fn optional_trigger_def(state: &GameState, source: CardId) -> Option<&CardDefini
             })
         })
         .or_else(|| state.exile.iter().find(|c| c.id == source).map(|c| &**c.definition))
-}
-
-/// The mana cost behind a `MayPay` / `MayPayBy` / `MayPayRepeatedly` prompt
-/// keyed on `desc`, walking the same shapes as [`find_maydo_body`].
-fn find_maypay_cost<'a>(eff: &'a Effect, desc: &str) -> Option<&'a crate::mana::ManaCost> {
-    match eff {
-        Effect::MayPay { description, mana_cost, .. }
-        | Effect::MayPayBy { description, mana_cost, .. }
-        | Effect::MayPayRepeatedly { description, mana_cost, .. }
-            if description == desc =>
-        {
-            Some(mana_cost)
-        }
-        Effect::MayDo { body, .. }
-        | Effect::MayPay { body, .. }
-        | Effect::MayPayBy { body, .. }
-        | Effect::MayTap { then: body, .. }
-        | Effect::MayDiscard { then: body, .. }
-        | Effect::ForEach { body, .. } => find_maypay_cost(body, desc),
-        Effect::Seq(v) => v.iter().find_map(|e| find_maypay_cost(e, desc)),
-        Effect::ChooseMode(v)
-        | Effect::ChooseN { modes: v, .. }
-        | Effect::Escalate { modes: v, .. }
-        | Effect::EscalatingThisTurn { modes: v } => {
-            v.iter().find_map(|e| find_maypay_cost(e, desc))
-        }
-        Effect::If { then, else_, .. } => {
-            find_maypay_cost(then, desc).or_else(|| find_maypay_cost(else_, desc))
-        }
-        _ => None,
-    }
-}
-
-/// Can `seat` pay the mana a "you may pay" prompt asks for — pool plus
-/// untapped sources? The engine taps for the answer (the echo path), so a
-/// yes the seat cannot fund would tap nothing and run nothing; screening it
-/// here keeps the outcome second opinion from pricing a body that cannot
-/// happen. A prompt with no mana cost (a plain MayDo) is always affordable.
-fn may_pay_prompt_affordable(state: &GameState, seat: usize, source: CardId, desc: &str) -> bool {
-    let Some(def) = optional_trigger_def(state, source) else { return true };
-    let cost = find_maypay_cost(&def.effect, desc)
-        .or_else(|| def.triggered_abilities.iter().find_map(|t| find_maypay_cost(&t.effect, desc)));
-    match cost {
-        Some(c) => c.cmc() == 0 || can_afford_from(c, &available_mana(state, seat), 0, 0),
-        None => true,
-    }
 }
 
 /// Recursively find the optional-effect body whose prompt is `desc`. Both
@@ -16626,12 +16675,78 @@ mod tests {
             ..Default::default()
         };
         let id = g.add_card_to_battlefield(0, def);
+        let w = EvalWeights::default();
+        let ask = crate::decision::OptionalKind::PayMana {
+            cost: Some(crate::mana::cost(&[crate::mana::generic(3)])),
+            purpose: crate::decision::PayFor::Payoff,
+        };
+        let take = |g: &crate::game::GameState| {
+            decide_optional_trigger(g, 0, id, &ask, "pay {3}: draw", &w, false)
+        };
         g.add_card_to_battlefield(0, crate::catalog::forest());
-        assert!(!may_pay_prompt_affordable(&g, 0, id, "pay {3}: draw"), "one land cannot pay {{3}}");
+        assert!(!take(&g), "one land cannot pay {{3}}");
         g.add_card_to_battlefield(0, crate::catalog::forest());
         g.add_card_to_battlefield(0, crate::catalog::forest());
-        assert!(may_pay_prompt_affordable(&g, 0, id, "pay {3}: draw"), "three lands can");
+        assert!(take(&g), "three lands can");
         assert!(optional_trigger_beneficial(&g, id, "pay {3}: draw"), "and a draw is upside");
+    }
+
+    /// The kinds that used to fall through to the blanket yes. Each one is an
+    /// engine-authored ask the prompt match never recognised: before the ask
+    /// carried its shape the bot anted its library, exiled its graveyard on
+    /// request, paid any amount of life at any life total and skipped its own
+    /// draw step. One assert per policy, on the kind — not on the prose.
+    #[test]
+    fn optional_kinds_answer_the_trade_not_the_prose() {
+        use crate::decision::{OptionalKind as K, PayFor};
+        let mut g = two_player_game();
+        let w = EvalWeights::default();
+        let src = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let ask = |g: &crate::game::GameState, k: &K| {
+            decide_optional_trigger(g, 0, src, k, "", &w, false)
+        };
+        // Flat costs and flat upside.
+        assert!(!ask(&g, &K::SelfCost), "ante / skip-your-draw is a flat loss");
+        assert!(!ask(&g, &K::TemptingOffer), "the caster is paid more than the accepter");
+        assert!(ask(&g, &K::FreeUpside));
+        assert!(ask(&g, &K::Neutral));
+        // Life: the Rhystic-tax buffer, and a thinner one when declining
+        // loses the permanent outright.
+        let deny = K::PayLife { life: 10, purpose: PayFor::DenyEffect };
+        let keep = K::PayLife { life: 10, purpose: PayFor::KeepSource };
+        assert!(!ask(&g, &deny), "20 life cannot pay 10 to deny (buffer > 10)");
+        assert!(ask(&g, &keep), "but it can pay 10 to keep a permanent (buffer > 5)");
+        // Mana: unaffordable is declined whatever the purpose.
+        let pay3 = |purpose| K::PayMana {
+            cost: Some(crate::mana::cost(&[crate::mana::generic(3)])),
+            purpose,
+        };
+        assert!(!ask(&g, &pay3(PayFor::SaveSpell)), "no lands, no payment");
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, crate::catalog::forest());
+        }
+        assert!(ask(&g, &pay3(PayFor::SaveSpell)), "three lands save the spell");
+        // KeepSource weighs the permanent, not just the mana: a Bear is worth
+        // keeping, a Forest is not.
+        assert!(ask(&g, &pay3(PayFor::KeepSource)), "a 2/2 is worth its upkeep");
+        // Graveyard payments come out of spare depth.
+        let forage = K::ExileGraveyard { count: 3 };
+        assert!(!ask(&g, &forage), "an empty graveyard has no three cards to spare");
+        for _ in 0..6 {
+            g.add_card_to_graveyard(0, crate::catalog::grizzly_bears());
+        }
+        assert!(ask(&g, &forage), "six deep, three can go");
+        assert!(ask(&g, &K::ExileGraveyard { count: 0 }), "0 = the engine pays it elsewhere");
+        // A sacrifice payoff needs fodder that isn't the source itself.
+        assert!(!ask(&g, &K::SacrificeForPayoff), "one creature is the exploiter");
+        g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        assert!(ask(&g, &K::SacrificeForPayoff), "two creatures: the weaker one goes");
+        // Discarding for a payoff wants a hand with slack.
+        assert!(!ask(&g, &K::DiscardForPayoff { count: 1 }), "an empty hand has no slack");
+        for _ in 0..4 {
+            g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        }
+        assert!(ask(&g, &K::DiscardForPayoff { count: 1 }), "four cards can spare one");
     }
 
     /// Moving the source to exile/graveyard is a self-cost (decline); returning
@@ -23420,7 +23535,11 @@ mod stack_response_tests {
             ..Default::default()
         };
         let id = g.add_card_to_battlefield(0, upside);
-        let d = Decision::OptionalTrigger { source: id, description: "you may".to_string() };
+        let d = Decision::OptionalTrigger {
+            source: id,
+            description: "you may".to_string(),
+            kind: crate::decision::OptionalKind::default(),
+        };
         assert!(
             matches!(AutoDecider.decide(&d), DecisionAnswer::Bool(false)),
             "AutoDecider declines every optional trigger"

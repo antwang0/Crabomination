@@ -228,7 +228,7 @@ use crate::game::layers::{
     PtSublayer, mod_families,
 };
 use crate::card::gather_spec;
-use crate::decision::{AmountKind, PickValue};
+use crate::decision::{AmountKind, OptionalKind, PayFor, PickValue};
 use crate::cow::CowBox;
 use crate::effect::static_effect_strips_abilities;
 use crate::player::Player;
@@ -17049,6 +17049,7 @@ impl GameState {
                 self.decider.decide(&Decision::OptionalTrigger {
                     source: card_id,
                     description: "Cast for madness".to_string(),
+                    kind: OptionalKind::PayMana { cost: Some(cost.clone()), purpose: PayFor::Payoff },
                 }),
                 DecisionAnswer::Bool(true)
             ),
@@ -17603,6 +17604,7 @@ impl GameState {
                     self.decider.decide(&Decision::OptionalTrigger {
                         source: crate::card::CardId(0),
                         description: "Skip this draw?".to_string(),
+                        kind: OptionalKind::SelfCost,
                     }),
                     DecisionAnswer::Bool(true)
                 );
@@ -17836,6 +17838,7 @@ impl GameState {
                             self.decider.decide(&Decision::OptionalTrigger {
                                 source: drawn,
                                 description: format!("Pay {life} life to keep the revealed card?"),
+                                kind: OptionalKind::PayLife { life, purpose: PayFor::Payoff },
                             }),
                             DecisionAnswer::Bool(true)
                         )
@@ -17918,6 +17921,7 @@ impl GameState {
                 state.decider.decide(&Decision::OptionalTrigger {
                     source: crate::card::CardId(0),
                     description: prompt.to_string(),
+                    kind: OptionalKind::Neutral,
                 }),
                 DecisionAnswer::Bool(true)
             )
@@ -18175,6 +18179,7 @@ impl GameState {
                     description: format!(
                         "Dredge {n}: mill {n} card(s) and return this card to your hand instead of drawing?"
                     ),
+                    kind: OptionalKind::Neutral,
                 }),
                 DecisionAnswer::Bool(true)
             ),

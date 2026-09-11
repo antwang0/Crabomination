@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::{CardType, Keyword};
-use crate::decision::{AmountKind, PickValue};
+use crate::decision::{AmountKind, OptionalKind, PayFor, PickValue};
 use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
 use smallvec::SmallVec;
@@ -2357,6 +2357,10 @@ pub(crate) fn apply_etb_trigger_tax(
             state.decider.decide(&Decision::OptionalTrigger {
                 source: trigger_source,
                 description: format!("Pay {{{}}} to keep this trigger?", total_tax),
+                kind: OptionalKind::PayMana {
+                    cost: Some(crate::mana::cost(&[crate::mana::generic(total_tax)])),
+                    purpose: PayFor::Payoff,
+                },
             }),
             DecisionAnswer::Bool(true)
         )
@@ -8044,6 +8048,7 @@ impl GameState {
                     description: format!(
                         "Spend leftover floating mana ({float_summary}) to cast {name}? (No keeps it and taps lands)"
                     ),
+                    kind: OptionalKind::Neutral,
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
                     actor: p,
@@ -9859,6 +9864,7 @@ impl GameState {
                     description: format!(
                         "Spend leftover floating mana ({float_summary}) to flashback {name}? (No keeps it and taps lands)"
                     ),
+                    kind: OptionalKind::Neutral,
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
                     actor: p,
@@ -11183,6 +11189,7 @@ impl GameState {
                     description: format!(
                         "Spend leftover floating mana ({float_summary}) to cast {name}? (No keeps it and taps lands)"
                     ),
+                    kind: OptionalKind::Neutral,
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
                     actor: p,
@@ -17214,6 +17221,7 @@ impl GameState {
                     description: format!(
                         "Spend leftover floating mana ({float_summary}) to activate {name}? (No keeps it and taps lands)"
                     ),
+                    kind: OptionalKind::Neutral,
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
                     actor: p,

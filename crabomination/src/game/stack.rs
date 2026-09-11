@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::{Keyword, Supertype};
-use crate::decision::{AmountKind, Decision, DecisionAnswer};
+use crate::decision::{AmountKind, Decision, DecisionAnswer, OptionalKind};
 use crate::effect::{Effect, EventKind, EventScope};
 use crate::game::types::{DelayedKind, DelayedTrigger};
 
@@ -362,6 +362,7 @@ impl GameState {
                     self.decider.decide(&crate::decision::Decision::OptionalTrigger {
                         source: id,
                         description: format!("Skip your draw step to gain {life} life ({name})?"),
+                        kind: OptionalKind::Neutral,
                     }),
                     crate::decision::DecisionAnswer::Bool(true)
                 )
@@ -3631,6 +3632,7 @@ impl GameState {
                     self.decider.decide(&crate::decision::Decision::OptionalTrigger {
                         source: id,
                         description: format!("Leave {name} tapped?"),
+                        kind: OptionalKind::Neutral,
                     })
                 {
                     set.insert(id);

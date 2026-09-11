@@ -1502,7 +1502,9 @@ fn strict_proctor_taxes_an_etb_trigger_unless_paid() {
         "Pest token should mint when ETB trigger was paid for");
     // Verify the tax decision was actually offered.
     let _ = Decision::OptionalTrigger {
-        source: id, description: "Pay {2} to keep this trigger?".to_string(),
+        source: id,
+        description: "Pay {2} to keep this trigger?".to_string(),
+        kind: crabomination::decision::OptionalKind::default(),
     };
 }
 

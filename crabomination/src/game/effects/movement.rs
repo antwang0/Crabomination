@@ -6,6 +6,7 @@
 use crate::game::KeywordSlice;
 
 use super::{EffectContext, EntityRef};
+use crate::decision::OptionalKind;
 use crate::card::{CardId, CardInstance, CounterType};
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
 use crate::game::{GameEvent, GameState, TriggerPush};
@@ -2391,6 +2392,7 @@ impl GameState {
                                 self.decider.decide(&crate::decision::Decision::OptionalTrigger {
                                     source: card.id,
                                     description: "Put on top of library? (no = bottom)".into(),
+                                    kind: OptionalKind::Neutral,
                                 }),
                                 crate::decision::DecisionAnswer::Bool(true)
                             ),
@@ -2412,6 +2414,7 @@ impl GameState {
                                 self.decider.decide(&crate::decision::Decision::OptionalTrigger {
                                     source: card.id,
                                     description: "Put second from the top of library? (no = bottom)".into(),
+                                    kind: OptionalKind::Neutral,
                                 }),
                                 crate::decision::DecisionAnswer::Bool(true)
                             ),

@@ -2531,7 +2531,7 @@ impl From<&Decision> for DecisionWire {
                     eligible: eligible.clone(),
                 }
             }
-            Decision::OptionalTrigger { source, description } => DecisionWire::OptionalTrigger {
+            Decision::OptionalTrigger { source, description, .. } => DecisionWire::OptionalTrigger {
                 source: *source,
                 description: (*description).to_string(),
             },

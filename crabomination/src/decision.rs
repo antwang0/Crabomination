@@ -120,6 +120,82 @@ pub enum AmountKind {
     DestroyPowerCutoff,
 }
 
+/// What a payment on an [`OptionalKind`] buys.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PayFor {
+    /// The ask's own payoff — a body, a free cast, a card put onto the
+    /// battlefield. Paying is optional upside.
+    #[default]
+    Payoff,
+    /// `source` stays on the battlefield instead of being sacrificed
+    /// (echo, cumulative upkeep, "pay or sacrifice").
+    KeepSource,
+    /// A spell or ability the paying seat controls is not countered.
+    SaveSpell,
+    /// An effect the paying seat does not control does not happen.
+    DenyEffect,
+}
+
+/// What a yes/no [`Decision::OptionalTrigger`] actually asks, in machine terms.
+///
+/// A headless policy answers off this, never off `description`. The prose is
+/// for humans: before this field the bot keyed five `starts_with` branches off
+/// it and answered **yes to everything else**, so ninety engine-authored asks
+/// — ante your library, exile your graveyard, sacrifice a permanent, pay any
+/// amount of life — were a blanket accept, and a reworded prompt silently
+/// dropped one of the five branches back into it. Same failure as
+/// [`PickValue`]'s and [`AmountKind`]'s, one family over; the ask states it now.
+///
+/// [`MayBody`](OptionalKind::MayBody) is the historical default and still the
+/// answer for every catalog-authored `May*` node: the policy finds the node on
+/// the source's definition by its own `description` and screens the body.
+/// Every other variant names a trade the body cannot show.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub enum OptionalKind {
+    /// A catalog `May*` node. The policy screens the body the node names.
+    #[default]
+    MayBody,
+    /// Yes pays mana. `cost` is `None` when only the engine can compute it at
+    /// payment time (cumulative upkeep's N-fold cost, a tax summed over the
+    /// board).
+    PayMana { cost: Option<crate::mana::ManaCost>, purpose: PayFor },
+    /// Yes pays `life` life.
+    PayLife { life: u32, purpose: PayFor },
+    /// Yes sacrifices permanents the seat controls for the ask's payoff
+    /// (Exploit and the reflexive "you may sacrifice ~; if you do" family).
+    SacrificeForPayoff,
+    /// Yes discards `count` card(s) for the ask's payoff.
+    DiscardForPayoff { count: u32 },
+    /// Yes gives up another permanent — sacrifices one, returns a land — so
+    /// that `source` is not sacrificed.
+    KeepByGivingUp,
+    /// Yes casts a card without paying its cost. Pure upside unless the card's
+    /// own body drains the caster (Decorum Dissertation recurs every main
+    /// phase and a blanket yes played it into the state-based loss).
+    CastFree,
+    /// Yes exiles `count` cards from the seat's OWN graveyard (Forage,
+    /// collect evidence, Carrion Rats). Accepted out of a graveyard with
+    /// spare depth — the rule the `AutoDecider` arms of those effects use.
+    /// `count: 0` means the engine can pay without spending graveyard cards
+    /// (a spare Food) or picks a minimal set itself: always accepted.
+    ExileGraveyard { count: u32 },
+    /// Yes costs the seat cards it cannot price here — ante the top of the
+    /// library, exile its hand. Decline.
+    SelfCost,
+    /// Yes is free for the seat and the engine authored the ask (a card put
+    /// onto the battlefield, a processed exile). Take it.
+    FreeUpside,
+    /// Neither answer costs anything the policy can price: an ordering, a
+    /// which-pile or a which-guess choice. Historical yes.
+    Neutral,
+    /// A tempting offer (CR 701.x): every accepter pays the caster more than
+    /// it gains. Decline.
+    TemptingOffer,
+    /// Ad Nauseam's per-reveal ask — the one stateful policy, answered on the
+    /// bot struct across the series.
+    RevealTopLoseLife,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Decision {
     /// Pick a target satisfying the ability's selector.
@@ -200,9 +276,14 @@ pub enum Decision {
     },
 
     /// Answer a "may" trigger or optional cost.
+    ///
+    /// `description` renders the question for a human; `kind` states it for a
+    /// headless policy — see [`OptionalKind`].
     OptionalTrigger {
         source: CardId,
         description: String,
+        #[serde(default)]
+        kind: OptionalKind,
     },
 
     /// Choose `count` cards from hand to put on top of the library.
@@ -884,7 +965,11 @@ mod one_color_decider_tests {
             source: CardId(1),
             legal: vec![Color::White, Color::Green],
         };
-        let later = Decision::OptionalTrigger { source: CardId(1), description: String::new() };
+        let later = Decision::OptionalTrigger {
+            source: CardId(1),
+            description: String::new(),
+            kind: super::OptionalKind::default(),
+        };
         for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
             let mut scripted = ScriptedDecider::new([DecisionAnswer::Color(c)]);
             let mut one = OneColorDecider::new(c);
