@@ -115,6 +115,55 @@ fn ghost_quarter_lets_the_victim_replace_the_land() {
     );
 }
 
+/// …and it still happens when the victim's ask SUSPENDS, which is every
+/// training seat. `MayDoBy`'s `who` here is `ControllerOf(Target(0))` and the
+/// `Seq` destroys that land first, so the re-run after the suspend re-derived
+/// the seat from an object that was already gone: the arm returned at its
+/// `let Some(seat)` with the replayed answer still in the channel, the
+/// compensation search never happened, and a sweep caught the leak with
+/// `CRAB_ANSWER_LOG=strict`. The continuation carries `PlayerRef::Seat` now.
+#[test]
+fn ghost_quarter_still_replaces_the_land_when_the_victims_ask_suspends() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    let gq = g.add_card_to_battlefield(0, catalog::ghost_quarter());
+    let victim = g.add_card_to_battlefield(1, catalog::reliquary_tower());
+    g.add_card_to_library(1, catalog::forest());
+    g.clear_sickness(gq);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gq, ability_index: 1, target: Some(Target::Permanent(victim)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("activate sac-destroy");
+    while !g.stack.is_empty() && g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.pending_decision.is_some(), "the victim is asked");
+    // Take the destroyed land out of reach before the answer comes back. In the
+    // sweep that caught this it was whatever had made the LKI unreachable by the
+    // resume; here it stands in for it, and the property under test is the same
+    // one either way: the continuation must carry the SEAT, not the selector
+    // that found it.
+    g.players[1].graveyard.clear();
+    // Yes to the offer, then the search pick itself.
+    for _ in 0..4 {
+        let Some(pending) = g.pending_decision.as_ref() else { break };
+        let answer = match &pending.decision {
+            Decision::SearchLibrary { candidates, .. } => {
+                DecisionAnswer::Search(candidates.first().map(|(id, _)| *id))
+            }
+            _ => DecisionAnswer::Bool(true),
+        };
+        g.submit_decision(answer).expect("answer");
+    }
+    assert!(g.battlefield_find(victim).is_none(), "target land destroyed");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Forest"),
+        "and its controller still fetched a basic, on the suspending path"
+    );
+}
+
 /// Thran Dynamo / Ur-Golem's Eye / Dreamstone Hedron tap for colorless burst.
 #[test]
 fn colorless_rocks_tap_for_burst() {

@@ -1377,11 +1377,17 @@ impl GameState {
         }
         let dbg = format!("{effect:?}");
         let variant = dbg.split(['(', ' ', '{']).next().unwrap_or("?");
+        // The variant alone names the RESOLUTION, not the arm that leaked — and
+        // for a nested body those differ, which cost one round of guessing. The
+        // leftovers' kinds say which ask produced them, and the head of the
+        // effect's own `Debug` says which body ran.
         let msg = format!(
-            "answer-log leak: {} logged + {} stashed answer(s) left by {} / {variant}",
+            "answer-log leak: {} logged + {} stashed answer(s) left by {} / {variant}\n               left: {:?}\n  effect: {}",
             self.scratch.resolution_answer_log.len(),
             self.scratch.stashed_resolution_answer.is_some() as u8,
             ctx.source_name.unwrap_or("<no source>"),
+            self.scratch.resolution_answer_log,
+            &dbg[..dbg.len().min(400)],
         );
         assert!(mode < 2, "{msg}");
         eprintln!("{msg}");
@@ -5892,13 +5898,28 @@ impl GameState {
                         events,
                     );
                 }
+                // The continuation carries the SEAT, not the selector that found
+                // it. `who` can be a selector over an object this resolution has
+                // already destroyed — Ghost Quarter and Field of Ruin are
+                // `Seq[Destroy target land, MayDoBy{ControllerOf(Target(0)), …}]`
+                // — and on the re-run after a suspend that selector resolved to
+                // nothing: the arm returned at the `let Some(seat)` above with
+                // the replayed answer still in the channel, so the compensation
+                // search NEVER HAPPENED for a `wants_ui` land controller (and the
+                // leak was what `CRAB_ANSWER_LOG=strict` caught in a sweep).
+                // Same shape as the fourteenth find, one selector out.
+                let concrete = Effect::MayDoBy {
+                    who: PlayerRef::Seat(seat),
+                    description: description.clone(),
+                    body: body.clone(),
+                };
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
                     &mut cursor,
                     seat,
                     description.clone(),
                     ctx.source.unwrap_or(CardId(0)),
-                    effect,
+                    &concrete,
                     OptionalKind::MayBody,
                 ) else {
                     return Ok(());
