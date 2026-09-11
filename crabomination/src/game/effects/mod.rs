@@ -1210,22 +1210,16 @@ impl GameState {
     // assert the drop below, and a `strict` run would abort on it.
     #[cfg(all(debug_assertions, not(test)))]
     fn report_answer_log_leak(&self, effect: &Effect, ctx: &EffectContext) {
-        // 0 = off, 1 = name it, 2 = panic on it. One `OnceLock` read, like every
-        // other `CRAB_*` instrument (`reject_trace_level`).
-        static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
-        let mode = *LEVEL.get_or_init(|| match std::env::var("CRAB_ANSWER_LOG") {
-            Ok(v) if v == "strict" => 2,
-            Ok(v) if !v.is_empty() && v != "0" => 1,
-            _ => 0,
-        });
+        let mode = crate::game::answer_log_level();
         if mode == 0 {
             return;
         }
         let dbg = format!("{effect:?}");
         let variant = dbg.split(['(', ' ', '{']).next().unwrap_or("?");
         let msg = format!(
-            "answer-log leak: {} answer(s) left by {} / {variant}",
+            "answer-log leak: {} logged + {} stashed answer(s) left by {} / {variant}",
             self.scratch.resolution_answer_log.len(),
+            self.scratch.stashed_resolution_answer.is_some() as u8,
             ctx.source_name.unwrap_or("<no source>"),
         );
         assert!(mode < 2, "{msg}");
@@ -2063,24 +2057,28 @@ impl GameState {
         if self.resolution_depth == 0 {
             self.resolution_causer = None;
         }
-        // The answer log is a per-resolution replay channel, so an outermost
-        // resolution that did NOT suspend must leave it empty; whatever is
-        // still in it leaked from an arm that skipped `clear_answer_log()` on a
-        // completing path — an error unwind included, which no arm clears (a
-        // `?` past an ask). The next resolution's first ask would then replay
-        // it, and `drop_stale_answer_log` only catches a *kind* mismatch: a
-        // same-kind leftover is consumed as that arm's own answer. Dropping it
+        // Both resume channels are per-resolution, so an outermost resolution
+        // that did NOT suspend must leave them empty; whatever is still there
+        // leaked from an arm that skipped `clear_answer_log()` on a completing
+        // path, or from an arm that never re-ran to take its stash — an error
+        // unwind included, which no arm clears (a `?` past an ask). The next
+        // resolution's first ask would then replay it, and
+        // `drop_stale_answer_log` only catches a *kind* mismatch: a same-kind
+        // leftover is consumed as that arm's own answer, and the single-slot
+        // `stashed_resolution_answer` has no such guard at all. Dropping both
         // here leaves nothing to mismatch. Inside one resolution the per-arm
         // clears stay load-bearing — a `Seq` of two asking arms, or an arm and
         // the nested resolution it runs, share the channel.
         // `CRAB_ANSWER_LOG=warn|strict` names the leaker (debug builds only).
         if self.resolution_depth == 0
             && self.suspend_signal.is_none()
-            && !self.scratch.resolution_answer_log.is_empty()
+            && (!self.scratch.resolution_answer_log.is_empty()
+                || self.scratch.stashed_resolution_answer.is_some())
         {
             #[cfg(all(debug_assertions, not(test)))]
             self.report_answer_log_leak(effect, ctx);
             self.clear_answer_log();
+            clear_opt_scratch!(self.stashed_resolution_answer);
         }
         if let Err(e) = ran {
             events.truncate(mark);

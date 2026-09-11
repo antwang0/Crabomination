@@ -466,6 +466,39 @@ mod answer_log_tests {
             "the resolution ended without suspending, so the channel is garbage"
         );
     }
+
+    /// The same net over the *other* resume channel. `stashed_resolution_answer`
+    /// is a single slot that nothing ever cleared: an arm that suspended and
+    /// then never re-ran to take it left it for the next arm of the same answer
+    /// kind to consume as its own, and unlike the log it has no kind guard.
+    #[test]
+    fn a_finished_resolution_drops_a_stash_no_arm_came_back_for() {
+        let mut g = GameState::new(vec![Player::new(0, "Alice"), Player::new(1, "Bob")]);
+        g.scratch.stashed_resolution_answer = Some(DecisionAnswer::Bool(true));
+        let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+        let _ = g.resolve_effect(&Effect::Noop, &ctx).expect("Noop resolves");
+        assert!(g.scratch.stashed_resolution_answer.is_none(), "the stash is garbage too");
+    }
+
+    /// The park that keeps the net off a live replay: outside any resolution
+    /// the channel is the suspended arm's, two `apply_pending_effect_answer`
+    /// arms resolve effects of their own, and the answer being applied belongs
+    /// *behind* what the arm has already replayed.
+    #[test]
+    fn applying_an_answer_appends_it_behind_the_parked_replay() {
+        let mut g = GameState::new(vec![Player::new(0, "Alice"), Player::new(1, "Bob")]);
+        g.scratch.resolution_answer_log.push(DecisionAnswer::Cards(vec![CardId(7)]));
+        g.apply_pending_effect_answer(
+            PendingEffectState::SeatBoolAnswerPending { player: 0 },
+            &DecisionAnswer::Bool(true),
+        )
+        .expect("a bool answers a bool ask");
+        assert_eq!(
+            g.scratch.resolution_answer_log,
+            vec![DecisionAnswer::Cards(vec![CardId(7)]), DecisionAnswer::Bool(true)],
+            "order is the arm's ask order, park or no park"
+        );
+    }
 }
 
 #[cfg(test)]
@@ -2764,6 +2797,24 @@ pub fn prompt_text() -> bool {
 /// `num_modes` and nothing else of the pick.
 pub(crate) fn mode_texts(modes: &[crate::effect::Effect]) -> Vec<String> {
     if prompt_text() { modes.iter().map(|m| m.effect_short_text()).collect() } else { Vec::new() }
+}
+
+/// `CRAB_ANSWER_LOG` — the resume-channel leak instrument's level.
+///
+/// 0 = off, 1 = name the leak, 2 = panic on it. Read on the cold side of a
+/// "channel is not empty" test, so an unset run pays one `OnceLock` read only
+/// when something has already leaked. Debug builds only: the two call sites are
+/// `resolve_effect_into`'s net and `submit_decision`'s one-shot census, and both
+/// are compiled out of every optimized profile. See ENGINE_BACKLOG's "the tenth
+/// find's production half".
+#[cfg(all(debug_assertions, not(test)))]
+pub(crate) fn answer_log_level() -> u8 {
+    static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+    *LEVEL.get_or_init(|| match std::env::var("CRAB_ANSWER_LOG") {
+        Ok(v) if v == "strict" => 2,
+        Ok(v) if !v.is_empty() && v != "0" => 1,
+        _ => 0,
+    })
 }
 
 /// `CRAB_SIM_REJECTS` — the picker/engine disagreement instrument's level.
@@ -21863,6 +21914,77 @@ impl GameState {
     /// Fails if no decision is pending, or the answer shape doesn't match the
     /// decision kind.
     pub fn submit_decision(&mut self, answer: DecisionAnswer) -> Result<Vec<GameEvent>, GameError> {
+        let out = self.submit_decision_inner(answer);
+        // Census, not a net: the one-shot resume channels below are each
+        // documented as living only across a synchronous resume → cast /
+        // activate call, and nothing clears any of them. `CRAB_ANSWER_LOG` names
+        // any that survived a round trip that left nothing pending. Debug builds
+        // only, and the whole call is behind "something is Some".
+        #[cfg(all(debug_assertions, not(test)))]
+        if self.pending_decision.is_none() && self.suspend_signal.is_none() {
+            self.report_stale_one_shots();
+        }
+        out
+    }
+
+    /// `CRAB_ANSWER_LOG=warn|strict` — the one-shot resume channels that should
+    /// be empty once `submit_decision` returns with nothing pending. Each is set
+    /// by a resume just before it replays a cast or an activation and `take()`n
+    /// by that replay; a replay that returns early (an unaffordable cost, an
+    /// illegal target, an error) never reaches its take, and the pick then waits
+    /// for the next cast or activation of the same shape to consume as its own.
+    /// Instrument first: ENGINE_BACKLOG has the finding, and the sweep says
+    /// whether any of them actually leaks before anyone nets them.
+    #[cfg(all(debug_assertions, not(test)))]
+    fn report_stale_one_shots(&self) {
+        // The common case is "all empty", and this runs once per answered
+        // decision in every debug build the suite links: test the cheap OR
+        // before naming anything.
+        let any = self.scratch.stashed_resolution_answer.is_some()
+            || self.scratch.pending_cast_sacrifices.is_some()
+            || self.scratch.pending_cast_discards.is_some()
+            || self.scratch.pending_spree_modes.is_some()
+            || self.scratch.pending_ability_exile_other.is_some()
+            || self.scratch.pending_ability_sac_any.is_some()
+            || self.pending_cast_spend_float.is_some()
+            || self.pending_landcycle_pick.is_some()
+            || self.pending_ability_sac_other.is_some()
+            || self.pending_ability_tap_other.is_some();
+        if !any {
+            return;
+        }
+        let stale: Vec<&str> = [
+            ("stashed_resolution_answer", self.scratch.stashed_resolution_answer.is_some()),
+            ("pending_cast_sacrifices", self.scratch.pending_cast_sacrifices.is_some()),
+            ("pending_cast_discards", self.scratch.pending_cast_discards.is_some()),
+            ("pending_spree_modes", self.scratch.pending_spree_modes.is_some()),
+            ("pending_ability_exile_other", self.scratch.pending_ability_exile_other.is_some()),
+            ("pending_ability_sac_any", self.scratch.pending_ability_sac_any.is_some()),
+            ("pending_cast_spend_float", self.pending_cast_spend_float.is_some()),
+            ("pending_landcycle_pick", self.pending_landcycle_pick.is_some()),
+            ("pending_ability_sac_other", self.pending_ability_sac_other.is_some()),
+            ("pending_ability_tap_other", self.pending_ability_tap_other.is_some()),
+        ]
+        .into_iter()
+        .filter(|(_, live)| *live)
+        .map(|(name, _)| name)
+        .collect();
+        if stale.is_empty() {
+            return;
+        }
+        let mode = answer_log_level();
+        if mode == 0 {
+            return;
+        }
+        let msg = format!("stale one-shot resume channel(s) after submit_decision: {stale:?}");
+        assert!(mode < 2, "{msg}");
+        eprintln!("{msg}");
+    }
+
+    fn submit_decision_inner(
+        &mut self,
+        answer: DecisionAnswer,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let pd = *self
             .pending_decision
             .take()
@@ -22517,9 +22639,11 @@ impl GameState {
     ///
     /// Called from `submit_decision` (outside any resolution) the answer log
     /// below is the suspended arm's live replay, and two of the arms resolve
-    /// effects of their own — outermost resolutions, whose exit drops the log
-    /// (see `resolve_effect_into`). Park the replay across the call and put this
-    /// answer's own pushes behind it.
+    /// effects of their own — outermost resolutions, whose exit drops the
+    /// channel (see `resolve_effect_into`). Park the replay across the call and
+    /// put this answer's own pushes behind it. The single-slot
+    /// `stashed_resolution_answer` needs no park: a value in it here belongs to
+    /// an arm that never re-ran to take it, and dropping that is the point.
     pub(crate) fn apply_pending_effect_answer(
         &mut self,
         state: PendingEffectState,
