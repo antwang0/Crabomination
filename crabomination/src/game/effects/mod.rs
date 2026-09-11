@@ -1180,8 +1180,11 @@ impl GameState {
         clear_scratch!(self.resolution_answer_log);
     }
 
-    /// Drop a *previous* resolution's leftover answers before an arm's first
-    /// ask replays slot 0.
+    /// Drop an earlier arm's leftover answers before this arm's first ask
+    /// replays slot 0. A *previous resolution's* leftovers no longer reach here
+    /// — `resolve_effect_into` drops the channel when the resolution ends — so
+    /// what this catches is the leftover of a `Seq` sibling, or of the arm that
+    /// ran the nested resolution this one is inside.
     ///
     /// The log is a per-resolution channel and every arm that uses it is
     /// supposed to [`clear_answer_log`](Self::clear_answer_log) on each
@@ -1199,6 +1202,36 @@ impl GameState {
     /// A mismatch on slot 0 is always the leftover, never this arm's own
     /// answer: drop it and let the ask suspend normally. It costs one round
     /// trip where it fires, instead of the cap.
+    /// Name the arm that left answers in `resolution_answer_log` — the card and
+    /// the top-level effect variant of the resolution that just ended. Off
+    /// unless `CRAB_ANSWER_LOG` is set, debug builds only, cold path only (see
+    /// the call site in `resolve_effect_into`).
+    // `not(test)`: the crate's own unit tests plant a leftover on purpose to
+    // assert the drop below, and a `strict` run would abort on it.
+    #[cfg(all(debug_assertions, not(test)))]
+    fn report_answer_log_leak(&self, effect: &Effect, ctx: &EffectContext) {
+        // 0 = off, 1 = name it, 2 = panic on it. One `OnceLock` read, like every
+        // other `CRAB_*` instrument (`reject_trace_level`).
+        static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+        let mode = *LEVEL.get_or_init(|| match std::env::var("CRAB_ANSWER_LOG") {
+            Ok(v) if v == "strict" => 2,
+            Ok(v) if !v.is_empty() && v != "0" => 1,
+            _ => 0,
+        });
+        if mode == 0 {
+            return;
+        }
+        let dbg = format!("{effect:?}");
+        let variant = dbg.split(['(', ' ', '{']).next().unwrap_or("?");
+        let msg = format!(
+            "answer-log leak: {} answer(s) left by {} / {variant}",
+            self.scratch.resolution_answer_log.len(),
+            ctx.source_name.unwrap_or("<no source>"),
+        );
+        assert!(mode < 2, "{msg}");
+        eprintln!("{msg}");
+    }
+
     fn drop_stale_answer_log(
         &mut self,
         cursor: usize,
@@ -2029,6 +2062,25 @@ impl GameState {
         // payments) have no causing spell or ability.
         if self.resolution_depth == 0 {
             self.resolution_causer = None;
+        }
+        // The answer log is a per-resolution replay channel, so an outermost
+        // resolution that did NOT suspend must leave it empty; whatever is
+        // still in it leaked from an arm that skipped `clear_answer_log()` on a
+        // completing path — an error unwind included, which no arm clears (a
+        // `?` past an ask). The next resolution's first ask would then replay
+        // it, and `drop_stale_answer_log` only catches a *kind* mismatch: a
+        // same-kind leftover is consumed as that arm's own answer. Dropping it
+        // here leaves nothing to mismatch. Inside one resolution the per-arm
+        // clears stay load-bearing — a `Seq` of two asking arms, or an arm and
+        // the nested resolution it runs, share the channel.
+        // `CRAB_ANSWER_LOG=warn|strict` names the leaker (debug builds only).
+        if self.resolution_depth == 0
+            && self.suspend_signal.is_none()
+            && !self.scratch.resolution_answer_log.is_empty()
+        {
+            #[cfg(all(debug_assertions, not(test)))]
+            self.report_answer_log_leak(effect, ctx);
+            self.clear_answer_log();
         }
         if let Err(e) = ran {
             events.truncate(mark);
@@ -3299,6 +3351,9 @@ impl GameState {
                     Some(n) => n.min(live.len() - 1),
                     None => return Ok(()),
                 };
+                // The only ask; the two grants below are side effects, and the
+                // nested resolutions they run share this channel.
+                self.clear_answer_log();
                 let kw = live.get(idx).cloned().unwrap_or(first);
                 self.run_effect(
                     &Effect::LoseKeyword {
@@ -24479,6 +24534,9 @@ impl GameState {
                     };
                     picks.push((seat, n));
                 }
+                // Every ask is in; the life loss and `on_you_win` below are this
+                // arm's side effects and must not be replayed.
+                self.clear_answer_log();
                 let Some(high) = picks.iter().map(|(_, n)| *n).max().filter(|n| *n > 0) else {
                     return Ok(());
                 };
