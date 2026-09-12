@@ -313,6 +313,16 @@ pub fn battle_screech() -> CardDefinition {
         name: "Battle Screech",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
+        // Flashback—Tap three untapped white creatures you control. A flashback
+        // whose cost is not mana at all: `Keyword::Flashback` carries the empty
+        // `ManaCost` and the rider is the whole price. `TapPermanents` already
+        // requires untapped and controlled-by-you, so the filter is the colour.
+        keywords: vec![Keyword::Flashback(crate::mana::ManaCost::default())],
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::TapPermanents {
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasColor(Color::White)),
+            count: 3,
+        }],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),

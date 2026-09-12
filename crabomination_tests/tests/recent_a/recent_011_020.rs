@@ -1167,6 +1167,33 @@ mod recent18 {
         assert_eq!(birds, 2, "two 1/1 Birds");
     }
 
+    /// **Flashback—Tap three untapped white creatures you control**, a
+    /// flashback whose cost is not mana at all. Shipped missing; the card is
+    /// played for the flashback more than for the front half.
+    #[test]
+    fn battle_screech_flashback_taps_three_white_creatures() {
+        let mut g = two_player_game();
+        let screech = g.add_card_to_graveyard(0, catalog::battle_screech());
+        // Two white creatures is one short of the price.
+        let a = g.add_card_to_battlefield(0, catalog::savannah_lions());
+        let b = g.add_card_to_battlefield(0, catalog::savannah_lions());
+        g.priority.player_with_priority = 0;
+        let flashback = |g: &mut GameState, id| {
+            g.perform_action(GameAction::CastFlashback {
+                card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+            })
+        };
+        assert!(flashback(&mut g, screech).is_err(), "two white creatures cannot pay for three");
+        let c = g.add_card_to_battlefield(0, catalog::savannah_lions());
+        flashback(&mut g, screech).expect("three untapped white creatures pay for it");
+        for id in [a, b, c] {
+            assert!(g.battlefield_find(id).unwrap().tapped, "each of the three is tapped");
+        }
+        drain_stack(&mut g);
+        let birds = g.battlefield.iter().filter(|c| c.definition.name == "Bird").count();
+        assert_eq!(birds, 2, "two 1/1 Birds off the flashback");
+    }
+
     /// Quag Vampires enters with a +1/+1 counter for each Multikicker payment.
     #[test]
     fn quag_vampires_grows_with_multikicker() {
