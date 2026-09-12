@@ -2930,7 +2930,22 @@ fix     the printed KEYWORDS are a column, and it reaches combat (`6114ec26`). C
         ⚠ Two rules keep it honest — only the evergreen subset is compared (the oracle array mixes in keyword ACTIONS
         and ability words), and that array counts keywords the card GRANTS, so the MISSING direction reads the printed
         keyword LINES instead. Every finding came from the other direction.
-tool    the injections are RUNNABLE now (`scripts/audit_printed_body_injections.py`, 12 / 12 as expected, three of them
+fix     the P/T column was reading 5,578 of 9,455 creatures and counting NEITHER half (`a9fd492e` / `658dc43c`). Same
+        disease as the cost column's `continue`: it took `power:` / `toughness:` off the factory's OWN flattened body
+        and skipped, uncounted, whenever either was missing — every card built through a `fn creature(.., p, t)`
+        helper, **3,877 creatures, 41 % of them, with no P/T check at all** behind a column printing "0 wrong P/T".
+        It walks the chain now, and three readings had to be right before it read 0 again, each one first reporting
+        CORRECT cards: a SHORTHAND field is the PARAMETER (`power,` — Rust's field-init shorthand, so the value IS the
+        identifier; reading the absent `power:` as "declares nothing" reported **401** creatures as 0/0); one half is
+        not a value (a literal with `power,` and no `toughness,` takes the other from its `..base`, not from `Default`
+        — eight Theros Gods read as `6/0`); and a STATION card (CR 721) has no P/T until fully stationed, its printed
+        one living in the top `StationBand`'s `pt`, which is what the oracle reports and what this compares now rather
+        than the card's genuinely-`Default` 0/0 (21 Spacecraft). **The coverage IS the finding — all 3,877 are
+        correct** — and it is worth something only because the number is printed. Two more idioms took `notyped`
+        338 -> 160 on the way: a BOUND CARD TYPE (`fn spell(name, mana, kind, effect)`'s `card_types: vec![kind]`, 190
+        factories over five sets, on the field where an Instant shipped as a Sorcery is castable at the wrong speed)
+        and a helper whose call is its TAIL after a statement (`fn ally(.., mut types, ..)`, 43 Allies).
+tool    the injections are RUNNABLE now (`scripts/audit_printed_body_injections.py`, 17 / 17 as expected, three of them
         NEGATIVE tests where a row would be the bug). **Five injections silently passed at some point in this run and
         all five were one mistake — a resolver reading the wrong definition**: `fn legend` taken from whichever file
         came first; "no literal at all" read as unreadable, which made the base recursion dead for every pure-helper
@@ -2960,9 +2975,10 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1072..1081   6163d94d      30    148,000       0       4*    0      4
   1082..1091   94478cd6      30    148,000       0       4*    0     10
   1092..1101   6114ec26      30    148,000       0       0     0     20
+  1102..1111   176b074c      30    148,000       0       0     0      6
 ```
 
-**213 cells / 1,050,800 games, 0 stuck on every one**, and every cap is the
+**243 cells / 1,198,800 games, 0 stuck on every one**, and every cap is the
 **already-diagnosed Beacon of Immortality board** — two at `cube` 1069, four
 more at `cube` 1076, and four at seed 1090 (two on `cube`, two on `all`) — not
 a new defect and not to be re-diagnosed.
@@ -2984,7 +3000,7 @@ end. **A cap WITHOUT the label is the signal** — the point is that the sweep
 stops crying wolf on a board nobody is going to change, not that caps stopped
 mattering.
 
-A draw is CR 104.4, not a defect. Seed frontier **1102**. One cell is a
+A draw is CR 104.4, not a defect. Seed frontier **1112**. One cell is a
 different kind of outlier and it is the entry below.
 
 **AND AT `(-291)` THE BOARD HAS AN ENDING, so the label above is a diagnostic
@@ -3034,7 +3050,16 @@ board", never as "the actor loses this much"** — re-run it on `release-fast`
 before believing a throughput number. And when a cell's wall clock is the
 thing being budgeted, the lever is the gate audits, not the engine.
 
-**Gates at the closing tip `6114ec26`** (`release-fast`): suite
+**Gates at the closing tip `658dc43c`** (the concurrent session's `60bd07bb`
+merged under it): suite **19,459 / 0 / 5** with `CRAB_ANSWER_LOG=strict`
+exported, clippy **0** over the workspace (`--all-targets`),
+`audit_printed_body` **0 on all six columns** over 16,483 priced + 17,244 type
+lines + 16,910 subtypes + 16,800 keywords + 9,254 P/T, and its injection
+battery **17 / 17 as expected**. `--bench` was last taken at `6114ec26` and the
+two commits since are a Python script and the concurrent session's own change,
+which carries its own rows below.
+
+**Gates at `6114ec26`** (`release-fast`): suite
 **19,457 / 0 / 5** with `CRAB_ANSWER_LOG=strict` exported (115.6 s), clippy
 **0** over the workspace (`--all-targets`), `--bench` **195,806 decisions /
 27.49 turns / 611.9 decisions-per-game / 0 stalls** — the committed counters,

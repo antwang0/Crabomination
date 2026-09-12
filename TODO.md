@@ -37,28 +37,31 @@ sixty-seventh pass, so don't re-take that.
    determinism + thread_determinism (the counters have not moved at any tip of either session), `audit_panics` **0 bare**, `audit_decision_plumbing`
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
    controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
-   capability, `audit_printed_body` **0 / 0 / 0 / 0 / 0 over 16,483 priced + 17,066 type lines + 16,748 subtypes + 16,601 keywords**, and
-   `scripts/audit_printed_body_injections.py` **12 / 12 as expected** — run that after touching any reader in it.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1101 on cube / all / sealed — 213 cells, 1,050,800 games, 0 stuck, 68 draws, and 10 caps that are
-   ALL the KNOWN Beacon board (`cube` 1069, 1076, 1090 + `all` 1090 — so it is not even cube-only). Next is 1102.** The sweep LABELS that board now (`cap_diagnosis` prints
+   capability, `audit_printed_body` **0 on all six columns over 16,483 priced + 17,244 type lines + 16,910 subtypes + 16,800
+   keywords + 9,254 P/T**, and `scripts/audit_printed_body_injections.py` **17 / 17 as expected** — run that after
+   touching any reader in it.
+   **Fresh seeds: 853..1030 on five pools, then 1031..1111 on cube / all / sealed — 243 cells, 1,198,800 games, 0 stuck, 74 draws, and 10 caps that are
+   ALL the KNOWN Beacon board (`cube` 1069, 1076, 1090 + `all` 1090 — so it is not even cube-only). Next is 1112.** The sweep LABELS that board now (`cap_diagnosis` prints
    `[SATURATED LIFE …]`, the script counts labelled caps apart and scores the block `failures=0`), so **a cap WITHOUT the label is the signal** — never
    read a bare cap count as clean. **`all` 1024 is the cell that EARNED its keep** (the `MayDoBy` leak).
 3. **This run, and the sentence it earned:** *a column that skips is not a column that passes, and a gate that cannot fail is worse than no gate.*
    `audit_printed_body` read cost / P/T / card types for three passes and reported 0; opening the two fields it had left alone found **29 shipped
-   defects**. (a) **Subtypes** — 22 cards, every kind with a live consumer: four Arcane spells no splicer could splice onto, two Lessons `Effect::Learn`
+   defects**, and the sixth column (P/T) turned out to be reading 5,578 of 9,455 creatures with no skip counter at all.
+   (a) **Subtypes** — 22 cards, every kind with a live consumer: four Arcane spells no splicer could splice onto, two Lessons `Effect::Learn`
    could not fetch and two non-Lessons it could, four planeswalkers `HasPlaneswalkerType` could not see, six `Kindred` cards with no creature type
    (Crib Swap a changeling with nothing to be every type OF). (b) **Keywords**, which combat reads every turn — 7 cards: Kurkesh with FLYING it does not
    print, Glorybringer dealing 4 free damage because the `Exert` gating it was missing, two BLACK Rise-of-the-Eldrazi cards made colorless by a `Devoid`
    printed five years later, and two `Changeling`s where the card names four roles. (c) **Five injections silently passed** during the run and all five
    were one mistake — a resolver reading the wrong definition — which is why the injections are a runnable script now.
-4. **Next, in order.** (a) **Sweep from 1102 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+4. **Next, in order.** (a) **Sweep from 1112 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
    PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,
    1076, 1090 and `all` 1090 are all the Beacon cap — a POOL property, never to be re-diagnosed.
    (b) **`audit_printed_body`'s remaining skips are where the next cards are**, and they are small now: `nocache` 3,778 (synthesised cards, not
-   auditable), `notyped` 338, `nonliteral` 921, `nokeywords` 460, `nosubtypes` 205. The last three are one idiom each (a local built by `push`, a `mut`
-   parameter, a non-`Keyword::` element) and the machinery to follow them exists.
+   auditable), `nonliteral` 921, `nokeywords` 439, `nosubtypes` 221, `notyped` 160, `nopt` 119. Each is one or two idioms (a local built by `push`, a
+   `mut` parameter, a non-`Keyword::` element) and the machinery to follow them exists. ⚠ **Print every skip you add** — the P/T column skipped 41 % of
+   creatures silently for as long as it existed, and read "0 wrong P/T" the whole time.
    (c) ⚠ **Do NOT build a `produced_mana` column** — ENGINE_BACKLOG's CLOSED-WITH-A-REASON entry: Scryfall's field counts mana the card CAUSES (Brass's
    Bounty's Treasures, Heartbeat of Spring's rider), so 355 of 707 prototype rows were the field's meaning, not the reader's gaps.
    (d) ⚠ **The seven-card nesting is RETIRED** and (e) ⚠ **the 8 loop arms are CLOSED WITH A REASON** — do not build the parking redesign or the
