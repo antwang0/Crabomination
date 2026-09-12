@@ -367,6 +367,36 @@ CASES = [
   "                    keywords: vec![Keyword::Vigilance],\n",
   "                        creature_types: vec![CreatureType::Knight],\n"
   "                        ..Default::default()\n                    },\n"),
+ # ⚠ THE COST OF A HELPER WHOSE CALL IS ITS TAIL. `fn ally(.., mut types, ..)
+ # { types.push(CreatureType::Ally); creature(name, c, types, ..) }` opens with
+ # a STATEMENT, and the cost resolver matched the call ANCHORED at the start of
+ # the body — so it gave up on the whole card. 219 non-land factories with a
+ # real printed cost read as `nonliteral` off a helper the type and subtype
+ # columns followed fine.
+ ("fires", "a cost through a helper whose call is its tail (bfz Hero of Goma Fada)",
+  "sets/bfz/creatures.rs",
+  '            "Hero of Goma Fada",\n            cost(&[generic(4), w()]),',
+  '            "Hero of Goma Fada",\n            cost(&[generic(5), w()]),'),
+ # ⚠ A PARAMETER CAN BE ONE ELEMENT OF THE SYMBOL LIST. `fn zubera(name,
+ # color_pip: ManaSymbol, dies) { cost: cost(&[generic(1), color_pip]), .. }`
+ # — the same "the binding is one element" shape `planeswalker_subtypes:
+ # vec![sub]` needed, and binding only the whole expression left the card
+ # unreadable.
+ ("fires", "a cost whose pip is a bound parameter (chk Ember-Fist Zubera)",
+  "sets/chk.rs",
+  '        "Ember-Fist Zubera",\n        r(),',
+  '        "Ember-Fist Zubera",\n        u(),'),
+ # `ManaCost::default()` is an explicit `{0}`, a VALUE and not a gap — reading
+ # it as unreadable skipped 31 zero-cost cards and took their COLOUR with them,
+ # which is where five Pacts and six suspend cards were hiding.
+ ("fires", "an explicit empty cost (mod_set Slaughter Pact)",
+  "sets/mod_set/instants.rs",
+  '        name: "Slaughter Pact",\n'
+  "        color_indicator: vec![crate::mana::Color::Black],\n"
+  "        cost: crate::mana::ManaCost::default(),",
+  '        name: "Slaughter Pact",\n'
+  "        color_indicator: vec![crate::mana::Color::Black],\n"
+  "        cost: cost(&[generic(1)]),"),
  # The layout gate: a transform card reaches the subtype comparison with its
  # own FACE's type line, and `layout == \"normal\"` used to drop it silently.
  ("fires", "a subtype on a transform face (modern Tormented Pariah)",

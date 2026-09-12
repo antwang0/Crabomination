@@ -339,6 +339,7 @@ pub fn frantic_search() -> CardDefinition {
 pub fn slaughter_pact() -> CardDefinition {
     CardDefinition {
         name: "Slaughter Pact",
+        color_indicator: vec![crate::mana::Color::Black],
         cost: crate::mana::ManaCost::default(),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
@@ -366,6 +367,7 @@ pub fn slaughter_pact() -> CardDefinition {
 pub fn pact_of_the_titan() -> CardDefinition {
     CardDefinition {
         name: "Pact of the Titan",
+        color_indicator: vec![crate::mana::Color::Red],
         cost: crate::mana::ManaCost::default(),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
@@ -1000,6 +1002,7 @@ pub fn gush() -> CardDefinition {
 pub fn intervention_pact() -> CardDefinition {
     CardDefinition {
         name: "Intervention Pact",
+        color_indicator: vec![crate::mana::Color::White],
         cost: ManaCost::new(vec![]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![

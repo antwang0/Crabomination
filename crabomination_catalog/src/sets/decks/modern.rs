@@ -276,6 +276,7 @@ pub fn lava_dart() -> CardDefinition {
 pub fn ancestral_vision() -> CardDefinition {
     CardDefinition {
         name: "Ancestral Vision",
+        color_indicator: vec![crate::mana::Color::Blue],
         no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(4, cost(&[u()]))],
@@ -20391,6 +20392,7 @@ pub fn urza_planeswalker() -> CardDefinition {
         .or(SelectionRequirement::HasCardType(CardType::Sorcery));
     CardDefinition {
         name: "Urza, Planeswalker",
+        color_indicator: vec![crate::mana::Color::Blue, crate::mana::Color::White],
         // CR 202.1b — the meld result prints no mana cost.
         no_mana_cost: true,
         supertypes: vec![Supertype::Legendary],
@@ -47906,6 +47908,7 @@ pub fn oliphaunt() -> CardDefinition {
 pub fn crashing_footfalls() -> CardDefinition {
     CardDefinition {
         name: "Crashing Footfalls",
+        color_indicator: vec![crate::mana::Color::Green],
         no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(4, cost(&[g()]))],
@@ -48311,6 +48314,7 @@ pub fn sigardas_aid() -> CardDefinition {
 pub fn living_end() -> CardDefinition {
     CardDefinition {
         name: "Living End",
+        color_indicator: vec![crate::mana::Color::Black],
         no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(3, cost(&[generic(2), b(), b()]))],

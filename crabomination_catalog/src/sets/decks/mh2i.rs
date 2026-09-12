@@ -41,6 +41,7 @@ pub fn out_of_time() -> CardDefinition {
 pub fn gaeas_will() -> CardDefinition {
     CardDefinition {
         name: "Gaea's Will",
+        color_indicator: vec![crate::mana::Color::Green],
         cost: ManaCost::default(),
         card_types: vec![CardType::Sorcery],
         no_mana_cost: true,
@@ -58,6 +59,7 @@ pub fn gaeas_will() -> CardDefinition {
 pub fn inevitable_betrayal() -> CardDefinition {
     CardDefinition {
         name: "Inevitable Betrayal",
+        color_indicator: vec![crate::mana::Color::Blue],
         cost: ManaCost::default(),
         card_types: vec![CardType::Sorcery],
         no_mana_cost: true,
@@ -80,6 +82,7 @@ pub fn inevitable_betrayal() -> CardDefinition {
 pub fn glimpse_of_tomorrow() -> CardDefinition {
     CardDefinition {
         name: "Glimpse of Tomorrow",
+        color_indicator: vec![crate::mana::Color::Red],
         cost: ManaCost::default(),
         card_types: vec![CardType::Sorcery],
         no_mana_cost: true,

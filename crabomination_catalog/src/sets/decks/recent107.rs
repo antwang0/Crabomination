@@ -103,6 +103,7 @@ pub fn the_underworld_cookbook() -> CardDefinition {
 pub fn asmoranomardicadaistinaculdacar() -> CardDefinition {
     CardDefinition {
         name: "Asmoranomardicadaistinaculdacar",
+        color_indicator: vec![crate::mana::Color::Black, crate::mana::Color::Red],
         // CR 202.1b — no printed mana cost. The `alternative_cost` below is the
         // only way to cast it, and that path does not read this flag.
         no_mana_cost: true,

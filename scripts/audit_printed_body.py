@@ -410,7 +410,20 @@ NAME = re.compile(r'^name: "((?:[^"\\]|\\.)*)",', re.M)
 # lines and a single-line pattern misses it; and half the catalog spells the
 # symbols `crate::mana::w()` rather than `w()`. Both were counted as
 # `nonliteral` — 180-odd factories on the second alone.
-COST = re.compile(r"^cost: (?:crate::mana::)?cost\(&\[(.*?)\]\)", re.M | re.S)
+# ⚠ TWO SPELLINGS OF THE SAME LIST. `cost(&[..])` is the common one and
+# `ManaCost::new(vec![..])` is what a factory writes when its symbols come from
+# a local binding (`let wb = || hybrid(White, Black); ManaCost::new(vec![
+# generic(1), wb(), wb()])`). Both are a symbol list and `body_cost` reads
+# either once the brackets are off.
+COST = re.compile(
+    r"^cost: (?:crate::mana::)?(?:cost\(&|ManaCost::new\(vec!)\[(.*?)\]\)",
+    re.M | re.S)
+# `cost: ManaCost::default()` / `ManaCost::new(vec![])` — an explicit EMPTY
+# symbol list, i.e. a printed `{0}`, and a VALUE rather than a gap. Reading it
+# as unreadable skipped 31 zero-cost cards out of the cost column and their
+# colour with them, which is where the five Pacts were hiding.
+COST_EMPTY = re.compile(
+    r"^cost: (?:crate::mana::)?ManaCost::default\(\),?$", re.M)
 # ⚠ NO NAME-ANCHORED COST READER. "The string next to the card's name, followed
 # by a `cost(&[..])`" prices `creature("Name", cost(&[r()]), ..)` right and
 # `skullbomb("Name", mode_cost, ..)` wrong — fourteen cards read at their
@@ -1604,6 +1617,17 @@ def resolve_helper_cost(index, path, helper, args, depth=0):
         after = blk[m.end():] if m else ""
         hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after)
         if not hm:
+            # ⚠ THE CALL IS NOT ALWAYS THE FIRST TOKEN. `fn ally(.., mut types,
+            # ..) { types.push(CreatureType::Ally); creature(name, c, types,
+            # ..) }` opens with a STATEMENT, and an anchored match there gives
+            # up on the whole card — 219 non-land factories with a real printed
+            # mana cost, the Zendikar / Battle-for-Zendikar Allies among them,
+            # skipped as `nonliteral` off a helper the type and subtype columns
+            # read fine. Same `tail_expression` fallback `factory_call_src`
+            # uses one level out.
+            after = tail_expression(after)
+            hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after)
+        if not hm:
             return None
         at = hm.start() + hm.group(0).rindex("(")
         mapped = [args[params.index(a)] if a in params and params.index(a) < len(args) else a
@@ -1626,8 +1650,23 @@ def resolve_helper_cost(index, path, helper, args, depth=0):
             i = params.index(cm.group(1))
             sm = re.match(r"&\[(.*)\]$", args[i].strip(), re.S) if i < len(args) else None
             return sm.group(1) if sm else None
-        inner = re.match(r"(?:crate::mana::)?cost\(&\[(.*)\]\)$", expr, re.S)
-        return inner.group(1) if inner else None
+        if re.fullmatch(r"(?:crate::mana::)?ManaCost::default\(\)", expr):
+            return ""
+        inner = (re.match(r"(?:crate::mana::)?cost\(&\[(.*)\]\)$", expr, re.S)
+                 or re.match(r"(?:crate::mana::)?ManaCost::new\(vec!\[(.*)\]\)$",
+                             expr, re.S))
+        if not inner:
+            return None
+        # ⚠ A PARAMETER CAN BE ONE ELEMENT OF THE LIST, NOT THE WHOLE COST.
+        # `fn zubera(name, color_pip: ManaSymbol, dies) { cost: cost(&[
+        # generic(1), color_pip]), .. }` is a symbol list whose second entry is
+        # the caller's `r()` — the same "the binding is one element" shape the
+        # subtype column needed for `planeswalker_subtypes: vec![sub]`, and
+        # binding only the whole expression left the card unreadable. A
+        # non-parameter element passes through `bind_param` unchanged, and one
+        # that binds to something `body_cost` cannot parse still skips.
+        return ", ".join(bind_param(a, params, args)
+                         for a in split_args(inner.group(1)))
     # No `cost:` of its own — follow its base, mapping the base's arguments
     # through this helper's parameters.
     for line in body.split("\n"):
@@ -2461,6 +2500,8 @@ def main() -> int:
             # audited by nobody.
             cm = COST.search(body)
             cost_src = cm.group(1) if cm else None
+            if cost_src is None and COST_EMPTY.search(body):
+                cost_src = ""   # an explicit `{0}`, not a chain to follow
             if cost_src is None:
                 # No `cost:` of its own: follow the call it defers to, and take
                 # the cost the HELPER prints rather than whatever sits next to

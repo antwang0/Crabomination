@@ -413,6 +413,7 @@ pub fn inspired_idea() -> CardDefinition {
 pub fn resurgent_belief() -> CardDefinition {
     CardDefinition {
         name: "Resurgent Belief",
+        color_indicator: vec![crate::mana::Color::White],
         // CR 202.1b — no printed mana cost; Suspend 2—{1}{W} is the only way
         // in. It shipped at {3}{W}, i.e. castable for four mana. The
         // `flashback_additional_cost` went with it: the card has no Flashback,

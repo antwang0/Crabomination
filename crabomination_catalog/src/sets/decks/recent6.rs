@@ -453,6 +453,7 @@ pub fn faerie_mastermind() -> CardDefinition {
 pub fn profane_tutor() -> CardDefinition {
     CardDefinition {
         name: "Profane Tutor",
+        color_indicator: vec![crate::mana::Color::Black],
         // CR 202.1b — no printed mana cost; suspend is the only way in.
         cost: ManaCost::default(),
         no_mana_cost: true,
@@ -713,6 +714,7 @@ pub fn dryad_arbor() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
         name: "Dryad Arbor",
+        color_indicator: vec![crate::mana::Color::Green],
         card_types: vec![CardType::Land, CardType::Creature],
         subtypes: Subtypes {
             land_types: vec![LandType::Forest],

@@ -90,6 +90,7 @@ pub fn saffi_eriksdotter() -> CardDefinition {
 pub fn restore_balance() -> CardDefinition {
     CardDefinition {
         name: "Restore Balance",
+        color_indicator: vec![crate::mana::Color::White],
         no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(6, cost(&[w()]))],
@@ -103,6 +104,7 @@ pub fn restore_balance() -> CardDefinition {
 pub fn wheel_of_fate() -> CardDefinition {
     CardDefinition {
         name: "Wheel of Fate",
+        color_indicator: vec![crate::mana::Color::Red],
         no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(4, cost(&[generic(1), r()]))],
@@ -127,6 +129,7 @@ pub fn wheel_of_fate() -> CardDefinition {
 pub fn hypergenesis() -> CardDefinition {
     CardDefinition {
         name: "Hypergenesis",
+        color_indicator: vec![crate::mana::Color::Green],
         no_mana_cost: true,
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Suspend(3, cost(&[generic(1), g(), g()]))],

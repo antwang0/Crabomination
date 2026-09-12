@@ -21,6 +21,7 @@ pub fn pact_of_negation() -> CardDefinition {
     use crate::mana::u as u_mana;
     CardDefinition {
         name: "Pact of Negation",
+        color_indicator: vec![crate::mana::Color::Blue],
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             counter_target_spell(),
@@ -156,6 +157,7 @@ pub fn summoners_pact() -> CardDefinition {
     use crate::mana::g as g_mana;
     CardDefinition {
         name: "Summoner's Pact",
+        color_indicator: vec![crate::mana::Color::Green],
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Search {
