@@ -34,7 +34,7 @@ sixty-seventh pass, so don't re-take that.
    claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
    came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
    candidates).
-2. **Gates at the tip:** suite **19,482 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+2. **Gates at the tip:** suite **19,483 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
    census assertions on every test), clippy **0** (`--all-targets`), golden_trace **11 / 11 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), **`robustness_grid.sh` ladder 30 cells / 33,120 games +
    `--wide` ladder 52 cells / 301,600 games + pilots 45 policies, all 0 failures** (the pilots leg's FIRST failure ever was this run's abilarms cell,
@@ -42,13 +42,19 @@ sixty-seventh pass, so don't re-take that.
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
    controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
    capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all EIGHT columns** over
-   16,558 priced + 17,376 type lines + 17,101 subtypes + 17,279 keywords + 9,334 P/T + 16,462 colours + 122 loyalty, `audit_card_names`
+   16,846 priced + 17,777 type lines + 17,235 subtypes + 17,453 keywords + 9,609 P/T + 16,712 colours + 124 loyalty, `audit_card_names`
    **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
    gate that sees `debug-assertions = false`).
-   ⚠ `scripts/audit_printed_body_injections.py` is **29 / 29** and counts rows from BOTH catalog audits — run it after touching any reader, and
+   ⚠⚠ **TWO SESSIONS WORKED `audit_printed_body.py` ON 2026-09-12 AND CONVERGED ON THE SAME SKIPS.** Every reader fix below landed twice-over by
+   rebase and none conflicted, but the seeds did (PERF's table) and the readers nearly did. **Say in this line which skip kind you are taking before you
+   take it** — the same discipline the sweep table earned. The residue after both runs: `nocache` 3,749 (synthesized; the name column owns it),
+   `nonliteral` 938 (700 of them LANDS, which print no cost, so closing them buys that column nothing), `nocolors` 1,060 and `nokeywords` 319 (mostly the
+   multi-face cards, whose oracle entry has no per-face `colors` or `keywords` array — a REAL bound, not a reader gap), `split` 107, `star` 102,
+   `noname` 90, `notaspell` 69, `nosubtypes` 149, `nosubvariant` 13, `notyped` 7, `nopt` 0, `faces` 0.
+   ⚠ `scripts/audit_printed_body_injections.py` is **40 / 40** and counts rows from BOTH catalog audits — run it after touching any reader, and
    **never run an audit while it runs**: it edits the catalog in place (it refuses a dirty catalog and restores on a signal now).
-   **Fresh seeds: 853..1030 on five pools, then 1031..1191 on cube / all / sealed (453 cells, 2,234,800 games) PLUS a concurrent session's 195 cells /
-   781,600 games on five pools at 1060..1130 — 0 stuck everywhere. Next is 1192, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
+   **Fresh seeds: 853..1030 on five pools, then 1031..1191 on cube / all / sealed (453 cells, 2,234,800 games) PLUS a concurrent session's 245 cells /
+   965,600 games on five pools at 1060..1171 — 0 stuck everywhere. Next is 1192, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
    turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
    of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
