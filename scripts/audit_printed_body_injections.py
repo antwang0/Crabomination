@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Injection battery for `audit_printed_body.py`'s readers.
 
-    python3 scripts/audit_printed_body_injections.py    # 31/31 as expected
+    python3 scripts/audit_printed_body_injections.py    # 34/34 as expected
 
 **A GATE THAT CANNOT FAIL IS WORSE THAN NO GATE**, and this session proved the
 point three times: `fn legend`'s injection passed because the resolver took
@@ -212,6 +212,34 @@ CASES = [
   "sets/thb.rs",
   "            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],",
   "            enchantment_subtypes: vec![],"),
+ # ONE HALF OF THE P/T, the other half from the `..base`. `power: 1,
+ # ..phantom(name, .., 2, ..)` used to read as UNREADABLE — a literal that
+ # declared one half skipped the card — which took 70 creatures out of the
+ # column, every 0-power card among them (`power:` is omitted because
+ # `Default` is already 0). Both halves now walk the chain on their own.
+ ("fires", "a P/T half taken from the base (jud Phantom Tiger)", "sets/jud.rs",
+  '        power: 1,\n        ..phantom(\n            "Phantom Tiger",',
+  '        power: 2,\n        ..phantom(\n            "Phantom Tiger",'),
+ ("fires", "a P/T half taken from Default (modern Wall of Omens)",
+  "sets/decks/modern.rs",
+  '        name: "Wall of Omens",\n        cost: cost(&[generic(1), w()]),\n'
+  "        card_types: vec![CardType::Creature],\n        subtypes: Subtypes {\n"
+  "            creature_types: vec![CreatureType::Wall],\n"
+  "            ..Default::default()\n        },\n        toughness: 4,",
+  '        name: "Wall of Omens",\n        cost: cost(&[generic(1), w()]),\n'
+  "        card_types: vec![CardType::Creature],\n        subtypes: Subtypes {\n"
+  "            creature_types: vec![CreatureType::Wall],\n"
+  "            ..Default::default()\n        },\n        toughness: 5,"),
+ # AN ARGUMENT AFTER A `vec![..]` IN A MULTI-LINE `..base(..)` CALL. The
+ # flattened body split any line with two `:` in it on top-level commas and
+ # dropped the separators, so `vec![CreatureType::Phyrexian, ..],` fused with
+ # the `3,` below it and `creature`'s `p`/`t` bound one argument short.
+ ("fires", "an argument after a vec! in a base call (usg2 fn paladin)",
+  "sets/usg2.rs",
+  "            vec![CreatureType::Phyrexian, CreatureType::Zombie, CreatureType::Knight],\n"
+  "            3,\n            3,",
+  "            vec![CreatureType::Phyrexian, CreatureType::Zombie, CreatureType::Knight],\n"
+  "            3,\n            4,"),
  # Negative: a `mut` parameter is mutated before the call it feeds, so binding
  # it to the caller's argument would report 20-odd correct Allies.
  ("silent", "a mut parameter is not its caller's argument (zen3 fn ally)",

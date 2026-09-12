@@ -261,16 +261,20 @@ What is left, with the reason — `--list <kind>` prints the factories:
     closing them buys that column nothing; 221 carry a real printed cost.
   * `noname` (184) — a factory whose name is in neither the literal, its head,
     nor its own `pub fn`.
-  * `nosubtypes` (158) — a subtype the reader will not guess at: a SHORTHAND
+  * `nosubtypes` (144) — a subtype the reader will not guess at: a SHORTHAND
     field (`Subtypes { creature_types, .. }` over a local built by `push`), a
     `mut` parameter (mutated before the call it feeds), or a card that BECOMES
     a creature (`SelfIsCreatureIf`, `creature_off_battlefield`), whose
     definition carries the types it becomes rather than the ones it prints —
     Gideon Blackblade and Grist.
-  * `nokeywords` (92) — a `keywords:` the reader will not guess at: a helper
+  * `nokeywords` (88) — a `keywords:` the reader will not guess at: a helper
     call in the vec (`cycling_two()`), a local built by `push`, or any other
     non-`Keyword::` element.
-  * `nopt` (70) — a P/T chain it cannot follow.
+  * `nopt` — **CLOSED, 0**. It was 70 until the halves walked the chain
+    separately (`merge_pt`): a literal declaring one half of the P/T used to
+    read as unreadable, which took out every `power: 1, ..phantom(.., 2, ..)`
+    and every 0-power card, whose `power:` is omitted because `Default` is
+    already 0. Every creature the oracle prints a numeric P/T for is compared.
   * `notyped` (52) — a type-line chain it cannot follow. It was 338 until three
     more idioms landed: a BOUND CARD TYPE (`fn spell(name, mana, kind, effect)`
     writes `card_types: vec![kind]`, 190 factories across five sets), a helper
@@ -288,7 +292,7 @@ What is left, with the reason — `--list <kind>` prints the factories:
 **PROVED BY INJECTION, NOT BY ITS OWN ZERO** — and the injections are
 RUNNABLE now rather than a list here: `scripts/audit_printed_body_injections.py`
 breaks one idiom at a time and states what the audit must do about it,
-**29 / 29 as expected**, four of them NEGATIVE tests (a row there would be the
+**34 / 34 as expected**, four of them NEGATIVE tests (a row there would be the
 bug), and it counts rows from `audit_card_names.py` too — a broken NAME is
 silent here and loud there. Run it after touching any reader below — and never run the audit while
 the battery is running, because it edits catalog files in place.
@@ -967,8 +971,34 @@ def station_pt(raw: str):
     return best[1] if best else None
 
 
+def merge_pt(near, far):
+    """`near`'s halves, each falling back to `far`'s — struct-update order.
+
+    ⚠ A HALF IS A VALUE WHEN THE OTHER HALF HAS A SOURCE. `parse_pt` used to
+    return "unreadable" for a literal that declared one half, which skipped 70
+    creatures out of the column — every `power: 1, ..phantom(name, .., 2, ..)`
+    and every 0-power card, whose `power:` is omitted because `Default` is
+    already 0 (Wall of Omens, Birds of Paradise, Ornithopter). The two cases
+    are one case: the missing half comes from the next link, and `Default`
+    (0) is the last link, which is exactly what the column already did for a
+    literal that declared NEITHER half.
+    """
+    if near is None or far is None:
+        return near if far is None else far
+    return tuple(n if n is not None else f for n, f in zip(near, far))
+
+
+def pt_incomplete(pt, declared) -> bool:
+    """True when the next link still has a half to supply."""
+    return not declared or (pt is not None and None in pt)
+
+
 def parse_pt(inner, params=(), args=()):
     """`((power, toughness) or None, declared)` off a literal's raw inner text.
+
+    ⚠ EITHER HALF MAY BE `None` — see `merge_pt`. `None` for the PAIR is
+    unreadable; `None` for one half is "this link does not say", and the base
+    chain (then `Default`) supplies it.
 
     ⚠ THE P/T COLUMN READ 5,578 OF 9,455 CREATURES AND COUNTED NEITHER HALF.
     It took `power:` / `toughness:` off the factory's OWN flattened body and
@@ -998,13 +1028,12 @@ def parse_pt(inner, params=(), args=()):
             if nested is not None:
                 return parse_pt(nested, params, args)
         return None, False
-    # ⚠ ONE HALF IS NOT A VALUE. A literal with `power,` and no `toughness,`
-    # takes the other half from its `..base`, not from `Default` — reading the
-    # missing half as 0 reported eight Theros Gods as `6/0`. Either both or
-    # neither; one alone is unreadable and skips.
-    if len(got) != 2:
-        return None, True
-    return (got["power"], got["toughness"]), True
+    # ⚠ ONE HALF IS NOT THIS LITERAL'S WHOLE ANSWER. A literal with `power,`
+    # and no `toughness,` takes the other half from its `..base`, not from
+    # `Default` — reading the missing half as 0 here reported eight Theros Gods
+    # as `6/0`. So hand the half back as a half (`merge_pt` fills it from the
+    # next link, `Default` last) rather than declaring the card unreadable.
+    return (got.get("power"), got.get("toughness")), True
 
 
 def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None):
@@ -1448,6 +1477,10 @@ def resolve_helper_cost(index, path, helper, args, depth=0):
     return None
 
 
+# A struct FIELD label — `cost:`, `power:` — and not the `::` of a path.
+FIELD_LABEL = re.compile(r"(?<!:)\b[a-z_][a-z0-9_]*:(?!:)")
+
+
 def helper_body(blk: str):
     """`top_fields` for a HELPER, whose signature spans several lines.
 
@@ -1468,10 +1501,25 @@ def helper_body(blk: str):
     # `top_fields` emits a field per newline. Split it on top-level commas or
     # every `^field:` read below misses: 342 `enchantment(..)` cards read as
     # "this helper has no cost" for exactly that reason.
+    #
+    # ⚠ THE SPLIT MUST NOT EAT THE COMMAS. `line.count(":") > 1` matches any
+    # line carrying two PATHS as well as a two-field literal — including
+    # `vec![CreatureType::Phyrexian, CreatureType::Zombie,
+    # CreatureType::Knight],`, one ARGUMENT of a multi-line `..base(..)` call —
+    # and `split_args` drops the separators. That fused the argument with the
+    # `3,` on the next line, so `usg2::creature`'s `p`/`t` bound one argument
+    # short and both Paladins read as unreadable P/T. Tightening the predicate
+    # instead is the wrong half: `..base(` is matched per LINE, so a one-field
+    # line that stays fused hides the base call (121 cards left the type-line
+    # column when that was tried). Split as before, and put every comma back.
     out = []
     for line in body.split("\n"):
         if line.count(":") > 1 and "," in line:
-            out.extend(x.strip() for x in split_args(line))
+            parts = [x.strip() for x in split_args(line)]
+            if parts:
+                tail = "," if line.rstrip().endswith(",") else ""
+                parts = [p + "," for p in parts[:-1]] + [parts[-1] + tail]
+            out.extend(parts)
         else:
             out.append(line)
     return "\n".join(out)
@@ -1706,10 +1754,14 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
                         wkw, whkw = parse_keywords(helper_raw(wblk))
                         if whkw:
                             got_kw, kw_ok, has_kw = wkw, wkw is not None, True
-                    if not has_pt:
+                    if pt_incomplete(got_pt, has_pt):
                         wpt, whpt = parse_pt(helper_raw(wblk))
                         if whpt:
-                            got_pt, pt_ok, has_pt = wpt, wpt is not None, True
+                            if wpt is None:
+                                got_pt, pt_ok = None, False
+                            else:
+                                got_pt = merge_pt(got_pt if has_pt else None, wpt)
+                            has_pt = True
                     if not has_col:
                         wc, whc = parse_colorfield(helper_raw(wblk))
                         if whc:
@@ -1746,8 +1798,12 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
             got_s = b.supers
         if not has_kw:
             got_kw, kw_ok = b.keywords, b.kw_ok
-        if not has_pt:
-            got_pt, pt_ok, has_pt = b.pt, b.pt_ok, True
+        if pt_incomplete(got_pt, has_pt):
+            if not b.pt_ok:
+                pt_ok = False
+            else:
+                got_pt = merge_pt(got_pt if has_pt else None, b.pt)
+            has_pt = True
         if not has_col:
             got_col, col_ok, has_col = b.colorfield, b.col_ok, True
         if not has_loy:
@@ -2146,8 +2202,10 @@ def main() -> int:
                 checked_pt += 1
                 # No `power:` anywhere in the chain is a VALUE, not a gap: the
                 # engine ships `Default` there, and a creature at 0/0 dies to
-                # state-based actions the turn it lands.
-                got_pt = read.pt or (0, 0)
+                # state-based actions the turn it lands. `Default` is the LAST
+                # link of `merge_pt`'s chain, so it fills a half the literal and
+                # every base left alone — which is what a 0-power card is.
+                got_pt = merge_pt(read.pt, (0, 0))
                 if got_pt != (int(op), int(ot)):
                     wrong_pt += 1
                     rows.append(("p/t", name, f"{path.name}::{fname}",
