@@ -4423,9 +4423,17 @@ fn permanent_value_with(
     let Some(c) = cp else { return 0 };
     let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0) * w.cmc;
     if c.card_types().contains(&CardType::Creature) {
-        v += w.creature_base + c.power.max(0) * w.power + c.toughness.max(0) * w.toughness;
+        // Clamped for `life_value`'s reason one characteristic over: a power is
+        // bounded by nothing (Exponential Growth doubles it {X} times), every
+        // term below MULTIPLIES it, and an unclamped one wraps into a large
+        // negative — the biggest creature on the board evaluating as the worst.
+        // `SCALE_CEILING` keeps the products inside `i32` for the profiles that
+        // ship, and no creature inside ±10,000 scores differently.
+        let ceil = crate::player::SCALE_CEILING;
+        let (pw, tou) = (c.power.clamp(0, ceil), c.toughness.clamp(0, ceil));
+        v += w.creature_base + pw * w.power + tou * w.toughness;
         if w.keyword_pct != 0 {
-            v += keyword_value(c.keywords(), c.power, w) * w.keyword_pct / 100;
+            v += keyword_value(c.keywords(), pw, w) * w.keyword_pct / 100;
         }
     }
     if c.card_types().contains(&CardType::Planeswalker) {
@@ -4567,10 +4575,10 @@ fn life_value(life: i32, w: &EvalWeights) -> i32 {
     // losing. Caught by the `debug-assertions` sweep at seeds 53 and 73 of
     // `--decks all`. Ten thousand is far past any total the evaluator has to
     // tell apart, and it keeps every product below in `i32` for the profiles
-    // this ships (`unit` 1 and 10). The constant is `player::LIFE_CEILING`
+    // this ships (`unit` 1 and 10). The constant is `player::SCALE_CEILING`
     // now — `encode_state_inner` has the same problem one consumer over and
     // the two have to agree about where a life total stops being a number.
-    let life = life.min(crate::player::LIFE_CEILING);
+    let life = life.min(crate::player::SCALE_CEILING);
     if !w.concave_life {
         return life * w.unit;
     }
@@ -8627,7 +8635,9 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
             })
             // CR 702.122e/702.171 — count the crew-power rider (Cloudspire
             // Captain / Deathless Pilot crew "as though power N greater").
-            .map(|c| (c.id, (c.power() + state.crew_saddle_power_bonus(c.id)).max(0) as u32))
+            .map(|c| {
+                (c.id, c.power().saturating_add(state.crew_saddle_power_bonus(c.id)).max(0) as u32)
+            })
             .collect();
         crew.sort_by_key(|&(_, p)| p);
         let mut picked = Vec::new();
@@ -8689,7 +8699,11 @@ fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
                     && !c.tapped
             })
             .map(|c| {
-                (c.id, (c.power() + state.crew_saddle_power_bonus(c.id)).max(0) as u32, c.can_attack())
+                (
+                    c.id,
+                    c.power().saturating_add(state.crew_saddle_power_bonus(c.id)).max(0) as u32,
+                    c.can_attack(),
+                )
             })
             .collect();
         // (can-attack ascending, then power ascending): free saddlers first.

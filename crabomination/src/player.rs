@@ -11,23 +11,30 @@ pub struct PlayerId(pub usize);
 /// `max_hand_size` starts here; effects can raise/lower it or remove it.
 pub const DEFAULT_MAX_HAND_SIZE: usize = 7;
 
-/// The magnitude past which a life total stops being a number anything
-/// downstream should read literally.
+/// The magnitude past which a **board number a consumer scales** — a life
+/// total, a power, a toughness, a sum of them — stops being a number that
+/// consumer should read literally.
 ///
-/// **A life total is bounded by nothing.** Beacon of Immortality doubles it
-/// every other turn and saturates at `i32::MAX` in about thirty casts — a
-/// correct card doing what it prints, and the board behind the only `cap` in
-/// ~1.3 M swept games (`ENGINE_BACKLOG`'s OPEN section, `cube` seed 1018). Every
-/// consumer *scales* the total, so an unclamped one either wraps (the bot's
-/// evaluator scored the seat with unbounded life as the one that is losing,
-/// caught by the `debug-assertions` sweep) or arrives at the net as a feature
-/// of 10^8 (`life / 20.0`).
+/// **None of them is bounded by anything.** Beacon of Immortality doubles a
+/// life total every other turn and saturates it at `i32::MAX` in about thirty
+/// casts (the board behind the only `cap` in ~1.3 M swept games,
+/// `ENGINE_BACKLOG`'s OPEN section, `cube` seed 1018); Exponential Growth is
+/// "double target creature's power {X} times" and gets there in one
+/// resolution. Both are correct cards doing what they print. Every consumer
+/// that *scales* such a number either wraps (the bot's evaluator scored the
+/// seat with unbounded life as the one that is losing, caught by the
+/// `debug-assertions` sweep) or hands the net a feature of 10^8
+/// (`life / 20.0`).
 ///
-/// Ten thousand is far past any total a consumer has to tell apart, and it
+/// Ten thousand is far past anything a consumer has to tell apart, and it
 /// keeps the evaluator's products inside `i32` for the profiles that ship
-/// (`unit` 1 and 10). **No state with `|life| <= 10_000` reads differently**,
-/// which is every non-degenerate game — the clamp is a guard, not a rescale.
-pub const LIFE_CEILING: i32 = 10_000;
+/// (`unit` 1 and 10). **No state inside `±10_000` reads differently**, which is
+/// every non-degenerate game — the clamp is a guard, not a rescale.
+///
+/// It is for the *consumers*. The rules-facing values stay exact and merely
+/// **saturate** ([`CardInstance::pump`](crate::card::CardInstance::pump),
+/// `compute_permanent`), because clamping a power would change combat damage.
+pub const SCALE_CEILING: i32 = 10_000;
 
 /// Serde default for `Player.max_hand_size` — the normal seven-card cap.
 fn default_max_hand_size() -> Option<usize> {

@@ -279,8 +279,11 @@ pub fn state_digest(g: &GameState) -> u64 {
         mix(c.controller as u64);
         mix(c.tapped as u64);
         mix(c.damage as u64);
-        mix((c.power_bonus + c.perm_power_bonus) as i64 as u64);
-        mix((c.toughness_bonus + c.perm_toughness_bonus) as i64 as u64);
+        // `wrapping_add`: this is a hash mix, so a wrap is a fine value —
+        // but a bare `+` would panic under `overflow-checks` on a board
+        // Exponential Growth has pushed to `i32::MAX` (`CardInstance::pump`).
+        mix(c.power_bonus.wrapping_add(c.perm_power_bonus) as i64 as u64);
+        mix(c.toughness_bonus.wrapping_add(c.perm_toughness_bonus) as i64 as u64);
         mix(c.counters.len() as u64);
         mix(c.counters.values().map(|n| *n as u64).sum::<u64>());
     }

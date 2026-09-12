@@ -401,6 +401,32 @@ fn exponential_growth_doubles_power_x_times() {
     assert_eq!((b.power(), b.toughness()), (16, 2), "power doubled three times");
 }
 
+/// …and a big {X} saturates instead of wrapping.
+///
+/// `1i32.checked_shl(n)` checks the SHIFT AMOUNT, not the value it produces:
+/// at `n = 31` it is `Some(i32::MIN)`, so the arm's `factor - 1` overflowed —
+/// a panic under `overflow-checks` (which is what the sweep binary runs) and,
+/// in release, a *negative* pump that made the biggest creature on the board
+/// the smallest. `times` is `Value::XFromCost` here, so 31 mana is all it
+/// takes, and every pump in the engine saturates now
+/// (`CardInstance::pump`).
+#[test]
+fn exponential_growth_saturates_instead_of_wrapping_at_a_huge_x() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::exponential_growth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(80); // {X}{X} with X=40
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: Some(40),
+    }).expect("castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.power(), i32::MAX, "saturated, not wrapped");
+    assert_eq!(b.toughness(), 2, "toughness untouched");
+}
+
 #[test]
 fn serpentine_curve_scales_with_instants_and_sorceries_in_yards() {
     let mut g = two_player_game();

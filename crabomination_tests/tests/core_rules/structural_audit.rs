@@ -777,3 +777,57 @@ fn every_listed_arm_pins_the_seat_its_ask_was_routed_to() {
          without a row here is an unproved rewrite",
     );
 }
+
+/// No engine site adds to a P/T bonus field with a bare `+=`.
+///
+/// A power is bounded by nothing — Exponential Growth is "double target
+/// creature's power {X} times" and reaches `i32::MAX` in one resolution — so
+/// the *next* `+=` on the field is an overflow: a panic under
+/// `overflow-checks` (the sweep binary) and, in release, the biggest creature
+/// on the board evaluating as the smallest. `CardInstance::pump` and
+/// `pump_permanent` saturate, and eighteen sites went through them; the field
+/// has to stay `pub` for the engine crate to reach it, so this is the ratchet
+/// that keeps a nineteenth from being written the old way.
+///
+/// Reads the source because there is nothing in the type system to ask: the
+/// same extraction a `rg` would do, pinned so it runs with the suite.
+#[test]
+fn every_pump_goes_through_the_saturating_helper() {
+    fn walk(dir: &std::path::Path, out: &mut Vec<String>) {
+        for e in std::fs::read_dir(dir).expect("readable").flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                let src = std::fs::read_to_string(&p).expect("utf-8");
+                // Test modules set the fields directly to build a board; the
+                // rule is about the engine's own accumulation.
+                let live = src.split("#[cfg(test)]").next().unwrap_or(&src);
+                for (i, line) in live.lines().enumerate() {
+                    let t = line.trim();
+                    if t.starts_with("//") {
+                        continue;
+                    }
+                    for f in ["power_bonus", "toughness_bonus"] {
+                        if t.contains(&format!("{f} +=")) || t.contains(&format!("{f} -=")) {
+                            out.push(format!("{}:{} — {t}", p.display(), i + 1));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let mut bad = Vec::new();
+    for crate_src in ["/../crabomination/src", "/../crabomination_base/src"] {
+        let root = format!("{}{crate_src}", env!("CARGO_MANIFEST_DIR"));
+        walk(std::path::Path::new(&root), &mut bad);
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} site(s) accumulate a P/T bonus with a bare `+=`; use `CardInstance::pump` / \
+         `pump_permanent`, which saturate:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}

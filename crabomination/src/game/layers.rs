@@ -1259,11 +1259,21 @@ fn compute_permanent_pass(
     if let Some(t) = set_toughness_only {
         toughness = t;
     }
-    power += mod_power + card.power_bonus + card.perm_power_bonus;
-    toughness += mod_toughness + card.toughness_bonus + card.perm_toughness_bonus;
+    // Saturating, for `CardInstance::pump`'s reason: Exponential Growth can
+    // put a pump bonus at `i32::MAX` in one resolution, and this is the sum
+    // every consumer reads. An overflow here is a panic under
+    // `overflow-checks` and a large negative power in release.
+    power = power
+        .saturating_add(mod_power)
+        .saturating_add(card.power_bonus)
+        .saturating_add(card.perm_power_bonus);
+    toughness = toughness
+        .saturating_add(mod_toughness)
+        .saturating_add(card.toughness_bonus)
+        .saturating_add(card.perm_toughness_bonus);
     // Counters applied after 7c (CR 613.7f).
-    power += counter_power_delta;
-    toughness += counter_toughness_delta;
+    power = power.saturating_add(counter_power_delta);
+    toughness = toughness.saturating_add(counter_toughness_delta);
     if switched {
         std::mem::swap(&mut power, &mut toughness);
     }

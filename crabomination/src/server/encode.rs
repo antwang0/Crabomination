@@ -258,6 +258,33 @@ fn untapped_sources(g: &GameState) -> [Vec<[bool; 5]>; 2] {
     }
 }
 
+/// A board number on its way into a feature, clamped first.
+///
+/// **Every `as f32 / k` in this file assumes a bounded numerator and none of
+/// them had one.** A life total (Beacon of Immortality) and a power
+/// (Exponential Growth's "double target creature's power {X} times") both
+/// reach `i32::MAX` from correct cards, and `life / 20.0` then hands the net
+/// 1.07e8 — a feature seven orders of magnitude outside anything it was
+/// trained on. The rules-facing values stay exact and merely saturate
+/// (`CardInstance::pump`, `compute_permanent`); this is the guard at the point
+/// where a number stops being a rules quantity and becomes an input.
+///
+/// `player::SCALE_CEILING` is the evaluator's own ceiling, so the two
+/// consumers agree about where a board number stops being readable. No state
+/// inside `±10,000` encodes differently.
+#[inline]
+fn scaled(n: i32) -> f32 {
+    n.clamp(-crate::player::SCALE_CEILING, crate::player::SCALE_CEILING) as f32
+}
+
+/// `CardInstance.damage` as a signed number, saturating: damage is a `u32`
+/// and a creature that has taken more than `i32::MAX` reads as *negative*
+/// through a bare `as i32`, which turns "lethal damage" into "healed".
+#[inline]
+fn damage_i32(c: &CardInstance) -> i32 {
+    c.damage.min(i32::MAX as u32) as i32
+}
+
 fn encode_state_inner(
     g: &GameState,
     seat: usize,
@@ -306,7 +333,7 @@ fn encode_state_inner(
     let eff_pt = |id: crate::card::CardId| {
         g.battlefield.iter().find(|c| c.id == id).and_then(|c| {
             let cp = g.computed_permanent_on(c)?;
-            Some((cp.power.max(0), (cp.toughness - c.damage as i32).max(0)))
+            Some((cp.power.max(0), cp.toughness.saturating_sub(damage_i32(c)).max(0)))
         })
     };
     // Attacker → summed P/T of its blockers (`block_map` is blocker →
@@ -317,8 +344,8 @@ fn encode_state_inner(
             if let Some((p, t)) = eff_pt(*blocker) {
                 for a in attackers {
                     let e = blocker_sums.entry(*a).or_insert((0, 0));
-                    e.0 += p;
-                    e.1 += t;
+                    e.0 = e.0.saturating_add(p);
+                    e.1 = e.1.saturating_add(t);
                 }
             }
         }
@@ -363,21 +390,21 @@ fn encode_state_inner(
             }
             if is_creature {
                 creatures[side] += 1;
-                power[side] += pw;
+                power[side] = power[side].saturating_add(pw);
             }
             if !no_combat {
                 // An object is never both an attacker and a blocker in one
                 // combat, so one feature pair serves both endpoints.
                 let counterpart = blocker_sums.get(&c.id).copied().or_else(|| {
                     g.block_map.get(&c.id).map(|attackers| {
-                        attackers.iter().filter_map(|a| eff_pt(*a)).fold((0, 0), |acc, (p, t)| {
-                            (acc.0 + p, acc.1 + t)
+                        attackers.iter().filter_map(|a| eff_pt(*a)).fold((0i32, 0i32), |acc, (p, t)| {
+                            (acc.0.saturating_add(p), acc.1.saturating_add(t))
                         })
                     })
                 });
                 if let Some((p, t)) = counterpart {
-                    o.feats[37] = p as f32 / 8.0;
-                    o.feats[38] = t as f32 / 8.0;
+                    o.feats[37] = scaled(p) / 8.0;
+                    o.feats[38] = scaled(t) / 8.0;
                 }
                 if g.attacking.iter().any(|a| {
                     a.attacker == c.id
@@ -461,17 +488,8 @@ fn encode_state_inner(
     }
 
     let gl = &mut s.global;
-    // Clamped, for `life_value`'s reason one consumer over: a life total is
-    // bounded by nothing (Beacon of Immortality saturates a seat at
-    // `i32::MAX`), and `life / 20.0` hands the net a feature of 10^8 for a
-    // board that is otherwise ordinary. The evaluator has clamped since the
-    // `debug-assertions` sweep; this is the same ceiling, so the two agree.
-    // No state with `|life| <= LIFE_CEILING` encodes differently.
-    let life_of = |p: usize| -> f32 {
-        g.players[p].life.clamp(-crate::player::LIFE_CEILING, crate::player::LIFE_CEILING) as f32
-    };
-    gl[0] = life_of(seat) / 20.0;
-    gl[1] = life_of(opp) / 20.0;
+    gl[0] = scaled(g.players[seat].life) / 20.0;
+    gl[1] = scaled(g.players[opp].life) / 20.0;
     gl[2] = g.players[seat].hand.len() as f32 / 7.0;
     gl[3] = g.players[opp].hand.len() as f32 / 7.0;
     gl[4] = g.players[seat].library.len() as f32 / 40.0;
@@ -500,8 +518,8 @@ fn encode_state_inner(
     gl[19] = g.attacking.len() as f32 / 4.0;
     gl[20] = creatures[0] as f32 / 6.0;
     gl[21] = creatures[1] as f32 / 6.0;
-    gl[22] = power[0] as f32 / 12.0;
-    gl[23] = power[1] as f32 / 12.0;
+    gl[22] = scaled(power[0]) / 12.0;
+    gl[23] = scaled(power[1]) / 12.0;
     // Mana actually available, by colour, for both seats. gl[14..=15]
     // already counted untapped *lands*; these count untapped *sources*
     // (mana creatures and rocks included) and say what colours they make.
@@ -597,11 +615,10 @@ fn encode_state_inner(
         // threshold, so saturating a little past it is the right shape.
         for (side, p) in [(0usize, seat), (1, opp)] {
             let pl = &g.players[p];
-            // Same ceiling as the totals above: one Beacon resolution gains a
-            // seat 10^9 life in a turn, and this scale is a threshold ("gain 3
-            // life"), so saturating it is the shape the comment above asks for.
-            gl[43 + side] =
-                pl.life_gained_this_turn.min(crate::player::LIFE_CEILING as u32) as f32 / 5.0;
+            // `scaled` here too: one Beacon resolution gains a seat 10^9 life
+            // in a turn, and this scale is a threshold ("gain 3 life"), so
+            // saturating it is the shape the comment above asks for.
+            gl[43 + side] = scaled(pl.life_gained_this_turn.min(i32::MAX as u32) as i32) / 5.0;
             gl[45 + side] = pl.instants_or_sorceries_cast_this_turn as f32 / 3.0;
             gl[47 + side] = pl.spells_cast_this_turn as f32 / 4.0;
             gl[49 + side] = pl.creatures_died_this_turn as f32 / 3.0;
@@ -1284,8 +1301,8 @@ fn encode_battlefield_object_into(
                 f[54] =
                     if cp.card_types().contains(&CardType::Enchantment) { 1.0 } else { 0.0 };
             }
-            f[4] = cp.power.max(0) as f32 / 8.0;
-            f[5] = (cp.toughness - c.damage as i32).max(0) as f32 / 8.0;
+            f[4] = scaled(cp.power.max(0)) / 8.0;
+            f[5] = scaled(cp.toughness.saturating_sub(damage_i32(c)).max(0)) / 8.0;
             let mut kb = 0u16;
             let mut warded = false;
             for k in cp.keywords() {
@@ -1329,8 +1346,8 @@ fn encode_battlefield_object_into(
             (is_land, is_creature, cp.power.max(0))
         }
         None => {
-            f[4] = c.power().max(0) as f32 / 8.0;
-            f[5] = (c.toughness() - c.damage as i32).max(0) as f32 / 8.0;
+            f[4] = scaled(c.power().max(0)) / 8.0;
+            f[5] = scaled(c.toughness().saturating_sub(damage_i32(c)).max(0)) / 8.0;
             (c.definition.is_land(), c.definition.is_creature(), c.power().max(0))
         }
     };
@@ -1422,9 +1439,9 @@ fn encode_battlefield_object_into(
     // the until-end-of-turn deltas specifically; permanent pumps live
     // in `perm_*` and are correctly invisible here.
     if !ablated(ABLATE_EXPIRY) {
-        f[45] = c.damage as f32 / 8.0;
-        f[46] = c.power_bonus as f32 / 4.0;
-        f[47] = c.toughness_bonus as f32 / 4.0;
+        f[45] = scaled(damage_i32(c)) / 8.0;
+        f[46] = scaled(c.power_bonus) / 4.0;
+        f[47] = scaled(c.toughness_bonus) / 4.0;
     }
     totals
 }
@@ -1656,22 +1673,72 @@ mod tests {
         g.players[1].life = i32::MAX - 6;
         g.players[0].life_gained_this_turn = u32::MAX;
         let s = encode_state(&g, 0, &vocab);
-        let ceiling = crate::player::LIFE_CEILING as f32 / 20.0;
+        let ceiling = crate::player::SCALE_CEILING as f32 / 20.0;
         assert_eq!(s.global[0], ceiling, "own life clamped");
         assert_eq!(s.global[1], ceiling, "opponent life clamped");
-        // The bound has to admit the largest *clamped* feature, not the
-        // largest tidy number: `life_gained_this_turn` saturates at
-        // `LIFE_CEILING / 5.0` = 2,000, four times the life totals' own
-        // `LIFE_CEILING / 20.0`. What this asserts is that every feature is
-        // finite and capped by the ceiling, which is the property; the
-        // divisors are the encoder's own and are not this test's business.
-        let widest = crate::player::LIFE_CEILING as f32 / 5.0;
+        assert_globals_bounded(&s);
+    }
+
+    /// Every feature is a board number over its own scale, and every scale is
+    /// at least 1, so the ceiling itself is the bound. The gate is about
+    /// *boundedness* — the bug it replaces was 1.07e8 — and not about the
+    /// divisors, which are the encoder's own business: the widest clamped
+    /// global today is `life_gained_this_turn` at `SCALE_CEILING / 5.0`, four
+    /// times the life totals' own `/ 20.0`, and a tighter bound here would
+    /// fail the day someone adds a feature on a smaller scale.
+    fn assert_globals_bounded(s: &crabomination_nn::EncodedState) {
+        let bound = crate::player::SCALE_CEILING as f32;
         for (i, x) in s.global.iter().enumerate() {
-            assert!(
-                x.is_finite() && x.abs() <= widest,
-                "global[{i}] left the encoder unbounded at {x} (ceiling {widest})",
-            );
+            assert!(x.is_finite() && x.abs() <= bound, "global[{i}] is unbounded at {x}");
         }
+        for (oi, o) in s.objects().iter().enumerate() {
+            for (i, x) in o.feats.iter().enumerate() {
+                assert!(
+                    x.is_finite() && x.abs() <= bound,
+                    "obj[{oi}].feats[{i}] is unbounded at {x}",
+                );
+            }
+        }
+    }
+
+    /// The same question one characteristic over: Exponential Growth is
+    /// "double target creature's power {X} times", so one resolution reaches
+    /// `i32::MAX` — and a pumped creature's power is scaled into `f[4]`, into
+    /// the per-side `power` totals, and into the blocker-sum features.
+    ///
+    /// Also asserts the arithmetic itself survives: summing two saturated
+    /// powers into `power[side]` is an `i32` overflow, which is a *panic*
+    /// under `overflow-checks` (the sweep binary) and a large negative total
+    /// in release. The test harness always unwinds, so this would fail rather
+    /// than abort either way.
+    #[test]
+    fn a_saturated_power_encodes_as_a_bounded_feature() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        for (i, seat) in [(0usize, 0usize), (1, 0), (2, 1)] {
+            let mut inst =
+                CardInstance::new(crate::card::CardId(910 + i as u32), catalog::grizzly_bears(), seat);
+            inst.controller = seat;
+            inst.pump(i32::MAX, i32::MAX);
+            inst.pump(i32::MAX, i32::MAX);
+            g.battlefield.push(inst);
+        }
+        assert_globals_bounded(&encode_state(&g, 0, &vocab));
+    }
+
+    /// `pump` saturates rather than wrapping, and `power()` reads the
+    /// saturated total back without overflowing on top of the printed power.
+    #[test]
+    fn a_pump_past_i32_max_saturates() {
+        let mut inst = CardInstance::new(crate::card::CardId(920), catalog::grizzly_bears(), 0);
+        inst.pump(i32::MAX, i32::MAX);
+        inst.pump(i32::MAX, i32::MAX);
+        assert_eq!(inst.power_bonus, i32::MAX);
+        assert_eq!(inst.power(), i32::MAX, "the printed 2 does not overflow on top");
+        assert_eq!(inst.toughness(), i32::MAX);
+        inst.pump(i32::MIN, i32::MIN);
+        assert_eq!(inst.power_bonus, -1, "and it saturates downward the same way");
     }
 
     #[test]

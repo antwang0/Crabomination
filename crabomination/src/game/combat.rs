@@ -1554,8 +1554,7 @@ impl GameState {
             }
             // CR 702.121 — Melee: +1/+1 until end of turn per opponent attacked.
             if melee_opponents > 0 && computed_kw(id).has_kw(&Keyword::Melee) {
-                card.power_bonus += melee_opponents;
-                card.toughness_bonus += melee_opponents;
+                card.pump(melee_opponents, melee_opponents);
             }
             // CR 702.142 — record that this creature attacked (gates Boast).
             card.attacked_this_turn = true;
@@ -2515,8 +2514,7 @@ impl GameState {
         }
         for &(id, d) in &pt_deltas {
             if let Some(c) = self.battlefield_find_mut(id) {
-                c.power_bonus += d;
-                c.toughness_bonus += d;
+                c.pump(d, d);
             }
         }
         // CR 509.3g — emit `AttackerWentUnblocked` for each attacker
@@ -2551,7 +2549,7 @@ impl GameState {
         });
         for &(id, d) in &frenzy_deltas {
             if let Some(c) = self.battlefield_find_mut(id) {
-                c.power_bonus += d;
+                c.pump(d, 0);
             }
         }
         self.give_priority_to_active();

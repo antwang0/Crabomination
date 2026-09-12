@@ -9233,8 +9233,7 @@ impl GameState {
                     self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
                     self.scratch.last_moved_cards.push(cid);
                     if is_creature && let Some(c) = self.battlefield_find_mut(src) {
-                        c.power_bonus += pow;
-                        c.toughness_bonus += tou;
+                        c.pump(pow, tou);
                     }
                 }
                 Ok(())
@@ -13070,8 +13069,7 @@ impl GameState {
                 }
                 if tapped > 0 {
                     if let Some(c) = self.battlefield_find_mut(source) {
-                        c.power_bonus += power * tapped;
-                        c.toughness_bonus += toughness * tapped;
+                        c.pump(power * tapped, toughness * tapped);
                     }
                     events.push(GameEvent::PumpApplied {
                         card_id: source,
@@ -14264,8 +14262,7 @@ impl GameState {
                             StackItem::Spell { card, .. } if card.id == cid => Some(card),
                             _ => None,
                         }) {
-                            card.power_bonus += p;
-                            card.toughness_bonus += t;
+                            card.pump(p, t);
                             events.push(GameEvent::PumpApplied {
                                 card_id: cid,
                                 power: p,
@@ -14278,15 +14275,13 @@ impl GameState {
                         // Fast path: the EOT fields are wiped at Cleanup.
                         Duration::EndOfTurn => {
                             if let Some(c) = self.battlefield_find_mut(cid) {
-                                c.power_bonus += p;
-                                c.toughness_bonus += t;
+                                c.pump(p, t);
                             }
                         }
                         // Permanent pumps survive Cleanup (Wall of Roots).
                         Duration::Permanent => {
                             if let Some(c) = self.battlefield_find_mut(cid) {
-                                c.perm_power_bonus += p;
-                                c.perm_toughness_bonus += t;
+                                c.pump_permanent(p, t);
                             }
                         }
                         // Mid durations ride the layer system, which knows
@@ -14321,14 +14316,20 @@ impl GameState {
                 // so the live power ends at power * 2^times.
                 let n = self.evaluate_value(times, ctx).max(0);
                 if n > 0 {
-                    let factor = 1i32.checked_shl(n as u32).unwrap_or(i32::MAX); // 2^n
+                    // `checked_shl` checks the SHIFT AMOUNT, not the value it
+                    // produces: `1i32.checked_shl(31)` is `Some(i32::MIN)`, and
+                    // `factor - 1` then overflows — a panic under
+                    // `overflow-checks` and a huge negative pump in release.
+                    // `times` is `Value::XFromCost` on the shipped card, so an
+                    // {X} of 31 is all it takes.
+                    let factor = if n >= 31 { i32::MAX } else { 1i32 << n }; // 2^n
                     for ent in self.resolve_selector(what, ctx) {
                         if let Some(cid) = ent.as_permanent_id()
                             && let Some(c) = self.battlefield_find(cid) {
                                 let cur = c.power();
-                                let delta = cur.saturating_mul(factor - 1);
+                                let delta = cur.saturating_mul(factor.saturating_sub(1));
                                 if let Some(c) = self.battlefield_find_mut(cid) {
-                                    c.power_bonus += delta;
+                                    c.pump(delta, 0);
                                     events.push(GameEvent::PumpApplied { card_id: cid, power: delta, toughness: 0 });
                                 }
                             }
@@ -15940,7 +15941,7 @@ impl GameState {
                     let Some(c) = self.battlefield_find(cid) else { continue };
                     // Base power = printed/CDA base plus any SetBasePower
                     // (perm_power_bonus); pumps + counters are "above base".
-                    let base = c.definition.base_power() + c.perm_power_bonus;
+                    let base = c.definition.base_power().saturating_add(c.perm_power_bonus);
                     let diff = (c.power() - base).max(0);
                     if diff == 0 { continue; }
                     let ctrl = c.controller;
@@ -18685,7 +18686,7 @@ impl GameState {
                     }
                     events.push(GameEvent::PermanentTapped { card_id: helper, actor: Some(ctx.controller), as_attacker: false });
                     if let Some(c) = self.battlefield_find_mut(src) {
-                        c.power_bonus += power;
+                        c.pump(power, 0);
                         events.push(GameEvent::PumpApplied { card_id: src, power, toughness: 0 });
                     }
                 }
@@ -32168,8 +32169,7 @@ impl GameState {
                     .collect();
                 for cid in card_ids {
                     if let Some(c) = self.battlefield_find_mut(cid) {
-                        c.power_bonus += p;
-                        c.toughness_bonus += t;
+                        c.pump(p, t);
                         events.push(GameEvent::PumpApplied {
                             card_id: cid,
                             power: p,

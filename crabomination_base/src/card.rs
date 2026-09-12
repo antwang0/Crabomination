@@ -8412,37 +8412,75 @@ impl CardInstance {
         }
     }
 
+    /// Add to the until-end-of-turn P/T bonus, **saturating**.
+    ///
+    /// A power is bounded by nothing, the way a life total is not: Exponential
+    /// Growth is "double target creature's power {X} times", so one resolution
+    /// can reach `i32::MAX`, and the next `+=` on the field wraps — a panic
+    /// under `overflow-checks` (which is what the sweep binary runs) and, in
+    /// release, a creature whose power is suddenly large and negative. Every
+    /// pump in the engine goes through here or [`pump_permanent`], so the
+    /// field cannot be reached by a bare `+=` and the class cannot come back
+    /// one arm at a time.
+    ///
+    /// Saturating, not clamped: the total stays exact for every value the
+    /// rules can tell apart, and the consumers that *scale* it (the encoder's
+    /// `/ 8.0`, the evaluator's `* w.power`) do their own clamping.
+    ///
+    /// [`pump_permanent`]: Self::pump_permanent
+    pub fn pump(&mut self, power: i32, toughness: i32) {
+        self.power_bonus = self.power_bonus.saturating_add(power);
+        self.toughness_bonus = self.toughness_bonus.saturating_add(toughness);
+    }
+
+    /// [`pump`](Self::pump) for the permanent-duration deltas, which survive
+    /// Cleanup and clear only when the permanent changes zone (CR 400.7).
+    pub fn pump_permanent(&mut self, power: i32, toughness: i32) {
+        self.perm_power_bonus = self.perm_power_bonus.saturating_add(power);
+        self.perm_toughness_bonus = self.perm_toughness_bonus.saturating_add(toughness);
+    }
+
     /// One pass over the counter bag, not one `counter_count` scan per
     /// P/T counter kind: the bag holds one entry per kind (`add` / `insert`
     /// find-or-push), so summing each entry's contribution reads the same
     /// answer, and the six or seven scans were ~100 Ir a call on a bag that
     /// is empty or one entry long (PERF `(-259)`).
+    ///
+    /// Saturating for [`pump`](Self::pump)'s reason: a bonus at `i32::MAX`
+    /// plus a printed power is an overflow on the read, not just on the write.
     pub fn power(&self) -> i32 {
-        let mut p = self.definition.base_power() + self.power_bonus + self.perm_power_bonus;
+        let mut p = self
+            .definition
+            .base_power()
+            .saturating_add(self.power_bonus)
+            .saturating_add(self.perm_power_bonus);
         for (ct, n) in self.counters.iter() {
             let n = *n as i32;
-            p += match ct {
+            p = p.saturating_add(match ct {
                 CounterType::PlusOnePlusOne | CounterType::PlusOnePlusZero => n,
                 CounterType::MinusOneMinusOne | CounterType::MinusOneMinusZero => -n,
                 CounterType::PlusTwoPlusZero | CounterType::PlusTwoPlusTwo => 2 * n,
                 _ => 0,
-            };
+            });
         }
         p
     }
 
     pub fn toughness(&self) -> i32 {
-        let mut t =
-            self.definition.base_toughness() + self.toughness_bonus + self.perm_toughness_bonus;
+        let mut t = self
+            .definition
+            .base_toughness()
+            .saturating_add(self.toughness_bonus)
+            .saturating_add(self.perm_toughness_bonus);
         for (ct, n) in self.counters.iter() {
             let n = *n as i32;
-            t += match ct {
+            t = t.saturating_add(match ct {
                 CounterType::PlusOnePlusOne | CounterType::PlusZeroPlusOne => n,
                 CounterType::MinusOneMinusOne | CounterType::MinusZeroMinusOne => -n,
                 CounterType::MinusZeroMinusTwo => -2 * n,
                 CounterType::PlusZeroPlusTwo | CounterType::PlusTwoPlusTwo => 2 * n,
                 _ => 0,
-            };
+            });
         }
         t
     }
