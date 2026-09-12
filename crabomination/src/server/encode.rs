@@ -1659,10 +1659,17 @@ mod tests {
         let ceiling = crate::player::LIFE_CEILING as f32 / 20.0;
         assert_eq!(s.global[0], ceiling, "own life clamped");
         assert_eq!(s.global[1], ceiling, "opponent life clamped");
+        // The bound has to admit the largest *clamped* feature, not the
+        // largest tidy number: `life_gained_this_turn` saturates at
+        // `LIFE_CEILING / 5.0` = 2,000, four times the life totals' own
+        // `LIFE_CEILING / 20.0`. What this asserts is that every feature is
+        // finite and capped by the ceiling, which is the property; the
+        // divisors are the encoder's own and are not this test's business.
+        let widest = crate::player::LIFE_CEILING as f32 / 5.0;
         for (i, x) in s.global.iter().enumerate() {
             assert!(
-                x.is_finite() && x.abs() <= 1_000.0,
-                "global[{i}] left the encoder unbounded at {x}",
+                x.is_finite() && x.abs() <= widest,
+                "global[{i}] left the encoder unbounded at {x} (ceiling {widest})",
             );
         }
     }

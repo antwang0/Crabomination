@@ -146,6 +146,16 @@ pub fn multi_player_game(n: usize) -> GameState {
         .map(|i| crate::player::Player::new(i, format!("P{i}")))
         .collect();
     let mut g = GameState::new(players);
+    // PINNED, because this is the TEST helper. `GameState::new` takes
+    // `GameRng::default()` = `from_entropy`, which is right for a real match
+    // (hands must not be predictable from the outside) and wrong for a suite:
+    // any test whose value comes out of a bot simulation then draws from a
+    // different stream on every run. `mulligan_sim_prefers_the_functional_hand`
+    // inverted on 1 of 200 streams — a 0.5 % flake that aborted one full suite
+    // run here and would abort a sweep or a CI job at random. The simulators
+    // that matter already re-pin (`selfplay.rs`, `recommend.rs`, `demo.rs`,
+    // `cube.rs`); this is the one entry point that did not.
+    g.rng.reseed(0x7A05_8C1B_2E4D_9F31);
     g.step = TurnStep::PreCombatMain;
     g
 }
