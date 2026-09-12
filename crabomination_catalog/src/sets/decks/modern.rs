@@ -2206,19 +2206,25 @@ pub fn greater_good() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            // The sacrifice is the activation cost. It is spelled in the effect
-            // (the payoff reads what was sacrificed), which does **not** gate
-            // the activation — so without this condition a bot could activate
-            // it with nothing to sacrifice, for ever.
-            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+            // ⚠ THE SACRIFICE IS AN ACTIVATION COST, AND IT HAS TO BE ONE.
+            // It was spelled in the EFFECT, behind a `condition` that only
+            // asked "do you control a creature?" — which stays true until the
+            // first copy RESOLVES, so every announcement in between was legal.
+            // The `abilarms` pilot found the end of that: `all` seed 23, turn
+            // 43, **a stack of 3,213 with 3,119 Greater Good activations on
+            // it** off three copies and six creatures, and the cell did not
+            // finish 12 games in 30 minutes (robustness grid, 2026-09-12).
+            // `sac_other_filter` pays it at announcement, gates the
+            // activation on a candidate existing (`candidates.len() < count`
+            // is `SelectionRequirementViolated`) and stamps
+            // `Value::SacrificedPower` for the draw — which is what
+            // `perform_activated_ability`'s own comment says this card is the
+            // example of.
+            sac_other_filter: Some((
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ))),
+                1,
+            )),
             effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
                 Effect::Draw {
                     who: Selector::You,
                     amount: Value::SacrificedPower,
@@ -2237,7 +2243,6 @@ pub fn greater_good() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()
@@ -2346,24 +2351,22 @@ pub fn goblin_bombardment() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            // The sacrifice is the activation cost. It is spelled in the effect
-            // (the payoff reads what was sacrificed), which does **not** gate
-            // the activation — so without this condition a bot could activate
-            // it with nothing to sacrifice, for ever.
-            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+            // ⚠ THE SACRIFICE IS AN ACTIVATION COST, AND A `condition` IS NOT
+            // ONE. "Do you control a creature?" stays true until the first
+            // copy RESOLVES, so every announcement in between is legal —
+            // Greater Good, built the same way, reached **a stack of 3,213
+            // with 3,119 activations on it** (robustness grid `--pilots`,
+            // `abilarms` on `all` seed 23, 2026-09-12). `sac_other_filter`
+            // pays it at announcement and gates the activation on a candidate
+            // existing.
+            sac_other_filter: Some((
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ))),
-            effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                Effect::DealDamage {
-                    to: Selector::Target(0),
-                    amount: Value::Const(1),
-                },
-            ]),
+                1,
+            )),
+            effect: Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(1),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -2372,7 +2375,6 @@ pub fn goblin_bombardment() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None,
-            sac_other_filter: None,
             tap_other_filter: None,
             from_hand: false,
             ..Default::default()

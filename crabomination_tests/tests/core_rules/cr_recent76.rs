@@ -156,16 +156,19 @@ fn cr_732_3_repeated_free_activation_is_rejected() {
 /// own previous call and the cap was unreachable in the case it exists for.
 /// Two shipped cards reached ~50,000 copies of one ability on one stack in a
 /// `--decks cube` game: Blinking Spirit (`{0}`: return this to its owner's hand)
-/// and Greater Good, whose sacrifice is spelled in the *effect* and so is paid
+/// and Greater Good, whose sacrifice was spelled in the *effect* and so was paid
 /// at resolution, not at announcement — which also means the printed cost
 /// cannot be what decides whether to watch.
+///
+/// ⚠ **Greater Good is no longer one of them, and the case below says why.**
+/// Its sacrifice is a real `sac_other_filter` cost since 2026-09-12, so the
+/// board bounds it before this watch ever has to: the second announcement has
+/// nothing to pay with. The watch is still the backstop for a printed `{0}`
+/// that consumes nothing, which is what Blinking Spirit is.
 #[test]
 fn cr_732_3_repeat_is_rejected_without_resolving_between_activations() {
     use crabomination::game::types::GameError;
-    for (name, def, index) in [
-        ("Blinking Spirit", catalog::blinking_spirit(), 0usize),
-        ("Greater Good", catalog::greater_good(), 0usize),
-    ] {
+    for (name, def, index) in [("Blinking Spirit", catalog::blinking_spirit(), 0usize)] {
         let mut g = two_player_game();
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
@@ -196,6 +199,46 @@ fn cr_732_3_repeat_is_rejected_without_resolving_between_activations() {
         assert!(g.stack.len() <= 60, "{name} left {} on the stack", g.stack.len());
         assert!(g.game_over.is_none(), "a fragmented loop is not a draw");
     }
+}
+
+/// CR 602.5b — and the card the watch above used to need is bounded by its own
+/// COST now, one announcement in.
+///
+/// Greater Good's sacrifice was the effect's first step behind a `condition`
+/// that only asked "do you control a creature?" — true until the first copy
+/// RESOLVES, so every announcement in between was legal. `abilarms` on
+/// `--decks all` seed 23 found the end of it: turn 43, a stack of 3,213 with
+/// 3,119 Greater Good activations on it.
+#[test]
+fn cr_602_5b_greater_goods_sacrifice_is_paid_at_announcement() {
+    use crabomination::game::types::GameError;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(fodder);
+    let gg = g.add_card_to_battlefield(0, catalog::greater_good());
+    g.clear_sickness(gg);
+    let activate = |g: &mut crabomination::game::GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: gg,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+    };
+    activate(&mut g).expect("one creature pays for one activation");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == fodder),
+        "the sacrifice is paid on ANNOUNCEMENT",
+    );
+    assert!(
+        matches!(activate(&mut g), Err(GameError::SelectionRequirementViolated)),
+        "the second announcement has nothing to pay with",
+    );
+    assert_eq!(g.stack.len(), 1, "one activation on the stack, not two");
 }
 
 /// CR 732.3 — a paid loop whose cost is met by the source's own mana ability.

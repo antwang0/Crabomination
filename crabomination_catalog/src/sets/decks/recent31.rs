@@ -574,21 +574,19 @@ pub fn butcher_of_the_horde() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
-            // Sacrifice-another cost folded as the effect's first step, which
-            // does **not** gate the activation — hence the condition, or a bot
-            // activates it with nothing to sacrifice for ever.
-            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou)
-                    .and(SelectionRequirement::OtherThanSource),
-            ))),
+            // ⚠ THE SACRIFICE IS AN ACTIVATION COST, AND A `condition` IS NOT
+            // ONE. "Do you control a creature?" stays true until the first
+            // copy RESOLVES, so every announcement in between is legal —
+            // Greater Good, built the same way, reached **a stack of 3,213
+            // with 3,119 activations on it** (robustness grid `--pilots`,
+            // `abilarms` on `all` seed 23, 2026-09-12). `sac_other_filter`
+            // pays it at announcement and gates the activation on a candidate
+            // existing.
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                1,
+            )),
             effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::OtherThanSource),
-                },
                 Effect::ChooseMode(vec![
                     Effect::GrantKeyword {
                         what: Selector::This,

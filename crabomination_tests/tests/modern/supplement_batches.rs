@@ -524,6 +524,48 @@ fn greater_good_sacrifices_creature_and_draws_power() {
         "Net hand = +4 draw - 3 discard = +1");
 }
 
+/// CR 602.5b — Greater Good's sacrifice is an activation COST, so it cannot be
+/// announced more times than there are creatures to pay with.
+///
+/// It used to be spelled in the EFFECT, behind a `condition` that only asked
+/// "do you control a creature?" — which stays true until the first copy
+/// RESOLVES, so every announcement in between was legal. The `abilarms` pilot
+/// found the end of that on `--decks all` seed 23: turn 43, **a stack of 3,213
+/// with 3,119 Greater Good activations on it** off three copies and six
+/// creatures, and the cell did not finish 12 games in 30 minutes.
+#[test]
+fn greater_good_cannot_be_announced_more_times_than_it_can_pay_for() {
+    let mut g = two_player_game();
+    let gg = g.add_card_to_battlefield(0, catalog::greater_good());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(gg);
+    g.clear_sickness(fodder);
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let activate = |g: &mut crabomination::game::GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: gg,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+    };
+    // The one creature pays for the first announcement, at announcement time.
+    activate(&mut g).expect("one creature, one activation");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == fodder),
+        "the sacrifice is paid on ANNOUNCEMENT, not on resolution",
+    );
+    // With the board empty of creatures the second announcement has nothing to
+    // pay with — and the ability is still on the stack, which is exactly the
+    // window the old shape let a bot fill.
+    assert!(activate(&mut g).is_err(), "nothing left to sacrifice");
+    assert_eq!(g.stack.len(), 1, "one activation on the stack, not two");
+}
+
 // ── Cube cards (round 6: modal counter, sac-payoff, drain Demon, recursion) ──
 
 #[test]

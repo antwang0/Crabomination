@@ -204,13 +204,24 @@ mod recent31 {
 
     #[test]
     fn butcher_grants_chosen_keyword_for_a_sacrifice() {
+        // ⚠ ACTIVATED, not `resolve_effect`d: the sacrifice is the ability's
+        // COST (2026-09-12 — it used to be the effect's first step, which does
+        // not bound the announcements), so the effect alone sacrifices nothing.
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, catalog::butcher_of_the_horde());
-        g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
-        let mut ctx = ctx0(&g);
-        ctx.source = Some(id);
+        let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+        g.clear_sickness(id);
+        g.clear_sickness(fodder);
         // Default decider picks mode 0 (vigilance).
-        g.resolve_effect(&catalog::butcher_of_the_horde().activated_abilities[0].effect, &ctx).unwrap();
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+        .expect("Butcher activates");
         drain_stack(&mut g);
         assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Vigilance));
         assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 1,
@@ -478,15 +489,27 @@ mod recent33 {
 
     #[test]
     fn altar_of_dementia_mills_equal_to_power() {
+        // ⚠ ACTIVATED, not `resolve_effect`d: the sacrifice is the ability's
+        // COST (2026-09-12 — it used to be the effect's first step, which does
+        // not bound the announcements), so the effect alone mills 0.
         let mut g = two_player_game();
         for _ in 0..10 { g.add_card_to_library(1, catalog::island()); }
         let altar = g.add_card_to_battlefield(0, catalog::altar_of_dementia());
-        g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 power
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 power
+        g.clear_sickness(altar);
+        g.clear_sickness(bear);
         let lib_before = g.players[1].library.len();
-        let mut ctx = ctx_for(altar);
-        ctx.targets = vec![Target::Player(1)];
-        g.resolve_effect(&catalog::altar_of_dementia().activated_abilities[0].effect, &ctx).unwrap();
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: altar,
+            ability_index: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+        .expect("Altar activates");
         drain_stack(&mut g);
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "the cost was paid");
         assert_eq!(g.players[1].library.len(), lib_before - 2, "milled = sacrificed creature's power");
     }
 

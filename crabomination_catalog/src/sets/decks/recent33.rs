@@ -82,25 +82,22 @@ pub fn altar_of_dementia() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
-            // The sacrifice is the activation cost. It is spelled in the effect
-            // (the payoff reads what was sacrificed, or the attachment LKI
-            // needs it), which does **not** gate the activation — so without
-            // this condition a bot could activate it with nothing to
-            // sacrifice, for ever. See `no_activated_ability_is_free_...`.
-            condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
+            // ⚠ THE SACRIFICE IS AN ACTIVATION COST, AND A `condition` IS NOT
+            // ONE. "Do you control a creature?" stays true until the first
+            // copy RESOLVES, so every announcement in between is legal —
+            // Greater Good, built the same way, reached **a stack of 3,213
+            // with 3,119 activations on it** (robustness grid `--pilots`,
+            // `abilarms` on `all` seed 23, 2026-09-12). `sac_other_filter`
+            // pays it at announcement and gates the activation on a candidate
+            // existing.
+            sac_other_filter: Some((
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ))),
-            effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                Effect::Mill {
-                    who: target_filtered(SelectionRequirement::Player),
-                    amount: Value::SacrificedPower,
-                },
-            ]),
+                1,
+            )),
+            effect: Effect::Mill {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::SacrificedPower,
+            },
             ..Default::default()
         }],
         ..Default::default()
