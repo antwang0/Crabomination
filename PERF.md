@@ -3044,6 +3044,10 @@ grid    and the `--wide` LADDER at the closing tip (`SEEDS` 1..101's 26 primes-a
         `POOLS="all sealed"`, the sizes the script's header says "actually find things"): **52 cells / 301,600 games, 0
         failures, cap 0 / stuck 0 / draw 10**. With the dflt sweeps above that is ~1.07 M games swept this session for
         one defect — the `abilarms` stack — plus the Beacon board's ending.
+actor   the grid's THIRD leg at the closing tip, which `bot_ladder` cannot stand in for (it runs the encoder on no
+        pool, so `server/encode.rs`'s four `debug_assert!`s have no other audit): `target-audit/overflow/selfplay_train
+        --actors 3 --games 3000 --steps 2` at seeds 7 and 20260912 — **2 cells, 0 failures, 6,000 games at 85.7 and
+        82.4 games/s** with `debug-assertions` on. All three legs green.
 perf    none claimed. `(-291)` is a cost, measured and gated down 7x rather than assumed: ungated it was +0.167 % on
         cube, because `end_turn` runs 3,234 times a six-game run and only ~150 of those are real turns. Sampling from
         turn 30 and one turn in 4 leaves +0.046 % / +0.024 % / +0.021 % on fixed / cube / sealed. `GameState` is 1,600
