@@ -16,7 +16,7 @@ column assumes is right.
     python3 scripts/audit_printed_body.py --rows 0   # every row
 
 COVERAGE, 2026-09-12: **16,483 factories priced, 17,066 on the type line,
-16,748 on subtypes** — from 10,270, 10,409 and 0. And the
+16,748 on subtypes, 16,601 on keywords** — from 10,270, 10,409, 0 and 0. And the
 2026-09-11 header's "219 real spells over ~40 bespoke helpers" was a mis-read of
 its own skip counts. The reader had four holes and none of them was the helper
 signatures:
@@ -83,6 +83,35 @@ variant at all is `nosubvariant`, NOT a finding: that is missing coverage, and
 counting it as "the card is missing this subtype" would report a catalog that
 cannot spell the word.
 
+**AND THE KEYWORDS ARE A COLUMN — 16,601 factories, 0 findings, 17 when it was
+opened, and it is the one that reaches the SIMULATOR'S HOT PATH.** Combat reads
+`keywords` on every block, every damage assignment and every evasion check of
+every self-play game, so a wrong one is paid for millions of times. Kurkesh,
+Onakke Ancient was a 4/3 with FLYING it does not print; Glorybringer dealt its
+4 damage on every attack and untapped anyway, because the exert that gates it
+was missing; Dread Drone and Tar Snare were marked `Devoid`, which made two
+BLACK Rise-of-the-Eldrazi cards colorless (the oracle's `colors` is `["B"]` for
+both, and devoid was printed five years later); and Stonework Packbeast and
+Tajuru Paragon were `Changeling` — every creature type — where the card prints
+"is also a Cleric, Rogue, Warrior, and Wizard", four.
+
+Only the EVERGREEN subset is compared: the oracle's `keywords` array mixes
+keyword abilities with keyword ACTIONS (Scry, Mill, Fight) and ability words
+(Landfall), and the engine models most of those as effects, so a whole-set
+comparison would be noise rather than a column. And the array counts keywords
+the card GRANTS — Steel Seraph's is `['Prototype', 'Flying', 'Vigilance']` for a
+card with flying whose trigger grants "your choice of flying, vigilance, or
+lifelink" — so the MISSING direction reads the printed keyword LINES instead
+(a line that is nothing but a comma-separated list of keyword words). The other
+direction needs no such rule, and is where every finding came from.
+
+Eight rows are `REVIEWED_KEYWORDS`: a keyword the engine carries instead of the
+printed wording it is equivalent to (Cockatrice's deathtouch for "destroy that
+creature at end of combat", Exalted Angel's lifelink for "you gain that much
+life", Necromancy's flash for "as though it had flash"). Each needed a
+reviewer's judgement ONCE; the list is what stops it costing that judgement
+every run, which is the same reason `REVIEWED_DEAD_MODES` exists one audit over.
+
 ⚠ **ONE COLUMN'S SKIP IS NOT THE OTHERS'.** The loop used to `continue` on a
 cost it could not read, so 900-odd cards behind a cost chain the resolver gives
 up on were dropped from the TYPE and SUBTYPE columns as well — three columns'
@@ -103,6 +132,8 @@ What is left, with the reason:
   * `noname` (184) — a factory whose name is in neither the literal, its head,
     nor its own `pub fn`.
   * `nosubvariant` (9) — above.
+  * `nokeywords` (460) — a `keywords:` the reader will not guess at: a helper
+    call, a local built by `push`, or a `vec!` with a non-`Keyword::` element.
   * `faces` / `split` / `star` / `notaspell` — documented below, all deliberate.
     `notaspell` also drops a Vanguard avatar named after a card: Maraxus of Keld
     is both, and the oracle lookup cannot tell them apart.
@@ -147,6 +178,7 @@ battery now.
   * a name the cache does not hold (synthesised cards, tokens).
 """
 import argparse
+import collections
 import json
 import pathlib
 import re
@@ -264,6 +296,119 @@ INNER_BASE = re.compile(r"\.\.(?:crate::card::)*CardDefinition \{")
 # The two idioms for "this card becomes a creature": the definition's own
 # `creature_types` are then the creature's, not the printed line's.
 BECOMES_CREATURE = re.compile(r"\bSelfIsCreatureIf\b|\bcreature_off_battlefield:\s*true")
+
+# ── the printed keywords ─────────────────────────────────────────────────────
+# Only the ones BOTH sides spell as a plain keyword: the oracle's `keywords`
+# array is a mix of keyword abilities, keyword ACTIONS (Scry, Mill, Fight) and
+# ability words (Landfall), and the engine models most of those as effects, so
+# a whole-set comparison would be noise. These are the ones with a `Keyword`
+# variant and no effect half — and they are the ones combat reads every turn,
+# which is why the column is worth having at all.
+EVERGREEN = {
+    "Flying": "Flying", "Trample": "Trample", "Vigilance": "Vigilance",
+    "Haste": "Haste", "Menace": "Menace", "Reach": "Reach",
+    "Lifelink": "Lifelink", "First strike": "FirstStrike",
+    "Deathtouch": "Deathtouch", "Defender": "Defender",
+    "Double strike": "DoubleStrike", "Shroud": "Shroud",
+    "Indestructible": "Indestructible", "Flash": "Flash",
+    "Intimidate": "Intimidate", "Fear": "Fear", "Infect": "Infect",
+    "Wither": "Wither", "Changeling": "Changeling", "Skulk": "Skulk",
+    "Shadow": "Shadow", "Horsemanship": "Horsemanship", "Persist": "Persist",
+    "Undying": "Undying", "Exert": "Exert", "Devoid": "Devoid",
+}
+EVERGREEN_VARIANTS = set(EVERGREEN.values())
+# ⚠ THE ORACLE'S `keywords` ARRAY COUNTS KEYWORDS THE CARD *GRANTS*. Steel
+# Seraph's is `['Prototype', 'Flying', 'Vigilance']` and the card is a 5/4 with
+# flying whose trigger grants "your choice of flying, vigilance, or lifelink" —
+# so the array alone reported a correct card as missing vigilance. A keyword the
+# card HAS is on a printed keyword LINE: a line of the oracle text that is
+# nothing but a comma-separated list of keyword words ("Flying, first strike,
+# lifelink"), or the keyword alone. The other direction — the engine has one the
+# card does not print — needs no such rule and is where this column's findings
+# came from.
+KEYWORD_LINE_WORD = re.compile(r"[A-Za-z][A-Za-z\' -]*")
+
+# A keyword the engine carries INSTEAD of the printed wording it is equivalent
+# to. Each needed a reviewer's judgement once; without the list it costs that
+# judgement every run, which is what made `REVIEWED_DEAD_MODES` necessary one
+# audit over. A card here is exempt for that ONE variant only — every other
+# keyword on it is still compared — and a NEW row is still the signal.
+REVIEWED_KEYWORDS = {
+    # "Whenever this creature deals combat damage to a creature, destroy that
+    # creature" is deathtouch in everything combat reads. It is not identical
+    # (deathtouch also makes 1 damage lethal for ASSIGNMENT, and the printed
+    # ability spares Walls), so these are approximations, not equivalences.
+    ("Stinkweed Imp", "Deathtouch"): "destroy-on-combat-damage, printed pre-deathtouch",
+    ("Thicket Basilisk", "Deathtouch"): "destroy at end of combat, non-Wall only",
+    ("Cockatrice", "Deathtouch"): "destroy at end of combat, non-Wall only",
+    # "Whenever this creature deals damage, you gain that much life" is the
+    # pre-lifelink templating of lifelink; same result, triggered rather than
+    # static.
+    ("Exalted Angel", "Lifelink"): "gain-that-much-life trigger, printed pre-lifelink",
+    ("Paladin of Prahv", "Lifelink"): "gain-that-much-life trigger, printed pre-lifelink",
+    # "is every creature type (even if this card isn't on the battlefield)" IS
+    # changeling; the keyword was printed four years later.
+    ("Mistform Ultimus", "Changeling"): "is every creature type, printed pre-changeling",
+    # "You may cast this spell as though it had flash" — the engine's `Flash`
+    # is exactly that permission. The sacrifice rider is the card's own half.
+    ("Ward of Lights", "Flash"): "cast as though it had flash",
+    ("Necromancy", "Flash"): "cast as though it had flash",
+}
+
+
+def printed_keyword_lines(text: str) -> set:
+    """The evergreen keywords the card itself HAS, off its printed lines."""
+    out = set()
+    for line in (text or "").split("\n"):
+        line = line.strip().rstrip(".")
+        if not line or "(" in line:
+            line = line.split("(")[0].strip().rstrip(",").rstrip(".")
+        parts = [x.strip() for x in line.split(",") if x.strip()]
+        if not parts or not all(KEYWORD_LINE_WORD.fullmatch(x) for x in parts):
+            continue
+        low = {x.lower() for x in parts}
+        if not low <= {k.lower() for k in EVERGREEN}:
+            continue
+        out |= {v for k, v in EVERGREEN.items() if k.lower() in low}
+    return out
+KW_ELEM = re.compile(r"^(?:crate::card::)?Keyword::([A-Za-z0-9_]+)")
+KW_SHORTHAND = re.compile(r"(?:^|,)\s*keywords\s*(?:,|$)")
+
+
+def parse_keywords(inner, params=(), args=()):
+    """`(keyword variants, declared)` off a literal's raw inner text.
+
+    None means unreadable, exactly as `parse_subtypes` — a `keywords:` built by
+    a helper call or a local `push` is not an empty keyword list, and reading it
+    as one reports a correct card as keywordless. A `Keyword::Ward(cost)` entry
+    keeps its variant name: the payload is not this column's business, and
+    skipping the whole card over one payloaded entry would drop the Flying next
+    to it.
+    """
+    if inner is None:
+        return set(), False
+    f = raw_field(inner, "keywords")
+    if f is None:
+        if KW_SHORTHAND.search(inner):
+            return None, True
+        bm = INNER_BASE.search(inner)
+        if bm:
+            nested = literal_raw(inner, bm.start())
+            if nested is not None:
+                return parse_keywords(nested, params, args)
+        return set(), False
+    f = bind_param(f, params, args)
+    fs = f.strip().rstrip(",")
+    m = re.match(r"vec!\[(.*)\]$", re.sub(r"\s+", " ", fs), re.S)
+    if not m:
+        return None, True
+    out = set()
+    for elem in split_args(m.group(1)):
+        em = KW_ELEM.match(elem.strip())
+        if not em:
+            return None, True
+        out.add(em.group(1))
+    return out, True
 
 
 def returned_literal(block: str, after: int):
@@ -842,6 +987,10 @@ def parse_type_line(body: str):
     return got_t, got_s, base, tm is not None, sm is not None
 
 
+Read = collections.namedtuple(
+    "Read", "types supers subs keywords ok sub_ok kw_ok")
+
+
 def resolve_from_block(index, path, blk, args, depth, subs_index=None):
     """`resolve_type_line` for a HELPER block, with the caller's arguments.
 
@@ -858,7 +1007,7 @@ def resolve_from_block(index, path, blk, args, depth, subs_index=None):
         after = blk[m.end():] if m else ""
         hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after)
         if not hm:
-            return set(), set(), None, False, False
+            return Read(set(), set(), None, None, False, False, False)
         body, call_src = ".." + hm.group(1) + "(", after
     return resolve_type_line(index, path, body, None, depth, inner,
                              helper_params(blk), args, call_src, subs_index)
@@ -884,7 +1033,8 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     """
     got_t, got_s, base, has_t, has_s = parse_type_line(body)
     got_sub, has_sub = parse_subtypes(inner, params, args, subs_index, path)
-    sub_ok = got_sub is not None
+    got_kw, has_kw = parse_keywords(inner, params, args)
+    sub_ok, kw_ok = got_sub is not None, got_kw is not None
     ok = True
     # The wrapper idiom sits OUTSIDE the literal, so it is read off `raw`.
     if raw is not None and depth == 0:
@@ -913,14 +1063,18 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
                         wsub, whsub = parse_subtypes(helper_raw(wblk), (), (), subs_index, wpath)
                         if whsub:
                             got_sub, sub_ok, has_sub = wsub, wsub is not None, True
+                    if not has_kw:
+                        wkw, whkw = parse_keywords(helper_raw(wblk))
+                        if whkw:
+                            got_kw, kw_ok, has_kw = wkw, wkw is not None, True
                     break
             else:
-                ok = sub_ok = False
+                ok = sub_ok = kw_ok = False
     if base:
         cands = [b for pth, b in index.get(base, []) if pth == path] \
             or [b for _, b in index.get(base, [])]
         if not cands or depth >= 5:
-            return got_t, got_s, got_sub, False, False
+            return Read(got_t, got_s, got_sub, got_kw, False, False, False)
         # The base call's arguments, mapped through THIS level's parameters, so
         # `fn sliver(name, c, p, t) { creature(name, c, vec![Sliver], p, t) }`
         # hands `creature` a literal and `fn creature(.., ct, ..)`'s
@@ -931,13 +1085,15 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
             or re.search(r"\b%s\s*\(" % re.escape(base), src)
         bargs = call_args(src, bm.start() + bm.group(0).rindex("(")) if bm else []
         mapped = [bind_param(a, params, args) for a in bargs]
-        bt, bs, bsub, bok, bsok = resolve_from_block(
-            index, path, cands[0], mapped, depth + 1, subs_index)
-        ok = ok and bok
+        b = resolve_from_block(index, path, cands[0], mapped, depth + 1, subs_index)
+        bsub, bsok = b.subs, b.sub_ok
+        ok = ok and b.ok
         if not has_t:
-            got_t = bt
+            got_t = b.types
         if not has_s:
-            got_s = bs
+            got_s = b.supers
+        if not has_kw:
+            got_kw, kw_ok = b.keywords, b.kw_ok
         # A `..base(..)` supplies the subtypes the literal did not declare —
         # `..creature("Storm Crow", .., types, 1, 2)`. A literal that DID
         # declare them wins, as the struct-update syntax says.
@@ -946,7 +1102,7 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     # Every card has card types; an empty set means the chain was not readable,
     # not that the card has none. Supertypes are genuinely optional, so they
     # cannot carry this test.
-    return got_t, got_s, got_sub, ok and bool(got_t), sub_ok
+    return Read(got_t, got_s, got_sub, got_kw, ok and bool(got_t), sub_ok, kw_ok)
 
 
 def main() -> int:
@@ -957,10 +1113,10 @@ def main() -> int:
     index = build_helper_index(CATALOG)
     subs_index = build_subtypes_index(CATALOG)
     checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
-    checked_types = checked_sub = 0
+    checked_types = checked_sub = checked_kw = wrong_kw = 0
     skip = {"nocache": 0, "faces": 0, "split": 0, "star": 0, "nonliteral": 0,
             "noname": 0, "notaspell": 0, "notyped": 0, "nosubtypes": 0,
-            "nosubvariant": 0}
+            "nosubvariant": 0, "nokeywords": 0}
     rows = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
@@ -1120,10 +1276,12 @@ def main() -> int:
             # A pure-helper factory's pseudo-literal carries no argument list,
             # so the base call is read out of the factory text instead — the
             # same `after_sig` the cost reader falls back to.
-            got_t, got_s, got_sub, resolved, sub_ok = resolve_type_line(
+            read = resolve_type_line(
                 index, path, body, raw, inner=factory_raw(raw),
                 call_src=raw[raw.find("\n") + 1:] if pseudo else None,
                 subs_index=subs_index)
+            got_t, got_s, got_sub = read.types, read.supers, read.subs
+            resolved, sub_ok = read.ok, read.sub_ok
             if not resolved:
                 skip["notyped"] += 1
                 continue
@@ -1174,6 +1332,35 @@ def main() -> int:
                                      " ".join(sorted(want_sub)) or "(none)"))
             elif not sub_ok:
                 skip["nosubtypes"] += 1
+            # The PRINTED KEYWORDS, restricted to the evergreen set both sides
+            # spell as a plain keyword. A missing Flying is not cosmetic: the
+            # bot's block search, the damage assignment and every evasion check
+            # read this field on every combat of every self-play game.
+            if not read.kw_ok:
+                skip["nokeywords"] += 1
+            else:
+                want_kw = {EVERGREEN[k] for k in (card.get("keywords") or [])
+                           if k in EVERGREEN}
+                have_kw = read.keywords & EVERGREEN_VARIANTS
+                # ⚠ A KEYWORD THE CARD GRANTS ITSELF IS NOT A MISSING ONE.
+                # "As long as you control a Swamp, this has fear" is a
+                # `StaticAbility`, not a `keywords:` entry, and the oracle
+                # counts it in the card's keywords all the same. So a keyword
+                # the factory mentions ANYWHERE is not reported missing; the
+                # other direction (the engine has one the card does not print)
+                # needs no such guard.
+                printed = printed_keyword_lines(card.get("oracle_text"))
+                missing = {k for k in (want_kw & printed) - have_kw
+                           if f"Keyword::{k}" not in raw
+                           and (name, k) not in REVIEWED_KEYWORDS}
+                extra = {k for k in have_kw - want_kw
+                         if (name, k) not in REVIEWED_KEYWORDS}
+                checked_kw += 1
+                if missing or extra:
+                    wrong_kw += 1
+                    rows.append(("kw", name, f"{path.name}::{fname}",
+                                 " ".join(sorted(have_kw)) or "(none)",
+                                 " ".join(sorted(want_kw)) or "(none)"))
             op, ot = card.get("power"), card.get("toughness")
             pm, tm = POWER.search(body), TOUGH.search(body)
             if op is None or ot is None or pm is None or tm is None:
@@ -1192,9 +1379,10 @@ def main() -> int:
     if len(rows) > len(shown):
         print(f"  ... {len(rows) - len(shown)} more (--rows 0)")
     print(f"# compared against the oracle: {checked} priced, {checked_types} on the "
-          f"type line, {checked_sub} on subtypes — "
+          f"type line, {checked_sub} on subtypes, {checked_kw} on keywords — "
           f"**{wrong_cost} wrong cost, {wrong_pt} wrong P/T, "
-          f"{missing_flag} missing `no_mana_cost`, {wrong_types} wrong type line**")
+          f"{missing_flag} missing `no_mana_cost`, {wrong_types} wrong type line, "
+          f"{wrong_kw} wrong keywords**")
     print("# skipped — " + ", ".join(f"{k} {v}" for k, v in sorted(skip.items())))
     return 0
 

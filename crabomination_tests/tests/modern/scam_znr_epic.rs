@@ -1194,24 +1194,34 @@ fn joraga_visionary_etb_draws() {
     assert_eq!(g.players[0].hand.len(), before, "drew a card on ETB");
 }
 
-/// Stonework Packbeast fills a party slot by **Changeling**, not by listing
-/// the four roles.
+/// Stonework Packbeast fills a party slot with the FOUR roles it prints, not
+/// with changeling.
 ///
-/// Its printed line is "Artifact Creature — Beast" and the keyword is what
-/// makes it every other type (CR 702.73). It shipped with Beast plus the four
-/// party roles spelled out — which filled a party but made it a Cleric to a
-/// Cleric anthem and nothing to a Sliver
-/// (`every_card_has_the_subtypes_its_printing_has`).
-/// `Value::PartyCount` honours Changeling, so the behaviour is unchanged
-/// where it mattered and correct everywhere else.
+/// Its printed line is "Artifact Creature — Beast" plus "Stonework Packbeast is
+/// also a Cleric, Rogue, Warrior, and Wizard" — four types. It shipped with
+/// those four in `creature_types` (wrong: the type line is Beast), was then
+/// "corrected" to `Keyword::Changeling` (wrong the other way: changeling is
+/// EVERY creature type, so the Packbeast was a Sliver to a Sliver lord and an
+/// Eldrazi to an Eldrazi one), and is four `AddCreatureTypeToMatching` statics
+/// now — which is what the card says. Found by the keyword column of
+/// `scripts/audit_printed_body.py`.
 #[test]
-fn stonework_packbeast_is_a_changeling_and_fills_a_party() {
+fn stonework_packbeast_is_four_named_roles_not_a_changeling() {
     use crabomination::card::{CreatureType, Keyword};
     let mut g = two_player_game();
     let pb = g.add_card_to_battlefield(0, catalog::stonework_packbeast());
     let def = &g.battlefield_find(pb).unwrap().definition;
     assert_eq!(def.subtypes.creature_types, vec![CreatureType::Beast], "printed type only");
-    assert!(def.keywords.contains(&Keyword::Changeling), "and Changeling for the rest");
+    assert!(!def.keywords.contains(&Keyword::Changeling), "NOT changeling: four named roles");
+    let cp = g.computed_permanent(pb).unwrap();
+    for ct in [CreatureType::Cleric, CreatureType::Rogue,
+               CreatureType::Warrior, CreatureType::Wizard] {
+        assert!(cp.subtypes().creature_types.contains(&ct), "also a {ct:?}");
+    }
+    assert!(
+        !cp.subtypes().creature_types.contains(&CreatureType::Sliver),
+        "and NOT every other type — that was the changeling bug",
+    );
 
     // Squad Commander mints one Kor Warrior per party member. It is a Kor
     // Warrior itself, so with the Packbeast the party is two — and it is two

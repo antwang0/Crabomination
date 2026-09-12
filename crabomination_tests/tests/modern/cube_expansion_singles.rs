@@ -1027,6 +1027,14 @@ fn glorybringer_attack_deals_4_damage_to_opponent_creature() {
     // Grizzly Bears has 2 toughness; 4 damage kills it
     assert!(g.players[1].graveyard.iter().any(|c| c.id == opp_creature),
         "Glorybringer should deal 4 damage to the targeted creature, killing it");
+    // CR 702.137 — the damage is the EXERT bonus, so it is PAID for: the dragon
+    // does not untap next untap step. It shipped without `Keyword::Exert`, so
+    // the 4 damage was free on every attack (the keyword column of
+    // `scripts/audit_printed_body.py`).
+    assert!(
+        g.battlefield_find(glory).unwrap().skip_next_untap,
+        "Glorybringer exerted, so it skips its next untap",
+    );
 }
 
 #[test]

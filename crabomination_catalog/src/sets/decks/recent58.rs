@@ -3,8 +3,8 @@
 
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement as R, Selector, Subtypes, TokenDefinition, TriggeredAbility,
-    Value,
+    Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes,
+    TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{LookPick, Duration, PlayerRef};
@@ -113,8 +113,25 @@ pub fn tajuru_paragon() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        // Changeling (CR 702.73), not the four extra types it used to list.
-        keywords: vec![Keyword::Changeling, Keyword::Kicker(cost(&[generic(3)]))],
+        // NOT changeling: the printed line is "is also a Cleric, Rogue,
+        // Warrior, and Wizard" — four types, where changeling is every one of
+        // them (a Sliver, a Dragon, an Eldrazi …).
+        keywords: vec![Keyword::Kicker(cost(&[generic(3)]))],
+        static_abilities: [
+            CreatureType::Cleric,
+            CreatureType::Rogue,
+            CreatureType::Warrior,
+            CreatureType::Wizard,
+        ]
+        .into_iter()
+        .map(|creature_type| StaticAbility {
+            description: "This creature is also a Cleric, Rogue, Warrior, and Wizard.",
+            effect: StaticEffect::AddCreatureTypeToMatching {
+                applies_to: Selector::This,
+                creature_type,
+            },
+        })
+        .collect(),
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::LookPickToHand(Box::new(LookPick {

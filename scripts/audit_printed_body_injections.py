@@ -49,6 +49,26 @@ CASES = [
  ("fires", "Subtypes-returning helper (war fn creatures)", "sets/war.rs",
   "fn creatures(t: Vec<CreatureType>) -> Subtypes {\n    Subtypes {\n        creature_types: t,",
   "fn creatures(t: Vec<CreatureType>) -> Subtypes {\n    Subtypes {\n        creature_types: vec![],"),
+ ("fires", "a keyword removed from a literal (mod_set Glorybringer)",
+  "sets/mod_set/creatures.rs",
+  "        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Exert],",
+  "        keywords: vec![Keyword::Haste, Keyword::Exert],"),
+ ("fires", "a keyword ADDED that the card does not print (ogw fn drone)",
+  "sets/ogw/creatures.rs",
+  "            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],\n"
+  "            ..Default::default()\n        },\n        power: p,\n        toughness: t,\n"
+  "        keywords: vec![Keyword::Devoid],",
+  "            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],\n"
+  "            ..Default::default()\n        },\n        power: p,\n        toughness: t,\n"
+  "        keywords: vec![Keyword::Devoid, Keyword::Flying],"),
+ # Negative: the oracle's `keywords` array counts keywords the card GRANTS, so
+ # the missing direction reads the printed keyword LINES instead. Steel Seraph
+ # grants "flying, vigilance, or lifelink" and has only flying; dropping its
+ # trigger must not make vigilance go missing.
+ ("silent", "a granted keyword is not a missing one (bro Steel Seraph)",
+  "sets/bro.rs",
+  "                keyword: Keyword::Flying,\n                duration: Duration::EndOfTurn,",
+  "                keyword: Keyword::Menace,\n                duration: Duration::EndOfTurn,"),
  # Negative: the reader must be looking at the RETURNED literal (the front
  # face), so emptying the BACK face's subtype must change nothing.
  ("silent", "the returned literal, not the first (thb Bronzehide Lion back face)",
@@ -63,7 +83,7 @@ CASES = [
 def run():
     out = subprocess.run([sys.executable, "scripts/audit_printed_body.py", "--rows", "0"],
                          cwd=ROOT, capture_output=True, text=True).stdout
-    rows = len(re.findall(r"^  (?:sub|types|super|cost|p/t|no-cost) ", out, re.M))
+    rows = len(re.findall(r"^  (?:sub|kw|types|super|cost|p/t|no-cost) ", out, re.M))
     head = next((l for l in out.split("\n") if l.startswith("# compared")), "")
     return rows, head
 base, line = run()

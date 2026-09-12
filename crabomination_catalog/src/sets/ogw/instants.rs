@@ -273,7 +273,8 @@ pub fn sweep_away() -> CardDefinition {
     }
 }
 
-/// Warping Wail — {1}{C} Devoid Instant. Choose one — exile target creature
+/// Warping Wail — {1}{C} Instant (colorless by cost; it prints no devoid).
+/// Choose one — exile target creature
 /// with power or toughness 1 or less; counter target sorcery; or create a
 /// 1/1 Eldrazi Scion.
 pub fn warping_wail() -> CardDefinition {
@@ -281,7 +282,6 @@ pub fn warping_wail() -> CardDefinition {
         name: "Warping Wail",
         cost: cost(&[generic(1), colorless(1)]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::Devoid],
         effect: Effect::ChooseMode(vec![
             Effect::Exile {
                 what: target_filtered(
@@ -307,13 +307,13 @@ pub fn warping_wail() -> CardDefinition {
     }
 }
 
-/// Tar Snare — {2}{B} Devoid Instant. Target creature gets -3/-2 EOT.
+/// Tar Snare — {2}{B} Instant. Target creature gets -3/-2 EOT.
+/// NOT devoid: Rise of the Eldrazi predates the keyword and the card is black.
 pub fn tar_snare() -> CardDefinition {
     CardDefinition {
         name: "Tar Snare",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::Devoid],
         effect: pump_target(-3, -2),
         ..Default::default()
     }

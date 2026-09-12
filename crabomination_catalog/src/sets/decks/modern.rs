@@ -33086,11 +33086,25 @@ pub fn stonework_packbeast() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        // Changeling (CR 702.73), not the five types it used to list: the
-        // printed line is "Artifact Creature — Beast" and the keyword is what
-        // makes it every other type
-        // (`every_card_has_the_subtypes_its_printing_has`).
-        keywords: vec![Keyword::Changeling],
+        // NOT changeling: the printed line is "is also a Cleric, Rogue,
+        // Warrior, and Wizard" — four types, where changeling is every one of
+        // them. A `Changeling` Packbeast was a Sliver, a Dragon and an Eldrazi
+        // for every lord on the board.
+        static_abilities: [
+            CreatureType::Cleric,
+            CreatureType::Rogue,
+            CreatureType::Warrior,
+            CreatureType::Wizard,
+        ]
+        .into_iter()
+        .map(|creature_type| StaticAbility {
+            description: "Stonework Packbeast is also a Cleric, Rogue, Warrior, and Wizard.",
+            effect: StaticEffect::AddCreatureTypeToMatching {
+                applies_to: Selector::This,
+                creature_type,
+            },
+        })
+        .collect(),
         // Printed "{2}: Add one mana of any color" — a mana cost, no tap
         // (it shipped as `{T}` until the helper-inlining audit column read it).
         activated_abilities: vec![ActivatedAbility {

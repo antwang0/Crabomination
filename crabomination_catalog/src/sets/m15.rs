@@ -2688,7 +2688,7 @@ pub fn kurkesh_onakke_ancient() -> CardDefinition {
             4,
             3,
             vec![CreatureType::Ogre, CreatureType::Spirit],
-            vec![Keyword::Flying],
+            vec![],
         )
     }
 }

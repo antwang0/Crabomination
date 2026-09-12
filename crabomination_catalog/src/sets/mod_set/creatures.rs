@@ -4387,7 +4387,13 @@ pub fn glorybringer() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Flying, Keyword::Haste],
+        // Exert (CR 702.137) — the 4 damage is the exert BONUS, not an
+        // unconditional attack trigger: the engine auto-exerts an attacking
+        // creature with `Keyword::Exert` (it skips its next untap) and fires
+        // its `SelfSource` `Attacks` trigger as the bonus, which is the idiom
+        // `akh/mod.rs` documents. Without the keyword the dragon dealt 4 every
+        // attack and untapped anyway.
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Exert],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::DealDamage {

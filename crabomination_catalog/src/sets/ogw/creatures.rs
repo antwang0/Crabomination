@@ -95,13 +95,13 @@ pub fn eldrazi_devastator() -> CardDefinition {
     }
 }
 
-/// Warden of Geometries — {4} 2/3 Eldrazi Drone. Devoid, vigilance,
-/// {T}: Add {C}.
+/// Warden of Geometries — {4} 2/3 Eldrazi Drone. Vigilance, {T}: Add {C}.
+/// No devoid: it is colorless by cost and prints the keyword nowhere.
 pub fn warden_of_geometries() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::{ManaPayload, PlayerRef, Value};
     CardDefinition {
-        keywords: vec![Keyword::Devoid, Keyword::Vigilance],
+        keywords: vec![Keyword::Vigilance],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {
@@ -1176,6 +1176,9 @@ pub fn lifespring_druid() -> CardDefinition {
 pub fn dread_drone() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb_mint_token(eldrazi_spawn_token(), 2)],
+        // NOT devoid: Rise of the Eldrazi predates the keyword and this card is
+        // black (the shared `drone` body is the Battle-for-Zendikar one).
+        keywords: vec![],
         ..drone("Dread Drone", cost(&[generic(4), b()]), 4, 1)
     }
 }
