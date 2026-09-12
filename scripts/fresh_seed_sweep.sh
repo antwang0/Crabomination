@@ -18,20 +18,19 @@
 # below count it apart, so a cube block does not read as a failure for a board
 # nobody is going to change.
 #
-# ⚠ **A NOVEL CAP IS A LEAD, NOT A FINDING — RE-RUN THE CELL AT THE PRODUCTION
-# ACTION CAP BEFORE CALLING IT ONE.** `CRAB_MAX_ACTIONS=6000` is a tenth of
-# what production allows, so a legitimately LONG game reads here exactly like a
-# loop, and the `[SATURATED LIFE]` label cannot tell them apart. `all` seed
-# 1149 was the first: 2 caps at 6,000 actions with 41 triggers on the stack at
-# turn 89 on a 40/41-permanent Lorehold board — and at `CRAB_MAX_ACTIONS=50000`
-# the same cell reads **6,800 decided, 0 undecided**. Slow, not stuck.
+# ⚠ **A NOVEL CAP IS RE-RUN AT THE PRODUCTION ACTION CAP BEFORE IT IS
+# REPORTED, and the script does that itself.** `CRAB_MAX_ACTIONS=6000` is a
+# tenth of what production allows — set that low so a real loop ends in under a
+# minute — which makes a legitimately LONG game read exactly like a stuck one,
+# and the `[SATURATED LIFE]` label cannot tell them apart: that board is
+# recognisable, a big slow board is not. `all` seed 1149 was the first: 2 caps
+# at 6,000 actions, 41 triggers on the stack at turn 89 on a 40/41-permanent
+# Lorehold board — and at `CRAB_MAX_ACTIONS=50000` the same cell reads
+# **6,800 decided, 0 undecided**. Slow, not stuck.
 #
-#   CRAB_ANSWER_LOG=strict CRAB_CAP_DIAG=20000 CRAB_MAX_ACTIONS=50000 \
-#     target-audit/overflow/bot_ladder --a dflt --b dflt --games 400 \
-#     --threads 3 --seed <seed> --decks <pool>
-#
-# A cap that SURVIVES that re-run is the signal. One that does not is a slow
-# cell, and PERF's slow-cell entry is where it goes.
+# So a cell that caps with no label is re-run at 50,000 automatically; the cost
+# is paid only when a novel cap appears. Caps that clear are counted as
+# `slow-not-stuck`, and only a cap that SURVIVES the re-run is a defect.
 #
 #   RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit \
 #     cargo build --profile overflow -p crabomination --bin bot_ladder
@@ -51,7 +50,7 @@ GAMES=${3:-400}
 BIN=${4:-target-audit/overflow/bot_ladder}
 cd "$(dirname "$0")/.."
 [ -x "$BIN" ] || { echo "no $BIN — build it (header)"; exit 1; }
-cells=0 games=0 cap=0 stuck=0 draw=0 fail=0 sat=0
+cells=0 games=0 cap=0 stuck=0 draw=0 fail=0 sat=0 slow=0
 for pool in $POOLS; do
   for seed in $SEEDS; do
     t0=$(date +%s)
@@ -77,13 +76,35 @@ for pool in $POOLS; do
         # Three seeds so far — cube 1018, 1069, 1076 — i.e. a pool property.
         known=$(echo "$out" | grep -c "SATURATED LIFE")
         if [ "$known" -gt 0 ]; then sat=$((sat + $1)); fi
+        # A cap this cell cannot explain: RE-RUN IT AT THE PRODUCTION ACTION
+        # CAP before reporting it. `CRAB_MAX_ACTIONS=6000` is a tenth of what
+        # production allows and is set that low so a real loop ends in under a
+        # minute — which makes a merely LONG game read exactly like a stuck
+        # one (`all` 1149: 41 triggers on the stack at turn 89, and 6,800 /
+        # 6,800 decided at 50,000). Only paid when a novel cap appears, so the
+        # common case costs nothing, and the sweep's verdict stops needing a
+        # second command to interpret.
+        if [ "$1" -gt 0 ] && [ "$known" -eq 0 ]; then
+          echo "  NOVEL cap — re-running this cell at CRAB_MAX_ACTIONS=50000 …"
+          re=$(RUST_MIN_STACK=33554432 CRAB_CAP_DIAG=20000 CRAB_MAX_ACTIONS=50000 \
+            timeout 7200 "$BIN" --a dflt --b dflt --games "$GAMES" --threads 3 \
+            --seed "$seed" --decks "$pool" 2>&1)
+          reby=$(echo "$re" | grep -E "^  undecided_by" | tail -1)
+          recap=$(echo "$reby" | awk '{print $3}')
+          if [ -z "$reby" ] || [ "${recap:-0}" -eq 0 ]; then
+            echo "  -> SLOW, not stuck: $(echo "$re" | grep -E '^[0-9]+ decided' | tail -1)"
+            slow=$((slow + $1))
+          else
+            echo "  -> STILL CAPPED at 50,000 actions — a defect. $reby"
+            echo "$re" | grep -A6 "^cap: " | head -40
+          fi
+        fi
       fi
     fi
     cells=$((cells + 1))
   done
 done
-novel=$((cap - sat))
+novel=$((cap - sat - slow))
 [ $((novel + stuck + fail)) -eq 0 ] || fail=$((fail + novel + stuck))
-echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $sat the known saturated-life board) / stuck $stuck / draw $draw"
-echo "  stuck is a defect; a draw is CR 104.4; a NOVEL cap ($novel) is a LEAD —"
-echo "  re-run that cell at CRAB_MAX_ACTIONS=50000 before calling it one (header)"
+echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $sat the known saturated-life board, $slow slow-not-stuck) / stuck $stuck / draw $draw"
+echo "  stuck and a cap that SURVIVES the 50,000-action re-run ($novel) are defects; a draw is CR 104.4"
