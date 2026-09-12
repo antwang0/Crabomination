@@ -19,6 +19,8 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-12 (the drift list, once it could be read) — 25 cards shipped a mechanic they print, one shipped the WRONG one, and one shipped an ability it does not print](#fixed-2026-09-12-the-drift-list-once-it-could-be-read--25-cards-shipped-a-mechanic-they-print-one-shipped-the-wrong-one-and-one-shipped-an-ability-it-does-not-print) | 52 |
+| Bugs & robustness | [CLOSED WITH A REASON 2026-09-12 — do NOT build an "invented verb" direction on `audit_oracle_verbs`' machinery](#closed-with-a-reason-2026-09-12--do-not-build-an-invented-verb-direction-on-audit_oracle_verbs-machinery) | 33 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-third find) — a `condition` is not a cost, and the census that closed the class asked the wrong question](#fixed-2026-09-12-twenty-third-find--a-condition-is-not-a-cost-and-the-census-that-closed-the-class-asked-the-wrong-question) | 54 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-second find) — a name no card has is audited by nobody, and that is where a second, worse copy of a card lives](#fixed-2026-09-12-twenty-second-find--a-name-no-card-has-is-audited-by-nobody-and-that-is-where-a-second-worse-copy-of-a-card-lives) | 55 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-first find) — colour is DERIVED, and three shipped cards print one their mana cost cannot carry](#fixed-2026-09-12-twenty-first-find--colour-is-derived-and-three-shipped-cards-print-one-their-mana-cost-cannot-carry) | 46 |
@@ -75,6 +77,88 @@ the handoff.
 
 
 # Bugs & robustness
+
+## CLOSED WITH A REASON 2026-09-12 — do NOT build an "invented verb" direction on `audit_oracle_verbs`' machinery
+
+Furnace Hellkite shipped an ETB that dealt 2 damage to each opponent and the
+card prints no trigger at all (twenty-third find's commit). **No column sees
+that class**: `audit_printed_body` compares characteristics, not abilities, and
+`audit_oracle_verbs` asks only the MISSING question — the oracle names a verb
+and the tree has no primitive for it. The obvious move is to invert it: the
+tree has the primitive and the oracle never says the verb.
+
+**It does not work, and the reason is structural rather than a tuning
+problem.** The `have` set that answers "what does this card do" is an
+*over-approximation on purpose*: helpers are expanded transitively, engine
+primitives contribute the variants their `run_effect` arm names, and a global
+helper table is built across every set file so a cycle builder in somebody
+else's `shared.rs` still resolves — with the file's own docstring stating the
+trade, "a name collision between two sets' private helpers over-attributes,
+which costs a false negative — the trade this file states it wants". A false
+negative is exactly what the MISSING direction wants and exactly what the
+INVENTED direction cannot afford.
+
+Measured, both ways, at `73dbc038`: inverting the condition gives **14,350
+rows over 17,026 cards**; loosening the oracle side to "the verb's WORD does
+not appear anywhere in the text" still gives **9,686**. Sampled, the rows are
+what the trade predicts — Bojuka Bog and Archive Trap, neither of which has a
+damage primitive anywhere in its own literal, both answering for a same-named
+helper in another set.
+
+An invented-ability column needs a `have` set built from the card's OWN literal
+with no helper expansion and no global table — a different reader, not a flag
+on this one. Not started.
+
+## FIXED 2026-09-12 (the drift list, once it could be read) — 25 cards shipped a mechanic they print, one shipped the WRONG one, and one shipped an ability it does not print
+
+`audit_keyword_drift`'s MISSING direction printed 367 rows and **287 of them
+were cards that carry the mechanic** — a mechanic has four spellings and the
+reader knew one and a half (see its docstring). Sharpened to 29, every row is
+real, and reading them found this:
+
+| What | Cards |
+|---|---|
+| Cycling | Unearth, Rejuvenate, Hollow One, Ominous Seas, Viscera Dragger, Decree of Justice |
+| Miracle | Terminus, Metamorphosis Fanatic |
+| Evoke | Shriekmaw, Reveillark |
+| Foretell | Sozin's Comet, Sage of the Beyond, Battle Mammoth |
+| Warp | Quantum Riddler, Mechanozoa, Astelli Reclaimer, Mightform Harmonizer, Pinnacle Emissary |
+| Splice onto Arcane | Through the Breach, Goryo's Vengeance |
+| Evolve / Mentor / Provoke / Soulshift 3 / Echo | Lonis, Felisa, Feral Throwback, Rootrunner, Yavimaya Granger |
+| Flashback / Madness / Morph / Replicate / Plot | Hungry for More, Anje's Ravager, Fledgling Mawcor, Consign to Memory, Plan the Heist |
+| Affinity for artifacts, Kicker {R} | Furnace Hellkite, Cinderclasm |
+
+**Three of them are worse than a gap.**
+
+* **Disowned Ancestor shipped the WRONG mechanic** — `renown(1)` where the card
+  prints Outlast {1}{B}, with a doc comment that agreed with the body. Renown
+  is a combat-damage trigger, Outlast a sorcery-speed tap ability.
+* **Furnace Hellkite shipped an ETB the card does not print** (2 damage to each
+  opponent), and its test held it in place.
+* **Rejuvenate gained five where the card says six**, and
+  `rejuvenate_gains_five_life` asserted the five. No column sees a number
+  inside an effect.
+
+**Warp was live and unreachable**: `shortcut::warp` and `AlternativeCost::warp`
+were both in the engine, the cast path reads the flag, and no card used either.
+So was Echo for Yavimaya Granger, whose doc said "Echo is dropped — tracked in
+TODO.md" while `Keyword::Echo(cost)` was in use by other cards. **A comment
+claiming a mechanic is dropped is worth one grep.**
+
+⚠ **Priest of Fell Rites is the false positive that cost a test.** Its unearth
+is an `ActivatedAbility` literal rather than `shortcut::unearth`; adding the
+shortcut gave it two unearths and shifted every ability index. Read the body
+before believing a row — and when a card IS modelled in a shape the reader
+cannot see, it goes in `MISSING_OK` with the shape named (12 rows: affinity
+through a static, battalion as a filtered `Attacks` trigger, bloodrush as a
+from-hand `discard_self_cost` ability, Bloodthirst **X**, three cards whose
+NAME is the mechanic's word, and the Priest).
+
+What is left is 29 rows of real missing-mechanic work: channel (15) and adamant
+(3) have no primitive at all; two kickers need a kicked-dependent modal count
+and a cast-trigger re-modelling; two flashbacks have non-mana costs; overload,
+escalate, cleave, emerge, bestow, gift and devour each need an
+`alternative_cost` or field shape the card does not have.
 
 ## FIXED 2026-09-12 (twenty-third find) — a `condition` is not a cost, and the census that closed the class asked the wrong question
 
