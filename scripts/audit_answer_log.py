@@ -59,6 +59,10 @@ Every remaining row is explained, which is the point of quoting the number:
     harmless for all 69 arms at once.
 
 So a NEW row is the signal, not the count.
+
+**Injection (eighteenth pass):** deleting `MayDoBy`'s `clear_answer_log()`
+takes this 8 suspicious -> **9**.
+
 """
 
 import re

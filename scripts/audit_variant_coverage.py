@@ -64,6 +64,10 @@ Run: python3 scripts/audit_variant_coverage.py           # ~40 s
      python3 scripts/audit_variant_coverage.py --verbose # + the no-op arms
 Exit status is 1 only on a dead *capability*; a dead primitive is
 informational, so this can gate a run.
+
+**Injection (eighteenth pass):** renaming the `Effect::TradeSecrets` arm out of
+`run_effect` takes this 0 dead capability -> **1**.
+
 """
 
 import os

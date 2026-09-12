@@ -29,6 +29,10 @@ how that audit's "~45 live bugs" gets re-checked instead of re-quoted.
 
 Exit status is 0 always: the bare count is a number to compare against the
 last reading, not a pass/fail.
+
+**Injection (eighteenth pass):** a bare `self.decider.decide(..)` added to the
+`Effect::MayDoBy` arm takes this 168 / 108 / 60 -> 169 / 108 / **61 bare**.
+
 """
 
 import os

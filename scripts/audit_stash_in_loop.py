@@ -28,6 +28,12 @@ The cursor-indexed helpers (`ask_seat_bool`, `ask_seat_amount`,
 Reading at the seventeenth pass: **1 single-slot ask in a loop, 1 allowlisted,
 0 unexplained.** It flags `PlayerReturnsPermanentsToHand` on the tree before the
 sixteenth find's fix, which is the check that it checks anything.
+
+**Injection (eighteenth pass):** adding a single-slot `ask_seat_cards(` inside
+`PlayersMayAccept`'s `for p in self.resolve_players(..)` takes this 1 / 1
+allowlisted / 0 unexplained -> 2 / 1 / **1 unexplained**. A gate that cannot
+fail is worse than no gate; this one can.
+
 """
 
 import re
