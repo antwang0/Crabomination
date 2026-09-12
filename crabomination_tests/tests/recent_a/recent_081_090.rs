@@ -333,6 +333,39 @@ mod recent81 {
         assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     }
 
+    /// **Adamant — three white mana grants vigilance**, the half the card
+    /// shipped without. `Predicate::ManaSpentOfColorAtLeast`'s own docstring
+    /// says "CR 702.137 (Adamant)" and two other cards already read it; this
+    /// was the one that did not.
+    #[test]
+    fn silverflame_ritual_adamant_grants_vigilance() {
+        use crabomination::card::Keyword;
+        use crabomination::mana::Color;
+        // Three white mana: adamant is on.
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let id = g.add_card_to_hand(0, catalog::silverflame_ritual());
+        g.players[0].mana_pool.add(Color::White, 4);
+        cast(&mut g, id);
+        assert!(
+            g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance),
+            "three white mana turns adamant on",
+        );
+
+        // One white and three generic: the counter lands, the vigilance does not.
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let id = g.add_card_to_hand(0, catalog::silverflame_ritual());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        cast(&mut g, id);
+        assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+        assert!(
+            !g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance),
+            "one white mana leaves adamant off",
+        );
+    }
+
     #[test]
     fn renewed_faith_gains_and_cycles() {
         let mut g = two_player_game();

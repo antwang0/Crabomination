@@ -270,6 +270,16 @@ def top_level_keywords(body: str):
 # entries: the fifteenth (Touch the Spirit Realm) was a real gap and is fixed.
 DISCARD_FROM_HAND = {"channel", "bloodrush"}
 
+# A mechanic whose vehicle is an identifier that does not contain its name.
+# ⚠ Adamant has no `Keyword::` and no field — it is a PREDICATE, and its
+# docstring in `effect.rs` says "CR 702.137 (Adamant)" outright. Two of the
+# three adamant rows were cards already reading it (Slaying Fire through
+# `Value::IfPred`, Searing Barrage through `Effect::If`); the third,
+# Silverflame Ritual, really had no adamant half.
+SPELLED_AS = {
+    "adamant": ("ManaSpentOfColorAtLeast",),
+}
+
 
 def spelled_in(literal: str, word: str) -> bool:
     """Is this mechanic spelled ANYWHERE in the card's literal?
@@ -296,6 +306,8 @@ def spelled_in(literal: str, word: str) -> bool:
     path-qualified or called". Starts-with, not contains, on purpose:
     `Gravestorm` must not answer for Storm.
     """
+    if any(alias in literal for alias in SPELLED_AS.get(word, ())):
+        return True
     if (word in DISCARD_FROM_HAND
             and "from_hand" in literal
             and "discard_self_cost" in literal):

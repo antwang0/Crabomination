@@ -483,11 +483,28 @@ pub fn silverflame_ritual() -> CardDefinition {
         name: "Silverflame Ritual",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::AddCounter {
-            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        },
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            // CR 702.137 — Adamant. Slaying Fire and Searing Barrage already
+            // read the per-colour payment this way; this card's half was the
+            // one missing.
+            Effect::If {
+                cond: crate::card::Predicate::ManaSpentOfColorAtLeast {
+                    color: crate::mana::Color::White,
+                    at_least: 3,
+                },
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Vigilance,
+                    duration: crate::effect::Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }
