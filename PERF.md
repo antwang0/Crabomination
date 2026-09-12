@@ -2881,13 +2881,14 @@ perf    none, and measured as none rather than assumed. Every change here is a c
   1031..1036   f9a5147c      18     88,800       0       0     0      8
   1037..1044   f9a5147c      24    118,400       0       0     0      0
   1045..1047   5ece833a       9     44,400       0       0     0     20
+  1048..1059   5ece833a      36    177,600       0       0     0      6
 ```
 
-**51 cells / 251,600 games, 0 cap and 0 stuck on every one.** A draw is
-CR 104.4, not a defect. The third block is the verification block: it ran on a
-binary rebuilt at the closing tip, so the saturating-arithmetic commits are
-swept rather than inferred. Seed frontier **1048**. One cell is an outlier and
-it is the entry below.
+**87 cells / 429,200 games, 0 cap and 0 stuck on every one.** A draw is
+CR 104.4, not a defect. The last two blocks ran on a binary rebuilt at the
+closing tip, so the saturating-arithmetic commits are swept rather than
+inferred. Seed frontier **1060**. One cell is an outlier and it is the entry
+below.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
 `cube` seed **1036** cost **3,313 s** against a 33-48 s median for its
@@ -2942,6 +2943,24 @@ unchanged, `audit_printed_body` 0 / 0 / 0 / 0 over 10,270 factories.
 `audit_answer_log` **71 arms / 8 suspicious** — and that is the *record* being
 corrected rather than a regression: HEAD reads the same, the docstring said
 69 / 7, and the extra arm is `ExileUntilDuplicateName`, now explained there.
+
+**AND EVERY ONE OF THOSE GATES WAS INJECTION-TESTED, which is new.** A reading
+is worth what the injection behind it is worth, and the printed-body column
+this run turned up a resolver that would have read clean forever, so the rest
+got the same treatment. Six pass with the break recorded in their own
+docstring (`audit_seat_from_selector`, `audit_stash_in_loop`,
+`audit_decision_plumbing`, `audit_answer_log`, `audit_variant_coverage`,
+`audit_printed_body` with one injection per idiom). **Two did not:**
+`audit_target_walkers` printed its shared-recursion count `(130/130)` as a
+LITERAL — renaming an arm out of `for_each_inner` left the report
+byte-identical — and it counts now, at 132/132, which also dates the "130 of
+130" that had been carried in four places; and `audit_panics` claims
+"no panic, unwrap or out-of-bounds" while `SITE` matches only unwrap / expect /
+panic! / unreachable!, so a bare `v[3]` is invisible (2,386 variable-index
+sites in the engine, 2,028 of them `players[seat]` — not a useful census, and
+the docstring says so rather than pretending). Its "guarded" column is also a
+22-line text window, so a guard from the PREVIOUS function counts: the weaker
+claim, not the stronger.
 
 ### 2026-09-11 (the target-walker session, the day's other concurrent one) — the bare-slot gate, the player-slot list, five shipped cards; no perf leg
 
