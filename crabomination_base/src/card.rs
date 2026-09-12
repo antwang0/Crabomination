@@ -452,8 +452,8 @@ pub enum PlaneswalkerSubtype {
     Grist,
     // Cube expansion: Wrenn (Wrenn and Six).
     Wrenn,
-    // NEO: The Wandering Emperor.
-    WanderingEmperor,
+    // modern_decks (Dakkon, Shadow Slayer) / AFR (Ellywick Tumblestrum).
+    Dakkon, Ellywick,
     // ONE planeswalkers.
     Koth, Kaya, Tyvar, Kaito,
     // WAR planeswalkers.

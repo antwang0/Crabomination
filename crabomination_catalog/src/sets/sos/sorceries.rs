@@ -2184,6 +2184,10 @@ pub fn improvisation_capstone() -> CardDefinition {
         name: "Improvisation Capstone",
         cost: cost(&[generic(5), r(), r()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             // Walk top of library exiling cards until running MV sum
             // reaches ≥ 4 (printed Oracle exact). Each card walked is

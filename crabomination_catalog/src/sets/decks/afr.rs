@@ -631,6 +631,10 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
+        subtypes: crate::card::Subtypes {
+            planeswalker_subtypes: vec![crate::card::PlaneswalkerSubtype::Ellywick],
+            ..Default::default()
+        },
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {

@@ -251,6 +251,10 @@ pub fn archive_trap() -> CardDefinition {
         name: "Archive Trap",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Instant],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Trap],
+            ..Default::default()
+        },
         effect: Effect::Mill {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(13),

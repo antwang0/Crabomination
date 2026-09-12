@@ -5,8 +5,8 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
-    LoyaltyAbility, SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value,
+    LoyaltyAbility, PlaneswalkerSubtype, SelectionRequirement as R, Selector, Subtypes,
+    Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef, Predicate, ZoneDest};
@@ -175,6 +175,10 @@ pub fn ajani_caller_of_the_pride() -> CardDefinition {
         cost: cost(&[generic(1), w(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani],
+            ..Default::default()
+        },
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {

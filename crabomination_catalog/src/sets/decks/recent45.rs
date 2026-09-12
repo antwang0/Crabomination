@@ -104,6 +104,10 @@ pub fn crib_swap() -> CardDefinition {
         name: "Crib Swap",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant, CardType::Kindred],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Changeling],
         effect: Effect::Seq(vec![
             Effect::CreateToken {

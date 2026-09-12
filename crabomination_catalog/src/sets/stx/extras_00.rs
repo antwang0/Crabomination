@@ -2502,6 +2502,10 @@ pub fn illuminate_history() -> CardDefinition {
         name: "Illuminate History",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         // Discard any number, then draw that many. Then if 7+ cards in your
         // graveyard, create a 3/2 red-and-white Spirit.
         effect: Effect::Seq(vec![

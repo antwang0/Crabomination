@@ -483,17 +483,19 @@ mod recent22 {
         }).expect("activate exhaust");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(jj).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
-        // Cast Brilliant Plan (Lesson: scry 3, draw 3). The copy draws another 3.
+        // Cast Introduction to Prophecy ({3} Sorcery — Lesson: scry 2, draw 1).
+        // The copy draws another 1. It used to be Brilliant Plan, which is not a
+        // Lesson — the printed card carries no subtype at all, and the tag it
+        // had made this pass for the wrong reason.
         let hand_before = g.players[0].hand.len();
-        let plan = g.add_card_to_hand(0, catalog::brilliant_plan());
-        g.players[0].mana_pool.add(Color::Blue, 1);
-        g.players[0].mana_pool.add_colorless(4);
+        let plan = g.add_card_to_hand(0, catalog::introduction_to_prophecy());
+        g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::CastSpell {
             card_id: plan, target: None, additional_targets: vec![], mode: None, x_value: None,
-        }).expect("cast Brilliant Plan");
+        }).expect("cast Introduction to Prophecy");
         drain_stack(&mut g);
-        // hand_before included the plan; it left the hand, then drew 3 + 3 = 6.
-        assert_eq!(g.players[0].hand.len(), hand_before + 6, "original + copied Lesson drew six");
+        // hand_before included the Lesson; it left the hand, then drew 1 + 1 = 2.
+        assert_eq!(g.players[0].hand.len(), hand_before + 2, "original + copied Lesson drew two");
     }
 }
 

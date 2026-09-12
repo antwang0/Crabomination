@@ -9,8 +9,9 @@
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect,
-    Keyword, LandType, SelectionRequirement, Selector, SoulbondBonus, SplitCard, SplitHalf,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
+    Keyword, LandType, PlaneswalkerSubtype, SelectionRequirement, Selector, SoulbondBonus,
+    SpellSubtype, SplitCard, SplitHalf, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
+    Value, WardCost,
 };
 use crate::card::{CounterType, DynamicPt, EventKind, EventScope, EventSpec};
 use crate::card::{StaticAbility, StaticEffect};
@@ -1927,6 +1928,10 @@ pub fn kodamas_reach() -> CardDefinition {
         name: "Kodama's Reach",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Arcane],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
@@ -20655,6 +20660,10 @@ pub fn kozileks_command() -> CardDefinition {
         name: "Kozilek's Command",
         cost: cost(&[x(), colorless(2)]),
         card_types: vec![CardType::Instant, CardType::Kindred],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
         effect: Effect::ChooseN {
             picks: vec![0, 1],
             modes: vec![
@@ -21522,6 +21531,10 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
         cost: cost(&[w(), u(), b()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Dakkon],
+            ..Default::default()
+        },
         enters_with_counters: Some((
             CounterType::Loyalty,
             Value::CountMatching {
@@ -38470,6 +38483,10 @@ pub fn elvish_promenade() -> CardDefinition {
         name: "Elvish Promenade",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Kindred, CardType::Sorcery],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::CountMatching {
@@ -41026,6 +41043,10 @@ pub fn through_the_breach() -> CardDefinition {
         name: "Through the Breach",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Instant],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Arcane],
+            ..Default::default()
+        },
         effect: Effect::PutFromHandOntoBattlefield {
             who: PlayerRef::You,
             filter: SelectionRequirement::Creature,
@@ -51063,6 +51084,10 @@ pub fn all_is_dust() -> CardDefinition {
         name: "All Is Dust",
         cost: cost(&[generic(7)]),
         card_types: vec![CardType::Kindred, CardType::Sorcery],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
         effect: Effect::SacrificeAllMatching {
             who: Selector::Player(PlayerRef::EachPlayer),
             filter: SelectionRequirement::Permanent.and(SelectionRequirement::Colorless.negate()),
@@ -52714,6 +52739,10 @@ pub fn peer_through_depths() -> CardDefinition {
         name: "Peer Through Depths",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Arcane],
+            ..Default::default()
+        },
         effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(5),
@@ -53035,6 +53064,10 @@ pub fn jace_the_mind_sculptor() -> CardDefinition {
         name: "Jace, the Mind Sculptor",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace],
+            ..Default::default()
+        },
         supertypes: vec![Supertype::Legendary],
         base_loyalty: 3,
         loyalty_abilities: vec![
@@ -54008,6 +54041,10 @@ pub fn ugin_the_spirit_dragon() -> CardDefinition {
         cost: cost(&[generic(8)]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Ugin],
+            ..Default::default()
+        },
         base_loyalty: 7,
         loyalty_abilities: vec![
             LoyaltyAbility {
@@ -54272,6 +54309,10 @@ pub fn sorin_imperious_bloodlord() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Sorin],
+            ..Default::default()
+        },
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {
@@ -56871,6 +56912,10 @@ pub fn ravenous_trap() -> CardDefinition {
         name: "Ravenous Trap",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Instant],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Trap],
+            ..Default::default()
+        },
         effect: Effect::ExilePlayerGraveyard {
             who: PlayerRef::Target(0),
             filter: None,
@@ -61051,6 +61096,10 @@ pub fn eyeblights_ending() -> CardDefinition {
         name: "Eyeblight's Ending",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant, CardType::Kindred],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature

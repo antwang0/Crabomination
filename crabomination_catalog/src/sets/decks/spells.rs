@@ -378,6 +378,10 @@ pub fn goryos_vengeance() -> CardDefinition {
         name: "Goryo's Vengeance",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
+        subtypes: crate::card::Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Arcane],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(

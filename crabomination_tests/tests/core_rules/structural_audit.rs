@@ -831,3 +831,46 @@ fn every_pump_goes_through_the_saturating_helper() {
         bad.join("\n  "),
     );
 }
+
+/// CR 308.1 — a Kindred card always carries the creature type it shares.
+///
+/// "Kindred cards have another card type and one or more creature types": the
+/// shared type is the whole reason the card type exists, so an empty
+/// `creature_types` on a Kindred card is a defect that reads as a legal card.
+/// Kozilek's Command and All Is Dust were `Kindred Instant` / `Kindred Sorcery`
+/// with no Eldrazi on them, Crib Swap a `Kindred Instant` with no Shapeshifter;
+/// six shipped that way, found by the subtype column of
+/// `scripts/audit_printed_body.py`. The consumer is real —
+/// `SelectionRequirement::HasCreatureType` over a spell, and a changeling's
+/// every-type grant reads the same list.
+///
+/// That audit needs the oracle cache and skips what it cannot read; this needs
+/// neither and cannot skip, which is why the class gets both.
+///
+/// ⚠ THE SAME RULE DOES NOT HOLD FOR PLANESWALKERS. It looks like it should
+/// (CR 205.3k lists the types) and the first cut of this test asserted it —
+/// then named six cards, and the oracle said three of them are right: The
+/// Wanderer, The Wandering Emperor and The Eternal Wanderer all print
+/// "Legendary Planeswalker" with nothing after it, and The Aetherspark prints
+/// `— Equipment`. The other two (Dakkon, Ellywick) were real and are fixed.
+/// A planeswalker's type is the oracle column's to check, not an invariant's.
+#[test]
+fn a_kindred_card_always_carries_the_creature_type_it_shares() {
+    use crabomination::card::CardType;
+    let mut bad: Vec<String> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if def.card_types.contains(&CardType::Kindred)
+            && def.subtypes.creature_types.is_empty()
+        {
+            bad.push(format!("{}: Kindred with no creature type", def.name));
+        }
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} Kindred card(s) with no creature type:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}

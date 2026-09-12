@@ -62,11 +62,13 @@ pub fn square_up() -> CardDefinition {
 
 // ── Brilliant Plan ──────────────────────────────────────────────────────────
 
-/// Brilliant Plan — {4}{U} Sorcery — Lesson.
+/// Brilliant Plan — {4}{U} Sorcery. NOT a Lesson: the printed card is the
+/// Portal Second Age sorcery, which prints no subtype, and the `Lesson` tag it
+/// carried made it fetchable by `Effect::Learn`.
 ///
 /// "Scry 3, then draw three cards."
 ///
-/// Pure card-velocity Lesson. Wired as `Seq(Scry(3) → Draw(3))` so the
+/// Pure card velocity. Wired as `Seq(Scry(3) → Draw(3))` so the
 /// Scry resolves first, letting the controller filter the next three
 /// draws. No target needed; the Scry uses `PlayerRef::You` and the Draw
 /// uses `Selector::You`.
@@ -75,10 +77,6 @@ pub fn brilliant_plan() -> CardDefinition {
         name: "Brilliant Plan",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
-        },
         effect: Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -764,7 +762,8 @@ pub fn test_of_patience() -> CardDefinition {
     }
 }
 
-/// Reduce to Ashes — {4}{R} Sorcery — Lesson.
+/// Reduce to Ashes — {4}{R} Sorcery. NOT a Lesson (same tag, same fix as
+/// Brilliant Plan): the printed card carries no subtype.
 /// "Deals 5 damage to target creature. If that creature would die this
 /// turn, exile it instead." The exile-on-death rider rides the Lava-Coil
 /// pattern: a creature with toughness ≤ 5 (lethal) is exiled instead of
@@ -775,10 +774,6 @@ pub fn reduce_to_ashes() -> CardDefinition {
         name: "Reduce to Ashes",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
-        },
         effect: Effect::If {
             cond: Predicate::All(vec![
                 Predicate::EntityMatches {

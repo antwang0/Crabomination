@@ -15,7 +15,8 @@ column assumes is right.
     python3 scripts/audit_printed_body.py            # the table
     python3 scripts/audit_printed_body.py --rows 0   # every row
 
-COVERAGE, 2026-09-12: **16,439 factories compared**, from 10,270 — and the
+COVERAGE, 2026-09-12: **16,439 factories compared on cost / P/T / type line,
+12,142 of them on subtypes too** — from 10,270 and 0 — and the
 2026-09-11 header's "219 real spells over ~40 bespoke helpers" was a mis-read of
 its own skip counts. The reader had four holes and none of them was the helper
 signatures:
@@ -55,13 +56,39 @@ helper whose own base is another helper. A chain it cannot follow is SKIPPED;
 the first cut reported 77 rows of "supertypes: (none)" and every one was
 `..legend(..)` supplying what the literal never claimed.
 
+**AND THE SUBTYPE HALF IS A COLUMN NOW — 12,142 factories, 0 findings, 20 when
+it was opened.** It was left alone for three passes ("the enums are per-kind and
+the mapping is a second audit"), and every kind had a live consumer waiting for
+it: `Keyword::Splice(cost, SpellSubtype::Arcane)` checks the host's
+`spell_subtypes` (25 splice cards), `Effect::Learn` filters the sideboard on
+`SpellSubtype::Lesson`, Zendikar's Trapfinder filters on `Trap`, and Nicol
+Bolas reads `HasPlaneswalkerType(Bolas)`. So a missing subtype is not cosmetic:
+Kodama's Reach could not be spliced onto, Illuminate History could not be
+Learned, and Jace, the Mind Sculptor was a `Jace` no filter could see. The
+`Subtypes` VALUE is one brace deeper than `top_fields` keeps, so this column
+reads `literal_raw` while every other column still reads the flattened text —
+one walker, two sources.
+
+The vocabulary is read off `crabomination_base`'s own enums, so a variant added
+there is checked without a second edit. A card whose oracle subtype has no
+variant at all is `nosubvariant`, NOT a finding: that is missing coverage, and
+counting it as "the card is missing this subtype" would report a catalog that
+cannot spell the word.
+
 What is left, with the reason:
   * `nocache` (3,778) — synthesized cards the oracle has never heard of.
-  * `nonliteral` (972) — a cost chain the resolver cannot read, mostly a helper
+  * `nosubtypes` (3,999) — a subtype the reader will not guess at: a helper
+    call (`subtypes: aura()`), a bare binding (`creature_types: ct` — every
+    per-set `fn creature(.., ct, ..)`), a `let mut subtypes` built by `push`,
+    or a card that BECOMES a creature (`SelfIsCreatureIf`,
+    `creature_off_battlefield`), whose definition carries the types it becomes
+    rather than the ones it prints — Gideon Blackblade and Grist.
+  * `nonliteral` (966) — a cost chain the resolver cannot read, mostly a helper
     that builds its cost from a local binding.
-  * `notyped` (254) — a type-line chain it cannot follow.
-  * `noname` (178) — a factory whose name is in neither the literal, its head,
+  * `notyped` (220) — a type-line chain it cannot follow.
+  * `noname` (184) — a factory whose name is in neither the literal, its head,
     nor its own `pub fn`.
+  * `nosubvariant` (6) — above.
   * `faces` / `split` / `star` / `notaspell` — documented below, all deliberate.
     `notaspell` also drops a Vanguard avatar named after a card: Maraxus of Keld
     is both, and the oracle lookup cannot tell them apart.
@@ -76,12 +103,20 @@ that cannot fail is worse than no gate:
   * Karn, Scion of Urza broken to `{3}` / `Creature` / no supertype -> all three;
   * `god_weapon`'s `supertypes:` removed -> Spear of Heliod, Whip of Erebos,
     Hammer of Purphoros;
-  * `fn legend(mut def)`'s assignment emptied -> the six Invasion legends.
+  * `fn legend(mut def)`'s assignment emptied -> the six Invasion legends;
+  * Archive Trap's own `spell_subtypes` emptied -> the subtype row (the literal
+    path);
+  * modern.rs `fn sliver`'s `CreatureType::Sliver` removed -> 54 subtype rows
+    (the base-struct path).
 
-**That last one silently PASSED at first.** `legend` is defined in five files
-with three different shapes, and the resolver took whichever came first, so an
-assigning wrapper was reading a base-struct one's supertypes. Same-file first
-now.
+**TWO OF THOSE SILENTLY PASSED AT FIRST, and both were the same mistake.**
+`legend` is defined in five files with three different shapes and the resolver
+took whichever came first, so an assigning wrapper read a base-struct one's
+supertypes — same-file first now. And the subtype reader called "no literal at
+all" UNREADABLE, which made the base recursion dead for every pure-helper
+factory: removing `fn aura`'s `EnchantmentSubtype::Aura` came back
+byte-identical. "No literal" is *not declared*, not unreadable; the type-line
+test above already drops a factory with no resolvable base.
 
 ⚠ SKIPPED, with the reason, and the skip counts are printed:
   * multi-face cards (`card_faces` in the oracle) — the factory's `cost:` is
@@ -156,6 +191,50 @@ RET = re.compile(r"->\s*(?:[A-Za-z_]+::)*CardDefinition\s*\{")
 WRAPS = re.compile(r"^\s*([a-z0-9_]+)\(\s*(?:[A-Za-z_]+::)*CardDefinition\s*\{", re.M)
 ASSIGNS = re.compile(r"\bdef\.(supertypes|card_types)\s*=")
 
+# ── the subtype half of the type line ────────────────────────────────────────
+# The vocabulary is read off `crabomination_base`, not restated here: a variant
+# added there has to reach this audit without a second edit, and a variant
+# RENAMED there must not silently stop being checked.
+BASE_CARD = ROOT / "crabomination_base" / "src" / "card.rs"
+SUB_ENUMS = ("CreatureType", "LandType", "ArtifactSubtype", "EnchantmentSubtype",
+             "SpellSubtype", "PlaneswalkerSubtype", "BattleSubtype")
+SUB_FIELDS = ("creature_types", "land_types", "artifact_subtypes",
+              "enchantment_subtypes", "spell_subtypes", "planeswalker_subtypes",
+              "battle_subtypes")
+
+
+def _subtype_variants():
+    text = BASE_CARD.read_text()
+    out = {}
+    for name in SUB_ENUMS:
+        m = re.search(r"pub enum %s \{(.*?)\n\}" % name, text, re.S)
+        if not m:
+            sys.exit(f"{name} not found — the subtype column reads its variants")
+        for v in re.findall(r"\b([A-Z][A-Za-z0-9_]*)\b",
+                            re.sub(r"//[^\n]*", "", m.group(1))):
+            out.setdefault(v.lower(), v)
+    return out
+
+
+# `"Elf"` -> `CreatureType::Elf`. Lowercased because that is the only difference
+# between an oracle word and a variant for all 393 of them.
+SUB_WORD = _subtype_variants()
+# `CT` is the catalog's one alias for `CreatureType` (two files).
+SUBVAR = re.compile(r"\b(?:%s|CT)::([A-Za-z0-9_]+)" % "|".join(SUB_ENUMS))
+SUB_FIELD = re.compile(r"\b(%s)\s*:" % "|".join(SUB_FIELDS))
+VEC_OF_VARIANTS = re.compile(
+    r"vec!\[\s*(?:(?:crate::card::)?(?:%s|CT)::[A-Za-z0-9_]+\s*,?\s*)*\]"
+    % "|".join(SUB_ENUMS))
+# A local binding assembled by `push` (`let mut subtypes = Subtypes::default();
+# subtypes.creature_types.push(..)`) reaches the literal as the SHORTHAND field
+# `subtypes,`. The value is not in the literal, so it is unreadable, not empty —
+# Storm Crow is the shape, and reading it as empty reported it as a Bird-less
+# Bird.
+SUB_SHORTHAND = re.compile(r"(?:^|,)\s*subtypes\s*(?:,|$)")
+# The two idioms for "this card becomes a creature": the definition's own
+# `creature_types` are then the creature's, not the printed line's.
+BECOMES_CREATURE = re.compile(r"\bSelfIsCreatureIf\b|\bcreature_off_battlefield:\s*true")
+
 
 def top_fields(block: str):
     """The depth-1 text of the first `CardDefinition { .. }` literal in `block`,
@@ -200,6 +279,143 @@ def top_fields(block: str):
         i += 1
     out.append("".join(line).strip())
     return "\n".join(out)
+
+
+def literal_raw(block: str, at: int = 0):
+    """The RAW text between the braces of the first `CardDefinition {` literal.
+
+    `top_fields` keeps depth-1 only, which is right for `cost:` and `card_types:`
+    and useless for `subtypes:` — a `Subtypes { creature_types: vec![..] }` has
+    its whole value one brace deeper, so the flattened line reads
+    `subtypes: Subtypes {` and the types are gone. The subtype column reads this
+    instead; everything else still reads `top_fields`, so one walker keeps
+    following the chain and only the SOURCE differs per field.
+    """
+    m = LITERAL.search(block, at)
+    if not m:
+        return None
+    i, depth, in_str, start = m.end(), 1, False, m.end()
+    while i < len(block) and depth:
+        c = block[i]
+        if in_str:
+            if c == "\\":
+                i += 2
+                continue
+            if c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return block[start:i]
+        i += 1
+    return None
+
+
+def factory_raw(block: str):
+    """`literal_raw` past the signature line — the factory's OWN literal."""
+    return literal_raw(block, block.find("\n") + 1)
+
+
+def helper_raw(blk: str):
+    """`literal_raw` past a helper's multi-line signature (see `helper_body`)."""
+    m = RET.search(blk)
+    return literal_raw(blk, m.end() - 1) if m else None
+
+
+def raw_field(inner: str, field: str):
+    """The text of the depth-0 field `field:` in a literal's raw inner text."""
+    i, depth, in_str = 0, 0, False
+    pat = field + ":"
+    while i < len(inner):
+        c = inner[i]
+        if in_str:
+            if c == "\\":
+                i += 2
+                continue
+            if c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif (depth == 0 and inner.startswith(pat, i)
+              and (i == 0 or not (inner[i - 1].isalnum() or inner[i - 1] == "_"))):
+            j, d2, s2, start = i + len(pat), 0, False, i + len(pat)
+            while j < len(inner):
+                c2 = inner[j]
+                if s2:
+                    if c2 == "\\":
+                        j += 2
+                        continue
+                    if c2 == '"':
+                        s2 = False
+                elif c2 == '"':
+                    s2 = True
+                elif c2 in "([{":
+                    d2 += 1
+                elif c2 in ")]}":
+                    if d2 == 0:
+                        break
+                    d2 -= 1
+                elif c2 == "," and d2 == 0:
+                    break
+                j += 1
+            return inner[start:j].strip()
+        i += 1
+    return None
+
+
+def parse_subtypes(inner):
+    """`(subtypes, declared)` off a literal's raw inner text.
+
+    `subtypes` is None when the field is there but unreadable — a helper call
+    (`subtypes: aura()`), a bare binding (`creature_types: types`), a shorthand
+    `subtypes,` — because saying nothing beats reporting the reader's own blind
+    spot. An absent field is an EMPTY set and NOT declared: the literal claims no
+    subtype, and whether a `..base` supplies one is the caller's recursion.
+
+    ⚠ NO LITERAL AT ALL IS "NOT DECLARED", NOT "UNREADABLE". The pure-helper
+    factory (`pub fn x() -> CardDefinition { aura("Name", ..) }`) has none, and
+    returning unreadable here made the base recursion dead for every one of
+    them — 2,392 factories, and the injection that removed `fn aura`'s own
+    `EnchantmentSubtype::Aura` came back byte-identical. A factory with neither
+    a literal nor a resolvable base is dropped by the type-line test above this
+    one, which already requires a non-empty `card_types`.
+    """
+    if inner is None:
+        return set(), False
+    f = raw_field(inner, "subtypes")
+    if f is None:
+        if SUB_SHORTHAND.search(inner):
+            return None, True
+        return set(), False
+    if not re.match(r"(?:crate::card::)?Subtypes\s*\{", f.strip()):
+        return None, True
+    i = f.index("{")
+    body, depth = None, 0
+    for j in range(i, len(f)):
+        if f[j] == "{":
+            depth += 1
+        elif f[j] == "}":
+            depth -= 1
+            if depth == 0:
+                body = f[i + 1:j]
+                break
+    if body is None:
+        return None, True
+    got = set()
+    for m in SUB_FIELD.finditer(body):
+        val = raw_field(body, m.group(1))
+        if val is None or not VEC_OF_VARIANTS.fullmatch(re.sub(r"\s+", " ", val).strip()):
+            return None, True
+        got |= set(SUBVAR.findall(val))
+    return got, True
 
 
 CARD_TYPES = {"Land", "Creature", "Artifact", "Enchantment", "Planeswalker",
@@ -438,15 +654,24 @@ def parse_type_line(body: str):
     return got_t, got_s, base, tm is not None, sm is not None
 
 
-def resolve_type_line(index, path, body, raw, depth=0):
-    """The card's types and supertypes, following `..base` and wrapper helpers.
+def resolve_type_line(index, path, body, raw, depth=0, inner=None):
+    """The card's types, supertypes and SUBTYPES, following `..base` and wrappers.
 
-    Returns `(types, supers, ok)`. `ok` is False when a link in the chain is a
-    helper this cannot find — saying nothing beats reporting the reader's own
-    blind spot, which is how 77 `..legend(..)` cards read as "supertypes:
-    (none)" the first time this column was opened.
+    Returns `(types, supers, subs, ok, sub_ok)`. `ok` is False when a link in the
+    chain is a helper this cannot find — saying nothing beats reporting the
+    reader's own blind spot, which is how 77 `..legend(..)` cards read as
+    "supertypes: (none)" the first time this column was opened. `sub_ok` is the
+    same verdict for the subtype half, kept apart because a chain can be
+    readable for one and not the other: the subtype column skips on its own
+    without costing the type column a card.
+
+    `inner` is the literal's RAW text (`factory_raw` / `helper_raw`); `body` is
+    the flattened `top_fields` / `helper_body` one. One walk, two sources — see
+    `literal_raw`.
     """
     got_t, got_s, base, has_t, has_s = parse_type_line(body)
+    got_sub, has_sub = parse_subtypes(inner)
+    sub_ok = got_sub is not None
     ok = True
     # The wrapper idiom sits OUTSIDE the literal, so it is read off `raw`.
     if raw is not None and depth == 0:
@@ -471,24 +696,35 @@ def resolve_type_line(index, path, body, raw, depth=0):
                         has_s = True
                     if not has_t and wht:
                         got_t, has_t = wt, True
+                    if not has_sub:
+                        wsub, whsub = parse_subtypes(helper_raw(wblk))
+                        if whsub:
+                            got_sub, sub_ok, has_sub = wsub, wsub is not None, True
                     break
             else:
-                ok = False
+                ok = sub_ok = False
     if base:
         cands = [b for pth, b in index.get(base, []) if pth == path] \
             or [b for _, b in index.get(base, [])]
         if not cands or depth >= 5:
-            return got_t, got_s, False
-        bt, bs, bok = resolve_type_line(index, path, helper_body(cands[0]) or "", None, depth + 1)
+            return got_t, got_s, got_sub, False, False
+        bt, bs, bsub, bok, bsok = resolve_type_line(
+            index, path, helper_body(cands[0]) or "", None, depth + 1,
+            helper_raw(cands[0]))
         ok = ok and bok
         if not has_t:
             got_t = bt
         if not has_s:
             got_s = bs
+        # A `..base(..)` supplies the subtypes the literal did not declare —
+        # `..creature("Storm Crow", .., types, 1, 2)`. A literal that DID
+        # declare them wins, as the struct-update syntax says.
+        if not has_sub:
+            got_sub, sub_ok = bsub, bsok
     # Every card has card types; an empty set means the chain was not readable,
     # not that the card has none. Supertypes are genuinely optional, so they
     # cannot carry this test.
-    return got_t, got_s, ok and bool(got_t)
+    return got_t, got_s, got_sub, ok and bool(got_t), sub_ok
 
 
 def main() -> int:
@@ -497,9 +733,10 @@ def main() -> int:
     args = ap.parse_args()
 
     index = build_helper_index(CATALOG)
-    checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
+    checked = wrong_cost = wrong_pt = missing_flag = wrong_types = checked_sub = 0
     skip = {"nocache": 0, "faces": 0, "split": 0, "star": 0, "nonliteral": 0,
-            "noname": 0, "notaspell": 0, "notyped": 0}
+            "noname": 0, "notaspell": 0, "notyped": 0, "nosubtypes": 0,
+            "nosubvariant": 0}
     rows = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
@@ -507,6 +744,17 @@ def main() -> int:
         for i, (pos, fname) in enumerate(starts):
             end = starts[i + 1][0] if i + 1 < len(starts) else len(src)
             raw = src[pos:end]
+            # ⚠ STOP AT THE NEXT `fn`, NOT AT THE NEXT FACTORY. `starts` is the
+            # PUBLIC factories, so a private helper defined under one of them
+            # (`fn sac_on_damage_aura(..) -> CardDefinition {`, jou3) sits inside
+            # its block — and `top_fields` / `factory_raw` then read the HELPER's
+            # literal as the card's. Armament of Nyx was priced off
+            # `sac_on_damage_aura`'s body that way. It degraded to a skip here
+            # rather than a false row, but it is the `legend` lesson again: a
+            # resolver that takes whichever definition comes first.
+            nxt = ANYFN.search(raw, raw.find("\n") + 1)
+            if nxt:
+                raw = raw[:nxt.start()]
             body = top_fields(raw)
             pseudo = body is None
             if body is None:
@@ -629,8 +877,9 @@ def main() -> int:
                 continue  # helper form: only the cost is positional here
             # The printed TYPE LINE. A Sorcery shipped as an Instant is castable
             # at instant speed; a missing Legendary is a legend rule that never
-            # fires. Subtypes are left alone — the enums are per-kind and the
-            # mapping is a second audit.
+            # fires; and a missing SUBTYPE is a tribal card that does not see
+            # its own creature, an Equipment nothing can equip, an Aura with
+            # nothing to attach to, a land that taps for the wrong colour.
             line = (card.get("type_line") or "").split("—")[0]
             want_t = {w for w in line.replace("//", " ").split() if w in CARD_TYPES}
             want_s = {w for w in line.split() if w in SUPERTYPES}
@@ -644,7 +893,8 @@ def main() -> int:
             # skipped rather than reported, because 77 rows of "supertypes:
             # (none)" the first time this column was opened were every one of
             # them `..legend(..)` supplying what the literal never claimed.
-            got_t, got_s, resolved = resolve_type_line(index, path, body, raw)
+            got_t, got_s, got_sub, resolved, sub_ok = resolve_type_line(
+                index, path, body, raw, inner=factory_raw(raw))
             if not resolved:
                 skip["notyped"] += 1
                 continue
@@ -664,6 +914,36 @@ def main() -> int:
                 rows.append(("super", name, f"{path.name}::{fname}",
                              " ".join(sorted(got_s)) or "(none)",
                              " ".join(sorted(want_s)) or "(none)"))
+            # The SUBTYPE half. A multi-face card's oracle line carries a second
+            # `—` and the engine ships one face per factory, so it is not this
+            # column's to compare; and a subtype word no enum has a variant for
+            # is a MISSING VARIANT, which is coverage rather than a defect — it
+            # would otherwise read as "the card is missing this subtype" on a
+            # catalog that cannot spell it.
+            tl = card.get("type_line") or ""
+            # ⚠ A CARD THAT *BECOMES* A CREATURE CARRIES THE TYPES IT BECOMES.
+            # `StaticEffect::SelfIsCreatureIf { creature_types: vec![] }` and
+            # `creature_off_battlefield: true` both read the definition's own
+            # `creature_types`, so Gideon Blackblade ships Human Soldier and
+            # Grist ships Insect while printing neither. That is the engine's
+            # encoding of the creature, not a wrong type line, and both flags
+            # are in the literal where this can see them.
+            if BECOMES_CREATURE.search(raw):
+                skip["nosubtypes"] += 1
+            elif sub_ok and card.get("layout") == "normal" and tl.count("—") <= 1:
+                words = tl.split("—", 1)[1].split() if "—" in tl else []
+                if any(w.lower() not in SUB_WORD for w in words):
+                    skip["nosubvariant"] += 1
+                else:
+                    want_sub = {SUB_WORD[w.lower()] for w in words}
+                    checked_sub += 1
+                    if got_sub != want_sub:
+                        wrong_types += 1
+                        rows.append(("sub", name, f"{path.name}::{fname}",
+                                     " ".join(sorted(got_sub)) or "(none)",
+                                     " ".join(sorted(want_sub)) or "(none)"))
+            elif not sub_ok:
+                skip["nosubtypes"] += 1
             op, ot = card.get("power"), card.get("toughness")
             pm, tm = POWER.search(body), TOUGH.search(body)
             if op is None or ot is None or pm is None or tm is None:
@@ -681,7 +961,8 @@ def main() -> int:
         print(f"  {kind}  {name}\n      {where}\n      body {got}   oracle {want}")
     if len(rows) > len(shown):
         print(f"  ... {len(rows) - len(shown)} more (--rows 0)")
-    print(f"# {checked} factories compared against the oracle: "
+    print(f"# {checked} factories compared against the oracle "
+          f"({checked_sub} of them on subtypes): "
           f"**{wrong_cost} wrong cost, {wrong_pt} wrong P/T, "
           f"{missing_flag} missing `no_mana_cost`, {wrong_types} wrong type line**")
     print("# skipped — " + ", ".join(f"{k} {v}" for k, v in sorted(skip.items())))
