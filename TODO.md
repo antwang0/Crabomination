@@ -47,8 +47,8 @@ sixty-seventh pass, so don't re-take that.
    gate that sees `debug-assertions = false`).
    ⚠ `scripts/audit_printed_body_injections.py` is **29 / 29** and counts rows from BOTH catalog audits — run it after touching any reader, and
    **never run an audit while it runs**: it edits the catalog in place (it refuses a dirty catalog and restores on a signal now).
-   **Fresh seeds: 853..1030 on five pools, then 1031..1171 on cube / all / sealed (393 cells, 1,938,800 games) PLUS a concurrent session's 195 cells /
-   781,600 games on five pools at 1060..1130 — 0 stuck everywhere. Next is 1172, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
+   **Fresh seeds: 853..1030 on five pools, then 1031..1191 on cube / all / sealed (453 cells, 2,234,800 games) PLUS a concurrent session's 195 cells /
+   781,600 games on five pools at 1060..1130 — 0 stuck everywhere. Next is 1192, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
    turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
    of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
@@ -110,7 +110,7 @@ sixty-seventh pass, so don't re-take that.
    (d) **All five duplicate pairs are gone** — and reading them was worth it: both copies of Kroxa and of Uro were in the CUBE POOL, so a seeded cube
    deck could draw two of one legend, and `kroxa_titan_of_deaths_hunger` discarded from each PLAYER where the card says each opponent. ⚠ **That commit
    changed the cube pool**; no vocab index and no golden trace moved with it.
-4. **Next, in order.** (a) **Sweep from 1172 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+4. **Next, in order.** (a) **Sweep from 1192 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
    PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,

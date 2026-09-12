@@ -3228,6 +3228,8 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1112..1118   1b0270fe      35    128,800       0       0     0      8   five pools, CONCURRENT SESSION
   1119..1130   3c37eef1      60    220,800       0       0     0      8   five pools, CONCURRENT SESSION
   1162..1171   a9d19eea      30    148,000       0      10^    0     20
+  1172..1181   36eb5ac0      30    148,000       0       0     0      6
+  1182..1191   36eb5ac0      30    148,000       0       0     0      2
   1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
@@ -3246,7 +3248,7 @@ side.
 block is barely dearer than a three-pool one — which is the only reason the
 duplication cost nothing but time.
 
-**393 cells / 1,938,800 games on the three-pool base, 0 stuck on every one**
+**453 cells / 2,234,800 games on the three-pool base, 0 stuck on every one**
 — and the five-pool rows are 245 cells / 965,600 games on top of that, counted
 apart because they are a different configuration and would otherwise be read as
 more base coverage than there is. Every cap is the
@@ -3271,7 +3273,7 @@ end. **A cap WITHOUT the label is the signal** — the point is that the sweep
 stops crying wolf on a board nobody is going to change, not that caps stopped
 mattering.
 
-A draw is CR 104.4, not a defect. Seed frontier **1172**. One cell is a
+A draw is CR 104.4, not a defect. Seed frontier **1192**. One cell is a
 different kind of outlier and it is the entry below.
 
 **THE SECOND `1102..1111` ROW IS THE SAME SEEDS ON FIVE POOLS WITH `(-291)`
