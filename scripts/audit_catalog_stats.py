@@ -18,7 +18,7 @@ skipped. Keyword check reads the top-level CardDefinition.keywords field only
 (so conditional/granted keywords nested in statics/equip-bonuses/tokens aren't
 flagged). DFC keyword/type refs union across faces.
 """
-import json, re, sys
+import collections, json, re, sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -1436,6 +1436,17 @@ def code_numbers(lit):
     )
     if searches > 1:
         nums.add(searches)
+    # ⚠ **N IS OFTEN SPELLED AS N CALLS OF A LOCAL CLOSURE**, and not only for
+    # searching: Earwig Squad's "exile three cards" is `Seq[pick(), pick(),
+    # pick()]` over a `let pick = || ..`, Springbloom Druid's "up to two basic
+    # lands" is `Seq[fetch(), fetch()]`. The literal holds the CALLS even when
+    # the `let` sits above it, so count any zero-argument call that repeats.
+    # This can only REMOVE rows — an extra code number is never a finding — so
+    # its cost is a masked row, not a false one, and the benefit is a column
+    # whose residue is small enough to read.
+    for n in collections.Counter(re.findall(r"\b([a-z_][a-z0-9_]*)\(\)", lit)).values():
+        if n > 1:
+            nums.add(n)
     for w, n in _CAMEL_NUM.items():
         if re.search(rf"[A-Z][a-z]*{w}(?=[A-Z]|\b)|\b{w}(?=[A-Z])|::{w.upper()}\b|\b{w.lower()}_", lit):
             nums.add(n)
@@ -2564,6 +2575,16 @@ def main():
     per_set = audit()
     detail = sys.argv[1] if len(sys.argv) > 1 else None
     
+    # `all` prints every set's detail in ONE pass. A per-set run costs a full
+    # catalog scan (~4 min), so triaging a column across thirty sets was thirty
+    # scans of the same data.
+    if detail == "all":
+        for dim in ("cost", "pt", "type", "ct", "st", "kw", "abil", "timing", "tapsac", "ocost", "addl", "cnt", "loy", "tok", "trig", "scope", "filt", "num", "stat", "mana"):
+            rows = [(s, r) for s in sorted(per_set) for r in per_set[s][dim]]
+            print(f"\n=== {dim.upper()} drift, every set ({len(rows)}) ===")
+            for s, (tag, got, ref) in rows:
+                print(f"  [{s}] {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
+        return
     if detail:
         d = per_set.get(detail)
         if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")

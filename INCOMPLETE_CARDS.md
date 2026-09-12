@@ -794,6 +794,26 @@ agreed with the wrong code, so `audit_doc_drift` could not see any):
 | Inscription of Ruin | mode 2 any creature card to hand; mode 3 any creature | mana value 2 or less to the battlefield; mana value 3 or less |
 | Cathartic Pyre | discard any number; target creature | up to two; creature or planeswalker |
 
+**Triaged again 2026-09-12 at 83 rows (from 92: see below), and the sample
+held — ten rows across five columns, zero defects.** The ones worth naming so
+nobody walks them a third time, each a READER limit rather than a card:
+
+| Row | Why it is not a finding |
+|---|---|
+| Valakut, the Molten Pinnacle `num` 6 vs 5 | The predicate counts the ENTRANT plus five others, which is six; the comment beside it says so. |
+| Springbloom Druid `num` 1 vs 2 | The `1` is the SACRIFICE count ("sacrifice a land"); the two searches are `Seq[fetch(), fetch()]`. |
+| Earwig Squad `num` 0 vs 3 | Three `pick()` calls of a local closure, and the `0` the reader shows is a `PlayerRef::Target(0)` slot index. |
+| Skizzik `trig` etb vs end | `EntersBattlefield` + `Not(SpellWasKicked)` wrapping an `AtNextEndStep { Sacrifice }` — the delayed trigger IS the end step, and kicked-ness cannot change after ETB. |
+| Telling Time `num` 2,1 vs 3 | "Look at three, one to hand / top / bottom" modelled as Scry 2 + Draw 1 — an approximation, since scry cannot bottom a card. |
+
+The closure case is now READ rather than listed: `code_numbers` counts any
+zero-argument call that repeats, not only `search`-shaped ones (Earwig Squad's
+`pick()`, Springbloom Druid's `fetch()`). That took `num` 92 -> 83, `stat`
+14 -> 12 and `kw` 18 -> 17, and it can only remove rows — an extra number in
+the code is never a finding — so its cost is a masked row, not a false one.
+`python3 scripts/audit_catalog_stats.py all` prints every set's detail in ONE
+catalog scan; triaging a column used to be thirty scans of the same data.
+
 Six of the seven `decks/modern.rs` rows are training-pool cards, which is
 the column's point: the pool the nets learn on had a -2/-2 Languish and a
 half-strength Searing Wind. Residue, 64 rows, each an approximation a doc
