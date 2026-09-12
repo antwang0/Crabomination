@@ -30,8 +30,10 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
    tracker prose; **fetch before every push** — two sessions shared this branch on 2026-09-11 and again on 2026-09-12; read `git log` first. Gotchas in
    **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331
-   (PERF Baseline). Ir crosses boxes, wall clock does not: the `--bench` spread is 289.72 to 542 games/s on byte-identical counters. `(-290)` is the last
-   claimed candidate, `(-291)` next; **the queue is at floor with no device above 0.2 %** — every perf leg of the last six runs came off a bug fix.
+   (PERF Baseline). Ir crosses boxes, wall clock does not: the `--bench` spread is 289.72 to 542 games/s on byte-identical counters. `(-291)` is the last
+   claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
+   came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
+   candidates).
 2. **Gates at the tip:** suite **19,480 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
    census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), `audit_panics` **0 bare**, `audit_decision_plumbing`
@@ -40,10 +42,12 @@ sixty-seventh pass, so don't re-take that.
    capability, `audit_printed_body` **0 on all six columns over 16,483 priced + 17,244 type lines + 16,910 subtypes + 16,800
    keywords + 9,254 P/T**, and `scripts/audit_printed_body_injections.py` **17 / 17 as expected** — run that after
    touching any reader in it.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1121 on cube / all / sealed — 273 cells, 1,346,800 games, 0 stuck, 86 draws, and 10 caps that are
-   ALL the KNOWN Beacon board (`cube` 1069, 1076, 1090 + `all` 1090 — so it is not even cube-only). Next is 1122.** The sweep LABELS that board now (`cap_diagnosis` prints
-   `[SATURATED LIFE …]`, the script counts labelled caps apart and scores the block `failures=0`), so **a cap WITHOUT the label is the signal** — never
-   read a bare cap count as clean. **`all` 1024 is the cell that EARNED its keep** (the `MayDoBy` leak).
+   **Fresh seeds: 853..1030 on five pools, then 1031..1121 on cube / all / sealed (273 cells, 1,346,800 games) PLUS a second session's 170 cells /
+   734,400 games on five pools at 1060..1121 — 0 stuck everywhere, and the 10 caps are ALL the KNOWN Beacon board. Next is 1122.** ⚠ **That board has an
+   ENDING now** (`(-291)`): the turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the last 100 cells / 432,000 games have
+   **0 caps of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**. The watch is its own negative
+   control twice over: on the 60 cells both sessions swept it drew exactly the games that were already draws (PERF Baseline).
+   **`all` 1024 is the cell that EARNED its keep** (the `MayDoBy` leak).
 3. **This run, and the sentence it earned:** *a column that skips is not a column that passes, and a gate that cannot fail is worse than no gate.*
    `audit_printed_body` read cost / P/T / card types for three passes and reported 0; opening the two fields it had left alone found **29 shipped
    defects**, and the sixth column (P/T) turned out to be reading 5,578 of 9,455 creatures with no skip counter at all.
@@ -56,11 +60,26 @@ sixty-seventh pass, so don't re-take that.
    unrelated cast trigger (Niblis, Bria, Lilah, Sokka) printed prowess and never had it, and nine more carried the trigger without the keyword, so no
    "prowess matters" filter saw them. (d) **Five injections silently passed** during the run and all five were one mistake — a resolver reading the
    wrong definition — which is why the injections are a runnable script now.
+3b. **The concurrent session's run, and the sentence IT earned:** *a rules quantity that saturates has consumers, and they wrap on top of it.*
+   (a) **CR 104.4 has a turn-granular half** (`(-291)`). `mandatory_loop_watch` samples after a trigger RESOLUTION and its digest carries the turn
+   number, so a loop whose period is a whole TURN moves the digest every cycle and is invisible to it — which is why the Beacon board ran to the action
+   cap for four seeds. `watch_turn_progress` is the same watch one level up, in `end_turn`. Its two gates are the entry: `end_turn` runs 3,234 times a
+   six-game `cube` run and only ~150 of those are real turns (a bot probe ends turns on its clone), so ungated it cost +0.167 %; sampling from turn 30
+   and one turn in 4 leaves +0.046 / +0.024 / +0.021 %. `GameState` is 1,600 bytes again — the watch's 16 came out of `free_activation_watch`, whose
+   key was `Option<(CardId, usize)>` for an index into `activated_abilities`.
+   (b) **Fifteen CONSUMERS of a saturating value wrapped on top of it**, all reachable from self-play: the actor's own `TrainRow` life-difference LABEL
+   (now `i64`), `snapshot_stats`' per-side power total and its two differences (the aux targets), both gang-block damage sums and their
+   `a.toughness() - a.damage as i32` (a `u32` damage past `i32::MAX` read NEGATIVE there, turning "lethal" into "healed"), the crew/saddle totals,
+   `TotalPowerControlled` + three other `Value`/`Predicate` sums, and two cost-side power totals. The pump ratchet guards the WRITE; a second ratchet
+   (`no_saturating_quantity_is_summed_with_plain_arithmetic`) now guards the reads, and it skips test modules by BRACE MATCHING — the older one cuts
+   each file at the first `#[cfg(test)]`, which in `bot.rs` is line 5,592 of 24,419.
+   (c) `helper_params` matched a helper's parameter list with `[^)]*`, which closes at a TUPLE parameter — eight bestow creatures were skipped out of the
+   subtype and keyword columns rather than read. Injection added (13th, now 17th).
 4. **Next, in order.** (a) **Sweep from 1122 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
    PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,
-   1076, 1090 and `all` 1090 are all the Beacon cap — a POOL property, never to be re-diagnosed.
+   1076, 1090 and `all` 1090 are all the Beacon board — a POOL property, never to be re-diagnosed, and **a draw rather than a cap since `(-291)`**.
    (b) **`audit_printed_body`'s remaining skips are where the next cards are**, and they are small now: `nocache` 3,778 (synthesised cards, not
    auditable), `nonliteral` 921, `nokeywords` 439, `nosubtypes` 221, `notyped` 160, `nopt` 119. Each is one or two idioms (a local built by `push`, a
    `mut` parameter, a non-`Keyword::` element) and the machinery to follow them exists. ⚠ **Print every skip you add** — the P/T column skipped 41 % of
