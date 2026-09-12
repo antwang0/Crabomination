@@ -34,9 +34,11 @@ sixty-seventh pass, so don't re-take that.
    claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
    came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
    candidates).
-2. **Gates at the tip:** suite **19,480 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+2. **Gates at the tip:** suite **19,482 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
    census assertions on every test), clippy **0** (`--all-targets`), golden_trace **11 / 11 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
-   determinism + thread_determinism (the counters have not moved at any tip of either session), `audit_panics` **0 bare**, `audit_decision_plumbing`
+   determinism + thread_determinism (the counters have not moved at any tip of either session), **`robustness_grid.sh` ladder 30 cells / 33,120 games +
+   `--wide` ladder 52 cells / 301,600 games + pilots 45 policies, all 0 failures** (the pilots leg's FIRST failure ever was this run's abilarms cell,
+   fixed), `audit_panics` **0 bare**, `audit_decision_plumbing`
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
    controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
    capability, `audit_printed_body` **0 on all six columns over 16,483 priced + 17,244 type lines + 16,910 subtypes + 16,800
