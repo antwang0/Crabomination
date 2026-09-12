@@ -106,9 +106,22 @@ for pool in $POOLS; do
           re=$(RUST_MIN_STACK=33554432 CRAB_CAP_DIAG=20000 CRAB_MAX_ACTIONS=50000 \
             timeout 7200 "$BIN" --a dflt --b dflt --games "$GAMES" --threads 3 \
             --seed "$seed" --decks "$pool" 2>&1)
+          rerc=$?
           reby=$(echo "$re" | grep -E "^  undecided_by" | tail -1)
+          redec=$(echo "$re" | grep -E "^[0-9]+ decided" | tail -1)
           recap=$(echo "$reby" | awk '{print $3}')
-          if [ -z "$reby" ] || [ "${recap:-0}" -eq 0 ]; then
+          # ⚠ AN ABSENT `undecided_by` MEANS TWO THINGS AND ONLY ONE OF THEM IS
+          # GOOD. The line is absent when every game decided — the cleared case
+          # — and also when the re-run never printed a summary at all: a
+          # `timeout 7200`, an abort, an OOM. Reading the second as the first
+          # scores a cell that HUNG as `slow-not-stuck`, which is the one way
+          # this gate could pass a defect it was built to catch. So the clear
+          # requires the `N decided` line and a zero exit; anything else is a
+          # failure of the cell, reported as one.
+          if [ $rerc -ne 0 ] || [ -z "$redec" ]; then
+            echo "  -> RE-RUN ITSELF FAILED (rc $rerc) — NOT counted as cleared."
+            echo "$re" | tail -20
+          elif [ -z "$reby" ] || [ "${recap:-0}" -eq 0 ]; then
             echo "  -> the ACTION BUDGET, not the board: $(echo "$re" | grep -E '^[0-9]+ decided' | tail -1)"
             echo "     $reby"
             slow=$((slow + $1))

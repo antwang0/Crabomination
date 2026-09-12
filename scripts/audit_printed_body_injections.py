@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Injection battery for `audit_printed_body.py`'s readers.
 
-    python3 scripts/audit_printed_body_injections.py    # 40/40 as expected
+    python3 scripts/audit_printed_body_injections.py           # 42/42 as expected
+    python3 scripts/audit_printed_body_injections.py -j 4      # fewer workers
 
 **A GATE THAT CANNOT FAIL IS WORSE THAN NO GATE**, and this session proved the
 point three times: `fn legend`'s injection passed because the resolver took
@@ -12,17 +13,25 @@ gave up on skipped the card out of the TYPE and SUBTYPE columns too. Each was
 invisible in a report that said 0.
 
 So the injections are runnable rather than a list in a docstring. Each case
-breaks ONE idiom in the catalog, runs the audit, and restores the file. A case
-marked `silent` is a NEGATIVE test: the reader is supposed to be looking
-somewhere else, and a row there would be the bug — Bronzehide Lion's BACK face
-(the reader takes the returned literal) and `fn ally`'s `mut types`, which is
-pushed to before the call it feeds, so binding it to the call site would report
-twenty-odd correct Allies.
+breaks ONE idiom in a COPY of the catalog, runs both oracle-backed audits
+against that copy, and compares the row count to a clean reading. A case marked
+`silent` is a NEGATIVE test: the reader is supposed to be looking somewhere
+else, and a row there would be the bug — Bronzehide Lion's BACK face, where the
+reader takes the returned literal rather than the first.
 
-Run it after touching any reader in `audit_printed_body.py`. It edits catalog
-files in place and restores them; `git status` must be clean afterwards.
+⚠ **IT USED TO PATCH THE REAL CATALOG IN PLACE**, which cost two things and
+neither was obvious. It could not run beside anything else: a concurrent
+`audit_doc_drift` read the Wall of Omens case mid-injection and reported the
+card at 0/5, a "BODY WRONG" row indistinguishable from a shipped defect. And it
+could not run its cases in parallel, because every one of them wrote the same
+tree — 40 cases x two audits, serial, is over an hour for a gate that has to run
+after every reader change. A per-worker copy under `CRAB_CATALOG_DIR` (24 MB
+each) fixes both, and the real catalog is never written at all, so a killed run
+leaves nothing behind.
+
+Run it after touching any reader in `audit_printed_body.py`.
 """
-import pathlib, re, signal, subprocess, sys
+import argparse, concurrent.futures, os, pathlib, queue, re, shutil, subprocess, sys, tempfile
 ROOT = pathlib.Path("/home/user/Crabomination")
 CASES = [
  ("fires", "literal field (Archive Trap)", "sets/mod_set/instants.rs",
@@ -262,10 +271,27 @@ CASES = [
   '        ..super::wwk::tapped_etb_land(\n            "Sejiri Refuge",',
   '        keywords: vec![Keyword::Flying],\n'
   '        ..super::wwk::tapped_etb_land(\n            "Sejiri Refuge",'),
- # Negative: a `mut` parameter is mutated before the call it feeds, so binding
- # it to the caller's argument would report 20-odd correct Allies.
- ("silent", "a mut parameter is not its caller's argument (zen3 fn ally)",
+ # ⚠ THIS CASE FLIPPED, and the flip is the point. It was `silent`: a `mut`
+ # parameter is mutated before the call it feeds, so binding it straight back
+ # to the caller's argument would have reported 20-odd correct Allies, and the
+ # reader bound it to `None` instead. `mut_param_arg` READS the mutation now, so
+ # deleting the push is a defect the column can see — the five zen3 Allies
+ # really do lose their Ally type with that line gone.
+ ("fires", "a mut parameter's own push (zen3 fn ally)",
   "sets/zen3.rs", "    types.push(CreatureType::Ally);\n", ""),
+ # A shorthand field inside a `Subtypes`-returning helper IS the parameter.
+ ("fires", "a shorthand parameter in a Subtypes helper (bro fn construct)",
+  "sets/bro.rs",
+  "fn construct(creature_types: Vec<CreatureType>) -> Subtypes {\n"
+  "    Subtypes {\n        creature_types,",
+  "fn construct(creature_types: Vec<CreatureType>) -> Subtypes {\n"
+  "    Subtypes {\n        creature_types: vec![],"),
+ # The layout gate: a transform card reaches the subtype comparison with its
+ # own FACE's type line, and `layout == \"normal\"` used to drop it silently.
+ ("fires", "a subtype on a transform face (modern Tormented Pariah)",
+  "sets/decks/modern.rs",
+  "        vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Werewolf],",
+  "        vec![CreatureType::Human, CreatureType::Werewolf],"),
 ]
 # ⚠ EVERY ROW KIND, or a column's cases cannot fire. The colour column was
 # added with its row kind missing here, and its injection read "silent" — the
@@ -277,63 +303,88 @@ ROW = re.compile(r"^  (?:sub|kw|types|super|cost|p/t|color|loyalty|no-cost) ", r
 NAME_ROW = re.compile(r"^  (?:spelling|unknown|duplicate|mismatch) +'", re.M)
 
 
-def run():
-    """Rows from BOTH oracle-backed catalog audits.
+def run(catalog):
+    """Rows from BOTH oracle-backed catalog audits, against `catalog`.
 
     `audit_card_names.py` shares this file's name reader, and its own rows are
     the population `audit_printed_body` drops as `nocache` — so an injection
     that breaks a NAME is silent in one and loud in the other, and the battery
-    has to see both or half of what it covers cannot fail.
+    has to see both or half of what it covers cannot fail. It imports
+    `audit_printed_body` and reads `apb.CATALOG`, so one variable steers both.
     """
+    env = dict(os.environ, CRAB_CATALOG_DIR=str(catalog))
     out = subprocess.run([sys.executable, "scripts/audit_printed_body.py", "--rows", "0"],
-                         cwd=ROOT, capture_output=True, text=True).stdout
+                         cwd=ROOT, capture_output=True, text=True, env=env).stdout
     names = subprocess.run([sys.executable, "scripts/audit_card_names.py"],
-                           cwd=ROOT, capture_output=True, text=True).stdout
+                           cwd=ROOT, capture_output=True, text=True, env=env).stdout
     rows = len(ROW.findall(out)) + len(NAME_ROW.findall(names))
     head = next((l for l in out.split("\n") if l.startswith("# compared")), "")
     return rows, head
 
 
-# ⚠ THE BATTERY EDITS THE CATALOG IN PLACE. A run that dies between the write
-# and the restore leaves a broken card behind, and the next audit reads it as a
-# finding — so refuse to start on a dirty catalog, and restore on a signal.
-dirty = subprocess.run(["git", "status", "--porcelain", "crabomination_catalog"],
-                       cwd=ROOT, capture_output=True, text=True).stdout.strip()
-if dirty:
-    print("catalog is dirty — commit or stash it first, or a killed run left a "
-          "patch behind:\n" + dirty)
-    sys.exit(2)
-PENDING = {}
+SRC = ROOT / "crabomination_catalog" / "src"
+ap = argparse.ArgumentParser()
+ap.add_argument("-j", "--jobs", type=int, default=min(6, os.cpu_count() or 1),
+                help="cases in flight; each holds one 24 MB catalog copy")
+ap.add_argument("-k", "--only", default=None,
+                help="run only cases whose label contains this substring")
+opts = ap.parse_args()
+cases = [c for c in CASES if opts.only is None or opts.only in c[1]]
+jobs = max(1, min(opts.jobs, len(cases)))
 
+with tempfile.TemporaryDirectory(prefix="apb_inject_") as tmp:
+    tmp = pathlib.Path(tmp)
+    # One copy per worker, reused across that worker's cases: the copy is 24 MB
+    # and ~1 s, the audit pair is ~2 min, so copying per CASE would be free too
+    # — but a pool of `jobs` trees keeps the peak bounded whatever `-j` is.
+    pool = [tmp / f"w{i}" for i in range(jobs)]
+    for d in pool:
+        shutil.copytree(SRC, d)
+    base, line = run(pool[0])
+    print(f"BASELINE {base} rows\n  {line}\n")
 
-def restore(*_):
-    for p, orig in PENDING.items():
-        p.write_text(orig)
-    PENDING.clear()
-    sys.exit(130)
+    # ⚠ A SLOT IS TAKEN, NOT COMPUTED. `slot = i % jobs` looks like it pins one
+    # tree per worker and does not: with two workers, case 2 (slot 0) starts as
+    # soon as case 1 finishes, while case 0 — also slot 0 — is still running.
+    # Two injections in one tree is a silently wrong reading, so the slot comes
+    # off a queue and goes back when the case is done.
+    free = queue.Queue()
+    for i in range(jobs):
+        free.put(i)
 
+    def one(case):
+        expect, label, rel, old, new = case
+        slot = free.get()
+        try:
+            return run_case(pool[slot], case)
+        finally:
+            free.put(slot)
 
-for sig in (signal.SIGINT, signal.SIGTERM):
-    signal.signal(sig, restore)
-base, line = run()
-print(f"BASELINE {base} rows\n  {line}\n")
-bad = 0
-for expect, label, rel, old, new in CASES:
-    p = ROOT / "crabomination_catalog/src" / rel
-    orig = p.read_text()
-    n = orig.count(old)
-    if n != 1:
-        print(f"BROKEN CASE     pattern occurs {n}x   {label}"); bad += 1; continue
-    PENDING[p] = orig
-    try:
-        p.write_text(orig.replace(old, new, 1))
-        rows, _ = run()
-    finally:
-        p.write_text(orig)
-        PENDING.pop(p, None)
-    delta = rows - base
-    ok = (delta > 0) if expect == "fires" else (delta == 0)
-    bad += not ok
-    print(f"{'ok' if ok else 'FAILED':8} expect {expect:6} got {delta:+5d} rows   {label}")
-print(f"\n{len(CASES) - bad}/{len(CASES)} as expected")
+    def run_case(root, case):
+        expect, label, rel, old, new = case
+        p = root / rel
+        orig = p.read_text()
+        n = orig.count(old)
+        if n != 1:
+            return None, f"BROKEN CASE     pattern occurs {n}x   {label}"
+        try:
+            p.write_text(orig.replace(old, new, 1))
+            rows, _ = run(root)
+        finally:
+            # Restoring matters even on a copy: the slot is reused by the next
+            # case, and a leftover patch would move ITS baseline silently.
+            p.write_text(orig)
+        delta = rows - base
+        ok = (delta > 0) if expect == "fires" else (delta == 0)
+        return ok, (f"{'ok' if ok else 'FAILED':8} expect {expect:6} "
+                    f"got {delta:+5d} rows   {label}")
+
+    bad = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as ex:
+        futs = [ex.submit(one, c) for c in cases]
+        for f in futs:
+            ok, msg = f.result()
+            bad += not ok
+            print(msg)
+print(f"\n{len(cases) - bad}/{len(cases)} as expected")
 sys.exit(1 if bad else 0)

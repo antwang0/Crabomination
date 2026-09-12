@@ -364,12 +364,21 @@ battery now.
 import argparse
 import collections
 import json
+import os
 import pathlib
 import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CATALOG = ROOT / "crabomination_catalog" / "src"
+# ⚠ `CRAB_CATALOG_DIR` POINTS THIS AT A COPY, and the injection battery is why:
+# it used to patch the REAL catalog in place, which made it unsafe to run
+# anything else at the same time (a `audit_doc_drift` run that overlapped it
+# reported Wall of Omens at 0/5 — the battery's own injection, indistinguishable
+# from a shipped defect) and unparallelisable, since every case wrote the same
+# file. A per-worker copy makes it both. `audit_card_names.py` imports this
+# module and reads `apb.CATALOG`, so it follows the same variable.
+CATALOG = pathlib.Path(os.environ.get("CRAB_CATALOG_DIR")
+                       or ROOT / "crabomination_catalog" / "src")
 CACHE = json.load(open(pathlib.Path(__file__).resolve().parent / ".scryfall_cache.json"))
 CACHE_LC = {k.lower(): v for k, v in CACHE.items() if isinstance(v, dict)}
 # The cache keyed the way a factory name is spelled: lowercase, letters and
@@ -1432,7 +1441,12 @@ COST_FIELD = re.compile(r"^cost: (.*?),?$", re.M)
 # into the caller's argument still reads the whole printed line. Anything else
 # (`retain`, `remove`, `clear`, `pop`, `drain`, `truncate`, an index assignment)
 # leaves the param unreadable, which is where it started.
-MUT_ADD = ("push", "extend", "extend_from_slice", "insert")
+# ⚠ NOT `insert`. `Vec::insert(i, v)` and `HashSet::insert(v)` have different
+# arities, so a reader that guesses which argument is the value reads NOTHING
+# from the one-argument form and hands back the caller's list unchanged — which
+# is a card reported as missing whatever was inserted. No catalog helper uses
+# it; the safe direction is to leave such a parameter unreadable.
+MUT_ADD = ("push", "extend", "extend_from_slice")
 MUT_READ_ONLY = ("contains", "iter", "len", "is_empty", "clone", "to_vec",
                  "as_slice", "first", "last", "sort", "sort_by", "dedup")
 
@@ -1457,6 +1471,10 @@ def mut_param_arg(src: str, name: str, arg: str):
     because the column compares SETS. Anything else, including a reassignment,
     returns None and the parameter stays unreadable.
     """
+    # A COMMENTED-OUT push is not a push. Reading one would ADD a type the
+    # code does not, which reports a correct card — the one direction an audit
+    # must never get wrong — so the line comments come off before the scan.
+    src = re.sub(r"//[^\n]*", "", src)
     if re.search(r"(?<![=!<>:])\b%s\s*=(?!=)" % re.escape(name), src):
         return None
     added = []
@@ -1467,10 +1485,7 @@ def mut_param_arg(src: str, name: str, arg: str):
         if meth not in MUT_ADD:
             return None
         at = m.end() - 1
-        vals = call_args(src, at)
-        if meth == "insert":
-            vals = vals[1:]
-        for v in vals:
+        for v in call_args(src, at):
             v = v.strip().lstrip("&")
             vm = re.fullmatch(r"vec!\[(.*)\]|\[(.*)\]", v, re.S)
             if vm:

@@ -90,6 +90,14 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   task log) rather than fail loudly. `rm -rf target/debug/incremental`
   costs one non-incremental engine rebuild (~4 min) and returns the space;
   delete superseded A/B binaries and dumps from the scratchpad as you go.
+  ⚠ **`target/debug/deps` IS THE BIGGER HOARD AND IT COSTS NOTHING TO CLEAR.**
+  Cargo keys each test binary by a content hash and never reclaims the old
+  one, so every edit-and-test round leaves a ~280 MB `core_rules-<hash>` /
+  `classic_sets-<hash>` / `recent_b-<hash>` behind: 21 GB of them after one
+  day, of which 4 GB was live.
+  `find target/debug/deps -maxdepth 1 -type f -size +50M -mmin +180 -delete`
+  freed 16 GB and rebuilt nothing — a stale hash is one cargo will never look
+  up again. Do it before a long optimized build, not after the build dies.
 - **A second worktree sharing `target/` builds NOTHING unless its sources are
   newer than the main tree's outputs.** Cargo keys a workspace member by its
   path *relative to the workspace root*, so `/home/user/crab_base/crabomination`
