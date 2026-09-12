@@ -9197,12 +9197,22 @@ What the table points at instead is `compute_permanent_pass`: **321,486 calls
 176,210 times from here and 145,276 from `compute_permanents`' own
 `from_iter`. That is one layer pass per permanent per freeze scope, which the
 `(-194)` census already priced as the freeze design's floor rather than a
-device. The unexplored half is not the pass body but the **scope granularity**
-— 176 k first-asks against ~124 k re-asks means the memo is reused ~1.7x per
-permanent, and a coarser `with_frozen_layers` would raise that — and a scope
-may not span a state mutation, so it is a correctness question before it is a
-perf one. Nobody has censused scopes-per-decision; that is the next reading, not
-a build.
+device. The scope-granularity half — "176 k first-asks against
+~124 k re-asks means the memo is reused ~1.7x, so a coarser scope would raise
+it" — **is refuted by the same dump, in the next line of it.** There are
+**162,514 `with_frozen_layers` calls** against those 300,266 asks: **1.85 asks
+a scope.** The scopes are already as small as they get, and there is no reuse
+to win by widening one — you would have to MERGE them, and their callers are
+43,614 inside `simulate_attack_outcome_once` (one a sim), 28,564 in
+`next_action_settled`, 15,138 nested inside another scope, 13,508 in
+`check_target_legality_with_source`. Only **25,634** of the 162 k ever reach a
+computed read at all, which is what `fx_pool::alloc_with`'s count is: those are
+the scopes that pay the gather (54.0 M, 2.6 % of the pool), and the other 137 k
+pay `with_frozen_layers` 208 Ir + `Unfreeze::drop` 43 Ir and nothing else.
+`(-47th)`'s depth-shadow refutation already priced a lock-free "memo present"
+flag for that residue at a 0.14 % ceiling. **Closed: the row is the layer pass
+and the gather, both recorded as the freeze design's floor, and neither the
+hit path nor the scope count is a device.**
 
 **THE PROMPT-TEXT ELISION'S LAST FAMILY — PRICED AND NOT BUILT, so nobody
 re-opens it off `(-288)`'s "two families are left".** `OptionalKind`
