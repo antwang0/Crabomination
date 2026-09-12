@@ -176,13 +176,6 @@ MISSING_OK = {
     # Battalion as an `Attacks` trigger filtered by
     # `Predicate::AttackingWithAtLeast(3)`, which is what the ability word means.
     ("firefist_striker", "battalion"),
-    # Bloodrush as a from-hand activated ability with `discard_self_cost` —
-    # the printed cost line, spelled out, with no name anywhere in it.
-    ("ghor_clan_rampager", "bloodrush"),
-    ("skarrg_goliath", "bloodrush"),
-    ("rubblebelt_maaka", "bloodrush"),
-    ("pyrewild_shaman", "bloodrush"),
-    ("rubblehulk", "bloodrush"),
     # Bloodthirst **X** — `enters_with_counters` over
     # `Value::DamageTakenThisTurn`, which is the mechanic; `Keyword::
     # Bloodthirst(n)` takes a fixed n and cannot say X.
@@ -267,6 +260,17 @@ def top_level_keywords(body: str):
     return re.findall(r"Keyword::([A-Za-z]+)", body[i : j + 1])
 
 
+# ⚠ **"[NAME] — [cost], Discard this card: …" IS ONE SHAPE AND IT HAS NO NAME
+# IN THE SOURCE.** Channel (Kamigawa) and Bloodrush (Gatecrash) are the same
+# printed construction and the same modelling: an `ActivatedAbility` with
+# `from_hand: true` and `discard_self_cost: true`, whose body is the effect.
+# Nothing in it spells the mechanic, so `spelled_in` cannot see it and twenty
+# rows read as missing — fourteen of the fifteen channel cards carry the
+# ability, and so do all five bloodrush ones. A rule, not twenty allowlist
+# entries: the fifteenth (Touch the Spirit Realm) was a real gap and is fixed.
+DISCARD_FROM_HAND = {"channel", "bloodrush"}
+
+
 def spelled_in(literal: str, word: str) -> bool:
     """Is this mechanic spelled ANYWHERE in the card's literal?
 
@@ -292,6 +296,10 @@ def spelled_in(literal: str, word: str) -> bool:
     path-qualified or called". Starts-with, not contains, on purpose:
     `Gravestorm` must not answer for Storm.
     """
+    if (word in DISCARD_FROM_HAND
+            and "from_hand" in literal
+            and "discard_self_cost" in literal):
+        return True
     return bool(
         re.search(rf"::{re.escape(word)}[A-Za-z0-9_]*\b", literal, re.I)
         or re.search(rf"(?:^|[^A-Za-z0-9_:]){re.escape(word)}[a-z0-9_]*\s*\(",

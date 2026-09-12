@@ -7326,17 +7326,41 @@ pub fn bloodletter_of_aclazotz() -> CardDefinition {
 /// Touch the Spirit Realm — {2}{W} Enchantment. ETB: exile up to one target
 /// artifact or creature until this leaves. (The Channel discard-mode is omitted.)
 pub fn touch_the_spirit_realm() -> CardDefinition {
-    use crate::card::{CardType as CT, ExileReturnZone};
+    use crate::card::{ActivatedAbility, CardType as CT, ExileReturnZone};
+    use crate::effect::DelayedTriggerKind;
+    let artifact_or_creature =
+        || SelectionRequirement::Creature.or(SelectionRequirement::HasCardType(CT::Artifact));
     CardDefinition {
         name: "Touch the Spirit Realm",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
-            what: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::HasCardType(CT::Artifact)),
-            ),
+            what: target_filtered(artifact_or_creature()),
             return_to: ExileReturnZone::Battlefield,
         })],
+        // Channel — {1}{W}, Discard this card: exile target artifact or
+        // creature and give it back at the next end step. The card's second
+        // half, shipped missing; every other Kamigawa channel card in this
+        // catalog is this same from-hand `discard_self_cost` ability.
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: target_filtered(artifact_or_creature()) },
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                            tapped: false,
+                        },
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

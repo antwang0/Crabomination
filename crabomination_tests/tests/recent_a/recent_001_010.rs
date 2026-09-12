@@ -2377,6 +2377,46 @@ mod recent {
             "returns when the enchantment leaves");
     }
 
+    /// **Channel — {1}{W}, Discard this card: exile target artifact or
+    /// creature; it comes back at the next end step.**
+    ///
+    /// The card's second half, shipped missing. Fourteen of the fifteen
+    /// Kamigawa channel cards in this catalog already carry the shape — an
+    /// `ActivatedAbility` with `from_hand` and `discard_self_cost` — and this
+    /// was the one that did not; `audit_keyword_drift` named all fifteen and
+    /// only this row was real.
+    #[test]
+    fn touch_the_spirit_realm_channels_from_hand_for_a_delayed_blink() {
+        use crabomination::game::types::TurnStep;
+        let mut g = two_player_game();
+        let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+        let touch = g.add_card_to_hand(0, catalog::touch_the_spirit_realm());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: touch,
+            ability_index: 0,
+            target: Some(Target::Permanent(victim)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("channel from hand");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(victim).is_none(), "exiled by the channel");
+        assert!(
+            g.players[0].graveyard.iter().any(|c| c.id == touch),
+            "discarding the card is the cost",
+        );
+        g.active_player_idx = 0;
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+        assert!(
+            g.battlefield.iter().any(|c| c.definition.name == "Serra Angel"),
+            "back at the beginning of the next end step",
+        );
+    }
+
     /// Sonar Strike burns a tapped creature and gains life with a Bat out.
     #[test]
     fn sonar_strike_hits_tapped_and_gains_with_bat() {
