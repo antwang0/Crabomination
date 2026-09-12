@@ -3037,6 +3037,10 @@ grid    `robustness_grid.sh --no-build --no-actor --pilots` at the run's tip: la
         pilots 45 cells 0 failures.** The rest of the class is censused and is not a backlog — of the 39 activated
         abilities that sacrifice in the effect, 13 sacrifice the SOURCE and are printed that way, and the other 17 carry
         a tap (bounded to one announcement an untap) or print the sacrifice as an effect.
+grid    and the `--wide` LADDER at the closing tip (`SEEDS` 1..101's 26 primes-and-friends x `GAMES=400` x
+        `POOLS="all sealed"`, the sizes the script's header says "actually find things"): **52 cells / 301,600 games, 0
+        failures, cap 0 / stuck 0 / draw 10**. With the dflt sweeps above that is ~1.07 M games swept this session for
+        one defect — the `abilarms` stack — plus the Beacon board's ending.
 perf    none claimed. `(-291)` is a cost, measured and gated down 7x rather than assumed: ungated it was +0.167 % on
         cube, because `end_turn` runs 3,234 times a six-game run and only ~150 of those are real turns. Sampling from
         turn 30 and one turn in 4 leaves +0.046 % / +0.024 % / +0.021 % on fixed / cube / sealed. `GameState` is 1,600
