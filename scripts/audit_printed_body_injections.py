@@ -306,6 +306,32 @@ CASES = [
   "    Subtypes {\n        creature_types,",
   "fn construct(creature_types: Vec<CreatureType>) -> Subtypes {\n"
   "    Subtypes {\n        creature_types: vec![],"),
+ # The keyword column on a FACE: the whole-card `keywords` array survives the
+ # face merge as `_card_keywords`, and the MISSING side is intersected with this
+ # face's own oracle text, so a back-face keyword cannot be reported on the front.
+ ("fires", "a keyword on an adventure face (modern Lonesome Unicorn)",
+  "sets/decks/modern.rs",
+  '        name: "Lonesome Unicorn",\n        cost: cost(&[generic(4), w()]),\n'
+  "        card_types: vec![CardType::Creature],\n        subtypes: Subtypes {\n"
+  "            creature_types: vec![CreatureType::Unicorn],\n"
+  "            ..Default::default()\n        },\n        power: 3,\n"
+  "        toughness: 3,\n        keywords: vec![Keyword::Vigilance],",
+  '        name: "Lonesome Unicorn",\n        cost: cost(&[generic(4), w()]),\n'
+  "        card_types: vec![CardType::Creature],\n        subtypes: Subtypes {\n"
+  "            creature_types: vec![CreatureType::Unicorn],\n"
+  "            ..Default::default()\n        },\n        power: 3,\n"
+  "        toughness: 3,"),
+ # ⚠ NEGATIVE, and it is the one that makes the case above safe. The whole-card
+ # `keywords` array survives the merge, so the reader must still take the CARD's
+ # own `keywords:` and not a nested `TokenDefinition`'s — Rider in Need's Knight
+ # token prints vigilance too, and the card-level column must not see it.
+ ("silent", "a token's keyword is not the card's (modern Rider in Need's Knight)",
+  "sets/decks/modern.rs",
+  "                        creature_types: vec![CreatureType::Knight],\n"
+  "                        ..Default::default()\n                    },\n"
+  "                    keywords: vec![Keyword::Vigilance],\n",
+  "                        creature_types: vec![CreatureType::Knight],\n"
+  "                        ..Default::default()\n                    },\n"),
  # The layout gate: a transform card reaches the subtype comparison with its
  # own FACE's type line, and `layout == \"normal\"` used to drop it silently.
  ("fires", "a subtype on a transform face (modern Tormented Pariah)",
