@@ -19147,9 +19147,8 @@ use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
         },
         power: 3,
         toughness: 3,
-        // "This creature attacks each combat if able." (Madness {1}{R} is
-        // not modelled.)
-        keywords: vec![Keyword::MustAttack],
+        // "This creature attacks each combat if able."
+        keywords: vec![Keyword::MustAttack, Keyword::Madness(cost(&[generic(1), r()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Seq(vec![

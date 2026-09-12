@@ -5048,6 +5048,7 @@ pub fn hungry_for_more() -> CardDefinition {
         name: "Hungry for More",
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), b(), r()]))],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),

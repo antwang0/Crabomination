@@ -8381,7 +8381,7 @@ pub fn fledgling_mawcor() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::Morph(cost(&[u(), u()]))],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,

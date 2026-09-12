@@ -162,6 +162,44 @@ ALLOWED = {
     ("stone_idol_trap", "affinity"),
 }
 
+# The MISSING direction's own allowlist: a card whose mechanic IS modelled, in
+# a shape `spelled_in` cannot see. Checked once, with the shape named, so the
+# list stays a list of cards to READ rather than a list of cards to re-check.
+#
+# ⚠ A row belongs here only when the mechanic is genuinely modelled. A card
+# that simply lacks it goes in the list and gets fixed.
+MISSING_OK = {
+    # Affinity through `StaticEffect::SelfCostReducedPerPermanentMatching`
+    # rather than `affinity_filter` — the catalog's other vehicle for it.
+    ("sky_blessed_samurai", "affinity"),
+    ("allies_at_last", "affinity"),
+    # Battalion as an `Attacks` trigger filtered by
+    # `Predicate::AttackingWithAtLeast(3)`, which is what the ability word means.
+    ("firefist_striker", "battalion"),
+    # Bloodrush as a from-hand activated ability with `discard_self_cost` —
+    # the printed cost line, spelled out, with no name anywhere in it.
+    ("ghor_clan_rampager", "bloodrush"),
+    ("skarrg_goliath", "bloodrush"),
+    ("rubblebelt_maaka", "bloodrush"),
+    ("pyrewild_shaman", "bloodrush"),
+    ("rubblehulk", "bloodrush"),
+    # Bloodthirst **X** — `enters_with_counters` over
+    # `Value::DamageTakenThisTurn`, which is the mechanic; `Keyword::
+    # Bloodthirst(n)` takes a fixed n and cannot say X.
+    ("petrified_wood_kin", "bloodthirst"),
+    # Unearth written out as an `ActivatedAbility` literal — `from_graveyard`
+    # + the haste grant + the end-step exile — rather than through
+    # `shortcut::unearth`. ⚠ THE FALSE POSITIVE THAT COST A TEST: adding the
+    # shortcut on top gave the card TWO unearths and shifted every ability
+    # index, which `priest_of_fell_rites_reanimates_and_unearths` caught. Read
+    # the body before believing a row.
+    ("priest_of_fell_rites", "unearth"),
+    # The mechanic's word is the card's NAME, and the oracle repeats the name.
+    ("storms_wrath", "storm"),
+    ("blitz_of_the_thunder_raptor", "blitz"),
+    ("devour_in_flames", "devour"),
+}
+
 # ⚠ Some of those fields are *implementation vehicles* rather than the printed
 # keyword: `affinity_graveyard_filter` is how "costs {1} less for each instant
 # in your graveyard" is modelled and no such card prints "Affinity", and
@@ -340,7 +378,7 @@ def scan():
                 # "the word appears as an identifier" is evidence the mechanic
                 # is modelled, and it is not evidence that the CARD prints it,
                 # so it must never answer the INVENTED question.
-                if spelled_in(body, word):
+                if spelled_in(body, word) or (m.group(1), word) in MISSING_OK:
                     continue
                 # The printed keyword line starts the ability, so require the
                 # word at a line start or after a separator — "escape" inside

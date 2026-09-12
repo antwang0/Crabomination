@@ -182,6 +182,7 @@ pub fn plan_the_heist() -> CardDefinition {
         name: "Plan the Heist",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Sorcery],
+        plot_cost: Some(cost(&[generic(3), u()])),
         effect: Effect::Seq(vec![
             Effect::If {
                 cond: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::Const(0)),

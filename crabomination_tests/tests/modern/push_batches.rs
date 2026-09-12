@@ -3663,3 +3663,34 @@ fn six_cards_carry_the_mechanic_they_print() {
     assert!(out.tap_cost && out.sorcery_speed, "Outlast taps and is sorcery-speed");
     assert_eq!(out.mana_cost, cost(&[generic(1), b()]));
 }
+
+/// Six more, and the residue after them is 29 rows of real missing-mechanic
+/// work rather than 367 rows of reader noise.
+///
+/// ⚠ Anje's Ravager's own comment said "(Madness {1}{R} is not modelled.)"
+/// and `Keyword::Madness(cost)` was in use by other cards; Yavimaya Granger's
+/// said the same thing about Echo. A comment claiming a mechanic is dropped
+/// is worth one grep.
+#[test]
+fn six_more_cards_carry_the_mechanic_they_print() {
+    use crabomination::card::Keyword;
+    use crabomination::mana::{b, cost, generic, r, u};
+
+    let has = |def: &crabomination::card::CardDefinition, want: &Keyword| {
+        def.keywords.iter().any(|k| k == want)
+    };
+    let hungry = catalog::hungry_for_more();
+    assert!(has(&hungry, &Keyword::Flashback(cost(&[generic(1), b(), r()]))), "Flashback {{1}}{{B}}{{R}}");
+    let anje = catalog::anjes_ravager();
+    assert!(has(&anje, &Keyword::Madness(cost(&[generic(1), r()]))), "Madness {{1}}{{R}}");
+    let mawcor = catalog::fledgling_mawcor();
+    assert!(has(&mawcor, &Keyword::Morph(cost(&[u(), u()]))), "Morph {{U}}{{U}}");
+    let consign = catalog::consign_to_memory();
+    assert!(has(&consign, &Keyword::Replicate(cost(&[generic(1)]))), "Replicate {{1}}");
+
+    assert_eq!(
+        catalog::plan_the_heist().plot_cost.as_ref(),
+        Some(&cost(&[generic(3), u()])),
+        "Plot {{3}}{{U}}",
+    );
+}

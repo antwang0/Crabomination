@@ -491,6 +491,7 @@ pub fn consign_to_memory() -> CardDefinition {
         name: "Consign to Memory",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
+        keywords: vec![crate::card::Keyword::Replicate(cost(&[generic(1)]))],
         effect: Effect::ChooseMode(vec![
             // Mode 0: counter target ability (the Goryo's-matchup default).
             Effect::CounterAbility {
