@@ -3144,9 +3144,10 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1102..1111   c746c7ab      50    216,000       0       0     0      8   five pools, WITH `(-291)`
   1112..1121   feed62f5      30    148,000       0       0     0     12
   1112..1121   0036101a      50    216,000       0       0     0     20   five pools, WITH `(-291)`
+  1122..1131   90340416      30    148,000       0       0     0      4
 ```
 
-**273 cells / 1,346,800 games on the three-pool base, 0 stuck on every one**
+**303 cells / 1,494,800 games on the three-pool base, 0 stuck on every one**
 — and the two five-pool `(-291)` rows are 100 cells / 432,000 games on top of
 that, counted apart because they are a different configuration and would
 otherwise be read as more base coverage than there is. Every cap is the
@@ -3171,7 +3172,7 @@ end. **A cap WITHOUT the label is the signal** — the point is that the sweep
 stops crying wolf on a board nobody is going to change, not that caps stopped
 mattering.
 
-A draw is CR 104.4, not a defect. Seed frontier **1122**. One cell is a
+A draw is CR 104.4, not a defect. Seed frontier **1142**. One cell is a
 different kind of outlier and it is the entry below.
 
 **THE SECOND `1102..1111` ROW IS THE SAME SEEDS ON FIVE POOLS WITH `(-291)`

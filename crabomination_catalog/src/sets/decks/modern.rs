@@ -2096,8 +2096,10 @@ pub fn mishras_bauble() -> CardDefinition {
 /// Wired as a self-source ETB `Search(filter: HasArtifactSubtype(Equipment),
 /// to: Hand)`. The engine's `do_search` already supports declining the
 /// search (decider answers `Search(None)`), which models the "may" rider.
-/// The {1}{W}, {T}: equip ability is omitted (no equipment-attach
-/// activation primitive yet) — use Stoneforge purely as a tutor for now.
+/// The `{1}{W}, {T}` half is wired too, as the `Move` below — the note that
+/// said it was "omitted (no equipment-attach activation primitive yet)"
+/// outlived the ability by however long, which is what a stale approximation
+/// note costs: it reads as a known gap and nobody re-checks it.
 pub fn stoneforge_mystic() -> CardDefinition {
     use crate::card::ArtifactSubtype;
     CardDefinition {
