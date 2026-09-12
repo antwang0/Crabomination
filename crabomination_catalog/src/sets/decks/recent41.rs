@@ -102,6 +102,20 @@ pub fn scale_up() -> CardDefinition {
             keywords: vec![],
             duration: Duration::EndOfTurn,
         },
+        // CR 702.96 — Overload {4}{G}{G}: "target" becomes "each", which is
+        // what `effect_override` is for.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect_override: Some(Effect::BecomeCreature {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: Value::Const(6),
+                toughness: Value::Const(4),
+                creature_types: vec![CreatureType::Wurm],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            }),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

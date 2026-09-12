@@ -1761,6 +1761,25 @@ fn crabomination_etb_mills_each_opponent_three_cards() {
         "Milled cards land in opp's graveyard");
 }
 
+/// **Emerge from artifact {5}{B}{B}**, shipped missing — and a second trigger
+/// the card does not print, removed.
+///
+/// The body carried "whenever a creature an opponent controls dies, scry 1"
+/// under a comment calling it an approximation "of the broader" version of an
+/// ability that is not on the card either. `audit_keyword_drift` named the
+/// card for its missing emerge and the invented trigger was sitting beside it.
+#[test]
+fn crabomination_emerges_from_an_artifact_and_has_one_trigger() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::mana::{b, cost, generic};
+    let def = catalog::crabomination();
+    let alt = def.alternative_cost.as_ref().expect("Emerge from artifact");
+    assert_eq!(alt.mana_cost, cost(&[generic(5), b(), b()]));
+    assert_eq!(alt.emerge.as_ref(), Some(&SelectionRequirement::Artifact),
+        "emerge from an ARTIFACT, not a creature");
+    assert_eq!(def.triggered_abilities.len(), 1, "the card prints one trigger");
+}
+
 #[test]
 fn chaos_warp_reshuffles_target_and_replays_revealed_permanent() {
     // With the owner's library otherwise empty, the shuffled-in bear is the

@@ -559,6 +559,29 @@ pub fn wear_down() -> CardDefinition {
                 SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
             ),
         },
+        // CR 702.165 — "Gift a card": promised, the opponent draws first and
+        // the spell destroys TWO instead of one.
+        gift: Some(Box::new(crate::card::Gift {
+            label: "a card",
+            gifted_effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                },
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                },
+                Effect::Destroy {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Enchantment),
+                    },
+                },
+            ]),
+        })),
         ..Default::default()
     }
 }

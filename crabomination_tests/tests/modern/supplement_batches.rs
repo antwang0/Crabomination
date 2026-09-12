@@ -2438,3 +2438,36 @@ fn tidehollow_sculler_etb_takes_an_opponent_card() {
         "Bolt returns to owner's hand when the Sculler leaves");
 }
 
+
+// ── Three alternative costs the cards print and did not carry ──────────────
+
+/// Overload, Cleave and Gift, all off the sharpened `audit_keyword_drift`
+/// list. Each rides a vehicle the engine already had and no card had used for
+/// these three: `AlternativeCost::effect_override` — "change the words" — for
+/// Overload and Cleave, and `CardDefinition::gift` for the promise.
+#[test]
+fn overload_cleave_and_gift_are_carried_by_the_cards_that_print_them() {
+    use crabomination::mana::{cost, g, generic, u};
+
+    // Scale Up — Overload {4}{G}{G}: "target" becomes "each".
+    let scale = catalog::scale_up();
+    let alt = scale.alternative_cost.as_ref().expect("Overload {4}{G}{G}");
+    assert_eq!(alt.mana_cost, cost(&[generic(4), g(), g()]));
+    assert!(alt.effect_override.is_some(), "overload rewrites the effect");
+    assert_ne!(alt.effect_override.as_ref(), Some(&scale.effect), "and rewrites it to something else");
+
+    // Inspired Idea — Cleave {3}{U}{U}: the bracketed downside comes off, so
+    // the override is the draw with no `PutOnLibraryFromHand` tail.
+    let idea = catalog::inspired_idea();
+    let alt = idea.alternative_cost.as_ref().expect("Cleave {3}{U}{U}");
+    assert_eq!(alt.mana_cost, cost(&[generic(3), u(), u()]));
+    assert!(
+        matches!(alt.effect_override.as_ref(), Some(crabomination::card::Effect::Draw { .. })),
+        "cleaved, it is the draw alone",
+    );
+
+    // Wear Down — Gift a card: promised, they draw first and it destroys two.
+    let wear = catalog::wear_down();
+    let gift = wear.gift.as_ref().expect("Gift a card");
+    assert_eq!(gift.label, "a card");
+}

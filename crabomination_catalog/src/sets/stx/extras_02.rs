@@ -369,6 +369,9 @@ pub fn inspired_idea() -> CardDefinition {
         name: "Inspired Idea",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
+        // ⚠ The bracketed half is "your maximum hand size is reduced by three
+        // for the rest of the game", which has no primitive; putting two cards
+        // back on the library is the standing approximation of the downside.
         effect: Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -379,6 +382,16 @@ pub fn inspired_idea() -> CardDefinition {
                 count: Value::Const(2),
             },
         ]),
+        // CR 702.147 — Cleave {3}{U}{U}: cast for the cleave cost and the
+        // bracketed words come off, so the override is the draw alone.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(3), u(), u()]),
+            effect_override: Some(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            }),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

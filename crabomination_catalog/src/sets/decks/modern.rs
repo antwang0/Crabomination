@@ -8058,26 +8058,31 @@ pub fn crabomination() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Mill {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(3),
-                },
+        // CR 702.119 — **Emerge from artifact** {5}{B}{B}. `AlternativeCost::
+        // emerge` carries the filter, so the artifact variant is the same
+        // vehicle as `shortcut::emerge`'s creature one with a different one.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            mana_cost: cost(&[generic(5), b(), b()]),
+            emerge: Some(SelectionRequirement::Artifact),
+            ..Default::default()
+        }),
+        // ⚠ The printed ETB is "target opponent exiles the top card of their
+        // library, a card at random from their graveyard, and a card at random
+        // from their hand; you may cast a spell from among them without paying
+        // its mana cost." Milling three is the standing approximation of the
+        // library half and is the only half modelled.
+        //
+        // ⚠ A SECOND TRIGGER — "whenever a creature an opponent controls dies,
+        // scry 1" — was removed: the card has no such ability, and the comment
+        // that shipped with it described it as an approximation "of the
+        // broader" version of an ability that is not on the card either.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
             },
-            // Whenever a creature your opponents control dies, you scry 1.
-            // (Approximation of the broader "creature card put into an opp
-            // graveyard" — covers the most common path: combat / removal
-            // putting it there from the battlefield.)
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
-                effect: Effect::Scry {
-                    who: PlayerRef::You,
-                    amount: Value::Const(1),
-                },
-            },
-        ],
+        }],
         ..Default::default()
     }
 }
