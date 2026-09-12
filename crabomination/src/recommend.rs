@@ -2237,6 +2237,19 @@ fn cap_diagnosis(g: &GameState, actions: usize) -> String {
         g.turn_number,
         g.stack.len()
     );
+    // ⚠ THE ONE KNOWN SHAPE, NAMED SO IT IS NOT RE-DIAGNOSED. A seat whose
+    // life is at or near `i32::MAX` cannot be killed by damage and cannot
+    // deck out fast enough to matter, so the game is unwinnable and the action
+    // cap is the backstop working. It is Beacon of Immortality every time —
+    // double target player's life, shuffle itself back — and it has been
+    // pinned three times now (`cube` 1018, 1069, 1076) with
+    // `CRAB_LIFE_WATCH`, which prints the doubling series. ENGINE_BACKLOG's
+    // OPEN section has the diagnosis; what is open there is adjudication, not
+    // a rules defect. `fresh_seed_sweep.sh` counts these separately so a cube
+    // block does not read as a failure for a board nobody is going to change.
+    if g.players.iter().any(|p| p.life > crate::player::SCALE_CEILING.saturating_mul(1_000)) {
+        let _ = write!(s, "  [SATURATED LIFE — the known unwinnable board, not a new defect]");
+    }
     for (seat, p) in g.players.iter().enumerate() {
         // The pool and the untapped count are what say whether a repeated
         // activation was *paid for*: an unbounded loop of a `{cost}` ability
