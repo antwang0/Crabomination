@@ -75,7 +75,7 @@ sixty-seventh pass, so don't re-take that.
    each file at the first `#[cfg(test)]`, which in `bot.rs` is line 5,592 of 24,419.
    (c) `helper_params` matched a helper's parameter list with `[^)]*`, which closes at a TUPLE parameter — eight bestow creatures were skipped out of the
    subtype and keyword columns rather than read. Injection added (13th, now 17th).
-4. **Next, in order.** (a) **Sweep from 1142 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+4. **Next, in order.** (a) **Sweep from 1152 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
    PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,
@@ -84,18 +84,22 @@ sixty-seventh pass, so don't re-take that.
    auditable), `nonliteral` 921, `nokeywords` 439, `nosubtypes` 221, `notyped` 160, `nopt` 119. Each is one or two idioms (a local built by `push`, a
    `mut` parameter, a non-`Keyword::` element) and the machinery to follow them exists. ⚠ **Print every skip you add** — the P/T column skipped 41 % of
    creatures silently for as long as it existed, and read "0 wrong P/T" the whole time.
-   (c) **The two oracle-backed catalog audits are COMPLEMENTARY and should be one.** `audit_catalog_stats.py` reads a wider keyword vocabulary
+   (c) ⚠ **THE CATALOG AUDITS ARE WORKED OUT — 22 rows sampled across three of them this run, ZERO code defects.** `audit_catalog_stats`' residue is
+   documented residue (its triage is in INCOMPLETE_CARDS, five named rows so nobody walks them a third time); `audit_oracle_verbs` is 56 from 172 and
+   what is left is three named shapes (a replacement effect the oracle words with the verb, a mechanic with no primitive, the deathtouch family).
+   Re-run them, read a NEW row, do not re-walk the standing ones.
+   (d) **The two oracle-backed catalog audits are COMPLEMENTARY and should be one.** `audit_catalog_stats.py` reads a wider keyword vocabulary
    (Ward, Prowess, Hexproof, Magecraft) over a narrower set of factories; `audit_printed_body.py` follows the helper chain over an evergreen set.
    The prowess class needed both — the wider vocabulary to see the row, the chain-following reader to tell a card's own `Keyword::Prowess` from a
    TOKEN's. Widening `audit_printed_body`'s `EVERGREEN` (with `REVIEWED_KEYWORDS` for the approximations) retires the overlap. NOT done.
-   (d) ⚠ **Do NOT build a `produced_mana` column** — ENGINE_BACKLOG's CLOSED-WITH-A-REASON entry: Scryfall's field counts mana the card CAUSES (Brass's
+   (e) ⚠ **Do NOT build a `produced_mana` column** — ENGINE_BACKLOG's CLOSED-WITH-A-REASON entry: Scryfall's field counts mana the card CAUSES (Brass's
    Bounty's Treasures, Heartbeat of Spring's rider), so 355 of 707 prototype rows were the field's meaning, not the reader's gaps.
-   (e) ⚠ **The seven-card nesting is RETIRED** and (f) ⚠ **the 8 loop arms are CLOSED WITH A REASON** — do not build the parking redesign or the
+   (f) ⚠ **The seven-card nesting is RETIRED** and (g) ⚠ **the 8 loop arms are CLOSED WITH A REASON** — do not build the parking redesign or the
    seat-list ref; a suspend advances nothing but the answer, and the premise to re-check is that one, not the catalog scan. One plumbing row is left on
    purpose: `ChangeTargetOfAbility` (Reroute) writes its new target BETWEEN its two asks, so routing it needs the two-pass split first.
-   (g) Nobody has checked the **ML side** of a saturated feature: what a `SCALE_CEILING` row does to a net that never saw one.
-   (h) `BecomeChosenColor` picks per source, not per target — bot strength, not a rules defect.
-   (i) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
+   (h) Nobody has checked the **ML side** of a saturated feature: what a `SCALE_CEILING` row does to a net that never saw one.
+   (i) `BecomeChosenColor` picks per source, not per target — bot strength, not a rules defect.
+   (j) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

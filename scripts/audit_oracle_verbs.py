@@ -16,8 +16,19 @@ not a semantics one — "draws a card" against `Effect::Draw` — so it cannot s
 a card that draws the wrong number or draws for the wrong player. It can see a
 card that does not draw at all.
 
-**Standing at 172 rows over 17,028 cards with oracle text (2026-08-31), and
-the rate of real findings is high.** Six classes were spot-checked in the
+**56 rows over 17,028 cards with oracle text (2026-09-12, from 172), and the
+easy ones are gone: a ten-row sample across `draw`, `destroy`, `counters`,
+`mill` and `lose_life` found ZERO code defects.** What is left is three shapes,
+none of them cheap: a REPLACEMENT effect the oracle words with the verb
+(Living Conundrum's "if you would draw … skip that draw", Lich's Mirror's "if
+you would lose the game … draw seven"), a mechanic the engine has no primitive
+for (Soul-Scar Mage's noncombat damage as -1/-1 counters, Kozilek's
+manifest-and-draw), and the `destroy` column's deathtouch family — Cockatrice,
+Thicket Basilisk, Stinkweed Imp and four more whose "destroy that creature at
+end of combat" ships as `Keyword::Deathtouch`, which is `REVIEWED_KEYWORDS` in
+`audit_printed_body` and the same call here.
+
+**When it was 172, the rate of real findings was high:** Six classes were spot-checked in the
 source: Codespell Cleric is a body-only stub (its whole ETB counter ability is
 absent), Fountain of Renewal drops its sac-for-a-card, Baral drops the trigger
 that draws, Crawl from the Cellar drops its Zombie counter, Master of Death
@@ -171,7 +182,12 @@ VERBS = {
     ),
     "scry": (r"\bscry \d", r"Scry"),
     "surveil": (r"\bsurveil \d", r"Surveil"),
-    "mill": (r"\bmills? (?:\w+ cards?|that many)", r"Mill|Dredge"),
+    # `rest_to_graveyard` IS a mill: `LookPickToHand(LookPick { count: 3,
+    # rest_to_graveyard: true, .. })` is how the catalog spells "mill three
+    # cards, you may put a land from among them into your hand" (Six, whose
+    # OWN second ability retraces out of the graveyard it fills — so reading
+    # it as a non-mill said the card's two halves did not connect).
+    "mill": (r"\bmills? (?:\w+ cards?|that many)", r"Mill|Dredge|rest_to_graveyard"),
     "search_library": (
         r"\bsearch(?:es)? (?:your|their) library\b",
         r"Search|Tutor|Fetch|Zone::Library",

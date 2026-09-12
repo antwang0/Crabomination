@@ -10724,7 +10724,7 @@ pub fn kiln_fiend() -> CardDefinition {
     }
 }
 
-/// Soul-Scar Mage — {R}, 1/2 Human Monk with Prowess. (Its noncombat-damage-
+/// Soul-Scar Mage — {R}, 1/2 Human Wizard with Prowess. (Its noncombat-damage-
 /// as-(-1/-1)-counters replacement is omitted — no damage-replacement
 /// primitive yet; tracked in TODO.md.)
 pub fn soul_scar_mage() -> CardDefinition {

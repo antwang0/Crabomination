@@ -806,6 +806,16 @@ nobody walks them a third time, each a READER limit rather than a card:
 | Skizzik `trig` etb vs end | `EntersBattlefield` + `Not(SpellWasKicked)` wrapping an `AtNextEndStep { Sacrifice }` — the delayed trigger IS the end step, and kicked-ness cannot change after ETB. |
 | Telling Time `num` 2,1 vs 3 | "Look at three, one to hand / top / bottom" modelled as Scry 2 + Draw 1 — an approximation, since scry cannot bottom a card. |
 
+`audit_oracle_verbs.py` got the same treatment the same day and came out the
+same way: **56 rows from 172, and a ten-row sample found zero code defects.**
+Two reader rows are closed for good rather than listed — `rest_to_graveyard`
+IS a mill, which is how Six spells "mill three cards, you may put a land from
+among them into your hand" (and Six's OWN second ability retraces out of the
+graveyard it fills, so reading it as a non-mill said the card's two halves did
+not connect); that took the `mill` column 4 -> 3. The rest is three shapes,
+each named in that script's docstring: a REPLACEMENT effect the oracle words
+with the verb, a mechanic with no primitive, and the deathtouch family.
+
 The closure case is now READ rather than listed: `code_numbers` counts any
 zero-argument call that repeats, not only `search`-shaped ones (Earwig Squad's
 `pick()`, Springbloom Druid's `fetch()`). That took `num` 92 -> 83, `stat`
