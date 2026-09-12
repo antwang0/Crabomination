@@ -2866,10 +2866,20 @@ fix     a power is bounded by nothing either (`22fb3f53`) — the twin of the cl
         (a `+=` over up to 1,024 permanents), and `creature_value`'s `c.power * w.power`. The split: rules-facing values
         saturate and stay exact (clamping a power would change combat damage); only the consumers that scale clamp.
         ⚠ **Encoding touched, same narrowness — no permanent inside ±10,000 P/T encodes differently.**
-perf    none, and measured as none rather than assumed. Every change here is a cast-time targeting walk, a suspend-path
-        clone that already happened, or a saturating add where a plain one was. `--bench` counters byte-identical at
-        every tip; `CRAB_DUMP_TRACES` identical over 64 `cube` games and 68 `all` dflt games, session-base binary vs
-        the closing one, which is the reading from the other side.
+fix     two cards were waiting on primitives that had already landed (`85af78d7`). `audit_incomplete`'s comment scan
+        reads 859 approximation notes and nobody re-reads them while the engine grows: Elder Gargaroth triggered only
+        on attack behind "the engine has no `Blocks` event kind" (it has had one since `declare_blockers` dispatched
+        per blocker), Metrognome's four-Gnome forced-discard trigger was dropped behind "no 'an opponent made you
+        discard this' event" (the Sand Golem family's `OpponentCausedYouToDiscard`), and Intimidation Campaign's note
+        claimed an omission two fields above the trigger that implements it. `audit_doc_drift` reads the class as a
+        column now — a doc claim whose object is a backticked identifier the engine declares — at 0.
+perf    none, and measured as none rather than assumed. Every engine change here is a cast-time targeting walk, a
+        suspend-path clone that already happened, or a saturating add where a plain one was. `--bench` counters
+        byte-identical at every tip of the run, including after the two card fixes (neither card is in the `fixed`
+        pool). `CRAB_DUMP_TRACES` identical over 64 `cube` games and 68 `all` dflt games against the session-base
+        binary — **until the card fixes, which move 2 of 64 cube traces, and the diff is the fix**: after
+        `DeclareBlockers` the stack carries one more item and `SubmitDecision(Mode(0))` puts a Beast token on the
+        board. The committed `golden_trace` pairings do not contain either card and are unmoved 10 / 10.
 ```
 
 **Sweeps, fresh seeds 1031..1047** — three pools (`cube` / `all` / `sealed`) x
