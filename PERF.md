@@ -2958,6 +2958,39 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-12 (the printed-body session, second pass) — seven idioms, two new columns, three shipped cards; no perf leg
+
+```text
+fix     the printed-body audit's readers, and the three cards the new colour column found (ENGINE_BACKLOG, twenty-first
+        find). The one that was a READER DEFECT rather than a gap: `shorthand()` did not count braces, so a nested
+        `EquipBonus { power, toughness, keywords, .. }` matched as the card's own field — latent in the P/T column since
+        the day it opened (eight creatures lost their check), and it would have reported sixteen auras and land
+        animations as printing the keyword they GRANT the moment the keyword column reused the same helper. `top_fields`
+        had the sibling bug: a newline inside a nested brace CLEARED the depth-1 line already collected, so a field whose
+        value spans braces lost its own NAME.
+        Six more chains the readers stopped one link short of — a shorthand `keywords,` (439 factories), the
+        `card_types: vec![if flag { .. } else { .. }]` two braces deep (89), a base bound to a PARAMETER (the caller's
+        argument list), a binding that is one ELEMENT of the vec (68 planeswalkers), a tuple parameter read field by
+        field (41 bestow creatures), and `cost: cost(cost_syms)` over a symbol slice (40).
+cover   priced 16,483 -> **16,534**, type line 17,244 -> **17,352**, subtypes 16,910 -> **17,078**, keywords 16,800 ->
+        **17,255**, P/T 9,254 -> **9,322**; plus **16,438 on COLOURS** and **121 on LOYALTY**, both new columns, and the
+        stray `no_mana_cost` direction, which had no check at all. Skips: nocache 3,778 / nocolors 909 / nonliteral 870 /
+        noname 184 / nosubtypes 158 / nokeywords 92 / nopt 70 / notyped 52 / noloyalty 0.
+perf    NONE CLAIMED and none attempted — the queue reads floor, the actor scaling and file-size levers are closed by
+        measurement above, and the whole run is catalog and tooling. `--bench` counters are the gate, not a wall clock.
+gate    --bench on a **`release`** binary (cgu 1 + thin LTO, not the `release-fast` the older rows use — the counters are
+        profile-independent and are what the gate compares; the wall clock and `bin_bytes` are not): **195,806 / 27.49 /
+        611.9 / 0 stalls (cap 0 / stuck 0 / draw 0), counters identical to the committed invariant**, determinism ok
+        (all pairs split). 403.8 games/s, peak_rss 27.2 MiB, bin_bytes 84,357,872, host_calib_ms 47.
+        Suite **19,460 / 0 / 5** (`CRAB_ANSWER_LOG=strict`; +1 is this run's colour-indicator test), golden_trace
+        **11 / 11** inside it and **unmoved** — the three catalog fixes move no trace. clippy --workspace --exclude
+        crabomination_client --all-targets **0**. audit_panics 0 bare; audit_decision_plumbing 168 / 108 / 60 DEAD 0;
+        audit_stash_in_loop 1 / 1 / 0; audit_seat_from_selector 0 open / 15 pinned / 8 loop / 4 controller-asked;
+        audit_answer_log 71 / 8; audit_variant_coverage 0 dead capability / 2 dead primitive; audit_doc_drift 0 of
+        21,467; audit_keyword_drift **0 invented** (the ratchet) / 367 missing; audit_printed_body 0 on all eight
+        columns; audit_printed_body_injections **27 / 27**.
+```
+
 ### 2026-09-12 (the Beacon session) — the ending a saturated life total never reaches
 
 ```text
@@ -3171,12 +3204,20 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1122..1131   90340416      30    148,000       0       0     0      4
   1132..1141   87e64efc      30    148,000       0       0     0     16
   1142..1151   edb11e35      30    148,000       0       2*    0     14
+  1112..1118   1b0270fe      35    128,800       0       0     0      8   five pools, CONCURRENT SESSION
+  1119..1130   3c37eef1      60    220,800       0       0     0      8   five pools, CONCURRENT SESSION
 ```
 
+⚠ **The last two rows OVERLAP the ones above them.** Two sessions took 1112
+concurrently on 2026-09-12 without seeing each other's push, so 1112..1130 was
+swept twice on different pool sets — both clean, which is the only reason it
+cost nothing but time. **Read this table before taking a seed and take it from
+the largest number in it: the next fresh seed is 1152.**
+
 **363 cells / 1,790,800 games on the three-pool base, 0 stuck on every one**
-— and the two five-pool `(-291)` rows are 100 cells / 432,000 games on top of
-that, counted apart because they are a different configuration and would
-otherwise be read as more base coverage than there is. Every cap is the
+— and the five-pool rows are 195 cells / 781,600 games on top of that, counted
+apart because they are a different configuration and would otherwise be read as
+more base coverage than there is. Every cap is the
 **already-diagnosed Beacon of Immortality board** — two at `cube` 1069, four
 more at `cube` 1076, and four at seed 1090 (two on `cube`, two on `all`) — not
 a new defect and not to be re-diagnosed.
@@ -9259,6 +9300,18 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+⚠ **THE QUEUE IS AT FLOOR AND HAS BEEN FOR SEVEN RUNS.** The last actor
+re-read (`9772ce0c`, below) is FLAT with nothing above 0.2 % self that has a
+device; actor scaling (4.13x on 4 cores) and the file-size build lever are
+closed by measurement in their own sections; the `produced_mana` column is
+closed with a reason in ENGINE_BACKLOG; and the entry directly below closed the
+last unread memo-hit lead by reading it. **Every perf leg of the last seven
+runs came off a bug fix, not off this list** — so the cheapest way to find one
+is still to fix a defect, and a run that pulls nothing here and says so is not
+a run that skipped its perf section. 2026-09-12 (the printed-body session):
+nothing pulled; that run is catalog and tooling, and the `--bench` counters in
+its Baseline entry are its gate.
 
 **`computed_permanent_hinted`'s "one memo-hit path nobody has read by line" —
 READ, and it is NOT a memo-hit path. No build spent on the device.** The lead

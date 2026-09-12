@@ -190,8 +190,8 @@ fn computed_permanent_carries_no_projection_pointers() {
 /// from a colour indicator, and `printed_color_set` is the only place the
 /// engine reads one. Three shipped cards had none (`audit_printed_body`'s
 /// colour column, 2026-09-12): a `{0}` Kobold and two cards with no mana cost
-/// at all, each colorless to protection, devotion and the deck builder's
-/// colour pools.
+/// at all, each colorless to `R::HasColor`, protection- and
+/// hexproof-from-colour, devotion and every "shares a colour" read.
 #[test]
 fn a_colour_indicator_is_the_printed_colour_when_the_cost_has_no_pip() {
     use crabomination::mana::{Color, ColorSet, ManaSymbol};

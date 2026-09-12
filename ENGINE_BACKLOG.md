@@ -96,12 +96,14 @@ it mostly did not. The seventh column of `audit_printed_body.py` reads it:
 
 Not cosmetic: the printed colour is the layer-5 base every colour read starts
 from — `R::HasColor`, protection- and hexproof-from-colour, devotion,
-`SpendRestriction`, the "shares a colour" family (Conspire's creature pair,
-Empty-Shrine Kannushi), and the LKI colour a card carries out of the
-battlefield. **The deck builders are NOT among them**, and that is worth
-recording: `CardBrief::pip_colors` is the cost's pips, which is the right
-reading for "can this two-colour seat pay for it" and stays right for a {0}
-Kobold. Fixed by giving each card its printed indicator; gate is
+`SpendRestriction` (`spell_kind()` reads it for the `multicolored` and
+`colorless` flags — Pillar of the Paruns), the "shares a colour" family
+(Conspire's creature pair, Empty-Shrine Kannushi), and the off-battlefield
+fallback a damage-prevention shield rechecks (CR 615.9, Samite Ministration).
+**The deck builders are NOT among them**, and that is worth recording:
+`CardBrief::pip_colors` is the cost's pips, which is the right reading for
+"can this two-colour seat pay for it" and stays right for a {0} Kobold. Fixed
+by giving each card its printed indicator; gate is
 `core_rules::card_instance::a_colour_indicator_is_the_printed_colour_when_the_
 cost_has_no_pip`, which also asserts the card has no coloured pip so it stays
 the indicator case.
