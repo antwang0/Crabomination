@@ -2972,19 +2972,22 @@ fix     `MayDoBy` re-derived the seat it asks (`cfef051f`). Caught by `CRAB_ANSW
 perf    none. Nothing here is on a hot path — every one of these arms is a per-card resolution behind a suspend.
 ```
 
-**Gates at `cfef051f`** (this box): suite **19,447 / 0 / 5** with
-`CRAB_ANSWER_LOG=strict` exported, clippy 0, `cargo check --profile
-release-fast` clean, `golden_trace` 10 / 10 unmoved, `audit_answer_log`
-**63 arms / 6 suspicious** (from 10 — 0 NO-CLEAR, 1 ERR?, 1 PRE, 4 MID, and
-every one of those four is a tail call that returns out of its loop).
-`audit_decision_plumbing` **173 / 107 / 66, DEAD 0 and repeat 0**, and
-`audit_stash_in_loop` (new) 1 / 1 allowlisted / 0 unexplained.
-`--bench` at `ad641aff`, `release-fast`: **195,806 decisions / 27.49 turns /
-611.9 decisions-per-game / 0 stalls** — the committed counters, byte-identical
-— `determinism ok`, `thread_determinism ok (3 vs 1)`, `games_per_s` 309.94,
-peak RSS 28.9 MiB, `bin_bytes` 128,855,768. Another box, another wall clock:
-that reading is not comparable to the 465.1 or the 542 above it, and the
-counters are why it does not need to be.
+**Gates at the closing tip** (this box): suite **19,447 / 0 / 5** with
+`CRAB_ANSWER_LOG=strict` exported, clippy 0 (`--all-targets`), `cargo check
+--profile release-fast` clean, `golden_trace` 10 / 10 unmoved, `audit_answer_log`
+**69 arms / 7 suspicious** (from 63 / 10 — 0 NO-CLEAR, 1 ERR?, 1 PRE, 6 MID, and
+the script's docstring now explains every remaining row instead of only counting
+them, so a NEW row is the signal). `audit_decision_plumbing` **168 / 108 / 60,
+DEAD 0 and repeat 0** (from 178 / 104 / 74), `audit_stash_in_loop` (new) 1 / 1
+allowlisted / 0 unexplained, `audit_seat_from_selector` (new) 27 open / 0
+demonstrated.
+`--bench`, `release-fast`: **195,806 decisions / 27.49 turns / 611.9
+decisions-per-game / 0 stalls** — the committed counters, byte-identical, and
+byte-identical at every tip this session — `determinism ok`,
+`thread_determinism ok (3 vs 1)`, `games_per_s` 320.51, peak RSS 28.6 MiB,
+`bin_bytes` 127,162,752. Another box, another wall clock: this session read those
+same counters at 290.94 / 294.27 / 309.94 / 320.51 games/s, which is the whole
+reason the counters and not the clock are the gate.
 
 **Sweeps, seeds 899..910 and 1001..1006** — five pools x 120 games/archetype a
 cell, three blocks of 30 cells / 110,400 games each, `CRAB_ANSWER_LOG=strict`,
