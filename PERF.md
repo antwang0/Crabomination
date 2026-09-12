@@ -3146,7 +3146,10 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1112..1121   0036101a      50    216,000       0       0     0     20   five pools, WITH `(-291)`
 ```
 
-**273 cells / 1,346,800 games, 0 stuck on every one**, and every cap is the
+**273 cells / 1,346,800 games on the three-pool base, 0 stuck on every one**
+— and the two five-pool `(-291)` rows are 100 cells / 432,000 games on top of
+that, counted apart because they are a different configuration and would
+otherwise be read as more base coverage than there is. Every cap is the
 **already-diagnosed Beacon of Immortality board** — two at `cube` 1069, four
 more at `cube` 1076, and four at seed 1090 (two on `cube`, two on `all`) — not
 a new defect and not to be re-diagnosed.
