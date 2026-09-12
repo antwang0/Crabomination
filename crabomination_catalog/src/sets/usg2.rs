@@ -2668,27 +2668,45 @@ pub fn rain_of_filth() -> CardDefinition {
     )
 }
 
-/// Metrognome — {4}. A Gnome a turn. (The printed forced-discard trigger is
-/// dropped — the engine has no "an opponent made you discard this" event.)
+/// Metrognome — {4}. A Gnome a turn, and four of them if an opponent makes you
+/// discard it.
+///
+/// The forced-discard half used to be dropped with "the engine has no 'an
+/// opponent made you discard this' event". It has had one since the Sand Golem
+/// family was fixed (`EventKind::OpponentCausedYouToDiscard` under
+/// `EventScope::SelfSource`, dispatched by the graveyard walk); the note
+/// outlived it.
 pub fn metrognome() -> CardDefinition {
+    let gnome = || crate::card::TokenDefinition {
+        name: "Gnome".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gnome],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::OpponentCausedYouToDiscard,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                definition: Box::new(gnome()),
+            },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
             tap_cost: true,
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crate::card::TokenDefinition {
-                    name: "Gnome".into(),
-                    power: 1,
-                    toughness: 1,
-                    card_types: vec![CardType::Artifact, CardType::Creature],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Gnome],
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
+                definition: Box::new(gnome()),
             },
             ..Default::default()
         }],

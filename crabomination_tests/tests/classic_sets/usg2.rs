@@ -594,3 +594,40 @@ fn darkest_hour_makes_every_creature_black() {
     let theirs = g.add_card_to_battlefield(1, catalog::serra_zealot()); // white
     assert_eq!(g.computed_permanent(theirs).unwrap().colors.to_vec(), vec![Color::Black]);
 }
+
+/// Metrognome's forced-discard half, which shipped dropped with the note "the
+/// engine has no 'an opponent made you discard this' event" — it has had one
+/// since the Sand Golem family was fixed, and the note outlived it by longer
+/// than the gap did.
+///
+/// Four Gnomes, not one: the discard trigger prints a different number from the
+/// activated ability, which is the reason a helper cannot stand in for it.
+#[test]
+fn metrognome_pays_four_gnomes_for_a_forced_discard() {
+    let mut g = two_player_game();
+    stock_libraries(&mut g, 10);
+    let gnome_source = g.add_card_to_hand(0, catalog::metrognome());
+    let mind_rot = g.add_card_to_hand(1, catalog::mind_rot());
+    g.players[1].mana_pool.add(Color::Black, 3);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mind_rot,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Mind Rot");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == gnome_source),
+        "Metrognome was the only card in hand, so it is the one discarded"
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Gnome" && c.controller == 0).count(),
+        4,
+        "four 1/1 Gnomes, the printed number",
+    );
+}

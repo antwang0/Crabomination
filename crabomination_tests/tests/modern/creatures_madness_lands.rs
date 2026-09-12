@@ -1955,3 +1955,41 @@ fn mutagenic_growth_payable_with_two_life() {
     assert_eq!((c.power(), c.toughness()), (4, 4), "+2/+2");
 }
 
+
+/// Elder Gargaroth triggers on BLOCKING too, which the card prints and the
+/// catalog dropped with "the engine has no `Blocks` event kind".
+///
+/// It has had one since `declare_blockers` started dispatching per blocker, so
+/// the note outlived the gap; the attack half was never in doubt, and this is
+/// the half that was missing. AutoDecider takes mode 0, the 3/3 Beast.
+#[test]
+fn elder_gargaroth_triggers_when_it_blocks() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gargaroth = g.add_card_to_battlefield(0, catalog::elder_gargaroth());
+    g.clear_sickness(attacker);
+    g.clear_sickness(gargaroth);
+    // Seat 1's turn, so seat 0's Gargaroth is the blocker.
+    g.active_player_idx = 1;
+    let step_to = |g: &mut GameState, step: TurnStep| {
+        while g.step != step {
+            g.perform_action(GameAction::PassPriority).expect("pass priority");
+        }
+    };
+    step_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    step_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(gargaroth, attacker)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Beast" && c.controller == 0).count(),
+        1,
+        "blocking fires the modal trigger, same as attacking",
+    );
+}

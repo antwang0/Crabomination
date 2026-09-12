@@ -5583,9 +5583,13 @@ pub fn elite_spellbinder() -> CardDefinition {
 /// "Whenever this creature attacks or blocks, choose one — Create a 3/3
 /// green Beast creature token; or You gain 3 life; or Draw a card."
 ///
-/// Approximation: the trigger fires only on attack (the engine has no
-/// `Blocks` event kind); the three modes are wired via `ChooseMode`.
-/// AutoDecider picks mode 0 (create a 3/3 Beast token).
+/// Both halves fire: `EventKind::Attacks` and `EventKind::Blocks`, one
+/// `TriggeredAbility` each, which is the shape "attacks or blocks" has here —
+/// a creature cannot do both in one combat, so two abilities cannot double up
+/// on one declaration. (The block half shipped dropped, with a note naming the
+/// event kind as missing; `declare_blockers` has dispatched one per blocker
+/// since long before, and the note outlived the gap — which is the column
+/// `audit_doc_drift` reads now.) AutoDecider picks mode 0 (the token).
 pub fn elder_gargaroth() -> CardDefinition {
     let beast_token = crate::card::TokenDefinition {
         name: "Beast".into(),
@@ -5616,27 +5620,32 @@ pub fn elder_gargaroth() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Trample],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::ChooseMode(vec![
-                // Mode 0: Create a 3/3 green Beast creature token.
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: Box::new(beast_token),
+        triggered_abilities: {
+            let modes = |token: crate::card::TokenDefinition| {
+                Effect::ChooseMode(vec![
+                    // Mode 0: Create a 3/3 green Beast creature token.
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: Box::new(token),
+                    },
+                    // Mode 1: You gain 3 life.
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                    // Mode 2: Draw a card.
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ])
+            };
+            vec![
+                TriggeredAbility {
+                    event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                    effect: modes(beast_token.clone()),
                 },
-                // Mode 1: You gain 3 life.
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(3),
+                TriggeredAbility {
+                    event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                    effect: modes(beast_token),
                 },
-                // Mode 2: Draw a card.
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
-        }],
+            ]
+        },
         ..Default::default()
     }
 }

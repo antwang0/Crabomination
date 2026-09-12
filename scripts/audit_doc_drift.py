@@ -17,6 +17,22 @@ and is skipped rather than reported.
 
     python3 scripts/audit_doc_drift.py            # the table
     python3 scripts/audit_doc_drift.py --rows 0   # every row
+
+**Second column, added at the eighteenth pass: a doc comment that says the
+engine cannot do something it can.** A factory that drops half a printed card
+says so in its doc and names the missing piece — and the note is written once,
+never re-read, while the engine keeps growing. Elder Gargaroth's "the engine
+has no `Blocks` event kind" outlived `EventKind::Blocks`; Metrognome's "the
+engine has no 'an opponent made you discard this' event" outlived its primitive
+by the whole Sand Golem fix; Intimidation Campaign's "no crime tracker yet" was
+false in the same file, two fields below the crime trigger it claimed was
+omitted. Each one is a half-implemented card nobody has a reason to leave.
+
+Only the checkable subset is reported: a claim whose object is a BACKTICKED
+identifier the engine declares. Prose claims need a reader.
+
+**Injection:** adding `/// … the engine has no \`Blocks\` event kind.` above any
+factory takes this 0 -> 1.
 """
 import argparse
 import json
@@ -245,6 +261,63 @@ def scan():
     return seen, rows, skipped[0]
 
 
+# ── The second column: a doc comment that says the engine cannot do something
+# it can ───────────────────────────────────────────────────────────────────────
+#
+# A factory that drops half a printed card usually says so in its doc, and the
+# note names the missing piece: "the trigger fires only on attack (the engine
+# has no `Blocks` event kind)". Those notes are written once and never re-read,
+# and the engine keeps growing — so the note outlives the gap, and with it the
+# card stays half-implemented for no reason anyone still believes. Elder
+# Gargaroth carried that exact sentence for as long as `EventKind::Blocks` has
+# existed, and Metrognome's ("the engine has no 'an opponent made you discard
+# this' event") outlived its primitive by the whole Sand Golem fix.
+#
+# The checkable subset is a claim whose object is a BACKTICKED identifier: if
+# the engine declares it, the note is stale and the card is a candidate to
+# finish. Prose claims ("no crime tracker yet" — also stale, also a real card)
+# are not matched; they need a reader.
+CLAIM = re.compile(
+    r"(?:engine has no|engine lacks|there is no|has no|is no)\s+`([A-Z][A-Za-z0-9_]*)`", re.I
+)
+ENGINE_DECL = re.compile(r"^\s{4}([A-Z][A-Za-z0-9_]*)\s*(?:\{|\(|,|$)")
+DOC = re.compile(r"^\s*///(.*)$")
+
+
+def engine_identifiers():
+    """Every enum variant the engine declares, `Name -> file:line`."""
+    out = {}
+    for p in sorted((ROOT / "crabomination_base" / "src").rglob("*.rs")):
+        for i, line in enumerate(p.read_text().split("\n")):
+            m = ENGINE_DECL.match(line)
+            if m:
+                out.setdefault(m.group(1), f"{p.name}:{i + 1}")
+    return out
+
+
+def stale_claims():
+    """Factories whose doc says the engine has no `X` while it declares `X`."""
+    engine = engine_identifiers()
+    out = []
+    for path in sorted(CATALOG.rglob("*.rs")):
+        doc = []
+        for line in path.read_text().split("\n"):
+            st = line.strip()
+            m = DOC.match(line)
+            if m:
+                doc.append(m.group(1).strip())
+                continue
+            if st.startswith("pub fn ") and doc:
+                text = " ".join(doc)
+                for ident in sorted(set(CLAIM.findall(text))):
+                    if ident in engine:
+                        out.append((st.split("(")[0][7:], path.name, ident, engine[ident]))
+                doc = []
+            elif st and not st.startswith("//"):
+                doc = []
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rows", type=int, default=40, help="0 = no cap")
@@ -268,6 +341,13 @@ def main():
         print(f"  {'':<44} {path}")
     if len(shown) < len(rows):
         print(f"  … {len(rows) - len(shown)} more (use --rows 0)")
+
+    stale = stale_claims()
+    print(f"\n=== stale \"the engine has no `X`\" notes: {len(stale)}")
+    for fname, where, ident, decl in stale:
+        print(f"  {fname:<44} claims no `{ident}` — declared at {decl} ({where})")
+    if not stale:
+        print("    (the claims that remain name things the engine really does not have)")
     return 0
 
 

@@ -88,8 +88,10 @@ pub fn flamecache_gecko() -> CardDefinition {
 }
 
 /// Intimidation Campaign — {1}{U}{B} Enchantment. ETB: each opponent loses 1
-/// life, you gain 1, and you draw a card. (The commit-a-crime self-bounce rider
-/// is omitted — the engine has no crime tracker yet.)
+/// life, you gain 1, and you draw a card; and the commit-a-crime self-bounce,
+/// which the doc claimed was omitted "the engine has no crime tracker yet"
+/// long after `EventKind::CommittedCrime` landed and this card started using
+/// it two fields below.
 pub fn intimidation_campaign() -> CardDefinition {
     CardDefinition {
         name: "Intimidation Campaign",
