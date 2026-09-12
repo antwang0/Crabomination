@@ -691,3 +691,89 @@ fn a_card_with_no_mana_cost_cannot_be_cast_from_hand() {
         "a card with no printed mana cost is not castable from hand: {err:?}",
     );
 }
+
+/// Every arm `Effect::with_asked_seat` lists actually pins its seat, and the
+/// table here is exactly that list.
+///
+/// The ask helpers queue `effect.with_asked_seat(seat)` as the continuation of
+/// a suspended ask, so an arm that derives its seat from a selector is fixed by
+/// *appearing in that one match* — Ghost Quarter's re-run resolved
+/// `ControllerOf(Target(0))` against a board whose land its own earlier clause
+/// had destroyed, returned at its `let Some(seat)` with the replayed answer
+/// still in the channel, and the compensation search never happened
+/// (ENGINE_BACKLOG's seventeenth find). Fourteen more arms had the same shape.
+///
+/// Proved by injection rather than by its own green: each variant is built
+/// with a `who` that is *not* a seat, and the pinned copy must read
+/// `Seat(3)` — a rewrite that silently did nothing would fail. The arm list is
+/// read out of the source so this table cannot fall behind the code, which is
+/// the half that matters: a sixteenth arm added to the match without a row
+/// here fails on the set comparison.
+/// `scripts/audit_seat_from_selector.py` asks the other question — which
+/// asking arms are still *outside* the list.
+#[test]
+fn every_listed_arm_pins_the_seat_its_ask_was_routed_to() {
+    use crabomination::card::{SelectionRequirement as R, WardCost};
+    use crabomination::effect::{Effect, PlayerRef, Value, ZoneDest};
+    use crabomination::mana::ManaCost;
+
+    let any = PlayerRef::EachOpponent;
+    let body = || Box::new(Effect::Noop);
+    let mc = || ManaCost::new(Vec::new());
+    let table: Vec<(&str, Effect)> = vec![
+        ("MayDoBy", Effect::MayDoBy { who: any.clone(), description: String::new(), body: body() }),
+        ("MayPayBy", Effect::MayPayBy { who: any.clone(), description: String::new(), mana_cost: mc(), body: body(), else_: None }),
+        ("MayPayRepeatedly", Effect::MayPayRepeatedly { who: any.clone(), description: String::new(), mana_cost: mc(), body: body() }),
+        ("PlayerMayPayLifeElse", Effect::PlayerMayPayLifeElse { who: any.clone(), life: Value::ONE, else_: body() }),
+        ("TokenCopyOfOpponentChoice", Effect::TokenCopyOfOpponentChoice { who: any.clone() }),
+        ("Learn", Effect::Learn { who: any.clone() }),
+        ("AttackMandateNextTurn", Effect::AttackMandateNextTurn { who: any.clone() }),
+        ("UnlessPlayerPays", Effect::UnlessPlayerPays { who: any.clone(), cost: WardCost::Life(1), then: body(), if_paid: None }),
+        ("PutFromHandOntoBattlefield", Effect::PutFromHandOntoBattlefield { who: any.clone(), filter: R::Any, count: Value::ONE, tapped: false, haste: false, sacrifice_eot: false, return_eot: false, then: None }),
+        ("SearchAnyNumber", Effect::SearchAnyNumber { who: any.clone(), filter: R::Any, to: ZoneDest::Exile }),
+        ("RevealHandDiscardMatchingUnlessPayLife", Effect::RevealHandDiscardMatchingUnlessPayLife { who: any.clone(), filter: R::Any, life: 1 }),
+        ("UntapChosenPerCardInGraveyard", Effect::UntapChosenPerCardInGraveyard { who: any.clone() }),
+        ("MayExileFromGraveyardElse", Effect::MayExileFromGraveyardElse { who: any.clone(), otherwise: body() }),
+        ("TradeSecrets", Effect::TradeSecrets { who: any.clone() }),
+        ("ExileUntilDuplicateName", Effect::ExileUntilDuplicateName { who: any.clone() }),
+    ];
+
+    for (name, eff) in &table {
+        let pinned = serde_json::to_string(&eff.with_asked_seat(3)).expect("serialize");
+        assert!(
+            pinned.contains(r#""who":{"Seat":3}"#),
+            "{name} is listed by `with_asked_seat` and did not pin its seat: {pinned}",
+        );
+    }
+
+    // An arm that asks `ctx.controller` about ANOTHER seat's cards must stay
+    // out: pinning `who` there rewrites the victim, not the asker.
+    let victim = Effect::Fateseal { who: any.clone(), amount: Value::ONE };
+    let untouched = serde_json::to_string(&victim.with_asked_seat(3)).expect("serialize");
+    assert!(
+        !untouched.contains(r#""who":{"Seat":3}"#),
+        "Fateseal asks its own controller — its `who` is the victim and must not be pinned",
+    );
+
+    // The table is the arm list, read out of the source.
+    let query_rs =
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../crabomination_base/src/effect/query.rs");
+    let src = std::fs::read_to_string(query_rs).expect("query.rs");
+    let start = src.find("pub fn with_asked_seat").expect("with_asked_seat");
+    let end = src[start..].find("\n    }").expect("end of fn") + start;
+    let mut listed: Vec<&str> = src[start..end]
+        .match_indices("Effect::")
+        .map(|(i, _)| {
+            let rest = &src[start + i + "Effect::".len()..];
+            &rest[..rest.find(' ').unwrap_or(0)]
+        })
+        .collect();
+    listed.sort_unstable();
+    let mut covered: Vec<&str> = table.iter().map(|(n, _)| *n).collect();
+    covered.sort_unstable();
+    assert_eq!(
+        listed, covered,
+        "the table above must be exactly `with_asked_seat`'s arm list — an arm added there \
+         without a row here is an unproved rewrite",
+    );
+}

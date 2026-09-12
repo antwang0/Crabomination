@@ -4724,4 +4724,56 @@ impl Effect {
             _ => None,
         }
     }
+
+    /// This effect with the seat an ask was routed to written into the `who`
+    /// field the arm re-derives that seat from.
+    ///
+    /// **The continuation an arm hands a suspending ask is its own effect, and
+    /// re-running it resolves `who` against a board the first pass has already
+    /// changed.** Ghost Quarter is
+    /// `Seq[Destroy target land, MayDoBy{ControllerOf(Target(0)), …}]`: by the
+    /// time the land controller answers, the land is in a graveyard, so the
+    /// re-run's `resolve_player` found nothing, the arm returned at its own
+    /// `let Some(seat)` with the replayed answer still in the channel, and the
+    /// compensation search never happened for a `wants_ui` seat
+    /// (`ENGINE_BACKLOG`'s seventeenth find, caught as an answer-log leak by a
+    /// sweep). `MayDoBy` was fixed by hand; the other thirteen arms of the
+    /// shape were one new card away from the same bug, which is why this is a
+    /// walker and not a per-arm patch.
+    ///
+    /// Called from the `ask_seat_*` helpers' **suspend branch only** — they
+    /// clone the continuation there anyway, so the non-suspending path (every
+    /// bot self-play ask) pays nothing.
+    ///
+    /// Listed, not defaulted: an arm whose `who` is the seat its asks are
+    /// routed to belongs here, and an arm that asks `ctx.controller` about
+    /// *another* seat's stuff (`Fateseal`, `ChooseFromHandToTopOfLibrary`,
+    /// `GuessColorCountInHand`, `MoveChosen`) must NOT — pinning `who` there
+    /// would rewrite the victim, not the asked seat. A loop over
+    /// `resolve_players` must not be here either: one seat pinned into the
+    /// list drops every other seat's question. `scripts/audit_seat_from_
+    /// selector.py` reads this arm list and reports which asking arms are
+    /// still outside it.
+    pub fn with_asked_seat(&self, seat: usize) -> Effect {
+        let mut out = self.clone();
+        match &mut out {
+            Effect::MayDoBy { who, .. }
+            | Effect::MayPayBy { who, .. }
+            | Effect::MayPayRepeatedly { who, .. }
+            | Effect::PlayerMayPayLifeElse { who, .. }
+            | Effect::TokenCopyOfOpponentChoice { who, .. }
+            | Effect::Learn { who, .. }
+            | Effect::AttackMandateNextTurn { who, .. }
+            | Effect::UnlessPlayerPays { who, .. }
+            | Effect::PutFromHandOntoBattlefield { who, .. }
+            | Effect::SearchAnyNumber { who, .. }
+            | Effect::RevealHandDiscardMatchingUnlessPayLife { who, .. }
+            | Effect::UntapChosenPerCardInGraveyard { who, .. }
+            | Effect::MayExileFromGraveyardElse { who, .. }
+            | Effect::TradeSecrets { who, .. }
+            | Effect::ExileUntilDuplicateName { who, .. } => *who = PlayerRef::Seat(seat),
+            _ => {}
+        }
+        out
+    }
 }

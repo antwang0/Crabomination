@@ -15,29 +15,34 @@ own `let Some(seat)`, and the compensation search never happened. A sweep found
 it as an answer-log leak, which is the symptom of returning past a replayed
 answer.
 
-The fix per arm is one rebuild: pass a continuation whose `who` is
-`PlayerRef::Seat(seat)` instead of the selector. It is always safe — it is the
-same seat the first pass asked — and it is what `Effect::Sacrifice`'s
-`per_seat_continuation` has always done.
+**THE FIX IS IN THE ASK HELPER NOW, NOT IN THE ARMS.** Every `ask_seat_*`
+queues `effect.with_asked_seat(seat)` instead of `effect.clone()`, and
+`Effect::with_asked_seat` (crabomination_base) writes `PlayerRef::Seat(seat)`
+into the `who` field of the arms listed in its one match. So an arm is fixed by
+appearing in that list, and this audit reads the list rather than re-deriving
+it — the script and the code cannot disagree about what is covered.
 
-This flags, per match arm or fn: a seat bound from `resolve_player(who…)` /
-`resolve_players(who…)` together with an `ask_seat_*` whose continuation
-argument is the bare `effect`. Multi-seat loops are flagged too: the same
-re-derivation applies to every seat in the list.
+The columns:
 
-Reading at the seventeenth pass: **27 arms open, 0 demonstrated.** `MayDoBy` is
-absent because it is fixed, and it is the only one with a shipped card that
-actually reaches the failure: Ghost Quarter and Volatile Fault both put a
-`Destroy`/`Move` of slot 0 *before* an ask whose `who` reads slot 0. A catalog
-scan for that shape over the other 26 finds nothing — which is a fact about the
-CATALOG, not about the code, and is exactly why they are listed rather than
-allowlisted. A new card pairing any of them with an earlier Destroy of the same
-slot ends the reprieve, and the fix is six lines per arm.
+  * **pinned** — the variant is in `with_asked_seat`'s arm list. Nothing to do.
+  * **controller** — the ask is routed to `ctx.controller`, not to the
+    selector-derived seat (`Fateseal`, `ChooseFromHandToTopOfLibrary`,
+    `GuessColorCountInHand`, `MoveChosen` look at another seat's cards and ask
+    the *resolving* seat about them). `ctx.controller` is resolution state, not
+    a board read, so it is stable across a re-run: not this class, and pinning
+    `who` there would rewrite the victim instead of the asker.
+  * **loop** — the asks are inside `for … in self.resolve_players(who, …)`. The
+    same re-derivation applies to the *list*, and one seat pinned into it would
+    drop every other seat's question, so `with_asked_seat` must not cover these.
+    Closing them needs a seat-LIST ref; none of the eight has a shipped card
+    that reaches the failure (the scan below) and they are listed, not
+    allowlisted.
+  * **open** — a single-seat arm outside the pin list. A defect; add the arm.
 
-The scan that produced that reading, for whoever repeats it: every
-`who: PlayerRef::(ControllerOf|OwnerOf)(Selector::Target(N))` in the catalog
-whose enclosing card has an earlier `Destroy` / `Exile` / `Sacrifice`, then read
-each hit to see whether the arm it feeds is one of the 27 (most feed
+The catalog scan behind "no shipped card reaches it", for whoever repeats it:
+every `who: PlayerRef::(ControllerOf|OwnerOf)(Selector::Target(N))` in the
+catalog whose enclosing card has an earlier `Destroy` / `Exile` / `Sacrifice`,
+then read each hit to see whether the arm it feeds is one of these (most feed
 `Effect::Search`, whose resume applies the pick rather than re-running the arm).
 """
 
@@ -47,6 +52,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "crabomination/src/game/effects/mod.rs"
+QUERY = ROOT / "crabomination_base/src/effect/query.rs"
 
 ASKS = (
     "self.ask_seat_bool(",
@@ -58,14 +64,33 @@ ASKS = (
     "self.choose_up_to_cards(",
 )
 
+
+def pinned_variants() -> set:
+    """The arm list of `Effect::with_asked_seat`, read off the source."""
+    text = QUERY.read_text()
+    m = re.search(r"pub fn with_asked_seat\(&self, seat: usize\) -> Effect \{(.*?)\n    \}", text, re.S)
+    if not m:
+        sys.exit("with_asked_seat not found — the audit reads its arm list")
+    return set(re.findall(r"Effect::([A-Za-z0-9_]+) \{ who", m.group(1)))
+
+
 def indent(line: str) -> int:
     return len(line) - len(line.lstrip())
+
+
+def ask_seat_arg(body, j):
+    """The seat argument of the `ask_seat_*` call starting at body[j]."""
+    for line in body[j + 1 : j + 4]:
+        arg = line.strip().rstrip(",")
+        if not arg or arg.startswith("&mut cursor"):
+            continue
+        return arg
+    return ""
 
 
 def main() -> int:
     lines = SRC.read_text().split("\n")
     # Split into scopes: each `Effect::Variant .. => {` arm, and each `fn`.
-    scopes = []  # (name, start, end)
     starts = []
     for i, line in enumerate(lines):
         st = line.strip()
@@ -77,43 +102,77 @@ def main() -> int:
             v = re.search(r"Effect::([A-Za-z0-9_]+)", st)
             if v:
                 starts.append((v.group(1), i, indent(line)))
+                continue
+            # A destructuring head spread over several lines closes with a bare
+            # `} => {`; without this the arm is invisible and its whole body is
+            # read as part of the arm ABOVE it (which is how a `who`-less
+            # `TapAnyNumberThenCounters` got flagged for a selector-derived
+            # seat that belonged to the arm two below it).
+            if st.startswith("}"):
+                for k in range(i - 1, max(i - 60, -1), -1):
+                    if indent(lines[k]) != indent(line):
+                        continue
+                    v = re.match(r"Effect::([A-Za-z0-9_]+)\s*\{", lines[k].strip())
+                    if v:
+                        starts.append((v.group(1), k, indent(line)))
+                    break
+    scopes = []
     for k, (name, i, ind) in enumerate(starts):
         end = starts[k + 1][1] if k + 1 < len(starts) else len(lines)
         scopes.append((name, i, end))
 
-    flagged = []
+    pinned_list = pinned_variants()
+    buckets = {"pinned": [], "controller": [], "loop": [], "open": []}
     for name, a, b in scopes:
         body = lines[a:b]
         text = "\n".join(body)
         if not re.search(r"resolve_players?\(who", text):
             continue
         # An ask whose continuation argument is the bare `effect`.
-        asked = None
+        asked, seat_arg = None, ""
         for j, line in enumerate(body):
             if any(p in line for p in ASKS):
                 window = "\n".join(body[j : j + 14])
-                if re.search(r"^\s+effect,\s*$", window, re.M) or re.search(
-                    r"\beffect\)", window
-                ):
-                    asked = a + j + 1
+                if re.search(r"^\s+effect,\s*$", window, re.M) or re.search(r"\beffect\)", window):
+                    asked, seat_arg = a + j + 1, ask_seat_arg(body, j)
                     break
         if asked is None:
             continue
-        flagged.append((name, a + 1, asked))
+        # The binding the singular resolver wrote, if any.
+        single = re.search(r"let Some\((?:mut )?([a-z_][a-z0-9_]*)\) = self\.resolve_player\(who", text)
+        # The plural resolver means a loop over seats unless the arm takes one
+        # seat off the front (`MayPayBy`'s `.first()`), whether the `for` reads
+        # it inline or through a `let seats = …` above.
+        in_loop = "resolve_players(who" in text and not re.search(
+            r"resolve_players\(who[^\n]*\)\s*\.first\(\)", text
+        )
+        row = (name, a + 1, asked, seat_arg)
+        if name in pinned_list:
+            buckets["pinned"].append(row)
+        elif in_loop:
+            buckets["loop"].append(row)
+        elif single is None or seat_arg != single.group(1):
+            buckets["controller"].append(row)
+        else:
+            buckets["open"].append(row)
+
+    for key, blurb in (
+        ("open", "OPEN — a single-seat arm outside `with_asked_seat`'s list; add the arm"),
+        ("loop", "loop over `resolve_players` — the LIST is re-derived; needs a seat-list ref, not this pin"),
+        ("controller", "asks `ctx.controller`, which is resolution state and stable across a re-run — not this class"),
+        ("pinned", "covered by `Effect::with_asked_seat`"),
+    ):
+        rows = buckets[key]
+        print(f"{len(rows)} {key}: {blurb}")
+        for name, arm_ln, ask_ln, seat in rows:
+            print(f"    {name:44} arm at {arm_ln}, ask {seat!r} at {ask_ln}")
+        print()
 
     print(
-        f"{len(flagged)} arm(s) ask a selector-derived seat with a bare "
-        f"continuation (`MayDoBy` is absent because it is fixed)\n"
+        f"{len(buckets['open'])} open / {len(buckets['loop'])} loop / "
+        f"{len(buckets['controller'])} controller-asked / {len(buckets['pinned'])} pinned"
     )
-    for name, arm_ln, ask_ln in flagged:
-        print(f"  {name:44} arm at {arm_ln}, ask at {ask_ln}")
-    if flagged:
-        print(
-            "\nEach re-derives its seat on the re-run. Pass a continuation whose "
-            "`who` is `PlayerRef::Seat(seat)` — the seat the first pass actually "
-            "asked — the way `Effect::MayDoBy` now does."
-        )
-    return 0
+    return 1 if buckets["open"] else 0
 
 
 if __name__ == "__main__":

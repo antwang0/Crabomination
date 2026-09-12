@@ -711,6 +711,13 @@ impl GameState {
     /// [`OptionalKind`](crate::decision::OptionalKind). It is a required
     /// argument, not a defaulted field, because the blanket-yes it replaces
     /// was invisible at the call site.
+    ///
+    /// **The queued continuation is `effect.with_asked_seat(seat)`, not
+    /// `effect`** — every `ask_seat_*` helper does this, so no arm has to
+    /// remember. An arm that derives its seat from a selector would otherwise
+    /// re-derive it on the re-run against a board its own earlier clause has
+    /// changed (`ENGINE_BACKLOG`'s seventeenth find). The rewrite is on the
+    /// suspend path only, where the effect is cloned anyway.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn ask_seat_bool(
         &mut self,
@@ -732,7 +739,7 @@ impl GameState {
             self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatBoolAnswerPending { player: seat },
-                effect.clone(),
+                effect.with_asked_seat(seat),
             )));
             return None;
         }
@@ -809,7 +816,7 @@ impl GameState {
             self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatTargetAnswerPending { player: seat },
-                effect.clone(),
+                effect.with_asked_seat(seat),
             )));
             return None;
         }
@@ -1034,7 +1041,7 @@ impl GameState {
             self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatAmountAnswerPending { player: seat, max },
-                effect.clone(),
+                effect.with_asked_seat(seat),
             )));
             return None;
         }
@@ -1073,7 +1080,7 @@ impl GameState {
             self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatAmountAnswerPending { player: seat, max: last as u32 },
-                effect.clone(),
+                effect.with_asked_seat(seat),
             )));
             return None;
         }
@@ -1125,7 +1132,7 @@ impl GameState {
                     self.suspend_signal = Some(Box::new((
                         decision,
                         PendingEffectState::CardsAnswerPending { player: seat },
-                        effect.clone(),
+                        effect.with_asked_seat(seat),
                     )));
                     return None;
                 }
@@ -1218,7 +1225,7 @@ impl GameState {
             self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatCardsAnswerPending { player: seat },
-                effect.clone(),
+                effect.with_asked_seat(seat),
             )));
             return None;
         }
@@ -5899,27 +5906,23 @@ impl GameState {
                     );
                 }
                 // The continuation carries the SEAT, not the selector that found
-                // it. `who` can be a selector over an object this resolution has
-                // already destroyed — Ghost Quarter and Field of Ruin are
-                // `Seq[Destroy target land, MayDoBy{ControllerOf(Target(0)), …}]`
-                // — and on the re-run after a suspend that selector resolved to
-                // nothing: the arm returned at the `let Some(seat)` above with
-                // the replayed answer still in the channel, so the compensation
-                // search NEVER HAPPENED for a `wants_ui` land controller (and the
-                // leak was what `CRAB_ANSWER_LOG=strict` caught in a sweep).
-                // Same shape as the fourteenth find, one selector out.
-                let concrete = Effect::MayDoBy {
-                    who: PlayerRef::Seat(seat),
-                    description: description.clone(),
-                    body: body.clone(),
-                };
+                // it — `Effect::with_asked_seat`, applied by the ask helper on
+                // the suspend path. `who` can be a selector over an object this
+                // resolution has already destroyed (Ghost Quarter and Field of
+                // Ruin are `Seq[Destroy target land,
+                // MayDoBy{ControllerOf(Target(0)), …}]`), and on the re-run
+                // that selector resolved to nothing: the arm returned at the
+                // `let Some(seat)` above with the replayed answer still in the
+                // channel, so the compensation search NEVER HAPPENED for a
+                // `wants_ui` land controller (and the leak was what
+                // `CRAB_ANSWER_LOG=strict` caught in a sweep).
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
                     &mut cursor,
                     seat,
                     description.clone(),
                     ctx.source.unwrap_or(CardId(0)),
-                    &concrete,
+                    effect,
                     OptionalKind::MayBody,
                 ) else {
                     return Ok(());
