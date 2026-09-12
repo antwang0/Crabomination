@@ -65,6 +65,11 @@ fn breaker_of_creation_gains_life_per_colorless() {
 fn drownyard_lurker_cycle_makes_spawn() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::drownyard_lurker());
+    // Cycling draws, and a draw from an empty library decks the cycler
+    // (CR 104.3c) — the fixture needs a library like a real game has.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
     fill_mana(&mut g);
     g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).expect("cycle");
     drain_stack(&mut g);

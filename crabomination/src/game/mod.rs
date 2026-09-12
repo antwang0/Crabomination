@@ -5391,7 +5391,7 @@ impl GameState {
         if delta > 0 && self.life_gain_becomes_draw_now(seat) {
             let mut events = Vec::new();
             for _ in 0..delta {
-                self.draw_one(seat, &mut events);
+                self.draw_one_or_deck(seat, &mut events);
             }
             return self.effective_life(seat);
         }
@@ -6890,7 +6890,7 @@ impl GameState {
                 }
                 CumulativeUpkeepCost::Draw(per) => {
                     for _ in 0..(per * n) {
-                        self.draw_one(active, &mut events);
+                        self.draw_one_or_deck(active, &mut events);
                     }
                     true
                 }
@@ -15803,10 +15803,14 @@ impl GameState {
         self.active_player_idx = starter;
         self.priority = PriorityState::new(starter);
         // CR 103.4 — opening hands. 727.3: a player short of seven cards will
-        // lose to the empty-library SBA, which the normal draw path enforces.
+        // lose to the empty-library SBA. ⚠ That comment was here before the
+        // enforcement was: the loop discarded `draw_one`'s result, and the
+        // arming lives in `draw_one_or_deck`. Nineteen call sites read the same
+        // way — every one a card that says "draw a card" — so CR 104.3c applied
+        // to the draw STEP and to `Effect::Draw` and to nothing else.
         for p in 0..self.players.len() {
             for _ in 0..self.starting_hand_size(p) {
-                self.draw_one(p, events);
+                self.draw_one_or_deck(p, events);
             }
         }
 
@@ -17376,7 +17380,7 @@ impl GameState {
             events.push(GameEvent::DiscardedBatch { player: seat, count: 1 });
         }
         // Draw a card (Dredge can replace this draw, CR 702.52).
-        self.draw_one(seat, &mut events);
+        self.draw_one_or_deck(seat, &mut events);
         Ok(events)
     }
 
@@ -17615,8 +17619,13 @@ impl GameState {
         self.players[p].library.extend(into_library);
         let mut events = Vec::new();
         self.shuffle_library(p, &mut events);
+        // CR 704.7 — the replacement SPENDS the loss that called it, an armed
+        // CR 104.3c one included, and it is spent here rather than at the SBA
+        // site: the seven draws below can arm a NEW one (a card pool smaller
+        // than seven), and clearing the flag after them would erase that.
+        self.players[p].pending_deck_loss = false;
         for _ in 0..7 {
-            self.draw_one(p, &mut events);
+            self.draw_one_or_deck(p, &mut events);
         }
         self.players[p].life = 20;
         self.players[p].poison_counters = 0;
@@ -17663,7 +17672,6 @@ impl GameState {
             self.players[p].pending_deck_loss = true;
         }
     }
-
 
     /// CR 121.2a — true while `p` controls an *active*
     /// `StaticEffect::MayReplaceDrawWithTutor` (Archmage Ascension at six
@@ -17748,6 +17756,16 @@ impl GameState {
         self.library_top_revealed_by_effect(seat)
     }
 
+    /// Draw one card for `p` — `true` when a card reached the hand or a
+    /// replacement did its own thing instead (Dredge, Uba Mask, Shared Fate, a
+    /// Words charge). Pushes `CardDrawn` for a normal draw, or `CardMilled` xN
+    /// + `CardLeftGraveyard` for a dredge.
+    ///
+    /// ⚠ **`false` DOES NOT MEAN "THE LIBRARY WAS EMPTY"** — it also covers a
+    /// draw that was skipped or capped, which is not a CR 104.3c attempt and
+    /// must not deck anyone. A caller that means "draw or lose" wants
+    /// [`draw_one_or_deck`](Self::draw_one_or_deck); one that only needs to
+    /// know whether a card arrived wants this.
     pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
         self.draw_one_outcome(p, events) == DrawOutcome::Drew
     }
@@ -18057,7 +18075,7 @@ impl GameState {
         if drew && let Some((extra, life_loss)) = empty_hand_bonus {
             self.in_draw_double = true;
             for _ in 0..extra {
-                self.draw_one(p, events);
+                self.draw_one_or_deck(p, events);
             }
             self.in_draw_double = false;
             if life_loss > 0 {
@@ -18147,7 +18165,7 @@ impl GameState {
             if doublers > 0 {
                 self.in_draw_double = true;
                 for _ in 0..(1u32 << doublers.min(8)) - 1 {
-                    self.draw_one(p, events);
+                    self.draw_one_or_deck(p, events);
                 }
                 self.in_draw_double = false;
             }
@@ -23489,7 +23507,7 @@ impl GameState {
                     if let Some(card) = Self::take_card(&mut self.players[target_player].hand, *cid)
                     {
                         self.players[target_player].library.push(card);
-                        self.draw_one(target_player, &mut events);
+                        self.draw_one_or_deck(target_player, &mut events);
                     }
                 }
                 Ok(events)
@@ -23739,7 +23757,7 @@ impl GameState {
                         self.discard_card(who, cid, &mut events);
                     }
                     None => {
-                        self.draw_one(namer, &mut events);
+                        self.draw_one_or_deck(namer, &mut events);
                     }
                 }
                 Ok(events)

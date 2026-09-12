@@ -216,6 +216,11 @@ fn gempalm_strider_cycle_pumps_the_elves() {
     let mut g = main_phase();
     let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     let strider = g.add_card_to_hand(0, catalog::gempalm_strider());
+    // Cycling draws, and a draw from an empty library decks the cycler
+    // (CR 104.3c) — the fixture needs a library like a real game has.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     cycle(&mut g, 0, strider);
     assert_eq!(power_of(&g, elf), 3, "1/1 Elf became a 3/3");

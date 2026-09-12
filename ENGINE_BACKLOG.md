@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-12 (twenty-fourth find) — one `false` for two meanings: a skipped draw eliminated the drawer, and nineteen more draws could not deck anyone](#fixed-2026-09-12-twenty-fourth-find--one-false-for-two-meanings-a-skipped-draw-eliminated-the-drawer-and-nineteen-more-draws-could-not-deck-anyone) | 48 |
 | Bugs & robustness | [FIXED 2026-09-12 (the drift list, once it could be read) — 25 cards shipped a mechanic they print, one shipped the WRONG one, and one shipped an ability it does not print](#fixed-2026-09-12-the-drift-list-once-it-could-be-read--25-cards-shipped-a-mechanic-they-print-one-shipped-the-wrong-one-and-one-shipped-an-ability-it-does-not-print) | 52 |
 | Bugs & robustness | [CLOSED WITH A REASON 2026-09-12 — do NOT build an "invented verb" direction on `audit_oracle_verbs`' machinery](#closed-with-a-reason-2026-09-12--do-not-build-an-invented-verb-direction-on-audit_oracle_verbs-machinery) | 33 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-third find) — a `condition` is not a cost, and the census that closed the class asked the wrong question](#fixed-2026-09-12-twenty-third-find--a-condition-is-not-a-cost-and-the-census-that-closed-the-class-asked-the-wrong-question) | 54 |
@@ -78,6 +79,47 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-12 (twenty-fourth find) — one `false` for two meanings: a skipped draw eliminated the drawer, and nineteen more draws could not deck anyone
+
+`GameState::draw_one` returned `bool`, and the `bool` answered two unrelated
+questions at once:
+
+  * **the draw did not happen** — a per-turn cap (CR 121.2b, Spirit of the
+    Labyrinth), a `PlayersSkipDraws` static (Omen Machine, Possessed Portal),
+    Obstinate Familiar's accepted optional skip, a Shared Fate with no opponent
+    to exile from, Uba Mask with nothing to exile;
+  * **CR 104.3c** — a draw was ATTEMPTED and the library was empty.
+
+CR 121.2a is explicit that the first is not the second: a skipped or replaced
+draw never became an attempt, so it cannot deck anyone.
+
+**Eight callers read the `false` as the second.** Casting Divination with Omen
+Machine on the battlefield armed `pending_deck_loss` and the next SBA sweep
+removed the caster — five cards left in their library, game handed to the
+opponent. `omen_machine_stops_draws` asserted the hand stayed empty and passed
+throughout: a test that checks the visible half of a card and not whether the
+player survived it.
+
+**And nineteen more callers read it as neither.** Every `self.draw_one(..);`
+written as a bare statement discarded the answer, so CR 104.3c applied to the
+draw step and to `Effect::Draw` and to nothing else — not to cycling, not to a
+cumulative-upkeep draw, not to a life-gain-becomes-draw, not to Lich's Mirror's
+seven, and **not to the opening hand**, whose loop carried the comment "a
+player short of seven cards will lose to the empty-library SBA, which the
+normal draw path enforces". It did not.
+
+`DrawOutcome` says which happened. `draw_one_or_deck` is the one place the loss
+is armed and is what all 27 sites call now; `draw_one` keeps its `bool` for the
+handful that only need to know whether a card arrived. Two redirects changed
+with it — `draws_redirected_this_turn` (Plagiarize) and Notion Thief hand the
+draw to a THIEF, and an empty library there decks the thief, not the seat whose
+draw was taken; the old code handed the `false` back and the caller armed the
+wrong seat.
+
+**The class is closed by a ratchet, not by a sweep of the file**:
+`no_engine_draw_throws_away_the_deck_out` fails on any bare
+`self.draw_one(..);` statement in the three engine files that draw. If the
+answer does not matter to the caller, the deck-out does.
 ## CLOSED WITH A REASON 2026-09-12 — do NOT build an "invented verb" direction on `audit_oracle_verbs`' machinery
 
 Furnace Hellkite shipped an ETB that dealt 2 damage to each opponent and the

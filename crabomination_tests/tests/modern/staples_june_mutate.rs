@@ -1669,6 +1669,10 @@ fn yidaro_recurs_on_fourth_cycle() {
     let mut g = two_player_game();
     // First cycle: shuffles into the library (not onto the battlefield).
     let y1 = g.add_card_to_hand(0, catalog::yidaro_wandering_monster());
+    // Each cycle draws, and a draw from an empty library decks the cycler.
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::island());
+    }
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::Cycle { card_id: y1, x_value: None }).expect("cycle 1");
@@ -3016,6 +3020,10 @@ fn reptilian_reflection_animates_on_cycle() {
     let refl = g.add_card_to_battlefield(0, catalog::reptilian_reflection());
     // A cycler in hand to trigger the cycle event.
     let cyc = g.add_card_to_hand(0, catalog::greater_sandwurm()); // Cycling {2}
+    // The cycle's draw needs a library, or CR 104.3c decks the cycler.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
     g.players[0].mana_pool.add_colorless(2);
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::Cycle { card_id: cyc, x_value: None }).expect("cycle");

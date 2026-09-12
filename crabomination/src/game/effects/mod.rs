@@ -3687,7 +3687,7 @@ impl GameState {
                     }
                 }
                 for _ in 0..stashed.len() {
-                    self.draw_one(p, events);
+                    self.draw_one_or_deck(p, events);
                 }
                 // The order the picks came back in is the order they go back
                 // on top (a UI seat's `ChooseCards` answer is ordered).
@@ -8500,7 +8500,7 @@ impl GameState {
                 }
                 for (seat, n) in per_seat.into_iter().enumerate() {
                     for _ in 0..n {
-                        self.draw_one(seat, events);
+                        self.draw_one_or_deck(seat, events);
                     }
                 }
                 Ok(())
@@ -22543,7 +22543,7 @@ impl GameState {
                     if !self.hands_revealed_to.contains(&(opp, ctx.controller)) {
                         self.hands_revealed_to.push((opp, ctx.controller));
                     }
-                    self.draw_one(ctx.controller, events);
+                    self.draw_one_or_deck(ctx.controller, events);
                 }
                 Ok(())
             }
@@ -24768,7 +24768,7 @@ impl GameState {
                     self.players[p].library.extend(hand);
                     self.shuffle_library(p, events);
                     for _ in 0..n {
-                        self.draw_one(p, events);
+                        self.draw_one_or_deck(p, events);
                     }
                 }
                 Ok(())
@@ -27391,10 +27391,10 @@ impl GameState {
                         break;
                     }
                     for _ in 0..2 {
-                        self.draw_one(v, events);
+                        self.draw_one_or_deck(v, events);
                     }
                     for _ in 0..4 {
-                        self.draw_one(ctx.controller, events);
+                        self.draw_one_or_deck(ctx.controller, events);
                     }
                 }
                 self.clear_answer_log();
@@ -31472,7 +31472,7 @@ impl GameState {
                     .filter(|c| self.card_colors_anywhere(c.id).contains(&color))
                     .count() as u32;
                 if actual == guess {
-                    self.draw_one(ctx.controller, events);
+                    self.draw_one_or_deck(ctx.controller, events);
                 }
                 Ok(())
             }
@@ -31500,7 +31500,7 @@ impl GameState {
                 self.cards_revealed_this_resolution = nonland;
                 self.run_effect(then, ctx, events)?;
                 for &p in &seats {
-                    self.draw_one(p, events);
+                    self.draw_one_or_deck(p, events);
                 }
                 Ok(())
             }
@@ -36676,7 +36676,7 @@ impl GameState {
                     }
                 };
                 if repeat && draw_on_repeat {
-                    self.draw_one(p, events);
+                    self.draw_one_or_deck(p, events);
                 }
                 if !repeat || self.players[p].library.is_empty() {
                     break;
@@ -36711,7 +36711,7 @@ impl GameState {
                     }
                     if controller_draws {
                         for _ in 0..manifested {
-                            self.draw_one(ctx.controller, events);
+                            self.draw_one_or_deck(ctx.controller, events);
                         }
                     }
                 }

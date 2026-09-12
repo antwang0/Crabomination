@@ -6631,13 +6631,14 @@ impl GameState {
             // CR 704.7 — a single loss replacement (Lich's Mirror) covers
             // every SBA that would end the game for this player at once.
             // CR 704.7 — a loss replacement (Lich's Mirror) refills the
-            // library, so the armed deck-out is spent with it; leaving it set
-            // would kill the player on the next sweep anyway.
+            // library, so the armed deck-out is spent with it (inside
+            // `apply_loss_reset`, before its own draws).
             if lost && !self.player_cant_lose_game(i) {
                 if self.apply_loss_reset(i) {
-                    if decked {
-                        self.players[i].pending_deck_loss = false;
-                    }
+                    // ⚠ The armed deck-out is spent INSIDE the reset now,
+                    // before its own seven draws — which can arm a fresh one
+                    // off a card pool smaller than seven, and clearing the
+                    // flag out here would erase that.
                     continue;
                 }
                 // Stamp the authoritative cause most-specific-first, matching

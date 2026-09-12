@@ -381,6 +381,10 @@ fn samut_scales_with_your_speed() {
 fn valors_flagship_cycles_into_pilots() {
     let mut g = main_phase();
     let ship = g.add_card_to_hand(0, catalog::valors_flagship());
+    // The cycle's draw needs a library, or CR 104.3c decks the cycler.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
     flood(&mut g, 0);
     g.perform_action(GameAction::Cycle { card_id: ship, x_value: Some(2) }).expect("cycle");
     drain_stack(&mut g);

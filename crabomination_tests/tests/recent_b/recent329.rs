@@ -428,11 +428,18 @@ fn tale_of_tamiyo_repeats_on_a_shared_card_type() {
     let mut g = main_phase();
     // Two Islands share a type → repeat and draw; the next pair is a land and
     // an instant, which stops it.
+    //
+    // ⚠ THE ORDER MATTERS AND IT USED TO BE WRONG. The draw takes the TOP
+    // card, so a Bolt in slot 3 is what the first repeat draws — leaving two
+    // more Islands, a third repeat, and a draw from an empty library. That was
+    // invisible while such a draw was a silent no-op; it decks the caster now
+    // (CR 104.3c), which is what a real game does. The Bolt goes last, so the
+    // second pair is the land-and-instant the comment describes.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::lightning_bolt());
-    g.add_card_to_library(0, catalog::island());
-    g.add_card_to_library(0, catalog::island());
     let saga = g.add_card_to_hand(0, catalog::the_tale_of_tamiyo());
     flood_mana(&mut g, 0);
     let hand_before = g.players[0].hand.len();

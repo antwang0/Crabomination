@@ -1072,3 +1072,43 @@ fn no_pathway_face_carries_a_basic_land_type() {
         assert!(taps_for(back, back_color), "{} lost its mana", back.name);
     }
 }
+
+/// CR 104.3c — **every draw is a draw that can deck you**, so no engine call
+/// site may throw away the answer.
+///
+/// ⚠ `draw_one` returns `false` for two unrelated things and only one of them
+/// is a deck-out ([`DrawOutcome`]); `draw_one_or_deck` is the caller-facing
+/// form that arms the loss for the right one. Nineteen sites called `draw_one`
+/// as a bare statement and discarded the result — every one of them a card that
+/// says "draw a card" — so CR 104.3c applied to the draw step and to
+/// `Effect::Draw` and to nothing else. The opening-hand loop even carried a
+/// comment saying "a player short of seven cards will lose to the empty-library
+/// SBA, which the normal draw path enforces", which it did not.
+///
+/// The rule this pins: a bare `self.draw_one(..);` statement is always wrong —
+/// if the answer does not matter, the deck-out does. Use `draw_one_or_deck`.
+#[test]
+fn no_engine_draw_throws_away_the_deck_out() {
+    let mut bad: Vec<String> = Vec::new();
+    for rel in ["src/game/mod.rs", "src/game/effects/mod.rs", "src/game/stack.rs"] {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("crabomination")
+            .join(rel);
+        let src = std::fs::read_to_string(&path).expect("read engine source");
+        for (i, line) in src.lines().enumerate() {
+            let t = line.trim();
+            if t.starts_with("self.draw_one(") && t.ends_with(");") {
+                bad.push(format!("{rel}:{}  {t}", i + 1));
+            }
+        }
+    }
+    assert!(
+        bad.is_empty(),
+        "{} bare `draw_one` statement(s) — the result is the deck-out, use \
+         `draw_one_or_deck`:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}
