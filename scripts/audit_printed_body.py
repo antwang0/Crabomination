@@ -482,8 +482,12 @@ SUB_WORD = _subtype_variants()
 # `CT` is the catalog's one alias for `CreatureType` (two files).
 SUBVAR = re.compile(r"\b(?:%s|CT)::([A-Za-z0-9_]+)" % "|".join(SUB_ENUMS))
 SUB_FIELD = re.compile(r"\b(%s)\s*:" % "|".join(SUB_FIELDS))
+# ⚠ `&[..]` IS THE SAME LIST AS `vec![..]`. A per-file helper that takes a
+# SLICE (`fn ct(types: &[CreatureType])`) binds its parameter to the caller's
+# `&[CreatureType::Human, ..]`, and a pattern that only knew `vec!` read it as
+# unreadable — `tla.rs`'s four non-Ally Allies among them.
 VEC_OF_VARIANTS = re.compile(
-    r"vec!\[\s*(?:(?:crate::card::)?(?:%s|CT)::[A-Za-z0-9_]+\s*,?\s*)*\]"
+    r"(?:vec!|&)?\[\s*(?:(?:crate::card::)?(?:%s|CT)::[A-Za-z0-9_]+\s*,?\s*)*\]"
     % "|".join(SUB_ENUMS))
 # A local binding assembled by `push` (`let mut subtypes = Subtypes::default();
 # subtypes.creature_types.push(..)`) reaches the literal as the SHORTHAND field
@@ -1102,7 +1106,7 @@ def parse_pt(inner, params=(), args=()):
     return (got.get("power"), got.get("toughness")), True
 
 
-def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None):
+def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None, hbody=None):
     """`(subtypes, declared)` off a literal's raw inner text.
 
     `subtypes` is None when the field is there but unreadable — a helper call
@@ -1129,7 +1133,7 @@ def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None):
         if bm:
             nested = literal_raw(inner, bm.start())
             if nested is not None:
-                return parse_subtypes(nested, params, args, subs_index, path)
+                return parse_subtypes(nested, params, args, subs_index, path, hbody)
         return set(), False
     if not re.match(r"(?:crate::card::)?Subtypes\s*\{", f.strip()):
         # `subtypes: creatures(vec![CreatureType::Golem])` — a per-file helper
@@ -1141,11 +1145,11 @@ def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None):
             cands = [c for c in subs_index.get(hm.group(1), []) if c[0] == path] \
                 or subs_index.get(hm.group(1), [])
             if cands:
-                _, hparams, hlit = cands[0]
+                _, hparams, hlit, hbody = cands[0]
                 at = f.index("(", f.index(hm.group(1)))
                 hargs = [bind_param(a, params, args) for a in call_args(f, at)]
                 return parse_subtypes("subtypes: Subtypes {%s}," % hlit,
-                                      hparams, hargs, subs_index, path)
+                                      hparams, hargs, subs_index, path, hbody)
         return None, True
     i = f.index("{")
     body, depth = None, 0
@@ -1165,15 +1169,29 @@ def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None):
     for name, short in fields:
         # Rust field-init shorthand IS the parameter — see SUB_FIELD_SHORTHAND.
         val = short if short is not None else raw_field(body, name)
-        if val is None or (short is not None and short not in params):
+        if val is None:
             return None, True
+        if short is not None and short not in params:
+            # ⚠ …OR A LOCAL, WHICH IS READABLE TOO WHEN THE HELPER'S BODY IS
+            # HERE. `fn ally(types: &[CreatureType]) -> Subtypes { let mut
+            # creature_types = types.to_vec(); if !creature_types.contains(
+            # &Ally) { creature_types.push(Ally); } Subtypes { creature_types,
+            # .. } }` is `tla.rs`'s whole Ally set, and the local's value is the
+            # parameter's list plus the helper's own pushes — exactly what
+            # `mut_param_arg` reads for a `mut` PARAMETER, one scope over. ⚠ The
+            # family has shipped this defect before: that helper was `ct` under
+            # a misleading name until 2026-09-01 and ten of its callers had no
+            # Ally type at all.
+            val = local_list_value(hbody, short, params, args)
+            if val is None:
+                return None, True
         val = bind_param(val, params, args)
         # ⚠ THE BINDING CAN BE ONE ELEMENT, not the whole field.
         # `planeswalker_subtypes: vec![sub]` — war's `fn walker`, every
         # planeswalker in the set — is a vec whose single element is the
         # parameter, and binding only the whole expression left 117 factories
         # unreadable on the column `HasPlaneswalkerType` reads.
-        vm = re.match(r"vec!\[(.*)\]$", re.sub(r"\s+", " ", val).strip(), re.S)
+        vm = re.match(r"(?:vec!|&)?\[(.*)\]$", re.sub(r"\s+", " ", val).strip(), re.S)
         if vm and params and vm.group(1).strip():
             val = "vec![%s]" % ", ".join(bind_param(a, params, args)
                                          for a in split_args(vm.group(1)))
@@ -1195,8 +1213,14 @@ def bind_param(expr: str, params, args) -> str:
     gives up the same way when the expression is anything else.
     """
     e = expr.strip().rstrip(",")
-    if e.endswith(".clone()"):
-        e = e[: -len(".clone()")].strip()
+    # `.to_vec()` on a slice parameter is the same binding as `.clone()` on an
+    # owned one — `fn ct(types: &[CreatureType]) { creature_types: types
+    # .to_vec() }` is how a per-file helper takes a slice, and leaving the
+    # suffix on made the field unreadable.
+    for suffix in (".clone()", ".to_vec()"):
+        if e.endswith(suffix):
+            e = e[: -len(suffix)].strip()
+            break
     if e in params:
         i = params.index(e)
         return args[i] if i < len(args) else expr
@@ -1526,6 +1550,28 @@ def mut_param_arg(src: str, name: str, arg: str):
     return "vec![%s]" % ", ".join(([have] if have else []) + added)
 
 
+def local_list_value(hbody, name, params, args):
+    """A `let mut <name> = <expr>;` local's value, with the helper's adds folded in.
+
+    The `Subtypes`-returning helper that builds its field in a local rather than
+    writing it inline: the initialiser is bound like any other expression
+    (`types.to_vec()` -> the caller's slice) and `mut_param_arg` accounts for
+    every statement that touches the local afterwards. `None` whenever either
+    half cannot be read, which is where the shorthand started.
+    """
+    if not hbody:
+        return None
+    m = re.search(r"\blet\s+mut\s+%s\s*=\s*(.+?);" % re.escape(name), hbody, re.S)
+    if not m:
+        return None
+    init = m.group(1).strip()
+    for suffix in (".to_vec()", ".clone()", ".into()"):
+        if init.endswith(suffix):
+            init = init[: -len(suffix)].strip()
+    init = bind_param(init.lstrip("&"), params, args)
+    return mut_param_arg(hbody[m.end():], name, init)
+
+
 def bind_mut_params(blk: str, params, args):
     """`(params, args)` with each `mut` parameter either READ or left unreadable.
 
@@ -1749,7 +1795,17 @@ def build_subtypes_index(catalog):
             if lit is not None:
                 params = [a.split(":")[0].replace("mut ", "").strip()
                           for a in split_args(m.group(2))]
-                index.setdefault(m.group(1), []).append((path, params, lit))
+                # The helper's own BODY comes along: a shorthand field can be a
+                # LOCAL rather than a parameter (`let mut creature_types =
+                # types.to_vec(); creature_types.push(Ally); Subtypes {
+                # creature_types, .. }`), and the local is only readable here.
+                # ⚠ `m.end()` is the FUNCTION's brace, not the literal's, so
+                # the statements between them — the `let mut` this exists to
+                # read — sit in the gap. Slice to the end of the literal itself.
+                lend = text.find(lit, m.end())
+                lend = lend + len(lit) + 2 if lend >= 0 else m.end() + len(lit) + 2
+                index.setdefault(m.group(1), []).append(
+                    (path, params, lit, text[m.start():lend]))
     return index
 
 

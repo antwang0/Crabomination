@@ -397,6 +397,24 @@ CASES = [
   '        name: "Slaughter Pact",\n'
   "        color_indicator: vec![crate::mana::Color::Black],\n"
   "        cost: cost(&[generic(1)]),"),
+ # ⚠ A SHORTHAND FIELD CAN BE A LOCAL, AND THE LOCAL CAN CARRY THE HELPER'S OWN
+ # PUSH. `fn mount(types) -> Subtypes { let mut creature_types = types;
+ # creature_types.push(Mount); Subtypes { creature_types, .. } }` — the Saddle
+ # set — and `tla`'s `fn ally`, which is the same shape with the push behind a
+ # `contains` guard. ⚠ That family HAS shipped this defect: `tla`'s helper was
+ # `ct` under a misleading name until 2026-09-01 and ten callers had no Ally.
+ ("fires", "a Subtypes helper's own push onto a local (recent66 fn mount)",
+  "sets/decks/recent66.rs",
+  "    creature_types.push(CreatureType::Mount);\n", ""),
+ # A slice parameter (`fn ct(types: &[CreatureType])`) binds to `&[..]`, which
+ # is the same list as `vec![..]` and was read as unreadable.
+ ("fires", "a subtype list through a slice parameter (tla fn ct)",
+  "sets/decks/tla.rs",
+  "fn ct(types: &[CreatureType]) -> Subtypes {\n"
+  "    Subtypes { creature_types: types.to_vec(), ..Default::default() }",
+  "fn ct(types: &[CreatureType]) -> Subtypes {\n"
+  "    let _ = types;\n"
+  "    Subtypes { creature_types: vec![], ..Default::default() }"),
  # The layout gate: a transform card reaches the subtype comparison with its
  # own FACE's type line, and `layout == \"normal\"` used to drop it silently.
  ("fires", "a subtype on a transform face (modern Tormented Pariah)",
