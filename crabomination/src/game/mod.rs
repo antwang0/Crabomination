@@ -3360,6 +3360,23 @@ impl TempCopy {
 /// empty on most of the 23 k probe clones a six-game `cube` run makes, and
 /// the out-of-line clone cost ~37 Ir apiece to copy nothing (PERF `(-200)`).
 #[inline(always)]
+/// A card's OWN prowess trigger — the shape `shortcut::prowess()` and
+/// `shortcut::prowess_trigger()` build, and the only one that should suppress
+/// the prowess the keyword mints. Matching the event KIND alone suppressed it
+/// for any cast trigger at all; see the call site.
+fn is_prowess_pump(ta: &crate::card::TriggeredAbility) -> bool {
+    matches!(ta.event.kind, crate::effect::EventKind::SpellCast)
+        && matches!(
+            &ta.effect,
+            Effect::PumpPT {
+                what: crate::effect::Selector::This,
+                power: crate::effect::Value::Const(1),
+                toughness: crate::effect::Value::Const(1),
+                duration: crate::effect::Duration::EndOfTurn,
+            }
+        )
+}
+
 fn clone_list<T: Clone>(v: &[T]) -> Vec<T> {
     if v.is_empty() { Vec::new() } else { v.to_vec() }
 }
@@ -20577,8 +20594,17 @@ impl GameState {
         // Prowess: inject +1/+1 EOT pump for each creature with the
         // Prowess keyword that does NOT already carry its own prowess()
         // triggered ability. Cards wired via shortcut::prowess() already
-        // have a SpellCast trigger on their definition; we skip those to
-        // avoid doubling the pump.
+        // have that trigger on their definition; we skip those to avoid
+        // doubling the pump.
+        //
+        // ⚠ "ITS OWN PROWESS TRIGGER", NOT "ANY SPELLCAST TRIGGER". The guard
+        // used to skip on the event KIND alone, so a prowess creature with an
+        // unrelated cast trigger never got its pump at all: Niblis of Frost
+        // (tap and freeze), Cori-Steel Cutter (make a Monk), Bria (grant
+        // unblockable), Lilah (plot the spell) and Sokka (make a token) all
+        // print prowess and never had it. `is_prowess_pump` matches the shape
+        // `shortcut::prowess()` builds and nothing else — which still suppresses
+        // Veyran, whose magecraft trigger IS that pump under another filter.
         for ev in events {
             if let GameEvent::SpellCast { player, card_id, .. } = ev {
                 let is_creature_spell = self.stack.iter().any(|si| matches!(
@@ -20590,9 +20616,7 @@ impl GameState {
                         .filter(|c| {
                             c.controller == *player
                                 && c.has_keyword(&Keyword::Prowess)
-                                && !c.definition.triggered_abilities.iter().any(|ta| {
-                                    matches!(ta.event.kind, crate::effect::EventKind::SpellCast)
-                                })
+                                && !c.definition.triggered_abilities.iter().any(is_prowess_pump)
                         })
                         .map(|c| c.id)
                         .collect();

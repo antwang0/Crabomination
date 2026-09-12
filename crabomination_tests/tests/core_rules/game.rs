@@ -6128,6 +6128,54 @@ fn prowess_does_not_trigger_on_creature_spell() {
     assert_eq!(m.toughness(), 3);
 }
 
+/// CR 702.107 — a prowess creature with an UNRELATED cast trigger still has
+/// prowess.
+///
+/// The keyword mints its pump for any creature that does not already carry its
+/// own `shortcut::prowess()` trigger, and the guard for "already carries one"
+/// matched the event KIND alone — so a prowess creature with any other
+/// `SpellCast` trigger got no pump at all. Four shipped cards printed prowess
+/// and never had it: Niblis of Frost (tap and freeze), Bria, Riptide Rogue
+/// (grant unblockable), Lilah, Undefeated Slickshot (plot the spell) and
+/// Sokka, Tenacious Tactician (make a token). Found by
+/// `audit_catalog_stats.py`'s `kw` column, which reads a wider keyword
+/// vocabulary than `audit_printed_body`'s.
+///
+/// Both halves are asserted, because the fix's whole risk is the other
+/// direction: Veyran's magecraft trigger IS the prowess pump under a narrower
+/// filter, so it must STILL suppress the minted one or the card pumps twice.
+#[test]
+fn prowess_survives_an_unrelated_cast_trigger_and_is_not_doubled() {
+    fn pump_after_a_bolt(factory: fn() -> crabomination::card::CardDefinition) -> i32 {
+        let mut g = two_player_game();
+        let base = factory().power;
+        let id = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(id);
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        }).expect("bolt castable");
+        drain_stack(&mut g);
+        g.battlefield.iter().find(|c| c.id == id).unwrap().power() - base
+    }
+    assert_eq!(pump_after_a_bolt(catalog::niblis_of_frost), 1,
+        "Niblis of Frost prints prowess; its tap trigger is not a prowess trigger");
+    assert_eq!(pump_after_a_bolt(catalog::bria_riptide_rogue), 1,
+        "Bria prints prowess; its unblockable grant is not a prowess trigger");
+    assert_eq!(pump_after_a_bolt(catalog::sokka_tenacious_tactician), 1,
+        "Sokka prints prowess; its token trigger is not a prowess trigger");
+    // Veyran's own trigger is the pump, on instants and sorceries — Lightning
+    // Bolt is one, so it fires once and the minted one must not fire too.
+    assert_eq!(pump_after_a_bolt(catalog::veyran_voice_of_duality), 1,
+        "Veyran pumps ONCE: its magecraft trigger is the prowess pump");
+}
+
 // ── Combat module tests ─────────────────────────────────────────────────────
 
 #[test]
