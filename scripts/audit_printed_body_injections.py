@@ -208,7 +208,10 @@ CASES = [
 # added with its row kind missing here, and its injection read "silent" — the
 # battery's own version of the bug it exists to catch.
 ROW = re.compile(r"^  (?:sub|kw|types|super|cost|p/t|color|loyalty|no-cost) ", re.M)
-NAME_ROW = re.compile(r"^  (?:spelling|unknown) ", re.M)
+# EVERY row kind of the name audit too — `duplicate` and `mismatch` were
+# added after this line and would have been invisible to it, which is the
+# third time that exact omission has come up in this file.
+NAME_ROW = re.compile(r"^  (?:spelling|unknown|duplicate|mismatch) +'", re.M)
 
 
 def run():

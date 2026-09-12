@@ -29,8 +29,15 @@ is appended, so a rename is safe for a trained net's *indices* but hands it a
 token it never saw. Batch renames, and say so in the commit.
 
 COVERAGE, 2026-09-12: **17,461 named factories outside the expected sets — 0
-spelling, 0 unknown, 0 duplicate**, with 6 reviewed unknowns and 3 reviewed
-duplicate pairs. It opened at 2 / 12 / 5. Both misspellings hid a WRONG COST,
+spelling, 0 unknown, 0 duplicate, 0 string/slug mismatch**, with 6 reviewed
+unknowns and 3 reviewed duplicate pairs. It opened at 2 / 12 / 5 / 1.
+
+⚠ **A HELPER-BUILT FACTORY'S NAME COMES FROM ITS `pub fn`, not from its own
+string** — `vanilla("Sabretooth Tiger", ..)` has no `name:` field — so a typo
+in that string would pass this column in silence, read as the slug's correct
+name. The `mismatch` row is the guard: a head string that is ALMOST the
+resolved name is a misspelling, because a token name or a prompt never is. It
+found Surging Æther, which shipped the ligature the Oracle dropped in 2016. Both misspellings hid a WRONG COST,
 and both had a correct DUPLICATE of the same card shipped beside them, which is
 the whole argument for the column — a name nobody audits is where a second,
 worse copy of a card lives:
@@ -166,6 +173,27 @@ def main() -> int:
             if name is None or " // " in name:
                 continue  # `noname` / `split`; not this column's populations
             checked += 1
+            # ⚠ A HELPER-BUILT FACTORY'S OWN STRING IS NOT WHAT THIS READ.
+            # `vanilla("Sabretooth Tiger", ..)` has no `name:` field, so the
+            # name came from the `pub fn` slug — and the slug is right even
+            # when the STRING is misspelled, so a typo there would pass this
+            # column in silence. Compare the two readings: a head string that
+            # is ALMOST the resolved name is a misspelling (a token name or a
+            # description is never close to it), and it is the string the
+            # engine actually ships.
+            head = "\n".join(raw.split("\n")[:14])
+            for cand in apb.ANYNAME.findall(head):
+                if cand == name:
+                    break
+                # A PROMPT that quotes the card ("Untap Leonin Battlemage") is
+                # not a misspelling of it, and a `\"`-escaped literal reaches
+                # this as a fragment rather than a name.
+                if "\\" in cand or name in cand or cand in name:
+                    continue
+                ratio = difflib.SequenceMatcher(None, key(cand), key(name)).ratio()
+                if ratio > 0.85:
+                    rows.append(("mismatch", cand, f"{rel}::{fname}", name))
+                    break
             # ⚠ ONE NAME, TWO CARDS. The pool can hold both, "cards named …"
             # sees two, and the legend rule counts them together — and a
             # duplicate is where a wrong body hides, because the correct
@@ -188,12 +216,15 @@ def main() -> int:
                          near[0] if near else "(nothing close)"))
 
     for kind, name, where, near in sorted(rows):
-        label = "also at" if kind == "duplicate" else "closest oracle name:"
+        label = {"duplicate": "also at",
+                 "mismatch": "but the `pub fn` says:"}.get(
+                     kind, "closest oracle name:")
         print(f"  {kind:9} {name!r}\n      {where}\n      {label} {near!r}")
     print(f"# {checked} named factories outside the expected sets — "
           f"**{sum(1 for r in rows if r[0] == 'spelling')} spelling, "
           f"{sum(1 for r in rows if r[0] == 'unknown')} unknown to the oracle, "
-          f"{sum(1 for r in rows if r[0] == 'duplicate')} duplicate names** "
+          f"{sum(1 for r in rows if r[0] == 'duplicate')} duplicate names, "
+          f"{sum(1 for r in rows if r[0] == 'mismatch')} string/slug mismatches** "
           f"({reviewed} reviewed unknown, {len(REVIEWED_DUPLICATES)} reviewed "
           f"duplicates)")
     return 0
