@@ -1546,6 +1546,64 @@ fn jarad_recurs_from_graveyard() {
         "Swamp and Forest sacrificed");
 }
 
+/// CR 602.5b — **"Sacrifice a Swamp and a Forest" is a COST**, so it is paid
+/// when the ability is announced, and a second announcement with nothing left
+/// to pay with is illegal.
+///
+/// It shipped as two `Effect::Sacrifice` steps behind a `condition` asking
+/// whether you control the two lands — the Greater Good shape, which stays
+/// true until the ability RESOLVES. A bot could announce it as many times as
+/// the CR 732.3 watchdog allowed, and every extra resolution sacrificed
+/// another pair of lands with Jarad already in hand.
+#[test]
+fn cr_602_5b_jarads_swamp_and_forest_are_paid_at_announcement() {
+    let mut g = two_player_game();
+    let jarad = g.add_card_to_graveyard(0, catalog::jarad_golgari_lich_lord());
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let activate = |g: &mut crabomination::game::GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: jarad,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    };
+    activate(&mut g).expect("one Swamp and one Forest pay for it");
+    assert!(
+        g.battlefield_find(swamp).is_none() && g.battlefield_find(forest).is_none(),
+        "both halves are paid on ANNOUNCEMENT, not on resolution",
+    );
+    assert!(activate(&mut g).is_err(), "nothing left to sacrifice");
+    assert_eq!(g.stack.len(), 1, "one activation on the stack, not two");
+}
+
+/// **Two filters, not one with a count of two.** `(Swamp-or-Forest, 2)` would
+/// be paid by two Swamps, which is why the cost needs `sac_other_second`.
+#[test]
+fn jarads_second_swamp_cannot_pay_for_the_forest_half() {
+    let mut g = two_player_game();
+    let jarad = g.add_card_to_graveyard(0, catalog::jarad_golgari_lich_lord());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: jarad,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(),
+        "two Swamps do not pay for a Swamp AND a Forest",
+    );
+    assert!(g.stack.is_empty(), "the announcement was rejected before anything was paid");
+    assert_eq!(g.battlefield.len(), 2, "and neither Swamp was sacrificed");
+}
+
 /// Conjured Currency swaps control of itself with an opponent's permanent.
 #[test]
 fn conjured_currency_swaps_control() {

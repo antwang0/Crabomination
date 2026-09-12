@@ -71,40 +71,27 @@ pub fn jarad_golgari_lich_lord() -> CardDefinition {
                 },
                 ..Default::default()
             },
+            // CR 602.5b — "Sacrifice a Swamp and a Forest" is a COST, paid on
+            // announcement. It shipped as two `Effect::Sacrifice` steps behind
+            // a `condition`, which is the Greater Good shape: the condition
+            // only asks whether you control the two lands, and that stays true
+            // until the ability RESOLVES, so the announcement could be repeated
+            // for free — and every extra resolution sacrificed another pair
+            // while Jarad was already in hand. Two filters, not one with a
+            // count of two: `(Swamp-or-Forest, 2)` is paid by two Swamps.
             ActivatedAbility {
                 mana_cost: ManaCost::default(),
                 from_graveyard: true,
-                condition: Some(Predicate::All(vec![
-                    Predicate::ValueAtLeast(land_count(LandType::Swamp), Value::ONE),
-                    Predicate::ValueAtLeast(land_count(LandType::Forest), Value::ONE),
-                ])),
-                effect: Effect::Seq(vec![
-                    Effect::Sacrifice {
-                        who: Selector::You,
-                        count: Value::ONE,
-                        filter: R::HasLandType(LandType::Swamp),
-                    },
-                    Effect::Sacrifice {
-                        who: Selector::You,
-                        count: Value::ONE,
-                        filter: R::HasLandType(LandType::Forest),
-                    },
-                    Effect::Move {
-                        what: Selector::This,
-                        to: ZoneDest::Hand(PlayerRef::You),
-                    },
-                ]),
+                sac_other_filter: Some((R::HasLandType(LandType::Swamp), 1)),
+                sac_other_second: Some((R::HasLandType(LandType::Forest), 1)),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
                 ..Default::default()
             },
         ],
         ..Default::default()
-    }
-}
-
-fn land_count(ty: LandType) -> Value {
-    Value::CountMatching {
-        sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
-        filter: R::HasLandType(ty),
     }
 }
 

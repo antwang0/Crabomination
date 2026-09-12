@@ -13345,6 +13345,7 @@ fn is_countable_mana_ability(a: &ActivatedAbility) -> bool {
         && a.mana_cost.symbols.is_empty()
         && !a.sac_cost
         && a.sac_other_filter.is_none()
+        && a.sac_other_second.is_none()
         && a.bounce_other_filter.is_none()
         && a.tap_other_filter.is_none()
         && a.tap_n_filter.is_none()

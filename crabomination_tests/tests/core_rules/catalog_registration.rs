@@ -914,6 +914,82 @@ const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
     ("Clergy of the Holy Nimbus", "static regeneration modelled as a free activation"),
 ];
 
+/// **A `condition` is not a cost, and a sacrifice in the EFFECT is not one
+/// either** — the two halves of the same mistake, and the ratchet below
+/// accepts a condition as the bound, which is the premise this disproves.
+///
+/// `condition` is checked at announcement and asks about the board; a
+/// sacrifice in the effect is paid at RESOLUTION. So the condition an
+/// effect-side sacrifice would falsify stays true for as long as the ability
+/// sits on the stack, and the announcement can be repeated. Greater Good
+/// ("Sacrifice a creature: draw three") was written that way behind "do you
+/// control a creature?" and put **3,213 items on one stack, 3,119 of them its
+/// own activations**, at turn 43 of an `abilarms` game — the robustness grid's
+/// first `--pilots` failure. Four cards were fixed with `sac_other_filter`;
+/// Jarad, Golgari Lich Lord needed a second filter first, because "Sacrifice a
+/// Swamp **and** a Forest" is two of them (`sac_other_second`).
+///
+/// The rule is narrow on purpose: a free ability whose ONLY bound is a
+/// condition, whose effect sacrifices permanents the activator chooses. The
+/// source sacrificing ITSELF (`SacrificePermanent { what: This }`, 13 printed
+/// cards) is not this shape — the source leaves, so the ability cannot be
+/// announced again. Neither is a MANA ability (Krark-Clan Ironworks): CR
+/// 605.3a resolves it without using the stack, so its effect-side sacrifice is
+/// paid before anything else can be announced.
+#[test]
+fn no_free_activation_spells_its_sacrifice_cost_in_its_effect() {
+    use crabomination::card::ActivatedAbility;
+    use crabomination::effect::StaticEffect;
+    /// The effect-tree spellings of "the activator sacrifices permanents it
+    /// picks". `SacrificePermanent` (the source itself) is deliberately not
+    /// here; neither is `MaySacrifice`, which is a choice the activator can
+    /// decline and so is not a cost being dodged.
+    const COST_IN_EFFECT: [&str; 2] = ["Sacrifice { who:", "SacrificeAndRemember { who:"];
+    let mut bad: Vec<String> = Vec::new();
+    let mut checked = 0usize;
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        checked += 1;
+        let granted = def.static_abilities.iter().filter_map(|sa| match &sa.effect {
+            StaticEffect::GrantActivatedAbility { ability, .. } => Some(ability),
+            StaticEffect::GrantActivatedAbilityFromGraveyard { ability, .. } => Some(&**ability),
+            _ => None,
+        });
+        for (i, ab) in def.activated_abilities.iter().chain(granted).enumerate() {
+            // Everything but the effect and the condition at its `Default`:
+            // no mana, no tap, no sacrifice, no per-turn cap, no cost field
+            // this struct has or a later pass adds.
+            let bare = ActivatedAbility {
+                effect: ab.effect.clone(),
+                condition: ab.condition.clone(),
+                ..Default::default()
+            };
+            if *ab != bare || ab.condition.is_none() {
+                continue; // a real cost line, or the ratchet below owns it
+            }
+            if crabomination::game::actions::is_mana_ability_public(&ab.effect) {
+                continue; // CR 605.3a — resolves without the stack, so it pays first
+            }
+            let body = format!("{:?}", ab.effect);
+            if COST_IN_EFFECT.iter().any(|pat| body.contains(pat)) {
+                bad.push(format!("{} [{i}]", def.name));
+            }
+        }
+    }
+    assert!(checked > 15_000, "only {checked} factories walked — the ratchet is vacuous");
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} activated ability/abilities pay a sacrifice in their EFFECT and are bounded \
+         only by a `condition` — which stays true until the ability resolves, so the \
+         announcement repeats. Move the sacrifice to `sac_other_filter` (and \
+         `sac_other_second` when it is two different filters): {:?}",
+        bad.len(),
+        &bad[..bad.len().min(40)]
+    );
+}
+
 /// **No shipped card carries an activated ability that is free, unconditional
 /// and unlimited.**
 ///

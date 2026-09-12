@@ -2489,6 +2489,16 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
             parts.push(format!("Sacrifice {n} {noun}s"));
         }
     }
+    // The second half of a two-filter sacrifice ("Sacrifice a Swamp and a
+    // Forest" — Jarad). Shown on its own so the cost line names both.
+    if let Some((req, n)) = ability.sac_other_second.as_ref() {
+        let noun = requirement_noun(req);
+        if *n == 1 {
+            parts.push(format!("Sacrifice a {noun}"));
+        } else {
+            parts.push(format!("Sacrifice {n} {noun}s"));
+        }
+    }
     // Tap-another-creature activations (Convoke-style outlets, "Tap an
     // untapped creature you control" costs) — `tap_other_filter`.
     if let Some(req) = ability.tap_other_filter.as_ref() {

@@ -3017,6 +3017,21 @@ pub struct ActivatedAbility {
     /// shapes).
     #[serde(default)]
     pub sac_other_filter: Option<(SelectionRequirement, u32)>,
+    /// A SECOND, DIFFERENT sacrifice in the same cost line — "Sacrifice a
+    /// Swamp **and** a Forest:" (Jarad, Golgari Lich Lord's graveyard
+    /// ability).
+    ///
+    /// ⚠ **One `(filter, count)` cannot say this.** `(Swamp-or-Forest, 2)`
+    /// is paid by two Swamps, and `(Swamp, 1)` alone drops half the cost —
+    /// which is why the card shipped with both sacrifices spelled in its
+    /// EFFECT behind a `condition`, the shape CR 602.5b forbids and the one
+    /// that put 3,119 Greater Good activations on one stack. Paid alongside
+    /// `sac_other_filter` and picked DISJOINTLY from it, so a permanent that
+    /// matches both halves (a Bayou) cannot pay both.
+    ///
+    /// Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub sac_other_second: Option<(SelectionRequirement, u32)>,
     /// "Sacrifice all [filter] you control" as an activation cost (Tomb of
     /// Urami's "Sacrifice all lands you control"). Paid alongside
     /// `sac_other_filter`; the source itself is included when it matches.

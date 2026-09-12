@@ -300,8 +300,20 @@ mod recent32 {
         EffectContext::for_ability(source, 0, None)
     }
 
-    fn ability0_effect(def: crabomination::card::CardDefinition) -> crabomination::card::Effect {
-        def.activated_abilities.into_iter().next().unwrap().effect
+    /// ⚠ **THE SACRIFICE IS A COST NOW, so `resolve_effect` on the ability's
+    /// body does not pay it.** These four cards spelled it as the effect's
+    /// first step behind a `condition`, which is not a bound (CR 602.5b, and
+    /// `no_free_activation_spells_its_sacrifice_cost_in_its_effect`); the
+    /// activation is what exercises the cost, so the tests take it.
+    fn activate0(g: &mut GameState, id: CardId) -> Result<Vec<GameEvent>, GameError> {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
     }
 
     #[test]
@@ -309,10 +321,11 @@ mod recent32 {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, catalog::bloodflow_connoisseur());
         g.add_card_to_battlefield(0, catalog::grizzly_bears()); // fodder
-        g.resolve_effect(&ability0_effect(catalog::bloodflow_connoisseur()), &ctx_for(id)).unwrap();
+        activate0(&mut g, id).expect("one creature to sacrifice");
         drain_stack(&mut g);
         let cp = g.computed_permanent(id).unwrap();
         assert_eq!((cp.power, cp.toughness), (2, 2), "a +1/+1 counter from the sacrifice");
+        assert!(activate0(&mut g, id).is_err(), "and nothing left to pay a second one");
     }
 
     #[test]
@@ -320,7 +333,8 @@ mod recent32 {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, catalog::vampire_aristocrat());
         g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        g.resolve_effect(&ability0_effect(catalog::vampire_aristocrat()), &ctx_for(id)).unwrap();
+        activate0(&mut g, id).expect("one creature to sacrifice");
+        drain_stack(&mut g);
         let cp = g.computed_permanent(id).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4));
     }
@@ -330,9 +344,12 @@ mod recent32 {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, catalog::cartel_aristocrat());
         let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        g.resolve_effect(&ability0_effect(catalog::cartel_aristocrat()), &ctx_for(id)).unwrap();
+        activate0(&mut g, id).expect("another creature to sacrifice");
+        assert!(
+            g.battlefield_find(fodder).is_none(),
+            "another creature was sacrificed, at ANNOUNCEMENT",
+        );
         drain_stack(&mut g);
-        assert!(g.battlefield_find(fodder).is_none(), "another creature was sacrificed");
         assert!(g.computed_permanent(id).unwrap().keywords().iter()
             .any(|k| matches!(k, Keyword::Protection(_))), "gained protection from a color");
     }
@@ -373,7 +390,9 @@ mod recent32 {
         g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
         let before = g.players[1].life;
         // Bontu's ability is the second activated ability slot here (the only one).
-        g.resolve_effect(&ability0_effect(catalog::bontu_the_glorified()), &ctx_for(bontu)).unwrap();
+        g.players[0].mana_pool.add_colorless(1);
+        g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+        activate0(&mut g, bontu).expect("{1}{B} and another creature");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, before - 1, "each opponent loses 1");
         assert_eq!(g.players[0].life, 21, "you gain 1");

@@ -16508,6 +16508,37 @@ impl GameState {
 
         let mut sac_other_picks = sac_other_picks;
 
+        // CR 602.5b — a SECOND, DIFFERENT sacrifice in one cost line:
+        // "Sacrifice a Swamp and a Forest:" (Jarad, Golgari Lich Lord). The
+        // picks are disjoint from the first filter's, so a dual land that
+        // matches both halves cannot pay both. Rejected before any payment,
+        // like the first filter's gate above.
+        if let Some((filter, count)) = ability.sac_other_second.as_ref() {
+            let count = *count as usize;
+            let candidates: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p)
+                .map(|c| c.id)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .filter(|id| !sac_other_picks.contains(id))
+                .filter(|id| {
+                    self.evaluate_requirement_static(
+                        filter,
+                        &Target::Permanent(*id),
+                        p,
+                        Some(card_id),
+                    )
+                })
+                .collect();
+            if candidates.len() < count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            let picks = self.auto_pick_lowest_power(&candidates, count);
+            sac_other_picks.extend(picks);
+        }
+
         // CR 602.5b — "…and any number of [filter] you control". Zero is a
         // legal payment, so there is no candidate-count gate; a hand-paying
         // activator picks the subset, everything else sacrifices all of them

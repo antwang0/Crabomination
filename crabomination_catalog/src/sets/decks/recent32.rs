@@ -1,7 +1,8 @@
 //! Aristocrats / sacrifice-matters supplement: sac-fodder payoffs and drain
-//! engines. Sacrifice-as-a-cost activated abilities fold the sacrifice as the
-//! effect's first step (the cost-as-first-step convention used across this
-//! catalog). Tracked in `DECK_FEATURES.md`; tests in `tests/recent32.rs`.
+//! engines. Sacrifice-as-a-cost activated abilities pay it as a COST
+//! (`sac_other_filter`, CR 602.5b) — see `sac_creature_cost` for what they did
+//! before and why it was wrong. Tracked in `DECK_FEATURES.md`; tests in
+//! `tests/recent32.rs`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
@@ -11,17 +12,39 @@ use crate::card::{
 use crate::effect::{Duration, PlayerRef};
 use crate::mana::{b, cost, generic, r, w};
 
-/// Sacrifice one creature you control as the first step of an activated cost.
-/// `another` excludes the source (CR "another creature").
-fn sac_creature(another: bool) -> Effect {
+/// CR 602.5b — "Sacrifice a creature:" as the activation COST, for
+/// `ActivatedAbility::sac_other_filter`. `another` spells the source out of
+/// the filter (CR "another creature"); the payment path excludes the source
+/// either way, so the two cards that print the self-including version lose
+/// only the self-sacrifice, which is never the right line for either.
+///
+/// ⚠ **IT WAS THE EFFECT'S FIRST STEP, BEHIND A `condition`, AND THAT IS NOT A
+/// COST.** The condition only asks whether you control a creature, which stays
+/// true until the ability RESOLVES — so the announcement repeats, which is how
+/// Greater Good put 3,119 activations on one stack (ENGINE_BACKLOG). The
+/// ratchet `no_free_activation_spells_its_sacrifice_cost_in_its_effect` is
+/// what found the four free ones after that fix (Bontu's mana cost hid it from
+/// the ratchet and it had the same defect); do not put it back in the effect.
+fn sac_creature_cost(another: bool) -> (SelectionRequirement, u32) {
+    (sac_creature_filter(another), 1)
+}
+
+fn sac_creature_filter(another: bool) -> SelectionRequirement {
     let mut filter = SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou);
     if another {
         filter = filter.and(SelectionRequirement::OtherThanSource);
     }
+    filter
+}
+
+/// Sacrifice one creature you control as an EFFECT — Smothering Abomination's
+/// upkeep trigger, which prints it that way ("At the beginning of your upkeep,
+/// sacrifice a creature"). Not a cost; see `sac_creature_cost`.
+fn sac_creature(another: bool) -> Effect {
     Effect::Sacrifice {
         who: Selector::You,
         count: Value::Const(1),
-        filter,
+        filter: sac_creature_filter(another),
     }
 }
 
@@ -57,23 +80,11 @@ pub fn cartel_aristocrat() -> CardDefinition {
         2,
     );
     def.activated_abilities = vec![ActivatedAbility {
-        // The sacrifice is the activation cost. It is spelled in the effect
-        // (the payoff reads what was sacrificed, or the attachment LKI
-        // needs it), which does **not** gate the activation — so without
-        // this condition a bot could activate it with nothing to
-        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
-        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
-            SelectionRequirement::Creature
-                .and(SelectionRequirement::ControlledByYou)
-                .and(SelectionRequirement::OtherThanSource),
-        ))),
-        effect: Effect::Seq(vec![
-            sac_creature(true),
-            Effect::GrantProtectionFromChosenColor {
-                what: Selector::This,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        sac_other_filter: Some(sac_creature_cost(true)),
+        effect: Effect::GrantProtectionFromChosenColor {
+            what: Selector::This,
+            duration: Duration::EndOfTurn,
+        },
         ..Default::default()
     }];
     def
@@ -90,22 +101,12 @@ pub fn bloodflow_connoisseur() -> CardDefinition {
         1,
     );
     def.activated_abilities = vec![ActivatedAbility {
-        // The sacrifice is the activation cost. It is spelled in the effect
-        // (the payoff reads what was sacrificed, or the attachment LKI
-        // needs it), which does **not** gate the activation — so without
-        // this condition a bot could activate it with nothing to
-        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
-        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
-            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-        ))),
-        effect: Effect::Seq(vec![
-            sac_creature(false),
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-        ]),
+        sac_other_filter: Some(sac_creature_cost(false)),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
         ..Default::default()
     }];
     def
@@ -126,23 +127,13 @@ pub fn vampire_aristocrat() -> CardDefinition {
         2,
     );
     def.activated_abilities = vec![ActivatedAbility {
-        // The sacrifice is the activation cost. It is spelled in the effect
-        // (the payoff reads what was sacrificed, or the attachment LKI
-        // needs it), which does **not** gate the activation — so without
-        // this condition a bot could activate it with nothing to
-        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
-        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
-            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-        ))),
-        effect: Effect::Seq(vec![
-            sac_creature(false),
-            Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(2),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        sac_other_filter: Some(sac_creature_cost(false)),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
         ..Default::default()
     }];
     def
@@ -170,24 +161,12 @@ pub fn yahenni_undying_partisan() -> CardDefinition {
         },
     }];
     def.activated_abilities = vec![ActivatedAbility {
-        // The sacrifice is the activation cost. It is spelled in the effect
-        // (the payoff reads what was sacrificed, or the attachment LKI
-        // needs it), which does **not** gate the activation — so without
-        // this condition a bot could activate it with nothing to
-        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
-        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
-            SelectionRequirement::Creature
-                .and(SelectionRequirement::ControlledByYou)
-                .and(SelectionRequirement::OtherThanSource),
-        ))),
-        effect: Effect::Seq(vec![
-            sac_creature(true),
-            Effect::GrantKeyword {
-                what: Selector::This,
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        sac_other_filter: Some(sac_creature_cost(true)),
+        effect: Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::Indestructible,
+            duration: Duration::EndOfTurn,
+        },
         ..Default::default()
     }];
     def
@@ -213,18 +192,8 @@ pub fn bontu_the_glorified() -> CardDefinition {
     ];
     def.activated_abilities = vec![ActivatedAbility {
         mana_cost: cost(&[generic(1), b()]),
-        // The sacrifice is the activation cost. It is spelled in the effect
-        // (the payoff reads what was sacrificed, or the attachment LKI
-        // needs it), which does **not** gate the activation — so without
-        // this condition a bot could activate it with nothing to
-        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
-        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
-            SelectionRequirement::Creature
-                .and(SelectionRequirement::ControlledByYou)
-                .and(SelectionRequirement::OtherThanSource),
-        ))),
+        sac_other_filter: Some(sac_creature_cost(true)),
         effect: Effect::Seq(vec![
-            sac_creature(true),
             Effect::Scry {
                 who: PlayerRef::You,
                 amount: Value::Const(1),

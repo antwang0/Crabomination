@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-12 (twenty-third find) — a `condition` is not a cost, and the census that closed the class asked the wrong question](#fixed-2026-09-12-twenty-third-find--a-condition-is-not-a-cost-and-the-census-that-closed-the-class-asked-the-wrong-question) | 54 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-second find) — a name no card has is audited by nobody, and that is where a second, worse copy of a card lives](#fixed-2026-09-12-twenty-second-find--a-name-no-card-has-is-audited-by-nobody-and-that-is-where-a-second-worse-copy-of-a-card-lives) | 55 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-first find) — colour is DERIVED, and three shipped cards print one their mana cost cannot carry](#fixed-2026-09-12-twenty-first-find--colour-is-derived-and-three-shipped-cards-print-one-their-mana-cost-cannot-carry) | 46 |
 | Bugs & robustness | [OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable](#open-2026-09-11--the-first-capped-board-in-13-m-swept-games-diagnosed-and-not-a-rules-defect-beacon-of-immortality-makes-a-wg-cube-mirror-unwinnable) | 42 |
@@ -74,6 +75,59 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-12 (twenty-third find) — a `condition` is not a cost, and the census that closed the class asked the wrong question
+
+The Greater Good fix (`51156f8a`) moved four sacrifices out of the effect and
+into `sac_other_filter`, then **censused the rest of the class by hand** and
+closed it: of 39 activated abilities that sacrifice in their effect, 13
+sacrifice the SOURCE and 17 carry a tap or a mana cost, so only the free,
+unconditional ones could loop. Jarad, Golgari Lich Lord was filed as the one
+exception, for want of a primitive.
+
+**The census asked "is there a cost line?" and the question is "is there a
+BOUND?".** A `condition` is checked at announcement and asks about the board; a
+sacrifice in the effect is paid at RESOLUTION. So the condition that the
+payment would falsify stays true for as long as the ability sits on the stack,
+and the announcement repeats — which is exactly what Greater Good did (3,119
+activations on one stack). Four more cards were written that way, all in
+`recent32.rs`, all with the same comment saying the condition was the bound:
+
+| Card | Printed | Was |
+|---|---|---|
+| Bloodflow Connoisseur | "Sacrifice a creature: Put a +1/+1 counter on this creature." | free + `condition`, sacrifice as the effect's first step |
+| Cartel Aristocrat | "Sacrifice another creature: … protection from the color of your choice" | same |
+| Vampire Aristocrat | "Sacrifice a creature: … +2/+2 until end of turn" | same |
+| Yahenni, Undying Partisan | "Sacrifice another creature: … indestructible until end of turn" | same |
+| Bontu the Glorified | "{1}{B}, Sacrifice another creature: Scry 1 …" | the same shape; its MANA cost hid it from the ratchet, and the sacrifice was still paid at resolution |
+
+⚠ **Krark-Clan Ironworks reads the same and is NOT this** — CR 605.3a resolves
+a mana ability without using the stack, so its effect-side sacrifice is paid
+before anything else can be announced. The ratchet skips mana abilities for
+that reason rather than allowlisting the card.
+
+**Jarad needed a primitive, and it is one field.** "Sacrifice a Swamp **and** a
+Forest" is two filters: `(Swamp-or-Forest, 2)` is paid by two Swamps and
+`(Swamp, 1)` drops half the cost. `ActivatedAbility::sac_other_second` is a
+second `(filter, count)` paid alongside the first and picked DISJOINTLY from
+it, so a Bayou cannot pay both halves. Everything downstream already reads the
+one `sac_other_picks` batch, so the change is the field, one block in
+`activate_ability`'s pre-flight, and the cost string in `view.rs`.
+
+**The ratchet is the class-killer**:
+`no_free_activation_spells_its_sacrifice_cost_in_its_effect` walks every
+factory (and every `GrantActivatedAbility`) for an ability whose ONLY non-default
+field is a `condition` and whose effect carries `Sacrifice { who:` or
+`SacrificeAndRemember { who:`. It found all four free ones on its first run.
+The older `no_activated_ability_is_free_unconditional_and_unlimited` cannot:
+it compares against a bare `ActivatedAbility`, so ANY non-default field —
+`condition` included — exempts the card. That is the premise this disproves,
+and the two ratchets now sit next to each other saying so.
+
+Tests: `cr_602_5b_jarads_swamp_and_forest_are_paid_at_announcement`,
+`jarads_second_swamp_cannot_pay_for_the_forest_half`, and the four
+`recent32` card tests, which now ACTIVATE the ability instead of resolving its
+body — `resolve_effect` on the body no longer pays a cost, which is the point.
 
 ## FIXED 2026-09-12 (twenty-second find) — a name no card has is audited by nobody, and that is where a second, worse copy of a card lives
 
