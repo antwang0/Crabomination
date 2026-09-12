@@ -34,8 +34,8 @@ sixty-seventh pass, so don't re-take that.
    claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
    came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
    candidates).
-2. **Gates at the tip:** suite **19,486 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
-   census assertions on every test), clippy **0** (`--all-targets`), golden_trace **11 / 11 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
+2. **Gates at the tip:** suite **19,489 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+   census assertions on every test), clippy **0** (`--all-targets`), golden_trace **12 / 12 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), **`robustness_grid.sh` ladder 30 cells / 33,120 games +
    `--wide` ladder 52 cells / 301,600 games + pilots 45 policies + actor 2 cells / 6,000 games, all 0 failures** (⚠ the actor leg's binary is
    `-p crabomination_ml --bin selfplay_train`; `-p crabomination` fails and leaves the PREVIOUS binary in place, which then reads green for a tip you
@@ -43,83 +43,52 @@ sixty-seventh pass, so don't re-take that.
    fixed), `audit_panics` **0 bare**, `audit_decision_plumbing`
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
    controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
-   capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all EIGHT columns** over
-   16,846 priced + 17,777 type lines + 17,235 subtypes + 17,453 keywords + 9,609 P/T + 16,712 colours + 124 loyalty, `audit_keyword_drift`
+   capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all TEN columns** over
+   16,846 priced + 17,777 type lines + 17,683 subtypes + **17,743** keywords + 9,609 P/T + **16,729** colours + 124 loyalty + **62 ADVENTURE HALVES +
+   81 BACK FACES** (the two new columns), `audit_keyword_drift`
    **0 invented / 80 missing** (367 until the reader learned a mechanic's other three spellings — read a row, the list is short enough now), `audit_card_names`
    **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
    gate that sees `debug-assertions = false`).
    ⚠⚠ **TWO SESSIONS WORKED `audit_printed_body.py` ON 2026-09-12 AND CONVERGED ON THE SAME SKIPS.** Every reader fix below landed twice-over by
    rebase and none conflicted, but the seeds did (PERF's table) and the readers nearly did. **Say in this line which skip kind you are taking before you
-   take it** — the same discipline the sweep table earned. The residue after both runs: `nocache` 3,749 (synthesized; the name column owns it),
-   `nonliteral` 938 (700 of them LANDS, which print no cost, so closing them buys that column nothing), `nocolors` 1,060 and `nokeywords` 319 (mostly the
-   multi-face cards, whose oracle entry has no per-face `colors` or `keywords` array — a REAL bound, not a reader gap), `split` 107, `star` 102,
-   `noname` 90, `notaspell` 69, `nosubtypes` 149, `nosubvariant` 13, `notyped` 7, `nopt` 0, `faces` 0.
-   ⚠ `scripts/audit_printed_body_injections.py` is **40 / 40** and counts rows from BOTH catalog audits — run it after touching any reader, and
+   take it** — the same discipline the sweep table earned. The residue after all three runs: `nocache` 3,749 (synthesized; the name column owns it),
+   `nonliteral` 938 (700 of them LANDS, which print no cost, so closing them buys that column nothing), `nocolors` 1,043, `split` 107, `star` 102,
+   `noname` 90, `nosubtypes` 74, `notaspell` 69, `noback` 60 (45 land helpers + 14 backs that are their own factory — both reasons, not a queue),
+   `nokeywords` 29, `nosubvariant` 13, `notyped` 7, and `nopt` / `noadv` / `noloyalty` / `faces` **0**.
+   ⚠ **"a REAL bound, not a reader gap" was wrong about the multi-face cards, and `nokeywords` 319 -> 29 is the correction.** Scryfall gives a FACE no
+   `keywords` of its own, but the top-level array is the UNION over both faces, so it IS comparable against one face as long as the `printed` filter is
+   that face's oracle text — the missing direction then never demands of the front a keyword only the back prints, and the extra direction needs no
+   change at all because a union is a superset. ~264 cards came back into the column combat reads every turn, and one of them (Lonesome Unicorn) had
+   shipped without the vigilance it prints. **Per-face `colors` DOES exist for 1,501 of the 2,585 multi-face entries**, so the same question is open
+   for `nocolors`; what actually drives that number is `nonliteral` (the cost chain), which the colour column needs for its pips.
+   ⚠ `scripts/audit_printed_body_injections.py` is **45 / 45** and counts rows from BOTH catalog audits — run it after touching any reader, and
    **never run an audit while it runs**: it edits the catalog in place (it refuses a dirty catalog and restores on a signal now).
    **Fresh seeds: 853..1030 on five pools, then 1031..1211 on cube / all / sealed (513 cells, 2,530,800 games) PLUS a concurrent session's 245 cells /
-   965,600 games on five pools at 1060..1171 — 0 stuck everywhere. Next is 1212, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
+   965,600 games on five pools at 1060..1171 — 0 stuck everywhere. Next is 1212 — NOT swept this run either, so it is still 1212 — and TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
    turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
    of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
    `(-291)` bear that out: 90 cells with exactly TWO caps, both at `all` 1149. The watch is its own negative control twice over: on the 60 cells both
    sessions swept it drew exactly the games that were already draws (PERF Baseline).
    **`all` 1024 is the cell that EARNED its keep** (the `MayDoBy` leak).
-3. **This run, and the sentence it earned:** *a column that skips is not a column that passes, and a gate that cannot fail is worse than no gate.*
-   `audit_printed_body` read cost / P/T / card types for three passes and reported 0; opening the two fields it had left alone found **29 shipped
-   defects**, and the sixth column (P/T) turned out to be reading 5,578 of 9,455 creatures with no skip counter at all.
-   (a) **Subtypes** — 22 cards, every kind with a live consumer: four Arcane spells no splicer could splice onto, two Lessons `Effect::Learn`
-   could not fetch and two non-Lessons it could, four planeswalkers `HasPlaneswalkerType` could not see, six `Kindred` cards with no creature type
-   (Crib Swap a changeling with nothing to be every type OF). (b) **Keywords**, which combat reads every turn — 7 cards: Kurkesh with FLYING it does not
-   print, Glorybringer dealing 4 free damage because the `Exert` gating it was missing, two BLACK Rise-of-the-Eldrazi cards made colorless by a `Devoid`
-   printed five years later, and two `Changeling`s where the card names four roles. (c) **PROWESS**, which the OTHER oracle audit saw and this one could
-   not: the keyword mints its pump only for a creature without its own prowess trigger, and the guard matched the event KIND — so four cards with an
-   unrelated cast trigger (Niblis, Bria, Lilah, Sokka) printed prowess and never had it, and nine more carried the trigger without the keyword, so no
-   "prowess matters" filter saw them. (d) **Five injections silently passed** during the run and all five were one mistake — a resolver reading the
-   wrong definition — which is why the injections are a runnable script now.
-3b. **The concurrent session's run, and the sentence IT earned:** *a rules quantity that saturates has consumers, and they wrap on top of it.*
-   (a) **CR 104.4 has a turn-granular half** (`(-291)`). `mandatory_loop_watch` samples after a trigger RESOLUTION and its digest carries the turn
-   number, so a loop whose period is a whole TURN moves the digest every cycle and is invisible to it — which is why the Beacon board ran to the action
-   cap for four seeds. `watch_turn_progress` is the same watch one level up, in `end_turn`. Its two gates are the entry: `end_turn` runs 3,234 times a
-   six-game `cube` run and only ~150 of those are real turns (a bot probe ends turns on its clone), so ungated it cost +0.167 %; sampling from turn 30
-   and one turn in 4 leaves +0.046 / +0.024 / +0.021 %. `GameState` is 1,600 bytes again — the watch's 16 came out of `free_activation_watch`, whose
-   key was `Option<(CardId, usize)>` for an index into `activated_abilities`.
-   (b) **Fifteen CONSUMERS of a saturating value wrapped on top of it**, all reachable from self-play: the actor's own `TrainRow` life-difference LABEL
-   (now `i64`), `snapshot_stats`' per-side power total and its two differences (the aux targets), both gang-block damage sums and their
-   `a.toughness() - a.damage as i32` (a `u32` damage past `i32::MAX` read NEGATIVE there, turning "lethal" into "healed"), the crew/saddle totals,
-   `TotalPowerControlled` + three other `Value`/`Predicate` sums, and two cost-side power totals. The pump ratchet guards the WRITE; a second ratchet
-   (`no_saturating_quantity_is_summed_with_plain_arithmetic`) now guards the reads, and it skips test modules by BRACE MATCHING — the older one cuts
-   each file at the first `#[cfg(test)]`, which in `bot.rs` is line 5,592 of 24,419.
-   (c) **A sacrifice in the EFFECT is not a cost, and a `condition` is not one either.** `robustness_grid.sh --pilots`
-   timed out for the first time (abilarms, `--decks all` seed 23, rc 124 after 30 min) and the cap diagnostic named it:
-   turn 43, **a stack of 3,213 with 3,119 Greater Good activations on it**. The `condition` only asked "do you control a
-   creature?", which stays true until the first copy RESOLVES. Four cards moved to `sac_other_filter` (Greater Good,
-   Goblin Bombardment, Altar of Dementia, Butcher of the Horde) and **the cell runs in 1.9 s now**. ⚠ The existing
-   ratchet `no_activated_ability_is_free_unconditional_and_unlimited` ACCEPTS a condition as the bound, which is the
-   premise this disproves. **The rest of the class was censused and is NOT a backlog**: of the 39 activated abilities
-   that sacrifice in the effect, 13 sacrifice the SOURCE and are printed that way (Dark Depths, Frenetic Efreet, "at the
-   beginning of the next end step"), and the other 17 all carry a tap or a mana cost — every `tap_cost` one is bounded
-   to one announcement an untap, and the mana-only ones (Nim Devourer, Kefka, Wine of Blood and Iron) print the
-   sacrifice as an effect too. Two Witherbloom Pests are synthesized cards with no printed text to violate.
-   (d) `helper_params` matched a helper's parameter list with `[^)]*`, which closes at a TUPLE parameter — eight bestow creatures were skipped out of the
-   subtype and keyword columns rather than read. Injection added (13th, now 17th).
-3c. **The concurrent session's SECOND run, and the sentence it earned:** *a reader that reads the wrong field reads 0 for ever, and a name no card has
-   is audited by nobody.* (a) **`shorthand()` did not count braces**, so a nested `EquipBonus { power, toughness, keywords }` was the card's own field to
-   the P/T column since the day it opened — and would have turned sixteen auras into keyword findings the moment the keyword column reused it.
-   `top_fields` had the sibling bug: a newline inside a nested brace CLEARED the depth-1 line already collected, so a field whose value spans braces lost
-   its own NAME. Six more chains stopped one link short (a shorthand `keywords,`, the `if flag {A} else {B}` card type, a base bound to a parameter, a
-   per-element vec binding, a tuple field, a symbol-slice cost). (b) Three NEW columns: the printed **COLOUR** — derived from the cost's pips plus
-   `color_indicator`, which the catalog spelled 7 times in 21,795 cards, so Rograkh, Ragnarok and Evermind all shipped colorless where they print a
-   colour — the starting **LOYALTY** (a gate, 0 findings), and the **stray `no_mana_cost`** direction, which makes a card uncastable and had no check.
-   (c) **The NAME column is the one that paid.** The head-string name matched the `pub fn` slug on a PREFIX, so a token the factory defines first could
-   win it (`fn sliver_queen` took `"Sliver"`); preferring the exact slug brought **27 factories back into every column**. Three cards no column had ever
-   priced came out of it — Victims of Night `{1}{B}{B}` -> `{B}{B}`, Sabertooth Tiger `{3}{R}` -> `{2}{R}`, Surging Æther `{2}{U}` -> `{3}{U}` (and
-   target creature -> target permanent) — and **two of the three had a CORRECT DUPLICATE of the same card shipped beside them**, which is why the catalog
-   read clean while the pool carried both. `scripts/audit_card_names.py` is the standing column: 0 spelling / 0 unknown / 0 duplicate / 0 string-slug
-   mismatch, from 2 / 12 / 5 / 1. ⚠ A rename is a VOCAB edit (`vocab_snapshot.rs` is append-only); none of these names is in the snapshot.
-   (d) **All five duplicate pairs are gone** — and reading them was worth it: both copies of Kroxa and of Uro were in the CUBE POOL, so a seeded cube
-   deck could draw two of one legend, and `kroxa_titan_of_deaths_hunger` discarded from each PLAYER where the card says each opponent. ⚠ **That commit
-   changed the cube pool**; no vocab index and no golden trace moved with it.
-3d. **This session's run, and the sentence it earned:** *a `condition` is not a cost, and a census that asks "is there a cost line?" closes a class it
+3. **The THIRD session of 2026-09-12, and the sentence it earned:** *a card with two halves is audited on one of them.* Every column in
+   `audit_printed_body` reads the factory's RETURNED literal, so on a two-faced card the `cost:` / `card_types:` / P/T they compare are the FRONT's.
+   (a) **CR 715's adventure half** — 62 read, four wrong: **Rider in Need `{1}{W}` -> `{2}{W}`**, and **Shield's Might / Haggle / Usher to Safety
+   `Sorcery` -> `Instant`**, i.e. castable a whole phase later than the card says, which the bot's own priority search reads. Haggle's BODY went with
+   its type line: "you may discard a card. If you do, draw a card" is `MayDiscard`, not a mandatory `Seq(Draw, Discard)`. (b) **CR 712's back face** —
+   81 read, one wrong: **Aetherwing, Golden-Scale Flagship** shipped `Artifact Creature 4/4` where the card prints `Legendary Artifact — Vehicle`, `*`/4,
+   Crew 1. CR 301.7 — a Vehicle is not a creature until crewed — so it attacked the turn the Siege was defeated and sat in range of every creature-only
+   removal spell. (c) **`nokeywords` 319 -> 29**, above, and **Lonesome Unicorn's missing vigilance** with it. (d) Two things the new columns needed to
+   be gates rather than counters: `adventure: Some` is the test rather than the struct name `Adventure {`, because `raw` runs to the NEXT factory's
+   `pub fn` and carries that card's DOC COMMENT (`/// … Adventure {X}{G} distributes …` matched on eleven factories with no adventure), and the literal
+   is the text rather than `raw`.
+3b. **The three earlier runs of 2026-09-12, collapsed to an index — each is recorded verbatim in its own PERF Baseline block and in
+   ENGINE_BACKLOG's numbered finds, which is where the detail belongs.** *A column that skips is not a column that passes* (the printed-body pass: 29
+   shipped defects across subtypes / keywords / prowess, and a P/T column that had been reading 5,578 of 9,455 creatures with no skip counter).
+   *A rules quantity that saturates has consumers, and they wrap on top of it* (CR 104.4's turn-granular half `(-291)`, fifteen saturating-sum
+   consumers, and a sacrifice in the EFFECT that is not a cost — the abilarms stack of 3,213). *A reader that reads the wrong field reads 0 for ever,
+   and a name no card has is audited by nobody* (`shorthand()`'s brace count, three new columns, the five duplicate card names, the cube-pool change).
+3c. **The second session of 2026-09-12's run, and the sentence it earned:** *a `condition` is not a cost, and a census that asks "is there a cost line?" closes a class it
    has not read.* (a) The Greater Good fix censused the other 39 effect-side sacrifices by hand and closed the class; the question it asked was the wrong
    one. A `condition` is checked at ANNOUNCEMENT and a sacrifice in the effect is paid at RESOLUTION, so the condition the payment would falsify stays
    true while the ability sits on the stack. **Four more cards were written exactly that way** (Bloodflow Connoisseur, Cartel Aristocrat, Vampire
@@ -150,7 +119,8 @@ sixty-seventh pass, so don't re-take that.
    (iii) What is left, which IS the defect. **So read `board` and `slow-not-stuck` before believing a cap.**
    (b) **`audit_printed_body`'s remaining skips are the hard residue** and `--list <kind>` prints the factories: `nocache` 3,749 is now genuinely the
    synthesized sets (the name column takes the rest), and **700 of `nonliteral`'s 870 are LANDS**, which print no mana cost, so closing them buys that
-   column nothing. What still has a card behind it: `nocolors` 1,060, `nosubtypes` 149, `nokeywords` 319, `notyped` 7 (`nopt` is 0).
+   column nothing. What still has a card behind it: `nocolors` 1,043, `nosubtypes` 74, `noback` 60, `nokeywords` 29, `notyped` 7
+   (`nopt` / `noadv` / `noloyalty` / `faces` are all 0 and are GATES — a row in one is a new idiom, not a new card).
    ⚠ **Print every skip you add** — the P/T column skipped 41 % of
    creatures silently for as long as it existed, and read "0 wrong P/T" the whole time.
    (c) ⚠ **THE CATALOG AUDITS ARE WORKED OUT — 22 rows sampled across three of them this run, ZERO code defects.** `audit_catalog_stats`' residue is

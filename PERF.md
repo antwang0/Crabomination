@@ -2958,6 +2958,83 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-12 (the two-halves session, third of the day) — the face nobody read, two new columns, five shipped cards; no perf leg
+
+```text
+fix     CR 715's ADVENTURE HALF had no column at all (`6c4a8430`). Every column in `audit_printed_body` reads the
+        factory's RETURNED literal, and on an adventure card that literal's `cost:` and `card_types:` are the
+        CREATURE's — so the other face was priced and timed by nobody. 62 read, four wrong: **Rider in Need
+        `{1}{W}` -> `{2}{W}`** (a mana cheap), and **Shield's Might / Haggle / Usher to Safety `Sorcery` ->
+        `Instant`**, i.e. castable a whole phase later than the card says, which the bot's own priority search reads.
+        Haggle's BODY went with its type line: "you may discard a card. If you do, draw a card" is `MayDiscard`, not a
+        mandatory `Seq(Draw, Discard)` — the latter lets the drawn card be the discarded one and loots on an empty
+        hand. `noadv` is 0, so the column is a gate; two things it had to get right to be one, and each was a row
+        before it was a rule: `adventure: Some` is the test rather than the struct name (`raw` runs to the NEXT
+        factory's `pub fn`, so it carries that card's DOC COMMENT, and `/// … Adventure {X}{G} distributes …` matched
+        `Adventure \{` on eleven factories with no adventure), and the literal is the text rather than `raw`.
+        ⚠ A `split` NAME costs this column its card too and there is exactly one — `mkm2::kellan_inquisitive_prodigy`,
+        read by hand: `{G}{U}` Sorcery, correct. A second one is the reason to move that skip.
+fix     CR 712's BACK FACE, the same hole one struct over (`77c84ad9`). A transform card's back is a nested
+        `CardDefinition` in the same factory. 81 read, one wrong: **Aetherwing, Golden-Scale Flagship** (back of
+        Invasion of Kaladesh) shipped `Artifact Creature 4/4` where the card prints `Legendary Artifact — Vehicle`,
+        `*`/4, Crew 1, power = the artifacts you control. CR 301.7 — a Vehicle is not a creature until it is crewed —
+        so it could attack the turn the Siege was defeated and it sat in range of every creature-only removal spell in
+        the pool. `DynamicPt::ArtifactsControlledPower` already existed for Akiri, so a value fix, not a primitive; the
+        doc comment had said "Crew / power-counts-artifacts are omitted", a documented approximation nobody had priced.
+        `noback` 60, both shapes with a reason rather than a queue: 45 land helpers (`znr_mdfc_land` & co., whose type
+        line the column would compare as "Land") and 14 whose back is another `pub fn` factory, audited as its own card
+        under its own name.
+fix     **`nokeywords` 319 -> 29** (+~264 cards on the column combat reads every turn), and the fifth shipped card.
+        ⚠ **THIS CORRECTS THE PREVIOUS ENTRY'S "a REAL bound, not a reader gap".** Scryfall gives a FACE no `keywords`
+        of its own, which is why a multi-face card skipped the column outright — but the top-level array is the UNION
+        over both faces, so it IS comparable against ONE face as long as the `printed` filter is that face's oracle
+        text: the missing direction then never demands of the front a keyword only the back prints, and the extra
+        direction needs no change at all, a union being a superset. **Lonesome Unicorn had shipped without the
+        vigilance it prints** (and its Knight token without the token's). A binding that is one ELEMENT of the vec took
+        17 more (`keywords: vec![keyword.clone()]` — the Maze / Possessed / Chimera / Clockwork helpers) and 17 off
+        `nocolors` with them. What is left is the `push` idiom in two spellings, both named in the docstring.
+        ⚠ **Per-face `colors` DOES exist, for 1,501 of the 2,585 multi-face cache entries**, so the same question is
+        open for `nocolors` — but what actually drives that number is `nonliteral` (the cost chain the colour column
+        needs for its pips), not the faces.
+cover   16,846 priced (flat) / 17,777 type line (flat) / subtypes 17,167 -> **17,683** (the other session's layout widening, this run's tip) / keywords 17,453 -> **17,743** /
+        9,609 P/T (flat) / colours 16,712 -> **16,729** / 124 loyalty, plus **62 on the ADVENTURE HALF** and **81 on
+        the BACK FACE**, both new. Skips: nocache 3,749 / nocolors 1,043 / nonliteral 938 / split 107 / star 102 /
+        noname 90 / notaspell 69 / nosubtypes 74 / noback 60 / nokeywords 29 / nosubvariant 15 / notyped 7 /
+        **nopt 0 / noadv 0 / noloyalty 0 / faces 0**.
+⚠ conv  **THE DAY'S SECOND CONVERGENCE, and it cost a rebase rather than a defect.** This session independently made
+        `b847ff8c`'s two fixes — the one-declared-half P/T and `helper_body`'s dropped comma — about two hours after
+        that commit landed, and found them the same way (read the skip counter, then read what the reader did with the
+        skips). The rebase took `b847ff8c`'s version, which is the better shape: its `merge_pt` fills the halves
+        SEPARATELY so each walks the base chain on its own, where this session's filled from `Default` only where
+        there was no base at all. Nothing was lost and nothing conflicted in the engine — but two sessions spent a run
+        each on one reader. NEXT's line about saying which skip kind you are taking is the whole lesson.
+perf    NONE CLAIMED and none attempted. The queue reads floor; PERF's "Perf candidates" head carries the closed leads
+        and the rule that every perf leg of the last several runs came off a bug fix. `--bench` counters are the gate,
+        not a wall clock — and this box is **4 cores**, so its absolute games/s is not comparable with any earlier
+        absolute in this file, every one of which was taken on 24.
+gate    --bench on a `release` binary rebuilt at the rebased tip: **195,806 / 27.49 / 611.9 / 0 stalls (cap 0 /
+        board 0 / stuck 0 / draw 0), counters BYTE-IDENTICAL to the committed invariant**, determinism ok (all 160
+        pairs split) and, with `CRAB_THREAD_CHECK=1`, thread_determinism ok (3 vs 1). Not the gate, recorded so the
+        next reader knows the box: 442.63 games/s, peak_rss 25.1 MiB, bin_bytes 84,764,408, host_calib_ms 44 on an
+        Intel Xeon @ 2.80GHz with 4 cores.
+        Suite **19,489 / 0 / 5** (`CRAB_ANSWER_LOG=strict`) — the previous tip's 19,486 plus the CR 301.7 Vehicle test
+        and the two adventure assertions — golden_trace **12 / 12 and unmoved** (and it is 12, not the 11 the last two
+        entries said): five catalog VALUE fixes move no trace. clippy --workspace --exclude crabomination_client
+        --all-targets **0**. `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean.
+        audit_printed_body **0 on all TEN columns**; audit_printed_body_injections **45 / 45**, from 42 (three new
+        cases: an adventure cost, an adventure card type, a back face's card types); audit_card_names 0 / 0 / 0 / 0;
+        audit_panics 0 bare; audit_decision_plumbing 168 / 108 / 60 DEAD 0 / repeat 0; audit_stash_in_loop 1 / 1 / 0;
+        audit_seat_from_selector 0 open / 15 pinned / 8 loop / 4 controller-asked; audit_answer_log 71 / 8;
+        audit_variant_coverage 0 dead capability / 2 dead primitive; audit_doc_drift 0; audit_keyword_drift **0
+        invented** (the ratchet); audit_stubs and audit_incomplete --structural-only both 0 of 21,793.
+        ⚠ The counters not moving is NOT evidence the five card fixes are inert: the `--bench` pool is four FIXED decks
+        and none of the changed cards is in one. The behaviour evidence is the suite — the CR 301.7 Vehicle test, the
+        Knight token's vigilance and Haggle's discard-then-draw order all fail on the old catalog.
+        ⚠ **NOT re-run this run, declared rather than implied by silence:** `robustness_grid.sh`'s three legs and a
+        fresh-seed sweep. The seed frontier is still **1212** and `1152..1161` is still the hole in the table below.
+        Four cores here; the `--wide` leg alone is 301,600 games.
+```
+
 ### 2026-09-12 (the cost-is-not-a-condition session) — the class a hand census closed, reopened by asking the right question; no perf leg
 
 ```text
