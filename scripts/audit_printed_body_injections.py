@@ -309,22 +309,52 @@ CASES = [
  # The keyword column on a FACE: the whole-card `keywords` array survives the
  # face merge as `_card_keywords`, and the MISSING side is intersected with this
  # face's own oracle text, so a back-face keyword cannot be reported on the front.
+ #
+ # ⚠ IT TAKES THE TOKEN'S VIGILANCE TOO, IN THE SAME CASE, and that is not
+ # padding. The MISSING side is filtered by `f"Keyword::{k}" not in raw` — "a
+ # keyword the factory mentions ANYWHERE is not reported missing", because a
+ # card can grant itself one through a static. Rider in Need's Knight token
+ # mentions `Keyword::Vigilance` in the same `pub fn` block, so removing only
+ # the card's line leaves the guard suppressing the row and the injection reads
+ # SILENT against a reader that is working. It did: 43/44 on the first full run
+ # after the token was fixed, on the case that had passed alone the hour before.
  ("fires", "a keyword on an adventure face (modern Lonesome Unicorn)",
   "sets/decks/modern.rs",
-  '        name: "Lonesome Unicorn",\n        cost: cost(&[generic(4), w()]),\n'
-  "        card_types: vec![CardType::Creature],\n        subtypes: Subtypes {\n"
-  "            creature_types: vec![CreatureType::Unicorn],\n"
-  "            ..Default::default()\n        },\n        power: 3,\n"
-  "        toughness: 3,\n        keywords: vec![Keyword::Vigilance],",
-  '        name: "Lonesome Unicorn",\n        cost: cost(&[generic(4), w()]),\n'
-  "        card_types: vec![CardType::Creature],\n        subtypes: Subtypes {\n"
-  "            creature_types: vec![CreatureType::Unicorn],\n"
-  "            ..Default::default()\n        },\n        power: 3,\n"
-  "        toughness: 3,"),
- # ⚠ NEGATIVE, and it is the one that makes the case above safe. The whole-card
- # `keywords` array survives the merge, so the reader must still take the CARD's
- # own `keywords:` and not a nested `TokenDefinition`'s — Rider in Need's Knight
- # token prints vigilance too, and the card-level column must not see it.
+  "        toughness: 3,\n        keywords: vec![Keyword::Vigilance],\n"
+  "        adventure: Some(Box::new(Adventure {\n"
+  '            name: "Rider in Need",\n'
+  "            cost: cost(&[generic(1), w()]),\n"
+  "            card_types: vec![CardType::Sorcery],\n"
+  "            effect: Effect::CreateToken {\n"
+  "                who: PlayerRef::You,\n"
+  "                count: Value::Const(1),\n"
+  "                definition: Box::new(TokenDefinition {\n"
+  '                    name: "Knight".into(),\n'
+  "                    power: 2,\n                    toughness: 2,\n"
+  "                    card_types: vec![CardType::Creature],\n"
+  "                    colors: vec![Color::White],\n"
+  "                    subtypes: Subtypes {\n"
+  "                        creature_types: vec![CreatureType::Knight],\n"
+  "                        ..Default::default()\n                    },\n"
+  "                    keywords: vec![Keyword::Vigilance],",
+  "        toughness: 3,\n"
+  "        adventure: Some(Box::new(Adventure {\n"
+  '            name: "Rider in Need",\n'
+  "            cost: cost(&[generic(1), w()]),\n"
+  "            card_types: vec![CardType::Sorcery],\n"
+  "            effect: Effect::CreateToken {\n"
+  "                who: PlayerRef::You,\n"
+  "                count: Value::Const(1),\n"
+  "                definition: Box::new(TokenDefinition {\n"
+  '                    name: "Knight".into(),\n'
+  "                    power: 2,\n                    toughness: 2,\n"
+  "                    card_types: vec![CardType::Creature],\n"
+  "                    colors: vec![Color::White],\n"
+  "                    subtypes: Subtypes {\n"
+  "                        creature_types: vec![CreatureType::Knight],\n"
+  "                        ..Default::default()\n                    },"),
+ # ⚠ NEGATIVE, and it is the one that makes the case above safe: a nested
+ # `TokenDefinition`'s keyword must stay invisible to the CARD-level column.
  ("silent", "a token's keyword is not the card's (modern Rider in Need's Knight)",
   "sets/decks/modern.rs",
   "                        creature_types: vec![CreatureType::Knight],\n"

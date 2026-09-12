@@ -36,9 +36,9 @@
 # (both seats past `SCALE_CEILING * 1_000` life, each library holding the Beacon
 # that shuffles itself back, so neither seat can be killed OR decked) with a
 # Basilica Screecher on it, whose extort moves 1 life a turn between two
-# saturated seats. CR 104.4's turn watch reads `repeats 2/12` there: the board
-# is unwinnable AND aperiodic, so the one verdict such a game has is never
-# reached. `cap_diagnosis` prints the watch's own state now, so the dump answers
+# saturated seats. CR 104.4's turn watch reads `repeats 10/12` there at the
+# 50,000-action budget — two samples short — so the board is unwinnable AND
+# aperiodic and the one verdict such a game has is never reached. `cap_diagnosis` prints the watch's own state now, so the dump answers
 # the question — `repeats N/12` under 12 on a `[SATURATED LIFE]` board is that
 # case, and anything else that survives is the signal this script exists for.
 #
@@ -142,10 +142,11 @@ for pool in $POOLS; do
             # SURVIVES and carries the label is the known unwinnable board:
             # both seats past `SCALE_CEILING * 1_000` life, a Beacon of
             # Immortality shuffling itself back so neither can be decked
-            # either. `all` 1159 is the worked example — `repeats 2/12` in the
-            # `no-progress watch:` line of the dump below, i.e. CR 104.4's turn
-            # watch cannot hold an anchor on a board the bot plays slightly
-            # differently each turn. Reported, counted, not a failure.
+            # either. `all` 1159 is the worked example — `repeats 10/12` in
+            # the `no-progress watch:` line of the dump below, i.e. CR 104.4's
+            # turn watch gets two samples short of the draw and cannot hold an
+            # anchor on a board the bot plays slightly differently each turn.
+            # Reported, counted, not a failure.
             echo "  -> STILL CAPPED at 50,000 and SATURATED — the known unwinnable board."
             echo "     read the \`no-progress watch:\` line: \`repeats N/12\` under 12 is why."
             echo "$re" | grep -A7 "^cap: " | head -40
@@ -160,9 +161,11 @@ for pool in $POOLS; do
     cells=$((cells + 1))
   done
 done
-# Every cap goes through the re-run now, so `slow` alone decides: `sat` is
-# diagnostic (which BOARD it was) and subtracting both double-counted a cap
-# that is labelled AND cleared — `cube` 1204 scored `failures=-8`.
+# `sat` is diagnostic only (which BOARD the cap was on) and decides nothing —
+# subtracting it as well as `slow` double-counted a cap that is labelled AND
+# cleared, and scored `cube` 1204 at `failures=-8`. What clears a cap is the
+# RE-RUN: `slow` if it decided the games, `known_board` if it kept them on the
+# saturated board.
 # A cap is a defect unless the re-run CLEARED it (`slow`) or the re-run kept it
 # AND the board is the saturated one (`known_board`). The label alone never
 # excuses one — that is what `cube` 1204 cost — and a survived cap without the
