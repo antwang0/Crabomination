@@ -99,19 +99,32 @@ Tajuru Paragon were `Changeling` — every creature type — where the card prin
 Only the EVERGREEN subset is compared: the oracle's `keywords` array mixes
 keyword abilities with keyword ACTIONS (Scry, Mill, Fight) and ability words
 (Landfall), and the engine models most of those as effects, so a whole-set
-comparison would be noise rather than a column. And the array counts keywords
+comparison would be noise rather than a column. ⚠ **The subset was too narrow
+at first, and that is how the PROWESS class stayed hidden here.**
+`audit_catalog_stats.py` checks Ward, Prowess, Hexproof and Protection too, and
+its `kw` column is what turned up four cards whose printed prowess never fired
+(the keyword's minted pump was suppressed by any cast trigger) and nine more
+carrying the trigger without the keyword. Those four are in the set now — two
+oracle-backed readers of one field, and the narrower vocabulary was the half
+that cost a bug class. And the array counts keywords
 the card GRANTS — Steel Seraph's is `['Prototype', 'Flying', 'Vigilance']` for a
 card with flying whose trigger grants "your choice of flying, vigilance, or
 lifelink" — so the MISSING direction reads the printed keyword LINES instead
 (a line that is nothing but a comma-separated list of keyword words). The other
 direction needs no such rule, and is where every finding came from.
 
-Eight rows are `REVIEWED_KEYWORDS`: a keyword the engine carries instead of the
+Twelve rows are `REVIEWED_KEYWORDS`: a keyword the engine carries instead of the
 printed wording it is equivalent to (Cockatrice's deathtouch for "destroy that
 creature at end of combat", Exalted Angel's lifelink for "you gain that much
 life", Necromancy's flash for "as though it had flash"). Each needed a
 reviewer's judgement ONCE; the list is what stops it costing that judgement
-every run, which is the same reason `REVIEWED_DEAD_MODES` exists one audit over.
+every run, which is the same reason `REVIEWED_DEAD_MODES` exists one audit over. A PAYLOADED `Hexproof` /
+`Protection` variant is handled by a RULE rather than by twelve more rows:
+`HexproofExceptColors`, `ProtectionFromMatching` and the rest are how the
+engine spells a printed "can't be the target of nongreen spells" / "has
+hexproof unless it's attacking", prose the oracle array does not report as the
+plain word, so they are excluded from the comparison. The plain
+`Keyword::Hexproof` / `Keyword::Protection` is still compared both ways.
 
 **AND THE P/T COLUMN WAS READING 5,578 OF 9,455 CREATURES AND COUNTING
 NEITHER HALF.** It took `power:` / `toughness:` off the factory's own flattened
@@ -344,6 +357,32 @@ EVERGREEN = {
     "Wither": "Wither", "Changeling": "Changeling", "Skulk": "Skulk",
     "Shadow": "Shadow", "Horsemanship": "Horsemanship", "Persist": "Persist",
     "Undying": "Undying", "Exert": "Exert", "Devoid": "Devoid",
+    # The four `audit_catalog_stats.py` sees and this did not, which is how the
+    # prowess class stayed hidden from the reader that follows the helper chain.
+    "Prowess": "Prowess", "Ward": "Ward", "Hexproof": "Hexproof",
+    "Protection": "Protection",
+}
+# ⚠ A PAYLOADED HEXPROOF / PROTECTION IS THE PROSE FORM, NOT THE KEYWORD.
+# `HexproofExceptColors`, `ProtectionFromMatching`, `HexproofUnlessAttackingOr\
+# Blocking` and the rest are how the engine spells a printed "can't be the
+# target of nongreen spells", "has hexproof unless it's attacking", "protection
+# from the colors of …" — prose that Scryfall's `keywords` array does not report
+# as the plain word. Comparing them against it reported twelve correct cards
+# (Thrun, Gaea's Revenge, Tromokratis, the two Informers …), so they are
+# excluded from the comparison rather than folded into it. The PLAIN
+# `Keyword::Hexproof` / `Keyword::Protection` is still compared both ways, which
+# is where a real one would show.
+PAYLOADED = {
+    "HexproofFromColor": "Hexproof", "HexproofFromMonocolored": "Hexproof",
+    "HexproofFromMulticolored": "Hexproof", "HexproofFromAbilities": "Hexproof",
+    "HexproofExceptColors": "Hexproof", "HexproofUnlessAttackingOrBlocking": "Hexproof",
+    "ProtectionFromCreatureType": "Protection", "ProtectionFromSpellSubtype": "Protection",
+    "ProtectionFromCardType": "Protection", "ProtectionFromColoredSpells": "Protection",
+    "ProtectionFromCreatures": "Protection", "ProtectionFromEverything": "Protection",
+    "ProtectionFromInstants": "Protection", "ProtectionFromMonocolored": "Protection",
+    "ProtectionFromMulticolored": "Protection", "ProtectionFromSpells": "Protection",
+    "ProtectionFromMatching": "Protection", "ProtectionFromManaValueExcept": "Protection",
+    "ProtectionFromManaValueParity": "Protection", "ProtectionFromOwnColors": "Protection",
 }
 EVERGREEN_VARIANTS = set(EVERGREEN.values())
 # ⚠ THE ORACLE'S `keywords` ARRAY COUNTS KEYWORDS THE CARD *GRANTS*. Steel
@@ -382,6 +421,19 @@ REVIEWED_KEYWORDS = {
     # is exactly that permission. The sacrifice rider is the card's own half.
     ("Ward of Lights", "Flash"): "cast as though it had flash",
     ("Necromancy", "Flash"): "cast as though it had flash",
+    # "Whenever this becomes the target of a spell an opponent controls,
+    # counter it unless its controller {pays / discards}" is ward in everything
+    # that matters; both cards were printed before the keyword existed.
+    ("Reality Smasher", "Ward"): "counter-unless-discard, printed pre-ward",
+    ("Frost Titan", "Ward"): "counter-unless-pay, printed pre-ward",
+    # Magecraft is "cast OR COPY an instant or sorcery"; prowess is "cast a
+    # noncreature spell". Neither contains the other, and prowess is the
+    # engine's standing approximation for it.
+    ("Veyran, Voice of Duality", "Prowess"): "magecraft, approximated as prowess",
+    # "As long as this permanent is a creature, it has prowess" — the engine
+    # grants it unconditionally, which is the same thing: as an Aura it is not
+    # a creature and the trigger has nothing to pump.
+    ("Triton Wavebreaker", "Prowess"): "prowess while it is a creature",
 }
 
 

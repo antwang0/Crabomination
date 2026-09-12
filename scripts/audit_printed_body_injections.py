@@ -73,6 +73,17 @@ CASES = [
   "sets/mod_set/creatures.rs",
   "        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Exert],",
   "        keywords: vec![Keyword::Haste, Keyword::Exert],"),
+ # The widened vocabulary: Prowess/Ward/Hexproof/Protection are only checked
+ # since `audit_catalog_stats.py` proved the evergreen set was too narrow to
+ # see the prowess class. Abbot of Keral Keep prints prowess on its own line.
+ ("fires", "a WIDENED-vocabulary keyword removed (modern Abbot of Keral Keep)",
+  "sets/decks/modern.rs",
+  "            creature_types: vec![CreatureType::Human, CreatureType::Monk],\n"
+  "            ..Default::default()\n        },\n        power: 2,\n        toughness: 1,\n"
+  "        keywords: vec![Keyword::Prowess],",
+  "            creature_types: vec![CreatureType::Human, CreatureType::Monk],\n"
+  "            ..Default::default()\n        },\n        power: 2,\n        toughness: 1,\n"
+  "        keywords: vec![],"),
  ("fires", "a keyword ADDED that the card does not print (ogw fn drone)",
   "sets/ogw/creatures.rs",
   "            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],\n"
