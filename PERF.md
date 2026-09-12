@@ -3143,6 +3143,7 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1102..1111   176b074c      30    148,000       0       0     0      6
   1102..1111   c746c7ab      50    216,000       0       0     0      8   five pools, WITH `(-291)`
   1112..1121   feed62f5      30    148,000       0       0     0     12
+  1112..1121   0036101a      50    216,000       0       0     0     20   five pools, WITH `(-291)`
 ```
 
 **273 cells / 1,346,800 games, 0 stuck on every one**, and every cap is the
@@ -3177,6 +3178,27 @@ IN, and it is the arm's confirmation over 216,000 games**: 0 caps of any kind
 the Beacon mirror again, and where the three-pool row above would have counted
 it as a labelled cap it is now an ending. Nothing else moved: the other 42
 cells are 0 / 0 / 0.
+
+**AND IT IS ITS OWN NEGATIVE CONTROL, because the seeds overlap.** The
+three-pool row above ran `1102..1111` WITHOUT the watch and reported **6**
+draws; the five-pool row ran the same seeds WITH it and the three shared pools
+(`cube` / `all` / `sealed`) drew **the same 6** — `cube` 1106, `cube` 1109,
+`all` 1106, two games each. The two extra are `both` 1106, a pool the first row
+did not sweep. So on 30 identical cells the watch drew **zero** games that were
+not already draws: it cannot fire before turn 48 (the gate at 30 plus twelve
+samples four turns apart), and a game that is getting anywhere never anchors —
+which is what `cr_104_4_a_turn_that_draws_a_card_is_not_a_no_progress_loop`
+asserts from the other side. `1112..1121` is fresh ground on the same binary:
+20 draws in 216,000 games, clustered at 1114 / 1116 / 1119 across `cube`,
+`all` and `both` (one board, three pools, as at 1090), and
+`CRAB_LIFE_WATCH=100000` on `cube` 1114 prints nothing — those are ordinary
+draws, not the saturated board. **And `1112..1121` is the control a second
+time**, because both sessions swept it: the three-pool row reports 12 draws
+without the watch, and the five-pool row's three shared pools are `cube` 1114
+(2), `cube` 1119 (2), `all` 1114 (2), `all` 1116 (4), `all` 1119 (2) — **12**.
+The eight extra are all `both`, which the first row does not sweep. Two
+independent blocks, 60 identical cells, zero games drawn that were not already
+draws.
 
 **AND AT `(-291)` THE BOARD HAS AN ENDING, so the label above is a diagnostic
 and no longer a carve-out.** A turn-granular no-progress watch
