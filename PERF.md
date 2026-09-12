@@ -2979,6 +2979,18 @@ fix     the CONSUMERS of a saturating quantity wrapped on top of it (`b314d0a2`)
         (`no_saturating_quantity_is_summed_with_plain_arithmetic`, which skips test modules by BRACE MATCHING — the
         older ratchet cuts each file at the first `#[cfg(test)]`, which in `bot.rs` is line 5,592 of 24,419) and
         `a_saturated_board_does_not_overflow_the_actor_stats`.
+fix     a sacrifice in the EFFECT is not a cost, and a `condition` is not one either (`51156f8a`). `robustness_grid.sh
+        --pilots` timed out for the first time — `abilarms` on `--decks all` seed 23, 12 games, rc 124 after 30 min —
+        and `CRAB_MAX_ACTIONS=6000 CRAB_CAP_DIAG=4000` named it in 12.2 s: **turn 43, a stack of 3,213 with 3,119
+        Greater Good activations on it**, off three copies and six creatures. The sacrifice was the effect's first step
+        behind a `condition` that only asked "do you control a creature?", which stays true until the first copy
+        RESOLVES. `sac_other_filter` pays it at announcement; **the cell now runs in 1.9 s, 204 decided, 0 undecided.**
+        Three more of the shape went with it (Goblin Bombardment, Altar of Dementia, Butcher of the Horde); Krark-Clan
+        Ironworks is NOT affected (a mana ability resolves without the stack) and Jarad's graveyard ability is filed (it
+        sacrifices a Swamp AND a Forest, which one (filter, count) cannot say).
+grid    `robustness_grid.sh --no-build --no-actor --pilots` at the run's tip: ladder leg 30 cells / 33,120 games, 0
+        failures, 0 cap / 0 stuck / 0 draw; pilots leg 45 policies, **1 failure** — the abilarms cell above, and the
+        only one the grid has ever had. Green again after the fix.
 perf    none claimed. `(-291)` is a cost, measured and gated down 7x rather than assumed: ungated it was +0.167 % on
         cube, because `end_turn` runs 3,234 times a six-game run and only ~150 of those are real turns. Sampling from
         turn 30 and one turn in 4 leaves +0.046 % / +0.024 % / +0.021 % on fixed / cube / sealed. `GameState` is 1,600

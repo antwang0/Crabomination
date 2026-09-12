@@ -73,7 +73,15 @@ sixty-seventh pass, so don't re-take that.
    `TotalPowerControlled` + three other `Value`/`Predicate` sums, and two cost-side power totals. The pump ratchet guards the WRITE; a second ratchet
    (`no_saturating_quantity_is_summed_with_plain_arithmetic`) now guards the reads, and it skips test modules by BRACE MATCHING — the older one cuts
    each file at the first `#[cfg(test)]`, which in `bot.rs` is line 5,592 of 24,419.
-   (c) `helper_params` matched a helper's parameter list with `[^)]*`, which closes at a TUPLE parameter — eight bestow creatures were skipped out of the
+   (c) **A sacrifice in the EFFECT is not a cost, and a `condition` is not one either.** `robustness_grid.sh --pilots`
+   timed out for the first time (abilarms, `--decks all` seed 23, rc 124 after 30 min) and the cap diagnostic named it:
+   turn 43, **a stack of 3,213 with 3,119 Greater Good activations on it**. The `condition` only asked "do you control a
+   creature?", which stays true until the first copy RESOLVES. Four cards moved to `sac_other_filter` (Greater Good,
+   Goblin Bombardment, Altar of Dementia, Butcher of the Horde) and **the cell runs in 1.9 s now**. ⚠ The existing
+   ratchet `no_activated_ability_is_free_unconditional_and_unlimited` ACCEPTS a condition as the bound — that is the
+   premise this disproves, and the wider class (~35 cards that sacrifice the SOURCE in the effect behind a mana cost,
+   so bounded but still wrong) is unfixed.
+   (d) `helper_params` matched a helper's parameter list with `[^)]*`, which closes at a TUPLE parameter — eight bestow creatures were skipped out of the
    subtype and keyword columns rather than read. Injection added (13th, now 17th).
 4. **Next, in order.** (a) **Sweep from 1152 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
