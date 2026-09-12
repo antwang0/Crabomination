@@ -20811,21 +20811,35 @@ pub fn aluren() -> CardDefinition {
 
 // ── Modern supplement: Burn & Creature additions ────────────────────────────
 
-/// Chain Lightning — {R} Sorcery. Deal 3 damage to any target.
+/// Chain Lightning — {R} Sorcery. Deal 3 damage to any target, then that
+/// player (or that permanent's controller) may pay {R}{R} to copy it.
 ///
-/// The printed "then the damaged player may pay {R}{R} to copy this spell"
-/// rider is omitted: spell-copy primitives exist (`Effect::CopySpell` etc.)
-/// but this copy is offered to a *different* player (the one dealt damage),
-/// which has no opponent-controlled pay-to-copy hook yet.
+/// The chain half shipped omitted, with a note saying the copy "is offered to
+/// a *different* player … which has no opponent-controlled pay-to-copy hook
+/// yet". `Effect::MayCopyThisSpell` is exactly that hook — CR 706, the
+/// Onslaught Chain cycle — and `ChainCopyCost::Mana` is the toll shape Chain
+/// Stasis uses. `ControllerOf` over a player target resolves to that player,
+/// which is what makes one `who` cover both halves of "that player or that
+/// permanent's controller".
+///
+/// Same caveat the Chain cycle carries: a permanent target that DIES to the
+/// damage leaves `ControllerOf(Target(0))` unresolvable and the chain ends
+/// there. That is a shared LKI gap, not this card's.
 pub fn chain_lightning() -> CardDefinition {
     CardDefinition {
         name: "Chain Lightning",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Any),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(3),
+            },
+            Effect::MayCopyThisSpell {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                cost: crate::effect::ChainCopyCost::Mana(cost(&[r(), r()])),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -43054,7 +43068,11 @@ pub fn leonin_warleader() -> CardDefinition {
 
 /// Captivating Vampire — {1}{B}{B} 2/2 Vampire. Other Vampires you control get
 /// +1/+1. Tap five untapped Vampires you control: Gain control of target
-/// creature. (The "it becomes a Vampire" rider is dropped.)
+/// creature, and it becomes a Vampire in addition to its other types — which
+/// matters on this card specifically, because the stolen creature then feeds
+/// the +1/+1 anthem AND the next activation's five-Vampire tap cost. The rider
+/// shipped dropped; `Effect::AddCreatureTypes` is the layer-4 additive form
+/// (CR 205.1b / 613.4) and has been there since Jenova.
 pub fn captivating_vampire() -> CardDefinition {
     CardDefinition {
         name: "Captivating Vampire",
@@ -43083,11 +43101,18 @@ pub fn captivating_vampire() -> CardDefinition {
                 SelectionRequirement::HasCreatureType(CreatureType::Vampire),
                 5,
             )),
-            effect: Effect::GainControl {
-                what: target_filtered(SelectionRequirement::Creature),
-                to: None,
-                duration: Duration::Permanent,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GainControl {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: None,
+                    duration: Duration::Permanent,
+                },
+                Effect::AddCreatureTypes {
+                    what: Selector::Target(0),
+                    creature_types: vec![CreatureType::Vampire],
+                    duration: Duration::Permanent,
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

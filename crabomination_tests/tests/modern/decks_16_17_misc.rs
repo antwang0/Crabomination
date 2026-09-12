@@ -1225,6 +1225,42 @@ fn chain_lightning_kills_a_three_toughness_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 dies to 3 damage");
 }
 
+/// CR 706 — the chain half. It shipped omitted behind "no opponent-controlled
+/// pay-to-copy hook yet"; `Effect::MayCopyThisSpell` is that hook and the
+/// Onslaught Chain cycle has used it for as long.
+///
+/// Declining ends the chain (the default), and accepting hands the DAMAGED
+/// player a copy they retarget — here back at the caster.
+#[test]
+fn chain_lightning_offers_the_copy_to_the_player_it_burned() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::chain_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.stack.is_empty(), "declined by default, so no copy");
+    assert_eq!(g.players[0].life, life0, "and nothing came back at the caster");
+
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::chain_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // The toll is {R}{R}, paid by the burned seat, who then repoints the copy.
+    g.players[1].mana_pool.add(Color::Red, 2);
+    let life0 = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Player(0)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 3, "the copy came back at the caster");
+}
+
 // ── Rift Bolt ───────────────────────────────────────────────────────────────
 
 #[test]

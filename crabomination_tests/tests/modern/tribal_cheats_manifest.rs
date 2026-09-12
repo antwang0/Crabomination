@@ -528,6 +528,23 @@ fn captivating_vampire_steals_with_five_vampires() {
     }).expect("tap five Vampires");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(prey).unwrap().controller, 0, "gained control of the bear");
+    // …and it becomes a Vampire in addition to its other types, which is the
+    // half that shipped dropped. On this card the rider is not cosmetic: the
+    // stolen creature now feeds the +1/+1 anthem and the next activation's
+    // five-Vampire tap cost.
+    let cp = g.computed_permanent(prey).unwrap();
+    assert!(
+        cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Vampire),
+        "the stolen creature is a Vampire now: {:?}",
+        cp.subtypes().creature_types,
+    );
+    assert!(
+        cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Bear),
+        "…IN ADDITION to its own types, not instead of them",
+    );
+    // Five Captivating Vampires are on the board and each anthems the OTHERS,
+    // so the 2/2 bear picks up +5/+5 the moment it joins the tribe.
+    assert_eq!((cp.power, cp.toughness), (7, 7), "so every anthem reaches it too");
 }
 
 /// Horned Sliver grants trample to every Sliver (yours and theirs).
