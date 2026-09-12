@@ -275,12 +275,19 @@ What is left, with the reason — `--list <kind>` prints the factories:
     read as unreadable, which took out every `power: 1, ..phantom(.., 2, ..)`
     and every 0-power card, whose `power:` is omitted because `Default` is
     already 0. Every creature the oracle prints a numeric P/T for is compared.
-  * `notyped` (52) — a type-line chain it cannot follow. It was 338 until three
-    more idioms landed: a BOUND CARD TYPE (`fn spell(name, mana, kind, effect)`
-    writes `card_types: vec![kind]`, 190 factories across five sets), a helper
-    whose call is its TAIL after a statement (`fn ally(.., mut types, ..) {
-    types.push(Ally); creature(..) }`, 43 Allies), and the `if flag { .. } else
-    { .. }` type above.
+  * `notyped` (7) — a type-line chain it cannot follow, and **a `notyped` card
+    is audited by NOBODY**: the walk `continue`s there, before every other
+    column. It was 338, then 52, and the six shapes that took it to 7 all
+    reach their base through something other than a `..helper(` line —
+    a tail after a BLOCK statement (`if cond { .. }` closes with a brace, not a
+    `;`, and the stray brace failed the anchored match: seven strive spells), a
+    `let`-bound tail name (`let mut d = dual_land_with(..); ..; d`, five cycling
+    duals), an `if flag { A(..) } else { B(..) }` inside that `let` (four
+    Wishes) or as the literal's own base (five `tor2::dreams`), a tail that is
+    the helper's own PARAMETER (`fn with_buyback(mut def, c)`, ten cards — the
+    columns it MUTATES are blanked one by one rather than read off the
+    unmutated argument), and a module-qualified base (`..super::wwk::
+    tapped_etb_land(..)`, four Zendikar lands). The seven left are one-offs.
   * `nosubvariant` (12) — above.
   * `faces` (0) — a multi-face factory whose name matches NO face of the card
     it resolves to. Zero today: every one of the 276 matches, so a row here is
@@ -292,7 +299,7 @@ What is left, with the reason — `--list <kind>` prints the factories:
 **PROVED BY INJECTION, NOT BY ITS OWN ZERO** — and the injections are
 RUNNABLE now rather than a list here: `scripts/audit_printed_body_injections.py`
 breaks one idiom at a time and states what the audit must do about it,
-**34 / 34 as expected**, four of them NEGATIVE tests (a row there would be the
+**40 / 40 as expected**, four of them NEGATIVE tests (a row there would be the
 bug), and it counts rows from `audit_card_names.py` too — a broken NAME is
 silent here and loud there. Run it after touching any reader below — and never run the audit while
 the battery is running, because it edits catalog files in place.
@@ -1407,6 +1414,28 @@ def helper_params(blk: str):
     return out
 
 
+# A `..base(..)` line's base, THROUGH A MODULE PATH. `..super::wwk::
+# tapped_etb_land(..)` is how the Zendikar files reach a shared land helper,
+# and an unqualified match read nothing there — four lands with no type line,
+# no subtypes and no keywords, while the same helper called WITHOUT the
+# struct-update syntax resolved fine.
+BASE_CALL = re.compile(r"\.\.(?:[A-Za-z_][A-Za-z0-9_]*::)*([a-z0-9_]+)\s*\(")
+
+
+def helper_params_all(blk: str):
+    """`helper_params`, but keeping a `mut` parameter's NAME.
+
+    Only for the tail-parameter path in `resolve_from_block`, which blanks the
+    columns the wrapper mutates one by one instead of dropping the card.
+    Everywhere else a `mut` parameter must stay `None`.
+    """
+    m = PARAMS.search(blk)
+    if not m:
+        return []
+    return [re.sub(r"^mut\s+", "", a.strip()).split(":")[0].strip()
+            for a in split_args(blk[m.end():])]
+
+
 def resolve_helper_cost(index, path, helper, args, depth=0):
     """The PRINTED cost of a card built by `helper(args…)`, as a symbol list.
 
@@ -1466,7 +1495,7 @@ def resolve_helper_cost(index, path, helper, args, depth=0):
     # No `cost:` of its own — follow its base, mapping the base's arguments
     # through this helper's parameters.
     for line in body.split("\n"):
-        bm = re.match(r"\.\.([a-z0-9_]+)\s*\(", line)
+        bm = re.match(BASE_CALL, line)
         if not bm:
             continue
         at = body.index(line) + line.index("(")
@@ -1625,7 +1654,7 @@ def parse_type_line(body: str, params=(), args=(), inner=None):
     base = None
     for line in body.split("\n"):
         if line.startswith("..") and not line.startswith("..Default::default"):
-            m = re.match(r"\.\.([a-z0-9_]+)\s*\(", line)
+            m = re.match(BASE_CALL, line)
             if m:
                 base = m.group(1)
     return got_t, got_s, base, tm is not None, sm is not None
@@ -1643,31 +1672,144 @@ def tail_expression(body: str) -> str:
     types.push(CreatureType::Ally); creature(name, c, types, p, t) }` opens with
     a statement, and reading from the top found `types` followed by `.` rather
     than `(` — so 43 Allies, and every helper shaped like them, resolved to
-    nothing and were dropped from the type-line column. Split on top-level `;`
-    and take the last chunk.
+    nothing and were dropped from the type-line column.
+
+    ⚠ A BLOCK STATEMENT ENDS THE PREVIOUS STATEMENT TOO, and splitting on `;`
+    alone does not see that. `fn strive_pump(..) { let mut body = vec![]; if
+    (power, toughness) != (0, 0) { body.push(..); } .. strive(name, mana, kind,
+    ..) }` closes its last `if` with a BRACE, so the chunk after the last `;`
+    began `}\n strive(` — and the caller's anchored `ident(` match failed on
+    the stray brace, which is why seven Journey into Nyx strive spells and two
+    more helpers had no type line. Take the text after the last statement
+    boundary — a `;` at depth 0 or the `}` that closes a depth-0 block — and
+    stop at the brace that closes the function, which is also what keeps the
+    doc comment of the NEXT factory out of the tail.
     """
-    out, depth, in_str, cur = [], 0, False, []
-    for c in body:
+    depth, in_str, start, i = 0, False, 0, 0
+    while i < len(body):
+        c = body[i]
         if in_str:
-            cur.append(c)
+            if c == "\\":
+                i += 2
+                continue
             if c == '"':
                 in_str = False
-            continue
-        if c == '"':
+        elif c == '"':
             in_str = True
         elif c in "([{":
             depth += 1
         elif c in ")]}":
             depth -= 1
-        elif c == ";" and depth <= 1:
-            out.append("".join(cur))
-            cur = []
-            continue
-        cur.append(c)
-    out.append("".join(cur))
-    tail = out[-1]
-    # The body's closing brace rides the tail; drop it and anything after.
-    return tail.rsplit("}", 1)[0] if tail.count("}") else tail
+            if depth < 0:
+                break
+            if depth == 0 and c == "}":
+                start = i + 1
+        elif c == ";" and depth == 0:
+            start = i + 1
+        i += 1
+    return body[start:i]
+
+
+def braced(text: str, at: int):
+    """`(inner, index past the closing brace)` for the `{` at `at`."""
+    depth, in_str, i = 0, False, at
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            if c == "\\":
+                i += 2
+                continue
+            if c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return text[at + 1:i], i + 1
+        i += 1
+    return None, len(text)
+
+
+IF_ELSE = re.compile(r"^\s*if\s+(!?[a-z_][a-z0-9_]*)\s*\{", re.S)
+
+
+def choose_branch(expr: str, params=(), args=()):
+    """`if flag { A } else { B }` resolved through the BOUND flag, or None.
+
+    The same rule `ternary_types` uses for a card type, one level up: here the
+    branches are whole BASE CALLS, which is how `jud2::wish` picks between
+    `instant(..)` and `sorcery(..)` — and a Wish whose speed cannot be read is
+    a card the type-line column drops entirely.
+    """
+    m = IF_ELSE.match(expr)
+    if not m:
+        return None
+    flag = m.group(1)
+    val = bind_param(flag.lstrip("!"), params, args).strip().rstrip(",")
+    if val not in ("true", "false"):
+        return None
+    yes, after = braced(expr, m.end() - 1)
+    if yes is None:
+        return None
+    em = re.match(r"\s*else\s*\{", expr[after:])
+    if not em:
+        return None
+    no, _ = braced(expr[after:], em.end() - 1)
+    return yes if (val == "true") != flag.startswith("!") else no
+
+
+def let_bound(src: str, tail: str, params=(), args=()):
+    """The initialiser of the `let` that bound a bare tail identifier.
+
+    `fn cycling_dual(..) { let mut d = dual_land_with(..); d.keywords.push(..);
+    d }` returns a NAME, not a call, so the chain stopped at the identifier and
+    five cycling duals had no type line, no subtypes and no keywords. The name
+    is a base call one statement up.
+    """
+    ident = tail.strip()
+    if not re.fullmatch(r"[a-z_][a-z0-9_]*", ident):
+        return None
+    m = re.search(r"\blet\s+(?:mut\s+)?%s\b\s*(?::[^=;]*)?=\s*" % re.escape(ident), src)
+    if not m:
+        return None
+    depth, in_str, i = 0, False, m.end()
+    while i < len(src):
+        c = src[i]
+        if in_str:
+            if c == "\\":
+                i += 2
+                continue
+            if c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+            if depth < 0:
+                break
+        elif c == ";" and depth == 0:
+            break
+        i += 1
+    init = src[m.end():i]
+    return choose_branch(init, params, args) or init
+
+
+# A field of the wrapped definition, and the verdict flag it invalidates when
+# the wrapper MUTATES it. `fn with_buyback(mut def, c) { def.keywords.push(..);
+# def }` returns its own parameter, so the card is readable through the
+# argument — for every column the wrapper leaves alone. The keyword column is
+# the one it changes, and reading the argument there would report the buyback
+# cycle as printing a keyword it does not have, which is the mistake
+# `zen3::ally`'s `types.push(Ally)` is the standing negative test for.
+MUT_COLUMN = {"card_types": "ok", "supertypes": "ok", "subtypes": "sub_ok",
+              "keywords": "kw_ok", "power": "pt_ok", "toughness": "pt_ok",
+              "color_indicator": "col_ok", "base_loyalty": "loy_ok"}
+CALL_HEAD = re.compile(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(")
 
 
 def resolve_from_block(index, path, blk, args, depth, subs_index=None):
@@ -1680,17 +1822,42 @@ def resolve_from_block(index, path, blk, args, depth, subs_index=None):
     the base's arguments can be read out of it.
     """
     body, inner = helper_body(blk), helper_raw(blk)
-    call_src = None
+    call_src, blanked = None, ()
     if body is None:
         m = RET.search(blk)
-        after = tail_expression(blk[m.end():] if m else "")
-        hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after)
+        src = blk[m.end():] if m else ""
+        params = helper_params(blk)
+        after = tail_expression(src)
+        hm = CALL_HEAD.match(after)
+        if not hm:
+            # The tail is not a call: a bare `let`-bound name, or an
+            # `if flag { .. } else { .. }` over two of them.
+            alt = (choose_branch(after, params, args)
+                   or let_bound(src, after, params, args))
+            hm = CALL_HEAD.match(alt or "")
+            if hm:
+                after = alt
+        if not hm and re.fullmatch(r"\s*[a-z_][a-z0-9_]*\s*", after):
+            # The tail is the helper's own PARAMETER — the wrapper idiom with
+            # a wrapped CALL rather than a literal, which is how ten buyback
+            # and rider cards are built. Every column the wrapper does not
+            # mutate reads through the argument; the ones it does are blanked
+            # rather than read off the unmutated definition.
+            ident = after.strip()
+            bound = bind_param(ident, helper_params_all(blk), args)
+            hm = CALL_HEAD.match(bound)
+            if hm:
+                after = bound
+                blanked = {MUT_COLUMN[f] for f in
+                           re.findall(r"\b%s\.([a-z_]+)" % re.escape(ident), src)
+                           if f in MUT_COLUMN}
         if not hm:
             return Read(set(), set(), None, None, None, None, None,
                         False, False, False, False, False, False)
         body, call_src = ".." + hm.group(1) + "(", after
-    return resolve_type_line(index, path, body, None, depth, inner,
+    read = resolve_type_line(index, path, body, None, depth, inner,
                              helper_params(blk), args, call_src, subs_index)
+    return read._replace(**{f: False for f in blanked}) if blanked else read
 
 
 def resolve_type_line(index, path, body, raw, depth=0, inner=None,
@@ -1713,6 +1880,19 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     """
     body = bind_base_param(body, params, args)
     got_t, got_s, base, has_t, has_s = parse_type_line(body, params, args, inner)
+    # A CONDITIONAL BASE: `..if sorcery_speed { sorcery(name, c, effect) } else
+    # { instant(name, c, effect) }` — `tor2::dreams`, five buyback-shaped
+    # cards whose SPEED is the flag. The branches are two braces deep, so the
+    # flattened body cannot hold them and the base scan above reads nothing;
+    # take them off the raw literal and bind the flag like any other argument.
+    cond_src = None
+    if base is None and inner:
+        bm = re.search(r"\.\.if\s+!?[a-z_][a-z0-9_]*\s*\{", inner)
+        if bm:
+            branch = choose_branch(inner[bm.start() + 2:], params, args)
+            hm = CALL_HEAD.match(branch or "")
+            if hm:
+                base, cond_src = hm.group(1), branch
     got_sub, has_sub = parse_subtypes(inner, params, args, subs_index, path)
     got_kw, has_kw = parse_keywords(inner, params, args)
     got_pt, has_pt = parse_pt(inner, params, args)
@@ -1784,7 +1964,7 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
         # hands `creature` a literal and `fn creature(.., ct, ..)`'s
         # `creature_types: ct` resolves to it. Same mapping as
         # `resolve_helper_cost`'s.
-        src = call_src if call_src is not None else body
+        src = cond_src or (call_src if call_src is not None else body)
         bm = re.search(r"\.\.%s\s*\(" % re.escape(base), src) \
             or re.search(r"\b%s\s*\(" % re.escape(base), src)
         bargs = call_args(src, bm.start() + bm.group(0).rindex("(")) if bm else []

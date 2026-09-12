@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Injection battery for `audit_printed_body.py`'s readers.
 
-    python3 scripts/audit_printed_body_injections.py    # 34/34 as expected
+    python3 scripts/audit_printed_body_injections.py    # 40/40 as expected
 
 **A GATE THAT CANNOT FAIL IS WORSE THAN NO GATE**, and this session proved the
 point three times: `fn legend`'s injection passed because the resolver took
@@ -240,6 +240,28 @@ CASES = [
   "            3,\n            3,",
   "            vec![CreatureType::Phyrexian, CreatureType::Zombie, CreatureType::Knight],\n"
   "            3,\n            4,"),
+ # THE SIX SHAPES THAT REACH THEIR BASE THROUGH SOMETHING OTHER THAN
+ # `..helper(`. Each was `notyped` — dropped before the FIRST column, so the
+ # card was audited by nobody — and each of these six injections is silent
+ # under the reader that skipped it.
+ ("fires", "a tail after a block statement (jou2 Aerial Formation)", "sets/jou2.rs",
+  '        "Aerial Formation",\n        cost(&[u()]),\n        CardType::Instant,',
+  '        "Aerial Formation",\n        cost(&[u()]),\n        CardType::Sorcery,'),
+ ("fires", "a let-bound base (lands Irrigated Farmland)", "sets/decks/lands.rs",
+  '        "Irrigated Farmland",\n        LandType::Plains,',
+  '        "Irrigated Farmland",\n        LandType::Swamp,'),
+ ("fires", "an if/else in a let (jud2 Burning Wish)", "sets/jud2.rs",
+  'wish("Burning Wish", cost(&[generic(1), r()]), R::HasCardType(CardType::Sorcery), false)',
+  'wish("Burning Wish", cost(&[generic(1), r()]), R::HasCardType(CardType::Sorcery), true)'),
+ ("fires", "a tail that is the helper's own parameter (tmp Anoint)", "sets/tmp/spells.rs",
+  '        instant(\n            "Anoint",', '        sorcery(\n            "Anoint",'),
+ ("fires", "a conditional base in a literal (tor2 Restless Dreams)", "sets/tor2.rs",
+  '        "Restless Dreams",\n        cost(&[b()]),\n        true,',
+  '        "Restless Dreams",\n        cost(&[b()]),\n        false,'),
+ ("fires", "a module-qualified base (zen3 Sejiri Refuge)", "sets/zen3.rs",
+  '        ..super::wwk::tapped_etb_land(\n            "Sejiri Refuge",',
+  '        keywords: vec![Keyword::Flying],\n'
+  '        ..super::wwk::tapped_etb_land(\n            "Sejiri Refuge",'),
  # Negative: a `mut` parameter is mutated before the call it feeds, so binding
  # it to the caller's argument would report 20-odd correct Allies.
  ("silent", "a mut parameter is not its caller's argument (zen3 fn ally)",
