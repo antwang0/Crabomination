@@ -2872,10 +2872,22 @@ perf    none, and measured as none rather than assumed. Every change here is a c
         the closing one, which is the reading from the other side.
 ```
 
-**Sweeps, fresh seeds 1031..1036** — three pools x 400 games/archetype a cell,
-`CRAB_ANSWER_LOG=strict`, `overflow` + `debug-assertions`, at the closing tip:
-**18 cells / 88,800 games, 0 failures, 0 cap, 0 stuck, 8 draws.** A draw is
-CR 104.4, not a defect. One cell is an outlier and it is the entry below.
+**Sweeps, fresh seeds 1031..1047** — three pools (`cube` / `all` / `sealed`) x
+400 games/archetype a cell, `CRAB_ANSWER_LOG=strict`, `overflow` +
+`debug-assertions`:
+
+```text
+  seeds        tip         cells   games      failures  cap  stuck  draw
+  1031..1036   f9a5147c      18     88,800       0       0     0      8
+  1037..1044   f9a5147c      24    118,400       0       0     0      0
+  1045..1047   5ece833a       9     44,400       0       0     0     20
+```
+
+**51 cells / 251,600 games, 0 cap and 0 stuck on every one.** A draw is
+CR 104.4, not a defect. The third block is the verification block: it ran on a
+binary rebuilt at the closing tip, so the saturating-arithmetic commits are
+swept rather than inferred. Seed frontier **1048**. One cell is an outlier and
+it is the entry below.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
 `cube` seed **1036** cost **3,313 s** against a 33-48 s median for its
@@ -2913,13 +2925,15 @@ board", never as "the actor loses this much"** — re-run it on `release-fast`
 before believing a throughput number. And when a cell's wall clock is the
 thing being budgeted, the lever is the gate audits, not the engine.
 
-**Gates at the closing tip** (`release-fast`): suite **19,453 / 0 / 5** with
-`CRAB_ANSWER_LOG=strict` exported (19,448 before this run's three new tests),
-clippy **0** over the workspace (`--all-targets`, `CARGO_TARGET_DIR=target-clip`),
-`--bench` **195,806 decisions / 27.49 turns
+**Gates at the closing tip `5ece833a`** (`release-fast`): suite
+**19,453 / 0 / 5** with `CRAB_ANSWER_LOG=strict` exported, clippy **0** over the
+workspace (`--all-targets`, `CARGO_TARGET_DIR=target-clip`), `cargo check
+--profile release-fast` clean, `--bench` **195,806 decisions / 27.49 turns
 / 611.9 decisions-per-game / 0 stalls** — the committed counters, byte-identical
-— `determinism ok`, `thread_determinism ok (3 vs 1)`, `games_per_s` 308.37,
-peak RSS 29.2 MiB, `bin_bytes` 126,930,168. `golden_trace` 10 / 10 unmoved.
+— `determinism ok`, `thread_determinism ok (3 vs 1)`, `games_per_s` 285.46,
+peak RSS 29.0 MiB, `bin_bytes` 126,932,512. `golden_trace` 10 / 10 unmoved, and
+`CRAB_DUMP_TRACES` over 64 `cube` games and 68 `all` dflt games is identical to
+the SESSION-BASE binary — four commits and a rebase later.
 `audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and
 repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector`
 **0 open / 8 loop / 4 controller-asked / 15 pinned** (from 27 undifferentiated),
