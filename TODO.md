@@ -35,7 +35,7 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the tip `cfef051f`:** suite **19,447 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel
    one-shot census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, release-fast check clean, `--bench` **195,806 /
    27.49 / 611.9 / 0 stalls** + determinism + thread_determinism, `audit_answer_log` 69 / 7 suspicious (its docstring explains every
-   remaining row, so a NEW row is the signal), `audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` 27 open / 0 demonstrated, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1030 swept on five pools, `cube` also 1031..1035 — next
+   remaining row, so a NEW row is the signal), `audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open** / 15 pinned / 8 loop / 4 controller, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1030 swept on five pools, `cube` also 1031..1035 — next
    is 1031, and `cube` from 1037** (the two sessions' blocks overlap between 995 and 1012; the grids are in PERF, along with `cube` 1036, a SLOW cell that
    is neither capped nor looping and is cleared of this session by an A/B. **`all` seed 1024 is the one sweep cell that EARNED its keep**:
    it aborted under `CRAB_ANSWER_LOG=strict` on a real defect — `MayDoBy` re-deriving its seat from a destroyed land, ENGINE_BACKLOG's seventeenth find —

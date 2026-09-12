@@ -344,14 +344,24 @@ repro goes 10 leaks -> 0 on the same seed and pool.
 object the first pass consumed* — the same rule as the fourteenth find (the dying
 source's LKI), one selector out. `scripts/audit_seat_from_selector.py` flags every
 asking arm whose seat comes from `resolve_player(who…)` while its continuation is
-the bare `effect`: **27 arms, 0 demonstrated.** `MayDoBy` is absent because it is
-fixed, and it was the only one a shipped card actually reaches — a catalog scan
-for "an earlier `Destroy`/`Exile`/`Sacrifice` of the slot an ask's `who` reads"
-finds nothing among the other 26 (most such cards feed `Effect::Search`, whose
-resume applies the pick rather than re-running the arm). That is a fact about the
-CATALOG, not about the code, so they are listed rather than allowlisted: a new
-card pairing any of them with an earlier Destroy of the same slot ends the
-reprieve, and the fix is six lines per arm.
+the bare `effect`, and its first reading was **27 arms, one of them fixed by
+hand here**.
+
+⚠ **That per-arm fix was then generalized and this section is the narrow half.**
+The session sharing the branch moved it into the ask helper (`0e33d521`): every
+`ask_seat_*` queues `effect.with_asked_seat(seat)`, which writes
+`PlayerRef::Seat(seat)` into the `who` of the arms in its one match list, so an
+arm is fixed by appearing in that list and the audit reads the list rather than
+re-deriving it. **The reading is 0 open / 15 pinned / 8 loop / 4 controller**,
+where the last two columns are not this class (`ctx.controller` is resolution
+state, stable across a re-run) or not closable by this pin (a loop over
+`resolve_players` re-derives the LIST, and one seat pinned into it would drop
+every other seat's question — that needs a seat-list ref). None of the eight has
+a shipped card that reaches the failure: the catalog scan is "an earlier
+`Destroy`/`Exile`/`Sacrifice` of the slot an ask's `who` reads", and the hits it
+finds mostly feed `Effect::Search`, whose resume applies the pick rather than
+re-running the arm. That is a fact about the CATALOG, not about the code, which
+is why they are listed rather than allowlisted.
 
 ## FIXED 2026-09-11 (sixteenth find) — an effect that suspends OFF the stack was a silent no-op, and the signal it left behind is not inert
 
