@@ -325,8 +325,10 @@ RUNNABLE now rather than a list here: `scripts/audit_printed_body_injections.py`
 breaks one idiom at a time and states what the audit must do about it,
 **45 / 45 as expected**, four of them NEGATIVE tests (a row there would be the
 bug), and it counts rows from `audit_card_names.py` too — a broken NAME is
-silent here and loud there. Run it after touching any reader below — and never run the audit while
-the battery is running, because it edits catalog files in place.
+silent here and loud there. Run it after touching any reader below. It patches
+a per-worker COPY under `CRAB_CATALOG_DIR` since `0acbd289`, so the old "never
+run the audit while the battery runs" rule is retired: it never writes the real
+tree, and `-j` makes a 45-case run minutes instead of an hour.
 
 The cost column's own four (Agent of Stromgald's `..creature(..)`; `instant(
 "Consume Strength", ..)`; `fn skullbomb`'s OWN `cost:`; Karn, Scion of Urza to

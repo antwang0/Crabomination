@@ -61,8 +61,9 @@ sixty-seventh pass, so don't re-take that.
    change at all because a union is a superset. ~264 cards came back into the column combat reads every turn, and one of them (Lonesome Unicorn) had
    shipped without the vigilance it prints. **Per-face `colors` DOES exist for 1,501 of the 2,585 multi-face entries**, so the same question is open
    for `nocolors`; what actually drives that number is `nonliteral` (the cost chain), which the colour column needs for its pips.
-   ⚠ `scripts/audit_printed_body_injections.py` is **45 / 45** and counts rows from BOTH catalog audits — run it after touching any reader, and
-   **never run an audit while it runs**: it edits the catalog in place (it refuses a dirty catalog and restores on a signal now).
+   ✅ `scripts/audit_printed_body_injections.py` is **45 / 45** and counts rows from BOTH catalog audits — run it after touching any reader. It patches a
+   per-worker COPY under `CRAB_CATALOG_DIR` since `0acbd289`, so **the "never run an audit or a build while it runs" warning is RETIRED**: it never
+   writes the real tree, it runs its cases in parallel (`-j`), and a 45-case run is minutes rather than the hour the in-place version cost.
    **Fresh seeds: 853..1030 on five pools, then 1031..1211 on cube / all / sealed (513 cells, 2,530,800 games) PLUS a concurrent session's 245 cells /
    965,600 games on five pools at 1060..1171 — 0 stuck everywhere. Next is 1212 — NOT swept this run either, so it is still 1212 — and TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
