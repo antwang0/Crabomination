@@ -326,7 +326,7 @@ pub fn sync_counter_coins(
 // Mirrors `pt_label::sync_pt_labels`' reproject-and-reconcile pattern.
 
 /// Below default-z UI so peek popups / tooltips / modals draw over it.
-const COUNTER_LABEL_Z: i32 = -1;
+const COUNTER_LABEL_Z: i32 = crate::theme::layer::CARD_OVERLAY;
 
 /// Short, human-readable token naming a counter kind for the count label.
 fn counter_token(kind: CounterType) -> &'static str {

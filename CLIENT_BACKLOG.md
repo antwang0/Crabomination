@@ -101,18 +101,52 @@ because the shape recurs.
 Not fixed, and worth their own pass — each is systemic rather than a paper
 cut, and the first two would make the third and fourth reviewable:
 
-- ⏳ **No z-layer table.** The badge band is coherent (eight modules each
-  define `= -1`, documented at `pt_label.rs:19`); the band above it is
-  nine magic numbers across 12 files, while every modal — `decision_ui`,
-  `popups`, `game_over`, `game_ui/mod`, `lobby_ui`, `menu`, `audit` — spawns
-  with **no `GlobalZIndex` at all**, so modals share implicit layer 0 with
-  the HUD and order by spawn order. A `theme::layer` module of named
-  constants is the fix, and it is a prerequisite for "Alt-Peek Inside
-  Decision Modals" below.
-- ⏳ **No modal focus arbiter.** Twelve independent `Escape` handlers with
-  no priority; one press can dismiss several overlapping surfaces, and
-  Esc-to-cancel-chat also closes whatever else is open. Pairs with the
-  layer table and with `input_guard`.
+- ✅ **No z-layer table** — shipped as `theme::layer`. Twelve named bands,
+  spaced by ten, replacing `-1, 0, 30, 35, 40, 45, 46, 60, 100, 1000`; the
+  remap is monotonic, so no surface changed places. The twenty-one existing
+  indices moved onto it and the surfaces that had *none* — thirteen
+  `DecisionModal` roots, `GameOverModalRoot`, five cast-flow modals, the
+  ability menu, both browsers, the help overlay — now sit at
+  `layer::MODAL`, with the Alt-peek popup and pile tooltip above them at
+  `layer::CARD_PEEK` (which is the prerequisite "Alt-Peek Inside Decision
+  Modals" below was missing). `quality.rs`'s `GlobalZIndex(1000)` hack is
+  gone: it existed only because "the mulligan / decision modals carry no
+  z-index, so they'd otherwise render on top of this since they spawn
+  later".
+  - ⚠ The order is enforced by **eleven `const _: () = assert!(…)` in the
+    `layer` module**, not by a test — a reorder fails the *build*, the
+    same idiom `crabomination/src/game/layers.rs:352` uses for its struct
+    sizes. Verified: pushing `MODAL` above `CARD_PEEK` fails with
+    `error[E0080] … assertion failed: MODAL < CARD_PEEK`.
+- ✅ **No modal focus arbiter** — shipped as `systems::esc`. Twelve
+  independent `Escape` readers now consult one precomputed owner:
+  `EscSurface` declares twelve surfaces topmost-first, `compute_esc_focus`
+  walks them in order and names the first that is open, and each handler
+  asks `esc.owns(…)`. The ten-predicate list in `handle_settings_toggle`
+  is deleted — the pause menu splits into `close_settings_on_esc`
+  (first in precedence) and `open_settings_on_esc` (opens only on an
+  *unclaimed* press), so it no longer has to know any other surface
+  exists. `EscConsumed` is retired.
+  - ⚠ **Precedence is a precomputed resource, not a chained system set.**
+    The obvious design does not fit this schedule:
+    `cancel_pickers_on_escape` is pinned `.after(handle_game_input)` (so a
+    click and an Esc in the same frame resolve as the click) while
+    `handle_keyboard_cursor_input` is pinned `.before` it — a
+    picker-before-selection chain closes that into a cycle Bevy rejects.
+    Running in `PreUpdate` instead makes every consumer
+    order-independent and moved nothing in the `Update` graph.
+  - ⚠ **`compute_esc_focus` needs `.after(bevy::input::InputSystems)`.**
+    `keyboard_input_system` also runs in `PreUpdate`, so without it Bevy
+    may schedule the arbiter first and read *last* frame's
+    `just_pressed`.
+  - Deliberate behaviour change: the attacker-plan Esc site used to fall
+    through on purpose, so one press cleared the plan *and* closed an open
+    ability menu. The menu is an `EscSurface::Picker` and outranks the
+    plan, so that is now two presses.
+  - ⏳ Residual: `settings_menu.rs:61` (the *menu*-state settings panel)
+    still reads `Escape` directly. It is in a different `AppState` with no
+    rival surfaces, so it has nothing to arbitrate against — left alone
+    deliberately.
 - ⏳ **48 hand-tuned chip colours.** `player_stats.rs:64-160` gives each
   game concept its own dark tint (Monarch, Initiative, Storm, Ring, Crime,
   Void, Descend, …) — 48 backgrounds a player cannot learn, and most of

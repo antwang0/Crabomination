@@ -516,6 +516,7 @@ pub fn toggle_shortcut_help(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     ui_fonts: Res<UiFonts>,
+    esc: Res<crate::systems::esc::EscFocus>,
     existing: Query<Entity, With<ShortcutHelpPanel>>,
 ) {
     let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
@@ -523,7 +524,9 @@ pub fn toggle_shortcut_help(
         keyboard.just_pressed(KeyCode::F1) || (shift && keyboard.just_pressed(KeyCode::Slash));
 
     if let Ok(panel) = existing.single() {
-        if open_key || keyboard.just_pressed(KeyCode::Escape) {
+        // F1 / `?` close it without consulting `EscFocus`, so the toggle
+        // key and the arbitrated dismiss key stay separate.
+        if open_key || esc.owns(crate::systems::esc::EscSurface::ShortcutHelp) {
             commands.entity(panel).despawn();
         }
     } else if open_key {
@@ -552,6 +555,7 @@ fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts) {
             },
             BackgroundColor(theme::OVERLAY_BG),
             ShortcutHelpPanel,
+            GlobalZIndex(theme::layer::MODAL),
             crate::systems::game_ui::InGameRoot,
         ))
         .with_children(|root| {
@@ -739,6 +743,9 @@ pub fn peek_popup(
             BackgroundColor(theme::OVERLAY_BG_LIGHT),
             Pickable::IGNORE,
             PeekPopup { path: front_texture.0.clone() },
+            // Above `MODAL`: reading a card has to work from inside a
+            // decision prompt (the Alt-peek-in-modals backlog item).
+            GlobalZIndex(theme::layer::CARD_PEEK),
         ))
         .with_children(|parent| {
             parent.spawn((
@@ -1258,8 +1265,9 @@ pub fn graveyard_browser(
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<GraveyardBrowser>, With<Button>)>,
     text_input: crate::systems::input_guard::TextInputGuard,
+    esc: Res<crate::systems::esc::EscFocus>,
 ) {
-    if keyboard.just_pressed(KeyCode::Escape) && state.open {
+    if esc.owns(crate::systems::esc::EscSurface::GraveyardBrowser) {
         state.open = false;
     }
     // `G` toggles the viewer's own graveyard (clicking a pile still browses
@@ -1345,6 +1353,7 @@ pub fn graveyard_browser(
                 BackgroundColor(theme::OVERLAY_BG),
                 Button,
                 GraveyardBrowser,
+                GlobalZIndex(theme::layer::MODAL),
             ))
             .id();
 
@@ -1504,6 +1513,7 @@ pub fn exile_browser(
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<ExileBrowser>, With<Button>)>,
     text_input: crate::systems::input_guard::TextInputGuard,
+    esc: Res<crate::systems::esc::EscFocus>,
     mut state: ResMut<crate::game::ExileBrowserState>,
     card_names: Res<crate::game::CardNames>,
 ) {
@@ -1514,10 +1524,9 @@ pub fn exile_browser(
     if key_v {
         state.open = !state.open;
     }
-    let close_requested = keyboard.just_pressed(KeyCode::Escape)
-        || overlay_interaction
-            .iter()
-            .any(|i| *i == Interaction::Pressed);
+    // Clicking the scrim closes without consuming the Esc press.
+    let close_requested = overlay_interaction.iter().any(|i| *i == Interaction::Pressed)
+        || esc.owns(crate::systems::esc::EscSurface::ExileBrowser);
     if !existing.is_empty() && (close_requested || !state.open) {
         for entity in &existing {
             commands.entity(entity).despawn();
@@ -1645,6 +1654,7 @@ pub fn exile_browser(
             BackgroundColor(theme::OVERLAY_BG),
             Button,
             ExileBrowser,
+            GlobalZIndex(theme::layer::MODAL),
         ))
         .id();
 
@@ -1897,6 +1907,7 @@ pub fn pile_tooltip(
                 },
                 BackgroundColor(theme::OVERLAY_BG_HEAVY),
                 PileTooltip { msg: msg.clone() },
+                GlobalZIndex(theme::layer::CARD_PEEK),
             ))
             .with_children(|p| {
                 p.spawn((
@@ -2251,7 +2262,7 @@ pub fn low_life_vignette(
                 LowLifeVignette,
                 Pickable::IGNORE,
                 crate::systems::game_ui::InGameRoot,
-                GlobalZIndex(35),
+                GlobalZIndex(theme::layer::SCREEN_TINT),
             ));
         }
         (false, Some((e, _))) => {

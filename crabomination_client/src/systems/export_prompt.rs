@@ -160,7 +160,7 @@ pub fn sync_export_prompt_ui(
                     ..default()
                 },
                 // Above the game-over modal, which can now open this prompt.
-                bevy::ui::GlobalZIndex(60),
+                bevy::ui::GlobalZIndex(theme::layer::TOP_PROMPT),
                 BackgroundColor(theme::OVERLAY_BG_HEAVY),
                 ExportPromptRoot,
             ))

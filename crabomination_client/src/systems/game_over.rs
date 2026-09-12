@@ -178,6 +178,7 @@ pub fn sync_game_over_modal(
             },
             BackgroundColor(theme::OVERLAY_BG),
             GameOverModalRoot,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .with_children(|root| {
             root.spawn((

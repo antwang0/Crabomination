@@ -20,7 +20,7 @@ use crate::theme::{self, UiFonts};
 
 /// Renders below default-z (0) UI so popups / tooltips / modals win —
 /// same band as the P/T badge.
-const BADGE_Z: i32 = -1;
+const BADGE_Z: i32 = crate::theme::layer::CARD_OVERLAY;
 /// Tuck the chip just inside the card's projected top-right corner.
 const BADGE_OFFSET_X: f32 = 30.0;
 const BADGE_OFFSET_Y: f32 = -4.0;

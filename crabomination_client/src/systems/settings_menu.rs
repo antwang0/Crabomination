@@ -95,7 +95,7 @@ fn spawn_panel(commands: &mut Commands, ui_fonts: &UiFonts) {
             },
             BackgroundColor(theme::OVERLAY_BG_HEAVY),
             SettingsPanelRoot,
-            GlobalZIndex(60),
+            GlobalZIndex(crate::theme::layer::TOP_PROMPT),
         ))
         .id();
     let panel = commands

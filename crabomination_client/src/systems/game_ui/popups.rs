@@ -252,6 +252,7 @@ pub fn spawn_ability_menu(
             },
             BackgroundColor(theme::PANEL_BG_SUNKEN),
             AbilityMenu,
+            GlobalZIndex(theme::layer::MODAL),
         ))
         .with_children(|menu| {
             menu.spawn((
@@ -644,6 +645,7 @@ pub fn spawn_alt_cast_modal(
             },
             bevy::picking::Pickable::IGNORE,
             AltCastModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .with_children(|root| {
             root.spawn((
@@ -841,6 +843,7 @@ pub fn spawn_pay_times_modal(
             },
             bevy::picking::Pickable::IGNORE,
             PayTimesModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .with_children(|root| {
             root.spawn((
@@ -1127,6 +1130,7 @@ pub fn spawn_split_cast_modal(
             },
             bevy::picking::Pickable::IGNORE,
             SplitCastModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .with_children(|root| {
             root.spawn((
@@ -1321,6 +1325,7 @@ pub fn spawn_spree_cast_modal(
             },
             bevy::picking::Pickable::IGNORE,
             SpreeModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .with_children(|root| {
             root.spawn((
@@ -1552,6 +1557,7 @@ pub fn spawn_helper_tap_modal(
             },
             bevy::picking::Pickable::IGNORE,
             HelperTapModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .with_children(|root| {
             root.spawn((
@@ -1734,12 +1740,20 @@ pub fn helper_cast_action(
 /// Esc dismisses any open cast-flow picker.
 ///
 /// Each of these has a Cancel button, but a player who has just armed one
-/// by mistake reaches for Esc — and `handle_settings_toggle` now stands
-/// aside for them, so without this the key did nothing at all. One system
-/// rather than a branch in each handler, so a picker added later only has
-/// to be listed here (and in the settings-toggle guard).
+/// by mistake reaches for Esc. One system rather than a branch in each
+/// handler, so a picker added later only has to be listed here — the
+/// second half of that sentence ("and in the settings-toggle guard") is
+/// gone: precedence is `EscSurface::Picker`, and the pause menu now
+/// stands aside by opening only on an unclaimed press rather than by
+/// enumerating these states.
+///
+/// Note this used to clear all seven states on *every* Esc press, active
+/// or not — which is why `compute_esc_focus` decides ownership from
+/// whether a picker is actually open. Firing unconditionally here would
+/// take presses that targeting, the blocker plan and the keyboard cursor
+/// were owed.
 pub fn cancel_pickers_on_escape(
-    keyboard: Res<ButtonInput<KeyCode>>,
+    esc: Res<crate::systems::esc::EscFocus>,
     mut alt_cast: ResMut<crate::game::AltCastState>,
     mut helper_tap: ResMut<crate::game::HelperTapState>,
     mut spree_cast: ResMut<crate::game::SpreeCastState>,
@@ -1748,7 +1762,7 @@ pub fn cancel_pickers_on_escape(
     mut ability_menu: ResMut<crate::game::AbilityMenuState>,
     mut hand_menu: ResMut<super::hand_menu::HandMenuState>,
 ) {
-    if !keyboard.just_pressed(KeyCode::Escape) {
+    if !esc.owns(crate::systems::esc::EscSurface::Picker) {
         return;
     }
     alt_cast.pending = None;

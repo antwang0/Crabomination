@@ -944,7 +944,7 @@ fn update_pending_cast_banner(
                     PendingCastBanner,
                     crate::systems::game_ui::InGameRoot,
                     Pickable::IGNORE,
-                    GlobalZIndex(40),
+                    GlobalZIndex(crate::theme::layer::BANNER),
                 ))
                 .with_children(|row| {
                     row.spawn((
@@ -1002,7 +1002,7 @@ fn update_spectator_banner(
                     SpectatorBanner,
                     crate::systems::game_ui::InGameRoot,
                     Pickable::IGNORE,
-                    GlobalZIndex(40),
+                    GlobalZIndex(crate::theme::layer::BANNER),
                 ))
                 .with_children(|row| {
                     row.spawn((
@@ -1070,7 +1070,7 @@ fn update_reconnect_banner(
                     ReconnectBanner,
                     crate::systems::game_ui::InGameRoot,
                     Pickable::IGNORE,
-                    GlobalZIndex(45),
+                    GlobalZIndex(crate::theme::layer::BANNER_URGENT),
                 ))
                 .with_children(|row| {
                     row.spawn((
@@ -1155,7 +1155,7 @@ fn update_rope_banner(
                     RopeBanner,
                     crate::systems::game_ui::InGameRoot,
                     Pickable::IGNORE,
-                    GlobalZIndex(45),
+                    GlobalZIndex(crate::theme::layer::BANNER_URGENT),
                 ))
                 .with_children(|row| {
                     row.spawn((
@@ -1315,7 +1315,7 @@ fn update_chess_clock_chip(
             ChessClockChip,
             crate::systems::game_ui::InGameRoot,
             Pickable::IGNORE,
-            GlobalZIndex(45),
+            GlobalZIndex(crate::theme::layer::BANNER_URGENT),
         ))
         .with_children(|col| {
             for (marker, label, low) in lines {

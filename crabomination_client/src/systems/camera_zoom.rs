@@ -68,6 +68,7 @@ pub fn camera_focus_hotkeys(
     keyboard: Res<ButtonInput<KeyCode>>,
     view: Res<crate::net_plugin::CurrentView>,
     text_input: crate::systems::input_guard::TextInputGuard,
+    esc: Res<crate::systems::esc::EscFocus>,
     mut focus: ResMut<CameraFocusSeat>,
 ) {
     let Some(cv) = &view.0 else {
@@ -95,7 +96,11 @@ pub fn camera_focus_hotkeys(
             focus.0 = if focus.0 == Some(seat) { None } else { Some(seat) };
         }
     }
-    if keyboard.just_pressed(KeyCode::Escape) {
+    // `EscSurface::CameraFocus` is last in the precedence order, just
+    // ahead of the unclaimed-press fallback that opens the pause menu.
+    // `compute_esc_focus` only names it when a seat is actually focused,
+    // so an unfocused camera cannot swallow that press.
+    if esc.owns(crate::systems::esc::EscSurface::CameraFocus) {
         focus.0 = None;
     }
 }

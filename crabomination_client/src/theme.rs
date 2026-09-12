@@ -222,3 +222,108 @@ pub fn update_hover_tint(
         });
     }
 }
+
+// ── Z layers ─────────────────────────────────────────────────────────────────
+
+/// The one ordering of every 2-D surface in the client.
+///
+/// Bevy stacks siblings by spawn order unless a node carries a
+/// `GlobalZIndex`. Before this module existed the badge band was coherent
+/// — eight modules each independently defined `const … Z: i32 = -1` — but
+/// the band above the HUD was nine magic numbers across twelve files, and
+/// **every modal spawned with no index at all**: `decision_ui`, `popups`,
+/// `game_over`, `game_ui`, `lobby_ui`, `menu` and `audit` all sat at an
+/// implicit `0` alongside the HUD, ordered by whichever happened to spawn
+/// last. It worked, by accident of spawn order. `quality.rs` had already
+/// paid for the fragility — its escape menu used `1000` specifically
+/// because "the mulligan / decision modals carry no z-index, so they'd
+/// otherwise render on top of this since they spawn later".
+///
+/// Values are spaced by ten so a new surface can slot between two
+/// existing ones without renumbering. The absolute numbers carry no
+/// meaning — only the order does, so prefer adding a named constant over
+/// reusing a neighbour's.
+///
+/// The previous scheme's order is preserved exactly: this is a monotonic
+/// remap of `-1, 0, 30, 35, 40, 45, 46, 60, 100, 1000`, with `MODAL` and
+/// `CARD_PEEK` inserted where the implicit-`0` surfaces used to land.
+pub mod layer {
+    /// In-world overlays reprojected onto cards each frame (P/T, keyword
+    /// strips, counter labels, token / regen / lock / agenda / free-cast
+    /// badges). Deliberately *beneath* all 2-D chrome so popups,
+    /// tooltips and modals draw over them.
+    pub const CARD_OVERLAY: i32 = -10;
+
+    /// The persistent HUD — player panels, phase chart, game log, stack
+    /// panel, buttons. This is Bevy's default, so HUD nodes need not set
+    /// it; the constant exists to give the band a name and to anchor the
+    /// ordering assertion below.
+    pub const HUD: i32 = 0;
+
+    /// Modal surfaces: decision prompts, the graveyard / exile browsers,
+    /// the game-over screen, the ability and alt-cast menus, the lobby,
+    /// main menu, draft and audit panels. Everything here is mutually
+    /// exclusive in practice; a surface that must sit over another modal
+    /// belongs in a band above, not deeper into this one.
+    pub const MODAL: i32 = 10;
+
+    /// Card inspection that must stay legible over a modal — the Alt-hold
+    /// peek popup and the pile tooltip. Above [`MODAL`] so reading a card
+    /// works from inside a decision prompt.
+    pub const CARD_PEEK: i32 = 20;
+
+    /// Cursor-following card preview for log lines and stack tiles.
+    pub const HOVER_PREVIEW: i32 = 30;
+
+    /// Full-screen tint that must colour everything below it but eat no
+    /// clicks (the low-life vignette).
+    pub const SCREEN_TINT: i32 = 40;
+
+    /// Status banners: pending cast, spectator notice.
+    pub const BANNER: i32 = 50;
+
+    /// Banners the player must see over any surface, because they explain
+    /// why the game is not responding — reconnect, rope timer, chess clock.
+    pub const BANNER_URGENT: i32 = 60;
+
+    /// The chat input bar: above the banners so the line being typed is
+    /// never covered.
+    pub const CHAT: i32 = 70;
+
+    /// Prompts that own the keyboard and must clear everything under them
+    /// — the export-state prompt and the menu's settings panel.
+    pub const TOP_PROMPT: i32 = 80;
+
+    /// Transient full-screen feedback that is allowed to frame even a
+    /// top prompt: the damage vignette, the draft alt-hold tooltip.
+    /// Click-through by construction (`Pickable::IGNORE`).
+    pub const SCREEN_FLASH: i32 = 90;
+
+    /// The in-game escape menu. The pause surface — always reachable and
+    /// always on top.
+    pub const ESCAPE_MENU: i32 = 100;
+
+    // ── The ordering contract, enforced at compile time ──────────────────
+    //
+    // The table's whole contract is its *order*; the numbers carry no
+    // meaning. Spelling the sequence out here means a reorder has to
+    // restate the intended order rather than silently reshuffling which
+    // surface covers which — and it fails the *build*, not a test run,
+    // which is the same reason `game/layers.rs` asserts its struct sizes
+    // this way.
+    //
+    // `CARD_OVERLAY < HUD` is the one eight other modules depend on:
+    // `pt_label`'s header states it as "rendered beneath other UI so peek
+    // popups, tooltips, and modals always draw on top of it".
+    const _: () = assert!(CARD_OVERLAY < HUD);
+    const _: () = assert!(HUD < MODAL);
+    const _: () = assert!(MODAL < CARD_PEEK);
+    const _: () = assert!(CARD_PEEK < HOVER_PREVIEW);
+    const _: () = assert!(HOVER_PREVIEW < SCREEN_TINT);
+    const _: () = assert!(SCREEN_TINT < BANNER);
+    const _: () = assert!(BANNER < BANNER_URGENT);
+    const _: () = assert!(BANNER_URGENT < CHAT);
+    const _: () = assert!(CHAT < TOP_PROMPT);
+    const _: () = assert!(TOP_PROMPT < SCREEN_FLASH);
+    const _: () = assert!(SCREEN_FLASH < ESCAPE_MENU);
+}

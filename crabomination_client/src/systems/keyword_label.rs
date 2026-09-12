@@ -26,7 +26,7 @@ use crate::MainCamera;
 
 /// Renders below default-z (0) UI so popups / tooltips / modals win — same
 /// band as the P/T badge.
-const KW_Z: i32 = -1;
+const KW_Z: i32 = crate::theme::layer::CARD_OVERLAY;
 /// Lift the strip a few px above the card's projected top edge so it reads as
 /// a banner sitting on the card rather than overlapping the title.
 const KW_LIFT: f32 = 14.0;

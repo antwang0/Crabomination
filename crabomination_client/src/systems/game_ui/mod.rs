@@ -112,6 +112,10 @@ pub struct GameInputResources<'w> {
     pub spree_cast: ResMut<'w, crate::game::SpreeCastState>,
     pub helper_tap: ResMut<'w, crate::game::HelperTapState>,
     pub hand_menu: ResMut<'w, hand_menu::HandMenuState>,
+    /// Arbitrated Escape ownership, read at the three Esc sites below
+    /// (blocker plan, attacker plan, targeting) so one press cancels one
+    /// thing. Right-click keeps its own unarbitrated path.
+    pub esc: Res<'w, crate::systems::esc::EscFocus>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -3489,6 +3493,7 @@ pub fn handle_game_input(
     let card_names = &mut *r.card_names;
     let legal_targets = &mut *r.legal_targets;
     let modal_cast = &mut *r.modal_cast;
+    let esc = &*r.esc;
 
     // Refresh the card-name lookup from the current view so the event
     // formatter can resolve any CardId it sees. Hand / battlefield /
@@ -3636,7 +3641,9 @@ pub fn handle_game_input(
             && !blocking.declared
         {
             let pass = keyboard.just_pressed(KeyCode::Space) || btns.pass;
-            if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {
+            if mouse.just_pressed(MouseButton::Right)
+                || esc.owns(crate::systems::esc::EscSurface::BlockerPlan)
+            {
                 blocking.selected_blocker = None;
                 return;
             }
@@ -3704,10 +3711,15 @@ pub fn handle_game_input(
             && cv.declares_attacks(your_seat)
             && cv.priority == your_seat
         {
-            if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {
+            if mouse.just_pressed(MouseButton::Right)
+                || esc.owns(crate::systems::esc::EscSurface::AttackPlan)
+            {
                 attacking.clear();
-                // Fall through so other handlers can also react (e.g. close
-                // an open ability menu via Escape).
+                // This used to fall through deliberately, so one Esc both
+                // cleared the plan and closed an open ability menu. The
+                // menu is an `EscSurface::Picker` and outranks the attack
+                // plan, so that pairing is now two presses — which is the
+                // point of one action per press.
             } else if activate {
                 use crabomination::card::{CardType, Keyword};
                 use crabomination::game::AttackTarget;
@@ -3801,7 +3813,9 @@ pub fn handle_game_input(
 
         // ── Targeting mode ────────────────────────────────────────────────────
         if targeting.active {
-            if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {
+            if mouse.just_pressed(MouseButton::Right)
+                || esc.owns(crate::systems::esc::EscSurface::Targeting)
+            {
                 // Esc / right-click during a decision-driven target
                 // pick can't "cancel" — the engine is blocked waiting
                 // for an answer. Tell the player why nothing happened

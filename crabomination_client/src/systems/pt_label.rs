@@ -33,7 +33,7 @@ use crate::systems::game_ui::InGameRoot;
 use crate::theme::UiFonts;
 
 /// Renders below default-z (0) UI so popups / tooltips / modals win.
-const PT_Z: i32 = -1;
+const PT_Z: i32 = crate::theme::layer::CARD_OVERLAY;
 /// Approximate badge footprint, used to tuck it just inside the card's
 /// projected bottom-right corner rather than spilling off the edge.
 const PT_OFFSET_X: f32 = 38.0;

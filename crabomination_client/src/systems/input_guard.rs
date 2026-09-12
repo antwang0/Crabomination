@@ -94,9 +94,35 @@ mod tests {
         assert_access_is_legal(game_ui::handle_reveal_conspiracy_keypress);
         assert_access_is_legal(camera_zoom::camera_focus_hotkeys);
         assert_access_is_legal(kb_cursor::handle_keyboard_cursor_input);
-        assert_access_is_legal(quality::handle_settings_toggle);
+        assert_access_is_legal(quality::close_settings_on_esc);
+        assert_access_is_legal(quality::open_settings_on_esc);
         assert_access_is_legal(ui::graveyard_browser);
         assert_access_is_legal(ui::exile_browser);
+    }
+
+    /// The Escape arbiter has the same exposure, and more of it:
+    /// `compute_esc_focus` reads nineteen resources, and every consumer
+    /// holds `ResMut` of the state it dismisses. A single overlap — a
+    /// consumer taking `EscSurfaceStates` instead of `Res<EscFocus>`, say
+    /// — is a launch panic this container cannot otherwise reach.
+    #[test]
+    fn every_esc_arbiter_system_has_a_legal_access_set() {
+        use crate::systems::{camera_zoom, decision_ui, esc, game_ui, kb_cursor, quality, ui};
+
+        assert_access_is_legal(esc::compute_esc_focus);
+        assert_access_is_legal(quality::close_settings_on_esc);
+        assert_access_is_legal(quality::open_settings_on_esc);
+        assert_access_is_legal(game_ui::cancel_pickers_on_escape);
+        assert_access_is_legal(decision_ui::handle_mode_pick_buttons);
+        assert_access_is_legal(decision_ui::handle_decision_cancel);
+        assert_access_is_legal(ui::toggle_shortcut_help);
+        assert_access_is_legal(ui::graveyard_browser);
+        assert_access_is_legal(ui::exile_browser);
+        assert_access_is_legal(kb_cursor::handle_keyboard_cursor_input);
+        assert_access_is_legal(camera_zoom::camera_focus_hotkeys);
+        // The 800-line input system carries `Res<EscFocus>` inside its
+        // bundled `GameInputResources` alongside twenty `ResMut`s.
+        assert_access_is_legal(game_ui::handle_game_input);
     }
 
     /// The shared wheel handler is registered unconditionally in every app

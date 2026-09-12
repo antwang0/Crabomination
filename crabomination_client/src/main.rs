@@ -95,9 +95,9 @@ use systems::gizmos::{
     LegalTargetGizmos, PtModifiedGizmos, StackGizmos, TargetArrowGizmos,
 };
 use systems::quality::{
-    handle_leave_game_button, handle_quality_buttons, handle_settings_toggle, handle_speed_slider,
-    reset_esc_consumed, setup_quality_panel, sync_settings_visibility, update_speed_slider_visuals,
-    EscConsumed, SettingsOpen,
+    close_settings_on_esc, handle_leave_game_button, handle_quality_buttons, handle_speed_slider,
+    open_settings_on_esc, setup_quality_panel, sync_settings_visibility,
+    update_speed_slider_visuals, SettingsOpen,
 };
 use systems::ui::{
     exile_browser, graveyard_browser, graveyard_card_hover_name, graveyard_recast_click,
@@ -396,7 +396,7 @@ fn main() {
         .insert_resource(HandZoom::default())
         .insert_resource(systems::kb_cursor::KeyboardCursor::default())
         .insert_resource(SettingsOpen::default())
-        .insert_resource(EscConsumed::default())
+        .insert_resource(systems::esc::EscFocus::default())
         .insert_resource(audit::AuditTarget::default())
         .insert_resource(audit::AuditPoolFilter::default())
         .insert_resource(audit::ShowVerifiedCards::default())
@@ -484,21 +484,28 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
-        // Esc / settings precedence chain. `reset_esc_consumed` clears
-        // the cross-system flag, `handle_settings_toggle` claims Esc
-        // when it acts on the modal, and `sync_settings_visibility`
-        // flips the modal's `Display` on toggle. The kb-cursor input
-        // system reads `EscConsumed` to know when to skip its own Esc
-        // clear, so it must run after the toggle handler.
+        // Escape arbitration. `compute_esc_focus` names the one surface
+        // that owns this frame's press; it runs in `PreUpdate` so every
+        // consumer is order-independent and nothing in the `Update` graph
+        // has to move (see `systems::esc` for why a chained set cannot
+        // work here — `cancel_pickers_on_escape` is pinned *after*
+        // `handle_game_input` and the keyboard cursor *before* it, which
+        // closes into a cycle).
+        // `.after(InputSystems)` is load-bearing: `keyboard_input_system`
+        // also runs in `PreUpdate`, so without it Bevy is free to schedule
+        // this first and read *last* frame's `just_pressed` — Esc would
+        // act a frame late, or on a press that had already been handled.
+        .add_systems(
+            PreUpdate,
+            systems::esc::compute_esc_focus.after(bevy::input::InputSystems),
+        )
+        // The pause menu sits at both ends of the precedence: it closes
+        // ahead of everything, and opens only on a press no open surface
+        // wanted. Neither half needs an ordering constraint.
         .add_systems(
             Update,
-            (
-                reset_esc_consumed,
-                handle_settings_toggle,
-                sync_settings_visibility,
-            )
+            (close_settings_on_esc, open_settings_on_esc, sync_settings_visibility)
                 .chain()
-                .before(systems::kb_cursor::handle_keyboard_cursor_input)
                 .run_if(in_state(AppState::InGame)),
         )
         // Keyboard cursor: Tab/Arrows update `KeyboardCursor.selection`

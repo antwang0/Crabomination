@@ -24,7 +24,6 @@ use bevy::prelude::*;
 use crabomination::card::CardId;
 
 use crate::card::{BattlefieldCard, GameCardId, HandCard, PlayerTargetZone};
-use crate::game::AltCastState;
 use crate::net_plugin::CurrentView;
 
 /// Current keyboard-cursor selection.
@@ -188,10 +187,9 @@ pub fn handle_keyboard_cursor_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     view: Res<CurrentView>,
     mut cursor: ResMut<KeyboardCursor>,
-    alt_cast: Res<AltCastState>,
     auto_rematch: Res<crate::systems::game_over::AutoRematchState>,
     settings: Res<crate::systems::quality::SettingsOpen>,
-    esc_consumed: Res<crate::systems::quality::EscConsumed>,
+    esc: Res<crate::systems::esc::EscFocus>,
     text_input: crate::systems::input_guard::TextInputGuard,
 ) {
     // Yield input to focused text fields / modals so typing doesn't
@@ -217,13 +215,11 @@ pub fn handle_keyboard_cursor_input(
     }
 
     // Esc clears the cursor (matches existing "Esc = cancel" feel).
-    // Skipped when the settings-toggle handler already consumed the
-    // same Esc press this frame, so closing the settings menu doesn't
-    // also wipe the cursor selection.
-    if keyboard.just_pressed(KeyCode::Escape)
-        && alt_cast.pending.is_none()
-        && !esc_consumed.0
-    {
+    // `EscSurface::CursorSelection` sits near the bottom of the
+    // precedence order, so every overlay and picker above it owns the
+    // press first — closing the settings menu or a browser no longer also
+    // wipes the cursor selection.
+    if esc.owns(crate::systems::esc::EscSurface::CursorSelection) {
         cursor.selection = None;
         return;
     }

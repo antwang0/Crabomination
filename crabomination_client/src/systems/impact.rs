@@ -419,7 +419,7 @@ fn spawn_vignette(commands: &mut Commands, peak_alpha: f32) {
         BorderColor::all(Color::srgba(0.9, 0.08, 0.08, 0.0)),
         // Above the board / HUD so the edge flash is never occluded; ignore
         // picking so it can't eat clicks.
-        GlobalZIndex(100),
+        GlobalZIndex(theme::layer::SCREEN_FLASH),
         Pickable::IGNORE,
         InGameRoot,
         HitVignette { age: 0.0, ttl: VIGNETTE_TTL, peak_alpha },

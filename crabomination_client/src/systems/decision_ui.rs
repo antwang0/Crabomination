@@ -775,6 +775,7 @@ fn spawn_scry_modal(
             BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
 
@@ -962,6 +963,7 @@ fn spawn_order_triggers_modal(
             BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
 
@@ -1141,6 +1143,7 @@ fn spawn_damage_order_modal(
             BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
 
@@ -1312,6 +1315,7 @@ fn spawn_damage_assign_modal(
             BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
 
@@ -1478,6 +1482,7 @@ fn spawn_search_modal(
             BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
 
@@ -1659,6 +1664,7 @@ fn spawn_card_picker_modal(
             BackgroundColor(theme::OVERLAY_BG),
             Button,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
 
@@ -1788,6 +1794,7 @@ fn spawn_put_on_library_modal(
             // clickable through the unfilled regions of the root.
             bevy::picking::Pickable::IGNORE,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
 
@@ -1887,6 +1894,7 @@ fn spawn_mulligan_modal(
         // re-acquires picking just where its rect is.
         bevy::picking::Pickable::IGNORE,
         DecisionModal,
+        GlobalZIndex(theme::layer::MODAL)
     )).id();
 
     let panel = commands.spawn((
@@ -2231,7 +2239,7 @@ pub fn handle_decision_cancel(
     outbox: Option<Res<NetOutbox>>,
     mut log: ResMut<GameLog>,
     mut state: ResMut<DecisionUiState>,
-    keys: Res<bevy::input::ButtonInput<bevy::input::keyboard::KeyCode>>,
+    esc: Res<crate::systems::esc::EscFocus>,
     cancel: Query<&Interaction, (Changed<Interaction>, With<DecisionCancelButton>)>,
 ) {
     let Some(cv) = &view.0 else { return };
@@ -2239,7 +2247,7 @@ pub fn handle_decision_cancel(
         return;
     }
     let clicked = cancel.iter().any(|i| *i == Interaction::Pressed);
-    if !clicked && !keys.just_pressed(bevy::input::keyboard::KeyCode::Escape) {
+    if !clicked && !esc.owns(crate::systems::esc::EscSurface::DecisionPrompt) {
         return;
     }
     if let Some(outbox) = &outbox {
@@ -2587,6 +2595,7 @@ fn spawn_optional_modal(
             },
             BackgroundColor(theme::OVERLAY_BG),
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
     let panel = commands
@@ -2905,6 +2914,7 @@ fn spawn_choose_color_modal(
             },
             bevy::picking::Pickable::IGNORE,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
     let panel = commands
@@ -2996,6 +3006,7 @@ fn spawn_name_card_modal(
             },
             bevy::picking::Pickable::IGNORE,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
     let panel = commands
@@ -3109,6 +3120,7 @@ fn spawn_learn_modal(
             },
             bevy::picking::Pickable::IGNORE,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
     let panel = commands
@@ -3380,11 +3392,10 @@ pub fn spawn_mode_pick_ui(
 pub fn handle_mode_pick_buttons(
     outbox: Option<Res<NetOutbox>>,
     view: Res<CurrentView>,
-    keyboard: Res<ButtonInput<KeyCode>>,
     mut pending: ResMut<crate::game::PendingModalCast>,
     mut targeting: ResMut<crate::game::TargetingState>,
     mut legal_targets: ResMut<crate::game::LegalTargets>,
-    mut esc_consumed: ResMut<crate::systems::quality::EscConsumed>,
+    esc: Res<crate::systems::esc::EscFocus>,
     btns: Query<(&Interaction, &ModalCastButton), Changed<Interaction>>,
     cancels: Query<&Interaction, (Changed<Interaction>, With<ModalCastCancel>)>,
 ) {
@@ -3392,14 +3403,13 @@ pub fn handle_mode_pick_buttons(
         return;
     }
     // Esc dismisses the modal pick — sibling to the Cancel button.
-    // Eat the keypress via `EscConsumed` so the same Esc doesn't also
-    // close the settings panel / trigger any other Esc-bound action.
-    if keyboard.just_pressed(KeyCode::Escape) {
+    // Owning the press is what stops the same Esc from also closing the
+    // pause menu or clearing the keyboard cursor.
+    if esc.owns(crate::systems::esc::EscSurface::ModePick) {
         pending.card_id = None;
         pending.card_name.clear();
         pending.modes.clear();
         pending.prepare_source = None;
-        esc_consumed.0 = true;
         return;
     }
     for i in &cancels {
@@ -3602,6 +3612,7 @@ fn spawn_modal_panel(commands: &mut Commands, min_width: f32) -> Entity {
             },
             bevy::picking::Pickable::IGNORE,
             DecisionModal,
+            GlobalZIndex(theme::layer::MODAL)
         ))
         .id();
     let panel = commands

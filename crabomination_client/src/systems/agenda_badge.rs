@@ -18,7 +18,7 @@ use crate::systems::game_ui::InGameRoot;
 use crate::theme::{self, UiFonts};
 
 /// Same band as the P/T and token badges — popups and modals still win.
-const BADGE_Z: i32 = -1;
+const BADGE_Z: i32 = crate::theme::layer::CARD_OVERLAY;
 /// Tuck the chip just below the card's projected bottom-left corner.
 const BADGE_OFFSET_X: f32 = 8.0;
 const BADGE_OFFSET_Y: f32 = -6.0;

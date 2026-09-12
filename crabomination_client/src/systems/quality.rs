@@ -1,7 +1,9 @@
 //! Settings menu — animation-speed slider + render-quality preset
-//! toggles. Hidden by default; toggled by Esc via
-//! [`handle_settings_toggle`]. The on-screen Pass/End/Next/Export
-//! buttons live in `game_ui` and stay out of this menu.
+//! toggles. Hidden by default; opened and closed by Esc via
+//! [`close_settings_on_esc`] / [`open_settings_on_esc`], which sit at
+//! opposite ends of the `systems::esc` precedence order. The on-screen
+//! Pass/End/Next/Export buttons live in `game_ui` and stay out of this
+//! menu.
 
 use bevy::prelude::*;
 
@@ -35,15 +37,9 @@ pub struct SpeedSliderFill;
 pub struct SpeedSliderLabel;
 
 /// Whether the settings modal is open. Toggled by Esc — see
-/// `handle_settings_toggle` in this module.
+/// `close_settings_on_esc` / `open_settings_on_esc` in this module.
 #[derive(Resource, Default, Debug, Clone, Copy)]
 pub struct SettingsOpen(pub bool);
-
-/// Set to `true` for one frame by `handle_settings_toggle` when it
-/// consumed an Esc press, so the keyboard-cursor Esc handler can skip
-/// itself and the user gets a single, predictable action per press.
-#[derive(Resource, Default, Debug, Clone, Copy)]
-pub struct EscConsumed(pub bool);
 
 /// Root entity of the settings modal, used by `sync_settings_visibility`
 /// to flip the panel between `Display::Flex` and `Display::None`.
@@ -83,11 +79,14 @@ pub fn setup_quality_panel(
                 ..default()
             },
             BackgroundColor(theme::OVERLAY_BG),
-            // Sit above every other in-game overlay (the mulligan / decision
-            // modals carry no z-index, so they'd otherwise render on top of
-            // this since they spawn later). The escape menu is the pause
-            // surface — it must always be reachable and on top.
-            GlobalZIndex(1000),
+            // The escape menu is the pause surface — it must always be
+            // reachable and on top, so it takes the highest band in
+            // `theme::layer`. (This used to be a bare `1000`, chosen
+            // because the decision modals carried no z-index at all and
+            // would otherwise cover it by spawning later; they now sit at
+            // `layer::MODAL` and the ordering is declared rather than
+            // outrun.)
+            GlobalZIndex(theme::layer::ESCAPE_MENU),
             SettingsMenuRoot,
             crate::systems::game_ui::InGameRoot,
         ))
@@ -232,78 +231,46 @@ pub fn setup_quality_panel(
 
 // ─── Settings open/close plumbing ────────────────────────────────────
 
-/// Reset `EscConsumed` to false at the very start of each frame so
-/// the Esc-precedence chain has a clean slate to write to.
-pub fn reset_esc_consumed(mut consumed: ResMut<EscConsumed>) {
-    consumed.0 = false;
-}
-
-/// Toggle the settings modal on Esc. Precedence:
-/// * Esc while the modal is open → close (consumes Esc).
-/// * Esc while targeting / blocking / a cursor selection is active → no-op
-///   (those handlers own the press).
-/// * Otherwise → open the modal (consumes Esc).
+/// Close the settings modal on Esc, and on its own close button.
 ///
-/// Runs before the keyboard-cursor input system so that opening the
-/// modal in the same frame doesn't also clear the cursor selection.
-#[allow(clippy::too_many_arguments)]
-pub fn handle_settings_toggle(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    cursor: Res<crate::systems::kb_cursor::KeyboardCursor>,
-    targeting: Res<crate::game::TargetingState>,
-    blocking: Res<crate::game::BlockingState>,
-    text_input: crate::systems::input_guard::TextInputGuard,
-    alt_cast: Res<crate::game::AltCastState>,
-    pending_mana_cast: Res<crate::net_plugin::PendingManaCast>,
-    modal_cast: Res<crate::game::PendingModalCast>,
-    helper_tap: Res<crate::game::HelperTapState>,
-    spree_cast: Res<crate::game::SpreeCastState>,
-    split_cast: Res<crate::game::SplitCastState>,
-    pay_times: Res<crate::game::PayTimesState>,
+/// `EscSurface::PauseMenu` is first in the precedence order — the pause
+/// surface is the topmost thing on screen (`theme::layer::ESCAPE_MENU`),
+/// so it takes the press before any overlay, picker or board selection.
+pub fn close_settings_on_esc(
+    esc: Res<crate::systems::esc::EscFocus>,
     close_btn: Query<&Interaction, (Changed<Interaction>, With<SettingsCloseButton>)>,
     mut settings: ResMut<SettingsOpen>,
-    mut consumed: ResMut<EscConsumed>,
 ) {
-    // Close button always closes.
+    // Close button always closes, and does not touch the Esc press.
     if close_btn.iter().any(|i| *i == Interaction::Pressed) {
         settings.0 = false;
         return;
     }
-    if !keyboard.just_pressed(KeyCode::Escape) {
-        return;
-    }
-    if text_input.typing() {
-        return;
-    }
-    if settings.0 {
+    if esc.owns(crate::systems::esc::EscSurface::PauseMenu) {
         settings.0 = false;
-        consumed.0 = true;
-        return;
     }
-    // Don't open settings on top of an active modal/selection — those
-    // handlers want this Esc press.
-    //
-    // The manual-mana payment window is the one that bit: a cast the engine
-    // bounced with `ManualTapRequired` is held pending while the player taps
-    // sources, and Esc is how they back out. Missing from this list, Esc
-    // popped the settings panel over the half-finished cast instead, which
-    // reads as "Esc doesn't cancel". Every picker below owns its own Esc
-    // for the same reason.
-    if targeting.active
-        || blocking.selected_blocker.is_some()
-        || cursor.selection.is_some()
-        || alt_cast.pending.is_some()
-        || pending_mana_cast.0.is_some()
-        || modal_cast.card_id.is_some()
-        || helper_tap.pending.is_some()
-        || spree_cast.pending.is_some()
-        || split_cast.pending.is_some()
-        || pay_times.pending.is_some()
-    {
-        return;
+}
+
+/// Open the settings modal when an Esc press reaches the bottom of the
+/// precedence chain unclaimed.
+///
+/// `EscFocus::unclaimed` — and that condition *is* the logic. This used
+/// to run first and defer by hand, listing ten "is something else active"
+/// predicates: `targeting`, `blocking.selected_blocker`,
+/// `cursor.selection`, `alt_cast`, `pending_mana_cast`, `modal_cast`,
+/// `helper_tap`, `spree_cast`, `split_cast`, `pay_times`. Every new picker
+/// had to be remembered here, and one was not: the manual-mana payment
+/// window was missing, so Esc popped the settings panel over a
+/// half-finished cast instead of backing out of it — "Esc doesn't
+/// cancel". Asking whether *anything* claimed the press cannot forget a
+/// surface, because it no longer needs to know about any of them.
+pub fn open_settings_on_esc(
+    esc: Res<crate::systems::esc::EscFocus>,
+    mut settings: ResMut<SettingsOpen>,
+) {
+    if esc.unclaimed() {
+        settings.0 = true;
     }
-    settings.0 = true;
-    consumed.0 = true;
 }
 
 /// Show / hide the settings modal whenever `SettingsOpen` flips.

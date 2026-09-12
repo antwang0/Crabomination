@@ -610,7 +610,7 @@ fn enter_drafting(
         // PositionType::Absolute already escapes the flex flow, but
         // bumping it ensures the tooltip wins over a freshly-spawned
         // grid that lands on a higher stacking context.
-        GlobalZIndex(100),
+        GlobalZIndex(crate::theme::layer::SCREEN_FLASH),
     ));
 }
 

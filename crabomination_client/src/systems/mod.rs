@@ -6,6 +6,7 @@ pub mod counter_coins;
 pub mod counter_tooltip;
 pub mod debug_console;
 pub mod decision_ui;
+pub mod esc;
 pub mod draft;
 pub mod export_prompt;
 pub mod game_over;

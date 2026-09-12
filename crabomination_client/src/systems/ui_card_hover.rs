@@ -93,6 +93,6 @@ pub fn ui_card_hover_preview(
         Pickable::IGNORE,
         UiCardHoverPreview { path },
         crate::systems::game_ui::InGameRoot,
-        GlobalZIndex(30),
+        GlobalZIndex(theme::layer::HOVER_PREVIEW),
     ));
 }

@@ -125,7 +125,7 @@ pub fn sync_chat_ui(
                     ChatInputBar,
                     crate::systems::game_ui::InGameRoot,
                     Pickable::IGNORE,
-                    GlobalZIndex(46),
+                    GlobalZIndex(crate::theme::layer::CHAT),
                 ))
                 .with_children(|row| {
                     row.spawn((
