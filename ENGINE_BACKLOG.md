@@ -73,6 +73,38 @@ the handoff.
 
 # Bugs & robustness
 
+## CLOSED WITH A REASON 2026-09-12 — do NOT build a `produced_mana` column; the oracle field is not the card's own mana ability
+
+The printed-body audit's five oracle-backed columns (cost, P/T, type line,
+subtypes, keywords) all worked because the oracle field IS the card's own
+value. The sixth candidate looked like the best of them — the bot's mana
+estimate is a hot path and a land that taps for the wrong colour distorts every
+affordability decision it makes — and it does not work, for a reason worth
+writing down rather than rediscovering.
+
+**Scryfall's `produced_mana` counts mana the card CAUSES, not mana it taps
+for.** A prototype over 2,917 cards read 707 and disagreed on 355, and the
+disagreements are the field's meaning rather than the reader's gaps:
+
+  * **Brass's Bounty** — `BGRUW`. It makes Treasure tokens; the *tokens* tap
+    for mana, and the card taps for none.
+  * **Heartbeat of Spring** — `BGRUW`. "Lands tap for an additional mana": it
+    produces nothing itself.
+  * **Mark of Sakiko**, **Sakiko, Mother of Summer** — `G`. An Aura and a lord
+    that give somebody ELSE a mana ability.
+  * **Astrolabe** — `BGRUW`, off a "you may spend mana as though it were mana
+    of any colour" rider.
+
+There is no structural rule in the oracle data that separates those from "this
+permanent has a mana ability", which is what the engine models — so the column
+could only ever be an allowlist of every such card, which is not a gate. The
+remaining half of the prototype's gap (`nosub` 2,465, `payload` 187) is
+readable with the helper-following the other columns already have, and closing
+it would still leave the 355.
+
+If the mana side is ever worth auditing, the target is the engine's own
+`ManaPayload` against the card's *oracle text*, not against `produced_mana`.
+
 ## OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable
 
 `cube` seed **1018**, archetype 0 (`cube WG`), 2 games of 3,200 — the only

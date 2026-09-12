@@ -2873,6 +2873,53 @@ fix     two cards were waiting on primitives that had already landed (`85af78d7`
         discard this' event" (the Sand Golem family's `OpponentCausedYouToDiscard`), and Intimidation Campaign's note
         claimed an omission two fields above the trigger that implements it. `audit_doc_drift` reads the class as a
         column now — a doc claim whose object is a backticked identifier the engine declares — at 0.
+fix     the subtype half of the type line was never a column, and 22 cards were wrong (`9262d5b9`). Three passes of
+        `audit_printed_body` read the cost, the P/T and the CARD TYPES and left the subtypes alone ("the enums are
+        per-kind and the mapping is a second audit"), and every kind had a LIVE CONSUMER waiting:
+        `Keyword::Splice(cost, SpellSubtype::Arcane)` checks the host's `spell_subtypes` (25 splice cards), so Kodama's
+        Reach, Through the Breach, Peer Through Depths and Goryo's Vengeance could not be spliced onto; `Effect::Learn`
+        filters the sideboard on `Lesson`, so Improvisation Capstone and Illuminate History could not be Learned and
+        Brilliant Plan and Reduce to Ashes — which print NO subtype — could; `HasPlaneswalkerType` is read in three
+        places, and Jace, the Mind Sculptor was a `Jace` no filter could see; and a `Kindred` card's creature type is
+        the whole point of the card type (CR 308.1), which Kozilek's Command, All Is Dust and Crib Swap (a CHANGELING
+        with nothing to be every type of) had none of. 18 cards gained the subtype they print, 2 lost one they do not,
+        2 needed a `PlaneswalkerSubtype` variant that did not exist, and `WanderingEmperor` went the other way: the
+        oracle says that card prints no planeswalker type, no card used the variant, and a variant that can never be
+        right is worse than none. `a_kindred_card_always_carries_the_creature_type_it_shares` gates the half that needs
+        no oracle and cannot skip — its first cut also asserted the planeswalker half and was WRONG, because The
+        Wanderer, The Wandering Emperor and The Eternal Wanderer print "Legendary Planeswalker" with nothing after it.
+fix     six idioms carry a subtype and the reader followed two (`94478cd6`). The other four in order of cost: a BOUND
+        PARAMETER (`fn creature(.., ct, ..)`'s `creature_types: ct`, 2,626 factories), a helper that RETURNS a
+        `Subtypes` (600-odd), a helper that is itself a pure call, and an `..CardDefinition { .. }` inner-literal base.
+        Subtypes 12,142 -> 16,748 factories priced. **And one column's skip is not the others'**: the loop
+        `continue`d on a cost it could not read, so 900-odd cards behind a hard cost chain were dropped from the TYPE
+        and SUBTYPE columns too — three columns' coverage decided by the hardest one. The type line reads 583 more
+        factories than the cost does now. Two readings were wrong the other way and reported CORRECT cards, both
+        visible only once the columns were independent: a factory that builds a second face first had the BACK face
+        read as the card (Bronzehide Lion as an `Enchantment — Aura`), and a SHORTHAND sub-field read as EMPTY rather
+        than unreadable (34 correct Allies and Mounts).
+fix     the printed KEYWORDS are a column, and it reaches combat (`6114ec26`). Combat walks `keywords` on every block,
+        every damage assignment and every evasion check of every self-play game, so a wrong one is paid for millions of
+        times. Seven defects of 17 rows: **Kurkesh, Onakke Ancient had FLYING** (a 4/3 Ogre Spirit unblockable by the
+        ground); **Glorybringer dealt its 4 damage for free** — the damage is the EXERT bonus and the keyword gating it
+        was missing, so the dragon fired an unconditional attack trigger and untapped anyway; **Dread Drone and Tar
+        Snare were `Devoid`**, which made two BLACK Rise-of-the-Eldrazi cards colorless for protection, devotion and
+        every "black creature" filter (the oracle's `colors` is `["B"]` for both, and devoid was printed five years
+        later); Warden of Geometries and Warping Wail carried it harmlessly and still wrongly; and **Stonework
+        Packbeast and Tajuru Paragon were `Changeling`** where the card says "is also a Cleric, Rogue, Warrior, and
+        Wizard" — four types, not every one, so the Packbeast was a Sliver to a Sliver lord. Eight more rows are
+        `REVIEWED_KEYWORDS`, a keyword carried instead of the printed wording it is equivalent to (Cockatrice's
+        deathtouch for "destroy that creature at end of combat"): a reviewer's judgement once, not every run.
+        ⚠ Two rules keep it honest — only the evergreen subset is compared (the oracle array mixes in keyword ACTIONS
+        and ability words), and that array counts keywords the card GRANTS, so the MISSING direction reads the printed
+        keyword LINES instead. Every finding came from the other direction.
+tool    the injections are RUNNABLE now (`scripts/audit_printed_body_injections.py`, 12 / 12 as expected, three of them
+        NEGATIVE tests where a row would be the bug). **Five injections silently passed at some point in this run and
+        all five were one mistake — a resolver reading the wrong definition**: `fn legend` taken from whichever file
+        came first; "no literal at all" read as unreadable, which made the base recursion dead for every pure-helper
+        factory; a cost chain the reader gave up on skipping the card out of three columns; a `let` literal before the
+        returned one; and a shorthand field read as empty. A gate that cannot fail is worse than no gate, so the gate
+        has a gate.
 perf    none, and measured as none rather than assumed. Every engine change here is a cast-time targeting walk, a
         suspend-path clone that already happened, or a saturating add where a plain one was. `--bench` counters
         byte-identical at every tip of the run, including after the two card fixes (neither card is in the `fixed`
@@ -2894,17 +2941,22 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1048..1059   5ece833a      36    177,600       0       0     0      6
   1060..1071   5ece833a      36    177,600       2       2*    0      0
   1072..1081   6163d94d      30    148,000       0       4*    0      4
+  1082..1091   94478cd6      30    148,000       0       4*    0     10
+  1092..1101   6114ec26      30    148,000       0       0     0     20
 ```
 
-**153 cells / 754,800 games, 0 stuck on every one**, and every cap is the
+**213 cells / 1,050,800 games, 0 stuck on every one**, and every cap is the
 **already-diagnosed Beacon of Immortality board** — two at `cube` 1069, four
-more at `cube` 1076 — not a new defect and not to be re-diagnosed.
+more at `cube` 1076, and four at seed 1090 (two on `cube`, two on `all`) — not
+a new defect and not to be re-diagnosed.
 `CRAB_LIFE_WATCH=100000` prints the same doubling series the instrument pinned
 it with at 1018 (126,961 -> 253,922 -> 507,841 -> … -> `i32::MAX`, one doubling
 every other turn), both seats saturated at turn 259 with libraries of 0 and 1.
 The Beacon is not on the board in the cap diagnostic because it shuffles ITSELF
-back: it is the one card left in p1's library. **Three seeds in ~2 M swept
-games**, which makes it a property of the cube pool rather than of a seed —
+back: it is the one card left in p1's library. **Four seeds in ~2.2 M swept
+games, and the 1090 pair proves it is not even cube-only** — the same board
+turns up on `all` — which makes it a property of the POOL rather than of a
+seed —
 and at `220af0dc` that is what the sweep now PRINTS. `cap_diagnosis`
 (`recommend.rs`) labels a seat past `SCALE_CEILING * 1_000` life
 `[SATURATED LIFE — the known unwinnable board, not a new defect]`, and
@@ -2915,7 +2967,7 @@ end. **A cap WITHOUT the label is the signal** — the point is that the sweep
 stops crying wolf on a board nobody is going to change, not that caps stopped
 mattering.
 
-A draw is CR 104.4, not a defect. Seed frontier **1082**. One cell is a
+A draw is CR 104.4, not a defect. Seed frontier **1102**. One cell is a
 different kind of outlier and it is the entry below.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
@@ -2954,14 +3006,23 @@ board", never as "the actor loses this much"** — re-run it on `release-fast`
 before believing a throughput number. And when a cell's wall clock is the
 thing being budgeted, the lever is the gate audits, not the engine.
 
-**Gates at the closing tip `220af0dc`** (`release-fast`): suite
-**19,456 / 0 / 5** with `CRAB_ANSWER_LOG=strict` exported (116.9 s), clippy
+**Gates at the closing tip `6114ec26`** (`release-fast`): suite
+**19,457 / 0 / 5** with `CRAB_ANSWER_LOG=strict` exported (115.6 s), clippy
 **0** over the workspace (`--all-targets`), `--bench` **195,806 decisions /
 27.49 turns / 611.9 decisions-per-game / 0 stalls** — the committed counters,
 byte-identical — `determinism ok`, `thread_determinism ok (3 vs 1)`,
-`games_per_s` 306.52, peak RSS 29.1 MiB, `bin_bytes` 127,002,584. The three
-commits after `5ece833a` are two card riders and a diagnostic string, so the
-counters are the behaviour check for them and they do not move.
+`games_per_s` 288.26, peak RSS 31.2 MiB, `bin_bytes` 126,986,296.
+`audit_printed_body` **0 / 0 / 0 / 0 / 0** over 16,483 priced + 17,066 type
+lines + 16,748 subtypes + 16,601 keywords, and its injection battery **12 / 12
+as expected**. ⚠ The counters not moving is NOT evidence the 29 card fixes are
+inert: the `--bench` pool is four FIXED decks and none of the changed cards is
+in them. The behaviour evidence is the suite — `stonework_packbeast_is_four_\
+named_roles_not_a_changeling` and Glorybringer's `skip_next_untap` assertion
+are new and both fail on the old catalog.
+
+**Gates at the mid-session tip `220af0dc`** (`release-fast`): suite
+**19,456 / 0 / 5**, clippy **0**, the same `--bench` counters,
+`games_per_s` 306.52, peak RSS 29.1 MiB, `bin_bytes` 127,002,584.
 
 **Gates at the mid-session tip `5ece833a`** (`release-fast`): suite
 **19,453 / 0 / 5** with `CRAB_ANSWER_LOG=strict` exported, clippy **0** over the
