@@ -120,8 +120,16 @@ FIELD_WORD = {
     "case": "case",
     "soulbond_bonus": "soulbond",
     "kicker_action_cost": "kicker",
+    "kicker_options": "kicker",
     "flashback_additional_cost": "flashback",
+    "flashback_condition": "flashback",
     "prototype": "prototype",
+    # ⚠ `miracle` is the alt-cast vehicle (`maybe_grant_miracle` reads it) and
+    # it was never listed, so every card that HAS Miracle read as missing it —
+    # Terminus, Temporal Mastery, Entreat the Angels and four more. The
+    # `CardDefinition` field list is 120 names; diff it against this map when
+    # a bucket looks too big to be real.
+    "miracle": "miracle",
 }
 
 # Deliberate modellings, checked once so they do not have to be re-checked.
@@ -161,7 +169,8 @@ ALLOWED = {
 # printed keyword is spelled some other way. They answer the MISSING question
 # and must not answer the INVENTED one.
 FIELD_ONLY_MISSING = {
-    "affinity_graveyard_filter", "kicker_action_cost", "flashback_additional_cost",
+    "affinity_graveyard_filter", "kicker_action_cost", "kicker_options",
+    "flashback_additional_cost", "flashback_condition",
     "saga_chapters", "room", "case", "station", "gift", "soulbond_bonus",
 }
 
