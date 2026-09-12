@@ -104,6 +104,9 @@ sixty-seventh pass, so don't re-take that.
    target creature -> target permanent) — and **two of the three had a CORRECT DUPLICATE of the same card shipped beside them**, which is why the catalog
    read clean while the pool carried both. `scripts/audit_card_names.py` is the standing column: 0 spelling / 0 unknown / 0 duplicate / 0 string-slug
    mismatch, from 2 / 12 / 5 / 1. ⚠ A rename is a VOCAB edit (`vocab_snapshot.rs` is append-only); none of these names is in the snapshot.
+   (d) **All five duplicate pairs are gone** — and reading them was worth it: both copies of Kroxa and of Uro were in the CUBE POOL, so a seeded cube
+   deck could draw two of one legend, and `kroxa_titan_of_deaths_hunger` discarded from each PLAYER where the card says each opponent. ⚠ **That commit
+   changed the cube pool**; no vocab index and no golden trace moved with it.
 4. **Next, in order.** (a) **Sweep from 1162 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
@@ -121,10 +124,11 @@ sixty-seventh pass, so don't re-take that.
    documented residue (its triage is in INCOMPLETE_CARDS, five named rows so nobody walks them a third time); `audit_oracle_verbs` is 56 from 172 and
    what is left is three named shapes (a replacement effect the oracle words with the verb, a mechanic with no primitive, the deathtouch family).
    Re-run them, read a NEW row, do not re-walk the standing ones.
-   (d) ✅ **The two oracle-backed keyword readers are one vocabulary now** — `EVERGREEN` carries Ward / Prowess / Hexproof / Protection, with a RULE
-   (`PAYLOADED`) rather than twelve rows for the prose variants. What is left of that item: **three duplicate pairs are filed, not fixed** — Kroxa, Uro
-   and Niv-Mizzet, each implemented twice in `modern.rs` with different primitives. Picking the survivor is a body-by-body read, not a delete; they are
-   `REVIEWED_DUPLICATES` in `audit_card_names.py`, so a NEW pair is the signal.
+   (d) ✅ **The two oracle-backed keyword readers are one vocabulary now** — `EVERGREEN` carries Ward / Prowess / Hexproof / Protection with a RULE
+   (`PAYLOADED`) rather than twelve rows for the prose variants — and ✅ **all five duplicate NAME pairs are gone**, not allowlisted: both copies of
+   Kroxa and of Uro were in the CUBE POOL (so a deck could draw two of one legend) and one of them discarded from each PLAYER where the card says each
+   opponent. ⚠ That commit CHANGED THE CUBE POOL — a seeded cube deck is not the deck the same seed built before it — while moving no vocab index and no
+   golden trace.
    (e) ⚠ **Do NOT build a `produced_mana` column** — ENGINE_BACKLOG's CLOSED-WITH-A-REASON entry: Scryfall's field counts mana the card CAUSES (Brass's
    Bounty's Treasures, Heartbeat of Spring's rider), so 355 of 707 prototype rows were the field's meaning, not the reader's gaps.
    (f) ⚠ **The seven-card nesting is RETIRED** and (g) ⚠ **the 8 loop arms are CLOSED WITH A REASON** — do not build the parking redesign or the

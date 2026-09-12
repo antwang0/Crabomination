@@ -126,10 +126,30 @@ what caught Surging Æther. ⚠ **A rename is a VOCAB edit**
 (`server/vocab_snapshot.rs` is append-only); none of these three names is in
 the snapshot, so no embedding index moved and no net needs retraining.
 
-**OPEN, filed not fixed: three duplicate pairs** — Kroxa, Uro and Niv-Mizzet,
-each implemented twice in `modern.rs` with different primitives. Picking the
-survivor is a body-by-body read rather than a delete. They are
-`REVIEWED_DUPLICATES` in the script, so a NEW pair is the signal.
+**AND THE THREE PAIRS THAT LOOKED LIKE A FOLLOW-UP WERE WORSE THAN FILED.**
+Kroxa, Uro and Niv-Mizzet were each implemented twice in `modern.rs` /
+`recent91.rs` with different primitives, filed as "a body-by-body read rather
+than a delete". Reading them:
+
+  * **both copies of Kroxa and both of Uro are in `cube_pool_all`** — the two
+    named factories in the main list, the two `*_titan_*` ones pushed in later
+    — so a seeded cube deck could draw two of one legend and the legend rule
+    would kill one on arrival, and the pool counted each card twice;
+  * **`kroxa_titan_of_deaths_hunger` discarded from `EachPlayer`**, where the
+    card reads "each opponent discards a card". Its controller discarded too,
+    and the test that called it had the same error in its own comment;
+  * the two `*_titan_*` copies also fused the card's TWO triggered abilities
+    into one `Seq`, which forces the order the controller is supposed to choose
+    (CR 603.3b) and removes the response window between them.
+
+All three deleted, with their `cube.rs` and `all_factories.rs` entries; the
+tests moved to the survivors and the Kroxa one now asserts the controller keeps
+their card. ⚠ **THE CUBE POOL CHANGED** — a seeded cube deck is not the deck
+the same seed built before it — but **no net needs retraining**:
+`vocab_snapshot.rs` keys on the NAME, both copies shipped the same name, and
+its contract keeps an index whether or not the name is still in the pool.
+Golden traces are unmoved. `REVIEWED_DUPLICATES` is empty, which is the
+ratchet: five pairs were live when the column opened and all five are gone.
 
 ## FIXED 2026-09-12 (twenty-first find) — colour is DERIVED, and three shipped cards print one their mana cost cannot carry
 
