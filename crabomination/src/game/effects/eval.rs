@@ -633,8 +633,7 @@ impl GameState {
                     .collect();
                 ids.iter()
                     .filter_map(|id| self.computed_permanent(*id))
-                    .map(|cp| cp.toughness.max(0))
-                    .sum()
+                    .fold(0i32, |a, cp| a.saturating_add(cp.toughness.max(0)))
             }
             Value::TotalPowerControlled => {
                 let ids: Vec<_> = self
@@ -645,8 +644,7 @@ impl GameState {
                     .collect();
                 ids.iter()
                     .filter_map(|id| self.computed_permanent(*id))
-                    .map(|cp| cp.power.max(0))
-                    .sum()
+                    .fold(0i32, |a, cp| a.saturating_add(cp.power.max(0)))
             }
             Value::SourceCrewerCount => ctx
                 .source
@@ -2800,7 +2798,7 @@ impl GameState {
                     .filter_map(|a| self.battlefield_find(a.attacker).map(|c| (a.attacker, c.controller)))
                     .filter(|(_, ctrl)| *ctrl == p)
                     .filter_map(|(id, _)| self.computed_permanent(id).map(|cp| cp.power.max(0)))
-                    .sum();
+                    .fold(0i32, i32::saturating_add);
                 total as u32 >= *at_least
             }
             Predicate::AttackedWithCountAtLeast { who, at_least } => {
@@ -2966,7 +2964,7 @@ impl GameState {
                     .iter()
                     .filter(|c| c.controller == p && c.definition.is_creature())
                     .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
-                    .sum();
+                    .fold(0i32, i32::saturating_add);
                 total >= 8
             }
             Predicate::ControlsEachGreatestPowerCreature { who } => {
@@ -3984,7 +3982,8 @@ impl GameState {
                         card.definition.is_creature() && card.power() > card.definition.power
                     }
                     R::PowerPlusToughnessAtMost(n) => {
-                        card.definition.is_creature() && card.power() + card.toughness() <= *n
+                        card.definition.is_creature()
+                    && card.power().saturating_add(card.toughness()) <= *n
                     }
                     R::PowerLessThanSource => {
                         source
@@ -4864,7 +4863,8 @@ impl GameState {
                 card.definition.is_creature() && card.power() > card.definition.power
             }
             R::PowerPlusToughnessAtMost(n) => {
-                card.definition.is_creature() && card.power() + card.toughness() <= *n
+                card.definition.is_creature()
+                    && card.power().saturating_add(card.toughness()) <= *n
             }
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
             R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)

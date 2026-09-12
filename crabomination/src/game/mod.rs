@@ -18773,7 +18773,8 @@ impl GameState {
                 return Err(GameError::CardIsTapped(cid));
             }
             let base = if self.crew_saddle_uses_toughness(cid) { cp.toughness } else { cp.power };
-            total_power += (base + self.crew_saddle_power_bonus(cid)).max(0);
+            total_power = total_power
+                .saturating_add(base.saturating_add(self.crew_saddle_power_bonus(cid)).max(0));
         }
         if (total_power as u32) < crew_n {
             return Err(GameError::SelectionRequirementViolated);
@@ -18859,7 +18860,8 @@ impl GameState {
                 return Err(GameError::CardIsTapped(cid));
             }
             let base = if self.crew_saddle_uses_toughness(cid) { cp.toughness } else { cp.power };
-            total_power += (base + self.crew_saddle_power_bonus(cid)).max(0);
+            total_power = total_power
+                .saturating_add(base.saturating_add(self.crew_saddle_power_bonus(cid)).max(0));
         }
         if (total_power as u32) < saddle_n {
             return Err(GameError::SelectionRequirementViolated);

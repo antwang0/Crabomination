@@ -5040,7 +5040,8 @@ fn decide_choose_cards(
                 let c = state.battlefield.iter().find(|c| c.id == *id)?;
                 // Only enemy creatures; prefer untapped (tapping a tapped
                 // creature is wasted) and higher power.
-                (!state.same_team(c.controller, seat)).then_some((*id, c.power() + if c.tapped { -100 } else { 0 }))
+                (!state.same_team(c.controller, seat))
+                    .then_some((*id, c.power().saturating_add(if c.tapped { -100 } else { 0 })))
             })
             .collect();
         ranked.sort_by_key(|b| std::cmp::Reverse(b.1));
@@ -8965,9 +8966,9 @@ fn pick_saddle(state: &GameState, seat: usize) -> Option<GameAction> {
                 break;
             }
             picked.push(*id);
-            total += p;
+            total = total.saturating_add(*p);
             if *can_attack {
-                attacker_power += p;
+                attacker_power = attacker_power.saturating_add(*p);
             }
         }
         if total < saddle_n {
@@ -9440,8 +9441,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
                 && !c.has_keyword(&Keyword::Defender)
                 && !c.has_keyword(&Keyword::CantAttack)
         })
-        .map(|c| c.power().max(0))
-        .sum();
+        .fold(0i32, |a, c| a.saturating_add(c.power().max(0)));
     let racing = total_raw_power > 0 && opp_clock > 0 && {
         let our_turns = turns_to_lethal(opp_life, total_raw_power);
         let their_turns = turns_to_lethal(state.effective_life(seat), opp_clock);
@@ -9704,7 +9704,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
         .filter_map(|id| {
             state.battlefield.iter().find(|c| c.id == *id).map(|c| c.power())
         })
-        .sum();
+        .fold(0i32, i32::saturating_add);
     let mut attacks: Vec<Attack> = Vec::with_capacity(attackers.len());
     for (pw_id, loyalty) in walker_targets {
         // Only redirect when we can plausibly finish it
@@ -11697,13 +11697,12 @@ fn block_chain_candidate(
             }
         }
         for (j, (a, _)) in attackers.iter().enumerate() {
-            let a_tough = a.toughness() - a.damage as i32;
+            let a_tough = a.toughness().saturating_sub(a.damage.min(i32::MAX as u32) as i32);
             let already: i32 = current
                 .iter()
                 .filter(|(_, aid)| *aid == a.id)
                 .filter_map(|(bid, _)| state.battlefield_find(*bid))
-                .map(|b| b.power().max(0))
-                .sum();
+                .fold(0i32, |a, b| a.saturating_add(b.power().max(0)));
             if already >= a_tough {
                 continue;
             }
@@ -11714,7 +11713,7 @@ fn block_chain_candidate(
                     continue;
                 }
                 gang.push(blockers[i].0.id);
-                dmg += blockers[i].0.power().max(0);
+                dmg = dmg.saturating_add(blockers[i].0.power().max(0));
                 if blockers[i].1.keywords().has_kw(&Keyword::Deathtouch) || dmg >= a_tough {
                     break;
                 }
@@ -11848,7 +11847,7 @@ fn chump_block_candidates(
             state.computed_permanent(a.attacker).map(|cp| (a.attacker, cp.power.max(0)))
         })
         .collect();
-    let total: i32 = incoming.iter().map(|(_, p)| p).sum();
+    let total: i32 = incoming.iter().fold(0i32, |a, (_, p)| a.saturating_add(*p));
     // Two clean swings from dead is where a chump starts buying the
     // turn that matters; above that, the card is worth more.
     if total <= 0 || total * 2 < state.effective_life(seat) {
@@ -11937,7 +11936,7 @@ fn gang_block_candidates(
             Some(cp) => cp.keywords().has_kw(&Keyword::Flying),
             None => atk.has_keyword(&Keyword::Flying),
         };
-        let a_tough = atk.toughness() - atk.damage as i32;
+        let a_tough = atk.toughness().saturating_sub(atk.damage.min(i32::MAX as u32) as i32);
         let mut gang: Vec<CardId> = Vec::new();
         let mut dmg = 0i32;
         for (b, bcp) in &idle {
@@ -11949,7 +11948,7 @@ fn gang_block_candidates(
                 continue;
             }
             gang.push(b.id);
-            dmg += b.power().max(0);
+            dmg = dmg.saturating_add(b.power().max(0));
             if bcp.keywords().has_kw(&Keyword::Deathtouch) || dmg >= a_tough {
                 break;
             }
@@ -12559,7 +12558,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 poison: {
                     let mut p = 0u32;
                     if a.has_keyword(&Keyword::Infect) {
-                        p += a.power().max(0) as u32;
+                        p = p.saturating_add(a.power().max(0) as u32);
                     }
                     p += a
                         .definition
@@ -12600,7 +12599,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 && let Some(a) = state.battlefield.find_by_id(atk.attacker)
             {
                 let e = pw_attackers.entry_or_default(pw);
-                e.0 += a.power().max(0) as u32;
+                e.0 = e.0.saturating_add(a.power().max(0) as u32);
                 e.1.push(atk.attacker);
             }
         }

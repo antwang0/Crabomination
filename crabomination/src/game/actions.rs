@@ -1638,8 +1638,9 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             .battlefield
             .iter()
             .filter(|c| c.controller == caster && c.definition.is_creature())
-            .map(|c| c.power().max(0) as u32)
-            .sum();
+            // A power saturates at `i32::MAX`, so a board of two such
+            // creatures overflows a plain `sum()`.
+            .fold(0u32, |a, c| a.saturating_add(c.power().max(0) as u32));
         reduction = reduction.saturating_add(total);
     }
     // Card-intrinsic "costs {1} less for each creature card in your graveyard"
@@ -17696,7 +17697,7 @@ impl GameState {
                     cost_sac_card = Some(card_id);
                     cost_sac_mv = mv;
                     cost_sac_count += 1;
-                    cost_sac_total_power += p_val;
+                    cost_sac_total_power = cost_sac_total_power.saturating_add(p_val);
                     // Cache the dying card's snapshot so AnotherOfYours
                     // triggers and type-filter predicates fire off
                     // sacrifices even when the dying card is a token.
@@ -17814,9 +17815,9 @@ impl GameState {
         for other_cid in sac_other_picks {
             let sac_power = self.battlefield_find(other_cid).map(|c| c.power()).unwrap_or(0);
             self.sacrificed_count += 1;
-            self.sacrificed_total_power += sac_power;
+            self.sacrificed_total_power = self.sacrificed_total_power.saturating_add(sac_power);
             cost_sac_count += 1;
-            cost_sac_total_power += sac_power;
+            cost_sac_total_power = cost_sac_total_power.saturating_add(sac_power);
             let is_creature = self
                 .battlefield_find(other_cid)
                 .map(|c| c.definition.is_creature())

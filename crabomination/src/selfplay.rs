@@ -784,7 +784,7 @@ fn play_recorded_game_mcts_inner(
             TrainRow {
                 state,
                 win: if seat == winner { 1.0 } else { 0.0 },
-                life_diff: ((life[seat] - life[1 - seat]) as f32 / 20.0).clamp(-1.0, 1.0),
+                life_diff: life_diff_label(life[seat], life[1 - seat]),
                 game_len: (turns.saturating_sub(turn)) as f32 / 15.0,
                 traj: traj_base | seat as u32,
                 ply: p,
@@ -794,6 +794,18 @@ fn play_recorded_game_mcts_inner(
         })
         .collect();
     RecordedGame { rows, heur, winner: Some(winner), turns, stop }
+}
+
+/// The row's life-difference label, in `[-1, 1]`.
+///
+/// ⚠ `i64`, not `i32`. Both totals saturate at the rules layer — `(-291)`'s
+/// Beacon board leaves one seat at `i32::MAX`, and a seat that then loses to a
+/// saturated power is at the other end — so the difference of the two
+/// overflows before the clamp ever sees it: a panic under `overflow-checks`
+/// (the actor's own `overflow` profile) and, in release, a label with the
+/// wrong SIGN on the most lopsided board in the run.
+fn life_diff_label(mine: i32, theirs: i32) -> f32 {
+    ((mine as i64 - theirs as i64) as f32 / 20.0).clamp(-1.0, 1.0)
 }
 
 /// Raw per-seat stats at snapshot time: `[life diff, board-power diff,
@@ -806,12 +818,15 @@ fn snapshot_stats(g: &GameState, seat: usize) -> [f32; 4] {
         if c.definition.is_creature() {
             let side = if c.controller == seat { 0 } else { 1 };
             creatures[side] += 1;
-            power[side] += c.power().max(0);
+            power[side] = power[side].saturating_add(c.power().max(0));
         }
     }
     [
-        (g.players[seat].life - g.players[opp].life) as f32,
-        (power[0] - power[1]) as f32,
+        // The same saturation the encoder guards (`encode::scaled`): a power
+        // and a life total are both unbounded rules quantities, so the per-side
+        // total and the difference of two of them both saturate here.
+        (g.players[seat].life.saturating_sub(g.players[opp].life)) as f32,
+        (power[0].saturating_sub(power[1])) as f32,
         (creatures[0] - creatures[1]) as f32,
         g.players[opp].hand.len() as f32,
     ]
@@ -819,6 +834,37 @@ fn snapshot_stats(g: &GameState, seat: usize) -> [f32; 4] {
 
 #[cfg(test)]
 mod tests {
+
+    /// A saturated board goes through the ACTOR's own numbers without
+    /// overflowing — the twin of
+    /// `encode::tests::a_saturated_power_encodes_as_a_bounded_feature`, one
+    /// consumer over. `snapshot_stats` sums a power per side and differences
+    /// two life totals, and both quantities saturate at the rules layer
+    /// (Exponential Growth, Beacon of Immortality). The test harness always
+    /// unwinds, so an overflow fails here rather than aborting.
+    #[test]
+    fn a_saturated_board_does_not_overflow_the_actor_stats() {
+        use crate::card::{CardId, CardInstance};
+        let mut g = crate::game::two_player_game();
+        g.players[0].life = i32::MAX;
+        g.players[1].life = i32::MIN + 1;
+        for (i, seat) in [(0usize, 0usize), (1, 0), (2, 1)] {
+            let mut inst =
+                CardInstance::new(CardId(930 + i as u32), crate::catalog::grizzly_bears(), seat);
+            inst.controller = seat;
+            inst.pump(i32::MAX, i32::MAX);
+            inst.pump(i32::MAX, i32::MAX);
+            g.battlefield.push(inst);
+        }
+        for seat in 0..2 {
+            let s = super::snapshot_stats(&g, seat);
+            assert!(s.iter().all(|x| x.is_finite()), "seat {seat}: {s:?}");
+        }
+        // And the row label the same board produces stays in range with the
+        // sign it should have.
+        assert_eq!(super::life_diff_label(i32::MAX, i32::MIN + 1), 1.0);
+        assert_eq!(super::life_diff_label(i32::MIN + 1, i32::MAX), -1.0);
+    }
 
     #[test]
     fn extra_packs_deepen_the_pool_and_name_the_handicap() {

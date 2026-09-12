@@ -832,6 +832,107 @@ fn every_pump_goes_through_the_saturating_helper() {
     );
 }
 
+/// No engine site SUMS or DIFFERENCES a saturating rules quantity with plain
+/// arithmetic.
+///
+/// The twin of `every_pump_goes_through_the_saturating_helper` one level down.
+/// That one keeps the *write* to a P/T bonus from wrapping; this one keeps the
+/// **consumers** from wrapping on top of it. A power saturates at `i32::MAX`
+/// (Exponential Growth doubles one `{X}` times), and a life total does too
+/// (Beacon of Immortality), so `a.power() + b.power()`, `sum()` over a board's
+/// powers, and `mine.life - theirs.life` all overflow: a panic under
+/// `overflow-checks` — which is the sweep binary and the actor's own
+/// `overflow` profile — and, in `release`, a training label or a block plan
+/// computed from a wrapped number.
+///
+/// Fifteen sites were written that way, all of them reachable from bot
+/// self-play: the actor's own `life_diff` and per-side power totals
+/// (`selfplay.rs`, which feeds `TrainRow`), the block planner's gang-damage
+/// sums, the crew/saddle totals, `TotalPowerControlled` and three other
+/// `Value`/`Predicate` sums, and the cost reduction that counts a board's
+/// power. `saturating_add` / `saturating_sub` / `fold(0, saturating_add)`
+/// everywhere; the difference of two life totals widens to `i64` instead,
+/// because both ends saturate and the clamp is applied after.
+///
+/// ⚠ Test modules are skipped by BRACE MATCHING, not by cutting the file at
+/// the first `#[cfg(test)]`: `bot.rs` has one at line 5,592 of 24,419, so the
+/// cut version of this walk would read a fifth of the file that matters most.
+#[test]
+fn no_saturating_quantity_is_summed_with_plain_arithmetic() {
+    /// Plain arithmetic ON a saturating read.
+    const ARITH: [&str; 4] =
+        [".power() +", ".toughness() +", ".power() -", ".toughness() -"];
+    /// Accumulators that hold a sum of them.
+    const TOTALS: [&str; 2] = ["total_power +=", "attacker_power +="];
+    /// Byte ranges of every `#[cfg(test)]` item, by brace matching from the
+    /// attribute to the close of the item it decorates.
+    fn test_spans(src: &str) -> Vec<(usize, usize)> {
+        let mut out = Vec::new();
+        let mut from = 0usize;
+        while let Some(rel) = src[from..].find("#[cfg(test)]") {
+            let at = from + rel;
+            let Some(open) = src[at..].find('{').map(|o| at + o) else { break };
+            let (mut depth, mut i) = (0i32, open);
+            let b = src.as_bytes();
+            while i < b.len() {
+                match b[i] {
+                    b'{' => depth += 1,
+                    b'}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+                i += 1;
+            }
+            out.push((at, i.min(src.len())));
+            from = i.max(at + 1);
+        }
+        out
+    }
+    fn walk(dir: &std::path::Path, out: &mut Vec<String>) {
+        for e in std::fs::read_dir(dir).expect("readable").flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                let src = std::fs::read_to_string(&p).expect("utf-8");
+                let spans = test_spans(&src);
+                let mut at = 0usize;
+                for (i, line) in src.lines().enumerate() {
+                    let start = at;
+                    at += line.len() + 1;
+                    if spans.iter().any(|(a, b)| start >= *a && start < *b) {
+                        continue;
+                    }
+                    let t = line.trim();
+                    if t.starts_with("//") || t.contains("saturating_") {
+                        continue;
+                    }
+                    if ARITH.iter().chain(TOTALS.iter()).any(|pat| t.contains(pat)) {
+                        out.push(format!("{}:{} — {t}", p.display(), i + 1));
+                    }
+                }
+            }
+        }
+    }
+    let mut bad = Vec::new();
+    for crate_src in ["/../crabomination/src", "/../crabomination_base/src"] {
+        let root = format!("{}{crate_src}", env!("CARGO_MANIFEST_DIR"));
+        walk(std::path::Path::new(&root), &mut bad);
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} site(s) do plain arithmetic on a saturating rules quantity; use \
+         `saturating_add` / `saturating_sub` (or widen to `i64`):\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}
+
 /// CR 308.1 — a Kindred card always carries the creature type it shares.
 ///
 /// "Kindred cards have another card type and one or more creature types": the

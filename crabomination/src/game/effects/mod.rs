@@ -2442,7 +2442,7 @@ impl GameState {
             self.sacrificed_mana_value = Some(stats.2);
             // The running batch tally — "the total power of the creatures
             // sacrificed this way" (Reign of the Pit).
-            self.sacrificed_total_power += stats.0;
+            self.sacrificed_total_power = self.sacrificed_total_power.saturating_add(stats.0);
             self.sacrificed_count += 1;
         }
         // `Selector::SacrificedCard` — "if you sacrificed an Island this way"
@@ -15942,7 +15942,7 @@ impl GameState {
                     // Base power = printed/CDA base plus any SetBasePower
                     // (perm_power_bonus); pumps + counters are "above base".
                     let base = c.definition.base_power().saturating_add(c.perm_power_bonus);
-                    let diff = (c.power() - base).max(0);
+                    let diff = c.power().saturating_sub(base).max(0);
                     if diff == 0 { continue; }
                     let ctrl = c.controller;
                     let n = self.scaled_counter_count(ctrl, CounterType::PlusOnePlusOne, diff as u32, true);
@@ -30064,11 +30064,11 @@ impl GameState {
                     }
                     _ => Vec::new(),
                 };
-                let (mut power, mut toughness) = (0, 0);
+                let (mut power, mut toughness) = (0i32, 0i32);
                 for id in &picks {
                     if let Some(cp) = self.computed_permanent(*id) {
-                        power += cp.power;
-                        toughness += cp.toughness;
+                        power = power.saturating_add(cp.power);
+                        toughness = toughness.saturating_add(cp.toughness);
                     }
                 }
                 let controller = ctx.controller;
