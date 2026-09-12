@@ -12,12 +12,42 @@ scopes, filters, amounts, ...) found shipped cards at the wrong value; this
 one is the card's own price and body, which is the one field every other
 column assumes is right.
 
-    python3 scripts/audit_printed_body.py            # the table
-    python3 scripts/audit_printed_body.py --rows 0   # every row
+    python3 scripts/audit_printed_body.py             # the table
+    python3 scripts/audit_printed_body.py --rows 0    # every row
+    python3 scripts/audit_printed_body.py --list nonliteral   # what a column skipped
 
-COVERAGE, 2026-09-12: **16,483 factories priced, 17,244 on the type line,
-16,882 on subtypes, 16,779 on keywords, 9,254 creatures on P/T** — from 10,270,
-10,409, 0, 0 and 5,578. And the
+COVERAGE, 2026-09-12 (second pass): **16,534 factories priced, 17,352 on the
+type line, 17,078 on subtypes, 17,255 on keywords, 9,322 on P/T, 16,438 on
+COLOURS** — the colour column is new, and the other five moved by the five
+idioms their readers could not follow. In order of what they cost:
+
+  * **a SHORTHAND `keywords,`** — `fn creature(.., keywords: Vec<Keyword>)`,
+    how most per-set files spell a creature. 439 factories, read as unreadable
+    where the P/T column had bound the same shape since it was opened.
+  * **`shorthand()` WAS DEPTH-BLIND**, which is why the keyword one could not
+    simply reuse it: a nested `EquipBonus { power, toughness, keywords, .. }`
+    matched, so every `simple_aura` and land animation (Flight, the Genju
+    cycle, the Zendikons, the Opal enchantments — 16 cards) read the keyword it
+    GRANTS as one it prints. It counts braces now, like `raw_field`.
+  * **`card_types: vec![if sorcery { Sorcery } else { Instant }]`** — 89
+    factories across the deck files, and the branches are two braces deep, so
+    the flattened body cannot hold them. It reads `literal_raw` for that field,
+    the way the subtype column already does. `top_fields` was also *clearing*
+    the line it had collected on a newline inside a nested brace, so the field
+    lost its own NAME and read as undeclared.
+  * **a base bound to a PARAMETER** — `landfall_self_pump(creature("Scythe
+    Leopard", ..), (1, 1), vec![])` writes `..base`, and the chain every reader
+    follows is one level out in the caller's argument list.
+  * **a binding that is one ELEMENT of the vec** — `planeswalker_subtypes:
+    vec![sub]`, every planeswalker in War of the Spark, 68 factories on the
+    column `HasPlaneswalkerType` reads.
+  * **a TUPLE parameter read field by field** — `..creature(name, mana, pt.0,
+    pt.1, ..)`, the bestow creatures, 41 on P/T.
+  * **`cost: cost(cost_syms)`** over a `&[ManaSymbol]` parameter — the
+    alpha/beta creature helpers, 40 on the cost column.
+
+The five columns were 10,270 / 10,409 / 0 / 0 / 5,578 when each was opened. And
+the
 2026-09-11 header's "219 real spells over ~40 bespoke helpers" was a mis-read of
 its own skip counts. The reader had four holes and none of them was the helper
 signatures:
@@ -126,6 +156,21 @@ hexproof unless it's attacking", prose the oracle array does not report as the
 plain word, so they are excluded from the comparison. The plain
 `Keyword::Hexproof` / `Keyword::Protection` is still compared both ways.
 
+**AND THE SEVENTH COLUMN IS THE PRINTED COLOUR — 16,438 factories, 3 findings.**
+Colour is DERIVED, not stored: `printed_color_set` is `color_override` if there
+is one, empty under `Devoid`, and otherwise the `color_indicator` unioned with
+the cost's pips. The catalog spelled `color_indicator` seven times in 21,795
+cards, and **186 of the oracle's 33,045 single-faced entries print a colour
+their mana cost cannot carry** — so the column is the gap between those two
+numbers. Rograkh, Son of Rohgahh ({0}, red), Ragnarok, Divine Deliverance (no
+cost, B/G) and Evermind (no cost, blue) each shipped colorless to `R::HasColor`,
+protection- and hexproof-from-colour, devotion, `SpendRestriction` and the
+"shares a colour" family. (NOT to the deck builders: `CardBrief::pip_colors` is
+the cost's pips, which is the right reading for castability.) It needs the
+cost column's chain (the pips) AND the keyword column's (`Devoid`), so it skips
+wherever either does. One row is `REVIEWED_COLORS`: Transguild Courier's
+all-colours is the CDA it prints, carried as a layer-5 static.
+
 **AND THE P/T COLUMN WAS READING 5,578 OF 9,455 CREATURES AND COUNTING
 NEITHER HALF.** It took `power:` / `toughness:` off the factory's own flattened
 body and `continue`d — with no skip counter — whenever either was missing,
@@ -155,27 +200,33 @@ up on were dropped from the TYPE and SUBTYPE columns as well — three columns'
 coverage decided by the hardest one, and the type line now reads 583 MORE
 factories than the cost does. Each column takes its own verdict.
 
-What is left, with the reason:
+What is left, with the reason — `--list <kind>` prints the factories:
   * `nocache` (3,778) — synthesized cards the oracle has never heard of.
-  * `notyped` (160) — a type-line chain it cannot follow. It was 338 until two
-    more idioms landed: a BOUND CARD TYPE (`fn spell(name, mana, kind, effect)`
-    writes `card_types: vec![kind]`, 190 factories across five sets) and a
-    helper whose call is its TAIL after a statement (`fn ally(.., mut types,
-    ..) { types.push(Ally); creature(..) }`, 43 Allies).
-  * `nopt` (119) — a P/T chain it cannot follow.
-  * `nonliteral` (921) — a cost chain the resolver cannot read, mostly a helper
-    that builds its cost from a local binding.
-  * `nosubtypes` (205) — a subtype the reader will not guess at: a SHORTHAND
+  * `nocolors` (909) — the colour column needs BOTH the cost chain (its pips)
+    and the keyword chain (`Devoid`), so it skips wherever either does.
+  * `nonliteral` (870) — a cost chain the resolver cannot read, mostly a helper
+    that builds its cost from a local binding. **700 of them are LANDS**, which
+    print no mana cost, so there is nothing for the cost column to compare and
+    closing them buys that column nothing; 221 carry a real printed cost.
+  * `noname` (184) — a factory whose name is in neither the literal, its head,
+    nor its own `pub fn`.
+  * `nosubtypes` (158) — a subtype the reader will not guess at: a SHORTHAND
     field (`Subtypes { creature_types, .. }` over a local built by `push`), a
     `mut` parameter (mutated before the call it feeds), or a card that BECOMES
     a creature (`SelfIsCreatureIf`, `creature_off_battlefield`), whose
     definition carries the types it becomes rather than the ones it prints —
     Gideon Blackblade and Grist.
-  * `noname` (184) — a factory whose name is in neither the literal, its head,
-    nor its own `pub fn`.
-  * `nosubvariant` (9) — above.
-  * `nokeywords` (460) — a `keywords:` the reader will not guess at: a helper
-    call, a local built by `push`, or a `vec!` with a non-`Keyword::` element.
+  * `nokeywords` (92) — a `keywords:` the reader will not guess at: a helper
+    call in the vec (`cycling_two()`), a local built by `push`, or any other
+    non-`Keyword::` element.
+  * `nopt` (70) — a P/T chain it cannot follow.
+  * `notyped` (52) — a type-line chain it cannot follow. It was 338 until three
+    more idioms landed: a BOUND CARD TYPE (`fn spell(name, mana, kind, effect)`
+    writes `card_types: vec![kind]`, 190 factories across five sets), a helper
+    whose call is its TAIL after a statement (`fn ally(.., mut types, ..) {
+    types.push(Ally); creature(..) }`, 43 Allies), and the `if flag { .. } else
+    { .. }` type above.
+  * `nosubvariant` (12) — above.
   * `faces` / `split` / `star` / `notaspell` — documented below, all deliberate.
     `notaspell` also drops a Vanguard avatar named after a card: Maraxus of Keld
     is both, and the oracle lookup cannot tell them apart.
@@ -183,8 +234,9 @@ What is left, with the reason:
 **PROVED BY INJECTION, NOT BY ITS OWN ZERO** — and the injections are
 RUNNABLE now rather than a list here: `scripts/audit_printed_body_injections.py`
 breaks one idiom at a time and states what the audit must do about it,
-**9 / 9 as expected**, two of them NEGATIVE tests (a row there would be the bug).
-Run it after touching any reader below.
+**23 / 23 as expected**, four of them NEGATIVE tests (a row there would be the
+bug). Run it after touching any reader below — and never run the audit while
+the battery is running, because it edits catalog files in place.
 
 The cost column's own four (Agent of Stromgald's `..creature(..)`; `instant(
 "Consume Strength", ..)`; `fn skullbomb`'s OWN `cost:`; Karn, Scion of Urza to
@@ -436,6 +488,14 @@ REVIEWED_KEYWORDS = {
     ("Triton Wavebreaker", "Prowess"): "prowess while it is a creature",
 }
 
+# The colour column's reviewed row: a card whose colour the engine carries as
+# the STATIC IT PRINTS rather than as a printed-colour field. Same answer on
+# the battlefield (the layer-5 `SetColors`), and the printed clause IS the
+# card's own text — so a `color_override` here would be modelling it twice.
+REVIEWED_COLORS = {
+    "Transguild Courier": "`StaticEffect::GrantAllColors` — the printed CDA",
+}
+
 
 def printed_keyword_lines(text: str) -> set:
     """The evergreen keywords the card itself HAS, off its printed lines."""
@@ -468,17 +528,21 @@ def parse_keywords(inner, params=(), args=()):
     """
     if inner is None:
         return set(), False
-    f = raw_field(inner, "keywords")
+    # ⚠ A SHORTHAND `keywords,` IS THE PARAMETER, not an unreadable field —
+    # the same reading the P/T column needed. `fn creature(.., keywords: Vec<
+    # Keyword>)` is how most per-set files spell a creature, so calling the
+    # shorthand unreadable skipped 439 factories, 25 of them on one file's
+    # helper alone. `field_value` binds it back to the caller's argument and
+    # still gives up (returns the bare name, which fails the `vec![` match
+    # below) when there is nothing to bind it to.
+    f = field_value(inner, "keywords", params, args)
     if f is None:
-        if KW_SHORTHAND.search(inner):
-            return None, True
         bm = INNER_BASE.search(inner)
         if bm:
             nested = literal_raw(inner, bm.start())
             if nested is not None:
                 return parse_keywords(nested, params, args)
         return set(), False
-    f = bind_param(f, params, args)
     fs = f.strip().rstrip(",")
     m = re.match(r"vec!\[(.*)\]$", re.sub(r"\s+", " ", fs), re.S)
     if not m:
@@ -558,10 +622,15 @@ def top_fields(block: str):
             depth -= 1
             if depth == 0:
                 break
+        # ⚠ A NEWLINE INSIDE A NESTED BRACE IS NOT A FIELD BREAK. Resetting
+        # `line` on every newline threw away the depth-1 prefix already
+        # collected, so a field whose value carries a braced block over several
+        # lines — `card_types: vec![if sorcery {\n CardType::Sorcery\n } else
+        # {..}]`, 59 factories — lost its own NAME and read as undeclared.
         if c == "\n" and not in_str:
             if depth == 1:
                 out.append("".join(line).strip())
-            line = []
+                line = []
         elif depth == 1:
             line.append(c)
         i += 1
@@ -697,8 +766,42 @@ def shorthand(inner: str, name: str) -> bool:
     the parameter — which `bind_param` resolves to the caller's literal. Reading
     the absent `power:` as "declares nothing" instead reported 401 correct
     creatures as 0/0.
+
+    ⚠ DEPTH 0, like `raw_field` — not "anywhere in the text". A nested
+    `EquipBonus { power, toughness, keywords, .. }` is the AURA'S BONUS, and a
+    depth-blind scan read its three shorthands as the card's own fields: every
+    `simple_aura` and land-animation (Flight, the Genju cycle, the Zendikons,
+    the Opal enchantments — 16 cards) reported the keyword it GRANTS as one it
+    prints. The `keywords:` reader is only sound because this one is.
     """
-    return re.search(r"(?:^|,)\s*%s\s*(?:,|$)" % re.escape(name), inner, re.M) is not None
+    i, depth, in_str = 0, 0, False
+    while i < len(inner):
+        c = inner[i]
+        if in_str:
+            if c == "\\":
+                i += 2
+                continue
+            if c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif (depth == 0 and inner.startswith(name, i)
+              and not (i and (inner[i - 1].isalnum() or inner[i - 1] == "_"))):
+            j = i + len(name)
+            while j < len(inner) and inner[j] in " \t\r\n":
+                j += 1
+            if j >= len(inner) or inner[j] == ",":
+                k = i - 1
+                while k >= 0 and inner[k] in " \t\r\n":
+                    k -= 1
+                if k < 0 or inner[k] in ",{":
+                    return True
+        i += 1
+    return False
 
 
 def field_value(inner, name, params, args):
@@ -833,6 +936,15 @@ def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None):
         if val is None:
             return None, True
         val = bind_param(val, params, args)
+        # ⚠ THE BINDING CAN BE ONE ELEMENT, not the whole field.
+        # `planeswalker_subtypes: vec![sub]` — war's `fn walker`, every
+        # planeswalker in the set — is a vec whose single element is the
+        # parameter, and binding only the whole expression left 117 factories
+        # unreadable on the column `HasPlaneswalkerType` reads.
+        vm = re.match(r"vec!\[(.*)\]$", re.sub(r"\s+", " ", val).strip(), re.S)
+        if vm and params and vm.group(1).strip():
+            val = "vec![%s]" % ", ".join(bind_param(a, params, args)
+                                         for a in split_args(vm.group(1)))
         if not VEC_OF_VARIANTS.fullmatch(re.sub(r"\s+", " ", val).strip()):
             return None, True
         got |= set(SUBVAR.findall(val))
@@ -856,7 +968,50 @@ def bind_param(expr: str, params, args) -> str:
     if e in params:
         i = params.index(e)
         return args[i] if i < len(args) else expr
+    # ⚠ A TUPLE PARAMETER IS READ FIELD BY FIELD. `fn bestow_creature(..,
+    # pt: (i32, i32), ..) { ..creature(name, mana, pt.0, pt.1, ..) }` hands the
+    # next link `pt.0`, which is not a parameter name and not a literal, so the
+    # P/T column lost all twelve bestow creatures one link before the value.
+    tm = re.fullmatch(r"([a-z0-9_]+)\.(\d+)", e)
+    if tm and tm.group(1) in params:
+        i = params.index(tm.group(1))
+        if i < len(args):
+            outer = re.fullmatch(r"\((.*)\)", args[i].strip(), re.S)
+            if outer:
+                parts = split_args(outer.group(1))
+                k = int(tm.group(2))
+                if k < len(parts):
+                    return parts[k].strip()
     return expr
+
+
+BASE_PARAM = re.compile(r"^\s*\.\.([a-z0-9_]+)\s*,?\s*$")
+
+
+def bind_base_param(body: str, params, args) -> str:
+    """A `..base` over a `base: CardDefinition` PARAMETER, inlined.
+
+    ⚠ A WRAPPER'S BASE IS NOT ALWAYS A CALL. `fn landfall_self_pump(base:
+    CardDefinition, ..) { CardDefinition { keywords, triggered_abilities: ..,
+    ..base } }` takes the card itself as an argument, so the chain the other
+    resolvers follow (`..creature(..)`) is one level further out — in the
+    CALLER's argument list. Rewriting `..base` to the argument text bound to it
+    puts the call back where every reader already looks; a base bound to
+    anything but a call is left alone and still skips.
+    """
+    if not params:
+        return body
+    out = []
+    for line in body.split("\n"):
+        m = BASE_PARAM.match(line)
+        if m and m.group(1) in params:
+            i = params.index(m.group(1))
+            if i < len(args) and re.match(r"\s*(?:[A-Za-z_]+::)*[a-z0-9_]+\s*\(",
+                                          args[i]):
+                out.append(".." + args[i].strip())
+                continue
+        out.append(line)
+    return "\n".join(out)
 
 
 CARD_TYPES = {"Land", "Creature", "Artifact", "Enchantment", "Planeswalker",
@@ -869,6 +1024,63 @@ SYM = re.compile(r"(\w+)\(([^()]*)\)")
 LETTER = {"w": "W", "u": "U", "b": "B", "r": "R", "g": "G"}
 COLOR = {"Color::White": "W", "Color::Blue": "U", "Color::Black": "B",
          "Color::Red": "R", "Color::Green": "G"}
+
+
+PIP = re.compile(r"\{([^}]*)\}")
+COLOR_TOKEN = re.compile(r"Color::[A-Za-z]+")
+
+
+def cost_colors(cost: str):
+    """The colors a printed mana cost carries — CR 202.2 / 105.
+
+    Every pip half counts: `{W/U}` is both, `{G/P}` is green, `{2/R}` is red.
+    Same reading as `printed_color_set`'s match over `ManaSymbol`.
+    """
+    out = set()
+    for p in PIP.findall(cost or ""):
+        for half in p.split("/"):
+            if half in "WUBRG":
+                out.add(half)
+    return out
+
+
+def parse_colorfield(inner, params=(), args=()):
+    """`((override or None, indicator set), declared)` off a literal's raw text.
+
+    The two printed-colour fields, read through the same chain as the subtypes
+    and the P/T: `color_override` replaces the cost's colours outright, a
+    `color_indicator` adds to them (CR 105.2c). Unreadable is None, exactly as
+    `parse_subtypes` — `fn kobold(name) { CardDefinition { color_override:
+    Some(vec![Red]), ..creature(..) } }` puts the field one link out from the
+    three Kher Keep Kobolds, and calling that absent would report three
+    correct red cards as colorless.
+    """
+    if inner is None:
+        return None, False
+    ov = raw_field(inner, "color_override")
+    ind = raw_field(inner, "color_indicator")
+    if ov is None and ind is None:
+        bm = INNER_BASE.search(inner)
+        if bm:
+            nested = literal_raw(inner, bm.start())
+            if nested is not None:
+                return parse_colorfield(nested, params, args)
+        return (None, set()), False
+    def read(f, wrapper):
+        m = re.fullmatch(wrapper, bind_param(f, params, args).strip().rstrip(","), re.S)
+        if not m:
+            return None
+        toks = COLOR_TOKEN.findall(m.group(1))
+        if any(t not in COLOR for t in toks):
+            return None
+        return {COLOR[t] for t in toks}
+    got_ov = read(ov, r"Some\(vec!\[(.*)\]\)") if ov is not None else None
+    if ov is not None and got_ov is None:
+        return None, True
+    got_ind = read(ind, r"vec!\[(.*)\]") if ind is not None else set()
+    if got_ind is None:
+        return None, True
+    return (got_ov, got_ind), True
 
 
 def body_cost(src: str):
@@ -1044,12 +1256,23 @@ def resolve_helper_cost(index, path, helper, args, depth=0):
         mapped = [args[params.index(a)] if a in params and params.index(a) < len(args) else a
                   for a in call_args(after, at)]
         return resolve_helper_cost(index, path, hm.group(1), mapped, depth + 1)
+    body = bind_base_param(body, params, args)
     m = COST_FIELD.search(body)
     if m:
         expr = m.group(1).strip().rstrip(",")
         if expr in params:
             i = params.index(expr)
             return args[i] if i < len(args) else None
+        # ⚠ A HELPER CAN BUILD ITS COST FROM A SYMBOL SLICE. `fn body(..,
+        # cost_syms: &[ManaSymbol], ..) { cost: cost(cost_syms), .. }` — the
+        # alpha/beta creature helpers — is a `cost(..)` call over the
+        # PARAMETER, and the literal match below only knows `cost(&[..])`.
+        # Bind it and read the caller's slice.
+        cm = re.match(r"(?:crate::mana::)?cost\(([A-Za-z_][A-Za-z0-9_]*)\)$", expr)
+        if cm and cm.group(1) in params:
+            i = params.index(cm.group(1))
+            sm = re.match(r"&\[(.*)\]$", args[i].strip(), re.S) if i < len(args) else None
+            return sm.group(1) if sm else None
         inner = re.match(r"(?:crate::mana::)?cost\(&\[(.*)\]\)$", expr, re.S)
         return inner.group(1) if inner else None
     # No `cost:` of its own — follow its base, mapping the base's arguments
@@ -1134,7 +1357,34 @@ def build_helper_index(catalog):
     return index
 
 
-def parse_type_line(body: str, params=(), args=()):
+TERNARY = re.compile(r"^\s*vec!\[\s*if\s+([a-z0-9_]+)\s*\{(.*?)\}\s*else\s*\{(.*?)\}\s*\]",
+                     re.S)
+
+
+def ternary_types(inner, params, args, vocab):
+    """`card_types: vec![if flag { A } else { B }]`, resolved through the flag.
+
+    ⚠ The BRANCHES are two braces deep, so the flattened body cannot hold them
+    (`top_fields` keeps depth 1 only) and the field reads as an empty type set.
+    `fn spell(name, mana, sorcery: bool, effect)` is how five of the deck files
+    spell every instant and sorcery — 59 factories with no type-line check at
+    all, which is the field where a Sorcery shipped as an Instant is castable
+    at the wrong speed. An unbound flag stays unreadable and skips.
+    """
+    f = raw_field(inner, "card_types") if inner else None
+    if f is None:
+        return None
+    m = TERNARY.match(f)
+    if not m:
+        return None
+    cond = bind_param(m.group(1), params, args).strip()
+    if cond not in ("true", "false"):
+        return None
+    branch = m.group(2) if cond == "true" else m.group(3)
+    return {w for w in WORD.findall(branch) if w in vocab}
+
+
+def parse_type_line(body: str, params=(), args=(), inner=None):
     """`(card_types, supertypes, base_helper, declares_types, declares_supers)`
     off one depth-1 field text.
 
@@ -1156,6 +1406,10 @@ def parse_type_line(body: str, params=(), args=()):
             got = {w for w in WORD.findall(bound) if w in vocab}
         return got
     got_t = words(tm, CARD_TYPES) if tm else set()
+    if not got_t:
+        tern = ternary_types(inner, params, args, CARD_TYPES)
+        if tern:
+            got_t, tm = tern, tm or True
     got_t = {"Kindred" if t == "Tribal" else t for t in got_t}
     got_s = set()
     if sm:
@@ -1171,7 +1425,7 @@ def parse_type_line(body: str, params=(), args=()):
 
 
 Read = collections.namedtuple(
-    "Read", "types supers subs keywords pt ok sub_ok kw_ok pt_ok")
+    "Read", "types supers subs keywords pt colorfield ok sub_ok kw_ok pt_ok col_ok")
 
 
 def tail_expression(body: str) -> str:
@@ -1224,7 +1478,8 @@ def resolve_from_block(index, path, blk, args, depth, subs_index=None):
         after = tail_expression(blk[m.end():] if m else "")
         hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after)
         if not hm:
-            return Read(set(), set(), None, None, None, False, False, False, False)
+            return Read(set(), set(), None, None, None, None,
+                        False, False, False, False, False)
         body, call_src = ".." + hm.group(1) + "(", after
     return resolve_type_line(index, path, body, None, depth, inner,
                              helper_params(blk), args, call_src, subs_index)
@@ -1248,12 +1503,15 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     what its caller passed (`bind_param`), and `call_src` is the text holding
     the base call when `body` is the pseudo-literal, which carries no arguments.
     """
-    got_t, got_s, base, has_t, has_s = parse_type_line(body, params, args)
+    body = bind_base_param(body, params, args)
+    got_t, got_s, base, has_t, has_s = parse_type_line(body, params, args, inner)
     got_sub, has_sub = parse_subtypes(inner, params, args, subs_index, path)
     got_kw, has_kw = parse_keywords(inner, params, args)
     got_pt, has_pt = parse_pt(inner, params, args)
+    got_col, has_col = parse_colorfield(inner, params, args)
     sub_ok, kw_ok = got_sub is not None, got_kw is not None
     pt_ok = not (has_pt and got_pt is None)
+    col_ok = got_col is not None
     ok = True
     # The wrapper idiom sits OUTSIDE the literal, so it is read off `raw`.
     if raw is not None and depth == 0:
@@ -1290,14 +1548,19 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
                         wpt, whpt = parse_pt(helper_raw(wblk))
                         if whpt:
                             got_pt, pt_ok, has_pt = wpt, wpt is not None, True
+                    if not has_col:
+                        wc, whc = parse_colorfield(helper_raw(wblk))
+                        if whc:
+                            got_col, col_ok, has_col = wc, wc is not None, True
                     break
             else:
-                ok = sub_ok = kw_ok = pt_ok = False
+                ok = sub_ok = kw_ok = pt_ok = col_ok = False
     if base:
         cands = [b for pth, b in index.get(base, []) if pth == path] \
             or [b for _, b in index.get(base, [])]
         if not cands or depth >= 5:
-            return Read(got_t, got_s, got_sub, got_kw, got_pt, False, False, False, False)
+            return Read(got_t, got_s, got_sub, got_kw, got_pt, got_col,
+                        False, False, False, False, False)
         # The base call's arguments, mapped through THIS level's parameters, so
         # `fn sliver(name, c, p, t) { creature(name, c, vec![Sliver], p, t) }`
         # hands `creature` a literal and `fn creature(.., ct, ..)`'s
@@ -1319,6 +1582,8 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
             got_kw, kw_ok = b.keywords, b.kw_ok
         if not has_pt:
             got_pt, pt_ok, has_pt = b.pt, b.pt_ok, True
+        if not has_col:
+            got_col, col_ok, has_col = b.colorfield, b.col_ok, True
         # A `..base(..)` supplies the subtypes the literal did not declare —
         # `..creature("Storm Crow", .., types, 1, 2)`. A literal that DID
         # declare them wins, as the struct-update syntax says.
@@ -1327,22 +1592,27 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     # Every card has card types; an empty set means the chain was not readable,
     # not that the card has none. Supertypes are genuinely optional, so they
     # cannot carry this test.
-    return Read(got_t, got_s, got_sub, got_kw, got_pt,
-                ok and bool(got_t), sub_ok, kw_ok, pt_ok)
+    return Read(got_t, got_s, got_sub, got_kw, got_pt, got_col,
+                ok and bool(got_t), sub_ok, kw_ok, pt_ok, col_ok)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rows", type=int, default=40)
+    ap.add_argument("--list", dest="list_kind", default=None,
+                    help="print the factories skipped under this kind")
     args = ap.parse_args()
 
     index = build_helper_index(CATALOG)
     subs_index = build_subtypes_index(CATALOG)
     checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
     checked_types = checked_sub = checked_kw = wrong_kw = checked_pt = 0
-    skip = {"nocache": 0, "faces": 0, "split": 0, "star": 0, "nonliteral": 0,
-            "noname": 0, "notaspell": 0, "notyped": 0, "nosubtypes": 0,
-            "nosubvariant": 0, "nokeywords": 0, "nopt": 0}
+    checked_col = wrong_col = 0
+    # A skip is a FACTORY, not a tally: `--list nonliteral` prints the ones a
+    # column could not read, which is the only way to work the queue down.
+    skip = {k: [] for k in ("nocache", "faces", "split", "star", "nonliteral",
+                            "noname", "notaspell", "notyped", "nosubtypes",
+                            "nosubvariant", "nokeywords", "nopt", "nocolors")}
     rows = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
@@ -1376,7 +1646,7 @@ def main() -> int:
                               raw[raw.find("\n") + 1:])
                 body = ".." + hm.group(1) + "(" if hm else None
                 if body is None:
-                    skip["noname"] += 1
+                    skip["noname"].append(f"{path.name}::{fname}")
                     continue
             nm = NAME.search(body)
             # A helper-built factory (`sorcery("Name", cost(..), ..)`) has no
@@ -1396,23 +1666,23 @@ def main() -> int:
             if name is None and fname.replace("_", "") in CACHE_SLUG_KEYS:
                 name = CACHE_SLUG[fname.replace("_", "")]["name"]
             if name is None:
-                skip["noname"] += 1
+                skip["noname"].append(f"{path.name}::{fname}")
                 continue
             if " // " in name:
-                skip["split"] += 1
+                skip["split"].append(f"{path.name}::{fname}")
                 continue
             card = CACHE.get(name) or CACHE_LC.get(name.lower())
             if not isinstance(card, dict):
-                skip["nocache"] += 1
+                skip["nocache"].append(f"{path.name}::{fname}")
                 continue
             if card.get("card_faces"):
-                skip["faces"] += 1
+                skip["faces"].append(f"{path.name}::{fname}")
                 continue
             # Tokens, Vanguards, schemes and the rest of the non-deck types all
             # print no mana cost and none of them is ever cast.
             tl = card.get("type_line") or ""
             if tl == "Card" or any(w in tl for w in NOT_A_SPELL):
-                skip["notaspell"] += 1
+                skip["notaspell"].append(f"{path.name}::{fname}")
                 continue
             # CR 202.1b / 601.3e — a card with NO printed mana cost cannot be
             # cast by paying one, and its mana value is 0. The engine enforces
@@ -1466,7 +1736,7 @@ def main() -> int:
             # column takes its own verdict now and the loop runs on.
             got = body_cost(cost_src) if cost_src is not None else None
             if got is None:
-                skip["nonliteral"] += 1
+                skip["nonliteral"].append(f"{path.name}::{fname}")
             else:
                 checked += 1
                 want = card.get("mana_cost", "")
@@ -1509,14 +1779,14 @@ def main() -> int:
             got_t, got_s, got_sub = read.types, read.supers, read.subs
             resolved, sub_ok = read.ok, read.sub_ok
             if not resolved:
-                skip["notyped"] += 1
+                skip["notyped"].append(f"{path.name}::{fname}")
                 continue
             checked_types += 1
             # A Vanguard avatar named after a card is not that card, and the
             # oracle lookup cannot tell them apart (Maraxus of Keld is both).
             if "avatar" in (raw[raw.find("\n"):] or "") and "Vanguard" not in (card.get("type_line") or ""):
                 if re.search(r"\.\.avatar\s*\(", raw):
-                    skip["notaspell"] += 1
+                    skip["notaspell"].append(f"{path.name}::{fname}")
                     continue
             if got_t != want_t and want_t:
                 wrong_types += 1
@@ -1543,11 +1813,11 @@ def main() -> int:
             # encoding of the creature, not a wrong type line, and both flags
             # are in the literal where this can see them.
             if BECOMES_CREATURE.search(raw):
-                skip["nosubtypes"] += 1
+                skip["nosubtypes"].append(f"{path.name}::{fname}")
             elif sub_ok and card.get("layout") == "normal" and tl.count("—") <= 1:
                 words = tl.split("—", 1)[1].split() if "—" in tl else []
                 if any(w.lower() not in SUB_WORD for w in words):
-                    skip["nosubvariant"] += 1
+                    skip["nosubvariant"].append(f"{path.name}::{fname}")
                 else:
                     want_sub = {SUB_WORD[w.lower()] for w in words}
                     checked_sub += 1
@@ -1557,13 +1827,13 @@ def main() -> int:
                                      " ".join(sorted(got_sub)) or "(none)",
                                      " ".join(sorted(want_sub)) or "(none)"))
             elif not sub_ok:
-                skip["nosubtypes"] += 1
+                skip["nosubtypes"].append(f"{path.name}::{fname}")
             # The PRINTED KEYWORDS, restricted to the evergreen set both sides
             # spell as a plain keyword. A missing Flying is not cosmetic: the
             # bot's block search, the damage assignment and every evasion check
             # read this field on every combat of every self-play game.
             if not read.kw_ok:
-                skip["nokeywords"] += 1
+                skip["nokeywords"].append(f"{path.name}::{fname}")
             else:
                 want_kw = {EVERGREEN[k] for k in (card.get("keywords") or [])
                            if k in EVERGREEN}
@@ -1587,13 +1857,30 @@ def main() -> int:
                     rows.append(("kw", name, f"{path.name}::{fname}",
                                  " ".join(sorted(have_kw)) or "(none)",
                                  " ".join(sorted(want_kw)) or "(none)"))
+            # The PRINTED COLOR — derived from the cost's pips, the colour
+            # indicator and `Devoid`, so it is only readable where the cost is
+            # and where the keyword chain resolved. 186 cards in the cache
+            # print a colour their mana cost cannot carry.
+            oc = card.get("colors")
+            if oc is None or got is None or not read.kw_ok or not read.col_ok:
+                skip["nocolors"].append(f"{path.name}::{fname}")
+            else:
+                ov, ind = read.colorfield
+                have_c = (set() if "Devoid" in read.keywords
+                          else ov if ov is not None else cost_colors(got) | ind)
+                checked_col += 1
+                if have_c != set(oc) and name not in REVIEWED_COLORS:
+                    wrong_col += 1
+                    rows.append(("color", name, f"{path.name}::{fname}",
+                                 "".join(sorted(have_c)) or "colorless",
+                                 "".join(sorted(oc)) or "colorless"))
             # The printed P/T, through the same chain as everything else — see
             # `parse_pt` for what it used to read instead.
             op, ot = card.get("power"), card.get("toughness")
             if op is None or ot is None:
                 continue
             if not (op.lstrip("-").isdigit() and ot.lstrip("-").isdigit()):
-                skip["star"] += 1
+                skip["star"].append(f"{path.name}::{fname}")
                 continue
             band = station_pt(raw)
             if band is not None:
@@ -1604,7 +1891,7 @@ def main() -> int:
                                  f"{band[0]}/{band[1]} (top station band)",
                                  f"{op}/{ot}"))
             elif not read.pt_ok:
-                skip["nopt"] += 1
+                skip["nopt"].append(f"{path.name}::{fname}")
             else:
                 checked_pt += 1
                 # No `power:` anywhere in the chain is a VALUE, not a gap: the
@@ -1623,11 +1910,14 @@ def main() -> int:
         print(f"  ... {len(rows) - len(shown)} more (--rows 0)")
     print(f"# compared against the oracle: {checked} priced, {checked_types} on the "
           f"type line, {checked_sub} on subtypes, {checked_kw} on keywords, "
-          f"{checked_pt} on P/T — "
+          f"{checked_pt} on P/T, {checked_col} on colors — "
           f"**{wrong_cost} wrong cost, {wrong_pt} wrong P/T, "
           f"{missing_flag} missing `no_mana_cost`, {wrong_types} wrong type line, "
-          f"{wrong_kw} wrong keywords**")
-    print("# skipped — " + ", ".join(f"{k} {v}" for k, v in sorted(skip.items())))
+          f"{wrong_kw} wrong keywords, {wrong_col} wrong colors**")
+    print("# skipped — " + ", ".join(f"{k} {len(v)}" for k, v in sorted(skip.items())))
+    if args.list_kind:
+        for where in skip.get(args.list_kind, []):
+            print(where)
     return 0
 
 
