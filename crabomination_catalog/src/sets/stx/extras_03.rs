@@ -471,6 +471,7 @@ pub fn furnace_hellkite() -> CardDefinition {
     CardDefinition {
         name: "Furnace Hellkite",
         cost: cost(&[generic(5), r(), r()]),
+        affinity_filter: Some(SelectionRequirement::Artifact),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dragon],
@@ -479,13 +480,11 @@ pub fn furnace_hellkite() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(2),
-            },
-        }],
+        // ⚠ **AN ETB THE CARD DOES NOT PRINT, REMOVED.** It dealt 2 damage to
+        // each opponent on entry; the oracle is "Affinity for artifacts /
+        // Flying / {R}: +1/+0" and nothing else. Found while adding the
+        // affinity above — the keyword audit named the card, and the body
+        // beside the missing keyword had an invented ability in it.
         // "{R}: This creature gets +1/+0 until end of turn" — the ability
         // shipped missing (the `cnt` audit column, 2026-09-10).
         activated_abilities: vec![crate::card::ActivatedAbility {
@@ -658,6 +657,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         name: "Sage of the Beyond",
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
+        foretell_cost: Some(cost(&[generic(4), u()])),
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Giant],
             ..Default::default()
@@ -1779,6 +1779,7 @@ pub fn battle_mammoth() -> CardDefinition {
         name: "Battle Mammoth",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
+        foretell_cost: Some(cost(&[generic(2), g(), g()])),
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elephant],
             ..Default::default()

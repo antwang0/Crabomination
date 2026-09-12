@@ -564,19 +564,30 @@ pub fn storms_wrath() -> CardDefinition {
 /// The Kicker {R} alt-cost is engine-wide ⏳ (same gap as Burst
 /// Lightning's kicker). The unkicked version is the headline play
 /// pattern for sweeping 1-toughness boards.
+fn cinderclasm_damage(n: i32) -> Effect {
+    Effect::ForEach {
+        selector: Selector::EachPermanent(SelectionRequirement::Creature),
+        body: Box::new(Effect::DealDamage {
+            to: Selector::TriggerSource,
+            amount: Value::Const(n),
+        }),
+    }
+}
+
 pub fn cinderclasm() -> CardDefinition {
     CardDefinition {
         name: "Cinderclasm",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-            ),
-            body: Box::new(Effect::DealDamage {
-                to: Selector::TriggerSource,
-                amount: Value::Const(1),
-            }),
+        // ⚠ Two defects, both read off the oracle: the card had no Kicker at
+        // all, and it hit PLANESWALKERS. "Cinderclasm deals 1 damage to each
+        // creature. If it was kicked, it deals 2 damage to each creature
+        // instead." — creatures only, and two when kicked.
+        keywords: vec![Keyword::Kicker(cost(&[r()]))],
+        effect: Effect::If {
+            cond: crate::card::Predicate::SpellWasKicked,
+            then: Box::new(cinderclasm_damage(2)),
+            else_: Box::new(cinderclasm_damage(1)),
         },
         ..Default::default()
     }

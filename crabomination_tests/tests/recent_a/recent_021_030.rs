@@ -261,6 +261,21 @@ mod recent22 {
         assert_eq!(g.players[0].mana_pool.amount(Color::Red), 5, "granted firebending 5 added {{R}}×5");
     }
 
+    /// Sozin's Comet prints **Foretell {2}{R}** and carried none of it.
+    ///
+    /// `audit_keyword_drift`'s field map never listed the vehicle the engine
+    /// uses, so every card that HAS a foretell cost reported as missing one
+    /// and the cards that really lacked it were hidden in the noise.
+    #[test]
+    fn sozins_comet_has_its_foretell_cost() {
+        use crabomination::mana::{cost, generic, r};
+        assert_eq!(
+            catalog::sozins_comet().foretell_cost.as_ref(),
+            Some(&cost(&[generic(2), r()])),
+            "Foretell {{2}}{{R}}",
+        );
+    }
+
     /// Sneak (CR 702.190): during the declare blockers step you may cast Donatello's
     /// Technique for {U} by returning an unblocked attacker you control to hand.
     #[test]

@@ -1132,6 +1132,29 @@ fn cinderclasm_pings_each_creature_for_one() {
     );
 }
 
+/// **Kicked it deals two, and it never hit planeswalkers.** The card shipped
+/// with no Kicker at all and with `Creature.or(Planeswalker)` as its target
+/// set; the oracle is "deals 1 damage to each creature. If it was kicked, it
+/// deals 2 damage to each creature instead."
+#[test]
+fn cinderclasm_kicked_deals_two_and_spares_planeswalkers() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let walker = g.add_card_to_battlefield(1, catalog::liliana_of_the_veil());
+    let id = g.add_card_to_hand(0, catalog::cinderclasm());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Cinderclasm kicked for {1}{R}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage kills the 2/2");
+    let w = g.battlefield_find(walker).expect("the walker is untouched");
+    assert_eq!(w.counter_count(crabomination::card::CounterType::Loyalty), 3,
+        "Cinderclasm hits creatures only");
+}
+
 // ── Cathartic Pyre (STX) ───────────────────────────────────────────────────
 
 #[test]
@@ -3282,8 +3305,23 @@ fn inkwood_scrivener_etb_drains_one() {
 
 // ── Furnace Hellkite (modern_decks push) ───────────────────────────────────
 
+/// ⚠ **This tested an ETB the card does not print.** The body dealt 2 damage
+/// to each opponent on entry; the oracle is "Affinity for artifacts / Flying /
+/// {R}: +1/+0" and nothing else, so the test held an invented ability in
+/// place. What the card DOES print and did not have is the affinity, which is
+/// what this asserts now — `audit_keyword_drift` named the card and the
+/// invented trigger was sitting beside the missing keyword.
 #[test]
-fn furnace_hellkite_etb_burns_each_opp_for_two() {
+fn furnace_hellkite_has_affinity_for_artifacts_and_no_etb() {
+    use crabomination::card::SelectionRequirement;
+    let def = catalog::furnace_hellkite();
+    assert_eq!(
+        def.affinity_filter.as_ref(),
+        Some(&SelectionRequirement::Artifact),
+        "Affinity for artifacts",
+    );
+    assert!(def.triggered_abilities.is_empty(), "the card prints no trigger");
+
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::furnace_hellkite());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
@@ -3295,7 +3333,7 @@ fn furnace_hellkite_etb_burns_each_opp_for_two() {
     }).expect("Hellkite castable");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, p1_life - 2);
+    assert_eq!(g.players[1].life, p1_life, "no damage on entry");
 }
 
 // ── Pinion Lecturer (modern_decks push) ────────────────────────────────────
@@ -4568,4 +4606,22 @@ fn final_payment_pays_five_life_without_token_fodder() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life - 5, "paid 5 life");
     assert!(!g.battlefield.iter().any(|c| c.id == victim), "target destroyed");
+}
+
+// ── The foretell cost two Strixhaven cards print and did not carry ─────────
+
+/// Sage of the Beyond (**Foretell {4}{U}**) and Battle Mammoth (**Foretell
+/// {2}{G}{G}**) shipped with no foretell cost, which is a card you cannot
+/// exile face down and cannot cast for its printed alternative.
+#[test]
+fn the_two_cards_that_print_foretell_carry_it() {
+    use crabomination::mana::{cost, g, generic, u};
+    assert_eq!(
+        catalog::sage_of_the_beyond().foretell_cost.as_ref(),
+        Some(&cost(&[generic(4), u()])),
+    );
+    assert_eq!(
+        catalog::battle_mammoth().foretell_cost.as_ref(),
+        Some(&cost(&[generic(2), g(), g()])),
+    );
 }

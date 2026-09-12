@@ -132,6 +132,7 @@ pub fn sozins_comet() -> CardDefinition {
         name: "Sozin's Comet",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Sorcery],
+        foretell_cost: Some(cost(&[generic(2), r()])),
         effect: Effect::GrantKeyword {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
