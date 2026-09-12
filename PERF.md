@@ -3017,8 +3017,29 @@ sweep   **`1152..1161` was a HOLE in the sweep table and nobody noticed for twen
 gate    the sweep's re-run had a hole of its own: an absent `undecided_by` line meant "every game decided" AND "the
         re-run printed no summary at all" (a `timeout 7200`, an abort, an OOM), and the second read as the first — a
         cell that HUNG would have scored `slow-not-stuck`. The clear now requires the `N decided` line and a zero exit.
+fix     **CR 104.3c applied to two draws out of twenty-seven.** `draw_one`'s answer IS the deck-out, and nineteen call
+        sites threw it away — every one a card that says "draw a card" (cycling, a cumulative-upkeep draw, a
+        life-gain-becomes-draw, Lich's Mirror's seven) — so the rule fired for the draw step and for `Effect::Draw` and
+        for nothing else. ⚠ The OPENING-HAND loop carried the comment "a player short of seven cards will lose to the
+        empty-library SBA, which the normal draw path enforces", and discarded the answer. All 27 call
+        `draw_one_or_deck`; `no_engine_draw_throws_away_the_deck_out` fails on any bare `self.draw_one(..);` statement.
+        One ordering change fell out: `apply_loss_reset` draws seven, and those draws can arm a FRESH deck-out off a
+        card pool smaller than seven, so the loss the replacement spends is cleared inside the reset rather than at the
+        SBA site afterwards. **Six tests were freezing the old behaviour**: five cycled with an empty library, and
+        `tale_of_tamiyo_repeats_on_a_shared_card_type` had its library in an order that only worked while an empty draw
+        was a silent no-op — the Bolt in slot 3 is what the first repeat DREW, so the third repeat drew from nothing.
+tool    **the keyword column opened to FACES** — the oracle's whole-card `keywords` array survives the merge as
+        `_card_keywords`, and both directions stay sound (the MISSING side is intersected with this face's own
+        `oracle_text`; the EXTRA side asks "neither face prints it", which a union answers conservatively).
+        `nokeywords` **319 -> 46**, compared **17,453 -> 17,726**, and it found **Lonesome Unicorn**, whose creature
+        face prints Vigilance and shipped without it — and its Adventure's Knight token, one line below, had the same
+        gap. ⚠ `nocolors` is NOT the same case and must not copy the trick: an adventure's whole-card `colors` is the
+        union of two halves with different mana costs. ⚠ The injection for it reads SILENT unless it takes the TOKEN's
+        `Keyword::Vigilance` with the card's: the MISSING side is filtered by "the factory mentions it anywhere", which
+        the token's line satisfies. 43/44 caught that; the widened case is 44/44.
 perf    none, and measured as none rather than assumed. Every engine change here is a draw path, a turn-watch digest
         sampled one turn in four past turn 30, and a catalog subtype; `--bench` measures `fixed`, which carries none of
+<<<<<<< HEAD
         the cards involved.
 ### 2026-09-12 (the two-halves session, third of the day) — the face nobody read, two new columns, five shipped cards; no perf leg
 
@@ -3106,6 +3127,13 @@ gate    --bench on a `release` binary rebuilt at the PUSHED tip: **195,806 / 27.
         ⚠ **NOT re-run this run, declared rather than implied by silence:** `robustness_grid.sh`'s three legs and a
         fresh-seed sweep. The seed frontier is still **1212** and `1152..1161` is still the hole in the table below.
         Four cores here; the `--wide` leg alone is 301,600 games.
+=======
+        the cards involved, and its counters came back **byte-identical: 195,806 / 27.49 / 611.9 / 0 stalls**.
+gates   suite **19,498 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12**,
+        `--bench` byte-identical + determinism ok, injections **44 / 44**, `audit_panics` 0 bare,
+        `audit_decision_plumbing` 168 / 108 / 60 DEAD 0 repeat 0, `audit_seat_from_selector` 0 open,
+        `audit_printed_body` **0 on all eight columns**, `cargo check --profile release-fast` clean.
+>>>>>>> b9cab6e8 (Gates at the tip, and two clippy warnings the deck-out sweep left behind)
 ```
 
 ### 2026-09-12 (the cost-is-not-a-condition session) — the class a hand census closed, reopened by asking the right question; no perf leg
@@ -3629,12 +3657,18 @@ watches are byte-identical), and
 unkillable board with a drain on it draws at turn 80 with the clamp and runs
 past turn 5,700 without it.
 
-⚠ **THE CLAMP DOES NOT CLOSE `all` 1159** — re-measured with it in, the cell
-still reads `cap 2` and `repeats 2/12`. The life drift was one source and not
-the only one: the bot taps a different number of lands each turn for the Beacon
-and the extort, and p0's library toggles 1/0 depending on whether the Beacon is
-on the stack when the turn ends. Both are in the digest and both are real
-state, so widening past them would be guessing at what "progress" means.
+⚠ **THE CLAMP DOES NOT CLOSE `all` 1159, BUT IT NEARLY DOES — `repeats 2/12`
+becomes `10/12`.** Re-measured with it in: the cell still reads `cap 2`, the two
+games still read `repeats 2/12` at the sweep's 6,000 actions, and **at the
+50,000-action re-run they read `repeats 10/12`** — two samples, eight turns,
+short of the draw. So the life drift was most of the aperiodicity and not all
+of it: the bot taps a different number of lands each turn for the Beacon and
+the extort, and p0's library toggles 1/0 depending on whether the Beacon is on
+the stack when the turn ends. Both are in the digest and both are real state,
+so widening past them would be guessing at what "progress" means —
+**`NO_PROGRESS_MAX_PERIOD` (8) is the parameter a later run should price, not
+the field list**, and the reading above is the evidence that it is the one that
+binds.
 
 So the sweep's verdict changed rather than the watch: **a cap that survives the
 re-run is a defect UNLESS the dump carries `[SATURATED LIFE]`**, in which case

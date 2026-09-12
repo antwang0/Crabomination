@@ -131,7 +131,9 @@ sixty-seventh pass, so don't re-take that.
    because the board doubles past the bound in one activation whatever the budget. `SimCost` counts it apart and the sweep has a `board` column.
    (iii) **A cap that SURVIVES the re-run** — `all` 1159, the first ever: the Beacon board with a Basilica Screecher moving 1 life a turn between two
    saturated seats, so CR 104.4's turn watch reads `repeats 2/12` where the eight games the same cell DREW read `12/12`. Unwinnable AND aperiodic.
-   The life half is fixed (the turn digest clamps above `SCALE_CEILING * 1_000`) and does NOT close the cell; the sweep's verdict changed instead —
+   The life half is fixed (the turn digest clamps above `SCALE_CEILING * 1_000`) and takes it to **`repeats 10/12` at the 50,000-action budget** —
+   two samples short — without closing the cell. ⚠ **`NO_PROGRESS_MAX_PERIOD` (8) is the next thing to price, not the digest's field list.**
+   The sweep's verdict changed instead —
    a survived cap is a defect **unless** the dump carries `[SATURATED LIFE]`, in which case it is `known_board`. ⚠ The label alone still excuses
    nothing: it is the label PLUS a survived re-run. (iv) What is left, which IS the defect.
    **So read `board`, `slow-not-stuck` and `known_board` before believing a cap — and read the `no-progress watch:` line of its dump.**
@@ -374,6 +376,13 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
    encodings invalidate the trained nets. Nothing since `dc478735` touches
    `encode.rs`, `crabomination_ml` or `crabomination_nn`.
+   ⚠ **A CARD FIX IS NOT AN ENCODING CHANGE, BUT IT IS A SEEDED-GAME CHANGE.**
+   The 2026-09-12 subtype / keyword fixes move no pool membership, no vocab
+   index and no encoded feature (the encoder reads neither subtypes nor
+   keywords), so no net needs a retrain — but `clearwater_pathway` is in the
+   cube pool and `lonesome_unicorn` in the deck pools, so a seeded game that
+   draws one can play out differently from the same seed before them. Say which
+   of the two a card commit is; they are not the same claim.
 5. **Robustness gate** — `scripts/robustness_grid.sh` + the actor leg, the
    seeded 4,000-pairing cube sweep (arm it in
    `bot_vs_bot_random_cube_decks_terminate`), the two census env vars.

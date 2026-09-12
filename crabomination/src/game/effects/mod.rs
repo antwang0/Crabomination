@@ -36107,8 +36107,7 @@ impl GameState {
             LearnChoice::Rummage { discard } => {
                 if self.players[p].hand.iter().any(|c| c.id == discard) {
                     self.discard_card(p, discard, events);
-                    if !self.draw_one_or_deck(p, events) {
-                    }
+                    self.draw_one_or_deck(p, events);
                 }
             }
             LearnChoice::Decline => {}
