@@ -1541,6 +1541,17 @@ pub struct SimCost {
     /// Undecided games that ran out of action budget — the loop was still
     /// making moves.
     pub action_capped: u64,
+    /// Undecided games the BOARD bound ended ([`StopReason::BoardCap`]): a
+    /// token-doubling runaway, not a loop and not slow.
+    ///
+    /// ⚠ **Counted apart because it is the one undecided shape a longer run
+    /// cannot clear.** It used to be summed into `action_capped`, and a
+    /// robustness sweep's answer to "is this cap a defect?" is "re-run the
+    /// cell with a bigger `CRAB_MAX_ACTIONS`" — which a Krenko board defeats
+    /// by construction: it doubles past 1,024 permanents in one activation
+    /// whatever the budget. Seed 1169 on `cube` and `all` is the worked
+    /// example (1,967 Goblins at turn 29), and it read as ten defects.
+    pub board_capped: u64,
     /// Undecided games where neither bot had a move accepted for eight
     /// consecutive rounds — the loop was stuck, not slow.
     pub no_legal_move: u64,
@@ -1553,10 +1564,22 @@ impl SimCost {
         self.games += 1;
         self.decisions += o.actions as u64;
         self.turns += o.turns as u64;
-        match o.stop {
-            StopReason::ActionCap | StopReason::BoardCap => self.action_capped += 1,
+        self.count_stop(o.stop, o.winner.is_none());
+    }
+
+    /// Tally one game's exit into the four undecided buckets.
+    ///
+    /// Split out of [`SimCost::record`] so the suite can gate the buckets
+    /// without a `GameOutcome`, which is crate-private: the BOARD cap being
+    /// counted apart from the action cap is what a robustness sweep's verdict
+    /// rests on (see `board_capped`), and that deserves a test rather than a
+    /// comment.
+    pub fn count_stop(&mut self, stop: StopReason, no_winner: bool) {
+        match stop {
+            StopReason::ActionCap => self.action_capped += 1,
+            StopReason::BoardCap => self.board_capped += 1,
             StopReason::NoLegalMove => self.no_legal_move += 1,
-            StopReason::GameOver if o.winner.is_none() => self.draws += 1,
+            StopReason::GameOver if no_winner => self.draws += 1,
             StopReason::GameOver => {}
         }
     }
@@ -1568,6 +1591,7 @@ impl std::ops::AddAssign for SimCost {
         self.decisions += r.decisions;
         self.turns += r.turns;
         self.action_capped += r.action_capped;
+        self.board_capped += r.board_capped;
         self.no_legal_move += r.no_legal_move;
         self.draws += r.draws;
     }

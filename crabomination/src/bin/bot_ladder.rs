@@ -1441,8 +1441,10 @@ fn run_peer(field: &[Archetype], args: &Args) -> i32 {
 fn outcomes_match(a: (&SimCost, &[Row]), b: (&SimCost, &[Row])) -> bool {
     let (ca, ra) = a;
     let (cb, rb) = b;
-    let cost_eq = (ca.games, ca.decisions, ca.turns, ca.action_capped, ca.no_legal_move, ca.draws)
-        == (cb.games, cb.decisions, cb.turns, cb.action_capped, cb.no_legal_move, cb.draws);
+    let cost_eq = (ca.games, ca.decisions, ca.turns, ca.action_capped, ca.board_capped,
+                   ca.no_legal_move, ca.draws)
+        == (cb.games, cb.decisions, cb.turns, cb.action_capped, cb.board_capped,
+            cb.no_legal_move, cb.draws);
     if !cost_eq || ra.len() != rb.len() {
         return false;
     }
@@ -1636,8 +1638,8 @@ fn main() {
     // one had no bot able to move at all.
     if tu > 0 {
         println!(
-            "  undecided_by   cap {} / stuck {} / draw {}",
-            cost.action_capped, cost.no_legal_move, cost.draws,
+            "  undecided_by   cap {} / board {} / stuck {} / draw {}",
+            cost.action_capped, cost.board_capped, cost.no_legal_move, cost.draws,
         );
     }
 
@@ -1663,13 +1665,15 @@ fn main() {
         println!("  turns_per_game {:.2}", cost.turns as f64 / g.max(1.0));
         println!("  decisions_per_game {:.1}", cost.decisions as f64 / g.max(1.0));
         // Split by *why*: an action-capped game was still making moves and
-        // ran out of budget, a stuck one had no bot able to move at all,
-        // and a draw is a rules outcome, not a stall. They want different
-        // fixes, so a moving stall rate names its own top cause.
+        // ran out of budget, a BOARD-capped one doubled past the permanent
+        // bound, a stuck one had no bot able to move at all, and a draw is a
+        // rules outcome, not a stall. They want different fixes, so a moving
+        // stall rate names its own top cause — and the board one wants no fix
+        // at all, which is why it is not summed with the action cap.
         println!("  stalls         {tu} ({stall_pct:.2}%)");
         println!(
-            "  stalls_by      cap {} / stuck {} / draw {}",
-            cost.action_capped, cost.no_legal_move, cost.draws,
+            "  stalls_by      cap {} / board {} / stuck {} / draw {}",
+            cost.action_capped, cost.board_capped, cost.no_legal_move, cost.draws,
         );
         match peak_rss_mib() {
             Some(m) => println!("  peak_rss_mib   {m:.1}"),

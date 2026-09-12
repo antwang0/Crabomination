@@ -32,6 +32,15 @@
 # is paid only when a novel cap appears. Caps that clear are counted as
 # `slow-not-stuck`, and only a cap that SURVIVES the re-run is a defect.
 #
+# ⚠ **AND A `board` CAP IS NOT AN ACTION CAP AT ALL.** `StopReason::BoardCap`
+# ends a game whose battlefield passes 1,024 permanents — a token-doubling
+# runaway, bounded on purpose — and it used to be summed into the same `cap`
+# counter, which made it the one undecided shape the 50,000-action re-run can
+# NEVER clear: a Krenko board doubles past the bound in one activation whatever
+# the budget. `cube` and `all` seed 1169 are the worked example (1,967 Goblins
+# at turn 29, 1,535 at turn 46) and they read as ten defects until `SimCost`
+# split the two. It has its own column now.
+#
 #   RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit \
 #     cargo build --profile overflow -p crabomination --bin bot_ladder
 #   scripts/fresh_seed_sweep.sh "cube all sealed" "725 726 727 728"   # 400 games
@@ -50,7 +59,7 @@ GAMES=${3:-400}
 BIN=${4:-target-audit/overflow/bot_ladder}
 cd "$(dirname "$0")/.."
 [ -x "$BIN" ] || { echo "no $BIN — build it (header)"; exit 1; }
-cells=0 games=0 cap=0 stuck=0 draw=0 fail=0 sat=0 slow=0
+cells=0 games=0 cap=0 board=0 stuck=0 draw=0 fail=0 sat=0 slow=0
 for pool in $POOLS; do
   for seed in $SEEDS; do
     t0=$(date +%s)
@@ -67,8 +76,9 @@ for pool in $POOLS; do
       echo "$out" | grep -A6 "^cap: " | head -40
       games=$((games + $(echo "$line" | awk '{print $1 + $3}')))
       if [ -n "$by" ]; then
-        set -- $(echo "$by" | awk '{print $3, $6, $9}')
-        cap=$((cap + $1)) stuck=$((stuck + $2)) draw=$((draw + $3))
+        # `undecided_by   cap N / board N / stuck N / draw N`
+        set -- $(echo "$by" | awk '{print $3, $6, $9, $12}')
+        cap=$((cap + $1)) board=$((board + $2)) stuck=$((stuck + $3)) draw=$((draw + $4))
         # The one cap shape that is diagnosed and is NOT a defect: a seat at
         # `i32::MAX` life (Beacon of Immortality doubling itself back into the
         # library). `cap_diagnosis` labels it; counted apart so a cube block
@@ -106,5 +116,6 @@ for pool in $POOLS; do
 done
 novel=$((cap - sat - slow))
 [ $((novel + stuck + fail)) -eq 0 ] || fail=$((fail + novel + stuck))
-echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $sat the known saturated-life board, $slow slow-not-stuck) / stuck $stuck / draw $draw"
-echo "  stuck and a cap that SURVIVES the 50,000-action re-run ($novel) are defects; a draw is CR 104.4"
+echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $sat the known saturated-life board, $slow slow-not-stuck) / board $board / stuck $stuck / draw $draw"
+echo "  stuck and a cap that SURVIVES the 50,000-action re-run ($novel) are defects;"
+echo "  a draw is CR 104.4 and a BOARD cap is the 1,024-permanent bound doing its job"

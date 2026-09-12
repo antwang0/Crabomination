@@ -3237,7 +3237,7 @@ the largest number in it: the next fresh seed is 1162.** `fixed` and `sos` are
 16 s and 20 s a cell against `all`'s 68 s, so a five-pool block is barely
 dearer than a three-pool one.
 
-**363 cells / 1,790,800 games on the three-pool base, 0 stuck on every one**
+**393 cells / 1,938,800 games on the three-pool base, 0 stuck on every one**
 — and the five-pool rows are 195 cells / 781,600 games on top of that, counted
 apart because they are a different configuration and would otherwise be read as
 more base coverage than there is. Every cap is the
@@ -3262,7 +3262,7 @@ end. **A cap WITHOUT the label is the signal** — the point is that the sweep
 stops crying wolf on a board nobody is going to change, not that caps stopped
 mattering.
 
-A draw is CR 104.4, not a defect. Seed frontier **1162**. One cell is a
+A draw is CR 104.4, not a defect. Seed frontier **1172**. One cell is a
 different kind of outlier and it is the entry below.
 
 **THE SECOND `1102..1111` ROW IS THE SAME SEEDS ON FIVE POOLS WITH `(-291)`
@@ -3321,6 +3321,30 @@ and no label can separate them** — the saturated-life one can be recognised by
 its board, this cannot. The script says so now: a novel cap is a LEAD, and the
 50,000-action re-run of that cell is the step that turns it into a finding or
 into a row here. The command is in its header and in its closing line.
+
+**AND A THIRD SHAPE, WHICH THE RE-RUN CANNOT CLEAR BY CONSTRUCTION — `cube`
+AND `all` SEED 1169.** Ten capped games, unlabelled, and the 50,000-action
+re-run the previous find had just automated came back **STILL CAPPED**: ten
+defects, by the sweep's own rule. The boards say otherwise — **1,967 Goblins at
+turn 29, 1,535 at turn 46, Krenko, Mob Boss on both** — and those games ended
+at 672 and 1,027 actions, nowhere near any action cap. They are
+`StopReason::BoardCap`: the 1,024-permanent bound (`MAX_BATTLEFIELD`) ending a
+token-doubling runaway on purpose, which `SimCost` was summing into
+`action_capped`.
+
+**That made the board cap the one undecided shape a longer run can never
+clear**, because a Krenko board doubles past the bound in a single activation
+whatever the budget — so the re-run turns it from a lead into a false finding
+rather than resolving it. `SimCost` counts it apart now (`board_capped`),
+`bot_ladder` prints `cap N / board N / stuck N / draw N`, the sweep has a
+column for it, and seed 1169 reads `cap 0 / board 10 / stuck 0` with
+`failures=0` and no wasted re-run. The actor keeps ONE capped bucket on
+purpose: for training throughput a runaway board and an action cap cost the
+same thing, and it is the sweep that has to tell them apart.
+
+⚠ `--bench`'s `stalls_by` line gained the column too, so its TEXT changed —
+`cap 0 / board 0 / stuck 0 / draw 0`. The gate counters are untouched: 195,806
+decisions / 27.49 turns / 611.9 per game / 0 stalls, byte-identical.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
 `cube` seed **1036** cost **3,313 s** against a 33-48 s median for its

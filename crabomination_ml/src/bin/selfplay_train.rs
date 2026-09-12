@@ -837,6 +837,10 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         if rec.rows.is_empty() {
             shared.stalls.fetch_add(1, Ordering::Relaxed);
             match rec.stop {
+                // The actor keeps ONE capped bucket on purpose: for training
+                // throughput a runaway board and an action cap cost the same
+                // thing (a game that produced no rows). The sweep is where
+                // they have to be told apart, and `SimCost` splits them there.
                 StopReason::ActionCap | StopReason::BoardCap => {
                     shared.stalls_capped.fetch_add(1, Ordering::Relaxed);
                 }

@@ -47,8 +47,8 @@ sixty-seventh pass, so don't re-take that.
    gate that sees `debug-assertions = false`).
    ⚠ `scripts/audit_printed_body_injections.py` is **29 / 29** and counts rows from BOTH catalog audits — run it after touching any reader, and
    **never run an audit while it runs**: it edits the catalog in place (it refuses a dirty catalog and restores on a signal now).
-   **Fresh seeds: 853..1030 on five pools, then 1031..1151 on cube / all / sealed (363 cells, 1,790,800 games) PLUS a concurrent session's 195 cells /
-   781,600 games on five pools at 1060..1130 — 0 stuck everywhere. Next is 1162, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
+   **Fresh seeds: 853..1030 on five pools, then 1031..1171 on cube / all / sealed (393 cells, 1,938,800 games) PLUS a concurrent session's 195 cells /
+   781,600 games on five pools at 1060..1130 — 0 stuck everywhere. Next is 1172, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
    turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
    of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
@@ -110,14 +110,17 @@ sixty-seventh pass, so don't re-take that.
    (d) **All five duplicate pairs are gone** — and reading them was worth it: both copies of Kroxa and of Uro were in the CUBE POOL, so a seeded cube
    deck could draw two of one legend, and `kroxa_titan_of_deaths_hunger` discarded from each PLAYER where the card says each opponent. ⚠ **That commit
    changed the cube pool**; no vocab index and no golden trace moved with it.
-4. **Next, in order.** (a) **Sweep from 1162 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+4. **Next, in order.** (a) **Sweep from 1172 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
    PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,
    1076, 1090 and `all` 1090 are all the Beacon board — a POOL property, never to be re-diagnosed, and **a draw rather than a cap since `(-291)`**.
-   ⚠⚠ **A NOVEL CAP IS A LEAD, NOT A FINDING: re-run that cell at `CRAB_MAX_ACTIONS=50000` first.** The sweep's 6,000 is a TENTH of production, so a
-   long game reads exactly like a loop and no label can separate them. `all` 1149 was the first — 41 triggers on the stack at turn 89 on a
-   40-permanent Lorehold board — and at 50,000 it is **6,800 decided, 0 undecided**. The script's header and closing line carry the command.
+   ⚠⚠ **THE `cap` BUCKET HELD THREE SHAPES AND NOW HOLDS ONE.** (i) A long game: the sweep's `CRAB_MAX_ACTIONS=6000` is a TENTH of
+   production, so it reads exactly like a loop — `all` 1149 (41 triggers on the stack at turn 89) is 6,800 decided at 50,000. The script re-runs a
+   novel cap at 50,000 ITSELF now and counts what clears as `slow-not-stuck`. (ii) A BOARD cap: `StopReason::BoardCap`, the 1,024-permanent bound
+   ending a token-doubling runaway on purpose — `cube` and `all` 1169 are 1,967 Goblins off Krenko at turn 29, and the re-run can never clear them
+   because the board doubles past the bound in one activation whatever the budget. `SimCost` counts it apart and the sweep has a `board` column.
+   (iii) What is left, which IS the defect. **So read `board` and `slow-not-stuck` before believing a cap.**
    (b) **`audit_printed_body`'s remaining skips are the hard residue** and `--list <kind>` prints the factories: `nocache` 3,749 is now genuinely the
    synthesized sets (the name column takes the rest), and **700 of `nonliteral`'s 870 are LANDS**, which print no mana cost, so closing them buys that
    column nothing. What still has a card behind it: `nocolors` 909, `nosubtypes` 158, `nokeywords` 92, `nopt` 70, `notyped` 52.

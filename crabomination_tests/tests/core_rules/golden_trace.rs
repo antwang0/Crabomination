@@ -448,6 +448,29 @@ fn a_board_past_max_battlefield_ends_the_game_as_a_cap() {
     assert_eq!(stop_reason(&g, 0, 50_000, 0), Some(StopReason::GameOver));
 }
 
+/// `SimCost` counts a BOARD cap apart from an action cap, and the sweep's
+/// verdict depends on it.
+///
+/// They were one `action_capped` bucket, which made the board cap the one
+/// undecided shape a longer run can never clear: the robustness sweep's answer
+/// to "is this cap a defect?" is "re-run the cell with a bigger
+/// `CRAB_MAX_ACTIONS`", and a Krenko board doubles past 1,024 permanents in a
+/// single activation whatever the budget. `cube` and `all` seed 1169 are the
+/// worked example — 1,967 Goblins at turn 29 — and they read as ten defects
+/// until the two were split.
+#[test]
+fn a_board_cap_is_counted_apart_from_an_action_cap() {
+    use crabomination::recommend::{SimCost, StopReason};
+    let mut cost = SimCost::default();
+    for stop in [StopReason::BoardCap, StopReason::BoardCap, StopReason::ActionCap] {
+        cost.count_stop(stop, true);
+    }
+    assert_eq!(cost.board_capped, 2, "both runaway boards");
+    assert_eq!(cost.action_capped, 1, "and only the action-capped one here");
+    assert_eq!(cost.no_legal_move, 0);
+    assert_eq!(cost.draws, 0);
+}
+
 /// The pair the 2026-09-09 fresh-seed sweep capped at 6,001 actions: seed
 /// 726's cube pool, archetype 6, pair seed 11400714845093003057 — two
 /// Portable Holes and a Leonin Relic-Warder cycling three boards. With the
