@@ -3118,6 +3118,15 @@ fix     nine more cards carried the prowess TRIGGER and not the keyword (`884780
         +1/+1 EOT" names FIFTY cards — Kami of the Hunt (Spirit or Arcane), the Lorehold and Inkling bodies, forty
         more with the same pump under a different FILTER and none of them prowess. Exact equality with `prowess()` /
         `prowess_trigger()` is the only thing the convention is about.
+perf    the prowess guard is in a HOT PATH and was measured on the pool that carries it, not just on `--bench`.
+        `is_prowess_pump` replaces an event-kind `matches!` with that same match plus an effect match, per triggered
+        ability, on every noncreature spell cast — and `--bench` is `--decks fixed`, which PERF's own rule says cannot
+        see a statics / grants change. `--decks cube --games 60 --threads 1 --seed 43` reads **480 decided, 0
+        undecided, 4.3 / 4.4 s** over two runs, and the `fixed` counters are byte-identical at 195,806 / 27.49 /
+        611.9 / 0 stalls. ⚠ **No paired A/B was taken** — building the base side is 18 min and the concurrent session
+        owned the box's build slot — so this is a no-anomaly reading plus a bounded argument, not a measured delta:
+        the added work is one enum match, only for triggers that already matched `SpellCast`, of which a board
+        carries a handful. If a later run wants the number, the A/B is one `git revert` of the guard away.
 note    **the two oracle-backed catalog audits are complementary, and that is how prowess was found.**
         `audit_catalog_stats.py` reads a WIDER keyword vocabulary than `audit_printed_body`'s evergreen set (Ward,
         Prowess, Hexproof, Magecraft) over a NARROWER set of factories; `audit_printed_body` follows the helper chain.
@@ -3161,9 +3170,10 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1112..1121   0036101a      50    216,000       0       0     0     20   five pools, WITH `(-291)`
   1122..1131   90340416      30    148,000       0       0     0      4
   1132..1141   87e64efc      30    148,000       0       0     0     16
+  1142..1151   edb11e35      30    148,000       0       2*    0     14
 ```
 
-**333 cells / 1,642,800 games on the three-pool base, 0 stuck on every one**
+**363 cells / 1,790,800 games on the three-pool base, 0 stuck on every one**
 — and the two five-pool `(-291)` rows are 100 cells / 432,000 games on top of
 that, counted apart because they are a different configuration and would
 otherwise be read as more base coverage than there is. Every cap is the
@@ -3188,7 +3198,7 @@ end. **A cap WITHOUT the label is the signal** — the point is that the sweep
 stops crying wolf on a board nobody is going to change, not that caps stopped
 mattering.
 
-A draw is CR 104.4, not a defect. Seed frontier **1152**. One cell is a
+A draw is CR 104.4, not a defect. Seed frontier **1162**. One cell is a
 different kind of outlier and it is the entry below.
 
 **THE SECOND `1102..1111` ROW IS THE SAME SEEDS ON FIVE POOLS WITH `(-291)`
@@ -3230,6 +3240,23 @@ games end at turn 196 / 4,537 actions instead of holding a thread to the cap
 (6,000 here, 50,000 in an actor). The `[SATURATED LIFE …]` label still names
 the board when `CRAB_CAP_DIAG` catches one mid-loop; what it no longer has to
 excuse is a cap.
+
+**AND THE SECOND CAP SHAPE THAT IS NOT A DEFECT — `all` SEED 1149, THE FIRST
+NOVEL CAP SINCE THE LABEL LANDED, AND IT IS THE INSTRUMENT AGAIN.** Two capped
+games at 6,000 actions, neither carrying the `[SATURATED LIFE]` label, so the
+block scored `failures=2` and the machinery did exactly what it was built to
+do. The diagnostic: turn 89, **41 triggers on the stack**, both seats alive on
+40- and 41-permanent Lorehold boards (12 Spirits, 5 Inkshape Demonstrators, a
+Restoration Seminar recurring out of exile on Paradigm). A trigger pile, not a
+cycle — and the decisive test says so: the same cell at
+`CRAB_MAX_ACTIONS=50000`, which is what production allows, reads **6,800
+decided, 0 undecided** in 98 s.
+
+**So `CRAB_MAX_ACTIONS=6000` makes a long game indistinguishable from a loop,
+and no label can separate them** — the saturated-life one can be recognised by
+its board, this cannot. The script says so now: a novel cap is a LEAD, and the
+50,000-action re-run of that cell is the step that turns it into a finding or
+into a row here. The command is in its header and in its closing line.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
 `cube` seed **1036** cost **3,313 s** against a 33-48 s median for its

@@ -42,11 +42,12 @@ sixty-seventh pass, so don't re-take that.
    capability, `audit_printed_body` **0 on all six columns over 16,483 priced + 17,244 type lines + 16,910 subtypes + 16,800
    keywords + 9,254 P/T**, and `scripts/audit_printed_body_injections.py` **17 / 17 as expected** — run that after
    touching any reader in it.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1121 on cube / all / sealed (273 cells, 1,346,800 games) PLUS a second session's 170 cells /
-   734,400 games on five pools at 1060..1121 — 0 stuck everywhere, and the 10 caps are ALL the KNOWN Beacon board. Next is 1122.** ⚠ **That board has an
-   ENDING now** (`(-291)`): the turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the last 100 cells / 432,000 games have
-   **0 caps of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**. The watch is its own negative
-   control twice over: on the 60 cells both sessions swept it drew exactly the games that were already draws (PERF Baseline).
+   **Fresh seeds: 853..1030 on five pools, then 1031..1151 on cube / all / sealed (363 cells, 1,790,800 games) PLUS a second session's 170 cells /
+   734,400 games on five pools at 1060..1121 — 0 stuck everywhere. Next is 1162.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
+   turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
+   of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
+   `(-291)` bear that out: 90 cells with exactly TWO caps, both at `all` 1149. The watch is its own negative control twice over: on the 60 cells both
+   sessions swept it drew exactly the games that were already draws (PERF Baseline).
    **`all` 1024 is the cell that EARNED its keep** (the `MayDoBy` leak).
 3. **This run, and the sentence it earned:** *a column that skips is not a column that passes, and a gate that cannot fail is worse than no gate.*
    `audit_printed_body` read cost / P/T / card types for three passes and reported 0; opening the two fields it had left alone found **29 shipped
@@ -86,11 +87,14 @@ sixty-seventh pass, so don't re-take that.
    sacrifice as an effect too. Two Witherbloom Pests are synthesized cards with no printed text to violate.
    (d) `helper_params` matched a helper's parameter list with `[^)]*`, which closes at a TUPLE parameter — eight bestow creatures were skipped out of the
    subtype and keyword columns rather than read. Injection added (13th, now 17th).
-4. **Next, in order.** (a) **Sweep from 1152 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+4. **Next, in order.** (a) **Sweep from 1162 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
    PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,
    1076, 1090 and `all` 1090 are all the Beacon board — a POOL property, never to be re-diagnosed, and **a draw rather than a cap since `(-291)`**.
+   ⚠⚠ **A NOVEL CAP IS A LEAD, NOT A FINDING: re-run that cell at `CRAB_MAX_ACTIONS=50000` first.** The sweep's 6,000 is a TENTH of production, so a
+   long game reads exactly like a loop and no label can separate them. `all` 1149 was the first — 41 triggers on the stack at turn 89 on a
+   40-permanent Lorehold board — and at 50,000 it is **6,800 decided, 0 undecided**. The script's header and closing line carry the command.
    (b) **`audit_printed_body`'s remaining skips are where the next cards are**, and they are small now: `nocache` 3,778 (synthesised cards, not
    auditable), `nonliteral` 921, `nokeywords` 439, `nosubtypes` 221, `notyped` 160, `nopt` 119. Each is one or two idioms (a local built by `push`, a
    `mut` parameter, a non-`Keyword::` element) and the machinery to follow them exists. ⚠ **Print every skip you add** — the P/T column skipped 41 % of

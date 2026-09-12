@@ -16,7 +16,22 @@
 # Immortality doubling and shuffling itself back, seen at `cube` 1018, 1069 and
 # 1076. `cap_diagnosis` labels that board `[SATURATED LIFE …]` and the totals
 # below count it apart, so a cube block does not read as a failure for a board
-# nobody is going to change. A cap WITHOUT that label is the signal.
+# nobody is going to change.
+#
+# ⚠ **A NOVEL CAP IS A LEAD, NOT A FINDING — RE-RUN THE CELL AT THE PRODUCTION
+# ACTION CAP BEFORE CALLING IT ONE.** `CRAB_MAX_ACTIONS=6000` is a tenth of
+# what production allows, so a legitimately LONG game reads here exactly like a
+# loop, and the `[SATURATED LIFE]` label cannot tell them apart. `all` seed
+# 1149 was the first: 2 caps at 6,000 actions with 41 triggers on the stack at
+# turn 89 on a 40/41-permanent Lorehold board — and at `CRAB_MAX_ACTIONS=50000`
+# the same cell reads **6,800 decided, 0 undecided**. Slow, not stuck.
+#
+#   CRAB_ANSWER_LOG=strict CRAB_CAP_DIAG=20000 CRAB_MAX_ACTIONS=50000 \
+#     target-audit/overflow/bot_ladder --a dflt --b dflt --games 400 \
+#     --threads 3 --seed <seed> --decks <pool>
+#
+# A cap that SURVIVES that re-run is the signal. One that does not is a slow
+# cell, and PERF's slow-cell entry is where it goes.
 #
 #   RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit \
 #     cargo build --profile overflow -p crabomination --bin bot_ladder
@@ -70,4 +85,5 @@ done
 novel=$((cap - sat))
 [ $((novel + stuck + fail)) -eq 0 ] || fail=$((fail + novel + stuck))
 echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $sat the known saturated-life board) / stuck $stuck / draw $draw"
-echo "  only a NOVEL cap ($novel) and stuck are defects; a draw is CR 104.4"
+echo "  stuck is a defect; a draw is CR 104.4; a NOVEL cap ($novel) is a LEAD —"
+echo "  re-run that cell at CRAB_MAX_ACTIONS=50000 before calling it one (header)"
