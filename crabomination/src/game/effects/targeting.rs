@@ -151,10 +151,12 @@ impl GameState {
         // Slot 0's own filter wins when it is player-only: the *slot* is a
         // player even when the effect body operates on permanents (Mudhole's
         // `Move { what: CardsInZone { who: Target(0) } }`, the "enchant
-        // player" Curses). `accepts_player_target` classifies by the body, so
-        // twenty-six shipped bodies enumerated zero legal targets without
-        // this. `req` is already slot 0's filter, so it costs no extra walk.
-        let accepts_player = req.is_player_only() || eff.accepts_player_target();
+        // player" Curses). The body classifier said "permanent-targeting" for
+        // twenty-six shipped bodies, which then enumerated zero legal targets;
+        // `accepts_player_target` folds the slot read in itself now, so this
+        // call site and the enumerator's cannot drift apart and a third one
+        // cannot reintroduce it.
+        let accepts_player = eff.accepts_player_target();
         let primary_player = if prefer_friendly { controller } else { opp };
         let secondary_player = if prefer_friendly { opp } else { controller };
 
@@ -453,6 +455,12 @@ impl GameState {
     ) -> Vec<Target> {
         use crate::card::SelectionRequirement;
         let any_filter = SelectionRequirement::Any;
+        // No `.or_else(target_filter_for_slot(0))` here, unlike the picker, and
+        // it is not a gap: `core_rules::target_walkers::the_primary_target_
+        // filter_agrees_with_the_slot_walker_on_slot_zero` holds the two walkers
+        // to the SAME filter over 7,816 bodies and to "primary answers whenever
+        // the slot walker does", so the picker's `or` arm is unreachable on the
+        // shipped catalog. The gate is what keeps this line honest.
         let req_owned =
             eff.primary_target_filter().map(|f| f.resolve_x(x).resolve_converge(converge));
         let req = req_owned.as_ref().unwrap_or(&any_filter);
@@ -463,8 +471,8 @@ impl GameState {
         self.legal_targets_for_filter_scoped(
             req,
             // See the picker's note: a player-only slot 0 is a player slot
-            // whatever the body does with it.
-            req.is_player_only() || eff.accepts_player_target(),
+            // whatever the body does with it, and the walker says so.
+            eff.accepts_player_target(),
             controller,
             source,
             offboard,

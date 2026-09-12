@@ -1004,8 +1004,17 @@ fn every_reachable_target_player_is_visible_to_the_player_gate() {
 /// walk of the same tree rather than against a guess at what the tree means,
 /// so it cannot false-report the way a blanket "holds a `Move`" test does.
 ///
-/// **Population 7,728 and 0 findings**, which is what makes it an invariant
-/// on the day it lands rather than a ratchet.
+/// **Tightened from presence to EQUALITY at the eighteenth pass**, because
+/// "both answer" is not the invariant the two call sites need. The picker
+/// reads `primary.or(slot0)` and `enumerate_legal_targets_xc` reads `primary`
+/// alone, so a body where the two walkers return *different* filters is one
+/// where the clickable list and the auto-pick aim at different sets — Feedback
+/// Bolt's shape, fixed by the deferral rather than case by case. The census
+/// says they are equal on **all 7,816** bodies that answer both, which is what
+/// makes the picker's `or` and the enumerator's silence the same `req`.
+///
+/// **Population 7,728 when written, 0 findings** — an invariant on the day it
+/// lands rather than a ratchet.
 #[test]
 fn the_primary_target_filter_agrees_with_the_slot_walker_on_slot_zero() {
     let mut bad: Vec<String> = Vec::new();
@@ -1026,19 +1035,28 @@ fn the_primary_target_filter_agrees_with_the_slot_walker_on_slot_zero() {
         for (kind, body) in bodies {
             let Some(slot0) = body.target_filter_for_slot(0) else { continue };
             covered += 1;
-            if body.primary_target_filter().is_some() {
-                continue;
+            match body.primary_target_filter() {
+                None => bad.push(format!("{} ({kind}) — slot 0 is {slot0:?}", def.name)),
+                // The same filter, not merely *a* filter. The picker reads
+                // `primary.or(slot0)` and the enumerator reads `primary`, so a
+                // body where the two differ is one where the clickable list and
+                // the auto-pick aim at different sets — the Feedback Bolt shape,
+                // which the deferral fixed by construction rather than by case.
+                // 7,816 bodies answer both, and they agree on every one.
+                Some(p) if p != slot0 => bad.push(format!(
+                    "{} ({kind}) — slot 0 is {slot0:?} but the primary walker says {p:?}",
+                    def.name,
+                )),
+                Some(_) => {}
             }
-            bad.push(format!("{} ({kind}) — slot 0 is {slot0:?}", def.name));
         }
     }
     bad.sort();
     bad.dedup();
     assert!(
         bad.is_empty(),
-        "{} bodies declare a slot-0 target filter that `primary_target_filter` \
-         cannot see, so the auto-picker chooses slot 0 against `Any` and offers \
-         targets the card forbids:\n  {}",
+        "{} bodies whose slot-0 filter and `primary_target_filter` disagree, so the \
+         auto-picker aims at one set and the enumerator offers another:\n  {}",
         bad.len(),
         bad.join("\n  ")
     );
@@ -1400,3 +1418,4 @@ fn a_player_only_slot_zero_enumerates_a_player() {
          vacuous. It was 566 when written; re-derive the shape before lowering this."
     );
 }
+

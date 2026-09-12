@@ -3549,7 +3549,33 @@ impl Effect {
     }
 
     /// True if a `Target::Player(_)` is a meaningful primary target for this
-    /// effect. The auto-target heuristic uses this to skip player candidates
+    /// effect — **body classification OR a player-only slot-0 filter**.
+    ///
+    /// The fold is the whole point. [`accepts_player_target_by_body`] asks what
+    /// the effect DOES with its target, so `Move` / `Attach` / `PumpPT` are
+    /// "permanent-targeting" — right for Regrowth, and wrong for "return all
+    /// artifacts target player owns", whose slot 0 is a player and whose body
+    /// moves cards. Twenty-six shipped bodies enumerated ZERO legal targets
+    /// because of it (Mudhole, Hurkyl's Recall, River's Rebuke, Jace's -1, the
+    /// seven "enchant player" Curses and fifteen more — uncastable, nothing
+    /// logged). Both call sites were patched by hand at the time; a third would
+    /// have brought it back, so the slot read lives here instead.
+    ///
+    /// Order matters: the body match answers `true` for damage / draw / mill in
+    /// one arm, so the slot walk only runs for effects that operate on
+    /// permanents.
+    ///
+    /// [`accepts_player_target_by_body`]: Self::accepts_player_target_by_body
+    pub fn accepts_player_target(&self) -> bool {
+        self.accepts_player_target_by_body()
+            || self.target_filter_for_slot(0).is_some_and(|f| f.is_player_only())
+    }
+
+    /// What the effect DOES with a target, ignoring the slot's own filter —
+    /// the inner half of [`accepts_player_target`](Self::accepts_player_target)
+    /// and private so no caller can take it alone.
+    ///
+    /// The auto-target heuristic uses this to skip player candidates
     /// when the effect actually operates on permanents — without it, an
     /// `Any`-filtered Move (Regrowth) auto-targets the caster as a player and
     /// silently fizzles, since `Effect::Move` only consumes
@@ -3559,7 +3585,7 @@ impl Effect {
     /// damage, life-gain/loss, drain, mill/draw/discard against a player ref,
     /// surveil/scry/look (no-op for non-player anyway). False for effects that
     /// move/tap/destroy/exile cards.
-    pub fn accepts_player_target(&self) -> bool {
+    fn accepts_player_target_by_body(&self) -> bool {
         match self {
             Effect::DealDamage { .. }
             | Effect::GainLife { .. }
@@ -3615,7 +3641,7 @@ impl Effect {
             | Effect::CounterUnlessPaid { .. }
             | Effect::CounterUnless { .. }
             | Effect::MakeSpellUncounterable { .. } => false,
-            Effect::UnlessPlayerPays { then, .. } => then.accepts_player_target(),
+            Effect::UnlessPlayerPays { then, .. } => then.accepts_player_target_by_body(),
             // "Gain control of all creatures target PLAYER controls"
             // (Emrakul, the World Anew) takes a player; the plain
             // permanent-steal form doesn't.
@@ -3711,29 +3737,29 @@ impl Effect {
                 .iter()
                 .find(|e| e.target_filter_for_slot(0).is_some())
                 .or_else(|| v.iter().find(|e| e.primary_target_filter().is_some()))
-                .map(|e| e.accepts_player_target())
-                .unwrap_or_else(|| v.iter().any(|e| e.accepts_player_target())),
+                .map(|e| e.accepts_player_target_by_body())
+                .unwrap_or_else(|| v.iter().any(|e| e.accepts_player_target_by_body())),
             Effect::If { then, else_, .. } => {
                 // Prefer the `then` branch (the active outcome) — same
                 // logic as `ability_effect_label`. Fall back to else_'s
                 // classification if `then` doesn't have a primary target.
                 // Slot 0 first, for the reason the `Seq` arm above gives.
                 if then.target_filter_for_slot(0).is_some() {
-                    then.accepts_player_target()
+                    then.accepts_player_target_by_body()
                 } else if else_.target_filter_for_slot(0).is_some() {
-                    else_.accepts_player_target()
+                    else_.accepts_player_target_by_body()
                 } else if then.primary_target_filter().is_some() {
-                    then.accepts_player_target()
+                    then.accepts_player_target_by_body()
                 } else if else_.primary_target_filter().is_some() {
-                    else_.accepts_player_target()
+                    else_.accepts_player_target_by_body()
                 } else {
-                    then.accepts_player_target() || else_.accepts_player_target()
+                    then.accepts_player_target_by_body() || else_.accepts_player_target_by_body()
                 }
             }
             Effect::DelayUntilWithCapture { body, .. }
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
-            | Effect::ForEach { body, .. } => body.accepts_player_target(),
+            | Effect::ForEach { body, .. } => body.accepts_player_target_by_body(),
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
@@ -3747,18 +3773,18 @@ impl Effect {
             | Effect::MayTap { then: body, .. }
             | Effect::MayDiscard { then: body, .. }
             | Effect::MayDiscardMatching { then: body, .. }
-            | Effect::MayPayLife { body, .. } => body.accepts_player_target(),
-            Effect::Process { then, .. } => then.accepts_player_target(),
-            Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
-            Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
+            | Effect::MayPayLife { body, .. } => body.accepts_player_target_by_body(),
+            Effect::Process { then, .. } => then.accepts_player_target_by_body(),
+            Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target_by_body()),
+            Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target_by_body()),
             Effect::FlipCoin {
                 on_heads, on_tails, ..
-            } => on_heads.accepts_player_target() || on_tails.accepts_player_target(),
+            } => on_heads.accepts_player_target_by_body() || on_tails.accepts_player_target_by_body(),
             Effect::FlipCoinsUntilLoseOrStop { tiers } => {
-                tiers.iter().any(|(_, e)| e.accepts_player_target())
+                tiers.iter().any(|(_, e)| e.accepts_player_target_by_body())
             }
             Effect::RollDie { results, .. } => {
-                results.iter().any(|(_, _, e)| e.accepts_player_target())
+                results.iter().any(|(_, _, e)| e.accepts_player_target_by_body())
             }
             // Conservative default: anything we don't classify is permitted.
             // The legality gate (filter + check_target_legality) still rejects

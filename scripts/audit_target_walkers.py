@@ -55,6 +55,12 @@ WALKERS = [
     "accepts_player_target",
 ]
 
+# A walker whose match lives in a private inner fn, because its public half
+# folds something else in. `accepts_player_target` ORs a player-only slot-0
+# filter over the body classification (the 26 uncastable bodies), so the
+# `_ => true` match this audit reads is `accepts_player_target_by_body`.
+INNER = {"accepts_player_target": "accepts_player_target_by_body"}
+
 # (walker, wrapper) pairs whose omission has been reviewed and is deliberate.
 # Add a line here only with the reason; an unreviewed pair belongs in the
 # report, not in this list.
@@ -105,7 +111,7 @@ def wrapper_variants() -> list[str]:
 
 def walker_bodies() -> dict[str, str]:
     src = QUERY.read_text()
-    return {f: _brace_body(src, src.index("pub fn " + f)) for f in WALKERS}
+    return {f: _brace_body(src, src.index("fn " + INNER.get(f, f) + "(")) for f in WALKERS}
 
 
 def main() -> int:
