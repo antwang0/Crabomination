@@ -3086,9 +3086,11 @@ fn atraxa_takes_one_per_type_and_bottoms_the_rest() {
 
 #[test]
 fn pathway_front_face_taps_for_front_color_only() {
-    // Playing Blightstep Pathway via PlayLand picks the front (Swamp / B)
-    // face. The land enters as a Swamp, has exactly one mana ability, and
-    // taps for {B}.
+    // Playing Blightstep Pathway via PlayLand picks the front face. It has
+    // exactly one mana ability and taps for {B} — and it prints NO basic land
+    // type, which is what `3ca1d297` fixed: a pathway's type line is bare
+    // "Land", so a Swamp subtype made it fetchable and Urborg-animatable.
+    // These two assertions were left asserting the defect.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::blightstep_pathway());
     g.perform_action(GameAction::PlayLand(id))
@@ -3096,9 +3098,8 @@ fn pathway_front_face_taps_for_front_color_only() {
 
     let card = g.battlefield_find(id).expect("card on battlefield");
     assert_eq!(card.definition.name, "Blightstep Pathway");
-    assert!(card.definition.subtypes.land_types.contains(&crabomination::card::LandType::Swamp));
-    assert!(!card.definition.subtypes.land_types.contains(&crabomination::card::LandType::Mountain),
-        "Front face should be a Swamp only — Mountain belongs to the back face");
+    assert!(card.definition.subtypes.land_types.is_empty(),
+        "a pathway prints no basic land type — bare `Land` on both faces");
     assert_eq!(card.definition.activated_abilities.len(), 1,
         "Front face exposes only one mana ability (the front color)");
 
@@ -3112,7 +3113,8 @@ fn pathway_front_face_taps_for_front_color_only() {
 #[test]
 fn pathway_back_face_taps_for_back_color_only() {
     // Playing Blightstep Pathway via PlayLandBack swaps to the back face
-    // (Searstep Pathway / Mountain / R) before placing on battlefield.
+    // (Searstep Pathway, {R}) before placing on battlefield. No basic land
+    // type there either — see the front-face test.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::blightstep_pathway());
     g.perform_action(GameAction::PlayLandBack(id))
@@ -3120,8 +3122,8 @@ fn pathway_back_face_taps_for_back_color_only() {
 
     let card = g.battlefield_find(id).expect("card on battlefield");
     assert_eq!(card.definition.name, "Searstep Pathway");
-    assert!(card.definition.subtypes.land_types.contains(&crabomination::card::LandType::Mountain));
-    assert!(!card.definition.subtypes.land_types.contains(&crabomination::card::LandType::Swamp));
+    assert!(card.definition.subtypes.land_types.is_empty(),
+        "a pathway prints no basic land type — bare `Land` on both faces");
     assert_eq!(card.definition.activated_abilities.len(), 1);
 
     g.perform_action(GameAction::ActivateAbility {
