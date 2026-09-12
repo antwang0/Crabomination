@@ -35,8 +35,9 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at the tip `cfef051f`:** suite **19,447 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel
    one-shot census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, release-fast check clean, `--bench` **195,806 /
    27.49 / 611.9 / 0 stalls** + determinism + thread_determinism, `audit_answer_log` 69 / 7 suspicious (its docstring explains every
-   remaining row, so a NEW row is the signal), `audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` 27 open / 0 demonstrated, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1030 swept — next
-   is 1031** (the two sessions' blocks overlap between 995 and 1012; the grids are in PERF. **`all` seed 1024 is the one sweep cell that EARNED its keep**:
+   remaining row, so a NEW row is the signal), `audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` 27 open / 0 demonstrated, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1030 swept on five pools, `cube` also 1031..1035 — next
+   is 1031, and `cube` from 1037** (the two sessions' blocks overlap between 995 and 1012; the grids are in PERF, along with `cube` 1036, a SLOW cell that
+   is neither capped nor looping and is cleared of this session by an A/B. **`all` seed 1024 is the one sweep cell that EARNED its keep**:
    it aborted under `CRAB_ANSWER_LOG=strict` on a real defect — `MayDoBy` re-deriving its seat from a destroyed land, ENGINE_BACKLOG's seventeenth find —
    and the only capped board on record is still the diagnosed Beacon of Immortality mirror at `cube` 1018).
 3. **This run, and the sentence both sessions earned:** *the suite tests the path that does not suspend, and the training path is the one that does* —
@@ -75,8 +76,10 @@ sixty-seventh pass, so don't re-take that.
    `CardDefinition` literal — it found **seven cards castable for free** (CR 202.1b) and is clean at 0/0/0/0 now over **10,270 factories**. The gap is
    **219 real spells** behind ~40 bespoke per-file helpers (`zubera("X", r(), ..)`); the subtype columns are unopened.
    (g) `BecomeChosenColor` picks per source, not per target — bot strength, not a rules defect. (h) mirrors: abilarms 926+, mirror 798+, mcts 777+,
-   lookahead / planner 781+. (i) Perf reads floor and the queue has no device above 0.2 %: every perf leg of the last four runs came off a bug fix, not
-   off the queue.
+   lookahead / planner 781+. (i) Perf reads floor and the queue has no device above 0.2 % (every perf leg of the last four runs came off a bug
+   fix, not off the queue) — **but there is one concrete lead now: `cube` seed 1036 is ~12x more expensive per game than its own neighbours**, not capped
+   and not looping, and an A/B against this session's parent clears the session of it (24.7 s vs 22.4 s on the same 8-game slice). PERF has the
+   reproducer; 12x on one `dflt` cube pairing is where a per-action cost lives.
 
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or

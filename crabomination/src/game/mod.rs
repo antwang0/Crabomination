@@ -16389,7 +16389,44 @@ impl GameState {
             }
         }
         self.clear_stale_target_suppression();
+        #[cfg(all(debug_assertions, not(test)))]
+        self.report_stranded_suspend_signal();
         result
+    }
+
+    /// A `suspend_signal` still set when an action returns with NOTHING pending
+    /// is a stranded suspension, and it is not inert: the next
+    /// `continue_*_resolution` takes whatever is in that field and turns it into
+    /// `pending_decision`, so the ask surfaces inside an unrelated resolution
+    /// carrying the wrong effect's continuation.
+    ///
+    /// Every known producer was an effect resolved OFF the stack, where nothing
+    /// could park a continuation — `resolve_effect_driven` is what closed those
+    /// (ENGINE_BACKLOG's sixteenth find). This is the guard for the next one, on
+    /// the same `CRAB_ANSWER_LOG` flag as the resume-channel nets and at the
+    /// same cost: one `Option` check on a path that already clones a checkpoint.
+    ///
+    /// `not(test)`: the crate's own unit tests set the field deliberately to
+    /// assert what drops it.
+    #[cfg(all(debug_assertions, not(test)))]
+    fn report_stranded_suspend_signal(&self) {
+        if self.suspend_signal.is_none() || self.pending_decision.is_some() {
+            return;
+        }
+        let mode = answer_log_level();
+        if mode == 0 {
+            return;
+        }
+        let (decision, _, remaining) = self.suspend_signal.as_deref().expect("checked above");
+        let d = format!("{decision:?}");
+        let r = format!("{remaining:?}");
+        let msg = format!(
+            "stranded suspend signal: {} …\n  continuation: {} …",
+            &d[..d.len().min(180)],
+            &r[..r.len().min(180)],
+        );
+        assert!(mode < 2, "{msg}");
+        eprintln!("{msg}");
     }
 
     /// A declined "up to N targets" slot is scoped to one cast attempt. The

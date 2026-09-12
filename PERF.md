@@ -2980,7 +2980,12 @@ the script's docstring now explains every remaining row instead of only counting
 them, so a NEW row is the signal). `audit_decision_plumbing` **168 / 108 / 60,
 DEAD 0 and repeat 0** (from 178 / 104 / 74), `audit_stash_in_loop` (new) 1 / 1
 allowlisted / 0 unexplained, `audit_seat_from_selector` (new) 27 open / 0
-demonstrated.
+demonstrated. A third net joins the two resume-channel ones on the same
+`CRAB_ANSWER_LOG` flag: **a `suspend_signal` still set when an action returns
+with nothing pending** is a stranded suspension, and the next
+`continue_*_resolution` would take it and pose it inside an unrelated resolution.
+`resolve_effect_driven` closed every known producer; the guard is for the next
+one, and reads 0 over four `warn` cells (`cube`/`all` x seeds 1031, 1035).
 `--bench`, `release-fast`: **195,806 decisions / 27.49 turns / 611.9
 decisions-per-game / 0 stalls** — the committed counters, byte-identical, and
 byte-identical at every tip this session — `determinism ok`,
@@ -2999,7 +3004,32 @@ NEXT.
 
 A sixth block, **1025..1030 over the fix at `e0dbfa48`** (30 cells / 110,400
 games), reads **0 failures / 0 cap / 0 stuck / 4 draws** — the leak the fifth
-block found does not recur.
+block found does not recur. A seventh, 1031.. on `cube`, got five clean cells and
+then ran into the cell below.
+
+**A SLOW CELL, MEASURED AND CLEARED OF THIS SESSION'S WORK: `cube` seed 1036.**
+It is not capped, not stuck and not looping — no game in it reaches even 2,000
+actions with `CRAB_CAP_DIAG=2000` — it is **~12x more expensive per game than its
+own neighbours**, which is the `--decks cube --seed 43` class PERF already
+documents (a cell that hides an expensive game behind `0 undecided`). The
+reproducer is small and deterministic:
+
+```text
+  RUST_MIN_STACK=33554432 CRAB_MAX_ACTIONS=6000 target-audit/overflow/bot_ladder \
+    --a dflt --b dflt --games 8 --threads 1 --seed 1036 --decks cube
+```
+
+| binary | seed 1036 | seed 1035 (control) |
+| --- | --- | --- |
+| the closing tip | 22.4 s / 64 games | 1.9 s |
+| **`5d8cf7dc`, this session's PARENT** (separate worktree, separate target dir, different md5) | **24.7 s** | 1.9 s |
+
+So the cell was already 13x its neighbour before any of this session's asks were
+routed, and the tip is if anything marginally faster on it. **Nothing here is a
+regression**, and the honest reading of the pair is that the seed is worth
+profiling on its own: 12x on one cube pairing is a throughput question (the ML
+phase's first priority), and a `dflt` mirror that expensive is where a per-action
+cost lives. The full 400-game cell is ~30 minutes, so profile the 8-game slice.
 
 A fifth block, **1019..1024 at `c9452d0e`** (30 cells), is the one that EARNED
 its keep: `all` 1024 aborted under `CRAB_ANSWER_LOG=strict` on the `MayDoBy` leak
