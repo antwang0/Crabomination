@@ -9167,6 +9167,43 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**`computed_permanent_hinted`'s "one memo-hit path nobody has read by line" —
+READ, and it is NOT a memo-hit path. No build spent on the device.** The lead
+at the bottom of the `a198daf3` re-read named it as 150 Ir/call self over
+366 k calls. At the 2026-09-12 tip (`e3f5af1a`, profiling-fast, `--games 6
+--threads 1 --seed 1 --decks cube`, 2,113,201,858 Ir) it is **300,266 calls /
+41.2 M self (1.95 %) / 137.2 Ir**, and the callee table says where those calls
+go:
+
+```text
+  callees of computed_permanent_hinted (399,640 calls out):
+    176,210   64.6 M   compute_permanent_pass        the MISS: one layer pass
+    172,470   18.3 M   cp_pool::alloc                one per miss
+     25,634   54.0 M   fx_pool::alloc_with           the scope's first read: the gather
+      7,040    1.9 M   SmallVec::reserve_one_unchecked   `perms` past its inline 8
+```
+
+**58.7 % of the calls are misses**, so the "hit path" the lead was about —
+two atomic loads, the mutex, the `perms` scan, an `Arc` clone — is at most
+~124 k calls of the 300 k and ~11 M of the 41.2 M self, **0.5 % of the pool**.
+A device that halved it would buy 0.25 %, and the scan is not what to halve:
+137 Ir average against a ~90-Ir lock-plus-clone floor puts the mean `perms`
+length in the low single digits, which is what `SmallVec<[_; 8]>` is for.
+Raising that inline 8 is also not free — `LayerFreezeState` sits inside
+`GameState`, which is at its 1,600-byte cap.
+
+What the table points at instead is `compute_permanent_pass`: **321,486 calls
+/ 86.8 M self (4.11 %) / 270 Ir**, the second-largest engine row, reached
+176,210 times from here and 145,276 from `compute_permanents`' own
+`from_iter`. That is one layer pass per permanent per freeze scope, which the
+`(-194)` census already priced as the freeze design's floor rather than a
+device. The unexplored half is not the pass body but the **scope granularity**
+— 176 k first-asks against ~124 k re-asks means the memo is reused ~1.7x per
+permanent, and a coarser `with_frozen_layers` would raise that — and a scope
+may not span a state mutation, so it is a correctness question before it is a
+perf one. Nobody has censused scopes-per-decision; that is the next reading, not
+a build.
+
 **THE PROMPT-TEXT ELISION'S LAST FAMILY — PRICED AND NOT BUILT, so nobody
 re-opens it off `(-288)`'s "two families are left".** `OptionalKind`
 (`68dceaaa`) took the bot's prose read out of `OptionalTrigger`, which is the
