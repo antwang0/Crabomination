@@ -10,13 +10,11 @@
 # `CRAB_MAX_ACTIONS=6000` ends a looping game in under a minute instead of
 # holding a thread to the 50,000 cap, and `CRAB_CAP_DIAG=4000` prints the
 # board of any game past 4,000 actions (stack targets, linked exiles), so a
-# cap names itself in the log. Only a NOVEL `cap` and `stuck` are defects:
-# `draw` is a rules outcome (CR 104.4), and one cap shape is diagnosed and is
-# not a defect either — a seat at `i32::MAX` life, which is Beacon of
-# Immortality doubling and shuffling itself back, seen at `cube` 1018, 1069 and
-# 1076. `cap_diagnosis` labels that board `[SATURATED LIFE …]` and the totals
-# below count it apart, so a cube block does not read as a failure for a board
-# nobody is going to change.
+# cap names itself in the log. `stuck` is always a defect and `draw` never is
+# (CR 104.4); a `cap` is one unless the 50,000-action re-run below clears it, or
+# keeps it on the one board that is diagnosed and unwinnable — both seats past
+# `SCALE_CEILING * 1_000` life, which is Beacon of Immortality doubling and
+# shuffling itself back (`cube` 1018, 1069, 1076, `all` 1159).
 #
 # ⚠ **A NOVEL CAP IS RE-RUN AT THE PRODUCTION ACTION CAP BEFORE IT IS
 # REPORTED, and the script does that itself.** `CRAB_MAX_ACTIONS=6000` is a
@@ -28,9 +26,21 @@
 # Lorehold board — and at `CRAB_MAX_ACTIONS=50000` the same cell reads
 # **6,800 decided, 0 undecided**. Slow, not stuck.
 #
-# So a cell that caps with no label is re-run at 50,000 automatically; the cost
-# is paid only when a novel cap appears. Caps that clear are counted as
-# `slow-not-stuck`, and only a cap that SURVIVES the re-run is a defect.
+# So EVERY cap is re-run at 50,000 automatically, labelled or not — `cube` 1204
+# read `cap 8 / draw 12` at 6,000 and `cap 0 / draw 20` at 50,000, so excusing a
+# labelled cap without the re-run reported 14 non-defects in one block. Caps
+# that clear are counted `slow-not-stuck`.
+#
+# ⚠ **AND A CAP THAT SURVIVES THE RE-RUN IS A DEFECT UNLESS IT IS SATURATED.**
+# `all` 1159 is the first cap ever to survive one: a Beacon of Immortality board
+# (both seats past `SCALE_CEILING * 1_000` life, each library holding the Beacon
+# that shuffles itself back, so neither seat can be killed OR decked) with a
+# Basilica Screecher on it, whose extort moves 1 life a turn between two
+# saturated seats. CR 104.4's turn watch reads `repeats 2/12` there: the board
+# is unwinnable AND aperiodic, so the one verdict such a game has is never
+# reached. `cap_diagnosis` prints the watch's own state now, so the dump answers
+# the question — `repeats N/12` under 12 on a `[SATURATED LIFE]` board is that
+# case, and anything else that survives is the signal this script exists for.
 #
 # ⚠ **AND A `board` CAP IS NOT AN ACTION CAP AT ALL.** `StopReason::BoardCap`
 # ends a game whose battlefield passes 1,024 permanents — a token-doubling
@@ -59,7 +69,7 @@ GAMES=${3:-400}
 BIN=${4:-target-audit/overflow/bot_ladder}
 cd "$(dirname "$0")/.."
 [ -x "$BIN" ] || { echo "no $BIN — build it (header)"; exit 1; }
-cells=0 games=0 cap=0 board=0 stuck=0 draw=0 fail=0 sat=0 slow=0
+cells=0 games=0 cap=0 board=0 stuck=0 draw=0 fail=0 sat=0 slow=0 known_board=0
 for pool in $POOLS; do
   for seed in $SEEDS; do
     t0=$(date +%s)
@@ -79,11 +89,11 @@ for pool in $POOLS; do
         # `undecided_by   cap N / board N / stuck N / draw N`
         set -- $(echo "$by" | awk '{print $3, $6, $9, $12}')
         cap=$((cap + $1)) board=$((board + $2)) stuck=$((stuck + $3)) draw=$((draw + $4))
-        # The one cap shape that is diagnosed and is NOT a defect: a seat at
-        # `i32::MAX` life (Beacon of Immortality doubling itself back into the
-        # library). `cap_diagnosis` labels it; counted apart so a cube block
-        # does not read as a failure for a board nobody is going to change.
-        # Three seeds so far — cube 1018, 1069, 1076 — i.e. a pool property.
+        # `sat` is DIAGNOSTIC ONLY — which board the cap was on, printed in the
+        # closing line so a reader can tell the Beacon boards from the rest. It
+        # decides nothing: the verdict is the re-run's, below. (`cube` 1018,
+        # 1069, 1076 and `all` 1090 / 1159 are the seeds that carry it, i.e. a
+        # pool property rather than a seed one.)
         known=$(echo "$out" | grep -c "SATURATED LIFE")
         if [ "$known" -gt 0 ]; then sat=$((sat + $1)); fi
         # A cap this cell cannot explain: RE-RUN IT AT THE PRODUCTION ACTION
@@ -125,9 +135,24 @@ for pool in $POOLS; do
             echo "  -> the ACTION BUDGET, not the board: $(echo "$re" | grep -E '^[0-9]+ decided' | tail -1)"
             echo "     $reby"
             slow=$((slow + $1))
+          elif echo "$re" | grep -q "SATURATED LIFE"; then
+            # ⚠ THE LABEL EXCUSES A CAP ONLY *AFTER* THE RE-RUN, NEVER BEFORE.
+            # A cap that clears at 50,000 was the budget whatever its label
+            # (`cube` 1204: `cap 8` here, `cap 0 / draw 20` there). One that
+            # SURVIVES and carries the label is the known unwinnable board:
+            # both seats past `SCALE_CEILING * 1_000` life, a Beacon of
+            # Immortality shuffling itself back so neither can be decked
+            # either. `all` 1159 is the worked example — `repeats 2/12` in the
+            # `no-progress watch:` line of the dump below, i.e. CR 104.4's turn
+            # watch cannot hold an anchor on a board the bot plays slightly
+            # differently each turn. Reported, counted, not a failure.
+            echo "  -> STILL CAPPED at 50,000 and SATURATED — the known unwinnable board."
+            echo "     read the \`no-progress watch:\` line: \`repeats N/12\` under 12 is why."
+            echo "$re" | grep -A7 "^cap: " | head -40
+            known_board=$((known_board + $1))
           else
-            echo "  -> STILL CAPPED at 50,000 actions — a defect. $reby"
-            echo "$re" | grep -A6 "^cap: " | head -40
+            echo "  -> STILL CAPPED at 50,000 actions, NOT saturated — a defect. $reby"
+            echo "$re" | grep -A7 "^cap: " | head -40
           fi
         fi
       fi
@@ -138,8 +163,12 @@ done
 # Every cap goes through the re-run now, so `slow` alone decides: `sat` is
 # diagnostic (which BOARD it was) and subtracting both double-counted a cap
 # that is labelled AND cleared — `cube` 1204 scored `failures=-8`.
-novel=$((cap - slow))
+# A cap is a defect unless the re-run CLEARED it (`slow`) or the re-run kept it
+# AND the board is the saturated one (`known_board`). The label alone never
+# excuses one — that is what `cube` 1204 cost — and a survived cap without the
+# label is the signal this whole script exists for.
+novel=$((cap - slow - known_board))
 [ $((novel + stuck + fail)) -eq 0 ] || fail=$((fail + novel + stuck))
-echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $sat the known saturated-life board, $slow slow-not-stuck) / board $board / stuck $stuck / draw $draw"
-echo "  stuck and a cap that SURVIVES the 50,000-action re-run ($novel) are defects;"
+echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $slow slow-not-stuck, $known_board the known unwinnable board; $sat carried the label) / board $board / stuck $stuck / draw $draw"
+echo "  stuck and a cap that SURVIVES the re-run without the saturated label ($novel) are defects;"
 echo "  a draw is CR 104.4 and a BOARD cap is the 1,024-permanent bound doing its job"

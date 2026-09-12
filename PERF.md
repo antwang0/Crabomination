@@ -2958,6 +2958,68 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-12 (the two-meanings-of-`false` session) — a skipped draw that eliminated the drawer, a column that counted 1,200 cards nowhere, and the sweep's first surviving cap; no perf leg
+
+```text
+fix     **a skipped draw is not a draw from an empty library.** `draw_one` returned the same `false` for "the draw
+        did not happen" — a per-turn cap (CR 121.2b, Spirit of the Labyrinth), a `PlayersSkipDraws` static (Omen
+        Machine, Possessed Portal), Obstinate Familiar's accepted skip, a Shared Fate with no opponent to exile from
+        — as for CR 104.3c, "a draw was ATTEMPTED and the library was empty". All eight callers read it as the second,
+        so **casting Divination with Omen Machine on the battlefield eliminated the caster**, with five cards left in
+        their library and the game handed to the opponent. CR 121.2a is explicit that a skipped draw never became an
+        attempt. `DrawOutcome` says which happened; `draw_one_or_deck` is the one place the loss is armed, so the eight
+        sites cannot drift apart again; `draw_one` keeps its `bool` for the nineteen callers that only want to know
+        whether a card arrived. Two redirects changed with it — `draws_redirected_this_turn` (Plagiarize) and Notion
+        Thief hand the draw to a THIEF, and an empty library there decks the thief, not the seat whose draw was taken.
+        ⚠ `omen_machine_stops_draws` asserted the hand stayed empty and passed throughout. A test that checks the
+        visible half of a card and not whether the player survived it is the same shape as the skips below.
+fix     **a life total past the saturation band is a state, not a number.** CR 104.4's turn watch draws a game whose
+        fingerprint keeps returning to one anchor, and `p.life` is in that fingerprint — so a seat at `i32::MAX` losing
+        1 a turn reads as progress. It is not: draining 1 off two billion ends the game in two billion turns. The turn
+        digest clamps above `SCALE_CEILING * 1_000` (only the turn digest — `player_counters` is its discriminator, so
+        the resolution and announcement watches are byte-identical). Gate:
+        `cr_104_4_a_drained_saturated_life_is_still_no_progress`, drawn at turn 80 with the clamp and still running
+        past turn 5,700 without it.
+fix     **ten Pathways carried a basic land type they do not print**, and three creatures were short a printed one
+        (Tuinvale Treefolk's Druid, Queen of Ice's Wizard, Tormented Pariah's Warrior). Every pathway face prints
+        "Land" with a plain `{T}: Add {C}`; `pathway_face` gave it the matching basic type, which made it a Swamp /
+        Island / Forest to a fetch, to landwalk evasion and to Domain. The mana was never the reason for the type —
+        `tap_add` prints the ability outright and `intrinsic_land_mana_abilities_with` only mints one for a COMPUTED
+        type the card does not print — and Blood Moon is unchanged either way, since a replacing `LandTypeChanger`
+        pushes `SetLandTypes` at L4 and `RemoveAllAbilities` at L6. `clearwater_pathway` is in the cube pool, so a
+        seeded cube game that draws it can play out differently; no pool membership, vocab index or encoded feature
+        moves (the encoder reads no subtype).
+tool    **`audit_printed_body`'s subtype column had three blind spots and they were all the same kind**: a READABLE
+        card the walk dropped with no bucket to name it. 17,235 -> **17,683** compared, and the opening found the
+        thirteen defects above. (a) A `mut` parameter now READS instead of giving up — `fn ally(.., mut types, ..) {
+        types.push(CreatureType::Ally); creature(..) }` hands the next link a list the caller never wrote, so binding
+        it back to the call site would drop the Ally; `mut_param_arg` requires every statement touching it to be an add
+        or a read and then binds the caller's elements plus the helper's. 52 Allies, in a family where this exact
+        omission HAS shipped (`tla`'s `fn ally` was `ct` under a misleading name until 2026-09-01). (b) A shorthand
+        whose name is a PARAMETER is the argument (`fn construct(creature_types) -> Subtypes { Subtypes {
+        creature_types, .. } }`), 23 cards. (c) ⚠ **THE LAYOUT GATE.** `card.get("layout") == "normal"` decided whether
+        a readable card was compared at all — and the face merge above it already replaces `type_line` with the FACE's
+        line, so every transform, mdfc, saga, adventure, prototype, leveler, mutate, class, case, augment and flip card
+        arrived with an ordinary one-`—` line and was dropped into nothing. 393 cards; `subtwoface` is the bucket so
+        the residue is printed rather than silent.
+tool    **the injection battery runs on per-worker COPIES now, in parallel, and never writes the catalog.** Patching
+        the real tree cost two things: it could not run beside anything else (an overlapping `audit_doc_drift` read the
+        Wall of Omens case mid-injection and reported the card at 0/5 — a "BODY WRONG" row indistinguishable from a
+        shipped defect), and it could not parallelise, because every case wrote the same files. `CRAB_CATALOG_DIR`
+        steers both oracle-backed audits (`audit_card_names` imports the module and reads `apb.CATALOG`). ⚠ The slot
+        comes off a QUEUE, not `i % jobs`: with two workers, case 2 starts as soon as case 1 finishes while case 0 is
+        still in that tree. **42/42**, ~35 min at `-j 3` under a concurrent engine build, against 100+ serial.
+sweep   **`1152..1161` was a HOLE in the sweep table and nobody noticed for twenty blocks** — the rows ran 1031..1151
+        and jumped to 1162, and the totals counted the gap as swept. Found by reading the seed column instead of the
+        sum. 30 cells / 148,000 games, 0 stuck — and the ten seeds it hid held **the first cap ever to survive the
+        50,000-action re-run**, `all` 1159. See "A FOURTH SHAPE" in the sweep section: the Beacon board plus a Basilica
+        Screecher, `no-progress watch: repeats 2/12` where the eight games the same cell DREW read `12/12`.
+gate    the sweep's re-run had a hole of its own: an absent `undecided_by` line meant "every game decided" AND "the
+        re-run printed no summary at all" (a `timeout 7200`, an abort, an OOM), and the second read as the first — a
+        cell that HUNG would have scored `slow-not-stuck`. The clear now requires the `N decided` line and a zero exit.
+perf    none, and measured as none rather than assumed. Every engine change here is a draw path, a turn-watch digest
+        sampled one turn in four past turn 30, and a catalog subtype; `--bench` measures `fixed`, which carries none of
+        the cards involved.
 ### 2026-09-12 (the two-halves session, third of the day) — the face nobody read, two new columns, five shipped cards; no perf leg
 
 ```text
@@ -3387,11 +3449,21 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1182..1191   36eb5ac0      30    148,000       0       0     0      2
   1192..1201   a875df26      30    148,000       0       0     0     16
   1202..1211   a875df26      30    148,000       0      14*    0     42
+  1152..1161   5a3b7a04      30    148,000       2       2!    0     10   THE HOLE, swept last
   1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
 bound — seed 1169's Krenko, counted in its own `board` column now and not a
-defect. See "A THIRD SHAPE" below.
+defect. See "A THIRD SHAPE" below. `!` **the first cap ever to survive the
+50,000-action re-run** — `all` 1159, the Beacon board with a Basilica Screecher
+on it; see "A FOURTH SHAPE" below. It is why the block reads `failures 2`, and
+why the sweep's verdict is `slow` OR `known_board` now rather than `slow` alone.
+
+⚠ **`1152..1161` WAS A HOLE IN THIS TABLE AND NOBODY NOTICED FOR TWENTY
+BLOCKS.** The rows above it run 1031..1151 and then jump to 1162; the frontier
+walked past ten seeds and the total counted them as swept. It was found by
+reading the table rather than the totals, and the seeds it hid held the run's
+only surviving cap. **Read the seed column, not the sum.**
 
 ⚠ **The rows marked CONCURRENT SESSION overlap the ones above them.** Two
 sessions swept the same seeds on 2026-09-12 without seeing each other's push —
@@ -3405,7 +3477,7 @@ side.
 block is barely dearer than a three-pool one — which is the only reason the
 duplication cost nothing but time.
 
-**513 cells / 2,530,800 games on the three-pool base, 0 stuck on every one**
+**543 cells / 2,678,800 games on the three-pool base, 0 stuck on every one**
 — and the five-pool rows are 245 cells / 965,600 games on top of that, counted
 apart because they are a different configuration and would otherwise be read as
 more base coverage than there is. Every cap is the
@@ -3432,9 +3504,8 @@ mattering. ⚠ **Since `(-291)` the label excuses nothing on its own**: ANY cap
 is re-run, and the entry below ("the label itself is a budget artefact") is
 why.
 
-A draw is CR 104.4, not a defect. Seed frontier **1212**, ⚠ **with one hole:
-`1152..1161` is not in the table above and was never swept.** The rows are
-contiguous otherwise; take the gap before the frontier.
+A draw is CR 104.4, not a defect. Seed frontier **1212**, and the rows are
+contiguous now: `1152..1161` was a hole for twenty blocks and was swept last.
 
 **THE SECOND `1102..1111` ROW IS THE SAME SEEDS ON FIVE POOLS WITH `(-291)`
 IN, and it is the arm's confirmation over 216,000 games**: 0 caps of any kind
@@ -3532,6 +3603,45 @@ same thing, and it is the sweep that has to tell them apart.
 ⚠ `--bench`'s `stalls_by` line gained the column too, so its TEXT changed —
 `cap 0 / board 0 / stuck 0 / draw 0`. The gate counters are untouched: 195,806
 decisions / 27.49 turns / 611.9 per game / 0 stalls, byte-identical.
+
+**AND A FOURTH — THE FIRST CAP EVER TO SURVIVE THE RE-RUN. `all` SEED 1159,
+FROM THE HOLE IN THE TABLE.** Two capped games, unlabelled by neither the
+board-cap column nor the budget: at 6,000 actions the cell reads `cap 2 /
+draw 8`, and at 50,000 it reads **`cap 2 / draw 8` again** — turn 2,270, both
+seats at `i32::MAX`, p0's library the one Beacon of Immortality that shuffles
+itself back, p1's empty. Neither seat can be killed and neither can be decked.
+
+**`cap_diagnosis` prints the watch's own state now, and that is the whole
+finding**: the eight games the cell DREW read `no-progress watch: repeats
+12/12`, and the two that capped read **`repeats 2/12`**. CR 104.4's turn watch
+is not missing — it is losing its anchor. The board is unwinnable AND
+aperiodic, which the digest cannot tell from a game that is getting somewhere.
+
+One source of the aperiodicity was a defect and is fixed: the board carries a
+**Basilica Screecher**, whose extort takes 1 life off a seat already at
+`i32::MAX` and hands it to the other, and the next Beacon doubles it back — so
+`p.life` moved on every sample. A life past the saturation band is a *state*,
+not a number: draining 1 off two billion ends the game in two billion turns.
+The turn digest clamps above `SCALE_CEILING * 1_000` now (only the turn digest
+— `player_counters` is its discriminator, so the resolution and announcement
+watches are byte-identical), and
+`cr_104_4_a_drained_saturated_life_is_still_no_progress` is the gate: the same
+unkillable board with a drain on it draws at turn 80 with the clamp and runs
+past turn 5,700 without it.
+
+⚠ **THE CLAMP DOES NOT CLOSE `all` 1159** — re-measured with it in, the cell
+still reads `cap 2` and `repeats 2/12`. The life drift was one source and not
+the only one: the bot taps a different number of lands each turn for the Beacon
+and the extort, and p0's library toggles 1/0 depending on whether the Beacon is
+on the stack when the turn ends. Both are in the digest and both are real
+state, so widening past them would be guessing at what "progress" means.
+
+So the sweep's verdict changed rather than the watch: **a cap that survives the
+re-run is a defect UNLESS the dump carries `[SATURATED LIFE]`**, in which case
+it is this board, counted as `known_board` and reported with its `repeats N/12`
+line. The label alone still excuses nothing — `cube` 1204 is the counterexample
+and cost fourteen false non-defects — it is the label PLUS a survived re-run
+that names the board.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
 `cube` seed **1036** cost **3,313 s** against a 33-48 s median for its
