@@ -32,7 +32,7 @@ sixty-seventh pass, so don't re-take that.
    **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331
    (PERF Baseline). Ir crosses boxes, wall clock does not: the `--bench` spread is 289.72 to 542 games/s on byte-identical counters. `(-290)` is the last
    claimed candidate, `(-291)` next; **the queue is at floor with no device above 0.2 %** — every perf leg of the last six runs came off a bug fix.
-2. **Gates at the tip:** suite **19,457 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+2. **Gates at the tip:** suite **19,480 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
    census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), `audit_panics` **0 bare**, `audit_decision_plumbing`
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
@@ -40,8 +40,8 @@ sixty-seventh pass, so don't re-take that.
    capability, `audit_printed_body` **0 on all six columns over 16,483 priced + 17,244 type lines + 16,910 subtypes + 16,800
    keywords + 9,254 P/T**, and `scripts/audit_printed_body_injections.py` **17 / 17 as expected** — run that after
    touching any reader in it.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1111 on cube / all / sealed — 243 cells, 1,198,800 games, 0 stuck, 74 draws, and 10 caps that are
-   ALL the KNOWN Beacon board (`cube` 1069, 1076, 1090 + `all` 1090 — so it is not even cube-only). Next is 1112.** The sweep LABELS that board now (`cap_diagnosis` prints
+   **Fresh seeds: 853..1030 on five pools, then 1031..1121 on cube / all / sealed — 273 cells, 1,346,800 games, 0 stuck, 86 draws, and 10 caps that are
+   ALL the KNOWN Beacon board (`cube` 1069, 1076, 1090 + `all` 1090 — so it is not even cube-only). Next is 1122.** The sweep LABELS that board now (`cap_diagnosis` prints
    `[SATURATED LIFE …]`, the script counts labelled caps apart and scores the block `failures=0`), so **a cap WITHOUT the label is the signal** — never
    read a bare cap count as clean. **`all` 1024 is the cell that EARNED its keep** (the `MayDoBy` leak).
 3. **This run, and the sentence it earned:** *a column that skips is not a column that passes, and a gate that cannot fail is worse than no gate.*
@@ -51,9 +51,12 @@ sixty-seventh pass, so don't re-take that.
    could not fetch and two non-Lessons it could, four planeswalkers `HasPlaneswalkerType` could not see, six `Kindred` cards with no creature type
    (Crib Swap a changeling with nothing to be every type OF). (b) **Keywords**, which combat reads every turn — 7 cards: Kurkesh with FLYING it does not
    print, Glorybringer dealing 4 free damage because the `Exert` gating it was missing, two BLACK Rise-of-the-Eldrazi cards made colorless by a `Devoid`
-   printed five years later, and two `Changeling`s where the card names four roles. (c) **Five injections silently passed** during the run and all five
-   were one mistake — a resolver reading the wrong definition — which is why the injections are a runnable script now.
-4. **Next, in order.** (a) **Sweep from 1112 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+   printed five years later, and two `Changeling`s where the card names four roles. (c) **PROWESS**, which the OTHER oracle audit saw and this one could
+   not: the keyword mints its pump only for a creature without its own prowess trigger, and the guard matched the event KIND — so four cards with an
+   unrelated cast trigger (Niblis, Bria, Lilah, Sokka) printed prowess and never had it, and nine more carried the trigger without the keyword, so no
+   "prowess matters" filter saw them. (d) **Five injections silently passed** during the run and all five were one mistake — a resolver reading the
+   wrong definition — which is why the injections are a runnable script now.
+4. **Next, in order.** (a) **Sweep from 1122 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
    PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,
@@ -62,14 +65,18 @@ sixty-seventh pass, so don't re-take that.
    auditable), `nonliteral` 921, `nokeywords` 439, `nosubtypes` 221, `notyped` 160, `nopt` 119. Each is one or two idioms (a local built by `push`, a
    `mut` parameter, a non-`Keyword::` element) and the machinery to follow them exists. ⚠ **Print every skip you add** — the P/T column skipped 41 % of
    creatures silently for as long as it existed, and read "0 wrong P/T" the whole time.
-   (c) ⚠ **Do NOT build a `produced_mana` column** — ENGINE_BACKLOG's CLOSED-WITH-A-REASON entry: Scryfall's field counts mana the card CAUSES (Brass's
+   (c) **The two oracle-backed catalog audits are COMPLEMENTARY and should be one.** `audit_catalog_stats.py` reads a wider keyword vocabulary
+   (Ward, Prowess, Hexproof, Magecraft) over a narrower set of factories; `audit_printed_body.py` follows the helper chain over an evergreen set.
+   The prowess class needed both — the wider vocabulary to see the row, the chain-following reader to tell a card's own `Keyword::Prowess` from a
+   TOKEN's. Widening `audit_printed_body`'s `EVERGREEN` (with `REVIEWED_KEYWORDS` for the approximations) retires the overlap. NOT done.
+   (d) ⚠ **Do NOT build a `produced_mana` column** — ENGINE_BACKLOG's CLOSED-WITH-A-REASON entry: Scryfall's field counts mana the card CAUSES (Brass's
    Bounty's Treasures, Heartbeat of Spring's rider), so 355 of 707 prototype rows were the field's meaning, not the reader's gaps.
-   (d) ⚠ **The seven-card nesting is RETIRED** and (e) ⚠ **the 8 loop arms are CLOSED WITH A REASON** — do not build the parking redesign or the
+   (e) ⚠ **The seven-card nesting is RETIRED** and (f) ⚠ **the 8 loop arms are CLOSED WITH A REASON** — do not build the parking redesign or the
    seat-list ref; a suspend advances nothing but the answer, and the premise to re-check is that one, not the catalog scan. One plumbing row is left on
    purpose: `ChangeTargetOfAbility` (Reroute) writes its new target BETWEEN its two asks, so routing it needs the two-pass split first.
-   (f) Nobody has checked the **ML side** of a saturated feature: what a `SCALE_CEILING` row does to a net that never saw one.
-   (g) `BecomeChosenColor` picks per source, not per target — bot strength, not a rules defect.
-   (h) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
+   (g) Nobody has checked the **ML side** of a saturated feature: what a `SCALE_CEILING` row does to a net that never saw one.
+   (h) `BecomeChosenColor` picks per source, not per target — bot strength, not a rules defect.
+   (i) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

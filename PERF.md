@@ -3087,6 +3087,29 @@ fix     the P/T column was reading 5,578 of 9,455 creatures and counting NEITHER
         338 -> 160 on the way: a BOUND CARD TYPE (`fn spell(name, mana, kind, effect)`'s `card_types: vec![kind]`, 190
         factories over five sets, on the field where an Instant shipped as a Sorcery is castable at the wrong speed)
         and a helper whose call is its TAIL after a statement (`fn ally(.., mut types, ..)`, 43 Allies).
+fix     prowess was suppressed by ANY cast trigger, so four cards never had it (`6b5d7b7c`). The keyword mints a
+        `+1/+1` EOT pump for each prowess creature that does not already carry its own `shortcut::prowess()` trigger,
+        and the guard for "already carries one" matched the event KIND alone — so a prowess creature with any other
+        cast trigger got no pump at all: Niblis of Frost (tap and freeze), Bria, Riptide Rogue (grant unblockable),
+        Lilah (plot the spell), Sokka (make a token). The guard's own comment already said what it meant. The fix's
+        whole risk is the other direction and is the test's third assertion: Veyran's magecraft trigger IS that pump
+        under a narrower filter, so it must STILL suppress the minted one or the card pumps twice — which is why the
+        new predicate matches the pump's SHAPE rather than the canonical trigger exactly.
+fix     nine more cards carried the prowess TRIGGER and not the keyword (`88478066` / `e7161128`), so
+        `has_keyword(&Keyword::Prowess)` was false for creatures that print it and no "prowess matters" filter could
+        see them — Abbot of Keral Keep, Monastery Mentor, Drake Hatcher, Meticulous Artisan, Jhessian Thief (all five
+        confirmed against the oracle) and four Prismari bodies. Carrying both is safe as of the commit above and was
+        not before it. ⚠ The gate had to be narrowed before it was true: "a `SpellCast` trigger whose effect is
+        +1/+1 EOT" names FIFTY cards — Kami of the Hunt (Spirit or Arcane), the Lorehold and Inkling bodies, forty
+        more with the same pump under a different FILTER and none of them prowess. Exact equality with `prowess()` /
+        `prowess_trigger()` is the only thing the convention is about.
+note    **the two oracle-backed catalog audits are complementary, and that is how prowess was found.**
+        `audit_catalog_stats.py` reads a WIDER keyword vocabulary than `audit_printed_body`'s evergreen set (Ward,
+        Prowess, Hexproof, Magecraft) over a NARROWER set of factories; `audit_printed_body` follows the helper chain.
+        The census that turned the class up needed both: the wider vocabulary to see the row, and the chain-following
+        reader to tell a card's own `Keyword::Prowess` from a TOKEN's — Cori-Steel Cutter's Monk carries one, and a
+        raw-text census called it a fifth defect. Widening `audit_printed_body`'s vocabulary would retire the overlap;
+        it is the obvious next step and is NOT done.
 tool    the injections are RUNNABLE now (`scripts/audit_printed_body_injections.py`, 17 / 17 as expected, three of them
         NEGATIVE tests where a row would be the bug). **Five injections silently passed at some point in this run and
         all five were one mistake — a resolver reading the wrong definition**: `fn legend` taken from whichever file
@@ -3119,9 +3142,10 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1092..1101   6114ec26      30    148,000       0       0     0     20
   1102..1111   176b074c      30    148,000       0       0     0      6
   1102..1111   c746c7ab      50    216,000       0       0     0      8   five pools, WITH `(-291)`
+  1112..1121   feed62f5      30    148,000       0       0     0     12
 ```
 
-**243 cells / 1,198,800 games, 0 stuck on every one**, and every cap is the
+**273 cells / 1,346,800 games, 0 stuck on every one**, and every cap is the
 **already-diagnosed Beacon of Immortality board** — two at `cube` 1069, four
 more at `cube` 1076, and four at seed 1090 (two on `cube`, two on `all`) — not
 a new defect and not to be re-diagnosed.
@@ -3143,7 +3167,7 @@ end. **A cap WITHOUT the label is the signal** — the point is that the sweep
 stops crying wolf on a board nobody is going to change, not that caps stopped
 mattering.
 
-A draw is CR 104.4, not a defect. Seed frontier **1112**. One cell is a
+A draw is CR 104.4, not a defect. Seed frontier **1122**. One cell is a
 different kind of outlier and it is the entry below.
 
 **THE SECOND `1102..1111` ROW IS THE SAME SEEDS ON FIVE POOLS WITH `(-291)`
