@@ -555,20 +555,25 @@ fn casualty_normal_cast_no_copy() {
 
 // ── More Adventure cards (CR 715) ────────────────────────────────────────────
 
-/// Rider in Need (Lonesome Unicorn) makes a 2/2 Knight; the Unicorn casts later.
+/// Rider in Need (Lonesome Unicorn) is {2}{W} and makes a 2/2 Knight WITH
+/// VIGILANCE; the Unicorn casts later. The printed-body audit's adventure
+/// column found the cost a mana low and the Unicorn's own vigilance missing.
 #[test]
 fn adventure_lonesome_unicorn_rider_in_need() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lonesome_unicorn());
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastAdventure {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Rider in Need");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
-        && c.definition.name == "Knight").count(), 1, "made a Knight");
+    let knight = g.battlefield.iter().find(|c| c.controller == 0
+        && c.definition.name == "Knight").expect("made a Knight");
+    assert!(knight.definition.keywords.contains(&Keyword::Vigilance), "Knight has vigilance");
     assert!(g.exile.iter().any(|c| c.id == id && c.on_adventure));
+    assert!(catalog::lonesome_unicorn().keywords.contains(&Keyword::Vigilance),
+            "the Unicorn itself prints vigilance");
 }
 
 /// Harvest Fear (Reaper of Night) makes the opponent discard two.
@@ -637,21 +642,32 @@ fn adventure_shepherd_usher_to_safety_bounces_own() {
     assert!(g.players[0].hand.iter().any(|c| c.id == mine), "own permanent back in hand");
 }
 
-/// Haggle (Merchant of the Vale) draws then discards (loots).
+/// Haggle (Merchant of the Vale) is an INSTANT and the discard is the GATE:
+/// "you may discard a card. If you do, draw a card." A mandatory
+/// `Seq(Draw, Discard)` let the drawn card be the one discarded and looted on
+/// an empty hand — the adventure column found the type line, this is the body
+/// the oracle text goes with.
 #[test]
 fn adventure_merchant_of_the_vale_haggle_loots() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::mountain());
-    g.add_card_to_hand(0, catalog::shock()); // a card to discard
+    g.add_card_to_hand(0, catalog::shock()); // the card to discard
     let id = g.add_card_to_hand(0, catalog::merchant_of_the_vale());
     g.players[0].mana_pool.add(Color::Red, 1);
     let hand_before = g.players[0].hand.len(); // includes Merchant + Shock
+    // The discard is the gate, so it takes an answer — declining is the other
+    // half of the printed card and leaves the hand alone.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastAdventure {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Haggle");
     drain_stack(&mut g);
-    // -1 (Merchant leaves) +1 (draw) -1 (discard) = hand_before - 1.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1, "drew then discarded");
+    // -1 (Merchant leaves) -1 (discard) +1 (draw) = hand_before - 1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "discarded, then drew");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Shock"),
+            "the Shock was the discard, not the drawn card");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Mountain"),
+            "and the draw came off the library");
 }
 
 // ── Affordance hints for new mechanics ───────────────────────────────────────

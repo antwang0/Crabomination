@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Injection battery for `audit_printed_body.py`'s readers.
 
-    python3 scripts/audit_printed_body_injections.py           # 42/42 as expected
+    python3 scripts/audit_printed_body_injections.py           # 45/45 as expected
     python3 scripts/audit_printed_body_injections.py -j 4      # fewer workers
 
 **A GATE THAT CANNOT FAIL IS WORSE THAN NO GATE**, and this session proved the
@@ -75,6 +75,26 @@ CASES = [
   "        power: p,\n        toughness: t,",
   "        subtypes: Subtypes { creature_types: types, ..Default::default() },\n"
   "        power: 0,\n        toughness: t,"),
+ # The ADVENTURE half (CR 715) and the BACK FACE (CR 712) — two faces every
+ # other column reads past, because the factory's `cost:`, `card_types:` and
+ # P/T are the FRONT's. Five shipped defects between them on the first read.
+ ("fires", "an adventure half's cost (modern Rider in Need)", "sets/decks/modern.rs",
+  '            name: "Rider in Need",\n            cost: cost(&[generic(2), w()]),',
+  '            name: "Rider in Need",\n            cost: cost(&[generic(3), w()]),'),
+ ("fires", "an adventure half's card type (modern Shield's Might)", "sets/decks/modern.rs",
+  "            name: \"Shield's Might\",\n            cost: cost(&[generic(1), g()]),\n"
+  "            card_types: vec![CardType::Instant],",
+  "            name: \"Shield's Might\",\n            cost: cost(&[generic(1), g()]),\n"
+  "            card_types: vec![CardType::Sorcery],"),
+ # CR 301.7: a Vehicle is not a creature until it is crewed.
+ ("fires", "a back face's card types (mom Aetherwing, Golden-Scale Flagship)",
+  "sets/decks/mom.rs",
+  "        card_types: vec![CardType::Artifact],\n"
+  "        supertypes: vec![Supertype::Legendary],\n        subtypes: Subtypes {\n"
+  "            artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle],",
+  "        card_types: vec![CardType::Artifact, CardType::Creature],\n"
+  "        supertypes: vec![Supertype::Legendary],\n        subtypes: Subtypes {\n"
+  "            artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle],"),
  ("fires", "a station band's own P/T (eoe Rescue Skiff, CR 721)", "sets/eoe.rs",
   "            min: 10,\n            keywords: vec![Keyword::Flying],\n            pt: Some((5, 6)),",
   "            min: 10,\n            keywords: vec![Keyword::Flying],\n            pt: Some((5, 7)),"),
@@ -296,7 +316,8 @@ CASES = [
 # ⚠ EVERY ROW KIND, or a column's cases cannot fire. The colour column was
 # added with its row kind missing here, and its injection read "silent" — the
 # battery's own version of the bug it exists to catch.
-ROW = re.compile(r"^  (?:sub|kw|types|super|cost|p/t|color|loyalty|no-cost) ", re.M)
+ROW = re.compile(r"^  (?:sub|kw|types|super|cost|p/t|color|loyalty|no-cost"
+                 r"|adv-cost|adv-types|back-types|back-p/t) ", re.M)
 # EVERY row kind of the name audit too — `duplicate` and `mismatch` were
 # added after this line and would have been invisible to it, which is the
 # third time that exact omission has come up in this file.

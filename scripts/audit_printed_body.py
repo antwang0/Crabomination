@@ -323,7 +323,7 @@ What is left, with the reason — `--list <kind>` prints the factories:
 **PROVED BY INJECTION, NOT BY ITS OWN ZERO** — and the injections are
 RUNNABLE now rather than a list here: `scripts/audit_printed_body_injections.py`
 breaks one idiom at a time and states what the audit must do about it,
-**40 / 40 as expected**, four of them NEGATIVE tests (a row there would be the
+**45 / 45 as expected**, four of them NEGATIVE tests (a row there would be the
 bug), and it counts rows from `audit_card_names.py` too — a broken NAME is
 silent here and loud there. Run it after touching any reader below — and never run the audit while
 the battery is running, because it edits catalog files in place.
@@ -705,7 +705,13 @@ def parse_keywords(inner, params=(), args=()):
         return None, True
     out = set()
     for elem in split_args(m.group(1)):
-        e = elem.strip()
+        # ⚠ A BINDING THAT IS ONE *ELEMENT* OF THE VEC. `field_value` binds the
+        # whole field, so `keywords: vec![keyword.clone()]` — `fn
+        # maze_elemental(.., keyword: Keyword)`, and the same shape in the
+        # Possessed / Chimera / Clockwork helpers — is not a bare parameter and
+        # read as unreadable. Same closure the subtype column needed for
+        # `planeswalker_subtypes: vec![sub]`.
+        e = bind_param(elem, params, args).strip()
         em = KW_ELEM.match(e)
         if em:
             out.add(em.group(1))
@@ -2191,12 +2197,13 @@ def main() -> int:
     checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
     checked_types = checked_sub = checked_kw = wrong_kw = checked_pt = 0
     checked_col = wrong_col = checked_loy = wrong_loy = stray_flag = 0
+    checked_adv = wrong_adv = checked_back = wrong_back = 0
     # A skip is a FACTORY, not a tally: `--list nonliteral` prints the ones a
     # column could not read, which is the only way to work the queue down.
     skip = {k: [] for k in ("nocache", "faces", "split", "star", "nonliteral",
                             "noname", "notaspell", "notyped", "nosubtypes",
                             "nosubvariant", "nokeywords", "nopt", "nocolors",
-                            "noloyalty", "subtwoface")}
+                            "noloyalty", "subtwoface", "noadv", "noback")}
     rows = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
@@ -2277,18 +2284,138 @@ def main() -> int:
             # per-face, so the columns that read them skip themselves: the
             # merged view drops those keys and carries `_face`, which the two
             # checks that would otherwise misread an absent key consult.
+            faces = card.get("card_faces") or []
             if card.get("card_faces"):
                 face = next((f for f in card["card_faces"]
                              if f.get("name") == name), None)
                 if face is None:
                     skip["faces"].append(f"{path.name}::{fname}")
                     continue
+                whole_kw = card.get("keywords")
                 card = {k: v for k, v in card.items()
                         if k not in ("colors", "keywords", "loyalty", "cmc",
                                      "mana_cost", "type_line", "oracle_text",
                                      "power", "toughness")}
                 card.update({k: v for k, v in face.items() if k != "name"})
                 card["_face"] = True
+                # ⚠ `keywords` IS WHOLE-CARD AND STILL COMPARABLE AGAINST ONE
+                # FACE. Scryfall gives a face no `keywords` of its own and the
+                # top-level array is the UNION over both, so the MISSING
+                # direction works as long as the `printed` filter comes from
+                # THIS face's oracle text — a keyword only the back face prints
+                # is then never demanded of the front — and the EXTRA direction
+                # works unchanged, because a union is a superset of either
+                # face. Skipping the whole column instead cost ~264 multi-face
+                # cards their keyword check, on the field combat reads every
+                # turn, and the skip counter read like a reader gap.
+                card["_card_keywords"] = whole_kw
+            # ── THE ADVENTURE HALF (CR 715) — its own cost and type line, and
+            # no column had ever read either. The factory's own `cost:` and
+            # `card_types:` are the CREATURE's, so every column above reads
+            # clean while the other half of the card is priced and timed by
+            # nobody: four shipped defects on the first read — Rider in Need
+            # a mana cheap, and Shield's Might / Haggle / Usher to Safety
+            # shipped as Sorceries that print `Instant — Adventure`, i.e.
+            # castable a whole phase later than the card says.
+            # ⚠ THE FIELD IS THE TEST, NOT THE STRUCT NAME, AND THE LITERAL IS
+            # THE TEXT, NOT `raw`. `raw` runs to the NEXT factory's `pub fn`,
+            # so it carries that card's DOC COMMENT — `/// … Adventure {X}{G}
+            # distributes …` matched `Adventure \{` on eleven factories with no
+            # adventure at all. Keying on `adventure: Some`, which no doc
+            # comment spells, keeps the SKIP honest: a factory that declares
+            # one and whose literal this cannot read is a row here, not a
+            # silent pass.
+            fraw = factory_raw(raw) or ""
+            if "adventure: Some" in fraw or "adventure: Some" in raw:
+                am = re.search(r"Adventure \{", fraw)
+                adv = (literal_raw_named(fraw, am.start(), "Adventure") or ""
+                       if am else "")
+                anm = re.search(r'name:\s*"([^"]+)"', adv)
+                aface = next((f for f in faces if anm
+                              and f.get("name") == anm.group(1)), None)
+                # `body_cost` reads the SYMBOL LIST, not the `cost(&[..])`
+                # wrapper — the cost column unwraps it the same way.
+                ac = re.match(r"(?:crate::mana::)?cost\(&\[(.*)\]\)$",
+                              (field_value(adv, "cost", (), ()) or "").strip(),
+                              re.S)
+                acost = body_cost(ac.group(1)) if ac else None
+                atypes = field_value(adv, "card_types", (), ())
+                if aface is None or acost is None or atypes is None:
+                    skip["noadv"].append(f"{path.name}::{fname}")
+                else:
+                    got_at = {w for w in WORD.findall(atypes) if w in CARD_TYPES}
+                    want_at = {w for w in CARD_TYPES
+                               if re.search(r"\b%s\b" % w,
+                                            aface.get("type_line") or "")}
+                    checked_adv += 1
+                    if norm(acost) != norm(aface.get("mana_cost") or ""):
+                        wrong_adv += 1
+                        rows.append(("adv-cost", anm.group(1),
+                                     f"{path.name}::{fname}", acost,
+                                     aface.get("mana_cost") or "(none)"))
+                    if got_at != want_at:
+                        wrong_adv += 1
+                        rows.append(("adv-types", anm.group(1),
+                                     f"{path.name}::{fname}",
+                                     " ".join(sorted(got_at)) or "(none)",
+                                     " ".join(sorted(want_at))))
+            # ── THE BACK FACE (CR 712 / 711) — the same hole as the adventure
+            # half one struct over. A transform card's back is a nested
+            # `CardDefinition` in the SAME factory, and every column above
+            # reads the returned literal, i.e. the front. Aetherwing,
+            # Golden-Scale Flagship shipped as an `Artifact Creature` where
+            # the card prints `Legendary Artifact — Vehicle`: CR 301.7 says a
+            # Vehicle is not a creature until it is crewed, so it could attack
+            # the turn it flipped in and sat in range of creature-only
+            # removal. Two shapes are NOT read and each has a reason:
+            # `znr_mdfc_land` & co. (45, all LANDS — the type line the column
+            # would compare is "Land") and a back that is another `pub fn`
+            # factory (14 — audited as its own card, by its own name).
+            bm = re.search(r"back_face:\s*Some\(", raw)
+            if bm is not None:
+                after = raw[bm.end():]
+                blit = None
+                if re.match(r"Box::new\(\s*(?:crate::card::)?CardDefinition \{", after):
+                    blit = literal_raw_named(after, 0, "CardDefinition")
+                else:
+                    lm = re.match(r"(?:Box::new\(\s*)?([a-z_][a-z0-9_]*)\s*\)", after)
+                    bind = (re.search(r"let (?:mut )?%s\s*=\s*(?:crate::card::)?"
+                                      r"CardDefinition \{" % re.escape(lm.group(1)), raw)
+                            if lm else None)
+                    if bind:
+                        blit = literal_raw_named(raw, bind.start(), "CardDefinition")
+                bnm = re.search(r'name:\s*"([^"]+)"', blit or "")
+                bface = next((f for f in faces if bnm
+                              and f.get("name") == bnm.group(1)), None)
+                bt = field_value(blit, "card_types", (), ()) if blit else None
+                if bface is None or bt is None:
+                    skip["noback"].append(f"{path.name}::{fname}")
+                else:
+                    got_bt = {w for w in WORD.findall(bt) if w in CARD_TYPES}
+                    want_bt = {w for w in CARD_TYPES
+                               if re.search(r"\b%s\b" % w,
+                                            bface.get("type_line") or "")}
+                    checked_back += 1
+                    if got_bt != want_bt:
+                        wrong_back += 1
+                        rows.append(("back-types", bnm.group(1),
+                                     f"{path.name}::{fname}",
+                                     " ".join(sorted(got_bt)) or "(none)",
+                                     " ".join(sorted(want_bt))))
+                    bp, btg = bface.get("power"), bface.get("toughness")
+                    bpt, bhas = parse_pt(blit)
+                    if (bp and btg and bp.lstrip("-").isdigit()
+                            and btg.lstrip("-").isdigit()
+                            and not (bhas and bpt is None)):
+                        # `Default` is the last link of `merge_pt`'s chain, the
+                        # same as the front face's own P/T column below.
+                        got_bpt = merge_pt(bpt, (0, 0))
+                        if got_bpt != (int(bp), int(btg)):
+                            wrong_back += 1
+                            rows.append(("back-p/t", bnm.group(1),
+                                         f"{path.name}::{fname}",
+                                         f"{got_bpt[0]}/{got_bpt[1]}",
+                                         f"{bp}/{btg}"))
             # Tokens, Vanguards, schemes and the rest of the non-deck types all
             # print no mana cost and none of them is ever cast.
             tl = card.get("type_line") or ""
@@ -2474,11 +2601,12 @@ def main() -> int:
             # ⚠ NOT ON A FACE EITHER: the oracle's `keywords` array is a
             # whole-card field, so an absent one would read as "the card prints
             # none" and report every keyword the engine has as EXTRA.
-            if not read.kw_ok or card.get("_face"):
+            kw_src = (card.get("_card_keywords") if card.get("_face")
+                      else card.get("keywords") or [])
+            if not read.kw_ok or kw_src is None:
                 skip["nokeywords"].append(f"{path.name}::{fname}")
             else:
-                want_kw = {EVERGREEN[k] for k in (card.get("keywords") or [])
-                           if k in EVERGREEN}
+                want_kw = {EVERGREEN[k] for k in kw_src if k in EVERGREEN}
                 have_kw = read.keywords & EVERGREEN_VARIANTS
                 # ⚠ A KEYWORD THE CARD GRANTS ITSELF IS NOT A MISSING ONE.
                 # "As long as you control a Swamp, this has fear" is a
@@ -2574,12 +2702,14 @@ def main() -> int:
     print(f"# compared against the oracle: {checked} priced, {checked_types} on the "
           f"type line, {checked_sub} on subtypes, {checked_kw} on keywords, "
           f"{checked_pt} on P/T, {checked_col} on colors, "
-          f"{checked_loy} on loyalty — "
+          f"{checked_loy} on loyalty, {checked_adv} on the adventure half, "
+          f"{checked_back} on the back face — "
           f"**{wrong_cost} wrong cost, {wrong_pt} wrong P/T, "
           f"{missing_flag} missing / {stray_flag} stray `no_mana_cost`, "
           f"{wrong_types} wrong type line, "
           f"{wrong_kw} wrong keywords, {wrong_col} wrong colors, "
-          f"{wrong_loy} wrong loyalty**")
+          f"{wrong_loy} wrong loyalty, {wrong_adv} wrong adventure half, "
+          f"{wrong_back} wrong back face**")
     print("# skipped — " + ", ".join(f"{k} {len(v)}" for k, v in sorted(skip.items())))
     if args.list_kind:
         for where in skip.get(args.list_kind, []):

@@ -21972,7 +21972,7 @@ pub fn stingerback_terror() -> CardDefinition {
 }
 
 /// Garenbrig Carver — {2}{G} Creature — Giant Warrior 3/2.
-/// Adventure: Shield's Might {1}{G} Sorcery — target creature gets +2/+2
+/// Adventure: Shield's Might {1}{G} Instant — target creature gets +2/+2
 /// until end of turn.
 pub fn garenbrig_carver() -> CardDefinition {
     CardDefinition {
@@ -21988,7 +21988,7 @@ pub fn garenbrig_carver() -> CardDefinition {
         adventure: Some(Box::new(Adventure {
             name: "Shield's Might",
             cost: cost(&[generic(1), g()]),
-            card_types: vec![CardType::Sorcery],
+            card_types: vec![CardType::Instant],
             effect: Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(2),
@@ -22000,8 +22000,9 @@ pub fn garenbrig_carver() -> CardDefinition {
     }
 }
 
-/// Lonesome Unicorn — {4}{W} Creature — Unicorn 3/4.
-/// Adventure: Rider in Need {1}{W} Sorcery — create a 2/2 white Knight token.
+/// Lonesome Unicorn — {4}{W} 3/3 vigilance Creature — Unicorn.
+/// Adventure: Rider in Need {2}{W} Sorcery — a 2/2 white Knight token with
+/// vigilance.
 pub fn lonesome_unicorn() -> CardDefinition {
     CardDefinition {
         name: "Lonesome Unicorn",
@@ -22013,9 +22014,10 @@ pub fn lonesome_unicorn() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        keywords: vec![Keyword::Vigilance],
         adventure: Some(Box::new(Adventure {
             name: "Rider in Need",
-            cost: cost(&[generic(1), w()]),
+            cost: cost(&[generic(2), w()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
@@ -22030,6 +22032,7 @@ pub fn lonesome_unicorn() -> CardDefinition {
                         creature_types: vec![CreatureType::Knight],
                         ..Default::default()
                     },
+                    keywords: vec![Keyword::Vigilance],
                     ..Default::default()
                 }),
             },
@@ -22079,7 +22082,7 @@ pub fn reaper_of_night() -> CardDefinition {
 }
 
 /// Merchant of the Vale — {2}{R} Creature — Human Rogue 1/4.
-/// Adventure: Haggle {R} Sorcery — draw a card, then discard a card.
+/// Adventure: Haggle {R} Instant — you may discard a card; if you do, draw a card.
 pub fn merchant_of_the_vale() -> CardDefinition {
     CardDefinition {
         name: "Merchant of the Vale",
@@ -22105,25 +22108,26 @@ pub fn merchant_of_the_vale() -> CardDefinition {
         adventure: Some(Box::new(Adventure {
             name: "Haggle",
             cost: cost(&[r()]),
-            card_types: vec![CardType::Sorcery],
-            effect: Effect::Seq(vec![
-                Effect::Draw {
+            card_types: vec![CardType::Instant],
+            // "You may discard a card. If you do, draw a card." — the discard
+            // is the GATE, not a rider: a mandatory `Seq(Draw, Discard)` lets
+            // the drawn card be the discarded one and loots on an empty hand.
+            effect: Effect::MayDiscard {
+                description: "Discard a card to draw a card?".into(),
+                count: Value::ONE,
+                then: Box::new(Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-            ]),
+                }),
+                else_: None,
+            },
         })),
         ..Default::default()
     }
 }
 
 /// Shepherd of the Flock — {1}{W} Creature — Human Cleric 2/2.
-/// Adventure: Usher to Safety {W} Sorcery — return target permanent you
+/// Adventure: Usher to Safety {W} Instant — return target permanent you
 /// control to its owner's hand.
 pub fn shepherd_of_the_flock() -> CardDefinition {
     CardDefinition {
@@ -22139,7 +22143,7 @@ pub fn shepherd_of_the_flock() -> CardDefinition {
         adventure: Some(Box::new(Adventure {
             name: "Usher to Safety",
             cost: cost(&[w()]),
-            card_types: vec![CardType::Sorcery],
+            card_types: vec![CardType::Instant],
             effect: Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
