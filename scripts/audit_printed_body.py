@@ -16,9 +16,9 @@ column assumes is right.
     python3 scripts/audit_printed_body.py --rows 0    # every row
     python3 scripts/audit_printed_body.py --list nonliteral   # what a column skipped
 
-COVERAGE, 2026-09-12 (second pass): **16,534 factories priced, 17,352 on the
-type line, 17,078 on subtypes, 17,255 on keywords, 9,322 on P/T, 16,438 on
-COLOURS and 121 on LOYALTY** — the last two columns are new, and the other five
+COVERAGE, 2026-09-12 (second pass): **16,563 factories priced, 17,381 on the
+type line, 17,106 on subtypes, 17,284 on keywords, 9,338 on P/T, 16,467 on
+COLOURS and 122 on LOYALTY** — the last two columns are new, and the other five
 moved by the idioms their readers could not follow. In order of what they
 cost:
 
@@ -46,6 +46,14 @@ cost:
     pt.1, ..)`, the bestow creatures, 41 on P/T.
   * **`cost: cost(cost_syms)`** over a `&[ManaSymbol]` parameter — the
     alpha/beta creature helpers, 40 on the cost column.
+  * **the head-string name matched on a PREFIX**, so a token the factory
+    defines before the card won it — `fn sliver_queen` took the `"Sliver"` of
+    its own token, `fn goblin_marshal` took `"Goblin"`, and the card then
+    dropped out of EVERY column as `nocache`. `resolve_card_name` prefers the
+    exact `pub fn` slug whenever the head string resolves to no card: 27
+    factories back, and one of them (Surging Æther) was `{2}{U}` where the card
+    prints `{3}{U}`. `scripts/audit_card_names.py` is the column that reads
+    what is left of that skip.
 
 The five columns were 10,270 / 10,409 / 0 / 0 / 5,578 when each was opened. And
 the
@@ -216,7 +224,11 @@ coverage decided by the hardest one, and the type line now reads 583 MORE
 factories than the cost does. Each column takes its own verdict.
 
 What is left, with the reason — `--list <kind>` prints the factories:
-  * `nocache` (3,778) — synthesized cards the oracle has never heard of.
+  * `nocache` (3,749) — a name the oracle does not know. Mostly synthesized
+    cards, and `scripts/audit_card_names.py` is the column that separates those
+    from the misspellings: it shares `resolve_card_name` with this file, and a
+    name no card has is audited by NOBODY, so two of them were hiding a wrong
+    cost.
   * `nocolors` (909) — the colour column needs BOTH the cost chain (its pips)
     and the keyword chain (`Devoid`), so it skips wherever either does.
   * `noloyalty` (0) — a `base_loyalty` chain it cannot follow. Zero today; a
@@ -1645,6 +1657,43 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
                 ok and bool(got_t), sub_ok, kw_ok, pt_ok, col_ok, loy_ok)
 
 
+def resolve_card_name(body, raw: str, fname: str):
+    """The card's name, from its literal, its head string, or its `pub fn`.
+
+    ONE reader, because `audit_card_names.py` needs the same answer this file's
+    `nocache` skip is decided by — a second copy of the heuristic disagreed with
+    this one the day it was written.
+
+    A helper-built factory (`sorcery("Name", cost(..), ..)`) has no `name:`
+    field, so a string literal from its head stands in — but it is checked
+    against the FUNCTION NAME, or the first token a factory defines is read as
+    the card ("Spirit" and "Centaur" both showed up that way, and a 4-line
+    window to dodge them lost 3,900 real factories).
+
+    ⚠ THE HEAD STRING MATCHES ON A PREFIX, so a TOKEN the factory defines
+    before the card can still win it: `fn sliver_queen` takes the `"Sliver"` of
+    its own token because the slug starts with it, and `fn goblin_marshal`
+    takes `"Goblin"`. The `pub fn` lookup is EXACT, so it wins whenever the
+    head string resolves to no card at all — a prefix guess beaten by the
+    card's own name. 27 factories came back into every column that way.
+    """
+    nm = NAME.search(body) if body is not None else None
+    name = nm.group(1) if nm else None
+    if name is None:
+        head = "\n".join(raw.split("\n")[:14])
+        slug = fname.replace("_", "")
+        for cand in ANYNAME.findall(head):
+            flat = re.sub(r"[^a-z0-9]", "", cand.lower())
+            if flat.startswith(slug[:10]) or slug.startswith(flat[:10]):
+                name = cand
+                break
+    slug = fname.replace("_", "")
+    if (name is None or (name not in CACHE and name.lower() not in CACHE_LC)) \
+            and slug in CACHE_SLUG_KEYS:
+        name = CACHE_SLUG[slug]["name"]
+    return name
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rows", type=int, default=40)
@@ -1698,23 +1747,7 @@ def main() -> int:
                 if body is None:
                     skip["noname"].append(f"{path.name}::{fname}")
                     continue
-            nm = NAME.search(body)
-            # A helper-built factory (`sorcery("Name", cost(..), ..)`) has no
-            # `name:` field, so take a string literal from its head — but check
-            # it against the FUNCTION NAME, or the first token a factory defines
-            # is read as the card ("Spirit" and "Centaur" both showed up that
-            # way, and a 4-line window to dodge them lost 3,900 real factories).
-            name = nm.group(1) if nm else None
-            if name is None:
-                head = "\n".join(raw.split("\n")[:14])
-                slug = fname.replace("_", "")
-                for cand in ANYNAME.findall(head):
-                    if re.sub(r"[^a-z0-9]", "", cand.lower()).startswith(slug[:10]) \
-                       or slug.startswith(re.sub(r"[^a-z0-9]", "", cand.lower())[:10]):
-                        name = cand
-                        break
-            if name is None and fname.replace("_", "") in CACHE_SLUG_KEYS:
-                name = CACHE_SLUG[fname.replace("_", "")]["name"]
+            name = resolve_card_name(body, raw, fname)
             if name is None:
                 skip["noname"].append(f"{path.name}::{fname}")
                 continue

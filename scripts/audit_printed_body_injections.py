@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Injection battery for `audit_printed_body.py`'s readers.
 
-    python3 scripts/audit_printed_body_injections.py    # 27/27 as expected
+    python3 scripts/audit_printed_body_injections.py    # 28/28 as expected
 
 **A GATE THAT CANNOT FAIL IS WORSE THAN NO GATE**, and this session proved the
 point three times: `fn legend`'s injection passed because the resolver took
@@ -178,6 +178,13 @@ CASES = [
   '        name: "Transguild Courier",\n        cost: cost(&[generic(4)]),',
   '        name: "Transguild Courier",\n        cost: cost(&[generic(4)]),\n'
   "        no_mana_cost: true,"),
+ # A NAME the oracle does not know is audited by NOBODY — every other column
+ # keys on it, and `audit_printed_body` drops the card as `nocache`. Two
+ # shipped cards were misspelled that way and both had a wrong cost behind the
+ # misspelling; `audit_card_names.py` is the column that sees them.
+ ("fires", "a misspelled card name (mod_set Victim of Night)",
+  "sets/mod_set/instants.rs",
+  '        name: "Victim of Night",', '        name: "Victims of Night",'),
  # Negative: the oracle's `keywords` array counts keywords the card GRANTS, so
  # the missing direction reads the printed keyword LINES instead. Steel Seraph
  # grants "flying, vigilance, or lifelink" and has only flying; dropping its
@@ -201,12 +208,22 @@ CASES = [
 # added with its row kind missing here, and its injection read "silent" — the
 # battery's own version of the bug it exists to catch.
 ROW = re.compile(r"^  (?:sub|kw|types|super|cost|p/t|color|loyalty|no-cost) ", re.M)
+NAME_ROW = re.compile(r"^  (?:spelling|unknown) ", re.M)
 
 
 def run():
+    """Rows from BOTH oracle-backed catalog audits.
+
+    `audit_card_names.py` shares this file's name reader, and its own rows are
+    the population `audit_printed_body` drops as `nocache` — so an injection
+    that breaks a NAME is silent in one and loud in the other, and the battery
+    has to see both or half of what it covers cannot fail.
+    """
     out = subprocess.run([sys.executable, "scripts/audit_printed_body.py", "--rows", "0"],
                          cwd=ROOT, capture_output=True, text=True).stdout
-    rows = len(ROW.findall(out))
+    names = subprocess.run([sys.executable, "scripts/audit_card_names.py"],
+                           cwd=ROOT, capture_output=True, text=True).stdout
+    rows = len(ROW.findall(out)) + len(NAME_ROW.findall(names))
     head = next((l for l in out.split("\n") if l.startswith("# compared")), "")
     return rows, head
 
