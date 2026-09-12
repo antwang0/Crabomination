@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Injection battery for `audit_printed_body.py`'s readers.
 
-    python3 scripts/audit_printed_body_injections.py    # 28/28 as expected
+    python3 scripts/audit_printed_body_injections.py    # 29/29 as expected
 
 **A GATE THAT CANNOT FAIL IS WORSE THAN NO GATE**, and this session proved the
 point three times: `fn legend`'s injection passed because the resolver took

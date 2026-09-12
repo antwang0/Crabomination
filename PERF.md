@@ -2999,7 +2999,7 @@ gate    --bench on a **`release`** binary (cgu 1 + thin LTO, not the `release-fa
         audit_stash_in_loop 1 / 1 / 0; audit_seat_from_selector 0 open / 15 pinned / 8 loop / 4 controller-asked;
         audit_answer_log 71 / 8; audit_variant_coverage 0 dead capability / 2 dead primitive; audit_doc_drift 0 of
         21,467; audit_keyword_drift **0 invented** (the ratchet) / 367 missing; audit_printed_body 0 on all eight
-        columns; audit_printed_body_injections **28 / 28**; audit_card_names **0 / 0 / 0 / 0** with an EMPTY
+        columns; audit_printed_body_injections **29 / 29**; audit_card_names **0 / 0 / 0 / 0** with an EMPTY
         `REVIEWED_DUPLICATES`. Suite at the final tip **19,482 / 0 / 5** — the cube-pool change (two duplicate legends
         removed) moves no golden trace.
 ```

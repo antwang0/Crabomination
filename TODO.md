@@ -41,9 +41,12 @@ sixty-seventh pass, so don't re-take that.
    fixed), `audit_panics` **0 bare**, `audit_decision_plumbing`
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
    controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
-   capability, `audit_printed_body` **0 on all six columns over 16,483 priced + 17,244 type lines + 16,910 subtypes + 16,800
-   keywords + 9,254 P/T**, and `scripts/audit_printed_body_injections.py` **17 / 17 as expected** — run that after
-   touching any reader in it.
+   capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all EIGHT columns** over
+   16,558 priced + 17,376 type lines + 17,101 subtypes + 17,279 keywords + 9,334 P/T + 16,462 colours + 122 loyalty, `audit_card_names`
+   **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
+   gate that sees `debug-assertions = false`).
+   ⚠ `scripts/audit_printed_body_injections.py` is **29 / 29** and counts rows from BOTH catalog audits — run it after touching any reader, and
+   **never run an audit while it runs**: it edits the catalog in place (it refuses a dirty catalog and restores on a signal now).
    **Fresh seeds: 853..1030 on five pools, then 1031..1151 on cube / all / sealed (363 cells, 1,790,800 games) PLUS a concurrent session's 195 cells /
    781,600 games on five pools at 1060..1130 — 0 stuck everywhere. Next is 1162, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the

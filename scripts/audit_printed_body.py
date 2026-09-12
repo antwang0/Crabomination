@@ -263,8 +263,9 @@ What is left, with the reason — `--list <kind>` prints the factories:
 **PROVED BY INJECTION, NOT BY ITS OWN ZERO** — and the injections are
 RUNNABLE now rather than a list here: `scripts/audit_printed_body_injections.py`
 breaks one idiom at a time and states what the audit must do about it,
-**27 / 27 as expected**, four of them NEGATIVE tests (a row there would be the
-bug). Run it after touching any reader below — and never run the audit while
+**29 / 29 as expected**, four of them NEGATIVE tests (a row there would be the
+bug), and it counts rows from `audit_card_names.py` too — a broken NAME is
+silent here and loud there. Run it after touching any reader below — and never run the audit while
 the battery is running, because it edits catalog files in place.
 
 The cost column's own four (Agent of Stromgald's `..creature(..)`; `instant(
