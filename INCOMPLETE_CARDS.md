@@ -994,13 +994,27 @@ multi-line costs** (~180); and **factories named only by their `pub fn`**
 columns at the wider coverage, and the reader is proved by injection — Agent of
 Stromgald's base-struct cost and Karn's three columns both report when broken.
 
-What is left, and where a defect would now hide: **`notyped` (4,464)** — the
-type line lives in the helper call for every `..base` factory, so only a
-self-contained literal can be read for types and supertypes, and a missing
-`Legendary` on a `..legend(..)` card is invisible. That is the next column.
-The rest are `nocache` (3,772 synthesized names), `noname` (2,392),
-`nonliteral` (405 bare-symbol helpers, `zubera("Name", r(), ..)`), and the
-deliberate faces / split / star / not-a-spell skips.
+**And the type-line column was opened the same day: 14,064 type lines read,
+from 10,409, and 0 findings.** The type line is rarely in the literal — three
+idioms carry it somewhere else, and `resolve_type_line` follows all three: the
+**base-struct** form (`..creature("Name", cost, types, 1, 1)`,
+`..god_weapon(..)`), the **wrapper** form (`legend(CardDefinition { .. })` over
+a `fn legend(mut def) { def.supertypes = ..; def }`, six Invasion legends), and
+a helper whose own base is another helper. A chain it cannot follow is SKIPPED,
+not reported: the first cut reported 77 rows of "supertypes: (none)" and every
+one was `..legend(..)` supplying what the literal never claimed.
+
+Each idiom is proved by its own injection, and **one of them silently passed at
+first**: `legend` is defined in five files with three different shapes, the
+resolver took whichever came first, and an assigning wrapper was reading a
+base-struct one's supertypes. Same-file first now. A gate that cannot fail is
+worse than no gate, and the only thing that catches one is breaking it on
+purpose per idiom rather than once per column.
+
+What is left: `notyped` (809, from 4,464 — a chain this cannot follow),
+`nocache` (3,772 synthesized names), `noname` (2,392), `nonliteral` (405
+bare-symbol helpers, `zubera("Name", r(), ..)`), and the deliberate faces /
+split / star / not-a-spell skips.
 
 Resurgent Belief also carried a `flashback_additional_cost` for a Flashback it
 does not have — the comment two lines below it already said "Suspend 2—{1}{W},

@@ -32,20 +32,39 @@ the helper signatures:
     `CACHE_SLUG`. Safer than the head-string heuristic it backs up, not less:
     no string from the body is involved.
 
+**THE TYPE LINE IS RARELY IN THE LITERAL**, which is why the column read only
+10,409 factories and now reads **14,064**. Three idioms carry it somewhere else
+and all three are followed (`resolve_type_line`):
+
+  * the **base-struct** form — `..creature("Name", cost, types, 1, 1)`,
+    `..god_weapon(..)`, `..legend(..)`;
+  * the **wrapper** form — `legend(CardDefinition { .. })` over a
+    `fn legend(mut def) { def.supertypes = ..; def }`, six Invasion legends;
+  * a helper whose own base is another helper, up to five links.
+
+When a link cannot be found the card is SKIPPED rather than reported: the first
+cut of this column reported 77 rows of "supertypes: (none)" and every one was a
+`..legend(..)` supplying what the literal never claimed.
+
 What is left, with the reason:
-  * `notyped` (4,464) — the type line lives in the helper call for every
-    `..base` factory, so only a SELF-CONTAINED literal can be read for types and
-    supertypes. Reading the base's type line is the column nobody has opened;
-    it is where a missing `Legendary` would hide.
+  * `notyped` (809, from 4,464) — a chain this cannot follow.
   * `nocache` (3,772) — synthesized cards the oracle has never heard of.
   * `noname` (2,392) and `nonliteral` (405) — the bare-symbol helpers
     (`zubera("Name", r(), ..)`) and factories whose name is in neither place.
   * `faces` / `split` / `star` / `notaspell` — documented below, all deliberate.
+    `notaspell` also drops a Vanguard avatar named after a card: Maraxus of Keld
+    is both, and the oracle lookup cannot tell them apart.
 
-**Proved by injection, not by its own zero**: breaking Agent of Stromgald's
+**Proved by injection, not by its own zero** — one per idiom, because a gate
+that cannot fail is worse than no gate. Breaking Agent of Stromgald's
 `..creature("Agent of Stromgald", cost(&[r()]), ..)` to `{4}{R}{R}` reports the
-cost row, and breaking Karn, Scion of Urza to `{3}` / `Creature` / no supertype
-reports all three.
+cost row; Karn, Scion of Urza broken to `{3}` / `Creature` / no supertype
+reports all three; `god_weapon`'s `supertypes:` removed reports Spear of
+Heliod, Whip of Erebos and Hammer of Purphoros; and `fn legend(mut def)`'s
+assignment emptied reports the six Invasion legends. **That last one silently
+PASSED at first** — `legend` is defined in five files with three different
+shapes, and the resolver took whichever came first, so an assigning wrapper was
+reading a base-struct one's supertypes. Same-file first now.
 
 ⚠ SKIPPED, with the reason, and the skip counts are printed:
   * multi-face cards (`card_faces` in the oracle) — the factory's `cost:` is
@@ -124,6 +143,17 @@ WORD = re.compile(r"\b([A-Z][a-z]+)\b")
 HELPERS = {"legendary": "Legendary", "basic": "Basic", "snow": "Snow"}
 POWER = re.compile(r"^power: (-?\d+),", re.M)
 TOUGH = re.compile(r"^toughness: (-?\d+),", re.M)
+
+
+# Every `fn` in the catalog that returns a `CardDefinition` — the helpers a
+# factory defers to, not just the factories themselves.
+ANYFN = re.compile(r"^(?:pub(?:\(crate\))? )?fn ([a-z0-9_]+)[(<]", re.M)
+RET = re.compile(r"->\s*(?:[A-Za-z_]+::)*CardDefinition\s*\{")
+# `helper(CardDefinition { .. })` — the WRAPPER idiom, as opposed to the
+# `..helper(..)` base-struct one. `fn legend(mut def) { def.supertypes = ..; def }`
+# is the shape, and six Invasion legends are built that way.
+WRAPS = re.compile(r"^\s*([a-z0-9_]+)\(\s*(?:[A-Za-z_]+::)*CardDefinition\s*\{", re.M)
+ASSIGNS = re.compile(r"\bdef\.(supertypes|card_types)\s*=")
 
 
 def top_fields(block: str):
@@ -252,11 +282,112 @@ def norm(cost: str) -> str:
     return "".join(sorted(p for p in re.findall(r"\{[^}]*\}", cost.upper()) if p != "{0}"))
 
 
+def helper_body(blk: str):
+    """`top_fields` for a HELPER, whose signature spans several lines.
+
+    `top_fields` skips one line and then takes the first `CardDefinition {` it
+    finds — right for a factory (`pub fn x() -> CardDefinition {` is one line),
+    and wrong for `fn god_weapon(\n  name: &'static str,\n ..\n) ->
+    CardDefinition {`, where that first match IS the function body's brace and
+    the read comes back as `"\n}\n"`. Start after the return type instead.
+    """
+    m = RET.search(blk)
+    return top_fields("fn _()\n" + blk[m.end():]) if m else None
+
+
+def build_helper_index(catalog):
+    """`name -> [(path, block)]` for every fn in the catalog that returns a
+    `CardDefinition`, so a factory's `..base` can be resolved to its types."""
+    index = {}
+    for path in sorted(catalog.rglob("*.rs")):
+        text = path.read_text()
+        hits = [(m.start(), m.group(1)) for m in ANYFN.finditer(text)]
+        for i, (pos, fn) in enumerate(hits):
+            end = hits[i + 1][0] if i + 1 < len(hits) else len(text)
+            blk = text[pos:end]
+            if RET.search(blk[:400]) or ASSIGNS.search(blk):
+                index.setdefault(fn, []).append((path, blk))
+    return index
+
+
+def parse_type_line(body: str):
+    """`(card_types, supertypes, base_helper, declares_types, declares_supers)`
+    off one depth-1 field text."""
+    tm, sm = TYPES.search(body), SUPER.search(body)
+    got_t = {w for w in WORD.findall(tm.group(1)) if w in CARD_TYPES} if tm else set()
+    got_t = {"Kindred" if t == "Tribal" else t for t in got_t}
+    got_s = set()
+    if sm:
+        got_s = {w for w in WORD.findall(sm.group(1)) if w in SUPERTYPES}
+        got_s |= {v for k, v in HELPERS.items() if k + "()" in sm.group(1)}
+    base = None
+    for line in body.split("\n"):
+        if line.startswith("..") and not line.startswith("..Default::default"):
+            m = re.match(r"\.\.([a-z0-9_]+)\s*\(", line)
+            if m:
+                base = m.group(1)
+    return got_t, got_s, base, tm is not None, sm is not None
+
+
+def resolve_type_line(index, path, body, raw, depth=0):
+    """The card's types and supertypes, following `..base` and wrapper helpers.
+
+    Returns `(types, supers, ok)`. `ok` is False when a link in the chain is a
+    helper this cannot find — saying nothing beats reporting the reader's own
+    blind spot, which is how 77 `..legend(..)` cards read as "supertypes:
+    (none)" the first time this column was opened.
+    """
+    got_t, got_s, base, has_t, has_s = parse_type_line(body)
+    ok = True
+    # The wrapper idiom sits OUTSIDE the literal, so it is read off `raw`.
+    if raw is not None and depth == 0:
+        after_sig = raw[raw.find("\n") + 1:]
+        wm = WRAPS.match(after_sig)
+        if wm:
+            # Same-file first: `legend` is defined in five files with three
+            # different shapes, and taking whichever came first made an
+            # ASSIGNING wrapper read the supertypes of somebody else's
+            # base-struct one — the injection that proved it silently passed.
+            cands = [c for c in index.get(wm.group(1), []) if c[0] == path] \
+                or index.get(wm.group(1), [])
+            for wpath, wblk in cands:
+                if ASSIGNS.search(wblk) or (helper_body(wblk) or ""):
+                    wb = helper_body(wblk) or ""
+                    wt, ws, _, wht, whs = parse_type_line(wb)
+                    if not has_s and (whs or "def.supertypes" in wblk):
+                        # An assigning wrapper's own value, or its literal's.
+                        got_s = ws or {
+                            w for w in WORD.findall(wblk) if w in SUPERTYPES
+                        }
+                        has_s = True
+                    if not has_t and wht:
+                        got_t, has_t = wt, True
+                    break
+            else:
+                ok = False
+    if base:
+        cands = [b for pth, b in index.get(base, []) if pth == path] \
+            or [b for _, b in index.get(base, [])]
+        if not cands or depth >= 5:
+            return got_t, got_s, False
+        bt, bs, bok = resolve_type_line(index, path, helper_body(cands[0]) or "", None, depth + 1)
+        ok = ok and bok
+        if not has_t:
+            got_t = bt
+        if not has_s:
+            got_s = bs
+    # Every card has card types; an empty set means the chain was not readable,
+    # not that the card has none. Supertypes are genuinely optional, so they
+    # cannot carry this test.
+    return got_t, got_s, ok and bool(got_t)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rows", type=int, default=40)
     args = ap.parse_args()
 
+    index = build_helper_index(CATALOG)
     checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
     skip = {"nocache": 0, "faces": 0, "split": 0, "star": 0, "nonliteral": 0,
             "noname": 0, "notaspell": 0, "notyped": 0}
@@ -359,33 +490,31 @@ def main() -> int:
             line = (card.get("type_line") or "").split("—")[0]
             want_t = {w for w in line.replace("//", " ").split() if w in CARD_TYPES}
             want_s = {w for w in line.split() if w in SUPERTYPES}
-            tm, sm = TYPES.search(body), SUPER.search(body)
-            # The base-struct form (`..creature("Name", cost, types, 1, 1)`,
-            # `..legend(..)`) keeps the type line in the helper call, so a
-            # literal that defers to a base says nothing about it and
-            # "supertypes: (none)" is the reader's blind spot, not the card's —
-            # 71 rows of it, every one a false positive, and six more that
-            # survived a `card_types:`-only gate because `..legend(..)` supplies
-            # the supertype while the literal overrides the types. The type line
-            # is only readable here when the literal is SELF-CONTAINED.
-            partial = any(
-                l.startswith("..") and not l.startswith("..Default::default")
-                for l in body.split("\n")
-            )
-            if tm is None or partial:
+            # ⚠ THE TYPE LINE IS RARELY IN THE LITERAL. Three idioms carry it
+            # somewhere else, and a reader that only looks at the literal
+            # reports its own blind spot: the BASE-STRUCT form
+            # (`..creature("Name", cost, types, 1, 1)`, `..god_weapon(..)`),
+            # the WRAPPER form (`legend(CardDefinition { .. })`, six Invasion
+            # legends), and a helper whose own base is another helper. All
+            # three are followed now; when a link cannot be found the card is
+            # skipped rather than reported, because 77 rows of "supertypes:
+            # (none)" the first time this column was opened were every one of
+            # them `..legend(..)` supplying what the literal never claimed.
+            got_t, got_s, resolved = resolve_type_line(index, path, body, raw)
+            if not resolved:
                 skip["notyped"] += 1
                 continue
-            if tm:
-                got_t = {w for w in WORD.findall(tm.group(1)) if w in CARD_TYPES}
-                got_t = {"Kindred" if t == "Tribal" else t for t in got_t}
-                if got_t != want_t and want_t:
-                    wrong_types += 1
-                    rows.append(("types", name, f"{path.name}::{fname}",
-                                 " ".join(sorted(got_t)), " ".join(sorted(want_t))))
-            got_s = set()
-            if sm:
-                got_s = {w for w in WORD.findall(sm.group(1)) if w in SUPERTYPES}
-                got_s |= {v for k, v in HELPERS.items() if k + "()" in sm.group(1)}
+            # A Vanguard avatar named after a card is not that card, and the
+            # oracle lookup cannot tell them apart (Maraxus of Keld is both).
+            if "avatar" in (raw[raw.find("\n"):] or "") and "Vanguard" not in (card.get("type_line") or ""):
+                if re.search(r"\.\.avatar\s*\(", raw):
+                    skip["notaspell"] += 1
+                    continue
+            if got_t != want_t and want_t:
+                wrong_types += 1
+                rows.append(("types", name, f"{path.name}::{fname}",
+                             " ".join(sorted(got_t)) or "(none)",
+                             " ".join(sorted(want_t))))
             if got_s != want_s:
                 wrong_types += 1
                 rows.append(("super", name, f"{path.name}::{fname}",
