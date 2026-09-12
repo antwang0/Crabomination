@@ -31,11 +31,6 @@ mod recent71 {
     }
 
     #[test]
-    fn sabertooth_tiger_has_first_strike() {
-        assert!(catalog::sabertooth_tiger().keywords.contains(&Keyword::FirstStrike));
-    }
-
-    #[test]
     fn segovian_leviathan_has_islandwalk() {
         assert!(catalog::segovian_leviathan().keywords.contains(&Keyword::Landwalk(LandType::Island)));
     }

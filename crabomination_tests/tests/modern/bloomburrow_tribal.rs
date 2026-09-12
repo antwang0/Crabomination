@@ -994,27 +994,6 @@ fn doom_whisperer_pays_life_to_surveil() {
 }
 
 #[test]
-fn victims_of_night_cant_kill_a_zombie() {
-    let mut g = two_player_game();
-    let zombie = g.add_card_to_battlefield(1, catalog::rotting_regisaur()); // Zombie Dinosaur
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let von = g.add_card_to_hand(0, catalog::victims_of_night());
-    g.players[0].mana_pool.add(Color::Black, 2);
-    g.players[0].mana_pool.add_colorless(1);
-    // Targeting the Zombie is illegal (fails the selection requirement).
-    assert!(g.perform_action(GameAction::CastSpell {
-        card_id: von, target: Some(Target::Permanent(zombie)),
-        additional_targets: vec![], mode: None, x_value: None }).is_err(),
-        "can't target a Zombie");
-    // The bear is a legal target.
-    g.perform_action(GameAction::CastSpell {
-        card_id: von, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None }).expect("kills the bear");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
-}
-
-#[test]
 fn meteor_golem_etb_destroys_opponent_permanent() {
     let mut g = two_player_game();
     let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());

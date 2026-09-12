@@ -61,23 +61,6 @@ pub fn rukh_egg() -> CardDefinition {
     }
 }
 
-/// Sabretooth Tiger — {2}{R} 2/1 Cat. First strike.
-pub fn sabertooth_tiger() -> CardDefinition {
-    CardDefinition {
-        name: "Sabretooth Tiger",
-        cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 1,
-        keywords: vec![Keyword::FirstStrike],
-        ..Default::default()
-    }
-}
-
 /// Ironroot Treefolk — {4}{G} 3/5 Treefolk (vanilla).
 pub fn ironroot_treefolk() -> CardDefinition {
     CardDefinition {

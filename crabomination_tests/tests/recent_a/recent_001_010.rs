@@ -6164,10 +6164,25 @@ mod recent {
         let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let spell = g.add_card_to_hand(0, catalog::surging_aether());
         g.players[0].mana_pool.add(Color::Blue, 1);
-        g.players[0].mana_pool.add_colorless(2);
+        g.players[0].mana_pool.add_colorless(3); // {3}{U}, not {2}{U}
         cast_at(&mut g, spell, Target::Permanent(foe));
         assert!(g.battlefield_find(foe).is_none(), "bounced");
         assert!(g.players[1].hand.iter().any(|c| c.id == foe), "to owner's hand");
+    }
+
+    /// "Return target PERMANENT to its owner's hand" — the card's own doc said
+    /// it was modelled as a creature, and nothing compared the two until the
+    /// name column priced the card (it was `nocache` behind the ligature).
+    #[test]
+    fn surging_aether_bounces_a_noncreature_permanent() {
+        let mut g = two_player_game();
+        let land = g.add_card_to_battlefield(1, catalog::forest());
+        let spell = g.add_card_to_hand(0, catalog::surging_aether());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        cast_at(&mut g, spell, Target::Permanent(land));
+        assert!(g.battlefield_find(land).is_none(), "bounced");
+        assert!(g.players[1].hand.iter().any(|c| c.id == land), "to owner's hand");
     }
 
     #[test]

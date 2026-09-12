@@ -1302,28 +1302,6 @@ pub fn apostles_blessing() -> CardDefinition {
     }
 }
 
-/// Victim of Night — {B}{B} Instant. "Destroy target non-Vampire,
-/// non-Werewolf, non-Zombie creature." (DKA; the factory keeps its plural
-/// `pub fn` name, which is how the misspelling hid the card from every
-/// oracle-backed column.)
-pub fn victims_of_night() -> CardDefinition {
-    use crate::card::CreatureType;
-    CardDefinition {
-        name: "Victim of Night",
-        cost: cost(&[b(), b()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::HasCreatureType(CreatureType::Vampire).negate())
-                    .and(SelectionRequirement::HasCreatureType(CreatureType::Werewolf).negate())
-                    .and(SelectionRequirement::HasCreatureType(CreatureType::Zombie).negate()),
-            ),
-        },
-        ..Default::default()
-    }
-}
-
 /// Vraska's Contempt — {2}{B}{B} Instant. "Exile target creature or
 /// planeswalker. You gain 2 life." (XLN)
 pub fn vraskas_contempt() -> CardDefinition {

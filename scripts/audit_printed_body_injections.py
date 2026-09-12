@@ -182,9 +182,9 @@ CASES = [
  # keys on it, and `audit_printed_body` drops the card as `nocache`. Two
  # shipped cards were misspelled that way and both had a wrong cost behind the
  # misspelling; `audit_card_names.py` is the column that sees them.
- ("fires", "a misspelled card name (mod_set Victim of Night)",
-  "sets/mod_set/instants.rs",
-  '        name: "Victim of Night",', '        name: "Victims of Night",'),
+ ("fires", "a misspelled card name (recent71 Sabretooth Tiger)",
+  "sets/decks/recent71.rs",
+  '        name: "Sabretooth Tiger",', '        name: "Sabertooth Tiger",'),
  # Negative: the oracle's `keywords` array counts keywords the card GRANTS, so
  # the missing direction reads the printed keyword LINES instead. Steel Seraph
  # grants "flying, vigilance, or lifelink" and has only flying; dropping its

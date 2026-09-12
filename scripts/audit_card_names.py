@@ -28,15 +28,20 @@ append-only by contract: the old name keeps its index for ever and the new one
 is appended, so a rename is safe for a trained net's *indices* but hands it a
 token it never saw. Batch renames, and say so in the commit.
 
-COVERAGE, 2026-09-12: **17,463 named factories outside the expected sets, 0
-spelling and 0 unknown, 6 reviewed** — from 2 and 12 when it was opened. The
-two it found were both a misspelling hiding a WRONG COST, which is the whole
-argument for the column:
+COVERAGE, 2026-09-12: **17,461 named factories outside the expected sets — 0
+spelling, 0 unknown, 0 duplicate**, with 6 reviewed unknowns and 3 reviewed
+duplicate pairs. It opened at 2 / 12 / 5. Both misspellings hid a WRONG COST,
+and both had a correct DUPLICATE of the same card shipped beside them, which is
+the whole argument for the column — a name nobody audits is where a second,
+worse copy of a card lives:
 
   * **Victims of Night** — the card is "Victim of Night", `{B}{B}`; the engine
     had `{1}{B}{B}`, and the cost column had never seen the card.
   * **Sabertooth Tiger** — "Sabretooth Tiger", `{2}{R}`; the engine had
-    `{3}{R}`.
+    `{3}{R}`. And `recent77.rs` already shipped the card correctly, so the
+    rename turned the row into a DUPLICATE row and the fix was a delete.
+    `Victims of Night` was the same shape: `mod_set/instants.rs` had the real
+    `victim_of_night()` forty lines below it.
 
 A third came out of the same reading without a rename: **Surging Æther** keeps
 the printed ligature the oracle de-ligatured in 2016, so it was `nocache` too —
@@ -76,6 +81,21 @@ SYNTHESIZED = (
     # both), which is the same reason `audit_printed_body` drops them.
     "sets/vanguard.rs",
 )
+
+# TWO FACTORIES UNDER ONE NAME, reviewed once. Each pair is the same card
+# implemented twice with different primitives, so picking the survivor is a
+# body-by-body read rather than a delete — filed, not fixed. A NEW pair is the
+# signal, and the two that are gone were found exactly this way: `Victim of
+# Night` had a misspelled duplicate with a wrong cost forty lines above it, and
+# `Sabretooth Tiger` had one whose name hid it from the oracle entirely.
+REVIEWED_DUPLICATES = {
+    "Kroxa, Titan of Death's Hunger": "modern.rs ships `kroxa` and "
+                                      "`kroxa_titan_of_deaths_hunger`",
+    "Uro, Titan of Nature's Wrath": "modern.rs ships `uro` and "
+                                    "`uro_titan_of_natures_wrath`",
+    "Niv-Mizzet, Parun": "modern.rs::niv_mizzet_parun and "
+                         "recent91.rs::nivmizzet_parun",
+}
 
 # A name the oracle does not know, reviewed ONCE and kept so a NEW row is the
 # signal — the same device as `audit_printed_body`'s `REVIEWED_KEYWORDS`.
@@ -124,6 +144,7 @@ def main() -> int:
         buckets.setdefault(k[:3], []).append(n)
 
     rows, checked, reviewed = [], 0, 0
+    seen = {}
     for path in sorted(apb.CATALOG.rglob("*.rs")):
         rel = path.relative_to(apb.CATALOG).as_posix()
         if not args.all and any(rel.startswith(s) for s in SYNTHESIZED):
@@ -145,6 +166,13 @@ def main() -> int:
             if name is None or " // " in name:
                 continue  # `noname` / `split`; not this column's populations
             checked += 1
+            # ⚠ ONE NAME, TWO CARDS. The pool can hold both, "cards named …"
+            # sees two, and the legend rule counts them together — and a
+            # duplicate is where a wrong body hides, because the correct
+            # sibling passes every column beside it.
+            if name in seen and name not in REVIEWED_DUPLICATES:
+                rows.append(("duplicate", name, f"{rel}::{fname}", seen[name]))
+            seen.setdefault(name, f"{rel}::{fname}")
             if name in real:
                 continue
             k = key(name)
@@ -160,11 +188,14 @@ def main() -> int:
                          near[0] if near else "(nothing close)"))
 
     for kind, name, where, near in sorted(rows):
-        print(f"  {kind:8} {name!r}\n      {where}\n      closest oracle name: {near!r}")
+        label = "also at" if kind == "duplicate" else "closest oracle name:"
+        print(f"  {kind:9} {name!r}\n      {where}\n      {label} {near!r}")
     print(f"# {checked} named factories outside the expected sets — "
           f"**{sum(1 for r in rows if r[0] == 'spelling')} spelling, "
-          f"{sum(1 for r in rows if r[0] == 'unknown')} unknown to the oracle** "
-          f"({reviewed} reviewed)")
+          f"{sum(1 for r in rows if r[0] == 'unknown')} unknown to the oracle, "
+          f"{sum(1 for r in rows if r[0] == 'duplicate')} duplicate names** "
+          f"({reviewed} reviewed unknown, {len(REVIEWED_DUPLICATES)} reviewed "
+          f"duplicates)")
     return 0
 
 
