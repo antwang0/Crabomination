@@ -762,7 +762,45 @@ fn omen_machine_stops_draws() {
     let _ = g.advance_step(Vec::new());
     assert_eq!(g.step, TurnStep::Draw);
     assert!(g.players[0].hand.is_empty(), "no turn-based draw");
+    // ⚠ AND THE SEAT IS STILL IN THE GAME. A skipped draw is not an attempted
+    // draw from an empty library (CR 121.2a vs CR 104.3c) — the assertion
+    // above passed for months while the draw step armed `pending_deck_loss`
+    // on a player with five cards left, because `draw_one` returned the same
+    // `false` for "skipped" as it does for "library empty".
+    assert!(!g.players[0].eliminated, "a skipped draw is not a deck-out");
+    assert!(!g.players[0].pending_deck_loss, "no CR 104.3c loss was armed");
+    assert!(!g.is_game_over(), "the game is still going");
+    assert_eq!(g.players[0].library.len(), 5, "nothing left the library");
 }
+
+/// CR 121.2a vs CR 104.3c — a draw Omen Machine skips is not a draw from an
+/// empty library, so the caster keeps playing.
+///
+/// ⚠ **THIS ELIMINATED THE CASTER.** `draw_one` returned the same `false` for
+/// "skipped" as for "library empty", and all eight callers read it as the
+/// second: casting Divination with Omen Machine out armed `pending_deck_loss`
+/// and the next SBA sweep removed the player — with five cards left in their
+/// library and the game handed to their opponent. Possessed Portal, Spirit of
+/// the Labyrinth's per-turn cap and Obstinate Familiar's optional skip are the
+/// same shape; `DrawOutcome` is the fix and `draw_one_or_deck` is the one place
+/// the loss is armed.
+#[test]
+fn a_draw_omen_machine_skips_does_not_deck_the_drawer() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::omen_machine());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[0].hand.clear();
+    let div = g.add_card_to_hand(0, catalog::divination());
+    cast(&mut g, 0, div, None);
+    assert!(g.players[0].hand.is_empty(), "the draws were skipped");
+    assert_eq!(g.players[0].library.len(), 5, "and nothing left the library");
+    assert!(!g.players[0].pending_deck_loss, "no CR 104.3c loss was armed");
+    assert!(!g.players[0].eliminated, "the caster is still in the game");
+    assert!(!g.is_game_over(), "and so is the game");
+}
+
 
 /// CR 106.6b — Myr Superion can only be paid with mana a creature produced.
 #[test]

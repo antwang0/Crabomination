@@ -603,12 +603,13 @@ impl GameState {
                         // CR 504.1 — the turn-based draw-step draw is exempt from
                         // Notion Thief's redirect ("except the first one they draw").
                         self.in_turn_based_draw = true;
-                        let drew = self.draw_one(p, &mut events);
+                        // CR 104.3c (or the Lab-Man win override), armed inside
+                        // the helper and ONLY for a draw that was attempted: a
+                        // draw the board skips (a per-turn cap, Omen Machine)
+                        // never became one. Game-over check happens inside SBA.
+                        let drew = self.draw_one_or_deck(p, &mut events);
                         self.in_turn_based_draw = false;
                         if !drew {
-                            // CR 104.3c (or the Lab-Man win override). Game-over
-                            // check happens inside SBA.
-                            self.lose_to_empty_draw(p);
                             self.check_state_based_actions_into(&mut events);
                             if self.is_game_over() {
                                 return Ok(events);

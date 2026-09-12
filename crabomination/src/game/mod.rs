@@ -17664,12 +17664,7 @@ impl GameState {
         }
     }
 
-    /// Draw one card for `p`, first offering the Dredge replacement
-    /// (CR 702.52). Returns `false` only when the draw couldn't be
-    /// satisfied (empty library) and no dredge replacement applied — the
-    /// caller is responsible for the resulting loss SBA. Pushes
-    /// `CardDrawn` for a normal draw, or `CardMilled` ×N +
-    /// `CardLeftGraveyard` for a dredge.
+
     /// CR 121.2a — true while `p` controls an *active*
     /// `StaticEffect::MayReplaceDrawWithTutor` (Archmage Ascension at six
     /// quest counters). Peeled through the gating wrappers by `active_static`.
@@ -17754,6 +17749,50 @@ impl GameState {
     }
 
     pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
+        self.draw_one_outcome(p, events) == DrawOutcome::Drew
+    }
+
+    /// One draw for `p` that may deck them, as every "draw N or lose" caller
+    /// wants it: `true` to keep drawing, `false` to stop, and CR 104.3c armed
+    /// here rather than at eight call sites.
+    ///
+    /// ⚠ **THE EIGHT CALL SITES ALL HAD THE SAME BUG.** Each read `draw_one`'s
+    /// `false` as "the library was empty" and armed the loss — which is right
+    /// for a real deck-out and catastrophic for a draw that was merely skipped.
+    /// Casting Divination while Omen Machine was on the battlefield eliminated
+    /// the caster with five cards left in their library, and Possessed Portal,
+    /// Spirit of the Labyrinth's per-turn cap and Obstinate Familiar's optional
+    /// skip are the same shape. One helper, so the distinction cannot be
+    /// forgotten again.
+    pub fn draw_one_or_deck(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
+        match self.draw_one_outcome(p, events) {
+            DrawOutcome::Drew => true,
+            DrawOutcome::Skipped => false,
+            DrawOutcome::EmptyLibrary => {
+                self.lose_to_empty_draw(p);
+                false
+            }
+        }
+    }
+
+    /// [`draw_one`](Self::draw_one), saying WHY a draw did not happen.
+    ///
+    /// ⚠ **`false` MEANT TWO THINGS AND ONE OF THEM KILLED THE PLAYER.** Every
+    /// caller that wanted CR 104.3c read the old `bool` as "tried to draw from
+    /// an empty library" and armed [`lose_to_empty_draw`](Self::lose_to_empty_draw)
+    /// — but the same `false` came back from a draw that was *skipped or
+    /// replaced*: a per-turn cap (CR 121.2b, Spirit of the Labyrinth), a
+    /// `PlayersSkipDraws` static (Omen Machine, Possessed Portal), Obstinate
+    /// Familiar's optional skip, a Shared Fate with no opponent to exile from.
+    /// Casting Divination with Omen Machine on the battlefield **eliminated the
+    /// caster on the spot**, with five cards left in their library. A skipped
+    /// draw is not an attempted one (CR 121.2a), so it is its own outcome and
+    /// only [`EmptyLibrary`](DrawOutcome::EmptyLibrary) arms the loss.
+    pub fn draw_one_outcome(
+        &mut self,
+        p: usize,
+        events: &mut Vec<GameEvent>,
+    ) -> DrawOutcome {
         // A revealed top only stays public while it stays on top. Guarded:
         // `library_tops_revealed` is a `ColdState` field and the `retain`
         // runs on every draw, for a list that is empty on almost every board.
@@ -17763,7 +17802,7 @@ impl GameState {
         // CR 121.2b — a per-turn draw cap applies to *individual* card draws,
         // so it gates every draw source, not just `Effect::Draw`'s count.
         if self.draw_cap_for(p).is_some_and(|cap| self.players[p].cards_drawn_this_turn >= cap) {
-            return false;
+            return DrawOutcome::Skipped;
         }
         // CR 614 — Possessed Portal: "If a player would draw a card, that
         // player skips that draw instead."
@@ -17773,7 +17812,17 @@ impl GameState {
             self.draws_redirected_this_turn.iter().find(|(from, _)| *from == p).copied()
             && thief != p
         {
-            return self.draw_one(thief, events);
+            // ⚠ THE REDIRECTED DRAW IS THE THIEF'S ATTEMPT, NOT `p`'s. An
+            // empty library under `thief` decks `thief` (CR 104.3c); `p`
+            // skipped their draw and is not at risk, so the loss is armed
+            // here rather than handed back to `p`'s caller.
+            return match self.draw_one_outcome(thief, events) {
+                DrawOutcome::EmptyLibrary => {
+                    self.lose_to_empty_draw(thief);
+                    DrawOutcome::Skipped
+                }
+                _ => DrawOutcome::Skipped,
+            };
         }
         // One lane read in front of the eleven board walks below (PERF
         // `(-233)`): every static any of them matches is in the lane's
@@ -17788,7 +17837,7 @@ impl GameState {
                 })
         };
         if global_static(&crate::effect::StaticEffect::PlayersSkipDraws) {
-            return false;
+            return DrawOutcome::Skipped;
         }
         // CR 121.2a — Obstinate Familiar: "you may skip that draw instead."
         // Controller-scoped and optional; the auto policy takes the skip only
@@ -17806,7 +17855,7 @@ impl GameState {
                     DecisionAnswer::Bool(true)
                 );
             if yes {
-                return false;
+                return DrawOutcome::Skipped;
             }
         }
         // CR 614 — Shared Fate: the draw becomes "exile the top card of one of
@@ -17814,9 +17863,9 @@ impl GameState {
         if global_static(&crate::effect::StaticEffect::SharedFate) {
             let victim = (0..self.players.len())
                 .find(|q| *q != p && !self.players[*q].library.is_empty());
-            let Some(victim) = victim else { return false };
+            let Some(victim) = victim else { return DrawOutcome::Skipped };
             if self.players[victim].library.is_empty() {
-                return false;
+                return DrawOutcome::Skipped;
             }
             let mut card = self.players[victim].library.remove(0);
             card.face_down = true;
@@ -17830,12 +17879,14 @@ impl GameState {
             let card_id = card.id;
             self.exile.push(card);
             events.push(GameEvent::PermanentExiled { card_id });
-            return true;
+            return DrawOutcome::Drew;
         }
         // CR 614 — Uba Mask: "If a player would draw a card, that player exiles
         // that card face up instead" and may play it from exile this turn.
         if global_static(&crate::effect::StaticEffect::PlayersDrawExiledPlayable) {
-            let Some(mut card) = self.players[p].library.first().cloned() else { return false };
+            let Some(mut card) = self.players[p].library.first().cloned() else {
+                return DrawOutcome::Skipped;
+            };
             self.players[p].library.remove(0);
             card.may_play_until = Some(crate::card::MayPlayPermission {
                 player: p,
@@ -17847,7 +17898,7 @@ impl GameState {
             let card_id = card.id;
             self.exile.push(card);
             events.push(GameEvent::PermanentExiled { card_id });
-            return true;
+            return DrawOutcome::Drew;
         }
         // CR 614 — a queued "the next time you would draw a card this turn,
         // [X] instead" charge (the Words cycle). Spent front-first, before the
@@ -17872,10 +17923,10 @@ impl GameState {
             if let Ok(mut evs) = self.resolve_effect_driven(&body, &ctx) {
                 events.append(&mut evs);
             }
-            return true;
+            return DrawOutcome::Drew;
         }
         if self.try_dredge_instead_of_draw(p, events) {
-            return true;
+            return DrawOutcome::Drew;
         }
         // CR 616.1e — several "instead of drawing, dig" replacements can
         // apply to the same draw; the affected player picks which one applies.
@@ -17905,7 +17956,7 @@ impl GameState {
             applicable.retain(|k| !declined.contains(k));
             let Some(kind) = self.choose_draw_replacement(p, &applicable) else { break };
             if self.apply_draw_dig(kind, p, events) {
-                return true;
+                return DrawOutcome::Drew;
             }
             declined.push(kind);
         }
@@ -17929,8 +17980,10 @@ impl GameState {
                 .iter()
                 .min_by_key(|c| (c.definition.cost.cmc(), c.id.0))
                 .map(|c| c.id);
-            let drew = match pick {
-                Some(cid) if self.discard_card(p, cid, events) => self.draw_one(p, events),
+            let out = match pick {
+                Some(cid) if self.discard_card(p, cid, events) => {
+                    self.draw_one_outcome(p, events)
+                }
                 _ => {
                     let n = self.mill_count_for(p, 1);
                     for _ in 0..n {
@@ -17943,11 +17996,11 @@ impl GameState {
                             events.push(GameEvent::CardMilled { player: p, card_id: cid });
                         }
                     }
-                    true
+                    DrawOutcome::Drew
                 }
             };
             self.in_chains_replacement = false;
-            return drew;
+            return out;
         }
         // CR 614 — Notion Thief: redirect an opponent's draw (except the
         // turn-based first draw of their draw step) to the thief's controller.
@@ -17957,9 +18010,15 @@ impl GameState {
             && let Some(thief) = self.notion_thief_for_draw(p)
         {
             self.in_draw_redirect = true;
-            let drew = self.draw_one(thief, events);
+            let out = self.draw_one_outcome(thief, events);
             self.in_draw_redirect = false;
-            return drew;
+            return match out {
+                DrawOutcome::EmptyLibrary => {
+                    self.lose_to_empty_draw(thief);
+                    DrawOutcome::Skipped
+                }
+                _ => DrawOutcome::Skipped,
+            };
         }
         // CR 121.2a — empty-hand draw replacement (Blood Scrivener). Snapshot
         // the bonus before the draw (the hand must be empty at draw time) and
@@ -17991,6 +18050,8 @@ impl GameState {
                 self.maybe_grant_miracle(p, id);
                 true
             }
+            // The one place a draw was ATTEMPTED and the library had nothing
+            // — CR 104.3c, and the only outcome that arms the loss.
             None => false,
         };
         if drew && let Some((extra, life_loss)) = empty_hand_bonus {
@@ -18091,7 +18152,7 @@ impl GameState {
                 self.in_draw_double = false;
             }
         }
-        drew
+        if drew { DrawOutcome::Drew } else { DrawOutcome::EmptyLibrary }
     }
 
     /// CR 616.1e — ask `p` which applicable draw replacement to apply. `None`
@@ -27768,4 +27829,23 @@ impl DrawDig {
             DrawDig::RevealUntilKind => "Reveal until a land or nonland card",
         }
     }
+}
+
+/// Why a draw did or did not happen — see [`GameState::draw_one_outcome`].
+///
+/// The distinction is CR 121.2a against CR 104.3c: a draw that is *skipped or
+/// replaced* never became an attempt, so it cannot deck anyone, while a draw
+/// that was attempted against an empty library decks the drawer.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DrawOutcome {
+    /// A card reached the hand, or a replacement did its own thing instead
+    /// (dredge, Uba Mask, Shared Fate, a Words charge).
+    Drew,
+    /// The draw did not happen and no one attempted one: a per-turn cap, a
+    /// `PlayersSkipDraws` static, an accepted optional skip, a replacement
+    /// with nothing to act on.
+    Skipped,
+    /// CR 104.3c — a draw was attempted and the library was empty. The
+    /// caller arms [`GameState::lose_to_empty_draw`].
+    EmptyLibrary,
 }

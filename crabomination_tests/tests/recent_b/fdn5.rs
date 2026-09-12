@@ -1251,6 +1251,11 @@ fn possessed_portal_skips_draws() {
     let mut evs = Vec::new();
     assert!(!g.draw_one(0, &mut evs), "the draw is skipped");
     assert_eq!(g.players[0].hand.len(), before);
+    // …and a skipped draw is not a CR 104.3c attempt: `draw_one_or_deck` is
+    // the caller-facing form, and it must not arm the loss here (see
+    // `nph::a_draw_omen_machine_skips_does_not_deck_the_drawer` for the class).
+    assert!(!g.draw_one_or_deck(0, &mut evs), "still skipped");
+    assert!(!g.players[0].pending_deck_loss, "and no deck-out armed");
 }
 
 /// Possessed Portal's end step costs each player a card or a permanent.

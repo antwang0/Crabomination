@@ -2422,6 +2422,22 @@ fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     if g.players.iter().any(|p| p.life > crate::player::SCALE_CEILING.saturating_mul(1_000)) {
         let _ = write!(s, "  [SATURATED LIFE — the known unwinnable board, not a new defect]");
     }
+    // ⚠ THE WATCH'S OWN STATE, because a cap past turn 30 is first of all a
+    // question about the watch. CR 104.4's turn-granular half draws a game
+    // whose fingerprint comes back to one anchor `NO_PROGRESS_DRAW_REPEATS`
+    // times; `repeats` says how close it got and `since` how long it has been
+    // away. `repeats 0 / since 0` with a live anchor on a turn-2000 board means
+    // the fingerprint moves every sample — the loop is not what the watch
+    // watches — and that is a different investigation from "the budget ran
+    // out a few turns early", which is what every cap before `all` 1159 was.
+    let (anchor, repeats, since) = g.no_progress_watch;
+    let _ = write!(
+        s,
+        "\n  no-progress watch: anchor {}, repeats {repeats}/{}, since {since}/{}",
+        if anchor == 0 { "unset" } else { "set" },
+        GameState::NO_PROGRESS_DRAW_REPEATS,
+        GameState::NO_PROGRESS_MAX_PERIOD,
+    );
     for (seat, p) in g.players.iter().enumerate() {
         // The pool and the untapped count are what say whether a repeated
         // activation was *paid for*: an unbounded loop of a `{cost}` ability
@@ -2433,13 +2449,17 @@ fn cap_diagnosis(g: &GameState, actions: usize) -> String {
             .count();
         let _ = write!(
             s,
-            "\n  p{seat}: life {} bf {} ({untapped} untapped) hand {} gy {} lib {} pool {}",
+            "\n  p{seat}: life {} bf {} ({untapped} untapped) hand {} gy {} lib {} pool {}{}{}",
             p.life,
             g.battlefield.iter().filter(|c| c.controller == seat).count(),
             p.hand.len(),
             p.graveyard.len(),
             p.library.len(),
             p.mana_pool.total() + p.mana_pool.restricted_total(),
+            // An empty library that is NOT armed for the CR 104.3c loss is the
+            // interesting half: it says the seat has not attempted a draw.
+            if p.pending_deck_loss { " [deck-loss armed]" } else { "" },
+            if p.skip_next_draw_step > 0 { " [draw steps skipped]" } else { "" },
         );
     }
     let name_of = |id: crate::card::CardId| {

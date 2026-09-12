@@ -8239,10 +8239,7 @@ impl GameState {
                             // `draw_one` applies the Dredge replacement
                             // (CR 702.52) before falling back to a normal
                             // draw; AutoDecider declines dredge by default.
-                            if !self.draw_one(p, events) {
-                                // CR 104.3c (or the Lab-Man win override);
-                                // the SBA pass decides game-over.
-                                self.lose_to_empty_draw(p);
+                            if !self.draw_one_or_deck(p, events) {
                                 return Ok(());
                             }
                         }
@@ -8269,8 +8266,7 @@ impl GameState {
                         self.discard_card(p, cid, events);
                     }
                     for _ in 0..n {
-                        if !self.draw_one(p, events) {
-                            self.lose_to_empty_draw(p);
+                        if !self.draw_one_or_deck(p, events) {
                             break;
                         }
                     }
@@ -8356,8 +8352,7 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if lessons.is_empty() {
-                    if !self.draw_one(p, events) {
-                        self.lose_to_empty_draw(p);
+                    if !self.draw_one_or_deck(p, events) {
                     }
                     return Ok(());
                 }
@@ -19020,8 +19015,7 @@ impl GameState {
                         // CR 701.19), then draws per hand-exile.
                         self.shuffle_library(owner, events);
                         for _ in 0..hand_exiled {
-                            if !self.draw_one(owner, events) {
-                                self.lose_to_empty_draw(owner);
+                            if !self.draw_one_or_deck(owner, events) {
                                 return Ok(());
                             }
                         }
@@ -27092,8 +27086,7 @@ impl GameState {
                     events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                 }
                 for _ in 0..x {
-                    if !self.draw_one(p, events) {
-                        self.lose_to_empty_draw(p);
+                    if !self.draw_one_or_deck(p, events) {
                         break;
                     }
                 }
@@ -31614,8 +31607,7 @@ impl GameState {
                         }
                     }
                     for _ in 0..7 {
-                        if !self.draw_one(seat, events) {
-                            self.lose_to_empty_draw(seat);
+                        if !self.draw_one_or_deck(seat, events) {
                             break;
                         }
                     }
@@ -36112,8 +36104,7 @@ impl GameState {
             LearnChoice::Rummage { discard } => {
                 if self.players[p].hand.iter().any(|c| c.id == discard) {
                     self.discard_card(p, discard, events);
-                    if !self.draw_one(p, events) {
-                        self.lose_to_empty_draw(p);
+                    if !self.draw_one_or_deck(p, events) {
                     }
                 }
             }
