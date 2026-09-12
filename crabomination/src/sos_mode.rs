@@ -88,6 +88,13 @@ impl College {
         }
     }
 
+    /// A college by name, case-insensitively — the CLI spelling
+    /// (`--opponent-colors lorehold`) of [`Self::name`]. `None` for
+    /// anything that isn't one of the five.
+    pub fn from_name(name: &str) -> Option<College> {
+        College::ALL.into_iter().find(|c| c.name().eq_ignore_ascii_case(name.trim()))
+    }
+
     /// The school land for this college. Taps for either of the college's
     /// two colors and has a `{2}{c1}{c2},{T}: Surveil 1` activated ability.
     pub fn school_land(self) -> CardFactory {

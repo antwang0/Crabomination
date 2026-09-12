@@ -25,6 +25,9 @@ use crabomination::cube::build_cube_state;
 use crabomination::sos_mode::build_sos_state;
 use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
+// Aliased: `bevy::prelude::Color` is the other `Color` in this file.
+use crabomination::mana::{Color as MtgColor, ColorSet};
+use crabomination::sos_mode::College;
 #[cfg(not(target_arch = "wasm32"))]
 use crabomination::server::{run_match, tcp_seat};
 use crabomination::server::{
@@ -288,15 +291,23 @@ fn build_sealed_state() -> GameState {
     let mut rng = rand::rng();
     let seed: u64 = rng.random();
     let packs = opponent_pack_count();
+    let colors = opponent_colors();
     // The opponent's seat: generated (the default) unless
     // `$CRAB_SEALED_OPP` names a decklist — set it to race two
     // constructed decks in the client. Naming a deck is always an
     // explicit request, so a deck that cannot be played is a hard
     // error, never a silent substitute (same rule as CRAB_SEALED_DECK
-    // below); `--opponent-packs` is meaningless for a pinned deck and
-    // is ignored.
+    // below); `--opponent-packs` and `--opponent-colors` describe a deck
+    // to *generate*, so both are meaningless for a pinned deck and are
+    // ignored — with a line saying so, because "only Lorehold" quietly
+    // not applying is the failure this mode has to make visible.
     let (opponent, opp_label) = match std::env::var("CRAB_SEALED_OPP") {
         Ok(p) => {
+            if !colors.is_empty() {
+                eprintln!(
+                    "sealed: CRAB_SEALED_OPP pins the opponent's deck — --opponent-colors ignored"
+                );
+            }
             let opp_path = resolve_deck_path(std::path::PathBuf::from(&p));
             let refuse_opp = |reason: &str| -> ! {
                 eprintln!(
@@ -326,7 +337,31 @@ fn build_sealed_state() -> GameState {
                 .unwrap_or_else(|| "Opponent deck".into());
             (parse.main, label)
         }
-        Err(_) => crabomination::selfplay::random_sealed_opponent_packs(seed, packs),
+        Err(_) => {
+            let (deck, label) =
+                crabomination::selfplay::random_sealed_opponent_in_colors(seed, packs, colors);
+            // A restricted lattice can come back empty if the pool has no
+            // playable card in the named colours at all. That is a 0-card
+            // opponent, i.e. an unplayable match; say which knob caused it
+            // rather than dealing the player an opening hand against nothing.
+            if deck.len() < 40 {
+                let what = if colors.is_empty() {
+                    format!("a {packs}-pack pool")
+                } else {
+                    format!(
+                        "the {} cards of a {packs}-pack pool",
+                        crabomination::selfplay::color_identity_name(colors),
+                    )
+                };
+                eprintln!(
+                    "\nsealed: the generated opponent came out at {} cards — {what} cannot fill a\n\
+                     40-card deck. Try more packs, or a different colour pair.\n",
+                    deck.len(),
+                );
+                std::process::exit(2);
+            }
+            (deck, label)
+        }
     };
 
     let path = sealed_deck_path();
@@ -416,6 +451,81 @@ fn opponent_pack_count_from(args: impl Iterator<Item = String>) -> usize {
             clamped
         })
         .unwrap_or(crabomination::selfplay::SEALED_PACKS)
+}
+
+/// `--opponent-colors <spec>` — pin the generated sealed opponent to one
+/// colour identity, so the seat across the table is always the same deck
+/// archetype ("let me practise this build against Lorehold"). Absent, the
+/// builder plays whichever colours its pool is deepest in.
+///
+/// A spec that doesn't parse **exits** rather than falling back to an
+/// unrestricted opponent. `--opponent-packs` can degrade quietly because a
+/// wrong pack count is visible in the game that follows; a wrong colour
+/// spec is not — the player gets a deck of some other colour that looks
+/// exactly like the one they asked for, and the whole point of the flag is
+/// the guarantee. Same rule the pinned-deck paths above follow.
+fn opponent_colors() -> ColorSet {
+    match opponent_colors_from(std::env::args().skip(1)) {
+        Ok(colors) => colors,
+        Err(why) => {
+            eprintln!("\nsealed: {why}\n");
+            std::process::exit(2)
+        }
+    }
+}
+
+const OPPONENT_COLORS_ARG: &str = "--opponent-colors";
+
+/// [`opponent_colors`] over an explicit argument list. `Ok(ColorSet::empty())`
+/// when the flag is absent — the unrestricted default.
+fn opponent_colors_from(args: impl Iterator<Item = String>) -> Result<ColorSet, String> {
+    let args: Vec<String> = args.collect();
+    let Some(at) = args.iter().position(|a| a == OPPONENT_COLORS_ARG) else {
+        return Ok(ColorSet::empty());
+    };
+    let spec = args
+        .get(at + 1)
+        .filter(|s| !s.starts_with("--"))
+        .ok_or_else(|| format!("{OPPONENT_COLORS_ARG} needs a value. {SPEC_HELP}"))?;
+    parse_color_identity(spec)
+}
+
+const SPEC_HELP: &str = "Give a college (lorehold, prismari, quandrix, silverquill, \
+                         witherbloom) or two-or-more WUBRG letters (rw, wubr).";
+
+/// A colour-identity spec: a Strixhaven college name, or WUBRG letters with
+/// `/`, `,`, `-` and spaces allowed as separators — so `lorehold`, `rw`,
+/// `WR` and `r/w` are one set, and the sealed pool's five colleges are
+/// nameable as themselves.
+fn parse_color_identity(spec: &str) -> Result<ColorSet, String> {
+    if let Some(college) = College::from_name(spec) {
+        return Ok(college.colors().iter().collect());
+    }
+    let mut colors = ColorSet::empty();
+    for ch in spec.chars().filter(|c| !"/,-_ \t".contains(*c)) {
+        colors.insert(match ch.to_ascii_uppercase() {
+            'W' => MtgColor::White,
+            'U' => MtgColor::Blue,
+            'B' => MtgColor::Black,
+            'R' => MtgColor::Red,
+            'G' => MtgColor::Green,
+            _ => {
+                return Err(format!(
+                    "{OPPONENT_COLORS_ARG} {spec:?} is not a colour identity. {SPEC_HELP}"
+                ));
+            }
+        });
+    }
+    // The sealed builder enumerates pairs and wider — it has no mono-colour
+    // shape to offer — so one colour would silently produce no deck at all.
+    if colors.len() < 2 {
+        return Err(format!(
+            "{OPPONENT_COLORS_ARG} {spec:?} names {} colour(s); the sealed builder only \
+             builds two-or-more-colour decks. {SPEC_HELP}",
+            colors.len(),
+        ));
+    }
+    Ok(colors)
 }
 
 /// Active text-edit field in the menu.
@@ -1476,8 +1586,26 @@ fn local_bot() -> Box<dyn crabomination::server::Bot> {
         iterations: 256,
         horizon_turns: 3,
         weights: crabomination::server::EvalWeights::default(),
+        search_threads: bot_search_threads(),
         ..crabomination::server::MctsConfig::default()
     }))
+}
+
+/// Worker threads for the bot's root search.
+///
+/// The ladder and the training actors run one game per core and leave the
+/// search serial; this program runs *one* game and a human waits on every
+/// decision of it, so the cores are sitting there. The budget is split
+/// rather than multiplied (`MctsConfig::search_threads`), so this is
+/// latency, not strength — see that field for the trade and the gate.
+///
+/// Half the machine, capped at 4. Half because Bevy has its own task and
+/// render pools on this box and a search that takes every core stutters the
+/// frame the human is looking at; capped at 4 because the budget is 256
+/// rollouts and splitting it further leaves each worker's UCB1 allocating on
+/// too few samples of its own.
+fn bot_search_threads() -> usize {
+    std::thread::available_parallelism().map(|n| (n.get() / 2).clamp(1, 4)).unwrap_or(1)
 }
 
 fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
@@ -1780,6 +1908,51 @@ mod tests {
             opponent_pack_count_from(args(&["--opponent-packs"]).into_iter()),
             crabomination::selfplay::SEALED_PACKS,
         );
+    }
+
+    /// The search-worker count is a *latency* knob on a shared box: it has
+    /// to leave Bevy's pools room on a big machine and must never ask for
+    /// zero threads on a small one (`MctsConfig::search_threads` is a
+    /// count, and 0 would mean "no rollouts at all" to `parallel_spend`).
+    #[test]
+    fn bot_search_threads_leaves_the_box_room_and_never_returns_zero() {
+        let n = bot_search_threads();
+        assert!((1..=4).contains(&n), "search workers out of range: {n}");
+        let cores = std::thread::available_parallelism().map(|c| c.get()).unwrap_or(1);
+        assert!(n <= cores.max(1), "asked for {n} workers on {cores} cores");
+    }
+
+    #[test]
+    fn opponent_colors_arg_takes_a_college_or_its_letters() {
+        let args = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let colors = |v: &[&str]| opponent_colors_from(args(v).into_iter());
+        // Absent: no restriction, the builder picks its own colours.
+        assert!(colors(&["--play", "sealed"]).unwrap().is_empty());
+
+        let lorehold: ColorSet = [MtgColor::Red, MtgColor::White].iter().collect();
+        for spec in ["lorehold", "Lorehold", " LOREHOLD ", "rw", "WR", "r/w", "r,w"] {
+            assert_eq!(
+                colors(&["--play", "sealed", "--opponent-colors", spec]).unwrap(),
+                lorehold,
+                "--opponent-colors {spec}",
+            );
+        }
+        assert_eq!(colors(&["--opponent-colors", "wubr"]).unwrap().len(), 4);
+
+        // Every rejection below would otherwise deal the player an opponent
+        // in colours they did not ask for — the one outcome the flag exists
+        // to rule out. A typo, a colour the game doesn't have, ...
+        assert!(colors(&["--opponent-colors", "banana"]).is_err());
+        assert!(colors(&["--opponent-colors", "rx"]).is_err());
+        // ... a single colour (the builder has no mono-colour shape), ...
+        assert!(colors(&["--opponent-colors", "r"]).is_err());
+        assert!(colors(&["--opponent-colors", ""]).is_err());
+        // ... and a flag whose value is missing or is the next flag. The
+        // `--` test is what stops `--opponent-colors --bug` reading as
+        // {Black, Blue, Green}: strip its dashes and it is a colour spec.
+        assert!(colors(&["--opponent-colors"]).is_err());
+        assert!(colors(&["--opponent-colors", "--play", "sealed"]).is_err());
+        assert!(colors(&["--opponent-colors", "--bug"]).is_err());
     }
     use super::*;
     use crate::systems::game_over::ActiveMatchFormat;

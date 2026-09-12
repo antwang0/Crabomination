@@ -264,6 +264,41 @@ pub struct MctsConfig {
     /// scale mctx assumes.
     pub gumbel_c_visit: f64,
     pub gumbel_c_scale: f64,
+    /// Worker threads the root search may use. **1 is the serial search
+    /// every ladder number in `ML_NOTES.md` was measured on** and stays the
+    /// default; the client sets it, the training actors must not (they
+    /// already run one game per core, and threads spawned *inside* each
+    /// actor oversubscribe the box).
+    ///
+    /// Root parallelisation: the seeding pass runs once, then each worker
+    /// runs its own UCB1 continuation from those shared statistics and the
+    /// per-arm `(visits, reward)` are summed. The budget is **split, not
+    /// multiplied** — `iterations` rollouts still happen — so the only
+    /// thing that changes is which arm each rollout lands on: a worker
+    /// allocates against its own visit counts rather than the merged ones.
+    /// That is the standard root-parallel trade and it is a behaviour
+    /// change, so it gates on the ladder like anything else that moves what
+    /// gets evaluated (profiles `mcts-dflt-256-par4` / `-par8`).
+    ///
+    /// **Gate (2026-09-08, `mcts-dflt-256-par4` vs `mcts-dflt-256`, sealed
+    /// mirrors, paired, 720 games a seed): 51.8 [49.4, 54.2] on seed 43 and
+    /// 49.3 [47.0, 51.6] on seed 97** — straddling 50 from either side, so
+    /// no evidence that splitting the budget four ways costs anything. Both
+    /// intervals are ±2.3, which is what a *search-level* arm costs in
+    /// precision: 283 and 287 of 360 pairs diverged, because extra threads
+    /// perturb the search's own random stream and the antithetic mirrors
+    /// break (the round-51 lesson). A sub-2-point effect is not resolved
+    /// here and would want ~4x the cells.
+    ///
+    /// Latency, which is the point (release-fast, `--threads 1`, 256
+    /// iterations, per searched decision): serial 61-62 ms, 4 workers
+    /// 20.4-20.8 ms (**3.0x**), 8 workers 11.7-15.5 ms. The budget itself is
+    /// unmoved at 256.0 rollouts a decision in all three.
+    ///
+    /// The close-call extension (`extend_close`) is never split: its stop
+    /// condition reads the merged means, so it runs serially after the
+    /// workers join.
+    pub search_threads: usize,
 }
 
 impl Default for MctsConfig {
@@ -283,6 +318,7 @@ impl Default for MctsConfig {
             gumbel: false,
             gumbel_c_visit: 50.0,
             gumbel_c_scale: 0.1,
+            search_threads: 1,
         }
     }
 }
@@ -489,6 +525,13 @@ pub struct MctsBot {
     cfg: MctsConfig,
     fallback: HeuristicBot,
 }
+
+/// Stack for a root-parallel search worker. The engine's other worker
+/// threads (`bot_ladder`, `deck_gauntlet`, `recommend`, `crossplay`) all
+/// take 32 MB for the same reason: effect resolution recurses through
+/// trigger and token-copy chains, and an unoptimized build's frames brush
+/// the 8 MB default.
+const WORKER_STACK_BYTES: usize = 32 * 1024 * 1024;
 
 impl MctsBot {
     pub fn new(cfg: MctsConfig) -> Self {
@@ -804,47 +847,19 @@ impl MctsBot {
         let base = self.cfg.iterations;
         let hard_max = (base as f64 * self.cfg.extend_close.max(1.0)).round() as u32;
         let mut done: u32 = n as u32;
-        while done < hard_max {
-            let parent = done.max(1) as f64;
-            if done >= base {
-                // Extension phase: only a still-close call earns more
-                // budget; separation is the stop.
-                match top_two_means(&visits, &total) {
-                    Some((m1, m2)) if m1 - m2 < self.cfg.close_margin => {}
-                    _ => break,
-                }
-            } else if self.cfg.early_stop
-                && done >= (n as u32).saturating_add(base / 4)
-                && leader_decided(&visits, &total, parent, self.cfg.exploration)
-            {
-                break;
-            }
-            let Some(i) = pick_arm(
-                &visits,
-                &total,
-                &priors,
-                parent,
-                self.cfg.exploration,
-                self.cfg.prior_weight,
-            ) else {
-                break;
-            };
-            let mut g = {
-                let _t = timing::lap(&timing::CLONE_NS);
-                state.clone()
-            };
-            let rooted = {
-                let _t = timing::lap(&timing::ROOT_NS);
-                g.perform_action(candidates[i].clone())
-            };
-            if rooted.is_err() {
-                visits[i] = u32::MAX;
-                continue;
-            }
-            total[i] += self.rollout(g, seat);
-            visits[i] += 1;
-            done += 1;
+        // The base budget, spread over workers when the profile asks for
+        // them. Falls through to the serial loop below for the remainder —
+        // which is the whole budget at `search_threads: 1`, and the
+        // close-call extension either way (it stops on the *merged* means,
+        // so it cannot be split).
+        if self.cfg.search_threads > 1 {
+            done = self.parallel_spend(
+                state, seat, &candidates, &priors, &mut visits, &mut total, done, base,
+            );
         }
+        self.ucb1_spend(
+            state, seat, &candidates, &priors, &mut visits, &mut total, done, base, hard_max,
+        );
         // Highest mean reward wins. (Robust-child — most visits — is the
         // usual MCTS choice, but with this few iterations the visit counts
         // are dominated by the seeding pass and carry little signal.)
@@ -887,6 +902,203 @@ impl MctsBot {
             );
         }
         candidates.into_iter().nth(best).unwrap_or(GameAction::PassPriority)
+    }
+
+    /// The UCB1 allocation loop: spend rollouts from `done` up to
+    /// `hard_max`, one arm chosen per rollout, and return the new `done`.
+    /// `base` is where the close-call extension phase begins — past it a
+    /// rollout is only spent while the top two means are still within
+    /// `close_margin`.
+    ///
+    /// Extracted from [`Self::search`] so the same loop is both the serial
+    /// search and one root-parallel worker's continuation; the body is
+    /// unchanged from the shape every ladder number was measured on.
+    #[allow(clippy::too_many_arguments)]
+    fn ucb1_spend(
+        &self,
+        state: &GameState,
+        seat: usize,
+        candidates: &[GameAction],
+        priors: &[f64],
+        visits: &mut [u32],
+        total: &mut [f64],
+        mut done: u32,
+        base: u32,
+        hard_max: u32,
+    ) -> u32 {
+        let n = visits.len();
+        while done < hard_max {
+            let parent = done.max(1) as f64;
+            if done >= base {
+                // Extension phase: only a still-close call earns more
+                // budget; separation is the stop.
+                match top_two_means(visits, total) {
+                    Some((m1, m2)) if m1 - m2 < self.cfg.close_margin => {}
+                    _ => break,
+                }
+            } else if self.cfg.early_stop
+                && done >= (n as u32).saturating_add(base / 4)
+                && leader_decided(visits, total, parent, self.cfg.exploration)
+            {
+                break;
+            }
+            let Some(i) = pick_arm(
+                visits,
+                total,
+                priors,
+                parent,
+                self.cfg.exploration,
+                self.cfg.prior_weight,
+            ) else {
+                break;
+            };
+            let mut g = {
+                let _t = timing::lap(&timing::CLONE_NS);
+                state.clone()
+            };
+            let rooted = {
+                let _t = timing::lap(&timing::ROOT_NS);
+                g.perform_action(candidates[i].clone())
+            };
+            if rooted.is_err() {
+                visits[i] = u32::MAX;
+                continue;
+            }
+            total[i] += self.rollout(g, seat);
+            visits[i] += 1;
+            done += 1;
+        }
+        done
+    }
+
+    /// One root-parallel worker: `chunk` further rollouts, allocated by
+    /// UCB1 against *its own* copy of the seeded statistics. The copy is
+    /// what makes the merge a sum of deltas — see [`Self::parallel_spend`].
+    #[allow(clippy::too_many_arguments)]
+    fn worker_chunk(
+        &self,
+        state: &GameState,
+        seat: usize,
+        candidates: &[GameAction],
+        priors: &[f64],
+        seed_visits: &[u32],
+        seed_total: &[f64],
+        done: u32,
+        chunk: u32,
+    ) -> (Vec<u32>, Vec<f64>) {
+        let mut visits = seed_visits.to_vec();
+        let mut total = seed_total.to_vec();
+        // `base == hard_max` locally: the close-call extension belongs to
+        // the merged search and runs after the join.
+        let stop = done + chunk;
+        self.ucb1_spend(state, seat, candidates, priors, &mut visits, &mut total, done, stop, stop);
+        (visits, total)
+    }
+
+    /// The base budget spent by `search_threads` independent UCB1
+    /// continuations off the seeded statistics, summed back into
+    /// `visits`/`total`. Returns `base`: the budget is spent either way,
+    /// and a worker that stopped early (`early_stop`) leaves rollouts
+    /// unspent on purpose, exactly as the serial loop does.
+    ///
+    /// Each worker starts from a *copy* of the seeded arrays, so what is
+    /// merged back is its delta. Arms parked at the root (`u32::MAX`)
+    /// stay parked: `perform_action` on a clone is deterministic, so every
+    /// worker parks the same set the seeding pass did.
+    ///
+    /// Scoped threads rather than a pool: a worker's whole job is
+    /// `budget / workers` rollouts of ~240 µs each, so ~20 µs of spawn is
+    /// under a percent, and a pool would have to own the borrowed root
+    /// state across decisions to pay for itself.
+    ///
+    /// Each worker is built with the engine's 32 MB stack, like every other
+    /// thread in the tree that resolves effects — a rollout runs the same
+    /// recursive trigger/copy chains a game does, and the default 8 MB is
+    /// not enough for them in an unoptimized build (`.cargo/config.toml`'s
+    /// `RUST_MIN_STACK`, and PERF's standing "effect-resolution recursion
+    /// depth" constraint). `RUST_MIN_STACK` only reaches a process cargo
+    /// launched, so the size is stated here rather than inherited.
+    #[allow(clippy::too_many_arguments)]
+    fn parallel_spend(
+        &self,
+        state: &GameState,
+        seat: usize,
+        candidates: &[GameAction],
+        priors: &[f64],
+        visits: &mut [u32],
+        total: &mut [f64],
+        done: u32,
+        base: u32,
+    ) -> u32 {
+        let budget = base.saturating_sub(done);
+        // One rollout per worker at least; a budget thinner than the thread
+        // count is the serial loop's job, not a reason to spawn.
+        let workers = self.cfg.search_threads.min(budget as usize);
+        if workers < 2 {
+            return done;
+        }
+        let seed_visits: Vec<u32> = visits.to_vec();
+        let seed_total: Vec<f64> = total.to_vec();
+        let per = budget / workers as u32;
+        let extra = budget % workers as u32;
+        let results: Vec<(Vec<u32>, Vec<f64>)> = std::thread::scope(|scope| {
+            let mut handles = Vec::with_capacity(workers);
+            // Chunks whose thread could not be spawned at all. Running them
+            // here keeps the budget exact: a search that quietly spent
+            // three quarters of its iterations because the box was out of
+            // threads is the kind of thing that shows up as "the bot got
+            // worse" months later.
+            let mut inline: Vec<(Vec<u32>, Vec<f64>)> = Vec::new();
+            let (seeded_v, seeded_t) = (seed_visits.as_slice(), seed_total.as_slice());
+            for w in 0..workers {
+                let chunk = per + u32::from((w as u32) < extra);
+                // Every capture is `Copy` (shared references and two
+                // counters), so the closure is too and the fallback below
+                // can still call it after `spawn_scoped` took it.
+                let run = move || {
+                    self.worker_chunk(
+                        state, seat, candidates, priors, seeded_v, seeded_t, done, chunk,
+                    )
+                };
+                let builder = std::thread::Builder::new().stack_size(WORKER_STACK_BYTES);
+                match builder.spawn_scoped(scope, run) {
+                    Ok(h) => handles.push(h),
+                    Err(_) => inline.push(run()),
+                }
+            }
+            handles
+                .into_iter()
+                // A rollout that panics is an engine bug, and the serial
+                // path propagates it. Keep that: re-raise on this thread
+                // rather than averaging in a worker that died.
+                .map(|h| h.join().unwrap_or_else(|e| std::panic::resume_unwind(e)))
+                .chain(inline)
+                .collect()
+        });
+        for (v, t) in results {
+            for i in 0..visits.len() {
+                if visits[i] == u32::MAX {
+                    continue;
+                }
+                // A worker can only park an arm the seeding pass accepted if
+                // `perform_action` stopped being a function of (state,
+                // action) — and then `v[i] - seed_visits[i]` is `u32::MAX -
+                // 1` added to a visit count, i.e. every mean the argmax
+                // reads is garbage. Assert it in the suite, drop the
+                // worker's contribution in the field.
+                debug_assert_ne!(
+                    v[i],
+                    u32::MAX,
+                    "worker parked arm {i}, which the seeding pass rooted from the same state",
+                );
+                if v[i] == u32::MAX {
+                    continue;
+                }
+                visits[i] += v[i] - seed_visits[i];
+                total[i] += t[i] - seed_total[i];
+            }
+        }
+        base
     }
 
     /// The round-51 fetch arms: search a pending `SearchLibrary` instead of
@@ -1074,6 +1286,49 @@ mod tests {
             !matches!(b, Some(GameAction::DeclareBlockers(_))),
             "second tick must not re-declare, got {b:?}"
         );
+    }
+
+    /// Root parallelisation splits the budget, it does not multiply it:
+    /// `iterations` rollouts happen whether one worker runs them or four.
+    ///
+    /// The arithmetic this pins is the merge. Each worker starts from a
+    /// *copy* of the seeded statistics, so what goes back is its delta; a
+    /// merge that summed the whole array instead would quadruple every
+    /// visit count and every reward total, and the argmax reads means.
+    #[test]
+    fn root_parallel_search_splits_the_budget_rather_than_multiplying_it() {
+        use crate::player::Player;
+
+        let players = vec![Player::new(0, "A"), Player::new(1, "B")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+
+        let bot = MctsBot::new(MctsConfig {
+            iterations: 32,
+            horizon_turns: 1,
+            search_threads: 4,
+            ..MctsConfig::default()
+        });
+        // Two arms the engine always accepts, so nothing parks and the
+        // visit sum is exactly the budget.
+        let candidates = vec![GameAction::PassPriority, GameAction::PassPriority];
+        let priors = vec![0.5, 0.5];
+        // The state `search` hands over: one seeding rollout per arm.
+        let mut visits = vec![1u32, 1];
+        let mut total = vec![0.5f64, 0.5];
+
+        let done =
+            bot.parallel_spend(&g, 0, &candidates, &priors, &mut visits, &mut total, 2, 32);
+
+        assert_eq!(done, 32, "the base budget is reported as spent");
+        assert_eq!(
+            visits.iter().sum::<u32>(),
+            32,
+            "four workers spent 32 rollouts between them, not 4 x 32: {visits:?}",
+        );
+        assert!(visits.iter().all(|&v| v > 1), "every arm was visited past its seed: {visits:?}");
     }
 
     /// CR 508.1d — the declaration this bot *returns* has to be legal, and

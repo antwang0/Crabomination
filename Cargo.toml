@@ -147,6 +147,62 @@ split-debuginfo = "off"
 inherits = "release-fast"
 overflow-checks = true
 
+# The profile for *playing* the client, i.e. the one build in this workspace
+# whose latency a human waits on.
+#
+# `dev` is the test suite's profile — the engine sits at opt-level 0 there so
+# an engine edit relinks 19 k tests in seconds — but the client's bot seat is
+# `MctsBot` at 256 iterations, and that runs ~58 engine actions per rollout x
+# 256 rollouts per decision *inside* the unoptimized engine. Measured with
+# `CRAB_MCTS_TIMING=1` on `bot_ladder --a mcts-dflt --b dflt --decks fixed`
+# (one thread, the client's exact search, 64 iterations so the debug cell
+# finishes; cost is linear in iterations and the per-rollout figure is not):
+#
+#   dev  (opt-level 0, debug-assertions on)   12,556 µs/rollout    812 ms/decision
+#   play (opt-level 3, debug-assertions on)    1,049 µs/rollout     68 ms/decision
+#   play (opt-level 3, assertions off)            268 µs/rollout   17.5 ms/decision
+#   release-fast (for reference)                  239 µs/rollout   14.8 ms/decision
+#
+# At the client's 256 iterations and ~35 searched decisions a game that is
+# about two minutes of the bot thinking per game under `dev`, essentially all
+# of it the compiler rather than the search. This profile is **47x** of it,
+# and lands within 12 % of `release-fast` while keeping dev's codegen units
+# and dev's link.
+#
+# Only the three engine crates are lifted: the client crate and its Bevy
+# rebuild stay on dev's settings, so client iteration is unchanged.
+# Dependencies keep opt-level 3 from `[profile.dev.package."*"]`, which a
+# profile that `inherits = "dev"` carries over (verified with `-v`).
+#
+#   cargo play -- --play sealed --opponent-packs 9     (alias in .cargo/config.toml)
+#   cargo run --profile play -p crabomination_client -- --play sealed
+#
+# `debug-assertions` is **off** on the three engine crates, which is the
+# difference between the second and third rows above: the engine's invariant
+# checks cost **4.4x** at opt-level 3 (`gather_continuous_effects`' walk and
+# the lattice re-derivation in `build_candidates_cfg` are inside the rollout
+# loop). Dropping the three `debug-assertions` lines below hands them back at
+# that price — worth doing when a play session is being used as the bug
+# instrument it sometimes is (ML_NOTES round 43 built its defect list out of
+# four recorded human games). Nothing is lost by default: the suite runs
+# 19 k tests with assertions on, and `[profile.overflow]` above is the
+# dedicated assertions build the robustness grid uses.
+#
+# `dev` itself is deliberately untouched: lifting the engine there would put
+# an opt-level-3 engine build in front of every `cargo test`.
+[profile.play]
+inherits = "dev"
+
+[profile.play.package.crabomination]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_base]
+opt-level = 3
+debug-assertions = false
+[profile.play.package.crabomination_catalog]
+opt-level = 3
+debug-assertions = false
+
 # Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
 [profile.wasm-release]
 # Default to release profile values.

@@ -1,5 +1,14 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
+// The bot seat runs the engine's search (`MctsBot`, 256 iterations), so this
+// program allocates like the simulator binaries do and takes their allocator
+// with it. A `#[global_allocator]` is a whole-program decision, which is why
+// it is stated here rather than pulled in through the engine's own feature.
+// See `crabomination_client/Cargo.toml` for the measurement.
+#[cfg(all(feature = "mimalloc", not(target_arch = "wasm32")))]
+#[global_allocator]
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use std::f32::consts::PI;
 
 use bevy::asset::AssetApp;

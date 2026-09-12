@@ -2592,6 +2592,137 @@ no equivalent — **interleave the sides (ABBA) and discard a warm-up, or do not
 quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
+### The box is 24 cores and the build only used 3.84 of them — measured 2026-09-08
+
+**Every build-time number above this line was taken on four cores, and the
+conclusion they share ("58-213 s is core-saturated, so the lever is total
+work") is false on a 24-core box.** Re-measured cold, fresh `CARGO_TARGET_DIR`,
+`cargo test --workspace --exclude crabomination_client --no-run --timings`:
+
+```text
+makespan 104.5 s for 401 s of CPU  ->  3.84x parallelism on 24 cores
+the chain, by unit start/duration:
+   10.6  16.6  crabomination_base
+   25.3  26.0  crabomination_catalog      (starts on base's rmeta, not its rlib)
+   43.9  39.1  crabomination
+   51.3  50.9  crabomination "lib" (test)     <- ends 102.2
+   83.0  21.5  crabomination_tests classic_sets  <- ends 104.5
+```
+
+**Twenty cores idle on average.** The build is one serial chain and rustc's
+frontend is single-threaded on stable, so nothing about scheduling, unit count
+or total work is the lever any more — the frontend is. Both fixes below follow
+from that, and the ordering between them does too.
+
+**Lever 1, rustc's parallel frontend (`-Zthreads`), nightly.** `scripts/fast.sh`.
+
+```text
+cold `cargo check --workspace --exclude crabomination_client --all-targets`
+  stable 1.95.0            70.6 s
+  nightly 1.100            59.0 s          (the newer compiler alone, -16 %)
+  nightly -Zthreads=8      34.7 s          -51 %
+
+cold `cargo test --no-run`, nightly -Zthreads=8 + mold   104.5 -> 66.3 s
+  parallelism 3.84x -> 4.80x; every unit shrank
+  crabomination            37.2 -> 16.4     crabomination "lib" (test)  48.3 -> 31.1
+  crabomination_catalog    25.1 -> 16.1     classic_sets                20.9 -> 16.6
+warm rebuild, touch game/effects/mod.rs, whole-workspace `test --no-run`
+  stable + lld   55.5 / 58.6 / 55.6 s
+  fast.sh        27.4 / 23.2 / 28.2 / 25.1 / 28.9 s        ~ -51 %
+suite 19,288 / 19,288 pass under it.
+```
+
+**Lever 2, mold.** `.cargo/mold-cc`. Link in isolation (touch
+`bin/bot_ladder.rs`, rebuild `-p crabomination --bin bot_ladder` — a 225 MB
+debug binary, so the rebuild is essentially one link), 4 reps after a
+discarded warm-up:
+
+```text
+  lld   6.00 / 7.32 / 5.84 / 10.03 s
+  mold  2.69 / 3.70 / 2.12 /  3.02 s        ~2.3x
+  cold whole-workspace makespan  104.5 -> 100.2 s   (only -4 %)
+```
+
+**The two numbers disagree by design and that is the finding: the cold build is
+frontend-bound, not link-bound.** A 2.3x link buys 4 % cold and shows up in the
+warm loop instead, where twelve executables relink against an engine that
+barely changed. Take the frontend first.
+
+**The linker lives in `target.*.linker`, not in `rustflags`, and that is not a
+style choice.** The RUSTFLAGS *environment variable* replaces
+`target.*.rustflags` wholesale, so every recipe in this file that sets it
+(`RUSTFLAGS="-C target-cpu=native"`, `-C debug-assertions=yes`,
+`scripts/fast.sh`) was silently relinking with the system default the moment
+the linker was expressed as a `link-arg`. Config keys that are not `rustflags`
+cannot be clobbered that way.
+
+**What was measured and is NOT worth taking**, so nobody re-derives it:
+
+* **`-C debuginfo=0`** — test binary 352 -> 303 MB, cold build 66 -> 58 s,
+  **suite wall unchanged** (19.4 s vs 19.1 s). The 300 MB is the catalog's
+  own code at opt-level 0, not debug info. Not worth losing backtraces.
+* **Dropping `crabomination_ml` from the suite** — it drags 86 dependency
+  crates (candle -> `tokenizers`, which is a *non-optional* dep of
+  `candle-core` on non-wasm; there is no feature flag for it) and owns the ten
+  slowest tests (11.1 s max). Excluding it saves **0.5 s** of suite wall:
+  candle and the training tests are off the critical path in both the build
+  and the run.
+* **`cargo test` instead of `cargo nextest`** — 54.1 s and it *fails*. cargo
+  runs test binaries sequentially, one at a time, so it wastes the box; and
+  six tests in `core_rules/land_tap_fast_path.rs` assert on a process-global
+  "fast path taken N times" counter and only pass one-process-per-test.
+
+**MEASUREMENT CONDITIONS — THE FIRST PASS WAS CONTENDED AND THE RE-TAKE
+CONFIRMED IT ANYWAY.** A second session was editing and building this tree
+throughout the original run (its own `target/play` and `target/release` Bevy
+builds; load average reached 22 on the 24 cores), so the cold rows above were
+one-sided series on a moving box — which this file's own rule forbids quoting.
+They were re-taken **ABBA on a settled box** (watcher: zero `rustc` *and*
+load < 4 sustained 90 s before starting; a 73 s warm-up discarded; every
+target dir deleted between runs; on-disk scratch, not the RAM-backed `/tmp`,
+which would have been faster and not comparable):
+
+```text
+cold `cargo check --workspace --exclude crabomination_client --all-targets`
+  A  stable 1.95.0            76 / 78 s      mean 77.0
+  B  nightly -Zthreads=8      36 / 37 s      mean 36.5      -52.6 %
+  A B B A, 4 of 4 ordered right, the sides do not overlap
+
+cold `cargo test --no-run`, wall clock (not the --timings makespan)
+  A  stable + lld            116 / 106 s     mean 111.0
+  B  nightly -Zthreads=8 + mold  78 / 66 s   mean  72.0     -35.1 %
+  A B B A, 4 of 4 ordered right, the sides do not overlap
+```
+
+**The re-take agrees with the contended first pass to within a point or two**
+(-52.6 % vs -50.9 % on the check; the build's 111 -> 72 s wall against the
+first pass's 111 -> 66 s), so the per-unit `--timings` breakdown above stands
+as written. The ABBA ordering also rules out drift as the explanation: both
+sides got *faster* over the series (A 116 -> 106, B 78 -> 66, page cache
+warming), which is the opposite sign from a box filling up.
+
+**The lld side was measured through `CRAB_LINKER=lld`**, the escape hatch in
+`.cargo/mold-cc`, rather than by reverting the config — which is what that
+hatch is for and the reason the linker is a config key instead of a
+`rustflags` entry.
+
+The 3.84x-parallelism reading is contention-*resistant* in the direction that
+matters: a contended box shows *more* of the machine busy, not less, so the
+idle-core finding is if anything understated.
+
+**Still open, and the next two levers if the loop is worth more work.**
+(a) The suite's 19.3 s run is **~100 % per-test process spawn**: 19,288 tests
+x ~24 ms / 24 cores = 19.3 s, and the binary costs 7.5 ms just to `exec`
+(`/bin/true` is 1.4 ms). `classic_sets` alone is 6.13 s under nextest and
+**0.40 s** under libtest threads (6,119 tests, 15x); the whole functional
+suite is 5.6 s that way. The six `land_tap_fast_path` tests are the only thing
+in the way. (b) `crabomination_catalog` is 26.0 s on the critical path and is
+**almost perfectly splittable** — `all_factories.rs` is the only file with
+broad cross-set references; everything else points at shared helpers in
+`sets/mod.rs` (`tap_add`, `horizon_land`) plus ~20 true cross-set calls. Same
+shape for `server/` inside the engine: 43.7 k lines, **518 of the engine's 674
+unit tests**, and only 15 back-references from the rest of the lib.
+
 ### Serde derives — priced on the base crate 2026-09-06, the engine half pending
 
 The routine's build-time list names "serde derives on the giant effect/state
@@ -8957,6 +9088,58 @@ were folded away** (the last two at the 2.8 k mark, the forty-fifth's at the
 forty-eighth pass). Their Log entries keep every row that a live candidate
 chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 `b1a95b22` and `89f55a5c`.
+
+### 2026-09-08 — the client's bot latency: the profile, the allocator, and root-parallel rollouts
+
+Not an engine change — **the client was never running the engine that PERF
+measures**. `cargo run -p crabomination_client` builds `crabomination` at
+opt-level 0 with assertions on, and since the client's bot seat became
+`MctsBot` at 256 iterations (round 65's lobby pilot) that unoptimized engine
+sits inside 256 rollouts x ~58 engine actions per searched decision, ~35 of
+them a game. Measured with `CRAB_MCTS_TIMING=1` on `bot_ladder --a mcts-dflt
+--b dflt --decks fixed --games 1 --unpaired --threads 1 --seed 1` (64
+iterations so the debug cell finishes; per-rollout cost is
+iteration-independent, confirmed at 227 vs 239 µs across a 4x budget):
+
+```text
+build (all mimalloc unless noted)              µs/rollout   ms/searched decision @64
+dev, system allocator  = what the client was      12,556          812
+dev, mimalloc                                     13,259          860   (allocator is noise at opt 0)
+play (opt 3, debug-assertions ON)                  1,049           68
+play (opt 3, debug-assertions off)                   244-268      17.5
+release-fast, system allocator                       383          24.8
+release-fast, mimalloc                               227-239      14.8
+```
+
+Three landings, none of which touch engine code:
+
+* **`[profile.play]`** (workspace `Cargo.toml`, `cargo play` alias) — the
+  three engine crates at opt-level 3 with assertions off, everything else on
+  dev's settings. **47x**, and within 12 % of `release-fast` while keeping
+  dev's codegen units and dev's link. `dev` untouched: it is the suite's
+  profile. The assertions are the 4.4x between rows 3 and 4.
+* **mimalloc in `crabomination_client`** — the client took the engine with
+  `default-features = false` and set no `#[global_allocator]`. **-41 %**
+  (383 -> 227 µs/rollout) once optimized, nothing at opt 0.
+* **`MctsConfig::search_threads`** (default 1 — every ladder number in
+  `ML_NOTES.md` is a serial search) — root parallelisation: shared seeding
+  pass, one UCB1 continuation per worker off those statistics, per-arm
+  `(visits, reward)` summed. The budget is split, not multiplied: 256.0
+  rollouts a decision at 1, 4 and 8 workers. At 256 iterations, per searched
+  decision: **serial 61-62 ms, 4 workers 20.4-20.8 ms (3.0x), 8 workers
+  11.7-15.5 ms**. Gate (sealed mirrors, paired, 720 games a seed):
+  `par4` vs serial **51.8 [49.4, 54.2]** (s43) and **49.3 [47.0, 51.6]**
+  (s97) — a null at ±2.3, the precision a search-level arm gets once the
+  antithetic pairing breaks (round 51). The client takes
+  `available_parallelism/2` capped at 4.
+
+End to end for a played game: **~3.2 s -> ~21 ms** per searched decision,
+i.e. ~114 s -> ~0.7 s of bot thinking a game.
+
+⚠ **A concurrent session was building throughout** (the mold/`fast.sh` work
+in the same tree), which is why the parallel cells are quoted as ranges and
+were re-read on a quiet box; the serial cells reproduce to ~2 %. Nothing here
+is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 

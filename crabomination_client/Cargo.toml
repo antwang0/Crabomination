@@ -32,8 +32,9 @@ rand = "0.10.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 toml = "1.1.2"
-# No allocator swap here: a `#[global_allocator]` is the program's call,
-# and neither of these is the simulator.
+# The engine, with its own `mimalloc` feature off: the allocator is the
+# *program's* call and this program makes it below, in its own dependency
+# table, so the choice is visible in one place instead of two.
 crabomination = { path = "../crabomination", default-features = false }
 # Generating the white name-placeholder PNGs for cards with no Scryfall art
 # (see scryfall::ensure_card_images). All three are already in the tree via
@@ -43,6 +44,20 @@ imageproc = "0.27"
 ab_glyph = "0.2.32"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# The client IS a simulator now: its bot seat is `MctsBot` at 256 iterations,
+# which clones a `GameState` and runs ~58 engine actions per rollout, 256
+# rollouts per decision — the many-short-lived-allocations pattern mimalloc
+# was adopted for on the engine binaries. Measured on `bot_ladder --a
+# mcts-dflt` (release-fast, one thread): 383 -> 227 µs/rollout, **-41 %**.
+# Native only (there is no mimalloc on wasm32) and behind a default-on
+# feature, so the A/B that produced that number stays runnable:
+# `--no-default-features --features wayland,audio,gamepad`.
+#
+# Worth nothing on a `dev` build — 12,556 (system) vs 13,259 (mimalloc)
+# µs/rollout there is noise, because at opt-level 0 the engine's own
+# instruction count dwarfs the allocator. It pays only on top of
+# `--profile play` / `--release`.
+mimalloc = { version = "0.1.52", default-features = false, optional = true }
 # Blocking HTTP (card prefetch) and OS config-dir discovery are native-only;
 # the browser build loads card art over HTTP via the AssetServer and stores
 # config in localStorage.
@@ -59,7 +74,11 @@ web-sys = { version = "0.3", features = [
 getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
-default = ["wayland", "audio", "gamepad"]
+default = ["wayland", "audio", "gamepad", "mimalloc"]
+
+# The bot's allocator (see the dependency's comment). On by default; the
+# switch exists so the measurement can be repeated rather than believed.
+mimalloc = ["dep:mimalloc"]
 
 # The pkg-config-backed platform bits, split out so a host that lacks the
 # system libraries can still type-check the client with

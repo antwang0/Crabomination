@@ -5,6 +5,31 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
 ## Builds
 
 - Always use debug builds. Never pass `--release` unless explicitly asked.
+
+- **The unoptimized loop has two accelerators, both opt-in-by-default and
+  neither of them an instrument.** `.cargo/config.toml` links Linux through
+  `.cargo/mold-cc`, a clang wrapper that uses **mold** when it is installed and
+  falls back to lld when it is not (2.3x on the link of a 225 MB debug binary).
+  `scripts/fast.sh` re-runs any cargo command on **nightly with rustc's
+  parallel frontend** (`-Zthreads=8`):
+
+      scripts/fast.sh check --workspace --exclude crabomination_client --all-targets
+      scripts/fast.sh nextest run --workspace --exclude crabomination_client
+
+  Measured 2026-09-08, 24 cores, ABBA on a settled box: cold workspace `check`
+  **77.0 -> 36.5 s** (-52.6 %), cold `cargo test --no-run` **111.0 -> 72.0 s**
+  (-35.1 %), both 4 of 4 ordered right with no overlap between the sides.
+  Warm rebuild after touching `game/effects/mod.rs` **55.6 -> ~27 s**; suite
+  19,288/19,288 green. The two
+  toolchains' artifacts coexist in one `target/` — cargo keys fingerprints by
+  compiler version, so alternating stable and `fast.sh` does *not* thrash
+  (measured: 0.82 s to return to stable).
+  ⚠ **Nothing from `scripts/fast.sh` is comparable to anything in PERF.md**,
+  and the `release-fast` gate below stays on stable — a different frontend
+  accepts and rejects different code, which is the one thing that gate exists
+  to check. The script refuses optimized profiles rather than rely on memory.
+  Install mold (no root):
+  `curl -sSLf https://github.com/rui314/mold/releases/download/v2.40.4/mold-2.40.4-x86_64-linux.tar.gz | tar xz -C ~/.local --strip-components=1`
 - **Carve-out: benchmarks and profiles are optimized builds.** A debug engine
   runs at opt-level 0, so any number measured there describes the compiler,
   not the code. Throughput runs use `--release`

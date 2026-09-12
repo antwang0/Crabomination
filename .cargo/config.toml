@@ -1,7 +1,17 @@
 # for Linux
+# `mold-cc` is a small clang wrapper that links with mold when it is installed
+# and falls back to lld otherwise — 2.3x on the link of a 225 MB debug binary
+# (lld 6.00/7.32/5.84/10.03 s vs mold 2.69/3.70/2.12/3.02 s, 2026-09-08).
+#
+# The linker lives in `linker`, NOT in `rustflags`, on purpose: the RUSTFLAGS
+# environment variable replaces `target.*.rustflags` wholesale, so every recipe
+# that sets it (scripts/fast.sh, PERF's A/B runs) would otherwise drop the
+# linker choice without saying so. See the header of `.cargo/mold-cc`.
+#
+# The path is resolved relative to this file's parent directory, so it works
+# from any subdirectory of the workspace.
 [target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+linker = ".cargo/mold-cc"
 
 # for Windows
 [target.x86_64-pc-windows-msvc]
@@ -13,6 +23,10 @@ linker = "rust-lld.exe"
 # Use `cargo dev` instead of `cargo run` for quicker re-links while
 # developing; release builds must NOT enable this feature.
 dev = "run -p crabomination_client --features dynamic_linking"
+# The client with the engine optimized — what to type when you are going to
+# *play* rather than iterate on client code. See `[profile.play]` in the
+# workspace Cargo.toml for what it costs and what it buys.
+play = "run --profile play -p crabomination_client"
 
 [env]
 # Debug-build effect resolution recurses deeply (token-copy / trigger

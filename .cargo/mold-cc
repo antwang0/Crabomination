@@ -1,0 +1,54 @@
+#!/bin/sh
+# Linker driver for the Linux build: clang, using mold when it is available
+# and falling back to lld (the previous behaviour) when it is not.
+#
+# Why a wrapper instead of `-C link-arg=-fuse-ld=mold` in `rustflags`:
+#
+#   * mold is not packaged on every box that builds this tree and is not
+#     always on PATH, so a bare `-fuse-ld=mold` in the checked-in config is a
+#     hard build failure on those boxes rather than a missing optimisation.
+#   * **The RUSTFLAGS environment variable replaces `target.*.rustflags`
+#     wholesale.** Anything that sets it — `scripts/fast.sh`, a one-off
+#     `RUSTFLAGS="-C target-cpu=native"`, PERF's A/B recipes — silently drops
+#     the linker choice and relinks with the system default, which is exactly
+#     the kind of unnoticed instrument change PERF.md keeps warning about.
+#     `linker` is a separate config key and is never clobbered that way.
+#
+# Measured 2026-09-08 on the 24-core box. Link in isolation (touch
+# `bin/bot_ladder.rs`, rebuild `-p crabomination --bin bot_ladder`; 225 MB
+# debug binary, 4 reps after a discarded warm-up):
+#
+#     lld   6.00 / 7.32 / 5.84 / 10.03 s
+#     mold  2.69 / 3.70 / 2.12 /  3.02 s      ~2.3x
+#
+# Whole-workspace `cargo test --no-run`, cold, makespan 104.5 -> 100.2 s: the
+# *cold* build is frontend-bound, not link-bound, so the link win lands in the
+# warm edit loop (twelve executables relinked) rather than here.
+#
+# Install (no root needed):
+#   curl -sSLf https://github.com/rui314/mold/releases/download/v2.40.4/mold-2.40.4-x86_64-linux.tar.gz \
+#     | tar xz -C ~/.local --strip-components=1
+#
+# To pin the old linker for an A/B:  CRAB_LINKER=lld cargo build ...
+# To point at a mold outside the search list:  CRAB_MOLD=/path/to/ld.mold
+
+case "$CRAB_LINKER" in
+  lld) exec clang -fuse-ld=lld "$@" ;;
+esac
+
+for candidate in \
+  "$CRAB_MOLD" \
+  "$HOME/.local/bin/ld.mold" \
+  /usr/local/bin/ld.mold \
+  /usr/bin/ld.mold
+do
+  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+    exec clang "--ld-path=$candidate" "$@"
+  fi
+done
+
+if mold_on_path=$(command -v ld.mold 2>/dev/null); then
+  exec clang "--ld-path=$mold_on_path" "$@"
+fi
+
+exec clang -fuse-ld=lld "$@"
