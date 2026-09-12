@@ -3039,7 +3039,6 @@ tool    **the keyword column opened to FACES** — the oracle's whole-card `keyw
         the token's line satisfies. 43/44 caught that; the widened case is 44/44.
 perf    none, and measured as none rather than assumed. Every engine change here is a draw path, a turn-watch digest
         sampled one turn in four past turn 30, and a catalog subtype; `--bench` measures `fixed`, which carries none of
-<<<<<<< HEAD
         the cards involved.
 ### 2026-09-12 (the two-halves session, third of the day) — the face nobody read, two new columns, five shipped cards; no perf leg
 
@@ -3127,13 +3126,6 @@ gate    --bench on a `release` binary rebuilt at the PUSHED tip: **195,806 / 27.
         ⚠ **NOT re-run this run, declared rather than implied by silence:** `robustness_grid.sh`'s three legs and a
         fresh-seed sweep. The seed frontier is still **1212** and `1152..1161` is still the hole in the table below.
         Four cores here; the `--wide` leg alone is 301,600 games.
-=======
-        the cards involved, and its counters came back **byte-identical: 195,806 / 27.49 / 611.9 / 0 stalls**.
-gates   suite **19,498 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12**,
-        `--bench` byte-identical + determinism ok, injections **44 / 44**, `audit_panics` 0 bare,
-        `audit_decision_plumbing` 168 / 108 / 60 DEAD 0 repeat 0, `audit_seat_from_selector` 0 open,
-        `audit_printed_body` **0 on all eight columns**, `cargo check --profile release-fast` clean.
->>>>>>> b9cab6e8 (Gates at the tip, and two clippy warnings the deck-out sweep left behind)
 ```
 
 ### 2026-09-12 (the cost-is-not-a-condition session) — the class a hand census closed, reopened by asking the right question; no perf leg
@@ -3179,12 +3171,35 @@ tool    `audit_keyword_drift`'s MISSING list was **367 rows and 287 of them were
         has `shortcut::soulshift(3)`). A mechanic has FOUR spellings and the reader knew one and a half: an unlisted
         `Keyword::` variant (`Splice`, `Buyback`, `Entwine`, `CyclingLife`, `ReplicateEnergy`, plus `Typecycling`
         listed under a spelling the enum does not have), a shortcut CALL, an `Effect::` variant, and a field whose
-        value is a helper call (`prototype: proto(..)`). MISSING 367 -> **80**, INVENTED **0** either way.
+        value is a helper call (`prototype: proto(..)`). Then three more, each a RULE rather than an allowlist:
+        `miracle` was missing from the field map (six cards that HAVE it read as missing it); "[Name] — [cost],
+        Discard this card:" is ONE construction with no name in it (channel and bloodrush, twenty rows, an
+        `ActivatedAbility` with `from_hand` + `discard_self_cost`); and adamant is a PREDICATE whose docstring says so
+        (`ManaSpentOfColorAtLeast`). **MISSING 367 -> 6**, INVENTED **0** throughout — and the 6 left each need a
+        primitive or a re-modelling. ⚠ The rule for a shape must be ADDITIVE: written as an early return, the
+        discard-from-hand one suppressed six bloodrush cards whose literal names a local helper.
+cards   **31 shipped defects off that list**, each checked against its oracle line first: Cycling x6, Warp x5 (a
+        mechanic that was live and unreachable — `shortcut::warp` and `AlternativeCost::warp` existed and no card used
+        either), Foretell x3, Miracle x2, Evoke x2, Splice onto Arcane x2, Evolve / Mentor / Provoke / Soulshift 3 /
+        Echo / Flashback x2 / Madness / Morph / Replicate / Plot / Cleave / Overload / Emerge / Gift / Adamant /
+        Affinity / Kicker one apiece. **Three are worse than a gap:** Disowned Ancestor shipped `renown(1)` where the
+        card prints Outlast {1}{B} (with a doc comment agreeing with the body); Furnace Hellkite and Crabomination
+        each shipped a trigger the card does not print; and Rejuvenate gained FIVE where the card says six, with
+        `rejuvenate_gains_five_life` asserting the five. **A test written from the body freezes the defect**, and no
+        column sees a number inside an effect.
 grid    `robustness_grid.sh --no-build --no-actor --pilots` at the run's tip, on a binary rebuilt with
         `-C debug-assertions=yes` after the five card fixes: ladder **30 cells / 33,120 games, 0 failures, cap 0 /
         stuck 0 / draw 0**; pilots **45 policies, 0 failures**. The pilots leg is the one that found the class in the
         first place (`abilarms`, a 3,213-deep stack), so it is the leg that has to be green after the five that were
         left.
+sweep   `fresh_seed_sweep.sh "cube all sealed" 1212..1221` on a binary rebuilt at the run's tip: **30 cells /
+        148,000 games, 0 failures** — cap 2 (both slow-not-stuck), **board 14**, stuck 0, draw 16.
+        ⚠ **`cube` 1215 is the run's one lead and it is NOT a defect: Scute Swarm.** The cell took 1,080 s against
+        ~45 s for its neighbours and capped twice at 6,000 actions on boards of **951 and 768 Scute Swarms** (987
+        permanents one side, 73 of its own triggers on the stack). Landfall copying is exponential and the board is
+        real. The script's own re-run settles it: at `CRAB_MAX_ACTIONS=50000` the cell reads **cap 0 / board 4**, i.e.
+        the 1,024-permanent `MAX_BATTLEFIELD` bound ending the game, which is the guard doing its job. A BOARD cap is
+        a third outcome beside `cap` and `draw` and is not a stall.
 actor   the third leg, on a `selfplay_train` rebuilt from `-p crabomination_ml` (the earlier `-p crabomination` build
         fails with "available bin in `crabomination_ml`" and leaves the PREVIOUS binary in place, which reads green
         for the tip it was built at — check the build's own exit, not just the assertion count):
@@ -3201,6 +3216,9 @@ gate    `--bench` on a **`release`** binary: **195,806 / 27.49 / 611.9 / 0 stall
         --all-targets **0**; `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean.
         audit_printed_body 0 on all eight columns over 16,815 priced + 17,695 type lines + 17,160 subtypes + 17,379
         keywords + 9,598 P/T + 16,683 colours + 123 loyalty; audit_card_names 0 / 0 / 0 / 0.
+        **At the closing tip, after the 31 card fixes: suite 19,503 / 0 / 5, clippy 0, audit_printed_body 0 on all TEN
+        columns (the other session's adventure-half and back-face ones included), audit_keyword_drift 0 invented /
+        6 missing.** The card fixes move no golden trace either — none of the 31 is in `fixed`.
 ```
 
 ### 2026-09-12 (the printed-body session, second pass) — seven idioms, three new columns, six shipped cards, two duplicates; no perf leg
@@ -3478,6 +3496,7 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1192..1201   a875df26      30    148,000       0       0     0     16
   1202..1211   a875df26      30    148,000       0      14*    0     42
   1152..1161   5a3b7a04      30    148,000       2       2!    0     10   THE HOLE, swept last
+  1212..1221   9f2e2759      30    148,000       0       2*    0     16   cube 1215: Scute Swarm, 14 BOARD caps
   1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
