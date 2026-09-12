@@ -117,3 +117,32 @@ fn cannot_attack_battle_you_protect() {
     }]));
     assert!(res.is_err(), "you can't attack a battle you protect");
 }
+
+/// CR 301.7 — Aetherwing, Golden-Scale Flagship (the back of Invasion of
+/// Kaladesh) is a **Vehicle**, so it is not a creature until it is crewed, and
+/// its power is the artifacts its controller controls (itself included). It
+/// shipped as a plain 4/4 `Artifact Creature`: attacking the turn it flipped
+/// in, and in range of every creature-only removal spell. Found by
+/// `audit_printed_body`'s back-face column.
+#[test]
+fn aetherwing_is_an_uncrewed_vehicle_whose_power_counts_artifacts() {
+    use crabomination::card::{CardType, Keyword};
+    let mut g = two_player_game();
+    let back = *catalog::invasion_of_kaladesh().back_face.expect("has a back face");
+    let ship = g.add_card_to_battlefield(0, back);
+    let pre = g.computed_permanent(ship).unwrap();
+    assert!(!pre.card_types().contains(&CardType::Creature), "uncrewed = not a creature");
+    assert!(pre.keywords().contains(&Keyword::Crew(1)), "Crew 1");
+    assert_eq!(pre.power, 1, "one artifact on the battlefield: itself");
+
+    // A second artifact, and the dynamic power follows it.
+    g.add_card_to_battlefield(0, catalog::azorius_signet());
+    assert_eq!(g.computed_permanent(ship).unwrap().power, 2, "power = artifacts you control");
+
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Crew { vehicle: ship, crew_creatures: vec![bear] })
+        .expect("crew 1 satisfied by a 2/2");
+    let post = g.computed_permanent(ship).unwrap();
+    assert!(post.card_types().contains(&CardType::Creature), "crewed = creature");
+    assert_eq!((post.power, post.toughness), (2, 4));
+}

@@ -67,9 +67,8 @@ pub fn invasion_of_zendikar() -> CardDefinition {
 }
 
 /// Invasion of Kaladesh // Aetherwing, Golden-Scale Flagship — {U}{R} Siege,
-/// defense 4. ETB: make a 1/1 flying Thopter. Back: a Legendary Artifact 4/4
-/// flier (modeled as a flying artifact creature; Crew / power-counts-artifacts
-/// are omitted).
+/// defense 4. ETB: make a 1/1 flying Thopter. Back: a Legendary Artifact —
+/// Vehicle, */4 flying, Crew 1, power = the artifacts you control.
 pub fn invasion_of_kaladesh() -> CardDefinition {
     let thopter = crate::card::TokenDefinition {
         name: "Thopter".into(),
@@ -83,14 +82,26 @@ pub fn invasion_of_kaladesh() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
+    // CR 301.7 — a Vehicle is not a creature until it is crewed, so shipping
+    // it as an `Artifact Creature` let it attack the turn it flipped in and
+    // put it in range of every creature-only removal spell. Crew 1 is cheap,
+    // not free.
     let aetherwing = CardDefinition {
         name: "Aetherwing, Golden-Scale Flagship",
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        card_types: vec![CardType::Artifact],
         supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
         color_indicator: vec![Color::Blue, Color::Red],
-        power: 4,
+        power: 0,
         toughness: 4,
-        keywords: vec![Keyword::Flying],
+        dynamic_pt: Some(crate::card::DynamicPt::ArtifactsControlledPower {
+            base_p: 0,
+            base_t: 4,
+        }),
+        keywords: vec![Keyword::Flying, Keyword::Crew(1)],
         ..Default::default()
     };
     CardDefinition {

@@ -6045,6 +6045,36 @@ Strixhaven coverage push). Remaining gaps:
 
 ## Suggested next-up tasks
 
+### Carried off TODO's NEXT, 2026-09-12 (fourth pass) — the open half of what that section had grown to
+
+NEXT is a 15-line handoff and had reached 120; the FIXED narrative under it
+was already recorded verbatim in PERF's Baseline and in this file's own
+finds, so only these survived the compaction.
+
+- ⏳ **`audit_printed_body`'s remaining skips are the hard residue.**
+  `--list <kind>` prints the factories. `nocache` 3,749 is the synthesized
+  sets (`audit_card_names.py` takes the rest) and **700 of `nonliteral`'s 887
+  are LANDS**, which print no mana cost, so closing them buys the cost column
+  nothing. What still has a card behind it: `nocolors` 961, `nosubtypes` 144,
+  `notyped` 62, `nokeywords` 35. ⚠ **Print every skip you add** — the P/T
+  column skipped 41 % of creatures silently for as long as it existed and read
+  "0 wrong P/T" the whole time; `nopt`, `noadv` and `noloyalty` are 0 and are
+  gates now, so a row in any of the three is a NEW IDIOM, not a new card.
+- ⏳ **The ML side of a saturated feature has not been checked**: what a
+  `player::SCALE_CEILING` row does to a net that never saw one.
+- ⏳ `BecomeChosenColor` picks per source, not per target — bot strength, not
+  a rules defect.
+- ⏳ One decision-plumbing row is open **on purpose**:
+  `ChangeTargetOfAbility` (Reroute) writes its new target BETWEEN its two
+  asks, so routing it needs the two-pass split first.
+- **CLOSED WITH A REASON — do not re-open off a catalog scan.** The
+  seven-card nesting is retired; the 8 loop arms are closed (a suspend
+  advances nothing but the answer, so the premise to re-check is that one);
+  `produced_mana` is not a column (Scryfall counts mana the card CAUSES, so
+  355 of 707 prototype rows were the field's meaning, not the reader's gaps).
+- Mirror A/B floors, for whoever needs a ladder base: abilarms 926+,
+  mirror 798+, mcts 777+, lookahead / planner 781+.
+
 - ⏳ **A "next spell only" spend permission.** North Star grants CR 609.4b for
   the whole turn (`Player.may_spend_any_color_this_turn`); the printed card
   scopes it to one spell.
