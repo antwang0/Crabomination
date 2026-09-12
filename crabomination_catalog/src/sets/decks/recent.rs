@@ -8073,18 +8073,21 @@ pub fn surging_sentinels() -> CardDefinition {
     }
 }
 
-/// Surging Æther — {2}{U} Instant. Ripple 4. Return target creature to its
-/// owner's hand. (Printed "target spell or permanent"; modeled as a creature.)
+/// Surging Æther — {3}{U} Instant. Ripple 4. Return target permanent to its
+/// owner's hand. (The oracle name de-ligatured to "Surging Aether" in 2016;
+/// the catalog keeps the printed form, which is why the card was `nocache`
+/// and its cost went unpriced for as long as it did.)
 pub fn surging_aether() -> CardDefinition {
     use crate::effect::shortcut::{ripple, target_filtered};
     CardDefinition {
         name: "Surging Æther",
-        cost: cost(&[generic(2), u()]),
+        cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
+        // "Return target PERMANENT to its owner's hand" — not target creature.
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Permanent),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(target_filtered(
-                SelectionRequirement::Creature,
+                SelectionRequirement::Permanent,
             )))),
         },
         triggered_abilities: vec![ripple(4)],

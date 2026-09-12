@@ -61,11 +61,11 @@ pub fn rukh_egg() -> CardDefinition {
     }
 }
 
-/// Sabertooth Tiger — {3}{R} 2/1 Cat. First strike.
+/// Sabretooth Tiger — {2}{R} 2/1 Cat. First strike.
 pub fn sabertooth_tiger() -> CardDefinition {
     CardDefinition {
-        name: "Sabertooth Tiger",
-        cost: cost(&[generic(3), r()]),
+        name: "Sabretooth Tiger",
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Cat],

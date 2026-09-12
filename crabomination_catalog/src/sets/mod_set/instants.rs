@@ -1302,13 +1302,15 @@ pub fn apostles_blessing() -> CardDefinition {
     }
 }
 
-/// Victims of Night — {1}{B}{B} Instant. "Destroy target creature that's not a
-/// Vampire, Werewolf, or Zombie." (DKA)
+/// Victim of Night — {B}{B} Instant. "Destroy target non-Vampire,
+/// non-Werewolf, non-Zombie creature." (DKA; the factory keeps its plural
+/// `pub fn` name, which is how the misspelling hid the card from every
+/// oracle-backed column.)
 pub fn victims_of_night() -> CardDefinition {
     use crate::card::CreatureType;
     CardDefinition {
-        name: "Victims of Night",
-        cost: cost(&[generic(1), b(), b()]),
+        name: "Victim of Night",
+        cost: cost(&[b(), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
             what: target_filtered(
