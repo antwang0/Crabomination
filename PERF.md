@@ -2827,6 +2827,108 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-12 (the seat-pin session) — one mechanism for fifteen arms, the walker fold, the encoder's unbounded life feature; no perf leg
+
+```text
+fix     fifteen arms re-derived the seat they had already asked (`0e33d521`). The seventeenth find fixed ONE by hand;
+        `audit_seat_from_selector` filed 27 with the shape and a recipe of "six lines per arm". A recipe that long, that
+        many times, is a prompt to move the fix down a level: every `ask_seat_*` helper queues
+        `effect.with_asked_seat(seat)` instead of `effect.clone()`, and `Effect::with_asked_seat` writes
+        `PlayerRef::Seat(seat)` into the `who` of the arms it lists. Suspend path only, where the continuation was cloned
+        anyway. The 27 are three populations: 15 single-seat arms (the class), 8 loops over `resolve_players` where the
+        LIST is what is re-derived and pinning one seat would DROP the other seats' questions, and 4 false positives that
+        ask `ctx.controller` ABOUT the selector seat — resolution state, stable across a re-run, and pinning `who` there
+        would have rewritten the victim. The audit compared scopes; it compares the ask's own seat argument now, and
+        reads `with_asked_seat`'s arm list so the script and the code cannot disagree. 0 open / 8 loop / 4
+        controller-asked / 15 pinned.
+fix     the player-only slot read is IN the walker now (`9e276870`). The nineteenth find patched two call sites and left
+        the class open — a third would have reintroduced it. `accepts_player_target` is
+        `accepts_player_target_by_body() || target_filter_for_slot(0).is_some_and(is_player_only)`, the body match is
+        private, and both sites read the walker with no prefix. The enumerator's missing `or_else` — which looked like
+        the same class one level over — is REFUTED by census, not argued: `primary_target_filter` and
+        `target_filter_for_slot(0)` return the SAME filter on all **7,816** bodies that answer both, and the existing
+        gate already holds "primary answers whenever the slot walker does", so the picker's `or` arm is unreachable on
+        the shipped catalog. The agreement gate is tightened from presence to EQUALITY.
+fix     the encoder handed the net a life feature of 1.07e8 (`d6f5e604`) — `ENGINE_BACKLOG`'s OPEN question, answered.
+        The evaluator has clamped since the `debug-assertions` sweep caught it WRAPPING (the seat with unbounded life
+        scored as the one losing); the encoder had no ceiling at all. `life_value`'s constant is hoisted to
+        `player::LIFE_CEILING` and both read it. ⚠ **Encoding touched — `global[0]`, `global[1]`, `global[43..45]` —
+        and no state with `|life| <= 10,000` encodes differently, so no net needs retraining.** A game reaching those
+        totals caps and records no rows.
+fix     a power is bounded by nothing either (`22fb3f53`) — the twin of the clamp above, and worse, because nothing
+        downstream was saturating. Exponential Growth is "double target creature's power {X} times", so ONE resolution
+        reaches `i32::MAX`. Four defects, one class: (1) `Effect::DoublePower` used
+        `1i32.checked_shl(n).unwrap_or(i32::MAX)` — `checked_shl` checks the SHIFT, not the value, so `n = 31` is
+        `Some(i32::MIN)` and `factor - 1` overflowed; (2) eighteen sites accumulated `power_bonus` with a bare `+=`
+        (`CardInstance::pump` now, with a source-reading ratchet, because the field must stay `pub`); (3) the READS
+        overflowed on top of the writes — `power()`, `compute_permanent`'s layer sum, the crew rider, the crossplay
+        hash; (4) the consumers that SCALE were unbounded — `f[4]`/`f[5]`/`f[46]`/`f[47]`, the per-side `power` totals
+        (a `+=` over up to 1,024 permanents), and `creature_value`'s `c.power * w.power`. The split: rules-facing values
+        saturate and stay exact (clamping a power would change combat damage); only the consumers that scale clamp.
+        ⚠ **Encoding touched, same narrowness — no permanent inside ±10,000 P/T encodes differently.**
+perf    none, and measured as none rather than assumed. Every change here is a cast-time targeting walk, a suspend-path
+        clone that already happened, or a saturating add where a plain one was. `--bench` counters byte-identical at
+        every tip; `CRAB_DUMP_TRACES` identical over 64 `cube` games and 68 `all` dflt games, session-base binary vs
+        the closing one, which is the reading from the other side.
+```
+
+**Sweeps, fresh seeds 1031..1036** — three pools x 400 games/archetype a cell,
+`CRAB_ANSWER_LOG=strict`, `overflow` + `debug-assertions`, at the closing tip:
+**18 cells / 88,800 games, 0 failures, 0 cap, 0 stuck, 8 draws.** A draw is
+CR 104.4, not a defect. One cell is an outlier and it is the entry below.
+
+**THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
+`cube` seed **1036** cost **3,313 s** against a 33-48 s median for its
+neighbours — 83x, and the first cell on record to cost anything like it. It is
+**not a stall**: 3,200 / 3,200 decided, 0 cap, 0 stuck, 0 draw. `CRAB_CAP_DIAG=1500`
+names it — 24 of the 1,600 pairings run past 1,500 actions to turn 100+ on a
+**52-79 permanent board**, one seat at zero cards in every zone and the other
+holding six or nine **Ghosts of the Innocent** (halve all damage to a player,
+rounded down — nine of them is a divide by 512, so no damage can ever kill and
+the matchup can only end by decking). A correct card doing what it prints, and
+a grind the bot's per-action search pays for on a board that size.
+
+The useful half is the second reading:
+
+```text
+  --games 400 --threads 1 --decks cube, same binary, same box
+  seed   release-fast   overflow+debug-assertions (3 threads)   profile factor (CPU-s)
+  1031      34.3 s               45.8 s                              4.0x
+  1032      38.5 s               47.6 s                              3.7x
+  1036     196.0 s            3,313.6 s                             50.7x
+```
+
+**5.4x on the production profile, 83x on the sweep's**, and the ~13x between
+them is not noise — it is the instrument working as designed. `gated_block!`
+and `gated_pick!` (`bot.rs`) and `sim_spell_action`'s window gate all read
+`if gate || cfg!(debug_assertions)`: under debug assertions the bot runs the
+body the gate exists to SKIP, and asserts it found nothing, which is how the
+gates' soundness is audited on real boards instead of against a re-derived
+list. So the sweep deliberately defeats the bot's own pruning, and the price
+of that is superlinear in board size — precisely where a 79-permanent board
+with 46 untapped costs the most.
+
+Nothing to fix; two things to remember. **Read a slow cell as "look at this
+board", never as "the actor loses this much"** — re-run it on `release-fast`
+before believing a throughput number. And when a cell's wall clock is the
+thing being budgeted, the lever is the gate audits, not the engine.
+
+**Gates at the closing tip** (`release-fast`): suite **19,453 / 0 / 5** with
+`CRAB_ANSWER_LOG=strict` exported (19,448 before this run's three new tests),
+clippy **0** over the workspace (`--all-targets`, `CARGO_TARGET_DIR=target-clip`),
+`--bench` **195,806 decisions / 27.49 turns
+/ 611.9 decisions-per-game / 0 stalls** — the committed counters, byte-identical
+— `determinism ok`, `thread_determinism ok (3 vs 1)`, `games_per_s` 308.37,
+peak RSS 29.2 MiB, `bin_bytes` 126,930,168. `golden_trace` 10 / 10 unmoved.
+`audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and
+repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector`
+**0 open / 8 loop / 4 controller-asked / 15 pinned** (from 27 undifferentiated),
+`audit_variant_coverage` 0 dead capability, `audit_target_walkers` 132 wrappers
+unchanged, `audit_printed_body` 0 / 0 / 0 / 0 over 10,270 factories.
+`audit_answer_log` **71 arms / 8 suspicious** — and that is the *record* being
+corrected rather than a regression: HEAD reads the same, the docstring said
+69 / 7, and the extra arm is `ExileUntilDuplicateName`, now explained there.
+
 ### 2026-09-11 (the target-walker session, the day's other concurrent one) — the bare-slot gate, the player-slot list, five shipped cards; no perf leg
 
 ```text

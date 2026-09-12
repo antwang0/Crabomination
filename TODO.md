@@ -28,58 +28,43 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; **fetch before every push** — two sessions shared this branch again on 2026-09-11 and the other one landed ten commits into the middle of
-   this one. Read `git log` first. `(-290)` is the last claimed candidate, `(-291)` next. Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing
-   rules"**. **A/B base: RE-TAKEN at `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331 (PERF Baseline, with the self table at
-   that base). Ir crosses boxes, wall clock does not: the four-box `--bench` spread is 289.72 to 542 games/s on byte-identical counters.
-2. **Gates at the tip `802dac98`:** suite **19,449 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel
-   one-shot census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, release-fast check clean, `--bench` **195,806 /
-   27.49 / 611.9 / 0 stalls** + determinism + thread_determinism (the counters have not moved at any tip of either session), `audit_answer_log` 69 / 7 suspicious (its docstring explains every
-   remaining row, so a NEW row is the signal), `audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open** / 15 pinned / 8 loop / 4 controller, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1030 swept on five pools, `cube` also 1031..1035 — next
-   is 1031, and `cube` from 1037** (the two sessions' blocks overlap between 995 and 1012; the grids are in PERF, along with `cube` 1036, a SLOW cell that
-   is neither capped nor looping and is cleared of this session by an A/B. **`all` seed 1024 is the one sweep cell that EARNED its keep**:
-   it aborted under `CRAB_ANSWER_LOG=strict` on a real defect — `MayDoBy` re-deriving its seat from a destroyed land, ENGINE_BACKLOG's seventeenth find —
-   and the only capped board on record is still the diagnosed Beacon of Immortality mirror at `cube` 1018).
-3. **This run, and the sentence both sessions earned:** *the suite tests the path that does not suspend, and the training path is the one that does* —
-   plus, from this session, *a gate that censuses `TargetFiltered` cannot see `Selector::Target(n)`*, and **each fix in the target-walker family exposed
-   the next walker down the chain.** Twenty-four finds, each its own section in ENGINE_BACKLOG's index. The other session's half is the resume class
-   (NINE instances of "what the first pass built, spent or asked does not survive into the continuation") plus the fourteenth printed-body column.
-   This session's three: (a) a **bare** slot above 0 is unaimable by construction — `auto_extra_distinct_slot_targets` breaks on the first `None` and the
-   primary walker's fallback only answers slot 0 — and both existing whole-catalog target gates censused `TargetFiltered` only. Five cards: Shifting
-   Borders, Hunter's Edge and Prismari Tideflame (b171) wanted a `TargetFiltered`; **Curse of the Werefox and Urgent Necropsy had their bodies under
-   `Effect::ApplyToTargets`, which rebinds `ctx.targets` to ONE element per iteration**, so the fight had no defender and three of four modes never ran.
-   (b) "target player's graveyard" was not a player slot: `sel_has_target` walked `CardsInZone`/`TopOfLibrary`/`BottomOfLibrary` for a `PlayerRef::Target`
-   and `sel_find` did not, so Mudhole aimed at a *land* and did nothing; `selector_player_ref` is one list, two readers. (c) That made slot 0 answer
-   `Player`, which exposed the walker after it: **`accepts_player_target` classifies by the effect's BODY**, so both its call sites dropped every player
-   candidate and **26 bodies enumerated ZERO legal targets** — Mudhole, Hurkyl's Recall, River's Rebuke, Jace's -1, Tsabo's Decree, the seven "enchant
-   player" Curses and fifteen more were **uncastable**, measured with `enumerate_legal_targets` on a two-player board.
-4. **Next:** (a) **sweep first and sweep wide, from 1019**, with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
-   yourself) and read its `cap / stuck / draw` line, not the bare undecided total: **only cap and stuck are defects**. Do NOT hand-roll the loop.
-   ⚠ **`cube` seed 1018 caps 2 games and it is NOT a rules defect — do not re-diagnose it** (ENGINE_BACKLOG's OPEN section): Beacon of Immortality doubles
-   its caster's life and shuffles itself back, so a WG mirror saturates both seats at `i32::MAX`, never decks and cannot be won. What is open there is
-   adjudication (a training-data decision) and whether the encoder/net do anything sane with an `i32::MAX` life feature — nobody has looked.
-   (b) ⚠ **The seven-card nesting is RETIRED — do NOT build the parking redesign** (~60 sites in 38 arms): taken on the suspending path, all three
-   differing shapes are correct, because every outer arm clears the channel before its body AND has no work after it. The gate stays. (c) `audit_decision_plumbing`'s
-   "gates a loop repetition" column is **CLOSED — 0 rows, from 7**; the recipe for an ask about doing the ROUND again is *one logged answer is one round
-   already performed*, replayed in place (ENGINE_BACKLOG). `scripts/audit_stash_in_loop.py` is the new gate for the rule the sixteenth find earned:
-   **a loop over seats may not ask through the single-slot channel** (1 hit, allowlisted, structural). `Target` was the last answer kind with no
-   seat-routed ask (`ask_seat_target_logged` now — Cuombajj Witches' opponent and Will of the Council's ballots were answered by the RESOLVER); the named-chooser
-   rows are all taken now (Grenzo's Rebuttal, Blight, and the two above) and the bare column reads **62 sites, DEAD 0 and repeat 0**, from 74.
-   One row is deliberately left: `ChangeTargetOfAbility` (Reroute) writes its new target BETWEEN its two asks, so routing it needs the two-pass split
-   first or the second ask's legal set shifts under the first ask's write.
-   (d) **The next walker in the target family is `accepts_player_target` itself**: the two call sites are patched, the classifier still says
-   "permanent-targeting" for those 26 bodies, and a third call site would reintroduce the bug. Fold `is_player_only` into the function once someone can
-   price the extra `target_filter_for_slot(0)` walk it costs on the picker's path.
-   (e) **The `MayBody` lead is WITHDRAWN on a measurement** — its hazard was two `May*` nodes sharing a description, and a catalog scan reads 2 of 21,756
-   definitions with any repeated `description:` literal, both static-ability text (PERF candidates; the scan is ten lines).
-   (f) **The fourteenth column is open and half-read**: `scripts/audit_printed_body.py` prices a card's OWN printed cost, body and type line off the
-   `CardDefinition` literal — it found **seven cards castable for free** (CR 202.1b) and is clean at 0/0/0/0 now over **10,270 factories**. The gap is
-   **219 real spells** behind ~40 bespoke per-file helpers (`zubera("X", r(), ..)`); the subtype columns are unopened.
-   (g) `BecomeChosenColor` picks per source, not per target — bot strength, not a rules defect. (h) mirrors: abilarms 926+, mirror 798+, mcts 777+,
-   lookahead / planner 781+. (i) Perf reads floor and the queue has no device above 0.2 % (every perf leg of the last four runs came off a bug
-   fix, not off the queue) — **but there is one concrete lead now: `cube` seed 1036 is ~12x more expensive per game than its own neighbours**, not capped
-   and not looping, and an A/B against this session's parent clears the session of it (24.7 s vs 22.4 s on the same 8-game slice). PERF has the
-   reproducer; 12x on one `dflt` cube pairing is where a per-action cost lives.
+   tracker prose; **fetch before every push** — two sessions shared this branch on 2026-09-11 and again on 2026-09-12; read `git log` first. Gotchas in
+   **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331
+   (PERF Baseline). Ir crosses boxes, wall clock does not: the `--bench` spread is 289.72 to 542 games/s on byte-identical counters. `(-290)` is the last
+   claimed candidate, `(-291)` next; **the queue is at floor with no device above 0.2 %** — every perf leg of the last five runs came off a bug fix.
+2. **Gates at the tip:** suite **19,452 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+   census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, release-fast check clean, `--bench` **195,806 / 27.49 /
+   611.9 / 0 stalls** + determinism + thread_determinism (the counters have not moved at any tip of either session), `audit_panics` **0 bare**,
+   `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned /
+   8 loop / 4 controller-asked**, `audit_answer_log` **71 / 8** (the record said 69 / 7 and was stale — HEAD read 71 / 8 too; the eighth row is explained
+   in the docstring now, so a NEW row is still the signal), `audit_variant_coverage` 0 dead capability, `audit_printed_body` 0 / 0 / 0 / 0.
+   **Fresh seeds: 853..1030 on five pools, then 1031..1036 on cube / all / sealed (18 cells, 88,800 games, 0 cap / 0 stuck / 8 draws) — next is 1037**,
+   and a 1037..1044 block was launched at the end of this run: read `sweep2.log`'s tail before re-taking those seeds. **`all` 1024 is the cell that
+   EARNED its keep** (the `MayDoBy` leak); the only capped board on record is still the diagnosed Beacon mirror at `cube` 1018.
+3. **This run, and the sentence it earned:** *a "six lines per arm, twenty-seven arms" recipe is a prompt to move the fix one level down.* Three class
+   kills, none of them a new find — all three closed a column an earlier run had left half-open. (a) **The asked seat**: every `ask_seat_*` queues
+   `effect.with_asked_seat(seat)`, so fifteen arms are fixed by one match and a sixteenth is one line. The 27 filed arms were three populations —
+   15 pinnable, 8 loops where pinning ONE seat would drop the other seats' questions, and 4 false positives that ask `ctx.controller` ABOUT the
+   selector seat. (b) **`accepts_player_target` folds the player-only slot read in itself**, so the two hand-patched call sites became one expression
+   and a third cannot reintroduce the bug; the enumerator's missing `or_else` is refuted by census — the two walkers agree on all **7,816** bodies that
+   answer both. (c) **The life ceiling had a twin**: a power is bounded by nothing either. `Effect::DoublePower`'s `checked_shl` checks the SHIFT and
+   not the value (`n = 31` gave `i32::MIN`, so `factor - 1` overflowed), eighteen sites accumulated a P/T bonus with a bare `+=`, the READS overflowed
+   on top of the writes, and every consumer that SCALES one was unbounded. Rules-facing values saturate; only the consumers that scale clamp.
+4. **Next, in order.** (a) **Sweep from 1037 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+   yourself); read its `cap / stuck / draw` line, not the bare undecided total: **only cap and stuck are defects**. Do NOT hand-roll the loop.
+   ⚠ `cube` **1036 is SLOW and NOT a defect** (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end
+   by decking, on a 79-permanent board. PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a
+   big board ~13x — `gated_block!` / `gated_pick!` run the body the gate exists to skip. ⚠ `cube` **1018** is the Beacon of Immortality cap; neither is
+   to be re-diagnosed. (b) ⚠ **The seven-card nesting is RETIRED — do NOT build the parking redesign** (~60 sites in 38 arms): taken on the suspending
+   path, all three differing shapes are correct because every outer arm clears the channel before its body AND has no work after it. The gate stays.
+   (c) The **8 loop arms** are the last column of the seat class: the LIST is re-derived, and closing them needs a seat-list `PlayerRef` nobody has
+   needed yet. A catalog scan of all eight reads context-stable refs with one exception (Timmerian Fiends, `ante_only`) — prevention, not a bug. One
+   plumbing row is also deliberately left: `ChangeTargetOfAbility` (Reroute) writes its new target BETWEEN its two asks, so routing it needs the
+   two-pass split first. (d) `audit_printed_body`'s gap is **219 real spells** behind ~40 bespoke per-file helpers (`zubera("X", r(), ..)`); the last cut
+   of this column found seven cards castable for free, and the subtype columns are unopened. (e) **The `MayBody` lead is WITHDRAWN on a measurement** —
+   2 of 21,756 definitions repeat a `description:` literal and both are static text. (f) Nobody has checked the **ML side** of a saturated feature: what a
+   `SCALE_CEILING` row does to a net that never saw one. (g) `BecomeChosenColor` picks per source, not per target — bot strength, not a rules defect.
+   (h) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
 
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
