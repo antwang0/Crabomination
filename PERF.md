@@ -2994,6 +2994,10 @@ cell, three blocks of 30 cells / 110,400 games each, `CRAB_ANSWER_LOG=strict`,
 block overlaps the `OptionalKind` session's 886..935; the seed frontier is in
 NEXT.
 
+A sixth block, **1025..1030 over the fix at `e0dbfa48`** (30 cells / 110,400
+games), reads **0 failures / 0 cap / 0 stuck / 4 draws** — the leak the fifth
+block found does not recur.
+
 A fifth block, **1019..1024 at `c9452d0e`** (30 cells), is the one that EARNED
 its keep: `all` 1024 aborted under `CRAB_ANSWER_LOG=strict` on the `MayDoBy` leak
 above — the run's only sweep FAIL, and a real defect. The other 29 cells are 0 cap

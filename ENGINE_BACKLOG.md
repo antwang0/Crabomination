@@ -351,6 +351,13 @@ after it — the two-pass recipe does not apply. The accounting that does:
 > there are rounds behind it. Replay them in place, skip those rounds, and let
 > the newest answer pay for the round this pass performs.
 
+⚠ **That accounting reads `resolution_answer_log.len()` as "my answers", so it
+depends on the nesting invariant** the structural gate protects: every arm that
+runs a nested body clears the channel before running it. An outer arm that did
+not would leave its own answers in front, and the inner arm would skip rounds
+that never happened. The gate's doc comment states both properties; this is the
+third thing that rests on them.
+
 * **Trade Secrets** — the repeat belongs to the OPPONENT ("then that player may
   repeat this process") and the resolving seat's decider was answering it. The
   first draft of the fix drew a round and *then* read the "no"; a decline has to
