@@ -257,6 +257,17 @@ up on were dropped from the TYPE and SUBTYPE columns as well — three columns'
 coverage decided by the hardest one, and the type line now reads 583 MORE
 factories than the cost does. Each column takes its own verdict.
 
+⚠ **THE WALK ACCOUNTS FOR EVERY FACTORY, AND THE CLOSING LINE PROVES IT.**
+`# accounting — N factories walked, M stopped early; cost 0, types 0, …` — a
+non-zero there is a card that reached a column and got neither a comparison nor
+a named skip, which is a hole in THIS FILE rather than a finding. It exists
+because `layout == "normal"` was exactly that for as long as the subtype column
+did: 393 readable cards dropped into nothing, and thirteen shipped defects
+behind them. `n/a` (P/T on a non-creature, loyalty on a non-planeswalker, an
+adventure half on a card with none) is recorded explicitly rather than left
+blank, and `stopped` is a card dropped before the column under a bucket that is
+printed below.
+
 What is left, with the reason — `--list <kind>` prints the factories:
   * `nocache` (3,749) — a name the oracle does not know. Mostly synthesized
     cards, and `scripts/audit_card_names.py` is the column that separates those
@@ -2302,12 +2313,23 @@ def main() -> int:
                             "nosubvariant", "nokeywords", "nopt", "nocolors",
                             "noloyalty", "subtwoface", "noadv", "noback")}
     rows = []
+    ledger = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
         starts = [(m.start(), m.group(1)) for m in FN.finditer(src)]
         for i, (pos, fname) in enumerate(starts):
             end = starts[i + 1][0] if i + 1 < len(starts) else len(src)
             raw = src[pos:end]
+            # ⚠ ONE LEDGER LINE PER FACTORY, so a column cannot drop a card into
+            # nothing. `layout == "normal"` decided whether a READABLE card was
+            # compared at all and counted the 393 it dropped NOWHERE — not a
+            # skip bucket, not a row, not a total. Every outcome below writes
+            # its column's verdict here, every early `continue` writes
+            # `_stopped`, and the closing line reports any column that reached a
+            # card and recorded neither. A number that is not zero there is a
+            # hole in the walk, not a card.
+            acct = {}
+            ledger.append(acct)
             # ⚠ STOP AT THE NEXT `fn`, NOT AT THE NEXT FACTORY. `starts` is the
             # PUBLIC factories, so a private helper defined under one of them
             # (`fn sac_on_damage_aura(..) -> CardDefinition {`, jou3) sits inside
@@ -2355,17 +2377,21 @@ def main() -> int:
                 body = ".." + hm.group(1) + "(" if hm else None
                 if body is None:
                     skip["noname"].append(f"{path.name}::{fname}")
+                    acct["_stopped"] = "noname"
                     continue
             name = resolve_card_name(body, raw, fname)
             if name is None:
                 skip["noname"].append(f"{path.name}::{fname}")
+                acct["_stopped"] = "noname"
                 continue
             if " // " in name:
                 skip["split"].append(f"{path.name}::{fname}")
+                acct["_stopped"] = "split"
                 continue
             card = CACHE.get(name) or CACHE_LC.get(name.lower())
             if not isinstance(card, dict):
                 skip["nocache"].append(f"{path.name}::{fname}")
+                acct["_stopped"] = "nocache"
                 continue
             # ⚠ A MULTI-FACE CARD WAS SKIPPED WHOLE — 276 factories with no
             # column at all, which is the same shape as the `nocache` skip that
@@ -2387,6 +2413,7 @@ def main() -> int:
                              if f.get("name") == name), None)
                 if face is None:
                     skip["faces"].append(f"{path.name}::{fname}")
+                    acct["_stopped"] = "faces"
                     continue
                 whole_kw = card.get("keywords")
                 card = {k: v for k, v in card.items()
@@ -2423,6 +2450,7 @@ def main() -> int:
             # one and whose literal this cannot read is a row here, not a
             # silent pass.
             fraw = factory_raw(raw) or ""
+            acct["adv"] = "n/a"    # overwritten when the card declares one
             if "adventure: Some" in fraw or "adventure: Some" in raw:
                 am = re.search(r"Adventure \{", fraw)
                 adv = (literal_raw_named(fraw, am.start(), "Adventure") or ""
@@ -2439,12 +2467,14 @@ def main() -> int:
                 atypes = field_value(adv, "card_types", (), ())
                 if aface is None or acost is None or atypes is None:
                     skip["noadv"].append(f"{path.name}::{fname}")
+                    acct["adv"] = "noadv"
                 else:
                     got_at = {w for w in WORD.findall(atypes) if w in CARD_TYPES}
                     want_at = {w for w in CARD_TYPES
                                if re.search(r"\b%s\b" % w,
                                             aface.get("type_line") or "")}
                     checked_adv += 1
+                    acct["adv"] = "compared"
                     if norm(acost) != norm(aface.get("mana_cost") or ""):
                         wrong_adv += 1
                         rows.append(("adv-cost", anm.group(1),
@@ -2469,6 +2499,7 @@ def main() -> int:
             # would compare is "Land") and a back that is another `pub fn`
             # factory (14 — audited as its own card, by its own name).
             bm = re.search(r"back_face:\s*Some\(", raw)
+            acct["back"] = "n/a"   # overwritten when the card declares one
             if bm is not None:
                 after = raw[bm.end():]
                 blit = None
@@ -2487,12 +2518,14 @@ def main() -> int:
                 bt = field_value(blit, "card_types", (), ()) if blit else None
                 if bface is None or bt is None:
                     skip["noback"].append(f"{path.name}::{fname}")
+                    acct["back"] = "noback"
                 else:
                     got_bt = {w for w in WORD.findall(bt) if w in CARD_TYPES}
                     want_bt = {w for w in CARD_TYPES
                                if re.search(r"\b%s\b" % w,
                                             bface.get("type_line") or "")}
                     checked_back += 1
+                    acct["back"] = "compared"
                     if got_bt != want_bt:
                         wrong_back += 1
                         rows.append(("back-types", bnm.group(1),
@@ -2518,6 +2551,7 @@ def main() -> int:
             tl = card.get("type_line") or ""
             if tl == "Card" or any(w in tl for w in NOT_A_SPELL):
                 skip["notaspell"].append(f"{path.name}::{fname}")
+                acct["_stopped"] = "notaspell"
                 continue
             # CR 202.1b / 601.3e — a card with NO printed mana cost cannot be
             # cast by paying one, and its mana value is 0. The engine enforces
@@ -2589,8 +2623,10 @@ def main() -> int:
             got = body_cost(cost_src) if cost_src is not None else None
             if got is None:
                 skip["nonliteral"].append(f"{path.name}::{fname}")
+                acct["cost"] = "nonliteral"
             else:
                 checked += 1
+                acct["cost"] = "compared"
                 want = card.get("mana_cost", "")
                 # A card that prints NO mana cost has nothing to compare
                 # against, and the `no_mana_cost` check above is the one that
@@ -2632,13 +2668,16 @@ def main() -> int:
             resolved, sub_ok = read.ok, read.sub_ok
             if not resolved:
                 skip["notyped"].append(f"{path.name}::{fname}")
+                acct["_stopped"] = "notyped"
                 continue
             checked_types += 1
+            acct["types"] = "compared"
             # A Vanguard avatar named after a card is not that card, and the
             # oracle lookup cannot tell them apart (Maraxus of Keld is both).
             if "avatar" in (raw[raw.find("\n"):] or "") and "Vanguard" not in (card.get("type_line") or ""):
                 if re.search(r"\.\.avatar\s*\(", raw):
                     skip["notaspell"].append(f"{path.name}::{fname}")
+                    acct["_stopped"] = "notaspell"
                     continue
             if got_t != want_t and want_t:
                 wrong_types += 1
@@ -2674,13 +2713,16 @@ def main() -> int:
             # describes ONE face, which `//` and the `—` count already say.
             if BECOMES_CREATURE.search(raw):
                 skip["nosubtypes"].append(f"{path.name}::{fname}")
+                acct["subtypes"] = "nosubtypes"
             elif sub_ok and "//" not in tl and tl.count("—") <= 1:
                 words = tl.split("—", 1)[1].split() if "—" in tl else []
                 if any(w.lower() not in SUB_WORD for w in words):
                     skip["nosubvariant"].append(f"{path.name}::{fname}")
+                    acct["subtypes"] = "nosubvariant"
                 else:
                     want_sub = {SUB_WORD[w.lower()] for w in words}
                     checked_sub += 1
+                    acct["subtypes"] = "compared"
                     if got_sub != want_sub:
                         wrong_types += 1
                         rows.append(("sub", name, f"{path.name}::{fname}",
@@ -2688,11 +2730,13 @@ def main() -> int:
                                      " ".join(sorted(want_sub)) or "(none)"))
             elif not sub_ok:
                 skip["nosubtypes"].append(f"{path.name}::{fname}")
+                acct["subtypes"] = "nosubtypes"
             else:
                 # Readable here, but the oracle line is not ONE face. Its own
                 # bucket, because "readable and not compared" is the shape that
                 # counted nowhere for as long as the layout gate existed.
                 skip["subtwoface"].append(f"{path.name}::{fname}")
+                acct["subtypes"] = "subtwoface"
             # The PRINTED KEYWORDS, restricted to the evergreen set both sides
             # spell as a plain keyword. A missing Flying is not cosmetic: the
             # bot's block search, the damage assignment and every evasion check
@@ -2704,6 +2748,7 @@ def main() -> int:
                       else card.get("keywords") or [])
             if not read.kw_ok or kw_src is None:
                 skip["nokeywords"].append(f"{path.name}::{fname}")
+                acct["keywords"] = "nokeywords"
             else:
                 want_kw = {EVERGREEN[k] for k in kw_src if k in EVERGREEN}
                 have_kw = read.keywords & EVERGREEN_VARIANTS
@@ -2721,6 +2766,7 @@ def main() -> int:
                 extra = {k for k in have_kw - want_kw
                          if (name, k) not in REVIEWED_KEYWORDS}
                 checked_kw += 1
+                acct["keywords"] = "compared"
                 if missing or extra:
                     wrong_kw += 1
                     rows.append(("kw", name, f"{path.name}::{fname}",
@@ -2733,11 +2779,13 @@ def main() -> int:
             oc = card.get("colors")
             if oc is None or got is None or not read.kw_ok or not read.col_ok:
                 skip["nocolors"].append(f"{path.name}::{fname}")
+                acct["colors"] = "nocolors"
             else:
                 ov, ind = read.colorfield
                 have_c = (set() if "Devoid" in read.keywords
                           else ov if ov is not None else cost_colors(got) | ind)
                 checked_col += 1
+                acct["colors"] = "compared"
                 if have_c != set(oc) and name not in REVIEWED_COLORS:
                     wrong_col += 1
                     rows.append(("color", name, f"{path.name}::{fname}",
@@ -2749,12 +2797,15 @@ def main() -> int:
             # card is in — and 0 means it dies to the state-based action the
             # turn it lands (CR 704.5i).
             ol = card.get("loyalty")
+            acct["loyalty"] = "n/a"   # overwritten below when it applies
             if ("Planeswalker" in (card.get("type_line") or "")
                     and ol is not None and ol.isdigit()):
                 if not read.loy_ok:
                     skip["noloyalty"].append(f"{path.name}::{fname}")
+                    acct["loyalty"] = "noloyalty"
                 else:
                     checked_loy += 1
+                    acct["loyalty"] = "compared"
                     # No `base_loyalty` anywhere in the chain is a VALUE, not a
                     # gap — the engine ships `Default` (0) there, and CR 704.5i
                     # puts a 0-loyalty walker in the graveyard on entry.
@@ -2766,13 +2817,16 @@ def main() -> int:
             # `parse_pt` for what it used to read instead.
             op, ot = card.get("power"), card.get("toughness")
             if op is None or ot is None:
+                acct["pt"] = "n/a"    # the oracle prints no P/T: not a creature
                 continue
             if not (op.lstrip("-").isdigit() and ot.lstrip("-").isdigit()):
                 skip["star"].append(f"{path.name}::{fname}")
+                acct["_stopped"] = "star"
                 continue
             band = station_pt(raw)
             if band is not None:
                 checked_pt += 1
+                acct["pt"] = "compared"
                 if band != (int(op), int(ot)):
                     wrong_pt += 1
                     rows.append(("p/t", name, f"{path.name}::{fname}",
@@ -2780,8 +2834,10 @@ def main() -> int:
                                  f"{op}/{ot}"))
             elif not read.pt_ok:
                 skip["nopt"].append(f"{path.name}::{fname}")
+                acct["pt"] = "nopt"
             else:
                 checked_pt += 1
+                acct["pt"] = "compared"
                 # No `power:` anywhere in the chain is a VALUE, not a gap: the
                 # engine ships `Default` there, and a creature at 0/0 dies to
                 # state-based actions the turn it lands. `Default` is the LAST
@@ -2810,6 +2866,21 @@ def main() -> int:
           f"{wrong_loy} wrong loyalty, {wrong_adv} wrong adventure half, "
           f"{wrong_back} wrong back face**")
     print("# skipped — " + ", ".join(f"{k} {len(v)}" for k, v in sorted(skip.items())))
+    # ⚠ THE WALK'S OWN ACCOUNTING. A factory that reached a column and got
+    # neither a comparison nor a named skip is a hole in this file, not a card:
+    # `layout == "normal"` was one for as long as the subtype column existed and
+    # cost 393 readable cards their check with nothing to show for it. `n/a` is
+    # a column that does not apply (P/T on a non-creature, loyalty on a
+    # non-planeswalker, an adventure half on a card with none) and is recorded
+    # explicitly; `stopped` is a card the walk dropped before the column, under
+    # a bucket that IS printed above.
+    stopped = sum(1 for a in ledger if "_stopped" in a)
+    holes = {c: sum(1 for a in ledger if "_stopped" not in a and c not in a)
+             for c in ("cost", "types", "subtypes", "keywords", "colors",
+                       "loyalty", "pt", "adv", "back")}
+    print(f"# accounting — {len(ledger)} factories walked, {stopped} stopped early; "
+          + ", ".join(f"{c} {n}" for c, n in holes.items())
+          + "   (every number after the semicolon must be 0)")
     if args.list_kind:
         for where in skip.get(args.list_kind, []):
             print(where)
