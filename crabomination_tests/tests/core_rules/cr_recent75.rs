@@ -367,3 +367,79 @@ fn cr_104_4_a_turn_that_draws_a_card_is_not_a_no_progress_loop() {
     assert!(g.turn_number > until, "stopped early at turn {}", g.turn_number);
     assert!(g.game_over.is_none(), "drawing a card every turn is progress");
 }
+
+/// CR 104.4 — a life total past the saturation band is a STATE, not a number,
+/// and moving it by one is not progress.
+///
+/// ⚠ **THIS RAN TO THE ACTION CAP AT TURN 2,270.** `all` seed 1159 of the
+/// 2026-09-12 fresh-seed sweep is the Beacon of Immortality board above with
+/// one addition: a Basilica Screecher, whose extort takes 1 life off a seat
+/// already at `i32::MAX` and gives it to the other, and the next Beacon doubles
+/// it back. Both seats are unkillable and the game cannot end — but `p.life`
+/// moved every sample, so the turn watch reached `repeats 2/12`, re-anchored,
+/// and never reached the one verdict such a game has. It was the first cap in
+/// the sweep's history to survive the 50,000-action re-run.
+///
+/// The digest clamps a life above `SCALE_CEILING * 1_000` — ten million, the
+/// same band `cap_diagnosis` calls saturated and a total no ordinary game
+/// reaches — so the drift stops counting. Two seats that differ only up there
+/// differ in nothing that can end the game. Without the clamp this board runs
+/// past turn 5,700 and never draws.
+///
+/// ⚠ **THE CLAMP DOES NOT CLOSE `all` 1159 ITSELF** — that cell still reads
+/// `cap 2` and `repeats 2/12` with it in. The life drift was one source of
+/// aperiodicity on that board and not the only one: the bot taps a different
+/// number of lands per turn for the Beacon and the extort, and the library
+/// toggles 1/0 depending on whether the Beacon is on the stack when the turn
+/// ends, both of which the digest reads. That board is recorded in PERF as a
+/// known unwinnable one; this test pins the half that IS fixed.
+#[test]
+fn cr_104_4_a_drained_saturated_life_is_still_no_progress() {
+    use crabomination::card::{StaticAbility, StaticEffect, TriggeredAbility};
+    use crabomination::effect::{
+        Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value,
+    };
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Neither seat can be killed, and neither can be decked.
+    for seat in 0..2 {
+        g.players[seat].life = i32::MAX;
+    }
+    let mut def = catalog::grizzly_bears();
+    def.static_abilities = vec![StaticAbility {
+        description: "Players skip their draw steps.",
+        effect: StaticEffect::SkipStep { step: TurnStep::Draw, all_players: true },
+    }];
+    // …and one life a turn leaves the other seat, for ever.
+    def.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::Upkeep),
+            EventScope::YourControl,
+        ),
+        effect: Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        },
+    }];
+    g.add_card_to_battlefield(0, def);
+    for _ in 0..40_000 {
+        if g.game_over.is_some() {
+            break;
+        }
+        g.advance_step(Vec::new()).expect("advance");
+        while !g.stack.is_empty() {
+            let _ = g.resolve_top_of_stack();
+        }
+    }
+    assert_eq!(g.game_over, Some(None), "an unkillable board is a draw");
+    assert!(
+        g.players[1].life < i32::MAX,
+        "the drain really ran ({} life)",
+        g.players[1].life,
+    );
+    let ceiling = GameState::NO_PROGRESS_WATCH_FROM_TURN
+        + GameState::NO_PROGRESS_SAMPLE_EVERY
+            * (GameState::NO_PROGRESS_DRAW_REPEATS + GameState::NO_PROGRESS_MAX_PERIOD + 2);
+    assert!(g.turn_number < ceiling, "drew too late: turn {}", g.turn_number);
+}

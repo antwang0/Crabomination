@@ -1935,9 +1935,26 @@ impl GameState {
         fn pair(lo: u32, hi: u32) -> u64 {
             u64::from(lo) | (u64::from(hi) << 32)
         }
+        // ⚠ A LIFE TOTAL PAST THE SATURATION BAND IS NOT A NUMBER, IT IS A
+        // STATE: "this seat cannot be killed". Draining 1 a turn off `i32::MAX`
+        // moves the digest every sample and ends the game in two billion turns,
+        // which is what `all` 1159 does — a Beacon of Immortality board where
+        // Basilica Screecher's extort takes 1 from a saturated seat and the
+        // next Beacon doubles it back. The turn watch reached `repeats 2/12`
+        // there and re-anchored forever, so the one verdict an unwinnable game
+        // has was never reached and the game ran to the 50,000-action cap at
+        // turn 2,270. Clamping to the band `cap_diagnosis` already calls
+        // saturated (`SCALE_CEILING * 1_000`, ten million — a life no ordinary
+        // game reaches) makes that drift stop being progress. **Only on the
+        // turn watch**: the other two digests' committed behaviour is not this
+        // commit's, and they carry `player_counters: false`.
+        let life_of = |p: &crate::player::Player| -> i32 {
+            let band = crate::player::SCALE_CEILING.saturating_mul(1_000);
+            if player_counters && p.life > band { band } else { p.life }
+        };
         let mut h = mix(0, pair(turn, if with_stack { self.stack.len() as u32 } else { 0 }));
         for p in &self.players {
-            h = mix(h, pair(p.life as u32, p.hand.len() as u32));
+            h = mix(h, pair(life_of(p) as u32, p.hand.len() as u32));
             h = mix(h, pair(p.library.len() as u32, p.graveyard.len() as u32));
             if with_stack {
                 h = mix(h, u64::from(p.poison_counters));
