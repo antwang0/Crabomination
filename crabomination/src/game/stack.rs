@@ -1713,6 +1713,43 @@ impl GameState {
     /// `game_over`. Set far above any legitimate repeat.
     pub const FREE_ACTIVATION_REPEAT_CAP: u32 = 50;
 
+    /// CR 104.4 — how many times a whole turn may return the game to the same
+    /// state before the game is a draw. With the commonest period (2, one
+    /// turn each seat) this is 50 turns in which no life total, zone size,
+    /// permanent, counter or dungeon room moved at all — a game that is over
+    /// in every sense but the bookkeeping. A real board that stalls still
+    /// mills a card a turn, so its library size moves and it never anchors.
+    pub const NO_PROGRESS_DRAW_REPEATS: u32 = 12;
+
+    /// Sample one turn in this many, rather than every turn — the second half
+    /// of the reason this is not a throughput regression (see
+    /// [`NO_PROGRESS_WATCH_FROM_TURN`](Self::NO_PROGRESS_WATCH_FROM_TURN) for
+    /// the first). A loop of period `p` sampled every `k` turns has period
+    /// `p / gcd(p, k)` in sample space, which for every `p` up to
+    /// [`NO_PROGRESS_MAX_PERIOD`](Self::NO_PROGRESS_MAX_PERIOD) and `k = 4` is
+    /// 1, 1, 3, 1, 5, 3, 7, 2 — all inside the period the watch can see. So
+    /// the only thing sampling costs is latency: 12 repeats four turns apart
+    /// is the same 48 turns of no progress that 48 consecutive samples were.
+    pub const NO_PROGRESS_SAMPLE_EVERY: u32 = 4;
+
+    /// The longest turn-loop this can see, in turns, before it re-anchors on
+    /// the latest state — [`MANDATORY_LOOP_MAX_PERIOD`](Self::MANDATORY_LOOP_MAX_PERIOD)'s
+    /// role one level up. Two seats alternating is period 2; four seats, 4.
+    pub const NO_PROGRESS_MAX_PERIOD: u32 = 8;
+
+    /// The turn the watch starts sampling on, and **the only reason it is not
+    /// a throughput regression.** `end_turn` is not a per-game event: a bot
+    /// probe that simulates through combat ends turns on its clone too, 3,234
+    /// times over a six-game `cube` run against ~150 real ones, and one
+    /// 1,074-Ir digest apiece was +0.167 % of the pool (2,085,000,297 ->
+    /// 2,088,492,125). A draw needs
+    /// [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS) returns to
+    /// an anchor, so no game can be drawn before turn 48 whatever this is set
+    /// to; sampling from 30 costs one `u32` compare on every turn that could
+    /// not have been in a loop, and the sims — which live a turn or two ahead
+    /// of a game that mostly ends before turn 30 — stop paying for it.
+    pub const NO_PROGRESS_WATCH_FROM_TURN: u32 = 30;
+
     /// CR 732.3 guard — reject an activation that repeats a loop. Called before
     /// any cost is paid, so a rejected activation leaves no trace.
     ///
@@ -1765,7 +1802,7 @@ impl GameState {
         card_id: CardId,
         ability_index: usize,
     ) -> Result<(), GameError> {
-        let key = Some((card_id, ability_index));
+        let key = Some((card_id, ability_index as u32));
         let (fp, prev_key, n) = self.free_activation_watch;
         if prev_key != key {
             self.free_activation_watch = (0, key, 0);
@@ -1864,6 +1901,22 @@ impl GameState {
     /// state without touching a zone; the resolution side keeps its historical
     /// field list so its committed behaviour is unchanged.
     fn fingerprint(&self, with_stack: bool) -> u64 {
+        self.fingerprint_as(with_stack, self.turn_number, false)
+    }
+
+    /// [`fingerprint`](Self::fingerprint) with the two things the turn-granular
+    /// watch needs and the other two must not have.
+    ///
+    /// `turn` is the turn number to mix (the turn watch passes `0`: a loop
+    /// whose period is a whole turn moves the real one every cycle, which is
+    /// exactly why the resolution watch cannot see it). `player_counters`
+    /// folds in the per-player counters the historical field list never
+    /// carried — energy, experience and the dungeon room. Those three are the
+    /// only player-visible progress a turn can make while every zone size,
+    /// life total and permanent stays put, so leaving them out would let the
+    /// turn watch draw a game that was getting somewhere. They stay off the
+    /// other two digests, whose committed behaviour is not this commit's.
+    fn fingerprint_as(&self, with_stack: bool, turn: u32, player_counters: bool) -> u64 {
         /// SplitMix64's finalizer over `acc + v + PHI`. Chaining it makes the
         /// digest order-sensitive, which the field stream needs.
         #[inline]
@@ -1881,7 +1934,7 @@ impl GameState {
         fn pair(lo: u32, hi: u32) -> u64 {
             u64::from(lo) | (u64::from(hi) << 32)
         }
-        let mut h = mix(0, pair(self.turn_number, if with_stack { self.stack.len() as u32 } else { 0 }));
+        let mut h = mix(0, pair(turn, if with_stack { self.stack.len() as u32 } else { 0 }));
         for p in &self.players {
             h = mix(h, pair(p.life as u32, p.hand.len() as u32));
             h = mix(h, pair(p.library.len() as u32, p.graveyard.len() as u32));
@@ -1890,6 +1943,10 @@ impl GameState {
             } else {
                 h = mix(h, pair(p.poison_counters, p.mana_pool.total()));
                 h = mix(h, u64::from(p.mana_pool.colorless_amount()));
+            }
+            if player_counters {
+                h = mix(h, pair(p.energy, p.experience));
+                h = mix(h, u64::from(p.dungeon.as_ref().map_or(0, |(_, room)| *room as u32 + 1)));
             }
         }
         h = mix(h, pair(self.exile.len() as u32, self.battlefield.len() as u32));
@@ -4610,7 +4667,46 @@ impl GameState {
                 for c in p.library.iter_mut() { sweep(c); }
             }
         }
+        self.watch_turn_progress();
         self.give_priority_to_active();
+    }
+
+    /// CR 104.4 — one sample of the turn-granular no-progress watch, taken at
+    /// the end of every turn (after the turn-number bump and the permission
+    /// sweep, so the sample point is the same state in every cycle).
+    ///
+    /// Shape: [`resolve_top_of_stack`]'s watch one level up. Hold an anchor,
+    /// count the turns that bring the game back to it, re-anchor when a turn
+    /// stays away longer than [`NO_PROGRESS_MAX_PERIOD`](Self::NO_PROGRESS_MAX_PERIOD).
+    /// Past [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS) the
+    /// game is a draw — the one verdict a game nobody can win or lose has.
+    ///
+    /// Cost: one digest every `NO_PROGRESS_SAMPLE_EVERY` turns past
+    /// `NO_PROGRESS_WATCH_FROM_TURN`, and a `u32` compare on every other
+    /// `end_turn`. `end_turn` is NOT a per-game event — a bot probe that
+    /// simulates through combat ends turns on its clone too (3,234 calls over
+    /// a six-game `cube` run against ~150 real turns), which is why the two
+    /// gates are there.
+    fn watch_turn_progress(&mut self) {
+        if self.game_over.is_some()
+            || self.turn_number < Self::NO_PROGRESS_WATCH_FROM_TURN
+            || !self.turn_number.is_multiple_of(Self::NO_PROGRESS_SAMPLE_EVERY)
+        {
+            return;
+        }
+        let fp = self.fingerprint_as(false, 0, true);
+        let (anchor, repeats, since) = self.no_progress_watch;
+        if fp == anchor {
+            let repeats = repeats + 1;
+            self.no_progress_watch = (anchor, repeats, 0);
+            if repeats >= Self::NO_PROGRESS_DRAW_REPEATS {
+                self.game_over = Some(None);
+            }
+        } else if anchor == 0 || since >= Self::NO_PROGRESS_MAX_PERIOD {
+            self.no_progress_watch = (fp, 0, 0);
+        } else {
+            self.no_progress_watch.2 = since + 1;
+        }
     }
 
     // ── State-based actions ───────────────────────────────────────────────────

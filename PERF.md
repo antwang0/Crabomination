@@ -2827,6 +2827,23 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-12 (the Beacon session) — the ending a saturated life total never reaches
+
+```text
+fix     `cube` 1069's two capped games are DRAWS (`(-291)`, Log). Both seats doubled their life total once a turn from
+        turn 81 until both sat at `i32::MAX`, on a one-card library holding Beacon of Immortality — legal Magic, correct
+        in the engine, and with no ending, because `mandatory_loop_watch` samples after a trigger RESOLUTION and its
+        digest carries the turn number. A loop whose period is a whole turn moves that digest every cycle.
+        `watch_turn_progress` is the same watch one level up, sampled in `end_turn`. The concurrent session met the same
+        board and LABELLED it (`[SATURATED LIFE …]`, `cube` 1018 / 1069 / 1076 / 1090); the label is still the right
+        diagnostic and no longer has to excuse a cap.
+perf    none claimed. `(-291)` is a cost, measured and gated down 7x rather than assumed: ungated it was +0.167 % on
+        cube, because `end_turn` runs 3,234 times a six-game run and only ~150 of those are real turns. Sampling from
+        turn 30 and one turn in 4 leaves +0.046 % / +0.024 % / +0.021 % on fixed / cube / sealed. `GameState` is 1,600
+        bytes again — the watch's 16 came out of `free_activation_watch`, whose key was `Option<(CardId, usize)>` for an
+        index into `activated_abilities`.
+```
+
 ### 2026-09-12 (the seat-pin session) — one mechanism for fifteen arms, the walker fold, the encoder's unbounded life feature; no perf leg
 
 ```text
@@ -2969,6 +2986,17 @@ mattering.
 
 A draw is CR 104.4, not a defect. Seed frontier **1102**. One cell is a
 different kind of outlier and it is the entry below.
+
+**AND AT `(-291)` THE BOARD HAS AN ENDING, so the label above is a diagnostic
+and no longer a carve-out.** A turn-granular no-progress watch
+(`watch_turn_progress`, CR 104.4) draws a game whose whole TURN has returned
+to the same state twelve samples running — which is what the saturated board
+does from the moment neither seat can be killed or decked. `cube` 1069 reads
+**`cap 0 / stuck 0 / draw 2`** on a binary rebuilt with it, and those two
+games end at turn 196 / 4,537 actions instead of holding a thread to the cap
+(6,000 here, 50,000 in an actor). The `[SATURATED LIFE …]` label still names
+the board when `CRAB_CAP_DIAG` catches one mid-loop; what it no longer has to
+excuse is a cap.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
 `cube` seed **1036** cost **3,313 s** against a 33-48 s median for its
@@ -5392,6 +5420,52 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-291)` CORRECTNESS, PRICED — the turn-granular no-progress watch (CR 104.4): fixed **+0.046 %**, cube **+0.024 %**, sealed **+0.021 %**, 11 / 11 golden traces unmoved
+
+Not a win and not filed as one. The fresh-seed sweep's `cube` 1069 cell
+came back **cap 2** (the first cap since the diagnosed `cube` 1018), and
+`CRAB_LIFE_WATCH=100000` named it in one run: both seats doubling their
+life total once a turn from turn 81, `126961 -> 253922 -> 507841 -> …`,
+until both sat at `i32::MAX` and neither could be killed or decked. The
+board is Beacon of Immortality with a one-card library — draw it, cast
+it, double, shuffle it back — which is legal Magic and correct in the
+engine. What was missing is the ending: `mandatory_loop_watch` samples
+after a *trigger resolution* and its digest carries the turn number, so a
+loop whose period is a whole turn moves the digest every cycle and is
+invisible to it. `watch_turn_progress` is the same watch one level up,
+sampled in `end_turn`, and the two capped games are **draws** now
+(`cap 0 / stuck 0 / draw 2`, and they end at turn 196 / 4,537 actions
+instead of the 6,000 cap — 50,000 in a real actor).
+
+```text
+callgrind --a gang --b gang --games 6 --threads 1 --seed 1, profiling-fast, no-default-features, one tree either side:
+  pool     base            with the watch    delta
+  fixed      638,831,220       639,127,781   +296,561  (+0.046 %)
+  cube     2,085,002,776     2,085,513,458   +510,682  (+0.024 %)
+  sealed   1,847,409,648     1,847,796,487   +386,839  (+0.021 %)
+```
+
+**The two gates are the whole entry, and the first reading says why.**
+`end_turn` is not a per-game event: a bot probe that simulates through
+combat ends turns on its clone too — **3,234 calls over a six-game `cube`
+run against ~150 real turns** — and one 1,074-Ir digest apiece read
+**+0.167 %** on cube (2,085,000,297 -> 2,088,492,125), which is more than
+the arm is worth. Two gates took it to +0.024 %: sample only from turn
+**30** (a draw needs 12 returns to an anchor four turns apart, so no game
+can be drawn before turn 48 whatever the gate is) and only one turn in
+**4** (a loop of period `p` sampled every `k` turns has period
+`p / gcd(p, k)`, which for every `p <= 8` and `k = 4` is 1, 1, 3, 1, 5,
+3, 7, 2 — all inside the period the watch can see; sampling costs
+latency, not coverage).
+
+**And it is free in `GameState` bytes, which is the gate that caught it.**
+`cow::tests::game_state_stays_small` failed at 1,616 — the struct was at
+its 1,600 cap exactly. The 16 bytes came back out of
+`free_activation_watch`, whose key was `Option<(CardId, usize)>`: a
+`usize` for an index into `activated_abilities` makes the tuple 8-aligned
+and the `Option` a discriminant word wider, 24 bytes where `(CardId, u32)`
+is 12. `GameState` is 1,600 again.
 
 ### `(-290)` TAKEN — the combat-instant enumerator deduped its candidates with `format!("{:?}")`: cube **-0.247 %**, sealed **-0.086 %**, fixed **-0.013 %**, 144 / 144 traces identical
 

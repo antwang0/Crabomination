@@ -1878,6 +1878,23 @@ pub struct GameState {
     /// that stays away longer re-anchors; a spell / player action resets it.
     #[serde(default)]
     pub mandatory_loop_watch: (u64, u32, u32),
+    /// CR 104.4 — **no-progress watchdog, at turn granularity**: `(anchor,
+    /// repeats, since)`, the same shape as `mandatory_loop_watch` one level
+    /// up. `mandatory_loop_watch` only ever sees a loop that closes inside a
+    /// single stack, because it samples after a *trigger resolution* and its
+    /// digest carries the turn number; a loop whose period is a whole turn
+    /// moves the turn number every cycle and so is invisible to it.
+    ///
+    /// The board that asked for this: a one-card library holding Beacon of
+    /// Immortality. Draw it, cast it, double your life, shuffle it back —
+    /// the library never runs out, the life total saturates at the ceiling,
+    /// and from then on neither seat can be killed or decked. Both seats did
+    /// it from turn 81 to the 6,000-action cap at turn 259 (`cube` 1069,
+    /// fresh-seed sweep 2026-09-12), and `cube` 1018 is the same board. Every
+    /// turn past the saturation point is byte-identical to the one two turns
+    /// before it, which is what this sees and the resolution watch cannot.
+    #[serde(default)]
+    pub no_progress_watch: (u64, u32, u32),
     /// CR 732.3 — fragmented-loop guard for non-mana activations (a mana
     /// ability neither trips nor resets it: it is announced inside the cost
     /// it pays). Holds the state fingerprint, the `(source, ability index)`
@@ -1888,7 +1905,13 @@ pub struct GameState {
     /// a key means the fingerprint is pending: it is computed on the first
     /// repeat of the key, not on the announcement that set it (PERF `(-220)`).
     #[serde(default)]
-    pub free_activation_watch: (u64, Option<(CardId, usize)>, u32),
+    /// ⚠ The ability index is a `u32`, not a `usize`: `(CardId, usize)` is
+    /// 8-aligned and `Option` of it needs a discriminant word, so the
+    /// `usize` cost **16 bytes of `GameState`** for an index into
+    /// `activated_abilities` — a list whose longest member in the catalog is
+    /// single digits. `GameState` is cloned by every bot probe and its size
+    /// is gated at 1,600 bytes (`cow::tests::game_state_stays_small`).
+    pub free_activation_watch: (u64, Option<(CardId, u32)>, u32),
     /// Priority state — tracks who can act and when the stack resolves.
     pub priority: PriorityState,
     /// Active continuous effects from resolved spells, abilities, and static abilities.
@@ -3403,6 +3426,7 @@ impl Clone for GameState {
             truce_until_turn: self.truce_until_turn,
             game_over: self.game_over,
             mandatory_loop_watch: self.mandatory_loop_watch,
+            no_progress_watch: self.no_progress_watch,
             free_activation_watch: self.free_activation_watch,
             next_effect_timestamp: self.next_effect_timestamp,
             next_id: self.next_id,
@@ -3598,6 +3622,7 @@ impl GameState {
             truce_until_turn: None,
             game_over: None,
             mandatory_loop_watch: (0, 0, 0),
+            no_progress_watch: (0, 0, 0),
             free_activation_watch: (0, None, 0),
             priority: PriorityState::new(0),
             continuous_effects: Default::default(),

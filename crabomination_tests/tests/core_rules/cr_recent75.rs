@@ -295,3 +295,75 @@ fn cr_732_4_two_portable_holes_and_a_mandatory_warder_end_as_a_draw() {
     assert_eq!(g.game_over, Some(None), "the period-3 loop is a draw, not an action cap");
     assert!(fuel > 0, "the draw arrives inside the watchdog's budget");
 }
+
+/// CR 104.4 — a loop whose period is a whole TURN is a draw too, and the
+/// resolution watchdog above cannot see it: that one samples after a trigger
+/// resolution and its digest carries the turn number, which a turn-long loop
+/// moves on every cycle.
+///
+/// The board that asked for it, from the 2026-09-12 fresh-seed sweep (`cube`
+/// 1069, and `cube` 1018 before it): a one-card library holding Beacon of
+/// Immortality. Draw it, cast it, double your life, shuffle it back — the
+/// library never empties, the life total saturates at the ceiling, and from
+/// then on neither seat can be killed or decked. Both seats did it from turn
+/// 81 to the 6,000-action cap at turn 259.
+///
+/// Here the same shape without the Beacon: nothing on the board but a bear
+/// whose static makes every player skip their draw step, so no zone, life
+/// total or permanent moves from one turn to the next.
+#[test]
+fn cr_104_4_no_progress_turn_loop_draws_the_game() {
+    use crabomination::card::{StaticAbility, StaticEffect};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let mut def = catalog::grizzly_bears();
+    def.static_abilities = vec![StaticAbility {
+        description: "Players skip their draw steps.",
+        effect: StaticEffect::SkipStep { step: TurnStep::Draw, all_players: true },
+    }];
+    g.add_card_to_battlefield(0, def);
+    for _ in 0..8_000 {
+        if g.game_over.is_some() {
+            break;
+        }
+        g.advance_step(Vec::new()).expect("advance");
+    }
+    assert_eq!(g.game_over, Some(None), "a turn that repeats forever is a draw");
+    // The watch starts at `NO_PROGRESS_WATCH_FROM_TURN` and samples one turn
+    // in `NO_PROGRESS_SAMPLE_EVERY`, so the draw lands a couple of periods
+    // past `+ SAMPLE_EVERY * DRAW_REPEATS` — not at the 50,000-action cap.
+    let ceiling = GameState::NO_PROGRESS_WATCH_FROM_TURN
+        + GameState::NO_PROGRESS_SAMPLE_EVERY
+            * (GameState::NO_PROGRESS_DRAW_REPEATS + GameState::NO_PROGRESS_MAX_PERIOD + 2);
+    assert!(g.turn_number < ceiling, "drew too late: turn {}", g.turn_number);
+}
+
+/// The turn watch must not fire on a game that is getting somewhere. The same
+/// board with the draw step left alone mills a card a seat a turn, so the
+/// library size moves every cycle and the watch never anchors.
+#[test]
+fn cr_104_4_a_turn_that_draws_a_card_is_not_a_no_progress_loop() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for seat in 0..2 {
+        for _ in 0..300 {
+            g.add_card_to_library(seat, catalog::mountain());
+        }
+    }
+    // Run twice as long as the loop above took to draw, then stop — the
+    // libraries are finite and decking out is a real ending, not this watch.
+    let until = GameState::NO_PROGRESS_WATCH_FROM_TURN
+        + GameState::NO_PROGRESS_SAMPLE_EVERY
+            * (GameState::NO_PROGRESS_DRAW_REPEATS + GameState::NO_PROGRESS_MAX_PERIOD + 4);
+    for _ in 0..8_000 {
+        if g.game_over.is_some() || g.turn_number > until {
+            break;
+        }
+        g.advance_step(Vec::new()).expect("advance");
+    }
+    assert!(g.turn_number > until, "stopped early at turn {}", g.turn_number);
+    assert!(g.game_over.is_none(), "drawing a card every turn is progress");
+}
