@@ -16,9 +16,9 @@ column assumes is right.
     python3 scripts/audit_printed_body.py --rows 0    # every row
     python3 scripts/audit_printed_body.py --list nonliteral   # what a column skipped
 
-COVERAGE, 2026-09-12 (second pass): **16,563 factories priced, 17,381 on the
-type line, 17,106 on subtypes, 17,284 on keywords, 9,338 on P/T, 16,467 on
-COLOURS and 122 on LOYALTY** — the last two columns are new, and the other five
+COVERAGE, 2026-09-12 (second pass): **16,815 factories priced, 17,640 on the
+type line, 17,101 on subtypes, 17,339 on keywords, 9,519 on P/T, 16,670 on
+COLOURS and 123 on LOYALTY** — the last two columns are new, and the other five
 moved by the idioms their readers could not follow. In order of what they
 cost:
 
@@ -46,6 +46,28 @@ cost:
     pt.1, ..)`, the bestow creatures, 41 on P/T.
   * **`cost: cost(cost_syms)`** over a `&[ManaSymbol]` parameter — the
     alpha/beta creature helpers, 40 on the cost column.
+  * **a MULTI-FACE card was skipped whole** — 276 factories with no column at
+    all, the same shape as the `nocache` skip that hid three wrong costs. The
+    oracle carries name / mana_cost / type_line / oracle_text / power /
+    toughness PER FACE, so the three columns that read those run once the right
+    face is picked: **by NAME, not by position.** Scryfall keys a DFC by
+    "Plargg, Dean of Chaos // Augusta, Dean of Order" AND by each face name, so
+    a lookup on the back face's name returns a card whose `card_faces[0]` is the
+    OTHER side — face 0 priced Augusta at `{1}{R}`, which is Plargg's cost. The
+    whole-card fields (`colors`, `keywords`, `loyalty`) are not per-face, so
+    the columns that read them skip themselves. `faces` 276 -> **0**.
+  * **`returned_literal` counted BRACES only**, so a literal passed as an
+    ARGUMENT was at depth 0 and won: `sidequest("Sidequest: Catch a Fish",
+    cost, .., <the back face's literal>)` builds its front through the helper,
+    and the factory read as its own BACK FACE — the Campsite's name and Land
+    type line over the enchantment's `{2}{W}`. It counts parens now, and the
+    one argument that IS the card (`legend(CardDefinition { .. })`, the six
+    Invasion legends) is told apart by being the call's first with nothing
+    before it.
+  * **a helper CALL inside the `keywords:` vec** — `cycling_two()`, `ward_1()`,
+    `cu(CumulativeUpkeepCost::Life(1))`, `basic_landcycling(..)`: 60 factories,
+    resolved through an index of `fn .. -> Keyword` bodies, and only where
+    every definition of a name agrees on the variant.
   * **the head-string name matched on a PREFIX**, so a token the factory
     defines before the card won it — `fn sliver_queen` took the `"Sliver"` of
     its own token, `fn goblin_marshal` took `"Goblin"`, and the card then
@@ -256,7 +278,10 @@ What is left, with the reason — `--list <kind>` prints the factories:
     types.push(Ally); creature(..) }`, 43 Allies), and the `if flag { .. } else
     { .. }` type above.
   * `nosubvariant` (12) — above.
-  * `faces` / `split` / `star` / `notaspell` — documented below, all deliberate.
+  * `faces` (0) — a multi-face factory whose name matches NO face of the card
+    it resolves to. Zero today: every one of the 276 matches, so a row here is
+    a new shape rather than a new card.
+  * `split` / `star` / `notaspell` — documented below, all deliberate.
     `notaspell` also drops a Vanguard avatar named after a card: Maraxus of Keld
     is both, and the oracle lookup cannot tell them apart.
 
@@ -546,6 +571,58 @@ KW_ELEM = re.compile(r"^(?:crate::card::)?Keyword::([A-Za-z0-9_]+)")
 KW_SHORTHAND = re.compile(r"(?:^|,)\s*keywords\s*(?:,|$)")
 
 
+_KW_HELPERS = None
+
+
+def keyword_helpers():
+    """`fn name(..) -> Keyword { Keyword::X(..) }` — name -> variant.
+
+    A `keywords:` vec can hold a CALL as one of its elements (`cycling_two()`,
+    `cu(CumulativeUpkeepCost::Life(1))`, `ward_1()`, `basic_landcycling(..)`),
+    and giving up on the whole vec over one of them cost 50 factories their
+    keyword check — on the column combat reads every turn, and now that Ward is
+    in `EVERGREEN` on a payload this reader still has to see.
+
+    A name defined in several files is resolved only when EVERY definition
+    agrees on the variant, which is a stronger rule than the same-file-first one
+    the other resolvers use and needs no path threaded through `parse_keywords`.
+    `cycling_two` is defined three times and all three return `Cycling`.
+    """
+    global _KW_HELPERS
+    if _KW_HELPERS is None:
+        found = {}
+        for path in sorted(CATALOG.rglob("*.rs")):
+            text = path.read_text()
+            for m in re.finditer(r"(?m)^fn ([a-z0-9_]+)\(", text):
+                at = m.end() - 1
+                close = matching(text, at)
+                if close is None:
+                    continue
+                tail = text[close + 1:close + 60]
+                rm = re.match(r"\s*->\s*(?:crate::card::)?Keyword\s*\{", tail)
+                if not rm:
+                    continue
+                body = text[close + 1 + rm.end():close + 400]
+                km = re.search(r"(?:crate::card::)?Keyword::([A-Za-z0-9_]+)", body)
+                if km:
+                    found.setdefault(m.group(1), set()).add(km.group(1))
+        _KW_HELPERS = {k: next(iter(v)) for k, v in found.items() if len(v) == 1}
+    return _KW_HELPERS
+
+
+def matching(text: str, at: int):
+    """Index of the `)` that closes the `(` at `at`, or None."""
+    depth = 0
+    for i in range(at, len(text)):
+        if text[i] == "(":
+            depth += 1
+        elif text[i] == ")":
+            depth -= 1
+            if depth == 0:
+                return i
+    return None
+
+
 def parse_keywords(inner, params=(), args=()):
     """`(keyword variants, declared)` off a literal's raw inner text.
 
@@ -579,11 +656,21 @@ def parse_keywords(inner, params=(), args=()):
         return None, True
     out = set()
     for elem in split_args(m.group(1)):
-        em = KW_ELEM.match(elem.strip())
-        if not em:
+        e = elem.strip()
+        em = KW_ELEM.match(e)
+        if em:
+            out.add(em.group(1))
+            continue
+        # A helper CALL as one element — `cycling_two()`, `ward_1()`, `cu(..)`.
+        cm = re.match(r"(?:[a-z0-9_]+::)*([a-z0-9_]+)\s*\(", e)
+        v = keyword_helpers().get(cm.group(1)) if cm else None
+        if v is None:
             return None, True
-        out.add(em.group(1))
+        out.add(v)
     return out, True
+
+
+WRAPPED = re.compile(r"\s*(?:crate::card::)?CardDefinition\s*")
 
 
 def returned_literal(block: str, after: int):
@@ -597,7 +684,7 @@ def returned_literal(block: str, after: int):
     Prismite's `..CardDefinition { .. }` base sits INSIDE the outer literal and
     must not win.
     """
-    depth, i, in_str, best = 0, after, False, None
+    depth, i, in_str, best, parens = 0, after, False, None, []
     while i < len(block):
         c = block[i]
         if in_str:
@@ -608,8 +695,27 @@ def returned_literal(block: str, after: int):
                 in_str = False
         elif c == '"':
             in_str = True
+        elif c == "(":
+            parens.append(i)
+        elif c == ")":
+            if parens:
+                parens.pop()
         elif c == "{":
-            if depth == 0 and LITERAL_END.search(block, after, i + 1):
+            # ⚠ A LITERAL PASSED AS AN ARGUMENT IS NOT THE CARD, and brace
+            # depth cannot see that — the braces that would hide it are
+            # PARENS. `sidequest("Sidequest: Catch a Fish", cost, .., <the back
+            # face's literal>)` builds its front through the helper, so the
+            # only literal in the factory is the BACK; read as the card it
+            # gave the Campsite's name and Land type line over the
+            # enchantment's `{2}{W}` cost.
+            # The WRAPPER form is the one argument that IS the card —
+            # `legend(CardDefinition { .. })`, the six Invasion legends — and
+            # it is the call's FIRST argument with nothing before it, which is
+            # what tells the two apart.
+            if depth == 0 and LITERAL_END.search(block, after, i + 1) and (
+                    not parens
+                    or (len(parens) == 1
+                        and WRAPPED.fullmatch(block[parens[0] + 1:i]))):
                 best = i + 1
             depth += 1
         elif c == "}":
@@ -1759,9 +1865,32 @@ def main() -> int:
             if not isinstance(card, dict):
                 skip["nocache"].append(f"{path.name}::{fname}")
                 continue
+            # ⚠ A MULTI-FACE CARD WAS SKIPPED WHOLE — 276 factories with no
+            # column at all, which is the same shape as the `nocache` skip that
+            # hid three wrong costs. The oracle carries name / mana_cost /
+            # type_line / oracle_text / power / toughness PER FACE, so the
+            # three columns that read those can run once the right face is
+            # picked: **by NAME, not by position.** Scryfall keys a DFC by
+            # "Plargg, Dean of Chaos // Augusta, Dean of Order" AND by each
+            # face name, so a lookup on the back face's name returns a card
+            # whose `card_faces[0]` is the OTHER side — face 0 reported Augusta
+            # at `{1}{R}`, which is Plargg's cost.
+            # The whole-card fields (`colors`, `keywords`, `loyalty`) are not
+            # per-face, so the columns that read them skip themselves: the
+            # merged view drops those keys and carries `_face`, which the two
+            # checks that would otherwise misread an absent key consult.
             if card.get("card_faces"):
-                skip["faces"].append(f"{path.name}::{fname}")
-                continue
+                face = next((f for f in card["card_faces"]
+                             if f.get("name") == name), None)
+                if face is None:
+                    skip["faces"].append(f"{path.name}::{fname}")
+                    continue
+                card = {k: v for k, v in card.items()
+                        if k not in ("colors", "keywords", "loyalty", "cmc",
+                                     "mana_cost", "type_line", "oracle_text",
+                                     "power", "toughness")}
+                card.update({k: v for k, v in face.items() if k != "name"})
+                card["_face"] = True
             # Tokens, Vanguards, schemes and the rest of the non-deck types all
             # print no mana cost and none of them is ever cast.
             tl = card.get("type_line") or ""
@@ -1776,7 +1905,11 @@ def main() -> int:
             # print no mana cost by definition and the cast path stops them
             # with `CannotCastLand`. This check runs on EVERY factory, literal
             # or helper-built, because the flag is a plain block-level field.
-            if (card.get("mana_cost", "") == "" and "no_mana_cost: true" not in raw
+            # ⚠ NOT ON A FACE. A transform card's back prints no mana cost by
+            # definition and is not cast by paying one, so both directions of
+            # this check are meaningless there.
+            if (not card.get("_face") and card.get("mana_cost", "") == ""
+                    and "no_mana_cost: true" not in raw
                     and "Land" not in (card.get("type_line") or "")):
                 missing_flag += 1
                 shipped = COST.search(body) if body is not None else None
@@ -1789,7 +1922,8 @@ def main() -> int:
             # a dead card in every deck it is in and a bot seat that holds it
             # to the end. Same crude text read as above, which is sound in this
             # direction: a nested `TokenDefinition` carries no such field.
-            elif card.get("mana_cost", "") != "" and "no_mana_cost: true" in raw:
+            elif (not card.get("_face") and card.get("mana_cost", "") != ""
+                    and "no_mana_cost: true" in raw):
                 stray_flag += 1
                 rows.append(("no-cost", name, f"{path.name}::{fname}",
                              "`no_mana_cost: true` — uncastable",
@@ -1926,7 +2060,10 @@ def main() -> int:
             # spell as a plain keyword. A missing Flying is not cosmetic: the
             # bot's block search, the damage assignment and every evasion check
             # read this field on every combat of every self-play game.
-            if not read.kw_ok:
+            # ⚠ NOT ON A FACE EITHER: the oracle's `keywords` array is a
+            # whole-card field, so an absent one would read as "the card prints
+            # none" and report every keyword the engine has as EXTRA.
+            if not read.kw_ok or card.get("_face"):
                 skip["nokeywords"].append(f"{path.name}::{fname}")
             else:
                 want_kw = {EVERGREEN[k] for k in (card.get("keywords") or [])

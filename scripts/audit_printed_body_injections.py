@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Injection battery for `audit_printed_body.py`'s readers.
 
-    python3 scripts/audit_printed_body_injections.py    # 29/29 as expected
+    python3 scripts/audit_printed_body_injections.py    # 31/31 as expected
 
 **A GATE THAT CANNOT FAIL IS WORSE THAN NO GATE**, and this session proved the
 point three times: `fn legend`'s injection passed because the resolver took
@@ -185,6 +185,19 @@ CASES = [
  ("fires", "a misspelled card name (recent77 Sabretooth Tiger)",
   "sets/decks/recent77.rs",
   '        "Sabretooth Tiger",', '        "Sabertooth Tiger",'),
+ # A MULTI-FACE card is audited on the face its factory NAMES now, so the front
+ # of a transform card has a cost column for the first time.
+ ("fires", "a front face's cost (fin2 Sidequest: Catch a Fish)", "sets/fin2.rs",
+  '        "Sidequest: Catch a Fish",\n        cost(&[generic(2), w()]),',
+  '        "Sidequest: Catch a Fish",\n        cost(&[generic(3), w()]),'),
+ # Negative: the BACK face's literal is passed as an argument to the helper
+ # that builds the front, at brace depth 0 — so a depth-only reader took it as
+ # the card and gave the Campsite's Land type line over the enchantment's
+ # `{2}{W}`. Breaking the back face must stay invisible.
+ ("silent", "an argument literal is not the card (fin2 Cooking Campsite)",
+  "sets/fin2.rs",
+  '            name: "Cooking Campsite",\n            card_types: vec![CardType::Land],',
+  '            name: "Cooking Campsite",\n            card_types: vec![CardType::Creature],'),
  # Negative: the oracle's `keywords` array counts keywords the card GRANTS, so
  # the missing direction reads the printed keyword LINES instead. Steel Seraph
  # grants "flying, vigilance, or lifelink" and has only flying; dropping its
