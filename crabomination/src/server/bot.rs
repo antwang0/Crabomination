@@ -4567,9 +4567,10 @@ fn life_value(life: i32, w: &EvalWeights) -> i32 {
     // losing. Caught by the `debug-assertions` sweep at seeds 53 and 73 of
     // `--decks all`. Ten thousand is far past any total the evaluator has to
     // tell apart, and it keeps every product below in `i32` for the profiles
-    // this ships (`unit` 1 and 10).
-    const LIFE_CEILING: i32 = 10_000;
-    let life = life.min(LIFE_CEILING);
+    // this ships (`unit` 1 and 10). The constant is `player::LIFE_CEILING`
+    // now — `encode_state_inner` has the same problem one consumer over and
+    // the two have to agree about where a life total stops being a number.
+    let life = life.min(crate::player::LIFE_CEILING);
     if !w.concave_life {
         return life * w.unit;
     }

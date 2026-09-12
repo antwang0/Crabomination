@@ -461,8 +461,17 @@ fn encode_state_inner(
     }
 
     let gl = &mut s.global;
-    gl[0] = g.players[seat].life as f32 / 20.0;
-    gl[1] = g.players[opp].life as f32 / 20.0;
+    // Clamped, for `life_value`'s reason one consumer over: a life total is
+    // bounded by nothing (Beacon of Immortality saturates a seat at
+    // `i32::MAX`), and `life / 20.0` hands the net a feature of 10^8 for a
+    // board that is otherwise ordinary. The evaluator has clamped since the
+    // `debug-assertions` sweep; this is the same ceiling, so the two agree.
+    // No state with `|life| <= LIFE_CEILING` encodes differently.
+    let life_of = |p: usize| -> f32 {
+        g.players[p].life.clamp(-crate::player::LIFE_CEILING, crate::player::LIFE_CEILING) as f32
+    };
+    gl[0] = life_of(seat) / 20.0;
+    gl[1] = life_of(opp) / 20.0;
     gl[2] = g.players[seat].hand.len() as f32 / 7.0;
     gl[3] = g.players[opp].hand.len() as f32 / 7.0;
     gl[4] = g.players[seat].library.len() as f32 / 40.0;
@@ -588,7 +597,11 @@ fn encode_state_inner(
         // threshold, so saturating a little past it is the right shape.
         for (side, p) in [(0usize, seat), (1, opp)] {
             let pl = &g.players[p];
-            gl[43 + side] = pl.life_gained_this_turn as f32 / 5.0;
+            // Same ceiling as the totals above: one Beacon resolution gains a
+            // seat 10^9 life in a turn, and this scale is a threshold ("gain 3
+            // life"), so saturating it is the shape the comment above asks for.
+            gl[43 + side] =
+                pl.life_gained_this_turn.min(crate::player::LIFE_CEILING as u32) as f32 / 5.0;
             gl[45 + side] = pl.instants_or_sorceries_cast_this_turn as f32 / 3.0;
             gl[47 + side] = pl.spells_cast_this_turn as f32 / 4.0;
             gl[49 + side] = pl.creatures_died_this_turn as f32 / 3.0;
@@ -1619,6 +1632,39 @@ mod tests {
         // Indices are a function of the sorted name list — two builds agree.
         let v2 = Vocab::sos_sealed();
         assert_eq!(v.index_of("Plains"), v2.index_of("Plains"));
+    }
+
+    /// A saturated life total is a *feature*, and it used to be 10^8 of one.
+    ///
+    /// Beacon of Immortality doubles its caster's life and shuffles itself
+    /// back, so a WG mirror saturates both seats at `i32::MAX` — the board
+    /// behind the only `cap` in ~1.3 M swept games, and a correct card doing
+    /// what it prints (`ENGINE_BACKLOG`'s OPEN section asked what the encoder
+    /// does with it; this is the answer). `life / 20.0` handed that to the net
+    /// unmodified. The evaluator has clamped since the `debug-assertions`
+    /// sweep and the encoder now reads the same ceiling.
+    ///
+    /// Asserts the whole global vector, not just the two life slots: the point
+    /// is that no feature leaves the encoder unbounded on a board the
+    /// simulator can actually reach.
+    #[test]
+    fn a_saturated_life_total_encodes_as_a_bounded_feature() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        g.players[0].life = i32::MAX;
+        g.players[1].life = i32::MAX - 6;
+        g.players[0].life_gained_this_turn = u32::MAX;
+        let s = encode_state(&g, 0, &vocab);
+        let ceiling = crate::player::LIFE_CEILING as f32 / 20.0;
+        assert_eq!(s.global[0], ceiling, "own life clamped");
+        assert_eq!(s.global[1], ceiling, "opponent life clamped");
+        for (i, x) in s.global.iter().enumerate() {
+            assert!(
+                x.is_finite() && x.abs() <= 1_000.0,
+                "global[{i}] left the encoder unbounded at {x}",
+            );
+        }
     }
 
     #[test]
