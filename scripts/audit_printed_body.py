@@ -15,56 +15,73 @@ column assumes is right.
     python3 scripts/audit_printed_body.py            # the table
     python3 scripts/audit_printed_body.py --rows 0   # every row
 
-COVERAGE, 2026-09-12: **14,873 factories compared**, from 10,270. The gap the
-2026-09-11 header described ("219 real spells over ~40 bespoke helpers") was a
-mis-read of its own skip counts; the reader had three holes and none of them was
-the helper signatures:
+COVERAGE, 2026-09-12: **16,439 factories compared**, from 10,270 — and the
+2026-09-11 header's "219 real spells over ~40 bespoke helpers" was a mis-read of
+its own skip counts. The reader had four holes and none of them was the helper
+signatures:
 
   * **the `..base` struct-update form — 2,890 factories, 13 % of the catalog.**
     `CardDefinition { activated_abilities: .., ..creature("Name", cost(&[r()]),
     ..) }` has a literal, so the helper fallback never ran, and the literal has
-    no `cost:` of its own, so the literal read found nothing. `base_struct_cost`
-    reads it, anchored on the card's own name.
+    no `cost:` of its own, so the literal read found nothing.
+  * **the PURE-HELPER factory — 2,392 more.** `pub fn x() -> CardDefinition {
+    sorcery("Name", cost(&[generic(2), r()]), effect) }` has no literal at all
+    and was dropped as `noname` BEFORE the name was resolved, which also made
+    every `body is None` branch in the file dead code.
   * **`crate::mana::w()` and multi-line costs** — a third of the catalog spells
-    the symbols with their path, and `top_fields` emits one line per field, so
-    `cost: cost(&[\n  generic(3),\n])` arrived as three lines. ~180 factories.
-  * **factories named only by their `pub fn`** — 1,607 more, resolved through
-    `CACHE_SLUG`. Safer than the head-string heuristic it backs up, not less:
-    no string from the body is involved.
+    the symbols with their path, and `top_fields` emits one line per field.
+  * **factories named only by their `pub fn`** — resolved through `CACHE_SLUG`.
+    Safer than the head-string heuristic it backs up, not less: no string from
+    the body is involved.
 
-**THE TYPE LINE IS RARELY IN THE LITERAL**, which is why the column read only
-10,409 factories and now reads **14,064**. Three idioms carry it somewhere else
-and all three are followed (`resolve_type_line`):
+**AND THE COST IS NOT THE ARGUMENT NEXT TO THE NAME.** It is for
+`creature("Name", cost(&[r()]), ..)`; it is NOT for `skullbomb("Name",
+mode_cost, ..)`, `keeper("Name", activation_cost, ..)` or `shard("Name",
+ability_cost, ..)`, whose helpers print `cost(&[generic(1)])` and
+`cost(&[sym, sym])` of their own — fourteen cards a name-anchored reader priced
+at their ability's cost, every one of them a false positive it would have
+reported forever. `resolve_helper_cost` follows the helper instead: it reads the
+helper's own `cost:`, binds a bare parameter name back to the caller's argument,
+follows the helper's own base up to five links, and **gives up (skips, never
+reports) when the expression is anything else** — `cost(&[sym, sym])` over a
+local binding is unreadable and says so.
 
-  * the **base-struct** form — `..creature("Name", cost, types, 1, 1)`,
-    `..god_weapon(..)`, `..legend(..)`;
-  * the **wrapper** form — `legend(CardDefinition { .. })` over a
-    `fn legend(mut def) { def.supertypes = ..; def }`, six Invasion legends;
-  * a helper whose own base is another helper, up to five links.
-
-When a link cannot be found the card is SKIPPED rather than reported: the first
-cut of this column reported 77 rows of "supertypes: (none)" and every one was a
+**THE TYPE LINE IS RARELY IN THE LITERAL EITHER**, which is why that column read
+10,409 factories and now reads **16,185**. Three idioms carry it elsewhere and
+all three are followed (`resolve_type_line`): the **base-struct** form, the
+**wrapper** form (`legend(CardDefinition { .. })` over a
+`fn legend(mut def) { def.supertypes = ..; def }`, six Invasion legends), and a
+helper whose own base is another helper. A chain it cannot follow is SKIPPED;
+the first cut reported 77 rows of "supertypes: (none)" and every one was
 `..legend(..)` supplying what the literal never claimed.
 
 What is left, with the reason:
-  * `notyped` (809, from 4,464) — a chain this cannot follow.
-  * `nocache` (3,772) — synthesized cards the oracle has never heard of.
-  * `noname` (2,392) and `nonliteral` (405) — the bare-symbol helpers
-    (`zubera("Name", r(), ..)`) and factories whose name is in neither place.
+  * `nocache` (3,778) — synthesized cards the oracle has never heard of.
+  * `nonliteral` (972) — a cost chain the resolver cannot read, mostly a helper
+    that builds its cost from a local binding.
+  * `notyped` (254) — a type-line chain it cannot follow.
+  * `noname` (178) — a factory whose name is in neither the literal, its head,
+    nor its own `pub fn`.
   * `faces` / `split` / `star` / `notaspell` — documented below, all deliberate.
     `notaspell` also drops a Vanguard avatar named after a card: Maraxus of Keld
     is both, and the oracle lookup cannot tell them apart.
 
-**Proved by injection, not by its own zero** — one per idiom, because a gate
-that cannot fail is worse than no gate. Breaking Agent of Stromgald's
-`..creature("Agent of Stromgald", cost(&[r()]), ..)` to `{4}{R}{R}` reports the
-cost row; Karn, Scion of Urza broken to `{3}` / `Creature` / no supertype
-reports all three; `god_weapon`'s `supertypes:` removed reports Spear of
-Heliod, Whip of Erebos and Hammer of Purphoros; and `fn legend(mut def)`'s
-assignment emptied reports the six Invasion legends. **That last one silently
-PASSED at first** — `legend` is defined in five files with three different
-shapes, and the resolver took whichever came first, so an assigning wrapper was
-reading a base-struct one's supertypes. Same-file first now.
+**Proved by injection, not by its own zero — one per idiom**, because a gate
+that cannot fail is worse than no gate:
+  * Agent of Stromgald's `..creature(..)` cost broken -> the cost row;
+  * `instant("Consume Strength", cost(&[..]), ..)` broken -> the cost row
+    (the pure-helper path);
+  * `fn skullbomb`'s OWN `cost:` broken -> all five Skullbombs (the path that
+    the name-anchored reader got backwards);
+  * Karn, Scion of Urza broken to `{3}` / `Creature` / no supertype -> all three;
+  * `god_weapon`'s `supertypes:` removed -> Spear of Heliod, Whip of Erebos,
+    Hammer of Purphoros;
+  * `fn legend(mut def)`'s assignment emptied -> the six Invasion legends.
+
+**That last one silently PASSED at first.** `legend` is defined in five files
+with three different shapes, and the resolver took whichever came first, so an
+assigning wrapper was reading a base-struct one's supertypes. Same-file first
+now.
 
 ⚠ SKIPPED, with the reason, and the skip counts are printed:
   * multi-face cards (`card_faces` in the oracle) — the factory's `cost:` is
@@ -112,26 +129,10 @@ NAME = re.compile(r'^name: "((?:[^"\\]|\\.)*)",', re.M)
 # symbols `crate::mana::w()` rather than `w()`. Both were counted as
 # `nonliteral` — 180-odd factories on the second alone.
 COST = re.compile(r"^cost: (?:crate::mana::)?cost\(&\[(.*?)\]\)", re.M | re.S)
-HELPER = re.compile(r'"(?:[^"\\]|\\.)*",\s*(?:crate::mana::)?cost\(&\[([^\]]*)\]\)')
-
-
-def base_struct_cost(raw: str, name: str):
-    """`CardDefinition { .., ..creature("Name", cost(&[r()]), ..) }` — the
-    struct-update form, where the literal carries the card's *extras* and the
-    base comes from a helper call in the `..base` position.
-
-    **2,890 factories, 13 % of the catalog, and the audit skipped every one**:
-    they have a `CardDefinition` literal, so the helper fallback never ran, and
-    the literal has no `cost:` field of its own, so the literal read found
-    nothing. Anchored on the card's own name rather than on "the first string
-    followed by a cost", because an activated ability inside the same block can
-    be built by a helper that takes a name too.
-    """
-    pat = re.compile(
-        re.escape('"' + name + '"') + r",\s*(?:crate::mana::)?cost\(&\[(.*?)\]\)", re.S
-    )
-    m = pat.search(raw)
-    return m.group(1) if m else None
+# ⚠ NO NAME-ANCHORED COST READER. "The string next to the card's name, followed
+# by a `cost(&[..])`" prices `creature("Name", cost(&[r()]), ..)` right and
+# `skullbomb("Name", mode_cost, ..)` wrong — fourteen cards read at their
+# ABILITY's cost that way. `resolve_helper_cost` follows the helper instead.
 # ⚠ ALIAS-TOLERANT ON PURPOSE. The catalog spells these three ways —
 # `CardType::Creature`, an aliased `CT::Creature` / `Sup::Legendary`, and a
 # helper (`supertypes: legendary()`, `subtypes: types(vec![..])`). A matcher
@@ -282,6 +283,98 @@ def norm(cost: str) -> str:
     return "".join(sorted(p for p in re.findall(r"\{[^}]*\}", cost.upper()) if p != "{0}"))
 
 
+def split_args(text: str):
+    """Top-level comma split of an argument list, brackets and strings aware."""
+    out, depth, cur, in_str, esc = [], 0, [], False, False
+    for c in text:
+        if in_str:
+            cur.append(c)
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+            continue
+        if c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            if depth == 0:
+                break
+            depth -= 1
+        elif c == "," and depth == 0:
+            out.append("".join(cur).strip())
+            cur = []
+            continue
+        cur.append(c)
+    if "".join(cur).strip():
+        out.append("".join(cur).strip())
+    return out
+
+
+def call_args(blk: str, at: int):
+    """The argument list of the call whose `(` is at `at`."""
+    return split_args(blk[at + 1:])
+
+
+PARAMS = re.compile(r"fn\s+[a-z0-9_]+\s*(?:<[^>]*>)?\s*\(([^)]*)\)", re.S)
+COST_FIELD = re.compile(r"^cost: (.*?),?$", re.M)
+
+
+def helper_params(blk: str):
+    m = PARAMS.search(blk)
+    if not m:
+        return []
+    return [a.split(":")[0].replace("mut ", "").strip() for a in split_args(m.group(1))]
+
+
+def resolve_helper_cost(index, path, helper, args, depth=0):
+    """The PRINTED cost of a card built by `helper(args…)`, as a symbol list.
+
+    **The positional argument next to the name is not the printed cost.** It is
+    for `creature("Name", cost(&[r()]), ..)`, and it is NOT for
+    `skullbomb("Name", mode_cost, ..)`, `keeper("Name", activation_cost, ..)`
+    or `shard("Name", ability_cost, ..)`, whose helpers print `cost(&[generic(1)])`
+    and `cost(&[sym, sym])` of their own — fourteen cards the name-anchored
+    reader priced at their ability's cost. So follow the helper: read ITS
+    `cost:`, bind a bare parameter name back to the caller's argument, and give
+    up (skip, never report) when the expression is anything else.
+    """
+    if depth > 4:
+        return None
+    cands = [b for pth, b in index.get(helper, []) if pth == path] \
+        or [b for _, b in index.get(helper, [])]
+    if not cands:
+        return None
+    blk = cands[0]
+    params = helper_params(blk)
+    body = helper_body(blk)
+    if body is None:
+        return None
+    m = COST_FIELD.search(body)
+    if m:
+        expr = m.group(1).strip().rstrip(",")
+        if expr in params:
+            i = params.index(expr)
+            return args[i] if i < len(args) else None
+        inner = re.match(r"(?:crate::mana::)?cost\(&\[(.*)\]\)$", expr, re.S)
+        return inner.group(1) if inner else None
+    # No `cost:` of its own — follow its base, mapping the base's arguments
+    # through this helper's parameters.
+    for line in body.split("\n"):
+        bm = re.match(r"\.\.([a-z0-9_]+)\s*\(", line)
+        if not bm:
+            continue
+        at = body.index(line) + line.index("(")
+        inner_args = call_args(body, at)
+        mapped = [args[params.index(a)] if a in params and params.index(a) < len(args) else a
+                  for a in inner_args]
+        return resolve_helper_cost(index, path, bm.group(1), mapped, depth + 1)
+    return None
+
+
 def helper_body(blk: str):
     """`top_fields` for a HELPER, whose signature spans several lines.
 
@@ -292,7 +385,23 @@ def helper_body(blk: str):
     the read comes back as `"\n}\n"`. Start after the return type instead.
     """
     m = RET.search(blk)
-    return top_fields("fn _()\n" + blk[m.end():]) if m else None
+    if not m:
+        return None
+    body = top_fields("fn _()\n" + blk[m.end():])
+    if body is None:
+        return None
+    # A one-line literal (`CardDefinition { name, cost: c, card_types: .., .. }`
+    # — most of the small per-file helpers) arrives as ONE line, because
+    # `top_fields` emits a field per newline. Split it on top-level commas or
+    # every `^field:` read below misses: 342 `enchantment(..)` cards read as
+    # "this helper has no cost" for exactly that reason.
+    out = []
+    for line in body.split("\n"):
+        if line.count(":") > 1 and "," in line:
+            out.extend(x.strip() for x in split_args(line))
+        else:
+            out.append(line)
+    return "\n".join(out)
 
 
 def build_helper_index(catalog):
@@ -399,10 +508,23 @@ def main() -> int:
             end = starts[i + 1][0] if i + 1 < len(starts) else len(src)
             raw = src[pos:end]
             body = top_fields(raw)
+            pseudo = body is None
             if body is None:
-                skip["noname"] += 1
-                continue
-            nm = NAME.search(body) if body is not None else None
+                # The PURE-HELPER factory — `pub fn x() -> CardDefinition {
+                # sorcery("Name", cost(&[generic(2), r()]), effect) }` — has no
+                # literal at all. It used to be dropped here, before the name
+                # was even resolved, which made every `body is None` branch
+                # below dead code and left **2,392 factories audited by
+                # nobody**. Stand in a pseudo-literal that defers to the
+                # top-level call, so the type-line resolver treats it as a base
+                # and the cost reader follows the helper it calls.
+                hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(",
+                              raw[raw.find("\n") + 1:])
+                body = ".." + hm.group(1) + "(" if hm else None
+                if body is None:
+                    skip["noname"] += 1
+                    continue
+            nm = NAME.search(body)
             # A helper-built factory (`sorcery("Name", cost(..), ..)`) has no
             # `name:` field, so take a string literal from its head — but check
             # it against the FUNCTION NAME, or the first token a factory defines
@@ -450,17 +572,39 @@ def main() -> int:
                     and "Land" not in (card.get("type_line") or "")):
                 missing_flag += 1
                 shipped = COST.search(body) if body is not None else None
-                shipped_src = shipped.group(1) if shipped else base_struct_cost(raw, name)
                 rows.append(("no-cost", name, f"{path.name}::{fname}",
-                             (body_cost(shipped_src) or "?") if shipped_src
+                             (body_cost(shipped.group(1)) or "?") if shipped
                              else "{} and castable for free",
                              "no printed mana cost"))
             # A helper-built factory passes the cost positionally:
             # `sorcery("Name", cost(&[generic(2), r()]), effect)`. Read that
             # form too, or 6,312 factories — most of the older sets — are
             # audited by nobody.
-            cm = COST.search(body) if body is not None else HELPER.search(raw)
-            cost_src = cm.group(1) if cm else base_struct_cost(raw, name)
+            cm = COST.search(body)
+            cost_src = cm.group(1) if cm else None
+            if cost_src is None:
+                # No `cost:` of its own: follow the call it defers to, and take
+                # the cost the HELPER prints rather than whatever sits next to
+                # the name (`base_struct_cost` is the old heuristic and priced
+                # fourteen cards at their ability's cost).
+                after_sig = raw[raw.find("\n") + 1:]
+                # ⚠ The PSEUDO literal is `..helper(` and nothing else, so its
+                # `..` match has no argument list behind it — reading the args
+                # out of it returned an empty list and every pure-helper card
+                # resolved to `None`. The real call is in `after_sig` there.
+                m1 = None if pseudo else re.search(r"\.\.([a-z0-9_]+)\s*\(", body)
+                cm2 = m1 or re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after_sig)
+                if cm2:
+                    src_text = body if m1 else after_sig
+                    at = src_text.index(cm2.group(0)) + cm2.group(0).rindex("(")
+                    cost_src = resolve_helper_cost(
+                        index, path, cm2.group(1), call_args(src_text, at)
+                    )
+                    if cost_src is not None:
+                        inner = re.match(r"(?:crate::mana::)?cost\(&\[(.*)\]\)$",
+                                         cost_src.strip(), re.S)
+                        if inner:
+                            cost_src = inner.group(1)
             if cost_src is None:
                 skip["nonliteral"] += 1
                 continue

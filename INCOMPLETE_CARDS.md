@@ -982,39 +982,48 @@ alias- and helper-tolerant now, and it is proved by injection rather than by
 its own zero — breaking Karn, Scion of Urza to `{3}`, `Creature`, no supertype
 reports all three rows.
 
-**Coverage, re-read 2026-09-12: 14,873 factories priced, from 10,270** — and
-the "219 real spells over ~40 bespoke helpers" above was a mis-read of the
-script's own skip counts. The reader had three holes and none of them was the
-helper signatures: the **`..base` struct-update form** (`CardDefinition { .., 
-..creature("Name", cost(&[r()]), ..) }` — **2,890 factories, 13 % of the
-catalog**, with a literal so the helper fallback never ran and no `cost:` in it
-so the literal read found nothing); **`crate::mana::`-qualified symbols and
-multi-line costs** (~180); and **factories named only by their `pub fn`**
-(1,607, resolved against the oracle by slug). Still 0 findings on all four
-columns at the wider coverage, and the reader is proved by injection — Agent of
-Stromgald's base-struct cost and Karn's three columns both report when broken.
+**Coverage, re-read 2026-09-12: 16,439 factories priced, from 10,270** (+60 %),
+and **16,185 type lines read, from 10,409** — with 0 findings on all four
+columns. The "219 real spells over ~40 bespoke helpers" above was a mis-read of
+the script's own skip counts. Four holes, none of them the helper signatures:
+the **`..base` struct-update form** (2,890 factories, 13 % of the catalog: a
+literal, so the helper fallback never ran, and no `cost:` in it, so the literal
+read found nothing); the **pure-helper factory** (2,392 more —
+`pub fn x() -> CardDefinition { sorcery("Name", cost(..), effect) }` was dropped
+as `noname` *before* the name was resolved, which also made every
+`body is None` branch in the file dead code); **`crate::mana::`-qualified
+symbols and multi-line costs**; and **factories named only by their `pub fn`**.
 
-**And the type-line column was opened the same day: 14,064 type lines read,
-from 10,409, and 0 findings.** The type line is rarely in the literal — three
-idioms carry it somewhere else, and `resolve_type_line` follows all three: the
-**base-struct** form (`..creature("Name", cost, types, 1, 1)`,
-`..god_weapon(..)`), the **wrapper** form (`legend(CardDefinition { .. })` over
-a `fn legend(mut def) { def.supertypes = ..; def }`, six Invasion legends), and
-a helper whose own base is another helper. A chain it cannot follow is SKIPPED,
-not reported: the first cut reported 77 rows of "supertypes: (none)" and every
-one was `..legend(..)` supplying what the literal never claimed.
+**The two readings that matter more than the coverage:**
 
-Each idiom is proved by its own injection, and **one of them silently passed at
-first**: `legend` is defined in five files with three different shapes, the
-resolver took whichever came first, and an assigning wrapper was reading a
-base-struct one's supertypes. Same-file first now. A gate that cannot fail is
-worse than no gate, and the only thing that catches one is breaking it on
-purpose per idiom rather than once per column.
+*One: the cost is not the argument next to the name.* It is for
+`creature("Name", cost(&[r()]), ..)` and it is NOT for `skullbomb("Name",
+mode_cost, ..)`, `keeper("Name", activation_cost, ..)` or `shard("Name",
+ability_cost, ..)`, whose helpers print a cost of their own — **fourteen cards a
+name-anchored reader priced at their ability's cost**, every one a false
+positive it would have reported forever. `resolve_helper_cost` follows the
+helper: its own `cost:`, a bare parameter bound back to the caller's argument,
+its own base up to five links, and a skip (never a report) when the expression
+is anything else.
 
-What is left: `notyped` (809, from 4,464 — a chain this cannot follow),
-`nocache` (3,772 synthesized names), `noname` (2,392), `nonliteral` (405
-bare-symbol helpers, `zubera("Name", r(), ..)`), and the deliberate faces /
-split / star / not-a-spell skips.
+*Two: the type line is rarely in the literal.* Three idioms carry it elsewhere —
+the base-struct form, the **wrapper** form (`legend(CardDefinition { .. })` over
+`fn legend(mut def) { def.supertypes = ..; def }`, six Invasion legends), and a
+helper whose own base is another helper. A chain the reader cannot follow is
+skipped, not reported: the first cut reported 77 rows of "supertypes: (none)"
+and every one was `..legend(..)` supplying what the literal never claimed.
+
+**Six injections, one per idiom**, and one of them **silently passed at first**:
+`legend` is defined in five files with three different shapes, the resolver took
+whichever came first, and an assigning wrapper was reading a base-struct one's
+supertypes — so the column would have read clean forever whatever those six
+cards said. Same-file first now. A gate that cannot fail is worse than no gate,
+and the only thing that catches one is breaking it per idiom rather than once
+per column.
+
+What is left: `nocache` (3,778 synthesized names), `nonliteral` (972 — a cost
+chain built from a local binding), `notyped` (254), `noname` (178), and the
+deliberate faces / split / star / not-a-spell skips.
 
 Resurgent Belief also carried a `flashback_additional_cost` for a Flashback it
 does not have — the comment two lines below it already said "Suspend 2—{1}{W},
