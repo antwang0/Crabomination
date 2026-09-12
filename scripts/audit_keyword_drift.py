@@ -28,13 +28,21 @@ comparison would need to follow it.
 **The two directions are not equally strong.** INVENTED is a proof — the
 engine carries a mechanic the printed card does not have, which is a wrong
 card in play — and it reads **0** after the pass that closed it. MISSING is a
-*reading list*: it cannot see a mechanic spelled as a bespoke triggered
-ability instead of a keyword, so a row is a card to read against its oracle,
-not a proven gap. Spot-checked, the big buckets are real (Gibbering Kami has
-no Soulshift 3 at all; Scurry Oak's own doc says "Evolve" and its body has
-only the counter trigger) — and four of them, `spree` / `soulshift` /
-`channel` / `evolve`, have **no `Keyword::` variant and no field in the
-engine**, so those are missing-mechanic work rather than missing-card work.
+*reading list*: it cannot see a mechanic spelled as a bespoke ability instead
+of a keyword, so a row is a card to read against its oracle, not a proven gap.
+
+⚠ **THAT LIST WAS 367 ROWS AND 287 OF THEM WERE NOISE, AND THE SPOT-CHECK IN
+THIS DOCSTRING WAS WRONG ABOUT ITS OWN EXAMPLES.** It claimed "Gibbering Kami
+has no Soulshift 3 at all" and that `spree` / `soulshift` / `channel` /
+`evolve` have no vehicle in the engine. Gibbering Kami carries
+`shortcut::soulshift(3)`; soulshift, spree and evolve all have one; `channel`
+is the only one of the four that really has none. The reader knew one and a
+half of a mechanic's FOUR spellings — see `spelled_in` for the other three —
+so it reported cards that carry the mechanic. **A reading list nobody can read
+is not a gate**; it is 80 rows now, and the residue is the documented blind
+spot (Ghor-Clan Rampager's bloodrush is a from-hand activated ability with
+`discard_self_cost` and no name anywhere) plus real gaps (Terminus prints
+Miracle {W} and has no miracle).
 """
 import argparse
 import json
@@ -51,7 +59,7 @@ CACHE_LC = {k.lower(): v for k, v in CACHE.items() if isinstance(v, dict)}
 # `audit_catalog_stats` already checks are deliberately absent.
 KW_WORD = {
     "Morph": "morph", "Megamorph": "megamorph", "Disguise": "disguise",
-    "Cycling": "cycling", "Landcycling": "cycling", "TypeCycling": "cycling",
+    "Cycling": "cycling", "Landcycling": "cycling", "Typecycling": "cycling",
     "Flashback": "flashback", "Escape": "escape", "Bestow": "bestow",
     "Madness": "madness", "Dash": "dash", "Kicker": "kicker",
     "Multikicker": "kicker", "Evoke": "evoke", "Unearth": "unearth",
@@ -212,6 +220,38 @@ def top_level_keywords(body: str):
     return re.findall(r"Keyword::([A-Za-z]+)", body[i : j + 1])
 
 
+def spelled_in(literal: str, word: str) -> bool:
+    """Is this mechanic spelled ANYWHERE in the card's literal?
+
+    ⚠ **A MECHANIC HAS FOUR SPELLINGS AND THIS READER KNEW ONE AND A HALF, SO
+    THE MISSING LIST WAS 84 % NOISE** — 367 rows of which 299 were cards that
+    DO carry the mechanic. A reading list nobody can read is not a gate. The
+    four, all found by re-reading the rows rather than by guessing:
+
+    * `Keyword::Splice(..)`, `Keyword::Buyback(..)`, `Keyword::Entwine(..)`,
+      `Keyword::CyclingLife(..)`, `Keyword::ReplicateEnergy(..)` — variants
+      `KW_WORD` never listed (43 rows), plus `Typecycling`, which it listed
+      under a spelling the enum does not have (`TypeCycling`).
+    * a SHORTCUT call: `shortcut::soulshift(3)`, `evolve()`, `extort()`,
+      `battalion(..)`, `graft(..)`, `cycling_two()`, `spree_mode(..)` — 17
+      mechanics, ~190 rows, every one of them modelled.
+    * an EFFECT variant: `Effect::Cipher { .. }`, `Effect::HauntCreature { .. }`
+      — 23 rows.
+    * a FIELD whose value is a helper call rather than `Some(..)`:
+      `prototype: proto(cost(..), 1, 1)` — 15 rows (handled by the caller's
+      widened field test, not here).
+
+    The rule is "an identifier that STARTS with the mechanic's word, either
+    path-qualified or called". Starts-with, not contains, on purpose:
+    `Gravestorm` must not answer for Storm.
+    """
+    return bool(
+        re.search(rf"::{re.escape(word)}[A-Za-z0-9_]*\b", literal, re.I)
+        or re.search(rf"(?:^|[^A-Za-z0-9_:]){re.escape(word)}[a-z0-9_]*\s*\(",
+                     literal, re.I)
+    )
+
+
 def factory_body(src: str, open_brace_end: int) -> str:
     """The factory's text, ending at its own closing brace.
 
@@ -272,7 +312,11 @@ def scan():
             have = {KW_WORD[k] for k in top_level_keywords(body) if k in KW_WORD}
             strict = set(have)
             for field, word in FIELD_WORD.items():
-                if re.search(rf"^ {{8}}{field}: (Some|vec!\[[^\]]|&\[)", body, re.M):
+                # ⚠ NOT JUST `Some(..)`. `prototype: proto(cost(..), 1, 1)` is
+                # a helper call, and requiring the constructor read fifteen
+                # Brothers' War prototypes as missing the mechanic they carry.
+                # Any value but `None` is the field being used.
+                if re.search(rf"^ {{8}}{field}: (?!None[,\s])\S", body, re.M):
                     have.add(word)
                     if field not in FIELD_ONLY_MISSING:
                         strict.add(word)
@@ -282,6 +326,12 @@ def scan():
             has_alt = re.search(r"^ {8}alternative_cost: Some", body, re.M) is not None
             for word in sorted(set(KW_WORD.values()) | set(FIELD_WORD.values())):
                 if word in have or (has_alt and word in ALT_FAMILY):
+                    continue
+                # The other three spellings — see `spelled_in`. MISSING only:
+                # "the word appears as an identifier" is evidence the mechanic
+                # is modelled, and it is not evidence that the CARD prints it,
+                # so it must never answer the INVENTED question.
+                if spelled_in(body, word):
                     continue
                 # The printed keyword line starts the ability, so require the
                 # word at a line start or after a separator — "escape" inside
