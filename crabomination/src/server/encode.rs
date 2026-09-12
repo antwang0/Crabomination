@@ -277,6 +277,15 @@ fn scaled(n: i32) -> f32 {
     n.clamp(-crate::player::SCALE_CEILING, crate::player::SCALE_CEILING) as f32
 }
 
+/// [`scaled`] for an unsigned count. Counters are the other unbounded
+/// numerator in this file: `DoubleCountersOnEach` doubles a permanent's
+/// counters, so a loop reaches `u32::MAX` the way Exponential Growth reaches
+/// `i32::MAX`, and `n as f32 / 4.0` would carry it straight into the net.
+#[inline]
+fn scaled_u(n: u32) -> f32 {
+    n.min(crate::player::SCALE_CEILING as u32) as f32
+}
+
 /// `CardInstance.damage` as a signed number, saturating: damage is a `u32`
 /// and a creature that has taken more than `i32::MAX` reads as *negative*
 /// through a bare `as i32`, which turns "lethal damage" into "healed".
@@ -1388,13 +1397,13 @@ fn encode_battlefield_object_into(
     let mut special = 0u32;
     for (kind, n) in c.counters.iter() {
         match kind {
-            CounterType::Loyalty => f[8] = *n as f32 / 8.0,
+            CounterType::Loyalty => f[8] = scaled_u(*n) / 8.0,
             CounterType::Prepared => {
                 if *n > 0 {
                     f[9] = 1.0;
                 }
             }
-            _ => special += *n,
+            _ => special = special.saturating_add(*n),
         }
         // CR 122.1 / 702.12: an Indestructible *counter* grants the
         // ability (`is_indestructible` reads it), and the keyword walk in
@@ -1406,11 +1415,11 @@ fn encode_battlefield_object_into(
         }
         if want_kinds {
             match kind {
-                CounterType::PlusOnePlusOne => f[48] = *n as f32 / 4.0,
-                CounterType::MinusOneMinusOne => f[49] = *n as f32 / 4.0,
-                CounterType::Stun => f[50] = *n as f32 / 2.0,
-                CounterType::Page => f[51] = *n as f32 / 3.0,
-                CounterType::Growth => f[52] = *n as f32 / 3.0,
+                CounterType::PlusOnePlusOne => f[48] = scaled_u(*n) / 4.0,
+                CounterType::MinusOneMinusOne => f[49] = scaled_u(*n) / 4.0,
+                CounterType::Stun => f[50] = scaled_u(*n) / 2.0,
+                CounterType::Page => f[51] = scaled_u(*n) / 3.0,
+                CounterType::Growth => f[52] = scaled_u(*n) / 3.0,
                 _ => {}
             }
         }
@@ -1421,15 +1430,15 @@ fn encode_battlefield_object_into(
         // this stops mattering", per the house rule.
         if want_v8 {
             match kind {
-                CounterType::Lore => f[55] = *n as f32 / 3.0,
-                CounterType::Charge => f[56] = *n as f32 / 4.0,
-                CounterType::Shield => f[57] = *n as f32 / 2.0,
-                CounterType::Finality => f[58] = *n as f32 / 2.0,
+                CounterType::Lore => f[55] = scaled_u(*n) / 3.0,
+                CounterType::Charge => f[56] = scaled_u(*n) / 4.0,
+                CounterType::Shield => f[57] = scaled_u(*n) / 2.0,
+                CounterType::Finality => f[58] = scaled_u(*n) / 2.0,
                 _ => {}
             }
         }
     }
-    f[34] = special as f32 / 4.0;
+    f[34] = scaled_u(special) / 4.0;
     // Expiry (round 40). Features 4/5 encode the board as if nothing
     // reverts: 5 is toughness *net of* damage, so a 4/4 with three
     // damage read as a 4/1 though it is whole again at cleanup, and a
@@ -1722,6 +1731,10 @@ mod tests {
             inst.controller = seat;
             inst.pump(i32::MAX, i32::MAX);
             inst.pump(i32::MAX, i32::MAX);
+            // Counters are the other unbounded numerator: `DoubleCountersOnEach`
+            // doubles them, so a loop reaches `u32::MAX` the same way.
+            inst.counters.add(crate::card::CounterType::PlusOnePlusOne, u32::MAX);
+            inst.counters.add(crate::card::CounterType::Stun, u32::MAX);
             g.battlefield.push(inst);
         }
         assert_globals_bounded(&encode_state(&g, 0, &vocab));

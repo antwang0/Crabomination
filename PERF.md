@@ -2852,7 +2852,7 @@ fix     the player-only slot read is IN the walker now (`9e276870`). The ninetee
 fix     the encoder handed the net a life feature of 1.07e8 (`d6f5e604`) — `ENGINE_BACKLOG`'s OPEN question, answered.
         The evaluator has clamped since the `debug-assertions` sweep caught it WRAPPING (the seat with unbounded life
         scored as the one losing); the encoder had no ceiling at all. `life_value`'s constant is hoisted to
-        `player::LIFE_CEILING` and both read it. ⚠ **Encoding touched — `global[0]`, `global[1]`, `global[43..45]` —
+        `player::SCALE_CEILING` (named `LIFE_CEILING` when it landed) and both read it. ⚠ **Encoding touched — `global[0]`, `global[1]`, `global[43..45]` —
         and no state with `|life| <= 10,000` encodes differently, so no net needs retraining.** A game reaching those
         totals caps and records no rows.
 fix     a power is bounded by nothing either (`22fb3f53`) — the twin of the clamp above, and worse, because nothing

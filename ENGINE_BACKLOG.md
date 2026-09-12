@@ -113,17 +113,18 @@ questions, both out of scope for a bug fix:
   unbounded life scored as the one losing). `encode_state_inner` was not:
   `gl[0] = life as f32 / 20.0` handed the net **1.07 × 10^8**, and
   `life_gained_this_turn / 5.0` the same one Beacon resolution at a time. Both
-  read `player::LIFE_CEILING` now — the evaluator's own constant, hoisted so
+  read `player::SCALE_CEILING` now — the evaluator's own constant, hoisted so
   the two consumers cannot drift. **No state with `|life| <= 10,000` encodes
   differently**, so nothing needs retraining: the clamp is a guard, not a
   rescale, and a game that reaches those totals caps and records no rows.
   Gate: `server::encode::tests::a_saturated_life_total_encodes_as_a_bounded_
   feature`, which asserts the whole global vector is finite and bounded rather
   than just the two life slots.
-  **The next column, unopened:** power and toughness are normalized
-  (`/ 8.0`) and unbounded in the same way — a doubling loop bounded only by the
-  1,024-permanent cap can put an arbitrary `p` into `feats[4]`, and `power[0]`
-  sums them. Nothing has been seen to reach it; nobody has looked.
+  **The next column was opened the same day** and was worse — see the P/T entry
+  above: Exponential Growth reaches `i32::MAX` in ONE resolution, eighteen sites
+  accumulated a P/T bonus with a bare `+=`, and the reads overflowed on top of
+  the writes. Counters are the third numerator of the same shape
+  (`DoubleCountersOnEach`) and are clamped with them.
 
 The bot-strength half — casting a life-doubling spell at maximum life is a
 strictly wasted action — is real and small, and is the one arm that would
