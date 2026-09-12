@@ -34107,12 +34107,24 @@ impl GameState {
                 };
                 // "That copy costs {N} less to cast" — pay the discounted
                 // cost up front; an unaffordable discount declines the cast.
+                // Mana actually charged, threaded to `finalize_cast` — a
+                // `pay_own_cost` / discounted cast here spends real mana, and
+                // reporting 0 hides it from Increment, the Opus "five or more
+                // mana" shapes and expend. See
+                // `cast_card_from_zone_spending`.
+                let mut mana_spent = 0u32;
                 if *reduce_generic > 0 || *pay_own_cost {
                     let mut discounted = card_def.cost.clone();
                     discounted.reduce_generic(*reduce_generic);
                     let forced_only = self.players[ctx.controller].wants_ui;
                     match self.try_pay_with_auto_tap_mode(ctx.controller, &discounted, forced_only) {
-                        Ok(receipt) => self.pay_life_cost(ctx.controller, receipt.side_effects.life_lost),
+                        Ok(receipt) => {
+                            mana_spent = receipt
+                                .pool_before
+                                .total()
+                                .saturating_sub(self.players[ctx.controller].mana_pool.total());
+                            self.pay_life_cost(ctx.controller, receipt.side_effects.life_lost);
+                        }
                         Err(_) => {
                             if *copy {
                                 self.players[ctx.controller].hand.retain(|c| c.id != cast_id);
@@ -34122,7 +34134,7 @@ impl GameState {
                     }
                 }
                 let cast_zone = if *copy { crate::card::Zone::Hand } else { *source_zone };
-                let cast_events = self.cast_card_for_free(
+                let cast_events = self.cast_card_from_zone_spending(
                     ctx.controller,
                     cast_id,
                     cast_zone,
@@ -34131,6 +34143,7 @@ impl GameState {
                     None,
                     None,
                     *exile_after,
+                    mana_spent,
                 );
                 let cast_events = match cast_events {
                     Ok(evs) => evs,

@@ -861,14 +861,18 @@ pub fn silverquill_penman() -> CardDefinition {
                         amount: Value::Const(1),
                         random: false,
                     },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::LoseLife {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(1),
-                    },
+                    // "If you do, draw a card AND each opponent loses 1
+                    // life" — both halves hang off the discard.
+                    crate::effect::shortcut::if_discarded(Effect::Seq(vec![
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
+                        Effect::LoseLife {
+                            who: Selector::Player(PlayerRef::EachOpponent),
+                            amount: Value::Const(1),
+                        },
+                    ])),
                 ])),
             },
         }],

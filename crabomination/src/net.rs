@@ -452,6 +452,12 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub may_play_castable: Vec<CardId>,
+    /// The land half: `may_play_until` cards that are lands and so are
+    /// *played* (`GameAction::PlayLand`), not cast. Kept separate from
+    /// `may_play_castable` because the client has to send a different
+    /// action. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub may_play_lands: Vec<CardId>,
     /// CardIds in the viewer's hand with Bargain they could cast right now
     /// (CR 702.176), so the client can offer a "sacrifice for Bargain?"
     /// toggle. `#[serde(default)]` for snapshot back-compat.

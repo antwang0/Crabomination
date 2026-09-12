@@ -940,6 +940,46 @@ impl GameState {
             .collect()
     }
 
+    /// The land half of [`may_play_castable`](Self::may_play_castable):
+    /// cards outside the caster's hand carrying a live `may_play_until`
+    /// permission that are **lands**, and so are *played* rather than cast.
+    ///
+    /// CR 118.x — "you may play that card" covers lands, and `play_land`
+    /// honours the grant from exile. But `may_play_castable` probes only
+    /// `GameAction::CastFromZoneWithoutPaying`, which correctly refuses a
+    /// land, so a land was published nowhere: the exile browser showed
+    /// Suspend Aggression's exiled top-of-library card with a "May play
+    /// (you)" badge and no way to click it, for the ~40 % of casts where
+    /// that card is a land. The bot had the play all along
+    /// (`pick_main_phase_action`'s impulse-exile branch); only the human
+    /// could not reach it.
+    ///
+    /// Same `would_accept` dry-run as its sibling, so the land-drop
+    /// allowance, timing and any `CantPlayLands` lock all gate it.
+    pub fn may_play_playable_lands(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        self.may_play_playable_lands_on(&self.affordance_probe_template(), caster)
+    }
+
+    fn may_play_playable_lands_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        let candidates: Vec<CardId> = self
+            .exile
+            .iter()
+            .chain(self.players.iter().flat_map(|p| p.graveyard.iter()))
+            .filter(|c| {
+                c.definition.is_land()
+                    && c.may_play_until.is_some_and(|perm| perm.player == caster)
+            })
+            .map(|c| c.id)
+            .collect();
+        candidates
+            .into_iter()
+            .filter(|id| Self::would_accept_on(template, GameAction::PlayLand(*id)))
+            .collect()
+    }
+
     /// CardIds in the caster's hand they could cast right now paying the
     /// optional Buyback cost (CR 702.27). Mirrors `kickable_hand_cards`.
     pub fn buyback_hand_cards(&self, caster: usize) -> Vec<CardId> {
@@ -1792,6 +1832,7 @@ impl GameState {
             miracle: self.miracle_hand_cards(seat),
             free_castable: self.free_castable_hand_cards_on(&template, seat),
             may_play_castable: self.may_play_castable_on(&template, seat),
+            may_play_lands: self.may_play_playable_lands_on(&template, seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
             hand_activatable: self.hand_activatable_cards(seat),
             morphable: self.morphable_hand_cards_on(&template, seat),

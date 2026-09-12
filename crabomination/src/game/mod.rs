@@ -933,6 +933,10 @@ pub struct HandAffordances {
     /// `GameAction::CastFromZoneWithoutPaying` (Suspend Aggression's two
     /// exiled cards, Practiced Scrollsmith's exiled graveyard card).
     pub may_play_castable: Vec<CardId>,
+    /// The land half of the same permission: `may_play_until` cards that
+    /// are lands, so they are *played* via `GameAction::PlayLand` rather
+    /// than cast. See `GameState::may_play_playable_lands`.
+    pub may_play_lands: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
     /// Hand cards carrying at least one `from_hand` activated ability (Talon
     /// Gates of Madara's `{4}: put this onto the battlefield`, the Spirit

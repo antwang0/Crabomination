@@ -24,9 +24,11 @@ use crabomination_nn::TrainRow;
 use crate::cube::CardFactory;
 use crate::draft::SosPacks;
 use crate::game::GameState;
+use crate::mana::ColorSet;
 use crate::recommend::{
     SimConfig, StopReason, build_match_template, build_random_deck, stop_reason,
 };
+use crate::sos_mode::College;
 use crate::server::bot::{Bot, EvalWeights, HeuristicBot};
 use crate::server::encode::{Vocab, encode_state_pair};
 
@@ -136,15 +138,67 @@ pub fn random_sealed_opponent(seed: u64) -> (Vec<CardFactory>, String) {
 /// builder, and one sample handed the player a free handicap on top of
 /// whatever `packs` says. Still deterministic in `seed`.
 pub fn random_sealed_opponent_packs(seed: u64, packs: usize) -> (Vec<CardFactory>, String) {
+    random_sealed_opponent_in_colors(seed, packs, ColorSet::empty())
+}
+
+/// [`random_sealed_opponent_packs`] with the opponent's colours pinned:
+/// only shapes inside `colors` are enumerated, so `{Red, White}` is a
+/// Lorehold deck every game (the client's `--opponent-colors lorehold`).
+/// `ColorSet::empty()` is unrestricted — exactly the call above.
+///
+/// The pool is still a plain `packs`-booster pool. The restriction picks
+/// which 40 cards come out of it; it does not deal a better one. A pool
+/// thin in the named colours therefore builds a weak deck rather than
+/// rerolling for a good one — rerolling until the colours ran deep would
+/// hand the opponent a stronger pool than `packs` says, which is the one
+/// dial this mode's difficulty is supposed to live on.
+///
+/// The filter is on mana identity — the builder's own notion of colour —
+/// so a card castable with generic mana alone (a mono-hybrid `{2/G}{2/G}`)
+/// is still fair game for a Lorehold deck: it casts off Mountains and
+/// Plains like everything else in it.
+///
+/// Needs at least two colours to build anything: the lattice enumerates
+/// pairs and wider (see [`SimConfig::color_restriction`]).
+pub fn random_sealed_opponent_in_colors(
+    seed: u64,
+    packs: usize,
+    colors: ColorSet,
+) -> (Vec<CardFactory>, String) {
     let packs = packs.max(1);
     let pool = sealed_pool_packs(seed, packs);
-    let deck = best_build_v3(&pool, 16, seed ^ 0x005E_A1ED);
-    let label = if packs == SEALED_PACKS {
+    let deck = sealed_opponent_build(&pool, 16, seed ^ 0x005E_A1ED, colors);
+    (deck, sealed_opponent_label(seed, packs, colors))
+}
+
+/// The opponent's name: the seed, plus whatever was asked for on top of a
+/// standard pool. Both handicaps are named so a match stays reproducible
+/// from what the client printed.
+fn sealed_opponent_label(seed: u64, packs: usize, colors: ColorSet) -> String {
+    let mut extras: Vec<String> = Vec::new();
+    if packs != SEALED_PACKS {
+        extras.push(format!("{packs} packs"));
+    }
+    if !colors.is_empty() {
+        extras.push(color_identity_name(colors));
+    }
+    if extras.is_empty() {
         format!("Sealed #{seed}")
     } else {
-        format!("Sealed #{seed} ({packs} packs)")
-    };
-    (deck, label)
+        format!("Sealed #{seed} ({})", extras.join(", "))
+    }
+}
+
+/// A colour identity's display name: the Strixhaven college when the set is
+/// exactly one college's pair, WUBRG letters otherwise. The sealed pool
+/// *is* a Strixhaven pool, so the five colleges are the five pairs a player
+/// names — and `rw` and `lorehold` then read back the same way.
+pub fn color_identity_name(colors: ColorSet) -> String {
+    College::ALL
+        .into_iter()
+        .find(|c| c.colors().iter().collect::<ColorSet>() == colors)
+        .map(|c| c.name().to_string())
+        .unwrap_or_else(|| colors.iter().map(|c| c.short_name()).collect())
 }
 
 /// Unshuffled two-seat template with both libraries loaded — clone per
@@ -173,7 +227,7 @@ pub fn build_candidates_cfg(
     // (what `selfplay_train --use-deck-best` runs per side per game) that
     // is 32 x ~26 `build_shape` calls replaced by ~26 + 32. The pool's
     // `PoolScores` is invariant across both loops for the same reason.
-    let scores = crate::recommend::PoolScores::new(pool, cfg.builder_v2);
+    let scores = crate::recommend::PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro);
     let shapes = crate::recommend::enumerate_shapes(&scores, cfg);
     let out: Vec<Vec<CardFactory>> = (0..n as u64)
         .map(|i| {
@@ -210,7 +264,60 @@ pub fn build_candidates_cfg(
 /// builds are a field of humans, this is the one who kept the best of
 /// their sixteen tries.
 pub fn best_build_v3(pool: &[CardFactory], n: usize, seed: u64) -> Vec<CardFactory> {
-    let cfg = SimConfig { builder_v3: true, ..SimConfig::default() };
+    best_build_v3_in_colors(pool, n, seed, ColorSet::empty())
+}
+
+/// [`best_build_v3`] with the candidate shapes confined to one colour
+/// identity ([`SimConfig::color_restriction`]); `ColorSet::empty()` is the
+/// unrestricted call above.
+pub fn best_build_v3_in_colors(
+    pool: &[CardFactory],
+    n: usize,
+    seed: u64,
+    colors: ColorSet,
+) -> Vec<CardFactory> {
+    best_build_v3_curved(pool, n, seed, colors, false)
+}
+
+/// The **client's** sealed-opponent recipe: [`best_build_v3_in_colors`] with
+/// `SimConfig::curve_aggro`.
+///
+/// A separate entry point rather than a flag flipped inside the shared one.
+/// `best_build_v3` delegates to that shared function, and it is the second
+/// arm of `selfplay_train --gate-builder-v3` ("best-of-16 v3 (client opponent
+/// recipe) vs single-sample v2") — so turning the curve on in place silently
+/// changed what that race measures, from `builder_v3` to `builder_v3` plus a
+/// curve. The gate keeps measuring the builder it names; the client gets the
+/// curve; neither reaches `SimConfig::default()`, so the training field, the
+/// ladder's sealed gate decks and `recommend_pool` are untouched.
+///
+/// `builder_v3` already gives this build a curve at the *shape* level
+/// (`curve_penalty`). `curve_aggro` adds the two things still missing inside
+/// a chosen shape: a mana-value term in the pick scoring
+/// (`draft::aggro_curve_delta`) and reserved slots in the assembly
+/// (`recommend::CurveSlots`), so the early drops survive the cut.
+pub fn sealed_opponent_build(
+    pool: &[CardFactory],
+    n: usize,
+    seed: u64,
+    colors: ColorSet,
+) -> Vec<CardFactory> {
+    best_build_v3_curved(pool, n, seed, colors, true)
+}
+
+fn best_build_v3_curved(
+    pool: &[CardFactory],
+    n: usize,
+    seed: u64,
+    colors: ColorSet,
+    curve_aggro: bool,
+) -> Vec<CardFactory> {
+    let cfg = SimConfig {
+        builder_v3: true,
+        curve_aggro,
+        color_restriction: colors,
+        ..SimConfig::default()
+    };
     // `n == 0`, or a pool with no playable card, has no best build — and an
     // empty deck is the answer, not a panic. This is the actor's deck-building
     // path (`selfplay_train` calls it twice a game); a panic at game 400 k
@@ -732,6 +839,47 @@ mod tests {
         let (_, plain) = random_sealed_opponent_packs(7, SEALED_PACKS);
         assert_eq!(plain, "Sealed #7", "a standard pool reads as before");
     }
+
+    /// `--opponent-colors lorehold`: nothing the opponent plays — spell or
+    /// land — sits outside the named pair, and the label names it back so
+    /// the match is still reproducible from what the client printed.
+    #[test]
+    fn a_colour_restricted_opponent_plays_only_that_pair() {
+        let lorehold: ColorSet = College::Lorehold.colors().iter().collect();
+        let (deck, label) = random_sealed_opponent_in_colors(7, 9, lorehold);
+        assert_eq!(deck.len(), 40, "a restricted build is still a legal 40");
+        assert_eq!(label, "Sealed #7 (9 packs, Lorehold)");
+        for &card in &deck {
+            let brief = crate::cube::card_brief(card);
+            assert!(
+                brief.pip_colors.is_subset_of(lorehold),
+                "{} is outside Lorehold",
+                brief.def.name,
+            );
+            // Lands carry no pips, so they are the other way a build can
+            // reach outside its colours: an off-colour dual from the pool.
+            let produced = crate::recommend::land_produced_colors(brief.def);
+            assert!(
+                produced.is_subset_of(lorehold),
+                "{} taps outside Lorehold",
+                brief.def.name,
+            );
+        }
+        // The restriction is what chose those colours, not the pool: the
+        // same seed under a different college is a different deck.
+        let witherbloom: ColorSet = College::Witherbloom.colors().iter().collect();
+        let (other, other_label) = random_sealed_opponent_in_colors(7, 9, witherbloom);
+        assert_ne!(other, deck);
+        assert_eq!(other_label, "Sealed #7 (9 packs, Witherbloom)");
+
+        // A pair that is nobody's college falls back to WUBRG letters, and
+        // an unrestricted opponent's label is unchanged.
+        let wg: ColorSet = [crate::mana::Color::White, crate::mana::Color::Green].iter().collect();
+        let (_, wg_label) = random_sealed_opponent_in_colors(7, SEALED_PACKS, wg);
+        assert_eq!(wg_label, "Sealed #7 (WG)");
+        let unrestricted = random_sealed_opponent_in_colors(7, SEALED_PACKS, ColorSet::empty());
+        assert_eq!(unrestricted.1, "Sealed #7");
+    }
     use super::*;
 
     /// The actor's deck-building path must not panic on a degenerate input.
@@ -756,6 +904,41 @@ mod tests {
     /// The client's sealed-opponent recipe: best-of-16 under the v3
     /// judge is a legal 40, deterministic in the seed, and actually the
     /// argmax of its own candidate set — not one more sample.
+    /// The client's sealed opponent opts into `curve_aggro`, so the deck a
+    /// local player is dealt against has early plays in it. Before the
+    /// curve work the assembly filled strictly by score, and a pool whose
+    /// best cards were expensive produced an opponent that did nothing
+    /// before turn four.
+    #[test]
+    fn the_sealed_opponent_builds_to_a_curve() {
+        for seed in [1u64, 7, 42, 1234] {
+            let (deck, _) = random_sealed_opponent_in_colors(
+                seed,
+                crate::selfplay::SEALED_PACKS,
+                crate::mana::ColorSet::empty(),
+            );
+            assert_eq!(deck.len(), 40, "seed {seed}: a sealed deck is 40 cards");
+            let spells: Vec<u32> = deck
+                .iter()
+                .map(|&f| crate::cube::card_brief(f))
+                .filter(|b| !b.is_land)
+                .map(|b| b.cmc)
+                .collect();
+            let early = spells.iter().filter(|&&c| c <= 2).count();
+            let top = spells.iter().filter(|&&c| c >= 5).count();
+            // `CurveSlots`' floor scales with the spell count; at the usual
+            // 23 it is five. The second pass can leave the reserve short
+            // only when the pool genuinely lacks cheap playables, which a
+            // full sealed pool does not.
+            assert!(
+                early >= 4,
+                "seed {seed}: {early} early plays in {} spells (top {top})",
+                spells.len(),
+            );
+            assert!(top <= 8, "seed {seed}: {top} five-plus-drops is top-heavy");
+        }
+    }
+
     #[test]
     fn best_build_v3_is_the_argmax_of_its_candidates() {
         let pool = sealed_pool(0xB3);

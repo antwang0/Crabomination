@@ -63,6 +63,13 @@ pub enum GraveyardRecast {
     /// says — the card's own cost for these two, free for an Omniscience-
     /// style grant.
     MayPlay,
+    /// The same permission on a **land**. CR 118.x — "you may play that
+    /// card" covers lands, and a land is *played*, not cast, so this
+    /// submits `GameAction::PlayLand` instead. Suspend Aggression exiles
+    /// the top card of your library along with its target, and that card
+    /// is a land often enough that the browser's cast-only path left it
+    /// permanently unclickable under a "May play (you)" badge.
+    MayPlayLand,
 }
 
 /// Marker for the live name tooltip rendered above the graveyard
@@ -1530,7 +1537,13 @@ pub fn exile_browser(
     // play it *right now* (`may_play_castable` is the same `would_accept`
     // dry-run as every other affordance), so the tile is clickable exactly
     // when the click would be accepted.
-    let entries: Vec<(usize, String, Option<String>, bool, Option<crabomination::card::CardId>)> = cv
+    let entries: Vec<(
+        usize,
+        String,
+        Option<String>,
+        bool,
+        Option<(crabomination::card::CardId, GraveyardRecast)>,
+    )> = cv
         .exile
         .iter()
         .map(|c| {
@@ -1577,12 +1590,25 @@ pub fn exile_browser(
                     None => badges.push("Returns when the exiler leaves".to_string()),
                 }
             }
-            let castable_now = cv.may_play_castable.contains(&c.id);
-            if castable_now {
+            // One permission, two actions: a nonland is cast
+            // (`CastFromZoneWithoutPaying`), a land is played
+            // (`PlayLand`). The engine publishes them as separate lists
+            // because the click has to send a different action — before
+            // `may_play_lands` existed only the cast list was consulted,
+            // so a may-play land showed its badge and never became
+            // clickable.
+            let play = if cv.may_play_castable.contains(&c.id) {
+                Some((c.id, GraveyardRecast::MayPlay))
+            } else if cv.may_play_lands.contains(&c.id) {
+                Some((c.id, GraveyardRecast::MayPlayLand))
+            } else {
+                None
+            };
+            if play.is_some() {
                 badges.push("Click to play".to_string());
             }
             let badge = (!badges.is_empty()).then(|| badges.join(" · "));
-            (c.owner, c.name.clone(), badge, c.face_down, castable_now.then_some(c.id))
+            (c.owner, c.name.clone(), badge, c.face_down, play)
         })
         .collect();
     // Owner sections: the viewer first, then the remaining seats in order —
@@ -1731,7 +1757,7 @@ pub fn exile_browser(
                             },
                             GraveyardCardItem {
                                 name: name.clone(),
-                                recast: may_play.map(|id| (id, GraveyardRecast::MayPlay)),
+                                recast: *may_play,
                             },
                         ))
                         .with_children(tile_children);
@@ -1930,6 +1956,8 @@ pub fn graveyard_recast_click(
                 card_id: *card_id, target: None, additional_targets: vec![],
                 mode: None, x_value: None,
             },
+            // A land under the same permission is played, not cast.
+            GraveyardRecast::MayPlayLand => GameAction::PlayLand(*card_id),
             GraveyardRecast::Escape(n) => {
                 // Auto-pick the first N *other* cards of the viewer's
                 // graveyard as the exile payment.

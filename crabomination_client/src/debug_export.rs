@@ -317,6 +317,7 @@ mod tests {
             foretellable_hand: vec![],
             plottable_hand: vec![],
             may_play_castable: vec![],
+            may_play_lands: vec![],
             castable_plotted: vec![],
             adventurable_hand: vec![],
             adventure_exile: vec![],

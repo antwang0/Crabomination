@@ -35816,10 +35816,10 @@ pub fn take_out_the_trash() -> CardDefinition {
                             amount: Value::Const(1),
                             random: false,
                         },
-                        Effect::Draw {
+                        crate::effect::shortcut::if_discarded(Effect::Draw {
                             who: Selector::You,
                             amount: Value::Const(1),
-                        },
+                        }),
                     ])),
                 }),
                 else_: Box::new(Effect::Noop),

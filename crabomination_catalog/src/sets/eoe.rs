@@ -5247,10 +5247,10 @@ pub fn vaultguard_trooper() -> CardDefinition {
                             amount: Value::Const(99),
                             random: false,
                         },
-                        Effect::Draw {
+                        crate::effect::shortcut::if_discarded(Effect::Draw {
                             who: Selector::You,
                             amount: Value::Const(2),
-                        },
+                        }),
                     ])),
                 }),
                 else_: Box::new(Effect::Noop),
@@ -6351,10 +6351,10 @@ pub fn melded_moxite() -> CardDefinition {
                     amount: Value::Const(1),
                     random: false,
                 },
-                Effect::Draw {
+                crate::effect::shortcut::if_discarded(Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(2),
-                },
+                }),
             ])),
         })],
         activated_abilities: vec![ActivatedAbility {

@@ -64,10 +64,10 @@ pub fn byway_barterer() -> CardDefinition {
                         amount: Value::HandSizeOf(PlayerRef::You),
                         random: false,
                     },
-                    Effect::Draw {
+                    crate::effect::shortcut::if_discarded(Effect::Draw {
                         who: Selector::You,
                         amount: Value::Const(2),
-                    },
+                    }),
                 ])),
                 description: "Discard your hand, then draw two?".into(),
             },

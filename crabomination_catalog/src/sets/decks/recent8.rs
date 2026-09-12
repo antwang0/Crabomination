@@ -660,10 +660,10 @@ pub fn yuyan_archers() -> CardDefinition {
                     amount: Value::ONE,
                     random: false,
                 },
-                Effect::Draw {
+                crate::effect::shortcut::if_discarded(Effect::Draw {
                     who: Selector::You,
                     amount: Value::ONE,
-                },
+                }),
             ])),
         })],
         ..Default::default()

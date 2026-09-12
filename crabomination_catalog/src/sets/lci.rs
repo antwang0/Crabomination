@@ -4022,16 +4022,20 @@ pub fn reckless_detective() -> CardDefinition {
                     amount: Value::Const(1),
                     random: false,
                 },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::PumpPT {
-                    what: Selector::This,
-                    power: Value::Const(2),
-                    toughness: Value::Const(0),
-                    duration: Duration::EndOfTurn,
-                },
+                // "If you do, draw a card AND it gets +2/+0" — both halves
+                // hang off the discard, so both sit inside the gate.
+                crate::effect::shortcut::if_discarded(Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(2),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
             ])),
         })],
         ..Default::default()
@@ -4338,10 +4342,10 @@ pub fn volatile_wanderglyph() -> CardDefinition {
                         amount: Value::Const(1),
                         random: false,
                     },
-                    Effect::Draw {
+                    crate::effect::shortcut::if_discarded(Effect::Draw {
                         who: Selector::You,
                         amount: Value::Const(1),
-                    },
+                    }),
                 ])),
             },
         }],

@@ -1279,10 +1279,15 @@ fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
     // EndOfControllersNextTurn semantics in a 2-player game: the
     // permission survives the granting turn's cleanup and the opp's
     // turn's cleanup, then clears on the controller's next cleanup.
-    // We approximate this by checking the permission persists across
-    // one cleanup but clears once `turn_number - granted_turn >=
-    // player_count`. In a 2p game that's 2 turns later — the
-    // controller's next cleanup.
+    //
+    // That sentence was always the rule; the assertions below used to
+    // encode the `turn_number - granted_turn >= player_count`
+    // *approximation* beside it, which clears one cleanup early and so
+    // contradicted the comment it sat under. The grant here lands on the
+    // controller's own turn, which is exactly where the approximation is
+    // wrong — the permission died before the controller's next turn began.
+    // The sweep now asks whose turn just ended, so this walks all three
+    // cleanups.
     let mut g = two_player_game();
     let pox_id = g.next_id();
     let mut pox = crabomination::card::CardInstance::new(pox_id, catalog::pox_plague(), 0);
@@ -1299,12 +1304,15 @@ fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
     // Burn through 2 cleanup steps (each `do_cleanup` advances the
     // turn). After cleanup #1 the permission persists; after #2 it
     // clears.
-    g.do_cleanup(&mut Vec::new());
-    assert!(g.exile.iter().find(|c| c.id == pox_id).unwrap()
-        .may_play_until.is_some(), "permission survives first cleanup");
-    g.do_cleanup(&mut Vec::new());
-    assert!(g.exile.iter().find(|c| c.id == pox_id).unwrap()
-        .may_play_until.is_none(), "permission expires after controllers next turn cleanup");
+    let alive = |g: &GameState| {
+        g.exile.iter().find(|c| c.id == pox_id).unwrap().may_play_until.is_some()
+    };
+    g.do_cleanup(&mut Vec::new()); // end of the granting turn (controller's)
+    assert!(alive(&g), "permission survives the granting turn's cleanup");
+    g.do_cleanup(&mut Vec::new()); // end of the opponent's turn
+    assert!(alive(&g), "and the opponent's turn's cleanup");
+    g.do_cleanup(&mut Vec::new()); // end of the controller's next turn
+    assert!(!alive(&g), "clearing on the controller's next cleanup");
 }
 
 #[test]
@@ -1466,6 +1474,152 @@ fn a_card_exiled_by_suspend_aggression_can_actually_be_played() {
     assert!(
         !g.compute_hand_affordances(0).may_play_castable.contains(&opp_creature),
         "seat 0 may not play the opponent's exiled creature",
+    );
+}
+
+/// A `pay_own_cost` may-play grant charges the card's real cost, so the
+/// cast has to report that mana to `finalize_cast` — Increment reads it.
+///
+/// `cast_card_for_free` hardcoded `mana_spent: 0` on every path, so a
+/// Pensive Professor (0/2) watched its controller pay for a may-play cast
+/// and never incremented: `Predicate::IncrementSatisfied` compared 0
+/// against the Professor's power and toughness. Reported from a recorded
+/// game (Suspend Aggression).
+#[test]
+fn may_play_cast_reports_the_mana_it_charged_to_increment() {
+    let mut g = two_player_game();
+    // The Professor's counter trigger draws, and `two_player_game` seats
+    // empty libraries — an unstocked one decks P0 mid-test.
+    crabomination::game::stock_libraries(&mut g, 5);
+    let professor = g.add_card_to_battlefield(0, catalog::pensive_professor());
+    let top_id = g.next_id();
+    g.players[0].add_to_library_top(top_id, catalog::lightning_bolt());
+    let ark_id = g.add_card_to_battlefield(0, catalog::ark_of_hunger());
+    for c in g.battlefield.iter_mut() {
+        c.summoning_sick = false;
+    }
+    // Mill the Bolt and take the "you may play it" grant.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ark_id, ability_index: 0, target: None,
+        additional_targets: Vec::new(), mode: None, x_value: None,
+    })
+    .expect("Ark mill activation");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == professor)
+            .map(|c| c.counter_count(CounterType::PlusOnePlusOne)),
+        Some(0),
+        "an activated ability is not a spell — nothing to increment yet",
+    );
+
+    // The grant is `pay_own_cost`, so this charges the Bolt's own {R}.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: top_id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the milled Bolt is playable");
+    drain_stack(&mut g);
+    // 20 - 3 (the Bolt) - 1 (the Ark's own "whenever one or more cards leave
+    // your graveyard" drain — casting the milled card is what triggers it).
+    assert_eq!(g.players[1].life, 16, "the Bolt resolved and the Ark drained");
+    // Increment: 1 mana spent > the Professor's 0 power.
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == professor)
+            .map(|c| c.counter_count(CounterType::PlusOnePlusOne)),
+        Some(1),
+        "the may-play cast spent {{R}}, which is more than the Professor's power",
+    );
+}
+
+/// "Its owner may play it until the end of **their next turn**." Granted on
+/// the holder's own turn, that window is the rest of this turn plus all of
+/// their next one.
+///
+/// The sweep counted turns elapsed (`>= player_count`), which is right only
+/// when the grant lands on someone else's turn. A Suspend Aggression cast on
+/// your own turn 5 was swept at the cleanup of turn 6, so the permission was
+/// gone before your turn 7 began and the exiled cards were unplayable for
+/// the window the card promises. Reported from a recorded game as
+/// "sometimes I can't cast cards exiled with Suspend Aggression".
+#[test]
+fn may_play_granted_on_your_own_turn_survives_until_your_next_turn_ends() {
+    let grant_at = |own_turn: bool| {
+        let mut g = two_player_game();
+        g.turn_number = 5;
+        g.active_player_idx = if own_turn { 0 } else { 1 };
+        let card = g.add_card_to_exile(0, catalog::lightning_bolt());
+        if let Some(c) = g.exile.iter_mut().find(|c| c.id == card) {
+            c.may_play_until = Some(crabomination::card::MayPlayPermission {
+                player: 0,
+                granted_turn: g.turn_number,
+                duration: crabomination::card::MayPlayDuration::EndOfControllersNextTurn,
+                exile_after: false,
+                miracle: false,
+            });
+        }
+        (g, card)
+    };
+    let alive = |g: &GameState, card| {
+        g.exile.iter().find(|c| c.id == card).is_some_and(|c| c.may_play_until.is_some())
+    };
+
+    // Granted on P0's own turn 5: survives P1's turn 6 AND P0's turn 7.
+    let (mut g, card) = grant_at(true);
+    g.do_cleanup(&mut Vec::new()); // end of turn 5 -> turn 6, P1
+    assert!(alive(&g, card), "still live during the opponent's turn");
+    g.do_cleanup(&mut Vec::new()); // end of turn 6 -> turn 7, P0
+    assert!(alive(&g, card), "live for the whole of the holder's next turn");
+    g.do_cleanup(&mut Vec::new()); // end of turn 7 -> turn 8
+    assert!(!alive(&g, card), "expires at the end of the holder's next turn");
+
+    // Granted on the opponent's turn 5: the holder's next turn is 6.
+    let (mut g, card) = grant_at(false);
+    g.do_cleanup(&mut Vec::new()); // end of turn 5 -> turn 6, P0
+    assert!(alive(&g, card), "live for the holder's turn 6");
+    g.do_cleanup(&mut Vec::new()); // end of turn 6 -> turn 7
+    assert!(!alive(&g, card), "expires at the end of that turn");
+}
+
+/// CR 305.1 — a land is played, not cast. "You may play that card" covers
+/// lands, but `CastFromZoneWithoutPaying` accepting one put the land on the
+/// stack *and* left `lands_played_this_turn` untouched, so a may-play land
+/// was an extra free land drop. The permission is published on its own list
+/// so the client can send `PlayLand` instead.
+#[test]
+fn may_play_land_is_a_land_drop_not_a_cast() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_exile(0, catalog::forest());
+    if let Some(c) = g.exile.iter_mut().find(|c| c.id == land) {
+        c.may_play_until = Some(crabomination::card::MayPlayPermission {
+            player: 0,
+            granted_turn: g.turn_number,
+            duration: crabomination::card::MayPlayDuration::EndOfControllersNextTurn,
+            exile_after: false,
+            miracle: false,
+        });
+    }
+    let aff = g.compute_hand_affordances(0);
+    assert!(!aff.may_play_castable.contains(&land), "a land is never cast");
+    assert!(aff.may_play_lands.contains(&land), "it is offered as a land drop");
+    assert!(
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: land, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "casting a land is rejected rather than put on the stack",
+    );
+    g.perform_action(GameAction::PlayLand(land)).expect("the granted land is playable");
+    assert!(g.battlefield.iter().any(|c| c.id == land), "the Forest is on the battlefield");
+    assert_eq!(
+        g.players[0].lands_played_this_turn, 1,
+        "and it consumes the land drop, rather than being a free extra one",
     );
 }
 

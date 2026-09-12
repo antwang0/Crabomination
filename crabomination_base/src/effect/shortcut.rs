@@ -1121,6 +1121,32 @@ pub fn prowess() -> TriggeredAbility {
     }
 }
 
+/// "... you may discard a card. **If you do**, [body]." — the contingent
+/// half of a loot.
+///
+/// `Effect::Discard` silently no-ops on an empty hand (it `continue`s past
+/// a player with no cards), so a bare `Seq([Discard, Draw])` hands the
+/// reward out anyway: a player holding nothing accepts the `MayDo`, discards
+/// nothing and draws. Observed on Lorehold, the Historian — an opponent
+/// with an empty hand took the upkeep loot every turn as a free draw.
+///
+/// Gates `body` on `Value::CardsDiscardedThisEffect`, which `discard_card`
+/// bumps and which resets between resolutions, so the reward runs only if a
+/// card actually changed zones.
+///
+/// **Not for every discard-then-draw.** A printed "discard a card, then
+/// draw a card" (Tormenting Voice's additional cost, Cathartic Reunion,
+/// Wild Guess) really does draw on an empty hand — the draw is sequenced
+/// after the discard, not conditioned on it. Use this only where the card
+/// says "if you do" / "to draw".
+pub fn if_discarded(body: Effect) -> Effect {
+    Effect::If {
+        cond: Predicate::ValueAtLeast(Value::CardsDiscardedThisEffect, Value::Const(1)),
+        then: Box::new(body),
+        else_: Box::new(Effect::Noop),
+    }
+}
+
 /// SOS Increment trigger: "Whenever you cast a spell, if the amount
 /// of mana you spent is greater than this creature's power or
 /// toughness, [body]." Powered by `Predicate::IncrementSatisfied`,

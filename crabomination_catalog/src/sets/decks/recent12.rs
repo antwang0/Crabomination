@@ -626,10 +626,10 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
                             amount: Value::ONE,
                             random: false,
                         },
-                        Effect::Draw {
+                        crate::effect::shortcut::if_discarded(Effect::Draw {
                             who: Selector::You,
                             amount: Value::ONE,
-                        },
+                        }),
                     ])),
                 },
                 x_cost: false,

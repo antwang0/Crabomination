@@ -514,7 +514,7 @@ pub fn artists_talent() -> CardDefinition {
                         amount: Value::ONE,
                         random: false,
                     },
-                    Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+                    crate::effect::shortcut::if_discarded(Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE }),
                 ])),
             },
         }],

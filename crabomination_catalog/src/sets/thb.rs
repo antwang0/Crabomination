@@ -1202,10 +1202,10 @@ pub fn gallia_of_the_endless_dance() -> CardDefinition {
                         amount: Value::ONE,
                         random: true,
                     },
-                    Effect::Draw {
+                    crate::effect::shortcut::if_discarded(Effect::Draw {
                         who: Selector::You,
                         amount: Value::Const(2),
-                    },
+                    }),
                 ])),
             },
         }],

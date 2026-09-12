@@ -670,10 +670,10 @@ pub fn thrilling_discovery() -> CardDefinition {
                         amount: Value::Const(2),
                         random: false,
                     },
-                    Effect::Draw {
+                    crate::effect::shortcut::if_discarded(Effect::Draw {
                         who: Selector::You,
                         amount: Value::Const(3),
-                    },
+                    }),
                 ])),
             },
         ]),

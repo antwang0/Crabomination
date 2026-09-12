@@ -10354,6 +10354,43 @@ impl GameState {
         x_value: Option<u32>,
         exile_after: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_card_from_zone_spending(
+            p, card_id, source_zone, target, additional_targets, mode, x_value, exile_after, 0,
+        )
+    }
+
+    /// [`cast_card_for_free`](Self::cast_card_for_free) with the mana the
+    /// caller actually charged.
+    ///
+    /// "For free" is the usual case and keeps the zero-argument entry
+    /// point, but it is not the only one: a `may_play_until` permission
+    /// stamped with `pay_own_cost` (Suspend Aggression, Ark of Hunger)
+    /// bills the card's real cost through `granted_alt_cast_cost_eot`, and
+    /// a miracle grant bills its miracle cost. Those casts spend mana, and
+    /// `finalize_cast`'s `mana_spent` is what
+    /// `Predicate::IncrementSatisfied`,
+    /// `Predicate::CastSpellManaSpentAtLeast` and
+    /// `mana_spent_on_spells_this_turn` all read.
+    ///
+    /// **It was hardcoded 0 on every path through here.** A Pensive
+    /// Professor (0/2) watched its controller pay {1}{R}{W} for a Suspend
+    /// Aggression off a may-play grant and never incremented, because
+    /// Increment compares the stashed `mana_spent` against the listening
+    /// creature's P/T and the stash said zero. Life tolls (Valgavoth) and
+    /// evidence tolls are not mana and still pass 0.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn cast_card_from_zone_spending(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        source_zone: crate::card::Zone,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        exile_after: bool,
+        mana_spent: u32,
+    ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Zone;
         // Grafdigger's Cage / Soulless Jailer — no casting from locked
         // zones (free-cast paths included).
@@ -10451,7 +10488,7 @@ impl GameState {
             mode,
             x_value.unwrap_or(0),
             0,
-            0,
+            mana_spent,
             false,
         );
         Ok(events)
@@ -10480,6 +10517,20 @@ impl GameState {
         let card_ref = self
             .find_card_anywhere(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 305.1 — a land is *played*, never cast: it never uses the
+        // stack, and it consumes the land drop. "You may play that card"
+        // grants do cover lands (CR 118.x), and `play_land` already honours
+        // the permission from exile — so the land belongs on that path, not
+        // this one.
+        //
+        // Accepting it here got both halves wrong at once: the land went on
+        // the stack (respondable, counterable) and `lands_played_this_turn`
+        // never moved, so every may-play land was an *extra* free land drop.
+        // The affordance split (`may_play_castable` / `may_play_lands`) is
+        // what lets the client send the right action for each.
+        if card_ref.definition.is_land() {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         let is_instant = card_ref.definition.is_instant_speed();
         // A "miracle {N}"-style grant attaches an alternative cast cost to
         // the permission (Lorehold, the Historian). When present, the cast
@@ -10591,18 +10642,26 @@ impl GameState {
             }
             self.pay_life_cost(p, life);
         }
+        // What this cast actually cost in mana, for `finalize_cast`'s
+        // `mana_spent` (Increment, the Opus "five or more mana was spent"
+        // shapes, expend). A waived or genuinely-free cast leaves it 0.
+        let mut mana_spent = 0u32;
         if waive {
             self.players[p].free_exile_cast_used_this_turn = true;
         } else if let Some(cost) = alt_cast_cost {
             let forced_only = self.players[p].manual_mana;
             let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+            mana_spent = receipt
+                .pool_before
+                .total()
+                .saturating_sub(self.players[p].mana_pool.total());
             self.pay_life_cost(p, receipt.side_effects.life_lost);
         }
         let mut events = match evidence_toll {
             Some(n) => self.collect_evidence_from_graveyard(p, n),
             None => Vec::new(),
         };
-        events.extend(self.cast_card_for_free(
+        events.extend(self.cast_card_from_zone_spending(
             p,
             card_id,
             zone,
@@ -10611,6 +10670,7 @@ impl GameState {
             mode,
             x_value,
             exile_after,
+            mana_spent,
         )?);
         Ok(events)
     }

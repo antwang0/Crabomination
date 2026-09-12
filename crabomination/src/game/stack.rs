@@ -4591,6 +4591,11 @@ impl GameState {
         // Remember the just-ended turn's active player for the CR 502.2
         // day/night turn-based check at the next untap.
         self.previous_turn_active = Some(active);
+        // The turn that is ending, captured before the bumps below — the
+        // `may_play_until` sweep needs "whose turn just ended", not "whose
+        // turn is starting".
+        let ended_turn = self.turn_number;
+        let ended_active = active;
         if self.players[active].is_alive() && self.players[active].extra_turns > 0 {
             self.players[active].extra_turns -= 1;
             self.current_turn_is_extra = true;
@@ -4617,14 +4622,23 @@ impl GameState {
             }
         }
         // Sweep expired `may_play_until` permissions across every zone.
-        // Runs *after* the turn-number bump so `elapsed = turn_number -
-        // granted_turn` reflects the cleanups that have actually
-        // completed. EndOfThisTurn → expires after one bump (elapsed
-        // ≥ 1). EndOfControllersNextTurn → expires after one full
-        // controller-turn loop (elapsed ≥ player_count) — in a 2p game
-        // that's 2 turn bumps later, i.e. the controller's *next*
-        // cleanup.
-        let player_count = self.players.len() as u32;
+        // Runs *after* the turn-number bump, so `EndOfThisTurn` reads
+        // `elapsed = turn_number - granted_turn >= 1`.
+        //
+        // `EndOfControllersNextTurn` ("its owner may play it until the end
+        // of their next turn") is asked of the turn that just *ended*
+        // rather than counted in turns elapsed. The count was
+        // `elapsed >= player_count`, which is right only when the grant
+        // lands on someone else's turn: a Suspend Aggression cast on your
+        // OWN turn 5 was swept at the cleanup of turn 6, so the permission
+        // was already gone when your turn 7 — "their next turn" — began,
+        // and the exiled cards were unplayable for the whole window the
+        // card promises. Reported from a recorded game.
+        //
+        // The turn-based form needs no player count and survives extra
+        // turns and skipped turns, both of which break the arithmetic:
+        // expire at the cleanup of the holder's first turn strictly after
+        // the grant.
         let turn_number = self.turn_number;
         let sweep = |c: &mut crate::card::CardInstance| {
             if let Some(perm) = c.may_play_until {
@@ -4632,7 +4646,7 @@ impl GameState {
                 let expired = match perm.duration {
                     crate::card::MayPlayDuration::EndOfThisTurn => elapsed >= 1,
                     crate::card::MayPlayDuration::EndOfControllersNextTurn => {
-                        elapsed >= player_count.max(1)
+                        ended_active == perm.player && ended_turn > perm.granted_turn
                     }
                     crate::card::MayPlayDuration::WhileExiled => false,
                     // Step-bounded miracle windows are also dead by turn end.

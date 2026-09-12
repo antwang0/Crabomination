@@ -690,7 +690,7 @@ pub fn chandra_spark_hunter() -> CardDefinition {
                                 amount: Value::ONE,
                                 random: false,
                             },
-                            Effect::Draw { who: Selector::You, amount: Value::ONE },
+                            crate::effect::shortcut::if_discarded(Effect::Draw { who: Selector::You, amount: Value::ONE }),
                         ])),
                     })),
                 },

@@ -3410,6 +3410,16 @@ pub fn auto_advance_p0(
     // e.g. crack a fetch land (an activatable ability) or hold up a
     // counterspell on the opponent's end step. When that's the case we stop
     // auto-passing and surface the window so the player gets priority.
+    //
+    // ⚠ Every list here must be checked, and for a long time only the
+    // *hand*-resident ones were. A play the viewer could legally make from
+    // some other zone — a card exiled by Suspend Aggression, an impulse
+    // land, a plotted card, an adventure half, a Spirit Guide's pitch
+    // ability in hand — left `has_instant_play` false, so this function
+    // passed priority for the player and the window closed under them.
+    // Reported as "sometimes I don't get the chance to play instants before
+    // damage is applied": the "sometimes" was whether the only playable
+    // thing happened to be in hand.
     let has_instant_play = !cv.castable_hand.is_empty()
         || !cv.back_castable_hand.is_empty()
         || !cv.prototypable_hand.is_empty()
@@ -3418,7 +3428,13 @@ pub fn auto_advance_p0(
         || !cv.activatable_permanents.is_empty()
         || !cv.kickable_hand.is_empty()
         || !cv.kicker_option_sets.is_empty()
-        || !cv.buyback_hand.is_empty();
+        || !cv.buyback_hand.is_empty()
+        // Non-hand zones, same `would_accept` validation as the rest.
+        || !cv.may_play_castable.is_empty()
+        || !cv.may_play_lands.is_empty()
+        || !cv.castable_plotted.is_empty()
+        || !cv.adventure_exile.is_empty()
+        || !cv.hand_activatable.is_empty();
 
     // Auto-pass a window only when the viewer has nothing to do there —
     // unless they've explicitly asked to fast-forward. End Turn (E) skips

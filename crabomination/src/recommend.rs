@@ -44,7 +44,7 @@ use crate::draft::{
     sos_draft_pool_ref,
 };
 use crate::game::GameState;
-use crate::mana::Color;
+use crate::mana::{Color, ColorSet};
 use crate::player::Player;
 use crate::server::{Bot, EvalWeights, MctsBot, MctsConfig, HeuristicBot};
 
@@ -99,6 +99,33 @@ pub struct SimConfig {
     /// flag (same rule as `builder_v2`) until the `--gate-builder-v3`
     /// race adopts it; the client's sealed opponent opts in explicitly.
     pub builder_v3: bool,
+    /// Score main-deck picks with [`draft::aggro_curve_delta`] on top of the
+    /// quality scorer: cheap proactive cards up, six-plus-drops down.
+    ///
+    /// The builder had no working curve. `CardBrief::base_score`'s bucket
+    /// spans three points against a quality term worth ~fifteen, and it
+    /// ranks a one-drop *below* a five-drop; `card_quality` has no mana-value
+    /// term at all. `curve_penalty` exists but only ranks colour shapes and
+    /// only under [`builder_v3`](Self::builder_v3), which is itself off.
+    /// The result is decks that top out heavy and do nothing before turn
+    /// four — reported from client games as "the bot doesn't build its deck
+    /// aggressive enough".
+    ///
+    /// Default **off**, same rule as `builder_v2` / `builder_v3`: this
+    /// changes every generated field including the ladder's sealed gate
+    /// decks, so it stays control-selectable until measured.
+    pub curve_aggro: bool,
+    /// Restrict the shape lattice to one colour identity: a shape is
+    /// enumerated only when its main colours **and** its splash sit inside
+    /// this set, so `{Red, White}` builds a Lorehold deck and nothing else
+    /// (the client's `--opponent-colors`). Empty — the default — is
+    /// unrestricted, every shape in the lattice.
+    ///
+    /// Fewer than two colours leaves *no* shape: the lattice enumerates
+    /// pairs and wider, never a mono-colour build, so a one-colour
+    /// restriction is an empty candidate set rather than a mono deck.
+    /// Callers that take this from a user reject that spelling up front.
+    pub color_restriction: ColorSet,
     /// Gauntlet seed — a run with the same (set, seed) faces the same field.
     pub seed: u64,
     /// Worker threads; 0 = available cores minus one.
@@ -148,6 +175,7 @@ impl Default for SimConfig {
             racing_confidence_z: 1.96,
             builder_v2: true,
             builder_v3: false,
+            curve_aggro: false,
             build_temperature: 1.0,
             spell_count_range: (22, 24),
             land_count_range: (16, 18),
@@ -155,6 +183,7 @@ impl Default for SimConfig {
             total_lands: 17,
             splash_max_cards: 3,
             splash_min_score: 12,
+            color_restriction: ColorSet::empty(),
             seed: 0,
             threads: 0,
             uniform_opponent_bot: false,
@@ -353,6 +382,12 @@ impl ColorList {
     fn as_slice(&self) -> &[Color] {
         &self.buf[..self.len as usize]
     }
+
+    /// The list as a bitmask — what `SimConfig::color_restriction`'s subset
+    /// test wants, and a five-bit `&`.
+    fn set(&self) -> ColorSet {
+        self.as_slice().iter().collect()
+    }
 }
 
 /// Build a main deck restricted to `colors` (plus the explicitly allowed
@@ -368,7 +403,7 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     rng: &mut R,
     quality: bool,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
-    let scores = PoolScores::new(picks, quality);
+    let scores = PoolScores::new(picks, quality, false);
     suggest_main_deck_in_colors_with(&scores, colors, splash, target_spells, noise, rng)
 }
 
@@ -391,6 +426,10 @@ pub struct PoolScores<'a> {
     /// `debug_assert` there, so a caller that builds these under one scorer
     /// and ranks splashes under the other fails the suite.
     quality: bool,
+    /// Whether `cards`' base scores carry [`draft::aggro_curve_delta`] —
+    /// `SimConfig::curve_aggro`. Checked by the same `debug_assert` as
+    /// `quality`, for the same reason.
+    aggro: bool,
     /// Descending-score orders over `picks`, one per fixing bonus a shape's
     /// colour count can imply, built on first ask. See [`Self::order`].
     orders: [std::cell::OnceCell<Vec<u32>>; 3],
@@ -405,16 +444,18 @@ pub struct PoolScores<'a> {
 }
 
 impl<'a> PoolScores<'a> {
-    pub fn new(picks: &'a [CardFactory], quality: bool) -> Self {
+    pub fn new(picks: &'a [CardFactory], quality: bool, aggro: bool) -> Self {
         let pick_colors = colors_of_picks(picks);
         let cards = picks
             .iter()
             .map(|&f| {
                 let brief = crate::cube::card_brief(f);
-                let base = if quality {
-                    crate::draft::score_brief_quality(brief, &pick_colors)
-                } else {
-                    crate::draft::score_brief_with_colors(brief, &pick_colors)
+                let base = match (quality, aggro) {
+                    (true, true) => crate::draft::score_brief_aggro(brief, &pick_colors),
+                    (true, false) => crate::draft::score_brief_quality(brief, &pick_colors),
+                    // The legacy control scorer takes no curve term: it is
+                    // kept intact precisely so it stays comparable.
+                    (false, _) => crate::draft::score_brief_with_colors(brief, &pick_colors),
                 };
                 (brief, base)
             })
@@ -433,6 +474,7 @@ impl<'a> PoolScores<'a> {
             picks,
             cards,
             quality,
+            aggro,
             orders: [const { std::cell::OnceCell::new() }; 3],
             dup_group,
             groups,
@@ -613,6 +655,11 @@ fn suggest_main_deck_shape<R: Rng>(
     /// slot and the cap allows, into the leftovers otherwise. `at` indexes
     /// `picks`; the cap counts copies of the *card*, which is
     /// `PoolScores::dup_group`'s dense id for it.
+    ///
+    /// Under `curve` the slot also has to be the right *shape* — see
+    /// [`CurveSlots`]. A pick the curve refuses is neither taken nor
+    /// discarded: it goes to `deferred` for the unconstrained second pass,
+    /// because a pool that cannot fill the reserve must still make 23 cards.
     #[inline]
     fn take(
         at: u32,
@@ -622,30 +669,55 @@ fn suggest_main_deck_shape<R: Rng>(
         main: &mut Vec<CardFactory>,
         leftovers: &mut Vec<CardFactory>,
         full: bool,
+        curve: Option<&mut CurveSlots>,
+        deferred: &mut Vec<u32>,
     ) {
         let f = scores.picks[at as usize];
-        let count = &mut counts[scores.dup_group[at as usize] as usize];
-        if main.len() < target_spells && u32::from(*count) < COPY_CAP {
-            *count += 1;
-            main.push(f);
-        } else if full {
-            leftovers.push(f);
+        let count = counts[scores.dup_group[at as usize] as usize];
+        // The hard stops first: claiming a curve slot for a pick the copy
+        // cap is about to reject would leak the slot.
+        if main.len() >= target_spells || u32::from(count) >= COPY_CAP {
+            if full {
+                leftovers.push(f);
+            }
+            return;
         }
+        if let Some(c) = curve
+            && !c.claim(scores.cards[at as usize].0.cmc)
+        {
+            deferred.push(at);
+            return;
+        }
+        counts[scores.dup_group[at as usize] as usize] += 1;
+        main.push(f);
     }
     let mut counts: Vec<u8> = vec![0; scores.groups];
     let mut main = Vec::with_capacity(target_spells);
     let mut leftovers = Vec::with_capacity(if full { picks.len() } else { 0 });
+    let mut curve = scores.aggro.then(|| CurveSlots::new(target_spells));
+    let mut deferred: Vec<u32> = Vec::new();
     if let Some(order) = ordered {
         for &i in order {
             if allow[i as usize >> 6] & (1u64 << (i & 63)) != 0 {
-                take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full);
+                take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full,
+                     curve.as_mut(), &mut deferred);
             }
         }
     } else {
         scored.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
         for (i, _) in scored {
-            take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full);
+            take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full,
+                 curve.as_mut(), &mut deferred);
         }
+    }
+    // Second pass, unconstrained: the curve is a target, not a quota the
+    // pool has to be able to meet. A pool with four playable two-drops
+    // leaves a reserved slot unfilled, and a 22-card deck is worse than an
+    // off-curve one — so whatever the curve turned away competes for what is
+    // left, still in score order.
+    for i in std::mem::take(&mut deferred) {
+        take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full,
+             None, &mut Vec::new());
     }
     if full {
         // `off` is appended whole, so a land's index in `leftovers` is its
@@ -753,6 +825,63 @@ pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize) 
     score -= extra_colors * 12;
     score -= pips.iter().skip(2).sum::<i32>() * 6;
     score - curve_penalty(main)
+}
+
+/// The curve a build must hit, in slots, under `SimConfig::curve_aggro`.
+///
+/// [`curve_penalty`] already names this codebase's notion of a sane limited
+/// curve — at least five spells at mana value ≤ 2, at most six at ≥ 5 — but
+/// it only scores *finished shapes*, and only under `builder_v3`. Nothing
+/// made the assembly build to it: `take` fills strictly by score, so a pool
+/// whose best cards are expensive yields a deck that does nothing before
+/// turn four however well the shape scored. `curve_aggro`'s scoring term
+/// biases the order; this constrains the result.
+///
+/// Same two numbers, scaled to the spell count, as slots: `early` is
+/// reserved for mana value ≤ 2 and only those may claim it, `top` caps mana
+/// value ≥ 5 outright, and everything else competes for `open` in score
+/// order exactly as before. Capacity is `early + open == target_spells`, so
+/// the constraint reshapes the deck without shrinking it.
+struct CurveSlots {
+    /// Reserved for mana value ≤ 2.
+    early: usize,
+    /// Remaining allowance for mana value ≥ 5.
+    top: usize,
+    /// Claimable by anything.
+    open: usize,
+}
+
+impl CurveSlots {
+    fn new(target_spells: usize) -> Self {
+        // `curve_penalty`'s own five-and-six, at its own 23-spell scale.
+        let early = target_spells * 5 / 23;
+        let top = target_spells * 6 / 23;
+        Self { early, top, open: target_spells - early }
+    }
+
+    /// Claim a slot for a spell of this mana value, or refuse it.
+    fn claim(&mut self, cmc: u32) -> bool {
+        if cmc <= 2 {
+            // Reserved first, so the cheap slots survive a run of better
+            // expensive cards further down the order.
+            if self.early > 0 {
+                self.early -= 1;
+            } else if self.open > 0 {
+                self.open -= 1;
+            } else {
+                return false;
+            }
+            return true;
+        }
+        if self.open == 0 || (cmc >= 5 && self.top == 0) {
+            return false;
+        }
+        if cmc >= 5 {
+            self.top -= 1;
+        }
+        self.open -= 1;
+        true
+    }
 }
 
 /// Soft curve-shape penalty on a spell list: 4 points per early spell
@@ -1011,6 +1140,10 @@ fn rank_shape<R: Rng>(
         scores.quality, cfg.builder_v2,
         "PoolScores was built under the other scorer; splash_cards reads its base scores",
     );
+    debug_assert_eq!(
+        scores.aggro, cfg.curve_aggro,
+        "PoolScores was built under the other curve term; splash_cards reads its base scores",
+    );
     let (spells, lands, noise) = shape;
     let splash: Vec<CardFactory> = splash_colors
         .iter()
@@ -1093,7 +1226,7 @@ fn build_shape<R: Rng>(
 /// score, deduplicated by identical main-deck contents (a triple whose
 /// third color contributes nothing collapses into its pair).
 pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<CandidateBuild> {
-    enumerate_candidates_with(&PoolScores::new(pool, cfg.builder_v2), cfg)
+    enumerate_candidates_with(&PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro), cfg)
 }
 
 /// [`enumerate_candidates`] against a prebuilt [`PoolScores`], for a caller
@@ -1142,6 +1275,13 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
     }
     debug_assert_eq!(shapes.len(), SHAPES);
 
+    // Empty is "unrestricted", so read it as WUBRG once and the per-shape
+    // test below is a single subset check.
+    let allowed = if cfg.color_restriction.is_empty() {
+        ColorSet::all()
+    } else {
+        cfg.color_restriction
+    };
     let mut rng = StdRng::seed_from_u64(cfg.seed); // noise=0 → unused; keeps API one-shape
     let mut out: Vec<ShapeBuild> = Vec::with_capacity(SHAPES);
     // Keyed on the copy-cap counts, which the builder already has: two shapes
@@ -1150,6 +1290,13 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
     // ask the same question was 652,126 Ir of `ipnsort` over twelve builds.
     let mut seen_mains: crate::fxhash::HashSet<Vec<u8>> = crate::fxhash::HashSet::default();
     for (colors, splash_colors) in shapes {
+        // A colour restriction narrows the lattice before any build work.
+        // The splash is in the test too: "only Lorehold" has to mean no
+        // third colour arriving through a splash slot, which is the one way
+        // a pair-shaped build reaches outside its pair.
+        if !colors.set().union(splash_colors.set()).is_subset_of(allowed) {
+            continue;
+        }
         let Some((build, counts)) = rank_shape(
             colors.as_slice(),
             splash_colors.as_slice(),
@@ -1181,7 +1328,7 @@ pub(crate) fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, 
     // Same shape lattice as user candidates (pairs, splashes, 3/4/5-color).
     // A field that only ever builds pairs never bombs back at splash-shaped
     // candidates — inflating their measured win rates.
-    let scores = PoolScores::new(pulls, cfg.builder_v2);
+    let scores = PoolScores::new(pulls, cfg.builder_v2, cfg.curve_aggro);
     let shapes = enumerate_shapes(&scores, cfg);
     build_random_deck_from(&shapes, &scores, cfg, rng)
 }
@@ -2917,7 +3064,7 @@ impl Session {
         let mut variants: Vec<CandidateBuild> = Vec::new();
         let mut seen: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
         // Invariant across every shape and variant below.
-        let scores = PoolScores::new(pool, cfg.builder_v2);
+        let scores = PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro);
         for &ci in base.ranking.iter().take(cfg.refine_top) {
             let shape = &base.candidates[ci];
             for v in 0..cfg.variants_per_shape.max(1) {
@@ -3593,6 +3740,158 @@ mod tests {
         assert_eq!(curve_penalty(&angels), 5 * 4 + 17 * 3);
         let mixed = five_bolts_six_angels();
         assert_eq!(curve_penalty(&mixed), 0, "five early + six top is a legal curve");
+    }
+
+    /// The builder's curve was inert: `base_score`'s bucket ranks a one-drop
+    /// *below* a five-drop and spans three points against a quality term
+    /// worth ~fifteen, so a pool of bombs built a pile of bombs. Flag on,
+    /// the curve term reorders cards of similar quality toward the cheap end
+    /// without burying a genuine bomb.
+    #[test]
+    fn curve_aggro_prefers_the_cheap_end() {
+        use crate::draft::{aggro_curve_delta, score_brief_aggro, score_brief_quality};
+        let brief = |f: CardFactory| crate::cube::card_brief(f);
+        let bolt = brief(catalog::lightning_bolt); // MV 1
+        let angel = brief(catalog::serra_angel); // MV 5
+        assert!(
+            aggro_curve_delta(bolt) > aggro_curve_delta(angel),
+            "the cheap card gains where the five-drop loses",
+        );
+        // A land never takes a spell slot, so it is not curved.
+        assert_eq!(aggro_curve_delta(brief(catalog::forest)), 0);
+
+        let colors = colors_of_picks(&[catalog::lightning_bolt, catalog::serra_angel]);
+        // The delta is exactly what separates the two scorers.
+        for f in [catalog::lightning_bolt, catalog::serra_angel, catalog::forest] {
+            let b = brief(f);
+            assert_eq!(
+                score_brief_aggro(b, &colors),
+                score_brief_quality(b, &colors) + aggro_curve_delta(b),
+                "aggro = quality + curve delta",
+            );
+        }
+        // It steers without overruling: Serra Angel is still the better card.
+        assert!(
+            score_brief_aggro(angel, &colors) > score_brief_aggro(bolt, &colors),
+            "a real bomb still outranks a one-drop — the term is a steer, not a veto",
+        );
+    }
+
+    /// A pool of nothing but five-drops and one-drops: with the flag on the
+    /// built main deck leans cheaper than with it off.
+    #[test]
+    fn curve_aggro_builds_a_cheaper_main_deck() {
+        // Distinct cards, not copies: `COPY_CAP` is 4, so a pool of twelve
+        // of the same card puts the same four in either deck and the build
+        // cannot express a preference at all.
+        let white = |b: &&'static crate::cube::CardBrief| !b.is_land;
+        let mut cheap: Vec<CardFactory> = Vec::new();
+        let mut dear: Vec<CardFactory> = Vec::new();
+        for f in crate::cube::cube_pool_all() {
+            let b = crate::cube::card_brief(f);
+            if !white(&b) {
+                continue;
+            }
+            if b.cmc <= 2 && cheap.len() < 14 {
+                cheap.push(f);
+            } else if b.cmc >= 6 && dear.len() < 14 {
+                dear.push(f);
+            }
+        }
+        assert!(cheap.len() >= 10 && dear.len() >= 10, "pool has both ends");
+        let pool: Vec<CardFactory> = dear.iter().chain(cheap.iter()).copied().collect();
+        let mean_cmc = |aggro: bool| -> f64 {
+            let scores = PoolScores::new(&pool, true, aggro);
+            let colors = colors_of_picks(&pool);
+            let cols: Vec<Color> = Color::ALL.iter().copied().filter(|c| colors.get(*c) > 0).collect();
+            let mut rng = StdRng::seed_from_u64(7);
+            let MainDeck { main, .. } =
+                suggest_main_deck_shape(&scores, &cols, &[], 10, 0, &mut rng, Detail::Full);
+            let spells: Vec<u32> =
+                main.iter().map(|&f| crate::cube::card_brief(f).cmc).collect();
+            spells.iter().sum::<u32>() as f64 / spells.len().max(1) as f64
+        };
+        let off = mean_cmc(false);
+        let on = mean_cmc(true);
+        assert!(on < off, "flag on builds a cheaper deck: {on} vs {off}");
+    }
+
+    /// The slot arithmetic in isolation: capacity is exactly the spell
+    /// count, the early reserve is cheap-only, and the top allowance is a
+    /// hard cap.
+    #[test]
+    fn curve_slots_reserve_early_and_cap_the_top() {
+        let mut c = CurveSlots::new(23);
+        assert_eq!((c.early, c.top, c.open), (5, 6, 18), "5 early + 18 open = 23");
+
+        // Six five-drops: the sixth is the last the cap allows.
+        let mut c = CurveSlots::new(23);
+        for i in 0..6 {
+            assert!(c.claim(5), "five-drop {i} fits under the cap of six");
+        }
+        assert!(!c.claim(5), "the seventh is refused");
+        assert!(c.claim(3), "a three-drop is unaffected by the top cap");
+        assert!(c.claim(2), "and the early reserve is untouched");
+
+        // The reserve is not spendable by expensive cards: fill every open
+        // slot with mid-cost spells and the five early slots must survive.
+        let mut c = CurveSlots::new(23);
+        for _ in 0..18 {
+            assert!(c.claim(3));
+        }
+        assert!(!c.claim(3), "open is exhausted");
+        assert!(!c.claim(6), "and so is the deck, for anything expensive");
+        for _ in 0..5 {
+            assert!(c.claim(1), "but the reserved cheap slots are still there");
+        }
+        assert!(!c.claim(1), "23 cards and no more");
+    }
+
+    /// End to end: a pool whose best cards are all expensive still builds to
+    /// a curve under the flag. Before this the assembly took strictly by
+    /// score, so the deck was whatever the pool's top of curve happened to
+    /// be.
+    #[test]
+    fn curve_slots_build_the_early_drops_into_the_deck() {
+        let mut cheap: Vec<CardFactory> = Vec::new();
+        let mut dear: Vec<CardFactory> = Vec::new();
+        for f in crate::cube::cube_pool_all() {
+            let b = crate::cube::card_brief(f);
+            if b.is_land {
+                continue;
+            }
+            if b.cmc <= 2 && cheap.len() < 30 {
+                cheap.push(f);
+            } else if b.cmc >= 5 && dear.len() < 30 {
+                dear.push(f);
+            }
+        }
+        assert!(cheap.len() >= 20 && dear.len() >= 20, "pool has both ends");
+        // Expensive first, so a score-only build reaches for them.
+        let pool: Vec<CardFactory> = dear.iter().chain(cheap.iter()).copied().collect();
+        let buckets = |aggro: bool| -> (usize, usize) {
+            let scores = PoolScores::new(&pool, true, aggro);
+            let colors = colors_of_picks(&pool);
+            let cols: Vec<Color> =
+                Color::ALL.iter().copied().filter(|c| colors.get(*c) > 0).collect();
+            let mut rng = StdRng::seed_from_u64(11);
+            let MainDeck { main, .. } =
+                suggest_main_deck_shape(&scores, &cols, &[], 23, 0, &mut rng, Detail::Full);
+            assert_eq!(main.len(), 23, "the constraint reshapes the deck, never shrinks it");
+            let cmcs: Vec<u32> = main.iter().map(|&f| crate::cube::card_brief(f).cmc).collect();
+            (
+                cmcs.iter().filter(|&&c| c <= 2).count(),
+                cmcs.iter().filter(|&&c| c >= 5).count(),
+            )
+        };
+        let (early_off, top_off) = buckets(false);
+        let (early_on, top_on) = buckets(true);
+        assert!(early_on >= 5, "flag on hits the early floor: {early_on}");
+        assert!(top_on <= 6, "and respects the top cap: {top_on}");
+        assert!(
+            early_on > early_off || top_on < top_off,
+            "and it actually changed the deck: {early_off}/{top_off} -> {early_on}/{top_on}",
+        );
     }
 
     /// The v3 shape ranker sees card quality: the same spell list scores

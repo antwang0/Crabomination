@@ -1998,6 +1998,38 @@ fn lorehold_the_historian_opp_upkeep_loots_with_scripted_yes() {
         "P0's graveyard +1 from the discard");
 }
 
+/// The printed loot is contingent — "discard a card **to** draw a card" —
+/// so a controller holding nothing must not get the draw.
+///
+/// `Effect::Discard` silently no-ops on an empty hand (it `continue`s past
+/// a player with no cards) and the `Draw` sitting beside it in the `Seq`
+/// ran anyway, so an opponent who had emptied their hand took this loot
+/// every upkeep as a free card. Reported from a recorded game.
+#[test]
+fn lorehold_the_historian_empty_hand_loot_draws_nothing() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_the_historian());
+    drain_stack(&mut g);
+    // Nothing to discard, but plenty to draw — the draw must still not fire.
+    g.players[0].hand.clear();
+    for _ in 0..3 {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::lightning_bolt());
+    }
+    // The controller accepts the MayDo; the gate is the discard, not the offer.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    let lib_before = g.players[0].library.len();
+    g.fire_step_triggers(crabomination::game::types::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.is_empty(), "no card was discarded, so none was drawn");
+    assert_eq!(
+        g.players[0].library.len(),
+        lib_before,
+        "an empty hand discards nothing, so the contingent draw does not happen",
+    );
+}
+
 #[test]
 fn lorehold_the_historian_grants_miracle_two_on_first_is_draw() {
     // "Each instant and sorcery card in your hand has miracle {2}." The

@@ -1791,10 +1791,10 @@ pub fn narset_jeskai_waymaster() -> CardDefinition {
                         amount: Value::HandSizeOf(PlayerRef::You),
                         random: false,
                     },
-                    Effect::Draw {
+                    crate::effect::shortcut::if_discarded(Effect::Draw {
                         who: Selector::You,
                         amount: Value::SpellsCastThisTurn(PlayerRef::You),
-                    },
+                    }),
                 ])),
             },
         }],

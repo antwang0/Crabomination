@@ -764,6 +764,29 @@ pub struct EvalWeights {
     /// by a hand-tuned threshold. Off by default until laddered
     /// ([`mull_sim_on`](Self::mull_sim_on), profile `mullsim`).
     pub mull_sim: bool,
+    /// Judge the mulligan against the cards the seat will actually **keep**,
+    /// and stop force-keeping at two.
+    ///
+    /// The engine deals London mulligans (`deal_to_hand(player, 7)` every
+    /// time, bottom N on keep), so the hand is always seven cards at the
+    /// decision point and the seat keeps the best `7 - N` of them. The
+    /// predicate counted lands and early plays over all seven regardless of
+    /// `mulligans_taken`, so a hand kept at two mulligans was scored as a
+    /// seven-carder and played as a five-carder — it overvalues every
+    /// non-zero mulligan count, which is exactly the direction that keeps
+    /// too much. The `hand.len() <= 3` branches were dead for the same
+    /// reason: seven is never ≤ 3.
+    ///
+    /// Also lifts the `mulligans_taken >= 2` force-keep to three. At two the
+    /// old rule kept *anything* — nought lands, seven lands, it did not look.
+    ///
+    /// Distinct from [`mull_quality`](Self::mull_quality), which retuned the
+    /// predicate's thresholds and is a well-powered null (50.2 %
+    /// [49.6, 50.8], 28 800 games). This is a modelling fix, not a retune:
+    /// the old rule answers a question about a hand the seat will not have.
+    /// Off by default until laddered
+    /// ([`mull_london_on`](Self::mull_london_on), profile `mulllondon`).
+    pub mull_london: bool,
     /// Restore the pre-2026-08-23 planeswalker cash-out read: raw enemy
     /// creature power against *current* loyalty, no blockers, no
     /// attack-capability filter. The control for the fix, kept so the
@@ -934,6 +957,30 @@ pub struct EvalWeights {
     /// bot out for nothing. Off by default until laddered
     /// ([`impulse_draw_on`](Self::impulse_draw_on), profile `impulse`).
     pub impulse_draw: bool,
+    /// Offer cards carrying an `Effect::GrantMayPlay` permission as casts
+    /// (`GameAction::CastFromZoneWithoutPaying`).
+    ///
+    /// The engine has cast these for a long time and
+    /// `GameState::may_play_castable` published the set, but the client's
+    /// UI was the only caller, so the whole class was human-only: 37
+    /// catalog cards — Snapcaster Mage, Hostage Taker, Emry, Goblin
+    /// Dark-Dwellers, Dauthi Voidwalker, Past in Flames, Ark of Hunger —
+    /// granted the bot a play it could not express at any valuation.
+    ///
+    /// Flagged rather than unconditional because these are new *action
+    /// types* competing for the six-arm cap in
+    /// [`main_phase_candidates_for_mcts`], which is round 46's case C
+    /// (`abilarms`, -1.1). It may equally be round 46's case A
+    /// (`target_arms`, +0.95): unlike an activated ability the heuristic
+    /// cannot score, a may-play cast is scored by `score_candidate` as the
+    /// card it casts, which is competence the class already has. The
+    /// ladder is what tells the two apart, and unlike r46's B cell this
+    /// one can be measured — the `cube` pool carries Snapcaster Mage,
+    /// Hostage Taker and Dauthi Voidwalker, where the sealed mirror that
+    /// read `impulse` at zero incidence carries none of them. Off by
+    /// default until laddered ([`may_play_on`](Self::may_play_on), profile
+    /// `mayplay`).
+    pub may_play: bool,
     /// Offer the search *alternative targetings* of the same spell, not
     /// just the one the auto-targeter picked.
     ///
@@ -1052,6 +1099,7 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             mull_sim: false,
+            mull_london: false,
             legacy_cashout: false,
             block_gang: false,
             determinize: 0,
@@ -1066,6 +1114,7 @@ impl EvalWeights {
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
+            may_play: false,
             target_arms: false,
             prepare_arm: false,
             fetch_arms: false,
@@ -1153,6 +1202,7 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             mull_sim: false,
+            mull_london: false,
             legacy_cashout: false,
             block_gang: false,
             determinize: 0,
@@ -1167,6 +1217,7 @@ impl EvalWeights {
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
+            may_play: false,
             target_arms: false,
             prepare_arm: false,
             fetch_arms: false,
@@ -1237,6 +1288,7 @@ impl EvalWeights {
             land_urgency: false,
             mull_quality: false,
             mull_sim: false,
+            mull_london: false,
             legacy_cashout: false,
             block_gang: false,
             determinize: 0,
@@ -1251,6 +1303,7 @@ impl EvalWeights {
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
+            may_play: false,
             target_arms: false,
             prepare_arm: false,
             fetch_arms: false,
@@ -1758,13 +1811,30 @@ impl EvalWeights {
 
     /// [`impulse_draw`](Self::impulse_draw); ladder as A against the
     /// `gang` control (profile `impulse`).
+    /// Carries [`may_play`](Self::may_play) too, and must: the interlock at
+    /// `pick_impulse_draw_ability`'s call site makes `impulse_draw` alone a
+    /// no-op, so a profile without it would ladder nothing. Read `mayplay`
+    /// for the cast class on its own and `impulse` for the pair.
     pub const fn impulse_draw_on() -> Self {
-        Self { impulse_draw: true, ..Self::block_gang_search() }
+        Self { impulse_draw: true, may_play: true, ..Self::block_gang_search() }
+    }
+
+    /// [`may_play`](Self::may_play); ladder as A against the `gang` control
+    /// (profile `mayplay`). Read it on `--decks cube`, not the sealed
+    /// mirror: sealed carries none of the 37 cards, which is what made
+    /// round 46's `impulse` cell zero-incidence.
+    pub const fn may_play_on() -> Self {
+        Self { may_play: true, ..Self::block_gang_search() }
     }
 
     /// [`mull_sim`](Self::mull_sim); ladder as A against `gang`.
     pub const fn mull_sim_on() -> Self {
         Self { mull_sim: true, ..Self::block_gang_search() }
+    }
+
+    /// [`mull_london`](Self::mull_london); ladder as A against `gang`.
+    pub const fn mull_london_on() -> Self {
+        Self { mull_london: true, ..Self::block_gang_search() }
     }
 
     /// [`legacy_cashout`](Self::legacy_cashout) — the pre-fix control.
@@ -2259,6 +2329,24 @@ impl EvalWeights {
     /// 50.0 / 50.0 / 50.2, two cells straddling 50 — null — and stays off.
     pub const fn default_const() -> Self {
         Self {
+            // `impulse_draw` turned on 2026-09-08 on the replay evidence,
+            // not the ladder — round 46's B cell read it at *zero
+            // incidence* (sealed mirrors carry no Ark of Hunger), so the
+            // 50.0/50.0 there is "never fired", not "no effect", and
+            // ML_NOTES parked it "justified by the replay rather than by
+            // the ladder". The replay is still the only instrument that
+            // sees this class: a recorded human game has the Ark cast and
+            // then idle for five turns while the bot topdecked on an empty
+            // hand.
+            //
+            // ⚠ Paired with [`may_play`](Self::may_play), which is off by
+            // default pending its own ladder. That pairing is deliberate
+            // and `pick_impulse_draw_ability`'s call site enforces it: an
+            // impulse draw whose milled card cannot then be played is a
+            // self-mill for a tap, which is *worse* than not activating.
+            // Turning this on alone therefore changes nothing until
+            // `may_play` lands — see the guard.
+            impulse_draw: true,
             attack_pairs_empty_only: true,
             attack_pairs_lazy: true,
             attack_skip_open: true,
@@ -5491,6 +5579,47 @@ fn decide_mulligan_by_sim(
     }
 }
 
+/// The cards a London mulligan actually leaves: the best `7 - n` of the
+/// seven dealt, in the order this seat would bottom them.
+///
+/// Bottoming policy, in the order a human bottoms: surplus lands beyond
+/// three first (a five-card keep does not want four lands), then the
+/// most expensive spells, which are the ones a short hand is least likely
+/// to cast. Deliberately simple — the point is that the predicate stops
+/// reading two cards the seat is about to put back, not that this is the
+/// optimal bottoming.
+fn london_kept<'a>(
+    hand: &'a [crate::card::CardInstance],
+    mulligans_taken: usize,
+) -> Vec<&'a crate::card::CardInstance> {
+    let mut kept: Vec<&crate::card::CardInstance> = hand.iter().collect();
+    let mut to_bottom = mulligans_taken.min(kept.len().saturating_sub(1));
+    while to_bottom > 0 {
+        let lands = kept.iter().filter(|c| c.definition.is_land()).count();
+        // Surplus land first, else the priciest spell.
+        let idx = if lands > 3 {
+            kept.iter().position(|c| c.definition.is_land())
+        } else {
+            kept.iter()
+                .enumerate()
+                .filter(|(_, c)| !c.definition.is_land())
+                .max_by_key(|(_, c)| c.definition.cost.cmc())
+                .map(|(i, _)| i)
+        };
+        match idx {
+            Some(i) => {
+                kept.remove(i);
+            }
+            // All lands and none surplus: drop one anyway so the count is right.
+            None => {
+                kept.pop();
+            }
+        }
+        to_bottom -= 1;
+    }
+    kept
+}
+
 fn decide_mulligan(
     state: &GameState,
     seat: usize,
@@ -5498,7 +5627,24 @@ fn decide_mulligan(
     w: &EvalWeights,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
-    let hand = &state.players[seat].hand;
+    // `mull_london`: judge the cards this seat will KEEP, not the seven it
+    // was dealt. The engine deals London mulligans, so the hand is seven
+    // every time and `mulligans_taken` of them go back — see the flag's doc.
+    let (london, dealt);
+    let hand: &[&crate::card::CardInstance] = if w.mull_london {
+        london = london_kept(&state.players[seat].hand, mulligans_taken);
+        &london
+    } else {
+        dealt = state.players[seat].hand.iter().collect::<Vec<_>>();
+        &dealt
+    };
+    // At two mulligans the old rule kept *anything* — nought lands, seven
+    // lands, it did not look. Under London a keep at three is five cards
+    // dealt down to four, which is worse than almost any four-card hand;
+    // one more rung down is the right floor, and the predicate above now
+    // reads the cards that will actually be kept, so it can be trusted
+    // further.
+    let force_keep_at = if w.mull_london { 3 } else { 2 };
     let lands = hand.iter().filter(|c| c.definition.is_land()).count();
     // Curve check: a 2–5-land hand is only worth keeping if it has at least
     // one nonland spell cheap enough to cast in the first few turns — three
@@ -5525,8 +5671,26 @@ fn decide_mulligan(
         need.is_subset_of(producible)
     });
     if !w.mull_quality {
-        let keepable = ((2..=5).contains(&lands) && has_early_play) || hand.len() <= 3;
-        return if keepable || mulligans_taken >= 2 {
+        // The acceptable land band is written for seven cards. Reading it
+        // against a *kept* hand of five would call three lands and two
+        // spells the same shape as five lands and two spells, and bottoming
+        // a surplus land off a flooded seven would walk it INTO the band —
+        // the flag would then keep more, not less. Scale the band with the
+        // hand instead, at the same ratio.
+        let max_lands = if w.mull_london {
+            match hand.len() {
+                7 => 5,
+                6 => 4,
+                5 => 3,
+                _ => 2,
+            }
+        } else {
+            5
+        };
+        let min_lands = if w.mull_london && hand.len() < 5 { 1 } else { 2 };
+        let keepable =
+            ((min_lands..=max_lands).contains(&lands) && has_early_play) || hand.len() <= 3;
+        return if keepable || mulligans_taken >= force_keep_at {
             DecisionAnswer::Keep
         } else {
             DecisionAnswer::TakeMulligan
@@ -5581,7 +5745,7 @@ fn decide_mulligan(
             _ => false,
         }
     };
-    if keepable || mulligans_taken >= 2 {
+    if keepable || mulligans_taken >= force_keep_at {
         DecisionAnswer::Keep
     } else {
         DecisionAnswer::TakeMulligan
@@ -5636,6 +5800,10 @@ mod spec {
     pub const BACK: u32 = 1 << 13;
     pub const ALT_COST: u32 = 1 << 14;
     pub const SPLICE: u32 = 1 << 19;
+    // any zone
+    /// A live `may_play_until` permission for this seat, on a card wherever
+    /// `Effect::GrantMayPlay` stamped it — exile or any player's graveyard.
+    pub const MAY_PLAY: u32 = 1 << 20;
     // battlefield
     pub const PREPARED: u32 = 1 << 18;
     // graveyard
@@ -5803,6 +5971,30 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
     m
 }
 
+/// [`spec::MAY_PLAY`]'s gate: a card outside this seat's hand carrying a
+/// `may_play_until` permission for it.
+///
+/// Same zones and same predicate as [`GameState::may_play_castable`], which
+/// is what the candidate block below re-walks — the permission is stamped
+/// wherever the card sits (a graveyard for Ark of Hunger's milled card and
+/// Practiced Scrollsmith's target, exile for Suspend Aggression's pair), and
+/// the grant can name an *opponent's* graveyard card, so this walks every
+/// graveyard rather than only this seat's.
+///
+/// Expiry is deliberately not read here. The permission's `granted_turn` +
+/// `duration` are the engine's to judge, and `would_accept` judges them at
+/// the pick site; a stale permission therefore sets the bit and then loses
+/// its candidate to the dry run, which is the same bargain every other gate
+/// in this sweep makes. The `any` short-circuits on the first hit.
+fn may_play_specialty(state: &GameState, seat: usize) -> u32 {
+    let any = state
+        .exile
+        .iter()
+        .chain(state.players.iter().flat_map(|p| p.graveyard.iter()))
+        .any(|c| c.may_play_until.is_some_and(|perm| perm.player == seat));
+    if any { spec::MAY_PLAY } else { 0 }
+}
+
 // `SweepMana<'a>` is invariant over `'a` (its `OnceCell` holds borrows of the
 // board), so the shared handle's lifetime has to be named rather than elided.
 fn cast_candidates<'a>(
@@ -5829,6 +6021,7 @@ fn cast_candidates<'a>(
     let facts = BoardFacts::gather(state, seat);
     let mask = hand_specialties(state, seat, &facts)
         | graveyard_specialties(state, seat)
+        | if w.may_play { may_play_specialty(state, seat) } else { 0 }
         | if facts.prepared { spec::PREPARED } else { 0 };
     let has_repartee = facts.repartee;
     // One producible-mana read for every affordability filter in this
@@ -6839,6 +7032,57 @@ fn cast_candidates<'a>(
         castable.push((action, false));
     }
 
+    // `Effect::GrantMayPlay` permissions: a card in a graveyard or in exile
+    // that this seat may play right now, cast with
+    // `GameAction::CastFromZoneWithoutPaying`.
+    //
+    // The engine has implemented this cast for a long time and
+    // `GameState::may_play_castable` has published the set for as long — but
+    // the only caller was the client's UI, so the permission was *human-only*
+    // and the whole class of cards was dead weight to the bot. Ark of Hunger
+    // is the clearest case: the bot would tap for "mill a card, you may play
+    // that card this turn", never play the milled card, and so take a pure
+    // self-mill for a tap — which also leaves the artifact's own "whenever
+    // one or more cards leave your graveyard" drain unreachable, because
+    // playing the milled card is what makes one leave.
+    //
+    // `would_accept` at the pick site is the gate, as it is for every other
+    // block here: it re-checks the permission's holder and expiry, the
+    // printed sorcery/instant window, and — for a `pay_own_cost` grant like
+    // the Ark's — the `granted_alt_cast_cost_eot` the stamp left behind, so
+    // an expired permission or a cost this seat cannot pay drops the
+    // candidate rather than reaching the engine.
+    //
+    // Lands are skipped: a land is *played*, not cast, so
+    // `CastFromZoneWithoutPaying` rejects one, and the impulse-exile land
+    // grant already has its own `PlayLand` path in `pick_main_phase_action`.
+    if w.may_play {
+    gated_block!(mask, spec::MAY_PLAY, castable, {
+    for c in state
+        .exile
+        .iter()
+        .chain(state.players.iter().flat_map(|p| p.graveyard.iter()))
+    {
+        if c.definition.is_land() || !c.may_play_until.is_some_and(|perm| perm.player == seat) {
+            continue;
+        }
+        let (target, additional_targets) = if c.definition.effect.requires_target() {
+            state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastFromZoneWithoutPaying {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        castable.push((action, false));
+    }
+    });
+    }
+
     // Mana-only alternative costs (Dash CR 702.110, Blitz 702.152,
     // Spectacle 702.111): for any hand card whose `alternative_cost` is paid
     // purely with mana (no pitch/sacrifice/graveyard/life rider), offer a
@@ -7630,7 +7874,12 @@ fn main_phase_action_with(
     // Same slot, the other route to a card: impulse-draw engines that mill
     // or exile off the top and grant permission to play it (Ark of Hunger).
     // Flag-gated until laddered.
-    if w.impulse_draw {
+    // `w.may_play` is the interlock, not a redundant flag: the whole value
+    // of an impulse draw is playing what it turned up, and until
+    // `cast_candidates` offers the `may_play_until` cast the bot cannot.
+    // Activating anyway mills a card it can never use and taps the
+    // permanent to do it — strictly worse than leaving the ability alone.
+    if w.impulse_draw && w.may_play {
         gated_pick!(state, sinks, sink::AB_GRANT_PLAY, pick_impulse_draw_ability(state, seat));
     }
 
@@ -15613,6 +15862,55 @@ pub mod response_census {
     }
 }
 
+/// True when a chosen mode's body provably does nothing on *this* board.
+///
+/// `score_candidate` scores a modal spell from card-level properties — cost,
+/// power, toughness, keywords — and never looks at which mode was chosen, so
+/// every mode of a charm ties and the bot takes whichever the enumeration
+/// offered first. Lorehold Charm's mode 0 is "each opponent sacrifices a
+/// nontoken artifact", which is a blank against an opponent with no artifact,
+/// and that is the mode index 0 — so the bot cast the charm for nothing on a
+/// board where mode 2 would have pumped its team. Reported from a game as
+/// "the bot cast a Lorehold Charm that did nothing".
+///
+/// Deliberately conservative: it answers `true` only for the shapes whose
+/// emptiness is decidable from the board without resolving anything, and
+/// `false` for everything else. A missed no-op costs what it costs today; a
+/// *wrong* `true` would suppress a real line, which is worse. Targeted modes
+/// need no arm here — `would_accept` already rejects a mode with no legal
+/// target, which is why Lorehold Charm's mode 1 was never the problem.
+fn mode_is_inert(state: &GameState, seat: usize, eff: &Effect) -> bool {
+    use crate::effect::{PlayerRef, Selector};
+    let gates = crate::game::effects::PrintedGates::default();
+    let any_permanent = |req: &crate::card::SelectionRequirement, perspective: Option<usize>| {
+        state.battlefield.iter().any(|c| {
+            let seat = perspective.unwrap_or(c.controller);
+            state.requirement_on_permanent(req, c, seat, None, &gates)
+        })
+    };
+    match eff {
+        // "Creatures you control get +1/+1", "destroy each X" — nothing to
+        // iterate is nothing to do.
+        Effect::ForEach { selector: Selector::EachPermanent(req), .. } => {
+            !any_permanent(req, Some(seat))
+        }
+        // "Each opponent sacrifices a [filter]" — the filter is read from the
+        // sacrificing player's side, so the perspective is the permanent's
+        // own controller, and only an opponent's permanent can answer it.
+        Effect::Sacrifice { who: Selector::Player(PlayerRef::EachOpponent), filter, .. } => {
+            !state.battlefield.iter().any(|c| {
+                c.controller != seat
+                    && state.players[c.controller].is_alive()
+                    && !state.same_team(seat, c.controller)
+                    && state.requirement_on_permanent(filter, c, c.controller, None, &gates)
+            })
+        }
+        // A sequence is a blank only if every step is.
+        Effect::Seq(steps) => steps.iter().all(|e| mode_is_inert(state, seat, e)),
+        _ => false,
+    }
+}
+
 fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &EvalWeights) -> i32 {
     use crate::card::CardType;
     // (source card, slot-0 target, variant bonus, extra mana sunk in).
@@ -15642,6 +15940,11 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         | GameAction::CastMayhem { card_id, target, .. }
         | GameAction::CastHarmonize { card_id, target, .. }
         | GameAction::CastDisturb { card_id, target, .. }
+        // A `may_play_until` cast is scored as the card it casts: the
+        // alternative is not a plain cast of the same spell (it is in a
+        // graveyard or in exile, and unreachable any other way) but leaving
+        // it there, so there is no variant premium to price.
+        | GameAction::CastFromZoneWithoutPaying { card_id, target, .. }
         | GameAction::CastSpellAlternative { card_id, target, .. } => {
             (*card_id, target.clone(), 0, 0)
         }
@@ -15686,6 +15989,42 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
             (GameAction::CastPrepareSpell { .. }, Some(spell)) => spell,
             _ => def,
         };
+        // CR 704.5j — a second copy of a legend this seat already controls
+        // dies to the legend rule the moment it resolves. The cast buys no
+        // board (you keep exactly one either way) and costs a card, so its
+        // value is negative however good the creature is.
+        //
+        // Nothing priced that, and `eval_permanent`'s legendary premium
+        // (`+2 * unit`) made it read as a *gain*, so the bot cast the second
+        // copy on sight and watched it die.
+        //
+        // A penalty rather than a filter: the exception is real — a fresh
+        // copy replacing a damaged or nearly-dead one, or an ETB worth the
+        // card — and hard rules have consistently lost to search here. The
+        // magnitude only has to sink it under doing something else.
+        //
+        // Per-*controller*, as the rule is: an opponent's copy is no
+        // conflict. Aeve's "isn't legendary if it's a token" carve-out is
+        // the same one the SBA's own walk makes.
+        if def.supertypes.contains(&crate::card::Supertype::Legendary)
+            && state.battlefield.iter().any(|c| {
+                c.controller == seat
+                    && c.definition.name == def.name
+                    && !(c.is_token && c.definition.nonlegendary_as_token)
+            })
+        {
+            return -8 * w.unit;
+        }
+        // A mode that provably does nothing on this board is worth less than
+        // holding the card: the spell is spent either way. Priced below zero
+        // rather than filtered, for the same reason as the duplicate legend —
+        // and so a charm whose every mode is blank still has *an* arm if
+        // something else makes casting it right.
+        if let GameAction::CastSpell { mode: Some(m), .. } = action
+            && mode_is_inert(state, seat, mode_branch(&def.effect, Some(*m)))
+        {
+            return -4 * w.unit;
+        }
         // These terms are raw card stats; `permanent_value` below is on the
         // profile's scale, so lift them into the same units or a scaled
         // profile would drown the cast's own merits in the target's value.
@@ -22243,6 +22582,19 @@ mod stack_response_tests {
         };
         assert!(!fires(&EvalWeights::block_gang_search()), "flag off: unchanged");
         assert!(fires(&EvalWeights::impulse_draw_on()), "flag on: the Ark is activated");
+        // The interlock: milling a card the bot cannot then play is a
+        // self-mill for a tap, so `impulse_draw` without `may_play` must
+        // stay silent rather than activate into nothing. This is the
+        // configuration the shipped default sits in until `may_play`
+        // lands, and the pairing is what keeps that default harmless.
+        assert!(
+            !fires(&EvalWeights { may_play: false, ..EvalWeights::impulse_draw_on() }),
+            "impulse_draw without may_play must not activate",
+        );
+        assert!(
+            !fires(&EvalWeights::default()),
+            "the shipped default carries impulse_draw but not may_play, so it is inert",
+        );
     }
 
     /// auto-aimed target.
@@ -22266,6 +22618,309 @@ mod stack_response_tests {
         };
         assert!(!has_arm(&EvalWeights::default()), "flag off: the class is invisible");
         assert!(has_arm(&EvalWeights::ability_arms_on()), "flag on: the activation is a candidate");
+    }
+
+    /// `Effect::GrantMayPlay` used to be a human-only class of card. The
+    /// engine has cast the grant for a long time
+    /// (`GameAction::CastFromZoneWithoutPaying`) and
+    /// `GameState::may_play_castable` published the set, but the client's UI
+    /// was the only caller: `cast_candidates` never walked for the
+    /// permission, so the bot could take the grant and not use it.
+    ///
+    /// Ark of Hunger is the case that surfaced it — "{T}: Mill a card. You
+    /// may play that card this turn" is pure self-mill for a tap if the
+    /// milled card is then left in the graveyard, and it also strands the
+    /// artifact's own "whenever one or more cards leave your graveyard"
+    /// drain, because playing the milled card is what would make one leave.
+    #[test]
+    fn ark_of_hunger_offers_the_milled_card_to_the_bot() {
+        let mut g = two_player_game();
+        let top = g.add_card_to_library(0, catalog::lightning_bolt());
+        let ark = g.add_card_to_battlefield(0, catalog::ark_of_hunger());
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == ark) {
+            c.summoning_sick = false;
+        }
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: ark,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            mode: None,
+            x_value: None,
+        })
+        .expect("Ark mill activation");
+        crate::game::drain_stack(&mut g);
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "the Bolt was milled");
+
+        let offered_with = |g: &GameState, w: &EvalWeights| {
+            cast_candidates(g, 0, w, None).iter().any(|(a, _)| {
+                matches!(a, GameAction::CastFromZoneWithoutPaying { card_id, .. } if *card_id == top)
+            })
+        };
+        let offered = |g: &GameState| offered_with(g, &EvalWeights::may_play_on());
+        assert!(
+            !offered_with(&g, &EvalWeights::default()),
+            "flag off: the class is invisible",
+        );
+        assert!(offered(&g), "flag on: the milled card is a candidate the bot can pick");
+
+        // The candidate is real, not dead weight: the grant is
+        // `pay_own_cost`, so the engine charges the Bolt's own {R} — absent
+        // without a red source, accepted with one.
+        let action = GameAction::CastFromZoneWithoutPaying {
+            card_id: top,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        assert!(GameState::accept_on(&g, action.clone()).is_none(), "no mana, no cast");
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        assert!(GameState::accept_on(&g, action).is_some(), "with {{R}} the bot's pick casts");
+
+        // And the gate is the permission, not the zone: revoke it and the
+        // graveyard card goes back to being invisible.
+        if let Some(c) = g.players[0].graveyard.iter_mut().find(|c| c.id == top) {
+            c.may_play_until = None;
+        }
+        assert!(!offered(&g), "no permission, no candidate");
+    }
+
+    /// CR 704.5j — the bot used to cast a second copy of a legend it already
+    /// controlled and watch it die to the legend rule: a card spent for no
+    /// board at all. `eval_permanent`'s `+2 * unit` legendary premium made
+    /// the duplicate read as a gain, and nothing anywhere compared names.
+    #[test]
+    fn a_duplicate_legend_is_not_worth_casting() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let hand_copy = g.add_card_to_hand(0, crate::catalog::lorehold_the_historian());
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, crate::catalog::mountain());
+        }
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, crate::catalog::plains());
+        }
+        for c in g.battlefield.iter_mut() {
+            c.summoning_sick = false;
+        }
+        let casts_it = |g: &GameState| {
+            let mut bot = HeuristicBot::with_weights(EvalWeights::default());
+            matches!(
+                bot.next_action(g, 0),
+                Some(GameAction::CastSpell { card_id, .. }) if card_id == hand_copy
+            )
+        };
+        assert!(casts_it(&g), "with no copy out, the legend is a fine play");
+
+        // Now the same seat already controls one.
+        g.add_card_to_battlefield(0, crate::catalog::lorehold_the_historian());
+        assert!(!casts_it(&g), "a duplicate dies to the legend rule — don't spend the card");
+
+        // Per-controller: the opponent's copy is no conflict at all.
+        let mut g2 = two_player_game();
+        g2.active_player_idx = 0;
+        g2.priority.player_with_priority = 0;
+        let mine = g2.add_card_to_hand(0, crate::catalog::lorehold_the_historian());
+        for _ in 0..3 {
+            g2.add_card_to_battlefield(0, crate::catalog::mountain());
+        }
+        for _ in 0..2 {
+            g2.add_card_to_battlefield(0, crate::catalog::plains());
+        }
+        g2.add_card_to_battlefield(1, crate::catalog::lorehold_the_historian());
+        for c in g2.battlefield.iter_mut() {
+            c.summoning_sick = false;
+        }
+        let mut bot = HeuristicBot::with_weights(EvalWeights::default());
+        assert!(
+            matches!(
+                bot.next_action(&g2, 0),
+                Some(GameAction::CastSpell { card_id, .. }) if card_id == mine
+            ),
+            "the legend rule is per-controller — an opponent's copy is not ours",
+        );
+    }
+
+    /// London: the seat keeps the best `7 - n` of the seven it is dealt, so
+    /// the predicate has to read those, not all seven. The old rule counted
+    /// lands over the full hand whatever `mulligans_taken` said, which
+    /// overvalues every non-zero mulligan count — the direction that keeps
+    /// too much.
+    #[test]
+    fn mulligan_judges_the_cards_it_will_actually_keep() {
+        use crate::decision::DecisionAnswer;
+        // Seven cards: five lands and two uncastable seven-drops. At two
+        // mulligans this keeps five — and bottoming two surplus lands leaves
+        // three lands + two spells it still cannot cast.
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        for _ in 0..5 {
+            g.add_card_to_hand(0, crate::catalog::forest());
+        }
+        for _ in 0..2 {
+            g.add_card_to_hand(0, crate::catalog::craw_wurm());
+        }
+        let kept = london_kept(&g.players[0].hand, 2);
+        assert_eq!(kept.len(), 5, "two mulligans means five cards kept");
+        assert_eq!(
+            kept.iter().filter(|c| c.definition.is_land()).count(),
+            3,
+            "surplus lands go back first",
+        );
+
+        // A six-land seven-carder: whole-hand counting sees six lands, the
+        // kept five sees three. The flag-off path force-keeps at two
+        // regardless, so the difference is read at one mulligan.
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        for _ in 0..6 {
+            g.add_card_to_hand(0, crate::catalog::forest());
+        }
+        g.add_card_to_hand(0, crate::catalog::craw_wurm());
+        let off = decide_mulligan(&g, 0, 1, &EvalWeights::default());
+        let on = decide_mulligan(&g, 0, 1, &EvalWeights::mull_london_on());
+        assert!(
+            matches!(off, DecisionAnswer::TakeMulligan),
+            "six lands and a seven-drop is a mulligan either way",
+        );
+        assert!(matches!(on, DecisionAnswer::TakeMulligan), "and still is under the flag");
+    }
+
+    /// The force-keep floor: the old rule kept *anything* at two mulligans.
+    #[test]
+    fn mulligan_floor_drops_one_rung_under_london() {
+        use crate::decision::DecisionAnswer;
+        // Seven lands: unkeepable at any hand size.
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        for _ in 0..7 {
+            g.add_card_to_hand(0, crate::catalog::forest());
+        }
+        assert!(
+            matches!(decide_mulligan(&g, 0, 2, &EvalWeights::default()), DecisionAnswer::Keep),
+            "flag off: two mulligans force-keeps a seven-land hand",
+        );
+        assert!(
+            matches!(
+                decide_mulligan(&g, 0, 2, &EvalWeights::mull_london_on()),
+                DecisionAnswer::TakeMulligan
+            ),
+            "flag on: still shipped at two",
+        );
+        assert!(
+            matches!(
+                decide_mulligan(&g, 0, 3, &EvalWeights::mull_london_on()),
+                DecisionAnswer::Keep
+            ),
+            "but three is the floor",
+        );
+    }
+
+    /// Lorehold Charm's mode 0 is "each opponent sacrifices a nontoken
+    /// artifact" — a blank against an opponent with no artifact. Every mode
+    /// used to score identically (`score_candidate` reads the card, never the
+    /// chosen mode), so the bot took index 0 and cast the charm for nothing.
+    #[test]
+    fn a_mode_that_does_nothing_is_not_the_one_picked() {
+        let setup = |opp_artifact: bool, own_creature: bool| {
+            let mut g = two_player_game();
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            g.add_card_to_battlefield(0, crate::catalog::mountain());
+            g.add_card_to_battlefield(0, crate::catalog::plains());
+            if own_creature {
+                g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+            }
+            if opp_artifact {
+                g.add_card_to_battlefield(1, crate::catalog::ark_of_hunger());
+            }
+            for c in g.battlefield.iter_mut() {
+                c.summoning_sick = false;
+            }
+            let charm = g.add_card_to_hand(0, crate::catalog::lorehold_charm());
+            (g, charm)
+        };
+        let mode_of = |g: &GameState, charm| {
+            let mut bot = HeuristicBot::with_weights(EvalWeights::default());
+            match bot.next_action(g, 0) {
+                Some(GameAction::CastSpell { card_id, mode, .. }) if card_id == charm => Some(mode),
+                _ => None,
+            }
+        };
+
+        // The scores are the mechanism, and the discriminating assertion:
+        // with every mode reading the card and none reading the board, mode
+        // 0 and mode 2 both scored 4 here and the pick came down to whatever
+        // order the menu happened to be in.
+        let score_of = |g: &GameState, charm, want: usize| -> i32 {
+            cast_candidates(g, 0, &EvalWeights::default(), None)
+                .iter()
+                .find_map(|(a, _)| match a {
+                    GameAction::CastSpell { card_id, mode: Some(m), .. }
+                        if *card_id == charm && *m == want =>
+                    {
+                        Some(score_candidate(g, 0, a, &EvalWeights::default()))
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("mode {want} is a candidate"))
+        };
+
+        // No opposing artifact, our own creature: mode 0 is the blank.
+        let (g, charm) = setup(false, true);
+        assert!(score_of(&g, charm, 0) < 0, "the blank mode is priced below doing nothing");
+        assert!(
+            score_of(&g, charm, 0) < score_of(&g, charm, 2),
+            "and below the mode that pumps a real board",
+        );
+        assert_ne!(mode_of(&g, charm), Some(Some(0)), "so it is not what gets cast");
+
+        // Mirror image: an opposing artifact and no creature of ours, so
+        // mode 2 is the blank and mode 0 is live. Same board test, opposite
+        // answer — this is what makes it a board check and not a card check.
+        let (g, charm) = setup(true, false);
+        assert!(score_of(&g, charm, 2) < 0, "pumping an empty board is the blank now");
+        assert!(score_of(&g, charm, 2) < score_of(&g, charm, 0));
+        assert_ne!(mode_of(&g, charm), Some(Some(2)));
+
+        // With both live neither is penalised.
+        let (g, charm) = setup(true, true);
+        assert!(score_of(&g, charm, 0) > 0 && score_of(&g, charm, 2) > 0, "neither is inert");
+    }
+
+    /// The permission is stamped wherever the card sits and names a *player*,
+    /// not the card's owner — Suspend Aggression exiles two cards and grants
+    /// each to its own owner, so seat 0 must not be offered seat 1's.
+    #[test]
+    fn may_play_grants_are_offered_from_exile_and_stay_seat_scoped() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let theirs = g.add_card_to_exile(1, catalog::lightning_bolt());
+        let stamp = |g: &mut GameState, id, player| {
+            if let Some(c) = g.exile.iter_mut().find(|c| c.id == id) {
+                c.may_play_until = Some(crate::card::MayPlayPermission {
+                    player,
+                    granted_turn: 0,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    exile_after: false,
+                    miracle: false,
+                });
+            }
+        };
+        let offered = |g: &GameState, id| {
+            cast_candidates(g, 0, &EvalWeights::may_play_on(), None).iter().any(|(a, _)| {
+                matches!(a, GameAction::CastFromZoneWithoutPaying { card_id, .. } if *card_id == id)
+            })
+        };
+        stamp(&mut g, theirs, 1);
+        assert!(!offered(&g, theirs), "seat 1's permission is not seat 0's candidate");
+        stamp(&mut g, theirs, 0);
+        assert!(offered(&g, theirs), "an exiled card granted to seat 0 is offered");
     }
 
     #[test]

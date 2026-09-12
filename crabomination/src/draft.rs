@@ -402,6 +402,45 @@ pub(crate) fn score_brief_quality(
     score_brief_with_colors(brief, seat_colors) + brief.quality
 }
 
+/// How much an aggressive build wants a card *for its cost*, on top of
+/// [`score_brief_quality`].
+///
+/// `CardBrief::base_score`'s curve weight is `{0:0, 1:1, 2..=4:3, 5:2, _:1}` —
+/// a spread of three, against a `quality` term that reaches roughly fifteen
+/// for a big evasive body. So the builder is curve-blind in practice, and it
+/// ranks a **one-drop below a five-drop**. `card_quality` has no mana-value
+/// term at all, by design: it was added to stop the builder benching bombs,
+/// and it worked, which is why nothing now pulls the other way.
+///
+/// This is the other way. Magnitudes give the curve a spread of seven, so
+/// combined with the existing bucket it can outrank a pip of colour fit (6)
+/// and reorder cards of similar quality — but a genuine bomb still wins,
+/// which is the intent. A limited deck wants a curve *and* its bombs.
+///
+/// Lands score zero: `assemble_lands` assigns them and they never take a
+/// spell slot.
+pub(crate) fn aggro_curve_delta(brief: &crate::cube::CardBrief) -> i32 {
+    if brief.is_land {
+        return 0;
+    }
+    match brief.cmc {
+        0..=2 => 3,
+        3 => 1,
+        4 => 0,
+        5 => -2,
+        _ => -4,
+    }
+}
+
+/// [`score_brief_quality`] plus [`aggro_curve_delta`] — the sealed builder's
+/// scorer under `SimConfig::curve_aggro`.
+pub(crate) fn score_brief_aggro(
+    brief: &crate::cube::CardBrief,
+    seat_colors: &ColorCounts,
+) -> i32 {
+    score_brief_quality(brief, seat_colors) + aggro_curve_delta(brief)
+}
+
 pub(crate) fn score_card_with_colors(
     factory: CardFactory,
     seat_colors: &ColorCounts,

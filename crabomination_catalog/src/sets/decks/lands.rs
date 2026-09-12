@@ -1806,10 +1806,10 @@ pub fn restless_vents() -> CardDefinition {
                     amount: Value::Const(1),
                     random: false,
                 },
-                Effect::Draw {
+                crate::effect::shortcut::if_discarded(Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),
-                },
+                }),
             ])),
         },
     )

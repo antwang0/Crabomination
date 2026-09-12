@@ -172,6 +172,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         miracle_hand: affordances.miracle,
         free_castable_hand: affordances.free_castable,
         may_play_castable: affordances.may_play_castable,
+        may_play_lands: affordances.may_play_lands,
         bargainable_hand: affordances.bargainable,
         squadable_hand: affordances.squadable,
         spreeable_hand: affordances.spreeable,
