@@ -15,8 +15,9 @@ column assumes is right.
     python3 scripts/audit_printed_body.py            # the table
     python3 scripts/audit_printed_body.py --rows 0   # every row
 
-COVERAGE, 2026-09-12: **16,483 factories priced, 17,066 on the type line,
-16,748 on subtypes, 16,601 on keywords** — from 10,270, 10,409, 0 and 0. And the
+COVERAGE, 2026-09-12: **16,483 factories priced, 17,244 on the type line,
+16,882 on subtypes, 16,779 on keywords, 9,254 creatures on P/T** — from 10,270,
+10,409, 0, 0 and 5,578. And the
 2026-09-11 header's "219 real spells over ~40 bespoke helpers" was a mis-read of
 its own skip counts. The reader had four holes and none of them was the helper
 signatures:
@@ -112,6 +113,29 @@ life", Necromancy's flash for "as though it had flash"). Each needed a
 reviewer's judgement ONCE; the list is what stops it costing that judgement
 every run, which is the same reason `REVIEWED_DEAD_MODES` exists one audit over.
 
+**AND THE P/T COLUMN WAS READING 5,578 OF 9,455 CREATURES AND COUNTING
+NEITHER HALF.** It took `power:` / `toughness:` off the factory's own flattened
+body and `continue`d — with no skip counter — whenever either was missing,
+which is every card built through a `fn creature(.., p, t)` helper: **3,877
+creatures, 41 % of them, with no P/T check at all** behind a column that
+printed "0 wrong P/T". It walks the chain now, and three readings had to be
+right before it read 0 again:
+
+  * a SHORTHAND field (`power,`, which is how every `fn creature(.., power,
+    toughness)` writes it) is the PARAMETER, and `bind_param` resolves it —
+    reading the absent `power:` as "declares nothing" reported 401 correct
+    creatures as 0/0;
+  * one half without the other is UNREADABLE, not a 0 — a literal with `power,`
+    and no `toughness,` takes the other half from its `..base`, and the naive
+    reading reported eight Theros Gods as `6/0`;
+  * a STATION card (CR 721, Edge of Eternities Spacecraft) has no P/T until it
+    is fully stationed, and the printed one lives in the top `StationBand`'s
+    `pt` — which is what the oracle reports, and what this compares, rather
+    than the card's genuinely-`Default` 0/0 (21 Spacecraft).
+
+**The coverage was the finding: all 3,877 are correct.** That is worth as much
+as a defect would have been, and only because the number is printed now.
+
 ⚠ **ONE COLUMN'S SKIP IS NOT THE OTHERS'.** The loop used to `continue` on a
 cost it could not read, so 900-odd cards behind a cost chain the resolver gives
 up on were dropped from the TYPE and SUBTYPE columns as well — three columns'
@@ -120,7 +144,12 @@ factories than the cost does. Each column takes its own verdict.
 
 What is left, with the reason:
   * `nocache` (3,778) — synthesized cards the oracle has never heard of.
-  * `notyped` (338) — a type-line chain it cannot follow.
+  * `notyped` (160) — a type-line chain it cannot follow. It was 338 until two
+    more idioms landed: a BOUND CARD TYPE (`fn spell(name, mana, kind, effect)`
+    writes `card_types: vec![kind]`, 190 factories across five sets) and a
+    helper whose call is its TAIL after a statement (`fn ally(.., mut types,
+    ..) { types.push(Ally); creature(..) }`, 43 Allies).
+  * `nopt` (119) — a P/T chain it cannot follow.
   * `nonliteral` (921) — a cost chain the resolver cannot read, mostly a helper
     that builds its cost from a local binding.
   * `nosubtypes` (205) — a subtype the reader will not guess at: a SHORTHAND
@@ -608,6 +637,85 @@ def raw_field(inner: str, field: str):
     return None
 
 
+def shorthand(inner: str, name: str) -> bool:
+    """Is `name` present as a SHORTHAND field (`power,`) at depth 0?
+
+    Rust's field-init shorthand means the value IS the identifier, so a helper's
+    `fn sliver(.., power, toughness)` writes `power,` and the field's value is
+    the parameter — which `bind_param` resolves to the caller's literal. Reading
+    the absent `power:` as "declares nothing" instead reported 401 correct
+    creatures as 0/0.
+    """
+    return re.search(r"(?:^|,)\s*%s\s*(?:,|$)" % re.escape(name), inner, re.M) is not None
+
+
+def field_value(inner, name, params, args):
+    """A depth-0 field's value text, shorthand included, parameters bound."""
+    v = raw_field(inner, name)
+    if v is None:
+        v = name if shorthand(inner, name) else None
+    return None if v is None else bind_param(v, params, args)
+
+
+# CR 721 — a STATION card (Edge of Eternities Spacecraft) has no power or
+# toughness until it is fully stationed; the printed P/T lives in the top
+# `StationBand`'s `pt`, which is what the oracle reports. The card's own
+# `power` / `toughness` really are `Default` there, so comparing them would
+# report 21 correct Spacecraft as 0/0 — read the band instead.
+STATION_PT = re.compile(
+    r"\bmin:\s*(\d+)[^}]*?\bpt:\s*Some\(\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)\)", re.S)
+
+
+def station_pt(raw: str):
+    """The highest station band's `pt`, or None when the card has no band."""
+    best = None
+    for m in STATION_PT.finditer(raw):
+        n = int(m.group(1))
+        if best is None or n > best[0]:
+            best = (n, (int(m.group(2)), int(m.group(3))))
+    return best[1] if best else None
+
+
+def parse_pt(inner, params=(), args=()):
+    """`((power, toughness) or None, declared)` off a literal's raw inner text.
+
+    ⚠ THE P/T COLUMN READ 5,578 OF 9,455 CREATURES AND COUNTED NEITHER HALF.
+    It took `power:` / `toughness:` off the factory's OWN flattened body and
+    `continue`d — with no skip counter — whenever either was missing, which is
+    every card built through a `fn creature(.., p, t)` helper: 3,877 creatures,
+    41 % of them, with no P/T check at all behind a column that printed
+    "0 wrong P/T". Same walk as the other fields now, same `bind_param`.
+
+    None + declared False is "this literal says nothing", and the caller's base
+    supplies it. None + declared True is UNREADABLE and skips.
+    """
+    if inner is None:
+        return None, False
+    got = {}
+    for f in ("power", "toughness"):
+        v = field_value(inner, f, params, args)
+        if v is None:
+            continue
+        v = v.strip().rstrip(",")
+        if not re.fullmatch(r"-?\d+", v):
+            return None, True
+        got[f] = int(v)
+    if not got:
+        bm = INNER_BASE.search(inner)
+        if bm:
+            nested = literal_raw(inner, bm.start())
+            if nested is not None:
+                return parse_pt(nested, params, args)
+        return None, False
+    # ⚠ ONE HALF IS NOT A VALUE. A literal with `power,` and no `toughness,`
+    # takes the other half from its `..base`, not from `Default` — reading the
+    # missing half as 0 reported eight Theros Gods as `6/0`. Either both or
+    # neither; one alone is unreadable and skips.
+    if len(got) != 2:
+        return None, True
+    return (got["power"], got["toughness"]), True
+
+
 def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None):
     """`(subtypes, declared)` off a literal's raw inner text.
 
@@ -968,15 +1076,32 @@ def build_helper_index(catalog):
     return index
 
 
-def parse_type_line(body: str):
+def parse_type_line(body: str, params=(), args=()):
     """`(card_types, supertypes, base_helper, declares_types, declares_supers)`
-    off one depth-1 field text."""
+    off one depth-1 field text.
+
+    ⚠ THE CARD TYPE IS A PARAMETER IN 190 FACTORIES. `fn spell(name, mana, kind,
+    effect) { CardDefinition { card_types: vec![kind], .. } }` is how five sets
+    spell every instant and sorcery, and `vec![kind]` holds no `CardType` word,
+    so the chain read as unresolvable and those cards had NO type-line check at
+    all — the field where an Instant shipped as a Sorcery is castable at the
+    wrong speed. `bind_param` was already doing this for the cost and the
+    subtypes; it does it here too.
+    """
     tm, sm = TYPES.search(body), SUPER.search(body)
-    got_t = {w for w in WORD.findall(tm.group(1)) if w in CARD_TYPES} if tm else set()
+    def words(field, vocab):
+        raw = field.group(1)
+        got = {w for w in WORD.findall(raw) if w in vocab}
+        if not got and params:
+            bound = " ".join(bind_param(a, params, args)
+                             for a in split_args(raw.strip().lstrip("vec![").rstrip("],")))
+            got = {w for w in WORD.findall(bound) if w in vocab}
+        return got
+    got_t = words(tm, CARD_TYPES) if tm else set()
     got_t = {"Kindred" if t == "Tribal" else t for t in got_t}
     got_s = set()
     if sm:
-        got_s = {w for w in WORD.findall(sm.group(1)) if w in SUPERTYPES}
+        got_s = words(sm, SUPERTYPES)
         got_s |= {v for k, v in HELPERS.items() if k + "()" in sm.group(1)}
     base = None
     for line in body.split("\n"):
@@ -988,7 +1113,41 @@ def parse_type_line(body: str):
 
 
 Read = collections.namedtuple(
-    "Read", "types supers subs keywords ok sub_ok kw_ok")
+    "Read", "types supers subs keywords pt ok sub_ok kw_ok pt_ok")
+
+
+def tail_expression(body: str) -> str:
+    """A function body's TAIL expression — what it returns.
+
+    ⚠ NOT THE FIRST TOKEN AFTER THE SIGNATURE. `fn ally(.., mut types, ..) {
+    types.push(CreatureType::Ally); creature(name, c, types, p, t) }` opens with
+    a statement, and reading from the top found `types` followed by `.` rather
+    than `(` — so 43 Allies, and every helper shaped like them, resolved to
+    nothing and were dropped from the type-line column. Split on top-level `;`
+    and take the last chunk.
+    """
+    out, depth, in_str, cur = [], 0, False, []
+    for c in body:
+        if in_str:
+            cur.append(c)
+            if c == '"':
+                in_str = False
+            continue
+        if c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif c == ";" and depth <= 1:
+            out.append("".join(cur))
+            cur = []
+            continue
+        cur.append(c)
+    out.append("".join(cur))
+    tail = out[-1]
+    # The body's closing brace rides the tail; drop it and anything after.
+    return tail.rsplit("}", 1)[0] if tail.count("}") else tail
 
 
 def resolve_from_block(index, path, blk, args, depth, subs_index=None):
@@ -1004,10 +1163,10 @@ def resolve_from_block(index, path, blk, args, depth, subs_index=None):
     call_src = None
     if body is None:
         m = RET.search(blk)
-        after = blk[m.end():] if m else ""
+        after = tail_expression(blk[m.end():] if m else "")
         hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after)
         if not hm:
-            return Read(set(), set(), None, None, False, False, False)
+            return Read(set(), set(), None, None, None, False, False, False, False)
         body, call_src = ".." + hm.group(1) + "(", after
     return resolve_type_line(index, path, body, None, depth, inner,
                              helper_params(blk), args, call_src, subs_index)
@@ -1031,10 +1190,12 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     what its caller passed (`bind_param`), and `call_src` is the text holding
     the base call when `body` is the pseudo-literal, which carries no arguments.
     """
-    got_t, got_s, base, has_t, has_s = parse_type_line(body)
+    got_t, got_s, base, has_t, has_s = parse_type_line(body, params, args)
     got_sub, has_sub = parse_subtypes(inner, params, args, subs_index, path)
     got_kw, has_kw = parse_keywords(inner, params, args)
+    got_pt, has_pt = parse_pt(inner, params, args)
     sub_ok, kw_ok = got_sub is not None, got_kw is not None
+    pt_ok = not (has_pt and got_pt is None)
     ok = True
     # The wrapper idiom sits OUTSIDE the literal, so it is read off `raw`.
     if raw is not None and depth == 0:
@@ -1067,14 +1228,18 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
                         wkw, whkw = parse_keywords(helper_raw(wblk))
                         if whkw:
                             got_kw, kw_ok, has_kw = wkw, wkw is not None, True
+                    if not has_pt:
+                        wpt, whpt = parse_pt(helper_raw(wblk))
+                        if whpt:
+                            got_pt, pt_ok, has_pt = wpt, wpt is not None, True
                     break
             else:
-                ok = sub_ok = kw_ok = False
+                ok = sub_ok = kw_ok = pt_ok = False
     if base:
         cands = [b for pth, b in index.get(base, []) if pth == path] \
             or [b for _, b in index.get(base, [])]
         if not cands or depth >= 5:
-            return Read(got_t, got_s, got_sub, got_kw, False, False, False)
+            return Read(got_t, got_s, got_sub, got_kw, got_pt, False, False, False, False)
         # The base call's arguments, mapped through THIS level's parameters, so
         # `fn sliver(name, c, p, t) { creature(name, c, vec![Sliver], p, t) }`
         # hands `creature` a literal and `fn creature(.., ct, ..)`'s
@@ -1094,6 +1259,8 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
             got_s = b.supers
         if not has_kw:
             got_kw, kw_ok = b.keywords, b.kw_ok
+        if not has_pt:
+            got_pt, pt_ok, has_pt = b.pt, b.pt_ok, True
         # A `..base(..)` supplies the subtypes the literal did not declare —
         # `..creature("Storm Crow", .., types, 1, 2)`. A literal that DID
         # declare them wins, as the struct-update syntax says.
@@ -1102,7 +1269,8 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     # Every card has card types; an empty set means the chain was not readable,
     # not that the card has none. Supertypes are genuinely optional, so they
     # cannot carry this test.
-    return Read(got_t, got_s, got_sub, got_kw, ok and bool(got_t), sub_ok, kw_ok)
+    return Read(got_t, got_s, got_sub, got_kw, got_pt,
+                ok and bool(got_t), sub_ok, kw_ok, pt_ok)
 
 
 def main() -> int:
@@ -1113,10 +1281,10 @@ def main() -> int:
     index = build_helper_index(CATALOG)
     subs_index = build_subtypes_index(CATALOG)
     checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
-    checked_types = checked_sub = checked_kw = wrong_kw = 0
+    checked_types = checked_sub = checked_kw = wrong_kw = checked_pt = 0
     skip = {"nocache": 0, "faces": 0, "split": 0, "star": 0, "nonliteral": 0,
             "noname": 0, "notaspell": 0, "notyped": 0, "nosubtypes": 0,
-            "nosubvariant": 0, "nokeywords": 0}
+            "nosubvariant": 0, "nokeywords": 0, "nopt": 0}
     rows = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
@@ -1361,17 +1529,34 @@ def main() -> int:
                     rows.append(("kw", name, f"{path.name}::{fname}",
                                  " ".join(sorted(have_kw)) or "(none)",
                                  " ".join(sorted(want_kw)) or "(none)"))
+            # The printed P/T, through the same chain as everything else — see
+            # `parse_pt` for what it used to read instead.
             op, ot = card.get("power"), card.get("toughness")
-            pm, tm = POWER.search(body), TOUGH.search(body)
-            if op is None or ot is None or pm is None or tm is None:
+            if op is None or ot is None:
                 continue
             if not (op.lstrip("-").isdigit() and ot.lstrip("-").isdigit()):
                 skip["star"] += 1
                 continue
-            if (pm.group(1), tm.group(1)) != (op, ot):
-                wrong_pt += 1
-                rows.append(("p/t", name, f"{path.name}::{fname}",
-                             f"{pm.group(1)}/{tm.group(1)}", f"{op}/{ot}"))
+            band = station_pt(raw)
+            if band is not None:
+                checked_pt += 1
+                if band != (int(op), int(ot)):
+                    wrong_pt += 1
+                    rows.append(("p/t", name, f"{path.name}::{fname}",
+                                 f"{band[0]}/{band[1]} (top station band)",
+                                 f"{op}/{ot}"))
+            elif not read.pt_ok:
+                skip["nopt"] += 1
+            else:
+                checked_pt += 1
+                # No `power:` anywhere in the chain is a VALUE, not a gap: the
+                # engine ships `Default` there, and a creature at 0/0 dies to
+                # state-based actions the turn it lands.
+                got_pt = read.pt or (0, 0)
+                if got_pt != (int(op), int(ot)):
+                    wrong_pt += 1
+                    rows.append(("p/t", name, f"{path.name}::{fname}",
+                                 f"{got_pt[0]}/{got_pt[1]}", f"{op}/{ot}"))
 
     shown = rows if args.rows == 0 else rows[: args.rows]
     for kind, name, where, got, want in shown:
@@ -1379,7 +1564,8 @@ def main() -> int:
     if len(rows) > len(shown):
         print(f"  ... {len(rows) - len(shown)} more (--rows 0)")
     print(f"# compared against the oracle: {checked} priced, {checked_types} on the "
-          f"type line, {checked_sub} on subtypes, {checked_kw} on keywords — "
+          f"type line, {checked_sub} on subtypes, {checked_kw} on keywords, "
+          f"{checked_pt} on P/T — "
           f"**{wrong_cost} wrong cost, {wrong_pt} wrong P/T, "
           f"{missing_flag} missing `no_mana_cost`, {wrong_types} wrong type line, "
           f"{wrong_kw} wrong keywords**")

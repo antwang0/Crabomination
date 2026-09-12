@@ -49,6 +49,26 @@ CASES = [
  ("fires", "Subtypes-returning helper (war fn creatures)", "sets/war.rs",
   "fn creatures(t: Vec<CreatureType>) -> Subtypes {\n    Subtypes {\n        creature_types: t,",
   "fn creatures(t: Vec<CreatureType>) -> Subtypes {\n    Subtypes {\n        creature_types: vec![],"),
+ ("fires", "a bound CARD TYPE parameter (jou2 fn spell's `kind`)", "sets/jou2.rs",
+  "fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {\n"
+  "    CardDefinition {\n        name,\n        cost: mana,\n        card_types: vec![kind],",
+  "fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {\n"
+  "    CardDefinition {\n        name,\n        cost: mana,\n        card_types: vec![CardType::Land],"),
+ ("fires", "a helper whose call is its TAIL, after a statement (bfz fn ally -> fn creature)",
+  "sets/bfz/creatures.rs",
+  "        card_types: vec![CardType::Creature],\n"
+  "        subtypes: Subtypes { creature_types: types, ..Default::default() },",
+  "        card_types: vec![CardType::Artifact],\n"
+  "        subtypes: Subtypes { creature_types: types, ..Default::default() },"),
+ ("fires", "a P/T through a bound parameter and a shorthand field (bfz fn creature)",
+  "sets/bfz/creatures.rs",
+  "        subtypes: Subtypes { creature_types: types, ..Default::default() },\n"
+  "        power: p,\n        toughness: t,",
+  "        subtypes: Subtypes { creature_types: types, ..Default::default() },\n"
+  "        power: 0,\n        toughness: t,"),
+ ("fires", "a station band's own P/T (eoe Rescue Skiff, CR 721)", "sets/eoe.rs",
+  "            min: 10,\n            keywords: vec![Keyword::Flying],\n            pt: Some((5, 6)),",
+  "            min: 10,\n            keywords: vec![Keyword::Flying],\n            pt: Some((5, 7)),"),
  ("fires", "a keyword removed from a literal (mod_set Glorybringer)",
   "sets/mod_set/creatures.rs",
   "        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Exert],",
