@@ -18,8 +18,9 @@ column assumes is right.
 
 COVERAGE, 2026-09-12 (second pass): **16,534 factories priced, 17,352 on the
 type line, 17,078 on subtypes, 17,255 on keywords, 9,322 on P/T, 16,438 on
-COLOURS** — the colour column is new, and the other five moved by the five
-idioms their readers could not follow. In order of what they cost:
+COLOURS and 121 on LOYALTY** — the last two columns are new, and the other five
+moved by the idioms their readers could not follow. In order of what they
+cost:
 
   * **a SHORTHAND `keywords,`** — `fn creature(.., keywords: Vec<Keyword>)`,
     how most per-set files spell a creature. 439 factories, read as unreadable
@@ -171,6 +172,20 @@ cost column's chain (the pips) AND the keyword column's (`Devoid`), so it skips
 wherever either does. One row is `REVIEWED_COLORS`: Transguild Courier's
 all-colours is the CDA it prints, carried as a layer-5 static.
 
+**AND THE EIGHTH IS THE STARTING LOYALTY — 121 planeswalkers, 0 findings, and
+it is kept as a gate rather than as a discovery.** CR 306.5b: a walker enters
+with loyalty counters equal to the printed number, `CardInstance::new` reads
+`base_loyalty` for exactly that, and 0 kills it on entry to CR 704.5i — so the
+field is silent when wrong and there was no check on it. 121 of the ~128
+planeswalker factories are read; the rest are behind an earlier skip.
+
+**AND THE `no_mana_cost` CHECK HAS BOTH DIRECTIONS NOW.** The missing flag was
+checked from the day the audit was written; the flag on a card that DOES print
+a cost is the worse half — `CannotCastNoCost` makes it a dead card in every
+deck it is in — and had no check at all. Both are crude text reads of the
+factory, which is sound because the flag is a plain block-level field and a
+nested `TokenDefinition` carries none.
+
 **AND THE P/T COLUMN WAS READING 5,578 OF 9,455 CREATURES AND COUNTING
 NEITHER HALF.** It took `power:` / `toughness:` off the factory's own flattened
 body and `continue`d — with no skip counter — whenever either was missing,
@@ -204,6 +219,8 @@ What is left, with the reason — `--list <kind>` prints the factories:
   * `nocache` (3,778) — synthesized cards the oracle has never heard of.
   * `nocolors` (909) — the colour column needs BOTH the cost chain (its pips)
     and the keyword chain (`Devoid`), so it skips wherever either does.
+  * `noloyalty` (0) — a `base_loyalty` chain it cannot follow. Zero today; a
+    row here is a new idiom, not a new card.
   * `nonliteral` (870) — a cost chain the resolver cannot read, mostly a helper
     that builds its cost from a local binding. **700 of them are LANDS**, which
     print no mana cost, so there is nothing for the cost column to compare and
@@ -234,7 +251,7 @@ What is left, with the reason — `--list <kind>` prints the factories:
 **PROVED BY INJECTION, NOT BY ITS OWN ZERO** — and the injections are
 RUNNABLE now rather than a list here: `scripts/audit_printed_body_injections.py`
 breaks one idiom at a time and states what the audit must do about it,
-**23 / 23 as expected**, four of them NEGATIVE tests (a row there would be the
+**27 / 27 as expected**, four of them NEGATIVE tests (a row there would be the
 bug). Run it after touching any reader below — and never run the audit while
 the battery is running, because it edits catalog files in place.
 
@@ -1044,6 +1061,29 @@ def cost_colors(cost: str):
     return out
 
 
+def parse_loyalty(inner, params=(), args=()):
+    """`(starting loyalty or None, declared)` off a literal's raw inner text.
+
+    CR 306.5b — a planeswalker enters with loyalty counters equal to the number
+    printed in its lower right, and `CardInstance::new` reads `base_loyalty`
+    for exactly that. A walker at the wrong number is wrong in every game it is
+    in, and the field is a plain `u32` — the same walk as `parse_pt`, including
+    `bind_param` for `fn walker(.., loyalty: u32)`.
+    """
+    if inner is None:
+        return None, False
+    v = field_value(inner, "base_loyalty", params, args)
+    if v is None:
+        bm = INNER_BASE.search(inner)
+        if bm:
+            nested = literal_raw(inner, bm.start())
+            if nested is not None:
+                return parse_loyalty(nested, params, args)
+        return None, False
+    v = v.strip().rstrip(",")
+    return (int(v), True) if v.isdigit() else (None, True)
+
+
 def parse_colorfield(inner, params=(), args=()):
     """`((override or None, indicator set), declared)` off a literal's raw text.
 
@@ -1425,7 +1465,8 @@ def parse_type_line(body: str, params=(), args=(), inner=None):
 
 
 Read = collections.namedtuple(
-    "Read", "types supers subs keywords pt colorfield ok sub_ok kw_ok pt_ok col_ok")
+    "Read", "types supers subs keywords pt colorfield loyalty "
+            "ok sub_ok kw_ok pt_ok col_ok loy_ok")
 
 
 def tail_expression(body: str) -> str:
@@ -1478,8 +1519,8 @@ def resolve_from_block(index, path, blk, args, depth, subs_index=None):
         after = tail_expression(blk[m.end():] if m else "")
         hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after)
         if not hm:
-            return Read(set(), set(), None, None, None, None,
-                        False, False, False, False, False)
+            return Read(set(), set(), None, None, None, None, None,
+                        False, False, False, False, False, False)
         body, call_src = ".." + hm.group(1) + "(", after
     return resolve_type_line(index, path, body, None, depth, inner,
                              helper_params(blk), args, call_src, subs_index)
@@ -1509,9 +1550,11 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     got_kw, has_kw = parse_keywords(inner, params, args)
     got_pt, has_pt = parse_pt(inner, params, args)
     got_col, has_col = parse_colorfield(inner, params, args)
+    got_loy, has_loy = parse_loyalty(inner, params, args)
     sub_ok, kw_ok = got_sub is not None, got_kw is not None
     pt_ok = not (has_pt and got_pt is None)
     col_ok = got_col is not None
+    loy_ok = not (has_loy and got_loy is None)
     ok = True
     # The wrapper idiom sits OUTSIDE the literal, so it is read off `raw`.
     if raw is not None and depth == 0:
@@ -1552,15 +1595,19 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
                         wc, whc = parse_colorfield(helper_raw(wblk))
                         if whc:
                             got_col, col_ok, has_col = wc, wc is not None, True
+                    if not has_loy:
+                        wl, whl = parse_loyalty(helper_raw(wblk))
+                        if whl:
+                            got_loy, loy_ok, has_loy = wl, wl is not None, True
                     break
             else:
-                ok = sub_ok = kw_ok = pt_ok = col_ok = False
+                ok = sub_ok = kw_ok = pt_ok = col_ok = loy_ok = False
     if base:
         cands = [b for pth, b in index.get(base, []) if pth == path] \
             or [b for _, b in index.get(base, [])]
         if not cands or depth >= 5:
-            return Read(got_t, got_s, got_sub, got_kw, got_pt, got_col,
-                        False, False, False, False, False)
+            return Read(got_t, got_s, got_sub, got_kw, got_pt, got_col, got_loy,
+                        False, False, False, False, False, False)
         # The base call's arguments, mapped through THIS level's parameters, so
         # `fn sliver(name, c, p, t) { creature(name, c, vec![Sliver], p, t) }`
         # hands `creature` a literal and `fn creature(.., ct, ..)`'s
@@ -1584,6 +1631,8 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
             got_pt, pt_ok, has_pt = b.pt, b.pt_ok, True
         if not has_col:
             got_col, col_ok, has_col = b.colorfield, b.col_ok, True
+        if not has_loy:
+            got_loy, loy_ok, has_loy = b.loyalty, b.loy_ok, True
         # A `..base(..)` supplies the subtypes the literal did not declare —
         # `..creature("Storm Crow", .., types, 1, 2)`. A literal that DID
         # declare them wins, as the struct-update syntax says.
@@ -1592,8 +1641,8 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     # Every card has card types; an empty set means the chain was not readable,
     # not that the card has none. Supertypes are genuinely optional, so they
     # cannot carry this test.
-    return Read(got_t, got_s, got_sub, got_kw, got_pt, got_col,
-                ok and bool(got_t), sub_ok, kw_ok, pt_ok, col_ok)
+    return Read(got_t, got_s, got_sub, got_kw, got_pt, got_col, got_loy,
+                ok and bool(got_t), sub_ok, kw_ok, pt_ok, col_ok, loy_ok)
 
 
 def main() -> int:
@@ -1607,12 +1656,13 @@ def main() -> int:
     subs_index = build_subtypes_index(CATALOG)
     checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
     checked_types = checked_sub = checked_kw = wrong_kw = checked_pt = 0
-    checked_col = wrong_col = 0
+    checked_col = wrong_col = checked_loy = wrong_loy = stray_flag = 0
     # A skip is a FACTORY, not a tally: `--list nonliteral` prints the ones a
     # column could not read, which is the only way to work the queue down.
     skip = {k: [] for k in ("nocache", "faces", "split", "star", "nonliteral",
                             "noname", "notaspell", "notyped", "nosubtypes",
-                            "nosubvariant", "nokeywords", "nopt", "nocolors")}
+                            "nosubvariant", "nokeywords", "nopt", "nocolors",
+                            "noloyalty")}
     rows = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
@@ -1700,6 +1750,16 @@ def main() -> int:
                              (body_cost(shipped.group(1)) or "?") if shipped
                              else "{} and castable for free",
                              "no printed mana cost"))
+            # ⚠ AND THE OTHER DIRECTION IS WORSE. The flag on a card that DOES
+            # print a cost makes it uncastable for ever — `CannotCastNoCost`,
+            # a dead card in every deck it is in and a bot seat that holds it
+            # to the end. Same crude text read as above, which is sound in this
+            # direction: a nested `TokenDefinition` carries no such field.
+            elif card.get("mana_cost", "") != "" and "no_mana_cost: true" in raw:
+                stray_flag += 1
+                rows.append(("no-cost", name, f"{path.name}::{fname}",
+                             "`no_mana_cost: true` — uncastable",
+                             card["mana_cost"]))
             # A helper-built factory passes the cost positionally:
             # `sorcery("Name", cost(&[generic(2), r()]), effect)`. Read that
             # form too, or 6,312 factories — most of the older sets — are
@@ -1874,6 +1934,25 @@ def main() -> int:
                     rows.append(("color", name, f"{path.name}::{fname}",
                                  "".join(sorted(have_c)) or "colorless",
                                  "".join(sorted(oc)) or "colorless"))
+            # CR 306.5b — the STARTING LOYALTY. A planeswalker enters with
+            # that many loyalty counters (`CardInstance::new` reads
+            # `base_loyalty`), so a wrong number is wrong in every game the
+            # card is in — and 0 means it dies to the state-based action the
+            # turn it lands (CR 704.5i).
+            ol = card.get("loyalty")
+            if ("Planeswalker" in (card.get("type_line") or "")
+                    and ol is not None and ol.isdigit()):
+                if not read.loy_ok:
+                    skip["noloyalty"].append(f"{path.name}::{fname}")
+                else:
+                    checked_loy += 1
+                    # No `base_loyalty` anywhere in the chain is a VALUE, not a
+                    # gap — the engine ships `Default` (0) there, and CR 704.5i
+                    # puts a 0-loyalty walker in the graveyard on entry.
+                    if (read.loyalty or 0) != int(ol):
+                        wrong_loy += 1
+                        rows.append(("loyalty", name, f"{path.name}::{fname}",
+                                     str(read.loyalty or 0), ol))
             # The printed P/T, through the same chain as everything else — see
             # `parse_pt` for what it used to read instead.
             op, ot = card.get("power"), card.get("toughness")
@@ -1910,10 +1989,13 @@ def main() -> int:
         print(f"  ... {len(rows) - len(shown)} more (--rows 0)")
     print(f"# compared against the oracle: {checked} priced, {checked_types} on the "
           f"type line, {checked_sub} on subtypes, {checked_kw} on keywords, "
-          f"{checked_pt} on P/T, {checked_col} on colors — "
+          f"{checked_pt} on P/T, {checked_col} on colors, "
+          f"{checked_loy} on loyalty — "
           f"**{wrong_cost} wrong cost, {wrong_pt} wrong P/T, "
-          f"{missing_flag} missing `no_mana_cost`, {wrong_types} wrong type line, "
-          f"{wrong_kw} wrong keywords, {wrong_col} wrong colors**")
+          f"{missing_flag} missing / {stray_flag} stray `no_mana_cost`, "
+          f"{wrong_types} wrong type line, "
+          f"{wrong_kw} wrong keywords, {wrong_col} wrong colors, "
+          f"{wrong_loy} wrong loyalty**")
     print("# skipped — " + ", ".join(f"{k} {len(v)}" for k, v in sorted(skip.items())))
     if args.list_kind:
         for where in skip.get(args.list_kind, []):

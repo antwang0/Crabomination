@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Injection battery for `audit_printed_body.py`'s readers.
 
-    python3 scripts/audit_printed_body_injections.py    # 23/23 as expected
+    python3 scripts/audit_printed_body_injections.py    # 27/27 as expected
 
 **A GATE THAT CANNOT FAIL IS WORSE THAN NO GATE**, and this session proved the
 point three times: `fn legend`'s injection passed because the resolver took
@@ -167,6 +167,17 @@ CASES = [
  # indicator, which is what three shipped cards were.
  ("fires", "a missing colour indicator (sok Evermind)", "sets/sok.rs",
   "        color_indicator: vec![Color::Blue],\n", ""),
+ # CR 306.5b — the STARTING LOYALTY. A walker at the wrong number is wrong in
+ # every game it is in, and 0 kills it on entry (CR 704.5i).
+ ("fires", "a wrong starting loyalty (bng3 Kiora, the Crashing Wave)", "sets/bng3.rs",
+  "        base_loyalty: 2,", "        base_loyalty: 3,"),
+ # The flag on a card that DOES print a cost makes it uncastable for ever —
+ # the worse half of the `no_mana_cost` check, and the one that had no test.
+ ("fires", "`no_mana_cost` on a card that prints one (recent302 Transguild Courier)",
+  "sets/decks/recent302.rs",
+  '        name: "Transguild Courier",\n        cost: cost(&[generic(4)]),',
+  '        name: "Transguild Courier",\n        cost: cost(&[generic(4)]),\n'
+  "        no_mana_cost: true,"),
  # Negative: the oracle's `keywords` array counts keywords the card GRANTS, so
  # the missing direction reads the printed keyword LINES instead. Steel Seraph
  # grants "flying, vigilance, or lifelink" and has only flying; dropping its
@@ -189,7 +200,7 @@ CASES = [
 # ⚠ EVERY ROW KIND, or a column's cases cannot fire. The colour column was
 # added with its row kind missing here, and its injection read "silent" — the
 # battery's own version of the bug it exists to catch.
-ROW = re.compile(r"^  (?:sub|kw|types|super|cost|p/t|color|no-cost) ", re.M)
+ROW = re.compile(r"^  (?:sub|kw|types|super|cost|p/t|color|loyalty|no-cost) ", re.M)
 
 
 def run():
