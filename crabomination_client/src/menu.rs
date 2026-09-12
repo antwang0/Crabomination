@@ -1103,6 +1103,7 @@ fn handle_text_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut clipboard: ResMut<bevy::clipboard::Clipboard>,
     mut status: ResMut<MenuStatus>,
+    mut config: ResMut<crate::config::ConfigStore>,
 ) {
     if fields.focused == FocusedField::None {
         return;
@@ -1183,19 +1184,21 @@ fn handle_text_input(
             FocusedField::DeckPath => fields.deck_path = buf,
             FocusedField::None => {}
         }
-        // Persist the edited field so it survives relaunches.
+        // Persist the edited field so it survives relaunches. Writes go
+        // through `ConfigStore` (the live document) — editing the file
+        // directly would be undone by the next store-driven save.
         match fields.focused {
             FocusedField::PlayerName => {
                 let v = fields.player_name.clone();
-                crate::config::update(|c| c.gameplay.player_name = v);
+                crate::config::update_store(&mut config, |c| c.gameplay.player_name = v);
             }
             FocusedField::JoinAddr => {
                 let v = fields.join_addr.clone();
-                crate::config::update(|c| c.gameplay.join_addr = v);
+                crate::config::update_store(&mut config, |c| c.gameplay.join_addr = v);
             }
             FocusedField::DeckPath => {
                 let v = fields.deck_path.clone();
-                crate::config::update(|c| c.gameplay.deck_path = v);
+                crate::config::update_store(&mut config, |c| c.gameplay.deck_path = v);
             }
             _ => {}
         }

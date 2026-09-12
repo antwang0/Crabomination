@@ -67,9 +67,7 @@ pub struct CameraFocusSeat(pub Option<usize>);
 pub fn camera_focus_hotkeys(
     keyboard: Res<ButtonInput<KeyCode>>,
     view: Res<crate::net_plugin::CurrentView>,
-    chat: Res<crate::systems::chat::ChatInputState>,
-    console: Res<crate::systems::debug_console::DebugConsoleState>,
-    export_prompt: Res<crate::systems::export_prompt::ExportPromptState>,
+    text_input: crate::systems::input_guard::TextInputGuard,
     mut focus: ResMut<CameraFocusSeat>,
 ) {
     let Some(cv) = &view.0 else {
@@ -81,7 +79,7 @@ pub fn camera_focus_hotkeys(
     if focus.0.is_some_and(|s| s >= n) {
         focus.0 = None;
     }
-    if chat.open || console.card_input_focused || export_prompt.active {
+    if text_input.typing() {
         return;
     }
     const DIGITS: [KeyCode; 6] = [

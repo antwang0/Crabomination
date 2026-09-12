@@ -1510,10 +1510,12 @@ fn spawn_search_modal(
             TextColor(theme::TEXT_PRIMARY),
         ));
 
-        // Scrollable grid: bounded height + Overflow::scroll_y so the
-        // mouse wheel pages through long candidate lists. Without the
-        // bound the panel sizes itself to the children and overflows the
-        // window.
+        // Scrollable grid: bounded height + Overflow::scroll_y + the
+        // `Scrollable` marker that actually drives `ScrollPosition`.
+        // Without the bound the panel sizes itself to the children and
+        // overflows the window; without `min_height: 0` flexbox's default
+        // `min-height: auto` outranks `max_height` and the node grows to
+        // fit anyway (same trap the audit picker documents).
         panel
             .spawn((
                 Node {
@@ -1524,10 +1526,12 @@ fn spawn_search_modal(
                     justify_content: JustifyContent::Center,
                     align_content: AlignContent::FlexStart,
                     max_height: Val::Vh(70.0),
+                    min_height: Val::Px(0.0),
                     overflow: Overflow::scroll_y(),
                     ..default()
                 },
                 Pickable::default(),
+                crate::systems::scroll::Scrollable::default(),
             ))
             .with_children(|row| {
                 for (card_id, name) in candidates {
@@ -2503,6 +2507,7 @@ pub fn handle_mulligan_buttons(
     outbox: Option<Res<NetOutbox>>,
     mut state: ResMut<DecisionUiState>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    text_input: crate::systems::input_guard::TextInputGuard,
     keep_q: Query<&Interaction, (Changed<Interaction>, With<MulliganKeepButton>)>,
     mull_q: Query<&Interaction, (Changed<Interaction>, With<MulliganTakeButton>)>,
     powder_q: Query<
@@ -2517,14 +2522,19 @@ pub fn handle_mulligan_buttons(
     };
     let Some(outbox) = outbox else { return };
 
-    let keep = keep_q.iter().any(|i| *i == Interaction::Pressed) || keyboard.just_pressed(KeyCode::KeyK);
-    let mull = mull_q.iter().any(|i| *i == Interaction::Pressed) || keyboard.just_pressed(KeyCode::KeyM);
+    // Pointer input stays live while a text surface owns the keyboard —
+    // clicking Keep with the chat bar open should still work. Only the
+    // K / M / P shortcuts are suppressed, so typing "keep my black bird"
+    // into chat can't mulligan the hand out from under the player.
+    let key = |k: KeyCode| !text_input.typing() && keyboard.just_pressed(k);
+    let keep = keep_q.iter().any(|i| *i == Interaction::Pressed) || key(KeyCode::KeyK);
+    let mull = mull_q.iter().any(|i| *i == Interaction::Pressed) || key(KeyCode::KeyM);
     let pressed_powder = powder_q
         .iter()
         .find_map(|(int, btn)| (*int == Interaction::Pressed).then_some(btn.0))
         .or_else(|| {
             // P shortcut → consume the first listed powder.
-            (keyboard.just_pressed(KeyCode::KeyP)).then(|| serum_powders.first().copied()).flatten()
+            key(KeyCode::KeyP).then(|| serum_powders.first().copied()).flatten()
         });
 
     if keep {
@@ -3466,6 +3476,7 @@ pub fn handle_choose_color_buttons(
     outbox: Option<Res<NetOutbox>>,
     mut state: ResMut<DecisionUiState>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    text_input: crate::systems::input_guard::TextInputGuard,
     buttons: Query<(&Interaction, &ChooseColorButton), Changed<Interaction>>,
 ) {
     use crabomination::mana::Color as ManaColor;
@@ -3476,11 +3487,14 @@ pub fn handle_choose_color_buttons(
     };
     let Some(outbox) = outbox else { return };
     // Keyboard shortcut — submit the matching color if it's on offer.
-    let key_color = if keyboard.just_pressed(KeyCode::KeyW) { Some(ManaColor::White) }
-        else if keyboard.just_pressed(KeyCode::KeyU) { Some(ManaColor::Blue) }
-        else if keyboard.just_pressed(KeyCode::KeyB) { Some(ManaColor::Black) }
-        else if keyboard.just_pressed(KeyCode::KeyR) { Some(ManaColor::Red) }
-        else if keyboard.just_pressed(KeyCode::KeyG) { Some(ManaColor::Green) }
+    // Suppressed while a text surface owns the keyboard (typing a chat
+    // line must not pick a color); clicks below stay live either way.
+    let key = |k: KeyCode| !text_input.typing() && keyboard.just_pressed(k);
+    let key_color = if key(KeyCode::KeyW) { Some(ManaColor::White) }
+        else if key(KeyCode::KeyU) { Some(ManaColor::Blue) }
+        else if key(KeyCode::KeyB) { Some(ManaColor::Black) }
+        else if key(KeyCode::KeyR) { Some(ManaColor::Red) }
+        else if key(KeyCode::KeyG) { Some(ManaColor::Green) }
         else { None };
     if let Some(c) = key_color
         && legal.contains(&c)

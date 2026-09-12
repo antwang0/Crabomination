@@ -252,8 +252,7 @@ pub fn handle_settings_toggle(
     cursor: Res<crate::systems::kb_cursor::KeyboardCursor>,
     targeting: Res<crate::game::TargetingState>,
     blocking: Res<crate::game::BlockingState>,
-    export_prompt: Res<crate::systems::export_prompt::ExportPromptState>,
-    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
+    text_input: crate::systems::input_guard::TextInputGuard,
     alt_cast: Res<crate::game::AltCastState>,
     pending_mana_cast: Res<crate::net_plugin::PendingManaCast>,
     modal_cast: Res<crate::game::PendingModalCast>,
@@ -273,7 +272,7 @@ pub fn handle_settings_toggle(
     if !keyboard.just_pressed(KeyCode::Escape) {
         return;
     }
-    if export_prompt.active || debug_console.card_input_focused {
+    if text_input.typing() {
         return;
     }
     if settings.0 {

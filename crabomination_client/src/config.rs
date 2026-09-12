@@ -5,6 +5,21 @@ use std::path::{Path, PathBuf};
 use bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
 
+/// Parse a config document, falling back to defaults if it does not parse.
+///
+/// Split out of the loaders so the fallback is unit-testable without
+/// touching the real config location. `label` only names the source in the
+/// log line (a path natively, the storage key in the browser).
+fn parse_or_default(text: &str, label: &str) -> Config {
+    toml::from_str(text).unwrap_or_else(|e| {
+        eprintln!(
+            "config: {label} is invalid ({e}); using defaults. The file was \
+             left as-is — fix or delete it to persist settings again."
+        );
+        Config::default()
+    })
+}
+
 /// Returns the platform config file path:
 /// - Windows:  %APPDATA%\crabomination\config.toml
 /// - Linux:    ~/.config/crabomination/config.toml
@@ -29,23 +44,29 @@ const CONFIG_STORAGE_KEY: &str = "config.toml";
 #[cfg(target_arch = "wasm32")]
 pub fn load() -> Config {
     match crate::storage::load(CONFIG_STORAGE_KEY) {
-        Some(text) => toml::from_str(&text).unwrap_or_else(|e| {
-            eprintln!("config: stored config invalid ({e}); using defaults");
-            Config::default()
-        }),
+        Some(text) => parse_or_default(&text, CONFIG_STORAGE_KEY),
         None => Config::default(),
     }
 }
 
 /// Load config from the default location, writing defaults if the file is absent.
+///
+/// An unreadable or unparseable file falls back to defaults rather than
+/// panicking: this file is meant to be hand-editable, and the game is the
+/// only way most users would fix it — a mistyped key that refuses to launch
+/// leaves them with no route back in. The broken file is deliberately left
+/// on disk (not overwritten with defaults) so the edit can be recovered;
+/// the next settings write is what replaces it.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load() -> Config {
     let path = config_path();
     if path.exists() {
-        let text = fs::read_to_string(&path)
-            .unwrap_or_else(|e| panic!("Failed to read config at {}: {e}", path.display()));
-        toml::from_str(&text)
-            .unwrap_or_else(|e| panic!("Invalid config at {}: {e}", path.display()))
+        let Ok(text) = fs::read_to_string(&path).inspect_err(|e| {
+            eprintln!("config: cannot read {} ({e}); using defaults", path.display());
+        }) else {
+            return Config::default();
+        };
+        parse_or_default(&text, &path.display().to_string())
     } else {
         let config = Config::default();
         if let Some(parent) = path.parent() {
@@ -145,12 +166,19 @@ impl Default for GameplayConfig {
     }
 }
 
-/// Load the config, apply `f`, and write it back. Used by the menu to
-/// persist edited fields (player name, join address, deck path).
-pub fn update(f: impl FnOnce(&mut Config)) {
-    let mut cfg = load();
-    f(&mut cfg);
-    save(&cfg);
+/// Apply `f` to the **live** config and write the whole document back.
+///
+/// Every persistence path must go through the [`ConfigStore`] resource.
+/// The previous `update()` helper re-read the file, edited that copy and
+/// wrote it out, leaving `ConfigStore` — built once at startup and never
+/// re-synced — stale. Because `persist_stops` / `persist_animation_speed`
+/// / the settings menu all rewrite the *whole* document from the store,
+/// the next one to fire silently reverted whatever `update()` had written:
+/// typing a player name in the menu and then nudging animation speed
+/// in-game restored the old name.
+pub fn update_store(store: &mut ConfigStore, f: impl FnOnce(&mut Config)) {
+    f(&mut store.0);
+    save(&store.0);
 }
 
 
@@ -325,6 +353,67 @@ pub fn persist_animation_speed(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A hand-edited config with a typo used to `panic!` out of `load()`,
+    /// so the game refused to launch and the only UI that could have
+    /// fixed the file was the one that wouldn't start.
+    #[test]
+    fn invalid_config_falls_back_to_defaults_instead_of_panicking() {
+        let cfg = parse_or_default("this is not valid toml {{{", "test");
+        let default = Config::default();
+        assert_eq!(cfg.gameplay.sort_hand, default.gameplay.sort_hand);
+        assert_eq!(cfg.graphics.window_width, default.graphics.window_width);
+    }
+
+    /// A key with the wrong *type* is the likeliest hand-edit slip
+    /// (quoting a number), and takes the same path.
+    #[test]
+    fn wrong_typed_field_falls_back_to_defaults() {
+        let cfg = parse_or_default("[graphics]\nwindow_width = \"1600\"\n", "test");
+        assert_eq!(cfg.graphics.window_width, Config::default().graphics.window_width);
+    }
+
+    /// The fallback must not swallow a *valid* partial document — every
+    /// section is `#[serde(default)]`, so absent keys keep their defaults
+    /// while present ones are honoured.
+    #[test]
+    fn partial_config_keeps_present_values_and_defaults_the_rest() {
+        let cfg = parse_or_default("[gameplay]\nplayer_name = \"Alice\"\n", "test");
+        assert_eq!(cfg.gameplay.player_name, "Alice");
+        assert_eq!(cfg.gameplay.animation_speed, Config::default().gameplay.animation_speed);
+    }
+
+    /// Every persistence path rewrites the *whole* document from
+    /// `ConfigStore`, which is what made the stale-store bug destructive:
+    /// an in-game animation-speed write reverted the menu's player name.
+    /// That is only safe if a fully-populated config survives the
+    /// serialize/deserialize round trip with no section dropped.
+    #[test]
+    fn whole_document_round_trips_with_every_section_populated() {
+        let mut cfg = Config::default();
+        cfg.paths.asset_dir = "/tmp/crab-assets".into();
+        cfg.graphics.window_mode = WindowModeCfg::Borderless;
+        cfg.graphics.window_width = 2560;
+        cfg.graphics.maximize_on_launch = false;
+        cfg.gameplay.player_name = "Alice".into();
+        cfg.gameplay.join_addr = "10.0.0.2:7777".into();
+        cfg.gameplay.deck_path = "decks/mono-red.txt".into();
+        cfg.gameplay.animation_speed = 2.0;
+
+        let back = parse_or_default(
+            &toml::to_string_pretty(&cfg).expect("serialize"),
+            "test",
+        );
+
+        assert_eq!(back.paths.asset_dir, "/tmp/crab-assets");
+        assert_eq!(back.graphics.window_mode, WindowModeCfg::Borderless);
+        assert_eq!(back.graphics.window_width, 2560);
+        assert!(!back.graphics.maximize_on_launch);
+        assert_eq!(back.gameplay.player_name, "Alice");
+        assert_eq!(back.gameplay.join_addr, "10.0.0.2:7777");
+        assert_eq!(back.gameplay.deck_path, "decks/mono-red.txt");
+        assert_eq!(back.gameplay.animation_speed, 2.0);
+    }
 
     #[test]
     fn gameplay_config_with_stops_roundtrips_through_toml() {

@@ -25,6 +25,112 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Paper-cut sweep (2026-09-12) — shipped, with residuals
+
+A read of the client turned up four defects that read as bugs rather than
+missing polish. All four are fixed; what each one *taught* is recorded here
+because the shape recurs.
+
+- ✅ **Four panels declared `Overflow::scroll_y()` and could not scroll.**
+  `bevy_ui` 0.19 ships no wheel-to-scroll system — it contains no
+  `MouseWheel` reader at all — so `ScrollPosition` is application-driven.
+  Only the draft packs and the audit picker wired a handler, and each
+  carried a private copy of it, identical apart from the marker type and
+  the line-pixel constant. The game log (200-entry scrollback, clipped at
+  420 px), the graveyard and exile browsers (85 vh), and the
+  library-search decision grid were all clipped and unreachable. The
+  search grid was the gameplay blocker: at 110 px tiles under a
+  `max_height: 70vh` / `max_width: 85%` panel, roughly **13 × 4 ≈ 52 cards
+  are reachable at 1080p and ~30 at 1440×900**, so a 60-card Demonic Tutor
+  hid ~8 cards and a Commander search ~47 — with no way to reach them.
+  Now one `systems::scroll::{Scrollable, handle_scroll}`, registered once
+  in every app state; the two private handlers are deleted.
+  - ⚠ **`ScrollPosition` is a required component of `Node`**, so tagging a
+    panel is the whole fix — there is nothing to insert alongside it. The
+    four `ScrollPosition::default()` calls the old code carried were inert.
+  - ⚠ **A scrollable that is a flex item in a column also needs
+    `min_height: Val::Px(0.0)`.** Flexbox's `min-height: auto` resolves to
+    content height and outranks `max_height`, so the node grows to fit and
+    never overflows. The audit picker documented this trap; the search grid
+    had walked into it.
+  - ⏳ Residual: the log renders newest-first and `update_log_text`
+    rebuilds every row on each event, so a new entry arriving while the
+    player is scrolled back shifts the view by a row. Fixing that is the
+    stable-children work already queued below.
+- ✅ **Gameplay keybinds fired while you were typing.**
+  `handle_export_prompt_input`'s docstring states the rule — "the caller's
+  input handlers should bail out early in that same frame to avoid
+  double-binding" — and it was applied by hand at six sites and missed at
+  four, while three of the six disagreed about whether the export prompt
+  counted. So `k` in a chat line submitted Keep on a mulligan prompt, `b`
+  picked Black in ChooseColor, `i` toggled the life graph, `[` halved
+  animation speed, and `?` opened the help overlay. Now one
+  `systems::input_guard::{TextInputGuard, text_input_active}`.
+  - ⚠ **A system holding `ResMut<T>` of any guarded resource cannot take
+    `TextInputGuard`** — `ResMut<T>` + `Res<T>` in one system is Bevy
+    **B0002, which compiles cleanly and panics at schedule init**, i.e. at
+    launch, on a machine with a GPU that neither CI nor this container
+    has. `handle_export_keypress` owns `ResMut<ExportPromptState>` and hit
+    exactly this. `System::initialize` raises the conflict and needs no
+    resources present, so
+    `input_guard::tests::every_text_input_guard_holder_has_a_legal_access_set`
+    reproduces the launch check headlessly — verified to fail when the
+    conflict is reintroduced. **Extend that test when a system gains the
+    guard.**
+  - Pointer input stays live while typing: clicking Keep with the chat bar
+    open still works, only the shortcut is suppressed.
+- ✅ **Editing your player name, then touching any in-game setting,
+  reverted it.** `config::update()` re-read the file, edited that copy and
+  wrote it back, leaving `ConfigStore` — built once at startup, never
+  re-synced — stale. Every other path (`persist_stops`,
+  `persist_animation_speed`, the settings menu) rewrites the *whole*
+  document from the store, so the next one to fire restored the old name /
+  join address / deck path. `update()` is deleted; `update_store()` takes
+  `&mut ConfigStore` and is the only write path.
+- ✅ **A hand-edited config bricked launch.** Native `load()` panicked on
+  unparseable TOML, and the only UI that could have fixed the file was the
+  one that wouldn't start. Now falls back to defaults and **leaves the
+  broken file on disk** so the edit is recoverable; the wasm loader
+  already did this and now shares `parse_or_default` with it.
+  - ⚠ The wasm branch of `config.rs` **cannot be compile-checked here**:
+    `cargo check --target wasm32-unknown-unknown` fails in the engine at
+    `game/layers.rs:352` (`size_of::<AffectedIds>() <=
+    size_of::<Vec<CardId>>()` is false on a 32-bit pointer). Pre-existing
+    — verified identical on a clean tree.
+
+Not fixed, and worth their own pass — each is systemic rather than a paper
+cut, and the first two would make the third and fourth reviewable:
+
+- ⏳ **No z-layer table.** The badge band is coherent (eight modules each
+  define `= -1`, documented at `pt_label.rs:19`); the band above it is
+  nine magic numbers across 12 files, while every modal — `decision_ui`,
+  `popups`, `game_over`, `game_ui/mod`, `lobby_ui`, `menu`, `audit` — spawns
+  with **no `GlobalZIndex` at all**, so modals share implicit layer 0 with
+  the HUD and order by spawn order. A `theme::layer` module of named
+  constants is the fix, and it is a prerequisite for "Alt-Peek Inside
+  Decision Modals" below.
+- ⏳ **No modal focus arbiter.** Twelve independent `Escape` handlers with
+  no priority; one press can dismiss several overlapping surfaces, and
+  Esc-to-cancel-chat also closes whatever else is open. Pairs with the
+  layer table and with `input_guard`.
+- ⏳ **48 hand-tuned chip colours.** `player_stats.rs:64-160` gives each
+  game concept its own dark tint (Monarch, Initiative, Storm, Ring, Crime,
+  Void, Descend, …) — 48 backgrounds a player cannot learn, and most of
+  the 230 raw `Color::srgb` literals in the client. Collapse into ~6
+  semantic families (resource / threat / timing / lock / flag / neutral).
+- ⏳ **The help overlay has already drifted.** `HELP_SECTIONS`
+  (`ui.rs:459`) is a hand-maintained const — "keep in sync when a binding
+  changes" — and is missing `T` (chat) and the ChooseColor `W`/`U`/`B`/`R`/
+  `G`. It also can't express that `G` means graveyard *and* green. Derive
+  the overlay and the handlers from one binding table; that is also the
+  foundation for keybind remapping.
+- ⏳ **`UiScale` is a stub, so text scaling is impossible, not merely
+  absent.** `main.rs:1246` returns `1.0` unconditionally because non-1.0
+  values grew the corner HUD over the hand area. With 837 `Val::Px`
+  literals and **135 text nodes at ≤13 px** (75 at 13, 38 at 12, 18 at 11,
+  4 at ≤10) on a 4K-capable client, this outranks most of Tier 1 below.
+  Subsumed by "Responsive HUD Layout".
+
 ## Client / UI follow-ups (M15 run)
 
 - ✅ ~~**Convoke/Improvise cast UI**~~ — shipped. Right-clicking a convokable

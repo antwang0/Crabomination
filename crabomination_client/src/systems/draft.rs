@@ -70,11 +70,6 @@ const PACK_GRID_PADDING_PX: f32 = 60.0;
 const PACK_GRID_GAP_PX: f32 = 12.0;
 const DECKBUILD_CARD_W: f32 = 90.0;
 const DECKBUILD_CARD_H: f32 = DECKBUILD_CARD_W * (88.0 / 63.0);
-/// Mouse-wheel scroll speed. One line ≈ this many pixels along the
-/// scrollable axis. `MouseScrollUnit::Line` deltas (typical hardware
-/// mice) get this scaled directly; `Pixel` deltas (touchpads /
-/// high-resolution wheels) are passed through 1:1.
-const SCROLL_LINE_PX: f32 = 60.0;
 
 // ── Resources / phase enum ───────────────────────────────────────────────────
 
@@ -491,12 +486,6 @@ struct PlayMatchButton;
 #[derive(Component)]
 struct DraftBackToMenuButton;
 
-/// Marker for nodes that respond to mouse-wheel scrolling. Carries no
-/// data — the wheel handler queries `(&DraftScrollable, &mut
-/// ScrollPosition, &ComputedNode, &GlobalTransform)` and routes the
-/// scroll delta to whichever scrollable's bounds contain the cursor.
-#[derive(Component)]
-struct DraftScrollable;
 
 /// Stamped onto every pack-card tile + picks-tab tile so the
 /// alt-hover tooltip can read which card the cursor is over without
@@ -536,7 +525,6 @@ impl Plugin for DraftPlugin {
                     handle_opponent_clicks,
                     handle_play_match,
                     handle_back_to_menu,
-                    handle_draft_scroll,
                     update_draft_alt_tooltip,
                 )
                     .run_if(in_state(AppState::Drafting)),
@@ -830,8 +818,7 @@ fn spawn_drafting_screen(
                     overflow: Overflow::scroll_y(),
                     ..default()
                 },
-                ScrollPosition::default(),
-                DraftScrollable,
+                crate::systems::scroll::Scrollable::default(),
             ))
             .with_children(|body| {
                 match session.current_tab {
@@ -1614,8 +1601,7 @@ fn spawn_deckbuilding_screen(
                         ..default()
                     },
                     BackgroundColor(theme::PANEL_BG_RAISED),
-                    ScrollPosition::default(),
-                    DraftScrollable,
+                    crate::systems::scroll::Scrollable::default(),
                 ))
                 .with_children(|main| {
                     main.spawn((
@@ -1692,8 +1678,7 @@ fn spawn_deckbuilding_screen(
                             ..default()
                         },
                         BackgroundColor(theme::PANEL_BG_RAISED),
-                        ScrollPosition::default(),
-                        DraftScrollable,
+                        crate::systems::scroll::Scrollable::default(),
                     ))
                     .with_children(|sb| {
                         sb.spawn((
@@ -2351,71 +2336,6 @@ fn handle_back_to_menu(
             next_state.set(AppState::Menu);
             return;
         }
-    }
-}
-
-/// Mouse-wheel scrolling for `DraftScrollable` panels. Looks up the
-/// cursor's window position, walks every scrollable node, and routes
-/// the wheel delta to whichever node's screen-space bounds contain
-/// the cursor. `ScrollPosition.y` is clamped at the lower bound; the
-/// upper bound is left to Bevy's layout system, which trims
-/// out-of-range scroll positions on the next frame.
-///
-/// Both `Line` and `Pixel` scroll units are supported — most desktop
-/// mice emit `Line(±1)` per detent; trackpads / Wayland surfaces
-/// emit `Pixel` deltas directly. The line variant is multiplied by
-/// `SCROLL_LINE_PX` so each detent advances roughly one card row.
-fn handle_draft_scroll(
-    mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
-    windows: Query<&Window>,
-    mut scrollables: Query<
-        (&ComputedNode, &GlobalTransform, &mut ScrollPosition),
-        With<DraftScrollable>,
-    >,
-) {
-    use bevy::input::mouse::MouseScrollUnit;
-    // Aggregate this frame's deltas into a single scalar before the
-    // bounds check, so a flurry of wheel events on the same frame
-    // doesn't trip the per-event clamp pass repeatedly.
-    let mut delta_px = 0.0f32;
-    for ev in wheel.read() {
-        delta_px += match ev.unit {
-            MouseScrollUnit::Line => -ev.y * SCROLL_LINE_PX,
-            MouseScrollUnit::Pixel => -ev.y,
-        };
-    }
-    if delta_px == 0.0 {
-        return;
-    }
-    let Ok(window) = windows.single() else { return };
-    let Some(cursor) = window.cursor_position() else { return };
-    for (computed, gtf, mut scroll) in &mut scrollables {
-        // `ComputedNode::size()` is in logical pixels; the global
-        // translation is the node's center in screen space.
-        let size = computed.size();
-        let center = gtf.translation().truncate();
-        let half = size * 0.5;
-        let inside = cursor.x >= center.x - half.x
-            && cursor.x <= center.x + half.x
-            && cursor.y >= center.y - half.y
-            && cursor.y <= center.y + half.y;
-        if !inside {
-            continue;
-        }
-        // Clamp against content height. `ComputedNode` exposes the
-        // content size only indirectly via `content_size()`; for
-        // safety we just clamp the lower bound (no upper bound) and
-        // let Bevy's layout system trim invalid values on the next
-        // frame (see `ScrollPosition`'s docstring — the layout
-        // system normalises out-of-range positions).
-        let new_y = (scroll.0.y + delta_px).max(0.0);
-        if (new_y - scroll.0.y).abs() > f32::EPSILON {
-            scroll.0.y = new_y;
-        }
-        // Only the topmost hovered scrollable consumes the scroll —
-        // bail to keep nested scrollables from double-scrolling on
-        // the same wheel tick.
-        return;
     }
 }
 

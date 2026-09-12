@@ -1257,19 +1257,16 @@ pub fn graveyard_browser(
     existing: Query<Entity, With<GraveyardBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<GraveyardBrowser>, With<Button>)>,
-    chat: Res<crate::systems::chat::ChatInputState>,
-    console: Res<crate::systems::debug_console::DebugConsoleState>,
+    text_input: crate::systems::input_guard::TextInputGuard,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) && state.open {
         state.open = false;
     }
     // `G` toggles the viewer's own graveyard (clicking a pile still browses
-    // any player's). Suppressed while chat or the debug-console card input
-    // has the keyboard and while a decision modal is up — ChooseColor binds
-    // G to green mana.
+    // any player's). Suppressed while any text surface has the keyboard and
+    // while a decision modal is up — ChooseColor binds G to green mana.
     if keyboard.just_pressed(KeyCode::KeyG)
-        && !chat.open
-        && !console.card_input_focused
+        && !text_input.typing()
         && view
             .0
             .as_ref()
@@ -1363,6 +1360,7 @@ pub fn graveyard_browser(
                     ..default()
                 },
                 BackgroundColor(theme::PANEL_BG),
+                crate::systems::scroll::Scrollable::default(),
             ))
             .id();
 
@@ -1505,14 +1503,14 @@ pub fn exile_browser(
     existing: Query<Entity, With<ExileBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<ExileBrowser>, With<Button>)>,
-    chat: Res<crate::systems::chat::ChatInputState>,
+    text_input: crate::systems::input_guard::TextInputGuard,
     mut state: ResMut<crate::game::ExileBrowserState>,
     card_names: Res<crate::game::CardNames>,
 ) {
     // Two ways in: the `V` key, and clicking the shared exile pile (which
     // flips `state.open`). The pile is the discoverable one — a browser
     // reachable only by knowing a keybind may as well not exist.
-    let key_v = !chat.open && keyboard.just_pressed(KeyCode::KeyV);
+    let key_v = !text_input.typing() && keyboard.just_pressed(KeyCode::KeyV);
     if key_v {
         state.open = !state.open;
     }
@@ -1662,6 +1660,7 @@ pub fn exile_browser(
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
+            crate::systems::scroll::Scrollable::default(),
         ))
         .id();
     commands.entity(root).add_child(panel);

@@ -188,24 +188,17 @@ pub fn handle_keyboard_cursor_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     view: Res<CurrentView>,
     mut cursor: ResMut<KeyboardCursor>,
-    export_prompt: Res<crate::systems::export_prompt::ExportPromptState>,
-    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
     alt_cast: Res<AltCastState>,
     auto_rematch: Res<crate::systems::game_over::AutoRematchState>,
     settings: Res<crate::systems::quality::SettingsOpen>,
     esc_consumed: Res<crate::systems::quality::EscConsumed>,
-    chat: Res<crate::systems::chat::ChatInputState>,
+    text_input: crate::systems::input_guard::TextInputGuard,
 ) {
     // Yield input to focused text fields / modals so typing doesn't
     // move the gameplay cursor. Settings modal also captures all
     // cursor input — keyboard cursor is meaningless while the
     // pause-style settings panel is open.
-    if export_prompt.active
-        || debug_console.card_input_focused
-        || chat.open
-        || auto_rematch.focused
-        || settings.0
-    {
+    if text_input.typing() || auto_rematch.focused || settings.0 {
         return;
     }
     let Some(cv) = view.0.as_ref() else { return };

@@ -264,15 +264,12 @@ pub fn handle_audit_buttons(
 /// player and every priority window is manual.
 pub fn handle_auto_pass_toggle(
     keyboard: Res<ButtonInput<KeyCode>>,
-    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
-    chat: Res<crate::systems::chat::ChatInputState>,
+    text_input: crate::systems::input_guard::TextInputGuard,
     mut ff: ResMut<FastForward>,
     btn: Query<&Interaction, (Changed<Interaction>, With<AutoPassButton>)>,
     mut label_q: Query<&mut Text, With<AutoPassButtonLabel>>,
 ) {
-    let key = !debug_console.card_input_focused
-        && !chat.open
-        && keyboard.just_pressed(KeyCode::KeyH);
+    let key = !text_input.typing() && keyboard.just_pressed(KeyCode::KeyH);
     let pressed = btn.iter().any(|i| *i == Interaction::Pressed);
     if key || pressed {
         ff.manual_priority = !ff.manual_priority;
@@ -299,13 +296,14 @@ pub fn handle_export_keypress(
     keyboard: Res<ButtonInput<KeyCode>>,
     btns: Res<ButtonState>,
     mut state: ResMut<crate::systems::export_prompt::ExportPromptState>,
+    // NOT `TextInputGuard` — it reads `ExportPromptState`, and a system
+    // cannot hold `ResMut<T>` and `Res<T>` at once (Bevy B0002, a startup
+    // panic that still compiles). `state.active` is the same check the
+    // guard's third field would have made.
     debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
     chat: Res<crate::systems::chat::ChatInputState>,
 ) {
-    if state.active {
-        return;
-    }
-    if debug_console.card_input_focused || chat.open {
+    if state.active || debug_console.card_input_focused || chat.open {
         return;
     }
     if keyboard.just_pressed(KeyCode::KeyX) || btns.export {
@@ -323,10 +321,9 @@ pub fn handle_planar_die_keypress(
     keyboard: Res<ButtonInput<KeyCode>>,
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
-    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
-    chat: Res<crate::systems::chat::ChatInputState>,
+    text_input: crate::systems::input_guard::TextInputGuard,
 ) {
-    if debug_console.card_input_focused || chat.open || !keyboard.just_pressed(KeyCode::KeyP) {
+    if text_input.typing() || !keyboard.just_pressed(KeyCode::KeyP) {
         return;
     }
     let Some(outbox) = &outbox else { return };
@@ -344,10 +341,9 @@ pub fn handle_reveal_conspiracy_keypress(
     keyboard: Res<ButtonInput<KeyCode>>,
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
-    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
-    chat: Res<crate::systems::chat::ChatInputState>,
+    text_input: crate::systems::input_guard::TextInputGuard,
 ) {
-    if debug_console.card_input_focused || chat.open || !keyboard.just_pressed(KeyCode::KeyG) {
+    if text_input.typing() || !keyboard.just_pressed(KeyCode::KeyG) {
         return;
     }
     let Some(outbox) = &outbox else { return };

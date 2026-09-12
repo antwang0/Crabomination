@@ -54,6 +54,7 @@ use game::{
     TargetingState,
 };
 use systems::game_ui::FastForward;
+use systems::input_guard::text_input_active;
 use systems::animate::{
     adjust_animation_speed, animate_combat_lurch, animate_deck_shuffle, animate_draw_card,
     animate_flip, dispatch_animation_queue, animate_mdfc_flip, animate_hand_slide,
@@ -461,9 +462,12 @@ fn main() {
         .add_systems(OnExit(AppState::Audit), audit::despawn_audit_picker)
         .add_systems(
             Update,
-            (audit::handle_audit_picker, audit::handle_audit_scroll)
-                .run_if(in_state(AppState::Audit)),
+            audit::handle_audit_picker.run_if(in_state(AppState::Audit)),
         )
+        // Mouse-wheel scrolling for every `Scrollable` panel, in every
+        // state — the menu/audit/draft pickers and the in-game log,
+        // browsers and decision grids all route through one handler.
+        .add_systems(Update, systems::scroll::handle_scroll)
         // Audit-mode HUD buttons: sync visibility every frame, handle
         // click → save + return to picker.
         .add_systems(
@@ -609,7 +613,9 @@ fn main() {
                 animate_tap,
                 animate_reveal_peek,
                 trigger_reveal_animation,
-                adjust_animation_speed,
+                // Keyboard-only: `[` `]` `\` are typeable, so a text
+                // surface owning the keyboard suppresses them.
+                adjust_animation_speed.run_if(not(text_input_active)),
             )
                 .run_if(in_state(AppState::InGame)),
         )
@@ -620,13 +626,14 @@ fn main() {
                 update_castable_highlights,
                 update_dying_highlights,
                 update_activatable_highlights,
-                toggle_shortcut_help,
+                // `?` is Shift+Slash — typeable, like the two above.
+                toggle_shortcut_help.run_if(not(text_input_active)),
                 trigger_phase_banner,
                 animate_phase_banner,
                 trigger_life_flash,
                 animate_life_flash,
                 record_life_history,
-                toggle_life_graph,
+                toggle_life_graph.run_if(not(text_input_active)),
                 sync_life_graph,
                 hover_card_preview,
             )

@@ -681,6 +681,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ..default()
             },
             BackgroundColor(theme::HUD_BG),
+            crate::systems::scroll::Scrollable::default(),
             GameLogOuterPanel,
             InGameRoot,
         ))

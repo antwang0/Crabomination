@@ -351,14 +351,6 @@ pub struct AuditPoolButton(pub Option<AuditPool>);
 #[derive(Component)]
 pub struct AuditShowVerifiedToggle;
 
-/// Marker for the scrollable list node — read by `handle_audit_scroll`
-/// to route mouse-wheel input.
-#[derive(Component)]
-pub struct AuditScrollable;
-
-/// Mouse-wheel scroll speed. One line ≈ this many pixels.
-const AUDIT_SCROLL_LINE_PX: f32 = 60.0;
-
 /// System: spawn the picker on `OnEnter(Audit)`.
 pub fn spawn_audit_picker(
     mut commands: Commands,
@@ -571,8 +563,7 @@ fn build_picker_ui(
                         ..default()
                     },
                     BackgroundColor(theme::PANEL_BG_SUNKEN),
-                    ScrollPosition::default(),
-                    AuditScrollable,
+                    crate::systems::scroll::Scrollable::default(),
                 ))
                 .with_children(|list| {
                     for entry in &cards {
@@ -755,49 +746,5 @@ pub fn handle_audit_picker(
             next_state.set(AppState::InGame);
             return;
         }
-    }
-}
-
-/// Mouse-wheel scrolling for the audit picker's card list. Mirrors the
-/// draft module's handler: aggregate wheel deltas per frame, find the
-/// hovered scrollable, and clamp the lower bound (Bevy's layout
-/// normalises the upper bound).
-pub fn handle_audit_scroll(
-    mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
-    windows: Query<&Window>,
-    mut scrollables: Query<
-        (&ComputedNode, &GlobalTransform, &mut ScrollPosition),
-        With<AuditScrollable>,
-    >,
-) {
-    use bevy::input::mouse::MouseScrollUnit;
-    let mut delta_px = 0.0f32;
-    for ev in wheel.read() {
-        delta_px += match ev.unit {
-            MouseScrollUnit::Line => -ev.y * AUDIT_SCROLL_LINE_PX,
-            MouseScrollUnit::Pixel => -ev.y,
-        };
-    }
-    if delta_px == 0.0 {
-        return;
-    }
-    let Ok(window) = windows.single() else { return };
-    let Some(cursor) = window.cursor_position() else { return };
-    for (computed, gtf, mut scroll) in &mut scrollables {
-        let size = computed.size();
-        let center = gtf.translation().truncate();
-        let half = size * 0.5;
-        let inside = cursor.x >= center.x - half.x
-            && cursor.x <= center.x + half.x
-            && cursor.y >= center.y - half.y
-            && cursor.y <= center.y + half.y;
-        if !inside {
-            continue;
-        }
-        let new_y = (scroll.0.y + delta_px).max(0.0);
-        if (new_y - scroll.0.y).abs() > f32::EPSILON {
-            scroll.0.y = new_y;
-        }
-        return;
     }
 }
