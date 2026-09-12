@@ -32,9 +32,9 @@ sixty-seventh pass, so don't re-take that.
    this one. Read `git log` first. `(-290)` is the last claimed candidate, `(-291)` next. Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing
    rules"**. **A/B base: RE-TAKEN at `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331 (PERF Baseline, with the self table at
    that base). Ir crosses boxes, wall clock does not: the four-box `--bench` spread is 289.72 to 542 games/s on byte-identical counters.
-2. **Gates at the tip `cfef051f`:** suite **19,447 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel
+2. **Gates at the tip `802dac98`:** suite **19,449 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel
    one-shot census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, release-fast check clean, `--bench` **195,806 /
-   27.49 / 611.9 / 0 stalls** + determinism + thread_determinism, `audit_answer_log` 69 / 7 suspicious (its docstring explains every
+   27.49 / 611.9 / 0 stalls** + determinism + thread_determinism (the counters have not moved at any tip of either session), `audit_answer_log` 69 / 7 suspicious (its docstring explains every
    remaining row, so a NEW row is the signal), `audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open** / 15 pinned / 8 loop / 4 controller, `audit_variant_coverage` 0 dead capability. **Fresh seeds 853..1030 swept on five pools, `cube` also 1031..1035 — next
    is 1031, and `cube` from 1037** (the two sessions' blocks overlap between 995 and 1012; the grids are in PERF, along with `cube` 1036, a SLOW cell that
    is neither capped nor looping and is cleared of this session by an A/B. **`all` seed 1024 is the one sweep cell that EARNED its keep**:
