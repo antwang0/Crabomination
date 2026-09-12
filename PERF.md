@@ -3012,21 +3012,32 @@ perf    NONE CLAIMED and none attempted. The queue reads floor; PERF's "Perf can
         and the rule that every perf leg of the last several runs came off a bug fix. `--bench` counters are the gate,
         not a wall clock — and this box is **4 cores**, so its absolute games/s is not comparable with any earlier
         absolute in this file, every one of which was taken on 24.
-gate    --bench on a `release` binary rebuilt at the rebased tip: **195,806 / 27.49 / 611.9 / 0 stalls (cap 0 /
-        board 0 / stuck 0 / draw 0), counters BYTE-IDENTICAL to the committed invariant**, determinism ok (all 160
-        pairs split) and, with `CRAB_THREAD_CHECK=1`, thread_determinism ok (3 vs 1). Not the gate, recorded so the
-        next reader knows the box: 442.63 games/s, peak_rss 25.1 MiB, bin_bytes 84,764,408, host_calib_ms 44 on an
-        Intel Xeon @ 2.80GHz with 4 cores.
-        Suite **19,489 / 0 / 5** (`CRAB_ANSWER_LOG=strict`) — the previous tip's 19,486 plus the CR 301.7 Vehicle test
-        and the two adventure assertions — golden_trace **12 / 12 and unmoved** (and it is 12, not the 11 the last two
-        entries said): five catalog VALUE fixes move no trace. clippy --workspace --exclude crabomination_client
-        --all-targets **0**. `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean.
+fix     the SHARED-BRANCH red, which was not this session's to originate and not its to leave (`6c939160`'s last two
+        commits). `3ca1d297` took the basic land type off the ten pathways — correct, a pathway's type line is bare
+        `Land`, and `no_pathway_face_carries_a_basic_land_type` is the ratchet for it — but `core_rules::game`'s two
+        per-face tests still asserted `land_types.contains(Swamp)` / `contains(Mountain)`, so the suite read
+        **8,776 passed / 2 FAILED** at that tip and the failure was the fix working. Both assert `is_empty()` now and
+        keep every other assertion. Two clippy warnings from the same two pushes with them: `Effect::Learn`'s
+        no-Lesson arm was an EMPTY `if !self.draw_one_or_deck(..) { }` (nothing branches on the return, so `let _ =`
+        with the reason written down) and the pathway ratchet's `[(fn() -> CardDefinition, C, C); 10]` gets the alias
+        clippy asks for.
+gate    --bench on a `release` binary rebuilt at the PUSHED tip: **195,806 / 27.49 / 611.9 / 0 stalls (cap 0 /
+        board 0 / stuck 0 / draw 0), counters BYTE-IDENTICAL to the committed invariant**, determinism ok (all
+        160 pairs split) and, with `CRAB_THREAD_CHECK=1`, thread_determinism ok (3 vs 1). Not the gate, recorded
+        so the next reader knows the box: 445.19 games/s, peak_rss 25.1 MiB, bin_bytes 84,789,792,
+        host_calib_ms 46 on an Intel Xeon @ 2.80GHz with 4 cores.
+        Suite **19,498 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), golden_trace **12 / 12 and unmoved** (and it is 12, not
+        the 11 the last two entries said): five catalog VALUE fixes move no trace. clippy --workspace --exclude
+        crabomination_client --all-targets **0**. `cargo check --profile release-fast -p crabomination --bin
+        bot_ladder` clean.
         audit_printed_body **0 on all TEN columns**; audit_printed_body_injections **45 / 45**, from 42 (three new
-        cases: an adventure cost, an adventure card type, a back face's card types); audit_card_names 0 / 0 / 0 / 0;
-        audit_panics 0 bare; audit_decision_plumbing 168 / 108 / 60 DEAD 0 / repeat 0; audit_stash_in_loop 1 / 1 / 0;
-        audit_seat_from_selector 0 open / 15 pinned / 8 loop / 4 controller-asked; audit_answer_log 71 / 8;
-        audit_variant_coverage 0 dead capability / 2 dead primitive; audit_doc_drift 0; audit_keyword_drift **0
-        invented** (the ratchet); audit_stubs and audit_incomplete --structural-only both 0 of 21,793.
+        cases: an adventure cost, an adventure card type, a back face's card types) — and the other session's rewrite
+        of that battery onto per-worker catalog COPIES took it from over an hour to minutes, so it is a gate anyone can
+        afford now; audit_card_names 0 / 0 / 0 / 0 over 17,457; audit_panics 0 bare (57 guarded, 11 lock-poison);
+        audit_decision_plumbing 168 / 108 / 60 DEAD 0 / repeat 0; audit_stash_in_loop 1 / 1 / 0;
+        audit_seat_from_selector 0 open / 8 loop / 4 controller-asked; audit_answer_log 71 / 8;
+        audit_variant_coverage 0 dead capability / 2 dead primitive; audit_doc_drift 0 of 21,461; audit_keyword_drift
+        **0 invented** / 29 missing (367 two sessions ago); audit_stubs 0 flagged and audit_incomplete --structural-only 0 need review, both of 21,793.
         ⚠ The counters not moving is NOT evidence the five card fixes are inert: the `--bench` pool is four FIXED decks
         and none of the changed cards is in one. The behaviour evidence is the suite — the CR 301.7 Vehicle test, the
         Knight token's vigilance and Haggle's discard-then-draw order all fail on the old catalog.

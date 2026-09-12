@@ -34,7 +34,7 @@ sixty-seventh pass, so don't re-take that.
    claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
    came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
    candidates).
-2. **Gates at the tip:** suite **19,489 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+2. **Gates at the tip:** suite **19,498 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
    census assertions on every test), clippy **0** (`--all-targets`), golden_trace **12 / 12 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), **`robustness_grid.sh` ladder 30 cells / 33,120 games +
    `--wide` ladder 52 cells / 301,600 games + pilots 45 policies + actor 2 cells / 6,000 games, all 0 failures** (⚠ the actor leg's binary is
@@ -46,7 +46,7 @@ sixty-seventh pass, so don't re-take that.
    capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all TEN columns** over
    16,846 priced + 17,777 type lines + 17,683 subtypes + **17,743** keywords + 9,609 P/T + **16,729** colours + 124 loyalty + **62 ADVENTURE HALVES +
    81 BACK FACES** (the two new columns), `audit_keyword_drift`
-   **0 invented / 80 missing** (367 until the reader learned a mechanic's other three spellings — read a row, the list is short enough now), `audit_card_names`
+   **0 invented / 29 missing** (367 two sessions ago — read a row, the list is short enough to work now), `audit_card_names`
    **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
    gate that sees `debug-assertions = false`).
    ⚠⚠ **TWO SESSIONS WORKED `audit_printed_body.py` ON 2026-09-12 AND CONVERGED ON THE SAME SKIPS.** Every reader fix below landed twice-over by
