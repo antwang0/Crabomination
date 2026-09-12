@@ -280,7 +280,8 @@ impl Effect {
     /// new wrapper is a single edit rather than five, and forgetting it
     /// breaks every walker together instead of one silently.
     /// `core_rules::target_walkers::the_shared_recursion_names_every_effect_
-    /// wrapper` holds it to 130 of 130 by reading `effect.rs` — the same
+    /// wrapper` holds it to every wrapper (132 at the eighteenth pass) by
+    /// reading `effect.rs` — the same
     /// extraction `scripts/audit_target_walkers.py` does, so the test and the
     /// audit cannot disagree about what a wrapper is.
     ///
@@ -2955,7 +2956,7 @@ impl Effect {
             // answering `false` for its whole subtree. That silent `false` is
             // the drift ENGINE_BACKLOG's "the gate's own wrappers" is about,
             // and it has shipped as card bugs three times; `for_each_inner` is
-            // held to 130 of 130 by a test, so a new wrapper is covered here
+            // held to every wrapper by a test, so a new wrapper is covered here
             // the moment it is covered there.
             other => {
                 let mut found = false;
@@ -3033,7 +3034,7 @@ impl Effect {
             // answering `false` for its whole subtree. That silent `false` is
             // the drift ENGINE_BACKLOG's "the gate's own wrappers" is about,
             // and it has shipped as card bugs three times; `for_each_inner` is
-            // held to 130 of 130 by a test, so a new wrapper is covered here
+            // held to every wrapper by a test, so a new wrapper is covered here
             // the moment it is covered there.
             other => {
                 let mut found = false;

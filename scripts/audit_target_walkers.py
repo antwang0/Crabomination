@@ -11,7 +11,7 @@ wrapper they do not name answers the fallback silently.
 RESTRICT (`prefers_graveyard_target`, `may_target_offboard_card` -> `false`;
 `primary_target_filter` -> `None`) now END in `Effect::for_each_inner`, the
 one shared recursion, which `core_rules::target_walkers::the_shared_
-recursion_names_every_effect_wrapper` holds at 130 of 130. **An unnamed
+recursion_names_every_effect_wrapper` holds it at every wrapper. **An unnamed
 wrapper there is COVERED, not lost** — it is handled generically instead of
 by an arm of its own, which is the whole point of the hundredth pass's fix.
 `accepts_player_target` does not defer and does not need to: its fallback is
@@ -119,6 +119,7 @@ def main() -> int:
     check = "--check" in sys.argv
     wrappers = wrapper_variants()
     bodies = walker_bodies()
+    shared = _brace_body(QUERY.read_text(), QUERY.read_text().index("pub fn for_each_inner"))
     print(f"{len(wrappers)} `Effect` wrappers (a variant with an `Effect` in its fields)")
     gaps = 0
     for f in WALKERS:
@@ -138,7 +139,20 @@ def main() -> int:
             # in one, and that mislabelled it as a restricting fallback.
             regime, counted = "every wrapper named — exhaustive", 0
         elif "for_each_inner" in bodies[f]:
-            regime, counted = "deferred to for_each_inner (130/130) — covered", 0
+            # ⚠ COUNTED, NOT QUOTED. This line used to read "(130/130)" as a
+            # literal, so deleting an arm from `for_each_inner` left the report
+            # unchanged — the one number that says the shared recursion is
+            # still complete could not move. `core_rules::target_walkers::
+            # the_shared_recursion_names_every_effect_wrapper` is the gate; this
+            # is the same count, so the two cannot disagree in silence.
+            named = sum(
+                1 for w in wrappers if re.search(r"\bEffect::" + w + r"\b", shared)
+            )
+            regime, counted = (
+                f"deferred to for_each_inner ({named}/{len(wrappers)}) — "
+                + ("covered" if named == len(wrappers) else "⚠ THE SHARED RECURSION IS INCOMPLETE"),
+                0 if named == len(wrappers) else len(wrappers) - named,
+            )
         elif re.search(r"_ => true", bodies[f]):
             regime, counted = "fallback `true` — permitted, not a gap", 0
         else:

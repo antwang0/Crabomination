@@ -1067,7 +1067,12 @@ fn the_primary_target_filter_agrees_with_the_slot_walker_on_slot_zero() {
     );
 }
 
-/// `Effect::for_each_inner` names every `Effect` wrapper — 130 of 130.
+/// `Effect::for_each_inner` names every `Effect` wrapper — 132 of 132.
+///
+/// The number is the population, and it moves: it was 130 when this landed,
+/// and `scripts/audit_target_walkers.py` printed "130/130" as a LITERAL until
+/// the eighteenth pass, so deleting an arm from the shared recursion left its
+/// report unchanged. It counts now, and this test is the gate the count backs.
 ///
 /// The five walkers' whole failure mode is that four of them end in `_ => …`,
 /// so a wrapper they do not name answers the fallback for its entire subtree.

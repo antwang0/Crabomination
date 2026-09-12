@@ -8,6 +8,22 @@ training run that has been going for hours, and the 33,120-game
 `-C debug-assertions=yes` grid only covers what a game actually reaches — it
 cannot tell you that the site nobody reached is safe.
 
+⚠ **THIS SCRIPT SEES TWO OF THOSE THREE.** `SITE` matches `.unwrap()`,
+`.expect(`, `panic!(` and `unreachable!(` and **nothing else** — a bare `v[3]`
+is invisible to it, which an injection at the eighteenth pass confirmed by
+passing. The out-of-bounds half is not a column anybody has opened because the
+population makes it useless as a triage list: **2,386 variable-index sites in
+the engine, 2,028 of them `players[seat]`**, which is safe by the seat
+invariant. Closing it needs a shape narrower than "an index that is not a
+literal", not a bigger list. Read "0 bare" as "0 bare *unwraps*".
+
+⚠ **AND A "PROOF" IS A TEXT WINDOW, NOT A DATA FLOW.** The `LOOKBACK` scan
+reads 22 lines above the site, so a guard belonging to the *previous function*
+counts: an injected `*v.first().unwrap()` placed just after an unrelated
+`is_empty()`-and-`return` was classified GUARDED. That is the price of a
+syntactic reader and is why this is a triage list rather than a gate — but it
+means the guarded column is a weaker claim than the bare one, not a stronger.
+
 A **guarded** site has a proof within its own statement region: a
 `is_empty()` / `is_none()` / `len()` test that returns, breaks or continues
 before it; a `match` arm or `if let` that already bound the shape; the same

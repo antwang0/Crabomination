@@ -2526,7 +2526,8 @@ what the blanket version could not be.
   filter, where `mentions_offboard_zone` is the half that opens the gate.
 
 **The structural fix shipped at the hundredth pass.**
-`Effect::for_each_inner` is the one recursion, **130 of 130 wrappers**, held
+`Effect::for_each_inner` is the one recursion, **every wrapper** (132 of 132
+at the eighteenth pass; the count is read, not quoted), held
 there by `core_rules::target_walkers::the_shared_recursion_names_every_
 effect_wrapper` reading `effect.rs` with the same extraction the audit script
 uses. `prefers_graveyard_target` and `may_target_offboard_card` defer to it
