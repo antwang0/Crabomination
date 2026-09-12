@@ -2892,13 +2892,21 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1037..1044   f9a5147c      24    118,400       0       0     0      0
   1045..1047   5ece833a       9     44,400       0       0     0     20
   1048..1059   5ece833a      36    177,600       0       0     0      6
+  1060..1071   5ece833a      36    177,600       2       2*    0      0
 ```
 
-**87 cells / 429,200 games, 0 cap and 0 stuck on every one.** A draw is
-CR 104.4, not a defect. The last two blocks ran on a binary rebuilt at the
-closing tip, so the saturating-arithmetic commits are swept rather than
-inferred. Seed frontier **1060**. One cell is an outlier and it is the entry
-below.
+**123 cells / 606,800 games, 0 stuck on every one**, and the two caps are the
+**already-diagnosed Beacon of Immortality board recurring at `cube` seed 1069**
+— not a new defect and not to be re-diagnosed. `CRAB_LIFE_WATCH=100000` prints
+the same doubling series the instrument pinned it with at 1018 (126,961 ->
+253,922 -> 507,841 -> … -> `i32::MAX`, one doubling every other turn), both
+seats saturated at turn 259 with libraries of 0 and 1. The Beacon is not on the
+board in the cap diagnostic because it shuffles ITSELF back: it is the one card
+left in p1's library. Two seeds in ~1.9 M swept games now, which makes it a
+property of the cube pool rather than of a seed.
+
+A draw is CR 104.4, not a defect. Seed frontier **1072**. One cell is a
+different kind of outlier and it is the entry below.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
 `cube` seed **1036** cost **3,313 s** against a 33-48 s median for its

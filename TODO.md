@@ -38,8 +38,8 @@ sixty-seventh pass, so don't re-take that.
    `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned /
    8 loop / 4 controller-asked**, `audit_answer_log` **71 / 8** (the record said 69 / 7 and was stale — HEAD read 71 / 8 too; the eighth row is explained
    in the docstring now, so a NEW row is still the signal), `audit_variant_coverage` 0 dead capability, `audit_printed_body` 0 / 0 / 0 / 0.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1059 on cube / all / sealed — 87 cells, 429,200 games, 0 cap / 0 stuck / 34 draws. Next is
-   1060.** The last block ran on a binary rebuilt at the closing tip, so this run's saturating-arithmetic commits are swept rather than inferred. **`all` 1024 is the cell that
+   **Fresh seeds: 853..1030 on five pools, then 1031..1071 on cube / all / sealed — 123 cells, 606,800 games, 0 stuck, 34 draws, and 2 caps
+   that are the KNOWN Beacon board recurring at `cube` 1069 (`CRAB_LIFE_WATCH` prints the same doubling series as 1018). Next is 1072.** The last block ran on a binary rebuilt at the closing tip, so this run's saturating-arithmetic commits are swept rather than inferred. **`all` 1024 is the cell that
    EARNED its keep** (the `MayDoBy` leak); the only capped board on record is still the diagnosed Beacon mirror at `cube` 1018.
 3. **This run, and the sentence it earned:** *a "six lines per arm, twenty-seven arms" recipe is a prompt to move the fix one level down.* Three class
    kills, none of them a new find — all three closed a column an earlier run had left half-open. (a) **The asked seat**: every `ask_seat_*` queues
@@ -50,12 +50,12 @@ sixty-seventh pass, so don't re-take that.
    answer both. (c) **The life ceiling had a twin**: a power is bounded by nothing either. `Effect::DoublePower`'s `checked_shl` checks the SHIFT and
    not the value (`n = 31` gave `i32::MIN`, so `factor - 1` overflowed), eighteen sites accumulated a P/T bonus with a bare `+=`, the READS overflowed
    on top of the writes, and every consumer that SCALES one was unbounded. Rules-facing values saturate; only the consumers that scale clamp.
-4. **Next, in order.** (a) **Sweep from 1060 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+4. **Next, in order.** (a) **Sweep from 1072 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total: **only cap and stuck are defects**. Do NOT hand-roll the loop.
    ⚠ `cube` **1036 is SLOW and NOT a defect** (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end
    by decking, on a 79-permanent board. PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a
-   big board ~13x — `gated_block!` / `gated_pick!` run the body the gate exists to skip. ⚠ `cube` **1018** is the Beacon of Immortality cap; neither is
-   to be re-diagnosed. (b) ⚠ **The seven-card nesting is RETIRED — do NOT build the parking redesign** (~60 sites in 38 arms): taken on the suspending
+   big board ~13x — `gated_block!` / `gated_pick!` run the body the gate exists to skip. ⚠ `cube` **1018 and 1069** are both the Beacon of Immortality cap — two seeds in ~1.9 M games, so it is a property of the cube
+   pool, not of a seed. Neither is to be re-diagnosed. (b) ⚠ **The seven-card nesting is RETIRED — do NOT build the parking redesign** (~60 sites in 38 arms): taken on the suspending
    path, all three differing shapes are correct because every outer arm clears the channel before its body AND has no work after it. The gate stays.
    (c) ⚠ **The 8 loop arms are CLOSED WITH A REASON — do not build the seat-list ref.** A suspend advances nothing but the answer, so the list can only
    move if the arm changed the board before or inside its ask loop; seven of the eight are already two-pass and the eighth's `who` is `You`/`ActivePlayer`.
