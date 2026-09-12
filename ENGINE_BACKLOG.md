@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-12 (twenty-second find) — a name no card has is audited by nobody, and that is where a second, worse copy of a card lives](#fixed-2026-09-12-twenty-second-find--a-name-no-card-has-is-audited-by-nobody-and-that-is-where-a-second-worse-copy-of-a-card-lives) | 55 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-first find) — colour is DERIVED, and three shipped cards print one their mana cost cannot carry](#fixed-2026-09-12-twenty-first-find--colour-is-derived-and-three-shipped-cards-print-one-their-mana-cost-cannot-carry) | 46 |
 | Bugs & robustness | [OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable](#open-2026-09-11--the-first-capped-board-in-13-m-swept-games-diagnosed-and-not-a-rules-defect-beacon-of-immortality-makes-a-wg-cube-mirror-unwinnable) | 42 |
 | Bugs & robustness | [FIXED 2026-09-12 (twentieth find) — the asked seat was re-derived on every re-run in fifteen arms, and the fix belongs in the ask helper, not in the arms](#fixed-2026-09-12-twentieth-find--the-asked-seat-was-re-derived-on-every-re-run-in-fifteen-arms-and-the-fix-belongs-in-the-ask-helper-not-in-the-arms) | 62 |
@@ -73,6 +74,62 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-12 (twenty-second find) — a name no card has is audited by nobody, and that is where a second, worse copy of a card lives
+
+Every oracle-backed column keys on the card's name. A factory whose name
+matches no oracle entry is therefore audited by **none** of them:
+`audit_printed_body` drops it as `nocache` and reads it as a synthesized card,
+which 3,683 of the 3,778 are. The rest are typos, and the typo is not the
+defect — it is the cover for one.
+
+**Three cards, each unpriced for as long as it had shipped:**
+
+```text
+  Victims of Night   -> Victim of Night     {1}{B}{B} -> {B}{B}
+  Sabertooth Tiger   -> Sabretooth Tiger    {3}{R}    -> {2}{R}
+  Surging Æther      -> Surging Aether      {2}{U}    -> {3}{U}
+```
+
+Surging Æther kept the ligature the Oracle dropped in 2016, so the name is
+correct as *printed* and unmatchable as *data* — and it also returned target
+CREATURE where the card prints "return target permanent", which its own doc
+comment admitted ("printed 'target spell or permanent'; modeled as a creature")
+and nothing compared.
+
+**And two of the three had a correct duplicate shipped beside them.**
+`mod_set/instants.rs` held `victim_of_night()` forty lines below the
+misspelled one; `recent77.rs` held `sabretooth_tiger()`. The correct sibling
+passes every column, so the catalog read clean while the pool carried both —
+and "cards named …", the legend rule and the deck de-dup all saw two. Both
+duplicates are deleted with their `all_factories` entries and the tests that
+only re-asserted what the survivor's own tests cover.
+
+**What made the three visible was a reader fix, not a new idea.** The
+head-string name matched the function slug on a PREFIX either way, so a token
+the factory defines before the card could win it — `fn sliver_queen` took the
+`"Sliver"` of its own token, `fn goblin_marshal` took `"Goblin"` — and the card
+dropped out of every column. `resolve_card_name` prefers the exact `pub fn`
+slug whenever the head string resolves to no card at all: **27 factories back**,
+and one of them was Surging Æther.
+
+`scripts/audit_card_names.py` is the standing column, sharing
+`resolve_card_name` with `audit_printed_body` rather than re-implementing it
+(a private copy disagreed with the original within the hour, reporting 404 rows
+of "Zombie" off nested token literals). It reads **17,461 named factories
+outside the expected sets: 0 spelling, 0 unknown, 0 duplicate, 0 string/slug
+mismatch**, from 2 / 12 / 5 / 1.
+
+⚠ **A helper-built factory's name comes from its `pub fn`**, so a typo in its
+own string would pass in silence — the `mismatch` row is the guard, and it is
+what caught Surging Æther. ⚠ **A rename is a VOCAB edit**
+(`server/vocab_snapshot.rs` is append-only); none of these three names is in
+the snapshot, so no embedding index moved and no net needs retraining.
+
+**OPEN, filed not fixed: three duplicate pairs** — Kroxa, Uro and Niv-Mizzet,
+each implemented twice in `modern.rs` with different primitives. Picking the
+survivor is a body-by-body read rather than a delete. They are
+`REVIEWED_DUPLICATES` in the script, so a NEW pair is the signal.
 
 ## FIXED 2026-09-12 (twenty-first find) — colour is DERIVED, and three shipped cards print one their mana cost cannot carry
 

@@ -35,15 +35,16 @@ sixty-seventh pass, so don't re-take that.
    came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
    candidates).
 2. **Gates at the tip:** suite **19,480 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
-   census assertions on every test), clippy **0** (`--all-targets`), golden_trace 10 / 10 unmoved, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
+   census assertions on every test), clippy **0** (`--all-targets`), golden_trace **11 / 11 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), `audit_panics` **0 bare**, `audit_decision_plumbing`
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
    controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
    capability, `audit_printed_body` **0 on all six columns over 16,483 priced + 17,244 type lines + 16,910 subtypes + 16,800
    keywords + 9,254 P/T**, and `scripts/audit_printed_body_injections.py` **17 / 17 as expected** — run that after
    touching any reader in it.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1151 on cube / all / sealed (363 cells, 1,790,800 games) PLUS a second session's 170 cells /
-   734,400 games on five pools at 1060..1121 — 0 stuck everywhere. Next is 1162.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
+   **Fresh seeds: 853..1030 on five pools, then 1031..1151 on cube / all / sealed (363 cells, 1,790,800 games) PLUS a concurrent session's 195 cells /
+   781,600 games on five pools at 1060..1130 — 0 stuck everywhere. Next is 1162, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
+   on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
    turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
    of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
    `(-291)` bear that out: 90 cells with exactly TWO caps, both at `all` 1149. The watch is its own negative control twice over: on the 60 cells both
@@ -87,6 +88,20 @@ sixty-seventh pass, so don't re-take that.
    sacrifice as an effect too. Two Witherbloom Pests are synthesized cards with no printed text to violate.
    (d) `helper_params` matched a helper's parameter list with `[^)]*`, which closes at a TUPLE parameter — eight bestow creatures were skipped out of the
    subtype and keyword columns rather than read. Injection added (13th, now 17th).
+3c. **The concurrent session's SECOND run, and the sentence it earned:** *a reader that reads the wrong field reads 0 for ever, and a name no card has
+   is audited by nobody.* (a) **`shorthand()` did not count braces**, so a nested `EquipBonus { power, toughness, keywords }` was the card's own field to
+   the P/T column since the day it opened — and would have turned sixteen auras into keyword findings the moment the keyword column reused it.
+   `top_fields` had the sibling bug: a newline inside a nested brace CLEARED the depth-1 line already collected, so a field whose value spans braces lost
+   its own NAME. Six more chains stopped one link short (a shorthand `keywords,`, the `if flag {A} else {B}` card type, a base bound to a parameter, a
+   per-element vec binding, a tuple field, a symbol-slice cost). (b) Three NEW columns: the printed **COLOUR** — derived from the cost's pips plus
+   `color_indicator`, which the catalog spelled 7 times in 21,795 cards, so Rograkh, Ragnarok and Evermind all shipped colorless where they print a
+   colour — the starting **LOYALTY** (a gate, 0 findings), and the **stray `no_mana_cost`** direction, which makes a card uncastable and had no check.
+   (c) **The NAME column is the one that paid.** The head-string name matched the `pub fn` slug on a PREFIX, so a token the factory defines first could
+   win it (`fn sliver_queen` took `"Sliver"`); preferring the exact slug brought **27 factories back into every column**. Three cards no column had ever
+   priced came out of it — Victims of Night `{1}{B}{B}` -> `{B}{B}`, Sabertooth Tiger `{3}{R}` -> `{2}{R}`, Surging Æther `{2}{U}` -> `{3}{U}` (and
+   target creature -> target permanent) — and **two of the three had a CORRECT DUPLICATE of the same card shipped beside them**, which is why the catalog
+   read clean while the pool carried both. `scripts/audit_card_names.py` is the standing column: 0 spelling / 0 unknown / 0 duplicate / 0 string-slug
+   mismatch, from 2 / 12 / 5 / 1. ⚠ A rename is a VOCAB edit (`vocab_snapshot.rs` is append-only); none of these names is in the snapshot.
 4. **Next, in order.** (a) **Sweep from 1162 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
@@ -95,18 +110,19 @@ sixty-seventh pass, so don't re-take that.
    ⚠⚠ **A NOVEL CAP IS A LEAD, NOT A FINDING: re-run that cell at `CRAB_MAX_ACTIONS=50000` first.** The sweep's 6,000 is a TENTH of production, so a
    long game reads exactly like a loop and no label can separate them. `all` 1149 was the first — 41 triggers on the stack at turn 89 on a
    40-permanent Lorehold board — and at 50,000 it is **6,800 decided, 0 undecided**. The script's header and closing line carry the command.
-   (b) **`audit_printed_body`'s remaining skips are where the next cards are**, and they are small now: `nocache` 3,778 (synthesised cards, not
-   auditable), `nonliteral` 921, `nokeywords` 439, `nosubtypes` 221, `notyped` 160, `nopt` 119. Each is one or two idioms (a local built by `push`, a
-   `mut` parameter, a non-`Keyword::` element) and the machinery to follow them exists. ⚠ **Print every skip you add** — the P/T column skipped 41 % of
+   (b) **`audit_printed_body`'s remaining skips are the hard residue** and `--list <kind>` prints the factories: `nocache` 3,749 is now genuinely the
+   synthesized sets (the name column takes the rest), and **700 of `nonliteral`'s 870 are LANDS**, which print no mana cost, so closing them buys that
+   column nothing. What still has a card behind it: `nocolors` 909, `nosubtypes` 158, `nokeywords` 92, `nopt` 70, `notyped` 52.
+   ⚠ **Print every skip you add** — the P/T column skipped 41 % of
    creatures silently for as long as it existed, and read "0 wrong P/T" the whole time.
    (c) ⚠ **THE CATALOG AUDITS ARE WORKED OUT — 22 rows sampled across three of them this run, ZERO code defects.** `audit_catalog_stats`' residue is
    documented residue (its triage is in INCOMPLETE_CARDS, five named rows so nobody walks them a third time); `audit_oracle_verbs` is 56 from 172 and
    what is left is three named shapes (a replacement effect the oracle words with the verb, a mechanic with no primitive, the deathtouch family).
    Re-run them, read a NEW row, do not re-walk the standing ones.
-   (d) **The two oracle-backed catalog audits are COMPLEMENTARY and should be one.** `audit_catalog_stats.py` reads a wider keyword vocabulary
-   (Ward, Prowess, Hexproof, Magecraft) over a narrower set of factories; `audit_printed_body.py` follows the helper chain over an evergreen set.
-   The prowess class needed both — the wider vocabulary to see the row, the chain-following reader to tell a card's own `Keyword::Prowess` from a
-   TOKEN's. Widening `audit_printed_body`'s `EVERGREEN` (with `REVIEWED_KEYWORDS` for the approximations) retires the overlap. NOT done.
+   (d) ✅ **The two oracle-backed keyword readers are one vocabulary now** — `EVERGREEN` carries Ward / Prowess / Hexproof / Protection, with a RULE
+   (`PAYLOADED`) rather than twelve rows for the prose variants. What is left of that item: **three duplicate pairs are filed, not fixed** — Kroxa, Uro
+   and Niv-Mizzet, each implemented twice in `modern.rs` with different primitives. Picking the survivor is a body-by-body read, not a delete; they are
+   `REVIEWED_DUPLICATES` in `audit_card_names.py`, so a NEW pair is the signal.
    (e) ⚠ **Do NOT build a `produced_mana` column** — ENGINE_BACKLOG's CLOSED-WITH-A-REASON entry: Scryfall's field counts mana the card CAUSES (Brass's
    Bounty's Treasures, Heartbeat of Spring's rider), so 355 of 707 prototype rows were the field's meaning, not the reader's gaps.
    (f) ⚠ **The seven-card nesting is RETIRED** and (g) ⚠ **the 8 loop arms are CLOSED WITH A REASON** — do not build the parking redesign or the

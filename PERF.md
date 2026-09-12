@@ -2958,7 +2958,7 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
-### 2026-09-12 (the printed-body session, second pass) — seven idioms, two new columns, three shipped cards; no perf leg
+### 2026-09-12 (the printed-body session, second pass) — seven idioms, three new columns, six shipped cards, two duplicates; no perf leg
 
 ```text
 fix     the printed-body audit's readers, and the three cards the new colour column found (ENGINE_BACKLOG, twenty-first
@@ -2972,9 +2972,17 @@ fix     the printed-body audit's readers, and the three cards the new colour col
         `card_types: vec![if flag { .. } else { .. }]` two braces deep (89), a base bound to a PARAMETER (the caller's
         argument list), a binding that is one ELEMENT of the vec (68 planeswalkers), a tuple parameter read field by
         field (41 bestow creatures), and `cost: cost(cost_syms)` over a symbol slice (40).
-cover   priced 16,483 -> **16,534**, type line 17,244 -> **17,352**, subtypes 16,910 -> **17,078**, keywords 16,800 ->
-        **17,255**, P/T 9,254 -> **9,322**; plus **16,438 on COLOURS** and **121 on LOYALTY**, both new columns, and the
-        stray `no_mana_cost` direction, which had no check at all. Skips: nocache 3,778 / nocolors 909 / nonliteral 870 /
+name    the second half of the run: **a name no card has is audited by nobody** (ENGINE_BACKLOG, twenty-second find).
+        The head-string name matched the `pub fn` slug on a PREFIX, so a token the factory defines first could win it
+        (`fn sliver_queen` took `"Sliver"`); preferring the exact slug brought **27 factories back into every column**
+        and exposed three cards no column had ever priced — Victims of Night `{1}{B}{B}` -> `{B}{B}`, Sabertooth Tiger
+        `{3}{R}` -> `{2}{R}`, Surging Æther `{2}{U}` -> `{3}{U}` (and target creature -> target permanent). Two of the
+        three had a CORRECT duplicate shipped beside them, which is why the catalog read clean: both deleted.
+        `scripts/audit_card_names.py` is the standing column — 17,461 named factories outside the expected sets, 0
+        spelling / 0 unknown / 0 duplicate / 0 string-slug mismatch, from 2 / 12 / 5 / 1.
+cover   priced 16,483 -> **16,561**, type line 17,244 -> **17,379**, subtypes 16,910 -> **17,104**, keywords 16,800 ->
+        **17,282**, P/T 9,254 -> **9,337**; plus **16,465 on COLOURS** and **122 on LOYALTY**, both new columns, and the
+        stray `no_mana_cost` direction, which had no check at all. Skips: nocache 3,749 / nocolors 909 / nonliteral 870 /
         noname 184 / nosubtypes 158 / nokeywords 92 / nopt 70 / notyped 52 / noloyalty 0.
 perf    NONE CLAIMED and none attempted — the queue reads floor, the actor scaling and file-size levers are closed by
         measurement above, and the whole run is catalog and tooling. `--bench` counters are the gate, not a wall clock.
@@ -2982,13 +2990,15 @@ gate    --bench on a **`release`** binary (cgu 1 + thin LTO, not the `release-fa
         profile-independent and are what the gate compares; the wall clock and `bin_bytes` are not): **195,806 / 27.49 /
         611.9 / 0 stalls (cap 0 / stuck 0 / draw 0), counters identical to the committed invariant**, determinism ok
         (all pairs split). 403.8 games/s, peak_rss 27.2 MiB, bin_bytes 84,357,872, host_calib_ms 47.
-        Suite **19,460 / 0 / 5** (`CRAB_ANSWER_LOG=strict`; +1 is this run's colour-indicator test), golden_trace
-        **11 / 11** inside it and **unmoved** — the three catalog fixes move no trace. clippy --workspace --exclude
+        Suite **19,480 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), golden_trace **11 / 11** inside it and **unmoved** — the
+        six catalog fixes move no trace. The count is the other session's 19,480 plus this run's two new tests minus
+        the two duplicate-card tests deleted with their cards. clippy --workspace --exclude
         crabomination_client --all-targets **0**. audit_panics 0 bare; audit_decision_plumbing 168 / 108 / 60 DEAD 0;
         audit_stash_in_loop 1 / 1 / 0; audit_seat_from_selector 0 open / 15 pinned / 8 loop / 4 controller-asked;
         audit_answer_log 71 / 8; audit_variant_coverage 0 dead capability / 2 dead primitive; audit_doc_drift 0 of
         21,467; audit_keyword_drift **0 invented** (the ratchet) / 367 missing; audit_printed_body 0 on all eight
-        columns; audit_printed_body_injections **27 / 27**.
+        columns; audit_printed_body_injections **28 / 28**;
+        audit_card_names 0 / 0 / 0 / 0.
 ```
 
 ### 2026-09-12 (the Beacon session) — the ending a saturated life total never reaches
@@ -3212,7 +3222,9 @@ perf    none, and measured as none rather than assumed. Every engine change here
 concurrently on 2026-09-12 without seeing each other's push, so 1112..1130 was
 swept twice on different pool sets — both clean, which is the only reason it
 cost nothing but time. **Read this table before taking a seed and take it from
-the largest number in it: the next fresh seed is 1152.**
+the largest number in it: the next fresh seed is 1162.** `fixed` and `sos` are
+16 s and 20 s a cell against `all`'s 68 s, so a five-pool block is barely
+dearer than a three-pool one.
 
 **363 cells / 1,790,800 games on the three-pool base, 0 stuck on every one**
 — and the five-pool rows are 195 cells / 781,600 games on top of that, counted
