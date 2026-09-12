@@ -3297,6 +3297,8 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1162..1171   a9d19eea      30    148,000       0      10^    0     20
   1172..1181   36eb5ac0      30    148,000       0       0     0      6
   1182..1191   36eb5ac0      30    148,000       0       0     0      2
+  1192..1201   a875df26      30    148,000       0       0     0     16
+  1202..1211   a875df26      30    148,000       0      14*    0     42
   1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
@@ -3315,7 +3317,7 @@ side.
 block is barely dearer than a three-pool one — which is the only reason the
 duplication cost nothing but time.
 
-**453 cells / 2,234,800 games on the three-pool base, 0 stuck on every one**
+**513 cells / 2,530,800 games on the three-pool base, 0 stuck on every one**
 — and the five-pool rows are 245 cells / 965,600 games on top of that, counted
 apart because they are a different configuration and would otherwise be read as
 more base coverage than there is. Every cap is the
@@ -3336,12 +3338,15 @@ and at `220af0dc` that is what the sweep now PRINTS. `cap_diagnosis`
 `fresh_seed_sweep.sh` counts labelled caps apart, so the closing line reads
 `undecided cap 4 (of which 4 the known saturated-life board)` and the block
 scores `failures=0`. Re-run of `cube` 1076 on the new binary confirms it end to
-end. **A cap WITHOUT the label is the signal** — the point is that the sweep
+end. **A cap WITHOUT the label WAS the signal** — the point was that the sweep
 stops crying wolf on a board nobody is going to change, not that caps stopped
-mattering.
+mattering. ⚠ **Since `(-291)` the label excuses nothing on its own**: ANY cap
+is re-run, and the entry below ("the label itself is a budget artefact") is
+why.
 
-A draw is CR 104.4, not a defect. Seed frontier **1192**. One cell is a
-different kind of outlier and it is the entry below.
+A draw is CR 104.4, not a defect. Seed frontier **1212**, ⚠ **with one hole:
+`1152..1161` is not in the table above and was never swept.** The rows are
+contiguous otherwise; take the gap before the frontier.
 
 **THE SECOND `1102..1111` ROW IS THE SAME SEEDS ON FIVE POOLS WITH `(-291)`
 IN, and it is the arm's confirmation over 216,000 games**: 0 caps of any kind
@@ -3399,6 +3404,22 @@ and no label can separate them** — the saturated-life one can be recognised by
 its board, this cannot. The script says so now: a novel cap is a LEAD, and the
 50,000-action re-run of that cell is the step that turns it into a finding or
 into a row here. The command is in its header and in its closing line.
+
+**AND THE LABEL ITSELF IS A BUDGET ARTEFACT NOW — `cube` AND `all` SEED 1204,
+WHICH CORROBORATES `(-291)` FROM THE OTHER SIDE.** Block 1202..1211 reported
+`cap 14`, every one carrying `[SATURATED LIFE]`: both seats at `i32::MAX` on
+turn 224 behind two Ghosts of the Innocent, libraries down to one card. The
+label excused them without a re-run, because the label used to mean "an
+unwinnable board nobody will fix".
+
+Since `(-291)` it means something weaker and better: **a board the turn-granular
+no-progress watch DRAWS, given the turns.** `cube` 1204 reads `cap 8 / draw 12`
+at the sweep's 6,000 actions and **`cap 0 / draw 20` at 50,000** — all twenty
+undecided games are draws, and every one of the eight caps was the budget
+running out a few turns before the watch fired. So the sweep re-runs ANY cap
+now, labelled or not; `sat` is diagnostic (which board it was) and `slow`
+alone decides. Subtracting both scored `cube` 1204 at `failures=-8` for one
+commit, which is what a counter that can go negative is for.
 
 **AND A THIRD SHAPE, WHICH THE RE-RUN CANNOT CLEAR BY CONSTRUCTION — `cube`
 AND `all` SEED 1169.** Ten capped games, unlabelled, and the 50,000-action

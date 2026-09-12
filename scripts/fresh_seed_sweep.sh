@@ -94,15 +94,23 @@ for pool in $POOLS; do
         # 6,800 decided at 50,000). Only paid when a novel cap appears, so the
         # common case costs nothing, and the sweep's verdict stops needing a
         # second command to interpret.
-        if [ "$1" -gt 0 ] && [ "$known" -eq 0 ]; then
-          echo "  NOVEL cap — re-running this cell at CRAB_MAX_ACTIONS=50000 …"
+        # ⚠ RE-RUN ANY CAP, LABELLED OR NOT. The `[SATURATED LIFE]` label used
+        # to mean "an unwinnable board nobody will fix", and since `(-291)`'s
+        # turn-granular no-progress watch it means "a board the watch DRAWS,
+        # given the turns" — which 6,000 actions does not always allow. `cube`
+        # 1204 reads `cap 8 / draw 12` here and `cap 0 / draw 20` at 50,000:
+        # every one of the eight was the budget, not the board. Excusing a
+        # labelled cap without the re-run reported 14 of them in one block.
+        if [ "$1" -gt 0 ]; then
+          echo "  cap — re-running this cell at CRAB_MAX_ACTIONS=50000 …"
           re=$(RUST_MIN_STACK=33554432 CRAB_CAP_DIAG=20000 CRAB_MAX_ACTIONS=50000 \
             timeout 7200 "$BIN" --a dflt --b dflt --games "$GAMES" --threads 3 \
             --seed "$seed" --decks "$pool" 2>&1)
           reby=$(echo "$re" | grep -E "^  undecided_by" | tail -1)
           recap=$(echo "$reby" | awk '{print $3}')
           if [ -z "$reby" ] || [ "${recap:-0}" -eq 0 ]; then
-            echo "  -> SLOW, not stuck: $(echo "$re" | grep -E '^[0-9]+ decided' | tail -1)"
+            echo "  -> the ACTION BUDGET, not the board: $(echo "$re" | grep -E '^[0-9]+ decided' | tail -1)"
+            echo "     $reby"
             slow=$((slow + $1))
           else
             echo "  -> STILL CAPPED at 50,000 actions — a defect. $reby"
@@ -114,7 +122,10 @@ for pool in $POOLS; do
     cells=$((cells + 1))
   done
 done
-novel=$((cap - sat - slow))
+# Every cap goes through the re-run now, so `slow` alone decides: `sat` is
+# diagnostic (which BOARD it was) and subtracting both double-counted a cap
+# that is labelled AND cleared — `cube` 1204 scored `failures=-8`.
+novel=$((cap - slow))
 [ $((novel + stuck + fail)) -eq 0 ] || fail=$((fail + novel + stuck))
 echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $sat the known saturated-life board, $slow slow-not-stuck) / board $board / stuck $stuck / draw $draw"
 echo "  stuck and a cap that SURVIVES the 50,000-action re-run ($novel) are defects;"

@@ -56,8 +56,8 @@ sixty-seventh pass, so don't re-take that.
    `noname` 90, `notaspell` 69, `nosubtypes` 149, `nosubvariant` 13, `notyped` 7, `nopt` 0, `faces` 0.
    ⚠ `scripts/audit_printed_body_injections.py` is **40 / 40** and counts rows from BOTH catalog audits — run it after touching any reader, and
    **never run an audit while it runs**: it edits the catalog in place (it refuses a dirty catalog and restores on a signal now).
-   **Fresh seeds: 853..1030 on five pools, then 1031..1191 on cube / all / sealed (453 cells, 2,234,800 games) PLUS a concurrent session's 245 cells /
-   965,600 games on five pools at 1060..1171 — 0 stuck everywhere. Next is 1192, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
+   **Fresh seeds: 853..1030 on five pools, then 1031..1211 on cube / all / sealed (513 cells, 2,530,800 games) PLUS a concurrent session's 245 cells /
+   965,600 games on five pools at 1060..1171 — 0 stuck everywhere. Next is 1212, and TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
    turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
    of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
@@ -134,20 +134,23 @@ sixty-seventh pass, so don't re-take that.
    (c) `audit_keyword_drift`'s MISSING list was **367 rows and 287 were cards that carry the mechanic** — a mechanic has FOUR spellings and the reader
    knew one and a half. 367 -> **80**, and the docstring's own spot-check was wrong about its own examples. **A reading list nobody can read is not a
    gate**, and the same is true of a skip counter nobody opens.
-4. **Next, in order.** (a) **Sweep from 1192 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
+4. **Next, in order.** (a) **Sweep `1152..1161` FIRST — it is a HOLE in PERF's table, not swept — then from 1212** with
+   `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
    PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,
    1076, 1090 and `all` 1090 are all the Beacon board — a POOL property, never to be re-diagnosed, and **a draw rather than a cap since `(-291)`**.
    ⚠⚠ **THE `cap` BUCKET HELD THREE SHAPES AND NOW HOLDS ONE.** (i) A long game: the sweep's `CRAB_MAX_ACTIONS=6000` is a TENTH of
    production, so it reads exactly like a loop — `all` 1149 (41 triggers on the stack at turn 89) is 6,800 decided at 50,000. The script re-runs a
-   novel cap at 50,000 ITSELF now and counts what clears as `slow-not-stuck`. (ii) A BOARD cap: `StopReason::BoardCap`, the 1,024-permanent bound
+   cap at 50,000 ITSELF now — **ANY cap, labelled or not** — and counts what clears as `slow-not-stuck`. ⚠ Since `(-291)` the `[SATURATED LIFE]` label
+   means "a board the watch DRAWS, given the turns", which 6,000 actions does not always allow: `cube` 1204 reads `cap 8 / draw 12` at 6,000 and
+   `cap 0 / draw 20` at 50,000. Excusing a labelled cap without the re-run reported 14 of them in one block. (ii) A BOARD cap: `StopReason::BoardCap`, the 1,024-permanent bound
    ending a token-doubling runaway on purpose — `cube` and `all` 1169 are 1,967 Goblins off Krenko at turn 29, and the re-run can never clear them
    because the board doubles past the bound in one activation whatever the budget. `SimCost` counts it apart and the sweep has a `board` column.
    (iii) What is left, which IS the defect. **So read `board` and `slow-not-stuck` before believing a cap.**
    (b) **`audit_printed_body`'s remaining skips are the hard residue** and `--list <kind>` prints the factories: `nocache` 3,749 is now genuinely the
    synthesized sets (the name column takes the rest), and **700 of `nonliteral`'s 870 are LANDS**, which print no mana cost, so closing them buys that
-   column nothing. What still has a card behind it: `nocolors` 909, `nosubtypes` 158, `nokeywords` 92, `nopt` 70, `notyped` 52.
+   column nothing. What still has a card behind it: `nocolors` 1,060, `nosubtypes` 149, `nokeywords` 319, `notyped` 7 (`nopt` is 0).
    ⚠ **Print every skip you add** — the P/T column skipped 41 % of
    creatures silently for as long as it existed, and read "0 wrong P/T" the whole time.
    (c) ⚠ **THE CATALOG AUDITS ARE WORKED OUT — 22 rows sampled across three of them this run, ZERO code defects.** `audit_catalog_stats`' residue is
