@@ -1548,3 +1548,39 @@ fn hauntwoods_shrieker_turns_a_manifested_creature_face_up() {
     assert!(!up.face_down, "turned face up for free");
     assert_eq!(up.definition.name, "Elder Gargaroth");
 }
+
+// ── The mechanics these cards print and did not carry ──────────────────────
+
+/// Warp on three more, and **Splice onto Arcane** on the two that print it.
+///
+/// Through the Breach and Goryo's Vengeance are both Arcane instants whose
+/// splice line is the reason they see play at all: without it they can never
+/// be revealed and paid for as another Arcane spell resolves.
+#[test]
+fn warp_and_splice_are_carried_by_the_cards_that_print_them() {
+    use crabomination::card::{Keyword, SpellSubtype};
+    use crabomination::mana::{cost, generic, g, r, u, b, hybrid, Color};
+    for (def, want) in [
+        (catalog::quantum_riddler(), cost(&[generic(1), u()])),
+        (catalog::mightform_harmonizer(), cost(&[generic(2), g()])),
+        (catalog::pinnacle_emissary(), cost(&[hybrid(Color::Blue, Color::Red)])),
+    ] {
+        let name = def.name;
+        let alt = def.alternative_cost.as_ref().unwrap_or_else(|| panic!("{name} prints Warp"));
+        assert!(alt.warp, "{name}'s alternative cost is a WARP one");
+        assert_eq!(alt.mana_cost, want, "{name}'s warp cost");
+    }
+    for (def, want) in [
+        (catalog::through_the_breach(), cost(&[generic(2), r(), r()])),
+        (catalog::goryos_vengeance(), cost(&[generic(2), b()])),
+    ] {
+        let name = def.name;
+        assert!(
+            def.keywords.iter().any(
+                |k| matches!(k, Keyword::Splice(c, s) if *c == want && *s == SpellSubtype::Arcane)
+            ),
+            "{name} prints Splice onto Arcane: {:?}",
+            def.keywords,
+        );
+    }
+}

@@ -1323,6 +1323,7 @@ pub fn mechanozoa() -> CardDefinition {
     CardDefinition {
         name: "Mechanozoa",
         cost: cost(&[generic(4), u(), u()]),
+        alternative_cost: Some(crate::effect::shortcut::warp(cost(&[generic(2), u()]))),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Robot, CreatureType::Jellyfish],
@@ -7037,6 +7038,7 @@ pub fn astelli_reclaimer() -> CardDefinition {
     CardDefinition {
         name: "Astelli Reclaimer",
         cost: cost(&[generic(3), w(), w()]),
+        alternative_cost: Some(crate::effect::shortcut::warp(cost(&[generic(2), w()]))),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Angel, CreatureType::Warrior],

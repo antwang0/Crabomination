@@ -289,6 +289,7 @@ pub fn quantum_riddler() -> CardDefinition {
     CardDefinition {
         name: "Quantum Riddler",
         cost: cost(&[generic(3), u(), u()]),
+        alternative_cost: Some(crate::effect::shortcut::warp(cost(&[generic(1), u()]))),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Sphinx],

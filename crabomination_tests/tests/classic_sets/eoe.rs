@@ -3451,3 +3451,22 @@ fn pain_for_all_passes_damage_dealt_to_the_host_on_to_each_opponent() {
     assert_eq!(g.players[1].life, 17, "the 3 dealt to the Angel hit the opponent");
     assert_eq!(g.players[0].life, 20);
 }
+
+/// **Warp, on the two Edge of Eternities cards that print it and had none.**
+///
+/// `shortcut::warp` and `AlternativeCost::warp` were both in the engine and no
+/// card used either, so the mechanic was live and unreachable; the drift audit
+/// named the cards once its MISSING list stopped being 84 % noise.
+#[test]
+fn the_eoe_cards_that_print_warp_carry_it() {
+    use crabomination::mana::{cost, generic, u, w};
+    for (def, want) in [
+        (catalog::mechanozoa(), cost(&[generic(2), u()])),
+        (catalog::astelli_reclaimer(), cost(&[generic(2), w()])),
+    ] {
+        let name = def.name;
+        let alt = def.alternative_cost.as_ref().unwrap_or_else(|| panic!("{name} prints Warp"));
+        assert!(alt.warp, "{name}'s alternative cost is a WARP one");
+        assert_eq!(alt.mana_cost, want, "{name}'s warp cost");
+    }
+}

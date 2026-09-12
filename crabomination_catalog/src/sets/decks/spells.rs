@@ -382,6 +382,10 @@ pub fn goryos_vengeance() -> CardDefinition {
             spell_subtypes: vec![crate::card::SpellSubtype::Arcane],
             ..Default::default()
         },
+        keywords: vec![crate::card::Keyword::Splice(
+            cost(&[generic(2), b()]),
+            crate::card::SpellSubtype::Arcane,
+        )],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(

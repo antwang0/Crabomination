@@ -26525,6 +26525,7 @@ pub fn mightform_harmonizer() -> CardDefinition {
     CardDefinition {
         name: "Mightform Harmonizer",
         cost: cost(&[generic(2), g(), g()]),
+        alternative_cost: Some(crate::effect::shortcut::warp(cost(&[generic(2), g()]))),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Insect, CreatureType::Druid],
@@ -26560,6 +26561,10 @@ pub fn pinnacle_emissary() -> CardDefinition {
             ..Default::default()
         },
         cost: cost(&[generic(1), u(), r()]),
+        // Warp {U/R} — one hybrid symbol, not a generic and a colour.
+        alternative_cost: Some(crate::effect::shortcut::warp(cost(&[
+            crate::mana::hybrid(crate::mana::Color::Blue, crate::mana::Color::Red),
+        ]))),
         card_types: vec![CardType::Artifact, CardType::Creature],
         power: 3,
         toughness: 3,
@@ -41076,6 +41081,7 @@ pub fn through_the_breach() -> CardDefinition {
             spell_subtypes: vec![SpellSubtype::Arcane],
             ..Default::default()
         },
+        keywords: vec![Keyword::Splice(cost(&[generic(2), r(), r()]), SpellSubtype::Arcane)],
         effect: Effect::PutFromHandOntoBattlefield {
             who: PlayerRef::You,
             filter: SelectionRequirement::Creature,
