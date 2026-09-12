@@ -9,7 +9,7 @@ use crate::card::{
     Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    cast_is_instant_or_sorcery, cast_is_noncreature, deal, draw, target_any,
+    cast_is_instant_or_sorcery, cast_is_noncreature, draw,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef};
 use crate::mana::{Color, cost, generic, hybrid, r, u, w};
@@ -72,36 +72,6 @@ pub fn kykar_winds_fury() -> CardDefinition {
     }
 }
 
-/// Niv-Mizzet, Parun — {U}{U}{U}{R}{R}{R} 5/5 Dragon Wizard, flying, can't be
-/// countered. Draw a card → deal 1 to any target. Any player casts an I/S → you
-/// draw.
-pub fn nivmizzet_parun() -> CardDefinition {
-    CardDefinition {
-        name: "Niv-Mizzet, Parun",
-        cost: cost(&[u(), u(), u(), r(), r(), r()]),
-        card_types: vec![CardType::Creature],
-        supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dragon, CreatureType::Wizard],
-            ..Default::default()
-        },
-        power: 5,
-        toughness: 5,
-        keywords: vec![Keyword::Flying, Keyword::CantBeCountered],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
-                effect: deal(1, target_any()),
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
-                    .with_filter(cast_is_instant_or_sorcery()),
-                effect: draw(1),
-            },
-        ],
-        ..Default::default()
-    }
-}
 
 /// 1/1 blue-red Insect with flying and haste (The Locust God).
 fn insect_token() -> TokenDefinition {

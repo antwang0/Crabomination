@@ -28,9 +28,10 @@ append-only by contract: the old name keeps its index for ever and the new one
 is appended, so a rename is safe for a trained net's *indices* but hands it a
 token it never saw. Batch renames, and say so in the commit.
 
-COVERAGE, 2026-09-12: **17,461 named factories outside the expected sets — 0
+COVERAGE, 2026-09-12: **17,458 named factories outside the expected sets — 0
 spelling, 0 unknown, 0 duplicate, 0 string/slug mismatch**, with 6 reviewed
-unknowns and 3 reviewed duplicate pairs. It opened at 2 / 12 / 5 / 1.
+unknowns and NO reviewed duplicates. It opened at 2 / 12 / 5 / 1, and all five
+duplicate pairs are gone rather than allowlisted.
 
 ⚠ **A HELPER-BUILT FACTORY'S NAME COMES FROM ITS `pub fn`, not from its own
 string** — `vanilla("Sabretooth Tiger", ..)` has no `name:` field — so a typo
@@ -89,20 +90,16 @@ SYNTHESIZED = (
     "sets/vanguard.rs",
 )
 
-# TWO FACTORIES UNDER ONE NAME, reviewed once. Each pair is the same card
-# implemented twice with different primitives, so picking the survivor is a
-# body-by-body read rather than a delete — filed, not fixed. A NEW pair is the
-# signal, and the two that are gone were found exactly this way: `Victim of
-# Night` had a misspelled duplicate with a wrong cost forty lines above it, and
-# `Sabretooth Tiger` had one whose name hid it from the oracle entirely.
-REVIEWED_DUPLICATES = {
-    "Kroxa, Titan of Death's Hunger": "modern.rs ships `kroxa` and "
-                                      "`kroxa_titan_of_deaths_hunger`",
-    "Uro, Titan of Nature's Wrath": "modern.rs ships `uro` and "
-                                    "`uro_titan_of_natures_wrath`",
-    "Niv-Mizzet, Parun": "modern.rs::niv_mizzet_parun and "
-                         "recent91.rs::nivmizzet_parun",
-}
+# TWO FACTORIES UNDER ONE NAME. **Empty, and that is the ratchet.** Five pairs
+# were live when this column opened and all five are gone: `Victim of Night`
+# and `Sabretooth Tiger` each had a MISSPELLED duplicate with a wrong cost
+# (which is how the class was found — the correct sibling passed every column
+# beside it), and `Kroxa`, `Uro` and `Niv-Mizzet` were each implemented twice
+# with different primitives, with BOTH copies of Kroxa and Uro in the CUBE
+# POOL — so a cube deck could draw two of one legend and the legend rule would
+# kill one on arrival. A new row here is a real defect; add one only with the
+# reason a pair has to stay.
+REVIEWED_DUPLICATES = {}
 
 # A name the oracle does not know, reviewed ONCE and kept so a NEW row is the
 # signal — the same device as `audit_printed_body`'s `REVIEWED_KEYWORDS`.

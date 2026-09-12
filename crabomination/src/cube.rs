@@ -2284,7 +2284,6 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         disowned_ancestor,
     ];
     if pair_contains(pair, Color::Red) {
-        v.push(kroxa_titan_of_deaths_hunger);
         v.push(terminate);
         v.push(voldaren_epicure);
         v.push(bloodtithe_harvester);
@@ -3332,7 +3331,6 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Blue) {
         v.push(simic_ascendancy);
-        v.push(uro_titan_of_natures_wrath);
         v.push(gaeas_skyfolk);
         v.push(talisman_of_curiosity);
         v.push(tanglepool_bridge);

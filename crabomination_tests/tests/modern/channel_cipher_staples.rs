@@ -2051,14 +2051,16 @@ fn bomat_courier_stashes_and_cashes_out() {
     assert!(!g.players[0].hand.iter().any(|c| c.id == junk), "old hand discarded");
 }
 
-/// Kroxa cast normally rips a card from each player, then sacrifices itself;
-/// escaped, it sticks around.
+/// Kroxa cast normally makes each OPPONENT discard, then sacrifices itself;
+/// escaped, it sticks around. (The duplicate factory this used to call had
+/// `EachPlayer` discard, so its controller discarded too — CR: "each opponent
+/// discards a card". Deleted 2026-09-12 with the rest of the duplicate.)
 #[test]
 fn kroxa_sacrifices_unless_escaped() {
     let mut g = two_player_game();
-    g.add_card_to_hand(0, catalog::island());
+    let mine = g.add_card_to_hand(0, catalog::island());
     g.add_card_to_hand(1, catalog::island()); // a LAND discard → still loses 3
-    let kroxa = g.add_card_to_hand(0, catalog::kroxa_titan_of_deaths_hunger());
+    let kroxa = g.add_card_to_hand(0, catalog::kroxa());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.step = TurnStep::PreCombatMain;
@@ -2067,6 +2069,8 @@ fn kroxa_sacrifices_unless_escaped() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(kroxa).is_none(), "hard-cast Kroxa sacrificed");
     assert_eq!(g.players[1].life, 17, "opponent discarded a land → lost 3");
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine),
+            "each OPPONENT discards — the controller does not");
     // Escape it back: {B}{B}{R}{R} + exile five from the graveyard.
     let fodder: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
     g.players[0].mana_pool.add(Color::Black, 2);
@@ -2086,12 +2090,16 @@ fn uro_etb_feast_then_sacrifice() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let hand_land = g.add_card_to_hand(0, catalog::forest());
-    let uro = g.add_card_to_hand(0, catalog::uro_titan_of_natures_wrath());
+    let uro = g.add_card_to_hand(0, catalog::uro());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![hand_land])]));
+    // The land drop is "you MAY put", so the May comes before the pick.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Cards(vec![hand_land]),
+    ]));
     crabomination::game::cast(&mut g, uro);
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 23, "gained 3");

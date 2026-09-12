@@ -51,7 +51,7 @@ mod recent91 {
     #[test]
     fn nivmizzet_parun_pings_on_draw() {
         let mut g = two_player_game();
-        g.add_card_to_battlefield(0, catalog::nivmizzet_parun());
+        g.add_card_to_battlefield(0, catalog::niv_mizzet_parun());
         g.add_card_to_library(0, catalog::forest());
         g.players[1].life = 20;
         draw(&mut g, 0);
@@ -595,7 +595,7 @@ mod recent94 {
     /// Niv-Mizzet, Parun can't be countered (partial completion).
     #[test]
     fn niv_mizzet_parun_cant_be_countered() {
-        assert!(catalog::nivmizzet_parun().keywords.contains(&Keyword::CantBeCountered));
+        assert!(catalog::niv_mizzet_parun().keywords.contains(&Keyword::CantBeCountered));
     }
 }
 
