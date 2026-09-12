@@ -2958,6 +2958,73 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-12 (the cost-is-not-a-condition session) — the class a hand census closed, reopened by asking the right question; no perf leg
+
+```text
+fix     **a `condition` is not a cost** (ENGINE_BACKLOG, twenty-third find). The Greater Good fix censused the rest of
+        its class by hand and closed it: of 39 activated abilities that sacrifice in their effect, 13 sacrifice the
+        SOURCE and 17 carry a tap or a mana cost. That census asked "is there a cost line?" when the question is "is
+        there a BOUND?" — a `condition` is checked at announcement, a sacrifice in the effect is paid at RESOLUTION, so
+        the condition the payment would falsify stays true while the ability sits on the stack and the announcement
+        repeats. FOUR more cards were written exactly that way, all in `recent32.rs`, each carrying the same comment
+        claiming the condition was the bound: Bloodflow Connoisseur, Cartel Aristocrat, Vampire Aristocrat, Yahenni.
+        Bontu the Glorified is the same shape behind a mana cost — bounded, and still paying at the wrong time. All
+        five pay through `sac_other_filter` now. ⚠ Krark-Clan Ironworks reads the same and is NOT this: CR 605.3a
+        resolves a mana ability without the stack, so its effect-side sacrifice is paid before anything else can be
+        announced, and the ratchet skips mana abilities for that reason rather than allowlisting the card.
+        Jarad, Golgari Lich Lord was FILED rather than fixed for want of a primitive — "Sacrifice a Swamp AND a Forest"
+        is two filters, and `(Swamp-or-Forest, 2)` is paid by two Swamps. `ActivatedAbility::sac_other_second` is a
+        second `(filter, count)` picked DISJOINTLY from the first; one block in `activate_ability`'s pre-flight and the
+        cost string in `view.rs`, because everything downstream already reads the one `sac_other_picks` batch.
+        The class-killer is `no_free_activation_spells_its_sacrifice_cost_in_its_effect`, which found the four free
+        ones on its first run. The older `no_activated_ability_is_free_unconditional_and_unlimited` cannot: it compares
+        against a bare `ActivatedAbility`, so ANY non-default field exempts the card, `condition` included. The new
+        ratchet clears what is NOT a bound and compares the rest — condition, speed, and the ZONE the ability is
+        activated from (Jarad's `from_graveyard` is exactly that shape), plus `convoke` and the `cost_reduction_*`
+        family, which only bite on a mana cost a card matching this rule does not have.
+tool    `audit_printed_body`'s P/T column skipped 70 creatures — every literal declaring ONE half of the pair, so every
+        `power: 1, ..phantom(.., 2, ..)` and every 0-power card (`power:` omitted because `Default` is already 0).
+        The halves walk the chain separately now (`merge_pt`) and **`nopt` is 0**. Reading the rest found the second
+        half in a shared reader: `helper_body` split any line with two `:` in it on top-level commas and dropped the
+        separators, fusing one ARGUMENT of a multi-line `..base(..)` call with the line below it (`usg2::paladin`).
+        Tightening the predicate is the wrong half — `..base(` is matched per LINE, and 121 cards left the type-line
+        column when that was tried — so the split stays and the commas go back.
+tool    `notyped` 52 -> **7**, and a `notyped` card is audited by NOBODY (the walk `continue`s before every column).
+        Six shapes, not fifty-two one-offs: a tail after a BLOCK statement (`if cond { .. }` closes with a brace, so
+        the chunk began `}\n strive(` and the anchored match failed on the stray brace), a `let`-bound tail name, an
+        `if flag { A() } else { B() }` in that `let` or as the literal's own base, a tail that is the helper's own
+        PARAMETER (`fn with_buyback(mut def, c)` — the columns it MUTATES are blanked one by one rather than read off
+        the unmutated argument, which is `nokeywords` 88 -> 97), and a module-qualified base
+        (`..super::wwk::tapped_etb_land(..)`). Six injections, each verified silent under the reader at HEAD.
+tool    `audit_keyword_drift`'s MISSING list was **367 rows and 287 of them were cards that carry the mechanic** — and
+        the docstring's own spot-check was wrong about its own examples ("Gibbering Kami has no Soulshift 3 at all"; it
+        has `shortcut::soulshift(3)`). A mechanic has FOUR spellings and the reader knew one and a half: an unlisted
+        `Keyword::` variant (`Splice`, `Buyback`, `Entwine`, `CyclingLife`, `ReplicateEnergy`, plus `Typecycling`
+        listed under a spelling the enum does not have), a shortcut CALL, an `Effect::` variant, and a field whose
+        value is a helper call (`prototype: proto(..)`). MISSING 367 -> **80**, INVENTED **0** either way.
+grid    `robustness_grid.sh --no-build --no-actor --pilots` at the run's tip, on a binary rebuilt with
+        `-C debug-assertions=yes` after the five card fixes: ladder **30 cells / 33,120 games, 0 failures, cap 0 /
+        stuck 0 / draw 0**; pilots **45 policies, 0 failures**. The pilots leg is the one that found the class in the
+        first place (`abilarms`, a 3,213-deep stack), so it is the leg that has to be green after the five that were
+        left.
+actor   the third leg, on a `selfplay_train` rebuilt from `-p crabomination_ml` (the earlier `-p crabomination` build
+        fails with "available bin in `crabomination_ml`" and leaves the PREVIOUS binary in place, which reads green
+        for the tip it was built at — check the build's own exit, not just the assertion count):
+        `--actors 3 --games 3000 --steps 2` at seeds 7 and 20260912, **2 cells, 0 failures, 6,000 games at 85.4 and
+        84.1 games/s** with `debug-assertions` on. All three legs green.
+perf    NONE CLAIMED and none attempted: the queue reads floor for the eighth run, and this run is a rules defect and
+        three readers. The `--bench` counters are the gate and they did not move.
+gate    `--bench` on a **`release`** binary: **195,806 / 27.49 / 611.9 / 0 stalls (cap 0 / stuck 0 / draw 0), counters
+        identical to the committed invariant**, determinism ok (all pairs split), thread_determinism ok (3 vs 1
+        identical). 447.57 games/s, peak_rss 25.2 MiB, bin_bytes 84,865,096, host_calib_ms 44 — the wall clock is the
+        host, which is why the counters are the gate. Suite **19,486 / 0 / 5** (`CRAB_ANSWER_LOG=strict`),
+        golden_trace **11 / 11 unmoved** — five cards changed how their cost is PAID and no trace moved, because none
+        of them is in the `fixed` pool the traces play. clippy --workspace --exclude crabomination_client
+        --all-targets **0**; `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean.
+        audit_printed_body 0 on all eight columns over 16,815 priced + 17,695 type lines + 17,160 subtypes + 17,379
+        keywords + 9,598 P/T + 16,683 colours + 123 loyalty; audit_card_names 0 / 0 / 0 / 0.
+```
+
 ### 2026-09-12 (the printed-body session, second pass) — seven idioms, three new columns, six shipped cards, two duplicates; no perf leg
 
 ```text
@@ -9369,7 +9436,9 @@ runs came off a bug fix, not off this list** — so the cheapest way to find one
 is still to fix a defect, and a run that pulls nothing here and says so is not
 a run that skipped its perf section. 2026-09-12 (the printed-body session):
 nothing pulled; that run is catalog and tooling, and the `--bench` counters in
-its Baseline entry are its gate.
+its Baseline entry are its gate. 2026-09-12 (the cost-is-not-a-condition
+session): nothing pulled either — one rules defect and three readers, and the
+`--bench` counters came back byte-identical to the committed invariant.
 
 **`computed_permanent_hinted`'s "one memo-hit path nobody has read by line" —
 READ, and it is NOT a memo-hit path. No build spent on the device.** The lead

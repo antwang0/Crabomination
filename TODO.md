@@ -34,15 +34,18 @@ sixty-seventh pass, so don't re-take that.
    claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
    came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
    candidates).
-2. **Gates at the tip:** suite **19,483 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+2. **Gates at the tip:** suite **19,486 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
    census assertions on every test), clippy **0** (`--all-targets`), golden_trace **11 / 11 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), **`robustness_grid.sh` ladder 30 cells / 33,120 games +
-   `--wide` ladder 52 cells / 301,600 games + pilots 45 policies, all 0 failures** (the pilots leg's FIRST failure ever was this run's abilarms cell,
+   `--wide` ladder 52 cells / 301,600 games + pilots 45 policies + actor 2 cells / 6,000 games, all 0 failures** (⚠ the actor leg's binary is
+   `-p crabomination_ml --bin selfplay_train`; `-p crabomination` fails and leaves the PREVIOUS binary in place, which then reads green for a tip you
+   did not build) (the pilots leg's FIRST failure ever was this run's abilarms cell,
    fixed), `audit_panics` **0 bare**, `audit_decision_plumbing`
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
    controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
    capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all EIGHT columns** over
-   16,846 priced + 17,777 type lines + 17,235 subtypes + 17,453 keywords + 9,609 P/T + 16,712 colours + 124 loyalty, `audit_card_names`
+   16,846 priced + 17,777 type lines + 17,235 subtypes + 17,453 keywords + 9,609 P/T + 16,712 colours + 124 loyalty, `audit_keyword_drift`
+   **0 invented / 80 missing** (367 until the reader learned a mechanic's other three spellings — read a row, the list is short enough now), `audit_card_names`
    **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
    gate that sees `debug-assertions = false`).
    ⚠⚠ **TWO SESSIONS WORKED `audit_printed_body.py` ON 2026-09-12 AND CONVERGED ON THE SAME SKIPS.** Every reader fix below landed twice-over by
@@ -116,6 +119,21 @@ sixty-seventh pass, so don't re-take that.
    (d) **All five duplicate pairs are gone** — and reading them was worth it: both copies of Kroxa and of Uro were in the CUBE POOL, so a seeded cube
    deck could draw two of one legend, and `kroxa_titan_of_deaths_hunger` discarded from each PLAYER where the card says each opponent. ⚠ **That commit
    changed the cube pool**; no vocab index and no golden trace moved with it.
+3d. **This session's run, and the sentence it earned:** *a `condition` is not a cost, and a census that asks "is there a cost line?" closes a class it
+   has not read.* (a) The Greater Good fix censused the other 39 effect-side sacrifices by hand and closed the class; the question it asked was the wrong
+   one. A `condition` is checked at ANNOUNCEMENT and a sacrifice in the effect is paid at RESOLUTION, so the condition the payment would falsify stays
+   true while the ability sits on the stack. **Four more cards were written exactly that way** (Bloodflow Connoisseur, Cartel Aristocrat, Vampire
+   Aristocrat, Yahenni — all `recent32.rs`, each with the same comment claiming the condition was the bound), plus Bontu, the same shape behind a mana
+   cost. ⚠ Krark-Clan Ironworks reads the same and is NOT this (CR 605.3a: a mana ability resolves without the stack). **Jarad is fixed rather than
+   filed**: `sac_other_second` is a second `(filter, count)` picked DISJOINTLY from the first, because "a Swamp AND a Forest" is two filters and
+   `(Swamp-or-Forest, 2)` is paid by two Swamps. The ratchet
+   `no_free_activation_spells_its_sacrifice_cost_in_its_effect` found the four on its first run and **clears what is not a bound** — condition, speed,
+   and the ZONE — where the older one exempts a card for ANY non-default field. (b) `audit_printed_body`: **`nopt` 70 -> 0** (a literal declaring ONE
+   half of the P/T read as unreadable — every 0-power card, whose `power:` is omitted because `Default` is already 0) and **`notyped` 52 -> 7**, six
+   shapes that reach their base without a `..helper(` line. ⚠ A `notyped` card is audited by NOBODY: the walk `continue`s before every column.
+   (c) `audit_keyword_drift`'s MISSING list was **367 rows and 287 were cards that carry the mechanic** — a mechanic has FOUR spellings and the reader
+   knew one and a half. 367 -> **80**, and the docstring's own spot-check was wrong about its own examples. **A reading list nobody can read is not a
+   gate**, and the same is true of a skip counter nobody opens.
 4. **Next, in order.** (a) **Sweep from 1192 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
