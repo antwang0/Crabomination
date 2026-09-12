@@ -3227,7 +3227,11 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1142..1151   edb11e35      30    148,000       0       2*    0     14
   1112..1118   1b0270fe      35    128,800       0       0     0      8   five pools, CONCURRENT SESSION
   1119..1130   3c37eef1      60    220,800       0       0     0      8   five pools, CONCURRENT SESSION
+  1162..1171   a9d19eea      30    148,000       0      10^    0     20
 ```
+`*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
+bound — seed 1169's Krenko, counted in its own `board` column now and not a
+defect. See "A THIRD SHAPE" below.
 
 ⚠ **The last two rows OVERLAP the ones above them.** Two sessions took 1112
 concurrently on 2026-09-12 without seeing each other's push, so 1112..1130 was
