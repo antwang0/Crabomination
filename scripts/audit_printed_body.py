@@ -924,7 +924,13 @@ def call_args(blk: str, at: int):
     return split_args(blk[at + 1:])
 
 
-PARAMS = re.compile(r"fn\s+[a-z0-9_]+\s*(?:<[^>]*>)?\s*\(([^)]*)\)", re.S)
+# ⚠ THE PARAMETER LIST CANNOT BE MATCHED WITH `[^)]*`. A tuple parameter
+# (`pt: (i32, i32)`) closes the group early, so `fn bestow_creature(name,
+# mana, bestow_cost, pt: (i32, i32), ct, kw, bonus)` reads as four
+# parameters and every argument after the tuple binds to the wrong name.
+# Brace-match instead: `split_args` stops at the unbalanced `)` and
+# survives nested calls.
+PARAMS = re.compile(r"fn\s+[a-z0-9_]+\s*(?:<[^>]*>)?\s*\(", re.S)
 # ⚠ A `mut` PARAMETER IS NOT ITS CALLER'S ARGUMENT. `fn ally(.., mut types:
 # Vec<CreatureType>, ..) { types.push(CreatureType::Ally); creature(name, c,
 # types, ..) }` hands `creature` a list the caller never wrote, so binding
@@ -944,7 +950,7 @@ def helper_params(blk: str):
     if not m:
         return []
     out = []
-    for a in split_args(m.group(1)):
+    for a in split_args(blk[m.end():]):
         out.append(None if MUT_PARAM.match(a.strip()) else a.split(":")[0].strip())
     return out
 

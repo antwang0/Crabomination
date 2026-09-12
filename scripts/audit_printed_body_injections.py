@@ -81,6 +81,20 @@ CASES = [
   "            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],\n"
   "            ..Default::default()\n        },\n        power: p,\n        toughness: t,\n"
   "        keywords: vec![Keyword::Devoid, Keyword::Flying],"),
+ # A TUPLE PARAMETER. `fn bestow_creature(name, mana, bestow_cost, pt: (i32,
+ # i32), ct, kw, bonus)` closes `[^)]*` at the tuple, so the reader that
+ # matched the parameter list that way bound `ct` to nothing and skipped all
+ # eight bestow creatures out of the subtype column. Breaking ONE call site's
+ # `ct` argument is silent under that reader and a row under a brace-matched
+ # one.
+ ("fires", "an argument after a tuple parameter (bng3 Ghostblade Eidolon)",
+  "sets/bng3.rs",
+  '        "Ghostblade Eidolon",\n        cost(&[generic(2), w()]),\n'
+  "        cost(&[generic(5), w()]),\n        (1, 1),\n"
+  "        vec![CreatureType::Spirit],",
+  '        "Ghostblade Eidolon",\n        cost(&[generic(2), w()]),\n'
+  "        cost(&[generic(5), w()]),\n        (1, 1),\n"
+  "        vec![],"),
  # Negative: the oracle's `keywords` array counts keywords the card GRANTS, so
  # the missing direction reads the printed keyword LINES instead. Steel Seraph
  # grants "flying, vigilance, or lifelink" and has only flying; dropping its
