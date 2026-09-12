@@ -63,15 +63,19 @@ pub fn copperline_gorge() -> CardDefinition {
 // engine swaps the `CardInstance.definition` to the back face's definition
 // before placing on battlefield).
 
-/// Single-color basic-typed land face (no ETB-tap, no triggers).
-fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDefinition {
+/// Single-color land face: `{T}: Add <color>`, no ETB-tap and no triggers.
+///
+/// ⚠ **A pathway face has NO basic land type.** Every one of the ten printed
+/// "Land" with a plain `{T}: Add {C}` and nothing else, and giving the face the
+/// matching basic type made it a Swamp / Island / … to everything that reads
+/// one: a fetch searching for a Swamp, landwalk evasion, Domain. The mana was
+/// never the reason for it — `tap_add` prints the ability outright, and
+/// `intrinsic_land_mana_abilities_with` only adds one for a COMPUTED type the
+/// card does not print, so dropping it leaves the mana exactly where it was.
+fn pathway_face(name: &'static str, color: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![land_type],
-            ..Default::default()
-        },
         activated_abilities: vec![tap_add(color)],
         ..Default::default()
     }
@@ -80,78 +84,41 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
 /// Build an MDFC pathway from front-face and back-face descriptors.
 fn pathway(
     front_name: &'static str,
-    front_type: LandType,
     front_color: Color,
     back_name: &'static str,
-    back_type: LandType,
     back_color: Color,
 ) -> CardDefinition {
-    let mut front = pathway_face(front_name, front_type, front_color);
-    front.back_face = Some(Box::new(pathway_face(back_name, back_type, back_color)));
+    let mut front = pathway_face(front_name, front_color);
+    front.back_face = Some(Box::new(pathway_face(back_name, back_color)));
     front
 }
 
-/// Blightstep Pathway // Searstep Pathway — B/R MDFC. Front face is a Swamp
-/// that taps for {B}; back face (Searstep Pathway) is a Mountain that taps
-/// for {R}. Played via `PlayLand(id)` (front) or `PlayLandBack(id)` (back).
+/// Blightstep Pathway // Searstep Pathway — B/R MDFC. Front taps for {B};
+/// back face (Searstep Pathway) taps for {R}. Neither prints a land subtype.
+/// Played via `PlayLand(id)` (front) or `PlayLandBack(id)` (back).
 pub fn blightstep_pathway() -> CardDefinition {
-    pathway(
-        "Blightstep Pathway",
-        LandType::Swamp,
-        Color::Black,
-        "Searstep Pathway",
-        LandType::Mountain,
-        Color::Red,
-    )
+    pathway("Blightstep Pathway", Color::Black, "Searstep Pathway", Color::Red)
 }
 
-/// Darkbore Pathway // Slitherbore Pathway — B/G MDFC. Front is a Swamp
-/// for {B}; back (Slitherbore Pathway) is a Forest for {G}.
+/// Darkbore Pathway // Slitherbore Pathway — B/G MDFC. Front taps for {B};
+/// back (Slitherbore Pathway) taps for {G}.
 pub fn darkbore_pathway() -> CardDefinition {
-    pathway(
-        "Darkbore Pathway",
-        LandType::Swamp,
-        Color::Black,
-        "Slitherbore Pathway",
-        LandType::Forest,
-        Color::Green,
-    )
+    pathway("Darkbore Pathway", Color::Black, "Slitherbore Pathway", Color::Green)
 }
 
 /// Branchloft Pathway // Boulderloft Pathway — G/W MDFC.
 pub fn branchloft_pathway() -> CardDefinition {
-    pathway(
-        "Branchloft Pathway",
-        LandType::Forest,
-        Color::Green,
-        "Boulderloft Pathway",
-        LandType::Plains,
-        Color::White,
-    )
+    pathway("Branchloft Pathway", Color::Green, "Boulderloft Pathway", Color::White)
 }
 
 /// Clearwater Pathway // Murkwater Pathway — U/B MDFC.
 pub fn clearwater_pathway() -> CardDefinition {
-    pathway(
-        "Clearwater Pathway",
-        LandType::Island,
-        Color::Blue,
-        "Murkwater Pathway",
-        LandType::Swamp,
-        Color::Black,
-    )
+    pathway("Clearwater Pathway", Color::Blue, "Murkwater Pathway", Color::Black)
 }
 
 /// Cragcrown Pathway // Timbercrown Pathway — R/G MDFC.
 pub fn cragcrown_pathway() -> CardDefinition {
-    pathway(
-        "Cragcrown Pathway",
-        LandType::Mountain,
-        Color::Red,
-        "Timbercrown Pathway",
-        LandType::Forest,
-        Color::Green,
-    )
+    pathway("Cragcrown Pathway", Color::Red, "Timbercrown Pathway", Color::Green)
 }
 
 // ── Shocklands ───────────────────────────────────────────────────────────────
@@ -1380,62 +1347,27 @@ pub fn kessig_wolf_run() -> CardDefinition {
 
 /// Hengegate Pathway // Mistgate Pathway — W/U MDFC.
 pub fn hengegate_pathway() -> CardDefinition {
-    pathway(
-        "Hengegate Pathway",
-        LandType::Plains,
-        Color::White,
-        "Mistgate Pathway",
-        LandType::Island,
-        Color::Blue,
-    )
+    pathway("Hengegate Pathway", Color::White, "Mistgate Pathway", Color::Blue)
 }
 
 /// Riverglide Pathway // Lavaglide Pathway — U/R MDFC.
 pub fn riverglide_pathway() -> CardDefinition {
-    pathway(
-        "Riverglide Pathway",
-        LandType::Island,
-        Color::Blue,
-        "Lavaglide Pathway",
-        LandType::Mountain,
-        Color::Red,
-    )
+    pathway("Riverglide Pathway", Color::Blue, "Lavaglide Pathway", Color::Red)
 }
 
 /// Barkchannel Pathway // Tidechannel Pathway — G/U MDFC.
 pub fn barkchannel_pathway() -> CardDefinition {
-    pathway(
-        "Barkchannel Pathway",
-        LandType::Forest,
-        Color::Green,
-        "Tidechannel Pathway",
-        LandType::Island,
-        Color::Blue,
-    )
+    pathway("Barkchannel Pathway", Color::Green, "Tidechannel Pathway", Color::Blue)
 }
 
 /// Brightclimb Pathway // Grimclimb Pathway — W/B MDFC.
 pub fn brightclimb_pathway() -> CardDefinition {
-    pathway(
-        "Brightclimb Pathway",
-        LandType::Plains,
-        Color::White,
-        "Grimclimb Pathway",
-        LandType::Swamp,
-        Color::Black,
-    )
+    pathway("Brightclimb Pathway", Color::White, "Grimclimb Pathway", Color::Black)
 }
 
 /// Needleverge Pathway // Pillarverge Pathway — R/W MDFC.
 pub fn needleverge_pathway() -> CardDefinition {
-    pathway(
-        "Needleverge Pathway",
-        LandType::Mountain,
-        Color::Red,
-        "Pillarverge Pathway",
-        LandType::Plains,
-        Color::White,
-    )
+    pathway("Needleverge Pathway", Color::Red, "Pillarverge Pathway", Color::White)
 }
 
 // ── Painlands (allied + enemy "Wastes/Reef/Forge" cycle) ─────────────────────

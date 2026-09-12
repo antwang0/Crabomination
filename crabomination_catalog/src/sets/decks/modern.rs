@@ -22829,7 +22829,7 @@ pub fn tuinvale_treefolk() -> CardDefinition {
         cost: cost(&[generic(5), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Treefolk],
+            creature_types: vec![CreatureType::Treefolk, CreatureType::Druid],
             ..Default::default()
         },
         power: 6,
@@ -22884,7 +22884,11 @@ pub fn queen_of_ice() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Noble,
+                CreatureType::Wizard,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -34348,7 +34352,7 @@ pub fn tormented_pariah() -> CardDefinition {
     vanilla_werewolf(
         "Tormented Pariah",
         cost(&[generic(3), r()]),
-        vec![CreatureType::Human, CreatureType::Werewolf],
+        vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Werewolf],
         3,
         2,
         "Rampaging Werewolf",
