@@ -152,7 +152,7 @@ pub fn drake_hatcher() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![Keyword::Vigilance],
+        keywords: vec![Keyword::Vigilance, Keyword::Prowess],
         triggered_abilities: vec![
             prowess(),
             TriggeredAbility {

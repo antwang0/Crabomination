@@ -975,3 +975,49 @@ fn a_kindred_card_always_carries_the_creature_type_it_shares() {
         bad.join("\n  "),
     );
 }
+
+/// CR 702.107 — the prowess KEYWORD and the prowess TRIGGER travel together.
+///
+/// `shortcut::prowess()`'s own doc states the convention: a factory declares
+/// `Keyword::Prowess`, and the helper converts the tag into a functional
+/// trigger — "the keyword itself remains in `card.keywords` for display +
+/// future 'Prowess matters' payoffs to filter on". Nine shipped cards carried
+/// the trigger with no keyword (Abbot of Keral Keep, Monastery Mentor, Drake
+/// Hatcher, Meticulous Artisan, Jhessian Thief and four Prismari bodies), so
+/// `has_keyword(&Keyword::Prowess)` was false for creatures that print it and
+/// no filter could see them.
+///
+/// The other direction is fine and common — the keyword alone is the normal
+/// spelling, and the engine mints the pump for it (see
+/// `prowess_survives_an_unrelated_cast_trigger_and_is_not_doubled`, which is
+/// the reason carrying BOTH is safe).
+#[test]
+fn a_card_with_the_prowess_trigger_also_carries_the_prowess_keyword() {
+    use crabomination::card::Keyword;
+    use crabomination::effect::shortcut::{prowess, prowess_trigger};
+    // ⚠ EXACT EQUALITY, NOT THE PUMP'S SHAPE. "A `SpellCast` trigger whose
+    // effect is +1/+1 until end of turn" is also Kami of the Hunt (Spirit or
+    // Arcane), Lorehold's Lesson triggers and forty-odd other Kamigawa /
+    // Strixhaven bodies — same pump, a different FILTER, and none of them
+    // prowess. The claim here is narrow: a card built with the canonical
+    // helper declares the keyword the helper's doc says it should.
+    let canonical = [prowess(), prowess_trigger()];
+    let mut bad: Vec<String> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        let has_trigger = def
+            .triggered_abilities
+            .iter()
+            .any(|ta| canonical.contains(ta));
+        if has_trigger && !def.keywords.contains(&Keyword::Prowess) {
+            bad.push(def.name.to_string());
+        }
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} card(s) with the prowess trigger and no `Keyword::Prowess`:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}

@@ -92,6 +92,7 @@ pub fn meticulous_artisan() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![prowess(), etb(mint_treasures(1))],
         ..Default::default()
     }

@@ -1587,6 +1587,7 @@ pub fn prismari_ember_trickster() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
+        keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),

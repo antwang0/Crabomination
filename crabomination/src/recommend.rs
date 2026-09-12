@@ -661,6 +661,7 @@ fn suggest_main_deck_shape<R: Rng>(
     /// discarded: it goes to `deferred` for the unconstrained second pass,
     /// because a pool that cannot fill the reserve must still make 23 cards.
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     fn take(
         at: u32,
         scores: &PoolScores<'_>,
@@ -3821,7 +3822,7 @@ mod tests {
     /// hard cap.
     #[test]
     fn curve_slots_reserve_early_and_cap_the_top() {
-        let mut c = CurveSlots::new(23);
+        let c = CurveSlots::new(23);
         assert_eq!((c.early, c.top, c.open), (5, 6, 18), "5 early + 18 open = 23");
 
         // Six five-drops: the sixth is the last the cap allows.

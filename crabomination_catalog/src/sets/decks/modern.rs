@@ -840,6 +840,7 @@ pub fn abbot_of_keral_keep() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
+        keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -22598,6 +22599,7 @@ pub fn monastery_mentor() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![
             prowess_trigger(),
             TriggeredAbility {

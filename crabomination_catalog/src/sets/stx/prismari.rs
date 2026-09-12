@@ -4899,6 +4899,7 @@ pub fn prismari_stormcaller_v2() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::Prowess],
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![prowess()],
         ..Default::default()
@@ -9003,6 +9004,7 @@ pub fn prismari_stormbinder_b160() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
+        keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![prowess()],
         ..Default::default()
     }
@@ -9107,6 +9109,7 @@ pub fn prismari_tideforge_b161() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![prowess()],
         ..Default::default()
     }

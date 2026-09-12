@@ -5589,10 +5589,10 @@ fn decide_mulligan_by_sim(
 /// to cast. Deliberately simple — the point is that the predicate stops
 /// reading two cards the seat is about to put back, not that this is the
 /// optimal bottoming.
-fn london_kept<'a>(
-    hand: &'a [crate::card::CardInstance],
+fn london_kept(
+    hand: &[crate::card::CardInstance],
     mulligans_taken: usize,
-) -> Vec<&'a crate::card::CardInstance> {
+) -> Vec<&crate::card::CardInstance> {
     let mut kept: Vec<&crate::card::CardInstance> = hand.iter().collect();
     let mut to_bottom = mulligans_taken.min(kept.len().saturating_sub(1));
     while to_bottom > 0 {
@@ -7064,7 +7064,7 @@ fn cast_candidates<'a>(
         .iter()
         .chain(state.players.iter().flat_map(|p| p.graveyard.iter()))
     {
-        if c.definition.is_land() || !c.may_play_until.is_some_and(|perm| perm.player == seat) {
+        if c.definition.is_land() || c.may_play_until.is_none_or(|perm| perm.player != seat) {
             continue;
         }
         let (target, additional_targets) = if c.definition.effect.requires_target() {

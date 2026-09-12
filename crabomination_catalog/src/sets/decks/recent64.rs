@@ -93,6 +93,7 @@ pub fn jhessian_thief() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
+        keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![
             prowess(),
             TriggeredAbility {
