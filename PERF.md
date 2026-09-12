@@ -3228,21 +3228,26 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1112..1118   1b0270fe      35    128,800       0       0     0      8   five pools, CONCURRENT SESSION
   1119..1130   3c37eef1      60    220,800       0       0     0      8   five pools, CONCURRENT SESSION
   1162..1171   a9d19eea      30    148,000       0      10^    0     20
+  1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
 bound — seed 1169's Krenko, counted in its own `board` column now and not a
 defect. See "A THIRD SHAPE" below.
 
-⚠ **The last two rows OVERLAP the ones above them.** Two sessions took 1112
-concurrently on 2026-09-12 without seeing each other's push, so 1112..1130 was
-swept twice on different pool sets — both clean, which is the only reason it
-cost nothing but time. **Read this table before taking a seed and take it from
-the largest number in it: the next fresh seed is 1162.** `fixed` and `sos` are
-16 s and 20 s a cell against `all`'s 68 s, so a five-pool block is barely
-dearer than a three-pool one.
+⚠ **The rows marked CONCURRENT SESSION overlap the ones above them.** Two
+sessions swept the same seeds on 2026-09-12 without seeing each other's push —
+1112..1130 and 1162..1171 — on different pool sets. **Read this table before
+taking a seed and take it from the largest number in it: the next fresh seed is
+1172.** The second reading is worth exactly the two pools it adds, and the
+1162..1171 pair agree to the game on the `^` caps: the same ten, all on seed
+1169, `cube` 6 and `all` 4, so the board bound below reproduces from either
+side.
+`fixed` and `sos` are 16 s and 20 s a cell against `all`'s 68 s, so a five-pool
+block is barely dearer than a three-pool one — which is the only reason the
+duplication cost nothing but time.
 
 **393 cells / 1,938,800 games on the three-pool base, 0 stuck on every one**
-— and the five-pool rows are 195 cells / 781,600 games on top of that, counted
+— and the five-pool rows are 245 cells / 965,600 games on top of that, counted
 apart because they are a different configuration and would otherwise be read as
 more base coverage than there is. Every cap is the
 **already-diagnosed Beacon of Immortality board** — two at `cube` 1069, four

@@ -16,9 +16,9 @@ column assumes is right.
     python3 scripts/audit_printed_body.py --rows 0    # every row
     python3 scripts/audit_printed_body.py --list nonliteral   # what a column skipped
 
-COVERAGE, 2026-09-12 (second pass): **16,815 factories priced, 17,640 on the
-type line, 17,101 on subtypes, 17,339 on keywords, 9,519 on P/T, 16,670 on
-COLOURS and 123 on LOYALTY** — the last two columns are new, and the other five
+COVERAGE, 2026-09-12 (second pass): **16,841 factories priced, 17,707 on the
+type line, 17,167 on subtypes, 17,405 on keywords, 9,524 on P/T, 16,695 on
+COLOURS and 124 on LOYALTY** — the last two columns are new, and the other five
 moved by the idioms their readers could not follow. In order of what they
 cost:
 
@@ -68,6 +68,16 @@ cost:
     `cu(CumulativeUpkeepCost::Life(1))`, `basic_landcycling(..)`: 60 factories,
     resolved through an index of `fn .. -> Keyword` bodies, and only where
     every definition of a name agrees on the variant.
+  * **the factory's base call is not always the FIRST TOKEN after the
+    signature.** `pub fn celestial_colonnade() { use crate::card::Keyword;
+    manland("Celestial Colonnade", ..) }` opens with a statement, so the match
+    found `use` and **105 factories — every one with a `use` or a `let` before
+    their tail — were dropped as `noname` before any column ran**.
+    `resolve_from_block` has taken the TAIL expression since `fn ally` taught
+    it the same lesson; here it is the FALLBACK rather than the rule, because
+    `tail_expression` splits on a `;` one brace deep too and that cuts a
+    literal holding a closure (taking it unconditionally cost 125 priced
+    factories, which is how the fallback shape was chosen).
   * **the head-string name matched on a PREFIX**, so a token the factory
     defines before the card won it — `fn sliver_queen` took the `"Sliver"` of
     its own token, `fn goblin_marshal` took `"Goblin"`, and the card then
@@ -259,7 +269,7 @@ What is left, with the reason — `--list <kind>` prints the factories:
     that builds its cost from a local binding. **700 of them are LANDS**, which
     print no mana cost, so there is nothing for the cost column to compare and
     closing them buys that column nothing; 221 carry a real printed cost.
-  * `noname` (184) — a factory whose name is in neither the literal, its head,
+  * `noname` (101) — a factory whose name is in neither the literal, its head,
     nor its own `pub fn`.
   * `nosubtypes` (144) — a subtype the reader will not guess at: a SHORTHAND
     field (`Subtypes { creature_types, .. }` over a local built by `push`), a
@@ -2037,6 +2047,20 @@ def resolve_card_name(body, raw: str, fname: str):
     return name
 
 
+def factory_call_src(raw: str) -> str:
+    """The factory text the pure-helper readers take their base call from.
+
+    The call is usually the first token after the signature; when a `use` or a
+    `let` comes first it is the TAIL expression instead. Taking the tail
+    unconditionally costs more than it buys — `tail_expression` splits on a `;`
+    one brace deep as well, which cuts a literal holding a closure — so the
+    plain reading wins whenever it finds a call at all.
+    """
+    after = raw[raw.find("\n") + 1:]
+    head = re.match(r"\s*(?:[A-Za-z_]+::)*[a-z0-9_]+\s*\(", after)
+    return after if head else tail_expression(after)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rows", type=int, default=40)
@@ -2084,8 +2108,28 @@ def main() -> int:
                 # nobody**. Stand in a pseudo-literal that defers to the
                 # top-level call, so the type-line resolver treats it as a base
                 # and the cost reader follows the helper it calls.
-                hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(",
-                              raw[raw.find("\n") + 1:])
+                # ⚠ NOT THE FIRST TOKEN AFTER THE SIGNATURE. `pub fn
+                # celestial_colonnade() { use crate::card::Keyword;
+                # manland("Celestial Colonnade", ..) }` opens with a statement,
+                # and matching from the top found `use` rather than the call —
+                # so 186 factories, every one with a `use` or a `let` before
+                # their tail, were dropped as `noname` before any column ran.
+                # `resolve_from_block` has taken the TAIL expression since `fn
+                # ally` taught it the same lesson; the factory path did not.
+                # ⚠ NOT ALWAYS THE FIRST TOKEN AFTER THE SIGNATURE. `pub fn
+                # celestial_colonnade() { use crate::card::Keyword;
+                # manland("Celestial Colonnade", ..) }` opens with a statement,
+                # and matching from the top found `use` rather than the call —
+                # 105 factories, every one with a `use` or a `let` before their
+                # tail, dropped as `noname` before any column ran.
+                # `resolve_from_block` has taken the TAIL expression since `fn
+                # ally` taught it the same lesson; here it is the FALLBACK, not
+                # the rule: `tail_expression` splits on a `;` one brace deep
+                # too, which cuts a literal that holds a closure or a `let`.
+                after_sig = raw[raw.find("\n") + 1:]
+                hm = re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(", after_sig) \
+                    or re.match(r"\s*(?:[A-Za-z_]+::)*([a-z0-9_]+)\s*\(",
+                                tail_expression(after_sig))
                 body = ".." + hm.group(1) + "(" if hm else None
                 if body is None:
                     skip["noname"].append(f"{path.name}::{fname}")
@@ -2175,7 +2219,7 @@ def main() -> int:
                 # the cost the HELPER prints rather than whatever sits next to
                 # the name (`base_struct_cost` is the old heuristic and priced
                 # fourteen cards at their ability's cost).
-                after_sig = raw[raw.find("\n") + 1:]
+                after_sig = factory_call_src(raw)
                 # ⚠ The PSEUDO literal is `..helper(` and nothing else, so its
                 # `..` match has no argument list behind it — reading the args
                 # out of it returned an empty list and every pure-helper card
@@ -2238,7 +2282,7 @@ def main() -> int:
             # same `after_sig` the cost reader falls back to.
             read = resolve_type_line(
                 index, path, body, raw, inner=factory_raw(raw),
-                call_src=raw[raw.find("\n") + 1:] if pseudo else None,
+                call_src=factory_call_src(raw) if pseudo else None,
                 subs_index=subs_index)
             got_t, got_s, got_sub = read.types, read.supers, read.subs
             resolved, sub_ok = read.ok, read.sub_ok
