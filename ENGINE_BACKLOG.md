@@ -150,13 +150,24 @@ that recipe:
 * **15 single-seat arms** — the real class, `MayDoBy` among them.
 * **8 loops** over `resolve_players(who, …)`, where the thing re-derived is the
   **list**. Pinning one seat into it would drop every other seat's question, so
-  the recipe is *wrong* for them; closing them needs a seat-list `PlayerRef`
-  nobody has needed yet. A catalog scan of all eight reads
-  `You` / `EachPlayer` / `EachOpponent` / `ActivePlayer` / `Target(0)` —
-  context state, not board reads — with **one** board-derived `who` in the whole
-  set (Timmerian Fiends' `AnteTopOfLibrary{ControllerOf(Target(0))}`, whose
-  `else_` exchanges the artifact *after* the ask, so the referent is still
-  there on the re-run, and which is `ante_only` and in no pool).
+  the recipe is *wrong* for them.
+
+  ⚠ **AND THE SEAT-LIST REF THAT WOULD CLOSE THEM IS NOT WORK — DO NOT BUILD
+  IT.** The reason is stronger than the catalog scan: **a suspend advances
+  nothing but the answer**, so the list can only move if the arm CHANGED THE
+  BOARD before or inside its ask loop — and seven of the eight are already
+  two-pass (ask everyone, then mutate) for the thirteenth find's reason, so at
+  suspend time the board is what it was at arm entry. The eighth
+  (`RevealTopMayPutOntoBattlefield`) does mutate inside its loop, and its
+  shipped `who` is `You` / `ActivePlayer`, which no board change can move. The
+  catalog scan agrees from the other side: all eight resolve
+  `You` / `EachPlayer` / `EachOpponent` / `ActivePlayer` / `Target(0)` — context
+  state — with **one** board-derived exception (Timmerian Fiends'
+  `AnteTopOfLibrary{ControllerOf(Target(0))}`, whose `else_` exchanges the
+  artifact *after* the ask, and which is `ante_only` and in no pool). Listed
+  rather than allowlisted because a future card or arm can change the premise;
+  the premise to re-check is the one in bold, not the scan. Same call, and for
+  the same reason, as the retired seven-card parking redesign.
 * **4 false positives**: `Fateseal`, `MoveChosen`, `ChooseFromHandToTopOfLibrary`
   and `GuessColorCountInHand` resolve a seat out of a selector and then ask
   **`ctx.controller`** about that seat's cards. `ctx.controller` is resolution

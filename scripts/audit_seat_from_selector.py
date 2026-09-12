@@ -34,9 +34,24 @@ The columns:
   * **loop** — the asks are inside `for … in self.resolve_players(who, …)`. The
     same re-derivation applies to the *list*, and one seat pinned into it would
     drop every other seat's question, so `with_asked_seat` must not cover these.
-    Closing them needs a seat-LIST ref; none of the eight has a shipped card
-    that reaches the failure (the scan below) and they are listed, not
-    allowlisted.
+
+    ⚠ **DO NOT BUILD THE SEAT-LIST REF FOR THESE EIGHT.** It is the obvious fix
+    and it has no path to a defect, for a reason stronger than the catalog scan:
+    **a suspend advances nothing but the answer.** The list can only move if the
+    arm CHANGED THE BOARD before or inside its ask loop — and seven of the eight
+    are already two-pass (ask everyone, then mutate) for the thirteenth find's
+    reason, so at suspend time the board is exactly what it was at arm entry.
+    The eighth (`RevealTopMayPutOntoBattlefield`) does mutate inside its loop,
+    and its shipped `who` is `You` / `ActivePlayer`, which no board change can
+    move. The catalog scan agrees from the other side: all eight resolve
+    `You` / `EachPlayer` / `EachOpponent` / `ActivePlayer` / `Target(0)` —
+    context state — with one board-derived exception (Timmerian Fiends'
+    `ControllerOf(Target(0))`, whose exchange happens AFTER the ask, and which
+    is `ante_only` and in no pool).
+
+    So this column is listed rather than allowlisted because a future card or a
+    future arm can change the premise — **not** because there is work queued.
+    The premise to re-check is the one in bold, not the scan.
   * **open** — a single-seat arm outside the pin list. A defect; add the arm.
 
 The catalog scan behind "no shipped card reaches it", for whoever repeats it:

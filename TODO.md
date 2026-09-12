@@ -57,8 +57,9 @@ sixty-seventh pass, so don't re-take that.
    big board ~13x — `gated_block!` / `gated_pick!` run the body the gate exists to skip. ⚠ `cube` **1018** is the Beacon of Immortality cap; neither is
    to be re-diagnosed. (b) ⚠ **The seven-card nesting is RETIRED — do NOT build the parking redesign** (~60 sites in 38 arms): taken on the suspending
    path, all three differing shapes are correct because every outer arm clears the channel before its body AND has no work after it. The gate stays.
-   (c) The **8 loop arms** are the last column of the seat class: the LIST is re-derived, and closing them needs a seat-list `PlayerRef` nobody has
-   needed yet. A catalog scan of all eight reads context-stable refs with one exception (Timmerian Fiends, `ante_only`) — prevention, not a bug. One
+   (c) ⚠ **The 8 loop arms are CLOSED WITH A REASON — do not build the seat-list ref.** A suspend advances nothing but the answer, so the list can only
+   move if the arm changed the board before or inside its ask loop; seven of the eight are already two-pass and the eighth's `who` is `You`/`ActivePlayer`.
+   The catalog scan agrees. Same call as the retired parking redesign, and the premise to re-check is that one, not the scan. One
    plumbing row is also deliberately left: `ChangeTargetOfAbility` (Reroute) writes its new target BETWEEN its two asks, so routing it needs the
    two-pass split first. (d) `audit_printed_body`'s gap is **219 real spells** behind ~40 bespoke per-file helpers (`zubera("X", r(), ..)`); the last cut
    of this column found seven cards castable for free, and the subtype columns are unopened. (e) **The `MayBody` lead is WITHDRAWN on a measurement** —
