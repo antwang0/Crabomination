@@ -15,14 +15,37 @@ column assumes is right.
     python3 scripts/audit_printed_body.py            # the table
     python3 scripts/audit_printed_body.py --rows 0   # every row
 
-COVERAGE, 2026-09-11: **10,270 factories compared**. The skip counts are
-printed; the one that is a real gap is `nonliteral`, and reading it is worth a
-line here rather than a re-derivation. Most of it is helper-built factories
-whose helper takes the cost in its own shape (`zubera("Name", r(), ..)`,
-`echo_creature("Name", &[generic(3), r()], ..)`) — **219 of them are real
-spells** the audit does not price, spread over ~40 bespoke per-file helpers, so
-closing it is 40 signatures for 2 % of the catalog. The rest is schemes,
-Vanguards and tokens, which print no mana cost by design.
+COVERAGE, 2026-09-12: **14,873 factories compared**, from 10,270. The gap the
+2026-09-11 header described ("219 real spells over ~40 bespoke helpers") was a
+mis-read of its own skip counts; the reader had three holes and none of them was
+the helper signatures:
+
+  * **the `..base` struct-update form — 2,890 factories, 13 % of the catalog.**
+    `CardDefinition { activated_abilities: .., ..creature("Name", cost(&[r()]),
+    ..) }` has a literal, so the helper fallback never ran, and the literal has
+    no `cost:` of its own, so the literal read found nothing. `base_struct_cost`
+    reads it, anchored on the card's own name.
+  * **`crate::mana::w()` and multi-line costs** — a third of the catalog spells
+    the symbols with their path, and `top_fields` emits one line per field, so
+    `cost: cost(&[\n  generic(3),\n])` arrived as three lines. ~180 factories.
+  * **factories named only by their `pub fn`** — 1,607 more, resolved through
+    `CACHE_SLUG`. Safer than the head-string heuristic it backs up, not less:
+    no string from the body is involved.
+
+What is left, with the reason:
+  * `notyped` (4,464) — the type line lives in the helper call for every
+    `..base` factory, so only a SELF-CONTAINED literal can be read for types and
+    supertypes. Reading the base's type line is the column nobody has opened;
+    it is where a missing `Legendary` would hide.
+  * `nocache` (3,772) — synthesized cards the oracle has never heard of.
+  * `noname` (2,392) and `nonliteral` (405) — the bare-symbol helpers
+    (`zubera("Name", r(), ..)`) and factories whose name is in neither place.
+  * `faces` / `split` / `star` / `notaspell` — documented below, all deliberate.
+
+**Proved by injection, not by its own zero**: breaking Agent of Stromgald's
+`..creature("Agent of Stromgald", cost(&[r()]), ..)` to `{4}{R}{R}` reports the
+cost row, and breaking Karn, Scion of Urza to `{3}` / `Creature` / no supertype
+reports all three.
 
 ⚠ SKIPPED, with the reason, and the skip counts are printed:
   * multi-face cards (`card_faces` in the oracle) — the factory's `cost:` is
@@ -44,6 +67,15 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "crabomination_catalog" / "src"
 CACHE = json.load(open(pathlib.Path(__file__).resolve().parent / ".scryfall_cache.json"))
 CACHE_LC = {k.lower(): v for k, v in CACHE.items() if isinstance(v, dict)}
+# The cache keyed the way a factory name is spelled: lowercase, letters and
+# digits only. A factory whose `CardDefinition` carries no `name:` and whose
+# head holds no string the old heuristic accepted is still named by its own
+# `pub fn` — 1,682 of 1,692 such factories resolve here, and resolving the
+# FUNCTION name against the oracle is safer than reading a string out of the
+# body, which is how a Spirit token's name once became the card's.
+CACHE_SLUG = {re.sub(r"[^a-z0-9]", "", k.lower()): v
+              for k, v in CACHE.items() if isinstance(v, dict)}
+CACHE_SLUG_KEYS = {k.replace("_", "") for k in ()} | set(CACHE_SLUG)
 
 FN = re.compile(r"^pub fn ([a-z0-9_]+)\(\) -> (?:[A-Za-z_]+::)*CardDefinition \{", re.M)
 # ⚠ THE FIELDS MUST COME FROM THE `CardDefinition` LITERAL, NOT THE FACTORY
@@ -55,8 +87,32 @@ FN = re.compile(r"^pub fn ([a-z0-9_]+)\(\) -> (?:[A-Za-z_]+::)*CardDefinition \{
 LITERAL = re.compile(r"(?:[A-Za-z_]+::)*CardDefinition \{")
 ANYNAME = re.compile(r'"((?:[^"\\]|\\.)*)"')
 NAME = re.compile(r'^name: "((?:[^"\\]|\\.)*)",', re.M)
-COST = re.compile(r"^cost: cost\(&\[([^\]]*)\]\),", re.M)
+# ⚠ MULTI-LINE AND PATH-TOLERANT. `top_fields` emits one line per depth-1
+# field, so a `cost: cost(&[\n  generic(3),\n  r(),\n])` arrives as three
+# lines and a single-line pattern misses it; and half the catalog spells the
+# symbols `crate::mana::w()` rather than `w()`. Both were counted as
+# `nonliteral` — 180-odd factories on the second alone.
+COST = re.compile(r"^cost: (?:crate::mana::)?cost\(&\[(.*?)\]\)", re.M | re.S)
 HELPER = re.compile(r'"(?:[^"\\]|\\.)*",\s*(?:crate::mana::)?cost\(&\[([^\]]*)\]\)')
+
+
+def base_struct_cost(raw: str, name: str):
+    """`CardDefinition { .., ..creature("Name", cost(&[r()]), ..) }` — the
+    struct-update form, where the literal carries the card's *extras* and the
+    base comes from a helper call in the `..base` position.
+
+    **2,890 factories, 13 % of the catalog, and the audit skipped every one**:
+    they have a `CardDefinition` literal, so the helper fallback never ran, and
+    the literal has no `cost:` field of its own, so the literal read found
+    nothing. Anchored on the card's own name rather than on "the first string
+    followed by a cost", because an activated ability inside the same block can
+    be built by a helper that takes a name too.
+    """
+    pat = re.compile(
+        re.escape('"' + name + '"') + r",\s*(?:crate::mana::)?cost\(&\[(.*?)\]\)", re.S
+    )
+    m = pat.search(raw)
+    return m.group(1) if m else None
 # ⚠ ALIAS-TOLERANT ON PURPOSE. The catalog spells these three ways —
 # `CardType::Creature`, an aliased `CT::Creature` / `Sup::Legendary`, and a
 # helper (`supertypes: legendary()`, `subtypes: types(vec![..])`). A matcher
@@ -131,6 +187,9 @@ def body_cost(src: str):
     """`cost(&[generic(3), r()])` -> "{3}{R}", or None when not literal."""
     out = []
     pos = 0
+    # `crate::mana::w()` is the same symbol as `w()`; the paths are what sits
+    # "between the symbols" for a third of the catalog.
+    src = src.replace("crate::mana::", "")
     for m in SYM.finditer(src):
         if src[pos:m.start()].strip(" ,\n"):
             return None  # something between the symbols we do not model
@@ -186,7 +245,11 @@ def norm(cost: str) -> str:
     WUBRG-rotated order the engine does not model — `{2}{U}{B}{G}` and
     `{2}{B}{G}{U}` are the same cost. Compare the sorted symbols, or the audit
     reports five pip-order rows for every real one (it did)."""
-    return "".join(sorted(re.findall(r"\{[^}]*\}", cost.upper())))
+    # `{0}` and an empty cost are the SAME symbol list to the engine — an
+    # empty `ManaCost`. What tells Ornithopter (`{0}`, castable) from Living
+    # End (no cost, not castable) is `no_mana_cost`, which is the check above,
+    # so comparing them here would report Claws of Gix forever.
+    return "".join(sorted(p for p in re.findall(r"\{[^}]*\}", cost.upper()) if p != "{0}"))
 
 
 def main() -> int:
@@ -196,7 +259,7 @@ def main() -> int:
 
     checked = wrong_cost = wrong_pt = missing_flag = wrong_types = 0
     skip = {"nocache": 0, "faces": 0, "split": 0, "star": 0, "nonliteral": 0,
-            "noname": 0, "notaspell": 0}
+            "noname": 0, "notaspell": 0, "notyped": 0}
     rows = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
@@ -223,6 +286,8 @@ def main() -> int:
                        or slug.startswith(re.sub(r"[^a-z0-9]", "", cand.lower())[:10]):
                         name = cand
                         break
+            if name is None and fname.replace("_", "") in CACHE_SLUG_KEYS:
+                name = CACHE_SLUG[fname.replace("_", "")]["name"]
             if name is None:
                 skip["noname"] += 1
                 continue
@@ -254,8 +319,9 @@ def main() -> int:
                     and "Land" not in (card.get("type_line") or "")):
                 missing_flag += 1
                 shipped = COST.search(body) if body is not None else None
+                shipped_src = shipped.group(1) if shipped else base_struct_cost(raw, name)
                 rows.append(("no-cost", name, f"{path.name}::{fname}",
-                             (body_cost(shipped.group(1)) or "?") if shipped
+                             (body_cost(shipped_src) or "?") if shipped_src
                              else "{} and castable for free",
                              "no printed mana cost"))
             # A helper-built factory passes the cost positionally:
@@ -263,16 +329,25 @@ def main() -> int:
             # form too, or 6,312 factories — most of the older sets — are
             # audited by nobody.
             cm = COST.search(body) if body is not None else HELPER.search(raw)
-            if not cm:
+            cost_src = cm.group(1) if cm else base_struct_cost(raw, name)
+            if cost_src is None:
                 skip["nonliteral"] += 1
                 continue
-            got = body_cost(cm.group(1))
+            got = body_cost(cost_src)
             if got is None:
                 skip["nonliteral"] += 1
                 continue
             checked += 1
             want = card.get("mana_cost", "")
-            if norm(got) != norm(want):
+            # A card that prints NO mana cost has nothing to compare against,
+            # and the `no_mana_cost` check above is the one that owns it. This
+            # also keeps the helper form honest: `blighted("Blighted Steppe",
+            # cost(&[generic(3), w()]), ..)` passes the ACTIVATED ability's
+            # cost, and the card is a land, so the only sound reading of it is
+            # "this card prints no mana cost".
+            if want == "":
+                pass
+            elif norm(got) != norm(want):
                 wrong_cost += 1
                 rows.append(("cost", name, f"{path.name}::{fname}", got or "{}", want or "{}"))
             if body is None:
@@ -285,6 +360,21 @@ def main() -> int:
             want_t = {w for w in line.replace("//", " ").split() if w in CARD_TYPES}
             want_s = {w for w in line.split() if w in SUPERTYPES}
             tm, sm = TYPES.search(body), SUPER.search(body)
+            # The base-struct form (`..creature("Name", cost, types, 1, 1)`,
+            # `..legend(..)`) keeps the type line in the helper call, so a
+            # literal that defers to a base says nothing about it and
+            # "supertypes: (none)" is the reader's blind spot, not the card's —
+            # 71 rows of it, every one a false positive, and six more that
+            # survived a `card_types:`-only gate because `..legend(..)` supplies
+            # the supertype while the literal overrides the types. The type line
+            # is only readable here when the literal is SELF-CONTAINED.
+            partial = any(
+                l.startswith("..") and not l.startswith("..Default::default")
+                for l in body.split("\n")
+            )
+            if tm is None or partial:
+                skip["notyped"] += 1
+                continue
             if tm:
                 got_t = {w for w in WORD.findall(tm.group(1)) if w in CARD_TYPES}
                 got_t = {"Kindred" if t == "Tribal" else t for t in got_t}

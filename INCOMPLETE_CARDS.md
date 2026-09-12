@@ -982,12 +982,25 @@ alias- and helper-tolerant now, and it is proved by injection rather than by
 its own zero — breaking Karn, Scion of Urza to `{3}`, `Creature`, no supertype
 reports all three rows.
 
-**Coverage, so nobody re-derives it: 10,270 factories priced.** The gap is
-helper-built factories whose helper takes the cost in its own shape
-(`zubera("Name", r(), ..)`, `echo_creature("Name", &[generic(3), r()], ..)`) —
-**219 real spells over ~40 bespoke per-file helpers**, i.e. 2 % of the catalog
-for 40 signatures. The rest of the skips are schemes, Vanguards and tokens,
-which print no mana cost by design.
+**Coverage, re-read 2026-09-12: 14,873 factories priced, from 10,270** — and
+the "219 real spells over ~40 bespoke helpers" above was a mis-read of the
+script's own skip counts. The reader had three holes and none of them was the
+helper signatures: the **`..base` struct-update form** (`CardDefinition { .., 
+..creature("Name", cost(&[r()]), ..) }` — **2,890 factories, 13 % of the
+catalog**, with a literal so the helper fallback never ran and no `cost:` in it
+so the literal read found nothing); **`crate::mana::`-qualified symbols and
+multi-line costs** (~180); and **factories named only by their `pub fn`**
+(1,607, resolved against the oracle by slug). Still 0 findings on all four
+columns at the wider coverage, and the reader is proved by injection — Agent of
+Stromgald's base-struct cost and Karn's three columns both report when broken.
+
+What is left, and where a defect would now hide: **`notyped` (4,464)** — the
+type line lives in the helper call for every `..base` factory, so only a
+self-contained literal can be read for types and supertypes, and a missing
+`Legendary` on a `..legend(..)` card is invisible. That is the next column.
+The rest are `nocache` (3,772 synthesized names), `noname` (2,392),
+`nonliteral` (405 bare-symbol helpers, `zubera("Name", r(), ..)`), and the
+deliberate faces / split / star / not-a-spell skips.
 
 Resurgent Belief also carried a `flashback_additional_cost` for a Flashback it
 does not have — the comment two lines below it already said "Suspend 2—{1}{W},
