@@ -6689,6 +6689,7 @@ pub fn unearth() -> CardDefinition {
         name: "Unearth",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         effect: Effect::Move {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3))
@@ -17609,9 +17610,10 @@ pub fn rejuvenate() -> CardDefinition {
         name: "Rejuvenate",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         effect: Effect::GainLife {
             who: Selector::You,
-            amount: Value::Const(5),
+            amount: Value::Const(6),
         },
         ..Default::default()
     }
@@ -18503,6 +18505,11 @@ pub fn decree_of_justice() -> CardDefinition {
         name: "Decree of Justice",
         cost: cost(&[x(), x(), generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
+        // ⚠ The cycling TRIGGER ("When you cycle this card, you may pay {X}.
+        // If you do, create X 1/1 Soldiers") is not modelled — there is no
+        // cycle-trigger primitive. The keyword itself is, and without it the
+        // card could not be cycled at all.
+        keywords: vec![Keyword::Cycling(cost(&[generic(2), w()]))],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
@@ -26593,6 +26600,7 @@ pub fn metamorphosis_fanatic() -> CardDefinition {
         name: "Metamorphosis Fanatic",
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Creature],
+        miracle: Some(cost(&[generic(1), b()])),
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
@@ -39688,6 +39696,7 @@ pub fn reveillark() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying],
+        alternative_cost: Some(crate::effect::shortcut::evoke(cost(&[generic(5), w()]))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::PermanentLeavesBattlefield,
@@ -50336,6 +50345,7 @@ pub fn hollow_one() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         static_abilities: vec![StaticAbility {
             description: "This spell costs {2} less to cast for each card you've discarded this turn.",
             effect: StaticEffect::SelfCostReducedPerDiscardThisTurn { per: 2 },
@@ -64920,6 +64930,7 @@ pub fn ominous_seas() -> CardDefinition {
         name: "Ominous Seas",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
                 once_per_turn: true,

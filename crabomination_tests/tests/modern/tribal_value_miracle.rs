@@ -2864,3 +2864,35 @@ fn golos_exiles_three_to_play_free_this_turn() {
         "without paying their mana costs"
     );
 }
+
+// ── The mechanic a card prints, and the reader that could not see it ────────
+
+/// **Terminus and Metamorphosis Fanatic print Miracle and had none**, and
+/// Shriekmaw and Reveillark print Evoke and had none.
+///
+/// `audit_keyword_drift`'s field map is what should have caught the miracle
+/// pair, and `miracle` — the alt-cast vehicle `maybe_grant_miracle` reads —
+/// was never listed in it, so the whole bucket read as noise: every card that
+/// HAS the field reported as missing it, which is how the two that really
+/// lacked it stayed hidden. Terminus with no Miracle {W} is a six-mana
+/// sorcery and nothing else.
+#[test]
+fn the_cards_that_print_miracle_or_evoke_carry_it() {
+    use crabomination::mana::{b, cost, generic, w};
+    for (def, want) in [
+        (catalog::terminus(), cost(&[w()])),
+        (catalog::metamorphosis_fanatic(), cost(&[generic(1), b()])),
+    ] {
+        let name = def.name;
+        assert_eq!(def.miracle.as_ref(), Some(&want), "{name} prints Miracle");
+    }
+    for (def, want) in [
+        (catalog::shriekmaw(), cost(&[generic(1), b()])),
+        (catalog::reveillark(), cost(&[generic(5), w()])),
+    ] {
+        let name = def.name;
+        let alt = def.alternative_cost.as_ref().unwrap_or_else(|| panic!("{name} prints Evoke"));
+        assert!(alt.evoke_sacrifice, "{name}'s alternative cost is an EVOKE one");
+        assert_eq!(alt.mana_cost, want, "{name}'s evoke cost");
+    }
+}

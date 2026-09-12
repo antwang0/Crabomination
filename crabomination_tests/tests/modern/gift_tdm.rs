@@ -3379,8 +3379,13 @@ fn wing_splicer_grants_golems_flying() {
         "Golem anthem grants flying");
 }
 
+/// ⚠ **This asserted FIVE and the card says SIX.** The expectation was written
+/// off the body rather than off the oracle, so the test froze the defect in
+/// place: no column sees a number inside an effect (`audit_printed_body`
+/// compares cost, types, subtypes, keywords, P/T and colour), and the card was
+/// only re-read because `audit_keyword_drift` listed it as missing Cycling.
 #[test]
-fn rejuvenate_gains_five_life() {
+fn rejuvenate_gains_six_life() {
     let mut g = two_player_game();
     let before = g.players[0].life;
     let id = g.add_card_to_hand(0, catalog::rejuvenate());
@@ -3390,7 +3395,7 @@ fn rejuvenate_gains_five_life() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Rejuvenate castable");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, before + 5, "gained 5 life");
+    assert_eq!(g.players[0].life, before + 6, "the card says 6");
 }
 
 #[test]

@@ -8308,6 +8308,7 @@ pub fn viscera_dragger() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         activated_abilities: vec![unearth(cost(&[generic(1), b()]))],
         ..Default::default()
     }

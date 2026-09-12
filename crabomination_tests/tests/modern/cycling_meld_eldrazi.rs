@@ -1546,3 +1546,37 @@ fn part_the_waterveil_regular_cast_skips_awaken() {
     assert!(!v.card_types().contains(&CardType::Creature), "land untouched");
 }
 
+
+// ── The mechanic a card prints, and the reader that could not see it ────────
+
+/// **Six shipped cards print Cycling and carried none of it.**
+///
+/// `audit_keyword_drift`'s MISSING direction is the column that sees this, and
+/// it could not: its list was 367 rows of which 287 were cards that DO carry
+/// the mechanic — spelled as a `Keyword::` variant it had never listed, as a
+/// shortcut call, as an `Effect::` variant, or as a field holding a helper
+/// call. Sharpened to 80 rows, these six read straight off it. A Hollow One
+/// with no Cycling has no way to feed its own cost reduction.
+#[test]
+fn the_cards_that_print_cycling_carry_it() {
+    use crabomination::card::Keyword;
+    use crabomination::mana::{cost, generic, w};
+    let two = cost(&[generic(2)]);
+    for (def, want) in [
+        (catalog::unearth(), two.clone()),
+        (catalog::rejuvenate(), two.clone()),
+        (catalog::hollow_one(), two.clone()),
+        (catalog::ominous_seas(), two.clone()),
+        (catalog::viscera_dragger(), two.clone()),
+        // Cycling {2}{W}. ⚠ Its cycle TRIGGER ("you may pay {X}: X Soldiers")
+        // has no primitive and is still not modelled; the keyword is.
+        (catalog::decree_of_justice(), cost(&[generic(2), w()])),
+    ] {
+        let name = def.name;
+        assert!(
+            def.keywords.iter().any(|k| matches!(k, Keyword::Cycling(c) if *c == want)),
+            "{name} prints Cycling and must carry it: {:?}",
+            def.keywords,
+        );
+    }
+}

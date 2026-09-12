@@ -4320,6 +4320,7 @@ pub fn shriekmaw() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Fear],
+        alternative_cost: Some(crate::effect::shortcut::evoke(cost(&[generic(1), b()]))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Destroy {

@@ -1207,6 +1207,7 @@ pub fn terminus() -> CardDefinition {
         name: "Terminus",
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Sorcery],
+        miracle: Some(cost(&[w()])),
         effect: Effect::Move {
             what: Selector::EachPermanent(SelectionRequirement::Creature),
             to: ZoneDest::Library {
