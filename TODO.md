@@ -34,7 +34,7 @@ sixty-seventh pass, so don't re-take that.
    claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
    came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
    candidates).
-2. **Gates at the tip:** suite **19,504 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+2. **Gates at the tip:** suite **19,505 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
    census assertions on every test), clippy **0** (`--all-targets`), golden_trace **12 / 12 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), **`robustness_grid.sh` ladder 30 cells / 33,120 games +
    `--wide` ladder 52 cells / 301,600 games + pilots 45 policies + actor 2 cells / 6,000 games, all 0 failures** (⚠ the actor leg's binary is
@@ -46,7 +46,7 @@ sixty-seventh pass, so don't re-take that.
    capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all TEN columns** over
    16,846 priced + 17,777 type lines + 17,683 subtypes + **17,743** keywords + 9,609 P/T + **16,729** colours + 124 loyalty + **62 ADVENTURE HALVES +
    81 BACK FACES** (the two new columns), `audit_keyword_drift`
-   **0 invented / 29 missing** (367 two sessions ago — read a row, the list is short enough to work now), `audit_card_names`
+   **0 invented / 6 missing** (367 at the start of 2026-09-12 — and the 6 left each need a primitive or a re-modelling), `audit_card_names`
    **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
    gate that sees `debug-assertions = false`).
    ⚠⚠ **TWO SESSIONS WORKED `audit_printed_body.py` ON 2026-09-12 AND CONVERGED ON THE SAME SKIPS.** Every reader fix below landed twice-over by
@@ -66,8 +66,7 @@ sixty-seventh pass, so don't re-take that.
    writes the real tree, it runs its cases in parallel (`-j`), and a 45-case run is minutes rather than the hour the in-place version cost.
    **Fresh seeds: 853..1030 on five pools, then 1031..1211 on cube / all / sealed (543 cells, 2,678,800 games) PLUS a concurrent session's 245 cells /
    965,600 games on five pools at 1060..1171 — 0 stuck everywhere. ⚠ `1152..1161` was a HOLE in PERF's table for twenty blocks and is swept now; the
-   frontier is still **1212**, so read the SEED COLUMN and not the total. TAKE IT FROM PERF'S TABLE: two sessions took 1112
-   on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
+   frontier is **1222** (1212..1221 is 30 cells / 148,000 games, 0 failures), so read the SEED COLUMN and not the total. TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
    turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
    of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
@@ -104,8 +103,20 @@ sixty-seventh pass, so don't re-take that.
    half of the P/T read as unreadable — every 0-power card, whose `power:` is omitted because `Default` is already 0) and **`notyped` 52 -> 7**, six
    shapes that reach their base without a `..helper(` line. ⚠ A `notyped` card is audited by NOBODY: the walk `continue`s before every column.
    (c) `audit_keyword_drift`'s MISSING list was **367 rows and 287 were cards that carry the mechanic** — a mechanic has FOUR spellings and the reader
-   knew one and a half. 367 -> **80**, and the docstring's own spot-check was wrong about its own examples. **A reading list nobody can read is not a
-   gate**, and the same is true of a skip counter nobody opens.
+   knew one and a half, and the docstring's own spot-check was wrong about its own examples. **A reading list nobody can read is not a gate**, and the
+   same is true of a skip counter nobody opens. Three more shapes are RULES rather than allowlist rows — `miracle` the FIELD (six cards that have it
+   read as missing it); "[Name] — [cost], Discard this card:" = `from_hand` + `discard_self_cost`, which is channel AND bloodrush, twenty rows; adamant
+   = `Predicate::ManaSpentOfColorAtLeast`, whose own docstring says "CR 702.137 (Adamant)" — leaving **367 -> 6**, INVENTED 0 throughout. ⚠ **A rule
+   for a shape must be ADDITIVE**: written as an early return the discard one suppressed six bloodrush cards whose literal names a local helper.
+   (d) **31 shipped card defects off that list**, each read against its oracle line FIRST. **Three are worse than a gap:** Disowned Ancestor shipped
+   `renown(1)` where the card prints Outlast {1}{B} (doc comment agreeing with the body); Furnace Hellkite and Crabomination each shipped a TRIGGER the
+   card does not print; Rejuvenate gained five where the card says six, and `rejuvenate_gains_five_life` asserted the five — **a test written from the
+   body freezes the defect**, and no column sees a number inside an effect. ⚠ **Warp was live and unreachable** (`shortcut::warp` +
+   `AlternativeCost::warp` existed, no card used either), and two cards' comments said a mechanic was "not modelled" / "dropped" while the vehicle was
+   in use elsewhere — **a comment claiming a mechanic is dropped is worth one grep**. ⚠ Priest of Fell Rites is the false positive that cost a test:
+   its unearth is an `ActivatedAbility` literal, not `shortcut::unearth`, and adding the shortcut shifted every ability index. **Read the body before
+   believing a row.** The 6 left need a primitive or a re-modelling: devour, bestow behind Collect evidence, escalate's per-mode price, a flashback
+   costed in X loyalty counters, and two kickers that change a MODAL COUNT and a cast trigger.
 3d. **The FOURTH session of 2026-09-12, and the sentence it earned:** *one `false` for two meanings is a bug in every caller at once.*
    (a) `draw_one` returned it for "the draw was skipped" AND for CR 104.3c, so **casting Divination with Omen Machine out eliminated the caster** with
    five cards left in their library — `DrawOutcome` and `draw_one_or_deck` are the fix. And **nineteen more sites discarded the answer entirely**, so
