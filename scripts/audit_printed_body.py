@@ -457,8 +457,13 @@ SUB_SHORTHAND = re.compile(r"(?:^|,)\s*subtypes\s*(?:,|$)")
 # over a `let mut creature_types = types.to_vec(); creature_types.push(Ally)`.
 # The field-with-colon scan finds nothing there, and "nothing" read as EMPTY
 # reported 34 correct cards as subtype-less. A shorthand is unreadable.
+# ⚠ A SHORTHAND WHOSE NAME IS A PARAMETER IS THE ARGUMENT, not a blind spot:
+# `fn construct(creature_types: Vec<CreatureType>) -> Subtypes { Subtypes {
+# creature_types, .. } }` is `bro.rs`'s whole set and 18 more cards elsewhere.
+# Unreadable is the answer only for a LOCAL of that name (the `let mut` shape
+# above). Captured so the two can be told apart.
 SUB_FIELD_SHORTHAND = re.compile(
-    r"(?:^|,)\s*(?:%s)\s*(?:,|$)" % "|".join(SUB_FIELDS), re.M)
+    r"(?:^|,)\s*(%s)\s*(?:,|$)" % "|".join(SUB_FIELDS), re.M)
 # `CardDefinition { .., ..CardDefinition { .., subtypes: .. } }` — a struct-update
 # base that is another LITERAL rather than a helper call, so the walker's
 # `..name(` scan does not see it (war.rs's Golems, Saheeli's Silverwing).
@@ -1110,12 +1115,13 @@ def parse_subtypes(inner, params=(), args=(), subs_index=None, path=None):
                 break
     if body is None:
         return None, True
-    if SUB_FIELD_SHORTHAND.search(body):
-        return None, True
     got = set()
-    for m in SUB_FIELD.finditer(body):
-        val = raw_field(body, m.group(1))
-        if val is None:
+    fields = [(m.group(1), None) for m in SUB_FIELD.finditer(body)]
+    fields += [(m.group(1), m.group(1)) for m in SUB_FIELD_SHORTHAND.finditer(body)]
+    for name, short in fields:
+        # Rust field-init shorthand IS the parameter — see SUB_FIELD_SHORTHAND.
+        val = short if short is not None else raw_field(body, name)
+        if val is None or (short is not None and short not in params):
             return None, True
         val = bind_param(val, params, args)
         # ⚠ THE BINDING CAN BE ONE ELEMENT, not the whole field.
@@ -1408,12 +1414,95 @@ PARAMS = re.compile(r"fn\s+[a-z0-9_]+\s*(?:<[^>]*>)?\s*\(", re.S)
 MUT_PARAM = re.compile(r"\bmut\s+([a-z0-9_]+)\s*:")
 COST_FIELD = re.compile(r"^cost: (.*?),?$", re.M)
 
+# Methods on a mutated list that cannot LOSE an element, so folding the pushes
+# into the caller's argument still reads the whole printed line. Anything else
+# (`retain`, `remove`, `clear`, `pop`, `drain`, `truncate`, an index assignment)
+# leaves the param unreadable, which is where it started.
+MUT_ADD = ("push", "extend", "extend_from_slice", "insert")
+MUT_READ_ONLY = ("contains", "iter", "len", "is_empty", "clone", "to_vec",
+                 "as_slice", "first", "last", "sort", "sort_by", "dedup")
+
+
+def mut_param_arg(src: str, name: str, arg: str):
+    """The caller's argument with the helper's own ADDITIONS folded in, or None.
+
+    ⚠ `fn ally(.., mut types: Vec<CreatureType>, ..) { types.push(CreatureType::
+    Ally); creature(name, c, types, ..) }` hands `creature` a list the caller
+    never wrote, so binding `types` straight back to the call site drops the Ally
+    and reports a correct card. That was the reason `helper_params` bound a `mut`
+    parameter to `None` — a give-up that skipped **52 Allies** out of the subtype
+    column, in a family where the SAME omission had already shipped once (`tla`'s
+    `fn ally` was `ct` under a misleading name until 2026-09-01 and ten of its
+    callers had no Ally type).
+
+    A give-up is not the only option: read the mutation. Every statement touching
+    the parameter must be an add (`MUT_ADD`) or a read (`MUT_READ_ONLY`), and
+    every added value a plain variant — then the bound expression is the caller's
+    elements plus the helper's, which is exactly the printed line. A conditional
+    push (`if !types.contains(&Ally) { types.push(Ally) }`) needs no special case
+    because the column compares SETS. Anything else, including a reassignment,
+    returns None and the parameter stays unreadable.
+    """
+    if re.search(r"(?<![=!<>:])\b%s\s*=(?!=)" % re.escape(name), src):
+        return None
+    added = []
+    for m in re.finditer(r"\b%s\s*\.\s*([a-z_]+)\s*\(" % re.escape(name), src):
+        meth = m.group(1)
+        if meth in MUT_READ_ONLY:
+            continue
+        if meth not in MUT_ADD:
+            return None
+        at = m.end() - 1
+        vals = call_args(src, at)
+        if meth == "insert":
+            vals = vals[1:]
+        for v in vals:
+            v = v.strip().lstrip("&")
+            vm = re.fullmatch(r"vec!\[(.*)\]|\[(.*)\]", v, re.S)
+            if vm:
+                v = vm.group(1) if vm.group(1) is not None else vm.group(2)
+            for part in split_args(v) if v.strip() else []:
+                part = part.strip()
+                if not re.fullmatch(r"(?:crate::card::)?[A-Za-z][A-Za-z0-9_]*"
+                                    r"::[A-Za-z0-9_]+", part):
+                    return None
+                added.append(part)
+    if not added:
+        return arg
+    inner = re.fullmatch(r"\s*(?:&)?(?:vec!)?\[(.*)\]\s*", arg.strip(), re.S)
+    if not inner:
+        return None
+    have = inner.group(1).strip()
+    return "vec![%s]" % ", ".join(([have] if have else []) + added)
+
+
+def bind_mut_params(blk: str, params, args):
+    """`(params, args)` with each `mut` parameter either READ or left unreadable.
+
+    The one place the `None` convention of `helper_params` is undone, and only
+    for a parameter whose every mutation `mut_param_arg` could account for.
+    """
+    if None not in params:
+        return params, args
+    m = RET.search(blk)
+    src = blk[m.end():] if m else blk
+    names = helper_params_all(blk)
+    params, args = list(params), list(args)
+    for i, p in enumerate(params):
+        if p is not None or i >= len(args) or i >= len(names):
+            continue
+        bound = mut_param_arg(src, names[i], args[i])
+        if bound is not None:
+            params[i], args[i] = names[i], bound
+    return params, args
+
 
 def helper_params(blk: str):
     """This helper's parameter names, with a `mut` one replaced by `None`.
 
     `None` never equals an expression, so `bind_param` leaves the expression
-    alone and the literal test skips the card — see `MUT_PARAM`.
+    alone and the literal test skips the card — see `MUT_PARAM`. `bind_mut_params`
+    puts the name back for the ones whose mutation it can read.
     """
     m = PARAMS.search(blk)
     if not m:
@@ -1465,7 +1554,7 @@ def resolve_helper_cost(index, path, helper, args, depth=0):
     if not cands:
         return None
     blk = cands[0]
-    params = helper_params(blk)
+    params, args = bind_mut_params(blk, helper_params(blk), args)
     body = helper_body(blk)
     if body is None:
         # A helper that is ITSELF a pure call — `fn sliver(name, c, p, t) {
@@ -1833,10 +1922,10 @@ def resolve_from_block(index, path, blk, args, depth, subs_index=None):
     """
     body, inner = helper_body(blk), helper_raw(blk)
     call_src, blanked = None, ()
+    params, args = bind_mut_params(blk, helper_params(blk), args)
     if body is None:
         m = RET.search(blk)
         src = blk[m.end():] if m else ""
-        params = helper_params(blk)
         after = tail_expression(src)
         hm = CALL_HEAD.match(after)
         if not hm:
@@ -1866,7 +1955,7 @@ def resolve_from_block(index, path, blk, args, depth, subs_index=None):
                         False, False, False, False, False, False)
         body, call_src = ".." + hm.group(1) + "(", after
     read = resolve_type_line(index, path, body, None, depth, inner,
-                             helper_params(blk), args, call_src, subs_index)
+                             params, args, call_src, subs_index)
     return read._replace(**{f: False for f in blanked}) if blanked else read
 
 
@@ -2078,7 +2167,7 @@ def main() -> int:
     skip = {k: [] for k in ("nocache", "faces", "split", "star", "nonliteral",
                             "noname", "notaspell", "notyped", "nosubtypes",
                             "nosubvariant", "nokeywords", "nopt", "nocolors",
-                            "noloyalty")}
+                            "noloyalty", "subtwoface")}
     rows = []
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text()
@@ -2320,9 +2409,17 @@ def main() -> int:
             # Grist ships Insect while printing neither. That is the engine's
             # encoding of the creature, not a wrong type line, and both flags
             # are in the literal where this can see them.
+            # ⚠ `layout == "normal"` USED TO GATE THIS AND IT COUNTED NOWHERE.
+            # The face merge above already replaces `type_line` with the FACE's
+            # line, so a transform / mdfc card reaches here with a perfectly
+            # ordinary one-`—` line and was dropped anyway — along with every
+            # saga, adventure, prototype, leveler, mutate, class, case, augment
+            # and flip card, 1,200-odd of them, into no skip bucket at all. The
+            # requirement was never the layout WORD: it is that the line
+            # describes ONE face, which `//` and the `—` count already say.
             if BECOMES_CREATURE.search(raw):
                 skip["nosubtypes"].append(f"{path.name}::{fname}")
-            elif sub_ok and card.get("layout") == "normal" and tl.count("—") <= 1:
+            elif sub_ok and "//" not in tl and tl.count("—") <= 1:
                 words = tl.split("—", 1)[1].split() if "—" in tl else []
                 if any(w.lower() not in SUB_WORD for w in words):
                     skip["nosubvariant"].append(f"{path.name}::{fname}")
@@ -2336,6 +2433,11 @@ def main() -> int:
                                      " ".join(sorted(want_sub)) or "(none)"))
             elif not sub_ok:
                 skip["nosubtypes"].append(f"{path.name}::{fname}")
+            else:
+                # Readable here, but the oracle line is not ONE face. Its own
+                # bucket, because "readable and not compared" is the shape that
+                # counted nowhere for as long as the layout gate existed.
+                skip["subtwoface"].append(f"{path.name}::{fname}")
             # The PRINTED KEYWORDS, restricted to the evergreen set both sides
             # spell as a plain keyword. A missing Flying is not cosmetic: the
             # bot's block search, the damage assignment and every evasion check
