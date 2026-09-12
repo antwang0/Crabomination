@@ -2893,19 +2893,29 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1045..1047   5ece833a       9     44,400       0       0     0     20
   1048..1059   5ece833a      36    177,600       0       0     0      6
   1060..1071   5ece833a      36    177,600       2       2*    0      0
+  1072..1081   6163d94d      30    148,000       0       4*    0      4
 ```
 
-**123 cells / 606,800 games, 0 stuck on every one**, and the two caps are the
-**already-diagnosed Beacon of Immortality board recurring at `cube` seed 1069**
-— not a new defect and not to be re-diagnosed. `CRAB_LIFE_WATCH=100000` prints
-the same doubling series the instrument pinned it with at 1018 (126,961 ->
-253,922 -> 507,841 -> … -> `i32::MAX`, one doubling every other turn), both
-seats saturated at turn 259 with libraries of 0 and 1. The Beacon is not on the
-board in the cap diagnostic because it shuffles ITSELF back: it is the one card
-left in p1's library. Two seeds in ~1.9 M swept games now, which makes it a
-property of the cube pool rather than of a seed.
+**153 cells / 754,800 games, 0 stuck on every one**, and every cap is the
+**already-diagnosed Beacon of Immortality board** — two at `cube` 1069, four
+more at `cube` 1076 — not a new defect and not to be re-diagnosed.
+`CRAB_LIFE_WATCH=100000` prints the same doubling series the instrument pinned
+it with at 1018 (126,961 -> 253,922 -> 507,841 -> … -> `i32::MAX`, one doubling
+every other turn), both seats saturated at turn 259 with libraries of 0 and 1.
+The Beacon is not on the board in the cap diagnostic because it shuffles ITSELF
+back: it is the one card left in p1's library. **Three seeds in ~2 M swept
+games**, which makes it a property of the cube pool rather than of a seed —
+and at `220af0dc` that is what the sweep now PRINTS. `cap_diagnosis`
+(`recommend.rs`) labels a seat past `SCALE_CEILING * 1_000` life
+`[SATURATED LIFE — the known unwinnable board, not a new defect]`, and
+`fresh_seed_sweep.sh` counts labelled caps apart, so the closing line reads
+`undecided cap 4 (of which 4 the known saturated-life board)` and the block
+scores `failures=0`. Re-run of `cube` 1076 on the new binary confirms it end to
+end. **A cap WITHOUT the label is the signal** — the point is that the sweep
+stops crying wolf on a board nobody is going to change, not that caps stopped
+mattering.
 
-A draw is CR 104.4, not a defect. Seed frontier **1072**. One cell is a
+A draw is CR 104.4, not a defect. Seed frontier **1082**. One cell is a
 different kind of outlier and it is the entry below.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
@@ -2944,13 +2954,21 @@ board", never as "the actor loses this much"** — re-run it on `release-fast`
 before believing a throughput number. And when a cell's wall clock is the
 thing being budgeted, the lever is the gate audits, not the engine.
 
-**Gates at the closing tip `5ece833a`** (`release-fast`): suite
+**Gates at the closing tip `220af0dc`** (`release-fast`): suite
+**19,456 / 0 / 5** with `CRAB_ANSWER_LOG=strict` exported (116.9 s), clippy
+**0** over the workspace (`--all-targets`), `--bench` **195,806 decisions /
+27.49 turns / 611.9 decisions-per-game / 0 stalls** — the committed counters,
+byte-identical — `determinism ok`, `thread_determinism ok (3 vs 1)`,
+`games_per_s` 306.52, peak RSS 29.1 MiB, `bin_bytes` 127,002,584. The three
+commits after `5ece833a` are two card riders and a diagnostic string, so the
+counters are the behaviour check for them and they do not move.
+
+**Gates at the mid-session tip `5ece833a`** (`release-fast`): suite
 **19,453 / 0 / 5** with `CRAB_ANSWER_LOG=strict` exported, clippy **0** over the
 workspace (`--all-targets`, `CARGO_TARGET_DIR=target-clip`), `cargo check
---profile release-fast` clean, `--bench` **195,806 decisions / 27.49 turns
-/ 611.9 decisions-per-game / 0 stalls** — the committed counters, byte-identical
-— `determinism ok`, `thread_determinism ok (3 vs 1)`, `games_per_s` 285.46,
-peak RSS 29.0 MiB, `bin_bytes` 126,932,512. `golden_trace` 10 / 10 unmoved, and
+--profile release-fast` clean, `--bench` the same **195,806 / 27.49 / 611.9 /
+0 stalls**, `determinism ok`, `thread_determinism ok (3 vs 1)`, `games_per_s`
+285.46, peak RSS 29.0 MiB, `bin_bytes` 126,932,512. `golden_trace` 10 / 10 unmoved, and
 `CRAB_DUMP_TRACES` over 64 `cube` games and 68 `all` dflt games is identical to
 the SESSION-BASE binary — four commits and a rebase later.
 `audit_panics` **0 bare**, `audit_decision_plumbing` 168 / 108 / 60 **DEAD 0 and
