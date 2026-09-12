@@ -8102,6 +8102,9 @@ pub fn ragnarok_divine_deliverance() -> CardDefinition {
         // be cast", not "costs {0}".
         cost: cost(&[]),
         no_mana_cost: true,
+        // CR 105.2c — no mana cost, so the printed B/G comes from the colour
+        // indicator; without it the card is colorless in every colour read.
+        color_indicator: vec![Color::Black, Color::Green],
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

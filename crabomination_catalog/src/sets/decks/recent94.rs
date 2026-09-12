@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, gain_life, on_attack, target_filtered};
 use crate::effect::{Duration, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, w};
+use crate::mana::{Color, b, cost, g, generic, r, w};
 
 use super::modern::simple_equipment;
 
@@ -339,6 +339,10 @@ pub fn rograkh_son_of_rohgahh() -> CardDefinition {
     CardDefinition {
         name: "Rograkh, Son of Rohgahh",
         cost: cost(&[generic(0)]),
+        // CR 105.2c — a {0} cost carries no colored pip, so the printed red
+        // comes from the colour indicator. Without it the Kobold is colorless
+        // to protection, devotion and every "shares a colour" read.
+        color_indicator: vec![Color::Red],
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {

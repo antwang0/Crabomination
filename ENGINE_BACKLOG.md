@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-12 (twenty-first find) — colour is DERIVED, and three shipped cards print one their mana cost cannot carry](#fixed-2026-09-12-twenty-first-find--colour-is-derived-and-three-shipped-cards-print-one-their-mana-cost-cannot-carry) | 46 |
 | Bugs & robustness | [OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable](#open-2026-09-11--the-first-capped-board-in-13-m-swept-games-diagnosed-and-not-a-rules-defect-beacon-of-immortality-makes-a-wg-cube-mirror-unwinnable) | 42 |
 | Bugs & robustness | [FIXED 2026-09-12 (twentieth find) — the asked seat was re-derived on every re-run in fifteen arms, and the fix belongs in the ask helper, not in the arms](#fixed-2026-09-12-twentieth-find--the-asked-seat-was-re-derived-on-every-re-run-in-fifteen-arms-and-the-fix-belongs-in-the-ask-helper-not-in-the-arms) | 62 |
 | Bugs & robustness | [FIXED 2026-09-11 (nineteenth find) — twenty-six shipped bodies enumerated ZERO legal targets: a player-only slot 0 classified by its BODY, not by its slot](#fixed-2026-09-11-nineteenth-find--twenty-six-shipped-bodies-enumerated-zero-legal-targets-a-player-only-slot-0-classified-by-its-body-not-by-its-slot) | 41 |
@@ -72,6 +73,55 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-12 (twenty-first find) — colour is DERIVED, and three shipped cards print one their mana cost cannot carry
+
+`CardDefinition::printed_color_set` is the whole of the engine's printed
+colour: `color_override` if there is one, empty under `Devoid`, and otherwise
+the `color_indicator` unioned with the **cost's pips**. So a card whose cost
+carries no coloured pip is colorless unless the indicator is there, and the
+catalog spelled `color_indicator` **seven times in 21,795 cards**.
+
+The oracle knows the answer for every card (`colors`), and **186 of the 33,045
+single-faced entries print a colour their mana cost cannot carry** — the Devoid
+half, which the engine models with the keyword, and the indicator half, which
+it mostly did not. The seventh column of `audit_printed_body.py` reads it:
+16,438 factories compared, **3 wrong**, all one shape.
+
+```text
+  Rograkh, Son of Rohgahh   {0} Kobold      engine colorless   printed R
+  Ragnarok, Divine Deliverance  no cost     engine colorless   printed BG
+  Evermind                      no cost     engine colorless   printed U
+```
+
+Not cosmetic: the printed colour is the layer-5 base every colour read starts
+from — `R::HasColor`, protection- and hexproof-from-colour, devotion,
+`SpendRestriction`, the "shares a colour" family (Conspire's creature pair,
+Empty-Shrine Kannushi), and the LKI colour a card carries out of the
+battlefield. **The deck builders are NOT among them**, and that is worth
+recording: `CardBrief::pip_colors` is the cost's pips, which is the right
+reading for "can this two-colour seat pay for it" and stays right for a {0}
+Kobold. Fixed by giving each card its printed indicator; gate is
+`core_rules::card_instance::a_colour_indicator_is_the_printed_colour_when_the_
+cost_has_no_pip`, which also asserts the card has no coloured pip so it stays
+the indicator case.
+
+**One row is REVIEWED rather than fixed.** Transguild Courier reads colorless
+and prints `BGRUW`, and the engine carries it as the CDA the card prints
+(`StaticEffect::GrantAllColors`, a layer-5 `SetColors`) — the same answer on
+the battlefield, and a `color_override` beside it would model the text twice.
+The residual is CR 604.3: a CDA applies in every zone, and the static is
+materialized on the battlefield only, so the Courier is colorless in hand and
+in the graveyard. Nothing in the pools reads that.
+
+**The reader's own limit, recorded so the next pass does not trip on it:** the
+column is skipped (`nocolors` 909) where the cost chain is unreadable, where
+the keyword chain is (it needs `Devoid`), or where `color_indicator` /
+`color_override` sits somewhere the field walker cannot follow. `fn kobold` in
+`leg.rs` is the third case — a private helper carrying `color_override` for the
+three Kher Keep Kobolds — and reading "absent" as "colorless" there would have
+reported three correct red cards. `parse_colorfield` walks the base chain like
+every other field for exactly that reason.
 
 ## CLOSED WITH A REASON 2026-09-12 — do NOT build a `produced_mana` column; the oracle field is not the card's own mana ability
 

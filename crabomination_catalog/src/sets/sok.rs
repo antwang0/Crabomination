@@ -726,6 +726,9 @@ pub fn evermind() -> CardDefinition {
             crate::card::SpellSubtype::Arcane,
         )],
         no_mana_cost: true,
+        // CR 105.2c — Evermind has no mana cost, so its blue is a colour
+        // indicator. Without it the splice payload is a colorless spell.
+        color_indicator: vec![Color::Blue],
         ..arcane_instant(
             "Evermind",
             cost(&[]),

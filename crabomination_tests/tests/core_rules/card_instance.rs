@@ -185,3 +185,40 @@ fn defender_cannot_attack() {
 fn computed_permanent_carries_no_projection_pointers() {
     assert_eq!(std::mem::size_of::<crabomination::game::layers::ComputedPermanent>(), 72);
 }
+
+/// CR 105.2c — a card whose mana cost carries no coloured pip takes its colour
+/// from a colour indicator, and `printed_color_set` is the only place the
+/// engine reads one. Three shipped cards had none (`audit_printed_body`'s
+/// colour column, 2026-09-12): a `{0}` Kobold and two cards with no mana cost
+/// at all, each colorless to protection, devotion and the deck builder's
+/// colour pools.
+#[test]
+fn a_colour_indicator_is_the_printed_colour_when_the_cost_has_no_pip() {
+    use crabomination::mana::{Color, ColorSet, ManaSymbol};
+    let set = |cs: &[Color]| {
+        let mut s = ColorSet::empty();
+        for c in cs {
+            s.insert(*c);
+        }
+        s
+    };
+    for (def, want) in [
+        (catalog::rograkh_son_of_rohgahh(), set(&[Color::Red])),
+        (catalog::evermind(), set(&[Color::Blue])),
+        (
+            catalog::ragnarok_divine_deliverance(),
+            set(&[Color::Black, Color::Green]),
+        ),
+    ] {
+        let name = def.name;
+        assert!(
+            !def.cost
+                .symbols
+                .iter()
+                .any(|s| matches!(s, ManaSymbol::Colored(_))),
+            "{name} prints a coloured pip, so this is not the indicator case",
+        );
+        let c = CardInstance::new(CardId(0), def, 0);
+        assert_eq!(c.printed_color_set(), want, "{name}");
+    }
+}
