@@ -78,9 +78,12 @@ sixty-seventh pass, so don't re-take that.
    turn 43, **a stack of 3,213 with 3,119 Greater Good activations on it**. The `condition` only asked "do you control a
    creature?", which stays true until the first copy RESOLVES. Four cards moved to `sac_other_filter` (Greater Good,
    Goblin Bombardment, Altar of Dementia, Butcher of the Horde) and **the cell runs in 1.9 s now**. ⚠ The existing
-   ratchet `no_activated_ability_is_free_unconditional_and_unlimited` ACCEPTS a condition as the bound — that is the
-   premise this disproves, and the wider class (~35 cards that sacrifice the SOURCE in the effect behind a mana cost,
-   so bounded but still wrong) is unfixed.
+   ratchet `no_activated_ability_is_free_unconditional_and_unlimited` ACCEPTS a condition as the bound, which is the
+   premise this disproves. **The rest of the class was censused and is NOT a backlog**: of the 39 activated abilities
+   that sacrifice in the effect, 13 sacrifice the SOURCE and are printed that way (Dark Depths, Frenetic Efreet, "at the
+   beginning of the next end step"), and the other 17 all carry a tap or a mana cost — every `tap_cost` one is bounded
+   to one announcement an untap, and the mana-only ones (Nim Devourer, Kefka, Wine of Blood and Iron) print the
+   sacrifice as an effect too. Two Witherbloom Pests are synthesized cards with no printed text to violate.
    (d) `helper_params` matched a helper's parameter list with `[^)]*`, which closes at a TUPLE parameter — eight bestow creatures were skipped out of the
    subtype and keyword columns rather than read. Injection added (13th, now 17th).
 4. **Next, in order.** (a) **Sweep from 1152 and sweep wide** with `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`

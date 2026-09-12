@@ -2990,7 +2990,10 @@ fix     a sacrifice in the EFFECT is not a cost, and a `condition` is not one ei
         sacrifices a Swamp AND a Forest, which one (filter, count) cannot say).
 grid    `robustness_grid.sh --no-build --no-actor --pilots` at the run's tip: ladder leg 30 cells / 33,120 games, 0
         failures, 0 cap / 0 stuck / 0 draw; pilots leg 45 policies, **1 failure** — the abilarms cell above, and the
-        only one the grid has ever had. Green again after the fix.
+        only one the grid has ever had. **Green again at the closing tip: ladder 30 cells / 33,120 games 0 failures,
+        pilots 45 cells 0 failures.** The rest of the class is censused and is not a backlog — of the 39 activated
+        abilities that sacrifice in the effect, 13 sacrifice the SOURCE and are printed that way, and the other 17 carry
+        a tap (bounded to one announcement an untap) or print the sacrifice as an effect.
 perf    none claimed. `(-291)` is a cost, measured and gated down 7x rather than assumed: ungated it was +0.167 % on
         cube, because `end_turn` runs 3,234 times a six-game run and only ~150 of those are real turns. Sampling from
         turn 30 and one turn in 4 leaves +0.046 % / +0.024 % / +0.021 % on fixed / cube / sealed. `GameState` is 1,600
