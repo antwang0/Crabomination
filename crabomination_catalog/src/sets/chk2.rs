@@ -1464,6 +1464,9 @@ pub fn rootrunner() -> CardDefinition {
             },
             ..Default::default()
         }],
+        // Soulshift 3 — shipped missing; every other Kamigawa Spirit with it
+        // uses this helper.
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(3)],
         ..Default::default()
     }
 }

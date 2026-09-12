@@ -555,6 +555,8 @@ pub fn feral_throwback() -> CardDefinition {
         power: 3,
         toughness: 3,
         enters_with_counters: amplify(2, CreatureType::Beast),
+        // Provoke — the card's second keyword, shipped missing.
+        triggered_abilities: vec![crate::effect::shortcut::provoke()],
         ..Default::default()
     }
 }

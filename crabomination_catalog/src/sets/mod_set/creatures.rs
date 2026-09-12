@@ -6375,7 +6375,11 @@ pub fn abzan_battle_priest() -> CardDefinition {
     }
 }
 
-/// Disowned Ancestor — {B} 0/4 Spirit Warrior, Renown 1.
+/// Disowned Ancestor — {B} 0/4 Spirit Warrior, **Outlast {1}{B}**.
+///
+/// ⚠ It shipped with `renown(1)` and a doc comment that agreed with the body
+/// rather than with the card. Renown is a combat-damage trigger and Outlast is
+/// a sorcery-speed tap ability; the two share only the counter they add.
 pub fn disowned_ancestor() -> CardDefinition {
     CardDefinition {
         name: "Disowned Ancestor",
@@ -6387,7 +6391,7 @@ pub fn disowned_ancestor() -> CardDefinition {
         },
         power: 0,
         toughness: 4,
-        triggered_abilities: vec![crate::effect::shortcut::renown(1)],
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[generic(1), b()]))],
         ..Default::default()
     }
 }

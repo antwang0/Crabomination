@@ -281,19 +281,23 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
-                Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+        triggered_abilities: vec![
+            // Mentor — the card's second line, shipped missing.
+            crate::effect::shortcut::mentor(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                    },
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(inkling_token()),
                 },
-            ),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(inkling_token()),
             },
-        }],
+        ],
         ..Default::default()
     }
 }

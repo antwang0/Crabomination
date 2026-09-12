@@ -16177,6 +16177,8 @@ pub fn lonis_genetics_expert() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![
+            // Evolve — the keyword the card leads with, shipped missing.
+            crate::effect::shortcut::evolve(),
             // "Whenever you sacrifice a Clue, put a +1/+1 counter on another
             // target creature you control" — shipped missing (the `cnt` audit column, 2026-09-10).
             TriggeredAbility {
@@ -17810,8 +17812,12 @@ pub fn sengir_autocrat() -> CardDefinition {
     }
 }
 
-/// Yavimaya Granger — {2}{G} 2/2 Elf. ETB search your library for a basic land,
-/// reveal it, put it into your hand. (Echo is dropped — tracked in TODO.md.)
+/// Yavimaya Granger — {2}{G} 2/2 Elf. **Echo {2}{G}.** ETB search your library
+/// for a basic land, reveal it, put it into your hand.
+///
+/// ⚠ The doc said "Echo is dropped — tracked in TODO.md" and
+/// `Keyword::Echo(cost)` had been in the engine, and in use by other cards,
+/// the whole time.
 pub fn yavimaya_granger() -> CardDefinition {
     use crate::effect::shortcut::etb;
     CardDefinition {
@@ -17824,6 +17830,7 @@ pub fn yavimaya_granger() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::Echo(cost(&[generic(2), g()]))],
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,

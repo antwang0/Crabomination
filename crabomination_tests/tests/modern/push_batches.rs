@@ -3613,3 +3613,53 @@ fn helix_pinnacle_wins_at_upkeep_with_one_hundred_counters() {
         "P0 (Helix controller) declared winner");
 }
 
+
+// ── The mechanics these six print and shipped without ──────────────────────
+
+/// Six cards, six mechanics the engine already had, all off the sharpened
+/// `audit_keyword_drift` list. **Disowned Ancestor is the worst of them**: it
+/// shipped `renown(1)` and a doc comment that agreed with the body rather than
+/// with the card, where the card prints Outlast {1}{B}. Renown is a combat
+/// damage trigger and Outlast is a sorcery-speed tap ability; they share only
+/// the counter they add.
+#[test]
+fn six_cards_carry_the_mechanic_they_print() {
+    use crabomination::card::Keyword;
+    use crabomination::mana::{b, cost, g, generic};
+
+    // Evolve, Mentor and Provoke are attack/enter triggers.
+    let lonis = catalog::lonis_genetics_expert();
+    assert!(
+        lonis.triggered_abilities.iter().any(|t| *t == crabomination::effect::shortcut::evolve()),
+        "Lonis leads with Evolve",
+    );
+    let felisa = catalog::felisa_fang_of_silverquill();
+    assert!(
+        felisa.triggered_abilities.iter().any(|t| *t == crabomination::effect::shortcut::mentor()),
+        "Felisa prints Mentor",
+    );
+    let throwback = catalog::feral_throwback();
+    assert!(
+        throwback.triggered_abilities.iter().any(|t| *t == crabomination::effect::shortcut::provoke()),
+        "Feral Throwback prints Provoke as well as Amplify",
+    );
+
+    // Soulshift is a dies trigger; Echo is a keyword; Outlast is an ability.
+    let root = catalog::rootrunner();
+    assert!(
+        root.triggered_abilities.iter().any(|t| *t == crabomination::effect::shortcut::soulshift(3)),
+        "Rootrunner prints Soulshift 3",
+    );
+    assert!(
+        catalog::yavimaya_granger()
+            .keywords
+            .iter()
+            .any(|k| matches!(k, Keyword::Echo(c) if *c == cost(&[generic(2), g()]))),
+        "Yavimaya Granger prints Echo {{2}}{{G}} — its doc said the mechanic was dropped",
+    );
+    let ancestor = catalog::disowned_ancestor();
+    assert!(ancestor.triggered_abilities.is_empty(), "Outlast is not a trigger, and Renown is gone");
+    let out = ancestor.activated_abilities.first().expect("Outlast {1}{B}");
+    assert!(out.tap_cost && out.sorcery_speed, "Outlast taps and is sorcery-speed");
+    assert_eq!(out.mana_cost, cost(&[generic(1), b()]));
+}

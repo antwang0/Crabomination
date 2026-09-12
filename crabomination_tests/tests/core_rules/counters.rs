@@ -475,8 +475,12 @@ fn abzan_battle_priest_grants_lifelink_to_countered_creatures() {
         "the priest itself has no counter yet");
 }
 
+/// ⚠ Disowned Ancestor prints **Outlast {1}{B}**, not Renown — it shipped with
+/// `renown(1)` and a doc comment that agreed with the body. Citadel Castellan
+/// really does have Renown 3; the two were tested together under the wrong
+/// name.
 #[test]
-fn disowned_ancestor_and_citadel_castellan_renown_bodies() {
+fn disowned_ancestor_outlasts_and_citadel_castellan_is_renowned() {
     let mut g = two_player_game();
     let anc = g.add_card_to_battlefield(0, catalog::disowned_ancestor());
     let cas = g.add_card_to_battlefield(0, catalog::citadel_castellan());
