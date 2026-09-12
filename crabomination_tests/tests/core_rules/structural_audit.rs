@@ -1021,3 +1021,52 @@ fn a_card_with_the_prowess_trigger_also_carries_the_prowess_keyword() {
         bad.join("\n  "),
     );
 }
+
+/// CR 305.6 — a basic land type IS the intrinsic `{T}: Add <color>`, so giving
+/// one to a land that does not print it makes the land that type to everything
+/// else that reads one. The ten MDFC pathways print "Land" with a plain tap
+/// ability and no subtype, and every face carried the matching basic type until
+/// 2026-09-12: a fetch searching for a Swamp found Blightstep Pathway, landwalk
+/// evaded over it, Domain counted it.
+///
+/// Both halves are pinned, because the type was there as a (redundant) way to
+/// spell the mana: no land type on either face, and each face still taps for
+/// exactly the one colour it prints.
+#[test]
+fn no_pathway_face_carries_a_basic_land_type() {
+    use crabomination::effect::{Effect, ManaPayload};
+    use crabomination::mana::Color as C;
+    let pathways: [(fn() -> crabomination::card::CardDefinition, C, C); 10] = [
+        (crabomination::catalog::blightstep_pathway, C::Black, C::Red),
+        (crabomination::catalog::darkbore_pathway, C::Black, C::Green),
+        (crabomination::catalog::branchloft_pathway, C::Green, C::White),
+        (crabomination::catalog::clearwater_pathway, C::Blue, C::Black),
+        (crabomination::catalog::cragcrown_pathway, C::Red, C::Green),
+        (crabomination::catalog::hengegate_pathway, C::White, C::Blue),
+        (crabomination::catalog::riverglide_pathway, C::Blue, C::Red),
+        (crabomination::catalog::barkchannel_pathway, C::Green, C::Blue),
+        (crabomination::catalog::brightclimb_pathway, C::White, C::Black),
+        (crabomination::catalog::needleverge_pathway, C::Red, C::White),
+    ];
+    let taps_for = |def: &crabomination::card::CardDefinition, want: C| {
+        def.activated_abilities.iter().any(|a| {
+            a.tap_cost
+                && matches!(&a.effect, Effect::AddMana { pool: ManaPayload::Colors(c), .. }
+                    if c.as_slice() == [want])
+        })
+    };
+    for (factory, front_color, back_color) in pathways {
+        let front = factory();
+        let back = front.back_face.as_deref().expect("pathway has a back face");
+        for face in [&front, back] {
+            assert!(
+                face.subtypes.land_types.is_empty(),
+                "{} prints no land subtype but ships {:?}",
+                face.name,
+                face.subtypes.land_types,
+            );
+        }
+        assert!(taps_for(&front, front_color), "{} lost its mana", front.name);
+        assert!(taps_for(back, back_color), "{} lost its mana", back.name);
+    }
+}

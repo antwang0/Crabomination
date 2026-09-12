@@ -16,11 +16,13 @@ column assumes is right.
     python3 scripts/audit_printed_body.py --rows 0    # every row
     python3 scripts/audit_printed_body.py --list nonliteral   # what a column skipped
 
-COVERAGE, 2026-09-12 (second pass): **16,841 factories priced, 17,707 on the
-type line, 17,167 on subtypes, 17,405 on keywords, 9,524 on P/T, 16,695 on
+COVERAGE, 2026-09-12 (third pass): **16,846 factories priced, 17,777 on the
+type line, 17,683 on subtypes, 17,453 on keywords, 9,609 on P/T, 16,712 on
 COLOURS and 124 on LOYALTY** — the last two columns are new, and the other five
-moved by the idioms their readers could not follow. In order of what they
-cost:
+moved by the idioms their readers could not follow. The subtype column's own
++448 is the third pass and is under `subtwoface` below: a `layout == "normal"`
+gate that decided whether a READABLE card was compared at all, and counted the
+1,200-odd it dropped nowhere. In order of what they cost:
 
   * **a SHORTHAND `keywords,`** — `fn creature(.., keywords: Vec<Keyword>)`,
     how most per-set files spell a creature. 439 factories, read as unreadable
@@ -261,23 +263,35 @@ What is left, with the reason — `--list <kind>` prints the factories:
     from the misspellings: it shares `resolve_card_name` with this file, and a
     name no card has is audited by NOBODY, so two of them were hiding a wrong
     cost.
-  * `nocolors` (909) — the colour column needs BOTH the cost chain (its pips)
+  * `nocolors` (1,060) — the colour column needs BOTH the cost chain (its pips)
     and the keyword chain (`Devoid`), so it skips wherever either does.
   * `noloyalty` (0) — a `base_loyalty` chain it cannot follow. Zero today; a
     row here is a new idiom, not a new card.
-  * `nonliteral` (870) — a cost chain the resolver cannot read, mostly a helper
+  * `nonliteral` (938) — a cost chain the resolver cannot read, mostly a helper
     that builds its cost from a local binding. **700 of them are LANDS**, which
     print no mana cost, so there is nothing for the cost column to compare and
     closing them buys that column nothing; 221 carry a real printed cost.
-  * `noname` (101) — a factory whose name is in neither the literal, its head,
+  * `noname` (90) — a factory whose name is in neither the literal, its head,
     nor its own `pub fn`.
-  * `nosubtypes` (144) — a subtype the reader will not guess at: a SHORTHAND
-    field (`Subtypes { creature_types, .. }` over a local built by `push`), a
-    `mut` parameter (mutated before the call it feeds), or a card that BECOMES
-    a creature (`SelfIsCreatureIf`, `creature_off_battlefield`), whose
-    definition carries the types it becomes rather than the ones it prints —
-    Gideon Blackblade and Grist.
-  * `nokeywords` (88) — a `keywords:` the reader will not guess at: a helper
+  * `nosubtypes` (74) — a subtype the reader will not guess at: a SHORTHAND
+    field over a LOCAL (`Subtypes { creature_types, .. }` where the name is not
+    a parameter — a shorthand that IS one is the argument and reads fine), or a
+    card that BECOMES a creature (`SelfIsCreatureIf`,
+    `creature_off_battlefield`), whose definition carries the types it becomes
+    rather than the ones it prints — Gideon Blackblade and Grist. It was 149: a
+    `mut` parameter now READS (`mut_param_arg` — every statement touching it an
+    add or a read, and the bound expression the caller's elements plus the
+    helper's), which is 52 Allies, and a shorthand parameter another 23.
+  * `subtwoface` (0) — readable here, but the oracle line is not ONE face.
+    ⚠ THE BUCKET EXISTS BECAUSE ITS ABSENCE HID 393 CARDS. The gate was
+    `card.get("layout") == "normal"`, and the face merge above it already
+    replaces `type_line` with the FACE's line — so every transform, mdfc, saga,
+    adventure, prototype, leveler, mutate, class, case, augment and flip card
+    arrived with a perfectly ordinary one-`—` line and was dropped into nothing.
+    13 defects were behind it (ten Pathways with a basic land type they do not
+    print, three creatures short a printed type). The requirement was never the
+    layout WORD: it is that the line describes one face.
+  * `nokeywords` (319) — a `keywords:` the reader will not guess at: a helper
     call in the vec (`cycling_two()`), a local built by `push`, or any other
     non-`Keyword::` element.
   * `nopt` — **CLOSED, 0**. It was 70 until the halves walked the chain
@@ -298,7 +312,7 @@ What is left, with the reason — `--list <kind>` prints the factories:
     columns it MUTATES are blanked one by one rather than read off the
     unmutated argument), and a module-qualified base (`..super::wwk::
     tapped_etb_land(..)`, four Zendikar lands). The seven left are one-offs.
-  * `nosubvariant` (12) — above.
+  * `nosubvariant` (15) — above.
   * `faces` (0) — a multi-face factory whose name matches NO face of the card
     it resolves to. Zero today: every one of the 276 matches, so a row here is
     a new shape rather than a new card.
