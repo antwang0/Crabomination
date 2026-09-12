@@ -34,9 +34,10 @@ the runtime half is the authority: this one trades a false negative there for a
 readable list. The two `ERR?` rows are listed, not fixed per arm — the net at the
 resolution's exit is what makes an unwind harmless, for all 63 arms at once.
 
-Reading at the seventeenth pass, with the whole MID census worked:
-**69 arms, 7 suspicious — 0 NO-CLEAR, 1 ERR?, 1 PRE, 6 MID.** It was 63 arms /
-10 suspicious before, and 11 MID before the worked example.
+Reading at the eighteenth pass: **71 arms, 8 suspicious — 0 NO-CLEAR, 1 ERR?,
+2 PRE, 8 MID.** It was 69 / 7 at the seventeenth (and 63 / 10 before that, with
+11 MID before the worked example); the two arms and the row between the two
+readings are `ExileUntilDuplicateName`, explained below.
 
 Every remaining row is explained, which is the point of quoting the number:
 
@@ -49,6 +50,11 @@ Every remaining row is explained, which is the point of quoting the number:
   * `TradeSecrets`' two MIDs are its draws, which are what the ask is ABOUT, so
     they cannot move after it; the arm skips the rounds its channel says are
     already performed;
+  * `ExileUntilDuplicateName`'s PRE and MID are the same shape one card over
+    (Tainted Pact): the exile IS what the ask is about, so it cannot move after
+    it. Its "exiled this way" set is read back off the zone (`exiled_with =
+    source`) rather than from a local `Vec`, and the round accounting is
+    `TradeSecrets`' — one logged answer is one round already performed;
   * the one ERR? is an unwind, which the net at the resolution's exit makes
     harmless for all 69 arms at once.
 

@@ -20,6 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable](#open-2026-09-11--the-first-capped-board-in-13-m-swept-games-diagnosed-and-not-a-rules-defect-beacon-of-immortality-makes-a-wg-cube-mirror-unwinnable) | 42 |
+| Bugs & robustness | [FIXED 2026-09-12 (twentieth find) — the asked seat was re-derived on every re-run in fifteen arms, and the fix belongs in the ask helper, not in the arms](#fixed-2026-09-12-twentieth-find--the-asked-seat-was-re-derived-on-every-re-run-in-fifteen-arms-and-the-fix-belongs-in-the-ask-helper-not-in-the-arms) | 62 |
 | Bugs & robustness | [FIXED 2026-09-11 (nineteenth find) — twenty-six shipped bodies enumerated ZERO legal targets: a player-only slot 0 classified by its BODY, not by its slot](#fixed-2026-09-11-nineteenth-find--twenty-six-shipped-bodies-enumerated-zero-legal-targets-a-player-only-slot-0-classified-by-its-body-not-by-its-slot) | 41 |
 | Bugs & robustness | [FIXED 2026-09-11 (eighteenth find) — "target player's graveyard" was not a player slot: the two walkers disagreed about which selectors read a player](#fixed-2026-09-11-eighteenth-find--target-players-graveyard-was-not-a-player-slot-the-two-walkers-disagreed-about-which-selectors-read-a-player) | 29 |
 | Bugs & robustness | [FIXED 2026-09-11 (seventeenth find) — a target slot declared *bare* above slot 0 is unaimable, and five shipped cards declared one](#fixed-2026-09-11-seventeenth-find--a-target-slot-declared-bare-above-slot-0-is-unaimable-and-five-shipped-cards-declared-one) | 36 |
@@ -105,14 +106,86 @@ questions, both out of scope for a bug fix:
   reports `cap`. `TODO.md`'s "early adjudication of stalled games via
   `eval_material`" is the lever, and it is a *training-data* decision (it
   changes what the actors record), not a correctness one.
-* **Encoding.** A saturated life total is an `i32::MAX` feature going into
-  `encode_state_inner` and `eval_material`. Nobody has checked what the net
-  does with it. Cheap to check, and the encoding caution in `TODO.md` applies
-  to any change that follows.
+* ~~**Encoding.** A saturated life total is an `i32::MAX` feature going into
+  `encode_state_inner` and `eval_material`.~~ **CHECKED AND CLAMPED
+  2026-09-12.** `eval_material` was already safe — `life_value` has clamped at
+  10,000 since the `debug-assertions` sweep found it *wrapping* (the seat with
+  unbounded life scored as the one losing). `encode_state_inner` was not:
+  `gl[0] = life as f32 / 20.0` handed the net **1.07 × 10^8**, and
+  `life_gained_this_turn / 5.0` the same one Beacon resolution at a time. Both
+  read `player::LIFE_CEILING` now — the evaluator's own constant, hoisted so
+  the two consumers cannot drift. **No state with `|life| <= 10,000` encodes
+  differently**, so nothing needs retraining: the clamp is a guard, not a
+  rescale, and a game that reaches those totals caps and records no rows.
+  Gate: `server::encode::tests::a_saturated_life_total_encodes_as_a_bounded_
+  feature`, which asserts the whole global vector is finite and bounded rather
+  than just the two life slots.
+  **The next column, unopened:** power and toughness are normalized
+  (`/ 8.0`) and unbounded in the same way — a doubling loop bounded only by the
+  1,024-permanent cap can put an arbitrary `p` into `feats[4]`, and `power[0]`
+  sums them. Nothing has been seen to reach it; nobody has looked.
 
 The bot-strength half — casting a life-doubling spell at maximum life is a
 strictly wasted action — is real and small, and is the one arm that would
 shorten the game without touching the rules.
+
+## FIXED 2026-09-12 (twentieth find) — the asked seat was re-derived on every re-run in fifteen arms, and the fix belongs in the ask helper, not in the arms
+
+The seventeenth find fixed **one** arm by hand. The shape: an arm resolves the
+seat it is about to ask out of a **selector**, hands `ask_seat_*` its own
+`effect` as the continuation, and the re-run after the suspend resolves that
+selector again — against a board the first pass, or an earlier sibling in the
+same `Seq`, has already changed. Ghost Quarter is `Seq[Destroy target land,
+MayDoBy{ControllerOf(Target(0)), …}]`, so on the re-run the land was in a
+graveyard, the arm returned at its own `let Some(seat)` with the replayed
+answer still in the channel, and the compensation search never happened for a
+`wants_ui` seat.
+
+`scripts/audit_seat_from_selector.py` filed **27 arms with the shape, 0
+demonstrated**, and the recipe it printed was "six lines per arm". Worked one
+by one, the 27 are not one population but three, and only one of them wants
+that recipe:
+
+* **15 single-seat arms** — the real class, `MayDoBy` among them.
+* **8 loops** over `resolve_players(who, …)`, where the thing re-derived is the
+  **list**. Pinning one seat into it would drop every other seat's question, so
+  the recipe is *wrong* for them; closing them needs a seat-list `PlayerRef`
+  nobody has needed yet. A catalog scan of all eight reads
+  `You` / `EachPlayer` / `EachOpponent` / `ActivePlayer` / `Target(0)` —
+  context state, not board reads — with **one** board-derived `who` in the whole
+  set (Timmerian Fiends' `AnteTopOfLibrary{ControllerOf(Target(0))}`, whose
+  `else_` exchanges the artifact *after* the ask, so the referent is still
+  there on the re-run, and which is `ante_only` and in no pool).
+* **4 false positives**: `Fateseal`, `MoveChosen`, `ChooseFromHandToTopOfLibrary`
+  and `GuessColorCountInHand` resolve a seat out of a selector and then ask
+  **`ctx.controller`** about that seat's cards. `ctx.controller` is resolution
+  state, so it is stable across a re-run — and pinning `who` there would have
+  rewritten the *victim*. The old audit compared scopes, not the ask's own seat
+  argument; it does now.
+
+**The fix is one mechanism, not fifteen patches.** Every `ask_seat_*` helper
+queues `effect.with_asked_seat(seat)` instead of `effect.clone()`, and
+`Effect::with_asked_seat` (`crabomination_base/src/effect/query.rs`) writes
+`PlayerRef::Seat(seat)` into the `who` of the arms it lists. So an arm is fixed
+by *appearing in one match*, a sixteenth arm is one line, and a new arm that
+forgets is caught by the audit rather than by a sweep six months later. It runs
+on the **suspend path only**, where the continuation is cloned anyway — the
+non-suspending path pays nothing, and `--bench` reads byte-identical counters.
+`MayDoBy`'s hand-rolled `concrete` is deleted; it is the mechanism now.
+
+Gates: `structural_audit::every_listed_arm_pins_the_seat_its_ask_was_routed_to`
+proves the rewrite by injection (each variant built with a `who` that is *not*
+a seat, each pinned copy asserted to read `Seat(3)`), asserts `Fateseal` is
+**not** rewritten, and reads the arm list out of `query.rs` so the table cannot
+fall behind the code. `scripts/audit_seat_from_selector.py` asks the other
+question — which asking arms are still outside the list — and reads the same
+arm list, so the script and the code cannot disagree. **0 open / 8 loop /
+4 controller-asked / 15 pinned**, from 27 undifferentiated.
+
+The transferable half: *a "fix is N lines per arm, N arms" recipe is a prompt
+to move the fix one level down.* Three of the six lines were the same three at
+every site, and the other three were the per-variant field list — which is
+exactly what one `match` expresses once.
 
 ## FIXED 2026-09-11 (nineteenth find) — twenty-six shipped bodies enumerated ZERO legal targets: a player-only slot 0 classified by its BODY, not by its slot
 
@@ -154,6 +227,27 @@ walker internals are what was fooled. A conjunct condition
 (`Player.and(CastSorceryThisTurn)` — Backdraft, Fire and Brimstone, Wicked
 Akuba) is legitimately unsatisfiable on a bare board and is out of the
 population.
+
+**FOLDED INTO THE WALKER 2026-09-12, which is what closes the class.** Two
+patched call sites is not a fix, it is two fixes: a third call site would have
+reintroduced the bug with nothing to catch it, and `NEXT` said so. So
+`accepts_player_target` is now `accepts_player_target_by_body() ||
+target_filter_for_slot(0).is_some_and(is_player_only)`, the body match is
+private, and both call sites read `eff.accepts_player_target()` with no prefix.
+The body arm answers `true` for damage / draw / mill in one match, so the slot
+walk only runs for effects that operate on permanents. Cost of the extra walk:
+`--bench` counters byte-identical, `cube` and `sealed` unchanged (PERF).
+
+**And the enumerator's missing `or_else` is not a gap, measured rather than
+argued.** The picker reads `primary_target_filter().or_else(target_filter_for_
+slot(0))` and `enumerate_legal_targets_xc` reads `primary_target_filter()`
+alone, which looked like the same class one level over. A whole-catalog census
+says the two walkers return the **same filter** on all **7,816** bodies that
+answer both — and the existing gate already holds "primary answers whenever the
+slot walker does" — so the picker's `or` arm is unreachable on the shipped
+catalog and the two call sites read an identical `req` by construction.
+`the_primary_target_filter_agrees_with_the_slot_walker_on_slot_zero` is
+tightened from presence to **equality** to keep it that way.
 
 ## FIXED 2026-09-11 (eighteenth find) — "target player's graveyard" was not a player slot: the two walkers disagreed about which selectors read a player
 
