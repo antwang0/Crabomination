@@ -8352,8 +8352,11 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if lessons.is_empty() {
-                    if !self.draw_one_or_deck(p, events) {
-                    }
+                    // No Lesson to fetch, so Learn is the draw-and-discard
+                    // half. `draw_one_or_deck` already decks the player on an
+                    // empty library and returns false on a SKIPPED draw too,
+                    // and neither outcome changes what happens next here.
+                    let _ = self.draw_one_or_deck(p, events);
                     return Ok(());
                 }
                 let hand: Vec<(crate::card::CardId, String)> = self.players[p]

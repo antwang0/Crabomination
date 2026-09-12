@@ -1036,7 +1036,9 @@ fn a_card_with_the_prowess_trigger_also_carries_the_prowess_keyword() {
 fn no_pathway_face_carries_a_basic_land_type() {
     use crabomination::effect::{Effect, ManaPayload};
     use crabomination::mana::Color as C;
-    let pathways: [(fn() -> crabomination::card::CardDefinition, C, C); 10] = [
+    /// A pathway factory and the colour each of its two faces taps for.
+    type Pathway = (fn() -> crabomination::card::CardDefinition, C, C);
+    let pathways: [Pathway; 10] = [
         (crabomination::catalog::blightstep_pathway, C::Black, C::Red),
         (crabomination::catalog::darkbore_pathway, C::Black, C::Green),
         (crabomination::catalog::branchloft_pathway, C::Green, C::White),
