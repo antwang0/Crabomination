@@ -2968,6 +2968,17 @@ fix     `cube` 1069's two capped games are DRAWS (`(-291)`, Log). Both seats dou
         `watch_turn_progress` is the same watch one level up, sampled in `end_turn`. The concurrent session met the same
         board and LABELLED it (`[SATURATED LIFE …]`, `cube` 1018 / 1069 / 1076 / 1090); the label is still the right
         diagnostic and no longer has to excuse a cap.
+fix     the CONSUMERS of a saturating quantity wrapped on top of it (`b314d0a2`). The pump ratchet keeps the WRITE from
+        wrapping; fifteen sites then summed or differenced the saturated value with plain arithmetic, every one reachable
+        from bot self-play. The worst are the actor's own: `TrainRow`'s life-difference LABEL (`i32::MAX` minus a
+        saturated loss is not an `i32` — it widens to `i64` behind a named `life_diff_label`) and `snapshot_stats`'
+        per-side power total and its two differences, which are the aux targets. Also both gang-block damage sums and
+        their `a.toughness() - a.damage as i32` (a `u32` damage past `i32::MAX` read NEGATIVE there, turning "lethal"
+        into "healed"), the crew/saddle totals, `TotalPowerControlled` + three other `Value`/`Predicate` sums, and the
+        sacrifice-cost and cost-reduction power totals. Two gates, each proved by injection: a source-reading ratchet
+        (`no_saturating_quantity_is_summed_with_plain_arithmetic`, which skips test modules by BRACE MATCHING — the
+        older ratchet cuts each file at the first `#[cfg(test)]`, which in `bot.rs` is line 5,592 of 24,419) and
+        `a_saturated_board_does_not_overflow_the_actor_stats`.
 perf    none claimed. `(-291)` is a cost, measured and gated down 7x rather than assumed: ungated it was +0.167 % on
         cube, because `end_turn` runs 3,234 times a six-game run and only ~150 of those are real turns. Sampling from
         turn 30 and one turn in 4 leaves +0.046 % / +0.024 % / +0.021 % on fixed / cube / sealed. `GameState` is 1,600
@@ -3107,6 +3118,7 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1082..1091   94478cd6      30    148,000       0       4*    0     10
   1092..1101   6114ec26      30    148,000       0       0     0     20
   1102..1111   176b074c      30    148,000       0       0     0      6
+  1102..1111   c746c7ab      50    216,000       0       0     0      8   five pools, WITH `(-291)`
 ```
 
 **243 cells / 1,198,800 games, 0 stuck on every one**, and every cap is the
@@ -3133,6 +3145,14 @@ mattering.
 
 A draw is CR 104.4, not a defect. Seed frontier **1112**. One cell is a
 different kind of outlier and it is the entry below.
+
+**THE SECOND `1102..1111` ROW IS THE SAME SEEDS ON FIVE POOLS WITH `(-291)`
+IN, and it is the arm's confirmation over 216,000 games**: 0 caps of any kind
+— not "0 novel", 0 — and 8 draws, two each at `cube` 1106, `cube` 1109, `all`
+1106 and `both` 1106. The same board on three different pools at one seed is
+the Beacon mirror again, and where the three-pool row above would have counted
+it as a labelled cap it is now an ending. Nothing else moved: the other 42
+cells are 0 / 0 / 0.
 
 **AND AT `(-291)` THE BOARD HAS AN ENDING, so the label above is a diagnostic
 and no longer a carve-out.** A turn-granular no-progress watch
