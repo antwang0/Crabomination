@@ -162,9 +162,14 @@ The First Sliver (Sliver spells you cast have cascade).
 aristocrats / sacrifice-matters batch: Cartel Aristocrat, Bloodflow
 Connoisseur, Vampire Aristocrat, Yahenni, Bontu the Glorified, Smothering
 Abomination, Butcher Ghoul, Elas il-Kor, Mahadi, and Heartless Summoning.
-Sacrifice-as-cost activated abilities fold the sacrifice as the effect's first
-step. New keyword `CantAttackOrBlockUnlessCreatureDiedThisTurn` (Bontu's combat
-gate, wired into attack/block legality + the client HUD strip/tooltip).
+⚠ Sacrifice-as-cost activated abilities pay the sacrifice as a COST
+(`sac_other_filter`, CR 602.5b). They used to fold it in as the effect's first
+step behind a `condition`, which is **not** a bound — the condition stays true
+until the ability resolves, so the announcement repeats (ENGINE_BACKLOG,
+twenty-third find; the ratchet is
+`no_free_activation_spells_its_sacrifice_cost_in_its_effect`). New keyword
+`CantAttackOrBlockUnlessCreatureDiedThisTurn` (Bontu's combat gate, wired into
+attack/block legality + the client HUD strip/tooltip).
 
 `catalog::sets::decks::recent33` (tests in `tests/recent33.rs`) adds more
 sacrifice-outlet staples — Endless Cockroaches (dies → hand), Poison-Tip Archer

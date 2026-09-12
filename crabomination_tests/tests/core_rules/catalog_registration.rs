@@ -956,15 +956,37 @@ fn no_free_activation_spells_its_sacrifice_cost_in_its_effect() {
             _ => None,
         });
         for (i, ab) in def.activated_abilities.iter().chain(granted).enumerate() {
-            // Everything but the effect and the condition at its `Default`:
-            // no mana, no tap, no sacrifice, no per-turn cap, no cost field
-            // this struct has or a later pass adds.
-            let bare = ActivatedAbility {
-                effect: ab.effect.clone(),
-                condition: ab.condition.clone(),
-                ..Default::default()
-            };
-            if *ab != bare || ab.condition.is_none() {
+            // Everything that is not a BOUND cleared, then compared against
+            // `Default`: what is left is "no mana, no tap, no sacrifice, no
+            // per-turn cap" — and no cost field this struct has or a later
+            // pass adds, which is the property that makes the comparison
+            // worth more than a list.
+            //
+            // ⚠ THE CLEARED SET IS THE CLAIM. A `condition` is not a bound
+            // (the whole point); neither is the SPEED, nor the zone the
+            // ability is activated from — a sorcery-speed activation can be
+            // announced again with the stack empty, and a card in the
+            // graveyard stays there until the ability resolves. `convoke` and
+            // the `cost_reduction_*` family only bite on a mana cost, which a
+            // card here does not have.
+            let mut probe = ab.clone();
+            probe.effect = ActivatedAbility::default().effect;
+            probe.condition = None;
+            probe.sorcery_speed = false;
+            probe.from_graveyard = false;
+            probe.from_hand = false;
+            probe.from_exile = false;
+            probe.from_command_zone = false;
+            probe.any_player = false;
+            probe.opponents_only = false;
+            probe.convoke = false;
+            probe.cost_reduction_if_control = None;
+            probe.cost_reduction_per = None;
+            probe.cost_reduction_per_counter = None;
+            probe.cost_reduction_per_equipped_power = false;
+            probe.cost_reduction_per_graveyard = None;
+            probe.x_mana_color = None;
+            if probe != ActivatedAbility::default() || ab.condition.is_none() {
                 continue; // a real cost line, or the ratchet below owns it
             }
             if crabomination::game::actions::is_mana_ability_public(&ab.effect) {
