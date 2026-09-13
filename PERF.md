@@ -3141,6 +3141,15 @@ tool    **the walk accounts for every factory now, and the closing line proves i
         21794 factories walked, 4124 stopped early; cost 0, types 0, subtypes 0, keywords 0, colors 0, loyalty 0,
         pt 0, adv 0, back 0`. A non-zero is a hole in the FILE, not a card — which `layout == "normal"` was for as
         long as the subtype column existed. Deleting one `acct[…]` write reads `keywords 29`, so it can fail.
+grid    **`robustness_grid.sh`'s three legs re-run at the MERGED tip** — the one gate the day's earlier sessions had
+        declared rather than implied by silence, on a tip that had moved a lot since (two draw paths, a turn-watch
+        digest, 32 catalog cards across both sessions). Ladder **30 cells / 33,120 games, 0 failures, cap 0 / stuck 0 /
+        draw 0**; pilots **45 cells, 0 failures**; actor **3 cells, 0 failures**, 66.9 / 66.7 / 72.6 games/s, with the
+        `check_asserts` gate reading 8 assertion strings in `target-audit/overflow/selfplay_train` (0 would mean the
+        `-C debug-assertions=yes` flag never reached the binary and the leg was green for nothing).
+actor   `stalls_board` verified end to end: a 600-game sealed run writes
+        `"stalls":0,"stalls_capped":0,"stalls_board":0,"stalls_stuck":0` — which is the pool claim above from the
+        other side, since `scute_swarm` is not in the SOS pool the actor builds from.
 gates   at the MERGED tip (both sessions' work rebased together): suite **19,506 / 0 / 5** (`CRAB_ANSWER_LOG=strict`),
         clippy **0** (`--all-targets`), golden_trace **12 / 12**, `--bench` byte-identical + determinism ok,
         injections **52 / 52**, `audit_printed_body` 0 on all ten columns with the accounting line all zeroes,
