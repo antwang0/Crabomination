@@ -34,10 +34,18 @@ the runtime half is the authority: this one trades a false negative there for a
 readable list. The two `ERR?` rows are listed, not fixed per arm — the net at the
 resolution's exit is what makes an unwind harmless, for all 63 arms at once.
 
-Reading at the eighteenth pass: **71 arms, 8 suspicious — 0 NO-CLEAR, 1 ERR?,
-2 PRE, 8 MID.** It was 69 / 7 at the seventeenth (and 63 / 10 before that, with
-11 MID before the worked example); the two arms and the row between the two
-readings are `ExileUntilDuplicateName`, explained below.
+Reading at the **nineteenth** pass (2026-09-13): **76 cursor blocks, 71 with
+asks, 7 suspicious.** It was 69 / 7 at the seventeenth and 71 / 8 at the
+eighteenth (and 63 / 10 before that, with 11 MID before the worked example);
+the two arms and the row between the seventeenth and eighteenth readings are
+`ExileUntilDuplicateName`, explained below.
+
+⚠ **8 -> 7 is `TradeSecrets` leaving the list, and the quoted 8 had gone stale
+before anyone noticed** — which is the failure mode a quoted count exists to
+prevent, so re-read it rather than trusting the prose. Its two MIDs were its
+draws; the arm no longer puts them between the ask and the clear. Verified on
+both sides of the fan-out commit (`origin` tip and this one read 76 / 71 / 7),
+so it is not that commit's doing.
 
 Every remaining row is explained, which is the point of quoting the number:
 
@@ -47,9 +55,11 @@ Every remaining row is explained, which is the point of quoting the number:
   * `CoinFlipDestroyLoop`'s PRE and MID are terminal `break`s, and its flip and
     repeat cost are carried across the suspend instead (`flip_one_coin_logged`
     plus `answer_already_acted_on`) — the static walk cannot see either;
-  * `TradeSecrets`' two MIDs are its draws, which are what the ask is ABOUT, so
-    they cannot move after it; the arm skips the rounds its channel says are
-    already performed;
+  * (`TradeSecrets` was here for its two MID draws — what the ask is ABOUT, so
+    they could not move after it, the arm skipping the rounds its channel says
+    are already performed. It no longer reads suspicious; kept as a line rather
+    than deleted because the shape is the one `ExileUntilDuplicateName` below
+    still has, and a reader who meets that one should know it had a sibling);
   * `ExileUntilDuplicateName`'s PRE and MID are the same shape one card over
     (Tainted Pact): the exile IS what the ask is about, so it cannot move after
     it. Its "exiled this way" set is read back off the zone (`exiled_with =
@@ -61,7 +71,7 @@ Every remaining row is explained, which is the point of quoting the number:
 So a NEW row is the signal, not the count.
 
 **Injection (eighteenth pass):** deleting `MayDoBy`'s `clear_answer_log()`
-takes this 8 suspicious -> **9**.
+takes this suspicious count up by one (8 -> 9 then, 7 -> 8 now).
 
 """
 

@@ -42,6 +42,23 @@
 # the question — `repeats N/12` under 12 on a `[SATURATED LIFE]` board is that
 # case, and anything else that survives is the signal this script exists for.
 #
+# ⚠⚠ **`NO_PROGRESS_MAX_PERIOD` IS NOT THE PARAMETER, AND THE BUDGET IS NOT
+# EITHER — measured 2026-09-13, and this retires the handoff's guess.** Both
+# dumps of `all` 1159 read `since 0/8`: the anchor is alive and matching at the
+# moment the cap fires, so it is not the period bound that loses it. And more
+# budget does not converge — the SAME cell at `CRAB_MAX_ACTIONS=200000` runs to
+# turn **9,099** (4x the actions, 4x the turns) and reads **`repeats 6/12`,
+# LOWER than the 10/12 it reached at 50,000**. The anchor is re-formed
+# continuously and the count never crosses 12, because what moves the digest on
+# that board is the TAPPED SET: both seats spend a varying amount of mana every
+# turn (Underworld Connections, extort), and `tapped` is one bit per permanent
+# in the fingerprint. **The watch is a periodicity detector and this board is
+# aperiodic**; no value of its three constants closes that — a longer period or
+# a lower repeat count only changes which aperiodic board survives. The shape
+# that would close it is a different predicate ("no seat can win or lose"),
+# which is an adjudication change, not a tuning one. Do not re-price the
+# constants; they have been.
+#
 # ⚠ **A RUNAWAY BOARD SKIPS THE RE-RUN, AND THAT IS THE THIRD THING THE `cap`
 # BUCKET HELD.** `cube` 1215: 951 Scute Swarms on a 987-permanent board at turn
 # 59, `cap 2 / board 2`, and the cell costs **1,588 s against ~40 s** for the

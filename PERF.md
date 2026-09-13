@@ -2958,6 +2958,80 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-13 (the fan-out session) — a `PlayerRef` that names two seats and resolves to one, seven shipped cards, and a sixth target walker nobody audited; no perf leg
+
+```text
+fix     **a fan-out `PlayerRef` resolved singularly drops every seat but the first, silently.**
+        `GameState::resolve_player` answers `PlayerRef::EachPlayer` with `(0..len).find(is_alive)` — seat 0. That is
+        EXACT while the ref names one player, which is what `EachOpponent` is at two seats and what ~100 shipped
+        cards rely on, and a silent under-application the moment it names two. Field of Ruin had been fixed by hand
+        a pass earlier with a comment saying exactly this; the rest of the class was never swept. **Seven cards:**
+        New Frontiers ramped seat 0 X basics and nobody else; Jace, Architect of Thought's -8 ("for each player,
+        search that player's library") searched one library of two; Krenko's Buzzcrusher's rider fetched a basic for
+        seat 0 whether or not a land of theirs had died; Case the Joint read one top card of two; Aether Rift's
+        "unless ANY player pays 5 life" offered it to seat 0 only, so on a seat-0 Rift the one seat with a reason to
+        pay was never asked; Mnemonic Nexus's "shuffle ALL graveyards" recycled one; and **Ill-Gotten Gains'
+        "each player discards their hand" discarded SEAT 0's hand size from everyone** — a seat holding more than
+        the caster kept the difference, and its buy-back half was the caster's alone
+        (`ReturnGraveyardCardsToHand` is "your graveyard").
+gate    **the gate is a `debug_assert!` in `resolve_player`, not a source scan, and that is why it found the last
+        two.** It reads the seats the ref ACTUALLY names (`resolve_players_unranged(..).len() <= 1`), so it is silent
+        for `EachOpponent` at two players and loud the moment a set of two is collapsed. The static census of `who:`
+        fields could never have reached `Value::HandSizeOf(EachPlayer)` or `Effect::ShuffleGraveyardIntoLibrary` —
+        one is not a `who:` field and the other's arm the census misparsed. **Zero release cost**: `debug_assert!`'s
+        body is dead there, so no training run can panic on it; the suite and the grid's `overflow` legs are where it
+        fires. Two ratchets in `structural_audit` pin both directions (a two-seat set panics, a one-seat set does not).
+        `Effect::Search`'s `to:` was checked and is NOT this: a plain search resolves `controller: You` against the
+        SEARCHED player by design (documented at the `picker_ref` split), which is why Path to Exile and White Orchid
+        Phantom put the basic under its own controller. A lead read is a lead closed.
+fix     **`Effect::EachPlayerDoes` dropped a `wants_ui` seat's suspend.** The loop ran on and let the next seat
+        overwrite `suspend_signal`, so the first seat's pending decision vanished and its half of the effect never
+        happened. It carries its remaining seats the way `Seq` carries its tail now (`per_seat_continuation` over a
+        `Seat(q)` fan-out of one). Unreachable from self-play (no seat wants UI); a server-path defect.
+tool    **`target_filter_for_slot_in_mode_kicked` is a SIXTH target walker and it had no column.** `_ => None` with
+        no `for_each_inner` deferral — the strictest regime — while its five siblings each had one in
+        `audit_target_walkers.py`. Wrapping Fractured Identity's token mint in `EachPlayerDoes` (to fix a *different*
+        bug) took its slot 0 out of the cast prompt entirely, and the catalog-driven
+        `cr_601_2c_every_catalog_target_filter_is_surfaced` is what caught it. `EachPlayerDoes` named; the walker now
+        has its column: **50 unnamed of 132, LATENT** — about half are delayed/reflexive wrappers that correctly
+        choose their targets later (`Reflexive`, `AtNextEndStep`, the `Whenever…ThisTurn` family) and the rest are
+        latent, with **zero current yield** (the catalog test passes, so no shipped card puts a slot in one today).
+        Counted apart from `--check` for that reason.
+cards   the 7 above, plus Fractured Identity's mint (exact at two seats, one copy short per extra seat).
+        ⚠ **Both pre-existing tests asserted seat 0 only, which is the half that worked** — the same shape as
+        `omen_machine_stops_draws`. Six new tests, each with an asymmetric board so neither seat can borrow the
+        other's number.
+perf    none attempted and none claimed. Every change is a catalog fan-out, a `debug_assert!` (dead in release) and
+        two arms whose single-valued callers loop exactly once; **none of the eight cards is in the `fixed`
+        archetypes**. `--bench` counters came back **byte-identical: 195,806 / 27.49 / 611.9 / 0 stalls**.
+gates   suite **19,511 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12
+        unmoved**, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls + determinism ok + thread_determinism ok (3 vs 1),
+        `audit_printed_body` 0 on all ten columns, `audit_panics` 0 bare, `audit_doc_drift` 0,
+        `audit_seat_from_selector` 0 open, `audit_stash_in_loop` 1/1/0, `audit_variant_coverage` 0 dead capability,
+        `audit_card_names` 0/0/0/0, `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean.
+sweep   **1222..1231 on cube / all / sealed — 30 cells / 148,000 games / 0 failures**, `cap 0 / board 0 / stuck 0 /
+        draw 4`, on a binary built with `-C debug-assertions=yes` so **the new `resolve_player` gate ran on every
+        decision of all 148,000 games and never tripped.** That is the fan-out class's engine-wide check: the suite
+        exercises the cards it has tests for, the sweep exercises the boards it does not. `strings` says the assert's
+        message is in the `overflow` binary and NOT in `release-fast`, which is the same claim from the other side.
+        Frontier **1232**.
+sweep   **`NO_PROGRESS_MAX_PERIOD` PRICED AND NOT MOVED — the handoff's guess is retired, with numbers.** `all` 1159
+        is the one cap that survives the sweep's 50,000-action re-run, and NEITHER the period bound nor the budget is
+        what holds it. Both dumps read **`since 0/8`** — the anchor is alive and matching at the instant the cap
+        fires, so it is not being lost to the period. And the same cell at `CRAB_MAX_ACTIONS=200000` runs to turn
+        **9,099** (4x the actions, 4x the turns) and reads **`repeats 6/12`, LOWER than the 10/12 it reached at
+        50,000**: the anchor is re-formed continuously and the count never crosses 12. What moves the digest there is
+        the **TAPPED SET** — both seats spend a varying amount of mana every turn (Underworld Connections, Basilica
+        Screecher's extort) and `tapped` is one bit per permanent in `fingerprint_as`. **The watch is a periodicity
+        detector and that board is aperiodic**, so no value of its three constants closes it; a longer period or a
+        lower repeat count only changes which aperiodic board survives. The shape that would is a different
+        predicate — "no seat can win or lose" — an adjudication change, not a tuning one. Cell unchanged at both
+        budgets: 6,790 decided / 10 undecided (`cap 2 / board 0 / stuck 0 / draw 8`).
+box     ⚠ **4 cores, Intel Xeon @ 2.80 GHz.** `--bench` wall clock reads **321.3 / 314.5 games/s** here against the
+        289.7–542 spread this file records on 24; the COUNTERS are the invariant and they are identical. No absolute
+        wall clock from this run is comparable with any earlier absolute in this file.
+```
+
 ### 2026-09-12 (the two-meanings-of-`false` session) — a skipped draw that eliminated the drawer, a column that counted 1,200 cards nowhere, and the sweep's first surviving cap; no perf leg
 
 ```text
@@ -3545,6 +3619,7 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1212..1221   9f2e2759      30    148,000       0       2#    0     16   cube 1215: Scute Swarm, 14 BOARD caps
   1222..1231   d814c3de      30    148,000       0       0     0      4
   1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
+  1222..1231   45f6a7da      30    148,000       0       0     0      4   `-C debug-assertions=yes`, the fan-out gate live
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
 bound — seed 1169's Krenko, counted in its own `board` column now and not a

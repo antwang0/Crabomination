@@ -11,7 +11,12 @@ sixty-seventh pass, so don't re-take that.
 - `ENGINE_BACKLOG.md` — engine backlog and audits, ordered **bugs /
   mechanics & primitives / rules coverage / tooling**: the correctness audit,
   the robustness filters, the decision-plumbing audit, missing mechanics,
-  follow-ups not yet done, suggested next-up tasks, the CR coverage audit.
+  follow-ups not yet done, suggested next-up tasks, the CR coverage audit —
+  **and, at the end, "The 2026-09-12/13 handoff detail, moved verbatim from
+  TODO's NEXT"**: the printed-body skip taxonomy, the four shapes in the `cap`
+  bucket, the sweep-table discipline and the closed-with-a-reason leads. NEXT
+  had grown to 163 lines against its own 15-line bound by holding them;
+  findings go there, not here.
 - `CARD_BACKLOG.md` — per-set card residuals: what each set still
   approximates, and the remaining gap lists. Titled by **subject**, ordered
   open-first, then the closed sets whose only content is residuals.
@@ -27,176 +32,12 @@ sixty-seventh pass, so don't re-take that.
 
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
-1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before
-   tracker prose; **fetch before every push** — two sessions shared this branch on 2026-09-11 and again on 2026-09-12; read `git log` first. Gotchas in
-   **CLAUDE.md**, measurement in **PERF's "Standing rules"**. **A/B base: `4311b872`** — sealed 2,548,564,763 / cube 2,330,452,847 / fixed 635,813,331
-   (PERF Baseline). Ir crosses boxes, wall clock does not: the `--bench` spread is 289.72 to 542 games/s on byte-identical counters. `(-291)` is the last
-   claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
-   came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
-   candidates).
-2. **Gates at the tip:** suite **19,506 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
-   census assertions on every test), clippy **0** (`--all-targets`), golden_trace **12 / 12 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
-   determinism + thread_determinism (the counters have not moved at any tip of either session), **`robustness_grid.sh` ladder 30 cells / 33,120 games +
-   `--wide` ladder 52 cells / 301,600 games + pilots 45 policies + actor 2 cells / 6,000 games, all 0 failures** (⚠ the actor leg's binary is
-   `-p crabomination_ml --bin selfplay_train`; `-p crabomination` fails and leaves the PREVIOUS binary in place, which then reads green for a tip you
-   did not build) (the pilots leg's FIRST failure ever was this run's abilarms cell,
-   fixed), `audit_panics` **0 bare**, `audit_decision_plumbing`
-   168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
-   controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
-   capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all TEN columns** over
-   **16,944** priced + 17,777 type lines + **17,714** subtypes + 17,743 keywords + 9,609 P/T + **16,827** colours + 124 loyalty + 62 ADVENTURE HALVES +
-   81 BACK FACES, and its **accounting line all zeroes** (21,794 factories walked, 4,124 stopped early under a printed bucket — a non-zero
-   there is a hole in the FILE, not a card, which `layout == "normal"` was for as long as the subtype column existed), `audit_keyword_drift`
-   **0 invented / 4 missing** (367 at the start of 2026-09-12 — and the 4 left each need a PRIMITIVE the engine does not have, not a field it does), `audit_card_names`
-   **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
-   gate that sees `debug-assertions = false`).
-   ⚠⚠ **TWO SESSIONS WORKED `audit_printed_body.py` ON 2026-09-12 AND CONVERGED ON THE SAME SKIPS.** Every reader fix below landed twice-over by
-   rebase and none conflicted, but the seeds did (PERF's table) and the readers nearly did. **Say in this line which skip kind you are taking before you
-   take it** — the same discipline the sweep table earned. The residue after all three runs: `nocache` 3,749 (synthesized; the name column owns it),
-   `nonliteral` 938 (700 of them LANDS, which print no cost, so closing them buys that column nothing), `nocolors` 1,043, `split` 107, `star` 102,
-   `noname` 90, `nosubtypes` 74, `notaspell` 69, `noback` 60 (45 land helpers + 14 backs that are their own factory — both reasons, not a queue),
-   `nokeywords` 29, `nosubvariant` 13, `notyped` 7, and `nopt` / `noadv` / `noloyalty` / `faces` **0**.
-   ⚠ **"a REAL bound, not a reader gap" was wrong about the multi-face cards, and `nokeywords` 319 -> 29 is the correction.** Scryfall gives a FACE no
-   `keywords` of its own, but the top-level array is the UNION over both faces, so it IS comparable against one face as long as the `printed` filter is
-   that face's oracle text — the missing direction then never demands of the front a keyword only the back prints, and the extra direction needs no
-   change at all because a union is a superset. ~264 cards came back into the column combat reads every turn, and one of them (Lonesome Unicorn) had
-   shipped without the vigilance it prints. **Per-face `colors` DOES exist for 1,501 of the 2,585 multi-face entries**, so the same question is open
-   for `nocolors`; what actually drives that number is `nonliteral` (the cost chain), which the colour column needs for its pips.
-   ✅ `scripts/audit_printed_body_injections.py` is **52 / 52** and counts rows from BOTH catalog audits — run it after touching any reader. It patches a
-   per-worker COPY under `CRAB_CATALOG_DIR` since `0acbd289`, so **the "never run an audit or a build while it runs" warning is RETIRED**: it never
-   writes the real tree, it runs its cases in parallel (`-j`), and a 45-case run is minutes rather than the hour the in-place version cost.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1231 on cube / all / sealed (603 cells, 2,974,800 games) PLUS a concurrent session's 245 cells /
-   965,600 games on five pools at 1060..1171 — 0 stuck everywhere. ⚠ `1152..1161` was a HOLE in PERF's table for twenty blocks and is swept now; the
-   frontier is **1232**: 1212..1221 is 30 cells / 148,000 games, 0 failures, swept by the concurrent session — ⚠ and by this one from 1216 before the
-   fetch, so THREE sessions have now taken the same seeds on the same day; the table is the only thing that stops it — and **1222..1231 is another 30
-   cells / 148,000 games, 0 failures, cap 0 / board 0 / stuck 0 / draw 4**, taken at the closing tip.
-   ⚠ **`cube` 1215 is SCUTE SWARM and is a known board**: 951 copies on 987 permanents, `cap 2 / board 2`, and it costs **214 s on
-   `release-fast` against 10.5 s** for the seed next door — 0.125 % of the games and 95 % of the cell. The sweep skips its re-run now
-   (`BIG_BOARD`), `stats.jsonl` has `stalls_board` to census the rate in the actor, and PERF's candidates carries the entry.
-   TAKE IT FROM PERF'S TABLE: two sessions took 1112
-   on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
-   turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
-   of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after
-   `(-291)` bear that out: 90 cells with exactly TWO caps, both at `all` 1149. The watch is its own negative control twice over: on the 60 cells both
-   sessions swept it drew exactly the games that were already draws (PERF Baseline).
-   **`all` 1024 is the cell that EARNED its keep** (the `MayDoBy` leak).
-3. **The THIRD session of 2026-09-12, and the sentence it earned:** *a card with two halves is audited on one of them.* Every column in
-   `audit_printed_body` reads the factory's RETURNED literal, so on a two-faced card the `cost:` / `card_types:` / P/T they compare are the FRONT's.
-   (a) **CR 715's adventure half** — 62 read, four wrong: **Rider in Need `{1}{W}` -> `{2}{W}`**, and **Shield's Might / Haggle / Usher to Safety
-   `Sorcery` -> `Instant`**, i.e. castable a whole phase later than the card says, which the bot's own priority search reads. Haggle's BODY went with
-   its type line: "you may discard a card. If you do, draw a card" is `MayDiscard`, not a mandatory `Seq(Draw, Discard)`. (b) **CR 712's back face** —
-   81 read, one wrong: **Aetherwing, Golden-Scale Flagship** shipped `Artifact Creature 4/4` where the card prints `Legendary Artifact — Vehicle`, `*`/4,
-   Crew 1. CR 301.7 — a Vehicle is not a creature until crewed — so it attacked the turn the Siege was defeated and sat in range of every creature-only
-   removal spell. (c) **`nokeywords` 319 -> 29**, above, and **Lonesome Unicorn's missing vigilance** with it. (d) Two things the new columns needed to
-   be gates rather than counters: `adventure: Some` is the test rather than the struct name `Adventure {`, because `raw` runs to the NEXT factory's
-   `pub fn` and carries that card's DOC COMMENT (`/// … Adventure {X}{G} distributes …` matched on eleven factories with no adventure), and the literal
-   is the text rather than `raw`.
-3b. **The three earlier runs of 2026-09-12, collapsed to an index — each is recorded verbatim in its own PERF Baseline block and in
-   ENGINE_BACKLOG's numbered finds, which is where the detail belongs.** *A column that skips is not a column that passes* (the printed-body pass: 29
-   shipped defects across subtypes / keywords / prowess, and a P/T column that had been reading 5,578 of 9,455 creatures with no skip counter).
-   *A rules quantity that saturates has consumers, and they wrap on top of it* (CR 104.4's turn-granular half `(-291)`, fifteen saturating-sum
-   consumers, and a sacrifice in the EFFECT that is not a cost — the abilarms stack of 3,213). *A reader that reads the wrong field reads 0 for ever,
-   and a name no card has is audited by nobody* (`shorthand()`'s brace count, three new columns, the five duplicate card names, the cube-pool change).
-3c. **The second session of 2026-09-12's run, and the sentence it earned:** *a `condition` is not a cost, and a census that asks "is there a cost line?" closes a class it
-   has not read.* (a) The Greater Good fix censused the other 39 effect-side sacrifices by hand and closed the class; the question it asked was the wrong
-   one. A `condition` is checked at ANNOUNCEMENT and a sacrifice in the effect is paid at RESOLUTION, so the condition the payment would falsify stays
-   true while the ability sits on the stack. **Four more cards were written exactly that way** (Bloodflow Connoisseur, Cartel Aristocrat, Vampire
-   Aristocrat, Yahenni — all `recent32.rs`, each with the same comment claiming the condition was the bound), plus Bontu, the same shape behind a mana
-   cost. ⚠ Krark-Clan Ironworks reads the same and is NOT this (CR 605.3a: a mana ability resolves without the stack). **Jarad is fixed rather than
-   filed**: `sac_other_second` is a second `(filter, count)` picked DISJOINTLY from the first, because "a Swamp AND a Forest" is two filters and
-   `(Swamp-or-Forest, 2)` is paid by two Swamps. The ratchet
-   `no_free_activation_spells_its_sacrifice_cost_in_its_effect` found the four on its first run and **clears what is not a bound** — condition, speed,
-   and the ZONE — where the older one exempts a card for ANY non-default field. (b) `audit_printed_body`: **`nopt` 70 -> 0** (a literal declaring ONE
-   half of the P/T read as unreadable — every 0-power card, whose `power:` is omitted because `Default` is already 0) and **`notyped` 52 -> 7**, six
-   shapes that reach their base without a `..helper(` line. ⚠ A `notyped` card is audited by NOBODY: the walk `continue`s before every column.
-   (c) `audit_keyword_drift`'s MISSING list was **367 rows and 287 were cards that carry the mechanic** — a mechanic has FOUR spellings and the reader
-   knew one and a half, and the docstring's own spot-check was wrong about its own examples. **A reading list nobody can read is not a gate**, and the
-   same is true of a skip counter nobody opens. Three more shapes are RULES rather than allowlist rows — `miracle` the FIELD (six cards that have it
-   read as missing it); "[Name] — [cost], Discard this card:" = `from_hand` + `discard_self_cost`, which is channel AND bloodrush, twenty rows; adamant
-   = `Predicate::ManaSpentOfColorAtLeast`, whose own docstring says "CR 702.137 (Adamant)" — leaving **367 -> 6**, INVENTED 0 throughout. ⚠ **A rule
-   for a shape must be ADDITIVE**: written as an early return the discard one suppressed six bloodrush cards whose literal names a local helper.
-   (d) **31 shipped card defects off that list**, each read against its oracle line FIRST. **Three are worse than a gap:** Disowned Ancestor shipped
-   `renown(1)` where the card prints Outlast {1}{B} (doc comment agreeing with the body); Furnace Hellkite and Crabomination each shipped a TRIGGER the
-   card does not print; Rejuvenate gained five where the card says six, and `rejuvenate_gains_five_life` asserted the five — **a test written from the
-   body freezes the defect**, and no column sees a number inside an effect. ⚠ **Warp was live and unreachable** (`shortcut::warp` +
-   `AlternativeCost::warp` existed, no card used either), and two cards' comments said a mechanic was "not modelled" / "dropped" while the vehicle was
-   in use elsewhere — **a comment claiming a mechanic is dropped is worth one grep**. ⚠ Priest of Fell Rites is the false positive that cost a test:
-   its unearth is an `ActivatedAbility` literal, not `shortcut::unearth`, and adding the shortcut shifted every ability index. **Read the body before
-   believing a row.** The 6 left need a primitive or a re-modelling: devour, bestow behind Collect evidence, escalate's per-mode price, a flashback
-   costed in X loyalty counters, and two kickers that change a MODAL COUNT and a cast trigger.
-3d. **The FOURTH session of 2026-09-12, and the sentence it earned:** *one `false` for two meanings is a bug in every caller at once.*
-   (a) `draw_one` returned it for "the draw was skipped" AND for CR 104.3c, so **casting Divination with Omen Machine out eliminated the caster** with
-   five cards left in their library — `DrawOutcome` and `draw_one_or_deck` are the fix. And **nineteen more sites discarded the answer entirely**, so
-   CR 104.3c applied to the draw step and to `Effect::Draw` and to nothing else; the opening-hand loop even carried a comment saying otherwise.
-   `no_engine_draw_throws_away_the_deck_out` is the ratchet. Six tests were freezing the old behaviour, one of them (Tale of Tamiyo) with a library
-   ORDER that only worked while an empty draw was silent.
-   (b) The subtype column's `layout == "normal"` gate decided whether a READABLE card was compared and counted the 393 it dropped nowhere: ten
-   Pathways with a basic land type they do not print, three creatures short one. `subtwoface` is the bucket. ⚠ **Print every skip you add.**
-   (c) `all` 1159 is the first cap ever to SURVIVE the 50,000-action re-run; `cap_diagnosis` prints the watch's own state now and the answer is
-   `repeats 2/12` against `12/12` on the eight games the same cell drew. Clamping a saturated life out of the turn digest takes it to `10/12` — two
-   samples short — so **`NO_PROGRESS_MAX_PERIOD` (8) is the next thing to price, not the digest's field list.**
-   (d) **Nineteen cards print a colour their mana cost cannot carry** (CR 202.2 — no cost or a `{0}`, so the indicator is the whole answer): the
-   suspend cycle, the five Pacts, Dryad Arbor, Urza and Asmoranomardicadaistinaculdacar. Colourless to protection, devotion and every colour
-   heuristic the bot has; ⚠ no encoding moves (the deck encoder reads the COST's pips). The COST reader had to open first — three gaps — and three
-   more closed on subtypes. ⚠ **The first run of the local-binding reader reported three defects and all three were the READER**: a row is a lead
-   until the reader that produced it has been read.
-   (e) **The walk accounts for every factory now** and the closing line proves it, so the `layout == "normal"` shape cannot recur silently:
-   `# accounting — 21794 walked, 4124 stopped early; cost 0, types 0, subtypes 0, keywords 0, colors 0, loyalty 0, pt 0, adv 0, back 0`.
-   (f) **The first perf candidate in seven runs to come off a measurement rather than a bug fix.** The sweep found `cube` 1215 costing 1,588 s where
-   its neighbours cost 40 — **Scute Swarm**, 951 copies on a 987-permanent board. On `release-fast` (the profile it is consumed under, which the sweep
-   build is NOT) the cell is **214.4 s against 10.5 s = 20.4x**, and the four undecided games account for ~204 s of it: **~51 s each against ~3.3 ms
-   for a normal game, about 15,000 games apiece.** 0.125 % of the cell's games, 95 % of its wall clock. The sweep skips the re-run for such a board
-   now (`BIG_BOARD`), and `stats.jsonl` carries **`stalls_board`** split out of `stalls_capped` — the actor kept one bucket on the grounds that "a
-   runaway board and an action cap cost the same thing", and that is the measurement that says they do not. ⚠⚠ **AND THE CENSUS IS ALREADY ANSWERED BY
-   THE POOL: `scute_swarm` is in `cube.rs`'s green pool and NOT in the SOS sealed pool `selfplay_train` builds from.** So it taxes the cube gate runs
-   and the sweep, not the training actor — which is CLAUDE.md's "a number is about a pool" rule biting the finding that found it.
-4. **Next, in order.** (a) **Sweep from 1212, and read the SEED COLUMN of PERF's table before you take one.**
-   `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
-   yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
-   (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
-   PERF's slow-cell entry has the **5.4x (release-fast) / 83x (sweep profile)** table and why the sweep amplifies a big board ~13x. ⚠ `cube` 1018, 1069,
-   1076, 1090 and `all` 1090 are all the Beacon board — a POOL property, never to be re-diagnosed, and **a draw rather than a cap since `(-291)`**.
-   ⚠⚠ **THE `cap` BUCKET HELD THREE SHAPES AND NOW HOLDS ONE.** (i) A long game: the sweep's `CRAB_MAX_ACTIONS=6000` is a TENTH of
-   production, so it reads exactly like a loop — `all` 1149 (41 triggers on the stack at turn 89) is 6,800 decided at 50,000. The script re-runs a
-   cap at 50,000 ITSELF now — **ANY cap, labelled or not** — and counts what clears as `slow-not-stuck`. ⚠ Since `(-291)` the `[SATURATED LIFE]` label
-   means "a board the watch DRAWS, given the turns", which 6,000 actions does not always allow: `cube` 1204 reads `cap 8 / draw 12` at 6,000 and
-   `cap 0 / draw 20` at 50,000. Excusing a labelled cap without the re-run reported 14 of them in one block. (ii) A BOARD cap: `StopReason::BoardCap`, the 1,024-permanent bound
-   ending a token-doubling runaway on purpose — `cube` and `all` 1169 are 1,967 Goblins off Krenko at turn 29, and the re-run can never clear them
-   because the board doubles past the bound in one activation whatever the budget. `SimCost` counts it apart and the sweep has a `board` column.
-   (iii) **A cap that SURVIVES the re-run** — `all` 1159, the first ever: the Beacon board with a Basilica Screecher moving 1 life a turn between two
-   saturated seats, so CR 104.4's turn watch reads `repeats 2/12` where the eight games the same cell DREW read `12/12`. Unwinnable AND aperiodic.
-   The life half is fixed (the turn digest clamps above `SCALE_CEILING * 1_000`) and takes it to **`repeats 10/12` at the 50,000-action budget** —
-   two samples short — without closing the cell. ⚠ **`NO_PROGRESS_MAX_PERIOD` (8) is the next thing to price, not the digest's field list.**
-   The sweep's verdict changed instead —
-   a survived cap is a defect **unless** the dump carries `[SATURATED LIFE]`, in which case it is `known_board`. ⚠ The label alone still excuses
-   nothing: it is the label PLUS a survived re-run. (iv) What is left, which IS the defect.
-   **So read `board`, `slow-not-stuck` and `known_board` before believing a cap — and read the `no-progress watch:` line of its dump.**
-   (b) **`audit_printed_body`'s remaining skips are the hard residue** and `--list <kind>` prints the factories: `nocache` 3,749 is now genuinely the
-   synthesized sets (the name column takes the rest), and **700 of `nonliteral`'s 870 are LANDS**, which print no mana cost, so closing them buys that
-   column nothing — ⚠ **and measured this time: of `nonliteral`'s 840, 718 are lands and NONE of them is coloured**, so both the cost and the colour
-   column have exactly zero yield there. What still has a card behind it: `nocolors` 945, `nosubtypes` 43, `noback` 60, `nokeywords` 29, `notyped` 7
-   (`nopt` / `noadv` / `noloyalty` / `faces` / `subtwoface` are all 0 and are GATES — a row in one is a new idiom, not a new card).
-   The 122 non-land `nonliteral` cards left are three shapes: a hybrid pip built by a LOCAL CLOSURE (`let wb = || hybrid(White, Black)`), an `{X}`
-   cost, and a handful of one-offs.
-   ⚠ **Print every skip you add** — the P/T column skipped 41 % of
-   creatures silently for as long as it existed, and read "0 wrong P/T" the whole time.
-   (c) ⚠ **THE CATALOG AUDITS ARE WORKED OUT — 22 rows sampled across three of them this run, ZERO code defects.** `audit_catalog_stats`' residue is
-   documented residue (its triage is in INCOMPLETE_CARDS, five named rows so nobody walks them a third time); `audit_oracle_verbs` is 56 from 172 and
-   what is left is three named shapes (a replacement effect the oracle words with the verb, a mechanic with no primitive, the deathtouch family).
-   Re-run them, read a NEW row, do not re-walk the standing ones.
-   (d) ✅ **The two oracle-backed keyword readers are one vocabulary now** — `EVERGREEN` carries Ward / Prowess / Hexproof / Protection with a RULE
-   (`PAYLOADED`) rather than twelve rows for the prose variants — and ✅ **all five duplicate NAME pairs are gone**, not allowlisted: both copies of
-   Kroxa and of Uro were in the CUBE POOL (so a deck could draw two of one legend) and one of them discarded from each PLAYER where the card says each
-   opponent. ⚠ That commit CHANGED THE CUBE POOL — a seeded cube deck is not the deck the same seed built before it — while moving no vocab index and no
-   golden trace.
-   (e) ⚠ **Do NOT build a `produced_mana` column** — ENGINE_BACKLOG's CLOSED-WITH-A-REASON entry: Scryfall's field counts mana the card CAUSES (Brass's
-   Bounty's Treasures, Heartbeat of Spring's rider), so 355 of 707 prototype rows were the field's meaning, not the reader's gaps.
-   (f) ⚠ **The seven-card nesting is RETIRED** and (g) ⚠ **the 8 loop arms are CLOSED WITH A REASON** — do not build the parking redesign or the
-   seat-list ref; a suspend advances nothing but the answer, and the premise to re-check is that one, not the catalog scan. One plumbing row is left on
-   purpose: `ChangeTargetOfAbility` (Reroute) writes its new target BETWEEN its two asks, so routing it needs the two-pass split first.
-   (h) Nobody has checked the **ML side** of a saturated feature: what a `SCALE_CEILING` row does to a net that never saw one.
-   (i) `BecomeChosenColor` picks per source, not per target — bot strength, not a rules defect.
-   (j) mirrors: abilarms 926+, mirror 798+, mcts 777+, lookahead / planner 781+.
+1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before tracker prose; **fetch before every push** — three sessions shared this branch on 2026-09-12 and two on 2026-09-13. Gotchas in **CLAUDE.md**, measurement in **PERF's "Standing rules"**, and ⚠ **the 2026-09-12/13 detail this section used to carry is now in ENGINE_BACKLOG's "The 2026-09-12/13 handoff detail, moved verbatim"** — 160 lines: the printed-body skip taxonomy, the four shapes in the `cap` bucket, the sweep-table discipline, the closed-with-a-reason leads. **Read it before you take a skip kind or a seed**, and say in this line which you are taking. NEXT was at 163 lines against its own 15; keep it at 15.
+2. **Gates at the tip, all re-run 2026-09-13:** suite **19,511 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** + determinism + thread_determinism, `audit_printed_body` **0 on all ten columns** with its accounting line all zeroes, `audit_panics` **0 bare**, `audit_doc_drift` **0**, `audit_seat_from_selector` **0 open**, `audit_stash_in_loop` 1/1/0, `audit_card_names` **0/0/0/0**, `audit_variant_coverage` 0 dead capability, `audit_keyword_drift` **0 invented / 4 missing**, `audit_target_walkers` 132 wrappers, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY gate that sees `debug-assertions = false`). ⚠⚠ **THIS BOX IS 4 CORES** — its `--bench` wall clock (321 games/s) compares with NO absolute in PERF, every one of which was taken on 24. The **counters** are the invariant.
+3. **This run — a fan-out `PlayerRef` resolved singularly drops every seat but the first.** `resolve_player` answers `EachPlayer` with seat 0 and says nothing; exact while the ref names one player (`EachOpponent` at two seats, which ~100 cards rely on), a silent under-application when it names two. **Seven shipped cards** — New Frontiers, Jace's −8, Krenko's Buzzcrusher, Case the Joint, Aether Rift, Mnemonic Nexus, Ill-Gotten Gains (which discarded *seat 0's hand size* from everyone). The gate is a `debug_assert!` in `resolve_player` reading the seats the ref ACTUALLY names — **dead in release** (`strings` the two binaries), so no training run can panic on it — and it found the two that no `who:` census could reach. Details in PERF's Baseline head.
+4. **Closed by measurement this run; do not re-take.** (a) `NO_PROGRESS_MAX_PERIOD` is **NOT** what holds `all` 1159: `since 0/8` in both dumps, and at `CRAB_MAX_ACTIONS=200000` the same cell runs to turn **9,099** and reads `repeats 6/12`, *lower* than 50,000's 10/12. The board is aperiodic because the **TAPPED SET** moves every turn; no value of the three constants closes it, and the shape that would is a different predicate ("no seat can win or lose") — an adjudication change. (b) `Effect::Search`'s `to:` is not a defect class: a plain search resolves `controller: You` against the SEARCHED player by design. (c) The **ML side of a saturated feature IS guarded** — `server::encode`'s `scaled` / `scaled_u` plus three tests including `assert_globals_bounded` over every global and object feature; what is open is the training-distribution question, not a code gap.
+5. **Seed frontier 1232.** 1222..1231 is 30 cells / 148,000 games on cube/all/sealed under `-C debug-assertions=yes` (so the new `resolve_player` gate ran on every one). ⚠ **TAKE THE NEXT ONES FROM PERF'S TABLE, NOT FROM THE TOTAL** — three sessions took overlapping seeds on 2026-09-12.
+6. **Best next moves.** (a) `audit_printed_body`'s `notyped` **7 were all read by hand against the oracle this run — zero defects**, and they are one reader shape (a nested `..CardDefinition { .. ..helper(..) }`), so closing it buys the GATE, not a card; the list is in the audit's docstring. (b) The skips with a card behind them: `nocolors` 945, `nosubtypes` 43, `noback` 60, `nokeywords` 29. (c) `audit_keyword_drift`'s last 4 each need a PRIMITIVE. (d) `audit_variant_coverage`'s two dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`) want a card each. (e) `audit_target_walkers`' sixth column (`target_filter_for_slot_in_mode_kicked`, 50 unnamed of 132) is LATENT with **zero current yield** — the catalog gate passes — so it is a surface, not a queue. (f) **The perf queue has been at floor for eight runs and every perf leg came off a bug fix**; PERF's "Perf candidates" head carries the closed leads.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

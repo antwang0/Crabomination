@@ -1736,6 +1736,18 @@ impl GameState {
     /// The longest turn-loop this can see, in turns, before it re-anchors on
     /// the latest state — [`MANDATORY_LOOP_MAX_PERIOD`](Self::MANDATORY_LOOP_MAX_PERIOD)'s
     /// role one level up. Two seats alternating is period 2; four seats, 4.
+    ///
+    /// ⚠ **PRICED AND NOT MOVED (2026-09-13).** `all` 1159 — the one cap that
+    /// survives the sweep's 50,000-action re-run — is not bounded by this.
+    /// Both of its dumps read `since 0/8`, so the anchor is matching at the
+    /// moment the cap fires, and the same cell at a 200,000-action budget runs
+    /// to turn 9,099 and reads `repeats 6/12`, *lower* than the 10/12 it
+    /// reached at 50,000. What moves that digest is the tapped set, which a
+    /// board spending a varying amount of mana every turn never repeats: the
+    /// watch is a periodicity detector and the board is aperiodic. Raising
+    /// this (or lowering [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS))
+    /// only changes which aperiodic board survives. `fresh_seed_sweep.sh`'s
+    /// header has the numbers.
     pub const NO_PROGRESS_MAX_PERIOD: u32 = 8;
 
     /// The turn the watch starts sampling on, and **the only reason it is not

@@ -323,6 +323,15 @@ What is left, with the reason — `--list <kind>` prints the factories:
     columns it MUTATES are blanked one by one rather than read off the
     unmutated argument), and a module-qualified base (`..super::wwk::
     tapped_etb_land(..)`, four Zendikar lands). The seven left are one-offs.
+    ⚠ **ALL SEVEN WERE READ BY HAND AGAINST THE ORACLE, 2026-09-13 — cost,
+    type line, subtypes, keywords and P/T, zero defects — so they are a READER
+    residue, not a card queue, and nobody needs to walk them again.** They are
+    one shape: a nested `..CardDefinition { .. ..helper(..) }`, i.e. a spread
+    whose base is itself a literal whose base is the helper, which the chain
+    walks one level short of. `modern::junk_diver`, `recent309::rakdos_joins_up`,
+    `lgn::spectral_sliver`, `lgn::mistform_sliver`, `mkm::krenkos_buzzcrusher`,
+    `nms2::arc_mage`, `gaps::kirtars_desire`. Closing it is one reader change
+    for ten columns on seven cards; the yield is the GATE, not a defect.
   * `nosubvariant` (15) — above.
   * `faces` (0) — a multi-face factory whose name matches NO face of the card
     it resolves to. Zero today: every one of the 276 matches, so a row here is
