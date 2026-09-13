@@ -5289,18 +5289,45 @@ pub fn sowing_mycospawn() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Devoid],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Land,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
+        keywords: vec![
+            Keyword::Devoid,
+            Keyword::Kicker(cost(&[generic(1), crate::mana::colorless(1)])),
+        ],
+        // ⚠ Both halves are "WHEN YOU CAST THIS SPELL", not enters-the-
+        // battlefield: the land arrives while the creature is still on the
+        // stack, and it arrives even if the creature is countered. The first
+        // shipped as an ETB and the second — the kicked one — did not ship at
+        // all, which is what `audit_keyword_drift` named the card for.
+        //
+        // ⚠ The land enters TAPPED here and the cached oracle does not say
+        // tapped. Left as it was rather than changed on one reading; no column
+        // compares a value inside an effect, so nothing else will catch it.
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
             },
-        }],
+            // ⚠ The "if it was kicked" is the trigger's INTERVENING IF, not a
+            // branch in its body: as an event filter the trigger only goes on
+            // the stack when the spell was kicked, so an unkicked cast never
+            // asks for a target. `CastSpellWasKicked` (not `SpellWasKicked`)
+            // is the one a cast trigger can read — it takes the flag off the
+            // stack instance that fired it, before that spell resolves.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource)
+                    .with_filter(crate::card::Predicate::CastSpellWasKicked),
+                effect: Effect::Exile {
+                    what: crate::effect::shortcut::target_filtered(SelectionRequirement::Land),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

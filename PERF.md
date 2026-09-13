@@ -3216,9 +3216,18 @@ gate    `--bench` on a **`release`** binary: **195,806 / 27.49 / 611.9 / 0 stall
         --all-targets **0**; `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean.
         audit_printed_body 0 on all eight columns over 16,815 priced + 17,695 type lines + 17,160 subtypes + 17,379
         keywords + 9,598 P/T + 16,683 colours + 123 loyalty; audit_card_names 0 / 0 / 0 / 0.
-        **At the closing tip, after the 31 card fixes: suite 19,503 / 0 / 5, clippy 0, audit_printed_body 0 on all TEN
-        columns (the other session's adventure-half and back-face ones included), audit_keyword_drift 0 invented /
-        6 missing.** The card fixes move no golden trace either — none of the 31 is in `fixed`.
+        **At the closing tip, after the 31 card fixes: suite 19,505 / 0 / 5, clippy 0 `--all-targets`,
+        `cargo check --profile release-fast` clean, audit_printed_body 0 on all TEN columns (the other session's
+        adventure-half and back-face ones included) and audit_card_names 0 / 0 / 0 / 0, audit_keyword_drift 0 invented
+        / 6 missing, injections 47 / 47 — and `--bench` re-run on a `release` binary at that tip reads
+        195,806 / 27.49 / 611.9 / 0 stalls, BYTE-IDENTICAL to the committed invariant, determinism ok,
+        thread_determinism ok (444.53 games/s, peak_rss 25.1 MiB, bin_bytes 84,918,240, host_calib_ms 44).**
+        The card fixes move no golden trace either — none of the 31 is in `fixed`, which is also why the counters
+        cannot be the evidence that they work; the suite is (each of the 31 has a test that fails on the old body).
+        ⚠ The injections read **46 / 47** first, as `BROKEN CASE (pattern occurs 0x)`: the Lonesome Unicorn case
+        anchors on Rider in Need's cost and the adventure column's own fix had moved it `{1}{W}` -> `{2}{W}`. The case
+        had not started failing, it had stopped RUNNING — and the battery reporting a stale pattern as broken rather
+        than as a silent pass is the only reason anyone saw it.
 ```
 
 ### 2026-09-12 (the printed-body session, second pass) — seven idioms, three new columns, six shipped cards, two duplicates; no perf leg

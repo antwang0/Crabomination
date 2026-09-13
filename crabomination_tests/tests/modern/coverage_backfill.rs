@@ -139,8 +139,12 @@ fn ursine_monstrosity_begin_combat_mills_and_pumps_per_graveyard_type() {
     assert!(u.keywords().contains(&crabomination::card::Keyword::MustAttack));
 }
 
+/// ⚠ The trigger is **"when you cast this spell"**, not enters-the-
+/// battlefield: it shipped as an ETB, and the card's second cast trigger — the
+/// kicked one — did not ship at all. Renamed off `..._etb_...` for that
+/// reason; `..._kicked_...` below covers the half that was missing.
 #[test]
-fn sowing_mycospawn_etb_searches_a_land_to_battlefield() {
+fn sowing_mycospawn_cast_searches_a_land_to_battlefield() {
     let mut g = two_player_game();
     let forest = g.add_card_to_library(0, catalog::forest());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
@@ -155,7 +159,30 @@ fn sowing_mycospawn_etb_searches_a_land_to_battlefield() {
     drain_stack(&mut g);
     let lands_after = g.battlefield.iter().filter(|c| c.controller == 0
         && c.definition.is_land()).count();
-    assert_eq!(lands_after, lands_before + 1, "ETB tutors a land onto the battlefield");
+    assert_eq!(lands_after, lands_before + 1, "the cast trigger tutors a land onto the battlefield");
+}
+
+/// **Kicker {1}{C}: "when you cast this spell, if it was kicked, exile target
+/// land"** — the half that shipped missing, along with the kicker itself.
+#[test]
+fn sowing_mycospawn_kicked_exiles_a_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let victim = g.add_card_to_battlefield(1, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::sowing_mycospawn());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6); // {4}{G} + kicker {1}{C}
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked for {4}{G} + {1}{C}");
+    // ⚠ Two triggers go on the stack above the spell, and the exile's target
+    // is AUTO-picked — scripting a `Target` answer is a
+    // `DecisionAnswerMismatch`, not a help.
+    assert_eq!(g.stack.len(), 3, "the spell plus both cast triggers");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "kicked, it exiles target land");
 }
 
 #[test]
