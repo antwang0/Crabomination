@@ -3574,7 +3574,7 @@ side.
 block is barely dearer than a three-pool one — which is the only reason the
 duplication cost nothing but time.
 
-**573 cells / 2,826,800 games on the three-pool base, 0 stuck on every one**
+**603 cells / 2,974,800 games on the three-pool base, 0 stuck on every one**
 — and the five-pool rows are 245 cells / 965,600 games on top of that, counted
 apart because they are a different configuration and would otherwise be read as
 more base coverage than there is. Every cap is the

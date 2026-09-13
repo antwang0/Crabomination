@@ -65,7 +65,7 @@ sixty-seventh pass, so don't re-take that.
    ✅ `scripts/audit_printed_body_injections.py` is **52 / 52** and counts rows from BOTH catalog audits — run it after touching any reader. It patches a
    per-worker COPY under `CRAB_CATALOG_DIR` since `0acbd289`, so **the "never run an audit or a build while it runs" warning is RETIRED**: it never
    writes the real tree, it runs its cases in parallel (`-j`), and a 45-case run is minutes rather than the hour the in-place version cost.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1221 on cube / all / sealed (573 cells, 2,826,800 games) PLUS a concurrent session's 245 cells /
+   **Fresh seeds: 853..1030 on five pools, then 1031..1231 on cube / all / sealed (603 cells, 2,974,800 games) PLUS a concurrent session's 245 cells /
    965,600 games on five pools at 1060..1171 — 0 stuck everywhere. ⚠ `1152..1161` was a HOLE in PERF's table for twenty blocks and is swept now; the
    frontier is **1232**: 1212..1221 is 30 cells / 148,000 games, 0 failures, swept by the concurrent session — ⚠ and by this one from 1216 before the
    fetch, so THREE sessions have now taken the same seeds on the same day; the table is the only thing that stops it — and **1222..1231 is another 30
