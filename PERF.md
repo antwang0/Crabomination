@@ -2987,6 +2987,77 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-13 (the cost-walk session, seventh of the day) — the reduction tail behind one bit, half the dispatches gated out, and a target class no shipped card had hit yet
+
+```text
+perf    **`(-298)` + `(-299)`: the reduction walk's tail, taken in the two pieces PERF's head had sized.**
+        `cost_reduction_for_spell_full_over`'s tail — everything after `(-296)`'s source loop — reads the
+        CARD being cast, so it ran in full on all 49,140 affordability checks whatever the board held.
+        `(-298)` merged **nineteen** walks of `card.definition.static_abilities` into one (thirteen `for sa`
+        loops plus six `.iter().any(matches!(..))` presence tests, the six kept once-per-card as flags):
+        **-0.167 / -0.200 / -0.230 %**, sized at 0.13 and read at 0.230 because the tail inlines into
+        `cost_reduction_for_spell_full` as well. `(-299)` then put the whole tail behind
+        `CardData::has_self_cost_reduction`, a one-bit definition memo: **-0.178 / -0.141 / -0.207 %**, and
+        it closes `(-296)`'s stated `fixed` +0.032 % residual. Together the row is **8,937,264 -> 3,491,022
+        self Ir on sealed, 181.9 -> 71.0 Ir/call, -61 %**. ⚠ The memo bit's room was **bits 53-62 of
+        CardMemo's word 1** (beside the gather mask); word 0 has a tenant in all 64. ⚠⚠ The gate's variant
+        list is a second copy of the walk's, and a variant the walk handles and the gate misses is a
+        **silently wrong mana cost** — so the walk's match yields `handled: bool` and `debug_assert_eq!`s it
+        against `static_effect_is_self_cost_reduction` on every static, audited by the suite and the sweep.
+
+perf    **`(-300)`: the empty dispatch is 47.2 % of them and it was paying a call to find out.** The first of
+        the two structural questions `(-294)` left on the #1 row. `perform_action_inner` drains every
+        action's event list through `dispatch_triggers_for_events` and the body's early-out sits behind the
+        call, the prologue and two `mem::take`s; five `is_empty()` reads inline instead. **94,072 of 199,186
+        calls**, to within a point of the census's prediction. **-0.227 / -0.139 / -0.195 %**. ⚠ `#[inline]`
+        is NOT enough: LLVM left the gate as its own 180,198-call, 7.6 Ir/call stub and `#[inline(always)]`
+        is worth another 0.021 / 0.009 / 0.015 points. A gate whose value is not making a call must be forced.
+
+perf    **`(-301)` REFUTED, twice, and the second reading is the transferable one.** The candidates head has
+        carried "40 % of `printed_requirement_impl`'s 850,908 calls are its own `And`/`Or` recursion" as a
+        lead. Making the spine a loop **loses both ways**: outermost-first **+0.241 / +0.901 / +1.410 %**,
+        original-order (a fixed `[&R; 8]` filled on the way down) **+0.042 / +0.126 / +0.458 %**. ⚠ **An
+        order-free fold is not an order-free walk when the operands short-circuit**: `.and()` nests LEFT, so
+        the innermost-left clause is the broad type test a filter is written with, and reversing the visit
+        order took calls 374,450 -> 653,378. And the frames were never the cost — the array to preserve the
+        order took the row from 42.7 to 63.6 Ir/call for 14,884 fewer calls. Both reverted; the 40 % is
+        closed as a lead in the candidates head.
+
+fix     **Three `PlayerRef`s read a player out of a selector and none of the three target walkers looked
+        inside.** `selector_player_ref` is the one list for the other direction; this one was written by hand
+        three times (`requires_target`'s census, `primary_target_filter`, `target_filter_for_slot`) and all
+        three listed only `OwnerOf` / `ControllerOf`. `EachPlayerExceptControllerOf`,
+        `CombatDamagerController` and `LastDamagerControllerOf` were in none, so a `Selector::Target` under
+        any of them read as **untargeted** — the census says no target, the cast path never asks, the spell
+        resolves unaimed. `player_ref_selector` is the one list now, exhaustive with no wildcard.
+        **Latent, not shipped**: Fractured Identity is the only aimed `who` and its body targets too, which
+        is why `audit_target_fields` could see it and 19,546 tests could not (**1 aimed -> 0**).
+        ENGINE_BACKLOG rule 5c; test `target_walkers::a_player_ref_that_reads_a_selector_carries_its_target`.
+
+sweep   **fresh seeds 1292..1295 (claimed in NEXT before the run): 12 cells / 59,200 games / 0 failures**,
+        `cap 2 (both slow-not-stuck) / board 0 / stuck 0 / draw 0`, three pools x four seeds x 400 games on a
+        `target-audit/overflow` build with `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`, at the
+        `(-300)` tip. Both caps are `cube` 1292's Beacon-of-Immortality board (`repeats 11/12` at 6,000
+        actions — one short) and the 50,000-action re-run reads `cap 0 / draw 2`. **Frontier 1296.**
+        `audit_panics` **0 bare** (68 sites, 57 guarded, 11 lock-poison), `audit_doc_drift` **0 / 0**,
+        `audit_card_names` **0 / 0 / 0 / 0**, `audit_variant_coverage` **0 dead capability / 1 dead
+        primitive** (closed with a reason), `audit_keyword_drift` **0 invented / 4 missing**,
+        `audit_target_fields` **0 aimed**.
+
+gates   suite **19,547 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--workspace --all-targets
+        --exclude crabomination_client`; the client needs four apt packages this image does not have),
+        golden_trace **12 / 12 unmoved**, `--bench` **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls** BYTE-IDENTICAL to the committed invariant with `determinism ok` and `thread_determinism ok
+        (3 vs 1 threads identical)`. `profiling-fast`
+        inherits `release-fast`, so every A/B build in this session already compiled with
+        `debug-assertions = false` — the release-fast check gate is covered by them.
+        ⚠ **THIS BOX IS 4 CORES**: `--bench` reads 418 games/s (`host_calib_ms 48`, `peak_rss_mib 22.0`)
+        and compares with NO absolute in this file. The counters are the invariant.
+        ⚠ **Ir totals moved under every A/B this session**; the run's own base at `71acf0c0` was
+        fixed **636,405,707** / cube **1,693,785,498** / sealed **1,769,439,147** and the tip is
+        **632,773,413 / 1,685,671,574 / 1,758,291,476** — **-0.571 / -0.479 / -0.630 %** over four commits.
+```
+
 ### 2026-09-13 (the sink-generator session, sixth of the day) — six passes over one batch, and the one word that cost `all` 1274 its 5,769 turns
 
 ```text
