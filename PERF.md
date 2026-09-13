@@ -3191,7 +3191,9 @@ grid    `robustness_grid.sh --no-build --no-actor --pilots` at the run's tip, on
         `-C debug-assertions=yes` after the five card fixes: ladder **30 cells / 33,120 games, 0 failures, cap 0 /
         stuck 0 / draw 0**; pilots **45 policies, 0 failures**. The pilots leg is the one that found the class in the
         first place (`abilarms`, a 3,213-deep stack), so it is the leg that has to be green after the five that were
-        left.
+        left. **Re-run at the CLOSING tip, after all 32 card fixes, on binaries rebuilt there: the same three legs,
+        the same numbers, 0 failures — ladder 30 / 33,120, pilots 45, actor 2 cells / 6,000 games at 85.4 and 83.6
+        games/s.**
 sweep   `fresh_seed_sweep.sh "cube all sealed" 1212..1221` on a binary rebuilt at the run's tip: **30 cells /
         148,000 games, 0 failures** — cap 2 (both slow-not-stuck), **board 14**, stuck 0, draw 16.
         ⚠ **`cube` 1215 is the run's one lead and it is NOT a defect: Scute Swarm.** The cell took 1,080 s against
@@ -3219,7 +3221,7 @@ gate    `--bench` on a **`release`** binary: **195,806 / 27.49 / 611.9 / 0 stall
         **At the closing tip, after the 31 card fixes: suite 19,505 / 0 / 5, clippy 0 `--all-targets`,
         `cargo check --profile release-fast` clean, audit_printed_body 0 on all TEN columns (the other session's
         adventure-half and back-face ones included) and audit_card_names 0 / 0 / 0 / 0, audit_keyword_drift 0 invented
-        / 6 missing, injections 47 / 47 — and `--bench` re-run on a `release` binary at that tip reads
+        / **4** missing, injections 47 / 47 — and `--bench` re-run on a `release` binary at that tip reads
         195,806 / 27.49 / 611.9 / 0 stalls, BYTE-IDENTICAL to the committed invariant, determinism ok,
         thread_determinism ok (444.53 games/s, peak_rss 25.1 MiB, bin_bytes 84,918,240, host_calib_ms 44).**
         The card fixes move no golden trace either — none of the 31 is in `fixed`, which is also why the counters

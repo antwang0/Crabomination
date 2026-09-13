@@ -46,7 +46,7 @@ sixty-seventh pass, so don't re-take that.
    capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all TEN columns** over
    16,846 priced + 17,777 type lines + 17,683 subtypes + **17,743** keywords + 9,609 P/T + **16,729** colours + 124 loyalty + **62 ADVENTURE HALVES +
    81 BACK FACES** (the two new columns), `audit_keyword_drift`
-   **0 invented / 6 missing** (367 at the start of 2026-09-12 — and the 6 left each need a primitive or a re-modelling), `audit_card_names`
+   **0 invented / 4 missing** (367 at the start of 2026-09-12 — and the 4 left each need a PRIMITIVE the engine does not have, not a field it does), `audit_card_names`
    **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
    gate that sees `debug-assertions = false`).
    ⚠⚠ **TWO SESSIONS WORKED `audit_printed_body.py` ON 2026-09-12 AND CONVERGED ON THE SAME SKIPS.** Every reader fix below landed twice-over by
