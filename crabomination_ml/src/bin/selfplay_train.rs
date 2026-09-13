@@ -313,6 +313,35 @@ struct Args {
     /// the full pass spent 66 M forward-rows against 13.5 M trained and
     /// held the learner to 1.56× of its 6× reuse cap. Ignored at λ = 1.
     relabel_new: bool,
+    /// Round 72: off-policy, advantage-weighted policy-gradient steps on
+    /// the decision stream (`Trainer::train_pg_step`). Implies
+    /// `--record-decisions --policy-head`; needs `--use-best` (the pilot
+    /// whose win head seeds the policy head and whose decisions are the
+    /// behaviour) and `--sample-temp > 0` (a deterministic behaviour has
+    /// no ratio to correct). The net config follows the pilot's file.
+    pg: bool,
+    /// `--pg` with no value step, relabel or row throttle: the trunk and
+    /// win head stay the pilot's, `--steps` counts PG steps, and the reuse
+    /// throttle runs on decisions pushed. The round-72 gate arm — its
+    /// control is the same file under `net67`.
+    pg_only: bool,
+    /// PG step every N value steps (ignored under `--pg-only`).
+    pg_every: u64,
+    /// Decisions per PG step. Lifts the distillation path's 64 cap.
+    pg_batch: usize,
+    pg_entropy: f32,
+    pg_rho_max: f32,
+    pg_lambda: f32,
+    /// Let the policy gradient reach the trunk (`PgConfig::trunk`).
+    pg_trunk: bool,
+    /// PG-only: pack the next batch on a worker thread while this one runs
+    /// the step (default). `--pg-no-prefetch` packs inline — the control
+    /// arm for the throughput A/B.
+    pg_prefetch: bool,
+    /// Actor profile under `--use-best`: `net67` (= `dflt` + the net
+    /// leaf, the gate's pilot) instead of the historical `net_eval_det1`,
+    /// which chains from a base four adoptions behind the default.
+    pilot_net67: bool,
     /// Build training decks with the gate-passed deck net as the judge
     /// (best-of-32 over the same noisy-greedy candidates the heuristic
     /// picks from) instead of taking the heuristic builder's own pick.
@@ -421,6 +450,16 @@ fn parse_args() -> Args {
         holdout: 0.05,
         stop_after_stale: 0,
         relabel_new: false,
+        pg: false,
+        pg_only: false,
+        pg_every: 1,
+        pg_batch: 256,
+        pg_entropy: 0.01,
+        pg_rho_max: 2.0,
+        pg_lambda: 1.0,
+        pg_trunk: false,
+        pg_prefetch: true,
+        pilot_net67: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -500,6 +539,31 @@ fn parse_args() -> Args {
             "--holdout" => a.holdout = val().parse().expect("--holdout"),
             "--stop-after-stale" => {
                 a.stop_after_stale = val().parse().expect("--stop-after-stale")
+            }
+            "--pg" => {
+                a.pg = true;
+                a.record_decisions = true;
+                a.policy_head = true;
+            }
+            "--pg-only" => {
+                a.pg = true;
+                a.pg_only = true;
+                a.record_decisions = true;
+                a.policy_head = true;
+            }
+            "--pg-every" => a.pg_every = val().parse().expect("--pg-every"),
+            "--pg-batch" => a.pg_batch = val().parse().expect("--pg-batch"),
+            "--pg-entropy" => a.pg_entropy = val().parse().expect("--pg-entropy"),
+            "--pg-rho-max" => a.pg_rho_max = val().parse().expect("--pg-rho-max"),
+            "--pg-lambda" => a.pg_lambda = val().parse().expect("--pg-lambda"),
+            "--pg-trunk" => a.pg_trunk = true,
+            "--pg-no-prefetch" => a.pg_prefetch = false,
+            "--pilot" => {
+                a.pilot_net67 = match val().as_str() {
+                    "net67" => true,
+                    "det1" => false,
+                    other => panic!("--pilot: {other:?} (expected net67 or det1)"),
+                }
             }
             "--relabel-mode" => {
                 let mode = val();
@@ -661,6 +725,9 @@ struct Shared {
     decisions_val: Mutex<Vec<crabomination_ml::DecisionRow>>,
     /// Rows ever pushed (not evicted-adjusted) — the reuse cap's basis.
     rows_pushed: AtomicU64,
+    /// Decisions pushed to the training deque — the PG-only throttle's
+    /// unit, as `rows_pushed` is the value loop's.
+    decisions_pushed: AtomicU64,
     /// Next self-play game index to claim — also the per-game seed salt.
     next_game: AtomicU64,
     games_done: AtomicU64,
@@ -777,7 +844,11 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         // blind here, because both seats cheat identically. `--actor-det`
         // still forces either value as the control arm.
         let mut pilot = if args.use_best.is_some() {
-            EvalWeights::net_eval_det1()
+            // `--pilot net67`: the gate's own profile (round 72). The
+            // historical `net_eval_det1` chains from `block_gang_search`,
+            // four adoptions behind `dflt`, so a run that gates as `net67`
+            // would otherwise train on games its pilot never plays.
+            if args.pilot_net67 { EvalWeights::net_on_default() } else { EvalWeights::net_eval_det1() }
         } else {
             EvalWeights::default()
         };
@@ -810,9 +881,20 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                 const DECISION_CAP: usize = 200_000;
                 const DECISION_VAL_CAP: usize = 4_000;
                 let traj_base = (salt(5) as u32) << 1;
+                // The return is stamped here, where the game's result is in
+                // hand (round 72): 1 for the deciding seat's win, 0 for its
+                // loss, NaN for a game with no winner — and under `--pg` an
+                // unlabelled game's decisions are dropped outright rather
+                // than parked in the deque taking no part.
                 let converted: Vec<(bool, crabomination_ml::DecisionRow)> = captured
                     .into_iter()
+                    .filter(|_| !(args.pg && rec.winner.is_none()))
                     .map(|d| {
+                        let ret = match rec.winner {
+                            Some(w) if w == d.seat => 1.0,
+                            Some(_) => 0.0,
+                            None => f32::NAN,
+                        };
                         (
                             is_holdout(traj_base | d.seat as u32, args.holdout),
                             crabomination_ml::DecisionRow {
@@ -821,12 +903,20 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                                 values: d.values,
                                 values_are_logits: d.values_are_logits,
                                 visits: d.visits,
+                                scores: d.scores,
+                                temp: d.temp,
+                                net_scored: d.net_scored,
+                                seat: d.seat as u8,
+                                turn: d.turn,
+                                ply: d.ply,
+                                ret,
                             },
                         )
                     })
                     .collect();
                 let mut v = shared.decisions_val.lock().unwrap();
                 let mut d = shared.decisions.lock().unwrap();
+                let mut pushed = 0u64;
                 for (held, row) in converted {
                     if held {
                         if v.len() < DECISION_VAL_CAP {
@@ -837,8 +927,12 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                             d.pop_front();
                         }
                         d.push_back(row);
+                        pushed += 1;
                     }
                 }
+                drop(d);
+                drop(v);
+                shared.decisions_pushed.fetch_add(pushed, Ordering::Relaxed);
             }
         }
         shared.games_done.fetch_add(1, Ordering::Relaxed);
@@ -1532,7 +1626,35 @@ fn main() {
         pairwise(&args, &vocab, games);
         return;
     }
-    let cfg = net_config(&args, vocab.size());
+    let pg_cfg = crabomination_ml::PgConfig {
+        rho_max: args.pg_rho_max,
+        entropy: args.pg_entropy,
+        lambda: args.pg_lambda,
+        trunk: args.pg_trunk,
+    };
+    if args.pg {
+        assert!(
+            args.use_best.is_some(),
+            "--pg needs --use-best: the pilot's win head seeds the policy head and its \
+             decisions are the behaviour"
+        );
+        assert!(
+            args.sample_temp > 0,
+            "--pg needs --sample-temp > 0: a deterministic behaviour has no ratio to correct"
+        );
+    }
+    // Under `--pg` the learner's shape follows the pilot's file (widths,
+    // attention, belief head), plus the policy head — the run trains on
+    // top of that net, not beside it.
+    let cfg = match &args.use_best {
+        Some(best) if args.pg => {
+            let mut c = file_net_config(best, vocab.size())
+                .unwrap_or_else(|| panic!("--pg: cannot read the pilot net {}", best.display()));
+            c.policy = true;
+            c
+        }
+        _ => net_config(&args, vocab.size()),
+    };
     let mut trainer = if args.muon {
         Trainer::new_muon(
             &cfg,
@@ -1592,6 +1714,24 @@ fn main() {
     if latest.exists() {
         trainer.load(&latest).expect("resume from latest.safetensors (delete it to start fresh)");
         eprintln!("resumed weights from {}", latest.display());
+    } else if args.pg {
+        // The warm start (round 72): every tensor from the pilot, and the
+        // policy head as a copy of the win head, so the policy's first
+        // ranking is exactly the pilot's own.
+        let best = args.use_best.as_ref().expect("checked above");
+        trainer
+            .load_missing_ok(best, &["head_policy.weight", "head_policy.bias"])
+            .expect("--pg: load the pilot into the learner");
+        trainer.init_policy_head_from_win().expect("--pg: seed head_policy from head_win");
+        eprintln!(
+            "pg: weights from {}, head_policy initialised from head_win ({}; rho_max {}, entropy {}, lambda {}, batch {})",
+            best.display(),
+            if args.pg_trunk { "gradient into the trunk" } else { "head only, trunk and win head frozen" },
+            args.pg_rho_max,
+            args.pg_entropy,
+            args.pg_lambda,
+            args.pg_batch
+        );
     } else if let Some(src) = &args.seed_emb {
         // Only on a fresh run: resuming already has embeddings that have
         // been trained on real positions, and overwriting them with the
@@ -1683,6 +1823,7 @@ fn main() {
         decisions: Mutex::new(std::collections::VecDeque::new()),
         decisions_val: Mutex::new(Vec::new()),
         rows_pushed: AtomicU64::new(0),
+        decisions_pushed: AtomicU64::new(0),
         next_game: AtomicU64::new(0),
         games_done: AtomicU64::new(0),
         run_start: Instant::now(),
@@ -1723,6 +1864,8 @@ fn main() {
     let args_r = &args;
     let vocab_r = &vocab;
     let judge_r = deck_judge.as_ref();
+    // Owned outside the scope so the prefetch worker can borrow it.
+    let prefetch_stop_cell = AtomicBool::new(false);
     std::thread::scope(|scope| {
         for i in 0..args.actors {
             let mcts_thread = mcts_all && (!fleet_split || i < args.mcts_fleet);
@@ -1774,13 +1917,67 @@ fn main() {
         let mut tail_budget = None::<(u64, u64)>;
         let stats_path = args.out.join("stats.jsonl");
         let mut prev_interval = Interval::default();
+        // Round 72: EMAs of [loss, adv_mean, adv_std, entropy, rho_mean,
+        // clip_frac, det_frac], the wide-row skip count, and the one-shot
+        // temperature sanity.
+        let pg_only = args.pg_only;
+        let mut pg_ema = [f32::NAN; 7];
+        let mut pg_wide = 0u64;
+        let mut pg_sanity_done = false;
+        // The prefetch pipeline (PG-only): a worker samples and packs the
+        // next batch on the CPU while this thread runs the current step on
+        // the GPU. Two batches of slack — enough to overlap, too few to run
+        // meaningfully past the reuse throttle. Dropping the receiver ends
+        // the worker; `prefetch_stop` ends it while it waits for data.
+        let (pg_tx, pg_rx) = std::sync::mpsc::sync_channel::<crabomination_ml::PgBatch>(2);
+        let prefetch_stop = &prefetch_stop_cell;
+        if pg_only && args.pg_prefetch {
+            let pg_batch = args.pg_batch;
+            let seed = args.seed;
+            std::thread::Builder::new()
+                .name("pg-prefetch".into())
+                .spawn_scoped(scope, move || {
+                    let mut prng = StdRng::seed_from_u64(seed ^ 0x9F3E_7C11);
+                    while !prefetch_stop.load(Ordering::Relaxed) {
+                        let sample: Vec<crabomination_ml::DecisionRow> = {
+                            let d = shared_r.decisions.lock().unwrap();
+                            if d.len() < pg_batch.max(256) {
+                                Vec::new()
+                            } else {
+                                (0..pg_batch).map(|_| d[prng.random_range(0..d.len())].clone()).collect()
+                            }
+                        };
+                        if sample.is_empty() {
+                            std::thread::sleep(std::time::Duration::from_millis(100));
+                            continue;
+                        }
+                        let refs: Vec<&crabomination_ml::DecisionRow> = sample.iter().collect();
+                        // Host buffers only: the learner uploads them with the
+                        // inline path's direct `from_vec`, so the step pays no
+                        // device-to-device copy for having been prefetched.
+                        if pg_tx.send(crabomination_ml::prepare_pg_batch(&refs)).is_err() {
+                            break;
+                        }
+                    }
+                })
+                .expect("spawn pg-prefetch");
+        } else {
+            drop(pg_tx);
+        }
         loop {
             if let Some(max) = args.steps
                 && step >= max
             {
                 break;
             }
-            let pushed = shared.rows_pushed.load(Ordering::Relaxed);
+            // The throttle's unit: rows and the value batch, or — PG-only —
+            // decisions and the PG batch.
+            let pushed = if pg_only {
+                shared.decisions_pushed.load(Ordering::Relaxed)
+            } else {
+                shared.rows_pushed.load(Ordering::Relaxed)
+            };
+            let unit = if pg_only { args.pg_batch } else { args.batch } as u64;
             let actors_live = shared.live_actors.load(Ordering::Relaxed) > 0;
             // Once generation ends, the global reuse budget stops meaning
             // "≤ reuse visits per row": every further sample lands on the
@@ -1791,16 +1988,20 @@ fn main() {
             // already absorbed roughly the other half while streaming —
             // and stop.
             if !actors_live && tail_budget.is_none() {
-                let wlen = shared.window.lock().unwrap().len() as u64;
+                let wlen = if pg_only {
+                    shared.decisions.lock().unwrap().len() as u64
+                } else {
+                    shared.window.lock().unwrap().len() as u64
+                };
                 tail_budget = Some((consumed, (args.tail_reuse * wlen as f64) as u64));
             }
             if let Some((at, budget)) = tail_budget
-                && consumed - at + args.batch as u64 > budget
+                && consumed - at + unit > budget
             {
                 break;
             }
             let budget = (args.reuse * pushed as f64) as u64;
-            if pushed < args.min_window || consumed + args.batch as u64 > budget {
+            if pushed < args.min_window || consumed + unit > budget {
                 if !actors_live {
                     break; // no more data coming and the reuse budget is spent
                 }
@@ -1809,87 +2010,163 @@ fn main() {
                 timing.sleep += t0.elapsed();
                 continue;
             }
-            // Refresh the λ-returns periodically: they are computed
-            // through the net, so they go stale as it learns. Every
-            // `relabel_every` steps is a compromise between staleness and
-            // the cost of a forward pass over the whole window — with
-            // λ = 1 the targets never change, so this is skipped entirely.
-            if args.lambda < 1.0
-                && step.is_multiple_of(args.relabel_every)
-                && shared.window.lock().unwrap().len() as u64 >= args.min_window
-            {
-                let t0 = Instant::now();
-                let mut w = shared.window.lock().unwrap();
-                let value =
-                    |rows: &[&TrainRow]| trainer.predict_win_batch(rows, 512).unwrap_or_default();
-                if args.relabel_new {
-                    w.relabel_lambda_new_rows(args.lambda, value);
-                } else {
-                    w.relabel_lambda(args.lambda, value);
+            if !pg_only {
+                // Refresh the λ-returns periodically: they are computed
+                // through the net, so they go stale as it learns. Every
+                // `relabel_every` steps is a compromise between staleness and
+                // the cost of a forward pass over the whole window — with
+                // λ = 1 the targets never change, so this is skipped entirely.
+                if args.lambda < 1.0
+                    && step.is_multiple_of(args.relabel_every)
+                    && shared.window.lock().unwrap().len() as u64 >= args.min_window
+                {
+                    let t0 = Instant::now();
+                    let mut w = shared.window.lock().unwrap();
+                    let value =
+                        |rows: &[&TrainRow]| trainer.predict_win_batch(rows, 512).unwrap_or_default();
+                    if args.relabel_new {
+                        w.relabel_lambda_new_rows(args.lambda, value);
+                    } else {
+                        w.relabel_lambda(args.lambda, value);
+                    }
+                    drop(w);
+                    timing.relabel += t0.elapsed();
                 }
-                drop(w);
-                timing.relabel += t0.elapsed();
-            }
-            let t0 = Instant::now();
-            let rows = sample_owned(&shared, args.batch, &mut rng);
-            timing.sample += t0.elapsed();
-            let refs: Vec<(&TrainRow, f32)> = rows.iter().map(|(r, t)| (r, *t)).collect();
-            if args.lr_cosine > 0 {
-                trainer.set_lr_factor(crabomination_ml::cosine_lr_factor(step, args.lr_cosine));
-            }
-            let t0 = Instant::now();
-            let loss = trainer.train_step_with_targets(&refs).expect("train step");
-            timing.step += t0.elapsed();
-            consumed += args.batch as u64;
-            step += 1;
-            for (ema, part) in loss_ema
-                .iter_mut()
-                .zip([loss.total, loss.win, loss.life, loss.len, loss.opp])
-            {
-                *ema = if ema.is_nan() { part } else { 0.99 * *ema + 0.01 * part };
+                let t0 = Instant::now();
+                let rows = sample_owned(&shared, args.batch, &mut rng);
+                timing.sample += t0.elapsed();
+                let refs: Vec<(&TrainRow, f32)> = rows.iter().map(|(r, t)| (r, *t)).collect();
+                if args.lr_cosine > 0 {
+                    trainer.set_lr_factor(crabomination_ml::cosine_lr_factor(step, args.lr_cosine));
+                }
+                let t0 = Instant::now();
+                let loss = trainer.train_step_with_targets(&refs).expect("train step");
+                timing.step += t0.elapsed();
+                consumed += args.batch as u64;
+                step += 1;
+                for (ema, part) in loss_ema
+                    .iter_mut()
+                    .zip([loss.total, loss.win, loss.life, loss.len, loss.opp])
+                {
+                    *ema = if ema.is_nan() { part } else { 0.99 * *ema + 0.01 * part };
+                }
+
+                // Policy steps ride alongside the value steps: the same net,
+                // taught to rank a decision's candidate successors the way
+                // the pilot ranked them. Sampled from a separate window
+                // because a decision is a different shape and cadence from a
+                // labelled position.
+                if args.record_decisions
+                    && args.policy_every > 0
+                    && step.is_multiple_of(args.policy_every)
+                {
+                    let sample: Vec<crabomination_ml::DecisionRow> = {
+                        let d = shared.decisions.lock().unwrap();
+                        if d.len() < 256 {
+                            Vec::new()
+                        } else {
+                            (0..args.batch.min(64))
+                                .map(|_| d[rng.random_range(0..d.len())].clone())
+                                .collect()
+                        }
+                    };
+                    if !sample.is_empty() {
+                        let refs: Vec<&crabomination_ml::DecisionRow> = sample.iter().collect();
+                        if let Ok(st) = trainer.train_policy_step_full(
+                            &refs,
+                            args.policy_temp,
+                            args.search_value_weight,
+                        ) {
+                            policy_ema = if policy_ema.is_nan() {
+                                st.top1
+                            } else {
+                                0.99 * policy_ema + 0.01 * st.top1
+                            };
+                            policy_loss_ema = if policy_loss_ema.is_nan() {
+                                st.loss
+                            } else {
+                                0.99 * policy_loss_ema + 0.01 * st.loss
+                            };
+                            policy_sv_ema = if policy_sv_ema.is_nan() {
+                                st.sv
+                            } else {
+                                0.99 * policy_sv_ema + 0.01 * st.sv
+                            };
+                        }
+                    }
+                }
+
             }
 
-            // Policy steps ride alongside the value steps: the same net,
-            // taught to rank a decision's candidate successors the way
-            // the pilot ranked them. Sampled from a separate window
-            // because a decision is a different shape and cadence from a
-            // labelled position.
-            if args.record_decisions
-                && args.policy_every > 0
-                && step.is_multiple_of(args.policy_every)
-            {
-                let sample: Vec<crabomination_ml::DecisionRow> = {
-                    let d = shared.decisions.lock().unwrap();
-                    if d.len() < 256 {
-                        Vec::new()
+            // Round 72: the policy-gradient step. Alongside the value steps
+            // at `--pg-every`, or — PG-only — the whole loop: `step` and
+            // `consumed` advance here, on decisions.
+            if args.pg && (pg_only || step.is_multiple_of(args.pg_every.max(1))) {
+                // PG-only: the next packed batch from the prefetch worker
+                // (the wait for it is "sample" time). Alongside value
+                // steps: sampled and packed here, synchronously.
+                let t0 = Instant::now();
+                let prepared: Option<crabomination_ml::PgBatch> = if pg_only && args.pg_prefetch {
+                    match pg_rx.recv() {
+                        Ok(pb) => Some(pb),
+                        Err(_) => break, // the worker died; nothing more will come
+                    }
+                } else {
+                    let sample: Vec<crabomination_ml::DecisionRow> = {
+                        let d = shared.decisions.lock().unwrap();
+                        if d.len() < args.pg_batch.max(256) {
+                            Vec::new()
+                        } else {
+                            (0..args.pg_batch)
+                                .map(|_| d[rng.random_range(0..d.len())].clone())
+                                .collect()
+                        }
+                    };
+                    if sample.is_empty() {
+                        None
                     } else {
-                        (0..args.batch.min(64))
-                            .map(|_| d[rng.random_range(0..d.len())].clone())
-                            .collect()
+                        let refs: Vec<&crabomination_ml::DecisionRow> = sample.iter().collect();
+                        Some(crabomination_ml::prepare_pg_batch(&refs))
                     }
                 };
-                if !sample.is_empty() {
-                    let refs: Vec<&crabomination_ml::DecisionRow> = sample.iter().collect();
-                    if let Ok(st) = trainer.train_policy_step_full(
-                        &refs,
-                        args.policy_temp,
-                        args.search_value_weight,
-                    ) {
-                        policy_ema = if policy_ema.is_nan() {
-                            st.top1
-                        } else {
-                            0.99 * policy_ema + 0.01 * st.top1
-                        };
-                        policy_loss_ema = if policy_loss_ema.is_nan() {
-                            st.loss
-                        } else {
-                            0.99 * policy_loss_ema + 0.01 * st.loss
-                        };
-                        policy_sv_ema = if policy_sv_ema.is_nan() {
-                            st.sv
-                        } else {
-                            0.99 * policy_sv_ema + 0.01 * st.sv
-                        };
+                timing.sample += t0.elapsed();
+                if prepared.is_none() && pg_only {
+                    // Inline packing found too few decisions: wait for the
+                    // actors, as the worker would have.
+                    let t0 = Instant::now();
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    timing.sleep += t0.elapsed();
+                    continue;
+                }
+                if let Some(pb) = prepared {
+                    if !pg_sanity_done && !pb.is_empty() {
+                        pg_sanity_done = true;
+                        pg_temperature_sanity(&pb, args.sample_temp);
+                    }
+                    if pg_only && args.lr_cosine > 0 {
+                        trainer.set_lr_factor(crabomination_ml::cosine_lr_factor(step, args.lr_cosine));
+                    }
+                    let t0 = Instant::now();
+                    let st = trainer.train_pg_step_prepared(pb, pg_cfg).expect("pg step");
+                    timing.step += t0.elapsed();
+                    pg_wide += st.wide_skipped as u64;
+                    if st.n > 0 {
+                        let parts = [
+                            st.loss,
+                            st.adv_mean,
+                            st.adv_std,
+                            st.entropy,
+                            st.rho_mean,
+                            st.clip_frac,
+                            st.det_frac,
+                        ];
+                        for (ema, part) in pg_ema.iter_mut().zip(parts) {
+                            *ema = if ema.is_nan() { part } else { 0.99 * *ema + 0.01 * part };
+                        }
+                    }
+                    if pg_only {
+                        consumed += args.pg_batch as u64;
+                        step += 1;
                     }
                 }
             }
@@ -1897,7 +2174,7 @@ fn main() {
             // The deck net rides along at a quarter cadence — its stream
             // is 2 rows/game, so training it every step would just churn
             // the same rows.
-            if step.is_multiple_of(4) {
+            if !pg_only && step.is_multiple_of(4) {
                 let t0 = Instant::now();
                 let rows: Vec<DeckRow> = {
                     let dw = shared.deck_window.lock().unwrap();
@@ -1932,6 +2209,8 @@ fn main() {
                     &stats_path,
                     &mut best_auc,
                     [policy_ema, policy_loss_ema, policy_sv_ema],
+                    pg_ema,
+                    args.pg.then_some((pg_cfg, pg_wide)),
                     pilot_trainer.as_ref(),
                     &mut timing,
                     &mut prev_interval,
@@ -1951,6 +2230,10 @@ fn main() {
                 }
             }
         }
+        // End the prefetch worker: the flag covers its wait-for-data loop,
+        // dropping the receiver covers a send blocked on a full channel.
+        prefetch_stop.store(true, Ordering::Relaxed);
+        drop(pg_rx);
         if step > 0 && !step.is_multiple_of(args.checkpoint_every) {
             checkpoint(
                 &trainer,
@@ -1965,6 +2248,8 @@ fn main() {
                 &stats_path,
                 &mut best_auc,
                 [policy_ema, policy_loss_ema, policy_sv_ema],
+                pg_ema,
+                args.pg.then_some((pg_cfg, pg_wide)),
                 pilot_trainer.as_ref(),
                 &mut timing,
                 &mut prev_interval,
@@ -2022,6 +2307,32 @@ struct Interval {
 /// no holdout was scored, so `--stop-after-stale` counts only checkpoints
 /// that actually said something.
 #[allow(clippy::too_many_arguments)]
+/// Round 72's one-shot check on the sampling temperature, from the first
+/// PG batch: the mean probability the behaviour gave its own pick. Below
+/// 0.5 the actors are playing something other than the pilot (the result
+/// labels stop meaning "the pilot's game" — round 57's caveat); above 0.9
+/// the near-ties get so little mass that every ratio clips and the step
+/// learns from nothing. Either way the temperature is wrong for this
+/// net's scale, and the run stops before it spends its budget.
+fn pg_temperature_sanity(pb: &crabomination_ml::PgBatch, temp: i32) {
+    if pb.is_empty() {
+        return;
+    }
+    let (mean, net_share) = pb.behaviour_summary();
+    eprintln!(
+        "pg sanity: mean pi_b(chosen) {mean:.3} over {} decisions at --sample-temp {temp} ({:.0}% net-scored)",
+        pb.len(),
+        100.0 * net_share
+    );
+    if !(0.5..=0.9).contains(&mean) {
+        eprintln!(
+            "ABORT: mean pi_b(chosen) {mean:.3} is outside [0.5, 0.9] — the sampling temperature is \
+             wrong for this net's score scale (see ML_NOTES round 72)"
+        );
+        std::process::exit(2);
+    }
+}
+
 fn checkpoint(
     trainer: &Trainer,
     deck_trainer: &DeckTrainer,
@@ -2035,6 +2346,8 @@ fn checkpoint(
     stats_path: &std::path::Path,
     best_auc: &mut f32,
     policy_ema: [f32; 3],
+    pg_ema: [f32; 7],
+    pg: Option<(crabomination_ml::PgConfig, u64)>,
     pilot: Option<&Trainer>,
     timing: &mut LearnerTiming,
     prev: &mut Interval,
@@ -2210,9 +2523,29 @@ fn checkpoint(
         }
         _ => f32::NAN,
     };
+    // Round 72: the policy-gradient EMAs, and the same statistics on the
+    // held-out decisions without an update (`Trainer::pg_eval`).
+    let [pg_loss, pg_adv_mean, pg_adv_std, pg_entropy, pg_rho_mean, pg_clip_frac, pg_det_frac] =
+        pg_ema;
+    let pg_wide = pg.map_or(0, |(_, w)| w);
+    // Capped at 512 decisions: the step pads to one batch (up to 8 states a
+    // decision), and 4 000 at once is a single ~30 k-state forward that the
+    // round-72 run's first checkpoint failed outright (val_pg_* read NaN).
+    let (val_pg_adv, val_pg_entropy, val_pg_clip) = match pg {
+        Some((cfg, _)) if val_policy_n > 0 => {
+            let v = shared.decisions_val.lock().unwrap();
+            let refs: Vec<&crabomination_ml::DecisionRow> = v.iter().take(512).collect();
+            match trainer.pg_eval(&refs, cfg) {
+                Ok(st) if st.n > 0 => (st.adv_mean, st.entropy, st.clip_frac),
+                _ => (f32::NAN, f32::NAN, f32::NAN),
+            }
+        }
+        _ => (f32::NAN, f32::NAN, f32::NAN),
+    };
+    let decisions_dropped = crabomination::server::decision_capture::dropped();
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_opp\":{opp:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"policy_sv\":{policy_sv:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"games_mcts\":{games_mcts},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_board\":{stalls_board},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"actor_s\":{actor_s:.1},\"actor_games_per_s\":{actor_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_opp\":{opp:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"policy_sv\":{policy_sv:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"pg_loss\":{pg_loss:.5},\"pg_adv_mean\":{pg_adv_mean:.4},\"pg_adv_std\":{pg_adv_std:.4},\"pg_entropy\":{pg_entropy:.4},\"pg_rho_mean\":{pg_rho_mean:.4},\"pg_clip_frac\":{pg_clip_frac:.4},\"pg_det_frac\":{pg_det_frac:.4},\"pg_wide_skipped\":{pg_wide},\"decisions_dropped\":{decisions_dropped},\"val_pg_adv\":{val_pg_adv:.4},\"val_pg_entropy\":{val_pg_entropy:.4},\"val_pg_clip\":{val_pg_clip:.4},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"games_mcts\":{games_mcts},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_board\":{stalls_board},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"actor_s\":{actor_s:.1},\"actor_games_per_s\":{actor_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()

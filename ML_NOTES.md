@@ -4701,3 +4701,241 @@ problem (a per-game weight snapshot) than this one.
 
 Test: `selfplay::tests::the_same_seed_records_the_same_game` plays one sealed
 game twice and compares every recorded row.
+
+## Round 72 — an off-policy policy gradient on the decision stream, head-only: BUILT and pre-registered, NOT YET RUN (2026-09-13)
+
+**The question.** No round has ever optimised a policy for *return*. Every
+pilot-weight round trained the value head — label-source nulls (r14 / r18 /
+r27), capacity closed (r45) — and the one policy-target round (r35 / 36,
+distillation of MCTS root means into the net) read a small real pilot gain.
+The net's policy head scores a successor state, so the policy over a decision
+is the softmax over its candidates' head logits: the only parameterised policy
+this pipeline can express, and only over the shortlist the heuristic hands it.
+Round 72 asks whether training that head on the game result, corrected for the
+behaviour that generated the decisions, beats the win head's own ranking as a
+scored pilot.
+
+**Why this and not PPO / TRPO / eligibility traces.** PPO needs on-policy data
+and the learner never republishes weights to the actors (the `net_eval::set_slot`
+seam exists, generation-safe, but nothing in the loop calls it); that is the
+next round if this one moves. TRPO is out on this stack — candle's autograd
+does not build the graph of the backprop itself, so Hessian-vector products
+are unavailable; PPO-clip is the substitute. Eligibility traces are already
+here in the only form a batch learner over complete episodes needs — the
+λ-return (`SampleWindow::relabel_lambda`) is the forward view and produces the
+same update as backward-view traces; the trace idea shows up on the policy side
+as `--pg-lambda` (G = λ·result + (1−λ)·V(succ_chosen)).
+
+**What was built** (all off by default; every prior path bit-reachable):
+
+- *Capture* (`decision_capture.rs`): the behaviour record per decision —
+  the picker's i32 scores and the sampling temperature (`Provenance`,
+  `maybe_full`), so π_b(chosen) = softmax(scores/temp)[chosen] is exact; a
+  `net_scored` tag; the seat's snapshot `ply` (a thread cell the recorder
+  bumps in its snapshot block — the join key to the value stream); the 1 024
+  cap now counted (`dropped()`) instead of silent; the hook re-applies with
+  `perform_action_inner` (no transaction checkpoint clone). The attack and
+  block declaration pickers now reach the recorder (`choose_scored_recorded`,
+  candidates wrapped as `DeclareAttackers` / `DeclareBlockers`; the chain
+  micro-steps are NOT hooked — the recorded decision is the final menu and
+  π_b(chosen | menu) is exact whatever grew it).
+- *Pilot* (`EvalWeights::policy_rank`, profile `net67-pol`): the three live
+  pickers rank by `net_eval::policy_logit` on each candidate's ONE-ACTION
+  successor — the state the recorder trained the head on, not the sim-settled
+  leaf `evaluate_action_outcome` / the combat sims score (a cast still on the
+  stack, a declaration unresolved; the encoder carries the stack). The chain's
+  finished set is re-scored in the same currency; the tail guard is bypassed
+  (a logit ranker does not saturate, and zeroing `net_slot` would drop the
+  head). The ladder refuses a `-pol` profile on a headless file — a fallback
+  would silently measure `net67`, and the head swap is the whole cell.
+- *Trainer* (`Trainer::train_pg_step`, `PgConfig`): ratio ρ = π_θ/π_b
+  truncated at `rho_max` (unit weight for argmax behaviour); baseline
+  b = Σ_j π_θ(j)·V(succ_j) from the detached win head — counterfactual over
+  the stored menu, no extra encode, independent of the chosen index, and it
+  removes the menu-level variance a twenty-turn result cannot; loss
+  −mean(ρ̄·(G−b)·log π_θ(chosen)) − β·H. Rows wider than
+  `POLICY_MAX_CANDIDATES` are skipped, not truncated (a truncated window would
+  put π_θ and π_b over different sets). `trunk: false` detaches the trunk:
+  only `head_policy.*` moves (asserted: `head_win`, `trunk1`, `emb`
+  bit-identical). Warm start `init_policy_head_from_win` + `load_missing_ok`
+  (a headless pilot into a headed config; `load` still refuses).
+- *Learner* (`selfplay_train --pg / --pg-only --pg-batch --pg-entropy
+  --pg-rho-max --pg-lambda --pg-trunk --pilot net67`): the net config follows
+  the pilot's file; `--pg-only` runs no value step and throttles on decisions
+  pushed; the return is stamped at drain; a one-shot sanity aborts the run if
+  mean π_b(chosen) over the first batch leaves [0.5, 0.9]; stats
+  `pg_loss / pg_adv_mean / pg_adv_std / pg_entropy / pg_rho_mean /
+  pg_clip_frac / pg_det_frac / pg_wide_skipped / decisions_dropped /
+  val_pg_*`. `--use-best` actors pilot `net_eval_det1` unless `--pilot net67`
+  — a fact worth knowing on its own: every net-piloted training run to date
+  played a profile four adoptions behind the gate's.
+
+**Pre-registered design** — `.ladder/run_r72_pg.sh` (probe | train | gate).
+Head-only PG on the four round-57 control nets, `--pilot net67`,
+`--sample-temp 300 --sample-turns 99`, 100 k games and 40 k steps a seed at
+lr 3e-4 cosine; the gated artifact is `latest.safetensors` after the fixed
+step count (NOT `best`: `val_policy` is imitation of the behaviour, AUC is the
+frozen head, and the max of a holdout PG statistic over checkpoints is
+winner's-curse optimistic). Gate: `net67-pol` vs `dflt` against `net67` on
+the same file vs `dflt`, sealed, paired, seeds 43 / 97, 1 000 games × 12 decks,
+pooled over four training seeds with a t interval. The control is re-run, not
+read from `.ladder/r68/old_*` (those cells ran on the round-67 default; rounds
+68 and 70 have moved `dflt`). Readings: `pol − ctrl > +0.5` → the head swap
+pays, queue `--pg-trunk` and the on-policy PPO round; within ±0.5 → a linear
+re-ranker over the frozen trunk cannot beat the win head's ranking, queue
+`--pg-trunk` with value steps as the last PG arm; `< −0.5` → the signal hurt,
+read `pg_clip_frac` / `pg_det_frac` / the sanity line first.
+
+**What the record says about the payoff, recorded before the run.** The policy
+can only re-rank a shortlist the heuristic chose; a policy gradient cannot
+create a menu entry, and menu entries are the only proven lever (+8 in two
+days, r55–r67). The paired ladder says most games are decided by nothing a
+profile influences, so the per-game PG signal is small and the counterfactual
+baseline is the minimum. Against that: this is a new axis, not a fourth
+label-source strike, with r35/36 as a weak positive prior. Beyond the scored
+pilot, a trained head could be consumed as the Gumbel prior (null with a
+distilled head at 64, r37) or as the MCTS rollout policy (uniform today, and
+"the rollout policy is the estimator" per `mcts.rs`; cost-gated).
+
+**Tests** (all green): `decision_capture::tests::{behaviour_scores_and_temperature_are_stored,
+scores_follow_the_reject_remap, misaligned_scores_are_dropped_not_misattributed,
+ply_is_stamped_from_the_thread_cell, the_cap_is_counted_not_silent}`,
+`bot::tail_guard_tests::{policy_rank_ranks_attacks_by_the_head,
+policy_rank_without_a_head_falls_back_to_the_win_head,
+the_attack_picker_records_its_menu_with_scores_and_temperature}`,
+`selfplay::tests::decision_ply_joins_to_the_seat_rows`, and in
+`crabomination_ml`: `pg_step_moves_probability_toward_positive_advantage,
+pg_head_only_leaves_trunk_and_win_head_untouched,
+pg_rho_is_clipped_and_deterministic_rows_get_unit_weight,
+behaviour_policy_matches_the_pickers_two_branches,
+pg_entropy_bonus_flattens_the_policy, pg_skips_unlabelled_and_wide_rows,
+init_policy_head_from_win_reproduces_the_win_ranking,
+load_missing_ok_tolerates_an_absent_policy_head,
+pad_decisions_keeps_the_chosen_candidate_in_the_window`.
+
+**Before the budget is spent**: `MODE=probe` (2 k games, 200 steps) for the
+sanity line, `actor_games_per_s` with capture on (the combat hooks add a clone
++ declare + encode per candidate, actor path only), `decisions_dropped`, a
+24-game `net67-pol` vs `net67` ladder smoke, and the headless refusal.
+
+**Probe (2026-09-13, 17:45, before the budget — a design amendment.** Sanity
+0.638 (in band), **417 games/s with capture on** at 22 actors (the combat
+hooks are not a cost worth measuring further), 0 dropped, 0.15 % wide rows
+skipped, `pg_clip_frac` 0.04, `pg_det_frac` 0. The 24-game smoke read
+`net67-pol` at **24.0 %** vs `net67` after 200 steps — and the *untrained*
+warm-start file (`head_policy := head_win` bit for bit,
+`.ladder/r72/make_init_head.py`) at **23.6 %**. That is the consumption, not
+the gradient: the policy-rank pilot scores the one-action successor, a state
+the frozen trunk never trained on (the value stream is turn boundaries,
+post-combat and end step), and round 44 already recorded that the net cannot
+score unsettled states (h0 −35). `val_policy` 0.47 at init says the same
+thing: the win head's ranking of one-action successors barely agrees with the
+behaviour's ranking of sim-settled outcomes. The two-arm gate would have read
+a ~−26 hole and nothing about the policy gradient. **Amended, pre-registered
+before training**: a third arm `init` (`net67-pol` on the untrained file);
+PRIMARY reading `pol − init` (the gradient), SECONDARY `init − ctrl` (the
+hole, recorded). Actors paced to the learner (`ACTORS=3`, round 69's regime)
+because the 200 k-decision deque would otherwise leave the tail training on
+8 % of the data. Follow-ups this opens regardless of the reading: a
+`--pg-trunk` arm cannot run PG-only (the win head's *outputs* would drift under
+a moving trunk even with its weights frozen — the sims under `net67-pol` still
+read it), so it needs value steps; and a settled-successor consumption (score
+the state the sims settle, and train the head on that) would close the hole
+at the source but needs the recorder to see the settled state.
+
+**Round 72 RESULT (2026-09-13, 19:15): the head-only policy gradient is REAL —
+`pol − init` +6.80 ±3.07 over four training seeds, every seed positive; the
+consumption hole `init − ctrl` −26.4 ±3.1; the trained pilot still 20 points
+below `dflt`.** Four seeds × 40 000 steps × 256 (10.24 M samples, ~74 k games
+a seed, ~17 min a seed at 3 actors; the step cap arrived before the game cap),
+gated as pre-registered (`.ladder/r72/`, 24 cells, 1 000 games × 12 sealed
+decks each, ±0.65):
+
+| training seed | pol (g43 / g97) | init (g43 / g97) | ctrl (g43 / g97) | pol − init | init − ctrl |
+|---|---|---|---|---|---|
+| 43 | 28.4 / 32.3 | 23.9 / 26.2 | 50.7 / 51.1 | **+5.30** | −25.85 |
+| 97 | 29.0 / 34.8 | 25.4 / 29.2 | 50.5 / 51.3 | **+4.60** | −23.60 |
+| 151 | 29.5 / 34.2 | 22.3 / 25.3 | 50.8 / 51.2 | **+8.05** | −27.20 |
+| 199 | 29.0 / 33.7 | 20.8 / 23.4 | 50.7 / 51.4 | **+9.25** | −28.95 |
+| pooled | 31.4 | 24.6 | 50.96 | **+6.80 ±3.07** | **−26.40 ±3.13** |
+
+**Readings.** (1) PRIMARY: a 257-parameter linear head over the FROZEN trunk,
+trained only on the game result through a truncated importance ratio, moved
+the scored pilot +6.8 points against the same head untrained — ten times the
+pre-registered +0.5 bar, all four seeds the same sign, both ladder seeds each
+time. The signal the record said would be small (most games decided by
+nothing a profile influences) is large enough to learn from at 10 M samples.
+(2) The consumption hole is measured at −26.4: ranking one-action successors
+by the win head is that far behind the sims' settled outcomes, and the
+policy gradient recovered a quarter of it without touching the trunk.
+(3) `ctrl` re-read the round-69 scored reference on the current default:
+`net67` with the r57 control nets **+0.96** pooled (50.5–51.4, seven of eight
+intervals clear of 50), matching r69's +1.1. (4) Training diagnostics were
+flat: `pg_entropy` 1.00 → 0.92, `pg_adv_mean` +0.03 to +0.04 (seed 151
+−0.002), `pg_clip_frac` 0.044, `val_policy` 0.46 throughout (agreement with
+the *sampled* behaviour pick, which the head is not trying to match) — none
+of them predicted a +6.8, so the ladder remains the only instrument.
+
+**NOT adopted** — `net67-pol` at 31 % is not a pilot — but the direction is
+now the strongest training-side signal the program has recorded (every prior
+pilot-weight round was a null or +1). What it argues for, in order:
+1. **`--pg-trunk` with value steps** (the trunk learns to represent the
+   unsettled one-action successor; the value steps keep the win head the
+   sims read calibrated). The head-only arm recovered 6.8 of 26.4 with the
+   representation fixed; the rest is representation.
+2. **Settled-successor consumption**: score the state the sims settle and
+   train the head on that — closes the hole at the source, needs the
+   recorder to see the settled state.
+3. The on-policy loop (PPO): actors that reload `latest` every N games
+   through `net_eval::set_slot`; the truncated-IS off-policy step is the
+   bridge, not the destination.
+4. Throughput first: the learner step is launch-bound (16.6 ms at batch 256,
+   GPU 81 % busy on tiny kernels); batch 1024 at 1/4 the steps + the
+   prefetch worker is the measured-next-A/B (`MODE=throughput`).
+
+**Round 72 throughput (2026-09-13, evening): prefetch worker +19 %, batch 1024
++25 % on top, both ADOPTED for the PG recipe; the first two readings were
+taken with a game on the GPU and are void.** The learner step at batch 256
+was 16.6 ms and the GPU read 81 % busy on tiny kernels, so the box's 24 cores
+sat idle by design (`ACTORS=3` paces generation to the learner because the
+200 k-decision deque is 12 GB). Two changes, measured separately:
+
+- *Prefetch worker* (`selfplay_train`, PG-only, `--pg-no-prefetch` is the
+  control): a thread samples and packs the next batch while the learner runs
+  the step. **The first implementation packed CPU tensors and moved them
+  (`Batch::to_device`) — a measured LOSS at batch 256 (arm C, 26 vs 37
+  steps/s mid-run): 24 small device copies cost ~6 ms a step, more than the
+  packing they hid.** Replaced by host buffers (`PackedHost`, the
+  `pack_states` loop minus the upload) uploaded on the learner with the
+  inline path's own direct `from_vec` — so a prefetched batch costs the step
+  nothing the inline one did not.
+- *Batch 1024, steps ÷ 4, lr × √4*: the same 10.24 M samples in fewer
+  launches.
+
+Interleaved ABCABC at 4 000 steps a seed-43 arm on a quiet box (cs2 off, GPU
+< 15 % for 60 s first; `.ladder/r72/abc_when_idle.sh`), mid-run checkpoint:
+
+| arm | recipe | steps/s | decisions/s | t_step | packing wait |
+|---|---|---|---|---|---|
+| A1 / A2 | 256, inline | 34.4 / 36.1 | 8 818 / 9 242 | 14.6 / 14.1 ms | 5.7 / 4.6 ms |
+| B1 / B2 | 256, prefetch | 41.8 / 42.6 | 10 706 / 10 918 | 14.8 / 14.5 ms | 0.0 / 0.0 ms |
+| C1 / C2 | 1024, prefetch | 13.2 / 13.3 | 13 494 / 13 574 | 66.3 / 65.3 ms | 0.4 / 0.9 ms |
+
+**Readings.** (1) The prefetch hides exactly the ~5 ms of packing: +19 %
+decisions/s at fixed batch, both reps. (2) Batch 1024 buys +25 % more, and
++50 % over the historical step — but NOT by amortising the GPU: `t_step` is
+4.5× at 4× the rows (padding to the batch's widest group grows with it). The
+gain is a ~9 ms/step cost that sits *outside* every learner timer (B: 23.8 ms
+a step against 14.8 accounted; C: 75.8 against 66.7) and is batch-independent
+— unattributed; the next throughput lever if anyone wants one. (3) At batch
+1024 the same 10.24 M samples on the gate's seed 43 read 28.4 / 32.6 vs the
+gate recipe's 28.4 / 32.3 with the same entropy trajectory (0.917 / 0.917):
+strength-neutral on one seed. **Adopted as the script's default
+(`PG_BATCH=1024 LR=6e-4 STEPS=10000`); the gate itself ran at 256.** (4) A
+learner at 13.5 k decisions/s is generation-bound at 3 actors (the reuse cap
+allows ~2.2 k pushed/s ≈ 90 games/s): the practical wall-clock win is
+`ACTORS=4..5`, not the learner. (5) The confound is worth its own line: arms
+measured 19:34–20:38 read progressively slower (26, then 20 steps/s) and a
+final interval with 62 ms a step unaccounted — Counter-Strike on the GPU
+(98 %, 8 GB, five cores). A timing arm on this box has to check
+`pgrep -x cs2` and `nvidia-smi` first; the ABC script does.

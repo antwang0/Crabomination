@@ -46,7 +46,7 @@
 //! nothing drains.
 
 use std::cell::RefCell;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crabomination_nn::EncodedState;
 
@@ -105,10 +105,74 @@ pub struct CapturedDecision {
     /// 2 are very different evidence, and the search-value regression
     /// weights by this rather than pretending they are the same number.
     pub visits: Option<Vec<u32>>,
+    /// The behaviour policy's record (round 72): the i32 scores the live
+    /// picker fed `choose_scored` / `sample_scored_index`, aligned with
+    /// `successors` and filtered alongside them on the reject remap, like
+    /// `values`. With `temp` this makes the probability the pilot played
+    /// `chosen` exactly recoverable — `softmax(scores / temp)[chosen]` —
+    /// which is what an off-policy policy-gradient step needs for its
+    /// importance ratio. `None` for search roots (their record is
+    /// `values`).
+    pub scores: Option<Vec<i32>>,
+    /// Sampling temperature in force at the pick, in the scores' units;
+    /// 0 = argmax (deterministic behaviour, no ratio to correct).
+    pub temp: i32,
+    /// True when `scores` are net units (win probability × 10 000,
+    /// `eval_material_frozen`), false when they are material units — the
+    /// tail guard fired, or the pick came from a net-free profile. The
+    /// behaviour probability is exact either way; this is an analysis tag.
+    pub net_scored: bool,
+    /// The seat's snapshot index at capture time — `TrainRow::ply` of the
+    /// latest row of this seat — so a decision can be joined to the value
+    /// stream's row and its λ-return. Set by the recorder through
+    /// [`set_ply`]; 0 outside a recorded game.
+    pub ply: u16,
 }
 
 thread_local! {
     static BUF: RefCell<Vec<CapturedDecision>> = const { RefCell::new(Vec::new()) };
+    /// The recorder's per-seat snapshot index, stamped onto every capture
+    /// as [`CapturedDecision::ply`]. Thread-local because the recorder and
+    /// the bot it drives share a thread, and the hook has no view of the
+    /// recorder's counters otherwise.
+    static PLY: std::cell::Cell<u16> = const { std::cell::Cell::new(0) };
+}
+
+/// Decisions the cap discarded, process-wide. The cap used to be a silent
+/// drop: the encode work was paid and nothing said the buffer was full.
+static DROPPED: AtomicU64 = AtomicU64::new(0);
+
+/// Set the snapshot index every subsequent capture on this thread carries.
+pub fn set_ply(p: u16) {
+    PLY.with(|c| c.set(p));
+}
+
+/// The snapshot index in force on this thread.
+pub fn ply() -> u16 {
+    PLY.with(|c| c.get())
+}
+
+/// Decisions discarded at the cap since process start.
+pub fn dropped() -> u64 {
+    DROPPED.load(Ordering::Relaxed)
+}
+
+/// Everything a capture site knows about *why* the pick was made, beyond
+/// the candidates and the index. All optional; `Default` is a bare
+/// heuristic pick with no record.
+#[derive(Clone, Copy, Default)]
+pub struct Provenance<'a> {
+    /// Per-candidate search values — see [`CapturedDecision::values`].
+    pub values: Option<&'a [f32]>,
+    pub values_are_logits: bool,
+    /// Rollouts behind each value — see [`CapturedDecision::visits`].
+    pub visits: Option<&'a [u32]>,
+    /// The picker's own scores — see [`CapturedDecision::scores`].
+    pub scores: Option<&'a [i32]>,
+    /// Sampling temperature at the pick; 0 = argmax.
+    pub temp: i32,
+    /// Whether `scores` are net units.
+    pub net_scored: bool,
 }
 
 /// Turn capture on or off for this process.
@@ -155,6 +219,25 @@ pub fn maybe_valued(
     values_are_logits: bool,
     visits: Option<&[u32]>,
 ) {
+    maybe_full(
+        state,
+        seat,
+        candidates,
+        chosen,
+        Provenance { values, values_are_logits, visits, ..Default::default() },
+    )
+}
+
+/// The general hook: [`maybe`] with the full [`Provenance`]. Every
+/// per-candidate slice in `prov` is filtered alongside `candidates` on the
+/// reject remap and attached only if it ends up aligned with the survivors.
+pub fn maybe_full(
+    state: &GameState,
+    seat: usize,
+    candidates: &[GameAction],
+    chosen: usize,
+    prov: Provenance<'_>,
+) {
     if !enabled() || state.game_over.is_some() || candidates.len() < 2 {
         return;
     }
@@ -162,24 +245,34 @@ pub fn maybe_valued(
     let mut successors = Vec::with_capacity(candidates.len());
     let mut kept_values: Vec<f32> = Vec::new();
     let mut kept_visits: Vec<u32> = Vec::new();
+    let mut kept_scores: Vec<i32> = Vec::new();
     let mut chosen_idx = None;
     for (i, a) in candidates.iter().enumerate() {
         let mut next = state.clone();
-        if next.perform_action(a.clone()).is_err() {
+        // A rejected candidate is thrown away, so `perform_action`'s
+        // transaction checkpoint (a second clone of the whole state, and
+        // one that shares every CoW zone) would never be read. Same
+        // reasoning as `bot::dry_run`.
+        if next.perform_action_inner(a.clone()).is_err() {
             continue;
         }
         if i == chosen {
             chosen_idx = Some(successors.len());
         }
-        if let Some(v) = values
+        if let Some(v) = prov.values
             && let Some(x) = v.get(i)
         {
             kept_values.push(*x);
         }
-        if let Some(n) = visits
+        if let Some(n) = prov.visits
             && let Some(x) = n.get(i)
         {
             kept_visits.push(*x);
+        }
+        if let Some(sc) = prov.scores
+            && let Some(x) = sc.get(i)
+        {
+            kept_scores.push(*x);
         }
         successors.push(super::encode::encode_state(&next, seat, vocab));
     }
@@ -194,23 +287,36 @@ pub fn maybe_valued(
     }
     BUF.with(|b| {
         let mut b = b.borrow_mut();
-        if b.len() < CAP {
-            let values = (values.is_some() && kept_values.len() == successors.len())
-                .then_some(kept_values);
-            let visits = (visits.is_some() && kept_visits.len() == successors.len())
-                .then_some(kept_visits);
-            b.push(CapturedDecision {
-                successors,
-                chosen,
-                seat,
-                turn: state.turn_number,
-                values,
-                values_are_logits,
-                visits,
-            });
+        if b.len() >= CAP {
+            DROPPED.fetch_add(1, Ordering::Relaxed);
+            return;
         }
+        let n = successors.len();
+        let values = (prov.values.is_some() && kept_values.len() == n).then_some(kept_values);
+        let visits = (prov.visits.is_some() && kept_visits.len() == n).then_some(kept_visits);
+        let scores = (prov.scores.is_some() && kept_scores.len() == n).then_some(kept_scores);
+        b.push(CapturedDecision {
+            successors,
+            chosen,
+            seat,
+            turn: state.turn_number,
+            values,
+            values_are_logits: prov.values_are_logits,
+            visits,
+            scores,
+            temp: prov.temp,
+            net_scored: prov.net_scored,
+            ply: ply(),
+        });
     });
 }
+
+/// `ENABLED` is process-global while `BUF` is thread-local, and cargo runs
+/// tests concurrently on separate threads: without serialising, one test
+/// flipping the flag off can land inside another's capture window. Every
+/// test that flips the flag, in this module or another, takes this lock.
+#[cfg(test)]
+pub(crate) static TEST_SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// Take this thread's captured decisions.
 pub fn drain() -> Vec<CapturedDecision> {
@@ -223,12 +329,7 @@ mod tests {
     use crate::card::{CardDefinition, CardType};
     use crate::game::two_player_game;
 
-    /// `ENABLED` is process-global while `BUF` is thread-local, and
-    /// cargo runs these tests concurrently on separate threads. Without
-    /// serialising, one test flipping the flag off can land inside
-    /// another's capture window — a flake that would show up rarely and
-    /// look like a capture bug.
-    static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    use super::TEST_SERIAL as SERIAL;
 
     fn creature(name: &'static str, p: i32, t: i32) -> CardDefinition {
         CardDefinition {
@@ -567,5 +668,126 @@ mod tests {
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].successors.len(), 2, "the bogus candidate is dropped");
         assert_eq!(got[0].chosen, 1, "chosen must be remapped onto the survivors");
+    }
+
+    /// The behaviour record rides along with the pick: the picker's own
+    /// scores and the temperature it sampled at, so the probability the
+    /// pilot played `chosen` can be recomputed exactly by the trainer.
+    #[test]
+    fn behaviour_scores_and_temperature_are_stored() {
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let (g, cands) = two_choice_state();
+        set_enabled(true);
+        maybe_full(
+            &g,
+            0,
+            &cands,
+            1,
+            Provenance { scores: Some(&[10, 20]), temp: 300, net_scored: true, ..Default::default() },
+        );
+        let got = drain();
+        set_enabled(false);
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].scores.as_deref(), Some(&[10, 20][..]));
+        assert_eq!(got[0].temp, 300);
+        assert!(got[0].net_scored);
+        assert!(got[0].values.is_none(), "a heuristic pick carries no search values");
+    }
+
+    /// A bare `maybe` records no behaviour scores and temperature 0 —
+    /// the deterministic-behaviour default the trainer reads as "no ratio".
+    #[test]
+    fn a_bare_capture_has_no_behaviour_record() {
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let (g, cands) = two_choice_state();
+        set_enabled(true);
+        maybe(&g, 0, &cands, 0);
+        let got = drain();
+        set_enabled(false);
+        assert_eq!(got.len(), 1);
+        assert!(got[0].scores.is_none());
+        assert_eq!(got[0].temp, 0);
+        assert!(!got[0].net_scored);
+    }
+
+    /// Scores follow the same remap as the successors: a rejected
+    /// candidate's score is dropped with it, so the survivors' scores stay
+    /// aligned with their states.
+    #[test]
+    fn scores_follow_the_reject_remap() {
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let (g, cands) = two_choice_state();
+        let bogus = GameAction::CastSpell {
+            card_id: crate::card::CardId(9_999),
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        };
+        let mut with_bogus = vec![bogus];
+        with_bogus.extend(cands.iter().cloned());
+        set_enabled(true);
+        maybe_full(
+            &g,
+            0,
+            &with_bogus,
+            2,
+            Provenance { scores: Some(&[99, 10, 20]), temp: 100, ..Default::default() },
+        );
+        let got = drain();
+        set_enabled(false);
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].successors.len(), 2);
+        assert_eq!(got[0].chosen, 1);
+        assert_eq!(got[0].scores.as_deref(), Some(&[10, 20][..]), "the bogus score is dropped");
+    }
+
+    /// A misaligned score slice degrades to `None` rather than pairing a
+    /// state with another candidate's score — the same rule `values` has.
+    #[test]
+    fn misaligned_scores_are_dropped_not_misattributed() {
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let (g, cands) = two_choice_state();
+        set_enabled(true);
+        maybe_full(&g, 0, &cands, 0, Provenance { scores: Some(&[10]), ..Default::default() });
+        let got = drain();
+        set_enabled(false);
+        assert_eq!(got.len(), 1);
+        assert!(got[0].scores.is_none());
+    }
+
+    /// The recorder's snapshot index is stamped from the thread cell, so
+    /// a decision can be joined to the row it followed.
+    #[test]
+    fn ply_is_stamped_from_the_thread_cell() {
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let (g, cands) = two_choice_state();
+        set_enabled(true);
+        set_ply(7);
+        maybe(&g, 0, &cands, 0);
+        set_ply(0);
+        let got = drain();
+        set_enabled(false);
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].ply, 7);
+        assert_eq!(ply(), 0, "the cell is reset for the next game");
+    }
+
+    /// The cap discards, and says so: the counter is the only way an actor
+    /// can tell a quiet game from a game that overflowed the buffer.
+    #[test]
+    fn the_cap_is_counted_not_silent() {
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let (g, cands) = two_choice_state();
+        let _ = drain();
+        set_enabled(true);
+        let before = dropped();
+        for _ in 0..=CAP {
+            maybe(&g, 0, &cands, 0);
+        }
+        let got = drain();
+        set_enabled(false);
+        assert_eq!(got.len(), CAP, "the buffer holds exactly the cap");
+        assert_eq!(dropped() - before, 1, "one decision past the cap was dropped and counted");
     }
 }

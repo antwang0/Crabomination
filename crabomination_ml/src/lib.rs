@@ -262,13 +262,22 @@ pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResu
 /// The state half of batch packing — per-group padded ids/features/masks
 /// plus globals, shared by the labeled training path and the label-free
 /// inference paths (`Trainer::predict_win_states`, the batch eval server).
-#[allow(clippy::type_complexity)]
-fn pack_states(
-    states: &[&EncodedState],
-    dev: &Device,
-) -> CResult<(Vec<Tensor>, Vec<Tensor>, Vec<Tensor>, Tensor)> {
+/// The host-side buffers [`pack_states`] uploads, before the upload: one
+/// `(n, ids, feats, mask)` per group plus the globals. Built on any thread
+/// (the prefetch worker), uploaded on the learner's with one direct
+/// `Tensor::from_vec` per tensor — the same path the inline packer takes,
+/// so a prefetched batch costs the step nothing the inline one did not.
+/// (Packing into CPU *tensors* and moving them instead cost ~6 ms a step at
+/// batch 256 — more than the packing it hid; round 72's arm C.)
+pub struct PackedHost {
+    b: usize,
+    groups: Vec<(usize, Vec<u32>, Vec<f32>, Vec<f32>)>,
+    global: Vec<f32>,
+}
+
+fn pack_states_host(states: &[&EncodedState]) -> PackedHost {
     let b = states.len();
-    let (mut ids, mut feats, mut mask) = (Vec::new(), Vec::new(), Vec::new());
+    let mut groups = Vec::with_capacity(NUM_GROUPS);
     for g in 0..NUM_GROUPS {
         let n = states.iter().map(|s| s.group_len(g)).max().unwrap_or(0).max(1);
         let mut id_v = vec![0u32; b * n];
@@ -281,15 +290,51 @@ fn pack_states(
                 mk_v[ri * n + oi] = 1.0;
             }
         }
-        ids.push(Tensor::from_vec(id_v, (b, n), dev)?);
-        feats.push(Tensor::from_vec(ft_v, (b, n, OBJ_FEATS), dev)?);
-        mask.push(Tensor::from_vec(mk_v, (b, n, 1), dev)?);
+        groups.push((n, id_v, ft_v, mk_v));
     }
     let mut gl = vec![0f32; b * GLOBAL_FEATS];
     for (ri, s) in states.iter().enumerate() {
         gl[ri * GLOBAL_FEATS..][..GLOBAL_FEATS].copy_from_slice(&s.global);
     }
-    Ok((ids, feats, mask, Tensor::from_vec(gl, (b, GLOBAL_FEATS), dev)?))
+    PackedHost { b, groups, global: gl }
+}
+
+impl PackedHost {
+    #[allow(clippy::type_complexity)]
+    fn upload(self, dev: &Device) -> CResult<(Vec<Tensor>, Vec<Tensor>, Vec<Tensor>, Tensor)> {
+        let b = self.b;
+        let (mut ids, mut feats, mut mask) = (Vec::new(), Vec::new(), Vec::new());
+        for (n, id_v, ft_v, mk_v) in self.groups {
+            ids.push(Tensor::from_vec(id_v, (b, n), dev)?);
+            feats.push(Tensor::from_vec(ft_v, (b, n, OBJ_FEATS), dev)?);
+            mask.push(Tensor::from_vec(mk_v, (b, n, 1), dev)?);
+        }
+        Ok((ids, feats, mask, Tensor::from_vec(self.global, (b, GLOBAL_FEATS), dev)?))
+    }
+
+    /// Upload as an inference batch (zero labels) — see [`make_state_batch`].
+    fn into_batch(self, dev: &Device) -> CResult<Batch> {
+        let b = self.b;
+        let (ids, feats, mask, global) = self.upload(dev)?;
+        Ok(Batch {
+            ids,
+            feats,
+            mask,
+            global,
+            win: Tensor::zeros((b, 1), DType::F32, dev)?,
+            life: Tensor::zeros((b, 1), DType::F32, dev)?,
+            len_t: Tensor::zeros((b, 1), DType::F32, dev)?,
+            aux: Tensor::zeros((b, AUX_FEATS), DType::F32, dev)?,
+        })
+    }
+}
+
+#[allow(clippy::type_complexity)]
+fn pack_states(
+    states: &[&EncodedState],
+    dev: &Device,
+) -> CResult<(Vec<Tensor>, Vec<Tensor>, Vec<Tensor>, Tensor)> {
+    pack_states_host(states).upload(dev)
 }
 
 /// Pack bare states for inference: real ids/features/masks/globals, zero
@@ -461,7 +506,23 @@ impl PlayModel {
     /// eval server's shape: every actor request gets both numbers for the
     /// cost of one extra `[B, h2] × [h2, 1]` matmul.
     pub fn forward_win_policy(&self, batch: &Batch) -> CResult<(Tensor, Option<Tensor>)> {
+        self.forward_win_policy_opt(batch, false)
+    }
+
+    /// [`forward_win_policy`](Self::forward_win_policy), optionally with
+    /// the trunk **detached** before the heads: the heads still read it,
+    /// but no gradient flows back past them, so a step on this output
+    /// trains the heads alone. The policy-gradient step's head-only arm
+    /// (round 72) is built on this — the trunk and the win head stay
+    /// bit-identical to the loaded pilot's, which is what makes its gate
+    /// control the same net.
+    pub fn forward_win_policy_opt(
+        &self,
+        batch: &Batch,
+        detach_trunk: bool,
+    ) -> CResult<(Tensor, Option<Tensor>)> {
         let t2 = self.trunk_out(batch)?;
+        let t2 = if detach_trunk { t2.detach() } else { t2 };
         let win = candle_nn::ops::sigmoid(&self.head_win.forward(&t2)?)?;
         let policy = match &self.head_policy {
             Some(h) => Some(h.forward(&t2)?),
@@ -569,6 +630,45 @@ pub struct DecisionRow {
     /// Rollouts behind each value, aligned with `successors` — the
     /// evidence weight for the search-value regression.
     pub visits: Option<Vec<u32>>,
+    /// The behaviour policy's record (round 72): the picker's own i32
+    /// scores, aligned with `successors`, and the temperature the pick
+    /// was sampled at (0 = argmax). Together they make the probability
+    /// the pilot played `chosen` exactly recoverable —
+    /// `softmax(scores / temp)[chosen]` — which the off-policy policy
+    /// gradient's importance ratio needs. `None` for search roots.
+    pub scores: Option<Vec<i32>>,
+    pub temp: i32,
+    /// Whether `scores` are net units (win probability × 10 000) rather
+    /// than material units. Analysis tag only.
+    pub net_scored: bool,
+    /// The deciding seat and the turn it decided on.
+    pub seat: u8,
+    pub turn: u32,
+    /// `TrainRow::ply` of the seat's latest snapshot at the decision.
+    pub ply: u16,
+    /// The game result for `seat` (1.0 won, 0.0 lost), stamped when the
+    /// game decides; NaN until then, and a NaN row takes no part in a
+    /// policy-gradient step.
+    pub ret: f32,
+}
+
+impl Default for DecisionRow {
+    fn default() -> Self {
+        Self {
+            successors: Vec::new(),
+            chosen: 0,
+            values: None,
+            values_are_logits: false,
+            visits: None,
+            scores: None,
+            temp: 0,
+            net_scored: false,
+            seat: 0,
+            turn: 0,
+            ply: 0,
+            ret: f32::NAN,
+        }
+    }
 }
 
 /// Widest candidate set a policy batch will consider. The recorder hooks
@@ -804,6 +904,277 @@ pub struct PolicyStats {
     /// the search's per-arm mean rewards. 0.0 when the term is off or no
     /// row qualified.
     pub sv: f32,
+}
+
+/// The off-policy policy-gradient step's knobs (round 72).
+#[derive(Debug, Clone, Copy)]
+pub struct PgConfig {
+    /// Truncated importance-sampling cap: ρ = π_θ(chosen) / π_b(chosen)
+    /// is clipped to `[0, rho_max]` (V-trace's truncation, one step).
+    pub rho_max: f32,
+    /// Entropy bonus β: `loss −= β · H(π_θ)`, so the policy does not
+    /// collapse onto one arm before the return has had its say.
+    pub entropy: f32,
+    /// The return blend: `G = λ · ret + (1 − λ) · V(succ_chosen)`. 1.0 is
+    /// the pure game result; 0.0 distils the win head's own ranking into
+    /// the policy head — the built-in sanity arm.
+    pub lambda: f32,
+    /// Let the gradient reach the shared trunk. Off (the default arm)
+    /// trains the policy head alone over a detached trunk, so the trunk
+    /// and the win head stay bit-identical to the loaded pilot's.
+    pub trunk: bool,
+}
+
+impl Default for PgConfig {
+    fn default() -> Self {
+        Self { rho_max: 2.0, entropy: 0.01, lambda: 1.0, trunk: false }
+    }
+}
+
+/// What one policy-gradient step reports. Every field is over the rows
+/// that took part (`n`); `wide_skipped` counts the rows that did not.
+#[derive(Debug, Clone, Copy)]
+pub struct PgStats {
+    /// The surrogate loss the gradient descended (advantage term plus the
+    /// entropy bonus).
+    pub loss: f32,
+    /// Advantage `G − b` before the ratio, mean and standard deviation.
+    pub adv_mean: f32,
+    pub adv_std: f32,
+    /// Mean policy entropy over the live candidates, in nats.
+    pub entropy: f32,
+    /// Mean *clipped* ratio, and the share of rows whose raw ratio
+    /// exceeded `rho_max`.
+    pub rho_mean: f32,
+    pub clip_frac: f32,
+    /// Share of rows with deterministic behaviour (`temp == 0`), which get
+    /// unit weight rather than a ratio.
+    pub det_frac: f32,
+    /// Rows wider than [`POLICY_MAX_CANDIDATES`], skipped rather than
+    /// truncated: a truncated window would put π_θ and π_b over different
+    /// candidate sets and bias the ratio.
+    pub wide_skipped: usize,
+    pub n: usize,
+}
+
+impl PgStats {
+    fn empty(wide_skipped: usize) -> Self {
+        Self {
+            loss: 0.0,
+            adv_mean: f32::NAN,
+            adv_std: f32::NAN,
+            entropy: f32::NAN,
+            rho_mean: f32::NAN,
+            clip_frac: f32::NAN,
+            det_frac: f32::NAN,
+            wide_skipped,
+            n: 0,
+        }
+    }
+}
+
+/// The behaviour policy over one decision's live candidates:
+/// `softmax(scores / temp)`, or first-wins-ties argmax at `temp == 0`
+/// — exactly `bot::choose_scored`'s two branches.
+fn behaviour_policy(scores: &[i32], temp: i32) -> Vec<f32> {
+    let n = scores.len();
+    let mut out = vec![0f32; n];
+    if n == 0 {
+        return out;
+    }
+    if temp <= 0 {
+        let mut best = 0usize;
+        for (i, &s) in scores.iter().enumerate() {
+            if s > scores[best] {
+                best = i;
+            }
+        }
+        out[best] = 1.0;
+        return out;
+    }
+    let max = *scores.iter().max().unwrap();
+    let mut acc = 0f64;
+    for (i, &s) in scores.iter().enumerate() {
+        let w = (((s - max) as f64) / temp as f64).exp();
+        out[i] = w as f32;
+        acc += w;
+    }
+    for w in out.iter_mut() {
+        *w = (*w as f64 / acc) as f32;
+    }
+    out
+}
+
+/// The probability the behaviour policy assigned to `chosen`, from a
+/// recorded decision's scores and temperature — the learner's startup
+/// sanity on the sampling temperature reads this without a net.
+pub fn behaviour_prob(scores: &[i32], temp: i32, chosen: usize) -> f32 {
+    behaviour_policy(scores, temp).get(chosen).copied().unwrap_or(0.0)
+}
+
+/// A decision batch padded to one width, the shared front half of the
+/// distillation and policy-gradient steps.
+struct PaddedDecisions<'a> {
+    b: usize,
+    k: usize,
+    /// `b × k` successor states, row-major; padding repeats the row's
+    /// first successor (masked out below, but it has to be a valid state
+    /// or the encoder packing would ragged out).
+    flat: Vec<&'a EncodedState>,
+    /// 1.0 on live slots, 0.0 on padding, `[b·k]`.
+    mask: Vec<f32>,
+    /// Per row: the window start (the truncation rule keeps the chosen
+    /// candidate), the chosen index within the window, and the live count.
+    offset: Vec<usize>,
+    chosen: Vec<usize>,
+    n: Vec<usize>,
+}
+
+/// Pad `rows` (already filtered to usable ones) to the batch's widest
+/// candidate set, at most [`POLICY_MAX_CANDIDATES`]. A wider set is
+/// truncated to a window that keeps the chosen candidate — the caller
+/// slices every per-candidate slice by the same `offset`, or the states
+/// and their values disagree (the bug round 37 found).
+fn pad_decisions<'a>(rows: &[&'a DecisionRow]) -> Option<PaddedDecisions<'a>> {
+    if rows.is_empty() {
+        return None;
+    }
+    let k = rows
+        .iter()
+        .map(|r| r.successors.len().min(POLICY_MAX_CANDIDATES))
+        .max()
+        .unwrap_or(2);
+    let b = rows.len();
+    let mut flat: Vec<&EncodedState> = Vec::with_capacity(b * k);
+    let mut mask = vec![0f32; b * k];
+    let mut offset = Vec::with_capacity(b);
+    let mut chosen = Vec::with_capacity(b);
+    let mut n_live = Vec::with_capacity(b);
+    for (i, r) in rows.iter().enumerate() {
+        let n = r.successors.len().min(k);
+        let off = if r.chosen < n { 0 } else { r.chosen + 1 - n };
+        for (j, s) in r.successors[off..off + n].iter().enumerate() {
+            flat.push(s);
+            mask[i * k + j] = 1.0;
+        }
+        for _ in n..k {
+            flat.push(&r.successors[0]);
+        }
+        offset.push(off);
+        chosen.push(r.chosen - off);
+        n_live.push(n);
+    }
+    Some(PaddedDecisions { b, k, flat, mask, offset, chosen, n: n_live })
+}
+
+/// A policy-gradient batch packed and ready: the padded successor tensors
+/// plus everything the step needs per row. Built by [`prepare_pg_batch`] —
+/// possibly on another thread and another device, which is the point: the
+/// prefetch pipeline packs the next batch on the CPU while the GPU runs the
+/// current step — and consumed by `Trainer::train_pg_step_prepared`.
+pub struct PgBatch {
+    host: PackedHost,
+    b: usize,
+    k: usize,
+    mask: Vec<f32>,
+    chosen: Vec<usize>,
+    n: Vec<usize>,
+    /// Behaviour scores over each row's live window, with the temperature.
+    scores: Vec<Vec<i32>>,
+    temps: Vec<i32>,
+    net_scored: Vec<bool>,
+    rets: Vec<f32>,
+    wide_skipped: usize,
+}
+
+impl PgBatch {
+    /// Rows that will take part.
+    pub fn len(&self) -> usize {
+        self.b
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.b == 0
+    }
+
+    pub fn wide_skipped(&self) -> usize {
+        self.wide_skipped
+    }
+
+    /// `(mean π_b(chosen), share of net-scored rows)` — the learner's
+    /// startup sanity on the sampling temperature.
+    pub fn behaviour_summary(&self) -> (f32, f32) {
+        if self.b == 0 {
+            return (f32::NAN, f32::NAN);
+        }
+        let mean = (0..self.b)
+            .map(|i| behaviour_prob(&self.scores[i], self.temps[i], self.chosen[i]))
+            .sum::<f32>()
+            / self.b as f32;
+        let net = self.net_scored.iter().filter(|x| **x).count() as f32 / self.b as f32;
+        (mean, net)
+    }
+}
+
+/// Filter, pad and pack `rows` for a policy-gradient step, on `dev`.
+///
+/// Rows without a finite `ret`, without an aligned behaviour record, or
+/// wider than [`POLICY_MAX_CANDIDATES`] take no part (the last counted in
+/// `wide_skipped`; a truncated window would put π_θ and π_b over
+/// different candidate sets and bias the ratio).
+pub fn prepare_pg_batch(rows: &[&DecisionRow]) -> PgBatch {
+    let mut wide_skipped = 0usize;
+    let usable: Vec<&DecisionRow> = rows
+        .iter()
+        .copied()
+        .filter(|r| {
+            if r.successors.len() > POLICY_MAX_CANDIDATES {
+                wide_skipped += 1;
+                return false;
+            }
+            r.successors.len() >= 2
+                && r.chosen < r.successors.len()
+                && r.ret.is_finite()
+                && r.scores.as_ref().is_some_and(|s| s.len() == r.successors.len())
+        })
+        .collect();
+    let Some(pad) = pad_decisions(&usable) else {
+        return PgBatch {
+            host: pack_states_host(&[]),
+            b: 0,
+            k: 0,
+            mask: Vec::new(),
+            chosen: Vec::new(),
+            n: Vec::new(),
+            scores: Vec::new(),
+            temps: Vec::new(),
+            net_scored: Vec::new(),
+            rets: Vec::new(),
+            wide_skipped,
+        };
+    };
+    let host = pack_states_host(&pad.flat);
+    let scores = usable
+        .iter()
+        .enumerate()
+        .map(|(i, r)| {
+            let (n, off) = (pad.n[i], pad.offset[i]);
+            r.scores.as_ref().expect("filtered")[off..off + n].to_vec()
+        })
+        .collect();
+    PgBatch {
+        host,
+        b: pad.b,
+        k: pad.k,
+        mask: pad.mask,
+        chosen: pad.chosen,
+        n: pad.n,
+        scores,
+        temps: usable.iter().map(|r| r.temp).collect(),
+        net_scored: usable.iter().map(|r| r.net_scored).collect(),
+        rets: usable.iter().map(|r| r.ret).collect(),
+        wide_skipped,
+    }
 }
 
 /// Binary cross-entropy against a soft target in [0, 1].
@@ -1063,48 +1434,28 @@ impl Trainer {
         if usable.is_empty() {
             return Ok(PolicyStats { loss: 0.0, top1: f32::NAN, n: 0, sv: 0.0 });
         }
-        let k = usable
-            .iter()
-            .map(|r| r.successors.len().min(POLICY_MAX_CANDIDATES))
-            .max()
-            .unwrap_or(2);
-        let b = usable.len();
-
-        // Flatten, padding each row out to `k` by repeating its first
-        // successor. The repeats are masked out of the softmax below, so
-        // their values never matter — but they have to be *valid* states
-        // or the encoder packing would ragged out.
-        let mut flat: Vec<&EncodedState> = Vec::with_capacity(b * k);
-        let mut mask = vec![0f32; b * k];
+        let pad = pad_decisions(&usable).expect("non-empty");
+        let (b, k) = (pad.b, pad.k);
+        let flat = pad.flat;
+        let mask = pad.mask;
         let mut onehot = vec![0f32; b * k];
         // Search-value regression targets and evidence weights, flat
         // over the same [b, k] layout; weight 0 = slot excluded.
         let mut sv_target = vec![0f32; b * k];
         let mut sv_w = vec![0f32; b * k];
         for (i, r) in usable.iter().enumerate() {
-            let n = r.successors.len().min(k);
-            // Keep the chosen candidate when truncating, so the target is
-            // never silently dropped off the end of a wide candidate set.
-            // The values are sliced by the SAME window: an earlier version
-            // read `values[0..n]` against the tail window of successors,
-            // silently pairing each state with another arm's value —
-            // latent while every recorded menu fit `POLICY_MAX_CANDIDATES`,
-            // live the moment one didn't.
-            let offset = if r.chosen < n { 0 } else { r.chosen + 1 - n };
-            for (j, s) in r.successors[offset..offset + n].iter().enumerate() {
-                flat.push(s);
-                mask[i * k + j] = 1.0;
-            }
-            for _ in n..k {
-                flat.push(&r.successors[0]);
-            }
+            let (n, offset) = (pad.n[i], pad.offset[i]);
+            // The values are sliced by the SAME window as the states: an
+            // earlier version read `values[0..n]` against the tail window
+            // of successors, silently pairing each state with another
+            // arm's value — latent while every recorded menu fit
+            // `POLICY_MAX_CANDIDATES`, live the moment one didn't.
             let vals = r
                 .values
                 .as_ref()
                 .filter(|v| v.len() >= offset + n)
                 .map(|v| &v[offset..offset + n]);
-            let w =
-                distill_weights(vals, r.chosen - offset, n, r.values_are_logits, temp);
+            let w = distill_weights(vals, pad.chosen[i], n, r.values_are_logits, temp);
             onehot[i * k..i * k + n].copy_from_slice(&w);
             if sv_weight > 0.0
                 && !r.values_are_logits
@@ -1193,6 +1544,171 @@ impl Trainer {
             n: b,
             sv: sv_val,
         })
+    }
+
+    /// One off-policy, advantage-weighted policy-gradient step on the
+    /// decision stream (round 72).
+    ///
+    /// The policy is the softmax over the candidates' policy-head logits
+    /// (the model must carry the head). Per row: the behaviour policy π_b
+    /// is rebuilt exactly from the recorded scores and temperature; the
+    /// ratio ρ = π_θ(chosen) / π_b(chosen) is truncated at `rho_max`
+    /// (unit weight when the behaviour was argmax); the baseline is the
+    /// **counterfactual** value of the menu, `b = Σ_j π_θ(j) · V(succ_j)`
+    /// from the detached win head — it costs no extra encode, does not
+    /// depend on the chosen index (so it is unbiased), and it removes the
+    /// menu-level variance the twenty-turn result cannot; the return is
+    /// `G = λ · ret + (1 − λ) · V(succ_chosen)`. Then
+    /// `loss = −mean(ρ̄ · (G − b) · log π_θ(chosen)) − β · H(π_θ)`.
+    ///
+    /// Rows without a finite `ret`, without aligned scores, or wider than
+    /// [`POLICY_MAX_CANDIDATES`] take no part (the last counted in
+    /// `wide_skipped`). With `cfg.trunk` off only `head_policy.*` moves.
+    pub fn train_pg_step(&mut self, rows: &[&DecisionRow], cfg: PgConfig) -> CResult<PgStats> {
+        let (loss, stats) = self.pg_forward(rows, cfg)?;
+        if let Some(loss) = loss {
+            self.opt.backward_step(&loss)?;
+        }
+        Ok(stats)
+    }
+
+    /// [`train_pg_step`](Self::train_pg_step) without the update — the
+    /// same statistics on a holdout.
+    pub fn pg_eval(&self, rows: &[&DecisionRow], cfg: PgConfig) -> CResult<PgStats> {
+        self.pg_forward(rows, cfg).map(|(_, st)| st)
+    }
+
+    /// [`train_pg_step`](Self::train_pg_step) on a batch packed ahead of
+    /// time — the prefetch pipeline's consumer.
+    pub fn train_pg_step_prepared(&mut self, pb: PgBatch, cfg: PgConfig) -> CResult<PgStats> {
+        let (loss, stats) = self.pg_forward_prepared(pb, cfg)?;
+        if let Some(loss) = loss {
+            self.opt.backward_step(&loss)?;
+        }
+        Ok(stats)
+    }
+
+    /// The step's forward half: the surrogate loss (None when no row
+    /// qualified) and its statistics.
+    fn pg_forward(&self, rows: &[&DecisionRow], cfg: PgConfig) -> CResult<(Option<Tensor>, PgStats)> {
+        self.pg_forward_prepared(prepare_pg_batch(rows), cfg)
+    }
+
+    fn pg_forward_prepared(&self, pb: PgBatch, cfg: PgConfig) -> CResult<(Option<Tensor>, PgStats)> {
+        if !self.model.has_policy_head() {
+            return Err(candle_core::Error::Msg(
+                "a policy-gradient step needs the policy head (NetConfig.policy)".into(),
+            ));
+        }
+        if pb.b == 0 {
+            return Ok((None, PgStats::empty(pb.wide_skipped)));
+        }
+        let (b, k) = (pb.b, pb.k);
+        // One direct upload per tensor from the host buffers — the same
+        // path the inline packer takes, whichever thread built them.
+        let PgBatch { host, mask, chosen, n: n_live, scores, temps, rets, wide_skipped, .. } = pb;
+        let batch = host.into_batch(&self.dev)?;
+        let (win, pol) = self.model.forward_win_policy_opt(&batch, !cfg.trunk)?;
+        let logits = pol.expect("checked above").reshape((b, k))?;
+        let mask_t = Tensor::from_vec(mask, (b, k), &self.dev)?;
+        let neg_inf = mask_t.affine(-1.0, 1.0)?.affine(-1e9, 0.0)?;
+        let logp = candle_nn::ops::log_softmax(&logits.add(&neg_inf)?, 1)?;
+        let p = logp.exp()?;
+        // The per-row scalars are cheap on the CPU (b·k ≤ 8192) and the
+        // win head is consumed detached — a baseline must not be trained.
+        let p_cpu = p.detach().to_vec2::<f32>()?;
+        let v_cpu = win.detach().reshape((b, k))?.to_vec2::<f32>()?;
+        let mut coef = vec![0f32; b];
+        let mut onehot = vec![0f32; b * k];
+        let mut advs = Vec::with_capacity(b);
+        let (mut rho_sum, mut clipped, mut det) = (0f64, 0usize, 0usize);
+        for i in 0..b {
+            let (n, ch) = (n_live[i], chosen[i]);
+            onehot[i * k + ch] = 1.0;
+            let pbh = behaviour_policy(&scores[i], temps[i]);
+            let pt = &p_cpu[i][..n];
+            let rho = if temps[i] <= 0 {
+                det += 1;
+                1.0
+            } else {
+                let raw = pt[ch] / pbh[ch].max(1e-6);
+                if raw > cfg.rho_max {
+                    clipped += 1;
+                }
+                raw.min(cfg.rho_max)
+            };
+            rho_sum += rho as f64;
+            let v = &v_cpu[i][..n];
+            let baseline: f32 = pt.iter().zip(v).map(|(p, v)| p * v).sum();
+            let g = cfg.lambda * rets[i] + (1.0 - cfg.lambda) * v[ch];
+            let adv = g - baseline;
+            advs.push(adv);
+            coef[i] = rho * adv;
+        }
+        let onehot_t = Tensor::from_vec(onehot, (b, k), &self.dev)?;
+        let coef_t = Tensor::from_vec(coef, b, &self.dev)?;
+        let picked = logp.mul(&onehot_t)?.sum(1)?; // log π_θ(chosen), [b]
+        let pg = picked.mul(&coef_t)?.mean_all()?.neg()?;
+        // Entropy over the live slots; padding is masked explicitly so a
+        // `0 · (−1e9)` never enters the sum.
+        let ent = p.mul(&logp)?.mul(&mask_t)?.sum(1)?.neg()?; // [b]
+        let ent_mean = ent.mean_all()?;
+        let loss = pg.sub(&ent_mean.affine(cfg.entropy as f64, 0.0)?)?;
+        let nf = b as f32;
+        let adv_mean = advs.iter().sum::<f32>() / nf;
+        let adv_var = advs.iter().map(|a| (a - adv_mean).powi(2)).sum::<f32>() / nf;
+        let stats = PgStats {
+            loss: loss.to_scalar::<f32>()?,
+            adv_mean,
+            adv_std: adv_var.sqrt(),
+            entropy: ent_mean.to_scalar::<f32>()?,
+            rho_mean: (rho_sum / b as f64) as f32,
+            clip_frac: clipped as f32 / nf,
+            det_frac: det as f32 / nf,
+            wide_skipped,
+            n: b,
+        };
+        Ok((Some(loss), stats))
+    }
+
+    /// Start the policy head as a copy of the win head (round 72's warm
+    /// start): same shape (`[1, h2] + [1]`), so the policy's initial
+    /// ranking is exactly the pilot's own, and the first gradient step
+    /// moves away from a known point rather than from noise.
+    pub fn init_policy_head_from_win(&mut self) -> CResult<()> {
+        let data = self.varmap.data().lock().unwrap();
+        for suffix in ["weight", "bias"] {
+            let src = data.get(&format!("head_win.{suffix}")).ok_or_else(|| {
+                candle_core::Error::Msg(format!("no head_win.{suffix}"))
+            })?;
+            let dst = data.get(&format!("head_policy.{suffix}")).ok_or_else(|| {
+                candle_core::Error::Msg("the model carries no policy head".into())
+            })?;
+            dst.set(src.as_tensor())?;
+        }
+        Ok(())
+    }
+
+    /// [`load`](Self::load), tolerating the absence of the named tensors
+    /// — they keep their initial values. Exists so a headless pilot can be
+    /// loaded into a policy-headed config (`load` refuses: "has no tensor
+    /// head_policy.weight"); pair with [`init_policy_head_from_win`].
+    pub fn load_missing_ok(&mut self, path: &std::path::Path, allow_missing: &[&str]) -> CResult<()> {
+        let loaded = candle_core::safetensors::load(path, &self.dev)?;
+        let data = self.varmap.data().lock().unwrap();
+        for (name, var) in data.iter() {
+            let Some(src) = loaded.get(name) else {
+                if allow_missing.contains(&name.as_str()) {
+                    continue;
+                }
+                return Err(candle_core::Error::Msg(format!(
+                    "{} has no tensor {name}",
+                    path.display()
+                )));
+            };
+            Self::set_padded(name, var, src, &self.dev)?;
+        }
+        Ok(())
     }
 
     /// The chance rate a `policy_top1` number has to be read against:
@@ -1358,6 +1874,15 @@ impl Trainer {
             let src = loaded.get(name).ok_or_else(|| {
                 candle_core::Error::Msg(format!("{} has no tensor {name}", path.display()))
             })?;
+            Self::set_padded(name, var, src, &self.dev)?;
+        }
+        Ok(())
+    }
+
+    /// Set `var` from `src`, zero-padding the one axis a legacy tensor is
+    /// allowed to be short on (the rules in [`load`](Self::load)).
+    fn set_padded(name: &str, var: &candle_core::Var, src: &Tensor, dev: &Device) -> CResult<()> {
+        {
             let want = var.dims();
             let have = src.dims();
             // Which axis, if any, this tensor is allowed to grow on.
@@ -1365,20 +1890,20 @@ impl Trainer {
             let feature_pad = (want.len() == 2 && have.len() == 2 && want[0] == have[0])
                 .then(|| want[1].checked_sub(have[1]))
                 .flatten()
-                .filter(|n| *n > 0 && matches!(name.as_str(), "obj.weight" | "trunk1.weight"));
-            let vocab_pad = matches!(name.as_str(), "emb.weight" | "head_opp.weight" | "head_opp.bias")
+                .filter(|n| *n > 0 && matches!(name, "obj.weight" | "trunk1.weight"));
+            let vocab_pad = matches!(name, "emb.weight" | "head_opp.weight" | "head_opp.bias")
                 .then(|| want[0].checked_sub(have[0]))
                 .flatten()
                 .filter(|n| *n > 0 && want[1..] == have[1..]);
             match (feature_pad, vocab_pad) {
                 (Some(n), _) => {
-                    let zeros = Tensor::zeros((want[0], n), src.dtype(), &self.dev)?;
+                    let zeros = Tensor::zeros((want[0], n), src.dtype(), dev)?;
                     var.set(&Tensor::cat(&[src, &zeros], 1)?)?;
                 }
                 (None, Some(n)) => {
                     let mut shape = want.to_vec();
                     shape[0] = n;
-                    let zeros = Tensor::zeros(shape, src.dtype(), &self.dev)?;
+                    let zeros = Tensor::zeros(shape, src.dtype(), dev)?;
                     var.set(&Tensor::cat(&[src, &zeros], 0)?)?;
                 }
                 _ => var.set(src)?,
@@ -2302,7 +2827,7 @@ mod tests {
                 chosen: 1,
                 values: None,
                 values_are_logits: false,
-                visits: None,
+                visits: None, ..Default::default()
             })
             .collect();
         let refs: Vec<&DecisionRow> = rows.iter().collect();
@@ -2343,7 +2868,7 @@ mod tests {
                 })
                 .map(|(i, _)| i)
                 .unwrap_or(0);
-            DecisionRow { successors, chosen, values: None, values_are_logits: false, visits: None }
+            DecisionRow { successors, chosen, values: None, values_are_logits: false, visits: None, ..Default::default() }
         };
         let rows: Vec<DecisionRow> = (0..256).map(|_| make(&mut rng)).collect();
         let held: Vec<DecisionRow> = (0..128).map(|_| make(&mut rng)).collect();
@@ -2382,14 +2907,14 @@ mod tests {
             chosen: 2,
             values: None,
             values_are_logits: false,
-            visits: None,
+            visits: None, ..Default::default()
         };
         let gumbel = DecisionRow {
             successors: successors.clone(),
             chosen: 0,
             values: Some(vec![0.0, 0.5, 20.0]),
             values_are_logits: true,
-            visits: None,
+            visits: None, ..Default::default()
         };
         let l_onehot = t.train_policy_step_temp(&[&played_2], 0.1).expect("onehot").loss;
         let l_gumbel = t.train_policy_step_temp(&[&gumbel], 0.1).expect("gumbel").loss;
@@ -2428,7 +2953,7 @@ mod tests {
             chosen: 11,
             values: Some(values),
             values_are_logits: false,
-            visits: None,
+            visits: None, ..Default::default()
         };
         // The reference: the same window handed over explicitly, no
         // truncation involved.
@@ -2439,7 +2964,7 @@ mod tests {
             chosen: 7,
             values: Some(ref_values),
             values_are_logits: false,
-            visits: None,
+            visits: None, ..Default::default()
         };
         let lt = t.train_policy_step_temp(&[&truncated], 0.01).expect("truncated").loss;
         let lr = t.train_policy_step_temp(&[&reference], 0.01).expect("reference").loss;
@@ -2554,7 +3079,7 @@ mod tests {
                     chosen: 0,
                     values: Some(vec![0.9, 0.5, 0.1]),
                     values_are_logits: false,
-                    visits: Some(vec![20, 10, 5]),
+                    visits: Some(vec![20, 10, 5]), ..Default::default()
                 }
             })
             .collect();
@@ -2601,7 +3126,7 @@ mod tests {
             chosen: 1,
             values: Some(vec![0.4, 0.6, 0.5]),
             values_are_logits: false,
-            visits: Some(vec![8, 30, 12]),
+            visits: Some(vec![8, 30, 12]), ..Default::default()
         };
         let gumbel = DecisionRow {
             values_are_logits: true,
@@ -2846,15 +3371,15 @@ mod tests {
             t.train_policy_step_temp(&[row], temp).expect("step").loss
         };
 
-        let played_0 = DecisionRow { successors: successors.clone(), chosen: 0, values: None, values_are_logits: false, visits: None };
-        let played_2 = DecisionRow { successors: successors.clone(), chosen: 2, values: None, values_are_logits: false, visits: None };
+        let played_0 = DecisionRow { successors: successors.clone(), chosen: 0, values: None, values_are_logits: false, visits: None, ..Default::default() };
+        let played_2 = DecisionRow { successors: successors.clone(), chosen: 2, values: None, values_are_logits: false, visits: None, ..Default::default() };
         // The pilot played 0; the search rated 2 far higher.
         let distil = DecisionRow {
             successors: successors.clone(),
             chosen: 0,
             values: Some(vec![0.10, 0.15, 0.90]),
             values_are_logits: false,
-            visits: None,
+            visits: None, ..Default::default()
         };
 
         let l0 = loss(&mut t, &played_0, 1.0);
@@ -2885,7 +3410,7 @@ mod tests {
             chosen: 0,
             values: Some(vec![0.2, 0.3, 0.5]),
             values_are_logits: false,
-            visits: None,
+            visits: None, ..Default::default()
         };
         let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
         reseed_params(&t.varmap, &t.dev, 11);
@@ -2919,7 +3444,7 @@ mod tests {
                 })
                 .map(|(i, _)| i)
                 .unwrap_or(0);
-            DecisionRow { successors, chosen, values: None, values_are_logits: false, visits: None }
+            DecisionRow { successors, chosen, values: None, values_are_logits: false, visits: None, ..Default::default() }
         };
         let rows: Vec<DecisionRow> = (0..256).map(|_| make(&mut rng)).collect();
         let held: Vec<DecisionRow> = (0..128).map(|_| make(&mut rng)).collect();
@@ -2962,14 +3487,14 @@ mod tests {
             chosen: 1,
             values: None,
             values_are_logits: false,
-            visits: None,
+            visits: None, ..Default::default()
         };
         let wide = DecisionRow {
             successors: (0..5).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
             chosen: 3,
             values: None,
             values_are_logits: false,
-            visits: None,
+            visits: None, ..Default::default()
         };
 
         // Alone, the narrow decision is a 2-way softmax.
@@ -2999,7 +3524,7 @@ mod tests {
             chosen: 0,
             values: None,
             values_are_logits: false,
-            visits: None,
+            visits: None, ..Default::default()
         };
         let stats = trainer.train_policy_step(&[&single]).expect("step");
         assert_eq!(stats.n, 0, "a forced move is not a policy example");
@@ -3637,5 +4162,380 @@ mod tests {
         assert!((t[5] - 0.0).abs() < 1e-6, "{t:?}");
         assert!((t[3] - 0.25).abs() < 1e-6, "{t:?}");
         assert!((t[1] - 0.375).abs() < 1e-6, "{t:?}");
+    }
+
+    // ────────────────────────── round 72: policy gradient ──────────────────────────
+
+    /// Three-candidate menus, uniform behaviour (flat scores at a positive
+    /// temperature), and a result that is 1 exactly when the played
+    /// candidate had the largest `global[0]`: the advantage is positive on
+    /// the "right" picks and negative on the others, so the policy must
+    /// come to prefer the largest `global[0]` — the policy-gradient twin
+    /// of `policy_head_learns_to_rank_candidates`, which learns the same
+    /// rule from a one-hot target.
+    #[test]
+    fn pg_step_moves_probability_toward_positive_advantage() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_policy_cfg();
+        let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 72);
+        let mut rng = StdRng::seed_from_u64(72);
+        let argmax0 = |s: &[EncodedState]| {
+            s.iter()
+                .enumerate()
+                .max_by(|a, b| {
+                    a.1.global[0].partial_cmp(&b.1.global[0]).unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .map(|(i, _)| i)
+                .unwrap_or(0)
+        };
+        let make = |rng: &mut StdRng| -> DecisionRow {
+            let successors: Vec<EncodedState> =
+                (0..3).map(|_| random_state(rng, cfg.vocab)).collect();
+            let best = argmax0(&successors);
+            let chosen = rng.random_range(0..3);
+            DecisionRow {
+                successors,
+                chosen,
+                scores: Some(vec![0, 0, 0]),
+                temp: 300,
+                ret: if chosen == best { 1.0 } else { 0.0 },
+                ..Default::default()
+            }
+        };
+        let rows: Vec<DecisionRow> = (0..512).map(|_| make(&mut rng)).collect();
+        // The holdout asks the ranking question directly: is the head's
+        // favourite the largest `global[0]`?
+        let held: Vec<DecisionRow> = (0..128)
+            .map(|_| {
+                let mut r = make(&mut rng);
+                r.chosen = argmax0(&r.successors);
+                r
+            })
+            .collect();
+        let refs: Vec<&DecisionRow> = held.iter().collect();
+        let before = trainer.policy_top1(&refs).expect("before");
+        let pg = PgConfig { trunk: true, entropy: 0.0, ..Default::default() };
+        for _ in 0..300 {
+            let batch: Vec<&DecisionRow> =
+                (0..32).map(|_| &rows[rng.random_range(0..rows.len())]).collect();
+            let st = trainer.train_pg_step(&batch, pg).expect("pg step");
+            assert_eq!(st.n, 32);
+            assert!(st.loss.is_finite());
+        }
+        let after = trainer.policy_top1(&refs).expect("after");
+        assert!(
+            after > 0.60 && after > before + 0.20,
+            "the policy gradient failed to learn the ranking: {before} -> {after} (chance 0.33)"
+        );
+    }
+
+    /// The head-only arm's whole gate design rests on this: with
+    /// `trunk: false` nothing but `head_policy.*` moves, so the pilot's
+    /// win head and trunk are bit-identical to the control's. With
+    /// `trunk: true` the trunk moves too.
+    #[test]
+    fn pg_head_only_leaves_trunk_and_win_head_untouched() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_policy_cfg();
+        let mut rng = StdRng::seed_from_u64(9);
+        let rows: Vec<DecisionRow> = (0..16)
+            .map(|_| DecisionRow {
+                successors: (0..3).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
+                chosen: 1,
+                scores: Some(vec![5, 0, -5]),
+                temp: 100,
+                ret: 1.0,
+                ..Default::default()
+            })
+            .collect();
+        let refs: Vec<&DecisionRow> = rows.iter().collect();
+        let snapshot = |t: &Trainer, name: &str| -> Vec<f32> {
+            let data = t.varmap.data().lock().unwrap();
+            data.get(name).expect(name).as_tensor().flatten_all().unwrap().to_vec1().unwrap()
+        };
+        let frozen = ["head_win.weight", "head_win.bias", "trunk1.weight", "emb.weight"];
+
+        let mut head_only = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&head_only.varmap, &head_only.dev, 9);
+        let before: Vec<Vec<f32>> = frozen.iter().map(|n| snapshot(&head_only, n)).collect();
+        let pol_before = snapshot(&head_only, "head_policy.weight");
+        for _ in 0..5 {
+            head_only.train_pg_step(&refs, PgConfig::default()).expect("pg step");
+        }
+        for (name, b) in frozen.iter().zip(&before) {
+            assert_eq!(b, &snapshot(&head_only, name), "{name} moved under the head-only arm");
+        }
+        assert_ne!(pol_before, snapshot(&head_only, "head_policy.weight"), "the head never trained");
+
+        let mut with_trunk = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&with_trunk.varmap, &with_trunk.dev, 9);
+        let trunk_before = snapshot(&with_trunk, "trunk1.weight");
+        let win_before = snapshot(&with_trunk, "head_win.weight");
+        for _ in 0..5 {
+            with_trunk
+                .train_pg_step(&refs, PgConfig { trunk: true, ..Default::default() })
+                .expect("pg step");
+        }
+        assert_ne!(trunk_before, snapshot(&with_trunk, "trunk1.weight"), "trunk arm: trunk unchanged");
+        assert_eq!(
+            win_before,
+            snapshot(&with_trunk, "head_win.weight"),
+            "the win head is never a policy-gradient target"
+        );
+    }
+
+    /// The ratio is truncated at `rho_max` and counted; argmax behaviour
+    /// gets unit weight and is counted separately.
+    #[test]
+    fn pg_rho_is_clipped_and_deterministic_rows_get_unit_weight() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_policy_cfg();
+        let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 5);
+        let mut rng = StdRng::seed_from_u64(5);
+        let succ = |rng: &mut StdRng| -> Vec<EncodedState> {
+            (0..2).map(|_| random_state(rng, cfg.vocab)).collect()
+        };
+        // The behaviour gave the played candidate ~e^-1000 of the mass.
+        let unlikely = DecisionRow {
+            successors: succ(&mut rng),
+            chosen: 1,
+            scores: Some(vec![0, -1000]),
+            temp: 1,
+            ret: 1.0,
+            ..Default::default()
+        };
+        let cfgpg = PgConfig { rho_max: 2.0, ..Default::default() };
+        let st = trainer.pg_eval(&[&unlikely], cfgpg).expect("eval");
+        assert_eq!(st.n, 1);
+        assert_eq!(st.clip_frac, 1.0, "an unlikely behaviour pick is clipped");
+        assert_eq!(st.rho_mean, 2.0, "the clipped ratio is rho_max");
+        assert_eq!(st.det_frac, 0.0);
+
+        let argmax = DecisionRow {
+            successors: succ(&mut rng),
+            chosen: 0,
+            scores: Some(vec![10, 0]),
+            temp: 0,
+            ret: 0.0,
+            ..Default::default()
+        };
+        let st = trainer.pg_eval(&[&argmax], cfgpg).expect("eval");
+        assert_eq!(st.det_frac, 1.0, "temp 0 is deterministic behaviour");
+        assert_eq!(st.rho_mean, 1.0, "and gets unit weight");
+        assert_eq!(st.clip_frac, 0.0);
+    }
+
+    /// The behaviour policy is rebuilt exactly as `choose_scored` picks:
+    /// softmax at a temperature, first-wins-ties argmax at 0.
+    #[test]
+    fn behaviour_policy_matches_the_pickers_two_branches() {
+        let p = behaviour_policy(&[0, 0, 0], 100);
+        assert!(p.iter().all(|x| (x - 1.0 / 3.0).abs() < 1e-6), "flat scores are uniform: {p:?}");
+        let p = behaviour_policy(&[300, 0], 300);
+        let want = 1.0 / (1.0 + (-1.0f32).exp());
+        assert!((p[0] - want).abs() < 1e-5, "one temperature behind is e^-1: {p:?}");
+        let p = behaviour_policy(&[7, 7, 3], 0);
+        assert_eq!(p, vec![1.0, 0.0, 0.0], "argmax keeps the first of a tie");
+        assert_eq!(behaviour_prob(&[7, 7, 3], 0, 1), 0.0);
+    }
+
+    /// With a large entropy bonus and no advantage to speak of, the
+    /// policy flattens: entropy rises over the steps.
+    #[test]
+    fn pg_entropy_bonus_flattens_the_policy() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_policy_cfg();
+        let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 21);
+        let mut rng = StdRng::seed_from_u64(21);
+        let rows: Vec<DecisionRow> = (0..64)
+            .map(|_| DecisionRow {
+                successors: (0..4).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
+                chosen: rng.random_range(0..4),
+                scores: Some(vec![0; 4]),
+                temp: 100,
+                // λ = 0 below makes G = V(succ_chosen), so the advantage is
+                // only the menu's own spread — small — and the bonus rules.
+                ret: 0.5,
+                ..Default::default()
+            })
+            .collect();
+        let refs: Vec<&DecisionRow> = rows.iter().collect();
+        // A fresh head is already near-uniform over random states, so
+        // sharpen it first: one-hot imitation of the recorded picks drives
+        // the entropy down, and the bonus has something to undo.
+        for _ in 0..150 {
+            trainer.train_policy_step(&refs).expect("sharpen");
+        }
+        let pg = PgConfig { entropy: 1.0, lambda: 0.0, trunk: true, ..Default::default() };
+        let before = trainer.pg_eval(&refs, pg).expect("eval").entropy;
+        assert!(before < (4.0f32).ln() - 0.1, "fixture: the sharpened policy is not flat ({before})");
+        for _ in 0..100 {
+            trainer.train_pg_step(&refs, pg).expect("pg step");
+        }
+        let after = trainer.pg_eval(&refs, pg).expect("eval").entropy;
+        assert!(after > before + 0.05, "entropy did not rise: {before} -> {after}");
+        assert!(after <= (4.0f32).ln() + 1e-3, "entropy is bounded by ln 4: {after}");
+    }
+
+    /// Unlabelled rows, rows without an aligned behaviour record, and
+    /// rows wider than the candidate cap take no part.
+    #[test]
+    fn pg_skips_unlabelled_and_wide_rows() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_policy_cfg();
+        let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        let mut rng = StdRng::seed_from_u64(3);
+        let unlabelled = DecisionRow {
+            successors: (0..2).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
+            chosen: 0,
+            scores: Some(vec![0, 0]),
+            temp: 1,
+            ..Default::default() // ret stays NaN
+        };
+        let no_record = DecisionRow {
+            successors: (0..2).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
+            chosen: 0,
+            ret: 1.0,
+            ..Default::default()
+        };
+        let wide = DecisionRow {
+            successors: (0..POLICY_MAX_CANDIDATES + 1)
+                .map(|_| random_state(&mut rng, cfg.vocab))
+                .collect(),
+            chosen: 0,
+            scores: Some(vec![0; POLICY_MAX_CANDIDATES + 1]),
+            temp: 1,
+            ret: 1.0,
+            ..Default::default()
+        };
+        let st = trainer
+            .pg_eval(&[&unlabelled, &no_record, &wide], PgConfig::default())
+            .expect("eval");
+        assert_eq!(st.n, 0);
+        assert_eq!(st.wide_skipped, 1);
+    }
+
+    /// The warm start: after the copy, the policy head's favourite is the
+    /// win head's favourite on every menu.
+    #[test]
+    fn init_policy_head_from_win_reproduces_the_win_ranking() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_policy_cfg();
+        let mut trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 8);
+        trainer.init_policy_head_from_win().expect("init");
+        let mut rng = StdRng::seed_from_u64(8);
+        for _ in 0..32 {
+            let menu: Vec<EncodedState> = (0..4).map(|_| random_state(&mut rng, cfg.vocab)).collect();
+            let refs: Vec<&EncodedState> = menu.iter().collect();
+            let argmax = |v: Vec<f32>| {
+                v.iter()
+                    .enumerate()
+                    .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+                    .map(|(i, _)| i)
+                    .unwrap()
+            };
+            let by_win = argmax(trainer.predict_win_states(&refs, 8).unwrap());
+            let by_pol = argmax(trainer.predict_policy_states(&refs, 8).unwrap());
+            assert_eq!(by_win, by_pol, "the copied head must rank as the win head does");
+        }
+    }
+
+    /// A headless pilot loads into a headed config when the head is
+    /// allowed missing — and `load` itself still refuses, so the
+    /// tolerance is opt-in.
+    #[test]
+    fn load_missing_ok_tolerates_an_absent_policy_head() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let headless = Trainer::new(&small_cfg(), 1e-3).expect("trainer");
+        reseed_params(&headless.varmap, &headless.dev, 13);
+        let path = std::env::temp_dir().join(format!("crab_r72_headless_{}.safetensors", std::process::id()));
+        headless.save(&path).expect("save");
+
+        let mut headed = Trainer::new(&small_policy_cfg(), 1e-3).expect("trainer");
+        assert!(headed.load(&path).is_err(), "`load` must still refuse a headless file");
+        headed
+            .load_missing_ok(&path, &["head_policy.weight", "head_policy.bias"])
+            .expect("tolerant load");
+        let read = |t: &Trainer, name: &str| -> Vec<f32> {
+            let data = t.varmap.data().lock().unwrap();
+            data.get(name).expect(name).as_tensor().flatten_all().unwrap().to_vec1().unwrap()
+        };
+        assert_eq!(read(&headless, "head_win.weight"), read(&headed, "head_win.weight"));
+        assert_eq!(read(&headless, "trunk1.weight"), read(&headed, "trunk1.weight"));
+        assert!(
+            headed.load_missing_ok(&path, &[]).is_err(),
+            "with nothing allowed missing the tolerant load is the strict one"
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    /// The prefetch pipeline packs host buffers on another thread; the
+    /// step they feed must be the same step as packing inline — same
+    /// statistics, same loss — or the pipeline changes the run.
+    #[test]
+    fn a_prepared_batch_gives_the_same_step_as_the_direct_path() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_policy_cfg();
+        let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 31);
+        let mut rng = StdRng::seed_from_u64(31);
+        let rows: Vec<DecisionRow> = (0..24)
+            .map(|_| DecisionRow {
+                successors: (0..rng.random_range(2..=4)).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
+                chosen: 0,
+                scores: Some(vec![3, 0, -3, 1]),
+                temp: 200,
+                net_scored: true,
+                ret: if rng.random_bool(0.5) { 1.0 } else { 0.0 },
+                ..Default::default()
+            })
+            .map(|mut r| {
+                r.scores.as_mut().unwrap().truncate(r.successors.len());
+                r
+            })
+            .collect();
+        let refs: Vec<&DecisionRow> = rows.iter().collect();
+        let pg = PgConfig::default();
+        let direct = trainer.pg_eval(&refs, pg).expect("direct");
+        let prepared = prepare_pg_batch(&refs);
+        assert_eq!(prepared.len(), 24);
+        let (mean_pb, net_share) = prepared.behaviour_summary();
+        assert!(mean_pb > 0.0 && mean_pb < 1.0 && net_share == 1.0);
+        let (_, via) = trainer.pg_forward_prepared(prepared, pg).expect("prepared");
+        assert_eq!(via.n, direct.n);
+        for (a, b, what) in [
+            (via.loss, direct.loss, "loss"),
+            (via.adv_mean, direct.adv_mean, "adv_mean"),
+            (via.entropy, direct.entropy, "entropy"),
+            (via.rho_mean, direct.rho_mean, "rho_mean"),
+        ] {
+            assert!((a - b).abs() < 1e-5, "{what}: prepared {a} vs direct {b}");
+        }
+    }
+
+    /// The padding helper keeps the chosen candidate inside the window
+    /// and reports the offset every per-candidate slice has to be cut by.
+    #[test]
+    fn pad_decisions_keeps_the_chosen_candidate_in_the_window() {
+        let mut rng = StdRng::seed_from_u64(1);
+        let mut wide = |chosen: usize| DecisionRow {
+            successors: (0..10).map(|_| random_state(&mut rng, 8)).collect(),
+            chosen,
+            ..Default::default()
+        };
+        let tail = wide(9);
+        let head = wide(3);
+        let pad = pad_decisions(&[&tail, &head]).expect("padded");
+        assert_eq!((pad.b, pad.k), (2, POLICY_MAX_CANDIDATES));
+        assert_eq!(pad.offset, vec![2, 0]);
+        assert_eq!(pad.chosen, vec![7, 3]);
+        assert_eq!(pad.n, vec![8, 8]);
+        assert_eq!(pad.flat.len(), 16);
+        assert!(std::ptr::eq(pad.flat[0], &tail.successors[2]), "the window starts at the offset");
+        assert!(pad.mask.iter().all(|m| *m == 1.0), "full-width rows carry no padding");
     }
 }

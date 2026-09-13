@@ -674,6 +674,12 @@ fn play_recorded_game_mcts_inner(
     // else pushes to `snaps`, so `i` and `i + 1` are the pair.
     let mut last_pair: Option<usize> = None;
     let (mut actions, mut stale) = (0usize, 0usize);
+    // The decision recorder's join key (round 72): every captured decision
+    // carries the seat's snapshot index at capture time, which is exactly
+    // the `ply` the labelling loop below assigns the latest row. Set here
+    // and bumped in the snapshot block, so a decision made in iteration k
+    // reads the row pushed in iteration k (or the last one pushed before).
+    crate::server::decision_capture::set_ply(0);
     while stop_reason(&g, actions, max_actions, stale).is_none() {
         let new_turn = (g.turn_number, g.active_player_idx) != last_turn;
         // The four shapes a combat passes through, each the leaf of a
@@ -709,6 +715,9 @@ fn play_recorded_game_mcts_inner(
                     .is_some_and(|i| snaps[i].2 == pair[0] && snaps[i + 1].2 == pair[1]);
                 if !repeat {
                     last_pair = Some(snaps.len());
+                    // Snapshots are pushed in seat pairs, so `len / 2`
+                    // before the push is this pair's per-seat `ply`.
+                    crate::server::decision_capture::set_ply((snaps.len() / 2) as u16);
                     for (seat, s) in pair.into_iter().enumerate() {
                         snaps.push((g.turn_number, seat, s));
                         heur.push(crate::server::bot::eval_material_public(
@@ -747,6 +756,7 @@ fn play_recorded_game_mcts_inner(
         if any { stale = 0 } else { stale += 1 }
     }
 
+    crate::server::decision_capture::set_ply(0);
     let turns = g.turn_number;
     // The same `stop_reason` as `recommend::play_one_game_traced`, so the
     // actor and the ladder bound a game identically.
@@ -1107,5 +1117,52 @@ mod tests {
         assert_eq!((a.winner, a.turns, a.rows.len()), (b.winner, b.turns, b.rows.len()));
         assert!(a.rows == b.rows, "every recorded position replays identically");
         assert!(a.heur == b.heur, "so does every heuristic row");
+    }
+
+    /// Round 72: every decision the recorder captures carries the ply of
+    /// the seat's latest row, so a policy-gradient target can be joined
+    /// to the value stream. The join has to be in range, chronological
+    /// (decisions drain in play order, rows are pushed in play order),
+    /// and the cell has to be reset for the next game.
+    #[test]
+    fn decision_ply_joins_to_the_seat_rows() {
+        use crate::server::decision_capture as cap;
+        let _serial = cap::TEST_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let vocab = Vocab::sos_sealed();
+        let deck_a = heuristic_sealed_build(&sealed_pool(0xA11CE), 1);
+        let deck_b = heuristic_sealed_build(&sealed_pool(0xB0B), 2);
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let _ = cap::drain();
+        cap::set_enabled(true);
+        let rec = play_recorded_game(
+            &template,
+            [EvalWeights::default(), EvalWeights::default()],
+            77,
+            4000,
+            &vocab,
+        );
+        let decisions = cap::drain();
+        cap::set_enabled(false);
+        assert!(rec.winner.is_some(), "fixture: the game decides");
+        assert!(!decisions.is_empty(), "a recorded game captures decisions");
+        let rows_of = |seat: usize| rec.rows.iter().filter(|r| r.traj & 1 == seat as u32).count();
+        let mut last_ply = [0u16; 2];
+        for d in &decisions {
+            assert!(
+                (d.ply as usize) < rows_of(d.seat),
+                "seat {} decision at ply {} but only {} rows",
+                d.seat,
+                d.ply,
+                rows_of(d.seat)
+            );
+            assert!(d.ply >= last_ply[d.seat], "plies run forward within a seat");
+            last_ply[d.seat] = d.ply;
+            assert!(d.scores.is_some(), "the live pickers record their scores");
+        }
+        assert!(
+            decisions.iter().any(|d| d.seat == 0) && decisions.iter().any(|d| d.seat == 1),
+            "both seats decide"
+        );
+        assert_eq!(cap::ply(), 0, "the recorder resets the cell after the game");
     }
 }

@@ -180,6 +180,43 @@ fn choose_scored(turn: u32, scored: &[(usize, i32)]) -> Option<usize> {
     Some(best.0)
 }
 
+/// [`choose_scored`], then hand the same menu to the decision recorder with
+/// the behaviour record attached (round 72): the scores the pick was made
+/// over and the temperature it was sampled at, so the probability the pilot
+/// played its choice is exactly recoverable downstream. `to_action` wraps
+/// candidate `i` as the engine action the recorder re-applies — the combat
+/// pickers' candidates are declarations, not actions, until this point.
+///
+/// Costs one relaxed atomic load when capture is off; with it on, one
+/// clone + apply + encode per candidate, on the actor path only.
+fn choose_scored_recorded(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    scored: &[(usize, i32)],
+    to_action: impl Fn(usize) -> GameAction,
+) -> Option<usize> {
+    let chosen = choose_scored(state.turn_number, scored)?;
+    if super::decision_capture::enabled() && scored.len() >= 2 {
+        let actions: Vec<GameAction> = scored.iter().map(|&(i, _)| to_action(i)).collect();
+        let scores: Vec<i32> = scored.iter().map(|&(_, s)| s).collect();
+        let chosen_pos = scored.iter().position(|&(i, _)| i == chosen).unwrap_or(0);
+        super::decision_capture::maybe_full(
+            state,
+            seat,
+            &actions,
+            chosen_pos,
+            super::decision_capture::Provenance {
+                scores: Some(&scores),
+                temp: sampling_temp(state.turn_number).map_or(0, |t| t as i32),
+                net_scored: w.net_slot != 0,
+                ..Default::default()
+            },
+        );
+    }
+    Some(chosen)
+}
+
 /// Drives one seat without a human client. Implementations see the full
 /// `GameState` and return the single next action they'd like to submit.
 pub trait Bot: Send {
@@ -757,6 +794,19 @@ pub struct EvalWeights {
     /// mirror seats saturate together, so the ladder may under-read a
     /// change whose client-facing case stands on its own.
     pub net_tail_guard: bool,
+    /// Rank the three live pickers' candidates — main-phase finalists,
+    /// attack declarations, block declarations — by the **policy head** of
+    /// the net in [`net_slot`](Self::net_slot) instead of by the win head
+    /// (round 72). Each candidate is scored on its ONE-ACTION successor
+    /// (`state` + the action applied, the state `decision_capture` trained
+    /// the head on), never on the sim-settled leaf: the head learned to
+    /// rank what the recorder showed it, and the pilot has to ask it the
+    /// same question. Requires a net carrying `head_policy.*`; without one
+    /// the pickers keep the win head and the ladder says so at startup.
+    /// Everything else — `eval_material` inside the sims, pending-decision
+    /// policies, the response layers — keeps the win head through
+    /// `net_slot`. Off by default; profile `net67-pol`.
+    pub policy_rank: bool,
     /// Sequence the land drop instead of taking the first land that
     /// covers the most missing colors. Two additions:
     ///
@@ -1153,6 +1203,7 @@ impl EvalWeights {
             fetch_arms: false,
             legacy_fetch: false,
             net_quantize: 0,
+            policy_rank: false,
         }
     }
 
@@ -1257,6 +1308,7 @@ impl EvalWeights {
             fetch_arms: false,
             legacy_fetch: false,
             net_quantize: 0,
+            policy_rank: false,
         }
     }
 
@@ -1344,6 +1396,7 @@ impl EvalWeights {
             fetch_arms: false,
             legacy_fetch: false,
             net_quantize: 0,
+            policy_rank: false,
         }
     }
 
@@ -1974,6 +2027,15 @@ impl EvalWeights {
     /// twin is `mcts-net67-256` against `mcts-dflt-256`.
     pub const fn net_on_default() -> Self {
         Self { net_slot: super::net_eval::SLOT_BEST, ..Self::default_const() }
+    }
+
+    /// [`net_on_default`](Self::net_on_default) with the live pickers
+    /// ranking by the policy head ([`policy_rank`](Self::policy_rank)) —
+    /// round 72's gate pilot, ladder `net67-pol`. Same slot, same file, so
+    /// against `net67` it differs by the head swap in three pickers and
+    /// nothing else.
+    pub const fn net_on_default_policy_rank() -> Self {
+        Self { policy_rank: true, ..Self::net_on_default() }
     }
 
     /// [`net_eval_det1`](Self::net_eval_det1) averaging three redeals per
@@ -10445,7 +10507,10 @@ fn board_open_for_attack(state: &GameState, seat: usize) -> bool {
 /// share a currency, or the comparison at the band's edge is between a
 /// probability and an unbounded material score.
 fn tail_guarded(state: &GameState, seat: usize, w: &EvalWeights) -> EvalWeights {
-    if !w.net_tail_guard || w.net_slot == 0 {
+    // A policy-head ranker (`policy_rank`) is a logit, not a sigmoid: it
+    // does not saturate the way the guard exists to catch, and zeroing
+    // `net_slot` here would silently drop the head the profile is for.
+    if !w.net_tail_guard || w.net_slot == 0 || policy_ranking(w) {
         return *w;
     }
     match super::net_eval::win_prob(state, seat, w.net_slot) {
@@ -10501,9 +10566,15 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     // First-wins-ties in `choose_scored`: index 0 is greedy, so equal
     // scores keep it (unless this thread is sampling — actors only).
     let starts = SimStarts::new(state, seat, w);
+    let by_policy = policy_ranking(w);
     let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
-        let Some(score) = simulate_attack_outcome_from(&starts, seat, cand, w) else { continue };
+        let score = if by_policy {
+            policy_rank_score(state, seat, &GameAction::DeclareAttackers(cand.clone()), None, w)
+        } else {
+            simulate_attack_outcome_from(&starts, seat, cand, w)
+        };
+        let Some(score) = score else { continue };
         scored.push((i, score));
     }
     // The chain's finished set is one more candidate in the same argmax
@@ -10528,10 +10599,23 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
             attack_chain_candidate(state, seat, w, &candidates, &scored, pool, &starts)
         && !candidates.iter().any(|c| attack_set_key(c) == attack_set_key(&chain))
     {
-        candidates.push(chain);
-        scored.push((menu_len, score));
+        // The chain grows its set by sims, so its score is in sim units;
+        // under `policy_rank` the menu is in head units and the chain's
+        // set has to be re-scored in the same currency to join the argmax.
+        let score = if by_policy {
+            policy_rank_score(state, seat, &GameAction::DeclareAttackers(chain.clone()), None, w)
+        } else {
+            Some(score)
+        };
+        if let Some(score) = score {
+            candidates.push(chain);
+            scored.push((menu_len, score));
+        }
     }
-    let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+    let chosen = choose_scored_recorded(state, seat, w, &scored, |i| {
+        GameAction::DeclareAttackers(candidates[i].clone())
+    })
+    .unwrap_or(0);
     if attack_census::on() {
         attack_census::tick(
             state,
@@ -11817,9 +11901,15 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
     }
 
     let starts = SimStarts::new(state, seat, w);
+    let by_policy = policy_ranking(w);
     let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
-        let Some(score) = simulate_block_outcome_from(&starts, seat, cand, w) else { continue };
+        let score = if by_policy {
+            policy_rank_score(state, seat, &GameAction::DeclareBlockers(cand.clone()), None, w)
+        } else {
+            simulate_block_outcome_from(&starts, seat, cand, w)
+        };
+        let Some(score) = score else { continue };
         scored.push((i, score));
     }
     // The chain's finished plan is one more candidate in the same argmax
@@ -11858,13 +11948,25 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
                 menu_winner = Some((menu_class, sims));
             }
             if !candidates.iter().any(|c| block_set_key(c) == block_set_key(&chain)) {
-                candidates.push(chain);
-                scored.push((menu_len, score));
-                chain_novel = true;
+                // Same currency rule as the attack picker: the chain's plan
+                // is re-scored by the head under `policy_rank`.
+                let score = if by_policy {
+                    policy_rank_score(state, seat, &GameAction::DeclareBlockers(chain.clone()), None, w)
+                } else {
+                    Some(score)
+                };
+                if let Some(score) = score {
+                    candidates.push(chain);
+                    scored.push((menu_len, score));
+                    chain_novel = true;
+                }
             }
         }
     }
-    let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+    let chosen = choose_scored_recorded(state, seat, w, &scored, |i| {
+        GameAction::DeclareBlockers(candidates[i].clone())
+    })
+    .unwrap_or(0);
     if block_census::on() {
         block_census::tick(menu_len, chosen, chain_novel, menu_winner);
     }
@@ -15233,6 +15335,43 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -
 /// Dry-run `action` to quiescence on a full-state clone (libraries kept —
 /// resolution may draw) and score the result for `seat`: the cast is
 /// applied, then priority passes with [`AutoDecider`] answers for any
+/// Whether `w` ranks the live pickers by the policy head: the flag is on
+/// AND the slot's net can answer. Read once per picker so every candidate
+/// of one argmax scores in the same currency.
+fn policy_ranking(w: &EvalWeights) -> bool {
+    w.policy_rank && w.net_slot != 0 && super::net_eval::slot_has_policy(w.net_slot)
+}
+
+/// The policy head's score of `action`'s one-action successor, on the i32
+/// scale the pickers compare: `logit × 1000`. `settled` is used when the
+/// caller already dry-ran the action; otherwise the action is applied to
+/// a clone here. `None` when the engine rejects the action or the slot
+/// carries no head — the caller falls back to its static rank.
+///
+/// Deliberately NOT the sim-settled leaf that `evaluate_action_outcome`
+/// and the combat sims score: the head was trained on the recorder's
+/// successor (`decision_capture`: the pre-decision state with exactly
+/// this action applied, a cast still on the stack, a declaration not yet
+/// resolved), and a pilot that asked it about a different state would be
+/// consuming a head it never trained.
+fn policy_rank_score(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    settled: Option<&GameState>,
+    w: &EvalWeights,
+) -> Option<i32> {
+    let logit = match settled {
+        Some(g) => super::net_eval::policy_logit(g, seat, w.net_slot)?,
+        None => {
+            let mut g = state.clone();
+            dry_run(&mut g, action.clone()).ok()?;
+            super::net_eval::policy_logit(&g, seat, w.net_slot)?
+        }
+    };
+    Some((logit * 1000.0) as i32)
+}
+
 /// decision that surfaces until the stack empties. `None` on rejection or
 /// a resolution that won't settle — callers fall back to the static rank.
 fn evaluate_action_outcome(
@@ -15512,6 +15651,7 @@ fn pick_by_outcome(
         return finalists.into_iter().next();
     }
     let baseline = eval_material(state, seat, w);
+    let by_policy = policy_ranking(w);
     let evd: Vec<(i32, Finalist)> = finalists
         .into_iter()
         .map(|f| {
@@ -15520,7 +15660,14 @@ fn pick_by_outcome(
             // see the effect reversing, so evaluating it would sell a
             // bounce as removal. They win only on static score against
             // other no-eval-gain lines.
-            let ev = if action_outcome_is_temporary(state, &f.action) {
+            //
+            // Under `policy_rank` every finalist is scored by the head on
+            // its one-action successor — the temporary pin has no
+            // baseline currency there, and the head saw those casts too.
+            let ev = if by_policy {
+                policy_rank_score(state, seat, &f.action, f.settled.as_deref(), w)
+                    .unwrap_or(baseline)
+            } else if action_outcome_is_temporary(state, &f.action) {
                 baseline
             } else {
                 evaluate_action_outcome(state, seat, &f.action, f.settled.as_deref(), w)
@@ -15535,7 +15682,7 @@ fn pick_by_outcome(
     if let Some(t) = sampling_temp(state.turn_number) {
         let ws: Vec<i32> = evd.iter().map(|e| e.0).collect();
         let i = sample_scored_index(&ws, t);
-        capture_decision(state, seat, &evd, i);
+        capture_decision(state, seat, &evd, i, t as i32, w);
         return evd.into_iter().nth(i).map(|(_, f)| f);
     }
     let best = evd
@@ -15543,7 +15690,7 @@ fn pick_by_outcome(
         .enumerate()
         .max_by_key(|(_, (ev, f))| (*ev, f.score))
         .map(|(i, _)| i)?;
-    capture_decision(state, seat, &evd, best);
+    capture_decision(state, seat, &evd, best, 0, w);
     evd.into_iter().nth(best).map(|(_, f)| f)
 }
 
@@ -15555,12 +15702,35 @@ fn pick_by_outcome(
 /// mean the recorded candidate set is the shortlist (`EVAL_TOP`) rather
 /// than every legal action — which is the same convention AlphaZero uses
 /// when it records the search's action set rather than the rules'.
-fn capture_decision(state: &GameState, seat: usize, evd: &[(i32, Finalist)], chosen: usize) {
+///
+/// `temp` is the sampling temperature the pick was drawn at (0 = argmax);
+/// with the outcome scores it is the behaviour record an off-policy
+/// policy-gradient step corrects against (round 72).
+fn capture_decision(
+    state: &GameState,
+    seat: usize,
+    evd: &[(i32, Finalist)],
+    chosen: usize,
+    temp: i32,
+    w: &EvalWeights,
+) {
     if !super::decision_capture::enabled() {
         return;
     }
     let actions: Vec<GameAction> = evd.iter().map(|(_, f)| f.action.clone()).collect();
-    super::decision_capture::maybe(state, seat, &actions, chosen);
+    let scores: Vec<i32> = evd.iter().map(|(ev, _)| *ev).collect();
+    super::decision_capture::maybe_full(
+        state,
+        seat,
+        &actions,
+        chosen,
+        super::decision_capture::Provenance {
+            scores: Some(&scores),
+            temp,
+            net_scored: w.net_slot != 0,
+            ..Default::default()
+        },
+    );
 }
 
 /// True when `e`'s tree contains a leaf whose apparent value REVERSES
@@ -25417,5 +25587,122 @@ mod tail_guard_tests {
             guarded_choice, material_choice,
             "saturated read: the guarded picker gives the material answer"
         );
+    }
+
+    /// A net whose win head is flat and whose policy head prefers the
+    /// successor with FEWER attackers (global 19 is the attacker count),
+    /// so under `policy_rank` the picker must decline the attack the
+    /// material eval wants.
+    struct HoldBackPolicyNet;
+    impl crabomination_nn::NetEvaluator for HoldBackPolicyNet {
+        fn eval(&self, _s: crabomination_nn::EncodedState) -> f32 {
+            0.5
+        }
+        fn eval_policy(&self, s: crabomination_nn::EncodedState) -> Option<f32> {
+            Some(-s.global[19])
+        }
+        fn has_policy(&self) -> bool {
+            true
+        }
+    }
+
+    fn with_net<R>(net: Arc<dyn crabomination_nn::NetEvaluator>, f: impl FnOnce(u8) -> R) -> R {
+        let _guard = SLOT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = super::super::net_eval::SLOT_CANDIDATE;
+        super::super::net_eval::set_slot(slot, Some(net));
+        let out = f(slot);
+        super::super::net_eval::set_slot(slot, None);
+        out
+    }
+
+    /// The game-5 board again: material wants the free flying attack.
+    fn free_attack_board() -> (GameState, crate::card::CardId) {
+        let mut g = two_player_game();
+        // The declaration the recorder and the policy ranker re-apply
+        // needs the declarer's priority (`declare_attackers_banded`).
+        g.priority.player_with_priority = 1;
+        g.turn_number = 20;
+        g.players[1].life = 3;
+        g.players[0].life = 23;
+        let flyer = g.add_card_to_battlefield(1, catalog::emeritus_of_ideation());
+        g.clear_sickness(flyer);
+        let wall = g.add_card_to_battlefield(0, catalog::pensive_professor());
+        g.clear_sickness(wall);
+        (g, flyer)
+    }
+
+    /// Round 72: with `policy_rank` on and a headed net in the slot, the
+    /// attack picker takes the head's answer (hold) over the sims'
+    /// (attack); with the flag off, the same net and slot give the
+    /// material attack — the head is consumed only where the profile asks.
+    #[test]
+    fn policy_rank_ranks_attacks_by_the_head() {
+        let (g, flyer) = free_attack_board();
+        let (with_flag, without_flag) = with_net(Arc::new(HoldBackPolicyNet), |slot| {
+            let mut w = EvalWeights::net_on_default_policy_rank();
+            w.net_slot = slot;
+            let a = pick_attacks_scored(&g, 1, &w);
+            let mut off = EvalWeights::net_on_default();
+            off.net_slot = slot;
+            let b = pick_attacks_scored(&g, 1, &off);
+            (a, b)
+        });
+        assert!(
+            without_flag.iter().any(|a| a.attacker == flyer),
+            "fixture: without the flag the picker wants the flying attack"
+        );
+        assert!(
+            with_flag.is_empty(),
+            "policy_rank: the head prefers no attackers and the picker obeys, got {with_flag:?}"
+        );
+    }
+
+    /// Without a policy head in the slot the flag is inert: the picker
+    /// keeps the win-head path and gives the material answer, and says
+    /// nothing different from `net67`.
+    #[test]
+    fn policy_rank_without_a_head_falls_back_to_the_win_head() {
+        let (g, flyer) = free_attack_board();
+        let pick = with_const_net(0.5, |slot| {
+            let mut w = EvalWeights::net_on_default_policy_rank();
+            w.net_slot = slot;
+            assert!(!policy_ranking(&w), "a headless net cannot rank by policy");
+            pick_attacks_scored(&g, 1, &w)
+        });
+        assert!(pick.iter().any(|a| a.attacker == flyer), "fallback is the material attack");
+    }
+
+    /// Round 72: the attack picker's final menu reaches the decision
+    /// recorder with the behaviour record — the sim scores it chose over
+    /// and the temperature it sampled at — and the recorded chosen index
+    /// is the declaration the picker returned.
+    #[test]
+    fn the_attack_picker_records_its_menu_with_scores_and_temperature() {
+        let _serial = super::super::decision_capture::TEST_SERIAL
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        use super::super::decision_capture as cap;
+        let (g, _flyer) = free_attack_board();
+        let _ = cap::drain();
+        cap::set_enabled(true);
+        set_action_sampling(Some((100, 99)));
+        let picked = pick_attacks_scored(&g, 1, &EvalWeights::default());
+        set_action_sampling(None);
+        let got = cap::drain();
+        cap::set_enabled(false);
+        assert_eq!(got.len(), 1, "one attack decision recorded, got {}", got.len());
+        let d = &got[0];
+        assert_eq!(d.seat, 1);
+        assert_eq!(d.temp, 100, "the sampling temperature rides along");
+        assert!(!d.net_scored, "the default profile scores in material units");
+        let scores = d.scores.as_ref().expect("the sim scores ride along");
+        assert_eq!(scores.len(), d.successors.len(), "scores stay aligned with the survivors");
+        assert!(d.chosen < d.successors.len());
+        // The chosen successor is the picked declaration: re-applying it
+        // encodes to the recorded state.
+        let mut next = g.clone();
+        next.perform_action(GameAction::DeclareAttackers(picked)).unwrap();
+        let enc = super::super::encode::encode_state(&next, 1, super::super::net_eval::vocab());
+        assert_eq!(d.successors[d.chosen], enc, "chosen must index the played declaration");
     }
 }
