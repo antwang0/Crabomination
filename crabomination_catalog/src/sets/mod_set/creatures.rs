@@ -5385,8 +5385,8 @@ pub fn ursine_monstrosity() -> CardDefinition {
 
 /// Moonshadow — {B} 7/7 Elemental, menace. Enters with six -1/-1 counters.
 /// Whenever one or more permanent cards are put into your graveyard from
-/// anywhere while it has a -1/-1 counter on it, remove one. (Fires per card
-/// rather than per batch.)
+/// anywhere while it has a -1/-1 counter on it, remove one. Printed "one or
+/// more", so `once_per_batch`: a four-card mill removes ONE counter.
 pub fn moonshadow() -> CardDefinition {
     CardDefinition {
         name: "Moonshadow",
@@ -5412,7 +5412,8 @@ pub fn moonshadow() -> CardDefinition {
                         filter: SelectionRequirement::WithCounter(CounterType::MinusOneMinusOne),
                     },
                 ]),
-            ),
+            )
+            .once_per_batch(),
             effect: Effect::RemoveCounter {
                 what: Selector::This,
                 kind: CounterType::MinusOneMinusOne,

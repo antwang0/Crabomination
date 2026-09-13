@@ -27446,7 +27446,11 @@ pub fn the_gitrog_monster() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::LandPutIntoGraveyard, EventScope::YourControl),
+                // "Whenever **one or more** land cards are put into your
+                // graveyard from anywhere, draw a card." One card for the
+                // batch, so it pins itself against the fan-out.
+                event: EventSpec::new(EventKind::LandPutIntoGraveyard, EventScope::YourControl)
+                    .once_per_batch(),
                 effect: Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),

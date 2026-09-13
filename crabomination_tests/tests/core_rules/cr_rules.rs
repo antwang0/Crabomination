@@ -1256,6 +1256,7 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
         additional_targets: Vec::new(),
         mana_spent_by_color: Vec::new(),
         activated: false,
+        source_transformed_since_push: false,
     });
     let mut events = Vec::new();
     let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
@@ -5045,10 +5046,20 @@ fn cr_111_10_token_created_fires_per_token() {
     assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
 }
 
-/// CR 614.13 — a token-doubling replacement multiplies the count, and each
-/// resulting token fires its own `TokenCreated` event (CR 111.10). With a
-/// doubler out, Voldaren at 3 Blood mints one → two Blood enter → it reaches
-/// five and transforms off the doubled token.
+/// CR 614.13 / 603.6 — a token-doubling replacement multiplies the count, and
+/// each resulting token fires its own `TokenCreated` event (CR 111.10). With a
+/// doubler out, Voldaren at 3 Blood mints one → **two** Blood enter → the
+/// singular "whenever you create a Blood token" triggers **twice**, and both
+/// see five or more Blood.
+///
+/// The second transform is **ignored**, not a flip back: CR 701.27f, "if an
+/// activated or triggered ability of a permanent … tries to transform it, the
+/// permanent does so only if it hasn't transformed or converted since the
+/// ability was put onto the stack." The two-trigger count is the CR 603.6
+/// assertion; the face is the CR 701.27f one, and the two together are why
+/// this test asserted a single transform before `EventKind::TokenCreated`
+/// joined `event_kind_fans_out` — one trigger got the face right for the
+/// wrong reason and hid the doubled token from the very ability under test.
 #[test]
 fn cr_614_13_token_doubling_fires_per_doubled_token() {
     let mut g = two_player_game();
@@ -5074,8 +5085,13 @@ fn cr_614_13_token_doubling_fires_per_doubled_token() {
         "doubler made two Blood from one mint"
     );
     g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.stack.len(), 2, "one trigger per Blood token created, not one for the batch");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
+    assert_eq!(
+        g.battlefield_find(caster).unwrap().definition.name,
+        "Bloodbat Summoner",
+        "CR 701.27f — the second trigger's transform is ignored, not a flip back"
+    );
 }
 
 // ── CR 508.1a — attack-only restriction ──────────────────────────────────────
@@ -10810,5 +10826,57 @@ fn cr_613_most_common_color_counts_computed_colors() {
         g.computed_permanent(djinn).unwrap().power,
         3,
         "and back on when the layer-5 source leaves",
+    );
+}
+
+/// CR 603.6 — the fan-out list's OTHER direction, the half that is checkable
+/// statically: `event_matches_spec` lets one `EventKind` match several
+/// `GameEvent` variants, which is how `PutIntoGraveyard` matched both
+/// `CardPutIntoGraveyard` and `CardMilled` and read 10 for a five-card mill.
+/// Of the 37 kinds in `event_kind_fans_out`, exactly TWO match more than one
+/// variant, and the second is this one: `PermanentLeavesBattlefield` matches
+/// `CreatureDied` **and** `PermanentLeftBattlefield`. It is NOT the same bug —
+/// the two routes are disjoint by construction (`note_left_without_dying` is
+/// called on every NON-graveyard exit, the death path collects its trigger
+/// before removal) — so one exit writes one record whichever way it goes.
+/// Pinned in both directions, because "disjoint by construction" is exactly
+/// the kind of claim a later refactor breaks silently.
+#[test]
+fn cr_603_6_one_exit_is_one_leaves_battlefield_trigger() {
+    use crabomination::card::CounterType as CT;
+    // (a) the DEATH route.
+    let mut g = two_player_game();
+    let drover = g.add_card_to_battlefield(0, catalog::twilight_drover());
+    let tok = g.add_token_to_battlefield(0, &crabomination_base::tokens::spirit_token());
+    let before = g.battlefield_find(drover).unwrap().counter_count(CT::PlusOnePlusOne);
+    let mut events = Vec::new();
+    g.destroy_permanent(tok, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(drover).unwrap().counter_count(CT::PlusOnePlusOne) - before, 1,
+        "a token dying is ONE leave, not one per event record",
+    );
+
+    // (b) the NON-death route, through `note_left_without_dying`.
+    let mut g = two_player_game();
+    let drover = g.add_card_to_battlefield(0, catalog::twilight_drover());
+    g.add_token_to_battlefield(0, &crabomination_base::tokens::spirit_token());
+    let before = g.battlefield_find(drover).unwrap().counter_count(CT::PlusOnePlusOne);
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(
+        &crabomination::effect::Effect::Exile {
+            what: crabomination::effect::Selector::EachPermanent(
+                crabomination::card::SelectionRequirement::IsToken
+                    .and(crabomination::card::SelectionRequirement::ControlledByYou),
+            ),
+        },
+        &ctx,
+    ).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(drover).unwrap().counter_count(CT::PlusOnePlusOne) - before, 1,
+        "an exile is ONE leave too",
     );
 }

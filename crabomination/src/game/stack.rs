@@ -2053,6 +2053,15 @@ impl GameState {
             return Ok(vec![]);
         };
         let mut events = vec![];
+        // CR 701.27f — scoped to the resolution the Trigger arm is about to
+        // start. Cleared here rather than at that arm's end so a suspended
+        // resolution keeps it across the answer (the resume runs out of
+        // `submit_decision`, not through here) and a spell can never read a
+        // trigger's leftover. Guarded: the flag is false on essentially every
+        // resolution, and an unguarded store unshares the whole scratch group.
+        if self.scratch.resolving_source_transformed {
+            self.scratch.resolving_source_transformed = false;
+        }
 
         match item {
             StackItem::Spell {
@@ -2912,8 +2921,15 @@ impl GameState {
                 activated: _,
                 trigger_player,
                 mana_spent_by_color,
+                source_transformed_since_push,
             } => {
                 self.scratch.activation_mana_colors_scratch = mana_spent_by_color;
+                // CR 701.27f — scoped to this resolution; `Effect::Transform`
+                // reads it when the thing it would transform is the ability's
+                // own permanent.
+                if source_transformed_since_push {
+                    self.scratch.resolving_source_transformed = true;
+                }
                 // CR 603.4 — re-check the intervening 'if' clause as the
                 // ability resolves. "If the condition isn't true at that
                 // time, the ability is removed from the stack and does

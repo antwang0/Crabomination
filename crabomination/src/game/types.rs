@@ -3030,6 +3030,15 @@ pub enum StackItem {
         /// spent on this activation cost"). Empty for triggered abilities.
         #[serde(default)]
         mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
+        /// CR 701.27f — set by `transform_permanent` on every item already on
+        /// the stack whose `source` is the permanent that just transformed.
+        /// An ability of a permanent transforms it "only if it hasn't
+        /// transformed or converted since the ability was put onto the
+        /// stack", and an item pushed *after* the transform defaults to
+        /// `false`, which is exactly that anchor. Read at resolution into
+        /// `resolving_source_transformed`.
+        #[serde(default)]
+        source_transformed_since_push: bool,
     },
 }
 
@@ -3145,6 +3154,9 @@ impl TriggerPush {
             activated: self.activated,
             trigger_player: self.trigger_player,
             mana_spent_by_color: self.mana_spent_by_color,
+            // CR 701.27f — false at push by definition; `transform_permanent`
+            // sets it on items already on the stack.
+            source_transformed_since_push: false,
         }
     }
 }

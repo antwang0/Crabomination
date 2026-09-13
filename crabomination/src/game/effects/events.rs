@@ -534,7 +534,52 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // `once_per_batch`. `SelfSource` ETBs never reach here —
             // `is_event_hardcoded` routes them to `fire_self_etb_triggers`.
             | EventKind::EntersBattlefield
+            // CR 603.6, the rest of the census the `EntersBattlefield` pass
+            // opened. Each was probed against a real batch before being put
+            // here; each read 1 where the printed card wants N:
+            //   PutIntoGraveyard      The Haunt of Hightower, 1 counter for a
+            //                         five-card mill ("whenever **a** card is
+            //                         put into an opponent's graveyard")
+            //   LandPutIntoGraveyard  Slogurk, 1 for five milled lands
+            //   TokenCreated          Mirkwood Bats, 1 life for three tokens
+            //   Explored              Wildgrowth Walker, 1 for two explores
+            //   PlayerDamaged         Aurification, 1 gold counter for two
+            //                         attackers — and the batch really does
+            //                         carry two `DamageDealt{to_player}`
+            //   CardExiled            Soulherder, 1 for two exiles
+            // The plural "one or more" wordings on these kinds pin themselves
+            // (Moonshadow, The Gitrog Monster, Kambal's second half) or
+            // already carried `once_per_turn`, which excludes fan-out anyway.
+            | EventKind::PutIntoGraveyard
+            | EventKind::LandPutIntoGraveyard
+            | EventKind::TokenCreated
+            | EventKind::Explored
+            | EventKind::PlayerDamaged
+            | EventKind::CardExiled
     )
+}
+
+/// CR 701.15b — ONE card reaching a graveyard can put TWO matching records in
+/// one batch: the mill sites that go through `route_to_graveyard` push a
+/// `CardPutIntoGraveyard` AND a `CardMilled`, and both match
+/// `EventKind::PutIntoGraveyard`. "Whenever a card is put into a graveyard" is
+/// once per CARD, so a fanned-out trigger on such a kind dedupes on the event
+/// subject. Not fixable at the emission sites: the dredge mill pushes only
+/// `CardMilled` and still has to fire this kind, so neither record can be
+/// dropped.
+///
+/// One list for the battlefield walk and the graveyard walk of
+/// `dispatch_triggers_for_events`, the way `event_kind_fans_out` is, so the two
+/// cannot drift — the graveyard walk is where the rule was missed, and Ichor
+/// Wellspring ("when this is put into a graveyard from anywhere, draw a card")
+/// drew two off a one-card mill because of it.
+///
+/// It is exactly this kind: a card reaches a graveyard once per batch, so the
+/// dedupe can never swallow a real second fire, while every other fanned-out
+/// kind CAN legitimately carry two events for one subject (two damage
+/// instances on one creature, two counter additions on one permanent).
+pub(crate) fn fanout_dedupes_on_subject(kind: &EventKind) -> bool {
+    matches!(kind, EventKind::PutIntoGraveyard)
 }
 
 pub(crate) fn is_graveyard_self_source_kind(kind: &EventKind) -> bool {

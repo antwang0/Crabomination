@@ -1570,6 +1570,15 @@ pub struct ResolutionScratch {
     /// (Protective Sphere's "shares a color with the mana spent").
     #[serde(skip)]
     pub(crate) activation_mana_colors_scratch: Vec<(crate::mana::Color, u32)>,
+    /// CR 701.27f — the resolving ability's `source_transformed_since_push`.
+    /// True means its permanent has transformed or converted since the ability
+    /// went on the stack, so an instruction to transform *that* permanent is
+    /// ignored. Lives here rather than on `GameState`, which is at its
+    /// 1,600-byte cap (`cow::tests::game_state_stays_small`); both its writes
+    /// are guarded by a read, and the arm that sets it already stores
+    /// `activation_mana_colors_scratch` beside it.
+    #[serde(skip)]
+    pub(crate) resolving_source_transformed: bool,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -3963,6 +3972,26 @@ impl GameState {
             c.front_face = None;
             c.set_definition(front);
             c.transformed = false;
+        }
+        // CR 701.27f — "an activated or triggered ability of a permanent …
+        // transforms it only if it hasn't transformed or converted since the
+        // ability was put onto the stack." Stamp the items that are already
+        // there; anything pushed after this point keeps the `false` its
+        // builder gave it, which is the rule's anchor. Read first: the stack
+        // is a CoW group and an unconditional walk would unshare it on every
+        // probe clone that transforms anything.
+        if self
+            .stack
+            .iter()
+            .any(|it| matches!(it, StackItem::Trigger { source, .. } if *source == id))
+        {
+            for it in self.stack.iter_mut() {
+                if let StackItem::Trigger { source, source_transformed_since_push, .. } = it
+                    && *source == id
+                {
+                    *source_transformed_since_push = true;
+                }
+            }
         }
         self.apply_as_transforms_effect(id, events);
         events.push(GameEvent::Transformed { card_id: id });
@@ -19878,6 +19907,9 @@ impl GameState {
         // `cube` run (PERF `(-117)`). One `Vec` a dispatch, cleared per
         // trigger, capacity kept.
         let mut block_sides_seen: Vec<CardId> = Vec::new();
+        // Per-(permanent, trigger) dedup for `PutIntoGraveyard`, whose batch
+        // can carry two records for one card. See the arm that uses it.
+        let mut graveyard_subjects_seen: Vec<CardId> = Vec::new();
         // The fast-path `continue` below, asked once for the board instead of
         // once per permanent. With no grant of any kind in play only a
         // permanent carrying a printed trigger or a Station band can get past
@@ -20087,6 +20119,7 @@ impl GameState {
                 // partner set via `Selector::BlockedAttacker` /
                 // `BlockingCreatures`, so one trigger instance still covers all.
                 block_sides_seen.clear();
+                graveyard_subjects_seen.clear();
                 for (i, ev) in events.iter().enumerate() {
                     let bits = if i < KEPT_BITS {
                         event_bits[i]
@@ -20149,6 +20182,21 @@ impl GameState {
                             continue;
                         }
                         block_sides_seen.push(sid);
+                    }
+                    // CR 701.15b — one card reaching a graveyard is two
+                    // matching records in the batch; see
+                    // `fanout_dedupes_on_subject`, which the graveyard walk
+                    // below reads from the same place so the two cannot drift.
+                    if crate::game::effects::events::fanout_dedupes_on_subject(&ta.event.kind)
+                        && let Some(
+                            crate::game::effects::EntityRef::Permanent(sid)
+                            | crate::game::effects::EntityRef::Card(sid),
+                        ) = subject
+                    {
+                        if graveyard_subjects_seen.contains(&sid) {
+                            continue;
+                        }
+                        graveyard_subjects_seen.push(sid);
                     }
                     // Evaluate the trigger's intervening filter here, before
                     // consuming any once-per-turn / per-subject budget: a
@@ -20465,6 +20513,7 @@ impl GameState {
                     let fanout = crate::game::effects::events::event_kind_fans_out(&ta.event.kind)
                         && !ta.event.once_per_turn
                         && !ta.event.once_per_batch;
+                    graveyard_subjects_seen.clear();
                     for ev in events {
                         if is_event_hardcoded(ev, &ta.event) {
                             continue;
@@ -20478,6 +20527,23 @@ impl GameState {
                             continue;
                         }
                         let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
+                        // CR 701.15b — the battlefield walk's rule, read from
+                        // the same place. `PutIntoGraveyard` is a
+                        // `is_graveyard_self_source_kind`, so "when THIS is put
+                        // into a graveyard from anywhere" fires out of the
+                        // graveyard the card just landed in — and a mill puts
+                        // both records for it in the batch.
+                        if crate::game::effects::events::fanout_dedupes_on_subject(&ta.event.kind)
+                            && let Some(
+                                crate::game::effects::EntityRef::Permanent(sid)
+                                | crate::game::effects::EntityRef::Card(sid),
+                            ) = subject
+                        {
+                            if graveyard_subjects_seen.contains(&sid) {
+                                continue;
+                            }
+                            graveyard_subjects_seen.push(sid);
+                        }
                         if let Some(filter) = &ta.event.filter {
                             let ctx = crate::game::effects::EffectContext {
                                 controller: card.owner,
