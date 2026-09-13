@@ -3062,6 +3062,26 @@ sweep   **fresh seeds 1282..1291 (claimed in NEXT before it was run): 30 cells /
         **0 dead capability / 1 dead primitive** (closed with a reason), `audit_keyword_drift`
         **0 invented / 4 missing**.
 
+park    **`(-297)`: the rest of `(-295)`'s class was built, laddered and PARKED — it loses 0.4 pts, and the
+        mechanism is the finding.** `bounce_other_filter` / `exile_other_filter` / `discard_cost` had **no
+        priced owner at all**, and the census is **48 catalog abilities** pairing one with a sink-generator
+        shape (`discard_cost` + draw 18 / + token 9 / + self-counter 8; `exile_other_filter` + token 6;
+        `bounce_other_filter` + draw 2 …), so it looked exactly like `(-295)` one field over. Giving them
+        `pick_sacrifice_value` reads **pooled 49.58 % on sealed** (43 / 97 / 151 / 199, 48,000 paired games,
+        cells 49.5 / 50.1 / **48.2** / 50.5, two intervals wholly below 50), `all` 49.90, `cube` 50.00 —
+        **with real incidence**, hundreds of discordant pairs a cell against round 72's four in 13,598, so
+        this reading is a measurement where round 72's could not be. ⚠ **`pick_sacrifice_value` tests
+        `ev > baseline` and `baseline` is "do nothing", which is not what a last-resort mana sink competes
+        with**: a sink fires with leftover mana and no better play, so its real alternative is "do nothing
+        AND waste the mana", and `eval_material` cannot see wasted mana — it prices the discarded card at
+        4·unit against a token at 3·pv and refuses. The blind plays were, on balance, right. **Which is why
+        `(-295)` is the narrow fix and stays narrow**: there the resource is a permanent on the board, which
+        the eval does see. ⚠⚠ **The code is REVERTED, not parked**: `ability_sink_bits` runs per (permanent,
+        ability), so carrying the arm cost the shipped default **+0.034 / +0.015 / +0.022 %** against the
+        `(-296)` tip — a seventh of what `(-296)` won, for a flag that is off — and that was already with a
+        separate gate bit keeping the default's gate byte-identical. `(-297)` carries the whole design and
+        `.ladder/run_r73_sinkcosts.sh` its thresholds; the entry is the deliverable.
+
 gates   suite **19,546 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--workspace --all-targets`),
         golden_trace **12 / 12 unmoved**, `--bench` **195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls** BYTE-IDENTICAL to the committed invariant with `determinism ok` and `thread_determinism ok
@@ -6762,6 +6782,85 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-297)` LADDERED AND PARKED — the rest of `(-295)`'s class LOSES 0.4 pts, and the reason is that a last-resort sink is not priced against doing nothing
+
+`(-295)` gave a sacrifice-cost ability its priced owner. Three sibling cost
+fields had **no priced owner at all** — `ability_sink_bits` did not set
+`AB_SAC` for them and `pick_sacrifice_value` did not consider them — so the
+five sink generators were the only thing that ever fired a bounce, an exile or
+a discard cost, unpriced. That is not a hypothetical class: the census is **48
+catalog abilities** pairing one of those fields with one of the five
+generators' shapes.
+
+```text
+  discard_cost        + draw 18   + token 9   + self-counter 8
+  exile_other_filter  + token 6   + self-counter 3   + team-pump 1
+  bounce_other_filter + draw 2    + token 1
+```
+
+So the class looked like `(-295)` one field over, and the same fix was built:
+`ability_spends_a_permanent_or_card`, read by the generators and by the owner
+from one function so the two cannot drift, behind `sink_costs_priced`
+(profile `sink-costs`).
+
+**It loses.**
+
+```text
+profiling-fast, sink-costs (A) vs dflt (B), --games 1000, --threads 3
+  sealed  43    49.5 % [49.2, 49.8]    6,000 pairs, 131 A-sweeps / 196 B-sweeps
+          97    50.1 % [49.8, 50.4]                 147 / 134
+          151   48.2 % [47.8, 48.6]                 194 / 406
+          199   50.5 % [50.3, 50.7]                  92 /  34
+          pooled 49.58 %, TWO of four intervals wholly below 50
+  cube    43/97  pooled 50.00 %
+  all     43/97  pooled 49.90 %   (50.0 [49.8, 50.1] and 49.8 [49.7, 49.9])
+```
+
+⚠ **AND THE INCIDENCE IS WHY THIS READING MEANS SOMETHING WHERE `(-295)`'s DID
+NOT.** Round 72 had **four discordant pairs in 13,598** and zero on both gating
+pools — no reading there could resolve strength, and it was adopted on the
+defect argument plus a closed stall. This arm moves **hundreds of pairs a
+cell**, so 49.58 % is a measurement.
+
+**THE MECHANISM, WHICH IS THE TRANSFERABLE HALF: `pick_sacrifice_value` tests
+`ev > baseline`, and `baseline` is "do nothing" — which is not what a
+last-resort mana sink competes with.** A sink generator fires at the end of the
+chain, when the bot has leftover mana and no better play, so the real
+alternative is "do nothing **and waste the mana**". `eval_material` cannot see
+wasted mana: it prices the discarded card at 4·unit against a token at 3·pv and
+refuses. The blind plays were, on balance, right.
+
+**Which is also why `(-295)` is the narrower fix and stays narrow.** There the
+resource spent is a permanent on the battlefield, which the eval *does* see and
+price against what the ability buys — and the play it refuses is the one that
+fed an 11/11 infect Colossus to a Thopter Foundry for 2,884 turns.
+
+⚠⚠ **AND THE CODE IS REVERTED, NOT PARKED, BECAUSE A PARKED FLAG ON THIS PATH
+IS NOT FREE — MEASURED.** `ability_sink_bits` runs per (permanent, ability) in
+`sink_facts`, so carrying the arm cost the shipped default
+**+0.034 / +0.015 / +0.022 %** on fixed / cube / sealed against the `(-296)`
+tip — a seventh of what `(-296)` won, for a flag that is off. The version
+measured was already the careful one: a separate `sink::AB_SPEND` gate bit
+asked only beside the flag, so that the DEFAULT's gate — and therefore what
+`pick_sacrifice_value` is *reached* on — stayed byte-identical (widening
+`AB_SAC` instead would have reached it on every board holding one of the 48
+abilities, in the default). The residual is the field tests themselves.
+
+**So the deliverable is this entry, and it is complete enough to rebuild the
+arm from**: the predicate is `sac_cost | sac_other_filter | sac_other_second |
+bounce_other_filter | exile_other_filter | exile_self_cost | discard_cost`,
+read by the five sink generators AND by `pick_sacrifice_value` from one
+function so the two cannot drift; the gate is a second sink bit for the four
+wide-only fields, ORed with `AB_SAC` only under the flag; and
+`.ladder/run_r73_sinkcosts.sh` is kept with its pre-registered thresholds and
+its header saying the arm has to be re-added. **The next reader should not
+re-take this as a defect fix at all.** If it is taken again it is as a
+**strength** arm, and the thing to change is the owner's baseline — a sink
+priced against an unspent-mana end of turn — not the predicate. ⚠ It also leaves `(-295)`'s own strength effect formally
+unresolved (4 discordant pairs is not a measurement); it is kept on the stall
+and on the generator's own doc comment having claimed what the code did not do.
+
 
 ### `(-296)` "NOTHING TO ITERATE" WAS THE WEAKER CLAIM — the cost-static source list filters on what the walks can MATCH: `sealed` **-0.318 %** / `cube` **-0.093 %** / `fixed` **+0.032 %**
 
