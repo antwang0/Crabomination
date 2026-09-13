@@ -16,6 +16,14 @@ column assumes is right.
     python3 scripts/audit_printed_body.py --rows 0    # every row
     python3 scripts/audit_printed_body.py --list nonliteral   # what a column skipped
 
+COVERAGE, 2026-09-13: **16,945 factories priced, 17,785 on the type line,
+17,722 on subtypes, 17,751 on keywords, 9,614 on P/T, 16,830 on COLOURS, 124 on
+LOYALTY, 62 on the ADVENTURE HALF and 81 on the BACK FACE**, with the accounting
+line all zeroes and `notyped` / `nopt` / `noadv` / `noloyalty` / `faces` /
+`subtwoface` all **0 and therefore GATES** — a row in one of those is a new
+idiom, not a new card. `scripts/audit_printed_body_injections.py` is **54
+cases**; run it after touching any reader.
+
 COVERAGE, 2026-09-12 (third pass): **16,846 factories priced, 17,777 on the
 type line, 17,683 on subtypes, 17,453 on keywords, 9,609 on P/T, 16,712 on
 COLOURS and 124 on LOYALTY** — the last two columns are new, and the other five
@@ -322,16 +330,28 @@ What is left, with the reason — `--list <kind>` prints the factories:
     the helper's own PARAMETER (`fn with_buyback(mut def, c)`, ten cards — the
     columns it MUTATES are blanked one by one rather than read off the
     unmutated argument), and a module-qualified base (`..super::wwk::
-    tapped_etb_land(..)`, four Zendikar lands). The seven left are one-offs.
-    ⚠ **ALL SEVEN WERE READ BY HAND AGAINST THE ORACLE, 2026-09-13 — cost,
-    type line, subtypes, keywords and P/T, zero defects — so they are a READER
-    residue, not a card queue, and nobody needs to walk them again.** They are
-    one shape: a nested `..CardDefinition { .. ..helper(..) }`, i.e. a spread
-    whose base is itself a literal whose base is the helper, which the chain
-    walks one level short of. `modern::junk_diver`, `recent309::rakdos_joins_up`,
-    `lgn::spectral_sliver`, `lgn::mistform_sliver`, `mkm::krenkos_buzzcrusher`,
-    `nms2::arc_mage`, `gaps::kirtars_desire`. Closing it is one reader change
-    for ten columns on seven cards; the yield is the GATE, not a defect.
+    tapped_etb_land(..)`, four Zendikar lands).
+    ⚠ **CLOSED 2026-09-13 — `notyped` is 0 and is a GATE**: a row here is a new
+    idiom, not a new card. The last seven were read BY HAND against the oracle
+    first (cost, type line, subtypes, keywords, P/T — zero defects), so the
+    yield was always the gate and never a card, and the two shapes behind them
+    were:
+      - **a nested literal as the base** — `..CardDefinition { name, cost,
+        ..Default::default() }`, a spread whose base is another literal rather
+        than a call, which the base scan (which walks CALLS) read as no base at
+        all. It is a link now, and the outer literal wins every field it
+        declares. ⚠ Its `ok` must NOT carry the "every card has card types"
+        test, which is what `types_optional` is for: the nested half of
+        `..CardDefinition { name, cost, .. }` legitimately declares none, and
+        folding its verdict into the caller's kept all six `notyped` even
+        though the OUTER literal spelled the types out.
+      - **the spread is not always the start of its line** — `CardDefinition {
+        power: 2, toughness: 2, ..spellshaper(` (Arc Mage) puts two fields and
+        the base on one depth-1 line, and an anchored match found nothing.
+    Cost of the close: type line 17,777 -> **17,785**, subtypes +7, keywords
+    +7, P/T +5, colours +2, **0 wrong on every column**; `nocolors` 945 -> 950,
+    which is the newly-readable cards reaching a column they then skip at, and
+    is the skip counter doing its job rather than a regression.
   * `nosubvariant` (15) — above.
   * `faces` (0) — a multi-face factory whose name matches NO face of the card
     it resolves to. Zero today: every one of the 276 matches, so a row here is
@@ -833,7 +853,17 @@ def top_fields(block: str):
     start = returned_literal(block, after_sig)
     if start is None:
         return None
-    i, depth, out, line, in_str = start, 1, [], [], False
+    return fields_of_raw(block[start:])
+
+
+def fields_of_raw(block: str):
+    """[`top_fields`]'s depth-1 flattening over a literal's RAW INNER text.
+
+    Split out so a NESTED literal can be flattened the same way its enclosing
+    one was — `..CardDefinition { .. ..helper(..) }` has to be read as a link
+    in the chain, not as an unreadable base (see `resolve_type_line`).
+    """
+    i, depth, out, line, in_str = 0, 1, [], [], False
     while i < len(block) and depth:
         c = block[i]
         if in_str:
@@ -1904,9 +1934,15 @@ def parse_type_line(body: str, params=(), args=(), inner=None):
         got_s |= {v for k, v in HELPERS.items() if k + "()" in sm.group(1)}
     base = None
     for line in body.split("\n"):
-        if line.startswith("..") and not line.startswith("..Default::default"):
-            m = re.match(BASE_CALL, line)
-            if m:
+        # ⚠ THE SPREAD IS NOT ALWAYS THE START OF ITS LINE. `CardDefinition {
+        # power: 2, toughness: 2, ..spellshaper(` puts two fields and the base
+        # on one depth-1 line, and an anchored match reads no base at all —
+        # which is `notyped`, i.e. a card audited by NOBODY. Scan the line for
+        # every `..call(` instead and keep the last, which is what the
+        # line-by-line loop was already doing one level up. `..Default::default`
+        # is not a base and `0..5` is not a call, so neither can win.
+        for m in BASE_CALL.finditer(line):
+            if not line.startswith("..Default::default", m.start()):
                 base = m.group(1)
     return got_t, got_s, base, tm is not None, sm is not None
 
@@ -2112,7 +2148,8 @@ def resolve_from_block(index, path, blk, args, depth, subs_index=None):
 
 
 def resolve_type_line(index, path, body, raw, depth=0, inner=None,
-                      params=(), args=(), call_src=None, subs_index=None):
+                      params=(), args=(), call_src=None, subs_index=None,
+                      types_optional=False):
     """The card's types, supertypes and SUBTYPES, following `..base` and wrappers.
 
     Returns `(types, supers, subs, ok, sub_ok)`. `ok` is False when a link in the
@@ -2144,6 +2181,20 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
             hm = CALL_HEAD.match(branch or "")
             if hm:
                 base, cond_src = hm.group(1), branch
+    # A NESTED LITERAL AS THE BASE: `..CardDefinition { .. ..helper(..) }`.
+    # Seven factories spell the card as an outer literal whose spread base is
+    # ITSELF a `CardDefinition` literal, whose base is the helper — so the base
+    # scan, which walks CALLS, found nothing and the chain stopped one link
+    # short with no card types. That is `notyped`, and **a `notyped` card is
+    # audited by NOBODY**: the walk `continue`s before every column. Read the
+    # nested literal as what it is, another link, and let the outer one win
+    # every field it declares (struct-update syntax). Only when the call scan
+    # found no base, so this can add a chain and never redirect one.
+    nested = None
+    if base is None and inner:
+        nm = re.search(r"\.\.\s*(?:[A-Za-z_]+::)*CardDefinition\s*\{", inner)
+        if nm:
+            nested = literal_raw_named(inner, nm.start(), "CardDefinition")
     got_sub, has_sub = parse_subtypes(inner, params, args, subs_index, path)
     got_kw, has_kw = parse_keywords(inner, params, args)
     got_pt, has_pt = parse_pt(inner, params, args)
@@ -2204,6 +2255,29 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
                     break
             else:
                 ok = sub_ok = kw_ok = pt_ok = col_ok = loy_ok = False
+    if nested is not None and depth < 5:
+        n = resolve_type_line(index, path, fields_of_raw(nested), None,
+                              depth + 1, nested, params, args, None, subs_index,
+                              types_optional=True)
+        ok = ok and n.ok
+        if not has_t:
+            got_t = n.types
+        if not has_s:
+            got_s = n.supers
+        if not has_sub:
+            got_sub, sub_ok = n.subs, n.sub_ok
+        if not has_kw:
+            got_kw, kw_ok = n.keywords, n.kw_ok
+        if pt_incomplete(got_pt, has_pt):
+            if not n.pt_ok:
+                pt_ok = False
+            else:
+                got_pt = merge_pt(got_pt if has_pt else None, n.pt)
+            has_pt = True
+        if not has_col:
+            got_col, col_ok, has_col = n.colorfield, n.col_ok, True
+        if not has_loy:
+            got_loy, loy_ok, has_loy = n.loyalty, n.loy_ok, True
     if base:
         cands = [b for pth, b in index.get(base, []) if pth == path] \
             or [b for _, b in index.get(base, [])]
@@ -2247,8 +2321,15 @@ def resolve_type_line(index, path, body, raw, depth=0, inner=None,
     # Every card has card types; an empty set means the chain was not readable,
     # not that the card has none. Supertypes are genuinely optional, so they
     # cannot carry this test.
+    #
+    # ⚠ `types_optional` is for a LINK rather than a card: the nested literal in
+    # `..CardDefinition { name, cost, ..Default::default() }` legitimately
+    # declares no card types, and folding its `ok` — which carries this very
+    # test — into its caller's made every one of those factories `notyped`
+    # even though the OUTER literal spells the types out.
     return Read(got_t, got_s, got_sub, got_kw, got_pt, got_col, got_loy,
-                ok and bool(got_t), sub_ok, kw_ok, pt_ok, col_ok, loy_ok)
+                ok and (bool(got_t) or types_optional),
+                sub_ok, kw_ok, pt_ok, col_ok, loy_ok)
 
 
 def resolve_card_name(body, raw: str, fname: str):

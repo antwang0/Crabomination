@@ -3030,6 +3030,22 @@ sweep   **`NO_PROGRESS_MAX_PERIOD` PRICED AND NOT MOVED — the handoff's guess 
         lower repeat count only changes which aperiodic board survives. The shape that would is a different
         predicate — "no seat can win or lose" — an adjudication change, not a tuning one. Cell unchanged at both
         budgets: 6,790 decided / 10 undecided (`cap 2 / board 0 / stuck 0 / draw 8`).
+tool    **`notyped` 7 -> 0, so the column is a GATE** — a row there is a new idiom, not a new card. ⚠ **All seven
+        were read BY HAND against the oracle first** (cost, type line, subtypes, keywords, P/T — zero defects), so
+        the yield was known to be the gate and never a card before a line of reader was written. Two shapes, and
+        neither is reachable by any other injection case: (a) **a nested literal as the base** —
+        `..CardDefinition { name, cost, ..Default::default() }`, a spread whose base is another LITERAL where the
+        base scan walks CALLS, so it read as no base at all; (b) **the spread is not always the start of its line** —
+        `CardDefinition { power: 2, toughness: 2, ..spellshaper(` (Arc Mage) puts two fields and the base on one
+        depth-1 line and the anchored match found nothing. ⚠ The first fix alone only moved 7 -> 6, and the reason is
+        the trap: a nested link's `ok` carries the "every card has card types" test, and the nested half of
+        `..CardDefinition { name, cost, .. }` legitimately declares NONE — so folding its verdict into the caller's
+        kept six cards `notyped` even though the OUTER literal spelled the types out (`types_optional`).
+        Type line 17,777 -> **17,785**, subtypes +7, keywords +7, P/T +5, colours +2, **0 wrong on every column**,
+        accounting line all zeroes. `nocolors` 945 -> **950** — the newly-readable cards reaching a column they then
+        skip at, which is the skip counter doing its job and not a regression. Injections **52 -> 54**, both new cases
+        `fires`; ⚠ the first anchor read `BROKEN CASE (pattern occurs 2x)` rather than failing, which is the battery
+        working and the reason to read its output rather than its exit code.
 cards   **`Effect::AddRadCounters` has a card at last** — `decks::nuclear_fallout`, {X}{B}{B}, "Each creature gets
         twice -X/-X until end of turn. Each player gets X rad counters." CR 728 was complete on the engine side the
         whole time (`do_rad_counters`, the precombat-main turn-based action that mills one per counter, loses 1 life

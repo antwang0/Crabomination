@@ -421,6 +421,25 @@ CASES = [
   "sets/decks/modern.rs",
   "        vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Werewolf],",
   "        vec![CreatureType::Human, CreatureType::Werewolf],"),
+ # `notyped` 7 -> 0: the two shapes that reach their base through something the
+ # base scan (which walks CALLS, anchored at the start of a depth-1 line) could
+ # not see. Both cards were audited by NOBODY until the chain followed them, so
+ # neither of these anchors is reachable by any other case.
+ ("fires", "a nested literal as the base (war Prismite)", "sets/war.rs",
+  # ⚠ ANCHORED ON THE NAME, because `creatures(vec![Golem])` occurs twice in
+  # the file and an anchor that is not unique reports BROKEN rather than
+  # failing — which is the battery working, and the reason to read its output
+  # rather than its exit code.
+  "            name: \"Prismite\",\n            cost: cost(&[generic(2)]),\n"
+  "            subtypes: creatures(vec![CreatureType::Golem]),",
+  "            name: \"Prismite\",\n            cost: cost(&[generic(2)]),\n"
+  "            subtypes: creatures(vec![CreatureType::Wall]),"),
+ ("fires", "a base spread that is not the start of its line (nms2 Arc Mage)",
+  "sets/nms2.rs",
+  "        vec![CreatureType::Human, CreatureType::Spellshaper],\n"
+  "        cost(&[generic(2), r()]),",
+  "        vec![CreatureType::Human],\n"
+  "        cost(&[generic(2), r()]),"),
 ]
 # ⚠ EVERY ROW KIND, or a column's cases cannot fire. The colour column was
 # added with its row kind missing here, and its injection read "silent" — the
