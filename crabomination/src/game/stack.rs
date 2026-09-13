@@ -7746,3 +7746,39 @@ mod modal_reachability {
         );
     }
 }
+
+#[cfg(test)]
+mod cast_mode_range {
+    /// ⚠ **`GameAction::CastSpell { mode }` IS NOT RANGE-CHECKED ANYWHERE, AND
+    /// AN OUT-OF-RANGE MODE USED TO RAISE FROM INSIDE THE RESOLUTION.** Only
+    /// the activated path clamps (`clamp_activated_mode`); the cast path hands
+    /// the index straight to the stack item. Casting a modal spell with
+    /// `mode: Some(99)` returned `Ok` from the action and then
+    /// `Err(ModeOutOfBounds(99))` from `resolve_top_of_stack` — with the stack
+    /// ALREADY EMPTY, so the spell was consumed, nothing happened, and on the
+    /// round-closing pass `perform_action_uncheckpointed`'s guard aborts the
+    /// process in any debug-assertions build. Same shape as the Grafdigger's
+    /// Cage abort of seed 1254, reachable by any client rather than by a board.
+    ///
+    /// The `ChooseMode` arm clamps now, as its three deferred paths always
+    /// have.
+    #[test]
+    fn an_out_of_range_cast_mode_clamps_instead_of_raising() {
+        use crate::game::{two_player_game, GameAction};
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, crate::catalog::healing_salve());
+        g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(crate::game::types::Target::Player(0)),
+            additional_targets: vec![],
+            mode: Some(99),
+            x_value: None,
+        })
+        .expect("the cast itself is accepted — that was never the bug");
+        g.resolve_top_of_stack()
+            .expect("an out-of-range mode must not raise out of a resolution");
+        assert!(g.stack.is_empty(), "the stack drained");
+        assert!(g.game_over.is_none(), "the game is still going");
+    }
+}

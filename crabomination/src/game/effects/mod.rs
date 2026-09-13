@@ -5617,13 +5617,35 @@ impl GameState {
                             _ => 0,
                         },
                     }
+                } else if modes.is_empty() {
+                    // A modal with no modes is a catalog bug, not a game
+                    // state. Nothing to run.
+                    return Ok(());
                 } else {
-                    ctx.mode
+                    // ⚠ **AN OUT-OF-RANGE MODE USED TO RAISE FROM INSIDE THE
+                    // RESOLUTION, WHICH IS THE ONE PLACE AN `Err` CANNOT BE
+                    // RECOVERED.** `GameAction::CastSpell { mode }` is not
+                    // range-checked anywhere — only the ACTIVATED path clamps
+                    // (`clamp_activated_mode`) — so a client casting a modal
+                    // spell with `mode: Some(99)` got `Ok` from the action,
+                    // and then `resolve_top_of_stack` returned
+                    // `ModeOutOfBounds` with the stack item ALREADY POPPED:
+                    // spell consumed, nothing done, and on the round-closing
+                    // pass `perform_action_uncheckpointed`'s guard aborts the
+                    // process in any debug-assertions build.
+                    //
+                    // Clamped now, which is what the three deferred paths
+                    // above have always done with a decider's answer — the
+                    // odd one out was this branch, not them. Deliberately NOT
+                    // a `debug_assert!`: the realistic source of a bad index
+                    // is a UI client, and a hostile or buggy client must not
+                    // be able to abort the engine. The bot never produces one
+                    // (it enumerates modes off the card).
+                    ctx.mode.min(modes.len() - 1)
                 };
-                if let Some(m) = modes.get(idx) {
-                    self.run_effect(m, ctx, events)
-                } else {
-                    Err(GameError::ModeOutOfBounds(idx))
+                match modes.get(idx) {
+                    Some(m) => self.run_effect(m, ctx, events),
+                    None => Ok(()),
                 }
             }
 

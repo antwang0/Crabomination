@@ -16571,8 +16571,14 @@ impl GameState {
     /// raise inside a resolution is `DecisionAnswerMismatch` (the
     /// `submit_decision` resume path, which self-play never enters — both
     /// seats are `wants_ui: false`, so nothing suspends), `ModeOutOfBounds`
-    /// (no catalog card can reach it: `nested_modals_are_all_reachable` and
-    /// the 0-hit nested-arity census in `game/stack.rs`), and a
+    /// (raised nowhere now — the `ChooseMode` arm clamps, as its three
+    /// deferred paths always did. ⚠ **The first version of this sentence said
+    /// "no catalog card can reach it", which was true and beside the point:**
+    /// the route is the ACTION, not the catalog. `GameAction::CastSpell
+    /// { mode }` is range-checked nowhere — only the activated path clamps —
+    /// so `mode: Some(99)` on any modal spell returned `Ok` from the action
+    /// and `Err(ModeOutOfBounds)` from the resolution, stack item already
+    /// popped. `cast_mode_range` in `game/stack.rs` pins it), and a
     /// resolution-time `check_target_legality_inner`.
     ///
     /// [`perform_action_inner`]: Self::perform_action_inner

@@ -3520,6 +3520,19 @@ modal   **`None` FROM `pick_trigger_mode` DOES NOT MEAN "NOT MODAL" DOWNSTREAM �
         because CR 700.2b picks the mode when the ability goes on the stack. Its assertion is unchanged — mode 0
         IS tap — only who was asked for it. Golden traces unmoved; `--bench` counters byte-identical.
 
+mode    **`GameAction::CastSpell { mode }` IS RANGE-CHECKED NOWHERE, AND THE CHECK THAT WAS MISSING SAT INSIDE A
+        RESOLUTION.** Only the ACTIVATED path clamps (`clamp_activated_mode`); the cast path hands the index to the
+        stack item. So a client casting any modal spell with `mode: Some(99)` got `Ok` from the action and then
+        `Err(ModeOutOfBounds(99))` from `resolve_top_of_stack` — **with the stack already empty**: spell consumed,
+        nothing done, and on the round-closing pass the partial-mutation guard aborts the process in any
+        debug-assertions build. Measured, not reasoned: `Ok(1)` / `Err(ModeOutOfBounds(99))` / `stack left = 0`.
+        The same shape as the Grafdigger's Cage abort two entries up, reached through the ACTION rather than a
+        board, which is why the catalog censuses could not see it — and why the first draft of the guard's doc said
+        "no catalog card can reach it", true and beside the point. The `ChooseMode` arm clamps now, which is what
+        its three deferred paths have always done with a decider's answer; the odd one out was that branch.
+        Deliberately NOT a `debug_assert!`: the realistic source of a bad index is a UI client, and a buggy or
+        hostile client must not be able to abort the engine. `cast_mode_range` pins it.
+
 walks   **THE THREE TRIGGER WALKS WROTE THE SAME FIVE RULES BY HAND AND THE DRIFT HAS COST TWO SHIPPED BUGS.**
         The concurrent session's `d457bcaa` named unifying them as "the cheapest structural pull on this page"; on
         reading, the two walks are NOT symmetric — the battlefield one carries the batch bit-mask and the ordering
