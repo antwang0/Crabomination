@@ -19619,11 +19619,15 @@ impl GameState {
             return;
         }
         // The kinds this batch can reach at all, ORed once (PERF `(-195)`).
-        // `ems_census` reads 93 % of (permanent, trigger) pairs as ones no
-        // event in the batch can match; the per-pair gate below answers that
-        // with one AND instead of one `event_matches_spec` per event, and
-        // the grant pre-filters ask it before their exact loop. Sound by
-        // construction: `event_kind_matches` itself opens with this test.
+        // Most (permanent, trigger) pairs are ones no event in the batch can
+        // match — `ems_census` read **72.6 % on sealed / 50.6 % on cube** at
+        // the `1ae70cfd` tip, and the gate is why the rest is not worse; the
+        // per-pair gate below answers that with one AND instead of one
+        // `event_matches_spec` per event, and the grant pre-filters ask it
+        // before their exact loop. Sound by construction: `event_kind_matches`
+        // itself opens with this test. (The figure carries its tip on purpose:
+        // it read 93 % when this comment was written and the workload moved
+        // under it — CLAUDE.md's rule about bare present-tense counts.)
         // The first `KEPT_BITS` kept per event as well: the battlefield pair
         // loop below asks the same mask per (pair, event), ~1.4 events a
         // pair (PERF `(-274)`). A fixed frame array, never a `SmallVec`:

@@ -2987,6 +2987,87 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-13 (the transform-anchor session, fifth of the day) — the rule the fan-out census exposed, the walk that did not get the fix, and the perf queue re-seeded
+
+```text
+fix     **CR 701.27f had never been implemented, and two copies of one transform trigger flipped the face back**
+        (`e31d5749`). The day's fan-out work made it visible rather than caused it: `PermanentSacrificed` and
+        `Attacks` have fanned out for a long time. "If an activated or triggered ability of a permanent that isn't
+        a delayed triggered ability of that permanent tries to transform it, the permanent does so only if it hasn't
+        transformed or converted since the ability was put onto the stack." Three shipped cards can be handed an
+        even-sized batch: **Daring Sleuth** read *untransformed* off a two-Clue sacrifice, **Voldaren Bloodcaster**
+        off a doubled Blood mint, and **Legion's Landing** ("attack with three or more creatures") went back to its
+        front face on four attackers — its existing test attacks with THREE and got the face right by parity.
+        ⚠ `459c86e1` had recalibrated `cr_614_13_token_doubling_fires_per_doubled_token` to ASSERT the flip back;
+        the trigger-count half of that recalibration was right and the face half was the missing rule.
+        **The anchor is the whole implementation and it needs no timestamp**: `StackItem::Trigger` carries
+        `source_transformed_since_push`, false at push by definition, and `transform_permanent` sets it on the items
+        ALREADY on the stack — so anything pushed afterwards keeps the builder's `false`, which is exactly "since the
+        ability was put onto the stack". The walk is behind an `iter().any()` read so the CoW stack is not unshared
+        by a probe that transforms nothing. ⚠ **The resolving item's flag lives in `scratch`, not on `GameState`:
+        the state is AT its 1,600-byte cap (`cow::tests::game_state_stays_small`) and one `bool` cost 24 bytes.**
+
+fix     **The graveyard walk did not get the subject dedupe the battlefield walk got** (`d457bcaa`), an hour after
+        `f4889ea3` landed half of it. `EventKind::PutIntoGraveyard` is a `is_graveyard_self_source_kind`, so every
+        "when this card is put into a graveyard from anywhere" trigger fires out of THAT walk — ten catalog
+        factories — and a mill puts both a `CardPutIntoGraveyard` and a `CardMilled` for the same card in the batch.
+        **Ichor Wellspring drew two cards for a one-card mill.** The rule is now `events::fanout_dedupes_on_subject`
+        and both walks read it, the way both already read `event_kind_fans_out`, whose own doc says "one list for the
+        battlefield walk and the graveyard walk, so the two cannot drift". ⚠⚠ **THE TWO WALKS ARE THE STANDING
+        HAZARD ON THIS PAGE**: every per-(trigger, event) rule is written twice — the fan-out decision, the
+        once-per-turn budget, the intervening filter, the replaced-death skip, the subject dedupe — and the
+        graveyard one has now silently missed a rule twice. Unifying them is the cheapest structural pull left.
+
+perf    **`(-293)` is a refutation with a ledger and the ledger is the result.** The dispatcher's one remaining
+        unguarded `&mut scratch` store read **0.317 / 0.186 / 0.240 %** of `fixed` / `cube` / `sealed` in the
+        `make_mut_slow` caller table, and guarding it bought **-0.020 / -0.022 / -0.010 %**. The caller table's own
+        diff says why: 1,078 unshares left `resolve_top_of_stack_inner` and 882 came back one frame down in
+        `resolve_effect_into_kind`, `apply_pending_effect_answer_inner` and `sacrifice_one` (all callers 8,354 ->
+        8,142, -2.5 %). **A CoW guard pays only where it is the LAST unguarded write to that group in the scope;
+        price it by the scope's remaining writes, not by the caller table's row.** Kept as a clarity change, not as
+        a win. `pending_permanent_deaths`' `mem::take` on the same entry path is NOT a sibling — `(-280)` already
+        moved that field out of the group on purpose, and its doc comment says so.
+
+perf    **And the new top row was then READ, not just filed.** `CRAB_TRIG_CENSUS` — the compile-time census already
+        in the tree, which nobody had pointed at this question — says `dispatch_triggers_for_events` is
+        **preamble-bound, not walk-bound**: 105,132 working dispatches on sealed (47 % of its 199,220 calls return
+        at the empty-batch early-out), **3.54 permanent visits and 3.82 matcher calls each, for 1,089 Ir of self**.
+        `(-115)`/`(-196)`'s lane already hits on 99 % and cuts the board walk to 22.8 % of itself. **So the
+        "group the batch's events by kind" device this run filed an hour earlier is refuted by its own census** —
+        the product it would attack is 402 k matcher calls against a 114.5 M row. The lead is the fixed per-dispatch
+        preamble (the per-event stamping loop, the synthesis collects, the `Vec` builds), and the one walk-side
+        number left is that **72.6 % of the pairs entering the loop can match no event in the batch** (61 % of the
+        calls) — ⚠ price that against `(-88)`'s rule first, since the census's own deadness test IS the work.
+        The counts cross-check against the callgrind dumps exactly (`dispatch_board_scan` 105,132 both sides).
+
+perf    **The queue is re-seeded off a fresh whole-profile read at `d457bcaa`, after eight runs at floor**, and it
+        has one clear top row on all three pools for the first time: `dispatch_triggers_for_events` at
+        **6.15 / 4.86 / 6.43 %**, nearly double the #2 on two of them, 199,220 calls at 575 Ir of self each, callers
+        and callees sized in "Perf candidates". ⚠ **The row GREW this day** — seven `EventKind`s joined
+        `event_kind_fans_out`, and fan-out is what removes the `break` that ended the inner event loop at the first
+        match — so its share is not comparable with a pre-2026-09-13 reading, and the cheapest shape of a win is
+        fewer (trigger, event) pairs entered, not a faster body.
+
+⚠⚠     **THE SEVENTH AND EIGHTH SAME-WORK COLLISIONS, AND THE LESSON IS NOT "CLAIM EARLIER".** This session ran the
+        `EventKind` fan-out census independently and reached `EntersBattlefield`, the seven kinds, the three
+        `once_per_batch` pins and the graveyard double-record — ALL of it — within minutes of the other session
+        pushing the same findings, and discarded its own copy twice. Claiming in NEXT cannot fix that: both sessions
+        were already in flight before either claimed. What DID produce unique work both times was **reading the
+        other session's landed commit adversarially**: CR 701.27f came out of disagreeing with its recalibrated
+        test, and the graveyard walk came out of checking whether its one-walk fix covered the other walk. **On a
+        branch with concurrent sessions, the highest-yield minute is spent on what just landed, not on the backlog.**
+
+gates   suite **19,542 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`, whole workspace),
+        golden_trace **12 / 12 unmoved**, **`--bench` 195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls
+        (`cap 0 / board 0 / stuck 0 / draw 0`) — BYTE-IDENTICAL to the committed invariant** with `determinism ok`
+        and `thread_determinism ok (3 vs 1 threads identical)`, `cargo check --profile release-fast -p crabomination
+        --bin bot_ladder` clean. ⚠ **THIS BOX IS 4 CORES**: its wall clock reads 318.74 games/s (106.2 a thread,
+        `host_calib_ms 53`, `peak_rss_mib 27.7`) and compares with no absolute in this file, every one of which was
+        taken on 24. The counters are the invariant and they did not move — which is the expected answer for
+        `--decks fixed`, four hand-built vanilla archetypes with no transforming permanent and no self-source
+        graveyard trigger in the pool.
+```
+
 ### 2026-09-13 (the tap-is-not-progress session) — the sweep's only surviving cap, closed by printing the digest instead of reasoning about its constants
 
 ```text
@@ -6486,6 +6567,71 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-293)` REFUTED WITH A LEDGER, AND THE LEDGER IS THE RESULT — a CoW guard on the dispatcher's one unguarded `scratch` store reads `fixed` -0.020 / `cube` -0.022 / `sealed` -0.010 %, against a caller table that said 0.317 / 0.186 / 0.240 %
+
+`resolve_top_of_stack_inner`'s `StackItem::Trigger` arm opened with
+
+```rust
+    self.scratch.activation_mana_colors_scratch = mana_spent_by_color;
+```
+
+— an unguarded `&mut` reach into a CoW group, which is the exact shape
+`(-280)`..`(-287)` swept eight legs out of. It is an **empty `Vec` over an empty
+`Vec`** on essentially every resolution: the field is empty for every *triggered*
+ability and for every activation that paid no coloured mana, and `take_scratch!`
+has already emptied it at the end of the previous resolution. It is also the
+FIRST `&mut` reach into `scratch` on that path (the arm's other two touches are
+a guarded read and a guarded store), so the caller table attributes the unshare
+to it.
+
+**The caller table said it was worth up to a quarter of a percent** — the
+instrument CLAUDE.md names, `--demangle=no` plus `cg_edges.py --callers
+make_mut_slow<hash>`, with the group identified by its clone callees (three
+`Vec::clone`s = `ResolutionScratch`):
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1, the d457bcaa tip either side
+  make_mut_slow(ResolutionScratch) <- resolve_top_of_stack_inner, base:
+    fixed   2,834 calls / 2,025,210 Ir = 0.317 % of the pool
+    cube    3,792 calls / 3,170,883 Ir = 0.186 %
+    sealed  5,120 calls / 4,272,465 Ir = 0.240 %
+```
+
+**Guarding it bought a tenth of that**, and the reason is in the caller table's
+own diff — the unshare does not disappear, it MOVES ONE FRAME DOWN:
+
+```text
+  scratch unshares by caller, sealed          base      cand
+    resolve_top_of_stack_inner                5,120  -> 4,042    -1,078
+    resolve_effect_into_kind                  2,148  -> 2,772      +624
+    apply_pending_effect_answer_inner           352  ->   502      +150
+    sacrifice_one                                 0  ->   108      +108
+    ALL CALLERS                               8,354  -> 8,142      -212   (-2.5 %)
+  Ir totals (system allocator, outcomes identical on every dump)
+    fixed    638,511,438 ->   638,384,026   -127,412   -0.0200 %
+    cube   1,700,368,478 -> 1,699,995,394   -373,084   -0.0219 %
+    sealed 1,781,963,748 -> 1,781,780,512   -183,236   -0.0103 %
+  24 / 48 / 72 decided, 0 undecided on all six dumps
+```
+
+⚠ **THE RULE, AND IT IS THE ONLY THING HERE WORTH QUOTING: A CoW GUARD PAYS
+ONLY WHERE IT IS THE LAST UNGUARDED WRITE TO THAT GROUP IN THE SCOPE. Price it
+by the scope's REMAINING writes, not by the caller table's row** — the row says
+where the unshare is *attributed*, and guarding one site hands the bill to the
+next `&mut` reach inside the same resolution. Four fifths of these came back one
+frame down. It is `(-88)`'s "price the witness against the work" seen from the
+other side, and it is why `(-280)`..`(-287)` worked: those eight were the
+*whole* set of writes to their groups on the probe path, so there was nothing
+left to inherit the unshare.
+
+**The change is KEPT, as a clarity change, not as a win.** -0.02 % is inside
+this file's own "do not claim under ~5 % without a microbenchmark" line; what it
+buys is that the one remaining unguarded store on a hot path now matches the
+`clear_scratch` / `take_scratch` convention the group is documented under, and
+that the next reader who runs the caller table does not re-take the 0.24 % row.
+The comment at the site points here.
+
 
 ### `(-292)` CORRECTNESS, AND IT COSTS NOTHING — the turn digest stops reading a permanent's tap: `all` 1159 is **cap 2 -> cap 0**, `--bench` counters identical, 12 / 12 golden traces unmoved
 
@@ -10123,6 +10269,122 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**THE QUEUE IS RE-SEEDED OFF A FRESH WHOLE-PROFILE READ AT `d457bcaa`
+(2026-09-13), AND IT HAS ONE CLEAR TOP ROW FOR THE FIRST TIME IN EIGHT RUNS:
+`dispatch_triggers_for_events` IS THE #1 SELF ROW ON ALL THREE POOLS AND IS
+NEARLY DOUBLE THE #2 ON TWO OF THEM.**
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                                        fixed            cube           sealed
+  program total                   638,511,438   1,700,368,478    1,781,963,748
+  dispatch_triggers_for_events     39.3 M 6.15%   82.6 M 4.86%    114.5 M 6.43%   <- #1 on all three
+  gather_continuous_effects_inner  24.5 M 3.84%   53.7 M 3.16%     58.1 M 3.26%
+  compute_permanent_pass           24.3 M 3.80%   67.5 M 3.97%     54.3 M 3.05%
+  check_state_based_actions_into   16.9 M 2.65%   49.0 M 2.88%     49.8 M 2.80%
+  sba_board_scan                   11.6 M 1.82%   30.9 M 1.82%     34.2 M 1.92%
+  computed_permanent_hinted        12.7 M 2.00%   33.0 M 1.94%     31.4 M 1.76%
+  allocator (malloc/free/_int_*)          ~8.8%           ~8.8%            ~9.7%
+```
+
+**It is 199,220 calls on sealed at 575 Ir of SELF each** (the matcher inlines
+into it, so the self figure is the walk plus `event_matches_spec_with_bits`),
+and the callers say where they come from:
+
+```text
+  dispatch_triggers_for_events <- , sealed      calls    incl Ir   Ir/call
+    perform_action_inner                      162,026    137.8 M       850
+    declare_attackers_banded                   17,592      0.79 M        45   <- already nothing
+    finalize_cast                               9,746      7.95 M       816
+    submit_decision_inner                       5,134      8.33 M      1,623
+    do_untap                                    3,100      3.41 M      1,099
+  its own callees, sealed
+    event_kind_bits                           316,896      3.82 M
+    dispatch_board_scan                       105,132      8.10 M      <- 94 k dispatches never reach it
+```
+
+⚠ **THE ROW GREW THIS DAY AND THE WHY MATTERS FOR ANYONE RANKING IT.** Seven
+`EventKind`s joined `event_kind_fans_out` on 2026-09-13 (`3176db34`,
+`459c86e1`, and `9e489446` the day before), and fan-out is exactly what removes
+the `break` that used to end the inner event loop at the first match. For a
+batch of one event — the common case — the walk is unchanged; for a board wipe
+or a three-token mint it is now O(events) per matching trigger where it was
+O(1). That is correctness and it is not going back, but it means **the row's
+share is not comparable with a pre-2026-09-13 reading**, and it means the
+cheapest shape of a win here is *fewer (trigger, event) pairs entered*, not a
+faster body: the batch mask (`(-195)`) and the per-permanent trigger fold
+(`(-196)`) are the two devices already in place, and nothing groups the batch's
+events by kind so that a trigger only walks the events it could match. **THAT DEVICE IS
+REFUTED, SAME DAY, BY A CENSUS THAT ALREADY EXISTED** — see the block below.
+
+⚠ **THE ROW IS PREAMBLE-BOUND, NOT WALK-BOUND, AND `CRAB_TRIG_CENSUS` SAYS SO
+IN ONE RUN.** The instrument is already in the tree (`ems_census` /
+`trig_census`, compile-time `--features trig-census` because the tick sits in
+the per-dispatch preamble and an env gate there cost +0.03-0.04 %), and nobody
+had pointed it at this question. Same command as the dumps above, the counts
+cross-check against them exactly (`dispatch_board_scan` is 105,132 calls in the
+callgrind dump and `dispatches` is 105,132 in the census, so it is the same
+workload):
+
+```text
+release-fast --features trig-census, CRAB_TRIG_CENSUS=1, gang mirror --games 6 --threads 1 --seed 1
+                                        fixed        cube      sealed
+  dispatch_triggers_for_events CALLS  (199,220 on sealed; 47 % return at the empty-batch early-out)
+  dispatches that do work             46,718      73,754     105,132
+  events per dispatch                   2.67        3.40        3.01
+  lane hits                                –      97.96 %     99.00 %
+  permanent VISITS the walk runs            –     325,738     372,204   of 1,531,334 / 1,634,996 whole-board
+  (trigger, event) PAIRS entering        4,312      52,124     108,336
+  event_matches_spec CALLS the pairs made 23,126    170,030     401,694
+  …of which pairs no event can match   2.88 %     50.64 %     72.64 %   (1.18 / 48.44 / 61.00 % of calls)
+  DERIVED: self Ir per working dispatch  841        1,120       1,089
+           visits per dispatch             –         4.42        3.54
+           matcher calls per dispatch     0.50       2.31        3.82
+```
+
+**A thousand instructions of self per dispatch to run three and a half
+permanent visits and four matcher calls is not a walk, it is a fixed
+preamble.** `(-115)`/`(-196)`'s lane already cuts the board walk to 21-23 % of
+itself and hits on 98-99 % of dispatches; the product the grouping device would
+attack is 402 k matcher calls on sealed against a 114.5 M row. **So the lead is
+the preamble that every dispatch pays whether or not a trigger exists**: the
+per-event `for e in events` stamping loop (timestamps, `entered_turn`,
+soulbond, the planeswalker/land/Arboria bookkeeping — 316 k iterations on
+sealed), the synthesis collects, the graveyard-batch count walk, and the
+`Vec` builds and drops the callee table shows (`Vec::drop` 105,186 calls,
+three `SpecFromIterNested` rows ~8 M between them).
+
+⚠ **AND THE PREAMBLE HAS ALREADY BEEN SWEPT, WHICH IS THE OTHER HALF OF THE
+ANSWER.** Reading it at `65b5a492`: every piece of it carries a PERF citation
+already — the batch mask `(-195)`, the fold `(-196)`, the fixed `[u128; 8]`
+frame array over a `SmallVec` (`collect` cost 153 Ir a dispatch, more than the
+leg saved), `dispatch_board_scan`'s one pass for four board facts, the three
+presence gates in front of the per-card grant lookups (36 / 4 / 1 Ir of pure
+overhead each, 945,812 times), `HashSet::default()` and `Vec::new()` that do
+not allocate. So `(-92)`'s standing verdict applies here too: **the row is
+flat, there is no hot line in it, and 1,089 Ir spread over a dozen already-
+priced pieces is what a swept preamble looks like.** A win here is a *structural*
+one — fewer dispatches, or less per-event work — not a faster statement.
+`perform_action_inner` drains every action's event list through this, 162,026
+times on sealed; whether those batches can be merged is the question nobody has
+asked.
+
+**The one walk-side number still worth something is the dead-pair share**:
+72.6 % of the pairs that enter the loop on sealed can match no event in the
+batch, and they are 61 % of the matcher calls. The kind-bit mask (`(-195)`)
+already runs ahead of them, so what is left is a *scope*-aware pre-check —
+and ⚠ price it against `(-88)`'s rule before building it, because the census's
+own deadness test is `event_kind_matches` with `source: None`, i.e. the work
+itself. A witness over the same question as the work is never cheaper than the
+hit rate.
+
+**Second row with a device: the allocator is ~9 % of every pool** and
+`_int_free` alone is 2.8-3.2 %. `(-256)` left mimalloc as the default for the
+shipped binary; these dumps are the *system* allocator by necessity (valgrind
+replaces malloc), so the 9 % is an upper bound on what a real run pays. A
+sized allocation census (`cg_alloc_sites.py`) at this tip has not been taken.
+
+
 **THE BOUND STOPS THE GAME AND DOES NOT STOP THE COST — `--decks cube --seed
 1215`, 40x its neighbours.** The first entry this list has gained off a
 measurement rather than a bug fix in seven runs, and the recipe is one command:
@@ -10229,7 +10491,7 @@ So the remaining `--decks cube` question is a smaller one than it looked:
 on how much of the ML loop runs on cube rather than sealed. `cube` 1036 (Ghosts of the Innocent, 5.4x release-fast / 83x sweep) is the
 other slow cell on record, with a different cause and the same shape of answer.
 
-⚠ **THE QUEUE IS AT FLOOR AND HAS BEEN FOR SEVEN RUNS.** The last actor
+⚠ **THE QUEUE WAS AT FLOOR FOR SEVEN RUNS AND THE HEAD OF THIS SECTION IS ITS RE-SEED (2026-09-13, `d457bcaa`); what follows is the state it was in.** The last actor
 re-read (`9772ce0c`, below) is FLAT with nothing above 0.2 % self that has a
 device; actor scaling (4.13x on 4 cores) and the file-size build lever are
 closed by measurement in their own sections; the `produced_mana` column is
