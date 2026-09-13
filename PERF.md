@@ -3039,7 +3039,37 @@ tool    **the keyword column opened to FACES** — the oracle's whole-card `keyw
         the token's line satisfies. 43/44 caught that; the widened case is 44/44.
 perf    none, and measured as none rather than assumed. Every engine change here is a draw path, a turn-watch digest
         sampled one turn in four past turn 30, and a catalog subtype; `--bench` measures `fixed`, which carries none of
-        the cards involved.
+        the cards involved, and its counters came back **byte-identical: 195,806 / 27.49 / 611.9 / 0 stalls**.
+fix     **nineteen cards print a colour their mana cost cannot carry, and none had a colour indicator** (CR 202.2).
+        A card with no mana cost (the suspend cycle — Ancestral Vision, Living End, Crashing Footfalls, Restore
+        Balance, Hypergenesis, Wheel of Fate, Gaea's Will, Glimpse of Tomorrow, Inevitable Betrayal, Profane Tutor,
+        Resurgent Belief) or a printed `{0}` (the five Pacts) has no pips to be coloured by, so the indicator is the
+        whole answer; Asmoranomardicadaistinaculdacar, Dryad Arbor and Urza, Planeswalker with them. Colourless to
+        protection, to "cast a blue spell", to devotion and to every colour heuristic the bot has. ⚠ **No encoding
+        moves**: the deck encoder reads `def.cost.colored_symbols()`, the COST's pips, and an indicator is not a cost.
+tool    **three cost-reader gaps and three subtype ones**, each with an injection (the battery is 49 cases).
+        Cost: the tail call is not always the FIRST token of a helper body (`fn ally` opens with a statement — 219
+        non-land factories); a parameter can be one ELEMENT of the symbol list (`cost(&[generic(1), color_pip])`);
+        `ManaCost::default()` is an explicit `{0}`, a VALUE and not a gap, and `ManaCost::new(vec![..])` is the same
+        list as `cost(&[..])` — that last pair is what hid the Pacts, since no cost means no colour.
+        Subtypes: a shorthand field can be a LOCAL carrying the helper's own push (`let mut creature_types = types;
+        creature_types.push(Mount)`), `.to_vec()` binds like `.clone()`, and `&[..]` is the same list as `vec![..]`.
+        ⚠ **The first run of the local reader reported three defects and all three were the READER** — the index
+        sliced the helper body from the FUNCTION's brace rather than the literal's, so the `let mut` statements fell
+        outside it. **A row is a lead until the reader that produced it has been read.**
+        Coverage: priced 16,846 -> **16,944**, colours 16,712 -> **16,827**, subtypes 17,683 -> **17,714**;
+        `nonliteral` 938 -> 840, `nosubtypes` 74 -> 43.
+tool    **the walk accounts for every factory now, and the closing line proves it.** One ledger line per factory: each
+        column's outcome, `_stopped` for an early `continue`, `n/a` where the column does not apply. `# accounting —
+        21794 factories walked, 4124 stopped early; cost 0, types 0, subtypes 0, keywords 0, colors 0, loyalty 0,
+        pt 0, adv 0, back 0`. A non-zero is a hole in the FILE, not a card — which `layout == "normal"` was for as
+        long as the subtype column existed. Deleting one `acct[…]` write reads `keywords 29`, so it can fail.
+gates   suite **19,504 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12**,
+        `--bench` byte-identical + determinism ok, injections **44 / 44**, `audit_panics` 0 bare,
+        `audit_decision_plumbing` 168 / 108 / 60 DEAD 0 repeat 0, `audit_seat_from_selector` 0 open,
+        `audit_printed_body` **0 on all TEN columns**, `cargo check --profile release-fast` clean.
+```
+
 ### 2026-09-12 (the two-halves session, third of the day) — the face nobody read, two new columns, five shipped cards; no perf leg
 
 ```text

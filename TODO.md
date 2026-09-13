@@ -44,8 +44,9 @@ sixty-seventh pass, so don't re-take that.
    168 / 108 / 60 **DEAD 0 and repeat 0**, `audit_stash_in_loop` 1 / 1 / 0, `audit_seat_from_selector` **0 open / 15 pinned / 8 loop / 4
    controller-asked**, `audit_answer_log` **71 / 8** (all eight explained in its docstring — a NEW row is the signal), `audit_variant_coverage` 0 dead
    capability, `audit_doc_drift` **0**, `audit_keyword_drift` **0 invented** (the ratchet), `audit_printed_body` **0 on all TEN columns** over
-   16,846 priced + 17,777 type lines + 17,683 subtypes + **17,743** keywords + 9,609 P/T + **16,729** colours + 124 loyalty + **62 ADVENTURE HALVES +
-   81 BACK FACES** (the two new columns), `audit_keyword_drift`
+   **16,944** priced + 17,777 type lines + **17,714** subtypes + 17,743 keywords + 9,609 P/T + **16,827** colours + 124 loyalty + 62 ADVENTURE HALVES +
+   81 BACK FACES, and its **accounting line all zeroes** (21,794 factories walked, 4,124 stopped early under a printed bucket — a non-zero
+   there is a hole in the FILE, not a card, which `layout == "normal"` was for as long as the subtype column existed), `audit_keyword_drift`
    **0 invented / 4 missing** (367 at the start of 2026-09-12 — and the 4 left each need a PRIMITIVE the engine does not have, not a field it does), `audit_card_names`
    **0 / 0 / 0 / 0** with an EMPTY `REVIEWED_DUPLICATES`, and `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (the ONLY
    gate that sees `debug-assertions = false`).
@@ -128,6 +129,13 @@ sixty-seventh pass, so don't re-take that.
    (c) `all` 1159 is the first cap ever to SURVIVE the 50,000-action re-run; `cap_diagnosis` prints the watch's own state now and the answer is
    `repeats 2/12` against `12/12` on the eight games the same cell drew. Clamping a saturated life out of the turn digest takes it to `10/12` — two
    samples short — so **`NO_PROGRESS_MAX_PERIOD` (8) is the next thing to price, not the digest's field list.**
+   (d) **Nineteen cards print a colour their mana cost cannot carry** (CR 202.2 — no cost or a `{0}`, so the indicator is the whole answer): the
+   suspend cycle, the five Pacts, Dryad Arbor, Urza and Asmoranomardicadaistinaculdacar. Colourless to protection, devotion and every colour
+   heuristic the bot has; ⚠ no encoding moves (the deck encoder reads the COST's pips). The COST reader had to open first — three gaps — and three
+   more closed on subtypes. ⚠ **The first run of the local-binding reader reported three defects and all three were the READER**: a row is a lead
+   until the reader that produced it has been read.
+   (e) **The walk accounts for every factory now** and the closing line proves it, so the `layout == "normal"` shape cannot recur silently.
+4. **Next, in order.** (a) **Sweep from 1212, and read the SEED COLUMN of PERF's table before you take one.**
    `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
    (3,200 / 3,200 decided): nine Ghosts of the Innocent divide all damage by 512, so the matchup can only end by decking, on a 79-permanent board.
@@ -150,8 +158,11 @@ sixty-seventh pass, so don't re-take that.
    **So read `board`, `slow-not-stuck` and `known_board` before believing a cap — and read the `no-progress watch:` line of its dump.**
    (b) **`audit_printed_body`'s remaining skips are the hard residue** and `--list <kind>` prints the factories: `nocache` 3,749 is now genuinely the
    synthesized sets (the name column takes the rest), and **700 of `nonliteral`'s 870 are LANDS**, which print no mana cost, so closing them buys that
-   column nothing. What still has a card behind it: `nocolors` 1,043, `nosubtypes` 74, `noback` 60, `nokeywords` 29, `notyped` 7
+   column nothing — ⚠ **and measured this time: of `nonliteral`'s 840, 718 are lands and NONE of them is coloured**, so both the cost and the colour
+   column have exactly zero yield there. What still has a card behind it: `nocolors` 945, `nosubtypes` 43, `noback` 60, `nokeywords` 29, `notyped` 7
    (`nopt` / `noadv` / `noloyalty` / `faces` / `subtwoface` are all 0 and are GATES — a row in one is a new idiom, not a new card).
+   The 122 non-land `nonliteral` cards left are three shapes: a hybrid pip built by a LOCAL CLOSURE (`let wb = || hybrid(White, Black)`), an `{X}`
+   cost, and a handful of one-offs.
    ⚠ **Print every skip you add** — the P/T column skipped 41 % of
    creatures silently for as long as it existed, and read "0 wrong P/T" the whole time.
    (c) ⚠ **THE CATALOG AUDITS ARE WORKED OUT — 22 rows sampled across three of them this run, ZERO code defects.** `audit_catalog_stats`' residue is

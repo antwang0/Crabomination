@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-12 (twenty-fifth find) — nineteen cards print a colour their mana cost cannot carry, and none had an indicator](#fixed-2026-09-12-twenty-fifth-find--nineteen-cards-print-a-colour-their-mana-cost-cannot-carry-and-none-had-an-indicator) | 44 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fourth find) — one `false` for two meanings: a skipped draw eliminated the drawer, and nineteen more draws could not deck anyone](#fixed-2026-09-12-twenty-fourth-find--one-false-for-two-meanings-a-skipped-draw-eliminated-the-drawer-and-nineteen-more-draws-could-not-deck-anyone) | 48 |
 | Bugs & robustness | [FIXED 2026-09-12 (the drift list, once it could be read) — 25 cards shipped a mechanic they print, one shipped the WRONG one, and one shipped an ability it does not print](#fixed-2026-09-12-the-drift-list-once-it-could-be-read--25-cards-shipped-a-mechanic-they-print-one-shipped-the-wrong-one-and-one-shipped-an-ability-it-does-not-print) | 52 |
 | Bugs & robustness | [CLOSED WITH A REASON 2026-09-12 — do NOT build an "invented verb" direction on `audit_oracle_verbs`' machinery](#closed-with-a-reason-2026-09-12--do-not-build-an-invented-verb-direction-on-audit_oracle_verbs-machinery) | 33 |
@@ -78,6 +79,42 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-12 (twenty-fifth find) — nineteen cards print a colour their mana cost cannot carry, and none had an indicator
+
+CR 202.2 — an object's colours are its mana cost's plus its colour indicator's.
+A card with **no mana cost at all** (the suspend-only cycle: Ancestral Vision,
+Crashing Footfalls, Gaea's Will, Glimpse of Tomorrow, Hypergenesis, Inevitable
+Betrayal, Living End, Profane Tutor, Restore Balance, Resurgent Belief, Wheel of
+Fate) or a printed `{0}` (Intervention Pact, Pact of Negation, Pact of the
+Titan, Slaughter Pact, Summoner's Pact) has **no pips to be coloured by**, so
+the indicator is the whole answer. All nineteen shipped without one, plus
+Asmoranomardicadaistinaculdacar, Dryad Arbor and Urza, Planeswalker.
+
+Colourless to protection, to "whenever you cast a blue spell", to devotion, to
+the drafter's colour identity and to every colour heuristic the bot has.
+
+⚠ **No encoding moves with it.** The deck encoder reads
+`def.cost.colored_symbols()` — the COST's pips — and an indicator is not a
+cost, so no net needs a retrain. Game behaviour changes for a deck holding one.
+
+**The column could not see them because the COST reader could not read them**,
+and the colour column needs the cost for its pips. Three gaps, each with its own
+injection:
+
+  * **the call is not always the first token.** `fn ally(.., mut types, ..) {
+    types.push(..); creature(..) }` opens with a STATEMENT, and the resolver
+    matched the tail call ANCHORED at the start of the body — 219 non-land
+    factories with a real printed cost skipped off a helper the type and
+    subtype columns followed fine.
+  * **a parameter can be one ELEMENT of the symbol list**: `cost(&[generic(1),
+    color_pip])` over `fn zubera(name, color_pip, dies)`. The subtype column
+    needed the same rule for `planeswalker_subtypes: vec![sub]`.
+  * **`ManaCost::default()` is an explicit `{0}`, a VALUE and not a gap**, and
+    `ManaCost::new(vec![..])` is the same symbol list `cost(&[..])` is. Reading
+    them as unreadable is what hid the Pacts: no cost, so no colour.
+
+Cost coverage 16,846 -> **16,944**, colour 16,712 -> **16,827**.
 
 ## FIXED 2026-09-12 (twenty-fourth find) — one `false` for two meanings: a skipped draw eliminated the drawer, and nineteen more draws could not deck anyone
 
