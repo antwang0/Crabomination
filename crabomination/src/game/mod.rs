@@ -19834,6 +19834,9 @@ impl GameState {
         // `cube` run (PERF `(-117)`). One `Vec` a dispatch, cleared per
         // trigger, capacity kept.
         let mut block_sides_seen: Vec<CardId> = Vec::new();
+        // Per-(permanent, trigger) dedup for `PutIntoGraveyard`, whose batch
+        // can carry two records for one card. See the arm that uses it.
+        let mut graveyard_subjects_seen: Vec<CardId> = Vec::new();
         // The fast-path `continue` below, asked once for the board instead of
         // once per permanent. With no grant of any kind in play only a
         // permanent carrying a printed trigger or a Station band can get past
@@ -20043,6 +20046,7 @@ impl GameState {
                 // partner set via `Selector::BlockedAttacker` /
                 // `BlockingCreatures`, so one trigger instance still covers all.
                 block_sides_seen.clear();
+                graveyard_subjects_seen.clear();
                 for (i, ev) in events.iter().enumerate() {
                     let bits = if i < KEPT_BITS {
                         event_bits[i]
@@ -20105,6 +20109,27 @@ impl GameState {
                             continue;
                         }
                         block_sides_seen.push(sid);
+                    }
+                    // CR 701.15b — ONE card reaching a graveyard can put TWO
+                    // matching records in the batch: the mill sites that go
+                    // through `route_to_graveyard` push a
+                    // `CardPutIntoGraveyard` AND a `CardMilled`, and both
+                    // match `EventKind::PutIntoGraveyard`. "Whenever a card is
+                    // put into a graveyard" is once per CARD, so dedupe on the
+                    // subject the way the block arm above does. Not fixable at
+                    // the emission sites: the dredge mill pushes only
+                    // `CardMilled` and still has to fire this kind, so neither
+                    // record can simply be dropped.
+                    if matches!(ta.event.kind, crate::effect::EventKind::PutIntoGraveyard)
+                        && let Some(
+                            crate::game::effects::EntityRef::Permanent(sid)
+                            | crate::game::effects::EntityRef::Card(sid),
+                        ) = subject
+                    {
+                        if graveyard_subjects_seen.contains(&sid) {
+                            continue;
+                        }
+                        graveyard_subjects_seen.push(sid);
                     }
                     // Evaluate the trigger's intervening filter here, before
                     // consuming any once-per-turn / per-subject budget: a

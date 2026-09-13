@@ -534,6 +534,28 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // `once_per_batch`. `SelfSource` ETBs never reach here —
             // `is_event_hardcoded` routes them to `fire_self_etb_triggers`.
             | EventKind::EntersBattlefield
+            // CR 603.6, the rest of the census the `EntersBattlefield` pass
+            // opened. Each was probed against a real batch before being put
+            // here; each read 1 where the printed card wants N:
+            //   PutIntoGraveyard      The Haunt of Hightower, 1 counter for a
+            //                         five-card mill ("whenever **a** card is
+            //                         put into an opponent's graveyard")
+            //   LandPutIntoGraveyard  Slogurk, 1 for five milled lands
+            //   TokenCreated          Mirkwood Bats, 1 life for three tokens
+            //   Explored              Wildgrowth Walker, 1 for two explores
+            //   PlayerDamaged         Aurification, 1 gold counter for two
+            //                         attackers — and the batch really does
+            //                         carry two `DamageDealt{to_player}`
+            //   CardExiled            Soulherder, 1 for two exiles
+            // The plural "one or more" wordings on these kinds pin themselves
+            // (Moonshadow, The Gitrog Monster, Kambal's second half) or
+            // already carried `once_per_turn`, which excludes fan-out anyway.
+            | EventKind::PutIntoGraveyard
+            | EventKind::LandPutIntoGraveyard
+            | EventKind::TokenCreated
+            | EventKind::Explored
+            | EventKind::PlayerDamaged
+            | EventKind::CardExiled
     )
 }
 

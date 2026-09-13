@@ -1001,7 +1001,12 @@ pub fn kambal_profiteering_mayor() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::TokenCreated, EventScope::YourControl),
+                // "Whenever **one or more** tokens you control enter, each
+                // opponent loses 1 life and you gain 1 life." One life for the
+                // batch — this half carries no once-each-turn rider, unlike
+                // the copy half above, so it pins against the fan-out here.
+                event: EventSpec::new(EventKind::TokenCreated, EventScope::YourControl)
+                    .once_per_batch(),
                 effect: Effect::Seq(vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::EachOpponent),

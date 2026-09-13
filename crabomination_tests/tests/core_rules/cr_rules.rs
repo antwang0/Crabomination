@@ -5045,10 +5045,17 @@ fn cr_111_10_token_created_fires_per_token() {
     assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
 }
 
-/// CR 614.13 — a token-doubling replacement multiplies the count, and each
-/// resulting token fires its own `TokenCreated` event (CR 111.10). With a
-/// doubler out, Voldaren at 3 Blood mints one → two Blood enter → it reaches
-/// five and transforms off the doubled token.
+/// CR 614.13 / 603.6 — a token-doubling replacement multiplies the count, and
+/// each resulting token fires its own `TokenCreated` event (CR 111.10). With a
+/// doubler out, Voldaren at 3 Blood mints one → **two** Blood enter → the
+/// singular "whenever you create a Blood token" triggers **twice**, both see
+/// five or more Blood, and two transforms land it back on its front face.
+///
+/// The two-trigger count is the assertion; the face is how it is observed.
+/// This test asserted a single transform until `EventKind::TokenCreated`
+/// joined `event_kind_fans_out` — the engine minted one trigger for the batch,
+/// so the doubled token was invisible to the very ability this test exists to
+/// exercise, and its own comment already said each token fires its own event.
 #[test]
 fn cr_614_13_token_doubling_fires_per_doubled_token() {
     let mut g = two_player_game();
@@ -5074,8 +5081,13 @@ fn cr_614_13_token_doubling_fires_per_doubled_token() {
         "doubler made two Blood from one mint"
     );
     g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.stack.len(), 2, "one trigger per Blood token created, not one for the batch");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
+    assert_eq!(
+        g.battlefield_find(caster).unwrap().definition.name,
+        "Voldaren Bloodcaster",
+        "two triggers, two transforms — back to the front face"
+    );
 }
 
 // ── CR 508.1a — attack-only restriction ──────────────────────────────────────

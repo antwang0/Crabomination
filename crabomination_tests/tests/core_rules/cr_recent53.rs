@@ -470,3 +470,198 @@ fn cr_603_6_a_singular_etb_wording_mints_one_trigger_per_match() {
     ]);
     assert_eq!(g.stack.len(), 3, "one Soul Warden trigger per entering creature");
 }
+
+// ── CR 603.6 — the rest of the fan-out list ─────────────────────────────────
+// The `EntersBattlefield` pass above was the first row of a census of every
+// `EventKind` the catalog triggers on under a scope a batch can carry several
+// events for. Five more kinds were missing, each probed against a real batch
+// first and each reading 1 where the printed card wants N. One gate per kind,
+// plus the plural wordings that now have to pin themselves.
+
+/// CR 603.6 — "whenever **a** card is put into an opponent's graveyard" is per
+/// card, so a five-card mill is five +1/+1 counters, not one.
+#[test]
+fn cr_603_6_put_into_graveyard_fans_out_per_card() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let haunt = g.add_card_to_battlefield(0, catalog::the_haunt_of_hightower());
+    for _ in 0..8 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let scour = g.add_card_to_hand(0, catalog::tome_scour());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 5);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: scour,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Tome Scour");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(haunt).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        5,
+        "one counter per card that hit the graveyard"
+    );
+}
+
+/// CR 603.6 — Moonshadow prints the plural ("whenever **one or more**
+/// permanent cards are put into your graveyard"), so the same five-card mill
+/// sheds exactly one -1/-1 counter.
+#[test]
+fn cr_603_6_a_plural_graveyard_wording_sheds_one_counter_for_the_batch() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let moon = g.add_card_to_battlefield(0, catalog::moonshadow());
+    // `add_card_to_battlefield` skips the entry replacement, so stamp the six
+    // -1/-1 counters the card enters with by hand.
+    g.battlefield_find_mut(moon).unwrap().add_counters(CounterType::MinusOneMinusOne, 6);
+    let before = g.battlefield_find(moon).unwrap().counter_count(CounterType::MinusOneMinusOne);
+    assert_eq!(before, 6);
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let scour = g.add_card_to_hand(0, catalog::tome_scour());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 5);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: scour,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Tome Scour");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(moon).unwrap().counter_count(CounterType::MinusOneMinusOne),
+        before - 1,
+        "one counter for the batch, not one per card"
+    );
+}
+
+/// CR 603.6 — "whenever **a** land card is put into your graveyard" is per
+/// land: Slogurk takes five counters off a five-land mill.
+#[test]
+fn cr_603_6_land_put_into_graveyard_fans_out_per_land() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let slog = g.add_card_to_battlefield(0, catalog::slogurk_the_overslime());
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let scour = g.add_card_to_hand(0, catalog::tome_scour());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 5);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: scour,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Tome Scour");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(slog).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        5,
+        "one counter per milled land"
+    );
+}
+
+/// CR 603.6 — "whenever you create **a** token" is per token: three Spirits
+/// from one Spectral Procession drain for three.
+#[test]
+fn cr_603_6_token_created_fans_out_per_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::mirkwood_bats());
+    let life = g.players[1].life;
+    let spell = g.add_card_to_hand(0, catalog::spectral_procession());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 10);
+    g.players[0].mana_pool.add_colorless(10);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Spectral Procession");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "one drain per token, not one per batch");
+}
+
+/// CR 603.6 — "whenever **a** creature you control explores" is per explore.
+#[test]
+fn cr_603_6_explored_fans_out_per_explore() {
+    let mut g = two_player_game();
+    let walker = g.add_card_to_battlefield(0, catalog::wildgrowth_walker());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[
+        GameEvent::Explored { card_id: a, controller: 0, explored_land: false },
+        GameEvent::Explored { card_id: b, controller: 0, explored_land: false },
+    ]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(walker).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "one counter per exploring creature"
+    );
+}
+
+/// CR 603.6 — "whenever **a** creature deals damage to you, put a gold counter
+/// on **it**" is per creature, and two attackers really do arrive as two
+/// `DamageDealt` events in one batch. Pinned, only the first attacker would be
+/// walled.
+#[test]
+fn cr_603_6_player_damaged_fans_out_per_source() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(1, catalog::aurification());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [a, b] {
+        g.clear_sickness(id);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])
+    .expect("attack");
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(&mut g);
+    let gold: u32 = [a, b]
+        .iter()
+        .filter_map(|id| g.battlefield_find(*id))
+        .map(|c| c.counter_count(CounterType::Gold))
+        .sum();
+    assert_eq!(gold, 2, "a gold counter on each attacker, not just the first");
+}
+
+/// CR 603.6 — "whenever **a** creature is exiled from the battlefield" is per
+/// creature.
+#[test]
+fn cr_603_6_card_exiled_fans_out_per_card() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::soulherder());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[
+        GameEvent::PermanentExiled { card_id: a },
+        GameEvent::PermanentExiled { card_id: b },
+    ]);
+    assert_eq!(g.stack.len(), 2, "one Soulherder trigger per exiled creature");
+}
