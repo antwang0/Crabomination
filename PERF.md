@@ -3004,7 +3004,7 @@ cards   the 7 above, plus Fractured Identity's mint (exact at two seats, one cop
 perf    none attempted and none claimed. Every change is a catalog fan-out, a `debug_assert!` (dead in release) and
         two arms whose single-valued callers loop exactly once; **none of the eight cards is in the `fixed`
         archetypes**. `--bench` counters came back **byte-identical: 195,806 / 27.49 / 611.9 / 0 stalls**.
-gates   suite **19,513 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12
+gates   suite **19,515 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12
         unmoved**, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls + determinism ok + thread_determinism ok (3 vs 1),
         `audit_printed_body` 0 on all ten columns, `audit_panics` 0 bare, `audit_doc_drift` 0,
         `audit_seat_from_selector` 0 open, `audit_stash_in_loop` 1/1/0, `audit_variant_coverage` 0 dead capability,
