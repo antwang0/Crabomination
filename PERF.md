@@ -3072,7 +3072,9 @@ sweep   **fresh seeds 1292..1295 (claimed in NEXT before the run): 12 cells / 59
         `audit_target_fields` **0 aimed**.
 
 gates   suite **19,547 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--workspace --all-targets
-        --exclude crabomination_client`; the client needs four apt packages this image does not have),
+        --exclude crabomination_client`; the client needs four apt packages this image does not have) and
+        **0** on `-p crabomination --features trig-census --bins`, the only build that compiles
+        `gather_census`,
         golden_trace **12 / 12 unmoved**, `--bench` **195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls** BYTE-IDENTICAL to the committed invariant with `determinism ok` and `thread_determinism ok
         (3 vs 1 threads identical)`. `profiling-fast`
