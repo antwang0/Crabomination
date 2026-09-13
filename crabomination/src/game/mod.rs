@@ -19209,8 +19209,16 @@ impl GameState {
     /// dispatch. `c7bdd850` made the five scans read an empty slice;
     /// this skips them outright.
     ///
+    /// `batch_bits` is the caller's [`event_kind_bits`] fold over the same
+    /// batch. The three presence questions below (a death, an attack, an
+    /// entry) used to be an `events.iter().any(..)` each, walked on every one
+    /// of the calls the `is_empty()` gate lets through; each is exactly one
+    /// bit of that mask, since every kind named is reached by one `GameEvent`
+    /// variant and no other (PERF `(-294)`).
+    ///
     /// [`dispatch_triggers_for_events`]: Self::dispatch_triggers_for_events
-    fn fire_delayed_event_watchers(&mut self, events: &[GameEvent]) {
+    /// [`event_kind_bits`]: crate::game::effects::events::event_kind_bits
+    fn fire_delayed_event_watchers(&mut self, events: &[GameEvent], batch_bits: u128) {
         // Every leg below fires a watcher off `delayed_triggers`; with none
         // registered there is nothing to fire, and the two ungated collects
         // further down ran on every dispatch (PERF `(-258)`).
@@ -19226,12 +19234,12 @@ impl GameState {
         // Ask the batch before building anything: most dispatches carry no
         // death event at all, and an empty `collect()` is still a
         // `Vec::from_iter` call with its size-hint dance (PERF's (-45)).
-        let any_death = events.iter().any(|e| {
-            matches!(
-                e,
-                GameEvent::CreatureDied { .. } | GameEvent::PermanentDied { .. }
-            )
-        });
+        // Off the mask, not a scan: `CreatureDied` and `PermanentDied` are
+        // each reached by their own `GameEvent` variant alone, so the two
+        // bits are the two `matches!` arms.
+        const DEATH_BITS: u128 = crate::effect::EventKind::CreatureDied.bit()
+            | crate::effect::EventKind::PermanentDied.bit();
+        let any_death = batch_bits & DEATH_BITS != 0;
         let died: Vec<CardId> = if !any_death {
             Vec::new()
         } else {
@@ -19311,8 +19319,10 @@ impl GameState {
         // "Whenever a creature attacks you or a planeswalker you control"
         // floating triggers (Tamiyo +2). Fire once per qualifying attacker;
         // the attacker is the trigger source.
+        // `Attacks` is reached by `GameEvent::AttackerDeclared` and nothing
+        // else, so the bit is the scan.
         let attackers: Vec<CardId> =
-            if !events.iter().any(|e| matches!(e, GameEvent::AttackerDeclared(_))) {
+            if batch_bits & const { crate::effect::EventKind::Attacks.bit() } == 0 {
                 Vec::new()
             } else {
                 events
@@ -19408,9 +19418,10 @@ impl GameState {
         // fires_once) until cleanup.
         // Ask the batch first, as the death and attack legs above do: the
         // collect is a `Vec::from_iter` call even when it builds nothing.
-        let entered_creatures: Vec<(CardId, usize)> = if !events
-            .iter()
-            .any(|e| matches!(e, GameEvent::PermanentEntered { .. }))
+        // `EntersBattlefield` is `GameEvent::PermanentEntered`'s bit alone.
+        let entered_creatures: Vec<(CardId, usize)> = if batch_bits
+            & const { crate::effect::EventKind::EntersBattlefield.bit() }
+            == 0
         {
             Vec::new()
         } else {
@@ -19588,39 +19599,6 @@ impl GameState {
             folded = events.iter().cloned().chain(synthesized).collect();
             &folded
         };
-        // "Whenever one or more cards leave your graveyard" fires once per
-        // simultaneous batch (every catalog `CardLeftGraveyard` listener is
-        // of that shape). The emission sites push one event per card — the
-        // per-turn tally and the client event mirror want the per-card
-        // granularity — so collapse to the first event per player here, at
-        // trigger dispatch only.
-        let gy_batched: Vec<GameEvent>;
-        let events: &[GameEvent] = if events
-            .iter()
-            .filter(|e| matches!(e, GameEvent::CardLeftGraveyard { .. }))
-            .count()
-            > 1
-        {
-            let mut seen_players: Vec<usize> = Vec::new();
-            gy_batched = events
-                .iter()
-                .filter(|e| match e {
-                    GameEvent::CardLeftGraveyard { player, .. } => {
-                        if seen_players.contains(player) {
-                            false
-                        } else {
-                            seen_players.push(*player);
-                            true
-                        }
-                    }
-                    _ => true,
-                })
-                .cloned()
-                .collect();
-            &gy_batched
-        } else {
-            events
-        };
         if events.is_empty() {
             return;
         }
@@ -19640,16 +19618,64 @@ impl GameState {
         // `collect` cost 153 Ir a dispatch (more than the leg saved) and
         // 18 % of batches run past four events, so a push loop would spill.
         // Events past the array re-derive their mask in the loop.
+        // ⚠ **AND IT IS THE ONLY PASS OVER `events` THIS FUNCTION NEEDS TO
+        // MAKE UNCONDITIONALLY.** It used to be one of six: the
+        // `CardLeftGraveyard` count below, the stamping loop, the exile
+        // presence check, the LifeGained/graveyard walk at the end and the
+        // LKI walk each opened their own `events.iter()`, and every one of
+        // them is a question the mask this loop builds already answers. They
+        // are gated on it now (PERF `(-294)`); the count is folded in here.
         const KEPT_BITS: usize = 8;
+        const GY_LEFT_BITS: u128 = crate::effect::EventKind::CardLeftGraveyard.bit();
         let mut event_bits = [0u128; KEPT_BITS];
         let mut batch_bits = 0u128;
+        let mut gy_left = 0usize;
         for (i, ev) in events.iter().enumerate() {
             let b = crate::game::effects::events::event_kind_bits(ev);
             batch_bits |= b;
+            // `GameEvent::CardLeftGraveyard` is the only variant that reaches
+            // this kind, so the bit is the variant test.
+            gy_left += usize::from(b & GY_LEFT_BITS != 0);
             if i < KEPT_BITS {
                 event_bits[i] = b;
             }
         }
+        // "Whenever one or more cards leave your graveyard" fires once per
+        // simultaneous batch (every catalog `CardLeftGraveyard` listener is
+        // of that shape). The emission sites push one event per card — the
+        // per-turn tally and the client event mirror want the per-card
+        // granularity — so collapse to the first event per player here, at
+        // trigger dispatch only.
+        let gy_batched: Vec<GameEvent>;
+        let events: &[GameEvent] = if gy_left > 1 {
+            let mut seen_players: Vec<usize> = Vec::new();
+            gy_batched = events
+                .iter()
+                .filter(|e| match e {
+                    GameEvent::CardLeftGraveyard { player, .. } => {
+                        if seen_players.contains(player) {
+                            false
+                        } else {
+                            seen_players.push(*player);
+                            true
+                        }
+                    }
+                    _ => true,
+                })
+                .cloned()
+                .collect();
+            // The collapse only drops duplicate `CardLeftGraveyard`s, so
+            // `batch_bits` is unchanged by it — but the per-index masks are,
+            // and the pair loop reads them by position. Re-derived for the
+            // survivors only; entries past the new length are never read
+            // (the loop enumerates `events`), so nothing else is cleared.
+            for (i, ev) in gy_batched.iter().take(KEPT_BITS).enumerate() {
+                event_bits[i] = crate::game::effects::events::event_kind_bits(ev);
+            }
+            &gy_batched
+        } else {
+            events
+        };
         // The same mask folded to one word, against each permanent's memoized
         // printed-trigger fold (PERF `(-196)`): with no grant in play, a
         // permanent whose fold misses the batch's has no trigger to walk.
@@ -19661,8 +19687,24 @@ impl GameState {
         // this batch, so `SelectionRequirement::EnteredThisTurn` (Shaile) can
         // compare against the current turn. Centralized here because every
         // battlefield-entry path emits a `PermanentEntered` event.
+        //
+        // The five variants the match below has an arm for, as their kind
+        // bits: `event_kind_bits` maps each to exactly one kind, so the batch
+        // carries the bit iff it carries the event. Over-approximating in the
+        // only direction it can (`AttachmentMoved { attached_to: None }` and a
+        // sacrifice of a card with no death snapshot both set their bit and
+        // then do nothing), which is the `(-195)` gate asked once for a whole
+        // pass instead of once per pair. An empty slice rather than an `if`
+        // around the ninety-line body: the loop then costs a length test, and
+        // the arms stay where a reader expects them.
+        const STAMP_BITS: u128 = crate::effect::EventKind::EntersBattlefield.bit()
+            | crate::effect::EventKind::BecameAttached.bit()
+            | crate::effect::EventKind::Transformed.bit()
+            | crate::effect::EventKind::TurnedFaceUp.bit()
+            | crate::effect::EventKind::PermanentSacrificed.bit();
+        let stamped: &[GameEvent] = if batch_bits & STAMP_BITS != 0 { events } else { &[] };
         let turn = self.turn_number;
-        for e in events {
+        for e in stamped {
             match e {
                 GameEvent::PermanentEntered { card_id } => {
                     // CR 613.7d — the new object's timestamp is its entry
@@ -19760,7 +19802,7 @@ impl GameState {
         // `delayed_triggers` entry, so with none registered — nearly every
         // dispatch — the whole thing is dead. Ask once.
         if !self.delayed_triggers.is_empty() {
-            self.fire_delayed_event_watchers(events);
+            self.fire_delayed_event_watchers(events, batch_bits);
         }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
@@ -20334,6 +20376,18 @@ impl GameState {
         // The walk order decides where these land on the stack relative to
         // each other, so `died_card_snapshots` is an insertion-ordered
         // [`IdMap`](crate::game::types::IdMap), not a `HashMap` — see its doc.
+        //
+        // ⚠ **GATING THIS WALK ON THE BATCH MASK BUYS EXACTLY NOTHING AND THE
+        // REASON IS THE SNAPSHOT LIFETIME, NOT THE MASK** (PERF `(-294)`,
+        // measured and reverted). The seven kinds the three `lki_*` tests
+        // admit are `DealtDamage`, the two sacrifice kinds, the two death
+        // kinds, `PermanentLeavesBattlefield` and `CardExiled`; a mask over
+        // them left `statics_granted_dying_triggers` at **8,852 calls, the
+        // same figure to the call**, because `died_card_snapshots` is filled
+        // and cleared inside ONE dispatch (`push_ordered_trigger_candidates`
+        // and the empty-candidate path both clear it), so a dispatch that has
+        // a snapshot to walk is by construction the dispatch whose batch
+        // carries the death. Do not re-take it.
         for snap in self.died_card_snapshots.values() {
             // CR 603.10a — a leaves-the-battlefield ability granted by a static
             // (Endless Whispers' "each creature has 'when this dies …'") looks
@@ -20435,8 +20489,10 @@ impl GameState {
         // per-card walk of exile is dead: every exile card iterated, every
         // definition's `triggered_abilities` walked, only to be filtered
         // out by the kind check. Most bench dispatches have no exile event
-        // at all.
-        if events.iter().any(|e| matches!(e, GameEvent::PermanentExiled { .. })) {
+        // at all. Read off the batch mask rather than walked: `CardExiled` is
+        // reached by `GameEvent::PermanentExiled` and by nothing else, so the
+        // bit test is not an approximation here, it is the same question.
+        if batch_bits & const { crate::effect::EventKind::CardExiled.bit() } != 0 {
             for card in &self.exile {
                 for ta in &card.definition.triggered_abilities {
                     if ta.event.kind != crate::effect::EventKind::CardExiled
@@ -20916,8 +20972,18 @@ impl GameState {
         // filters in this very batch still see the pre-batch state.
         //
         // CR 603.4 — "until end of turn, whenever …" delayed triggers.
+        //
+        // And the walk itself is skipped when the batch can carry neither of
+        // the two kinds it reads, which is most of them — the same mask, the
+        // same `(-195)` argument as the stamping pass above.
+        // `CardPutIntoGraveyard` always sets `PutIntoGraveyard`; `CardMilled`
+        // sets it too, so the gate over-admits in the sound direction.
+        const LIFE_OR_GY_BITS: u128 = crate::effect::EventKind::LifeGained.bit()
+            | crate::effect::EventKind::PutIntoGraveyard.bit();
         let has_delayed_triggers = !self.delayed_triggers.is_empty();
-        for ev in events {
+        let watched: &[GameEvent] =
+            if batch_bits & LIFE_OR_GY_BITS != 0 { events } else { &[] };
+        for ev in watched {
             match ev {
                 GameEvent::LifeGained { player, amount } => {
                     self.life_gain_flag_pending |= seat_bit(*player);

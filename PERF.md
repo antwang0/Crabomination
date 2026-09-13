@@ -6639,6 +6639,76 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-294)` THE PREAMBLE LEAD, TAKEN — the dispatcher walked its batch **six** times unconditionally and the mask it builds on pass two answers four of them: `fixed` **-0.339 %** / `cube` **-0.275 %** / `sealed` **-0.404 %**
+
+`(-293)`'s re-seed put `dispatch_triggers_for_events` at the head of the queue
+on all three pools and `CRAB_TRIG_CENSUS` then said it is **preamble-bound, not
+walk-bound**: 1,089 Ir of self per working dispatch to run 3.54 permanent visits
+and 3.82 matcher calls. The candidates head named the pieces — "the per-event
+stamping loop, the synthesis collects, the graveyard-batch count walk" — and
+said a win here has to be structural. **The structure is that `events` is walked
+six times on a dispatch that gets past the empty-batch return, and four of those
+walks are asking a question `event_kind_bits` has already answered.**
+
+```text
+  the six passes over `events`, base                                   gated now?
+  1  events.iter().filter(CardLeftGraveyard).count() > 1                folded into 2
+  2  the batch-mask loop (batch_bits, event_bits[..8])                  kept — it IS the answer
+  3  the stamping loop (timestamps, entered_turn, soulbond, Arboria)    STAMP_BITS
+  4  events.iter().any(PermanentExiled)  (the exile LKI walk's gate)    CardExiled.bit(), exactly
+  5  the LifeGained / CardPutIntoGraveyard walk at the tail            LIFE_OR_GY_BITS
+  6  fire_delayed_event_watchers' THREE scans (death, attack, entry)    DEATH_BITS / Attacks / EntersBattlefield
+```
+
+Sound by the same construction as `(-195)`: `event_kind_matches` opens with
+`event_kind_bits(event) & spec.kind.bit() == 0`, so a bit clear in `batch_bits`
+is a kind no event in the batch can reach. Passes 4 and 6 are **exact** — each
+names kinds reached by one `GameEvent` variant and no other, so the bit test
+*is* the `matches!` it replaces. Passes 3 and 5 over-approximate in the only
+direction they can (`AttachmentMoved { attached_to: None }` sets `BecameAttached`
+and then does nothing; `CardMilled` sets `PutIntoGraveyard`), which can only
+run a pass that would have found nothing.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1, base 176d3ee5
+                                 base            cand          delta
+  fixed                   638,362,007     636,201,373     -2,160,634   -0.339 %
+  cube                  1,700,049,124   1,695,370,022     -4,679,102   -0.275 %
+  sealed                1,782,283,087   1,775,080,177     -7,202,910   -0.404 %
+  dispatch_triggers_for_events, self
+  fixed                    39,300,070      37,139,362     -2,160,708   -5.50 % of the row
+  cube                     82,643,322      78,038,104     -4,605,218   -5.57 %
+  sealed                  114,527,604     108,784,070     -5,743,534   -5.01 %
+  fire_delayed_event_watchers, self
+  cube                        199,608         118,308        -81,300   -40.7 % of the row
+  sealed                    3,138,576       1,658,450     -1,480,126   -47.2 %
+  24 / 48 / 72 decided, 0 undecided, and the ladder's per-game lines are
+  byte-identical on all six dumps (only the wall-clock line differs).
+```
+
+**The two rows account for the whole program delta on every pool** (sealed
+-5,743,534 + -1,480,126 = -7,223,660 against -7,202,910; `fixed` carries no
+delayed trigger at all, so its row is absent and the dispatcher's delta *is*
+the program's). That is what a pass removed looks like, as against a statement
+made faster.
+
+⚠ **AND THE SEVENTH WALK, THE LKI ONE, IS A REFUTATION — do not re-take it.**
+`died_card_snapshots` is walked at the tail for the Enrage / orphaned-Aura /
+leaves-the-battlefield families, and `statics_granted_dying_triggers` is a
+**whole-battlefield pass per snapshot** (8,852 calls / 2,906,304 Ir on sealed),
+so it looked like the largest of the six. A mask over the seven kinds its three
+`lki_*` tests admit left that figure at **8,852 calls, the same number to the
+call**: `died_card_snapshots` is filled and cleared *inside one dispatch* — both
+`push_ordered_trigger_candidates` and the empty-candidate path clear it — so a
+dispatch with a snapshot to walk is by construction the dispatch whose batch
+carries the death. **A presence gate is worth nothing when the state it guards
+is produced by the same batch it is tested against**; the comment at the site
+says so and the constant is gone.
+
+Reverted with it: `IdMap::as_slice`, which existed only so the walk could be
+handed `&[]`.
+
+
 ### `(-293)` REFUTED WITH A LEDGER, AND THE LEDGER IS THE RESULT — a CoW guard on the dispatcher's one unguarded `scratch` store reads `fixed` -0.020 / `cube` -0.022 / `sealed` -0.010 %, against a caller table that said 0.317 / 0.186 / 0.240 %
 
 `resolve_top_of_stack_inner`'s `StackItem::Trigger` arm opened with
@@ -10439,6 +10509,49 @@ one — fewer dispatches, or less per-event work — not a faster statement.
 `perform_action_inner` drains every action's event list through this, 162,026
 times on sealed; whether those batches can be merged is the question nobody has
 asked.
+
+✅ **THE PREAMBLE LEAD IS TAKEN — `(-294)`, and the shape of the answer was
+"how many times is `events` walked", not "which statement is slow".** Six
+unconditional passes over the batch; the mask built on pass two answers four of
+them, and the row fell 5.0-5.6 % for a program -0.339 / -0.275 / -0.404 %. The
+pieces this head named as the lead were right about *where* and wrong about
+*what*: the stamping loop is not expensive per event (its `match` is a jump
+table), it is expensive because **~85 % of dispatches carry none of the five
+variants it has an arm for and walked their whole batch to find that out**. ⚠
+The seventh walk — the `died_card_snapshots` LKI one, which looked like the
+biggest because `statics_granted_dying_triggers` is a whole-board pass per
+snapshot — is a **refutation with the reason attached**: the snapshots are
+created and cleared inside one dispatch, so the gate never fires. `(-294)` has
+it; do not re-take it.
+
+**What is left of this row after `(-294)`:** 108.8 M / 6.13 % on sealed, still
+#1, still flat — the per-line read at the base tip (`cg_lines.py --in
+dispatch_triggers_for_events`, 113.8 M grouped over 234 lines) has **no line
+above 0.40 % of the program**, and the named engine lines are the batch loop
+(`batch_bits |= b` 2.22 M), the stamping `match` (2.44 M, now gated), the walk's
+own machinery and the `DispatchScan` move (1.68 M). The remaining structural
+questions are both about *dispatch count*, not per-dispatch work: 47 % of the
+199,220 calls return at the empty-batch early-out (`perform_action_inner`
+dispatches after every action, and `pass_priority`'s non-round-closing branch
+returns no events at all), and whether `perform_action_inner`'s 162,026 batches
+can be merged is still unasked.
+
+**The allocator row is READ and it has no device — sized census taken
+2026-09-13, at the `176d3ee5` tip, so nobody spends a build on it.** The 9 % is
+not growth and it is not one caller. `cg_growth.py` over the sealed dump reads
+**217,546 growths across 156 callers**, and the growths-per-call rule (`(-103)`,
+above ~1.5 is a re-growth row worth taking) leaves nothing sized: the top rows
+are `sacrifice_one` 3.31 x 288 calls, `deal_damage_to_from` 2.98 x 534,
+`mint_token_with_counters` 2.84 x 982 — **hundreds** of growths each, 122 k /
+203 k / 422 k Ir, and the two rows with real call counts
+(`deal_combat_damage_to_target` 1.30 x 9,228, `do_untap` 1.26 x 3,710) are
+*below* the rule. The 950,323 `__rust_alloc` calls are fresh allocations, and
+they are the structural three: `GameState::clone` **71,290** (the bot's
+dry-run probes), the CoW unshare family **~131 k** (`Arc::clone_from_ref_in`
+92 k + `make_mut_slow` 37 k + `CowBox<Vec<_>>::push` 52 k), and `finish_grow`
+**154,464** spread over those 156 callers. `String::clone` is 12,966 at 97 Ir
+apiece — the "String keys in game state" lead, sized at **0.07 %**. Attack any
+of it by making a probe clone less, not by sizing a buffer.
 
 **The one walk-side number still worth something is the dead-pair share**:
 72.6 % of the pairs that enter the loop on sealed can match no event in the
