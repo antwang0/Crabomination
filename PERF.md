@@ -6783,6 +6783,46 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-301)` REFUTED — the requirement walker's `And`/`Or` recursion is not the cost, and its *order* is worth 1.4 %
+
+`printed_requirement_impl` is 1.81 % of `sealed` over five symbol rows and
+**40 % of its 850,908 calls are its own `And`/`Or` recursion** (PERF's
+candidates head). `SelectionRequirement::and` nests to the LEFT, so a
+four-clause filter is three `And` nodes down the `a` side and each one was a
+stack frame. Two ways to make the spine a loop were built and measured against
+the `(-300)` tip; **both lose**, and the second is the interesting one.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                                        fixed      cube      sealed
+  (a) spine walked OUTERMOST-first     +0.241 %  +0.901 %   +1.410 %
+  (b) spine walked in the ORIGINAL      +0.042 %  +0.126 %   +0.458 %
+      order (fixed [&R; 8] array)
+```
+
+**(a) is the whole finding.** The three-valued fold is order-free — any
+`Some(false)` makes an `And` false, all `Some(true)` makes it true, anything
+else unknown — so the shortest loop just descends the spine evaluating each
+right operand as it goes. That reverses which clause is tested first, and it
+cost **sealed +1.41 %**: `printed_requirement_impl`'s calls went **374,450 ->
+653,378**. A catalog filter is written `Permanent.and(Nonland).and(Controlled-
+ByOpponent)`, so the innermost-left clause is the **broad type test**, and it
+is what returns `Some(false)` and skips everything outside it. ⚠ **An
+order-free fold is not an order-free walk when the operands short-circuit.**
+
+**(b) says the frames were never the cost.** Reproducing the original order
+needs the spine collected first — a fixed `[&SelectionRequirement; 8]` filled
+on the way down and read back to front — and that array costs more than the
+calls it removes: the row's self went **42.7 -> 63.6 Ir/call** against 14,884
+fewer calls on the `'2` row. A five-argument `&self` call that LLVM can see
+through is cheaper here than eight pointer stores.
+
+Both reverted; outcomes were byte-identical on all six dumps either way, so
+this is a pure cost result. **The recursion line in the candidates head is
+closed**: "40 % of its calls are its own recursion" is true and is not a
+lead. What is still open in that row is the *number of evaluations* — 26.6 per
+`auto_targets_for_effect_all_slots_kicked` call — not the shape of the walk.
+
 ### `(-300)` The empty dispatch is 47.2 % of them, and it was paying a call to find out
 
 NEXT's first open structural question about the #1 row was the empty-batch
@@ -10895,6 +10935,10 @@ profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 
   `cast_candidates` 47.3 M inclusive = 7.44 % — so this is NOT a sealed-only shape.
   `printed_requirement_impl` totals 34.8 M / 1.96 % of sealed over five symbol rows
   and 850,908 calls, of which **342,206 (40 %) are its own And/Or recursion**.
+  ⚠ That 40 % is CLOSED as a lead, not open: `(-301)` built the spine as a loop
+  twice and both lose (+0.458 % keeping the order, +1.410 % not). The frames
+  are not the cost; the ORDER is — the innermost-left clause of a `.and()`
+  chain is the broad type test and it is what short-circuits.
 ```
 
 **Two halves of near-equal size and they are different questions.**
