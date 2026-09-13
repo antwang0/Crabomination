@@ -3174,6 +3174,25 @@ fn devourer_of_memory_pumps_and_evades_when_you_mill() {
     let cp = g.computed_permanent(id).expect("devourer on bf");
     assert_eq!((cp.power, cp.toughness), (3, 2), "+1/+1 off the mill");
     assert!(cp.keywords().contains(&Keyword::Unblockable), "can't be blocked this turn");
+
+    // "Whenever **one or more** cards are put into your graveyard from your
+    // library" is once per batch, not once per card: `EventKind::CardMilled`
+    // fans out, so this trigger pins itself with `once_per_batch`. Three
+    // cards milled together is one more +1/+1, not three.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let mut evs = Vec::new();
+    for _ in 0..3 {
+        let card = g.players[0].library.remove(0);
+        let cid = card.id;
+        g.players[0].graveyard.push(card);
+        evs.push(crabomination::game::GameEvent::CardMilled { player: 0, card_id: cid });
+    }
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).expect("devourer on bf");
+    assert_eq!((cp.power, cp.toughness), (4, 3), "one pump for the batch, not three");
 }
 
 /// Oracle-verb audit (`token`): shipped as a reveal-until-instant body, a

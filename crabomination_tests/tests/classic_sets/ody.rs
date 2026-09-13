@@ -1191,6 +1191,43 @@ fn haunting_echoes_strips_library_copies() {
     assert!(g.players[1].library.iter().any(|c| c.definition.name == "Wall of Omens"));
 }
 
+/// CR 603.6 — Pedantic Learning reads "whenever **a** land card is put into
+/// your graveyard from your library", so a mill that hits two lands offers the
+/// {1} twice. Until `EventKind::CardMilled` fanned out, one batch minted one
+/// trigger however many lands it carried, and every land after the first was
+/// value the card never gave.
+#[test]
+fn pedantic_learning_triggers_once_per_milled_land() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::pedantic_learning());
+    // Two lands and a nonland, milled together as one batch.
+    for def in [catalog::mountain(), catalog::forest(), catalog::grizzly_bears()] {
+        g.add_card_to_library(0, def);
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+    }
+    let before = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    for _ in 0..3 {
+        let card = g.players[0].library.remove(0);
+        let cid = card.id;
+        g.players[0].graveyard.push(card);
+        evs.push(GameEvent::CardMilled { player: 0, card_id: cid });
+    }
+    // Pay both times; the third (nonland) mill is filtered out and never asks.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    mana(&mut g, 0);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 2, "one draw per milled land, not one per batch");
+}
+
 /// Unifying Theory offers each caster a {2} cantrip.
 #[test]
 fn unifying_theory_offers_a_cantrip() {

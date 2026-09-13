@@ -4419,6 +4419,23 @@ mod recent {
         mill_top(&mut g, 0);
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, opp - 2, "milled creature drained opp");
+        // CR 603.6 — "**a** creature card is put into a graveyard from a
+        // library" is per card, so two creature cards in one mill drain twice.
+        // Before `EventKind::CardMilled` fanned out this batch drained once,
+        // which also made Dreadhound's two halves disagree: its `CreatureDied`
+        // half already fanned out over a board wipe.
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        let mut evs = Vec::new();
+        for _ in 0..2 {
+            let card = g.players[0].library.remove(0);
+            let cid = card.id;
+            g.players[0].graveyard.push(card);
+            evs.push(GameEvent::CardMilled { player: 0, card_id: cid });
+        }
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, opp - 4, "two milled creatures drain twice");
     }
 
     /// Saryth grants deathtouch to tapped allies and hexproof to untapped allies.

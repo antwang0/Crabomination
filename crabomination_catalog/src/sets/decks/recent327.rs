@@ -158,6 +158,14 @@ pub fn hedge_shredder() -> CardDefinition {
                     amount: Value::Const(2),
                 }),
             }),
+            // "Whenever one or more land cards are put into your graveyard
+            // from your library, put **them** onto the battlefield tapped."
+            // Deliberately NOT `once_per_batch`: the body moves its own
+            // `TriggerSource`, so firing per land is what puts every land of
+            // a batch onto the battlefield. Pinned to one trigger it would
+            // move exactly one of them — which is what it did before
+            // `CardMilled` fanned out. The residual is the number of trigger
+            // objects on the stack, not the board state.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardMilled, EventScope::YourControl).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land },

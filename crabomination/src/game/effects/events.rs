@@ -515,6 +515,14 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // A Tekuthal-doubled proliferate emits two events in one batch;
             // payoffs fire once per proliferation.
             | EventKind::Proliferated
+            // A mill of three is three events, and the singular printed
+            // wording ("whenever **a** land card is put into your graveyard
+            // from your library" — Pedantic Learning; "**a** creature card"
+            // — Dreadhound) fires per card. The plural "one or more"
+            // wording (Devourer of Memory) pins itself with
+            // `once_per_batch`; before this kind fanned out, both wordings
+            // read as the plural one and the singular cards under-fired.
+            | EventKind::CardMilled
     )
 }
 

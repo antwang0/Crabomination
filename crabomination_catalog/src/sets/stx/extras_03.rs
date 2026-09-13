@@ -305,13 +305,13 @@ pub fn devourer_of_memory() -> CardDefinition {
         toughness: 1,
         // "Whenever one or more cards are put into your graveyard from your
         // library, this creature gets +1/+1 until end of turn and can't be
-        // blocked this turn." `CardMilled` fires per card, so a mill of
-        // three pumps three times where the printed "one or more" pumps
-        // once — the engine has no per-event batching; the shape is right,
-        // the size over-counts. (Shipped as a magecraft +1/+0 draw body —
-        // a different card entirely — until the oracle-verb audit.)
+        // blocked this turn." `CardMilled` fans out per card, so the plural
+        // printed wording has to pin itself with `once_per_batch` or a mill
+        // of three pumps three times. (Shipped as a magecraft +1/+0 draw
+        // body — a different card entirely — until the oracle-verb audit.)
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardMilled, EventScope::YourControl),
+            event: EventSpec::new(EventKind::CardMilled, EventScope::YourControl)
+                .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::This,

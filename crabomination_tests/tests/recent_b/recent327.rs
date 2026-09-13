@@ -124,6 +124,31 @@ fn leyline_of_transformation_types_cards_outside_the_battlefield() {
     assert!(!g.evaluate_requirement_on_card(&zombie, &card, 0), "only cards you own");
 }
 
+/// Its printed text is "put **them** onto the battlefield tapped", so a mill
+/// that hits two lands deploys both. Before `EventKind::CardMilled` fanned out
+/// the batch minted one trigger whose body moved its own `TriggerSource` — one
+/// land, and the other stayed in the graveyard.
+#[test]
+fn hedge_shredder_deploys_every_land_in_one_mill() {
+    let mut g = main_phase();
+    let shredder = g.add_card_to_battlefield(0, catalog::hedge_shredder());
+    let a = g.add_card_to_library(0, catalog::mountain());
+    let b = g.add_card_to_library(0, catalog::forest());
+    let crew = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Crew { vehicle: shredder, crew_creatures: vec![crew] })
+        .expect("crew 1");
+    g.clear_sickness(shredder);
+    g.step = TurnStep::DeclareAttackers;
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.declare_attackers(vec![Attack { attacker: shredder, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    for (id, name) in [(a, "Mountain"), (b, "Forest")] {
+        let deployed = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} entered play"));
+        assert!(deployed.tapped, "{name} tapped");
+    }
+}
+
 /// Hedge Shredder's mill drops any land it hits onto the battlefield tapped.
 #[test]
 fn hedge_shredder_deploys_the_lands_it_mills() {
