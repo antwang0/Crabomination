@@ -3053,7 +3053,9 @@ census  **`(-303)`: the gather census, and it is the strongest number on the pag
         `trig-census`, so the shipped binary is byte-identical — verified `fixed` **+0.0000 %** / `sealed`
         **+0.0003 %**). **95-99.6 % of gathers return the answer the previous gather returned**
         (fixed 23,479/24,248, cube 42,042/44,258, sealed 61,923/62,144) and **50-52 % follow NO `&mut` reach
-        at the battlefield**. On `cube` that is 44,258 gathers at ~2,086 Ir, **~92 M / 5.5 % of the pool**.
+        at the battlefield**. The row is exact, not estimated: `gather_continuous_effects_inner`'s whole
+        caller tree is **26.9 M / 4.25 % on fixed, 82.7 M / 4.91 % on cube, 63.8 M / 3.63 % on sealed**, so
+        serving only the `NO_REACH` half is worth **~1.8-2.5 % of the program on every pool**.
         ⚠ `sba_census` is the precedent and the warning: it read 17.8-19.0 % and lost because the
         *fingerprint* costs as much as the sweep. Here the rate is five times higher, the skipped work an
         order dearer, and `NO_REACH` is a gate that needs a **counter compare**, not a fingerprint.
@@ -6898,10 +6900,23 @@ gang mirror --games 6 --threads 1 --seed 1
   sealed            62,144     61,923   99.64 %             31,642   50.92 %
 ```
 
-**That is the highest repeat rate this file has measured for anything.** A
-gather is ~2,086 Ir inclusive (the `compute_permanents` edge divided by its
-gathers), so on `cube` the 44,258 gathers are **~92 M Ir, 5.5 % of the pool**,
-and 95 % of them recompute an answer that is already known.
+**That is the highest repeat rate this file has measured for anything**, and
+the row it prices is exact rather than estimated — `gather_continuous_effects_
+inner`'s whole caller tree at the same tip:
+
+```text
+                     inclusive Ir   % of pool   per gather
+  fixed                26,912,866      4.25 %      1,110
+  cube                 82,709,253      4.91 %      1,869
+  sealed               63,806,542      3.63 %      1,027
+  its callers: fx_pool::alloc_with (the freeze scope's first gather),
+  compute_permanents, computed_permanent_hinted, check_state_based_actions_into.
+```
+
+**3.6-4.9 % of the program, 95 % of it recomputing an answer that is already
+known.** A memo that served only the `NO_REACH` half would be worth ~1.8-2.5 %
+of the program on every pool — larger than anything this file has landed in
+one pass since `(-278)`.
 
 ⚠ **`sba_census` is the precedent AND the warning, and this is not the same
 arithmetic.** That census read 17.8-19.0 % repeat sweeps and was closed
@@ -11159,9 +11174,11 @@ continuous-effect set and re-running the layer pass for the combatants.
   `(-203)`). ✅ **THE CENSUS IS TAKEN AND IT IS THE STRONGEST NUMBER ON THIS
   PAGE — `(-303)`: 95-99.6 % of gathers return the answer the previous gather
   returned, and 50-52 % follow no `&mut` reach at the battlefield at all.** On
-  `cube` that is 44,258 gathers, **~92 M Ir / 5.5 % of the pool**, 95 % of it
-  recomputing a known answer, with a gate that needs a counter compare rather
-  than `sba_census`' fatal fingerprint. `(-303)` lists the three things to
+  `cube` that is 44,258 gathers, **82.7 M Ir / 4.91 % of the pool** (fixed
+  26.9 M / 4.25 %, sealed 63.8 M / 3.63 %), 95 % of it recomputing a known
+  answer, with a gate that needs a counter compare rather than `sba_census`'
+  fatal fingerprint. **Serving only the `NO_REACH` half is worth ~1.8-2.5 % of
+  the program on every pool.** `(-303)` lists the three things to
   establish before building it — the gather's non-battlefield inputs first.
 
 ⚠ **`cg_ratio.py` at this tip has NOTHING new above the floor.** Its top row is
