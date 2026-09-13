@@ -11077,12 +11077,24 @@ continuous-effect set and re-running the layer pass for the combatants.
   contributor to the `SpecFromIterNested` row that is **#3 on cube at 3.71 %
   self** — the 75.6 M edge is *inclusive*, i.e. the layer passes, which is
   exactly what a memo hit removes.
-* **Open the freeze scope one level up, around the bot's per-candidate
-  declare/simulate call**, so the gather is shared by everything that call
-  reaches. ⚠ The scope takes `&self` and the damage steps mutate, so this is
-  *not* "wrap `resolve_combat_into`" — it is the `&self` search paths
-  (`pick_attacks_inner`, `pick_blocks_inner`, `simulate_*_outcome_once`) that
-  can hold one, and the question to answer first is whether they already do.
+* ⚠ **NOT "open a freeze scope one level up" — THAT IS ALREADY DONE AND THE
+  NEXT READER SHOULD NOT SPEND A BUILD RE-DOING IT.** `declare_attackers_banded`
+  and `declare_blockers` each already wrap their compute in
+  `with_frozen_layers` with a comment saying why ("the band, attacks-alone,
+  can't-attack-alone and trigger passes were each taking their own, up to four
+  per call"), and the bot holds one around the whole tick (`next_action`),
+  around `pick_attacks_inner`, around `sim_spell_action_inner` and around both
+  `eval_material` entries — sixteen sites. **The gathers that are left are each
+  a scope's FIRST gather**, and there is exactly one per call. The scope cannot
+  remove them: it takes `&self`, all four callers are `&mut self`, and
+  `GameState::clone` starts every probe unfrozen by construction
+  (`layer_freeze: LayerFreeze::default()`), which is what makes a simulation's
+  first layer question a fresh whole-game gather every time.
+  **So the device is a memo whose lifetime spans a MUTATION** — a state-level
+  gathered-effect memo cleared at the write chokepoints, which is the shape
+  `Battlefield`'s two-bit lanes already use one level down (`(-87)`, `(-197)`,
+  `(-203)`). Price it against the lane work's own rule first: a census of how
+  many mutations between two gathers could actually change the gather.
 
 ⚠ **`cg_ratio.py` at this tip has NOTHING new above the floor.** Its top row is
 `printed_requirement_impl'2` at **35.2x** (0.80 % of sealed against 0.02 % of
