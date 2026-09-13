@@ -3520,6 +3520,37 @@ modal   **`None` FROM `pick_trigger_mode` DOES NOT MEAN "NOT MODAL" DOWNSTREAM �
         because CR 700.2b picks the mode when the ability goes on the stack. Its assertion is unchanged — mode 0
         IS tap — only who was asked for it. Golden traces unmoved; `--bench` counters byte-identical.
 
+1274    **A SLOW LIFE ENGINE MAKES THE TURN DIGEST MONOTONE, AND A MONOTONE DIGEST CAN NEVER ANCHOR.** Sweep
+        block **1272..1281: 30 cells / 148,000 games / 4 failures**, all `cap`, all surviving the script's own
+        50,000-action re-run: `all` **1274** (2 games, unlabelled) and `all` **1281** (2 games, `[SATURATED LIFE]`,
+        turn 2001). Under the tightened verdict a survived cap is a defect, label or not, so both count.
+        **1274 is diagnosed and NOT fixed — the diagnosis is the deliverable, and it is complete.**
+        `CRAB_PROGRESS_WATCH=1900` over the capped game, 56 consecutive turns, reads every digest field as
+        period-2 EXCEPT two:
+
+```text
+  progress: turn 1900 | p0 life 933 h2 l1 g41 poison9 … | p1 life 936 h1 l1 g37 … | bf 35 untapped 22 ids 9c003ea2… tapped beb587dc…
+  progress: turn 1901 | p0 life 933 …                   | p1 life 937 …          | bf 36 untapped 23 ids cc68f92b… tapped e83ca511…
+  progress: turn 1902 | p0 life 934 …                   | p1 life 937 …          | bf 35 untapped 22 ids 1fee9214… tapped beb587dc…
+  …hand, library, graveyard, poison, pool, energy, experience, exile, damage, counters: CONSTANT for 56 turns.
+  `tapped` alternates between exactly two values. `bf`/`untapped` alternate 35/36 and 22/23.
+```
+
+        The board is **Thopter Foundry x2** on 30 lands: sacrifice a Thopter, gain 1 life, make a Thopter. So
+        **(a) `life` is monotone** — +1 per player per own turn, 946 at turn 1927 and 3831 at turn 7696, which is
+        exactly one per own turn over 5,769 turns — and **(b) `ids` never repeats**, because the remade Thopter is
+        a NEW `CardId` each cycle even though the board composition is identical. ⚠ **Neither field alone is the
+        bug and removing either alone fixes nothing**: the digest is one `u64` over all fields, so one aperiodic
+        field is enough, and there are two. At `CRAB_MAX_ACTIONS=200000` the cell reads turn **7696**, `repeats
+        0/12`, **`since 8/8`** — pinned at `NO_PROGRESS_MAX_PERIOD`, re-anchoring forever.
+        **What is open is a DESIGN call, not a measurement**, which is why it is not taken here: is a Thopter
+        remade every turn "a permanent entering and leaving" (what `ids` is documented to mean) or the same board?
+        Is mutual unbounded life gain progress? The `tapped` change that closed `all` 1159 was the same kind of
+        call and it was landed with a 20,000-game replayed negative control; this one deserves the same and did
+        not fit the run. **Do not tune the three constants** — `no_progress_step` already pins what they buy, and
+        the 1159 lesson stands: ask which FIELD is aperiodic and whether that field is progress. Both are named
+        above. 1281 is the same family with the life engine already at the `[SATURATED LIFE]` magnitude.
+
 mode    **`GameAction::CastSpell { mode }` IS RANGE-CHECKED NOWHERE, AND THE CHECK THAT WAS MISSING SAT INSIDE A
         RESOLUTION.** Only the ACTIVATED path clamps (`clamp_activated_mode`); the cast path hands the index to the
         stack item. So a client casting any modal spell with `mode: Some(99)` got `Ok` from the action and then
@@ -3532,6 +3563,13 @@ mode    **`GameAction::CastSpell { mode }` IS RANGE-CHECKED NOWHERE, AND THE CHE
         its three deferred paths have always done with a decider's answer; the odd one out was that branch.
         Deliberately NOT a `debug_assert!`: the realistic source of a bad index is a UI client, and a buggy or
         hostile client must not be able to abort the engine. `cast_mode_range` pins it.
+        ⚠ **THE SIBLING FIELDS ARE CLOSED WITH A REASON — do not re-take them.** `CastSpell` carries three
+        other unvalidated-looking fields and each is checked at the ACTION boundary, which is the whole
+        point: `x_value` is bounded by payment (`x_value: Some(1_000_000)` with 3 mana reads
+        `Err(Mana(InsufficientGeneric { needed: 1000000, have: 0 }))` and nothing reaches the stack, so no
+        X-sized loop or overflow is reachable), and `target` / `additional_targets` go through
+        `check_target_legality` at cast and fizzle at resolution (CR 608.2b) rather than raising. `mode` was
+        the one field with no boundary check at all.
 
 walks   **THE THREE TRIGGER WALKS WROTE THE SAME FIVE RULES BY HAND AND THE DRIFT HAS COST TWO SHIPPED BUGS.**
         The concurrent session's `d457bcaa` named unifying them as "the cheapest structural pull on this page"; on

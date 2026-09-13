@@ -7782,3 +7782,4 @@ mod cast_mode_range {
         assert!(g.game_over.is_none(), "the game is still going");
     }
 }
+
