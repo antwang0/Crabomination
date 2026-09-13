@@ -181,3 +181,10 @@ grouped integration-test binaries (`core_rules`, `modern`, `sos`, `stx`,
   bug fix, or ruling stays, even if it looks redundant.
 - Test *execution* is nearly free (thousands of tests per second); the cost is
   compile + link. Optimize for fewer binaries and less code, not fewer runs.
+  ⚠ **"Fewer binaries" means "delete the ones that run no tests", which is
+  done — it is NOT a reason to merge the eight that run many.** Measured
+  2026-09-13: warm `cargo test -p crabomination_tests --no-run` is 4.26 s with
+  one binary touched and 10.9 s with all eight, because four link at a time, so
+  the seven extra cost 6.6 s of wall clock rather than 7x. Merging halves the
+  link count and doubles each survivor's compile. PERF's build-time section has
+  the ABBA.
