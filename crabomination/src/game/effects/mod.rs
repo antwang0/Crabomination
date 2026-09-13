@@ -15046,6 +15046,19 @@ impl GameState {
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
                 for id in ids {
+                    // CR 701.27f — "if an activated or triggered ability of a
+                    // permanent … tries to transform it, the permanent does so
+                    // only if it hasn't transformed or converted since the
+                    // ability was put onto the stack." Two copies of one
+                    // ability on the stack (a batch of simultaneous events —
+                    // Voldaren Bloodcaster off a doubled Blood mint, Vincent
+                    // Valentine off a board wipe) otherwise flipped the face
+                    // back and forth. Only the ability's OWN permanent: an
+                    // ability transforming something else (Tovolar's
+                    // "transform the Werewolf that entered") is unrestricted.
+                    if self.scratch.resolving_source_transformed && Some(id) == ctx.source {
+                        continue;
+                    }
                     self.transform_permanent(id, events);
                 }
                 self.check_state_based_actions_into(events);

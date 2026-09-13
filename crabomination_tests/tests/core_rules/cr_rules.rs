@@ -1256,6 +1256,7 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
         additional_targets: Vec::new(),
         mana_spent_by_color: Vec::new(),
         activated: false,
+        source_transformed_since_push: false,
     });
     let mut events = Vec::new();
     let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
@@ -5048,14 +5049,17 @@ fn cr_111_10_token_created_fires_per_token() {
 /// CR 614.13 / 603.6 — a token-doubling replacement multiplies the count, and
 /// each resulting token fires its own `TokenCreated` event (CR 111.10). With a
 /// doubler out, Voldaren at 3 Blood mints one → **two** Blood enter → the
-/// singular "whenever you create a Blood token" triggers **twice**, both see
-/// five or more Blood, and two transforms land it back on its front face.
+/// singular "whenever you create a Blood token" triggers **twice**, and both
+/// see five or more Blood.
 ///
-/// The two-trigger count is the assertion; the face is how it is observed.
-/// This test asserted a single transform until `EventKind::TokenCreated`
-/// joined `event_kind_fans_out` — the engine minted one trigger for the batch,
-/// so the doubled token was invisible to the very ability this test exists to
-/// exercise, and its own comment already said each token fires its own event.
+/// The second transform is **ignored**, not a flip back: CR 701.27f, "if an
+/// activated or triggered ability of a permanent … tries to transform it, the
+/// permanent does so only if it hasn't transformed or converted since the
+/// ability was put onto the stack." The two-trigger count is the CR 603.6
+/// assertion; the face is the CR 701.27f one, and the two together are why
+/// this test asserted a single transform before `EventKind::TokenCreated`
+/// joined `event_kind_fans_out` — one trigger got the face right for the
+/// wrong reason and hid the doubled token from the very ability under test.
 #[test]
 fn cr_614_13_token_doubling_fires_per_doubled_token() {
     let mut g = two_player_game();
@@ -5085,8 +5089,8 @@ fn cr_614_13_token_doubling_fires_per_doubled_token() {
     drain_stack(&mut g);
     assert_eq!(
         g.battlefield_find(caster).unwrap().definition.name,
-        "Voldaren Bloodcaster",
-        "two triggers, two transforms — back to the front face"
+        "Bloodbat Summoner",
+        "CR 701.27f — the second trigger's transform is ignored, not a flip back"
     );
 }
 

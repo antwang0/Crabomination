@@ -1570,6 +1570,15 @@ pub struct ResolutionScratch {
     /// (Protective Sphere's "shares a color with the mana spent").
     #[serde(skip)]
     pub(crate) activation_mana_colors_scratch: Vec<(crate::mana::Color, u32)>,
+    /// CR 701.27f — the resolving ability's `source_transformed_since_push`.
+    /// True means its permanent has transformed or converted since the ability
+    /// went on the stack, so an instruction to transform *that* permanent is
+    /// ignored. Lives here rather than on `GameState`, which is at its
+    /// 1,600-byte cap (`cow::tests::game_state_stays_small`); both its writes
+    /// are guarded by a read, and the arm that sets it already stores
+    /// `activation_mana_colors_scratch` beside it.
+    #[serde(skip)]
+    pub(crate) resolving_source_transformed: bool,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -3963,6 +3972,26 @@ impl GameState {
             c.front_face = None;
             c.set_definition(front);
             c.transformed = false;
+        }
+        // CR 701.27f — "an activated or triggered ability of a permanent …
+        // transforms it only if it hasn't transformed or converted since the
+        // ability was put onto the stack." Stamp the items that are already
+        // there; anything pushed after this point keeps the `false` its
+        // builder gave it, which is the rule's anchor. Read first: the stack
+        // is a CoW group and an unconditional walk would unshare it on every
+        // probe clone that transforms anything.
+        if self
+            .stack
+            .iter()
+            .any(|it| matches!(it, StackItem::Trigger { source, .. } if *source == id))
+        {
+            for it in self.stack.iter_mut() {
+                if let StackItem::Trigger { source, source_transformed_since_push, .. } = it
+                    && *source == id
+                {
+                    *source_transformed_since_push = true;
+                }
+            }
         }
         self.apply_as_transforms_effect(id, events);
         events.push(GameEvent::Transformed { card_id: id });
