@@ -1631,16 +1631,162 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
     {
         reduction = reduction.saturating_add(amount);
     }
-    // Card-intrinsic "costs {X} less, where X is the greatest power among
-    // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
-    // Power` static carried by the spell being cast. Generic-only, clamped by
-    // the caller via `ManaCost::reduce_generic`.
-    if card
-        .definition
-        .static_abilities
-        .iter()
-        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByGreatestPower))
-    {
+    // Every remaining card-intrinsic reduction is carried by a *printed
+    // static on the spell being cast*, so they share one walk. Thirteen of
+    // the nineteen shapes accumulate per matching static; the other six are
+    // once-per-card counts, so they set a flag the block below acts on —
+    // which is what each `.any()` did when it was its own walk. Order is
+    // free: every arm is a `saturating_add` of a non-negative amount.
+    let mut greatest_power = false;
+    let mut total_power = false;
+    let mut per_creature_in_graveyard = false;
+    let mut per_card_type_in_graveyard = false;
+    let mut noncreature_artifact_mv = false;
+    let mut distinct_land_names = false;
+    for sa in &card.definition.static_abilities {
+        match &sa.effect {
+            // "costs {X} less, where X is the greatest power among creatures
+            // you control" (The Great Henge).
+            StaticEffect::SelfCostReducedByGreatestPower => greatest_power = true,
+            // "costs {X} less, where X is the total power of creatures you
+            // control" (Ghalta, Primal Hunger).
+            StaticEffect::SelfCostReducedByTotalPower => total_power = true,
+            // "costs {1} less for each creature card in your graveyard"
+            // (Ghoultree).
+            StaticEffect::SelfCostReducedPerCreatureInGraveyard => {
+                per_creature_in_graveyard = true;
+            }
+            // "costs {1} less for each card type among cards in your
+            // graveyard" (Emrakul, the Promised End).
+            StaticEffect::SelfCostReducedPerCardTypeInGraveyard => {
+                per_card_type_in_graveyard = true;
+            }
+            // "costs {X} less, X = total MV of noncreature artifacts you
+            // control" (Metalwork Colossus).
+            StaticEffect::SelfCostReducedByNoncreatureArtifactMv => {
+                noncreature_artifact_mv = true;
+            }
+            // "costs {X} less, where X is the number of differently named
+            // lands you control" (Fungal Colossus).
+            StaticEffect::SelfCostReducedByDistinctLandNames => distinct_land_names = true,
+            // "costs {per} less for each [filter] card in your graveyard"
+            // (Serpent of the Pass).
+            StaticEffect::SelfCostReducedPerGraveyardCardMatching { filter, per } => {
+                let n = state.players[caster]
+                    .graveyard
+                    .iter()
+                    .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
+                    .count() as u32;
+                reduction = reduction.saturating_add(n.saturating_mul(*per));
+            }
+            // "costs {per} less for each [filter] permanent you control" —
+            // Affinity for [type] (Allies at Last).
+            StaticEffect::SelfCostReducedPerPermanentMatching { filter, per } => {
+                // Evaluate through the battlefield-aware path so board-state filters
+                // (IsModified, Tapped, …) resolve — `evaluate_requirement_on_card`
+                // treats those as false. Walking Skyscraper counts modified creatures.
+                // The implicit "you control" is skipped when the printed filter
+                // names a controller itself (Obsidian Charmaw counts *opponents'*
+                // colorless lands via `ControlledByOpponent`).
+                let filter_names_controller = requirement_mentions_controller(filter);
+                let n = state
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        (filter_names_controller || c.controller == caster)
+                            && state.evaluate_requirement_static(
+                                filter,
+                                &crate::game::Target::Permanent(c.id),
+                                caster,
+                                Some(card.id),
+                            )
+                    })
+                    .count() as u32;
+                reduction = reduction.saturating_add(n.saturating_mul(*per));
+            }
+            // "costs {amount} less if a creature died this turn" (Bone Picker).
+            StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { amount }
+                if state.players.iter().any(|p| p.creatures_died_this_turn > 0) =>
+            {
+                reduction = reduction.saturating_add(*amount);
+            }
+            // "costs {amount} less if [condition]" (Avatar of Hope).
+            StaticEffect::SelfCostReducedIfPredicate { amount, condition } => {
+                let mut ctx = crate::game::effects::EffectContext::for_spell(caster, None, 0, 0);
+                ctx.source = Some(card.id);
+                if state.evaluate_predicate(condition, &ctx) {
+                    reduction = reduction.saturating_add(*amount);
+                }
+            }
+            // "costs {X} less, where X is your Domain" (Leyline Binding) —
+            // distinct basic land types among the caster's lands.
+            StaticEffect::SelfCostReducedByDomain { per } => {
+                reduction = reduction.saturating_add(per * state.domain_count(caster) as u32);
+            }
+            // "costs {amount} less during your turn" (Mental Modulation).
+            StaticEffect::SelfCostReducedDuringYourTurn { amount }
+                if state.active_player_idx == caster =>
+            {
+                reduction = reduction.saturating_add(*amount);
+            }
+            // "costs {X} less, where X is your devotion to [colors]"
+            // (Theros — Daybreak Chimera).
+            StaticEffect::SelfCostReducedByDevotion { colors } => {
+                reduction = reduction.saturating_add(state.devotion_to(caster, colors) as u32);
+            }
+            // "costs {N} less if you control a permanent matching each
+            // filter" (Of One Mind).
+            StaticEffect::SelfCostReducedIfControlEach { filters, amount } => {
+                let all_present = filters.iter().all(|f| {
+                    state
+                        .battlefield
+                        .iter()
+                        .any(|c| c.controller == caster && state.evaluate_requirement_on_card(f, c, caster))
+                });
+                if all_present {
+                    reduction = reduction.saturating_add(*amount);
+                }
+            }
+            // "costs {N} less if [predicate]" (Gigastorm Titan, Lashwhip
+            // Predator). Predicate evaluated with the caster as controller.
+            StaticEffect::SelfCostReducedIf { condition, amount } => {
+                let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
+                if state.evaluate_predicate(condition, &ctx) {
+                    reduction = reduction.saturating_add(*amount);
+                }
+            }
+            // "costs {N} less per card you've discarded this turn" (Hollow One).
+            StaticEffect::SelfCostReducedPerDiscardThisTurn { per } => {
+                reduction = reduction
+                    .saturating_add(per * state.players[caster].cards_discarded_this_turn);
+            }
+            // CR 702.125 — Undaunted: "costs {N} less to cast for each opponent."
+            StaticEffect::SelfCostReducedPerOpponent { per } => {
+                let opponents = state.opponents_of(caster).len() as u32;
+                reduction = reduction.saturating_add(per * opponents);
+            }
+            // "Costs {N} less for each other spell cast this turn" (Thrasta) —
+            // every player's casts count.
+            StaticEffect::SelfCostReducedPerSpellCastThisTurn { per } => {
+                let count: u32 = state.players.iter().map(|p| p.spells_cast_this_turn).sum();
+                reduction = reduction.saturating_add(per * count);
+            }
+            // "costs {N} less per creature you attacked with this turn"
+            // (Search Party Captain).
+            StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per, all_players } => {
+                let count: u32 = if *all_players {
+                    state.players.iter().map(|p| p.creatures_attacked_this_turn).sum()
+                } else {
+                    state.players[caster].creatures_attacked_this_turn
+                };
+                reduction = reduction.saturating_add(per * count);
+            }
+            _ => {}
+        }
+    }
+    // The six once-per-card shapes flagged above. Each is generic-only and
+    // clamped by the caller via `ManaCost::reduce_generic`.
+    if greatest_power {
         let greatest = state
             .battlefield
             .iter()
@@ -1650,14 +1796,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             .unwrap_or(0);
         reduction = reduction.saturating_add(greatest);
     }
-    // Card-intrinsic "costs {X} less, where X is the total power of creatures
-    // you control" (Ghalta, Primal Hunger). Generic-only, clamped by the caller.
-    if card
-        .definition
-        .static_abilities
-        .iter()
-        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByTotalPower))
-    {
+    if total_power {
         let total: u32 = state
             .battlefield
             .iter()
@@ -1667,14 +1806,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             .fold(0u32, |a, c| a.saturating_add(c.power().max(0) as u32));
         reduction = reduction.saturating_add(total);
     }
-    // Card-intrinsic "costs {1} less for each creature card in your graveyard"
-    // (Ghoultree). Generic-only, clamped by the caller.
-    if card
-        .definition
-        .static_abilities
-        .iter()
-        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedPerCreatureInGraveyard))
-    {
+    if per_creature_in_graveyard {
         let n = state.players[caster]
             .graveyard
             .iter()
@@ -1682,14 +1814,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             .count() as u32;
         reduction = reduction.saturating_add(n);
     }
-    // Card-intrinsic "costs {1} less for each card type among cards in your
-    // graveyard" (Emrakul, the Promised End). Generic-only, clamped by caller.
-    if card
-        .definition
-        .static_abilities
-        .iter()
-        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedPerCardTypeInGraveyard))
-    {
+    if per_card_type_in_graveyard {
         let types: crate::fxhash::HashSet<crate::card::CardType> = state.players[caster]
             .graveyard
             .iter()
@@ -1697,14 +1822,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             .collect();
         reduction = reduction.saturating_add(types.len() as u32);
     }
-    // Card-intrinsic "costs {X} less, X = total MV of noncreature artifacts
-    // you control" (Metalwork Colossus). Generic-only, clamped by the caller.
-    if card
-        .definition
-        .static_abilities
-        .iter()
-        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByNoncreatureArtifactMv))
-    {
+    if noncreature_artifact_mv {
         let total: u32 = state
             .battlefield
             .iter()
@@ -1717,82 +1835,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             .sum();
         reduction = reduction.saturating_add(total);
     }
-    // Card-intrinsic "costs {per} less for each [filter] card in your
-    // graveyard" (Serpent of the Pass). Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedPerGraveyardCardMatching { filter, per } = &sa.effect {
-            let n = state.players[caster]
-                .graveyard
-                .iter()
-                .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
-                .count() as u32;
-            reduction = reduction.saturating_add(n.saturating_mul(*per));
-        }
-    }
-    // Card-intrinsic "costs {per} less for each [filter] permanent you control"
-    // — Affinity for [type] (Allies at Last). Generic-only, clamped by caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedPerPermanentMatching { filter, per } = &sa.effect {
-            // Evaluate through the battlefield-aware path so board-state filters
-            // (IsModified, Tapped, …) resolve — `evaluate_requirement_on_card`
-            // treats those as false. Walking Skyscraper counts modified creatures.
-            // The implicit "you control" is skipped when the printed filter
-            // names a controller itself (Obsidian Charmaw counts *opponents'*
-            // colorless lands via `ControlledByOpponent`).
-            let filter_names_controller = requirement_mentions_controller(filter);
-            let n = state
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    (filter_names_controller || c.controller == caster)
-                        && state.evaluate_requirement_static(
-                            filter,
-                            &crate::game::Target::Permanent(c.id),
-                            caster,
-                            Some(card.id),
-                        )
-                })
-                .count() as u32;
-            reduction = reduction.saturating_add(n.saturating_mul(*per));
-        }
-    }
-    // Card-intrinsic "costs {amount} less if a creature died this turn" (Bone
-    // Picker). Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { amount } = sa.effect
-            && state.players.iter().any(|p| p.creatures_died_this_turn > 0)
-        {
-            reduction = reduction.saturating_add(amount);
-        }
-    }
-    // Card-intrinsic "costs {amount} less if [condition]" (Avatar of Hope).
-    // Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedIfPredicate { amount, condition } = &sa.effect {
-            let mut ctx = crate::game::effects::EffectContext::for_spell(caster, None, 0, 0);
-            ctx.source = Some(card.id);
-            if state.evaluate_predicate(condition, &ctx) {
-                reduction = reduction.saturating_add(*amount);
-            }
-        }
-    }
-    // Card-intrinsic "costs {X} less, where X is your Domain" (Leyline Binding)
-    // — distinct basic land types among the caster's lands. Generic-only,
-    // clamped by the caller via `ManaCost::reduce_generic`.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedByDomain { per } = sa.effect {
-            reduction = reduction.saturating_add(per * state.domain_count(caster) as u32);
-        }
-    }
-    // Card-intrinsic "costs {X} less, where X is the number of differently
-    // named lands you control" (Fungal Colossus). Generic-only, clamped by the
-    // caller via `ManaCost::reduce_generic`.
-    if card
-        .definition
-        .static_abilities
-        .iter()
-        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByDistinctLandNames))
-    {
+    if distinct_land_names {
         let mut names: Vec<&str> = state
             .battlefield
             .iter()
@@ -1802,22 +1845,6 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
         names.sort_unstable();
         names.dedup();
         reduction = reduction.saturating_add(names.len() as u32);
-    }
-    // Card-intrinsic "costs {amount} less during your turn" (Mental Modulation).
-    // Generic-only, clamped by the caller.
-    if state.active_player_idx == caster {
-        for sa in &card.definition.static_abilities {
-            if let StaticEffect::SelfCostReducedDuringYourTurn { amount } = sa.effect {
-                reduction = reduction.saturating_add(amount);
-            }
-        }
-    }
-    // Card-intrinsic "costs {X} less, where X is your devotion to [colors]"
-    // (Theros — Daybreak Chimera). Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedByDevotion { colors } = &sa.effect {
-            reduction = reduction.saturating_add(state.devotion_to(caster, colors) as u32);
-        }
     }
     // One-shot "the next instant or sorcery you cast this turn costs {N}
     // less" discounts (Thundertrap Trainer). Each was stamped with the
@@ -1842,69 +1869,6 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             if granted_at == cast_so_far {
                 reduction = reduction.saturating_add(amount);
             }
-        }
-    }
-    // Card-intrinsic "costs {N} less if you control a permanent matching each
-    // filter" (Of One Mind). Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedIfControlEach { filters, amount } = &sa.effect {
-            let all_present = filters.iter().all(|f| {
-                state
-                    .battlefield
-                    .iter()
-                    .any(|c| c.controller == caster && state.evaluate_requirement_on_card(f, c, caster))
-            });
-            if all_present {
-                reduction = reduction.saturating_add(*amount);
-            }
-        }
-    }
-    // Card-intrinsic "costs {N} less if [predicate]" (Gigastorm Titan, Lashwhip
-    // Predator). Predicate evaluated with the caster as controller. Generic-only.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedIf { condition, amount } = &sa.effect {
-            let ctx = crate::game::effects::EffectContext::for_ability(card.id, caster, None);
-            if state.evaluate_predicate(condition, &ctx) {
-                reduction = reduction.saturating_add(*amount);
-            }
-        }
-    }
-    // Card-intrinsic "costs {N} less per card you've discarded this turn"
-    // (Hollow One). Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedPerDiscardThisTurn { per } = &sa.effect {
-            reduction = reduction
-                .saturating_add(per * state.players[caster].cards_discarded_this_turn);
-        }
-    }
-    // CR 702.125 — Undaunted: "costs {N} less to cast for each opponent."
-    // Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedPerOpponent { per } = &sa.effect {
-            let opponents = state.opponents_of(caster).len() as u32;
-            reduction = reduction.saturating_add(per * opponents);
-        }
-    }
-    // "Costs {N} less for each other spell cast this turn" (Thrasta) —
-    // every player's casts count. Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedPerSpellCastThisTurn { per } = &sa.effect {
-            let count: u32 = state.players.iter().map(|p| p.spells_cast_this_turn).sum();
-            reduction = reduction.saturating_add(per * count);
-        }
-    }
-    // Card-intrinsic "costs {N} less per creature you attacked with this turn"
-    // (Search Party Captain). Generic-only, clamped by the caller.
-    for sa in &card.definition.static_abilities {
-        if let StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per, all_players } =
-            &sa.effect
-        {
-            let count: u32 = if *all_players {
-                state.players.iter().map(|p| p.creatures_attacked_this_turn).sum()
-            } else {
-                state.players[caster].creatures_attacked_this_turn
-            };
-            reduction = reduction.saturating_add(per * count);
         }
     }
     // Turn-scoped "[filter] spells you cast this turn cost {N} less"

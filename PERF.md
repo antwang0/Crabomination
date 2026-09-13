@@ -6783,6 +6783,41 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-298)` The reduction walk's tail read one list nineteen times, and every read was a match on one variant
+
+`cost_reduction_for_spell_full_over` is 640 lines and `(-296)` took its first
+230 (the `for src in srcs` source loop). **Everything after that reads the CARD
+being cast**, so it runs in full on all 49,140 affordability checks whatever
+the board holds — and it walked `card.definition.static_abilities` **nineteen
+separate times**: thirteen `for sa in ..` loops each matching one
+`SelfCostReduced*` variant, and six `.iter().any(matches!(..))` presence tests.
+One walk now, with the six presence tests kept as flags the block below acts on
+so a second copy of one of them still reduces the cost once.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                   base            cand         delta
+  fixed     636,405,707     635,343,187      -0.167 %
+  cube    1,693,785,498   1,690,405,699      -0.200 %
+  sealed  1,769,439,147   1,765,376,041      -0.230 %
+
+  sealed, the two rows that moved (self Ir, 49,140 / 7,844 calls)
+    cost_reduction_for_spell_full_over   8,937,264 -> 5,628,092   -37.0 %  (181.9 -> 114.5 Ir/call)
+    cost_reduction_for_spell_full        3,703,544 -> 3,156,782   -14.8 %  (the tail inlines into it too)
+```
+
+Outcomes byte-identical on all six dumps (the only line that differs is the
+wall clock). **The sizing said ~0.13 % of `sealed` and it read -0.230 %**: the
+estimate priced twelve empty-slice loop set-ups at ~48 Ir a call and missed
+that the tail inlines into `cost_reduction_for_spell_full` as well, and that
+the six `.any()` closures were their own walks on top of the thirteen loops.
+
+No memo, no new state, no behaviour change — the arms accumulate into
+`reduction` with `saturating_add` of a non-negative amount, so their order is
+free. The one thing that had to be checked before merging was that **no two of
+the nineteen match the same variant**, which a single `match` makes the
+compiler's problem (an unreachable arm is a warning, and there was none).
+
 ### `(-297)` LADDERED AND PARKED — the rest of `(-295)`'s class LOSES 0.4 pts, and the reason is that a last-resort sink is not priced against doing nothing
 
 `(-295)` gave a sacrifice-cost ability its priced owner. Three sibling cost
@@ -10818,12 +10853,11 @@ card.definition.<field>` checks** (`affinity_filter`,
 
 Two devices, both priced, neither taken:
 
-* **Merge the thirteen loops into one.** A mechanical refactor: every arm
-  accumulates into `reduction` with `saturating_add`, so the order is free —
-  ⚠ *provided no two of the thirteen match the same variant*, which is the one
-  thing to check before touching it. Saves twelve empty-slice loop set-ups,
-  ~48 Ir a call over 49,140 calls ≈ **0.13 % of `sealed`**. No memo, no new
-  state, no behaviour change.
+* ✅ **TAKEN, `(-298)`: merge the thirteen loops into one** — nineteen walks
+  once the six `.any()` presence tests are counted, and they merged with them.
+  Sized at 0.13 % of `sealed` and it read **fixed -0.167 / cube -0.200 /
+  sealed -0.230 %**; the estimate missed that the tail inlines into
+  `cost_reduction_for_spell_full` as well.
 * **A definition-level "carries any self-cost reduction" bit**, which is what
   would take the other ~0.35 % — the ~22 field loads collapse to one word
   load, and it would also close `(-296)`'s remaining `fixed` +0.032 %. ⚠ **The
