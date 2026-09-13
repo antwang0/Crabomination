@@ -3178,11 +3178,12 @@ tool    `audit_keyword_drift`'s MISSING list was **367 rows and 287 of them were
         (`ManaSpentOfColorAtLeast`). **MISSING 367 -> 6**, INVENTED **0** throughout — and the 6 left each need a
         primitive or a re-modelling. ⚠ The rule for a shape must be ADDITIVE: written as an early return, the
         discard-from-hand one suppressed six bloodrush cards whose literal names a local helper.
-cards   **31 shipped defects off that list**, each checked against its oracle line first: Cycling x6, Warp x5 (a
+cards   **32 shipped defects off that list**, each checked against its oracle line first: Cycling x6, Warp x5 (a
         mechanic that was live and unreachable — `shortcut::warp` and `AlternativeCost::warp` existed and no card used
         either), Foretell x3, Miracle x2, Evoke x2, Splice onto Arcane x2, Evolve / Mentor / Provoke / Soulshift 3 /
         Echo / Flashback x2 / Madness / Morph / Replicate / Plot / Cleave / Overload / Emerge / Gift / Adamant /
-        Affinity / Kicker one apiece. **Three are worse than a gap:** Disowned Ancestor shipped `renown(1)` where the
+        Affinity / Kicker one apiece, plus Sowing Mycospawn's kicker and BOTH of its triggers (they are "when you
+        CAST this spell", not ETBs, and the kicked half had never shipped). **Three are worse than a gap:** Disowned Ancestor shipped `renown(1)` where the
         card prints Outlast {1}{B} (with a doc comment agreeing with the body); Furnace Hellkite and Crabomination
         each shipped a trigger the card does not print; and Rejuvenate gained FIVE where the card says six, with
         `rejuvenate_gains_five_life` asserting the five. **A test written from the body freezes the defect**, and no
@@ -3206,7 +3207,7 @@ actor   the third leg, on a `selfplay_train` rebuilt from `-p crabomination_ml` 
         fails with "available bin in `crabomination_ml`" and leaves the PREVIOUS binary in place, which reads green
         for the tip it was built at — check the build's own exit, not just the assertion count):
         `--actors 3 --games 3000 --steps 2` at seeds 7 and 20260912, **2 cells, 0 failures, 6,000 games at 85.4 and
-        84.1 games/s** with `debug-assertions` on. All three legs green.
+        84.1 games/s** with `debug-assertions` on. All three legs green, and green again at the closing tip (`grid`).
 perf    NONE CLAIMED and none attempted: the queue reads floor for the eighth run, and this run is a rules defect and
         three readers. The `--bench` counters are the gate and they did not move.
 gate    `--bench` on a **`release`** binary: **195,806 / 27.49 / 611.9 / 0 stalls (cap 0 / stuck 0 / draw 0), counters
@@ -3218,14 +3219,14 @@ gate    `--bench` on a **`release`** binary: **195,806 / 27.49 / 611.9 / 0 stall
         --all-targets **0**; `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean.
         audit_printed_body 0 on all eight columns over 16,815 priced + 17,695 type lines + 17,160 subtypes + 17,379
         keywords + 9,598 P/T + 16,683 colours + 123 loyalty; audit_card_names 0 / 0 / 0 / 0.
-        **At the closing tip, after the 31 card fixes: suite 19,505 / 0 / 5, clippy 0 `--all-targets`,
+        **At the closing tip, after all 32 card fixes: suite 19,506 / 0 / 5, clippy 0 `--all-targets`,
         `cargo check --profile release-fast` clean, audit_printed_body 0 on all TEN columns (the other session's
         adventure-half and back-face ones included) and audit_card_names 0 / 0 / 0 / 0, audit_keyword_drift 0 invented
         / **4** missing, injections 47 / 47 — and `--bench` re-run on a `release` binary at that tip reads
         195,806 / 27.49 / 611.9 / 0 stalls, BYTE-IDENTICAL to the committed invariant, determinism ok,
         thread_determinism ok (444.53 games/s, peak_rss 25.1 MiB, bin_bytes 84,918,240, host_calib_ms 44).**
-        The card fixes move no golden trace either — none of the 31 is in `fixed`, which is also why the counters
-        cannot be the evidence that they work; the suite is (each of the 31 has a test that fails on the old body).
+        The card fixes move no golden trace either — none of the 32 is in `fixed`, which is also why the counters
+        cannot be the evidence that they work; the suite is (each has a test that fails on the old body).
         ⚠ The injections read **46 / 47** first, as `BROKEN CASE (pattern occurs 0x)`: the Lonesome Unicorn case
         anchors on Rider in Need's cost and the adventure column's own fix had moved it `{1}{W}` -> `{2}{W}`. The case
         had not started failing, it had stopped RUNNING — and the battery reporting a stale pattern as broken rather
