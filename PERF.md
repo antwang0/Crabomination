@@ -10797,6 +10797,45 @@ near-empty on a board with no cost static.
   favourable direction, but the *key* has to be cheaper than
   `cost_reduction_for_spell_full_over` or it is the witness-over-the-work
   mistake again.
+**AND THE BIGGEST SINGLE PIECE LEFT IN THAT TREE IS THE REDUCTION WALK'S
+*TAIL*, NOT ITS SOURCE LOOP — ~0.5 % OF `sealed`, SIZED 2026-09-13 AND NOT
+TAKEN.** `(-296)` took the source loop. `cost_reduction_for_spell_full_over` is
+640 lines and the `for src in srcs` block is the first 230; **everything after
+it reads the CARD being cast**, so it runs in full on every one of the 49,140
+affordability checks whatever the board holds. Its self was 10.94 M before
+`(-296)` and that leg removed 2.0 M, and since 96.7 % of the calls make no
+callee call at all, **nearly all of the remaining ~8.9 M (0.50 % of `sealed`)
+is the tail.**
+
+What the tail is, counted: **~22 independent `if let Some(..) =
+card.definition.<field>` checks** (`affinity_filter`,
+`affinity_graveyard_filter`, `self_cost_reduction_if_target`,
+`..._if_night`, `..._if_delirium`, `..._if_crime`, `..._if_sacrificed_artifact`,
+`..._per_cards_drawn`, `..._if_cast_spell`, `..._if`, `..._per`,
+`..._if_collect_evidence`, …) **plus THIRTEEN separate
+`for sa in &card.definition.static_abilities` loops**, each matching its own
+`SelfCostReduced*` variant.
+
+Two devices, both priced, neither taken:
+
+* **Merge the thirteen loops into one.** A mechanical refactor: every arm
+  accumulates into `reduction` with `saturating_add`, so the order is free —
+  ⚠ *provided no two of the thirteen match the same variant*, which is the one
+  thing to check before touching it. Saves twelve empty-slice loop set-ups,
+  ~48 Ir a call over 49,140 calls ≈ **0.13 % of `sealed`**. No memo, no new
+  state, no behaviour change.
+* **A definition-level "carries any self-cost reduction" bit**, which is what
+  would take the other ~0.35 % — the ~22 field loads collapse to one word
+  load, and it would also close `(-296)`'s remaining `fixed` +0.032 %. ⚠ **The
+  memo word is dense and shared**: `CardMemo` is five `AtomicU64`s, word 0
+  carries the colour set (0-4), three valid flags (5, 6, 7), `type_bits`,
+  `grant_bits`, `layer4_bits` (58-59), the vocab index (41-56) and four valid
+  flags (30, 31, 57, 60), and words 3 and 4 are the mana summary and the
+  encoder's payload with their own bit-63 flags. **Read the whole layout before
+  claiming a spare bit**; a sixth word is 8 bytes x 21 k definitions = 168 kB
+  and is the honest alternative. `(-197)`'s `MANA_STATIC` is the shape to copy.
+
+
 * **Target enumeration, 3.61 %, and it is 26.6 requirement evaluations a
   call.** `auto_targets_for_effect_all_slots_kicked` walks every candidate
   object against the slot's filter. The short-circuit shape already exists in
