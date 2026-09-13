@@ -1112,3 +1112,54 @@ fn no_engine_draw_throws_away_the_deck_out() {
         bad.join("\n  "),
     );
 }
+
+/// **A fan-out `PlayerRef` resolved singularly drops every seat but the first,
+/// and it does it silently.** `GameState::resolve_player` carries a
+/// `debug_assert!` that fires when the ref it is handed actually names more
+/// than one seat; this is the gate on the gate.
+///
+/// ⚠ Seven shipped cards were behind it, and no `who:` census would have found
+/// two of them: `Value::HandSizeOf(EachPlayer)` (Ill-Gotten Gains — every
+/// player discarded *seat 0's* hand size) and the three graveyard-shuffle arms
+/// (Mnemonic Nexus recycled one graveyard). The other five were `who:` fields
+/// on `Search` (New Frontiers, Jace's −8, Krenko's Buzzcrusher), `LookAtTop`
+/// (Case the Joint) and `UnlessPlayerPays` (Aether Rift). Field of Ruin had
+/// been fixed by hand a pass earlier and its comment says exactly why — the
+/// rest of the class was never swept.
+///
+/// The assert is the right instrument because it covers *execution*, not
+/// source shape: it reads the seats the ref actually names, so it is silent
+/// for `EachOpponent` at two players (exactly one opponent, the modelling the
+/// whole catalog relies on) and loud the moment a set of two is collapsed.
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "drops seats")]
+fn a_fan_out_player_ref_resolved_singularly_is_a_panic() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    // `Scry` shares its arm with `LookAtTop` / `Surveil` / `RearrangeTop`, and
+    // that arm resolves `who` singularly — `EachPlayer` names both live seats.
+    g.add_card_to_library(0, crabomination::catalog::forest());
+    g.add_card_to_library(1, crabomination::catalog::forest());
+    let _ = g.resolve_effect(
+        &Effect::Scry { who: PlayerRef::EachPlayer, amount: Value::ONE },
+        &EffectContext::for_spell(0, None, 0, 0),
+    );
+}
+
+/// The same ref through the same arm with **one** seat in its set is silent —
+/// `EachOpponent` at two players is the exact modelling ~100 cards ship, and a
+/// gate that failed on it would be a gate nobody could keep.
+#[test]
+fn a_fan_out_player_ref_naming_one_seat_resolves_singularly() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    g.add_card_to_library(1, crabomination::catalog::forest());
+    g.resolve_effect(
+        &Effect::Scry { who: PlayerRef::EachOpponent, amount: Value::ONE },
+        &EffectContext::for_spell(0, None, 0, 0),
+    )
+    .expect("one opponent is one seat");
+}

@@ -1003,7 +1003,15 @@ mod recent278 {
         );
     }
 
-    /// Case the Joint draws two.
+    /// Case the Joint draws two, then looks at the top card of **each**
+    /// player's library.
+    ///
+    /// ⚠ The look was `LookAtTop { who: EachPlayer }`, and the
+    /// scry/surveil/look arm resolves `who` singularly — so it read the first
+    /// living seat's library and no other. The look itself moves nothing, so
+    /// the gate for that half is `resolve_player`'s `debug_assert!`: this test
+    /// runs the effect with two live seats, which trips it if the fan-out is
+    /// ever taken back out.
     #[test]
     fn case_the_joint_draws_two() {
         let mut g = two_player_game();

@@ -2,10 +2,19 @@
 """Which `Effect` wrappers each target walker forgets to recurse into.
 
 `Effect::requires_target` is an exhaustive match, so the compiler makes it
-name every wrapper. Its four siblings in `effect/query.rs` —
+name every wrapper. Its five siblings in `effect/query.rs` —
 `primary_target_filter`, `prefers_graveyard_target`,
-`may_target_offboard_card`, `accepts_player_target` — end in `_ => …`, so a
-wrapper they do not name answers the fallback silently.
+`may_target_offboard_card`, `accepts_player_target` and the cast-time slot
+walk `target_filter_for_slot_in_mode_kicked` — end in `_ => …`, so a wrapper
+they do not name answers the fallback silently.
+
+⚠ **The sixth walker had no column here until a card fell through it.**
+`target_filter_for_slot_in_mode_kicked` is the one the cast path asks "what may
+slot N point at?", and wrapping Fractured Identity's token mint in
+`Effect::EachPlayerDoes` — to fix a *different* bug — took its slot 0 out of the
+cast prompt entirely. Five audited walkers and one unaudited one is how that
+happens; see LATENT below for why its column is a surface report rather than a
+`--check` failure.
 
 **Read the fallback before reading a column as a bug list.** The three that
 RESTRICT (`prefers_graveyard_target`, `may_target_offboard_card` -> `false`;
@@ -53,13 +62,37 @@ WALKERS = [
     "prefers_graveyard_target",
     "may_target_offboard_card",
     "accepts_player_target",
+    "target_filter_for_slot_in_mode_kicked",
 ]
+
+# The sixth walker is LATENT, not a defect census, and it is counted apart from
+# `--check` for that reason. Its regime is the strictest one (`_ => None`, no
+# `for_each_inner` deferral), so an unnamed wrapper means "a target slot
+# declared inside this wrapper's body is not surfaced at cast time" — which is
+# *correct* for the ~half of the list that chooses its targets later (`Reflexive`,
+# `ReflexiveTrigger`, `AtNextEndStep`, the `Whenever…ThisTurn` delayed triggers)
+# and a latent gap for the rest (`ChooseUpToN`, `MayRepeat`, `MillThenToHand`,
+# `VillainousChoice`, …). Nobody has made that judgement per wrapper.
+#
+# ⚠ **The shipped gate for this walker is the catalog, not this list** —
+# `core_rules::cr_rules::cr_601_2c_every_catalog_target_filter_is_surfaced`
+# serializes every factory's effect, collects the `TargetFiltered` slots and
+# demands each one come back out of this walker. It found `EachPlayerDoes` the
+# hour Fractured Identity was wrapped in one. This column exists because the
+# walker had no column at all while its five siblings each had one, and an
+# unaudited walker is how a wrapper goes unnamed for a hundred passes.
+LATENT = {"target_filter_for_slot_in_mode_kicked"}
 
 # A walker whose match lives in a private inner fn, because its public half
 # folds something else in. `accepts_player_target` ORs a player-only slot-0
 # filter over the body classification (the 26 uncastable bodies), so the
 # `_ => true` match this audit reads is `accepts_player_target_by_body`.
-INNER = {"accepts_player_target": "accepts_player_target_by_body"}
+INNER = {
+    "accepts_player_target": "accepts_player_target_by_body",
+    # The cast-time slot walk is a private inner `fn` too: the public half
+    # folds the kicker/mode arguments in before recursing.
+    "target_filter_for_slot_in_mode_kicked": "eff_find",
+}
 
 # (walker, wrapper) pairs whose omission has been reviewed and is deliberate.
 # Add a line here only with the reason; an unreviewed pair belongs in the
@@ -155,11 +188,17 @@ def main() -> int:
             )
         elif re.search(r"_ => true", bodies[f]):
             regime, counted = "fallback `true` — permitted, not a gap", 0
+        elif f in LATENT:
+            regime, counted = (
+                "fallback RESTRICTS — LATENT, the catalog gate is "
+                "`cr_601_2c_every_catalog_target_filter_is_surfaced`",
+                0,
+            )
         else:
             regime, counted = "fallback RESTRICTS — these are gaps", len(missing)
         gaps += counted
         print(f"\n{f}: {len(missing)} unnamed of {len(wrappers)}  [{regime}]")
-        if show_all or counted:
+        if show_all or counted or f in LATENT:
             for w in missing:
                 print(f"    {w}")
     if check and gaps:

@@ -631,3 +631,30 @@ fn psychic_battle_fires_once_per_decision() {
         "one reveal contest for a two-target spell"
     );
 }
+
+/// Aether Rift's "unless **any player** pays 5 life" asks every seat, not just
+/// the first one.
+///
+/// ⚠ `Effect::UnlessPlayerPays` resolved its `who` with the singular
+/// `resolve_player`, so `EachPlayer` was seat 0 — the only seat with a reason
+/// to pay (the Rift's opponent) was never offered the choice when the Rift sat
+/// on seat 0. The script here declines for the controller and pays for the
+/// opponent: before the fan-out the second answer was never read.
+#[test]
+fn aether_rift_offers_the_five_life_to_every_player() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::aether_rift());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(true),
+    ]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "the creature stayed binned");
+    assert!(g.battlefield_find(bear).is_none(), "the opponent paid to deny the reanimation");
+    assert_eq!(g.players[1].life, 15, "they paid 5 life");
+    assert_eq!(g.players[0].life, 20, "the controller declined");
+}

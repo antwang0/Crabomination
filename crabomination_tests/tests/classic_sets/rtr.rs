@@ -2368,6 +2368,43 @@ fn jace_architect_minus_two_bottoms_the_other_pile() {
     );
 }
 
+/// Jace's −8 exiles a nonland card from **every** player's library, not just
+/// the first seat's.
+///
+/// ⚠ "For each player, search that player's library …" was
+/// `Search { who: EachPlayer }`, and that arm resolves its `who` singularly —
+/// so the ultimate read one library, and against a seat-1 Jace it read the
+/// opponent's rather than both. The cast half stays with the walker's
+/// controller, which is what the printed "You may cast those cards" says.
+#[test]
+fn jace_architect_ultimate_exiles_from_every_library() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let jace = g.add_card_to_battlefield(0, catalog::jace_architect_of_thought());
+    g.battlefield_find_mut(jace)
+        .unwrap()
+        .counters
+        .insert(crabomination::card::CounterType::Loyalty, 8);
+    let mine = g.add_card_to_library(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jace,
+        ability_index: 2,
+        target: None,
+        x_value: None,
+    })
+    .expect("-8");
+    drain_stack(&mut g);
+    for (seat, id) in [(0usize, mine), (1usize, theirs)] {
+        assert!(
+            !g.players[seat].library.iter().any(|c| c.id == id),
+            "seat {seat}'s library was searched",
+        );
+    }
+}
+
 /// Search the City returns a matching exiled card, then sacrifices itself and
 /// grants an extra turn once the pile empties.
 #[test]

@@ -137,6 +137,31 @@ pub enum PlayerRef {
     OpponentsWhoVotedDifferently,
 }
 
+impl PlayerRef {
+    /// True for the refs that name a *set* of seats — the ones
+    /// `GameState::resolve_players_unranged` gives a dedicated fan-out arm.
+    ///
+    /// The singular `resolve_player` answers every one of these with the
+    /// first seat in the set, which is exact when the set holds one player
+    /// (`EachOpponent` at two seats) and drops the rest when it does not
+    /// (`EachPlayer` at two seats: the effect happens to seat 0 only). An
+    /// effect arm that resolves its `who` singularly therefore has to be
+    /// handed a ref that is single *here*, and `resolve_player`'s
+    /// `debug_assert!` is the gate that says so.
+    pub fn is_fan_out(&self) -> bool {
+        matches!(
+            self,
+            PlayerRef::EachOpponent
+                | PlayerRef::EachOpponentExceptTriggerer
+                | PlayerRef::OpponentsWhoVotedDifferently
+                | PlayerRef::EachPlayer
+                | PlayerRef::EachPlayerWithoutMaxSpeed
+                | PlayerRef::EachTeammate
+                | PlayerRef::EachPlayerExceptControllerOf(_)
+        )
+    }
+}
+
 /// Which players a player-targeted static effect affects. The static
 /// is anchored on a permanent (the "source") and reads off that
 /// source's controller seat at recompute time. Used by

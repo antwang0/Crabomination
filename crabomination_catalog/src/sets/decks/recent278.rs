@@ -158,9 +158,16 @@ pub fn case_the_joint() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(2),
             },
-            Effect::LookAtTop {
+            // "look at the top card of each player's library" — the
+            // scry/surveil/look arm resolves `who` singularly, so a bare
+            // `LookAtTop { who: EachPlayer }` peeked at the first living
+            // seat's library only.
+            Effect::EachPlayerDoes {
                 who: PlayerRef::EachPlayer,
-                amount: Value::ONE,
+                body: Box::new(Effect::LookAtTop {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                }),
             },
         ]),
         ..Default::default()

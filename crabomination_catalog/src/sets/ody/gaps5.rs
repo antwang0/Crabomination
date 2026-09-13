@@ -343,12 +343,20 @@ pub fn new_frontiers() -> CardDefinition {
     sorcery(
         "New Frontiers",
         cost(&[x(), g()]),
-        Effect::Repeat {
-            count: Value::XFromCost,
-            body: Box::new(Effect::Search {
-                who: PlayerRef::EachPlayer,
-                filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: true },
+        // `EachPlayerDoes` rather than `Search { who: EachPlayer }`: the
+        // search arm resolves its `who` with the *singular* `resolve_player`,
+        // which answers `EachPlayer` with the first living seat — so a bare
+        // symmetric search ramped seat 0 X times and nobody else. Field of
+        // Ruin carries the same note.
+        Effect::EachPlayerDoes {
+            who: PlayerRef::EachPlayer,
+            body: Box::new(Effect::Repeat {
+                count: Value::XFromCost,
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: true },
+                }),
             }),
         },
     )

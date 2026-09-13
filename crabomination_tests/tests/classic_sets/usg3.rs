@@ -506,20 +506,35 @@ fn victimize_reanimates_two_for_one() {
     }
 }
 
-/// Ill-Gotten Gains wheels every hand into three graveyard picks.
+/// Ill-Gotten Gains wheels **every** hand into three graveyard picks.
+///
+/// ⚠ Two halves were the caster's alone. `Value::HandSizeOf` resolved
+/// `EachPlayer` singularly, so the discard amount was seat 0's hand size for
+/// everyone — a seat holding more than the caster kept the difference — and
+/// `ReturnGraveyardCardsToHand` is "your graveyard", so only the caster bought
+/// anything back. The opponent's hand here is deliberately *larger* than the
+/// caster's: with the old amount they would have kept two cards.
 #[test]
 fn ill_gotten_gains_wheels_into_the_graveyard() {
     let mut g = two_player_game();
     for _ in 0..4 {
         g.add_card_to_graveyard(0, catalog::grizzly_bears());
     }
+    for _ in 0..5 {
+        g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    }
     let spell = g.add_card_to_hand(0, catalog::ill_gotten_gains());
     for _ in 0..2 {
         g.add_card_to_hand(0, catalog::forest());
     }
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
     mana(&mut g, 0);
     cast(&mut g, spell, None);
-    assert_eq!(g.players[0].hand.len(), 3, "hand pitched, three bought back");
+    assert_eq!(g.players[0].hand.len(), 3, "caster's hand pitched, three bought back");
+    assert_eq!(g.players[1].hand.len(), 3, "opponent's four-card hand pitched too");
+    assert_eq!(g.players[1].graveyard.len(), 5 + 4 - 3, "their discards in, their three out");
     assert!(g.exile.iter().any(|c| c.id == spell), "it exiles itself");
 }
 

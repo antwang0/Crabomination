@@ -881,3 +881,39 @@ fn unyielding_gatekeeper_blinks_yours_and_pays_for_theirs() {
     run(&mut g, mine);
     assert!(g.battlefield_find(mine).unwrap().tapped, "your own blinks back tapped");
 }
+
+/// Krenko's Buzzcrusher blows up a nonbasic land and **that land's controller**
+/// fetches the basic.
+///
+/// ⚠ The rider was `Search { who: EachPlayer }`, whose arm resolves `who`
+/// singularly — so seat 0 fetched a basic whether or not a land of theirs had
+/// been destroyed, and a seat-1 Buzzcrusher ramped its own victim's opponent.
+/// The destroy half stays an approximation (the card is "for each player,
+/// destroy up to one nonbasic land that player controls"); the rider is exact
+/// for the land that died.
+#[test]
+fn krenkos_buzzcrusher_ramps_the_destroyed_lands_controller() {
+    let mut g = two_player_game();
+    let nonbasic = g.add_card_to_battlefield(1, catalog::valakut_the_molten_pinnacle());
+    let theirs = g.add_card_to_library(1, catalog::mountain());
+    let mine = g.add_card_to_library(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::krenkos_buzzcrusher());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(theirs))]));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(nonbasic)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(nonbasic).is_none(), "the nonbasic died");
+    let b = g.battlefield_find(theirs).expect("its controller fetched a basic");
+    assert_eq!((b.controller, b.tapped), (1, true), "their basic, tapped");
+    assert!(g.battlefield_find(mine).is_none(), "the caster fetched nothing");
+}

@@ -1801,3 +1801,38 @@ fn shifty_doppelganger_cheats_a_creature_in() {
     assert!(g.computed_permanent(big).unwrap().keywords().contains(&Keyword::Haste));
     assert!(g.battlefield_find(dop).is_none(), "the Doppelganger exiled itself");
 }
+
+/// New Frontiers ramps **every** player X basics, not just the first seat.
+///
+/// ⚠ It was `Repeat X { Search { who: EachPlayer } }`, and the search arm
+/// resolves its `who` with the singular `resolve_player` — which answers
+/// `EachPlayer` with the first living seat. So seat 0 fetched X basics and
+/// seat 1 fetched none, whoever cast it. `EachPlayerDoes` re-seats "you" per
+/// player, which is the shape Field of Ruin already carries a note about.
+#[test]
+fn new_frontiers_ramps_every_player() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let mine = g.add_card_to_library(0, catalog::forest());
+    let theirs = g.add_card_to_library(1, catalog::mountain());
+    let spell = g.add_card_to_hand(0, catalog::new_frontiers());
+    mana(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(mine)),
+        DecisionAnswer::Search(Some(theirs)),
+    ]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("cast New Frontiers for X=1");
+    drain_stack(&mut g);
+    for (seat, land) in [(0usize, mine), (1usize, theirs)] {
+        let b = g.battlefield_find(land).unwrap_or_else(|| panic!("seat {seat} fetched"));
+        assert_eq!((b.controller, b.tapped), (seat, true), "seat {seat}: their basic, tapped");
+    }
+}

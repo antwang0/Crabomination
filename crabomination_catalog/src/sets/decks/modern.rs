@@ -56599,9 +56599,15 @@ pub fn fractured_identity() -> CardDefinition {
         cost: cost(&[generic(3), w(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::CreateTokenCopyOf {
-                extra_keywords: vec![],
+            // `EachPlayerDoes` re-seats "you" per player: the mint arm resolves
+            // its own `who` singularly, so a bare fan-out ref there would give
+            // exactly one player a copy — exact at two seats, one copy short
+            // per extra seat above that.
+            Effect::EachPlayerDoes {
                 who: PlayerRef::EachPlayerExceptControllerOf(Box::new(Selector::Target(0))),
+                body: Box::new(Effect::CreateTokenCopyOf {
+                extra_keywords: vec![],
+                who: PlayerRef::You,
                 count: Value::Const(1),
                 source: target_filtered(
                     SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
@@ -56613,6 +56619,7 @@ pub fn fractured_identity() -> CardDefinition {
                 enters_tapped: false,
                 non_legendary: false,
                 legendary: false,
+                }),
             },
             Effect::Exile {
                 what: Selector::Target(0),

@@ -593,7 +593,15 @@ pub fn tolsimir_midnights_light() -> CardDefinition {
 }
 
 /// Krenko's Buzzcrusher — {2}{R}{R} 4/4 flying trample; its entry blows up a
-/// nonbasic land per player, each of whom may fetch a basic.
+/// nonbasic land, whose controller may fetch a basic tapped.
+///
+/// Approximated on the destroy half: the card is "for each player, destroy up
+/// to one nonbasic land that player controls", and the engine has no
+/// per-player unrestricted choice, so this destroys one targeted nonbasic land.
+/// The rider is then exact for the land that died — `ControllerOf(Target(0))`,
+/// White Orchid Phantom's shape. It used to be `Search { who: EachPlayer }`,
+/// whose arm resolves `who` singularly, so the first living seat fetched a
+/// basic whether or not a land of theirs had been destroyed.
 pub fn krenkos_buzzcrusher() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Trample],
@@ -605,7 +613,7 @@ pub fn krenkos_buzzcrusher() -> CardDefinition {
                 ),
             },
             Effect::Search {
-                who: PlayerRef::EachPlayer,
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 filter: SelectionRequirement::IsBasicLand,
                 to: crate::effect::ZoneDest::Battlefield {
                     controller: PlayerRef::You,

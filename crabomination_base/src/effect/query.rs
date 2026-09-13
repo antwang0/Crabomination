@@ -3956,6 +3956,11 @@ impl Effect {
                     sel_find(selector, slot).or_else(|| eff_find(body, slot, mode, kicked))
                 }
                 Effect::Repeat { body, .. } => eff_find(body, slot, mode, kicked),
+                // `EachPlayerDoes` only re-seats "you" for its body; the body
+                // is the same effect tree and its slots are the spell's own
+                // (Fractured Identity's "each player other than its
+                // controller creates a copy of *target* nonland permanent").
+                Effect::EachPlayerDoes { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::ChooseMode(modes) => match mode {
                     // Mode-aware path: only look in the chosen branch.
                     Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),

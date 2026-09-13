@@ -103,10 +103,18 @@ pub fn jace_architect_of_thought() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -8,
                 effect: Effect::Seq(vec![
-                    Effect::Search {
+                    // "For each player, search that player's library …" —
+                    // `EachPlayerDoes` rather than `Search { who: EachPlayer }`,
+                    // whose arm resolves `who` singularly and so searched only
+                    // the first living seat. The cast half stays outside the
+                    // fan-out: it is the walker's controller who may cast them.
+                    Effect::EachPlayerDoes {
                         who: PlayerRef::EachPlayer,
-                        filter: R::Nonland,
-                        to: ZoneDest::Exile,
+                        body: Box::new(Effect::Search {
+                            who: PlayerRef::You,
+                            filter: R::Nonland,
+                            to: ZoneDest::Exile,
+                        }),
                     },
                     Effect::CastAnyOrderWithoutPaying {
                         what: Selector::LastMoved,

@@ -1148,17 +1148,29 @@ fn leave_no_trace_radiance_over_enchantments() {
     assert!(g.battlefield_find(a).is_none(), "shared-color enchantment destroyed too");
 }
 
-/// Mnemonic Nexus shuffles each player's graveyard into their library.
+/// Mnemonic Nexus shuffles **each** player's graveyard into their library.
+///
+/// ⚠ `Effect::ShuffleGraveyardIntoLibrary` resolved its `who` with the
+/// singular `resolve_player`, which answers `EachPlayer` with the first living
+/// seat — so "shuffle all graveyards" recycled seat 0's and left every other
+/// one where it was. The test asserted seat 0 only, which is the half that
+/// worked. Both seats now, and asymmetric counts so neither can borrow the
+/// other's number.
 #[test]
 fn mnemonic_nexus_recycles_graveyards() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_graveyard(0, catalog::forest()); }
-    let before_lib = g.players[0].library.len();
-    let before_gy = g.players[0].graveyard.len();
-    assert!(before_gy > 0);
+    for _ in 0..2 { g.add_card_to_graveyard(1, catalog::forest()); }
+    let before = [
+        (g.players[0].library.len(), g.players[0].graveyard.len()),
+        (g.players[1].library.len(), g.players[1].graveyard.len()),
+    ];
+    assert_eq!((before[0].1, before[1].1), (3, 2));
     resolve_spell_r(&mut g, catalog::mnemonic_nexus(), vec![]);
-    assert_eq!(g.players[0].graveyard.len(), 0, "graveyard emptied");
-    assert_eq!(g.players[0].library.len(), before_lib + before_gy, "cards went to library");
+    for (seat, (lib, gy)) in before.iter().copied().enumerate() {
+        assert_eq!(g.players[seat].graveyard.len(), 0, "seat {seat} graveyard emptied");
+        assert_eq!(g.players[seat].library.len(), lib + gy, "seat {seat} cards went to library");
+    }
 }
 
 /// Hex destroys six target creatures.

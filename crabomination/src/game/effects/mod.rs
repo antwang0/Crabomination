@@ -4315,9 +4315,33 @@ impl GameState {
             }
 
             Effect::EachPlayerDoes { who, body } => {
-                for p in self.apnap_sort(self.resolve_players(who, ctx)) {
+                let seats = self.apnap_sort(self.resolve_players(who, ctx));
+                for (i, p) in seats.iter().copied().enumerate() {
                     let sub = EffectContext { controller: p, ..ctx.clone() };
                     self.run_effect(body, &sub, events)?;
+                    // A `wants_ui` seat's body suspends, and the loop used to
+                    // run on and let the NEXT seat's suspend overwrite the
+                    // signal — the first seat's pending decision was dropped
+                    // and its half of the effect never happened. `Seq` carries
+                    // its tail the same way; here the tail is the seats not yet
+                    // reached, each re-seated by a `Seat(q)` fan-out of one.
+                    if let Some((_, _, remaining)) = self.suspend_signal.as_deref_mut() {
+                        let tail = per_seat_continuation(&seats[i + 1..], |q| {
+                            Effect::EachPlayerDoes {
+                                who: PlayerRef::Seat(q),
+                                body: body.clone(),
+                            }
+                        });
+                        if !matches!(tail, Effect::Noop) {
+                            let carried = std::mem::replace(remaining, Effect::Noop);
+                            *remaining = if matches!(carried, Effect::Noop) {
+                                tail
+                            } else {
+                                Effect::seq(vec![carried, tail])
+                            };
+                        }
+                        return Ok(());
+                    }
                 }
                 Ok(())
             }
@@ -19443,46 +19467,60 @@ impl GameState {
             }
 
             Effect::UnlessPlayerPays { who, cost, then, if_paid } => {
-                // Rhystic-tax rider: resolve the taxed player, ask them yes/no
-                // whether to pay `cost`, and resolve `then` if they don't (or
-                // can't). `then` runs in this same context, so its
+                // Rhystic-tax rider: resolve the taxed player(s), ask each
+                // yes/no whether to pay `cost`, and resolve `then` if nobody
+                // does (or can). `then` runs in this same context, so its
                 // `PlayerRef::You` is the rider's controller. The question is
                 // seat-routed: a `wants_ui` payer (who may be an opponent of
                 // the resolving controller) gets the yes/no modal.
-                let Some(payer) = self.resolve_player(who, ctx) else {
+                //
+                // `resolve_players` rather than `resolve_player`: "unless ANY
+                // player pays" (Aether Rift) is `who: EachPlayer`, and the
+                // singular resolver answers that with the first living seat,
+                // so half the time the only seat with a reason to pay was
+                // never asked. Every other site's `who` is single-valued, for
+                // which this is the same one seat — one shared `cursor`
+                // across the asks, `PlayersMayAccept`'s shape.
+                let payers = self.resolve_players(who, ctx);
+                if payers.is_empty() {
                     return self.run_effect(then, ctx, events);
-                };
+                }
                 // AutoDecider declines (false) — let the effect resolve.
                 let mut cursor = 0;
-                let Some(wants_to_pay) = self.ask_seat_bool(
-                    &mut cursor,
-                    payer,
-                    "Pay the tax to prevent the triggered effect?".to_string(),
-                    ctx.source.unwrap_or(CardId(0)),
-                    effect,
-                    OptionalKind::PayMana { cost: None, purpose: PayFor::DenyEffect },
-                ) else {
-                    return Ok(());
-                };
-                // Consent was already given above; now let a hand-paying
-                // seat say which sources fund it rather than auto-tapping.
-                let picks = match (wants_to_pay, Self::ward_mana_choice(cost)) {
-                    (true, Some((mc, _))) => {
-                        match self.ask_mana_sources(
-                            &mut cursor,
-                            payer,
-                            &mc,
-                            ctx.source.unwrap_or(CardId(0)),
-                            effect,
-                        ) {
-                            Some(p) => p,
-                            None => return Ok(()),
-                        }
+                let mut paid_by = None;
+                let mut cleared = false;
+                for payer in payers {
+                    let Some(wants_to_pay) = self.ask_seat_bool(
+                        &mut cursor,
+                        payer,
+                        "Pay the tax to prevent the triggered effect?".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                        OptionalKind::PayMana { cost: None, purpose: PayFor::DenyEffect },
+                    ) else {
+                        return Ok(());
+                    };
+                    if !wants_to_pay {
+                        continue;
                     }
-                    _ => None,
-                };
-                let discards = if wants_to_pay {
-                    match self.ask_ward_discards(
+                    // Consent was already given above; now let a hand-paying
+                    // seat say which sources fund it rather than auto-tapping.
+                    let picks = match Self::ward_mana_choice(cost) {
+                        Some((mc, _)) => {
+                            match self.ask_mana_sources(
+                                &mut cursor,
+                                payer,
+                                &mc,
+                                ctx.source.unwrap_or(CardId(0)),
+                                effect,
+                            ) {
+                                Some(p) => p,
+                                None => return Ok(()),
+                            }
+                        }
+                        None => None,
+                    };
+                    let discards = match self.ask_ward_discards(
                         &mut cursor,
                         payer,
                         cost,
@@ -19491,21 +19529,31 @@ impl GameState {
                     ) {
                         Some(d) => d,
                         None => return Ok(()),
-                    }
-                } else {
-                    None
-                };
-                self.clear_answer_log();
-                let paid = wants_to_pay
-                    && self.try_pay_ward_cost_from(
+                    };
+                    // The log is the replay channel for the asks above, and
+                    // `try_pay_ward_cost_from` is the commit — so the clear
+                    // happens once, on the seat that consented, and this seat
+                    // is the last one asked whether the payment lands or not.
+                    self.clear_answer_log();
+                    cleared = true;
+                    if self.try_pay_ward_cost_from(
                         payer,
                         cost,
                         ctx,
                         events,
                         picks.as_deref(),
                         discards.as_deref(),
-                    );
-                if paid {
+                    ) {
+                        paid_by = Some(payer);
+                    }
+                    break;
+                }
+                // Every seat declined: the arm still owns the clear, or its
+                // "no"s stay in the channel for the next arm's slot 0.
+                if !cleared {
+                    self.clear_answer_log();
+                }
+                if paid_by.is_some() {
                     if let Some(e) = if_paid {
                         self.run_effect(e, ctx, events)?;
                     }
@@ -24531,9 +24579,12 @@ impl GameState {
                 Ok(())
             }
 
+            // ⚠ `resolve_players`: "shuffle ALL graveyards into their owners'
+            // libraries" (Mnemonic Nexus) is `who: EachPlayer`, and the
+            // singular resolver answered that with seat 0 — one graveyard
+            // recycled, the rest left where they were.
             Effect::ShuffleGraveyardIntoLibrary { who } => {
-                
-                if let Some(p) = self.resolve_player(who, ctx) {
+                for p in self.resolve_players(who, ctx) {
                     let cards = std::mem::take(&mut *self.players[p].graveyard);
                     self.players[p].library.extend(cards);
                     self.shuffle_library(p, events);
@@ -24542,7 +24593,7 @@ impl GameState {
             }
 
             Effect::ShuffleFilteredGraveyardIntoLibrary { who, filter } => {
-                if let Some(p) = self.resolve_player(who, ctx) {
+                for p in self.resolve_players(who, ctx) {
                     let gy = std::mem::take(&mut *self.players[p].graveyard);
                     let (matched, kept): (Vec<_>, Vec<_>) = gy
                         .into_iter()
@@ -24555,8 +24606,7 @@ impl GameState {
             }
 
             Effect::ShuffleFilteredGraveyardIntoLibraryGainLife { who, filter } => {
-                
-                if let Some(p) = self.resolve_player(who, ctx) {
+                for p in self.resolve_players(who, ctx) {
                     let gy = std::mem::take(&mut *self.players[p].graveyard);
                     let (matched, kept): (Vec<_>, Vec<_>) = gy
                         .into_iter()
@@ -36115,6 +36165,27 @@ impl GameState {
     }
 
     pub(crate) fn resolve_player(&self, pref: &PlayerRef, ctx: &EffectContext) -> Option<usize> {
+        // ⚠ A fan-out ref resolved singularly answers with the FIRST seat of
+        // its set and drops the rest — silently. That is exact while the set
+        // holds one player, which is what `EachOpponent` is at two seats, and
+        // it is a defect the moment it holds two: `Search { who: EachPlayer }`
+        // searched seat 0's library and nobody else's, so New Frontiers ramped
+        // one seat, Jace's -8 exiled from one library, and Case the Joint read
+        // one top card. Field of Ruin had already been fixed by hand
+        // (`EachPlayerDoes`) and its comment says exactly this; the three
+        // others were never swept.
+        //
+        // So the gate is not "never resolve a fan-out singularly" — it is
+        // "never resolve one that actually holds more than one seat". It costs
+        // nothing in release (`debug_assert!`'s body is dead there) and one
+        // `resolve_players_unranged` per fan-out ask under debug assertions.
+        debug_assert!(
+            !pref.is_fan_out() || self.resolve_players_unranged(pref, ctx).len() <= 1,
+            "resolve_player({pref:?}) drops seats {:?} — this arm must fan out \
+             with resolve_players, or the card must wrap its body in \
+             Effect::EachPlayerDoes",
+            self.resolve_players_unranged(pref, ctx),
+        );
         match pref {
             PlayerRef::You => Some(ctx.controller),
             PlayerRef::CurrentVoter => Some(self.current_voter.unwrap_or(ctx.controller)),

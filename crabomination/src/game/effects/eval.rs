@@ -396,7 +396,20 @@ impl GameState {
                 .sum(),
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::PlayerSpeed(p) => self.resolve_player(p, ctx).map(|p| self.players[p].speed as i32).unwrap_or(0),
-            Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
+            // Max over the resolved set, `LifeLostThisTurn`'s convention: a
+            // single-valued ref reads the same one hand, and `EachPlayer` now
+            // reads "the biggest hand" instead of seat 0's. That is what
+            // **Ill-Gotten Gains** needs — "each player discards their hand"
+            // is `Discard { who: EachPlayer, amount: HandSizeOf(EachPlayer) }`,
+            // and the arm caps each seat's discard at its own hand, so the max
+            // empties every hand where seat 0's size emptied only the seats
+            // holding no more than seat 0 did.
+            Value::HandSizeOf(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].hand.len() as i32)
+                .max()
+                .unwrap_or(0),
             Value::OpponentsWithHandSizeAtMost(n) => {
                 let me = ctx.controller;
                 let teammates = self.teammates(me);

@@ -657,12 +657,25 @@ pub fn ill_gotten_gains() -> CardDefinition {
         cost(&[generic(2), b(), b()]),
         Effect::Seq(vec![
             Effect::ExileResolvingSpell,
+            // "Each player discards their hand" — `HandSizeOf` is the max over
+            // the resolved set and the arm caps each seat at its own hand, so
+            // every hand empties. (It read seat 0's hand size for everyone
+            // until `HandSizeOf` was a max.)
             Effect::Discard {
                 who: Selector::Player(PlayerRef::EachPlayer),
                 amount: Value::HandSizeOf(PlayerRef::EachPlayer),
                 random: false,
             },
-            Effect::ReturnGraveyardCardsToHand { filter: R::Any, max: Value::Const(3) },
+            // "then returns up to three cards from their graveyard to their
+            // hand" — `ReturnGraveyardCardsToHand` is "your graveyard", so the
+            // symmetric half needs the fan-out or only the caster buys back.
+            Effect::EachPlayerDoes {
+                who: PlayerRef::EachPlayer,
+                body: Box::new(Effect::ReturnGraveyardCardsToHand {
+                    filter: R::Any,
+                    max: Value::Const(3),
+                }),
+            },
         ]),
     )
 }
