@@ -676,6 +676,31 @@ pub struct EvalWeights {
     /// when the sim ends inside burn range keeps the cost bounded to the
     /// positions where the extra cycle can actually reach a result.
     pub attack_race_horizon: bool,
+    /// The mana-sink generators ask
+    /// [`ability_sacrifices_a_permanent`] instead of `ab.sac_cost`, so an
+    /// ability that sacrifices ANOTHER permanent reaches its priced owner
+    /// ([`pick_sacrifice_value`]) instead of being taken unpriced.
+    ///
+    /// ⚠ **`ab.sac_cost` means "sacrifice THIS permanent" and five sink
+    /// generators used it to mean "costs a permanent".** `sac_other_filter`
+    /// was invisible to all five, and four of them run *after*
+    /// `pick_sacrifice_value` in the chain — so they took, unpriced, exactly
+    /// the exchanges the priced owner had just refused.
+    ///
+    /// Found on `all` seed 1274 of the fresh-seed sweep, a capped game that
+    /// ran 5,769 turns: **Thopter Foundry** ("{1}, Sacrifice a nontoken
+    /// artifact: create a 1/1 Thopter, gain 1 life") on a board whose only
+    /// nontoken artifact is **Blightsteel Colossus**, an 11/11 trample
+    /// infect that wins the game on its next attack against an opponent at
+    /// 0 poison. `pick_token_maker` fed it to the Foundry the turn it was
+    /// cast, every turn, for 1 life and a 1/1 — and the Colossus
+    /// `shuffles_into_library_instead`, so it came back on top of a
+    /// one-card library and was drawn and cast again. One line closes the
+    /// cell: 6,798 decided / 2 capped -> **6,800 decided / 0 undecided**.
+    ///
+    /// [`ability_sacrifices_a_permanent`]: fn@super::bot::ability_sacrifices_a_permanent
+    /// [`pick_sacrifice_value`]: fn@super::bot::pick_sacrifice_value
+    pub sac_sinks_priced: bool,
     /// Evaluate undecided positions with the learned value net registered
     /// in this [`net_eval`](crate::server::net_eval) slot instead of the
     /// material heuristic; 0 (default) is off. The net returns a win
@@ -1093,6 +1118,7 @@ impl EvalWeights {
             player_target_arms: false,
             skip_noop_x0: false,
             attack_race_horizon: false,
+            sac_sinks_priced: false,
             net_slot: 0,
             net_blend_scale: 0,
             net_blend_ply: false,
@@ -1196,6 +1222,7 @@ impl EvalWeights {
             player_target_arms: false,
             skip_noop_x0: false,
             attack_race_horizon: false,
+            sac_sinks_priced: false,
             net_slot: 0,
             net_blend_scale: 0,
             net_blend_ply: false,
@@ -1282,6 +1309,7 @@ impl EvalWeights {
             player_target_arms: false,
             skip_noop_x0: false,
             attack_race_horizon: false,
+            sac_sinks_priced: false,
             net_slot: 0,
             net_blend_scale: 0,
             net_blend_ply: false,
@@ -2376,8 +2404,32 @@ impl EvalWeights {
             player_target_arms: true,
             own_graveyard_picks: true,
             skip_noop_x0: true,
+            // Round 72 (2026-09-13): the five mana-sink generators defer a
+            // sacrifice-cost ability to `pick_sacrifice_value`. Adopted as the
+            // correctness fix it is — **zero incidence on both gating pools**
+            // (sealed seeds 43/97/151/199 and cube 43/97, 72,000 paired games,
+            // every pair an exact mirror at 50.00 % ±0.00), incidence only on
+            // `all`, where it reads 50.0 % over four seeds with 4 discordant
+            // pairs in 13,598 and closes `all` 1274's 5,769-turn stall
+            // (`6,798 decided / 2 cap` -> `6,800 / 0`). Control:
+            // [`round72_off`](Self::round72_off), profile `r72-off`;
+            // `.ladder/run_r72_sacsinks.sh` re-runs the gate.
+            sac_sinks_priced: true,
             ..Self::round56_default()
         }
+    }
+
+    /// The round-72 control: the default with the sink generators' sacrifice
+    /// deferral back off (profile `r72-off`).
+    pub const fn round72_off() -> Self {
+        Self { sac_sinks_priced: false, ..Self::default_const() }
+    }
+
+    /// The default plus [`sac_sinks_priced`](Self::sac_sinks_priced): the five
+    /// mana-sink generators hand a sacrifice-cost ability to its priced owner
+    /// instead of taking it unpriced (profile `sac-sinks`).
+    pub const fn sac_sinks_priced_on() -> Self {
+        Self { sac_sinks_priced: true, ..Self::default_const() }
     }
 
     /// The round-67 control: the default with the four 2026-09-06 targeting
@@ -7866,13 +7918,13 @@ fn main_phase_action_with(
     // Pump the whole team before combat damage (Bearer of Glory's
     // "{4}{W}: creatures you control get +1/+1") when the bot has two or more
     // attacking creatures — the pump pays off on the swing. Dry-run-gated.
-    gated_pick!(state, sinks, sink::AB_TEAM_PUMP, pick_team_pump(state, seat));
+    gated_pick!(state, sinks, sink::AB_TEAM_PUMP, pick_team_pump(state, seat, w));
 
     // As a last resort before passing, sink spare mana into a "{cost}: draw a
     // card" ability when card-starved (Bonders' Enclave, Arch of Orazca-style
     // engines). Dry-run-gated, so cost / activation conditions bottom out in
     // `would_accept`.
-    gated_pick!(state, sinks, sink::AB_DRAW, pick_card_draw_ability(state, seat));
+    gated_pick!(state, sinks, sink::AB_DRAW, pick_card_draw_ability(state, seat, w));
 
     // Same slot, the other route to a card: impulse-draw engines that mill
     // or exile off the top and grant permission to play it (Ark of Hunger).
@@ -7883,7 +7935,7 @@ fn main_phase_action_with(
     // Activating anyway mills a card it can never use and taps the
     // permanent to do it — strictly worse than leaving the ability alone.
     if w.impulse_draw && w.may_play {
-        gated_pick!(state, sinks, sink::AB_GRANT_PLAY, pick_impulse_draw_ability(state, seat));
+        gated_pick!(state, sinks, sink::AB_GRANT_PLAY, pick_impulse_draw_ability(state, seat, w));
     }
 
     // Re-arm an unprepared prepare-spell creature via an off-card "target
@@ -7903,12 +7955,12 @@ fn main_phase_action_with(
     // Sink leftover mana into a repeatable "{cost}: +1/+1 counter on this"
     // ability to grow the board (Fire Sages, Water Tribe Captain). Last resort,
     // so it never pre-empts a spell or land. Dry-run-gated.
-    gated_pick!(state, sinks, sink::AB_SELF_COUNTER, pick_self_pump_counter(state, seat));
+    gated_pick!(state, sinks, sink::AB_SELF_COUNTER, pick_self_pump_counter(state, seat, w));
 
     // Sink leftover mana into a "{cost}: create a token" ability to grow the
     // board (Sun Warriors' {5}: 1/1 Ally, Realm of Koh's Spirit, Jasmine Dragon).
     // Last resort, dry-run-gated.
-    gated_pick!(state, sinks, sink::AB_TOKEN, pick_token_maker(state, seat));
+    gated_pick!(state, sinks, sink::AB_TOKEN, pick_token_maker(state, seat, w));
 
     BotStep::plain(GameAction::PassPriority)
 }
@@ -7920,12 +7972,30 @@ fn main_phase_action_with(
 /// judge at all. The clone-and-resolve eval prices both sides of the
 /// exchange: the permanent given up AND what its death buys, triggers
 /// included. Strictly-better-than-passing or nothing.
+/// The sacrifice-cost family [`pick_sacrifice_value`] owns, as one predicate
+/// so the owner and the generators that must defer to it cannot drift.
+///
+/// ⚠ **`ab.sac_cost` alone is "sacrifice THIS permanent", and five sink
+/// generators read it as "costs a permanent".** `sac_other_filter` — the
+/// Thopter Foundry / Bottle Gnomes / Krark-Clan Ironworks shape — was
+/// invisible to all of them; `sac_sinks_priced` is the gate and its doc has
+/// the board that found it.
+fn ability_sacrifices_a_permanent(ab: &crate::effect::ActivatedAbility) -> bool {
+    ab.sac_cost || ab.sac_other_filter.is_some() || ab.sac_other_second.is_some()
+}
+
+/// [`ability_sacrifices_a_permanent`] behind [`EvalWeights::sac_sinks_priced`],
+/// for the generators whose historical gate was the narrow one.
+fn sink_sacrifice_cost(ab: &crate::effect::ActivatedAbility, w: &EvalWeights) -> bool {
+    if w.sac_sinks_priced { ability_sacrifices_a_permanent(ab) } else { ab.sac_cost }
+}
+
 fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     let baseline = eval_material(state, seat, w);
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in usable_abilities(state, card, &scan) {
-            if !ab.sac_cost && ab.sac_other_filter.is_none() {
+            if !ability_sacrifices_a_permanent(&ab) {
                 continue;
             }
             // Destroy-shaped sac removal keeps its dedicated trade math
@@ -8032,10 +8102,10 @@ fn ability_makes_token(e: &Effect) -> bool {
     }
 }
 
-fn pick_token_maker(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_token_maker(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            if ab.sac_cost || ab.exhaust || !ability_makes_token(&ab.effect) {
+            if sink_sacrifice_cost(ab, w) || ab.exhaust || !ability_makes_token(&ab.effect) {
                 continue;
             }
             let action = GameAction::ActivateAbility {
@@ -8057,12 +8127,12 @@ fn pick_token_maker(state: &GameState, seat: usize) -> Option<GameAction> {
 /// as a last-resort mana sink — grows the board when the bot has nothing better
 /// to do. Skips sacrifice-cost and once-per-game (Exhaust) abilities so it never
 /// throws away a permanent or a one-shot. Dry-run-gated through `would_accept`.
-fn pick_self_pump_counter(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_self_pump_counter(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     use crate::card::CounterType;
     use crate::effect::Selector;
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            if ab.sac_cost || ab.exhaust {
+            if sink_sacrifice_cost(ab, w) || ab.exhaust {
                 continue;
             }
             // Adapt abilities (CR 702.108) put +1/+1 counters on a creature with
@@ -8225,7 +8295,7 @@ fn requirement_restricts_to_your_creatures(req: &crate::card::SelectionRequireme
     }
 }
 
-fn pick_team_pump(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_team_pump(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     use crate::effect::{Selector, Value};
     let attackers = state
         .attacking
@@ -8237,7 +8307,7 @@ fn pick_team_pump(state: &GameState, seat: usize) -> Option<GameAction> {
     }
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            if ab.sac_cost {
+            if sink_sacrifice_cost(ab, w) {
                 continue;
             }
             let Effect::PumpPT { what: Selector::EachPermanent(req), power: Value::Const(p), .. } =
@@ -8269,7 +8339,7 @@ fn pick_team_pump(state: &GameState, seat: usize) -> Option<GameAction> {
 /// the source) when the bot is card-starved (≤2 cards in hand) and can afford
 /// it. Fired last, as a mana sink, so it never pre-empts casting spells or
 /// playing lands. Dry-run-gated through `would_accept`.
-fn pick_card_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_card_draw_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     use crate::effect::Selector;
     if state.players[seat].hand.len() > 2 {
         return None;
@@ -8277,8 +8347,8 @@ fn pick_card_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> 
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
             let Effect::Draw { who: Selector::You, .. } = &ab.effect else { continue };
-            if ab.sac_cost {
-                continue; // don't sacrifice the source just to draw
+            if sink_sacrifice_cost(ab, w) {
+                continue; // don't spend a permanent just to draw
             }
             let action = GameAction::ActivateAbility {
                 card_id: card.id,
@@ -8323,7 +8393,7 @@ fn ability_grants_play(eff: &Effect) -> bool {
 /// because the mill is a real cost: firing this every turn with no mana to
 /// cast what it finds just self-mills. Dry-run-gated like every other
 /// generator, so tap/mana/timing legality bottoms out in `would_accept`.
-fn pick_impulse_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_impulse_draw_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     if state.players[seat].hand.len() > 2 {
         return None;
     }
@@ -8335,7 +8405,7 @@ fn pick_impulse_draw_ability(state: &GameState, seat: usize) -> Option<GameActio
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in usable_abilities(state, card, &scan) {
-            if ab.sac_cost || ab.exile_self_cost {
+            if sink_sacrifice_cost(&ab, w) || ab.exile_self_cost {
                 continue; // the engine is worth more than one card
             }
             if !ability_grants_play(&ab.effect) {
@@ -8432,6 +8502,16 @@ fn pick_removal_destroy(state: &GameState, seat: usize) -> Option<GameAction> {
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in usable_abilities(state, card, &scan) {
+            // ⚠ **DELIBERATELY THE NARROW GATE, unlike the five sink
+            // generators `sac_sinks_priced` fixed.** `pick_removal_sacrifice`
+            // owns the trade math for `sac_cost` and `pick_sacrifice_value`
+            // skips Destroy shapes outright ("keeps its dedicated trade
+            // math"), so a "{1}, Sacrifice a creature: destroy target
+            // creature" ability has no priced owner: widening this gate would
+            // delete the play rather than price it. The follow-up is to teach
+            // `pick_removal_sacrifice`'s favourable-trade test to read the
+            // sacrificed OTHER permanent's power instead of the source's;
+            // until then this stays as it is, on purpose.
             if ab.sac_cost {
                 continue; // `pick_removal_sacrifice` owns the trade math.
             }
@@ -17341,10 +17421,10 @@ mod tests {
         g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
         g.players[0].mana_pool.add_colorless(3);
         // No 4-power creature → the draw ability's condition fails.
-        assert!(pick_card_draw_ability(&g, 0).is_none(),
+        assert!(pick_card_draw_ability(&g, 0, &EvalWeights::default()).is_none(),
             "no draw without a 4-power creature");
         g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
-        match pick_card_draw_ability(&g, 0).expect("bot draws when card-starved") {
+        match pick_card_draw_ability(&g, 0, &EvalWeights::default()).expect("bot draws when card-starved") {
             GameAction::ActivateAbility { card_id, ability_index, .. } => {
                 assert_eq!(card_id, land);
                 assert_eq!(ability_index, 1, "the draw ability, not the mana ability");
@@ -17353,7 +17433,7 @@ mod tests {
         }
         // A full hand → don't bother drawing.
         for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
-        assert!(pick_card_draw_ability(&g, 0).is_none(), "won't draw with a full hand");
+        assert!(pick_card_draw_ability(&g, 0, &EvalWeights::default()).is_none(), "won't draw with a full hand");
     }
 
     /// The bot fires Frostwielder's `{T}: 1 damage` ping to kill a 1/1, but
@@ -17449,10 +17529,10 @@ mod tests {
         g.players[0].mana_pool.add_colorless(4);
         // One attacker: not worth the pump.
         g.attacking = vec![Attack { attacker: bearer, target: AttackTarget::Player(1) }];
-        assert!(pick_team_pump(&g, 0).is_none(), "holds the pump with one attacker");
+        assert!(pick_team_pump(&g, 0, &EvalWeights::default()).is_none(), "holds the pump with one attacker");
         // Two attackers: fire it.
         g.attacking.push(Attack { attacker: bear, target: AttackTarget::Player(1) });
-        match pick_team_pump(&g, 0).expect("bot pumps the team") {
+        match pick_team_pump(&g, 0, &EvalWeights::default()).expect("bot pumps the team") {
             GameAction::ActivateAbility { card_id, .. } => assert_eq!(card_id, bearer),
             _ => panic!("expected an activate-ability action"),
         }
@@ -23241,7 +23321,7 @@ mod stack_response_tests {
         g.priority.player_with_priority = 0;
         g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
         g.players[0].mana_pool.add_colorless(1);
-        assert!(matches!(pick_self_pump_counter(&g, 0),
+        assert!(matches!(pick_self_pump_counter(&g, 0, &EvalWeights::default()),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == sages),
             "bot grows Fire Sages with leftover mana");
 
@@ -23252,7 +23332,7 @@ mod stack_response_tests {
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
         g.players[0].mana_pool.add_colorless(3);
-        assert!(pick_self_pump_counter(&g, 0).is_none(), "won't spend a once-per-game Exhaust as a mana sink");
+        assert!(pick_self_pump_counter(&g, 0, &EvalWeights::default()).is_none(), "won't spend a once-per-game Exhaust as a mana sink");
     }
 
     /// With spare mana and nothing better, the bot sinks it into a
@@ -23264,9 +23344,9 @@ mod stack_response_tests {
         g.clear_sickness(sw);
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
-        assert!(pick_token_maker(&g, 0).is_none(), "no mana → no token");
+        assert!(pick_token_maker(&g, 0, &EvalWeights::default()).is_none(), "no mana → no token");
         g.players[0].mana_pool.add_colorless(5);
-        assert!(matches!(pick_token_maker(&g, 0),
+        assert!(matches!(pick_token_maker(&g, 0, &EvalWeights::default()),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == sw),
             "bot makes an Ally token with leftover mana");
     }

@@ -3556,6 +3556,38 @@ modal   **`None` FROM `pick_trigger_mode` DOES NOT MEAN "NOT MODAL" DOWNSTREAM �
         the 1159 lesson stands: ask which FIELD is aperiodic and whether that field is progress. Both are named
         above. 1281 is the same family with the life engine already at the `[SATURATED LIFE]` magnitude.
 
+✅ 1274  **THE CHEAPER HYPOTHESIS WAS RIGHT, THE DIGEST IS NOT THE DEFECT, AND `all` 1274 IS CLOSED — `cap 2`
+        -> `cap 0`, one flag** (2026-09-13, `(-295)`, profile `sac-sinks`, adopted). **`life` and `ids` were
+        symptoms of a bot defect, and the poison counter the previous reading noticed was the clue.** What
+        named it was a missing column in the dump, not a new instrument: `cap_diagnosis` tallied the stack,
+        the battlefield and the exile, and **the loop's card was in the hand and the library at every sample
+        point** — `hand 2 lib 1` returning to itself while the board alternated by one permanent. Two lines
+        (`p0 hand:` / `p0 lib:`) and the board reads:
+
+```text
+  all 1274   p0 hand: Hunter Sliver, Lavabelly Sliver, Blightsteel Colossus     p1 lib: Blightsteel Colossus
+  all 1281   p0 lib:  Beacon of Immortality                                     p1 lib: Beacon of Immortality
+```
+
+        **Blightsteel Colossus** — 11/11 trample **infect**, `shuffles_into_library_instead` — is the only
+        nontoken artifact on the board, so it is the only legal sacrifice for **Thopter Foundry** ("{1},
+        Sacrifice a nontoken artifact: create a 1/1 Thopter, gain 1 life"). The bot cast it and fed it to the
+        Foundry the same turn, every turn, for 1 life and a 1/1, against an opponent on **0 poison** that one
+        connection kills. Its replacement put it back on top of a one-card library, so it was drawn and cast
+        again: the "monotone life" and the "never-repeating ids" are that loop's exhaust, and the board was
+        never unwinnable — **the bot threw the win away 2,884 times.**
+        The defect is one word wide. `ab.sac_cost` means "sacrifice THIS permanent"; five mana-sink generators
+        read it as "costs a permanent", so `sac_other_filter` was invisible to all five — and **four of the
+        five run AFTER `pick_sacrifice_value` in the chain**, the one generator that clones, resolves and
+        prices both sides of the exchange. They were taking, unpriced, exactly what it had just refused.
+        `ability_sacrifices_a_permanent` is the predicate now and the owner reads the same one.
+        ⚠ **`pick_removal_destroy` deliberately keeps the narrow gate**: a destroy-shaped sacrifice-other
+        ability has no priced owner (`pick_removal_sacrifice` needs `sac_cost`, `pick_sacrifice_value` skips
+        Destroy), so widening it would delete the play rather than price it. Teaching
+        `pick_removal_sacrifice`'s favourable-trade test to read the sacrificed *other* permanent is the
+        follow-up. **1281 is NOT closed by this** (still `cap 2`) — it is the Beacon board, named in the dump
+        now rather than inferred from a life total, and its remaining mover is unnamed.
+
 mode    **`GameAction::CastSpell { mode }` IS RANGE-CHECKED NOWHERE, AND THE CHECK THAT WAS MISSING SAT INSIDE A
         RESOLUTION.** Only the ACTIVATED path clamps (`clamp_activated_mode`); the cast path hands the index to the
         stack item. So a client casting any modal spell with `mode: Some(99)` got `Ok` from the action and then
@@ -6638,6 +6670,54 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-295)` NOT A PERF ROW — the bot defect that cost a 5,769-turn stall, and the ladder reading that let it be adopted: **zero incidence on both gating pools**
+
+Filed in the Log because it is a *simulator throughput* fix measured the way
+the perf legs are: one capped game is ~15,000 normal games of wall clock
+(`(-279)`'s Scute Swarm arithmetic), so a stall is the largest single
+throughput event a training interval can take.
+
+The board, the card and the one-word defect are in the Baseline's `1274`
+entry. What belongs here is the **gate**, because an arm with no incidence on
+the pools the ladder measures is the case this file has got wrong before
+(`own_graveyard_picks`, "ZERO incidence everywhere it was measured", then
++0.9 on the list that does play it).
+
+```text
+profiling-fast, sac-sinks (A) vs dflt (B), --games 1000, --threads 3
+  sealed  seeds 43 / 97 / 151 / 199   48,000 paired games   50.00 % ±0.00  — 6,000/6,000 pairs EXACT MIRRORS in every cell
+  cube    seeds 43 / 97               24,000 paired games   50.00 % ±0.00  — 7,999/7,999 pairs exact mirrors
+  all     seeds 1274 / 43 / 97 / 151  27,196 paired games   50.00 %        — the only pool with incidence:
+            1274   3,400 pairs, 2 A-sweeps / 2 B-sweeps, [49.9 %, 50.1 %]   and 6,798 decided / 2 cap -> 6,800 / 0
+            43     3,399 pairs, 0 / 0                                        (the 2 undecided there are a different board)
+            97     3,400 pairs, 0 / 0
+            151    3,400 pairs, 0 A-sweeps / 2 B-sweeps, [49.9 %, 50.0 %]
+```
+
+**Four discordant pairs in 13,598, two each way, and 72,000 games on the two
+gating pools where the shape never comes up at all.** So the reading is not
+"it is worth +0.0"; it is "**the pools that gate strength cannot see this
+change, and the pool that can reads even while the stall disappears**". Adopted
+on that basis, as the correctness fix it is — the generator's own doc comment
+claimed it "never throws away a permanent" while the code threw away an 11/11.
+`.ladder/run_r72_sacsinks.sh` re-runs the gate; `r72-off` is the control.
+
+⚠ **The frozen control profiles do not inherit it**, which is why the committed
+`--bench` invariant is untouched: `--bench` is a `gang` mirror and
+`block_gang_search()` descends from `attack_search_sim()`, not from
+`default_const()`. Golden traces are unmoved for the same reason — `red()` vs
+`white_blue()` carries no sacrifice outlet.
+
+**The transferable half is the dump, not the flag.** The previous run's
+diagnosis of this cell was complete about the *digest* and pointed at a redesign
+of the field the whole pool's draw behaviour rides on; the cheaper hypothesis it
+filed an hour later ("p0 sits on poison 9, so the bots may be failing to WIN")
+was right, and what settled it in one run was adding the two zones
+`cap_diagnosis` did not print. **A guard that aborts is paying for a diagnosis
+and should collect one** — and it should collect it from every zone the loop can
+be in, not from the three it happened to start with.
+
 
 ### `(-294)` THE PREAMBLE LEAD, TAKEN — the dispatcher walked its batch **six** times unconditionally and the mask it builds on pass two answers four of them: `fixed` **-0.339 %** / `cube` **-0.275 %** / `sealed` **-0.404 %**
 

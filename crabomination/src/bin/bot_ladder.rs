@@ -329,6 +329,13 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "gy-fixes" => Some(Pilot::Scored(EvalWeights::graveyard_fixes_on())),
         "all-fixes" => Some(Pilot::Scored(EvalWeights::all_fixes_on())),
         "r67-off" => Some(Pilot::Scored(EvalWeights::round67_off())),
+        // Round 72: the five mana-sink generators defer a sacrifice-cost
+        // ability to `pick_sacrifice_value` instead of taking it unpriced.
+        // ADOPTED, so `sac-sinks` is the default now; `r72-off` is the
+        // control the gate re-runs against
+        // (`.ladder/run_r72_sacsinks.sh`, with BASE=r72-off).
+        "sac-sinks" => Some(Pilot::Scored(EvalWeights::sac_sinks_priced_on())),
+        "r72-off" => Some(Pilot::Scored(EvalWeights::round72_off())),
         // Round 56: the wide attack chain (runs from an empty greedy,
         // pairs at the first step) and the block chain (pair-or-gang
         // moves, priced by the block sim). Gate each as A against `dflt55`.
