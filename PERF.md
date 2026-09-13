@@ -6931,12 +6931,32 @@ side. Half of every pool's gathers are in it.
 **So the lead is a state-level gathered-effect memo, invalidated by a dirty
 bit at the write chokepoints — `Battlefield`'s two-bit lanes one level down
 are the shape.** What is left to establish before building it, in order:
-1. The gather's inputs are not only the battlefield — it reads
-   `continuous_effects`, graveyard-resident anthems, the command zone and
-   several `Player` fields. **Every one needs a chokepoint or the memo is
-   silently stale**, which over millions of games is the worst failure mode in
-   this tree. The `NO_REACH` column is therefore an *upper bound* on what a
-   battlefield-only dirty bit can serve, not a promise.
+1. **The read audit is DONE and it is the reason a battlefield-only dirty bit
+   is NOT sound.** Every `self.<field>` in the 3,657-line body, by count:
+
+   ```text
+     51 battlefield      45 players        9 active_player_idx   5 exile
+      4 active_static     4 same_team      3 teammates           3 opponents_of
+      2 attacking         2 eager_static_targets                 2 lands_of_computed_type
+      1 continuous_effects  1 block_map    1 attackers_blocked_by  1 blockers_of
+      1 distinct_card_types_in_all_graveyards   1 player_tally
+      1 devotion_to       1 attached_equipment_count             1 effective_ring_bearer
+      1 brawl_equip_mv
+     + 15 evaluate_requirement_on_card, 12 evaluate_predicate,
+       10 evaluate_requirement_static_on, 10 evaluate_value — which read
+       whatever a catalog filter names.
+   ```
+
+   **`self.players` at 45 sites is the finding**: hands, graveyards, libraries,
+   life totals and the per-turn tallies are all gather inputs, so a life
+   payment or a draw can move the answer with no battlefield reach at all.
+   That is what the `NO_REACH` column's 50 % is an *upper bound* for, and why
+   it is not a promise — the four `evaluate_*` entries make the input set open
+   to whatever a card's filter reads. A sound epoch has to cover
+   `battlefield`, `players`, `exile`, `attacking`, `block_map` and
+   `continuous_effects` at minimum. ⚠ The zones are `CowBox`es, so
+   `cow::make_mut` / `unique_mut` is already a chokepoint for those;
+   `players[i].life` and the tallies are plain fields and are not.
 2. The audit is the same one every memo here carries: recompute and compare on
    every hit under `debug_assertions`, so the suite's 19.5 k tests and the
    fresh-seed sweep are the ratchet. It will make the suite slower; that is
