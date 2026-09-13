@@ -42,6 +42,15 @@
 # the question — `repeats N/12` under 12 on a `[SATURATED LIFE]` board is that
 # case, and anything else that survives is the signal this script exists for.
 #
+# ⚠ **A RUNAWAY BOARD SKIPS THE RE-RUN, AND THAT IS THE THIRD THING THE `cap`
+# BUCKET HELD.** `cube` 1215: 951 Scute Swarms on a 987-permanent board at turn
+# 59, `cap 2 / board 2`, and the cell costs **1,588 s against ~40 s** for the
+# seeds either side. The two action caps there are the same runaway a few
+# actions short of the bound, so re-running them at 50,000 re-derives a bound
+# that has already fired — 12 CPU-minutes in and still going when it was
+# stopped. A dump with a seat past `BIG_BOARD` (500) permanents is counted with
+# the board caps and the re-run is skipped, with the number printed.
+#
 # ⚠ **AND A `board` CAP IS NOT AN ACTION CAP AT ALL.** `StopReason::BoardCap`
 # ends a game whose battlefield passes 1,024 permanents — a token-doubling
 # runaway, bounded on purpose — and it used to be summed into the same `cap`
@@ -67,6 +76,10 @@ POOLS=${1:?pools, e.g. "cube all sealed"}
 SEEDS=${2:?seeds, e.g. "725 726"}
 GAMES=${3:-400}
 BIN=${4:-target-audit/overflow/bot_ladder}
+# A seat's permanent count past this is the `MAX_BATTLEFIELD` runaway rather
+# than a lead, and its 50,000-action re-run is guaranteed waste — see the block
+# that reads it. Raise it only with a board that justifies the number.
+BIG_BOARD=${BIG_BOARD:-500}
 cd "$(dirname "$0")/.."
 [ -x "$BIN" ] || { echo "no $BIN — build it (header)"; exit 1; }
 cells=0 games=0 cap=0 board=0 stuck=0 draw=0 fail=0 sat=0 slow=0 known_board=0
@@ -111,7 +124,26 @@ for pool in $POOLS; do
         # 1204 reads `cap 8 / draw 12` here and `cap 0 / draw 20` at 50,000:
         # every one of the eight was the budget, not the board. Excusing a
         # labelled cap without the re-run reported 14 of them in one block.
-        if [ "$1" -gt 0 ]; then
+        # ⚠ **A RUNAWAY BOARD IS NOT A LEAD AND ITS RE-RUN IS GUARANTEED
+        # WASTE.** The re-run exists to tell a LONG game from a stuck one, and
+        # a board in the hundreds of permanents is neither — it is the runaway
+        # `MAX_BATTLEFIELD` exists for, and the action caps beside it are the
+        # same runaway a few actions short of the bound. `cube` 1215 is the
+        # worked example: 951 Scute Swarms on a 987-permanent board at turn 59,
+        # `cap 2 / board 2`, and the cell itself already costs 1,588 s against
+        # ~40 s for the seeds either side (PERF's candidates). Its 50,000-action
+        # re-run was still going after 12 CPU-minutes and would have spent the
+        # whole `timeout 7200` to re-derive a bound that had already fired.
+        # So: a dump with a seat past `BIG_BOARD` permanents is counted as the
+        # known runaway and the re-run is skipped, with the number printed.
+        big=$(echo "$out" | grep -oE "^  p[0-9]: life -?[0-9]+ bf [0-9]+" \
+              | grep -oE "bf [0-9]+" | grep -oE "[0-9]+" | sort -rn | head -1)
+        if [ "$1" -gt 0 ] && [ "${big:-0}" -ge "${BIG_BOARD:-500}" ]; then
+          echo "  cap — NOT re-run: a runaway board (${big} permanents), which is what"
+          echo "     MAX_BATTLEFIELD is for. Counted with the board caps, not as a defect."
+          echo "$out" | grep -A7 "^cap: " | head -30
+          known_board=$((known_board + $1))
+        elif [ "$1" -gt 0 ]; then
           echo "  cap — re-running this cell at CRAB_MAX_ACTIONS=50000 …"
           re=$(RUST_MIN_STACK=33554432 CRAB_CAP_DIAG=20000 CRAB_MAX_ACTIONS=50000 \
             timeout 7200 "$BIN" --a dflt --b dflt --games "$GAMES" --threads 3 \
@@ -172,6 +204,6 @@ done
 # label is the signal this whole script exists for.
 novel=$((cap - slow - known_board))
 [ $((novel + stuck + fail)) -eq 0 ] || fail=$((fail + novel + stuck))
-echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $slow slow-not-stuck, $known_board the known unwinnable board; $sat carried the label) / board $board / stuck $stuck / draw $draw"
+echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $slow slow-not-stuck, $known_board a known board — saturated life or a MAX_BATTLEFIELD runaway; $sat carried the saturated label) / board $board / stuck $stuck / draw $draw"
 echo "  stuck and a cap that SURVIVES the re-run without the saturated label ($novel) are defects;"
 echo "  a draw is CR 104.4 and a BOARD cap is the 1,024-permanent bound doing its job"

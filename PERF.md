@@ -9740,6 +9740,68 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**THE BOUND STOPS THE GAME AND DOES NOT STOP THE COST — `--decks cube --seed
+1215`, 40x its neighbours.** The first entry this list has gained off a
+measurement rather than a bug fix in seven runs, and the recipe is one command:
+
+```text
+  RUST_MIN_STACK=33554432 CRAB_CAP_DIAG=4000 CRAB_MAX_ACTIONS=6000 \
+    target-audit/overflow/bot_ladder --a dflt --b dflt --games 400 \
+    --threads 3 --seed 1215 --decks cube
+  cube 1212  3200 decided,  0 undecided, in    47.7 s
+  cube 1213  3200 decided,  0 undecided, in    36.8 s
+  cube 1214  3200 decided,  0 undecided, in    40.0 s
+  cube 1215  3196 decided,  4 undecided, in 1,588.2 s     <- 40x, on the overflow build
+             undecided_by   cap 2 / board 2 / stuck 0 / draw 0
+```
+
+**It is Scute Swarm again** — the board `MAX_BATTLEFIELD` was added for
+(`(-279)`'s guard row: an unguarded binary held one thread for 90+ minutes, and
+"the bound has fired on no board but Scute Swarm's" still holds). Landfall makes
+a COPY of itself past six lands, so every land drop doubles the population: the
+dump reads **951 Swarms on a 987-permanent board at turn 59** with 73 of its own
+triggers still on the stack, and the second one 768 at turn 82. Two of the four
+undecided games are `board` caps, which is the bound working, and the
+no-progress watch correctly reads `repeats 0/12` — a board that grows every turn
+IS progressing.
+
+**What is new is the price of getting there.** The bound ends the game at 1,024
+permanents; it does not make the 1,023 before it cheap, and 400 games of this
+pairing cost 26 minutes against 40 seconds for the seeds either side. That is
+the per-permanent work — the layer pass, the grant walk, the requirement walker
+— met at ~1,000 permanents instead of the usual ~40, and `(-194)` already prices
+one layer pass per permanent per freeze scope as the freeze design's floor.
+
+⚠ **THE 40x IS A SWEEP-PROFILE NUMBER. THE PRODUCTION ONE IS 20x, AND IT IS
+MEASURED.** `release-fast`, same command, same box, same afternoon:
+
+```text
+  cube 1214  3200 decided, 0 undecided, in  10.5 s
+  cube 1215  3196 decided, 4 undecided, in 214.4 s     <- 20.4x
+             undecided_by   cap 2 / board 2 / stuck 0 / draw 0
+```
+
+So the sweep profile amplifies this board about **2x**, not the 13x `cube` 1036
+showed — a different board answers the instrument differently, which is the
+reason to measure rather than scale.
+
+**And the per-GAME figure is the one that matters for an actor.** 1214's 3,200
+games take 10.5 s, i.e. **~3.3 ms a game**. If 1215's 3,196 decided games cost
+the same, its four undecided ones account for ~204 s — **~51 s each, about
+15,000 normal games apiece.** One runaway board in a `selfplay_train` actor is
+not a tail, it is a stall the length of a whole training interval, and the
+board cap is what ends it rather than what prevents it.
+
+**The next step is a census, not a device**: how often does a `selfplay_train`
+game reach a board like this? Four games in 3,200 here (0.125 %), and at ~51 s
+against ~3.3 ms that 0.125 % is **95 % of the cell's wall clock**. The actor's
+pools are not the sweep's, so the rate has to be measured there — `stats.jsonl`
+already carries `games_per_s` per interval and `stalls_capped`, and a
+`board_capped` column beside it would say it directly. THAT is the number that
+decides whether the per-permanent floor is worth attacking, and it is one flag
+away. `cube` 1036 (Ghosts of the Innocent, 5.4x release-fast / 83x sweep) is the
+other slow cell on record, with a different cause and the same shape of answer.
+
 ⚠ **THE QUEUE IS AT FLOOR AND HAS BEEN FOR SEVEN RUNS.** The last actor
 re-read (`9772ce0c`, below) is FLAT with nothing above 0.2 % self that has a
 device; actor scaling (4.13x on 4 cores) and the file-size build lever are
