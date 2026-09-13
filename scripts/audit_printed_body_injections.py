@@ -318,12 +318,17 @@ CASES = [
  # the card's line leaves the guard suppressing the row and the injection reads
  # SILENT against a reader that is working. It did: 43/44 on the first full run
  # after the token was fixed, on the case that had passed alone the hour before.
+ # ⚠ And its pattern went STALE the moment the adventure column fixed Rider in
+ # Need's cost ({1}{W} -> {2}{W}): the anchor still said `generic(1)` and the
+ # battery reported BROKEN CASE (pattern occurs 0x) rather than a silent pass —
+ # which is the only reason it was caught. An injection anchored on a value is
+ # anchored on something a later fix can move.
  ("fires", "a keyword on an adventure face (modern Lonesome Unicorn)",
   "sets/decks/modern.rs",
   "        toughness: 3,\n        keywords: vec![Keyword::Vigilance],\n"
   "        adventure: Some(Box::new(Adventure {\n"
   '            name: "Rider in Need",\n'
-  "            cost: cost(&[generic(1), w()]),\n"
+  "            cost: cost(&[generic(2), w()]),\n"
   "            card_types: vec![CardType::Sorcery],\n"
   "            effect: Effect::CreateToken {\n"
   "                who: PlayerRef::You,\n"
@@ -340,7 +345,7 @@ CASES = [
   "        toughness: 3,\n"
   "        adventure: Some(Box::new(Adventure {\n"
   '            name: "Rider in Need",\n'
-  "            cost: cost(&[generic(1), w()]),\n"
+  "            cost: cost(&[generic(2), w()]),\n"
   "            card_types: vec![CardType::Sorcery],\n"
   "            effect: Effect::CreateToken {\n"
   "                who: PlayerRef::You,\n"
