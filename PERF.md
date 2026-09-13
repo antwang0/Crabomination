@@ -3030,6 +3030,12 @@ sweep   **`NO_PROGRESS_MAX_PERIOD` PRICED AND NOT MOVED — the handoff's guess 
         lower repeat count only changes which aperiodic board survives. The shape that would is a different
         predicate — "no seat can win or lose" — an adjudication change, not a tuning one. Cell unchanged at both
         budgets: 6,790 decided / 10 undecided (`cap 2 / board 0 / stuck 0 / draw 8`).
+        ⚠ **THE LAST SENTENCE STOPPED A STEP EARLY, AND THE CONCURRENT SESSION TOOK THE STEP** (`08841a3e`,
+        `c2a99d11`): there is a third option between tuning the detector and replacing it — ask whether the FIELD
+        making the stream aperiodic is progress. A tap the untap step takes back is not, so `tapped` left the turn
+        digest, the stream on that board is constant, and the cell is **`cap 0 / draw 10`**. Everything above about
+        the CONSTANT stands and is corroborated by their 400,000-action reading (turn 18,202, `repeats 0/12`); the
+        constant's own doc carries both halves and the generalisation.
 tool    **`notyped` 7 -> 0, so the column is a GATE** — a row there is a new idiom, not a new card. ⚠ **All seven
         were read BY HAND against the oracle first** (cost, type line, subtypes, keywords, P/T — zero defects), so
         the yield was known to be the gate and never a card before a line of reader was written. Two shapes, and
