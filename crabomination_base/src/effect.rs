@@ -9937,6 +9937,79 @@ pub fn static_effect_strips_abilities(effect: &StaticEffect) -> bool {
     }
 }
 
+/// True when `effect`, on a permanent OTHER than the spell being cast, can
+/// change what that spell costs — the presence predicate behind
+/// `actions::CostStaticSources`.
+///
+/// ⚠ **THE LIST IS EVERY ARM OF THE THREE SOURCE LOOPS AND NOTHING ELSE.**
+/// `extra_cost_for_spell_over`, `colored_spell_tax_for_spell_over` and
+/// `cost_reduction_for_spell_full_over`'s `for src in srcs` block are the
+/// walks; a variant they match and this does not is a source silently dropped
+/// and a spell silently mispriced. The self-cost family
+/// (`SelfCostReduced*`, `self_cost_reduction_if_control`, the intrinsic
+/// affinity fields) is deliberately absent: those are read off the CARD being
+/// cast, never off a source, and `cost_reduction_for_spell_full_over` reads
+/// them after the loop ends.
+///
+/// The audit is a `debug_assert_eq!` in `bot::can_afford_in_state_with`, the
+/// narrowed list's only consumer: it recomputes all three values over the
+/// unfiltered board and compares. Over-approximates like its siblings — the
+/// controller, filter and state gates are ignored, so `true` means "keep the
+/// source and let the walk decide".
+pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
+    use StaticEffect as SE;
+    match effect {
+        // `extra_cost_for_spell_over`
+        SE::AdditionalCost { .. }
+        | SE::AdditionalCostAfterFirstSpell { .. }
+        | SE::NamedSpellTax { .. }
+        | SE::OpponentActivityCostsMoreOnYourTurn { .. }
+        | SE::OpponentSpellsCostMore { .. }
+        | SE::SpellTaxPerControllerPermanent { .. }
+        | SE::SpellsCostMoreExceptOnControllerTurn { .. }
+        | SE::TaxOpponentSpellsTargeting { .. }
+        | SE::TaxOpponentSpellsTargetingThis { .. } => true,
+        // `colored_spell_tax_for_spell_over`
+        SE::ColoredSpellTax { .. } => true,
+        // `cost_reduction_for_spell_full_over`'s source loop
+        SE::AllPlayersSpellsCostLess { .. }
+        | SE::ChosenTypeSpellCostReduction { .. }
+        | SE::CostReduction { .. }
+        | SE::CostReductionBySourcePower { .. }
+        | SE::CostReductionByValue { .. }
+        | SE::CostReductionDuringOpponentsTurn { .. }
+        | SE::CostReductionFirstCreatureSpell { .. }
+        | SE::CostReductionFirstInstantOrSorcery { .. }
+        | SE::CostReductionFirstInstantOrSorceryPerValue { .. }
+        | SE::CostReductionNthSpell { .. }
+        | SE::CostReductionPerControllerExperience { .. }
+        | SE::CostReductionPerCounterOnSource { .. }
+        | SE::CostReductionTargetingFilter { .. }
+        | SE::CostReductionWhile { .. }
+        | SE::ExileCastCostReduction { .. }
+        | SE::FirstMatchingSpellEachTurnCostsLess { .. }
+        | SE::GrantAffinityToISSpells { .. }
+        | SE::GrantAffinityToSpells { .. }
+        | SE::GraveyardCastCostReduction { .. }
+        | SE::NamedSpellCostReduction { .. }
+        | SE::SharedCreatureTypeSpellCostReduction { .. }
+        | SE::YourISSpellsCostLessPerTargetCreature { .. } => true,
+        // The one gate wrapper the reduction loop peels itself (CR 716.2).
+        // The other `While*` wrappers are NOT peeled by these three walks, so
+        // listing them here would over-approximate past what they can reach —
+        // but that direction is free and the next reader should not have to
+        // prove it, so they are in: a kept source the walk ignores costs one
+        // iteration, a dropped source it would have matched costs a wrong
+        // mana cost.
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_affects_spell_cost(inner),
+        _ => false,
+    }
+}
+
 /// The `GrantActivatedAbility` twin of [`static_grants_triggered_ability`],
 /// with the same wrapper set and the same over-approximation: `grant_scan`'s
 /// walk peels *and evaluates* the gates, so a `true` here may still be a

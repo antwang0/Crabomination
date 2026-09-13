@@ -13624,6 +13624,37 @@ fn can_afford_in_state_with(
         card,
         srcs.battlefield(),
     );
+    // ⚠ **THE AUDIT FOR `CostStaticSources`' NARROWED FILTER, AND THIS IS ITS
+    // ONLY CONSUMER.** The list keeps a battlefield permanent only when
+    // `static_affects_spell_cost` admits one of its statics, so a variant that
+    // predicate misses and one of the three walks matches is a source dropped
+    // and a spell mispriced — silently, and only on a board that plays the
+    // card. Recompute all three over the unfiltered board and compare; the
+    // suite exercises every sweep this has, and the fresh-seed sweep runs with
+    // `debug-assertions` on over ~148,000 games a block.
+    #[cfg(debug_assertions)]
+    {
+        debug_assert_eq!(
+            extra,
+            crate::game::actions::extra_cost_for_spell(state, seat, card, None),
+            "cost-static filter dropped an additional-cost source ({})",
+            card.definition.name,
+        );
+        debug_assert_eq!(
+            reduction,
+            crate::game::actions::cost_reduction_for_spell_full(
+                state, seat, card, None, false, false,
+            ),
+            "cost-static filter dropped a cost-reduction source ({})",
+            card.definition.name,
+        );
+        debug_assert_eq!(
+            tax.symbols,
+            crate::game::actions::colored_spell_tax_for_spell(state, seat, card).symbols,
+            "cost-static filter dropped a coloured-tax source ({})",
+            card.definition.name,
+        );
+    }
     let printed: std::borrow::Cow<'_, crate::mana::ManaCost> = if tax.symbols.is_empty() {
         std::borrow::Cow::Borrowed(&card.definition.cost)
     } else {

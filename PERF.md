@@ -3034,6 +3034,34 @@ fix     **`all` 1281's aperiodic field is `ctr`, and this is the first reading t
         ordinarily real progress**, so this one is the adjudication case ("no seat can win or lose") rather
         than a field to drop. The field is named now; the call is not taken.
 
+perf    **`(-296)`: "nothing to iterate" was the weaker claim.** The new #1 candidate — the `cast_candidates`
+        tree, 8.9 % of `sealed` inclusive against 1.25 % of self, found with `cg_ratio.py` — has two halves and
+        this takes a piece of the affordability one. `CostStaticSources` gathered the cost-static sources once
+        per sweep but filtered on `!static_abilities.is_empty()`; the three walks need "nothing to **match**",
+        so every anthem and every Sphere of Safety kept its permanent in the list and its holder paid a 22-arm
+        match three times per hand card per check (**18.1 M Ir, 1.02 % of sealed, 96.7 % of the reduction
+        walk's 49,140 calls making no callee call at all**). `effect::static_affects_spell_cost` is the
+        predicate. **sealed -0.318 % / cube -0.093 % / fixed +0.032 %**, outcomes byte-identical.
+        ⚠ **The first reading was `fixed` +0.153 % and the fix was one short-circuit**: without `!sas.is_empty()
+        &&` in front the predicate came out out-of-line, called per battlefield card, and the whole `fixed`
+        diff was one `+944,566` row on the gather's `collect` — that pool has nothing to filter, so it paid the
+        call and saved nothing. **A predicate in a hot filter is priced by its fast path, not by its body.**
+        The `fixed` residual is kept and stated; driving it to zero needs a definition memo bit for 0.03 %.
+        The audit is a `debug_assert_eq!` in the narrowed list's only consumer, recomputing all three values
+        over the unfiltered board — measured free (suite 96.2 s ungated against ~97 s at the opening tip), so
+        the "only when something was dropped" gate was measured and reverted.
+
+sweep   **fresh seeds 1282..1291 (claimed in NEXT before it was run): 30 cells / 148,000 games / 0 failures**,
+        `cap 0 / board 0 / stuck 0 / draw 14`, on a `target-audit/overflow` build with
+        `-C debug-assertions=yes` (32 assertion strings in the binary, so the flag reached it) at the
+        `(-295)` tip — which matters, because `(-295)` changes what the bots do on any board with a
+        sacrifice-other outlet, so this is not the same workload as a sweep at the previous tip.
+        **Frontier 1292.** `audit_panics` **0 bare** (68 sites off the bin/test paths, 57 guarded, 11
+        lock-poison), `audit_doc_drift` **0 / 0**, `audit_card_names` **0 / 0 / 0 / 0**,
+        `audit_seat_from_selector` **0 open**, `audit_stash_in_loop` 1 / 1 / 0, `audit_variant_coverage`
+        **0 dead capability / 1 dead primitive** (closed with a reason), `audit_keyword_drift`
+        **0 invented / 4 missing**.
+
 gates   suite **19,546 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--workspace --all-targets`),
         golden_trace **12 / 12 unmoved**, `--bench` **195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls** BYTE-IDENTICAL to the committed invariant with `determinism ok` and `thread_determinism ok
@@ -6734,6 +6762,69 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-296)` "NOTHING TO ITERATE" WAS THE WEAKER CLAIM — the cost-static source list filters on what the walks can MATCH: `sealed` **-0.318 %** / `cube` **-0.093 %** / `fixed` **+0.032 %**
+
+Off the new #1 candidate (the `cast_candidates` tree, this file's candidates
+head). `can_afford_in_state_with` derives the full cost of every hand card the
+mana pre-filter admits, and three whole-board static walks are half of that
+tree: **18.1 M Ir, 1.02 % of `sealed`**, with **96.7 % of
+`cost_reduction_for_spell_full_over`'s 49,140 calls making no callee call at
+all** — pure 22-arm match over sources that could not match.
+
+`CostStaticSources` already gathered the sources once per sweep, filtered on
+`!static_abilities.is_empty()`. That is "nothing to **iterate**". The walks need
+"nothing to **match**": an anthem, a Sphere of Safety, any of the ~200 non-cost
+statics kept its permanent in the list, and its holder paid the match three
+times per hand card per check. `effect::static_affects_spell_cost` is the
+predicate — the 32 arms of the three source loops, `While*` wrappers descended
+— and the filter reads it.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+base = the (-294) tip                       base            cand          delta
+  fixed                              636,201,373     636,405,477      +0.032 %
+  cube                             1,695,370,022   1,693,785,081      -0.093 %
+  sealed                           1,775,080,177   1,769,438,665      -0.318 %
+  the three walks, self, sealed
+    cost_reduction_for_spell_full_over                            -2,003,512
+    extra_cost_for_spell_over                                     -1,898,096
+    colored_spell_tax_for_spell_over                              -1,024,428
+    malloc + _int_free (a shorter list is a smaller Vec)             -904,254
+    static_affects_spell_cost (new row)                             +332,224
+  24 / 48 / 72 decided, 0 undecided, per-game lines byte-identical on all six dumps.
+```
+
+⚠ **THE FIRST VERSION OF THIS READ `fixed` +0.153 % AND THE FIX WAS ONE
+SHORT-CIRCUIT.** Written as `static_abilities.iter().any(..)` alone —
+semantically identical, since `any` over an empty slice is false — the
+predicate came out **out of line, called once per battlefield card**: the whole
+diff on `fixed` was a single `+944,566` row on the gather's `collect`, and the
+three walks saved nothing there at all, because that pool's boards carry almost
+no statics to filter. Putting `!sas.is_empty() &&` back in front makes the
+empty case the same code it was, and it moved **fixed +0.153 -> +0.032, cube
+-0.010 -> -0.093, sealed -0.229 -> -0.318 %**. **A predicate in a hot filter is
+priced by its fast path, not by its body** — and the fast path has to be the
+one the old filter had, or the pool with nothing to filter pays for the pool
+that has something.
+
+**`fixed` is still +0.032 % and that is kept, stated.** 204 k Ir on 636 M, all
+of it the predicate call on the few `fixed` permanents that do carry a static —
+and `fixed` is the pool this file already documents as blind to the cost path
+("carries no `GrantTriggeredAbility` static at all, which is why the committed
+bench never saw it"). The pool a `selfplay_train` actor plays is `sealed`.
+Driving the residual to zero needs a definition-level memo bit
+(`dispatch_bits`, the `MANA_STATIC` shape from `(-197)`), which is four spare
+bits in a shared `u64` against 0.03 % — not taken.
+
+**The audit is a `debug_assert_eq!` in the narrowed list's ONLY consumer.**
+`can_afford_in_state_with` recomputes all three values over the unfiltered
+board and compares, so a variant the predicate misses and a walk matches is a
+failing test rather than a mispriced spell. Cost: **nothing measurable** —
+suite 97.9 s with it gated on "the filter actually dropped something" and
+96.2 s ungated, against ~97 s at the run's opening tip, so the gate was
+measured and reverted and the assert is unconditional. 19,546 tests ran it.
+
 
 ### `(-295)` NOT A PERF ROW — the bot defect that cost a 5,769-turn stall, and the ladder reading that let it be adopted: **zero incidence on both gating pools**
 
@@ -10553,6 +10644,82 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**THE NEW #1 IS A CALLER, NOT A SELF ROW, AND NO SELF TABLE CAN SEE IT:
+`bot::cast_candidates` IS 8.9 % OF `sealed` INCLUSIVE AGAINST 1.25 % OF SELF
+(2026-09-13, the `(-294)` tip, `035e9d53`).** Found with `cg_ratio.py` — the
+device PERF's "Which pool a change moves" describes and which had not been run
+at this tip — off the `sealed` / `fixed` join at `--floor 0.45`. Its top row is
+`printed_requirement_impl` at **0.80 % of sealed against 0.06 % of fixed,
+13.21x**, the largest ratio in the table by a factor of seven; following its
+callers upward is what found the caller.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                                                calls     incl Ir    % pool   Ir/call
+  sealed (1,775,080,177)
+    bot::cast_candidates          <- sim_spell_action_inner   8,736   92,225,146   5.20 %   10,557
+                                  <- main_phase_action_with   8,280   65,881,822   3.71 %    7,957
+                                                    TOTAL    17,016  158,106,968   8.91 %
+      its self                                                        22,224,090   1.25 %
+      -> can_afford_in_state_with                  48,596   61,948,552   3.49 %    1,275   (2.86 a call)
+           -> cost_reduction_for_spell_full_over   49,140   11,071,502   0.62 %
+           -> can_afford_from                      49,140    6,174,378   0.35 %
+           -> extra_cost_for_spell_over            49,140    4,529,320   0.26 %
+           -> colored_spell_tax_for_spell_over     49,140    2,512,054   0.14 %
+           -> relax_cost_colors_known              49,140    1,031,940   0.06 %
+      -> auto_targets_for_effect_all_slots_kicked  11,178   64,019,541   3.61 %    5,726   (0.66 a call)
+           -> printed_requirement_impl            297,154   26,348,974   1.48 %            **26.6 a call**
+           -> check_target_legality_with_source     11,334    6,907,570   0.39 %
+           -> evaluate_requirement_static           25,106    2,930,884   0.17 %
+  fixed (636,201,373): the same two halves at 19.5 M (3.06 %) and 14.5 M (2.28 %),
+  `cast_candidates` 47.3 M inclusive = 7.44 % — so this is NOT a sealed-only shape.
+  `printed_requirement_impl` totals 34.8 M / 1.96 % of sealed over five symbol rows
+  and 850,908 calls, of which **342,206 (40 %) are its own And/Or recursion**.
+```
+
+**Two halves of near-equal size and they are different questions.**
+
+✅ **ONE PIECE OF THE AFFORDABILITY HALF IS TAKEN — `(-296)`, sealed -0.318 %**:
+the source list now filters on what the three walks can *match* rather than on
+whether the source has any static at all. What is left of that half is the
+**2.86 full cost re-derivations a call** below; the walks themselves are now
+near-empty on a board with no cost static.
+
+* **Affordability, 3.49 %.** `can_afford_in_state_with` is 0.35 % of self and
+  five callees at *exactly* 49,140 calls each — one full cost re-derivation per
+  check: the reduction walk, the extra-cost walk, the colour tax, the colour
+  relaxation. The mana available does not change between the candidates of one
+  decision and neither does the board those four walks read, so the question is
+  whether a per-decision memo (or a cheaper pre-filter — `cmc > total` is
+  already the separate test `available_mana` documents) can cut the 2.86
+  re-derivations a call. ⚠ Price it against `(-88)` first: a memo keyed by the
+  spell is one lookup per candidate against ~1,275 Ir of work, which is the
+  favourable direction, but the *key* has to be cheaper than
+  `cost_reduction_for_spell_full_over` or it is the witness-over-the-work
+  mistake again.
+* **Target enumeration, 3.61 %, and it is 26.6 requirement evaluations a
+  call.** `auto_targets_for_effect_all_slots_kicked` walks every candidate
+  object against the slot's filter. The short-circuit shape already exists in
+  the same module — `first_legal_graveyard_card`, 21,904 calls — so the
+  question is what `cast_candidates` actually needs: an *enumeration* (it
+  proposes one target per candidate spell) or a *witness* ("is this castable at
+  all"). If a witness is enough for the generation pass and the enumeration can
+  be deferred to the candidate that survives, 26.6 evaluations become ~1–3.
+  ⚠ **Read `cast_candidates`' two callers first**: `sim_spell_action_inner`
+  (8,736) is the sim path and `main_phase_action_with` (8,280) the real
+  decision, and they may not need the same thing.
+
+⚠ **THE METHOD IS THE HALF THAT GENERALISES, AND THIS FILE'S OWN RULE POINTED
+THE WRONG WAY FOR NINE PASSES.** "Price a hot row by WHO CALLS IT, not by its
+body" ranks callers of a row that is already in the self table. `cast_candidates`
+is **1.25 % of self on sealed and 1.51 % on fixed** — it has never been above
+the fold of any self table in this file — and 87 % of its cost is in two
+callees that are themselves spread over five and three rows. **A caller is
+priced by its callee tree, and the self table cannot rank one.** The ratio
+device is what surfaced it, from a row (`printed_requirement_impl`) four levels
+down.
+
 
 **THE QUEUE IS RE-SEEDED OFF A FRESH WHOLE-PROFILE READ AT `d457bcaa`
 (2026-09-13), AND IT HAS ONE CLEAR TOP ROW FOR THE FIRST TIME IN EIGHT RUNS:

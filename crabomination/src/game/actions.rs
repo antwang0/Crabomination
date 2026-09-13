@@ -863,17 +863,36 @@ pub fn strive_cost_for_spell(
     out
 }
 
+/// [`CostStaticSources`]' filter: does this permanent carry a static any of
+/// the three cost walks can match? The `is_empty()` short-circuit is load
+/// bearing — see the comment at the call site.
+#[inline]
+fn carries_cost_static(c: &crate::card::CardInstance) -> bool {
+    let sas = &c.definition.static_abilities;
+    !sas.is_empty() && sas.iter().any(|sa| crate::effect::static_affects_spell_cost(&sa.effect))
+}
+
 /// The static sources any of the three cost walks below can match, gathered
 /// once and handed to their `_over` forms.
 ///
-/// A source whose `static_abilities` is empty contributes nothing to
-/// [`extra_cost_for_spell`], [`colored_spell_tax_for_spell`] or
-/// [`cost_reduction_for_spell_full`] — the walks load its `definition`
-/// through an `Arc`, read an empty slice and move on. That is the whole of
-/// their cost on a board with no cost statics, and the bot's affordability
-/// pre-filter pays it three times **per hand card**. Building this once per
-/// sweep is sound by construction: the filter drops only sources whose
-/// inner loop has nothing to iterate.
+/// A source whose `static_abilities` carries nothing
+/// [`static_affects_spell_cost`](crate::effect::static_affects_spell_cost)
+/// admits contributes nothing to [`extra_cost_for_spell`],
+/// [`colored_spell_tax_for_spell`] or [`cost_reduction_for_spell_full`] — the
+/// walks load its `definition` through an `Arc`, run their match over statics
+/// none of the arms can take, and move on. That is the whole of their cost on
+/// a board with no cost statics, and the bot's affordability pre-filter pays
+/// it three times **per hand card**. Building this once per sweep is sound by
+/// construction: the filter drops only sources whose inner loop cannot match.
+///
+/// ⚠ **The predicate used to be `!static_abilities.is_empty()`, which is the
+/// weaker claim "nothing to iterate" rather than "nothing to match"** — an
+/// anthem, a Sphere of Safety, any of the ~200 non-cost statics kept its
+/// permanent in the list and its holder paid the 22-arm match per hand card
+/// per check. On `sealed` the three walks were **18.1 M Ir, 1.02 % of the
+/// pool, with 96.7 % of the reduction walk's 49,140 calls making no callee
+/// call at all** — pure match over sources that could not match (PERF
+/// `(-296)`).
 ///
 /// Battlefield sources come first so [`battlefield`](Self::battlefield) is a
 /// prefix; [`all`](Self::all) adds the CR 315.5 command-zone half that only
@@ -885,10 +904,18 @@ pub(crate) struct CostStaticSources<'a> {
 
 impl<'a> CostStaticSources<'a> {
     pub(crate) fn gather(state: &'a crate::game::GameState) -> Self {
+        // ⚠ **THE `is_empty()` TEST STAYS IN FRONT AND IT IS THE MEASUREMENT.**
+        // Written as `static_abilities.iter().any(..)` alone — which is
+        // semantically identical, since `any` over an empty slice is false —
+        // the predicate came out as an out-of-line call per battlefield card
+        // and `--decks fixed` read **+0.153 %**: that pool's boards carry
+        // almost no statics at all, so it paid the call and saved nothing,
+        // while `sealed` still read -0.229 %. With the cheap test first the
+        // empty case is the same code it was (PERF `(-296)`).
         let mut cards: Vec<&crate::card::CardInstance> = state
             .battlefield
             .iter()
-            .filter(|c| !c.definition.static_abilities.is_empty())
+            .filter(|c| carries_cost_static(c))
             .collect();
         let bf = cards.len();
         cards.extend(
@@ -896,10 +923,7 @@ impl<'a> CostStaticSources<'a> {
                 .players
                 .iter()
                 .flat_map(|p| p.command.iter())
-                .filter(|c| {
-                    !c.definition.static_abilities.is_empty()
-                        && c.command_zone_abilities_active()
-                }),
+                .filter(|c| carries_cost_static(c) && c.command_zone_abilities_active()),
         );
         Self { cards, bf }
     }
