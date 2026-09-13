@@ -6462,6 +6462,71 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-293)` REFUTED WITH A LEDGER, AND THE LEDGER IS THE RESULT — a CoW guard on the dispatcher's one unguarded `scratch` store reads `fixed` -0.020 / `cube` -0.022 / `sealed` -0.010 %, against a caller table that said 0.317 / 0.186 / 0.240 %
+
+`resolve_top_of_stack_inner`'s `StackItem::Trigger` arm opened with
+
+```rust
+    self.scratch.activation_mana_colors_scratch = mana_spent_by_color;
+```
+
+— an unguarded `&mut` reach into a CoW group, which is the exact shape
+`(-280)`..`(-287)` swept eight legs out of. It is an **empty `Vec` over an empty
+`Vec`** on essentially every resolution: the field is empty for every *triggered*
+ability and for every activation that paid no coloured mana, and `take_scratch!`
+has already emptied it at the end of the previous resolution. It is also the
+FIRST `&mut` reach into `scratch` on that path (the arm's other two touches are
+a guarded read and a guarded store), so the caller table attributes the unshare
+to it.
+
+**The caller table said it was worth up to a quarter of a percent** — the
+instrument CLAUDE.md names, `--demangle=no` plus `cg_edges.py --callers
+make_mut_slow<hash>`, with the group identified by its clone callees (three
+`Vec::clone`s = `ResolutionScratch`):
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1, the d457bcaa tip either side
+  make_mut_slow(ResolutionScratch) <- resolve_top_of_stack_inner, base:
+    fixed   2,834 calls / 2,025,210 Ir = 0.317 % of the pool
+    cube    3,792 calls / 3,170,883 Ir = 0.186 %
+    sealed  5,120 calls / 4,272,465 Ir = 0.240 %
+```
+
+**Guarding it bought a tenth of that**, and the reason is in the caller table's
+own diff — the unshare does not disappear, it MOVES ONE FRAME DOWN:
+
+```text
+  scratch unshares by caller, sealed          base      cand
+    resolve_top_of_stack_inner                5,120  -> 4,042    -1,078
+    resolve_effect_into_kind                  2,148  -> 2,772      +624
+    apply_pending_effect_answer_inner           352  ->   502      +150
+    sacrifice_one                                 0  ->   108      +108
+    ALL CALLERS                               8,354  -> 8,142      -212   (-2.5 %)
+  Ir totals (system allocator, outcomes identical on every dump)
+    fixed    638,511,438 ->   638,384,026   -127,412   -0.0200 %
+    cube   1,700,368,478 -> 1,699,995,394   -373,084   -0.0219 %
+    sealed 1,781,963,748 -> 1,781,780,512   -183,236   -0.0103 %
+  24 / 48 / 72 decided, 0 undecided on all six dumps
+```
+
+⚠ **THE RULE, AND IT IS THE ONLY THING HERE WORTH QUOTING: A CoW GUARD PAYS
+ONLY WHERE IT IS THE LAST UNGUARDED WRITE TO THAT GROUP IN THE SCOPE. Price it
+by the scope's REMAINING writes, not by the caller table's row** — the row says
+where the unshare is *attributed*, and guarding one site hands the bill to the
+next `&mut` reach inside the same resolution. Four fifths of these came back one
+frame down. It is `(-88)`'s "price the witness against the work" seen from the
+other side, and it is why `(-280)`..`(-287)` worked: those eight were the
+*whole* set of writes to their groups on the probe path, so there was nothing
+left to inherit the unshare.
+
+**The change is KEPT, as a clarity change, not as a win.** -0.02 % is inside
+this file's own "do not claim under ~5 % without a microbenchmark" line; what it
+buys is that the one remaining unguarded store on a hot path now matches the
+`clear_scratch` / `take_scratch` convention the group is documented under, and
+that the next reader who runs the caller table does not re-take the 0.24 % row.
+The comment at the site points here.
+
+
 ### `(-292)` CORRECTNESS, AND IT COSTS NOTHING — the turn digest stops reading a permanent's tap: `all` 1159 is **cap 2 -> cap 0**, `--bench` counters identical, 12 / 12 golden traces unmoved
 
 `(-291)` gave the Beacon board an ending and one cell did not take it. `all`
@@ -10098,6 +10163,62 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**THE QUEUE IS RE-SEEDED OFF A FRESH WHOLE-PROFILE READ AT `d457bcaa`
+(2026-09-13), AND IT HAS ONE CLEAR TOP ROW FOR THE FIRST TIME IN EIGHT RUNS:
+`dispatch_triggers_for_events` IS THE #1 SELF ROW ON ALL THREE POOLS AND IS
+NEARLY DOUBLE THE #2 ON TWO OF THEM.**
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                                        fixed            cube           sealed
+  program total                   638,511,438   1,700,368,478    1,781,963,748
+  dispatch_triggers_for_events     39.3 M 6.15%   82.6 M 4.86%    114.5 M 6.43%   <- #1 on all three
+  gather_continuous_effects_inner  24.5 M 3.84%   53.7 M 3.16%     58.1 M 3.26%
+  compute_permanent_pass           24.3 M 3.80%   67.5 M 3.97%     54.3 M 3.05%
+  check_state_based_actions_into   16.9 M 2.65%   49.0 M 2.88%     49.8 M 2.80%
+  sba_board_scan                   11.6 M 1.82%   30.9 M 1.82%     34.2 M 1.92%
+  computed_permanent_hinted        12.7 M 2.00%   33.0 M 1.94%     31.4 M 1.76%
+  allocator (malloc/free/_int_*)          ~8.8%           ~8.8%            ~9.7%
+```
+
+**It is 199,220 calls on sealed at 575 Ir of SELF each** (the matcher inlines
+into it, so the self figure is the walk plus `event_matches_spec_with_bits`),
+and the callers say where they come from:
+
+```text
+  dispatch_triggers_for_events <- , sealed      calls    incl Ir   Ir/call
+    perform_action_inner                      162,026    137.8 M       850
+    declare_attackers_banded                   17,592      0.79 M        45   <- already nothing
+    finalize_cast                               9,746      7.95 M       816
+    submit_decision_inner                       5,134      8.33 M      1,623
+    do_untap                                    3,100      3.41 M      1,099
+  its own callees, sealed
+    event_kind_bits                           316,896      3.82 M
+    dispatch_board_scan                       105,132      8.10 M      <- 94 k dispatches never reach it
+```
+
+⚠ **THE ROW GREW THIS DAY AND THE WHY MATTERS FOR ANYONE RANKING IT.** Seven
+`EventKind`s joined `event_kind_fans_out` on 2026-09-13 (`3176db34`,
+`459c86e1`, and `9e489446` the day before), and fan-out is exactly what removes
+the `break` that used to end the inner event loop at the first match. For a
+batch of one event — the common case — the walk is unchanged; for a board wipe
+or a three-token mint it is now O(events) per matching trigger where it was
+O(1). That is correctness and it is not going back, but it means **the row's
+share is not comparable with a pre-2026-09-13 reading**, and it means the
+cheapest shape of a win here is *fewer (trigger, event) pairs entered*, not a
+faster body: the batch mask (`(-195)`) and the per-permanent trigger fold
+(`(-196)`) are the two devices already in place, and nothing groups the batch's
+events by kind so that a trigger only walks the events it could match. Price
+that against the batch-size distribution first — a census of `events.len()` per
+dispatch is one gated counter and no build.
+
+**Second row with a device: the allocator is ~9 % of every pool** and
+`_int_free` alone is 2.8-3.2 %. `(-256)` left mimalloc as the default for the
+shipped binary; these dumps are the *system* allocator by necessity (valgrind
+replaces malloc), so the 9 % is an upper bound on what a real run pays. A
+sized allocation census (`cg_alloc_sites.py`) at this tip has not been taken.
+
+
 **THE BOUND STOPS THE GAME AND DOES NOT STOP THE COST — `--decks cube --seed
 1215`, 40x its neighbours.** The first entry this list has gained off a
 measurement rather than a bug fix in seven runs, and the recipe is one command:
@@ -10204,7 +10325,7 @@ So the remaining `--decks cube` question is a smaller one than it looked:
 on how much of the ML loop runs on cube rather than sealed. `cube` 1036 (Ghosts of the Innocent, 5.4x release-fast / 83x sweep) is the
 other slow cell on record, with a different cause and the same shape of answer.
 
-⚠ **THE QUEUE IS AT FLOOR AND HAS BEEN FOR SEVEN RUNS.** The last actor
+⚠ **THE QUEUE WAS AT FLOOR FOR SEVEN RUNS AND THE HEAD OF THIS SECTION IS ITS RE-SEED (2026-09-13, `d457bcaa`); what follows is the state it was in.** The last actor
 re-read (`9772ce0c`, below) is FLAT with nothing above 0.2 % self that has a
 device; actor scaling (4.13x on 4 cores) and the file-size build lever are
 closed by measurement in their own sections; the `produced_mana` column is

@@ -2923,7 +2923,19 @@ impl GameState {
                 mana_spent_by_color,
                 source_transformed_since_push,
             } => {
-                self.scratch.activation_mana_colors_scratch = mana_spent_by_color;
+                // `mana_spent_by_color` is empty for every *triggered*
+                // ability and for every activation that paid no coloured
+                // mana, and `take_scratch!` has already emptied the field at
+                // the end of the previous resolution — so this store is an
+                // empty `Vec` over an empty `Vec` on the great majority of
+                // resolutions, and an unguarded `&mut` reach unshares the
+                // whole `ResolutionScratch` group on a probe's clone. Same
+                // guard as `clear_scratch` / `take_scratch`; PERF `(-293)`.
+                if !mana_spent_by_color.is_empty()
+                    || !self.scratch.activation_mana_colors_scratch.is_empty()
+                {
+                    self.scratch.activation_mana_colors_scratch = mana_spent_by_color;
+                }
                 // CR 701.27f — scoped to this resolution; `Effect::Transform`
                 // reads it when the thing it would transform is the ability's
                 // own permanent.
