@@ -20203,16 +20203,12 @@ impl GameState {
                     // matching records in the batch; see
                     // `fanout_dedupes_on_subject`, which the graveyard walk
                     // below reads from the same place so the two cannot drift.
-                    if crate::game::effects::events::fanout_dedupes_on_subject(&ta.event.kind)
-                        && let Some(
-                            crate::game::effects::EntityRef::Permanent(sid)
-                            | crate::game::effects::EntityRef::Card(sid),
-                        ) = subject
-                    {
-                        if graveyard_subjects_seen.contains(&sid) {
-                            continue;
-                        }
-                        graveyard_subjects_seen.push(sid);
+                    if crate::game::effects::events::subject_already_fired(
+                        &mut graveyard_subjects_seen,
+                        &ta.event.kind,
+                        subject,
+                    ) {
+                        continue;
                     }
                     // Evaluate the trigger's intervening filter here, before
                     // consuming any once-per-turn / per-subject budget: a
@@ -20223,29 +20219,12 @@ impl GameState {
                     // pre-check just gates the budget bookkeeping. Powers
                     // Faerie Mastermind's "second card each turn" payoff.
                     if let Some(filter) = &ta.event.filter {
-                        let ctx = crate::game::effects::EffectContext {
-                            controller: card.controller,
-                            source: Some(trig_source),
-                            targets: vec![],
-                            trigger_source: subject,
-                            mode: 0,
-                            x_value: 0,
-                            converged_value: 0,
-                            mana_spent: 0,
-                            mana_spent_by_color: Vec::new(),
-                            source_name: None,
-                            cast_from_hand: true,
-                            event_amount: self.event_amount_for(ev),
-                            kicked: false,
-                            kicked_options: Vec::new(),
-                            kick_count: 0,
-                            bargained: false,
-                            cast_via_mayhem: false,
-                            cast_via_waterbend: false,
-                            cast_collected_evidence: false,
-                            entwined: false,
-                            spree_modes: Vec::new(),
-                        };
+                        let ctx = crate::game::effects::EffectContext::for_intervening_filter(
+                            card.controller,
+                            trig_source,
+                            subject,
+                            self.event_amount_for(ev),
+                        );
                         if !self.evaluate_predicate(filter, &ctx) {
                             if !fanout {
                                 break;
@@ -20549,41 +20528,20 @@ impl GameState {
                         // into a graveyard from anywhere" fires out of the
                         // graveyard the card just landed in — and a mill puts
                         // both records for it in the batch.
-                        if crate::game::effects::events::fanout_dedupes_on_subject(&ta.event.kind)
-                            && let Some(
-                                crate::game::effects::EntityRef::Permanent(sid)
-                                | crate::game::effects::EntityRef::Card(sid),
-                            ) = subject
-                        {
-                            if graveyard_subjects_seen.contains(&sid) {
-                                continue;
-                            }
-                            graveyard_subjects_seen.push(sid);
+                        if crate::game::effects::events::subject_already_fired(
+                            &mut graveyard_subjects_seen,
+                            &ta.event.kind,
+                            subject,
+                        ) {
+                            continue;
                         }
                         if let Some(filter) = &ta.event.filter {
-                            let ctx = crate::game::effects::EffectContext {
-                                controller: card.owner,
-                                source: Some(card.id),
-                                targets: vec![],
-                                trigger_source: subject,
-                                mode: 0,
-                                x_value: 0,
-                                converged_value: 0,
-                                mana_spent: 0,
-                                mana_spent_by_color: Vec::new(),
-                                source_name: None,
-                                cast_from_hand: true,
-                                event_amount: self.event_amount_for(ev),
-                                kicked: false,
-                                kicked_options: Vec::new(),
-                                kick_count: 0,
-                                bargained: false,
-                                cast_via_mayhem: false,
-                                cast_via_waterbend: false,
-                                cast_collected_evidence: false,
-                                entwined: false,
-                                spree_modes: Vec::new(),
-                            };
+                            let ctx = crate::game::effects::EffectContext::for_intervening_filter(
+                                card.owner,
+                                card.id,
+                                subject,
+                                self.event_amount_for(ev),
+                            );
                             if !self.evaluate_predicate(filter, &ctx) {
                                 if !fanout {
                                     break;
@@ -21068,29 +21026,12 @@ impl GameState {
                 from_mana_ability,
             } = candidate;
             if let Some(filter) = filter {
-                let ctx = crate::game::effects::EffectContext {
+                let ctx = crate::game::effects::EffectContext::for_intervening_filter(
                     controller,
-                    source: Some(source),
-                    targets: vec![],
-                    trigger_source: subject,
-                    mode: 0,
-                    x_value: 0,
-                    converged_value: 0,
-                    mana_spent: 0,
-                    mana_spent_by_color: Vec::new(),
-                    source_name: None,
-                    cast_from_hand: true,
+                    source,
+                    subject,
                     event_amount,
-                    kicked: false,
-                    kicked_options: Vec::new(),
-                    kick_count: 0,
-                    bargained: false,
-                    cast_via_mayhem: false,
-                    cast_via_waterbend: false,
-                    cast_collected_evidence: false,
-                    entwined: false,
-                    spree_modes: Vec::new(),
-                };
+                );
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
                 }

@@ -582,6 +582,42 @@ pub(crate) fn fanout_dedupes_on_subject(kind: &EventKind) -> bool {
     matches!(kind, EventKind::PutIntoGraveyard)
 }
 
+/// CR 701.15b — one fired trigger per SUBJECT, for the kinds where a single
+/// batch can carry more than one record about the same object.
+///
+/// ⚠ **A MILL PUTS BOTH `CardPutIntoGraveyard` AND `CardMilled` IN THE BATCH
+/// FOR ONE CARD**, so a `PutIntoGraveyard` trigger read every milled card
+/// twice — The Haunt of Hightower took 10 counters off a five-card mill. The
+/// dedupe was then added to the battlefield walk and NOT the graveyard one,
+/// and `PutIntoGraveyard` is a `is_graveyard_self_source_kind`, so Ichor
+/// Wellspring drew two cards for a one-card mill until the second copy
+/// landed. Both walks call this now; there is no second copy to forget.
+///
+/// Returns true when the caller should skip this event: the subject has
+/// already minted a trigger in this batch. Non-deduping kinds and
+/// subject-less events always return false.
+pub(crate) fn subject_already_fired(
+    seen: &mut Vec<crate::card::CardId>,
+    kind: &EventKind,
+    subject: Option<crate::game::effects::EntityRef>,
+) -> bool {
+    if !fanout_dedupes_on_subject(kind) {
+        return false;
+    }
+    let Some(
+        crate::game::effects::EntityRef::Permanent(sid)
+        | crate::game::effects::EntityRef::Card(sid),
+    ) = subject
+    else {
+        return false;
+    };
+    if seen.contains(&sid) {
+        return true;
+    }
+    seen.push(sid);
+    false
+}
+
 pub(crate) fn is_graveyard_self_source_kind(kind: &EventKind) -> bool {
     matches!(
         kind,

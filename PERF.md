@@ -3520,6 +3520,21 @@ modal   **`None` FROM `pick_trigger_mode` DOES NOT MEAN "NOT MODAL" DOWNSTREAM �
         because CR 700.2b picks the mode when the ability goes on the stack. Its assertion is unchanged — mode 0
         IS tap — only who was asked for it. Golden traces unmoved; `--bench` counters byte-identical.
 
+walks   **THE THREE TRIGGER WALKS WROTE THE SAME FIVE RULES BY HAND AND THE DRIFT HAS COST TWO SHIPPED BUGS.**
+        The concurrent session's `d457bcaa` named unifying them as "the cheapest structural pull on this page"; on
+        reading, the two walks are NOT symmetric — the battlefield one carries the batch bit-mask and the ordering
+        `(-xxx)` measured, the graveyard one has neither — so merging the loops would put a branch in the hot path
+        to buy tidiness. What IS duplicated verbatim, and is what actually drifted, is extracted instead:
+        `EffectContext::for_intervening_filter` (the CR 603.4 filter context — **three** hand-written copies of
+        nineteen identical fields, differing only in `controller`/`source`/`event_amount`, so a new context field
+        had to be added three times or the walks disagreed) and `events::subject_already_fired` (the CR 701.15b
+        per-subject dedupe — two byte-identical copies, and it was added to the battlefield walk and not the
+        graveyard one, which is exactly how Ichor Wellspring drew two cards for a one-card mill). Both carry the
+        bug they came from in their doc. **-87 lines net, 115 of them out of `game/mod.rs`**, which is one of the
+        four oversized files the build-time section tracks. Behaviour-preserving: suite 19,545/19,545, golden
+        traces 12/12 unmoved, clippy 0, and the `--bench` counters below are the gate that the dispatcher's hot
+        path did not move.
+
 gate    --bench on a `release` binary rebuilt at the PUSHED tip: **195,806 / 27.49 / 611.9 / 0 stalls (cap 0 /
         board 0 / stuck 0 / draw 0), counters BYTE-IDENTICAL to the committed invariant**, determinism ok (all
         160 pairs split) and, with `CRAB_THREAD_CHECK=1`, thread_determinism ok (3 vs 1). Not the gate, recorded

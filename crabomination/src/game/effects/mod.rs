@@ -419,6 +419,54 @@ fn grist_insect_token() -> Box<crate::card::TokenDefinition> {
     })
 }
 
+impl EffectContext {
+    /// The context an intervening filter (CR 603.4) is evaluated in.
+    ///
+    /// ⚠ **THE THREE TRIGGER WALKS BUILT THIS BY HAND, IDENTICALLY, AND A NEW
+    /// `EffectContext` FIELD HAD TO BE ADDED TO ALL THREE OR THE WALKS WOULD
+    /// DISAGREE.** The battlefield walk, the graveyard walk and the
+    /// command-zone walk differ only in `controller`, `source` and how they
+    /// get `event_amount`; the other nineteen fields were copied. Drift
+    /// between those walks has cost two shipped bugs already (`CardDiscarded`
+    /// admitted by one list and not the other; the graveyard walk missing the
+    /// subject dedupe), so the rules they share live in one place now — see
+    /// also `events::subject_already_fired`.
+    ///
+    /// A filter is a pure predicate over the event and its subject: no
+    /// targets, no mode, no cast riders. `cast_from_hand: true` is the
+    /// historical default the three walks all passed.
+    pub(crate) fn for_intervening_filter(
+        controller: usize,
+        source: CardId,
+        trigger_source: Option<EntityRef>,
+        event_amount: u32,
+    ) -> Self {
+        Self {
+            controller,
+            source: Some(source),
+            targets: vec![],
+            trigger_source,
+            mode: 0,
+            x_value: 0,
+            converged_value: 0,
+            mana_spent: 0,
+            mana_spent_by_color: Vec::new(),
+            source_name: None,
+            cast_from_hand: true,
+            event_amount,
+            kicked: false,
+            kicked_options: Vec::new(),
+            kick_count: 0,
+            bargained: false,
+            cast_via_mayhem: false,
+            cast_via_waterbend: false,
+            cast_collected_evidence: false,
+            entwined: false,
+            spree_modes: Vec::new(),
+        }
+    }
+}
+
 impl GameState {
     /// Petals of Insight — look at the top `count`, then either bottom the
     /// whole batch and run `then`, or leave them and run `else_`.
