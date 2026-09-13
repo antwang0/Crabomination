@@ -6965,7 +6965,9 @@ fn cast_candidates<'a>(
 
     // MDFC back faces (CR 712): cast the back of a hand MDFC, or the back of a
     // graveyard MDFC carrying the one-shot `may_cast_back_from_graveyard`
-    // permission (Pestilent Cauldron's "cast it transformed"). Targets come
+    // permission (which no card grants today — see
+    // `Effect::GrantCastBackFromGraveyard`; a Disturb card reaches this same
+    // arm through its keyword instead). Targets come
     // from the BACK face's effect; `would_accept` enforces cost / timing /
     // zone, so these only surface when actually castable. (Land backs are
     // played via PlayLandBack, handled by the land logic, so they're skipped
@@ -20646,8 +20648,13 @@ mod tests {
     }
 
     /// The bot casts an MDFC's back face from the graveyard when it carries the
-    /// `may_cast_back_from_graveyard` permission (Pestilent Cauldron after its
-    /// sacrifice → Restorative Burst).
+    /// `may_cast_back_from_graveyard` permission.
+    ///
+    /// ⚠ The permission is set by hand here because **no card grants it** —
+    /// `Effect::GrantCastBackFromGraveyard`'s doc has the reason (the printed
+    /// shape is Disturb, a keyword, and Pestilent Cauldron does not print the
+    /// sacrifice this comment used to claim). Pestilent Cauldron is the card
+    /// under test only for its back face; the flag is the subject.
     #[test]
     fn bot_casts_mdfc_back_face_from_graveyard() {
         let mut g = two_player_game();

@@ -508,3 +508,55 @@ fn valgavoth_exile_view_shows_the_life_price() {
     let entry = view.exile.iter().find(|c| c.id == victim).expect("in exile");
     assert_eq!(entry.play_for_life, Some(2), "Bears cost 2 life to play");
 }
+
+/// Nuclear Fallout shrinks every creature by twice X and hands every player X
+/// rad counters — then CR 728's turn-based action spends them.
+///
+/// ⚠ The first card in the catalog to reach `Effect::AddRadCounters`, which
+/// `audit_variant_coverage` had listed as a dead primitive: the rad mechanic
+/// (`do_rad_counters`) was complete and nothing built a counter. Both halves
+/// are asserted, because "twice -X/-X" is the half a body reading `-X/-X`
+/// would freeze.
+#[test]
+fn nuclear_fallout_shrinks_twice_x_and_irradiates_everyone() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::nuclear_fallout());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("cast Nuclear Fallout for X=1");
+    drain_stack(&mut g);
+    for (seat, id) in [(0usize, mine), (1usize, theirs)] {
+        assert!(
+            g.battlefield_find(id).is_none(),
+            "seat {seat}'s 2/2 took -2/-2, not -1/-1",
+        );
+        assert_eq!(g.players[seat].rad_counters, 1, "seat {seat} got X rad counters");
+    }
+
+    // CR 728.2 — the active player's precombat main turn-based action mills
+    // one card per counter, loses 1 life per nonland milled, and spends the
+    // counter for each nonland. Stepped into rather than called: the action
+    // fires as the phase begins, before anyone has priority.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].life;
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        let _ = g.advance_step(Vec::new());
+    }
+    assert_eq!(g.players[0].rad_counters, 0, "the counter was spent on a nonland");
+    assert_eq!(g.players[0].life, before - 1, "and cost 1 life");
+    assert_eq!(
+        g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        2,
+        "the milled Bears joined the one that died",
+    );
+}

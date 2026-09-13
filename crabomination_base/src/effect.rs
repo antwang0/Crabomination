@@ -7208,12 +7208,31 @@ pub enum Effect {
         filter: crate::card::SelectionRequirement,
     },
     /// Grant a one-shot permission to cast `what`'s MDFC **back face from the
-    /// graveyard**, paying the back's cost (Pestilent Cauldron — "sacrifice
-    /// this, then you may cast Restorative Burst transformed"). Sets the
+    /// graveyard**, paying the back's cost. Sets the
     /// `may_cast_back_from_graveyard` flag on the resolved card; the controller
     /// then casts the back via `GameAction::CastSpellBack`, which hops the card
     /// out of the graveyard and consumes the permission. No-op if `what` has no
     /// back face.
+    ///
+    /// ⚠ **NO CARD BUILDS THIS, AND THE CARD THIS DOC USED TO NAME DOES NOT
+    /// PRINT IT** — `audit_variant_coverage.py`'s docstring triaged it on
+    /// 2026-08-30 and the triage never reached the code: it was built for a
+    /// Pestilent Cauldron whose oracle text was fabricated, and `2ca109bc`
+    /// replaced that card with the printed one, whose three abilities are a
+    /// Pest mint, a lifegain-scaled mill and a graveyard exile. **A comment
+    /// claiming a mechanic is worth one grep**, and this one had been repeated
+    /// in three places (here, `CardInstance::may_cast_back_from_graveyard`, and
+    /// the bot test that sets the flag by hand).
+    ///
+    /// The half the triage did not name: **the printed shape is Disturb**
+    /// (CR 702.145, "you may cast this card from your graveyard transformed for
+    /// its disturb cost"), a KEYWORD on the card, which reaches
+    /// `CastSpellBack` through `Keyword::Disturb(_)` — nine catalog cards — not
+    /// through an effect that grants permission. So this is not a card in
+    /// waiting *and* not a duplicate of a live variant: it is the one-shot
+    /// grant nothing prints. The FLAG stays (it is a capability, and dropping
+    /// a `CardInstance` field is a `CardData`-size change); only this
+    /// effect-shaped writer is orphaned.
     GrantCastBackFromGraveyard { what: Selector },
     /// Resolve-now equivalent of `GrantMayPlay`: at effect resolution
     /// time, ask the controller "cast `what` without paying its mana

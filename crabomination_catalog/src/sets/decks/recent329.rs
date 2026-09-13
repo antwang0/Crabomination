@@ -1,5 +1,7 @@
-//! The BLB/DSK/OTJ one-primitive backlog — each card here was blocked on a
-//! single engine primitive. Tests in `tests/recent_b/recent329.rs`.
+//! The one-primitive backlog — each card here was blocked on a single engine
+//! primitive, or is the FIRST card for one the engine already had and nothing
+//! built (Nuclear Fallout, rad counters). Mostly BLB/DSK/OTJ.
+//! Tests in `tests/recent_b/recent329.rs`.
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
@@ -508,6 +510,43 @@ pub fn kaito_bane_of_nightmares() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Nuclear Fallout — {X}{B}{B} sorcery. Twice -X/-X to every creature, and
+/// X rad counters to every player.
+///
+/// ⚠ **The first card in the catalog to hand out a rad counter.** CR 728 is
+/// fully modelled — `do_rad_counters` is the precombat-main turn-based action
+/// that mills one per counter, loses 1 life per nonland milled and removes a
+/// counter for each — and `Effect::AddRadCounters` was implemented with
+/// nothing building it, which is how `audit_variant_coverage` had been
+/// reporting it as a dead primitive.
+pub fn nuclear_fallout() -> CardDefinition {
+    CardDefinition {
+        name: "Nuclear Fallout",
+        cost: cost(&[x(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            // "twice -X/-X", so the pump is -2X and not -X.
+            Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature),
+                power: Value::Negate(Box::new(Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::XFromCost),
+                ))),
+                toughness: Value::Negate(Box::new(Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::XFromCost),
+                ))),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddRadCounters {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::XFromCost,
+            },
+        ]),
         ..Default::default()
     }
 }

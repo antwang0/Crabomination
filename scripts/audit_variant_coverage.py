@@ -20,17 +20,22 @@ inside those line ranges do not count as an implementation. That is what makes
 the filter stronger than the compiler — exhaustiveness is satisfied by exactly
 those arms.
 
-Reading at 2026-08-28, over 471 + 987 + 237 = 1,695 variants: **zero dead
-capabilities**, and three dead primitives — each an implemented effect waiting
-for the card that wanted it.
+Reading at 2026-09-13, over 473 + 987 + 237 = 1,697 variants: **zero dead
+capabilities and ONE dead primitive** (`GrantCastBackFromGraveyard`, closed
+with a reason below). It was three at 2026-08-28 — one deleted as a duplicate,
+one closed by shipping its card — and the surviving row is the one that is not
+waiting for anything.
 
 **Triaged 2026-08-30, so the next reader does not repeat the archaeology.**
 "Waiting for the card that wanted it" was right for two of the three and
 wrong — dangerously so — for the third.
 
-* `Effect::AddRadCounters` — genuinely waiting. Rad counters are a printed
-  mechanic and **no implemented card mentions one** (0 hits joining the
-  catalog's names against `.scryfall_cache.json`), so nothing has regressed.
+* `Effect::AddRadCounters` — **CLOSED 2026-09-13**: it was genuinely waiting,
+  and `decks::nuclear_fallout` ({X}{B}{B}, "Each creature gets twice -X/-X
+  until end of turn. Each player gets X rad counters.") is the card. CR 728 was
+  complete on the engine side the whole time — `do_rad_counters` is the
+  precombat-main turn-based action — so this was one card, not one primitive.
+  The count reads **1 dead primitive**, not 3 or 2.
 * `Effect::GrantCastBackFromGraveyard` — waiting for a card that **does not
   exist**. It was built for a Pestilent Cauldron whose oracle text was
   fabricated ("If Pestilent Cauldron is in your graveyard, you may cast it
@@ -38,6 +43,17 @@ wrong — dangerously so — for the third.
   card, which has no such line. Its lane (`may_cast_back_from_graveyard`,
   `GameAction::CastSpellBack`) is kept: it is a capability, and deleting a
   `CardInstance` field is a `CardData`-size change, not a tidy-up.
+  ⚠ **This triage lived here and nowhere else until 2026-09-13**, so the
+  fabricated Pestilent Cauldron claim was still sitting in three doc comments
+  in the code (`Effect::GrantCastBackFromGraveyard`,
+  `CardInstance::may_cast_back_from_graveyard`, and the bot test that sets the
+  flag by hand) and a reader who met one of those would have gone looking for
+  an ability that does not exist. All three carry the correction now, plus the
+  half this entry did not name: **the printed shape is Disturb** (CR 702.145),
+  a KEYWORD that reaches `CastSpellBack` through `Keyword::Disturb(_)` on nine
+  catalog cards — so the variant is neither a card in waiting nor a duplicate
+  of a live one. **A triage that does not reach the code it is about is half a
+  triage.**
 * `Effect::ExileTopAndMayCastUpToMv` — **DELETED**, because it was not
   waiting for a card, it was a second and *wrong* implementation of one.
   Its own doc named Kotis, the Fangkeeper, which ships on

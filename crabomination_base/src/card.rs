@@ -7657,10 +7657,12 @@ pub struct CardData {
     /// Paragon). Cleared when the card leaves the stack.
     pub cast_from_library: bool,
     /// One-shot permission to cast this MDFC's **back face from the
-    /// graveyard** (Pestilent Cauldron's "sacrifice, then cast Restorative
-    /// Burst transformed"). Set by `Effect::GrantCastBackFromGraveyard` once
-    /// the card is in the graveyard; consumed (cleared) by
-    /// `cast_spell_back_face` when it hops the card to hand to cast the back.
+    /// graveyard**. Set by `Effect::GrantCastBackFromGraveyard` once the card
+    /// is in the graveyard; consumed (cleared) by `cast_spell_back_face` when
+    /// it hops the card to hand to cast the back. ⚠ No card grants it — the
+    /// printed shape is Disturb, a keyword, and the Pestilent Cauldron
+    /// sacrifice this used to name is not an ability that card has. See
+    /// `Effect::GrantCastBackFromGraveyard`.
     /// (serde handled via the wire-mirror struct, like `cast_via_flashback`.)
     pub may_cast_back_from_graveyard: bool,
     /// "As [this] enters, choose a creature type." Cavern of Souls. The

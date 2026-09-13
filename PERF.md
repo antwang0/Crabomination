@@ -3004,7 +3004,7 @@ cards   the 7 above, plus Fractured Identity's mint (exact at two seats, one cop
 perf    none attempted and none claimed. Every change is a catalog fan-out, a `debug_assert!` (dead in release) and
         two arms whose single-valued callers loop exactly once; **none of the eight cards is in the `fixed`
         archetypes**. `--bench` counters came back **byte-identical: 195,806 / 27.49 / 611.9 / 0 stalls**.
-gates   suite **19,512 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12
+gates   suite **19,513 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12
         unmoved**, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls + determinism ok + thread_determinism ok (3 vs 1),
         `audit_printed_body` 0 on all ten columns, `audit_panics` 0 bare, `audit_doc_drift` 0,
         `audit_seat_from_selector` 0 open, `audit_stash_in_loop` 1/1/0, `audit_variant_coverage` 0 dead capability,
@@ -3030,6 +3030,18 @@ sweep   **`NO_PROGRESS_MAX_PERIOD` PRICED AND NOT MOVED — the handoff's guess 
         lower repeat count only changes which aperiodic board survives. The shape that would is a different
         predicate — "no seat can win or lose" — an adjudication change, not a tuning one. Cell unchanged at both
         budgets: 6,790 decided / 10 undecided (`cap 2 / board 0 / stuck 0 / draw 8`).
+cards   **`Effect::AddRadCounters` has a card at last** — `decks::nuclear_fallout`, {X}{B}{B}, "Each creature gets
+        twice -X/-X until end of turn. Each player gets X rad counters." CR 728 was complete on the engine side the
+        whole time (`do_rad_counters`, the precombat-main turn-based action that mills one per counter, loses 1 life
+        per nonland milled and spends a counter for each), so this was one card and not one primitive.
+        `audit_variant_coverage` **2 dead primitives -> 1**, and the survivor is closed with a reason rather than
+        left open: `GrantCastBackFromGraveyard` is the one-shot grant nothing prints, because **the printed shape is
+        Disturb** (CR 702.145), a KEYWORD reaching the same `CastSpellBack` lane on nine catalog cards.
+        ⚠ **The triage that says so was written 2026-08-30 and lived only in the audit's docstring**, so the
+        fabricated "Pestilent Cauldron — sacrifice this, then cast Restorative Burst transformed" was still in three
+        doc comments in the CODE. All three carry the correction now. **A triage that does not reach the code it is
+        about is half a triage.** No pool or vocab index moves: the card joins no draft pool, and `Vocab::sos_sealed`
+        is the frozen snapshot plus the SOS and cube pools.
 box     ⚠ **4 cores, Intel Xeon @ 2.80 GHz.** `--bench` wall clock reads **321.3 / 314.5 games/s** here against the
         289.7–542 spread this file records on 24; the COUNTERS are the invariant and they are identical. No absolute
         wall clock from this run is comparable with any earlier absolute in this file.
