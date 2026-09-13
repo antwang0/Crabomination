@@ -2252,7 +2252,17 @@ fn play_one_game_traced(
     g.start_mulligan_phase();
     let mut bots: Vec<Box<dyn Bot>> = pilots.into_iter().map(Pilot::build).collect();
     let (mut actions, mut stale) = (0usize, 0usize);
+    // `CRAB_PROGRESS_WATCH=<turn>` — see `progress_watch_line`. Hoisted out of
+    // the loop: one `OnceLock` load a *game*, not one an action.
+    let (watch_from, mut watched_turn) = (progress_watch_from(), u32::MAX);
     while stop_reason(&g, actions, max_actions, stale).is_none() {
+        if let Some(from) = watch_from
+            && g.turn_number >= from
+            && g.turn_number != watched_turn
+        {
+            watched_turn = g.turn_number;
+            eprintln!("{}", progress_watch_line(&g));
+        }
         let mut any = false;
         for (s, bot) in bots.iter_mut().enumerate() {
             // Cross-binary: poll only the seat this process pilots and
@@ -2380,6 +2390,75 @@ fn cap_diag_floor() -> Option<Option<usize>> {
         let v = std::env::var_os("CRAB_CAP_DIAG")?;
         Some(v.to_str().and_then(|s| s.parse::<usize>().ok()).filter(|n| *n > 1))
     })
+}
+
+/// `CRAB_PROGRESS_WATCH=<turn>` — one line per turn from `<turn>` on, naming
+/// every quantity CR 104.4's turn watch digests. `None` off.
+fn progress_watch_from() -> Option<u32> {
+    static FROM: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
+    *FROM.get_or_init(|| std::env::var_os("CRAB_PROGRESS_WATCH")?.to_str()?.parse::<u32>().ok())
+}
+
+/// The turn watch's inputs, spelled out, for a game that will not draw.
+///
+/// ⚠ **`cap_diagnosis` says the watch did not fire; this says WHY.** Both
+/// questions come up on the same board and only the first one had an
+/// instrument: `all` 1159 reads `repeats 0/12` at turn 18,202, which means the
+/// digest keeps moving and says nothing at all about *which* of the fourteen
+/// quantities behind it is the one moving. Answering that has cost a rebuild
+/// and a guess every time — the guess on record ("the bot taps a different
+/// number of lands each turn") was never measured.
+///
+/// Printed from the self-play driver rather than from the watch itself,
+/// because the watch runs on **every bot probe's clone too** (3,234 `end_turn`
+/// calls a six-game run against ~150 real turns) and a dump from there is
+/// mostly other people's futures. Here `g` is the one real game.
+///
+/// Diff two consecutive lines and the drifting quantity names itself. It is a
+/// *view* of [`GameState::fingerprint_as`]'s field list, not a second copy of
+/// its mix — the two are meant to agree about what is watched, not about how
+/// it is hashed.
+fn progress_watch_line(g: &GameState) -> String {
+    use std::fmt::Write;
+    let mut s = format!("progress: turn {}", g.turn_number);
+    for (seat, p) in g.players.iter().enumerate() {
+        let _ = write!(
+            s,
+            " | p{seat} life {} h{} l{} g{} poison{} pool{}/{} e{} x{} room{}",
+            p.life,
+            p.hand.len(),
+            p.library.len(),
+            p.graveyard.len(),
+            p.poison_counters,
+            p.mana_pool.total(),
+            p.mana_pool.colorless_amount(),
+            p.energy,
+            p.experience,
+            p.dungeon.as_ref().map_or(0, |(_, room)| *room as u32 + 1),
+        );
+    }
+    // Two small order-sensitive digests so a board of 900 permanents still
+    // fits on a line: `ids` moves when a permanent enters or leaves, `tapped`
+    // when the same board ends the turn tapped differently.
+    let hash = |it: &mut dyn Iterator<Item = u64>| {
+        it.fold(0u64, |a, v| {
+            let mut z = a.wrapping_add(v).wrapping_add(0x9E37_79B9_7F4A_7C15);
+            z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            z ^ (z >> 31)
+        })
+    };
+    let ids = hash(&mut g.battlefield.iter().map(|c| u64::from(c.id.0)));
+    let tapped = hash(&mut g.battlefield.iter().map(|c| u64::from(c.tapped)));
+    let _ = write!(
+        s,
+        " | exile {} bf {} untapped {} dmg {} ctr {} ids {ids:08x} tapped {tapped:08x}",
+        g.exile.len(),
+        g.battlefield.len(),
+        g.battlefield.iter().filter(|c| !c.tapped).count(),
+        g.battlefield.iter().map(|c| u64::from(c.damage)).sum::<u64>(),
+        g.battlefield.iter().map(|c| c.counters.values().sum::<u32>()).sum::<u32>(),
+    );
+    s
 }
 
 fn cap_diagnosis(g: &GameState, actions: usize) -> String {
