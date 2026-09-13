@@ -6854,6 +6854,55 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-302)` A card-type pre-test in front of the target enumerator's board walk — and widening it loses
+
+The last sized piece of the `cast_candidates` tree: the target half is 3.61 %
+of `sealed` and **26.6 requirement evaluations per
+`auto_targets_for_effect_all_slots_kicked` call**, one per board permanent per
+slot. The walk is a *max* (rank by side, then power), so no witness
+short-circuit applies — the only lever is fewer candidates reaching the
+walker. `required_printed_card_type` reads the filter's top-level `And` spine
+once per slot; a permanent whose printed types lack the type it names is
+rejected without the call and the `And` frames above it.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                     (-300)+walkers        (-302)       delta
+  fixed         632,848,410     632,418,759        -0.068 %
+  cube        1,685,808,479   1,684,319,755        -0.088 %
+  sealed      1,758,627,618   1,756,423,583        -0.125 %
+  sealed printed_requirement_impl calls, three rows:
+    394,466 / 374,450 / 81,992  ->  358,158 / 349,928 / 45,684   (-97,138)
+```
+
+Sound because **every conjunct of an `And` must hold**, so a `false` from one
+of them is `false` for the whole filter whatever the rest says — a partial
+pre-*test* is sound where a partial evaluation would not be. It answers under
+exactly the walker's conditions: no layer-4 card-type source in scope (the
+caller's `PrintedGates`, asked once per walk), not bestowed, and — for
+`Creature` — not one of CR 604.3's off-battlefield creatures (Grist), whose arm
+declines on the battlefield. Every rejection is `debug_assert!`ed against the
+walker at the call site, `(-296)`'s audit shape.
+
+⚠ **WIDENING IT LOSES, AND THAT IS THE ENTRY'S POINT.** The obvious next step
+is to carry the filter's other cheap conjuncts — `Nonland` / `Noncreature` and
+`ControlledByYou` / `ControlledByOpponent`, a printed-type test and a `usize`
+compare. Built twice, as a three-field struct and as a `Copy` struct of
+one-byte tags so the closure capture stayed trivial, and **both read the same
+thing**:
+
+```text
+  fixed  +0.369 %   cube  +0.039 / +0.038 %   sealed  +0.271 / +0.259 %
+```
+
+for **6,158 more candidates rejected** (358,158 -> 352,000). Two structurally
+different implementations landing within 0.012 points of each other is not
+layout noise — it is the cost of the extra tests **every KEPT candidate pays**.
+⚠ `(-296)` said "a predicate in a hot filter is priced by its fast path, not by
+its body"; this is the same rule one level in: **a pre-test is priced by what
+the candidates it does NOT reject pay for it.** One test that rejects 97 k wins;
+three tests that reject 103 k lose. Both wide arms reverted.
+
 ### `(-301)` REFUTED — the requirement walker's `And`/`Or` recursion is not the cost, and its *order* is worth 1.4 %
 
 `printed_requirement_impl` is 1.81 % of `sealed` over five symbol rows and
@@ -11066,6 +11115,14 @@ Two devices, both priced, neither taken:
   `effect::static_effect_is_self_cost_reduction`, checked against the walk's
   own `handled` in a `debug_assert_eq!` on every static — see `(-299)`.
 
+
+✅ **A PIECE OF THE TARGET HALF IS TAKEN — `(-302)`, sealed -0.125 %**: a
+printed card-type pre-test off the filter's top-level `And` spine, asked once
+per slot, takes 97,138 of the walker's calls. ⚠ **Do not widen it** —
+carrying `Nonland`/`Noncreature` and the two controller conjuncts as well
+reads `fixed` +0.369 / `sealed` +0.259..0.271 % in two different
+implementations, for 6,158 more rejections. A pre-test is priced by what the
+candidates it does NOT reject pay for it.
 
 * **Target enumeration, 3.61 %, and it is 26.6 requirement evaluations a
   call.** `auto_targets_for_effect_all_slots_kicked` walks every candidate

@@ -62,6 +62,78 @@ impl PrintedGates {
     }
 }
 
+/// The printed card type **every** battlefield object satisfying `req` must
+/// have, when one of `req`'s top-level conjuncts names one. `.and()` nests to
+/// the LEFT, so this walks that spine and looks only at bare conjuncts — a
+/// type under an `Or` or a `Not` constrains nothing. Every conjunct of an
+/// `And` must hold, so a `false` from one of them is `false` for the whole
+/// filter whatever the rest says, which is what makes a partial pre-test
+/// sound where a partial *evaluation* would not be.
+///
+/// One requirement walk per *filter*, in front of a walk that asks the filter
+/// of every permanent on the board: a target filter that names a card type
+/// rejects much of the board on that one test, and
+/// [`GameState::requirement_on_permanent`] pays a call and the `And` frames
+/// above it to say so. Pair it with [`printed_type_rejects`], which answers
+/// exactly what the walker's `card_type` closure answers.
+///
+/// ⚠ **Widening it loses — measured, twice.** Carrying `Nonland`/`Noncreature`
+/// and `ControlledByYou`/`ControlledByOpponent` as well, in two different
+/// shapes (a three-field struct and a `Copy` one-byte-tag struct), read
+/// `fixed` **+0.369 %** / `sealed` **+0.259..0.271 %** against this one's
+/// -0.068 / -0.126, for 6,158 more candidates rejected. PERF `(-302)`: the
+/// pre-test is priced by what every KEPT candidate pays, not by what a
+/// rejected one saves.
+pub(crate) fn required_printed_card_type(
+    req: &SelectionRequirement,
+) -> Option<crate::card::CardType> {
+    use SelectionRequirement as R;
+    use crate::card::CardType as T;
+    fn leaf(r: &SelectionRequirement) -> Option<T> {
+        match r {
+            // Not `HasCardType`: that arm reads the adventure/omen half.
+            R::Creature => Some(T::Creature),
+            R::Land => Some(T::Land),
+            R::Artifact => Some(T::Artifact),
+            R::Enchantment => Some(T::Enchantment),
+            R::Planeswalker => Some(T::Planeswalker),
+            _ => None,
+        }
+    }
+    let mut node = req;
+    loop {
+        match node {
+            R::And(a, b) => {
+                if let Some(t) = leaf(b) {
+                    return Some(t);
+                }
+                node = a;
+            }
+            other => return leaf(other),
+        }
+    }
+}
+
+/// `true` when the printed types alone say `c` cannot be a `t`, under exactly
+/// the conditions `printed_requirement_impl`'s `card_type` closure answers
+/// under: no layer-4 card-type source in scope (the caller's [`PrintedGates`]
+/// question, asked once per walk by
+/// [`GameState::printed_type_prefilter`]), not bestowed, and — for `Creature`
+/// — not one of CR 604.3's off-battlefield creatures (Grist), whose arm
+/// declines on the battlefield. `c` is a battlefield permanent.
+#[inline]
+pub(crate) fn printed_type_rejects(t: &crate::card::CardType, c: &CardInstance) -> bool {
+    if c.bestowed {
+        return false;
+    }
+    // CR 604.3 — Grist is a creature everywhere but the battlefield, and the
+    // walker's `Creature` arm declines there rather than read printed types.
+    if *t == crate::card::CardType::Creature && c.definition.creature_off_battlefield {
+        return false;
+    }
+    !c.definition.card_types.contains(t)
+}
+
 /// OTJ — a card is an outlaw if it is a creature that's an Assassin, Mercenary,
 /// Pirate, Rogue, or Warlock (Changeling satisfies any type).
 pub(crate) fn card_is_outlaw(card: &CardInstance) -> bool {
@@ -3189,6 +3261,22 @@ impl GameState {
             source,
             Some(card),
         )
+    }
+
+    /// [`required_printed_card_type`] when the printed answer is
+    /// authoritative for this board — i.e. no layer-4 card-type source is in
+    /// scope. `None` means "no pre-test"; a `Some(t)` is usable with
+    /// [`printed_type_rejects`] for every permanent of this walk.
+    #[inline]
+    pub(crate) fn printed_type_prefilter(
+        &self,
+        req: &SelectionRequirement,
+        gates: &PrintedGates,
+    ) -> Option<crate::card::CardType> {
+        if gates.card(self) {
+            return None;
+        }
+        required_printed_card_type(req)
     }
 
     /// [`evaluate_requirement_static_on`](Self::evaluate_requirement_static_on)

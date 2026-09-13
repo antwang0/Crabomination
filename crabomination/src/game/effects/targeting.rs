@@ -742,7 +742,28 @@ impl GameState {
             // The battlefield candidate walk below already holds each
             // permanent; hand it over instead of re-finding it by id.
             let gates = crate::game::effects::eval::PrintedGates::default();
+            // **26.6 requirement evaluations a call** is what this walk cost
+            // at the `(-300)` tip (PERF's candidates head), one per board
+            // permanent per slot — and a target filter that names a card type
+            // rejects much of the board on that one test. One requirement walk
+            // per *slot* answers it for every candidate instead; the walker
+            // still decides everything the pre-test keeps.
+            let type_gate = self.printed_type_prefilter(req, &gates);
             let is_legal_bf = |c: &CardInstance| -> bool {
+                if let Some(t) = &type_gate
+                    && crate::game::effects::eval::printed_type_rejects(t, c)
+                {
+                    // The audit for the pre-test, in the shape `(-296)`'s
+                    // narrowed source list uses: a candidate dropped here that
+                    // the walker would have kept is a target the enumerator
+                    // never offers.
+                    debug_assert!(
+                        !self.requirement_on_permanent(req, c, controller, source, &gates),
+                        "the printed card-type pre-test dropped a candidate the walker keeps: {}",
+                        c.definition.name,
+                    );
+                    return false;
+                }
                 self.requirement_on_permanent(req, c, controller, source, &gates)
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
             };
