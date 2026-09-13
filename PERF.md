@@ -2333,6 +2333,35 @@ reading eight of the 185 found the first three, and reading three of the
 fourteen in one file found the fourth. **Read the file with the most hits
 first: a filter's false positives cluster, because they share a helper.**
 
+## Build time — MERGING the eight integration-test binaries buys nothing either, measured 2026-09-13
+
+The suite convention says "the cost is compile + link, so optimize for fewer
+binaries", and the two levers it names are taken (`test = false` on bin targets
+that ran zero tests, 25.2 s -> 21.7 s). That sentence keeps being read as a
+reason to merge the eight test binaries `crabomination_tests` actually has.
+**It is not, and the reason is that they link in parallel.**
+
+```text
+cargo test -p crabomination_tests --no-run, warm, ABBA on a settled 4-core box.
+"touched" = `touch tests/<bin>/main.rs`, which recompiles that whole binary's test tree and relinks it.
+
+  no-op                     0.24 s
+  ONE binary touched        4.24 s   /  4.28 s
+  ALL EIGHT touched        12.03 s   /  9.69 s      mean 10.9
+```
+
+Seven extra binaries cost **6.6 s of wall clock, not 7 x 4.26** — the box
+runs four of them at once, so the count above the core count is nearly free.
+Merging eight into four halves the number of links and **doubles the compile
+of each survivor**, which on four cores is the same wall clock or worse; and
+it costs the thing the split is actually for, which is that touching one
+set's tests recompiles one set's tests. For scale, an engine change that
+forces all eight to relink is a ~48 s rebuild of which this is the tail.
+
+**So "fewer binaries" meant *delete the ones that run no tests*, and that is
+done.** A merge is a convention question, and this file has no number that
+supports it.
+
 ## Build time — the file-size lever is dead, measured 2026-08-23
 
 **"Oversized engine files dominate incremental rebuilds" is false on this
