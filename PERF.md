@@ -9800,16 +9800,26 @@ the same, its four undecided ones account for ~204 s — **~51 s each, about
 not a tail, it is a stall the length of a whole training interval, and the
 board cap is what ends it rather than what prevents it.
 
-**The next step is a census, not a device**: how often does a `selfplay_train`
-game reach a board like this? Four games in 3,200 here (0.125 %), and at ~51 s
-against ~3.3 ms that 0.125 % is **95 % of the cell's wall clock**. The actor's
-pools are not the sweep's, so the rate has to be measured there — and
-`stats.jsonl` carries **`stalls_board`** beside `stalls_capped` now, split out
-of it for exactly this reason. The actor kept ONE capped bucket on the grounds
-that "for training throughput a runaway board and an action cap cost the same
-thing"; the two numbers above are the measurement that says they do not. THAT
-column is what decides whether the per-permanent floor is worth attacking: a
-rate of 0.125 % is invisible in `games_per_s` and owns 95 % of it. `cube` 1036 (Ghosts of the Innocent, 5.4x release-fast / 83x sweep) is the
+**The census was the next step and it is already answered — for the actor, by
+the pool.** ⚠ **`scute_swarm` IS IN `cube.rs`'s GREEN POOL AND NOT IN THE SOS
+SEALED POOL**, and `selfplay_train` builds both decks from `sealed_pool`. So
+this board is a `--decks cube` phenomenon: it costs the gate runs and the
+sweep, and the training actor has never seen it. The older note holds from the
+other side — "the bound has fired on no board but Scute Swarm's" — across ~3 M
+swept games including every `sealed` cell.
+
+So the number that matters is smaller than it looked and the claim has to say
+which pool it is about (CLAUDE.md's own rule). `stats.jsonl` carries
+**`stalls_board`** beside `stalls_capped` anyway, split out of it because the
+actor kept ONE bucket on the grounds that "for training throughput a runaway
+board and an action cap cost the same thing" and the two numbers above are the
+measurement that says they do not. It costs nothing and it is the thing that
+would catch the first sealed board to do it.
+
+**What is left to decide the per-permanent floor** is therefore a `--decks
+cube` question: 0.125 % of that pool's games are 95 % of its wall clock, and a
+gate run of 10–30 k cube games pays it. Whether that is worth attacking depends
+on how much of the ML loop runs on cube rather than sealed. `cube` 1036 (Ghosts of the Innocent, 5.4x release-fast / 83x sweep) is the
 other slow cell on record, with a different cause and the same shape of answer.
 
 ⚠ **THE QUEUE IS AT FLOOR AND HAS BEEN FOR SEVEN RUNS.** The last actor

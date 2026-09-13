@@ -147,8 +147,9 @@ sixty-seventh pass, so don't re-take that.
    build is NOT) the cell is **214.4 s against 10.5 s = 20.4x**, and the four undecided games account for ~204 s of it: **~51 s each against ~3.3 ms
    for a normal game, about 15,000 games apiece.** 0.125 % of the cell's games, 95 % of its wall clock. The sweep skips the re-run for such a board
    now (`BIG_BOARD`), and `stats.jsonl` carries **`stalls_board`** split out of `stalls_capped` — the actor kept one bucket on the grounds that "a
-   runaway board and an action cap cost the same thing", and that is the measurement that says they do not. ⚠ **Census the rate in the actor before
-   anyone attacks the per-permanent floor.**
+   runaway board and an action cap cost the same thing", and that is the measurement that says they do not. ⚠⚠ **AND THE CENSUS IS ALREADY ANSWERED BY
+   THE POOL: `scute_swarm` is in `cube.rs`'s green pool and NOT in the SOS sealed pool `selfplay_train` builds from.** So it taxes the cube gate runs
+   and the sweep, not the training actor — which is CLAUDE.md's "a number is about a pool" rule biting the finding that found it.
 4. **Next, in order.** (a) **Sweep from 1212, and read the SEED COLUMN of PERF's table before you take one.**
    `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
