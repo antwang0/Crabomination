@@ -3547,7 +3547,12 @@ modal   **`None` FROM `pick_trigger_mode` DOES NOT MEAN "NOT MODAL" DOWNSTREAM �
         remade every turn "a permanent entering and leaving" (what `ids` is documented to mean) or the same board?
         Is mutual unbounded life gain progress? The `tapped` change that closed `all` 1159 was the same kind of
         call and it was landed with a 20,000-game replayed negative control; this one deserves the same and did
-        not fit the run. **Do not tune the three constants** — `no_progress_step` already pins what they buy, and
+        not fit the run. ⚠ **TEST THE CHEAPER HYPOTHESIS FIRST: this may not be a WATCH bug at all.** The
+        dump shows **p0 sitting on `poison9` — one counter from losing (CR 704.5c) — for all 5,769 turns**,
+        and 2 Thopters against 946 life is not a clock either. So the board may be one the bots simply fail
+        to win rather than one that cannot be won, which is a `dflt` quality question and not a digest
+        question. Read whether ANY reachable poison or evasion source is on that board before touching a
+        field the whole pool's draw behaviour rides on. **Do not tune the three constants** — `no_progress_step` already pins what they buy, and
         the 1159 lesson stands: ask which FIELD is aperiodic and whether that field is progress. Both are named
         above. 1281 is the same family with the life engine already at the `[SATURATED LIFE]` magnitude.
 
