@@ -166,6 +166,59 @@ fn selector_player_ref(s: &Selector) -> Option<&PlayerRef> {
     }
 }
 
+/// The `Selector` a [`PlayerRef`] reads a player *out of*, if any — the
+/// inverse of [`selector_player_ref`], and the same "one list, three readers"
+/// device for the other direction.
+///
+/// "The owner of X", "each player other than X's controller", "the controller
+/// of what last damaged X": the target is X's, so `requires_target`'s census
+/// and both filter walks have to peel the same set. They did not —
+/// `EachPlayerExceptControllerOf`, `CombatDamagerController` and
+/// `LastDamagerControllerOf` were in none of the three, so a `Selector::Target`
+/// under any of them read as *untargeted* and the spell would go on the stack
+/// with no target chosen. Only Fractured Identity ships one today and its body
+/// targets as well, so the class was latent; `audit_target_fields` names it.
+///
+/// Exhaustive on purpose — a new `PlayerRef` carrying a `Selector` stops
+/// compiling here rather than joining the class.
+fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
+    match p {
+        PlayerRef::OwnerOf(s)
+        | PlayerRef::ControllerOf(s)
+        | PlayerRef::EachPlayerExceptControllerOf(s)
+        | PlayerRef::CombatDamagerController(s)
+        | PlayerRef::LastDamagerControllerOf(s) => Some(s),
+        // A filter, not a selector — it cannot hold a target.
+        PlayerRef::MostControlledMatching(_)
+        // A nested ref, peeled by the callers that recurse.
+        | PlayerRef::OpponentOf(_)
+        | PlayerRef::Target(_)
+        | PlayerRef::CounteredSpellController
+        | PlayerRef::AcceptingPlayer
+        | PlayerRef::CurrentVoter
+        | PlayerRef::You
+        | PlayerRef::EachOpponent
+        | PlayerRef::EachPlayer
+        | PlayerRef::EachTeammate
+        | PlayerRef::EachPlayerWithoutMaxSpeed
+        | PlayerRef::ActivePlayer
+        | PlayerRef::PlayerWithMostLife
+        | PlayerRef::OwnerOfMoved
+        | PlayerRef::EnchantedPlayer
+        | PlayerRef::EachOpponentExceptTriggerer
+        | PlayerRef::Triggerer
+        | PlayerRef::TriggerEventPlayer
+        | PlayerRef::Seat(_)
+        | PlayerRef::DefendingPlayer
+        | PlayerRef::LowestLife
+        | PlayerRef::HighestLife
+        | PlayerRef::MostCardsInHand
+        | PlayerRef::MostCreatures
+        | PlayerRef::ChosenPlayerOfSource
+        | PlayerRef::OpponentsWhoVotedDifferently => None,
+    }
+}
+
 /// `Some(&Player)` when a bare `PlayerRef::Target(n)` fills `slot` — effects
 /// that target a player directly through a `PlayerRef` field
 /// (`ExilePlayerGraveyard`, `ExileHand`, `DiscardUnlessKind`).
@@ -594,8 +647,10 @@ impl Effect {
         fn player_has_target(p: &PlayerRef) -> bool {
             match p {
                 PlayerRef::Target(_) => true,
-                PlayerRef::OwnerOf(s) | PlayerRef::ControllerOf(s) => sel_has_target(s),
-                _ => false,
+                PlayerRef::OpponentOf(inner) => player_has_target(inner),
+                // Every ref that reads a player *out of* a selector, from the
+                // one list — see [`player_ref_selector`].
+                _ => player_ref_selector(p).is_some_and(sel_has_target),
             }
         }
         fn value_has_target(v: &Value) -> bool {
@@ -1018,7 +1073,11 @@ impl Effect {
             | Effect::RevealTopExileOnePerCardType { .. }
             | Effect::GrantForageGraveyardCreatureCastsThisTurn
             | Effect::GainControlWhileTriggerAuraAttached => false,
-            Effect::EachPlayerDoes { body, .. } => body.requires_target(),
+            // The fan-out ref can itself name a target ("each player other
+            // than *its controller*" — Fractured Identity), so both halves.
+            Effect::EachPlayerDoes { who, body } => {
+                player_has_target(who) || body.requires_target()
+            }
             // Resolution-time ChooseCards by the affected player; untargeted.
             // A `who: PlayerRef::Target(n)` makes the affected player a
             // real cast-time target (Quandrix Command mode 3).
@@ -2061,9 +2120,12 @@ impl Effect {
                 //
                 // "The controller/owner **of** X" is X's filter, not a player
                 // one: Parallectric Feedback damages "target *spell*'s
-                // controller", so slot 0 is the spell.
-                Selector::Player(PlayerRef::ControllerOf(inner))
-                | Selector::Player(PlayerRef::OwnerOf(inner)) => sel_filter(inner),
+                // controller", so slot 0 is the spell. Off
+                // `player_ref_selector`, so this walk and `requires_target`'s
+                // census cannot disagree about which refs hide one.
+                Selector::Player(who) if player_ref_selector(who).is_some() => {
+                    sel_filter(player_ref_selector(who).expect("checked"))
+                }
                 Selector::Player(who) => implicit_player_if_bare_player_ref(who),
                 Selector::EachMatching { filter, .. } => Some(filter),
                 Selector::EachPermanent(f) => Some(f),
@@ -3862,9 +3924,11 @@ impl Effect {
                 } if *s2 == slot => Some(&PLAYER),
                 // "the controller/owner **of** X" declares whatever X does —
                 // Parallectric Feedback's slot 0 is the *spell*, reached
-                // through `Player(ControllerOf(TargetFiltered))`.
-                Selector::Player(PlayerRef::ControllerOf(i))
-                | Selector::Player(PlayerRef::OwnerOf(i)) => sel_find(i, slot),
+                // through `Player(ControllerOf(TargetFiltered))`. Same one
+                // list as the census; see [`player_ref_selector`].
+                Selector::Player(who) if player_ref_selector(who).is_some() => {
+                    sel_find(player_ref_selector(who).expect("checked"), slot)
+                }
                 Selector::AttachedTo(i)
                 | Selector::AttachedToMe(i)
                 | Selector::RadianceGroup { subject: i }

@@ -1424,3 +1424,48 @@ fn a_player_only_slot_zero_enumerates_a_player() {
     );
 }
 
+
+/// CR 601.2c — a `PlayerRef` that reads a player **out of** a selector carries
+/// that selector's target: "each player other than *target creature*'s
+/// controller" aims at the creature. Three of the five such refs
+/// (`EachPlayerExceptControllerOf`, `CombatDamagerController`,
+/// `LastDamagerControllerOf`) were in none of the three walkers, so a target
+/// under any of them read as absent and the spell went on the stack unaimed.
+/// `player_ref_selector` is the one list all three read now; this pins every
+/// variant in it, including the two that were always there.
+#[test]
+fn a_player_ref_that_reads_a_selector_carries_its_target() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, PlayerRef, Selector};
+
+    let aimed = || Box::new(Selector::TargetFiltered { slot: 0, filter: R::Creature });
+    let refs: Vec<(&str, PlayerRef)> = vec![
+        ("OwnerOf", PlayerRef::OwnerOf(aimed())),
+        ("ControllerOf", PlayerRef::ControllerOf(aimed())),
+        ("EachPlayerExceptControllerOf", PlayerRef::EachPlayerExceptControllerOf(aimed())),
+        ("CombatDamagerController", PlayerRef::CombatDamagerController(aimed())),
+        ("LastDamagerControllerOf", PlayerRef::LastDamagerControllerOf(aimed())),
+    ];
+    for (name, who) in refs {
+        // The census, through a bare `PlayerRef` field whose body targets
+        // nothing — so the ref is the only thing that can answer.
+        let fanned = Effect::EachPlayerDoes { who: who.clone(), body: Box::new(Effect::Noop) };
+        assert!(
+            fanned.requires_target(),
+            "{name}: requires_target does not see the target under the player ref",
+        );
+        // Both filter walkers, through a selector-shaped field.
+        let exiled = Effect::Exile { what: Selector::Player(who) };
+        assert_eq!(
+            exiled.target_filter_for_slot(0),
+            Some(&R::Creature),
+            "{name}: the slot walker leaves the target with no filter, so CR 608.2b \
+             re-checks it against nothing",
+        );
+        assert_eq!(
+            exiled.primary_target_filter(),
+            Some(&R::Creature),
+            "{name}: the aim walker leaves the target unfiltered",
+        );
+    }
+}

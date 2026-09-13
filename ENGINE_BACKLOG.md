@@ -2803,6 +2803,20 @@ in the same run: a body that needs a target and gives slot 0 no filter is
 offered `SelectionRequirement::Any` — every permanent *and* a player. Any fix
 to one walker is a fix to all three, through `IMPLICIT_PLAYER_TARGET`.
 
+**Rule 5c: the `PlayerRef` direction has the same one-list problem, and it is
+closed the same way.** `selector_player_ref` is "which selectors read a
+player"; the inverse — *which `PlayerRef`s read a player out of a selector* —
+was written out by hand three times (`requires_target`'s census and both filter
+walkers) and all three listed only `OwnerOf` and `ControllerOf`.
+`EachPlayerExceptControllerOf`, `CombatDamagerController` and
+`LastDamagerControllerOf` were in none of them, so a `Selector::Target` under
+any of the three read as **untargeted** — a spell on the stack with no target
+chosen. `player_ref_selector` is the one list now, exhaustive (no wildcard), and
+the three walkers read it. Latent when found: only Fractured Identity ships an
+aimed `who`, and its body targets as well, which is why `audit_target_fields`
+could see the class and the suite could not. Closed at the hundred-and-
+seventeenth pass; the audit reads **0 aimed**.
+
 **Rule 5b: an arm for a chooser above a shared `body` arm shadows it.**
 `MayDoBy { who }` placed above `MayDo { body } | MayDoBy { body }` silently
 takes the body's filter away. Clippy's `unreachable_pattern` catches it; merge
