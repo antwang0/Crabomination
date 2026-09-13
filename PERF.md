@@ -2987,6 +2987,65 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-13 (the sink-generator session, sixth of the day) — six passes over one batch, and the one word that cost `all` 1274 its 5,769 turns
+
+```text
+perf    **`(-294)`: the queue's #1 row was preamble-bound, and the preamble was `events` walked SIX times.**
+        `dispatch_triggers_for_events` opens a pass for the `CardLeftGraveyard` count, the batch mask, the
+        stamping loop, the exile presence check, the tail LifeGained/graveyard walk and — inside
+        `fire_delayed_event_watchers` — three more presence scans. **Four of them are questions the mask built
+        on pass two already answers**, by `(-195)`'s construction (`event_kind_matches` opens with
+        `bits & spec.kind.bit() == 0`); two of the four are EXACT, since every kind they name is reached by one
+        `GameEvent` variant and no other. **fixed -0.339 % / cube -0.275 % / sealed -0.404 %**, and the two rows
+        that moved account for the whole program delta on every pool (dispatcher self -5.50 / -5.57 / -5.01 %
+        of itself, `fire_delayed_event_watchers` self -40.7 % on cube and -47.2 % on sealed). Outcomes
+        byte-identical on all six dumps. ⚠ **The seventh walk is a REFUTATION with the reason attached**: a mask
+        over the `died_card_snapshots` LKI walk left `statics_granted_dying_triggers` at **8,852 calls, the same
+        number to the call** — the snapshots are filled and cleared inside ONE dispatch, so a dispatch with a
+        snapshot to walk is by construction the dispatch whose batch carries the death. **A presence gate is
+        worth nothing when the state it guards is produced by the same batch it is tested against.**
+
+fix     **`(-295)` / Baseline `1274`: `ab.sac_cost` means "sacrifice THIS permanent", and five mana-sink
+        generators read it as "costs a permanent".** `pick_team_pump`, `pick_card_draw_ability`,
+        `pick_impulse_draw_ability`, `pick_self_pump_counter` and `pick_token_maker` were all blind to
+        `sac_other_filter` — and **four of the five run AFTER `pick_sacrifice_value`**, the one generator that
+        clones, resolves and prices both sides of the exchange, so they took unpriced exactly what it had just
+        refused. On `all` 1274 that is **Blightsteel Colossus** (11/11 trample infect,
+        `shuffles_into_library_instead`) fed to a **Thopter Foundry** for 1 life and a 1/1, every turn, against
+        an opponent on 0 poison, for 5,769 turns. `6,798 decided / 2 cap` -> **`6,800 / 0`**. Ladder gate
+        (`.ladder/run_r72_sacsinks.sh`): sealed 43/97/151/199 and cube 43/97, **72,000 paired games, every pair
+        an exact mirror at 50.00 % ±0.00** — zero incidence on both gating pools — and on `all`, the only pool
+        that has any, **4 discordant pairs in 13,598, two each way, 50.0 %**. Adopted (control `r72-off`).
+
+infra   **The dump named three zones and the loop was living in the other two.** `cap_diagnosis` tallied the
+        stack, the battlefield and the exile; 1274's card is in the HAND and the LIBRARY at every sample point,
+        which is why two sessions read `hand 2 lib 1` returning to itself and could not name it. Two lines per
+        seat, same `tally` cap. It paid for itself on the first run (`p1 lib: Blightsteel Colossus`) and again
+        on the next cell (`p0 lib: Beacon of Immortality`).
+
+fix     **`all` 1281's aperiodic field is `ctr`, and this is the first reading that names it.** Same instrument,
+        `CRAB_PROGRESS_WATCH=200`: `ids` constant, `bf` 64 constant, `exile` 53 constant, `dmg` 0, both life
+        totals above the `(-291)` clamp's band so both flatten to it, `tapped` alternating between two values
+        (and not read by the turn watch since `(-292)`) — and **the battlefield's counter total rising by one
+        every two turns: 55 55 56 56 57 57 58 58.** So 1281 is NOT 1274's family: it is a board with **Sphere of
+        Safety x2** (attacking is priced out), **Rest in Peace x2** (nothing reaches a graveyard, `g0` both
+        seats) and a **Beacon of Immortality** as each seat's whole one-card library. Unlike `tapped`, a counter
+        is not taken back by the untap step, and unlike `ids` it is not an identity artifact — **a counter is
+        ordinarily real progress**, so this one is the adjudication case ("no seat can win or lose") rather
+        than a field to drop. The field is named now; the call is not taken.
+
+gates   suite **19,546 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--workspace --all-targets`),
+        golden_trace **12 / 12 unmoved**, `--bench` **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls** BYTE-IDENTICAL to the committed invariant with `determinism ok` and `thread_determinism ok
+        (3 vs 1 threads identical)`, `cargo check --profile release-fast -p crabomination --bin bot_ladder`
+        clean. ⚠ **The bot change moves neither the traces nor the bench and the reason is structural, not
+        luck**: `--bench` is a `gang` mirror and `block_gang_search()` descends from `attack_search_sim()`,
+        not from `default_const()`, so no frozen control profile inherits an adopted flag — and the golden
+        traces' `red()` vs `white_blue()` carries no sacrifice outlet. ⚠⚠ **THIS BOX IS 4 CORES**: `--bench`
+        reads 439.36 games/s (`host_calib_ms 46`, `peak_rss_mib 25.1`) and compares with NO absolute in this
+        file, every one of which was taken on 24. The counters are the invariant.
+```
+
 ### 2026-09-13 (the transform-anchor session, fifth of the day) — the rule the fan-out census exposed, the walk that did not get the fix, and the perf queue re-seeded
 
 ```text
@@ -3585,8 +3644,13 @@ modal   **`None` FROM `pick_trigger_mode` DOES NOT MEAN "NOT MODAL" DOWNSTREAM �
         ability has no priced owner (`pick_removal_sacrifice` needs `sac_cost`, `pick_sacrifice_value` skips
         Destroy), so widening it would delete the play rather than price it. Teaching
         `pick_removal_sacrifice`'s favourable-trade test to read the sacrificed *other* permanent is the
-        follow-up. **1281 is NOT closed by this** (still `cap 2`) — it is the Beacon board, named in the dump
-        now rather than inferred from a life total, and its remaining mover is unnamed.
+        follow-up. **1281 is NOT closed by this** (still `cap 2`) and it is NOT the same family: its aperiodic
+        field is **`ctr`**, the battlefield's counter total, rising one every two turns (55 55 56 56 57 57 …)
+        while `ids`, `bf`, `exile` and `dmg` are constant and both life totals sit above `(-291)`'s clamp band.
+        Sphere of Safety x2 prices out attacking, Rest in Peace x2 keeps both graveyards at 0, and each seat's
+        whole library is one Beacon of Immortality. A counter is not taken back by the untap step and is not an
+        identity artifact — **it is ordinarily real progress** — so 1281 is the adjudication case, not a field
+        to drop. Named here for the first time; the call is not taken.
 
 mode    **`GameAction::CastSpell { mode }` IS RANGE-CHECKED NOWHERE, AND THE CHECK THAT WAS MISSING SAT INSIDE A
         RESOLUTION.** Only the ACTIVATED path clamps (`clamp_activated_mode`); the cast path hands the index to the
