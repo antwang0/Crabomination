@@ -10327,8 +10327,22 @@ per-event `for e in events` stamping loop (timestamps, `entered_turn`,
 soulbond, the planeswalker/land/Arboria bookkeeping — 316 k iterations on
 sealed), the synthesis collects, the graveyard-batch count walk, and the
 `Vec` builds and drops the callee table shows (`Vec::drop` 105,186 calls,
-three `SpecFromIterNested` rows ~8 M between them). Read those by line before
-touching the walk.
+three `SpecFromIterNested` rows ~8 M between them).
+
+⚠ **AND THE PREAMBLE HAS ALREADY BEEN SWEPT, WHICH IS THE OTHER HALF OF THE
+ANSWER.** Reading it at `65b5a492`: every piece of it carries a PERF citation
+already — the batch mask `(-195)`, the fold `(-196)`, the fixed `[u128; 8]`
+frame array over a `SmallVec` (`collect` cost 153 Ir a dispatch, more than the
+leg saved), `dispatch_board_scan`'s one pass for four board facts, the three
+presence gates in front of the per-card grant lookups (36 / 4 / 1 Ir of pure
+overhead each, 945,812 times), `HashSet::default()` and `Vec::new()` that do
+not allocate. So `(-92)`'s standing verdict applies here too: **the row is
+flat, there is no hot line in it, and 1,089 Ir spread over a dozen already-
+priced pieces is what a swept preamble looks like.** A win here is a *structural*
+one — fewer dispatches, or less per-event work — not a faster statement.
+`perform_action_inner` drains every action's event list through this, 162,026
+times on sealed; whether those batches can be merged is the question nobody has
+asked.
 
 **The one walk-side number still worth something is the dead-pair share**:
 72.6 % of the pairs that enter the loop on sealed can match no event in the
