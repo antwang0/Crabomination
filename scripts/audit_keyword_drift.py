@@ -43,6 +43,14 @@ is not a gate**; it is 80 rows now, and the residue is the documented blind
 spot (Ghor-Clan Rampager's bloodrush is a from-hand activated ability with
 `discard_self_cost` and no name anywhere) plus real gaps (Terminus prints
 Miracle {W} and has no miracle).
+
+**It is FOUR rows now**, and each of the four needs a primitive the engine does
+not have rather than a field it does: a bestow cost that is `{R}` plus Collect
+evidence 6 (Detective's Phoenix), escalate's per-extra-mode price (Collective
+Defiance), a flashback costed in X loyalty counters removed from your walkers
+(Light Up the Night), and a kicker that changes a spell's MODAL COUNT from one
+to any number (Inscription of Ruin). Everything a rule or a card fix could
+reach has been reached; the next row here is engine work.
 """
 import argparse
 import json
@@ -278,6 +286,12 @@ DISCARD_FROM_HAND = {"channel", "bloodrush"}
 # Silverflame Ritual, really had no adamant half.
 SPELLED_AS = {
     "adamant": ("ManaSpentOfColorAtLeast",),
+    # CR 702.81 — Devour is an "as this enters" replacement, and the catalog
+    # writes it as the effect it amounts to: an ETB `SacrificeAnyNumber` whose
+    # `per_each` adds the counter (Caprichrome). `Keyword::Devour(n)` is in the
+    # enum and no card uses it. The alias is safe because it is only consulted
+    # for a card whose ORACLE says "devour".
+    "devour": ("SacrificeAnyNumber",),
 }
 
 
