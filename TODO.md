@@ -65,9 +65,13 @@ sixty-seventh pass, so don't re-take that.
    ✅ `scripts/audit_printed_body_injections.py` is **45 / 45** and counts rows from BOTH catalog audits — run it after touching any reader. It patches a
    per-worker COPY under `CRAB_CATALOG_DIR` since `0acbd289`, so **the "never run an audit or a build while it runs" warning is RETIRED**: it never
    writes the real tree, it runs its cases in parallel (`-j`), and a 45-case run is minutes rather than the hour the in-place version cost.
-   **Fresh seeds: 853..1030 on five pools, then 1031..1211 on cube / all / sealed (543 cells, 2,678,800 games) PLUS a concurrent session's 245 cells /
+   **Fresh seeds: 853..1030 on five pools, then 1031..1215 on cube / all / sealed (555 cells, 2,723,600 games) PLUS a concurrent session's 245 cells /
    965,600 games on five pools at 1060..1171 — 0 stuck everywhere. ⚠ `1152..1161` was a HOLE in PERF's table for twenty blocks and is swept now; the
-   frontier is **1222** (1212..1221 is 30 cells / 148,000 games, 0 failures), so read the SEED COLUMN and not the total. TAKE IT FROM PERF'S TABLE: two sessions took 1112
+   frontier is **1222** (1212..1221 is 30 cells / 148,000 games, 0 failures, swept by the concurrent session), so read the SEED COLUMN and not the total.
+   ⚠ **`cube` 1215 is SCUTE SWARM and is a known board**: 951 copies on 987 permanents, `cap 2 / board 2`, and it costs **214 s on
+   `release-fast` against 10.5 s** for the seed next door — 0.125 % of the games and 95 % of the cell. The sweep skips its re-run now
+   (`BIG_BOARD`), `stats.jsonl` has `stalls_board` to census the rate in the actor, and PERF's candidates carries the entry.
+   TAKE IT FROM PERF'S TABLE: two sessions took 1112
    on the same day and swept 1112..1130 twice.** ⚠ **The Beacon board has an ENDING now** (`(-291)`): the
    turn-granular no-progress watch draws it, `cube` 1069 reads `cap 0 / draw 2`, and the 100 cells / 432,000 games of the five-pool rows have **0 caps
    of any kind**. The `[SATURATED LIFE …]` label is a diagnostic, not a carve-out — **any cap is the signal now**, and the three blocks swept after

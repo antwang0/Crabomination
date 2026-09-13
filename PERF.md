@@ -3538,12 +3538,15 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1192..1201   a875df26      30    148,000       0       0     0     16
   1202..1211   a875df26      30    148,000       0      14*    0     42
   1152..1161   5a3b7a04      30    148,000       2       2!    0     10   THE HOLE, swept last
-  1212..1221   9f2e2759      30    148,000       0       2*    0     16   cube 1215: Scute Swarm, 14 BOARD caps
+  1212..1221   9f2e2759      30    148,000       0       2#    0     16   cube 1215: Scute Swarm, 14 BOARD caps
   1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
 bound — seed 1169's Krenko, counted in its own `board` column now and not a
-defect. See "A THIRD SHAPE" below. `!` **the first cap ever to survive the
+defect. See "A THIRD SHAPE" below. `#` the `MAX_BATTLEFIELD` RUNAWAY — `cube` 1215, 951 Scute Swarms on a
+987-permanent board, `cap 2 / board 2`; the re-run is skipped for it now (a
+seat past `BIG_BOARD`), and the cell is in the candidates section for what it
+costs. `!` **the first cap ever to survive the
 50,000-action re-run** — `all` 1159, the Beacon board with a Basilica Screecher
 on it; see "A FOURTH SHAPE" below. It is why the block reads `failures 2`, and
 why the sweep's verdict is `slow` OR `known_board` now rather than `slow` alone.
@@ -3566,7 +3569,7 @@ side.
 block is barely dearer than a three-pool one — which is the only reason the
 duplication cost nothing but time.
 
-**543 cells / 2,678,800 games on the three-pool base, 0 stuck on every one**
+**573 cells / 2,826,800 games on the three-pool base, 0 stuck on every one**
 — and the five-pool rows are 245 cells / 965,600 games on top of that, counted
 apart because they are a different configuration and would otherwise be read as
 more base coverage than there is. Every cap is the
