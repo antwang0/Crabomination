@@ -3064,8 +3064,10 @@ tool    **the walk accounts for every factory now, and the closing line proves i
         21794 factories walked, 4124 stopped early; cost 0, types 0, subtypes 0, keywords 0, colors 0, loyalty 0,
         pt 0, adv 0, back 0`. A non-zero is a hole in the FILE, not a card — which `layout == "normal"` was for as
         long as the subtype column existed. Deleting one `acct[…]` write reads `keywords 29`, so it can fail.
-gates   suite **19,504 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12**,
-        `--bench` byte-identical + determinism ok, injections **44 / 44**, `audit_panics` 0 bare,
+gates   at the MERGED tip (both sessions' work rebased together): suite **19,506 / 0 / 5** (`CRAB_ANSWER_LOG=strict`),
+        clippy **0** (`--all-targets`), golden_trace **12 / 12**, `--bench` byte-identical + determinism ok,
+        injections **52 / 52**, `audit_printed_body` 0 on all ten columns with the accounting line all zeroes,
+        `audit_panics` 0 bare,
         `audit_decision_plumbing` 168 / 108 / 60 DEAD 0 repeat 0, `audit_seat_from_selector` 0 open,
         `audit_printed_body` **0 on all TEN columns**, `cargo check --profile release-fast` clean.
 ```

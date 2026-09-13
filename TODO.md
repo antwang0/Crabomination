@@ -34,7 +34,7 @@ sixty-seventh pass, so don't re-take that.
    claimed entry and it is a COST, not a win; `(-292)` next. **The queue is at floor with no device above 0.2 %** — every perf leg of the last six runs
    came off a bug fix, and the one named unread lead (`computed_permanent_hinted`'s "memo-hit path") was read this run and is a MISS path (PERF
    candidates).
-2. **Gates at the tip:** suite **19,505 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
+2. **Gates at the tip:** suite **19,506 / 0 / 5** (export `CRAB_ANSWER_LOG=strict` — that makes both resume-channel nets and the ten-channel one-shot
    census assertions on every test), clippy **0** (`--all-targets`), golden_trace **12 / 12 unmoved**, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** +
    determinism + thread_determinism (the counters have not moved at any tip of either session), **`robustness_grid.sh` ladder 30 cells / 33,120 games +
    `--wide` ladder 52 cells / 301,600 games + pilots 45 policies + actor 2 cells / 6,000 games, all 0 failures** (⚠ the actor leg's binary is
@@ -62,7 +62,7 @@ sixty-seventh pass, so don't re-take that.
    change at all because a union is a superset. ~264 cards came back into the column combat reads every turn, and one of them (Lonesome Unicorn) had
    shipped without the vigilance it prints. **Per-face `colors` DOES exist for 1,501 of the 2,585 multi-face entries**, so the same question is open
    for `nocolors`; what actually drives that number is `nonliteral` (the cost chain), which the colour column needs for its pips.
-   ✅ `scripts/audit_printed_body_injections.py` is **45 / 45** and counts rows from BOTH catalog audits — run it after touching any reader. It patches a
+   ✅ `scripts/audit_printed_body_injections.py` is **52 / 52** and counts rows from BOTH catalog audits — run it after touching any reader. It patches a
    per-worker COPY under `CRAB_CATALOG_DIR` since `0acbd289`, so **the "never run an audit or a build while it runs" warning is RETIRED**: it never
    writes the real tree, it runs its cases in parallel (`-j`), and a 45-case run is minutes rather than the hour the in-place version cost.
    **Fresh seeds: 853..1030 on five pools, then 1031..1221 on cube / all / sealed (573 cells, 2,826,800 games) PLUS a concurrent session's 245 cells /
@@ -140,7 +140,15 @@ sixty-seventh pass, so don't re-take that.
    heuristic the bot has; ⚠ no encoding moves (the deck encoder reads the COST's pips). The COST reader had to open first — three gaps — and three
    more closed on subtypes. ⚠ **The first run of the local-binding reader reported three defects and all three were the READER**: a row is a lead
    until the reader that produced it has been read.
-   (e) **The walk accounts for every factory now** and the closing line proves it, so the `layout == "normal"` shape cannot recur silently.
+   (e) **The walk accounts for every factory now** and the closing line proves it, so the `layout == "normal"` shape cannot recur silently:
+   `# accounting — 21794 walked, 4124 stopped early; cost 0, types 0, subtypes 0, keywords 0, colors 0, loyalty 0, pt 0, adv 0, back 0`.
+   (f) **The first perf candidate in seven runs to come off a measurement rather than a bug fix.** The sweep found `cube` 1215 costing 1,588 s where
+   its neighbours cost 40 — **Scute Swarm**, 951 copies on a 987-permanent board. On `release-fast` (the profile it is consumed under, which the sweep
+   build is NOT) the cell is **214.4 s against 10.5 s = 20.4x**, and the four undecided games account for ~204 s of it: **~51 s each against ~3.3 ms
+   for a normal game, about 15,000 games apiece.** 0.125 % of the cell's games, 95 % of its wall clock. The sweep skips the re-run for such a board
+   now (`BIG_BOARD`), and `stats.jsonl` carries **`stalls_board`** split out of `stalls_capped` — the actor kept one bucket on the grounds that "a
+   runaway board and an action cap cost the same thing", and that is the measurement that says they do not. ⚠ **Census the rate in the actor before
+   anyone attacks the per-permanent floor.**
 4. **Next, in order.** (a) **Sweep from 1212, and read the SEED COLUMN of PERF's table before you take one.**
    `scripts/fresh_seed_sweep.sh` (it exports nothing — pass `CRAB_ANSWER_LOG=strict`
    yourself); read its `cap / stuck / draw` line, not the bare undecided total. Do NOT hand-roll the loop. ⚠ `cube` **1036 is SLOW and NOT a defect**
