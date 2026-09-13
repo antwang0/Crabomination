@@ -2958,6 +2958,84 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-13 (the tap-is-not-progress session) — the sweep's only surviving cap, closed by printing the digest instead of reasoning about its constants
+
+```text
+fix     **`all` 1159 is `cap 0` (`(-292)`, `08841a3e`), and three runs' worth of conclusions about it were wrong.**
+        That cell was the first and only cap in the fresh-seed sweep's history to survive its own 50,000-action
+        re-run: the Beacon board plus a Basilica Screecher and an Underworld Connections, both seats past the
+        saturation band, neither killable, neither deckable. `(-291)`'s life clamp took CR 104.4's turn watch there
+        from `repeats 2/12` to `repeats 10/12` and stopped, and PERF and TODO both concluded **"`NO_PROGRESS_MAX_PERIOD`
+        (8) is the next thing to price, NOT the digest's field list."** The concurrent session priced the constant
+        the same day, correctly found it was not the bound, and concluded the board was simply aperiodic and that
+        only "a different predicate (no seat can win or lose)" — an adjudication change — could close it. ⚠ **There
+        is a third option between tuning a periodicity detector and replacing it: ask whether the field making the
+        stream aperiodic is PROGRESS.**
+        Two measurements, one new diagnostic. (1) `repeats 10/12` was where the cap happened to land, not a trend:
+        at `CRAB_MAX_ACTIONS=400000` the same game runs to **turn 18,202** and reads `repeats 0/12` — restarting,
+        not converging (the other session's 200,000-action run read turn 9,099 / `6/12`, which says the same thing
+        from a third point). (2) `CRAB_PROGRESS_WATCH=2000` (new, `12ed0fcc`) printed every quantity the digest
+        reads, and over turns 2,000..2,270 the sampled stream is **exactly two states differing in one permanent's
+        tap** — after the life clamp every other field is equal, permanent ids included. The bot takes a 33rd land
+        for the extort in bursts, so the sampled sequence is `A x11  B x9  A x20  B x9  A x19`, and **9 misses is
+        one past `NO_PROGRESS_MAX_PERIOD`**, which abandons the anchor and the count with it: 11, 0, 11, 0, 10 —
+        `NO_PROGRESS_DRAW_REPEATS` unreachable, which is both diagnostic readings at once.
+        So `tapped` leaves the TURN digest, gated on `player_counters` exactly as the life clamp is; the resolution
+        and announcement watches keep it, because within a turn a tap is a cost paid and a real move.
+        A/B on the cell, one binary shape, one budget (overflow + `debug-assertions`, `--games 400 --threads 3
+        --seed 1159 --decks all`, `CRAB_MAX_ACTIONS=50000`):
+            before  6790 decided, 10 undecided, 73.6s   cap 2 / board 0 / stuck 0 / draw 8
+            after   6790 decided, 10 undecided, 68.0s   cap 0 / board 0 / stuck 0 / draw 10
+        The two capped games are the two new draws. ⚠ **The `cap` bucket now holds no shape that is not a long game
+        or the 1,024-permanent board bound** — shape `(iii)` of the four is empty for the first time.
+⚠ neg  **THE CHANGE TURNS NO DECIDED GAME INTO A DRAW, AND THAT IS THE READING THAT MATTERS.** Taking a field out of
+        a digest can only ADD draws, so the false-positive direction is the whole risk and a closed cell proves
+        nothing about it. Four cells already in the sweep table, replayed at the fixed tip against their committed
+        readings (`--games 400 --threads 3`, `CRAB_MAX_ACTIONS=6000`): `cube` 1216 **draw 6 = 6**, `all` 1216
+        **draw 10 = 10**, `cube` 1221 **0 = 0**, `all` 1221 **0 = 0** — 20,000 games, not one verdict moved. The
+        argument they stand on: `tapped` is bounded, so a stream where it is the ONLY field moving lives in a small
+        finite space and is cycling, not progressing; and a turn's tap is undone by the next untap step. A seat
+        tapping the other's board down is denial, not progress, and CR 104.4 calls that a draw.
+infra   **`CRAB_PROGRESS_WATCH=<turn>`** (`12ed0fcc`) — one line a turn from `<turn>` on, naming every field
+        `fingerprint_as` reads plus two order-sensitive digests (permanent ids, tap bits) so a 900-permanent board
+        still fits on a line. `cap_diagnosis` says the watch did not fire; this says why, and that question had cost
+        a rebuild and a guess every time it was asked. Printed from `play_one_game_traced`, NOT from
+        `watch_turn_progress`: the watch runs on every bot probe's clone too (3,234 `end_turn` calls a six-game
+        `cube` run against ~150 real turns), so a dump from inside it is mostly other people's futures. One
+        `OnceLock` load a GAME — read once before the loop, not per action.
+test    **the shapes that decide whether the turn watch fires are properties of the digest STREAM, and none of them
+        is reachable from a board small enough to write down** — `all` 1159 needed 2,270 turns and a whole deck pool
+        to produce one. `no_progress_step` is `watch_turn_progress`'s state machine split out as a pure function
+        (same arithmetic, behaviour-preserving) and `cr_104_4_the_no_progress_watch_prices_its_excursions` feeds it
+        streams directly: a frozen stream draws on the Nth return; an excursion of up to `NO_PROGRESS_MAX_PERIOD`
+        samples costs nothing; one sample longer costs the whole count, and repeated once a cycle **it never draws
+        at all, however many turns it is given.** That last one is the cliff and it is a test now rather than a
+        paragraph. `progress_fingerprint` exposes the turn digest so
+        `cr_104_4_the_turn_digest_reads_progress_and_not_bookkeeping` can test the field list AS a field list — a
+        tap and a saturated life are out, and the nine things a turn can move and keep are asserted one at a time,
+        so a field that stops being read names itself.
+gate    **the sweep's `[SATURATED LIFE]` carve-out is gone with the cell that earned it** (`2be06a35`). It excused a
+        cap that survived its own re-run for exactly one cell, on the grounds that the watch could not draw that
+        board. It can. Leaving it in is the `cube` 1204 hole one step further along — that one cost fourteen false
+        non-defects by letting the label excuse a cap BEFORE the re-run; this would let it excuse one AFTER, so the
+        next board the watch cannot draw reports as `known_board` and nobody looks. A survived cap is a defect,
+        saturated or not; `known_board` keeps its `MAX_BATTLEFIELD` arm only.
+sweep   **1232..1241: 30 cells / 148,000 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 14` — the FIRST
+        block under the tightened verdict, where a survived cap has no carve-out left to fall into. Taken at this
+        session's pre-merge tip, so without the fan-out session's `18dd93dc` / `bfd21876`. Then, after the merge and
+        a rebuild, **1242..1251: 30 cells / 148,000 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 12`,
+        `-C debug-assertions=yes` throughout, so the fan-out gate ran on every decision of those too. `all` 1159
+        re-confirmed at the merged tip: `cap 0 / board 0 / stuck 0 / draw 10` in 67.7 s. **Frontier 1262.**
+        ⚠ **Two sessions worked this branch again all day** — this one took 1232..1241 and 1242..1251 and says so
+        here, which is the discipline the four same-seed collisions earned.
+perf    none claimed. The tap bit leaves the digest behind an `AND` with a mask hoisted out of the permanent loop, so
+        all three digests carry one extra `and` per permanent and nothing branches — against `(-291)`'s
+        +0.046 / +0.024 / +0.021 %, which is what the watch itself cost. ⚠ **This box is 4 cores**, like the fan-out
+        session's and unlike the 24 every absolute in this file was taken on: `--bench` read 408.3 / 438.2 / 468.3
+        games/s on three runs of two binaries with **identical counters**, which is the spread, and the counters are
+        the gate.
+```
+
 ### 2026-09-13 (the fan-out session) — a `PlayerRef` that names two seats and resolves to one, seven shipped cards, and a sixth target walker nobody audited; no perf leg
 
 ```text
@@ -3666,6 +3744,8 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1222..1231   d814c3de      30    148,000       0       0     0      4
   1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
   1222..1231   45f6a7da      30    148,000       0       0     0      4   `-C debug-assertions=yes`, the fan-out gate live
+  1232..1241   (pre-merge)   30    148,000       0       0     0     14   first block under the TIGHTENED verdict; no `18dd93dc`/`bfd21876`
+  1242..1251   c2a99d11      30    148,000       0       0     0     12   the merged tip, `-C debug-assertions=yes`
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD
 bound — seed 1169's Krenko, counted in its own `board` column now and not a
@@ -3847,25 +3927,27 @@ watches are byte-identical), and
 unkillable board with a drain on it draws at turn 80 with the clamp and runs
 past turn 5,700 without it.
 
-⚠ **THE CLAMP DOES NOT CLOSE `all` 1159, BUT IT NEARLY DOES — `repeats 2/12`
-becomes `10/12`.** Re-measured with it in: the cell still reads `cap 2`, the two
-games still read `repeats 2/12` at the sweep's 6,000 actions, and **at the
-50,000-action re-run they read `repeats 10/12`** — two samples, eight turns,
-short of the draw. So the life drift was most of the aperiodicity and not all
-of it: the bot taps a different number of lands each turn for the Beacon and
-the extort, and p0's library toggles 1/0 depending on whether the Beacon is on
-the stack when the turn ends. Both are in the digest and both are real state,
-so widening past them would be guessing at what "progress" means —
-**`NO_PROGRESS_MAX_PERIOD` (8) is the parameter a later run should price, not
-the field list**, and the reading above is the evidence that it is the one that
-binds.
+⚠ **THE CLAMP DOES NOT CLOSE `all` 1159 — AND THE PARAGRAPH THAT STOOD HERE
+GOT EVERY REMAINING CLAIM WRONG.** It read: the clamp takes the cell to
+`repeats 10/12`, "two samples, eight turns, short of the draw"; the residue is
+the bot's land taps *and* p0's library toggling 1/0 with the Beacon on the
+stack; both are real state; therefore *"`NO_PROGRESS_MAX_PERIOD` (8) is the
+parameter a later run should price, not the field list"*. **All three measured
+false on 2026-09-13, see `(-292)`.** `repeats 10/12` was where the cap happened
+to land (at 400,000 actions the same game reads `0/12` at turn 18,202 —
+restarting, not converging); the library reads `l1` on every one of the 271
+sampled turns; and the field list is exactly what closed it, because the tap was
+the *whole* residue and the patience was never what bound. The cell is `cap 0`
+since `08841a3e`. Kept rather than deleted because the shape of the error is the
+lesson: **a watch that does not fire is a question about its INPUTS, and a
+diagnostic that prints them beats three runs of reasoning about its constants.**
 
-So the sweep's verdict changed rather than the watch: **a cap that survives the
-re-run is a defect UNLESS the dump carries `[SATURATED LIFE]`**, in which case
-it is this board, counted as `known_board` and reported with its `repeats N/12`
-line. The label alone still excuses nothing — `cube` 1204 is the counterexample
-and cost fourteen false non-defects — it is the label PLUS a survived re-run
-that names the board.
+The sweep's verdict changed with it, twice. First: a cap that survives the
+re-run is a defect **unless** the dump carries `[SATURATED LIFE]`, in which case
+it is this board. Then, once the board had an ending, **the carve-out went too**
+(`2be06a35`): a survived cap is a defect, saturated or not. The label alone
+never excused one — `cube` 1204 is the counterexample and cost fourteen false
+non-defects — and now it excuses none at all.
 
 **THE SWEEP'S SLOW CELL, AND WHY ITS NUMBER IS NOT THE PRODUCTION NUMBER.**
 `cube` seed **1036** cost **3,313 s** against a 33-48 s median for its
@@ -6298,6 +6380,72 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-292)` CORRECTNESS, AND IT COSTS NOTHING — the turn digest stops reading a permanent's tap: `all` 1159 is **cap 2 -> cap 0**, `--bench` counters identical, 12 / 12 golden traces unmoved
+
+`(-291)` gave the Beacon board an ending and one cell did not take it. `all`
+1159 — that board plus a Basilica Screecher and an Underworld Connections, both
+seats past the saturation band — was the first and only cap in the fresh-seed
+sweep's history to survive its own 50,000-action re-run. The life clamp took CR
+104.4's turn watch there from `repeats 2/12` to `repeats 10/12` and stopped.
+**PERF and TODO both then concluded that `NO_PROGRESS_MAX_PERIOD` was the thing
+to price and that the field list was not**, from `repeats N/12` alone. A
+concurrent session priced the constant the same day, correctly found it was not
+the bound, and concluded the board was simply aperiodic and that only a
+different predicate — "no seat can win or lose", an adjudication change — could
+close it. ⚠ **Between tuning a periodicity detector and replacing it there is a
+third option: ask whether the field making the stream aperiodic is PROGRESS.**
+
+*Reading one.* `repeats 10/12` is where the cap landed, not a trend. At
+`CRAB_MAX_ACTIONS=400000` the same game runs to **turn 18,202** and reads
+`repeats 0/12`; at 200,000 (the other session's run) turn 9,099 and `6/12`.
+Three points, no convergence.
+
+*Reading two.* `CRAB_PROGRESS_WATCH=2000` (`12ed0fcc`) prints every quantity the
+digest reads, one line a turn, from the self-play driver rather than from the
+watch (which runs on every probe's clone). Over turns 2,000..2,270 the sampled
+stream is **two states, differing in one permanent's tap** — after the life
+clamp every other field is equal, permanent ids included. The bot takes a 33rd
+land for the extort in bursts:
+
+```text
+  sampled every NO_PROGRESS_SAMPLE_EVERY=4 turns, turns 2000..2270:
+    A x11   B x9   A x20   B x9   A x19
+  and 9 misses is ONE past NO_PROGRESS_MAX_PERIOD (8), which abandons the
+  anchor and the count with it:
+    repeats  11 -> 0 -> 11 -> 0 -> 10        NO_PROGRESS_DRAW_REPEATS = 12
+```
+
+Both diagnostic readings fall out of that one mechanism, and so does the other
+session's `since 0/8`: the sample the cap lands on is a matching one. The fix is
+the field list. `tapped` leaves the TURN digest, gated on `player_counters`
+exactly as the life clamp is; the other two watches keep it, because they sample
+*within* a turn, where a tap is a cost paid and a real move.
+
+**Raising the patience was the tempting fix and it is the wrong one.** It buys
+this board and loses the next one whose excursion is a sample longer; a tap the
+untap step takes back is not a game getting anywhere, whatever the constant is.
+
+```text
+overflow + debug-assertions, --games 400 --threads 3 --seed 1159 --decks all, CRAB_MAX_ACTIONS=50000, one binary shape:
+  before  6790 decided, 10 undecided, 73.6 s   cap 2 / board 0 / stuck 0 / draw 8
+  after   6790 decided, 10 undecided, 68.0 s   cap 0 / board 0 / stuck 0 / draw 10
+negative control (the direction that can go wrong — taking a field out can only ADD draws):
+  cube 1216 draw 6 = 6 | all 1216 draw 10 = 10 | cube 1221 0 = 0 | all 1221 0 = 0   20,000 games, no verdict moved
+--bench: 195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls, determinism + thread_determinism ok — identical to the committed invariant
+```
+
+**No price to pay, and the shape of the change is why.** The bit leaves behind
+an `AND` with a mask hoisted out of the permanent loop, so all three digests
+carry one extra `and` per permanent and nothing branches — against `(-291)`'s
++0.046 / +0.024 / +0.021 %, which is what the watch itself cost.
+
+**The transferable half is the diagnostic, not the field.** A watch that does
+not fire is a question about its INPUTS. Three runs reasoned about its constants
+from `repeats N/12` alone and put a guess on the record twice; one run printed
+the fields and the answer was unarguable in two lines of output. `cap_diagnosis`
+had already been extended once to print the watch's own state, which was the
+right instinct and one level too shallow.
 
 ### `(-291)` CORRECTNESS, PRICED — the turn-granular no-progress watch (CR 104.4): fixed **+0.046 %**, cube **+0.024 %**, sealed **+0.021 %**, 11 / 11 golden traces unmoved
 
