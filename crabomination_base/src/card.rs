@@ -5771,6 +5771,41 @@ impl CardDefinition {
         self.triggered_abilities.iter().fold(0u64, |m, t| m | t.event.kind.fold())
     }
 
+    /// Can any *card-intrinsic* cost reduction fire for this printing? The
+    /// gate on `actions::cost_reduction_for_spell_full_over`'s tail, which is
+    /// otherwise ~22 field loads and a `static_abilities` walk on every one of
+    /// the affordability checks a decision's candidate list makes. Memoized
+    /// per object by [`CardData::has_self_cost_reduction`].
+    ///
+    /// ⚠ **Every read of the card being cast in that tail has to be
+    /// represented here** — a field added there and not here is silently
+    /// skipped. The two `self_cost_reduction_*` fields the tail does *not*
+    /// read (`_cost_if_target`, `_per_sacrificed`, both consumed elsewhere)
+    /// are in anyway: a card kept that the tail ignores costs one pass of a
+    /// tail that finds nothing, a card dropped that it would have matched
+    /// costs a wrong mana cost.
+    pub fn has_self_cost_reduction(&self) -> bool {
+        self.affinity_filter.is_some()
+            || self.affinity_graveyard_filter.is_some()
+            || self.self_cost_reduction_if_target.is_some()
+            || self.self_cost_reduction_cost_if_target.is_some()
+            || !self.self_cost_reduction_if_control.is_empty()
+            || self.self_cost_reduction_if_night.is_some()
+            || self.self_cost_reduction_if_delirium.is_some()
+            || self.self_cost_reduction_if_crime.is_some()
+            || self.self_cost_reduction_if_sacrificed_artifact.is_some()
+            || self.self_cost_reduction_per_cards_drawn
+            || self.self_cost_reduction_per_sacrificed
+            || self.self_cost_reduction_if_cast_spell.is_some()
+            || self.self_cost_reduction_if.is_some()
+            || self.self_cost_reduction_if_collect_evidence.is_some()
+            || self.self_cost_reduction_per.is_some()
+            || self
+                .static_abilities
+                .iter()
+                .any(|sa| crate::effect::static_effect_is_self_cost_reduction(&sa.effect))
+    }
+
     pub fn dispatch_scan_bits(&self) -> u64 {
         use crate::effect::{
             StaticEffect, static_effect_strips_abilities, static_grants_triggered_ability,
@@ -7096,10 +7131,12 @@ pub mod dispatch_bits {
 /// [`grant_bits`], 34-35 [`type_bits`], 36-40 [`dispatch_bits`]. Zero is
 /// "nothing known".
 ///
-/// A second word holds the layer gather's [`gather_spec`] mask (bits 0-51)
-/// with its valid flag at bit 63 — 52 bits do not fit beside the first
+/// A second word holds the layer gather's [`gather_spec`] mask (bits 0-52)
+/// with its valid flag at bit 63 — 53 bits do not fit beside the first
 /// word's tenants, and a second atom is 8 bytes on a `CardData` that is
-/// already hundreds. A third holds [`CardDefinition::trigger_kind_fold`]
+/// already hundreds — plus, at bits 53-54,
+/// [`CardDefinition::has_self_cost_reduction`]'s flag and answer, which is
+/// why [`Self::set_gather`] is a load-modify-store. A third holds [`CardDefinition::trigger_kind_fold`]
 /// — the [`EventKind::fold`] of every printed trigger's kind, valid flag
 /// at bit 63 (a kind whose fold lands on bit 63 always passes the gate,
 /// which is the sound direction). All words are cleared together in
@@ -7256,7 +7293,36 @@ impl CardMemo {
 
     #[inline]
     fn set_gather(&self, bits: u64) {
-        self.1.store(bits | Self::GATHER_VALID, std::sync::atomic::Ordering::Relaxed);
+        // Load-modify-store, not a plain store: bits 53-54 of this word are
+        // the self-cost-reduction tenants below.
+        let v = self.1.load(std::sync::atomic::Ordering::Relaxed);
+        self.1.store(
+            (v & !gather_spec::ALL) | bits | Self::GATHER_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    /// Bits 53 and 54 of the *second* word — the flag and the payload of
+    /// [`CardDefinition::has_self_cost_reduction`]. `gather_spec::ALL` is
+    /// bits 0-52 and [`GATHER_VALID`](Self::GATHER_VALID) bit 63, so this is
+    /// the first word in the memo with room for a one-bit answer.
+    const COSTRED_VALID: u64 = 1 << 53;
+    const COSTRED: u64 = 1 << 54;
+
+    #[inline]
+    fn get_costred(&self) -> Option<bool> {
+        let v = self.1.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::COSTRED_VALID != 0).then_some(v & Self::COSTRED != 0)
+    }
+
+    #[inline]
+    fn set_costred(&self, yes: bool) {
+        let v = self.1.load(std::sync::atomic::Ordering::Relaxed);
+        let payload = if yes { Self::COSTRED } else { 0 };
+        self.1.store(
+            (v & !Self::COSTRED) | payload | Self::COSTRED_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
     }
 
     /// On the *third* word; see the type doc.
@@ -8130,6 +8196,23 @@ impl CardData {
         let fold = self.definition.trigger_kind_fold();
         self.definition.memo.set_kinds(fold);
         fold | CardMemo::KINDS_VALID
+    }
+
+    /// [`CardDefinition::has_self_cost_reduction`] for this object, memoized
+    /// beside the gather mask on the second word.
+    #[inline]
+    pub fn has_self_cost_reduction(&self) -> bool {
+        if let Some(v) = self.definition.memo.get_costred() {
+            debug_assert_eq!(
+                v,
+                self.definition.has_self_cost_reduction(),
+                "self-cost-reduction memo is stale: a definition rewrite did not clear it",
+            );
+            return v;
+        }
+        let v = self.definition.has_self_cost_reduction();
+        self.definition.memo.set_costred(v);
+        v
     }
 }
 

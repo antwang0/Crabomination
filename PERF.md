@@ -6783,6 +6783,52 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-299)` The tail is behind one bit now — a definition memo for "can this card reduce its own cost at all"
+
+`(-298)` made the tail's nineteen walks one. What was left is that it runs at
+all: ~22 `if let Some(..) = card.definition.<field>` loads plus that one walk,
+on every affordability check, for a card that in the overwhelming majority of
+cases carries none of them. The tail is now
+`actions::self_cost_reduction_from_card`, called only when
+`CardData::has_self_cost_reduction()` — one relaxed load off the memo's second
+word — says the printing carries something.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                       (-298)          (-299)        delta      vs the run's base
+  fixed       635,343,187     634,213,045       -0.178 %          -0.345 %
+  cube      1,690,405,699   1,688,023,702       -0.141 %          -0.340 %
+  sealed    1,765,376,041   1,761,718,240       -0.207 %          -0.436 %
+
+  sealed self Ir, 49,140 calls      base      (-298)     (-299)
+    cost_reduction_for_spell_full_over  8,937,264  5,628,092  3,491,022   (181.9 -> 71.0 Ir/call, -61 %)
+    cost_reduction_for_spell_full       3,703,544  3,156,782  2,838,336   (7,844 calls)
+```
+
+Outcomes byte-identical on all six dumps. **This also closes `(-296)`'s stated
+`fixed` +0.032 % residual** — that entry said driving it to zero needed a
+definition memo bit, and this is that bit.
+
+**Where the bit lives, because the layout is the interesting part.** Word 0 of
+`CardMemo` is full: every one of its 64 bits has a tenant. Word 1 is the layer
+gather's `gather_spec` mask (bits 0-52) with its valid flag at 63, so **bits
+53-62 were the only room in the memo** — the flag takes 53 and the answer 54.
+The one consequence is that `set_gather` is a load-modify-store now instead of
+a plain store; it runs once per definition, so it is free, and the alternative
+(a sixth word) is 8 bytes x 21 k definitions.
+
+⚠ **THE GATE IS A SECOND COPY OF THE WALK'S LIST AND THAT IS THE RISK, SO IT IS
+CHECKED BOTH WAYS IN DEBUG.** `effect::static_effect_is_self_cost_reduction`
+names the nineteen `SelfCostReduced*` variants and the walk matches them; a
+variant the walk handles and the gate misses is a **silently wrong mana cost**,
+not a slow path. The walk's match yields `handled: bool` and
+`debug_assert_eq!`s it against the predicate on every static it sees — so the
+suite's ~19.5 k tests and the `overflow` sweep grid both audit the pair. The
+field half has no such check and is a comment instead: the two
+`self_cost_reduction_*` fields the tail does *not* read are listed anyway, so
+the predicate is "any self-cost-reduction field at all" rather than a
+hand-maintained subset of one function's reads.
+
 ### `(-298)` The reduction walk's tail read one list nineteen times, and every read was a match on one variant
 
 `cost_reduction_for_spell_full_over` is 640 lines and `(-296)` took its first
@@ -10858,16 +10904,13 @@ Two devices, both priced, neither taken:
   Sized at 0.13 % of `sealed` and it read **fixed -0.167 / cube -0.200 /
   sealed -0.230 %**; the estimate missed that the tail inlines into
   `cost_reduction_for_spell_full` as well.
-* **A definition-level "carries any self-cost reduction" bit**, which is what
-  would take the other ~0.35 % — the ~22 field loads collapse to one word
-  load, and it would also close `(-296)`'s remaining `fixed` +0.032 %. ⚠ **The
-  memo word is dense and shared**: `CardMemo` is five `AtomicU64`s, word 0
-  carries the colour set (0-4), three valid flags (5, 6, 7), `type_bits`,
-  `grant_bits`, `layer4_bits` (58-59), the vocab index (41-56) and four valid
-  flags (30, 31, 57, 60), and words 3 and 4 are the mana summary and the
-  encoder's payload with their own bit-63 flags. **Read the whole layout before
-  claiming a spare bit**; a sixth word is 8 bytes x 21 k definitions = 168 kB
-  and is the honest alternative. `(-197)`'s `MANA_STATIC` is the shape to copy.
+* ✅ **TAKEN, `(-299)`: a definition-level "carries any self-cost reduction"
+  bit.** **fixed -0.178 / cube -0.141 / sealed -0.207 %** on top of `(-298)`,
+  and it closed `(-296)`'s stated `fixed` residual. Word 0 was indeed full;
+  the room was **bits 53-62 of word 1**, beside the gather mask. The tail is
+  `self_cost_reduction_from_card` now and the gate's variant list is
+  `effect::static_effect_is_self_cost_reduction`, checked against the walk's
+  own `handled` in a `debug_assert_eq!` on every static — see `(-299)`.
 
 
 * **Target enumeration, 3.61 %, and it is 26.6 requirement evaluations a

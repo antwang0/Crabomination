@@ -1518,6 +1518,67 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
             }
         }
     }
+    // Everything the card being cast can contribute, behind the one-bit
+    // definition memo: ~22 field loads and a `static_abilities` walk that
+    // nearly every spell in a decision's candidate list has nothing for.
+    if card.has_self_cost_reduction() {
+        reduction = reduction.saturating_add(self_cost_reduction_from_card(
+            state, caster, card, target,
+        ));
+    }
+    // One-shot "the next instant or sorcery you cast this turn costs {N}
+    // less" discounts (Thundertrap Trainer). Each was stamped with the
+    // caster's instant/sorcery tally at grant time; it applies only while
+    // that tally is unchanged — i.e. to the *next* such spell — and then
+    // naturally lapses once the tally ticks up on cast (no consume hook
+    // needed). The tally increments at spell-commit, after this read.
+    if card.definition.is_instant() || card.definition.is_sorcery() {
+        let cast_so_far = state.players[caster].instants_or_sorceries_cast_this_turn;
+        for &(amount, granted_at) in &state.players[caster].pending_is_discounts {
+            if granted_at == cast_so_far {
+                reduction = reduction.saturating_add(amount);
+            }
+        }
+    }
+    // One-shot "the next spell you cast this turn costs {N} less"
+    // discounts (Mutated Cultist) — any spell type; same lapse-by-tally
+    // scheme as `pending_is_discounts` above.
+    {
+        let cast_so_far = state.players[caster].spells_cast_this_turn;
+        for &(amount, granted_at) in &state.players[caster].pending_spell_discounts {
+            if granted_at == cast_so_far {
+                reduction = reduction.saturating_add(amount);
+            }
+        }
+    }
+    // Turn-scoped "[filter] spells you cast this turn cost {N} less"
+    // grants (Urza, Planeswalker's +2). Cleared at cleanup.
+    for (filter, amount) in &state.players[caster].turn_spell_discounts {
+        if state.evaluate_requirement_on_card(filter, card, caster) {
+            reduction = reduction.saturating_add(*amount);
+        }
+    }
+    // Transient "sacrifice any number, {N} less each" additional-cost
+    // reduction (Awaken the Blood Avatar). Stamped on the state for the
+    // duration of one cast by `cast_spell_sacrifice_reduce`.
+    reduction = reduction.saturating_add(state.extra_cast_reduction);
+    reduction
+}
+
+/// The card-intrinsic half of [`cost_reduction_for_spell_full_over`]: every
+/// reduction printed on the spell *being cast*, as opposed to the statics its
+/// controller's board contributes. Split out so the whole of it sits behind
+/// [`CardData::has_self_cost_reduction`]'s memo bit — ⚠ **a read of `card`
+/// added here has to be added to that predicate too**, or it is skipped on
+/// every card whose other fields are all empty.
+fn self_cost_reduction_from_card(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
+) -> u32 {
+    use crate::effect::StaticEffect;
+    let mut reduction = 0u32;
     // Card-intrinsic Affinity-for-[filter] cost reduction: "{1} less for
     // each [filter]" baked onto the spell card itself. Counts every
     // battlefield permanent matching `affinity_filter`. CR 601.2f / 117.7c —
@@ -1644,31 +1705,43 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
     let mut noncreature_artifact_mv = false;
     let mut distinct_land_names = false;
     for sa in &card.definition.static_abilities {
-        match &sa.effect {
+        let handled = match &sa.effect {
             // "costs {X} less, where X is the greatest power among creatures
             // you control" (The Great Henge).
-            StaticEffect::SelfCostReducedByGreatestPower => greatest_power = true,
+            StaticEffect::SelfCostReducedByGreatestPower => {
+                greatest_power = true;
+                true
+            }
             // "costs {X} less, where X is the total power of creatures you
             // control" (Ghalta, Primal Hunger).
-            StaticEffect::SelfCostReducedByTotalPower => total_power = true,
+            StaticEffect::SelfCostReducedByTotalPower => {
+                total_power = true;
+                true
+            }
             // "costs {1} less for each creature card in your graveyard"
             // (Ghoultree).
             StaticEffect::SelfCostReducedPerCreatureInGraveyard => {
                 per_creature_in_graveyard = true;
+                true
             }
             // "costs {1} less for each card type among cards in your
             // graveyard" (Emrakul, the Promised End).
             StaticEffect::SelfCostReducedPerCardTypeInGraveyard => {
                 per_card_type_in_graveyard = true;
+                true
             }
             // "costs {X} less, X = total MV of noncreature artifacts you
             // control" (Metalwork Colossus).
             StaticEffect::SelfCostReducedByNoncreatureArtifactMv => {
                 noncreature_artifact_mv = true;
+                true
             }
             // "costs {X} less, where X is the number of differently named
             // lands you control" (Fungal Colossus).
-            StaticEffect::SelfCostReducedByDistinctLandNames => distinct_land_names = true,
+            StaticEffect::SelfCostReducedByDistinctLandNames => {
+                distinct_land_names = true;
+                true
+            }
             // "costs {per} less for each [filter] card in your graveyard"
             // (Serpent of the Pass).
             StaticEffect::SelfCostReducedPerGraveyardCardMatching { filter, per } => {
@@ -1678,6 +1751,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
                     .count() as u32;
                 reduction = reduction.saturating_add(n.saturating_mul(*per));
+                true
             }
             // "costs {per} less for each [filter] permanent you control" —
             // Affinity for [type] (Allies at Last).
@@ -1703,12 +1777,14 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     })
                     .count() as u32;
                 reduction = reduction.saturating_add(n.saturating_mul(*per));
+                true
             }
             // "costs {amount} less if a creature died this turn" (Bone Picker).
-            StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { amount }
-                if state.players.iter().any(|p| p.creatures_died_this_turn > 0) =>
-            {
-                reduction = reduction.saturating_add(*amount);
+            StaticEffect::SelfCostReducedIfCreatureDiedThisTurn { amount } => {
+                if state.players.iter().any(|p| p.creatures_died_this_turn > 0) {
+                    reduction = reduction.saturating_add(*amount);
+                }
+                true
             }
             // "costs {amount} less if [condition]" (Avatar of Hope).
             StaticEffect::SelfCostReducedIfPredicate { amount, condition } => {
@@ -1717,22 +1793,26 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 if state.evaluate_predicate(condition, &ctx) {
                     reduction = reduction.saturating_add(*amount);
                 }
+                true
             }
             // "costs {X} less, where X is your Domain" (Leyline Binding) —
             // distinct basic land types among the caster's lands.
             StaticEffect::SelfCostReducedByDomain { per } => {
                 reduction = reduction.saturating_add(per * state.domain_count(caster) as u32);
+                true
             }
             // "costs {amount} less during your turn" (Mental Modulation).
-            StaticEffect::SelfCostReducedDuringYourTurn { amount }
-                if state.active_player_idx == caster =>
-            {
-                reduction = reduction.saturating_add(*amount);
+            StaticEffect::SelfCostReducedDuringYourTurn { amount } => {
+                if state.active_player_idx == caster {
+                    reduction = reduction.saturating_add(*amount);
+                }
+                true
             }
             // "costs {X} less, where X is your devotion to [colors]"
             // (Theros — Daybreak Chimera).
             StaticEffect::SelfCostReducedByDevotion { colors } => {
                 reduction = reduction.saturating_add(state.devotion_to(caster, colors) as u32);
+                true
             }
             // "costs {N} less if you control a permanent matching each
             // filter" (Of One Mind).
@@ -1746,6 +1826,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 if all_present {
                     reduction = reduction.saturating_add(*amount);
                 }
+                true
             }
             // "costs {N} less if [predicate]" (Gigastorm Titan, Lashwhip
             // Predator). Predicate evaluated with the caster as controller.
@@ -1754,22 +1835,26 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 if state.evaluate_predicate(condition, &ctx) {
                     reduction = reduction.saturating_add(*amount);
                 }
+                true
             }
             // "costs {N} less per card you've discarded this turn" (Hollow One).
             StaticEffect::SelfCostReducedPerDiscardThisTurn { per } => {
                 reduction = reduction
                     .saturating_add(per * state.players[caster].cards_discarded_this_turn);
+                true
             }
             // CR 702.125 — Undaunted: "costs {N} less to cast for each opponent."
             StaticEffect::SelfCostReducedPerOpponent { per } => {
                 let opponents = state.opponents_of(caster).len() as u32;
                 reduction = reduction.saturating_add(per * opponents);
+                true
             }
             // "Costs {N} less for each other spell cast this turn" (Thrasta) —
             // every player's casts count.
             StaticEffect::SelfCostReducedPerSpellCastThisTurn { per } => {
                 let count: u32 = state.players.iter().map(|p| p.spells_cast_this_turn).sum();
                 reduction = reduction.saturating_add(per * count);
+                true
             }
             // "costs {N} less per creature you attacked with this turn"
             // (Search Party Captain).
@@ -1780,9 +1865,19 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     state.players[caster].creatures_attacked_this_turn
                 };
                 reduction = reduction.saturating_add(per * count);
+                true
             }
-            _ => {}
-        }
+            _ => false,
+        };
+        // The gate's list (`static_effect_is_self_cost_reduction`) and this
+        // match are the same list written twice, so a debug build checks them
+        // against each other on every static it walks: a variant this handles
+        // and the gate does not is a reduction silently skipped.
+        debug_assert_eq!(
+            handled,
+            crate::effect::static_effect_is_self_cost_reduction(&sa.effect),
+            "self-cost-reduction walk and its memo gate disagree",
+        );
     }
     // The six once-per-card shapes flagged above. Each is generic-only and
     // clamped by the caller via `ManaCost::reduce_generic`.
@@ -1846,42 +1941,6 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
         names.dedup();
         reduction = reduction.saturating_add(names.len() as u32);
     }
-    // One-shot "the next instant or sorcery you cast this turn costs {N}
-    // less" discounts (Thundertrap Trainer). Each was stamped with the
-    // caster's instant/sorcery tally at grant time; it applies only while
-    // that tally is unchanged — i.e. to the *next* such spell — and then
-    // naturally lapses once the tally ticks up on cast (no consume hook
-    // needed). The tally increments at spell-commit, after this read.
-    if card.definition.is_instant() || card.definition.is_sorcery() {
-        let cast_so_far = state.players[caster].instants_or_sorceries_cast_this_turn;
-        for &(amount, granted_at) in &state.players[caster].pending_is_discounts {
-            if granted_at == cast_so_far {
-                reduction = reduction.saturating_add(amount);
-            }
-        }
-    }
-    // One-shot "the next spell you cast this turn costs {N} less"
-    // discounts (Mutated Cultist) — any spell type; same lapse-by-tally
-    // scheme as `pending_is_discounts` above.
-    {
-        let cast_so_far = state.players[caster].spells_cast_this_turn;
-        for &(amount, granted_at) in &state.players[caster].pending_spell_discounts {
-            if granted_at == cast_so_far {
-                reduction = reduction.saturating_add(amount);
-            }
-        }
-    }
-    // Turn-scoped "[filter] spells you cast this turn cost {N} less"
-    // grants (Urza, Planeswalker's +2). Cleared at cleanup.
-    for (filter, amount) in &state.players[caster].turn_spell_discounts {
-        if state.evaluate_requirement_on_card(filter, card, caster) {
-            reduction = reduction.saturating_add(*amount);
-        }
-    }
-    // Transient "sacrifice any number, {N} less each" additional-cost
-    // reduction (Awaken the Blood Avatar). Stamped on the state for the
-    // duration of one cast by `cast_spell_sacrifice_reduce`.
-    reduction = reduction.saturating_add(state.extra_cast_reduction);
     reduction
 }
 

@@ -10010,6 +10010,39 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
     }
 }
 
+/// True when `effect` is one of the `SelfCostReduced*` statics
+/// `cost_reduction_for_spell_full_over`'s tail reads off the card **being
+/// cast** (as opposed to [`static_affects_spell_cost`], which is about the
+/// *sources* on the board). The tail's single walk `debug_assert_eq!`s its own
+/// handled-ness against this on every static it sees, so the two lists cannot
+/// drift; [`CardDefinition::has_self_cost_reduction`] is the memoized gate that
+/// keeps the whole tail off a card carrying none of them.
+pub fn static_effect_is_self_cost_reduction(effect: &StaticEffect) -> bool {
+    use StaticEffect as SE;
+    matches!(
+        effect,
+        SE::SelfCostReducedByGreatestPower
+            | SE::SelfCostReducedByTotalPower
+            | SE::SelfCostReducedPerCreatureInGraveyard
+            | SE::SelfCostReducedPerCardTypeInGraveyard
+            | SE::SelfCostReducedByNoncreatureArtifactMv
+            | SE::SelfCostReducedByDistinctLandNames
+            | SE::SelfCostReducedPerGraveyardCardMatching { .. }
+            | SE::SelfCostReducedPerPermanentMatching { .. }
+            | SE::SelfCostReducedIfCreatureDiedThisTurn { .. }
+            | SE::SelfCostReducedIfPredicate { .. }
+            | SE::SelfCostReducedByDomain { .. }
+            | SE::SelfCostReducedDuringYourTurn { .. }
+            | SE::SelfCostReducedByDevotion { .. }
+            | SE::SelfCostReducedIfControlEach { .. }
+            | SE::SelfCostReducedIf { .. }
+            | SE::SelfCostReducedPerDiscardThisTurn { .. }
+            | SE::SelfCostReducedPerOpponent { .. }
+            | SE::SelfCostReducedPerSpellCastThisTurn { .. }
+            | SE::SelfCostReducedPerCreatureAttackedThisTurn { .. }
+    )
+}
+
 /// The `GrantActivatedAbility` twin of [`static_grants_triggered_ability`],
 /// with the same wrapper set and the same over-approximation: `grant_scan`'s
 /// walk peels *and evaluates* the gates, so a `true` here may still be a
