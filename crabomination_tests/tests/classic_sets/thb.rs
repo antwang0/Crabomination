@@ -2744,9 +2744,15 @@ fn stinging_lionfish_taps_on_first_off_turn_spell() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.active_player_idx = 1;
     g.priority.player_with_priority = 0;
+    // CR 700.2b — the mode is chosen when the ability is PUT ON THE STACK, so
+    // `Mode(0)` comes before the `MayDo`'s yes, which is asked at resolution.
+    // The order used to be the other way round because the nested modal was
+    // never asked at all: it printed "tap **or untap**" and only ever tapped
+    // (`modal_reachability` in `game/stack.rs` has the five-card story). The
+    // assertion is unchanged — mode 0 IS tap — only who was asked for it.
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
-        crabomination::decision::DecisionAnswer::Bool(true),
         crabomination::decision::DecisionAnswer::Mode(0), // tap
+        crabomination::decision::DecisionAnswer::Bool(true),
         crabomination::decision::DecisionAnswer::Target(Target::Permanent(victim)),
     ]));
     g.perform_action(GameAction::CastSpell {

@@ -155,53 +155,65 @@ impl GameState {
     /// (modal Magecraft: Scry 1 / +1/+0 EOT).
     ///
     /// The picked index is clamped to `modes.len() - 1` to guard against
-    /// a misbehaving decider returning an out-of-range mode. Effects that
-    /// nest `ChooseMode` inside `Seq`/`If`/`ForEach` are not addressed
-    /// here — those would need a recursive walk and an N-tuple of picks;
-    /// the printed Magic cards in scope today (Prismari Apprentice,
-    /// future Tempted by the Oriq Magecraft rider) all have a top-level
-    /// `ChooseMode` so the simple walk is sufficient.
+    /// a misbehaving decider returning an out-of-range mode.
+    ///
+    /// ⚠ **THIS USED TO SAY THE NESTED CASE WAS OUT OF SCOPE BECAUSE "the
+    /// printed Magic cards in scope today all have a top-level `ChooseMode`",
+    /// AND NINE SHIPPED CARDS SAID OTHERWISE.** Returning `None` does not
+    /// mean "not modal" downstream — it means `mode.unwrap_or(0)`, so a
+    /// modal this function cannot see resolves at **mode 0, forever, without
+    /// ever asking anyone**. Orzhov Pontiff's haunt half could never pick its
+    /// -1/-1 mode; Merrow Reejerey and Stinging Lionfish printed "tap **or
+    /// untap**" and only ever tapped; Prophetic Titan, Depth Defiler, Tizerus
+    /// Charger and Wardens of the Cycle each hid their modal in one branch of
+    /// an `If`. Two holes, both closed here: `governing_modal` now descends
+    /// `If`/`HauntCreature`, and a nested modal whose mode **targets** asks
+    /// the decider synchronously instead of falling through to 0 — the
+    /// top-level path has always done exactly that, and it is the same
+    /// guarantee (the pick precedes target assignment because both happen at
+    /// push time). `tmp`-free gate: `nested_modals_are_all_reachable`.
     pub(crate) fn pick_trigger_mode(
         &mut self,
         effect: &Effect,
         source: CardId,
         controller: usize,
     ) -> Option<usize> {
-        if let Effect::ChooseMode(modes) = effect {
-            if modes.is_empty() {
-                return None;
-            }
-            // A `wants_ui` controller picks through the client modal at
-            // resolution time instead of the synchronous decider (which
-            // would silently take mode 0 — Riot creatures never hasty).
-            // Deferral is gated on no mode requiring a target, since target
-            // slots are assigned at push time, before the pick exists.
-            if self.players.get(controller).is_some_and(|p| p.wants_ui)
-                && modes.iter().all(|m| !m.requires_target())
-            {
-                return Some(crate::game::types::MODE_PICK_DEFERRED);
-            }
-            let answer = self.decider.decide(&Decision::ChooseMode {
-                source,
-                num_modes: modes.len(),
-                mode_texts: crate::game::mode_texts(modes),
-            });
-            if let DecisionAnswer::Mode(idx) = answer {
-                return Some(idx.min(modes.len() - 1));
-            }
+        let top_level = matches!(effect, Effect::ChooseMode(_));
+        let modes = match effect {
+            Effect::ChooseMode(modes) => modes,
+            // CR 603.7 — a modal buried behind a reflexive payment (Voltstorm
+            // Angel's "pay {E}{E}. When you do, choose one …"), a haunt body,
+            // or one branch of an `If`.
+            _ => Self::governing_modal(effect)?,
+        };
+        if modes.is_empty() {
             return None;
         }
-        // CR 603.7 — a modal buried behind a reflexive payment (Voltstorm
-        // Angel's "pay {E}{E}. When you do, choose one …") owns its pick at
-        // resolution, *after* the payment succeeds. Defer it: the mode isn't
-        // read until the wrappers run, and `MODE_PICK_DEFERRED` routes a UI
-        // seat to the client modal and a bot to its decider (both post-payment,
-        // since the payment only ever runs when accepted).
-        if let Some(modes) = Self::governing_modal(effect)
-            && !modes.is_empty()
-            && modes.iter().all(|m| !m.requires_target())
-        {
-            return Some(crate::game::types::MODE_PICK_DEFERRED);
+        // Deferral hands the pick to resolution time. A targeting mode can
+        // never defer — target slots are assigned at push time, before a
+        // deferred pick exists — so those fall through to the synchronous
+        // decider below, which is what the top-level path has always done.
+        if modes.iter().all(|m| !m.requires_target()) {
+            // Top level: only a `wants_ui` seat defers, so it picks through
+            // the client modal rather than the synchronous decider (which
+            // would silently take mode 0 — Riot creatures never hasty). A
+            // bot is asked here instead, keeping its answer in the push-time
+            // trace.
+            //
+            // Nested: every seat defers, because the wrapper it is buried in
+            // must run first — the payment only ever happens when accepted,
+            // and the mode is not read until the wrappers do.
+            if !top_level || self.players.get(controller).is_some_and(|p| p.wants_ui) {
+                return Some(crate::game::types::MODE_PICK_DEFERRED);
+            }
+        }
+        let answer = self.decider.decide(&Decision::ChooseMode {
+            source,
+            num_modes: modes.len(),
+            mode_texts: crate::game::mode_texts(modes),
+        });
+        if let DecisionAnswer::Mode(idx) = answer {
+            return Some(idx.min(modes.len() - 1));
         }
         None
     }
@@ -226,6 +238,17 @@ impl GameState {
             // resolution's mode slot — Urza's Avenger's "-1/-1 and gains your
             // choice of …". The first modal step wins.
             Effect::Seq(steps) => steps.iter().find_map(Self::governing_modal),
+            // A haunt body is a single-child wrapper like the ones above —
+            // Orzhov Pontiff's "choose one" rides both its ETB and its haunt.
+            Effect::HauntCreature { body } => Self::governing_modal(body),
+            // Only ONE branch of an `If` can run, and in every catalog card
+            // with this shape only one carries the modal (the other is the
+            // "choose both" / `Noop` half), so first-match is unambiguous.
+            // The condition is evaluated at resolution, so a pick made for a
+            // branch that does not run is simply never read.
+            Effect::If { then, else_, .. } => {
+                Self::governing_modal(then).or_else(|| Self::governing_modal(else_))
+            }
             _ => None,
         }
     }
@@ -7611,5 +7634,103 @@ impl GameState {
             self.battlefield.push(returned);
             events.push(GameEvent::PermanentEntered { card_id: rid });
         }
+    }
+}
+
+#[cfg(test)]
+mod modal_reachability {
+    use crate::effect::Effect;
+
+    /// ⚠ **A MODAL `pick_trigger_mode` CANNOT SEE RESOLVES AT MODE 0 FOREVER,
+    /// AND NINE SHIPPED CARDS DID.** `None` from that function does not mean
+    /// "not modal" downstream — it means `mode.unwrap_or(0)`, so the
+    /// `ChooseMode` arm reads 0 and runs the leftmost mode without ever
+    /// asking the decider. Two holes, both closed and both pinned here:
+    ///
+    ///  - `governing_modal` did not descend `If` or `HauntCreature`, so
+    ///    Prophetic Titan, Depth Defiler, Tizerus Charger, Wardens of the
+    ///    Cycle (modal in one `If` branch) and Orzhov Pontiff (modal as its
+    ///    haunt body) were invisible to it.
+    ///  - a NESTED modal with a targeting mode was refused by the deferral
+    ///    gate and then fell through to `None`, so Merrow Reejerey, Stinging
+    ///    Lionfish, Component Collector and Atraxa's Skitterfang printed
+    ///    "tap **or** untap" and only ever tapped.
+    ///
+    /// The gate is the catalog itself: every `ChooseMode` carried by a
+    /// triggered or activated ability must be reachable, so a card that
+    /// buries one in a new wrapper fails here instead of silently shipping
+    /// with its other modes dead.
+    #[test]
+    fn nested_modals_are_all_reachable() {
+        use crate::catalog::all_known_factories;
+        let mut seen = std::collections::HashSet::new();
+        let mut unreachable: Vec<String> = Vec::new();
+        let mut checked = 0usize;
+        for f in all_known_factories() {
+            let def = f();
+            if !seen.insert(def.name) {
+                continue;
+            }
+            for (kind, eff) in def
+                .triggered_abilities
+                .iter()
+                .map(|t| ("trigger", &t.effect))
+                .chain(def.activated_abilities.iter().map(|a| ("activated", &a.effect)))
+            {
+                // Cheap structural pre-filter; the walk below is the real test.
+                if !serde_json::to_value(eff).unwrap().to_string().contains("\"ChooseMode\"") {
+                    continue;
+                }
+                checked += 1;
+                if super::GameState::governing_modal(eff).is_none() {
+                    unreachable.push(format!("{} [{kind}]", def.name));
+                }
+            }
+        }
+        assert!(checked > 100, "the pre-filter found only {checked} modal abilities — it broke");
+        assert!(
+            unreachable.is_empty(),
+            "{} modal abilities resolve at mode 0 without asking anyone \
+             (`governing_modal` cannot reach the `ChooseMode`): {:?}",
+            unreachable.len(),
+            unreachable,
+        );
+    }
+
+    /// The targeting half of the same bug: a nested modal whose mode targets
+    /// cannot defer (target slots are assigned at push time), and used to
+    /// fall through to `None` — mode 0. It must reach the synchronous
+    /// decider instead, which is what the top-level path always did.
+    #[test]
+    fn a_nested_targeting_modal_asks_the_decider() {
+        use crate::decision::{DecisionAnswer, ScriptedDecider};
+        use crate::game::two_player_game;
+        let mut g = two_player_game();
+        // Merrow Reejerey's shape: MayDo { ChooseMode([Tap(target), Untap(target)]) }.
+        let modal = Effect::MayDo {
+            description: "Tap or untap target permanent?".to_string(),
+            body: Box::new(Effect::ChooseMode(vec![
+                Effect::Tap { what: crate::effect::shortcut::target_filtered(
+                    crate::card::SelectionRequirement::Any,
+                ) },
+                Effect::Untap {
+                    what: crate::effect::shortcut::target_filtered(
+                        crate::card::SelectionRequirement::Any,
+                    ),
+                    up_to: None,
+                },
+            ])),
+        };
+        assert!(
+            super::GameState::governing_modal(&modal).is_some(),
+            "the MayDo wrapper was always descended",
+        );
+        g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
+        let picked = g.pick_trigger_mode(&modal, crate::card::CardId(1), 0);
+        assert_eq!(
+            picked,
+            Some(1),
+            "a targeting nested modal must reach the decider, not fall through to mode 0",
+        );
     }
 }

@@ -16556,12 +16556,24 @@ impl GameState {
     ///
     /// **It is a standing guard, not a proof, and its coverage is whatever
     /// failing round-closing passes the suite happens to produce — today,
-    /// none.** If it ever fires, the fix belongs at the raising site, not
-    /// here: `resolve_top_of_stack_inner` pops before it resolves, so an `Err`
-    /// out of resolution has already consumed the stack item, and no restore
-    /// this function could take would make that action retryable. The
-    /// checkpoint's own answer was to put the item back and let the bot fail
-    /// on it again forever.
+    /// none.** The fresh-seed sweep is what has the coverage: it fired there
+    /// for the first time on 2026-09-13, `cube` / `all` seed 1254, and the
+    /// fix went to the raising site as this comment said it should — a cast a
+    /// Grafdigger's Cage forbids is a no-op, not an `Err`
+    /// (`cast_card_for_free`). `resolve_top_of_stack_inner` pops before it
+    /// resolves, so an `Err` out of resolution has already consumed the stack
+    /// item, and no restore this function could take would make that action
+    /// retryable. The checkpoint's own answer was to put the item back and
+    /// let the bot fail on it again forever.
+    ///
+    /// The list above is a census now, not an estimate: every `?` in the
+    /// effect dispatcher was paren-matched to its callee, and what can still
+    /// raise inside a resolution is `DecisionAnswerMismatch` (the
+    /// `submit_decision` resume path, which self-play never enters — both
+    /// seats are `wants_ui: false`, so nothing suspends), `ModeOutOfBounds`
+    /// (no catalog card can reach it: `nested_modals_are_all_reachable` and
+    /// the 0-hit nested-arity census in `game/stack.rs`), and a
+    /// resolution-time `check_target_legality_inner`.
     ///
     /// [`perform_action_inner`]: Self::perform_action_inner
     fn perform_action_uncheckpointed(

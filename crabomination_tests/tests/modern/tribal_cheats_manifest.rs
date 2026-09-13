@@ -649,6 +649,46 @@ fn merrow_reejerey_buffs_and_triggers_on_merfolk_cast() {
     assert_eq!(g.computed_permanent(other).unwrap().power, 2, "other Merfolk pumped");
 }
 
+/// CR 700.2b — Merrow Reejerey prints "tap **or untap** target permanent",
+/// and the untap mode was unreachable: the `ChooseMode` sits inside the
+/// `MayDo`, and a nested modal whose modes TARGET cannot defer its pick (target
+/// slots are assigned at push time), so `pick_trigger_mode` returned `None` —
+/// which downstream means `mode.unwrap_or(0)`. It tapped, every time, without
+/// ever asking. Four cards shared the shape; `modal_reachability` in
+/// `game/stack.rs` is the structural gate, and this is the behavioural one.
+#[test]
+fn merrow_reejerey_can_choose_the_untap_mode() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::merrow_reejerey());
+    // A tapped permanent for the untap mode to act on.
+    let victim = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == victim) {
+        c.tapped = true;
+    }
+    // Mode(1) is picked at PUSH time; the MayDo's yes is asked at resolution.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Mode(1),
+        DecisionAnswer::Bool(true),
+    ]));
+    let merfolk = g.add_card_to_hand(0, catalog::cursecatcher());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: merfolk,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Cursecatcher is castable for {U}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == victim && c.tapped),
+        "mode 1 untapped the permanent — before the fix the trigger always took mode 0 and tapped",
+    );
+}
+
 // ── Elf / Zombie / Vampire tribal ─────────────────────────────────────────────
 
 /// Elvish Champion pumps other Elves and grants forestwalk.

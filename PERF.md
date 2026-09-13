@@ -3080,6 +3080,9 @@ sweep   **1232..1241: 30 cells / 148,000 games / 0 failures**, `cap 0 / board 0 
         cannot follow is ignored. The player-action path still gets its `Err`, because there a refusal IS the
         rejection of an illegal action. After the fix the same block re-read **30 cells / 148,000 games / 0
         failures**, `cap 0 / board 0 / stuck 0 / draw 16`. **Frontier 1272.**
+        Then **1262..1271 (claimed in NEXT before it was taken): 30 cells / 148,000 games / 0 failures**,
+        `cap 0 / board 0 / stuck 0 / draw 12` at the run's opening tip, and re-swept at the closing tip because the
+        modal fix below changes what the bots are ASKED and therefore which games they play. **Frontier 1282.**
         ⚠ **THE GUARD FIRED AND NAMED NOTHING, AND THAT IS WHY THE FIX TOOK A REPRODUCTION RUN INSTEAD OF A READ.**
         Its whole message was `CardNotInHand(CardId(28))`, and 22 functions raise that. It now prints the stack top
         (what was resolving, by card name) and the first byte at which the before/after serializations diverge with
@@ -3414,6 +3417,28 @@ fix     the SHARED-BRANCH red, which was not this session's to originate and not
         no-Lesson arm was an EMPTY `if !self.draw_one_or_deck(..) { }` (nothing branches on the return, so `let _ =`
         with the reason written down) and the pathway ratchet's `[(fn() -> CardDefinition, C, C); 10]` gets the alias
         clippy asks for.
+modal   **`None` FROM `pick_trigger_mode` DOES NOT MEAN "NOT MODAL" DOWNSTREAM — IT MEANS `mode.unwrap_or(0)`,
+        AND NINE SHIPPED CARDS RESOLVED AT MODE 0 FOREVER WITHOUT EVER ASKING ANYONE.** Found by asking what else
+        can raise inside a resolution after the Cage fix (the census is in the entry above); the modal arm's
+        `ModeOutOfBounds` is a raiser, and reading how `ctx.mode` gets there found the bigger bug next to it. Two
+        holes. **(a) `governing_modal` did not descend `If` or `HauntCreature`** — Prophetic Titan, Depth Defiler,
+        Tizerus Charger and Wardens of the Cycle each hide their "choose one" in one branch of an `If` (the other
+        branch is the delirium/kicked "choose both" or a `Noop`), and Orzhov Pontiff's haunt half carries the modal
+        as its body, so its famous -1/-1 mode was unreachable while its ETB half — the same `ChooseMode`, at top
+        level — worked. **(b) A NESTED modal whose mode TARGETS was refused by the deferral gate and then fell
+        through to `None`** — deferral is correctly barred there (target slots are assigned at push time, before a
+        deferred pick exists), but the fall-through was to mode 0 rather than to the synchronous decider the
+        top-level path has always used for exactly this case. Merrow Reejerey, Stinging Lionfish, Component
+        Collector and Atraxa's Skitterfang all print "tap **or untap**" and only ever tapped. ⚠ **The function's
+        own doc asserted the opposite** — "the printed Magic cards in scope today all have a top-level
+        `ChooseMode` so the simple walk is sufficient" — the same shape as Devourer of Memory's "the engine has no
+        per-event batching": a claim the catalog outgrew, left where the next reader would trust it. Three gates,
+        all three proven able to fail by injection, and the structural one names the five cards when it does.
+        One existing test moved: `stinging_lionfish_taps_on_first_off_turn_spell` had its scripted answers in the
+        order the bug produced (the mode was never asked), and now takes `Mode(0)` BEFORE the `MayDo`'s yes,
+        because CR 700.2b picks the mode when the ability goes on the stack. Its assertion is unchanged — mode 0
+        IS tap — only who was asked for it. Golden traces unmoved; `--bench` counters byte-identical.
+
 gate    --bench on a `release` binary rebuilt at the PUSHED tip: **195,806 / 27.49 / 611.9 / 0 stalls (cap 0 /
         board 0 / stuck 0 / draw 0), counters BYTE-IDENTICAL to the committed invariant**, determinism ok (all
         160 pairs split) and, with `CRAB_THREAD_CHECK=1`, thread_determinism ok (3 vs 1). Not the gate, recorded
