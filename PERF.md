@@ -10145,9 +10145,41 @@ board and an action cap cost the same thing" and the two numbers above are the
 measurement that says they do not. It costs nothing and it is the thing that
 would catch the first sealed board to do it.
 
-**What is left to decide the per-permanent floor** is therefore a `--decks
-cube` question: 0.125 % of that pool's games are 95 % of its wall clock, and a
-gate run of 10–30 k cube games pays it. Whether that is worth attacking depends
+⚠⚠ **AND "WHAT IS LEFT TO DECIDE THE PER-PERMANENT FLOOR" IS ANSWERED —
+2026-09-13, AND THE ANSWER IS THAT THERE IS NO FLOOR TO ATTACK.** The lead
+assumed the 20x was the per-permanent machinery meeting ~1,000 permanents
+instead of ~40. It is not: that machinery is **sub-linear** in board size, and
+what is superlinear is Scute Swarm's own printed doubling being simulated
+inside the bot's probes.
+
+One harness, four boards, `n` vanilla-ish permanents split between the seats
+plus 40-card libraries and five cards in hand, timing
+`HeuristicBot::next_action_settled` at `PreCombatMain`:
+
+```text
+  us / decision            n=50     n=100    n=200     n=400     n=800    x16 board
+  a vanilla bear            483       662     1,044     1,854     3,723      7.7x
+  + one triggered ability   527       689     1,108     1,974     3,967      7.5x
+  + one anthem static     1,258     2,145     3,998     7,674    15,754     12.5x
+  Scute Swarm             2,251     4,501    10,601    28,796    94,382     41.9x
+  per-permanent, 50 -> 800: vanilla 9.7 -> 4.7 | trigger 10.5 -> 5.0 | static 25.2 -> 19.7 | SWARM 45.0 -> 118.0
+```
+
+**A triggered ability is free and a static costs a constant ~4x**, and in both
+cases the per-permanent column falls or holds — the definition of no
+superlinearity. **Only the Swarm's column rises**, 2.6x across the range, and
+the reason is the card: landfall makes a copy of every Swarm, so a probe that
+plays a land does O(N) token creation and the bot evaluates several such
+actions. That is the engine simulating what the card prints.
+
+⚠ Debug profile (`cargo test`, opt-level 0, `debug-assertions` on), so the
+absolute microseconds compare with nothing in this file. **The claim is the
+shape of the per-permanent column**, which a ratio makes robust to the
+constant factor — a quadratic cannot hide in a column that falls.
+
+So the remaining `--decks cube` question is a smaller one than it looked:
+0.125 % of that pool's games are 95 % of its wall clock, and a gate run of
+10–30 k cube games pays it. Whether that is worth attacking depends
 on how much of the ML loop runs on cube rather than sealed. `cube` 1036 (Ghosts of the Innocent, 5.4x release-fast / 83x sweep) is the
 other slow cell on record, with a different cause and the same shape of answer.
 
