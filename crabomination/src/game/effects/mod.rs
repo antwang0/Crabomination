@@ -34087,6 +34087,26 @@ impl GameState {
                 if self.find_card_zone(card_id) != Some(*source_zone) {
                     return Ok(());
                 }
+                // A Cage / Magistrate / graveyard lock forbids this cast, and
+                // a forbidden cast is a no-op, not an `Err` — `cast_card_for_free`'s
+                // doc has the whole story (`cube` / `all` seed 1254) and covers
+                // the twelve call sites that go through it. This arm is NOT one
+                // of them: a `pay_own_cost` / discounted cast charges real mana,
+                // so it calls `cast_card_from_zone_spending` directly below and
+                // needs its own check. Asked here rather than at that call
+                // because it also keeps the controller from being OFFERED a
+                // cast that cannot happen — the prompt is a few lines down.
+                if matches!(
+                    source_zone,
+                    crate::card::Zone::Graveyard | crate::card::Zone::Library | crate::card::Zone::Exile
+                ) {
+                    let def = self.find_card_anywhere(card_id).map(|c| c.definition.arc());
+                    if let Some(def) = def
+                        && self.cast_from_zone_blocked(ctx.controller, &def, *source_zone)
+                    {
+                        return Ok(());
+                    }
+                }
                 // Lands are played, not cast — skip them silently. This
                 // makes `ForEach LastMoved → CastWithoutPayingImmediate`
                 // safe to use over a mixed top-of-library exile (e.g.

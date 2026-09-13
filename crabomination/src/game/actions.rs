@@ -10355,6 +10355,52 @@ impl GameState {
         x_value: Option<u32>,
         exile_after: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // ⚠ **A CAGE MAKES THIS CAST IMPOSSIBLE, NOT ERRONEOUS, AND THE
+        // DIFFERENCE ABORTED THE PROCESS.** Grafdigger's Cage ("players can't
+        // cast spells from graveyards or libraries"), Drannith Magistrate and
+        // the graveyard locks all refuse the cast correctly, and
+        // `cast_card_from_zone_spending` reports that refusal as
+        // `CardNotInHand` — indistinguishable, to a caller, from the engine
+        // invariant of the same name. **Nine of this function's thirteen
+        // effect-resolution call sites took it with `?`**: `Cascade`,
+        // `Discover`, `Ripple`, `KnowledgePool`, `PossibilityStorm`,
+        // `CastAnyOrderWithoutPaying`, `CastFromHandWithoutPaying`,
+        // `CastFreeParadigmCopy` and `ExileTopMayPayEnergyToCast`. An `Err`
+        // out of a resolution leaves the stack item
+        // `resolve_top_of_stack_inner` has already popped, so the
+        // round-closing `PassPriority` comes back `Err` with the state moved
+        // and `perform_action_uncheckpointed`'s guard fires — which is how
+        // this was found, on `cube` / `all` seed 1254 of the 2026-09-13
+        // sweep, The Dawning Archaic attacking into a Cage. Release builds
+        // compile the guard out, so what shipped was quieter and not better:
+        // the trigger vanished off the stack and the action reported failure.
+        // **Cascade into an opponent's Drannith Magistrate is the same bug on
+        // a board people actually assemble** — far likelier than the 10-drop
+        // the sweep happened to find, which is why the check sits here and not
+        // only on that arm. (`CastWithoutPayingImmediate` still carries its
+        // own copy: a discounted or `pay_own_cost` cast charges mana, so it
+        // calls `cast_card_from_zone_spending` directly and never reaches
+        // this line.)
+        //
+        // CR 608.2 — an instruction a player is unable to follow is ignored,
+        // so the effect resolves and does nothing. Every caller of THIS entry
+        // point is an effect saying "cast it if you can"; the player-action
+        // path (`cast_from_zone_without_paying`) calls
+        // `cast_card_from_zone_spending` directly and still gets its `Err`,
+        // because there a refusal IS the rejection of an illegal action.
+        // Everything else the helper can raise still propagates: those are
+        // engine invariants and the guard is how they get found.
+        if matches!(
+            source_zone,
+            crate::card::Zone::Graveyard | crate::card::Zone::Library | crate::card::Zone::Exile
+        ) {
+            let def = self.find_card_anywhere(card_id).map(|c| c.definition.arc());
+            if let Some(def) = def
+                && self.cast_from_zone_blocked(p, &def, source_zone)
+            {
+                return Ok(Vec::new());
+            }
+        }
         self.cast_card_from_zone_spending(
             p, card_id, source_zone, target, additional_targets, mode, x_value, exile_after, 0,
         )

@@ -6106,6 +6106,57 @@ fn cr_702_85_first_sliver_grants_sliver_spells_cascade() {
         "the granted cascade casts the lower-MV card onto the battlefield");
 }
 
+/// CR 608.2 / 702.85 — cascade into an opponent's Drannith Magistrate. The
+/// Magistrate forbids casting the exiled card, so the cascade trigger does as
+/// much as it can (nothing) and the card stays exiled. It is not an error.
+///
+/// ⚠ **THIS IS THE SAME DEFECT `cube` / `all` SEED 1254 FOUND, ON A BOARD
+/// PEOPLE ACTUALLY ASSEMBLE.** `cast_card_from_zone_spending` reports a
+/// forbidden cast as `CardNotInHand`, and `Effect::Cascade` was one of NINE
+/// effect-resolution call sites that took that with `?` — an `Err` out of a
+/// resolution, leaving behind the stack item `resolve_top_of_stack_inner` has
+/// already popped. `perform_action_uncheckpointed`'s guard aborts on it in any
+/// debug-assertions build; release compiled the guard out and silently lost
+/// the trigger. The fix is in `cast_card_for_free`, which is why one test on
+/// one card would not have covered it.
+#[test]
+fn cr_608_2_cascade_through_drannith_magistrate_is_a_no_op() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Library top: a nonland card cascade would otherwise cast for free.
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    // "Your opponents can't cast spells from anywhere other than their hands."
+    g.add_card_to_battlefield(1, catalog::drannith_magistrate());
+    g.add_card_to_battlefield(0, catalog::the_first_sliver());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let meg = g.add_card_to_hand(0, catalog::megantic_sliver());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: meg, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Megantic Sliver castable for {5}{G}");
+
+    // Resolving the cascade trigger must SUCCEED and do nothing. Before the
+    // fix this returned `Err(CardNotInHand)` with the item already popped.
+    let mut resolutions = 0;
+    while !g.stack.is_empty() && resolutions < 20 {
+        g.resolve_top_of_stack()
+            .expect("a cast the Magistrate forbids is a no-op, not an error");
+        resolutions += 1;
+    }
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bears),
+        "the Magistrate forbade the cascade cast — the card did not hit the battlefield",
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.id == meg),
+        "the Sliver itself still resolved — only the cascade cast was forbidden",
+    );
+    assert!(g.game_over.is_none(), "the game is still going");
+}
+
 // ── CR 506 — skip the active player's combat phase (Stonehorn Dignitary) ───────
 
 #[test]

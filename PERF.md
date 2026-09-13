@@ -3061,9 +3061,30 @@ sweep   **1232..1241: 30 cells / 148,000 games / 0 failures**, `cap 0 / board 0 
         session's pre-merge tip, so without the fan-out session's `18dd93dc` / `bfd21876`. Then, after the merge and
         a rebuild, **1242..1251: 30 cells / 148,000 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 12`,
         `-C debug-assertions=yes` throughout, so the fan-out gate ran on every decision of those too. `all` 1159
-        re-confirmed at the merged tip: `cap 0 / board 0 / stuck 0 / draw 10` in 67.7 s. **Frontier 1262.**
+        re-confirmed at the merged tip: `cap 0 / board 0 / stuck 0 / draw 10` in 67.7 s.
         ⚠ **Two sessions worked this branch again all day** — this one took 1232..1241 and 1242..1251 and says so
         here, which is the discipline the four same-seed collisions earned.
+        Then **1252..1261: 30 cells / 138,000 games / 2 FAILURES — and they were one defect, the FIRST TIME
+        `perform_action_uncheckpointed`'s standing guard has ever fired.** `cube` 1254 and `all` 1254 both aborted
+        `rc 134`; `sealed` 1254 was clean, which is the pool, not luck. The board is The Dawning Archaic attacking
+        into a Grafdigger's Cage with a sorcery in its controller's graveyard: the Cage refuses the free cast
+        CORRECTLY, `cast_card_from_zone_spending` reports that refusal as `CardNotInHand` — indistinguishable from
+        the engine invariant of the same name — and the effect propagated it. An `Err` out of a resolution leaves
+        the stack item `resolve_top_of_stack_inner` has already popped, so the round-closing `PassPriority` came
+        back `Err` with the state moved, which is exactly what the guard exists to catch. Fixed at
+        `cast_card_for_free` rather than only at the arm the sweep landed on: **nine of its thirteen
+        effect-resolution call sites took the same `Err` with `?`** — `Cascade`, `Discover`, `Ripple`, `KnowledgePool`,
+        `PossibilityStorm`, `CastAnyOrderWithoutPaying`, `CastFromHandWithoutPaying`, `CastFreeParadigmCopy`,
+        `ExileTopMayPayEnergyToCast` — so **cascade into an opponent's Drannith Magistrate was the same abort on a
+        board people actually assemble**, and that is the second regression test. CR 608.2: an instruction a player
+        cannot follow is ignored. The player-action path still gets its `Err`, because there a refusal IS the
+        rejection of an illegal action. After the fix the same block re-read **30 cells / 148,000 games / 0
+        failures**, `cap 0 / board 0 / stuck 0 / draw 16`. **Frontier 1272.**
+        ⚠ **THE GUARD FIRED AND NAMED NOTHING, AND THAT IS WHY THE FIX TOOK A REPRODUCTION RUN INSTEAD OF A READ.**
+        Its whole message was `CardNotInHand(CardId(28))`, and 22 functions raise that. It now prints the stack top
+        (what was resolving, by card name) and the first byte at which the before/after serializations diverge with
+        a window either side — which named `The Dawning Archaic` and the popped stack item on the first re-run. A
+        guard that aborts is paying for a diagnosis; it should collect one.
 grid    all FOUR legs at the merged tip, on binaries rebuilt there: ladder **30 cells / 33,120 games, 0 failures**;
         actor (`selfplay_train`, the only leg that runs the encoder and so the only audit its four `debug_assert!`s
         have) **3 cells, 0 failures**; pilots **45 policies, 0 failures**; and `--wide` ladder **52 cells / 301,600

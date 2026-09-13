@@ -16546,10 +16546,54 @@ impl GameState {
         if let Err(e) = &result {
             let (a, b) =
                 (serde_json::to_string(&before).ok(), serde_json::to_string(&*self).ok());
-            assert!(
-                a.is_some() && a == b,
-                "uncheckpointed action left a partial mutation behind ({e:?})"
-            );
+            if a.is_none() || a != b {
+                // ⚠ **"THE FIX BELONGS AT THE RAISING SITE" NEEDS THE RAISING
+                // SITE, AND THE ERROR ALONE DOES NOT NAME IT.** The first time
+                // this fired (`cube` / `all` seed 1254, 2026-09-13) it said
+                // `CardNotInHand(CardId(28))` and nothing else — and 22
+                // functions raise that. The three things that do name it are
+                // what the resolution was, whose card it was, and which region
+                // of the state moved, so the guard prints all three before it
+                // aborts. The panic is the diagnosis, so it pays for itself.
+                use crate::game::types::StackItem;
+                let what = match before.stack.last() {
+                    Some(StackItem::Spell { card, .. }) => {
+                        format!("resolving spell {}", card.definition.name)
+                    }
+                    Some(StackItem::Trigger { source, activated, .. }) => format!(
+                        "resolving {} of {:?}",
+                        if *activated { "ability" } else { "trigger" },
+                        before
+                            .battlefield
+                            .iter()
+                            .find(|c| c.id == *source)
+                            .map_or("<off-board>", |c| c.definition.name),
+                    ),
+                    _ => "no stack item (step machinery)".to_string(),
+                };
+                // The first byte that differs, with a window either side —
+                // serde field order is stable, so this lands inside the
+                // structure that moved rather than naming the whole state.
+                let where_ = match (&a, &b) {
+                    (Some(a), Some(b)) => {
+                        let at = a.bytes().zip(b.bytes()).take_while(|(x, y)| x == y).count();
+                        let lo = at.saturating_sub(120);
+                        format!(
+                            "first divergence at byte {at}:\n  before: …{}…\n  after:  …{}…",
+                            &a[lo..a.len().min(at + 200)],
+                            &b[lo..b.len().min(at + 200)],
+                        )
+                    }
+                    _ => "state did not serialize".to_string(),
+                };
+                // The action is always the round-closing `PassPriority` here —
+                // that branch is this function's only caller — so what it was
+                // is not the question; what it was resolving is.
+                panic!(
+                    "uncheckpointed action left a partial mutation behind ({e:?})\n  \
+                     stack top: {what}\n  {where_}"
+                );
+            }
         }
         result
     }

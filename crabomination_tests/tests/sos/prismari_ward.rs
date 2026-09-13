@@ -1775,6 +1775,63 @@ fn the_dawning_archaic_attack_trigger_uses_immediate_free_cast() {
         "Dawning Archaic has an attack-triggered free-cast effect");
 }
 
+/// CR 608.2 — a free cast a Cage forbids is an instruction the controller is
+/// UNABLE to follow, so the trigger resolves and does nothing. It is not an
+/// error, and the difference is not cosmetic.
+///
+/// ⚠ **THIS ABORTED THE PROCESS, AND IT IS THE FIRST TIME
+/// `perform_action_uncheckpointed`'s standing guard ever fired.** `cube` and
+/// `all` seed 1254 of the 2026-09-13 fresh-seed sweep, both `rc 134`:
+/// The Dawning Archaic attacks into a Grafdigger's Cage with a sorcery in its
+/// controller's graveyard. `cast_card_from_zone_spending` refuses the cast —
+/// correctly, the Cage says players can't cast spells from graveyards — and
+/// reports the refusal as `CardNotInHand`, which
+/// `Effect::CastWithoutPayingImmediate` propagated. An `Err` out of a
+/// resolution leaves behind the stack item `resolve_top_of_stack_inner` has
+/// already popped, so the round-closing `PassPriority` came back `Err` with
+/// the state moved, and the guard that exists to catch exactly that aborted.
+/// Its own doc comment had predicted the shape ("`cast_card_for_free` on a
+/// card that has moved") and said the fix belongs at the raising site.
+///
+/// Release builds compile the guard out, so what shipped was quieter and not
+/// better: the trigger vanished off the stack and the action reported failure.
+#[test]
+fn the_dawning_archaic_trigger_is_a_no_op_through_a_cage() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    // A sorcery in the attacker's graveyard for the trigger to target.
+    let mut gy = crabomination::card::CardInstance::new(g.next_id(), catalog::divination(), 0);
+    gy.controller = 0;
+    let gy_id = gy.id;
+    g.players[0].graveyard.push(gy);
+    // "Players can't cast spells from graveyards or libraries."
+    g.add_card_to_battlefield(1, catalog::grafdiggers_cage());
+    let arc = g.add_card_to_battlefield(0, catalog::the_dawning_archaic());
+    g.clear_sickness(arc);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: arc,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("the Archaic attacks");
+
+    // The attack trigger is on the stack; resolving it must SUCCEED and do
+    // nothing. Before the fix this returned `Err(CardNotInHand)` with the
+    // item already popped.
+    let mut resolutions = 0;
+    while !g.stack.is_empty() && resolutions < 20 {
+        g.resolve_top_of_stack().expect("a cast the Cage forbids is a no-op, not an error");
+        resolutions += 1;
+    }
+    assert!(g.stack.is_empty(), "the stack drained");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == gy_id),
+        "the sorcery stayed in the graveyard — the Cage forbade the cast",
+    );
+    assert!(g.game_over.is_none(), "the game is still going");
+}
+
 #[test]
 fn the_dawning_archaic_cost_reduces_per_is_in_graveyard() {
     // Push (modern_decks, batch 78): Dawning Archaic's "This spell
