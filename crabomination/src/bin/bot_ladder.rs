@@ -1897,6 +1897,19 @@ fn main() {
             if sweeps == 0 { 0.0 } else { 100.0 * repeats as f64 / sweeps as f64 },
         );
     }
+    // The gather memo's price, ahead of anyone building it — see
+    // `game::gather_census`. Needs `--features trig-census` and
+    // `CRAB_GATHER_CENSUS=1`.
+    #[cfg(feature = "trig-census")]
+    if crabomination::game::gather_census::on() {
+        let (gathers, repeats, no_reach) = crabomination::game::gather_census::snapshot();
+        println!(
+            "  gather_census {repeats}/{gathers} repeats ({:.2} %), {no_reach} after no \
+             &mut reach ({:.2} %)",
+            if gathers == 0 { 0.0 } else { 100.0 * repeats as f64 / gathers as f64 },
+            if gathers == 0 { 0.0 } else { 100.0 * no_reach as f64 / gathers as f64 },
+        );
+    }
     // PERF (-138): how many affordance probes ever write the resolution-scratch
     // half of `GameState` — the population a `CowBox<ResolutionScratch>` would
     // serve. Off unless `CRAB_SCRATCH_CENSUS` is set.

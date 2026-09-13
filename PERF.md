@@ -3048,6 +3048,17 @@ fix     **Three `PlayerRef`s read a player out of a selector and none of the thr
         is why `audit_target_fields` could see it and 19,546 tests could not (**1 aimed -> 0**).
         ENGINE_BACKLOG rule 5c; test `target_walkers::a_player_ref_that_reads_a_selector_carries_its_target`.
 
+census  **`(-303)`: the gather census, and it is the strongest number on the page.** `gather_census` (one tick
+        at `gather_continuous_effects_with`, the chokepoint every gather goes through; compile-time gated on
+        `trig-census`, so the shipped binary is byte-identical — verified `fixed` **+0.0000 %** / `sealed`
+        **+0.0003 %**). **95-99.6 % of gathers return the answer the previous gather returned**
+        (fixed 23,479/24,248, cube 42,042/44,258, sealed 61,923/62,144) and **50-52 % follow NO `&mut` reach
+        at the battlefield**. On `cube` that is 44,258 gathers at ~2,086 Ir, **~92 M / 5.5 % of the pool**.
+        ⚠ `sba_census` is the precedent and the warning: it read 17.8-19.0 % and lost because the
+        *fingerprint* costs as much as the sweep. Here the rate is five times higher, the skipped work an
+        order dearer, and `NO_REACH` is a gate that needs a **counter compare**, not a fingerprint.
+        `(-303)` lists the three things to establish before building the memo, non-battlefield inputs first.
+
 sweep   **fresh seeds 1292..1295 (claimed in NEXT before the run): 12 cells / 59,200 games / 0 failures**,
         `cap 2 (both slow-not-stuck) / board 0 / stuck 0 / draw 0`, three pools x four seeds x 400 games on a
         `target-audit/overflow` build with `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`, at the
@@ -6867,6 +6878,58 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-303)` The gather census: **95-99.6 % of gathers return the answer the previous one did**, and half follow no `&mut` reach at all
+
+The candidates head's new #1 (`compute_permanents`, 7.25 % of `cube`
+inclusive, 47-56 % of its calls running a whole-game gather) asked for the
+census before the build, the way `(-87)` did. `gather_census` is that
+instrument — one tick at `gather_continuous_effects_with`, the single
+chokepoint every gather goes through, compile-time gated on `trig-census` so
+the shipped binary is byte-identical (verified: `fixed` +0.0000 %, `sealed`
++0.0003 % against the `(-302)` tip) and `CRAB_GATHER_CENSUS=1` at run time.
+
+```text
+release-fast --features trig-census, CRAB_GATHER_CENSUS=1 CRAB_TRIG_CENSUS=1,
+gang mirror --games 6 --threads 1 --seed 1
+                   gathers   same answer as the previous   after no &mut battlefield reach
+  fixed             24,248     23,479   96.83 %             12,208   50.35 %
+  cube              44,258     42,042   94.99 %             23,124   52.25 %
+  sealed            62,144     61,923   99.64 %             31,642   50.92 %
+```
+
+**That is the highest repeat rate this file has measured for anything.** A
+gather is ~2,086 Ir inclusive (the `compute_permanents` edge divided by its
+gathers), so on `cube` the 44,258 gathers are **~92 M Ir, 5.5 % of the pool**,
+and 95 % of them recompute an answer that is already known.
+
+⚠ **`sba_census` is the precedent AND the warning, and this is not the same
+arithmetic.** That census read 17.8-19.0 % repeat sweeps and was closed
+because the *fingerprint* proving a repeat is a whole-board walk of the same
+shape as the ~2.5-3.5 k Ir sweep it would skip — it loses before soundness is
+reached. Here the repeat rate is five times higher, the thing skipped is an
+order dearer, **and the second column is a gate that needs no fingerprint at
+all**: `NO_REACH` counts gathers that followed no `&mut` reach at the
+battlefield since the previous one, which is a counter compare on the read
+side. Half of every pool's gathers are in it.
+
+**So the lead is a state-level gathered-effect memo, invalidated by a dirty
+bit at the write chokepoints — `Battlefield`'s two-bit lanes one level down
+are the shape.** What is left to establish before building it, in order:
+1. The gather's inputs are not only the battlefield — it reads
+   `continuous_effects`, graveyard-resident anthems, the command zone and
+   several `Player` fields. **Every one needs a chokepoint or the memo is
+   silently stale**, which over millions of games is the worst failure mode in
+   this tree. The `NO_REACH` column is therefore an *upper bound* on what a
+   battlefield-only dirty bit can serve, not a promise.
+2. The audit is the same one every memo here carries: recompute and compare on
+   every hit under `debug_assertions`, so the suite's 19.5 k tests and the
+   fresh-seed sweep are the ratchet. It will make the suite slower; that is
+   the price of the gate, not a reason to skip it.
+3. `GameState::clone` must decide what happens to the memo: carrying it is
+   correct only if the epoch is carried too, and a probe that starts with a
+   warm memo is most of the win (56 % of `compute_permanents`' gathers are a
+   simulation's first layer question).
 
 ### `(-302)` A card-type pre-test in front of the target enumerator's board walk — and widening it loses
 
@@ -11093,8 +11156,13 @@ continuous-effect set and re-running the layer pass for the combatants.
   **So the device is a memo whose lifetime spans a MUTATION** — a state-level
   gathered-effect memo cleared at the write chokepoints, which is the shape
   `Battlefield`'s two-bit lanes already use one level down (`(-87)`, `(-197)`,
-  `(-203)`). Price it against the lane work's own rule first: a census of how
-  many mutations between two gathers could actually change the gather.
+  `(-203)`). ✅ **THE CENSUS IS TAKEN AND IT IS THE STRONGEST NUMBER ON THIS
+  PAGE — `(-303)`: 95-99.6 % of gathers return the answer the previous gather
+  returned, and 50-52 % follow no `&mut` reach at the battlefield at all.** On
+  `cube` that is 44,258 gathers, **~92 M Ir / 5.5 % of the pool**, 95 % of it
+  recomputing a known answer, with a gate that needs a counter compare rather
+  than `sba_census`' fatal fingerprint. `(-303)` lists the three things to
+  establish before building it — the gather's non-battlefield inputs first.
 
 ⚠ **`cg_ratio.py` at this tip has NOTHING new above the floor.** Its top row is
 `printed_requirement_impl'2` at **35.2x** (0.80 % of sealed against 0.02 % of

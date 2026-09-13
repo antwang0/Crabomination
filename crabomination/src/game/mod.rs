@@ -736,6 +736,78 @@ impl LayerFreezeState {
 /// `default()` and a `cube` run takes 22,684 state clones against 28,992
 /// freeze scopes, so a pool that lived on the state would be empty at nearly
 /// every scope that could use one.
+/// **Prices the memo PERF's candidates head asks for, before anyone builds
+/// it**: how many whole-game continuous-effect gathers produce the *same*
+/// answer as the previous gather on this thread, and how many follow no `&mut`
+/// reach at the battlefield since the previous one.
+///
+/// `compute_permanents` is 7.25 % of `cube` inclusive and 47-56 % of its calls
+/// run a gather; the shape that would remove them is a state-level memo whose
+/// lifetime spans a mutation. [`sba_census`](crate::game::stack::sba_census)
+/// is the precedent and the warning both: it measured 17.8-19.0 % repeat
+/// sweeps and the *fingerprint* that would prove a repeat cost as much as the
+/// sweep it skipped. A gather is ~2,100 Ir, an order more than that sweep, so
+/// it is not the same arithmetic — but it still has to be done. `REPEATS` is
+/// the ceiling; `NO_REACH` is the part a cheap dirty bit could actually serve.
+///
+/// Compile-time gated on `trig-census` so the shipped binary is byte-identical
+/// (PERF `(-115)`: an env-gated tick on a hot path is not free), then
+/// `CRAB_GATHER_CENSUS=1` at run time. `bot_ladder` prints it.
+#[cfg(feature = "trig-census")]
+pub mod gather_census {
+    use std::cell::Cell;
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    use crate::game::layers::ContinuousEffect;
+
+    pub static GATHERS: AtomicU64 = AtomicU64::new(0);
+    pub static REPEATS: AtomicU64 = AtomicU64::new(0);
+    pub static NO_REACH: AtomicU64 = AtomicU64::new(0);
+
+    thread_local! {
+        static PREV: Cell<u64> = const { Cell::new(u64::MAX) };
+        static PREV_REACHES: Cell<u64> = const { Cell::new(u64::MAX) };
+    }
+
+    pub fn on() -> bool {
+        static LEVEL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_GATHER_CENSUS") {
+            Ok(v) => !v.is_empty() && v != "0",
+            _ => false,
+        })
+    }
+
+    /// `ContinuousEffect` carries no `Hash`, and adding one would put a derive
+    /// on the whole `Modification` tree for a census; the `Debug` rendering is
+    /// a total function of the value, which is all a digest needs. Slow on
+    /// purpose — nothing runs it unless the variable is set.
+    fn digest(fx: &[ContinuousEffect]) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        fx.len().hash(&mut h);
+        for e in fx {
+            format!("{e:?}").hash(&mut h);
+        }
+        h.finish()
+    }
+
+    pub(crate) fn tick(fx: &[ContinuousEffect]) {
+        GATHERS.fetch_add(1, Relaxed);
+        let d = digest(fx);
+        if PREV.with(|p| p.replace(d)) == d {
+            REPEATS.fetch_add(1, Relaxed);
+        }
+        let now = crate::zone::BATTLEFIELD_REACHES.load(Relaxed);
+        if PREV_REACHES.with(|p| p.replace(now)) == now {
+            NO_REACH.fetch_add(1, Relaxed);
+        }
+    }
+
+    pub fn snapshot() -> (u64, u64, u64) {
+        (GATHERS.load(Relaxed), REPEATS.load(Relaxed), NO_REACH.load(Relaxed))
+    }
+}
+
 mod cp_pool {
     use std::sync::Arc;
 
@@ -10727,6 +10799,12 @@ impl GameState {
         let prev = self.in_layer_gather.swap(true, Ordering::Relaxed);
         let out = self.gather_continuous_effects_inner(buf);
         self.in_layer_gather.store(prev, Ordering::Relaxed);
+        // The one chokepoint every gather goes through — see `gather_census`.
+        // Compile-time gated, so the shipped binary does not carry the check.
+        #[cfg(feature = "trig-census")]
+        if gather_census::on() {
+            gather_census::tick(&out);
+        }
         // The card-type presence gate's audit, run in the sound direction and
         // in the one place where the gather already happened, so it costs a
         // gate-shaped battlefield walk rather than a gather. A new emitter
