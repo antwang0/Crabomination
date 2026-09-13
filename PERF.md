@@ -11038,9 +11038,62 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**THE NEW #1 IS A CALLER, NOT A SELF ROW, AND NO SELF TABLE CAN SEE IT:
-`bot::cast_candidates` IS 8.9 % OF `sealed` INCLUSIVE AGAINST 1.25 % OF SELF
-(2026-09-13, the `(-294)` tip, `035e9d53`).** Found with `cg_ratio.py` — the
+**THE QUEUE IS RE-SEEDED OFF A FRESH WHOLE-PROFILE READ AT `f59872cc`
+(2026-09-13, the `(-302)` tip), AND THE NEW #1 IS A CALLER AGAIN:
+`GameState::compute_permanents` IS 7.25 % OF `cube` INCLUSIVE — bigger than
+`dispatch_triggers_for_events_slow`'s self row on that pool — AND **HALF ITS
+CALLS DO A WHOLE-GAME CONTINUOUS-EFFECT GATHER**.**
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                                          fixed            cube          sealed
+  program total                     632,418,551   1,684,318,970   1,756,418,792
+  compute_permanents INCLUSIVE       29.1 M 4.61%  122.1 M 7.25%    69.6 M 3.96%
+    its own self                       2.0 M          2.0 M           2.4 M
+    -> the layer passes (collect)     13.9 M         75.6 M          36.0 M
+    -> frozen_effects                  7.6 M         19.4 M          16.0 M
+    -> gather_continuous_effects_inner 6.0 M         23.9 M          14.7 M
+  calls / of which GATHER            10,682 / 5,056  20,484 / 11,448  26,530 / 13,234
+                                        47 %            56 %            50 %
+  its four callers (calls, inclusive Ir) — cube
+    combat_damage_computed            7,664   61.8 M     <- 1 per call, 8,065 Ir each
+    declare_attackers_banded          6,188   18.1 M     <- 1 per call
+    declare_blockers                  4,708   25.3 M     <- 1 per call
+    check_state_based_actions_into    3,794   16.9 M     <- 3,794 of 21,626 sweeps (17 %)
+```
+
+**There is no repetition INSIDE a call — every caller asks once — so the cost
+is repetition ACROSS calls on a board that has not moved.** `declare_attackers_
+banded` runs 6,244 times a cube run and `declare_blockers` 4,708: those are the
+bot's attack/block *simulations*, each on a clone, each re-gathering the whole
+continuous-effect set and re-running the layer pass for the combatants.
+
+**Two devices, neither taken, and they compose.**
+
+* **Route `compute_permanents` through the freeze scope's `perms` memo.** It
+  calls `apply_layers_one_gated` directly, so inside a scope it recomputes
+  permanents `computed_permanent_hinted` may already hold — the two memoize
+  nothing for each other. Its 20,484 collects are the single biggest
+  contributor to the `SpecFromIterNested` row that is **#3 on cube at 3.71 %
+  self** — the 75.6 M edge is *inclusive*, i.e. the layer passes, which is
+  exactly what a memo hit removes.
+* **Open the freeze scope one level up, around the bot's per-candidate
+  declare/simulate call**, so the gather is shared by everything that call
+  reaches. ⚠ The scope takes `&self` and the damage steps mutate, so this is
+  *not* "wrap `resolve_combat_into`" — it is the `&self` search paths
+  (`pick_attacks_inner`, `pick_blocks_inner`, `simulate_*_outcome_once`) that
+  can hold one, and the question to answer first is whether they already do.
+
+⚠ **`cg_ratio.py` at this tip has NOTHING new above the floor.** Its top row is
+`printed_requirement_impl'2` at **35.2x** (0.80 % of sealed against 0.02 % of
+fixed) and that is callgrind's *recursion context* of the walker, not a second
+symbol — `(-301)` closed it. The rest of the table is the allocator family and
+rows already named here. **The ratio device is spent for this pair of pools;
+the caller tree above is what a re-read found instead.**
+
+**SUPERSEDED AS #1 BY THE BLOCK ABOVE — KEPT FOR THE METHOD AND FOR THE PIECE
+THAT IS LEFT. `bot::cast_candidates` IS 8.9 % OF `sealed` INCLUSIVE AGAINST
+1.25 % OF SELF (2026-09-13, the `(-294)` tip, `035e9d53`).** Found with `cg_ratio.py` — the
 device PERF's "Which pool a change moves" describes and which had not been run
 at this tip — off the `sealed` / `fixed` join at `--floor 0.45`. Its top row is
 `printed_requirement_impl` at **0.80 % of sealed against 0.06 % of fixed,
