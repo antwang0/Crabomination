@@ -11,10 +11,11 @@
 # holding a thread to the 50,000 cap, and `CRAB_CAP_DIAG=4000` prints the
 # board of any game past 4,000 actions (stack targets, linked exiles), so a
 # cap names itself in the log. `stuck` is always a defect and `draw` never is
-# (CR 104.4); a `cap` is one unless the 50,000-action re-run below clears it, or
-# keeps it on the one board that is diagnosed and unwinnable — both seats past
-# `SCALE_CEILING * 1_000` life, which is Beacon of Immortality doubling and
-# shuffling itself back (`cube` 1018, 1069, 1076, `all` 1159).
+# (CR 104.4); a `cap` is one unless the 50,000-action re-run below clears it,
+# or the board is a `MAX_BATTLEFIELD` runaway the re-run cannot say anything
+# new about. The Beacon boards (`cube` 1018, 1069, 1076, `all` 1159 — both
+# seats past `SCALE_CEILING * 1_000` life, the Beacon shuffling itself back)
+# are DRAWS since `(-291)` and `(-292)`, and excuse nothing any more.
 #
 # ⚠ **A NOVEL CAP IS RE-RUN AT THE PRODUCTION ACTION CAP BEFORE IT IS
 # REPORTED, and the script does that itself.** `CRAB_MAX_ACTIONS=6000` is a
@@ -48,21 +49,29 @@
 # which prints every field the digest reads so the moving one names itself.
 #
 # ⚠⚠ **`NO_PROGRESS_MAX_PERIOD` IS NOT THE PARAMETER, AND THE BUDGET IS NOT
-# EITHER — measured 2026-09-13, and this retires the handoff's guess.** Both
-# dumps of `all` 1159 read `since 0/8`: the anchor is alive and matching at the
-# moment the cap fires, so it is not the period bound that loses it. And more
-# budget does not converge — the SAME cell at `CRAB_MAX_ACTIONS=200000` runs to
-# turn **9,099** (4x the actions, 4x the turns) and reads **`repeats 6/12`,
-# LOWER than the 10/12 it reached at 50,000**. The anchor is re-formed
-# continuously and the count never crosses 12, because what moves the digest on
-# that board is the TAPPED SET: both seats spend a varying amount of mana every
-# turn (Underworld Connections, extort), and `tapped` is one bit per permanent
-# in the fingerprint. **The watch is a periodicity detector and this board is
-# aperiodic**; no value of its three constants closes that — a longer period or
-# a lower repeat count only changes which aperiodic board survives. The shape
-# that would close it is a different predicate ("no seat can win or lose"),
-# which is an adjudication change, not a tuning one. Do not re-price the
-# constants; they have been.
+# EITHER — measured 2026-09-13 by TWO SESSIONS INDEPENDENTLY, which is why
+# both sets of numbers are kept.** Both dumps of `all` 1159 read `since 0/8`:
+# the anchor is alive and matching at the moment the cap fires, so it is not
+# the period bound that loses it. And more budget does not converge — the SAME
+# cell at `CRAB_MAX_ACTIONS=200000` runs to turn **9,099** (4x the actions, 4x
+# the turns) and reads **`repeats 6/12`, LOWER than the 10/12 it reached at
+# 50,000**; at 400,000 it runs to turn **18,202** and reads **`0/12`**. The
+# anchor is re-formed continuously and the count never crosses 12, because what
+# moves the digest on that board is the TAPPED SET: both seats spend a varying
+# amount of mana every turn (Underworld Connections, extort), and `tapped` was
+# one bit per permanent in the fingerprint. **The watch is a periodicity
+# detector and this board WAS aperiodic**; no value of its three constants
+# closes that — a longer period or a lower repeat count only changes which
+# aperiodic board survives. Do not re-price the constants; they have been.
+#
+# ⚠ **The conclusion one session drew from that — "the shape that would close
+# it is a different predicate ('no seat can win or lose'), an adjudication
+# change and not a tuning one" — is one step too pessimistic, and the third
+# option is the one that landed.** Neither tune the detector nor replace it:
+# ask whether the field making the stream aperiodic is PROGRESS. A tap the
+# untap step takes back is not, so the turn digest stopped reading it
+# (`b59b3fab`), the stream on that board is constant, and the cell is
+# `cap 0 / draw 10` with 20,000 replayed games showing no other verdict moved.
 #
 # ⚠ **A RUNAWAY BOARD SKIPS THE RE-RUN, AND THAT IS THE THIRD THING THE `cap`
 # BUCKET HELD.** `cube` 1215: 951 Scute Swarms on a 987-permanent board at turn

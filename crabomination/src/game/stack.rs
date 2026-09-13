@@ -1737,17 +1737,28 @@ impl GameState {
     /// the latest state — [`MANDATORY_LOOP_MAX_PERIOD`](Self::MANDATORY_LOOP_MAX_PERIOD)'s
     /// role one level up. Two seats alternating is period 2; four seats, 4.
     ///
-    /// ⚠ **PRICED AND NOT MOVED (2026-09-13).** `all` 1159 — the one cap that
-    /// survives the sweep's 50,000-action re-run — is not bounded by this.
-    /// Both of its dumps read `since 0/8`, so the anchor is matching at the
-    /// moment the cap fires, and the same cell at a 200,000-action budget runs
-    /// to turn 9,099 and reads `repeats 6/12`, *lower* than the 10/12 it
-    /// reached at 50,000. What moves that digest is the tapped set, which a
-    /// board spending a varying amount of mana every turn never repeats: the
-    /// watch is a periodicity detector and the board is aperiodic. Raising
-    /// this (or lowering [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS))
-    /// only changes which aperiodic board survives. `fresh_seed_sweep.sh`'s
-    /// header has the numbers.
+    /// ⚠ **PRICED AND NOT MOVED (2026-09-13), BY TWO SESSIONS THAT MET ON THE
+    /// SAME BOARD.** `all` 1159 — the one cap that ever survived the sweep's
+    /// 50,000-action re-run — was not bounded by this. Both of its dumps read
+    /// `since 0/8`, so the anchor was matching at the moment the cap fired;
+    /// the same cell at a 200,000-action budget ran to turn 9,099 and read
+    /// `repeats 6/12`, *lower* than the 10/12 it reached at 50,000, and at
+    /// 400,000 to turn 18,202 and `repeats 0/12`. More budget did not
+    /// converge. Raising this, or lowering
+    /// [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS), would
+    /// only have changed which board survived.
+    ///
+    /// **What moved that digest was the tapped set, and the answer was to stop
+    /// digesting it rather than to tolerate it.** `CRAB_PROGRESS_WATCH=2000`
+    /// printed the field list on the capped game: two states, differing in one
+    /// permanent's tap, in runs of 11 / 9 / 20 / 9 / 19 samples — and 9 misses
+    /// is one past this constant, so every run of returns died a sample short.
+    /// `fingerprint_as` drops `tapped` on the turn watch now, the stream on
+    /// that board is constant, and the cell is `cap 0 / draw 10`. The reading
+    /// that stands is the one about THIS constant: a periodicity detector
+    /// cannot be tuned into seeing an aperiodic stream, so when one shows up,
+    /// ask which field is making it aperiodic and whether that field is
+    /// progress. `fresh_seed_sweep.sh`'s header has the numbers.
     pub const NO_PROGRESS_MAX_PERIOD: u32 = 8;
 
     /// The turn the watch starts sampling on, and **the only reason it is not
