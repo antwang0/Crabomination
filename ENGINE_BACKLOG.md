@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress](#fixed-2026-09-13-twenty-sixth-find--the-sweeps-only-surviving-cap-and-the-field-in-the-digest-that-was-bookkeeping-rather-than-progress) | 80 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fifth find) — nineteen cards print a colour their mana cost cannot carry, and none had an indicator](#fixed-2026-09-12-twenty-fifth-find--nineteen-cards-print-a-colour-their-mana-cost-cannot-carry-and-none-had-an-indicator) | 44 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-fourth find) — one `false` for two meanings: a skipped draw eliminated the drawer, and nineteen more draws could not deck anyone](#fixed-2026-09-12-twenty-fourth-find--one-false-for-two-meanings-a-skipped-draw-eliminated-the-drawer-and-nineteen-more-draws-could-not-deck-anyone) | 48 |
 | Bugs & robustness | [FIXED 2026-09-12 (the drift list, once it could be read) — 25 cards shipped a mechanic they print, one shipped the WRONG one, and one shipped an ability it does not print](#fixed-2026-09-12-the-drift-list-once-it-could-be-read--25-cards-shipped-a-mechanic-they-print-one-shipped-the-wrong-one-and-one-shipped-an-ability-it-does-not-print) | 52 |
@@ -26,7 +27,7 @@ the handoff.
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-third find) — a `condition` is not a cost, and the census that closed the class asked the wrong question](#fixed-2026-09-12-twenty-third-find--a-condition-is-not-a-cost-and-the-census-that-closed-the-class-asked-the-wrong-question) | 54 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-second find) — a name no card has is audited by nobody, and that is where a second, worse copy of a card lives](#fixed-2026-09-12-twenty-second-find--a-name-no-card-has-is-audited-by-nobody-and-that-is-where-a-second-worse-copy-of-a-card-lives) | 55 |
 | Bugs & robustness | [FIXED 2026-09-12 (twenty-first find) — colour is DERIVED, and three shipped cards print one their mana cost cannot carry](#fixed-2026-09-12-twenty-first-find--colour-is-derived-and-three-shipped-cards-print-one-their-mana-cost-cannot-carry) | 46 |
-| Bugs & robustness | [OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable](#open-2026-09-11--the-first-capped-board-in-13-m-swept-games-diagnosed-and-not-a-rules-defect-beacon-of-immortality-makes-a-wg-cube-mirror-unwinnable) | 42 |
+| Bugs & robustness | [CLOSED 2026-09-13 (was OPEN 2026-09-11) — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable](#closed-2026-09-13-was-open-2026-09-11--the-first-capped-board-in-13-m-swept-games-diagnosed-and-not-a-rules-defect-beacon-of-immortality-makes-a-wg-cube-mirror-unwinnable) | 51 |
 | Bugs & robustness | [FIXED 2026-09-12 (twentieth find) — the asked seat was re-derived on every re-run in fifteen arms, and the fix belongs in the ask helper, not in the arms](#fixed-2026-09-12-twentieth-find--the-asked-seat-was-re-derived-on-every-re-run-in-fifteen-arms-and-the-fix-belongs-in-the-ask-helper-not-in-the-arms) | 62 |
 | Bugs & robustness | [FIXED 2026-09-11 (nineteenth find) — twenty-six shipped bodies enumerated ZERO legal targets: a player-only slot 0 classified by its BODY, not by its slot](#fixed-2026-09-11-nineteenth-find--twenty-six-shipped-bodies-enumerated-zero-legal-targets-a-player-only-slot-0-classified-by-its-body-not-by-its-slot) | 41 |
 | Bugs & robustness | [FIXED 2026-09-11 (eighteenth find) — "target player's graveyard" was not a player slot: the two walkers disagreed about which selectors read a player](#fixed-2026-09-11-eighteenth-find--target-players-graveyard-was-not-a-player-slot-the-two-walkers-disagreed-about-which-selectors-read-a-player) | 29 |
@@ -80,6 +81,88 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress
+
+`all` seed **1159** was the first and only cap in the fresh-seed sweep's
+history to survive its own 50,000-action re-run — the Beacon of Immortality
+board plus a Basilica Screecher and an Underworld Connections, both seats past
+`SCALE_CEILING * 1_000` life, neither killable, neither deckable. `(-291)`'s
+turn-granular no-progress watch draws boards like it; this one it could not,
+and `(-291)`'s life clamp took it from `repeats 2/12` only as far as `10/12`.
+
+**Three runs concluded the constant was the thing to price. It was the field
+list, and the difference is the method.** From `repeats N/12` alone, PERF and
+TODO both wrote "⚠ `NO_PROGRESS_MAX_PERIOD` (8) is the next thing to price, not
+the digest's field list"; a concurrent session then priced the constant
+properly — correctly ruling it out — and concluded the board was simply
+aperiodic, so that only a different predicate ("no seat can win or lose"), an
+adjudication change, could close it. ⚠ **There is a third option between tuning
+a periodicity detector and replacing it: ask whether the field making the
+stream aperiodic is PROGRESS.**
+
+What answered it is one diagnostic, `CRAB_PROGRESS_WATCH=<turn>` — one line a
+turn naming every quantity `fingerprint_as` reads, printed from the self-play
+driver rather than from the watch (which runs on every bot probe's clone, 3,234
+`end_turn` calls a six-game `cube` run against ~150 real turns). Over turns
+2,000..2,270 of the capped game the sampled stream is **two states differing in
+one permanent's tap** — after the life clamp every other field is equal,
+permanent ids included:
+
+```text
+  sampled every NO_PROGRESS_SAMPLE_EVERY=4 turns:
+    A x11   B x9   A x20   B x9   A x19
+  9 misses is ONE past NO_PROGRESS_MAX_PERIOD (8), which abandons the anchor
+  and the count with it:
+    repeats  11 -> 0 -> 11 -> 0 -> 10       NO_PROGRESS_DRAW_REPEATS = 12
+```
+
+Every diagnostic reading falls out of that: `repeats 10/12` at a 50,000-action
+budget, `6/12` at 200,000 (turn 9,099), `0/12` at 400,000 (turn 18,202) — and
+`since 0/8` in every dump, because the sample the cap lands on is a matching
+one. The bot takes a 33rd land for the extort in bursts; nothing else moves.
+
+**Fix:** `tapped` leaves the TURN digest, gated on `player_counters` exactly as
+the life clamp is. The resolution and announcement watches keep it, because
+they sample *within* a turn, where a tap is a cost paid and a real move.
+
+```text
+overflow + debug-assertions, --games 400 --threads 3 --seed 1159 --decks all, CRAB_MAX_ACTIONS=50000:
+  before  6790 decided, 10 undecided, 73.6 s   cap 2 / board 0 / stuck 0 / draw 8
+  after   6790 decided, 10 undecided, 68.0 s   cap 0 / board 0 / stuck 0 / draw 10
+negative control — taking a field OUT can only add draws, so this is the direction that can go wrong:
+  cube 1216 draw 6 = 6 | all 1216 draw 10 = 10 | cube 1221 0 = 0 | all 1221 0 = 0    20,000 games, no verdict moved
+  fresh: 1232..1241 and 1242..1251, 60 cells / 296,000 games / 0 failures
+```
+
+**Three things it left behind.**
+
+* `no_progress_step` — the watch's state machine as a pure function, because
+  the shapes that decide whether it fires are properties of the digest STREAM
+  and none is reachable from a board small enough to write down (1159 needed
+  2,270 turns and a whole deck pool to make one).
+  `cr_104_4_the_no_progress_watch_prices_its_excursions` feeds it streams and
+  pins the cliff: an excursion one sample past the patience, repeated once a
+  cycle, means the watch **never** draws, however many turns it is given.
+* `progress_fingerprint` — the turn digest exposed so the field list is
+  testable AS a field list.
+* ⚠ **The same shape is still in `c.id`, pinned and NOT fixed.** A permanent
+  enters the digest by a monotonic id, so a board that REPLACES one with an
+  identical one (a token made and sacrificed every turn, a blink that returns a
+  new object under CR 400.7) never returns to an anchor.
+  `cr_104_4_the_turn_digest_reads_progress_and_not_bookkeeping` asserts it.
+  Left open deliberately: no board has asked in ~3.1 M swept games, and `id` is
+  what tells two boards apart, so keying a definition instead changes what the
+  digest means. **It is the first hypothesis for the next survived cap**, and
+  the run that takes it should have a board in hand and a negative control.
+
+The sweep's verdict tightened with the fix: the `[SATURATED LIFE]` carve-out
+excused a survived cap for exactly this cell, so it went with it. A survived
+cap is a defect now, saturated or not — leaving the excuse in is the `cube`
+1204 hole one step further along (that one cost fourteen false non-defects by
+letting the label excuse a cap *before* the re-run; this would let it excuse
+one *after*, and the next board the watch cannot draw would report as
+`known_board` with nobody looking).
 
 ## FIXED 2026-09-12 (twenty-fifth find) — nineteen cards print a colour their mana cost cannot carry, and none had an indicator
 
@@ -452,7 +535,16 @@ it would still leave the 355.
 If the mana side is ever worth auditing, the target is the engine's own
 `ManaPayload` against the card's *oracle text*, not against `produced_mana`.
 
-## OPEN 2026-09-11 — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable
+## CLOSED 2026-09-13 (was OPEN 2026-09-11) — the first capped board in ~1.3 M swept games, diagnosed and NOT a rules defect: Beacon of Immortality makes a WG cube mirror unwinnable
+
+⚠ **CLOSED, AND BY THE FIRST OF THE TWO QUESTIONS THIS ENTRY CALLS OUT OF
+SCOPE.** Adjudication was the lever and it is pulled: `(-291)` gave CR
+104.4's turn-granular watch to `end_turn` and these boards became DRAWS, and
+`(-292)` took the last one that resisted (`all` 1159 — see the twenty-sixth
+find at the top of this part). No `cap` in the sweep is a Beacon board any
+more, and the `[SATURATED LIFE]` label excuses nothing. Everything below
+about the diagnosis and about the encoding still stands; only the
+"out of scope for a bug fix" verdict on the first bullet does not.
 
 `cube` seed **1018**, archetype 0 (`cube WG`), 2 games of 3,200 — the only
 `cap` the last three sweep blocks produced (355,200 games). Reproduce with
@@ -7636,7 +7728,9 @@ leads, and the per-session sentences. NEXT now points here.
 ⚠ **Two lines below have been overtaken and the corrections are in NEXT, not
 here** (this block is verbatim by design): `NO_PROGRESS_MAX_PERIOD` is NOT what
 holds `all` 1159 — priced 2026-09-13, numbers in PERF and in
-`fresh_seed_sweep.sh`'s header — and the ML side of a saturated feature IS
+`fresh_seed_sweep.sh`'s header, and **the cell itself is CLOSED the same day**
+(`cap 0 / draw 10`, `(-292)`; the tap left the turn digest, and the find at the
+top of this part has it) — and the ML side of a saturated feature IS
 guarded (`server::encode`'s `scaled` / `scaled_u`, three tests including
 `assert_globals_bounded` over every global and every object feature); what is
 open there is the training-distribution question, not a code gap.

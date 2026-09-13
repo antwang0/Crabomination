@@ -420,6 +420,29 @@ fn cr_104_4_the_turn_digest_reads_progress_and_not_bookkeeping() {
     moves!("poison", g.players[1].poison_counters = 1);
     moves!("energy", g.players[1].energy = 1);
     moves!("an experience counter", g.players[1].experience = 1);
+
+    // ⚠ **THE DIGEST'S KNOWN BLIND SPOT, PINNED SO THE NEXT SURVIVED CAP HAS A
+    // FIRST HYPOTHESIS.** A permanent enters the digest by its `CardId`, which
+    // is monotonic, so a board that REPLACES a permanent with an identical one
+    // — a token made and sacrificed every turn, a blink that returns a new
+    // object (CR 400.7) — never returns to an anchor and can never be drawn,
+    // whatever the three constants are. It is the same shape as the tap that
+    // held `all` 1159: a quantity in the digest that is bookkeeping rather
+    // than progress.
+    //
+    // Asserted rather than fixed, deliberately. **No board has asked**: across
+    // ~3.1 M swept games the only cap ever to survive its re-run was 1159, and
+    // the fix for it was measured on that board. `id` is the digest's primary
+    // discriminator of board CONTENTS, so replacing it with a per-definition
+    // key is a change to what the digest means, and the run that makes it
+    // should have a board in hand and a negative control the way `(-292)` did.
+    let replaced = {
+        let before = g.progress_fingerprint();
+        g.battlefield.retain(|c| c.id != id);
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.progress_fingerprint() != before
+    };
+    assert!(replaced, "a permanent replaced by an identical one moves the digest — see the note above");
 }
 
 /// Feed a digest stream to the turn watch's state machine and report how many
@@ -587,3 +610,4 @@ fn cr_104_4_a_drained_saturated_life_is_still_no_progress() {
             * (GameState::NO_PROGRESS_DRAW_REPEATS + GameState::NO_PROGRESS_MAX_PERIOD + 2);
     assert!(g.turn_number < ceiling, "drew too late: turn {}", g.turn_number);
 }
+

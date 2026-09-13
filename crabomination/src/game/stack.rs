@@ -2015,6 +2015,18 @@ impl GameState {
         // digests read tapped-ness WITHIN a turn, where a tap is a cost paid
         // and a real move, and their committed behaviour is not this
         // commit's. Same gate as the life clamp: `player_counters`.
+        //
+        // ⚠ **THE SAME SHAPE IS STILL IN `c.id` AND IT IS THE NEXT PLACE TO
+        // LOOK.** A permanent enters this stream by a monotonic id, so a board
+        // that REPLACES one with an identical one — a token made and
+        // sacrificed every turn, a blink that returns a new object (CR 400.7)
+        // — never returns to an anchor and can never be drawn, whatever the
+        // three constants are. Pinned in
+        // `cr_104_4_the_turn_digest_reads_progress_and_not_bookkeeping` and
+        // NOT fixed: no board has asked (one survived cap in ~3.1 M swept
+        // games), and `id` is what tells two boards apart, so keying a
+        // definition instead changes what the digest means. Do it with a
+        // board in hand and a negative control, the way this field was done.
         let tap_bit = u64::from(!player_counters);
         for c in &self.battlefield {
             // One word a permanent — id, tapped and a 30-bit damage — and a
