@@ -3020,6 +3020,13 @@ gate    **the sweep's `[SATURATED LIFE]` carve-out is gone with the cell that ea
         non-defects by letting the label excuse a cap BEFORE the re-run; this would let it excuse one AFTER, so the
         next board the watch cannot draw reports as `known_board` and nobody looks. A survived cap is a defect,
         saturated or not; `known_board` keeps its `MAX_BATTLEFIELD` arm only.
+actor   **and for the training loop a draw is not a worse outcome than the cap it replaces, it is the same outcome
+        sooner.** `RecordedGame` returns `rows: Vec::new()` for any game without a winner (`selfplay.rs`'s
+        `let Some(Some(winner)) = g.game_over else`), so an unwinnable board taught the net nothing either way — the
+        difference is that it used to hold an actor thread for the full 50,000-action budget and now ends around turn
+        80. The A/B cell is the size of it: 73.6 s -> 68.0 s, of which the two games were ~5.6 s, on a cell where
+        they are 2 games of 6,800. The rate is ~0.01 % of swept games, so this is not a `games_per_s` claim; it is
+        the tail, and `stats.jsonl`'s `stalls_capped` / `stalls_board` split is what would census it.
 sweep   **1232..1241: 30 cells / 148,000 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 14` — the FIRST
         block under the tightened verdict, where a survived cap has no carve-out left to fall into. Taken at this
         session's pre-merge tip, so without the fan-out session's `18dd93dc` / `bfd21876`. Then, after the merge and
@@ -3028,12 +3035,36 @@ sweep   **1232..1241: 30 cells / 148,000 games / 0 failures**, `cap 0 / board 0 
         re-confirmed at the merged tip: `cap 0 / board 0 / stuck 0 / draw 10` in 67.7 s. **Frontier 1262.**
         ⚠ **Two sessions worked this branch again all day** — this one took 1232..1241 and 1242..1251 and says so
         here, which is the discipline the four same-seed collisions earned.
+grid    all FOUR legs at the merged tip, on binaries rebuilt there: ladder **30 cells / 33,120 games, 0 failures**;
+        actor (`selfplay_train`, the only leg that runs the encoder and so the only audit its four `debug_assert!`s
+        have) **3 cells, 0 failures**; pilots **45 policies, 0 failures**; and `--wide` ladder **52 cells / 301,600
+        games, 0 failures**, `cap 0 / board 0 / stuck 0 / draw 10`. With the two sweep blocks that is **~630,000
+        games swept at this tip under `-C debug-assertions=yes` with not one cap of any kind.**
 perf    none claimed. The tap bit leaves the digest behind an `AND` with a mask hoisted out of the permanent loop, so
         all three digests carry one extra `and` per permanent and nothing branches — against `(-291)`'s
         +0.046 / +0.024 / +0.021 %, which is what the watch itself cost. ⚠ **This box is 4 cores**, like the fan-out
         session's and unlike the 24 every absolute in this file was taken on: `--bench` read 408.3 / 438.2 / 468.3
         games/s on three runs of two binaries with **identical counters**, which is the spread, and the counters are
         the gate.
+audits  at the tip, all at their committed values: audit_panics **0 bare** (68 sites, 57 guarded, 11 lock-poison);
+        audit_doc_drift **0**; audit_decision_plumbing **168 / 108 / 60, DEAD 0**; audit_answer_log **76 / 71 / 7**
+        (the corrected count, not the 8 the prose carried for several passes); audit_stash_in_loop 1 / 1 / 0;
+        audit_seat_from_selector **0 open** / 8 loop / 4 controller-asked / 15 pinned; audit_target_walkers 132
+        wrappers; audit_variant_coverage 0 dead capability / 1 dead primitive; audit_keyword_drift **0 invented** /
+        4 missing — ⚠ **spot-checked Light Up the Night against the oracle rather than taking the note on trust: its
+        BODY is right** ("X damage, X plus 1 instead if that target is a creature or planeswalker" — the shipped
+        `Effect::If` is exactly that), and what it lacks is a flashback whose cost is "{3}{R}, remove X loyalty
+        counters from among planeswalkers you control", a cost primitive the engine does not have. The note holds.
+        audit_card_names **0 / 0 / 0 / 0**; audit_printed_body **0 on all ten columns** over 16,944 priced + 17,777
+        type lines + 17,714 subtypes + 17,743 keywords + 9,609 P/T + 16,827 colours + 124 loyalty + 62 adventure
+        halves + 81 back faces, accounting line **all zeroes** (21,794 factories walked).
+gates   at `c029199d` (this session's last commit before the concurrent one landed Soul Warden): suite **19,523 / 0 /
+        5** (`CRAB_ANSWER_LOG=strict`), golden_trace **12 / 12 unmoved** inside it, clippy **0** (`--workspace
+        --exclude crabomination_client --all-targets`), `cargo check --profile release-fast -p crabomination --bin
+        bot_ladder` clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls** with determinism and thread_determinism
+        ok. ⚠ **Every reading in this block names the tip it was taken at, because the branch moved five times under
+        it** — two sessions worked it all day, and a gates line that says "at the tip" is a claim about whichever tip
+        the reader's `git log` shows, which is not the one that was measured.
 ```
 
 ### 2026-09-13 (the fan-out session) — a `PlayerRef` that names two seats and resolves to one, seven shipped cards, and a sixth target walker nobody audited; no perf leg
