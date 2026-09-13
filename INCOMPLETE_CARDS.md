@@ -46,7 +46,8 @@ It has two independent passes:
    neither can see a card whose tree is fine and whose *engine* arm is a
    no-op. This one cross-references each capability enum against the catalog
    and the engine both ways. **2026-08-31: 0 dead
-   capabilities over 1,695 variants; 2 dead primitives.** See "The other direction" below.
+   capabilities over 1,695 variants; 2 dead primitives.** 2026-09-13: 0 dead
+   capabilities over 1,697; **1** dead primitive. See "The other direction" below.
 
 The tables below are a human triage of those 470 + the structural findings,
 grouped by the **missing engine primitive** so each cluster is one work-item.
@@ -119,15 +120,22 @@ arm outside a no-op**, including all 441 statics the layer pass explicitly
 declines to turn into continuous effects. The filter is cheap (~40 s, no
 build) and it gates on this half only.
 
-**Two dead primitives fall out of the other direction** — implemented
-effects nothing constructs, i.e. capability waiting for the card that wanted
-it, at no engine cost. (`ExileTopAndMayCastUpToMv` was a third and is
-constructed now.)
+**One dead primitive falls out of the other direction** — an implemented
+effect nothing constructs, i.e. capability waiting for the card that wanted
+it, at no engine cost. (`ExileTopAndMayCastUpToMv` was one of three and is
+constructed now; `AddRadCounters` was the second and got its cards
+2026-09-13.)
 
 | Primitive | Resolver | The card shape it is for |
 |---|---|---|
-| `Effect::AddRadCounters { who, amount }` | `effects/mod.rs` | rad counters (Fallout) |
-| `Effect::GrantCastBackFromGraveyard { what }` | `effects/mod.rs` | "you may cast it from your graveyard" |
+| `Effect::GrantCastBackFromGraveyard { what }` | `effects/mod.rs` | "you may cast it from your graveyard" — ⚠ **no printed card prints this**; the row below says why the lane stays anyway |
+
+**Closed 2026-09-13:** `Effect::AddRadCounters { who, amount }` — Nuclear
+Fallout (`decks::recent329`) plus `sets::pip`'s Contaminated Drink, Glowing One
+and Feral Ghoul. The CR 728.2 turn-based action had been implemented and
+`core_rules`-tested the whole time with nothing to drive it. Both sessions
+working this branch picked Nuclear Fallout off the same audit row the same day;
+the duplicate was dropped at the rebase.
 
 **Check the encoding caution in TODO before adding a card for one**: whether a
 new catalog entry moves `Vocab` decides whether it invalidates the trained
@@ -158,7 +166,7 @@ Commands · Moment of Reckoning · Vanquish the Horde.
 
 ### 3. MDFC back faces — **mechanism is fully wired** (`back_face` + `GameAction::CastSpellBack`/`PlayLandBack`; 71 cards use it)
 The "engine-wide ⏳" notes on these were stale. Status:
-- ✅ **Pestilent Cauldron // Restorative Burst** — back attached; from-hand back-cast test; **and** the transform-cast-from-graveyard rider now works (see below).
+- ✅ **Pestilent Cauldron // Restorative Burst** — back attached; from-hand back-cast test. ⚠ It has **no** transform-cast-from-graveyard rider — the row below says why the claim that used to stand here was wrong on both halves.
 - ✅ **Wandering Archaic // Explore the Vastlands** — back wired (`{4}` → add 6 colorless, gain 3 life) + test.
 - ✅ **Selfless Glyphweaver // Deadly Vanity** — back wired via new `Effect::EachPlayerKeepsOneSacrificeRest` (each player keeps one creature/PW, sacrifices the rest) + test.
 - ✅ **Birgi // Harnfel** — Harnfel back wired (`CardDiscarded` → `ExileTopAndGrantMayPlay { 2 }`), cast from hand as an artifact + test.

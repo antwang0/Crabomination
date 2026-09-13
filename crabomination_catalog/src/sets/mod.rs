@@ -425,6 +425,7 @@ pub mod ody;
 pub mod pls;
 pub mod pls2;
 pub mod pcy;
+pub mod pip;
 pub mod pcy2;
 pub mod pcy3;
 pub mod pcy4;

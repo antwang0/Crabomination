@@ -83,6 +83,7 @@ pub use sets::nms2::*;
 pub use sets::nms3::*;
 pub use sets::nms4::*;
 pub use sets::pcy::*;
+pub use sets::pip::*;
 pub use sets::pcy2::*;
 pub use sets::pcy3::*;
 pub use sets::pcy4::*;

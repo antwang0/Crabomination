@@ -7320,13 +7320,13 @@ static DECKS: &[Factory] = &[
     super::decks::eriette_the_beguiler,
     super::decks::rottenmouth_viper,
     super::decks::portent_of_calamity,
-    super::decks::nuclear_fallout,
     super::decks::niko_light_of_hope,
     super::decks::wishing_well,
     super::decks::valgavoth_terror_eater,
     super::decks::osteomancer_adept,
     super::decks::the_tale_of_tamiyo,
     super::decks::kaito_bane_of_nightmares,
+    super::decks::nuclear_fallout,
     super::decks::endless_cockroaches,
     super::decks::poison_tip_archer,
     super::decks::altar_of_dementia,
@@ -14478,6 +14478,11 @@ static PCY4: &[Factory] = &[
     super::pcy4::sheltering_prayers,
     super::pcy4::shield_dancer,
     super::pcy4::task_mage_assembly,
+];
+static PIP: &[Factory] = &[
+    super::pip::contaminated_drink,
+    super::pip::glowing_one,
+    super::pip::feral_ghoul,
 ];
 static PLS: &[Factory] = &[
     super::pls::allied_strategies,
@@ -22254,6 +22259,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("pcy2", PCY2),
     ("pcy3", PCY3),
     ("pcy4", PCY4),
+    ("pip", PIP),
     ("pls", PLS),
     ("pls2", PLS2),
     ("por", POR),
