@@ -31,16 +31,21 @@
 # labelled cap without the re-run reported 14 non-defects in one block. Caps
 # that clear are counted `slow-not-stuck`.
 #
-# ⚠ **AND A CAP THAT SURVIVES THE RE-RUN IS A DEFECT UNLESS IT IS SATURATED.**
-# `all` 1159 is the first cap ever to survive one: a Beacon of Immortality board
-# (both seats past `SCALE_CEILING * 1_000` life, each library holding the Beacon
-# that shuffles itself back, so neither seat can be killed OR decked) with a
-# Basilica Screecher on it, whose extort moves 1 life a turn between two
-# saturated seats. CR 104.4's turn watch reads `repeats 10/12` there at the
-# 50,000-action budget — two samples short — so the board is unwinnable AND
-# aperiodic and the one verdict such a game has is never reached. `cap_diagnosis` prints the watch's own state now, so the dump answers
-# the question — `repeats N/12` under 12 on a `[SATURATED LIFE]` board is that
-# case, and anything else that survives is the signal this script exists for.
+# ⚠ **AND A CAP THAT SURVIVES THE RE-RUN IS A DEFECT, FULL STOP.** It used to
+# read "unless it is saturated", for exactly one cell. `all` 1159 is the only
+# cap ever to survive a re-run: a Beacon of Immortality board (both seats past
+# `SCALE_CEILING * 1_000` life, each library holding the Beacon that shuffles
+# itself back, so neither seat can be killed OR decked) with a Basilica
+# Screecher on it, whose extort moves 1 life a turn between two saturated
+# seats. CR 104.4's turn watch could not hold an anchor there — and the reason
+# was not the board, it was the digest: it read which permanents were tapped,
+# the bot took a 33rd land in bursts, and a 9-sample excursion is one past
+# `NO_PROGRESS_MAX_PERIOD`, so every run of returns was thrown away one sample
+# short of the draw. The turn digest stopped reading the tap (`b59b3fab`) and
+# the cell is `cap 0 / draw 10`. **An unwinnable board has an ending now, so a
+# survived cap says the watch has a NEW hole** — start at the
+# `no-progress watch:` line of the dump, then `CRAB_PROGRESS_WATCH=<turn>`,
+# which prints every field the digest reads so the moving one names itself.
 #
 # ⚠⚠ **`NO_PROGRESS_MAX_PERIOD` IS NOT THE PARAMETER, AND THE BUDGET IS NOT
 # EITHER — measured 2026-09-13, and this retires the handoff's guess.** Both
@@ -184,24 +189,23 @@ for pool in $POOLS; do
             echo "  -> the ACTION BUDGET, not the board: $(echo "$re" | grep -E '^[0-9]+ decided' | tail -1)"
             echo "     $reby"
             slow=$((slow + $1))
-          elif echo "$re" | grep -q "SATURATED LIFE"; then
-            # ⚠ THE LABEL EXCUSES A CAP ONLY *AFTER* THE RE-RUN, NEVER BEFORE.
-            # A cap that clears at 50,000 was the budget whatever its label
-            # (`cube` 1204: `cap 8` here, `cap 0 / draw 20` there). One that
-            # SURVIVES and carries the label is the known unwinnable board:
-            # both seats past `SCALE_CEILING * 1_000` life, a Beacon of
-            # Immortality shuffling itself back so neither can be decked
-            # either. `all` 1159 is the worked example — `repeats 10/12` in
-            # the `no-progress watch:` line of the dump below, i.e. CR 104.4's
-            # turn watch gets two samples short of the draw and cannot hold an
-            # anchor on a board the bot plays slightly differently each turn.
-            # Reported, counted, not a failure.
-            echo "  -> STILL CAPPED at 50,000 and SATURATED — the known unwinnable board."
-            echo "     read the \`no-progress watch:\` line: \`repeats N/12\` under 12 is why."
-            echo "$re" | grep -A7 "^cap: " | head -40
-            known_board=$((known_board + $1))
           else
-            echo "  -> STILL CAPPED at 50,000 actions, NOT saturated — a defect. $reby"
+            # ⚠ **A SURVIVED CAP IS A DEFECT, SATURATED OR NOT — and the
+            # carve-out that used to stand here is gone with the board that
+            # earned it.** `[SATURATED LIFE]` excused a survived cap for
+            # exactly one cell, `all` 1159, because CR 104.4's turn watch could
+            # not hold an anchor there. It can: the turn digest stopped reading
+            # a permanent's tap (`b59b3fab`) and that cell is `cap 0 / draw 10`.
+            # Leaving the excuse in would mean the NEXT board the watch cannot
+            # draw reports as `known_board` and nobody looks — which is the
+            # hole `cube` 1204 already cost fourteen false non-defects for, one
+            # step further along. An unwinnable board has an ending now, so a
+            # cap that survives 50,000 actions says the watch has a new hole,
+            # and the `no-progress watch:` line of the dump is where it starts.
+            echo "  -> STILL CAPPED at 50,000 actions — a defect. $reby"
+            echo "     read the \`no-progress watch:\` line first: \`repeats N/12\` under 12 on"
+            echo "     an unwinnable board means the digest is moving, and CRAB_PROGRESS_WATCH=<turn>"
+            echo "     prints every field it reads so the moving one names itself."
             echo "$re" | grep -A7 "^cap: " | head -40
           fi
         fi
@@ -213,14 +217,17 @@ done
 # `sat` is diagnostic only (which BOARD the cap was on) and decides nothing —
 # subtracting it as well as `slow` double-counted a cap that is labelled AND
 # cleared, and scored `cube` 1204 at `failures=-8`. What clears a cap is the
-# RE-RUN: `slow` if it decided the games, `known_board` if it kept them on the
-# saturated board.
-# A cap is a defect unless the re-run CLEARED it (`slow`) or the re-run kept it
-# AND the board is the saturated one (`known_board`). The label alone never
-# excuses one — that is what `cube` 1204 cost — and a survived cap without the
-# label is the signal this whole script exists for.
+# RE-RUN: `slow` if it decided the games. `known_board` is now the RUNAWAY
+# skip only (a seat past `BIG_BOARD` permanents, where the re-run would
+# re-derive a bound that has already fired) — the saturated-life arm that used
+# to feed it is gone with `all` 1159, the one cell it was written for.
+# A cap is a defect unless the re-run CLEARED it (`slow`) or it was never
+# re-run because the board is a `MAX_BATTLEFIELD` runaway (`known_board`). The
+# `[SATURATED LIFE]` label excuses NOTHING — it did not before the re-run
+# (that is what `cube` 1204 cost) and it does not after one either, because
+# since `b59b3fab` the watch draws those boards.
 novel=$((cap - slow - known_board))
 [ $((novel + stuck + fail)) -eq 0 ] || fail=$((fail + novel + stuck))
-echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $slow slow-not-stuck, $known_board a known board — saturated life or a MAX_BATTLEFIELD runaway; $sat carried the saturated label) / board $board / stuck $stuck / draw $draw"
-echo "  stuck and a cap that SURVIVES the re-run without the saturated label ($novel) are defects;"
+echo "SWEEP DONE cells=$cells games=$games failures=$fail   undecided cap $cap (of which $slow slow-not-stuck, $known_board a MAX_BATTLEFIELD runaway not re-run; $sat carried the saturated label, which decides nothing) / board $board / stuck $stuck / draw $draw"
+echo "  stuck and ANY cap that SURVIVES the re-run ($novel) are defects;"
 echo "  a draw is CR 104.4 and a BOARD cap is the 1,024-permanent bound doing its job"
