@@ -3226,7 +3226,9 @@ grid    `robustness_grid.sh --no-build --no-actor --pilots` at the run's tip, on
         the same numbers, 0 failures — ladder 30 / 33,120, pilots 45, actor 2 cells / 6,000 games at 85.4 and 83.6
         games/s.**
 sweep   `fresh_seed_sweep.sh "cube all sealed" 1212..1221` on a binary rebuilt at the run's tip: **30 cells /
-        148,000 games, 0 failures** — cap 2 (both slow-not-stuck), **board 14**, stuck 0, draw 16.
+        148,000 games, 0 failures** — cap 2 (both slow-not-stuck), **board 14**, stuck 0, draw 16. A second block at
+        the CLOSING tip, **1222..1231: 30 cells / 148,000 games, 0 failures, cap 0 / board 0 / stuck 0 / draw 4** —
+        296,000 games swept this run, no defect in either block.
         ⚠ **`cube` 1215 is the run's one lead and it is NOT a defect: Scute Swarm.** The cell took 1,080 s against
         ~45 s for its neighbours and capped twice at 6,000 actions on boards of **951 and 768 Scute Swarms** (987
         permanents one side, 73 of its own triggers on the stack). Landfall copying is exponential and the board is
@@ -3539,6 +3541,7 @@ perf    none, and measured as none rather than assumed. Every engine change here
   1202..1211   a875df26      30    148,000       0      14*    0     42
   1152..1161   5a3b7a04      30    148,000       2       2!    0     10   THE HOLE, swept last
   1212..1221   9f2e2759      30    148,000       0       2#    0     16   cube 1215: Scute Swarm, 14 BOARD caps
+  1222..1231   d814c3de      30    148,000       0       0     0      4
   1162..1171   d731da67      50    184,000       0      10^    0     20   five pools, CONCURRENT SESSION
 ```
 `*` the Beacon board (a draw since `(-291)`); `^` the 1,024-permanent BOARD

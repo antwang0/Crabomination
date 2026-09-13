@@ -67,8 +67,9 @@ sixty-seventh pass, so don't re-take that.
    writes the real tree, it runs its cases in parallel (`-j`), and a 45-case run is minutes rather than the hour the in-place version cost.
    **Fresh seeds: 853..1030 on five pools, then 1031..1221 on cube / all / sealed (573 cells, 2,826,800 games) PLUS a concurrent session's 245 cells /
    965,600 games on five pools at 1060..1171 — 0 stuck everywhere. ⚠ `1152..1161` was a HOLE in PERF's table for twenty blocks and is swept now; the
-   frontier is **1222** (1212..1221 is 30 cells / 148,000 games, 0 failures, swept by the concurrent session — ⚠ and by this one from 1216 before the
-   fetch, so THREE sessions have now taken the same seeds on the same day; the table is the only thing that stops it).
+   frontier is **1232**: 1212..1221 is 30 cells / 148,000 games, 0 failures, swept by the concurrent session — ⚠ and by this one from 1216 before the
+   fetch, so THREE sessions have now taken the same seeds on the same day; the table is the only thing that stops it — and **1222..1231 is another 30
+   cells / 148,000 games, 0 failures, cap 0 / board 0 / stuck 0 / draw 4**, taken at the closing tip.
    ⚠ **`cube` 1215 is SCUTE SWARM and is a known board**: 951 copies on 987 permanents, `cap 2 / board 2`, and it costs **214 s on
    `release-fast` against 10.5 s** for the seed next door — 0.125 % of the games and 95 % of the cell. The sweep skips its re-run now
    (`BIG_BOARD`), `stats.jsonl` has `stalls_board` to census the rate in the actor, and PERF's candidates carries the entry.
