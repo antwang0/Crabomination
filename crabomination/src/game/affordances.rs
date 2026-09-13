@@ -1958,7 +1958,7 @@ impl GameState {
 
     /// MDFC cards whose back face is castable right now — from hand, plus any
     /// in the graveyard carrying the one-shot `may_cast_back_from_graveyard`
-    /// permission (Pestilent Cauldron's "cast it transformed"). The front-face
+    /// permission (which no shipped card grants). The front-face
     /// sweep (`castable_hand_cards_on`) never probes the back, so a
     /// pathway-style card whose only affordable half is the back would
     /// otherwise read as a dead card — no highlight, and `auto_advance`

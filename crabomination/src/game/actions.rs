@@ -4034,7 +4034,7 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         if !self.players[p].has_in_hand(card_id) {
-            // MDFC back-face cast from the graveyard (Pestilent Cauldron):
+            // MDFC back-face cast from the graveyard:
             // when the card is in the controller's graveyard with the one-shot
             // `may_cast_back_from_graveyard` permission, hop it into hand for
             // the normal back-face cast pipeline (the Muldrotha idiom),

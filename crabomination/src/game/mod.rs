@@ -971,8 +971,8 @@ pub struct HandAffordances {
     /// MDFCs whose **back face** is castable right now via
     /// `GameAction::CastSpellBack` — from hand, plus any in the graveyard
     /// carrying the one-shot `may_cast_back_from_graveyard` permission
-    /// (Pestilent Cauldron). Complements `castable` (which only probes the
-    /// front face) so back-affordable MDFCs still highlight and hold open
+    /// (which no shipped card grants). Complements `castable` (which only
+    /// probes the front face) so back-affordable MDFCs still highlight and hold open
     /// priority windows.
     pub back_castable: Vec<CardId>,
     /// CR 702.160 — hand cards with Prototype castable for the prototype

@@ -385,7 +385,7 @@ pub struct ClientView {
     #[serde(default)]
     pub castable_hand: Vec<CardId>,
     /// MDFCs whose **back face** is castable right now via `CastSpellBack` —
-    /// from hand, plus permitted graveyard backs (Pestilent Cauldron's
+    /// from hand, plus permitted graveyard backs (those carrying the one-shot
     /// `may_cast_back_from_graveyard`). `castable_hand` only probes front
     /// faces. Feeds the castable highlight and the auto-pass hold logic.
     /// `#[serde(default)]` for snapshot back-compat.
