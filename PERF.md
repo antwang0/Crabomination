@@ -2987,6 +2987,75 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-13 (the transform-anchor session, fifth of the day) — the rule the fan-out census exposed, the walk that did not get the fix, and the perf queue re-seeded
+
+```text
+fix     **CR 701.27f had never been implemented, and two copies of one transform trigger flipped the face back**
+        (`e31d5749`). The day's fan-out work made it visible rather than caused it: `PermanentSacrificed` and
+        `Attacks` have fanned out for a long time. "If an activated or triggered ability of a permanent that isn't
+        a delayed triggered ability of that permanent tries to transform it, the permanent does so only if it hasn't
+        transformed or converted since the ability was put onto the stack." Three shipped cards can be handed an
+        even-sized batch: **Daring Sleuth** read *untransformed* off a two-Clue sacrifice, **Voldaren Bloodcaster**
+        off a doubled Blood mint, and **Legion's Landing** ("attack with three or more creatures") went back to its
+        front face on four attackers — its existing test attacks with THREE and got the face right by parity.
+        ⚠ `459c86e1` had recalibrated `cr_614_13_token_doubling_fires_per_doubled_token` to ASSERT the flip back;
+        the trigger-count half of that recalibration was right and the face half was the missing rule.
+        **The anchor is the whole implementation and it needs no timestamp**: `StackItem::Trigger` carries
+        `source_transformed_since_push`, false at push by definition, and `transform_permanent` sets it on the items
+        ALREADY on the stack — so anything pushed afterwards keeps the builder's `false`, which is exactly "since the
+        ability was put onto the stack". The walk is behind an `iter().any()` read so the CoW stack is not unshared
+        by a probe that transforms nothing. ⚠ **The resolving item's flag lives in `scratch`, not on `GameState`:
+        the state is AT its 1,600-byte cap (`cow::tests::game_state_stays_small`) and one `bool` cost 24 bytes.**
+
+fix     **The graveyard walk did not get the subject dedupe the battlefield walk got** (`d457bcaa`), an hour after
+        `f4889ea3` landed half of it. `EventKind::PutIntoGraveyard` is a `is_graveyard_self_source_kind`, so every
+        "when this card is put into a graveyard from anywhere" trigger fires out of THAT walk — ten catalog
+        factories — and a mill puts both a `CardPutIntoGraveyard` and a `CardMilled` for the same card in the batch.
+        **Ichor Wellspring drew two cards for a one-card mill.** The rule is now `events::fanout_dedupes_on_subject`
+        and both walks read it, the way both already read `event_kind_fans_out`, whose own doc says "one list for the
+        battlefield walk and the graveyard walk, so the two cannot drift". ⚠⚠ **THE TWO WALKS ARE THE STANDING
+        HAZARD ON THIS PAGE**: every per-(trigger, event) rule is written twice — the fan-out decision, the
+        once-per-turn budget, the intervening filter, the replaced-death skip, the subject dedupe — and the
+        graveyard one has now silently missed a rule twice. Unifying them is the cheapest structural pull left.
+
+perf    **`(-293)` is a refutation with a ledger and the ledger is the result.** The dispatcher's one remaining
+        unguarded `&mut scratch` store read **0.317 / 0.186 / 0.240 %** of `fixed` / `cube` / `sealed` in the
+        `make_mut_slow` caller table, and guarding it bought **-0.020 / -0.022 / -0.010 %**. The caller table's own
+        diff says why: 1,078 unshares left `resolve_top_of_stack_inner` and 882 came back one frame down in
+        `resolve_effect_into_kind`, `apply_pending_effect_answer_inner` and `sacrifice_one` (all callers 8,354 ->
+        8,142, -2.5 %). **A CoW guard pays only where it is the LAST unguarded write to that group in the scope;
+        price it by the scope's remaining writes, not by the caller table's row.** Kept as a clarity change, not as
+        a win. `pending_permanent_deaths`' `mem::take` on the same entry path is NOT a sibling — `(-280)` already
+        moved that field out of the group on purpose, and its doc comment says so.
+
+perf    **The queue is re-seeded off a fresh whole-profile read at `d457bcaa`, after eight runs at floor**, and it
+        has one clear top row on all three pools for the first time: `dispatch_triggers_for_events` at
+        **6.15 / 4.86 / 6.43 %**, nearly double the #2 on two of them, 199,220 calls at 575 Ir of self each, callers
+        and callees sized in "Perf candidates". ⚠ **The row GREW this day** — seven `EventKind`s joined
+        `event_kind_fans_out`, and fan-out is what removes the `break` that ended the inner event loop at the first
+        match — so its share is not comparable with a pre-2026-09-13 reading, and the cheapest shape of a win is
+        fewer (trigger, event) pairs entered, not a faster body.
+
+⚠⚠     **THE SEVENTH AND EIGHTH SAME-WORK COLLISIONS, AND THE LESSON IS NOT "CLAIM EARLIER".** This session ran the
+        `EventKind` fan-out census independently and reached `EntersBattlefield`, the seven kinds, the three
+        `once_per_batch` pins and the graveyard double-record — ALL of it — within minutes of the other session
+        pushing the same findings, and discarded its own copy twice. Claiming in NEXT cannot fix that: both sessions
+        were already in flight before either claimed. What DID produce unique work both times was **reading the
+        other session's landed commit adversarially**: CR 701.27f came out of disagreeing with its recalibrated
+        test, and the graveyard walk came out of checking whether its one-walk fix covered the other walk. **On a
+        branch with concurrent sessions, the highest-yield minute is spent on what just landed, not on the backlog.**
+
+gates   suite **19,542 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`, whole workspace),
+        golden_trace **12 / 12 unmoved**, **`--bench` 195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls
+        (`cap 0 / board 0 / stuck 0 / draw 0`) — BYTE-IDENTICAL to the committed invariant** with `determinism ok`
+        and `thread_determinism ok (3 vs 1 threads identical)`, `cargo check --profile release-fast -p crabomination
+        --bin bot_ladder` clean. ⚠ **THIS BOX IS 4 CORES**: its wall clock reads 318.74 games/s (106.2 a thread,
+        `host_calib_ms 53`, `peak_rss_mib 27.7`) and compares with no absolute in this file, every one of which was
+        taken on 24. The counters are the invariant and they did not move — which is the expected answer for
+        `--decks fixed`, four hand-built vanilla archetypes with no transforming permanent and no self-source
+        graveyard trigger in the pool.
+```
+
 ### 2026-09-13 (the tap-is-not-progress session) — the sweep's only surviving cap, closed by printing the digest instead of reasoning about its constants
 
 ```text
@@ -10209,8 +10278,11 @@ cheapest shape of a win here is *fewer (trigger, event) pairs entered*, not a
 faster body: the batch mask (`(-195)`) and the per-permanent trigger fold
 (`(-196)`) are the two devices already in place, and nothing groups the batch's
 events by kind so that a trigger only walks the events it could match. Price
-that against the batch-size distribution first — a census of `events.len()` per
-dispatch is one gated counter and no build.
+that against the batch-size distribution first: the shape of a win here depends
+entirely on how many dispatches carry more than one event, and nothing in this
+file has ever measured that. One gated counter beside `CRAB_SBA_CENSUS`, one
+`release-fast` build, and the answer decides whether the grouping device is
+worth building at all.
 
 **Second row with a device: the allocator is ~9 % of every pool** and
 `_int_free` alone is 2.8-3.2 %. `(-256)` left mimalloc as the default for the
