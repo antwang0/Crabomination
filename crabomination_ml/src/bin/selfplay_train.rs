@@ -677,10 +677,21 @@ struct Shared {
     /// legible per checkpoint rather than inferred from the deque.
     games_mcts: AtomicU64,
     stalls: AtomicU64,
-    /// The two ways a stall happens, so a moving stall rate names its own
-    /// cause instead of only its size. `stalls - capped - stuck` is the
+    /// The ways a stall happens, so a moving stall rate names its own cause
+    /// instead of only its size. `stalls - capped - board - stuck` is the
     /// remainder: a game that ended by the rules but produced no rows.
     stalls_capped: AtomicU64,
+    /// ⚠ **A BOARD CAP IS ITS OWN COUNTER BECAUSE IT COSTS ITS OWN AMOUNT.**
+    /// This used to be summed into `stalls_capped` on the grounds that "for
+    /// training throughput a runaway board and an action cap cost the same
+    /// thing", and the sweep measured that they do not: `cube` 1215 is 951
+    /// Scute Swarms on a 987-permanent board, and on `release-fast` its four
+    /// undecided games cost **~51 s each against ~3.3 ms for a normal one —
+    /// about 15,000 games apiece**. Four games in 3,200 is 0.125 % of the cell
+    /// and 95 % of its wall clock. A rate that small is invisible in
+    /// `games_per_s` and decides it, which is exactly what a counter is for
+    /// (PERF's candidates).
+    stalls_board: AtomicU64,
     stalls_stuck: AtomicU64,
     live_actors: AtomicU64,
     /// Set by the learner when `--stop-after-stale` trips: the holdout
@@ -837,12 +848,14 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         if rec.rows.is_empty() {
             shared.stalls.fetch_add(1, Ordering::Relaxed);
             match rec.stop {
-                // The actor keeps ONE capped bucket on purpose: for training
-                // throughput a runaway board and an action cap cost the same
-                // thing (a game that produced no rows). The sweep is where
-                // they have to be told apart, and `SimCost` splits them there.
-                StopReason::ActionCap | StopReason::BoardCap => {
+                StopReason::ActionCap => {
                     shared.stalls_capped.fetch_add(1, Ordering::Relaxed);
+                }
+                // Counted apart: see `stalls_board`. A runaway board is ~15,000
+                // normal games of wall clock, so its RATE is what decides the
+                // actor's throughput, not the stall total.
+                StopReason::BoardCap => {
+                    shared.stalls_board.fetch_add(1, Ordering::Relaxed);
                 }
                 StopReason::NoLegalMove => {
                     shared.stalls_stuck.fetch_add(1, Ordering::Relaxed);
@@ -1677,6 +1690,7 @@ fn main() {
         games_mcts: AtomicU64::new(0),
         stalls: AtomicU64::new(0),
         stalls_capped: AtomicU64::new(0),
+        stalls_board: AtomicU64::new(0),
         stalls_stuck: AtomicU64::new(0),
         live_actors: AtomicU64::new(args.actors as u64),
         stop: AtomicBool::new(false),
@@ -2036,6 +2050,7 @@ fn checkpoint(
     let rows = shared.rows_pushed.load(Ordering::Relaxed);
     let stalls = shared.stalls.load(Ordering::Relaxed);
     let stalls_capped = shared.stalls_capped.load(Ordering::Relaxed);
+    let stalls_board = shared.stalls_board.load(Ordering::Relaxed);
     let stalls_stuck = shared.stalls_stuck.load(Ordering::Relaxed);
     let secs = start.elapsed().as_secs_f64();
     let [total, win, life, len, opp] = loss_ema;
@@ -2197,7 +2212,7 @@ fn checkpoint(
     };
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_opp\":{opp:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"policy_sv\":{policy_sv:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"games_mcts\":{games_mcts},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"actor_s\":{actor_s:.1},\"actor_games_per_s\":{actor_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_opp\":{opp:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"policy_sv\":{policy_sv:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"games_mcts\":{games_mcts},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_board\":{stalls_board},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"actor_s\":{actor_s:.1},\"actor_games_per_s\":{actor_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()

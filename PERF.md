@@ -9795,11 +9795,13 @@ board cap is what ends it rather than what prevents it.
 **The next step is a census, not a device**: how often does a `selfplay_train`
 game reach a board like this? Four games in 3,200 here (0.125 %), and at ~51 s
 against ~3.3 ms that 0.125 % is **95 % of the cell's wall clock**. The actor's
-pools are not the sweep's, so the rate has to be measured there — `stats.jsonl`
-already carries `games_per_s` per interval and `stalls_capped`, and a
-`board_capped` column beside it would say it directly. THAT is the number that
-decides whether the per-permanent floor is worth attacking, and it is one flag
-away. `cube` 1036 (Ghosts of the Innocent, 5.4x release-fast / 83x sweep) is the
+pools are not the sweep's, so the rate has to be measured there — and
+`stats.jsonl` carries **`stalls_board`** beside `stalls_capped` now, split out
+of it for exactly this reason. The actor kept ONE capped bucket on the grounds
+that "for training throughput a runaway board and an action cap cost the same
+thing"; the two numbers above are the measurement that says they do not. THAT
+column is what decides whether the per-permanent floor is worth attacking: a
+rate of 0.125 % is invisible in `games_per_s` and owns 95 % of it. `cube` 1036 (Ghosts of the Innocent, 5.4x release-fast / 83x sweep) is the
 other slow cell on record, with a different cause and the same shape of answer.
 
 ⚠ **THE QUEUE IS AT FLOOR AND HAS BEEN FOR SEVEN RUNS.** The last actor
