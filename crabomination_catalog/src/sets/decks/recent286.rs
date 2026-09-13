@@ -638,6 +638,10 @@ pub fn builders_talent() -> CardDefinition {
                 },
             },
             TriggeredAbility {
+                // "Whenever one or more noncreature, nonland permanents you
+                // control enter, put a +1/+1 counter on target creature you
+                // control." One counter for the batch, so it pins itself
+                // against the `EntersBattlefield` fan-out.
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(Predicate::All(vec![
                         Predicate::SourceClassLevelAtLeast(2),
@@ -645,7 +649,8 @@ pub fn builders_talent() -> CardDefinition {
                             what: Selector::TriggerSource,
                             filter: noncreature_nonland.clone(),
                         },
-                    ])),
+                    ]))
+                    .once_per_batch(),
                 effect: Effect::AddCounter {
                     what: target_filtered(R::Creature.and(R::ControlledByYou)),
                     kind: CounterType::PlusOnePlusOne,

@@ -631,11 +631,15 @@ pub fn bonny_pall_clearcutter() -> CardDefinition {
 }
 
 /// Satoru, the Infiltrator — {U}{B} 2/3 Human Ninja Rogue with menace.
-/// Whenever a nontoken creature you control enters without being cast, draw a
-/// card. (The "one or more at once" batching resolves per creature.)
+/// Whenever one or more nontoken creatures you control enter without being
+/// cast, draw a card — ONE card for the batch, hence `once_per_batch`.
 pub fn satoru_the_infiltrator() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
+            // "Whenever Satoru and/or one or more other nontoken creatures
+            // you control enter, if none of them were cast, draw a card." One
+            // card for the batch, so it pins itself against the
+            // `EntersBattlefield` fan-out.
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::All(vec![
                     Predicate::EntityMatches {
@@ -643,7 +647,8 @@ pub fn satoru_the_infiltrator() -> CardDefinition {
                         filter: R::Creature.and(R::NotToken),
                     },
                     Predicate::Not(Box::new(Predicate::TriggerSourceEnteredByCast)),
-                ])),
+                ]))
+                .once_per_batch(),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::ONE,

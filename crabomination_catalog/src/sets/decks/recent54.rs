@@ -508,8 +508,11 @@ pub fn bioshift() -> CardDefinition {
 }
 
 /// Woodland Champion — {1}{G} 2/2 Elf Scout. Whenever one or more tokens you
-/// control enter, put that many +1/+1 counters on this creature. (Modeled as
-/// one counter per entering token.)
+/// control enter, put that many +1/+1 counters on this creature. Modeled as
+/// one counter per entering token, which is why it is NOT `once_per_batch`:
+/// "that many" is exactly what the `EntersBattlefield` fan-out gives, and
+/// pinning it would put one counter for a batch of three. The residual is the
+/// number of trigger objects on the stack, not the counters.
 pub fn woodland_champion() -> CardDefinition {
     CardDefinition {
         name: "Woodland Champion",

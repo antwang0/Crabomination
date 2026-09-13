@@ -523,6 +523,17 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // `once_per_batch`; before this kind fanned out, both wordings
             // read as the plural one and the singular cards under-fired.
             | EventKind::CardMilled
+            // CR 603.6 — a `CreateToken { count: 3 }`, a mass reanimation and
+            // a two-sided ETB all push several `PermanentEntered` into ONE
+            // batch, and the singular printed wording ("whenever **another
+            // creature** you control enters" — Soul Warden, Court Street
+            // Denizen, Verdant Sun's Avatar; 341 catalog triggers) fires per
+            // permanent. Before this fanned out, Soul Warden gained 1 life off
+            // Spectral Procession's three tokens. The plural wording
+            // ("whenever **one or more** creatures enter") pins itself with
+            // `once_per_batch`. `SelfSource` ETBs never reach here —
+            // `is_event_hardcoded` routes them to `fire_self_etb_triggers`.
+            | EventKind::EntersBattlefield
     )
 }
 

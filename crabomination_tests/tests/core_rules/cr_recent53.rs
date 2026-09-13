@@ -367,3 +367,106 @@ fn cr_605_3a_an_unfundable_you_may_pay_runs_nothing() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fire), "stays in the graveyard");
 }
+
+// ── CR 603.6 — `EntersBattlefield` fans out over a simultaneous batch ────────
+// A `CreateToken { count: 3 }` pushes three `PermanentEntered` events into one
+// batch, and until `EventKind::EntersBattlefield` joined `event_kind_fans_out`
+// a `YourControl`/`AnyPlayer` watcher fired ONCE for all of them: Soul Warden
+// gained 1 life off Spectral Procession's three tokens. 332 catalog factories
+// carry such a trigger and the whole suite passed either way, so these three
+// are the gate.
+
+/// CR 603.6 — the singular printed wording ("whenever another creature
+/// enters") fires once per entering creature, end to end through the real
+/// token-mint path.
+#[test]
+fn cr_603_6_an_etb_watcher_fires_once_per_entering_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::soul_warden());
+    let life = g.players[0].life;
+    let spell = g.add_card_to_hand(0, catalog::spectral_procession());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 10);
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Spectral Procession");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count(),
+        3,
+        "three tokens entered in one batch"
+    );
+    assert_eq!(g.players[0].life, life + 3, "one Soul Warden trigger per token, not one per batch");
+}
+
+/// CR 603.6 — "put **that many** +1/+1 counters" is spelled as one counter per
+/// entering token, so the fan-out is what makes the total right. Pinning this
+/// one with `once_per_batch` would put a single counter for a batch of three.
+#[test]
+fn cr_603_6_woodland_champion_counts_the_whole_token_batch() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let champ = g.add_card_to_battlefield(0, catalog::woodland_champion());
+    let spell = g.add_card_to_hand(0, catalog::spectral_procession());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 10);
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Spectral Procession");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(champ).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "that many — one counter per token in the batch"
+    );
+}
+
+/// CR 603.6 — the plural printed wording ("whenever **one or more** … enter")
+/// pins itself with `once_per_batch` and mints one trigger for the batch.
+/// Satoru draws one card however many uncast nontoken creatures arrive at once.
+#[test]
+fn cr_603_6_a_plural_etb_wording_mints_one_trigger_for_the_batch() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::satoru_the_infiltrator());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[
+        GameEvent::PermanentEntered { card_id: a },
+        GameEvent::PermanentEntered { card_id: b },
+        GameEvent::PermanentEntered { card_id: c },
+    ]);
+    assert_eq!(g.stack.len(), 1, "one card for the batch, not one per creature");
+}
+
+/// The same batch against a singular watcher mints one trigger per match —
+/// the contrast that makes the pin above mean something.
+#[test]
+fn cr_603_6_a_singular_etb_wording_mints_one_trigger_per_match() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::soul_warden());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[
+        GameEvent::PermanentEntered { card_id: a },
+        GameEvent::PermanentEntered { card_id: b },
+        GameEvent::PermanentEntered { card_id: c },
+    ]);
+    assert_eq!(g.stack.len(), 3, "one Soul Warden trigger per entering creature");
+}

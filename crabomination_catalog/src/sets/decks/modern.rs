@@ -35294,8 +35294,8 @@ fn rabbit_1_1_token() -> TokenDefinition {
 }
 
 /// Valley Questcaller — {1}{W} 2/3 Rabbit Warrior. Other Rabbits, Bats, Birds,
-/// and Mice you control get +1/+1; whenever one or more of those enter, scry 1.
-/// (The batched "one or more" trigger is modeled per entering creature.)
+/// and Mice you control get +1/+1; whenever one or more of those enter, scry 1
+/// — once for the batch, hence `once_per_batch`.
 pub fn valley_questcaller() -> CardDefinition {
     use crate::effect::{StaticAbility, StaticEffect};
     let typal = || {
@@ -35327,11 +35327,15 @@ pub fn valley_questcaller() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
+            // "Whenever one or more other Rabbits, Bats, Birds, and/or Mice
+            // you control enter, scry 1." Scry 1 for the batch, not per
+            // creature, so it pins itself against the fan-out.
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: typal().and(SelectionRequirement::OtherThanSource),
-                }),
+                })
+                .once_per_batch(),
             effect: Effect::Scry {
                 who: PlayerRef::You,
                 amount: Value::Const(1),

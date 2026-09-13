@@ -841,11 +841,13 @@ pub fn hotshot_investigators() -> CardDefinition {
 /// your own creatures is a cost, and without the choice the trigger would
 /// hand the drawback to whatever entered.
 ///
-/// Two approximations, both in the direction of the printed card: the target
-/// is "another creature you control" rather than specifically one of the
-/// creatures that entered in this batch (the engine has no
-/// entered-this-batch selector), and the trigger fires per entering creature
-/// rather than once per simultaneous batch.
+/// One approximation, in the direction of the printed card: the target is
+/// "another creature you control" rather than specifically one of the
+/// creatures that entered in this batch (the engine has no entered-this-batch
+/// selector). Left NOT `once_per_batch` on purpose — the intervening `if`
+/// fails for every entry after the one that accepts, so per-entry firing
+/// converges on the printed board state while a pin would offer the choice
+/// once and drop it if declined.
 pub fn frantic_scapegoat() -> CardDefinition {
     CardDefinition {
         name: "Frantic Scapegoat",

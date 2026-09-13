@@ -374,12 +374,15 @@ pub fn spiritcall_enthusiast() -> CardDefinition {
         spell,
     );
     front.triggered_abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
-            Predicate::EntityMatches {
+        // "Whenever one or more tokens you control enter, this creature
+        // becomes prepared." Once for the batch, not once per token — the
+        // effect is idempotent either way, but the trigger count is not.
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::IsToken,
-            },
-        ),
+            })
+            .once_per_batch(),
         effect: becomes_prepared(),
     });
     front
