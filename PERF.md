@@ -3023,6 +3023,20 @@ perf    **`(-301)` REFUTED, twice, and the second reading is the transferable on
         order took the row from 42.7 to 63.6 Ir/call for 14,884 fewer calls. Both reverted; the 40 % is
         closed as a lead in the candidates head.
 
+perf    **`(-302)`: a printed card-type pre-test in front of the target enumerator's board walk, and the
+        reason NOT to widen it.** The last sized piece of the `cast_candidates` tree — 26.6 requirement
+        evaluations per `auto_targets_for_effect_all_slots_kicked` call, one per board permanent per slot,
+        and the walk is a *max* so no witness short-circuit applies. The filter's top-level `And` spine is
+        read once per slot; a permanent whose printed types lack the type it names never reaches the walker.
+        **-0.068 / -0.088 / -0.126 %**, `printed_requirement_impl` **-97,138 calls**. Sound because every
+        conjunct of an `And` must hold, so a partial pre-*test* is sound where a partial evaluation is not;
+        answered under the walker's own conditions and `debug_assert!`ed against it per rejection.
+        ⚠ **Widening it LOSES**: carrying `Nonland`/`Noncreature` and the two controller conjuncts, built
+        twice (a three-field struct and a `Copy` struct of one-byte tags), reads **fixed +0.369 / cube
+        +0.039 / sealed +0.259..0.271 %** for 6,158 more rejections — two different implementations within
+        0.012 points of each other, so not layout noise. `(-296)` priced a predicate by its fast path;
+        **a pre-test is priced by the candidates it does NOT reject.** Both wide arms reverted.
+
 fix     **Three `PlayerRef`s read a player out of a selector and none of the three target walkers looked
         inside.** `selector_player_ref` is the one list for the other direction; this one was written by hand
         three times (`requires_target`'s census, `primary_target_filter`, `target_filter_for_slot`) and all
@@ -3055,7 +3069,7 @@ gates   suite **19,547 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--wo
         and compares with NO absolute in this file. The counters are the invariant.
         ⚠ **Ir totals moved under every A/B this session**; the run's own base at `71acf0c0` was
         fixed **636,405,707** / cube **1,693,785,498** / sealed **1,769,439,147** and the tip is
-        **632,773,413 / 1,685,671,574 / 1,758,291,476** — **-0.571 / -0.479 / -0.630 %** over four commits.
+        **632,418,551 / 1,684,318,970 / 1,756,418,792** — **-0.627 / -0.559 / -0.736 %** over five commits.
 ```
 
 ### 2026-09-13 (the sink-generator session, sixth of the day) — six passes over one batch, and the one word that cost `all` 1274 its 5,769 turns
