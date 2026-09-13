@@ -2580,6 +2580,26 @@ fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     if !exiled.is_empty() {
         let _ = write!(s, "\n  exile: {}", render(&exiled));
     }
+    // ⚠ **A LOOP WHOSE CARD IS NOT ON THE BATTLEFIELD AT THE SAMPLE POINT IS
+    // INVISIBLE IN EVERY LINE ABOVE, AND THAT COST TWO SESSIONS THE 1274
+    // DIAGNOSIS.** `all` 1274 cycles one card hand -> battlefield -> library
+    // every turn (cast it, sacrifice it, it goes back on top instead of
+    // dying) and the counts said so — `hand 2 lib 1` returning to itself
+    // while the board alternated by one permanent — but nothing named the
+    // card, because the `board` / `stack` / `exile` tallies are the three
+    // zones it is not in when the cap fires. A one-card library and a
+    // three-card hand are the whole of the engine on that board.
+    // Same `tally` cap as the others, so a 50-card library prints 12 rows.
+    for (seat, p) in g.players.iter().enumerate() {
+        let hand = tally(p.hand.iter().map(|c| c.definition.name.to_string()));
+        if !hand.is_empty() {
+            let _ = write!(s, "\n  p{seat} hand: {}", render(&hand));
+        }
+        let lib = tally(p.library.iter().map(|c| c.definition.name.to_string()));
+        if !lib.is_empty() {
+            let _ = write!(s, "\n  p{seat} lib: {}", render(&lib));
+        }
+    }
     s
 }
 
