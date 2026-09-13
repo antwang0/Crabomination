@@ -74,3 +74,37 @@ fn cr_701_27f_a_third_copy_is_ignored_too() {
         "Bearer of Overwhelming Truths",
     );
 }
+
+/// The third shipped card on the shape, and the one whose existing test passed
+/// by accident. Legion's Landing reads "whenever you attack with three or more
+/// creatures, transform this"; `EventKind::Attacks` fans out, so three
+/// attackers were three transforms and landed on the back face by parity.
+/// Four attackers put it back on the front until CR 701.27f.
+#[test]
+fn cr_701_27f_legions_landing_survives_an_even_attack() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let ll = g.add_card_to_battlefield(0, catalog::legions_landing());
+    let attackers: Vec<CardId> = (0..4)
+        .map(|_| {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+            c
+        })
+        .collect();
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass to declare attackers");
+    }
+    g.perform_action(GameAction::DeclareAttackers(
+        attackers.iter().map(|&c| Attack { attacker: c, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack with four");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ll).expect("still there").definition.name,
+        "Adanto, the First Fort",
+        "four triggers, one transform",
+    );
+}

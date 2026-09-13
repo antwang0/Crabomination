@@ -20139,17 +20139,11 @@ impl GameState {
                         }
                         block_sides_seen.push(sid);
                     }
-                    // CR 701.15b — ONE card reaching a graveyard can put TWO
-                    // matching records in the batch: the mill sites that go
-                    // through `route_to_graveyard` push a
-                    // `CardPutIntoGraveyard` AND a `CardMilled`, and both
-                    // match `EventKind::PutIntoGraveyard`. "Whenever a card is
-                    // put into a graveyard" is once per CARD, so dedupe on the
-                    // subject the way the block arm above does. Not fixable at
-                    // the emission sites: the dredge mill pushes only
-                    // `CardMilled` and still has to fire this kind, so neither
-                    // record can simply be dropped.
-                    if matches!(ta.event.kind, crate::effect::EventKind::PutIntoGraveyard)
+                    // CR 701.15b — one card reaching a graveyard is two
+                    // matching records in the batch; see
+                    // `fanout_dedupes_on_subject`, which the graveyard walk
+                    // below reads from the same place so the two cannot drift.
+                    if crate::game::effects::events::fanout_dedupes_on_subject(&ta.event.kind)
                         && let Some(
                             crate::game::effects::EntityRef::Permanent(sid)
                             | crate::game::effects::EntityRef::Card(sid),
@@ -20475,6 +20469,7 @@ impl GameState {
                     let fanout = crate::game::effects::events::event_kind_fans_out(&ta.event.kind)
                         && !ta.event.once_per_turn
                         && !ta.event.once_per_batch;
+                    graveyard_subjects_seen.clear();
                     for ev in events {
                         if is_event_hardcoded(ev, &ta.event) {
                             continue;
@@ -20488,6 +20483,23 @@ impl GameState {
                             continue;
                         }
                         let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
+                        // CR 701.15b — the battlefield walk's rule, read from
+                        // the same place. `PutIntoGraveyard` is a
+                        // `is_graveyard_self_source_kind`, so "when THIS is put
+                        // into a graveyard from anywhere" fires out of the
+                        // graveyard the card just landed in — and a mill puts
+                        // both records for it in the batch.
+                        if crate::game::effects::events::fanout_dedupes_on_subject(&ta.event.kind)
+                            && let Some(
+                                crate::game::effects::EntityRef::Permanent(sid)
+                                | crate::game::effects::EntityRef::Card(sid),
+                            ) = subject
+                        {
+                            if graveyard_subjects_seen.contains(&sid) {
+                                continue;
+                            }
+                            graveyard_subjects_seen.push(sid);
+                        }
                         if let Some(filter) = &ta.event.filter {
                             let ctx = crate::game::effects::EffectContext {
                                 controller: card.owner,

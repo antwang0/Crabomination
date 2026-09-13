@@ -665,3 +665,36 @@ fn cr_603_6_card_exiled_fans_out_per_card() {
     ]);
     assert_eq!(g.stack.len(), 2, "one Soulherder trigger per exiled creature");
 }
+
+/// The graveyard walk is the battlefield walk's twin and has to carry the same
+/// rules. `EventKind::PutIntoGraveyard` is a `is_graveyard_self_source_kind`,
+/// so a `SelfSource` "when this is put into a graveyard from anywhere" fires
+/// out of the graveyard the card just landed in — and a mill puts BOTH a
+/// `CardPutIntoGraveyard` and a `CardMilled` for it in the batch. The
+/// subject dedupe that the battlefield walk got has to be there too, or Ichor
+/// Wellspring draws two cards for one mill.
+#[test]
+fn cr_603_6_a_milled_self_source_graveyard_trigger_fires_once() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::ichor_wellspring());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest()); // something to draw
+    }
+    let before = g.players[0].hand.len();
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Mill {
+                who: Selector::Player(crabomination::effect::PlayerRef::You),
+                amount: Value::ONE,
+            },
+            &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0),
+        )
+        .expect("mill one");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].hand.len(),
+        before + 1,
+        "one card reaching the graveyard is one trigger, whichever records the batch carries",
+    );
+}

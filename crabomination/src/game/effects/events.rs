@@ -559,6 +559,29 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
     )
 }
 
+/// CR 701.15b — ONE card reaching a graveyard can put TWO matching records in
+/// one batch: the mill sites that go through `route_to_graveyard` push a
+/// `CardPutIntoGraveyard` AND a `CardMilled`, and both match
+/// `EventKind::PutIntoGraveyard`. "Whenever a card is put into a graveyard" is
+/// once per CARD, so a fanned-out trigger on such a kind dedupes on the event
+/// subject. Not fixable at the emission sites: the dredge mill pushes only
+/// `CardMilled` and still has to fire this kind, so neither record can be
+/// dropped.
+///
+/// One list for the battlefield walk and the graveyard walk of
+/// `dispatch_triggers_for_events`, the way `event_kind_fans_out` is, so the two
+/// cannot drift — the graveyard walk is where the rule was missed, and Ichor
+/// Wellspring ("when this is put into a graveyard from anywhere, draw a card")
+/// drew two off a one-card mill because of it.
+///
+/// It is exactly this kind: a card reaches a graveyard once per batch, so the
+/// dedupe can never swallow a real second fire, while every other fanned-out
+/// kind CAN legitimately carry two events for one subject (two damage
+/// instances on one creature, two counter additions on one permanent).
+pub(crate) fn fanout_dedupes_on_subject(kind: &EventKind) -> bool {
+    matches!(kind, EventKind::PutIntoGraveyard)
+}
+
 pub(crate) fn is_graveyard_self_source_kind(kind: &EventKind) -> bool {
     matches!(
         kind,
