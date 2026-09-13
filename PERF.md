@@ -3004,7 +3004,7 @@ cards   the 7 above, plus Fractured Identity's mint (exact at two seats, one cop
 perf    none attempted and none claimed. Every change is a catalog fan-out, a `debug_assert!` (dead in release) and
         two arms whose single-valued callers loop exactly once; **none of the eight cards is in the `fixed`
         archetypes**. `--bench` counters came back **byte-identical: 195,806 / 27.49 / 611.9 / 0 stalls**.
-gates   suite **19,511 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12
+gates   suite **19,512 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--all-targets`), golden_trace **12 / 12
         unmoved**, `--bench` 195,806 / 27.49 / 611.9 / 0 stalls + determinism ok + thread_determinism ok (3 vs 1),
         `audit_printed_body` 0 on all ten columns, `audit_panics` 0 bare, `audit_doc_drift` 0,
         `audit_seat_from_selector` 0 open, `audit_stash_in_loop` 1/1/0, `audit_variant_coverage` 0 dead capability,
@@ -3014,7 +3014,10 @@ sweep   **1222..1231 on cube / all / sealed — 30 cells / 148,000 games / 0 fai
         decision of all 148,000 games and never tripped.** That is the fan-out class's engine-wide check: the suite
         exercises the cards it has tests for, the sweep exercises the boards it does not. `strings` says the assert's
         message is in the `overflow` binary and NOT in `release-fast`, which is the same claim from the other side.
-        Frontier **1232**.
+        Frontier **1232**. ⚠⚠ **THE FOURTH SAME-SEED COLLISION — the concurrent session swept 1222..1231 too**, the
+        same day, independently. Both blocks read `0 failures` and `cap 0 / board 0 / stuck 0 / draw 4`, byte-identical
+        off two different builds: a determinism cross-check nobody asked for and an hour each nobody needed to spend.
+        Four collisions in two days now. Take the block from the table above and say which one before taking it.
 sweep   **`NO_PROGRESS_MAX_PERIOD` PRICED AND NOT MOVED — the handoff's guess is retired, with numbers.** `all` 1159
         is the one cap that survives the sweep's 50,000-action re-run, and NEITHER the period bound nor the budget is
         what holds it. Both dumps read **`since 0/8`** — the anchor is alive and matching at the instant the cap
