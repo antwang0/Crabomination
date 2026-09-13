@@ -3028,6 +3028,18 @@ perf    **`(-293)` is a refutation with a ledger and the ledger is the result.**
         a win. `pending_permanent_deaths`' `mem::take` on the same entry path is NOT a sibling — `(-280)` already
         moved that field out of the group on purpose, and its doc comment says so.
 
+perf    **And the new top row was then READ, not just filed.** `CRAB_TRIG_CENSUS` — the compile-time census already
+        in the tree, which nobody had pointed at this question — says `dispatch_triggers_for_events` is
+        **preamble-bound, not walk-bound**: 105,132 working dispatches on sealed (47 % of its 199,220 calls return
+        at the empty-batch early-out), **3.54 permanent visits and 3.82 matcher calls each, for 1,089 Ir of self**.
+        `(-115)`/`(-196)`'s lane already hits on 99 % and cuts the board walk to 22.8 % of itself. **So the
+        "group the batch's events by kind" device this run filed an hour earlier is refuted by its own census** —
+        the product it would attack is 402 k matcher calls against a 114.5 M row. The lead is the fixed per-dispatch
+        preamble (the per-event stamping loop, the synthesis collects, the `Vec` builds), and the one walk-side
+        number left is that **72.6 % of the pairs entering the loop can match no event in the batch** (61 % of the
+        calls) — ⚠ price that against `(-88)`'s rule first, since the census's own deadness test IS the work.
+        The counts cross-check against the callgrind dumps exactly (`dispatch_board_scan` 105,132 both sides).
+
 perf    **The queue is re-seeded off a fresh whole-profile read at `d457bcaa`, after eight runs at floor**, and it
         has one clear top row on all three pools for the first time: `dispatch_triggers_for_events` at
         **6.15 / 4.86 / 6.43 %**, nearly double the #2 on two of them, 199,220 calls at 575 Ir of self each, callers
@@ -10277,12 +10289,55 @@ share is not comparable with a pre-2026-09-13 reading**, and it means the
 cheapest shape of a win here is *fewer (trigger, event) pairs entered*, not a
 faster body: the batch mask (`(-195)`) and the per-permanent trigger fold
 (`(-196)`) are the two devices already in place, and nothing groups the batch's
-events by kind so that a trigger only walks the events it could match. Price
-that against the batch-size distribution first: the shape of a win here depends
-entirely on how many dispatches carry more than one event, and nothing in this
-file has ever measured that. One gated counter beside `CRAB_SBA_CENSUS`, one
-`release-fast` build, and the answer decides whether the grouping device is
-worth building at all.
+events by kind so that a trigger only walks the events it could match. **THAT DEVICE IS
+REFUTED, SAME DAY, BY A CENSUS THAT ALREADY EXISTED** — see the block below.
+
+⚠ **THE ROW IS PREAMBLE-BOUND, NOT WALK-BOUND, AND `CRAB_TRIG_CENSUS` SAYS SO
+IN ONE RUN.** The instrument is already in the tree (`ems_census` /
+`trig_census`, compile-time `--features trig-census` because the tick sits in
+the per-dispatch preamble and an env gate there cost +0.03-0.04 %), and nobody
+had pointed it at this question. Same command as the dumps above, the counts
+cross-check against them exactly (`dispatch_board_scan` is 105,132 calls in the
+callgrind dump and `dispatches` is 105,132 in the census, so it is the same
+workload):
+
+```text
+release-fast --features trig-census, CRAB_TRIG_CENSUS=1, gang mirror --games 6 --threads 1 --seed 1
+                                        fixed        cube      sealed
+  dispatch_triggers_for_events CALLS  (199,220 on sealed; 47 % return at the empty-batch early-out)
+  dispatches that do work             46,718      73,754     105,132
+  events per dispatch                   2.67        3.40        3.01
+  lane hits                                –      97.96 %     99.00 %
+  permanent VISITS the walk runs            –     325,738     372,204   of 1,531,334 / 1,634,996 whole-board
+  (trigger, event) PAIRS entering        4,312      52,124     108,336
+  event_matches_spec CALLS the pairs made 23,126    170,030     401,694
+  …of which pairs no event can match   2.88 %     50.64 %     72.64 %   (1.18 / 48.44 / 61.00 % of calls)
+  DERIVED: self Ir per working dispatch  841        1,120       1,089
+           visits per dispatch             –         4.42        3.54
+           matcher calls per dispatch     0.50       2.31        3.82
+```
+
+**A thousand instructions of self per dispatch to run three and a half
+permanent visits and four matcher calls is not a walk, it is a fixed
+preamble.** `(-115)`/`(-196)`'s lane already cuts the board walk to 21-23 % of
+itself and hits on 98-99 % of dispatches; the product the grouping device would
+attack is 402 k matcher calls on sealed against a 114.5 M row. **So the lead is
+the preamble that every dispatch pays whether or not a trigger exists**: the
+per-event `for e in events` stamping loop (timestamps, `entered_turn`,
+soulbond, the planeswalker/land/Arboria bookkeeping — 316 k iterations on
+sealed), the synthesis collects, the graveyard-batch count walk, and the
+`Vec` builds and drops the callee table shows (`Vec::drop` 105,186 calls,
+three `SpecFromIterNested` rows ~8 M between them). Read those by line before
+touching the walk.
+
+**The one walk-side number still worth something is the dead-pair share**:
+72.6 % of the pairs that enter the loop on sealed can match no event in the
+batch, and they are 61 % of the matcher calls. The kind-bit mask (`(-195)`)
+already runs ahead of them, so what is left is a *scope*-aware pre-check —
+and ⚠ price it against `(-88)`'s rule before building it, because the census's
+own deadness test is `event_kind_matches` with `source: None`, i.e. the work
+itself. A witness over the same question as the work is never cheaper than the
+hit rate.
 
 **Second row with a device: the allocator is ~9 % of every pool** and
 `_int_free` alone is 2.8-3.2 %. `(-256)` left mimalloc as the default for the
