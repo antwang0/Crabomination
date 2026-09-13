@@ -1929,6 +1929,11 @@ impl GameState {
     /// life total and permanent stays put, so leaving them out would let the
     /// turn watch draw a game that was getting somewhere. They stay off the
     /// other two digests, whose committed behaviour is not this commit's.
+    ///
+    /// `player_counters` is the turn watch's flag in both directions: it also
+    /// **takes two things out** that are progress within a turn and are not
+    /// progress across one — a life total past the saturation band, and which
+    /// permanents are tapped. Both are commented at their field below.
     fn fingerprint_as(&self, with_stack: bool, turn: u32, player_counters: bool) -> u64 {
         /// SplitMix64's finalizer over `acc + v + PHI`. Chaining it makes the
         /// digest order-sensitive, which the field stream needs.
@@ -1980,6 +1985,26 @@ impl GameState {
             }
         }
         h = mix(h, pair(self.exile.len() as u32, self.battlefield.len() as u32));
+        // ⚠ WHICH PERMANENTS ARE TAPPED AT THE END OF A TURN IS BOOKKEEPING,
+        // NOT PROGRESS — and it is the whole of what kept `all` 1159 running
+        // to the action cap at turn 18,202. `CRAB_PROGRESS_WATCH=2000` printed
+        // every quantity this digest reads on that board: the turn-granular
+        // watch sees exactly TWO states, and after the life clamp above they
+        // differ in nothing but one permanent's tap. The bot taps a 33rd land
+        // in bursts, so the sampled stream runs 11 of one state, 9 of the
+        // other, 20, 9, 19 — and 9 misses is one past
+        // `NO_PROGRESS_MAX_PERIOD`, so every run of returns was thrown away
+        // one sample before it could reach `NO_PROGRESS_DRAW_REPEATS`
+        // (`repeats 10/12` at the 50,000-action budget, `0/12` at 400,000).
+        // Raising the patience would have bought this one board and lost the
+        // next; a tap the untap step takes back is not a game getting
+        // anywhere, and dropping it makes the stream constant.
+        //
+        // **Only on the turn watch** — the resolution and announcement
+        // digests read tapped-ness WITHIN a turn, where a tap is a cost paid
+        // and a real move, and their committed behaviour is not this
+        // commit's. Same gate as the life clamp: `player_counters`.
+        let tap_bit = u64::from(!player_counters);
         for c in &self.battlefield {
             // One word a permanent — id, tapped and a 30-bit damage — and a
             // second, tagged in bit 63, only when the permanent carries
@@ -1989,7 +2014,7 @@ impl GameState {
             // the next permanent's, which is what keeps two boards from ever
             // sharing a stream (PERF `(-179)`).
             let counters = c.counters.values().sum::<u32>();
-            let head = u64::from(c.id.0) | (u64::from(c.tapped) << 32);
+            let head = u64::from(c.id.0) | ((u64::from(c.tapped) & tap_bit) << 32);
             if counters == 0 && c.damage < (1 << 30) {
                 h = mix(h, head | (u64::from(c.damage) << 33));
             } else {
@@ -4731,6 +4756,15 @@ impl GameState {
     /// simulates through combat ends turns on its clone too (3,234 calls over
     /// a six-game `cube` run against ~150 real turns), which is why the two
     /// gates are there.
+    /// The digest CR 104.4's turn watch compares, exposed so the field list
+    /// can be tested as a field list: what is *not* in it is the whole of what
+    /// decides whether an unwinnable board ever gets its draw, and two of the
+    /// three things that are out were put there by a board that ran to the
+    /// action cap. Not used by the engine itself.
+    pub fn progress_fingerprint(&self) -> u64 {
+        self.fingerprint_as(false, 0, true)
+    }
+
     fn watch_turn_progress(&mut self) {
         if self.game_over.is_some()
             || self.turn_number < Self::NO_PROGRESS_WATCH_FROM_TURN
@@ -4739,17 +4773,42 @@ impl GameState {
             return;
         }
         let fp = self.fingerprint_as(false, 0, true);
-        let (anchor, repeats, since) = self.no_progress_watch;
+        let (watch, draw) = Self::no_progress_step(self.no_progress_watch, fp);
+        self.no_progress_watch = watch;
+        if draw {
+            self.game_over = Some(None);
+        }
+    }
+
+    /// [`watch_turn_progress`](Self::watch_turn_progress)'s state machine over
+    /// one digest sample: the new `(anchor, repeats, since)` and whether the
+    /// game is now a draw.
+    ///
+    /// Split out of its caller because **the shapes that decide whether this
+    /// watch fires are properties of the digest STREAM, not of any board that
+    /// fits in a test.** The one board that defeated it (`all` 1159 — Beacon
+    /// of Immortality plus an extort, both seats unkillable) needed 2,270
+    /// turns and a whole deck pool to produce its stream; the stream itself is
+    /// four lines. A test that feeds one directly can pin what the three
+    /// constants buy in the only terms that matter — how long an excursion
+    /// from the anchor may be, and how much of the count it costs.
+    ///
+    /// Read it as: hold the first sample as an anchor; every return to it is a
+    /// repeat, and [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS)
+    /// of them is CR 104.4's draw. A sample that misses does *not* cost the
+    /// count — a loop longer than one sampling period has to be allowed to
+    /// come back — but a miss that goes on for more than
+    /// [`NO_PROGRESS_MAX_PERIOD`](Self::NO_PROGRESS_MAX_PERIOD) samples gives
+    /// up on the anchor and starts again on the current state, count and all.
+    pub fn no_progress_step(watch: (u64, u32, u32), fp: u64) -> ((u64, u32, u32), bool) {
+        let (anchor, repeats, since) = watch;
         if fp == anchor {
             let repeats = repeats + 1;
-            self.no_progress_watch = (anchor, repeats, 0);
-            if repeats >= Self::NO_PROGRESS_DRAW_REPEATS {
-                self.game_over = Some(None);
-            }
+            ((anchor, repeats, 0), repeats >= Self::NO_PROGRESS_DRAW_REPEATS)
         } else if anchor == 0 || since >= Self::NO_PROGRESS_MAX_PERIOD {
-            self.no_progress_watch = (fp, 0, 0);
+            ((fp, 0, 0), false)
         } else {
-            self.no_progress_watch.2 = since + 1;
+            ((anchor, repeats, since + 1), false)
         }
     }
 

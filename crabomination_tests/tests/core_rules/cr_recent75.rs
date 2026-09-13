@@ -368,6 +368,149 @@ fn cr_104_4_a_turn_that_draws_a_card_is_not_a_no_progress_loop() {
     assert!(g.game_over.is_none(), "drawing a card every turn is progress");
 }
 
+/// CR 104.4 — the turn watch's digest, tested as a FIELD LIST.
+///
+/// ⚠ **WHAT IS OUT OF THIS DIGEST IS WHY `all` 1159 RAN TO TURN 18,202.**
+/// `CRAB_PROGRESS_WATCH=2000` printed every quantity it reads on that board
+/// and the sampled stream was two states that differed in **one permanent's
+/// tap** — the bot taking a 33rd land for the extort in bursts. A tap the
+/// next untap step takes back is not a game getting anywhere, so it is out;
+/// anything a turn can move and keep is in, and the three counters that have
+/// no other witness (energy, experience, the dungeon room) are in because a
+/// board can advance through them while every zone size stands still.
+///
+/// The same field is IN the other two digests, which sample within a turn
+/// where a tap is a cost paid. Only `progress_fingerprint` drops it.
+#[test]
+fn cr_104_4_the_turn_digest_reads_progress_and_not_bookkeeping() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let base = g.progress_fingerprint();
+
+    // Out: a tap, and a life total the game can no longer be decided by.
+    g.battlefield_find_mut(id).expect("permanent").tapped = true;
+    assert_eq!(g.progress_fingerprint(), base, "a tap is not progress across a turn");
+    g.players[0].life = i32::MAX;
+    let saturated = g.progress_fingerprint();
+    g.players[0].life = i32::MAX - 1_000;
+    assert_eq!(g.progress_fingerprint(), saturated, "a drained saturated life is not progress");
+
+    // In: everything a turn can move and keep. Each is asserted on its own, so
+    // a field that stops being read names itself instead of hiding behind the
+    // next one.
+    macro_rules! moves {
+        ($what:literal, $body:expr) => {{
+            let before = g.progress_fingerprint();
+            $body;
+            assert_ne!(g.progress_fingerprint(), before, "{} must be progress", $what);
+        }};
+    }
+    moves!("a life total inside the band", g.players[0].life = 20);
+    moves!("damage on a permanent", g.battlefield_find_mut(id).unwrap().damage = 1);
+    moves!(
+        "a counter on a permanent",
+        g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1)
+    );
+    moves!("a card in hand", g.add_card_to_hand(0, catalog::mountain()));
+    moves!("a card in the library", g.add_card_to_library(0, catalog::mountain()));
+    moves!("a permanent entering", g.add_card_to_battlefield(1, catalog::mountain()));
+    moves!("poison", g.players[1].poison_counters = 1);
+    moves!("energy", g.players[1].energy = 1);
+    moves!("an experience counter", g.players[1].experience = 1);
+}
+
+/// Feed a digest stream to the turn watch's state machine and report how many
+/// samples it took to declare the draw, if it ever did.
+fn samples_to_draw(stream: impl IntoIterator<Item = u64>) -> Option<u32> {
+    let mut watch = (0u64, 0u32, 0u32);
+    for (i, fp) in stream.into_iter().enumerate() {
+        let (next, draw) = GameState::no_progress_step(watch, fp);
+        watch = next;
+        if draw {
+            return Some(i as u32 + 1);
+        }
+    }
+    None
+}
+
+/// CR 104.4 — what the turn watch's three constants actually buy, priced on a
+/// digest stream rather than on a board.
+///
+/// ⚠ **THIS IS THE TEST THE CAPPED GAMES ASKED FOR.** Whether the watch fires
+/// is a property of the digest *stream*, and the streams that defeat it are
+/// not reachable from any board small enough to write down: `all` 1159 took
+/// 2,270 turns and a whole deck pool to produce one. Four lines here say the
+/// same thing, so the next run can price a constant in seconds instead of in
+/// a forty-minute ladder leg.
+///
+/// The three properties, in the order they matter:
+///
+/// * A stream that never moves draws on the `NO_PROGRESS_DRAW_REPEATS`-th
+///   *return*, so one sample later than that — the first sample is the anchor,
+///   not a repeat.
+/// * A miss does not cost the count. A loop whose period is longer than one
+///   sampling interval has to be allowed to come back, and an excursion of up
+///   to `NO_PROGRESS_MAX_PERIOD` samples keeps everything it had.
+/// * **An excursion one sample longer than that costs the whole count**, and
+///   that is the cliff. A game that returns to one state but takes a long
+///   excursion once per cycle never draws, however many turns it is given —
+///   the count restarts every cycle and `NO_PROGRESS_DRAW_REPEATS` is never
+///   reached. It is not a slow draw; it is no draw at all.
+#[test]
+fn cr_104_4_the_no_progress_watch_prices_its_excursions() {
+    let repeats = GameState::NO_PROGRESS_DRAW_REPEATS;
+    let patience = GameState::NO_PROGRESS_MAX_PERIOD;
+
+    // A frozen game: anchor on the first sample, draw on the last return.
+    assert_eq!(
+        samples_to_draw(std::iter::repeat_n(0xA11CEu64, 4 * repeats as usize)),
+        Some(repeats + 1),
+        "a stream that never moves draws on the {repeats}th return",
+    );
+
+    // An excursion of exactly `NO_PROGRESS_MAX_PERIOD` samples is free: the
+    // draw lands `patience` samples later than the frozen stream's and not a
+    // repeat later, so nothing was forgotten while the game was away.
+    let with_excursion = |away: u32| {
+        let mut s = vec![0xA11CEu64; 5];
+        s.extend((0..away).map(u64::from));
+        s.extend(std::iter::repeat_n(0xA11CEu64, 4 * repeats as usize));
+        s
+    };
+    assert_eq!(
+        samples_to_draw(with_excursion(patience)),
+        Some(repeats + 1 + patience),
+        "an excursion of {patience} samples keeps the count",
+    );
+
+    // One sample longer and the anchor is abandoned, count and all: the draw
+    // is late by everything that came before it.
+    assert!(
+        samples_to_draw(with_excursion(patience + 1)).unwrap() > repeats + 1 + patience,
+        "an excursion of {} samples must cost the count",
+        patience + 1,
+    );
+
+    // ⚠ The cliff, and the reason a real unwinnable board can run for ever:
+    // repeat that excursion once a cycle and the watch never gets there. The
+    // stream below returns to one state 5 times in every cycle — 100,000
+    // samples, 500,000 turns at `NO_PROGRESS_SAMPLE_EVERY` — and draws never.
+    let mut cyclic = Vec::with_capacity(100_000);
+    for cycle in 0..(100_000 / (5 + patience as usize + 1)) {
+        cyclic.extend(std::iter::repeat_n(0xA11CEu64, 5));
+        // Distinct every cycle, so the excursion never anchors either.
+        cyclic.extend((0..=patience).map(|i| 1 + cycle as u64 * 64 + u64::from(i)));
+    }
+    assert_eq!(
+        samples_to_draw(cyclic),
+        None,
+        "a long excursion once a cycle costs the count every cycle",
+    );
+}
+
 /// CR 104.4 — a life total past the saturation band is a STATE, not a number,
 /// and moving it by one is not progress.
 ///
@@ -386,13 +529,14 @@ fn cr_104_4_a_turn_that_draws_a_card_is_not_a_no_progress_loop() {
 /// differ in nothing that can end the game. Without the clamp this board runs
 /// past turn 5,700 and never draws.
 ///
-/// ⚠ **THE CLAMP DOES NOT CLOSE `all` 1159 ITSELF** — that cell still reads
-/// `cap 2` and `repeats 2/12` with it in. The life drift was one source of
-/// aperiodicity on that board and not the only one: the bot taps a different
-/// number of lands per turn for the Beacon and the extort, and the library
-/// toggles 1/0 depending on whether the Beacon is on the stack when the turn
-/// ends, both of which the digest reads. That board is recorded in PERF as a
-/// known unwinnable one; this test pins the half that IS fixed.
+/// ⚠ **THE CLAMP IS HALF OF `all` 1159 AND THE TAP IS THE OTHER HALF.** With
+/// only the clamp that cell still read `cap 2`; `CRAB_PROGRESS_WATCH=2000`
+/// then printed the digest's whole field list on the capped game and the
+/// second half named itself — see
+/// `cr_104_4_the_turn_digest_reads_progress_and_not_bookkeeping`. The guess on
+/// record here, that the library "toggles 1/0 depending on whether the Beacon
+/// is on the stack", was wrong: `l1` on every one of the 271 sampled turns.
+/// This test pins the clamp; that one pins the tap.
 #[test]
 fn cr_104_4_a_drained_saturated_life_is_still_no_progress() {
     use crabomination::card::{StaticAbility, StaticEffect, TriggeredAbility};
