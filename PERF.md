@@ -6783,6 +6783,45 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-300)` The empty dispatch is 47.2 % of them, and it was paying a call to find out
+
+NEXT's first open structural question about the #1 row was the empty-batch
+early-out: `perform_action_inner` drains every action's event list through
+`dispatch_triggers_for_events`, and the body's own early-out is reached only
+after the call, the prologue and two `mem::take`s. The gate is five
+`is_empty()` reads at the call site now (`#[inline(always)]`, `cow::make_mut`'s
+shape), and the body is `dispatch_triggers_for_events_slow`.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                    (-299)          (-300)       delta
+  fixed        634,213,045     632,773,413     -0.227 %
+  cube       1,688,023,702   1,685,671,574     -0.139 %
+  sealed     1,761,718,240   1,758,291,476     -0.195 %
+
+  sealed, the row itself
+    dispatch_triggers_for_events   199,186 calls   108,784,070 self
+    dispatch_triggers_for_events_slow 105,114 calls 104,268,682 self
+```
+
+**94,072 of 199,186 calls — 47.2 % — never had anything to do**, which is the
+figure NEXT predicted from the `(-294)` census to within a point. Outcomes
+byte-identical on all six dumps.
+
+⚠ **`#[inline]` is not enough here and the difference is measurable.** With
+plain `#[inline]` the gate came out as its own 180,198-call, 7.6 Ir/call
+function — LLVM inlined it at 19 k of the ~20 call sites' worth of calls and
+left the rest calling a five-load stub. `#[inline(always)]` removed the row
+entirely, for another **fixed -0.021 / cube -0.009 / sealed -0.015** points
+over the `#[inline]` build. A gate whose whole value is *not making a call*
+has to be forced.
+
+The gate is strictly more conservative than the body's early-out: it tests the
+same five facts (the batch, the two `scratch` pending lists, the pending deaths
+and the pending control changes) and returns only where the body would have
+returned having touched nothing — the body's own comment already said the two
+`mem::take`s leave exactly what the early-out leaves.
+
 ### `(-299)` The tail is behind one bit now — a definition memo for "can this card reduce its own cost at all"
 
 `(-298)` made the tail's nineteen walks one. What was left is that it runs at
@@ -11061,6 +11100,14 @@ questions are both about *dispatch count*, not per-dispatch work: 47 % of the
 dispatches after every action, and `pass_priority`'s non-round-closing branch
 returns no events at all), and whether `perform_action_inner`'s 162,026 batches
 can be merged is still unasked.
+✅ **THE FIRST OF THE TWO IS TAKEN — `(-300)`**: the census's 47 % was
+**94,072 of 199,186 calls, 47.2 %**, and they now return from five inlined
+`is_empty()` reads instead of a call and two `mem::take`s. **fixed -0.227 /
+cube -0.139 / sealed -0.195 %**, and `#[inline(always)]` rather than
+`#[inline]` is worth another 0.015-0.021 of those points — LLVM left the gate
+as its own 180,198-call stub otherwise. The *second* question — merging
+`perform_action_inner`'s batches — is still unasked, and is now about the
+105,114 dispatches that do work.
 
 **The allocator row is READ and it has no device — sized census taken
 2026-09-13, at the `176d3ee5` tip, so nobody spends a build on it.** The 9 % is

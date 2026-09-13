@@ -19532,7 +19532,28 @@ impl GameState {
         }
     }
 
+    /// **The empty dispatch, answered at the call site.** `perform_action_inner`
+    /// drains every action's event list through here and roughly half of those
+    /// batches are empty with nothing queued behind them; the body's own
+    /// early-out still costs the call, the prologue and two `mem::take`s to
+    /// reach. Five `is_empty()` reads inline instead — the same five facts the
+    /// body's early-out tests, in the same order, and strictly more
+    /// conservative: this returns only when the body would have returned
+    /// having touched nothing. `cow::make_mut`'s shape (PERF `(-300)`).
+    #[inline(always)]
     pub fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
+        if events.is_empty()
+            && self.scratch.pending_cost_events.is_empty()
+            && self.scratch.pending_cost_triggers.is_empty()
+            && self.pending_permanent_deaths.is_empty()
+            && self.scratch.pending_control_changes.is_empty()
+        {
+            return;
+        }
+        self.dispatch_triggers_for_events_slow(events);
+    }
+
+    fn dispatch_triggers_for_events_slow(&mut self, events: &[GameEvent]) {
         // Cost-payment events (paid life) queued since the last dispatch —
         // fold them in so resumed-decision paths that bypass
         // `perform_action`'s drain still fire their triggers.
