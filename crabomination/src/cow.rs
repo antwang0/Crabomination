@@ -46,11 +46,18 @@ mod tests {
     /// PERF `(-306)`: `Battlefield`'s write counter and the packed board fold
     /// it stamps (16 bytes, inline because the memo has to travel with the
     /// zone through a clone), fixed -0.208 / cube -0.240 / sealed -0.383 %
-    /// Ir *with* the growth already in the reading.
+    /// Ir *with* the growth already in the reading. Raised 1,616 -> 1,664 at
+    /// PERF `(-311)`: the state-level gather memo's key, its `Arc` and its
+    /// `SecondPass`, carried inline so the memo travels with the state through
+    /// a clone — fixed -0.911 / cube -1.490 / sealed -0.517 % Ir *with* the
+    /// growth already in the reading. ⚠ The key's five scalars are stored and
+    /// **compared**, not hashed, and that is 16 of the 48 bytes: a 64-bit fold
+    /// of small counters is a probabilistic witness and the first cut's fold
+    /// collided inside one sweep cell.
     #[test]
     fn game_state_stays_small() {
         let n = std::mem::size_of::<crate::game::GameState>();
-        assert!(n <= 1_648, "GameState grew to {n} bytes (cap 1,648) — see PERF (-144), (-280)");
+        assert!(n <= 1_664, "GameState grew to {n} bytes (cap 1,664) — see PERF (-144), (-280)");
     }
 
     #[test]

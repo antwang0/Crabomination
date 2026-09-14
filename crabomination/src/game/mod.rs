@@ -640,7 +640,7 @@ struct LayerFreezeState {
     /// answer**. Shipped with the whole key it takes **45.7 / 44.5 / 42.1 %**
     /// of all gathers off the program (24,248 -> 13,166 / 44,258 -> 24,554 /
     /// 62,144 -> 36,002).
-    cross: Option<(u64, std::sync::Arc<Vec<ContinuousEffect>>, crate::game::layers::SecondPass)>,
+    cross: Option<(GatherKey, std::sync::Arc<Vec<ContinuousEffect>>, crate::game::layers::SecondPass)>,
 }
 
 /// The board questions with a presence gate, and the slot each one
@@ -772,6 +772,18 @@ impl LayerFreezeState {
     }
 }
 
+/// The witness set [`GameState::gather_key`] builds and the state-level gather
+/// memo is stamped with — see that method for what is in it and why the five
+/// scalars are compared rather than hashed.
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub(crate) struct GatherKey {
+    /// `battlefield` / `continuous_effects` / `exile` write counters,
+    /// `active_player_idx`, stack depth.
+    scalars: [u32; 5],
+    /// The seats' write counters and the attacker / blocked ids, folded.
+    lists: u64,
+}
+
 /// A thread-local free list of `Arc<ComputedPermanent>` boxes, recycled
 /// between freeze scopes.
 ///
@@ -846,15 +858,21 @@ pub mod gather_census {
     /// dropped, and a global counter charges the probe's writes to the parent
     /// (PERF `(-306)`, which is why `sba_census`' 18 % was unreachable).
     pub struct PrevStamp {
-        stamp: AtomicU64,
+        stamp: std::sync::Mutex<Option<super::GatherKey>>,
         digest: AtomicU64,
         board: AtomicU64,
+    }
+
+    impl PrevStamp {
+        fn replace(&self, key: super::GatherKey) -> Option<super::GatherKey> {
+            self.stamp.lock().map(|mut g| g.replace(key)).unwrap_or(None)
+        }
     }
 
     impl Default for PrevStamp {
         fn default() -> Self {
             Self {
-                stamp: AtomicU64::new(u64::MAX),
+                stamp: std::sync::Mutex::new(None),
                 digest: AtomicU64::new(u64::MAX),
                 board: AtomicU64::new(u64::MAX),
             }
@@ -864,7 +882,9 @@ pub mod gather_census {
     impl Clone for PrevStamp {
         fn clone(&self) -> Self {
             Self {
-                stamp: AtomicU64::new(self.stamp.load(Relaxed)),
+                stamp: std::sync::Mutex::new(
+                    self.stamp.lock().ok().and_then(|g| *g),
+                ),
                 digest: AtomicU64::new(self.digest.load(Relaxed)),
                 board: AtomicU64::new(self.board.load(Relaxed)),
             }
@@ -911,10 +931,12 @@ pub mod gather_census {
         if prev_bf != u64::MAX && prev_bf == bf {
             STATE_NO_BF.fetch_add(1, Relaxed);
         }
+        // The key is a struct now, so the census carries it in a cell rather
+        // than an atomic — the census build is single-threaded by contract.
         let key = state.gather_key();
-        let prev = state.gather_census_prev.stamp.swap(key, Relaxed);
+        let prev = state.gather_census_prev.replace(key);
         let prev_d = state.gather_census_prev.digest.swap(d, Relaxed);
-        if prev == key {
+        if prev == Some(key) {
             STATE_NO_ANY.fetch_add(1, Relaxed);
             if prev_d != d {
                 STATE_WRONG.fetch_add(1, Relaxed);
@@ -10958,7 +10980,9 @@ impl GameState {
         debug_assert!(
             self.gather_memo_agrees(&hit.0, hit.1),
             "the state-level gather memo is stale: an input moved that `gather_key` \
-             does not witness",
+             does not witness\n  memo:  {:?}\n  fresh: {:?}",
+            hit.0,
+            self.gather_continuous_effects(),
         );
         Some(hit)
     }
@@ -11001,33 +11025,60 @@ impl GameState {
     /// * `active_player_idx` (9) is a scalar and goes in whole;
     /// * `attacking` (2) and `block_map` (1) have no chokepoint — they are
     ///   two-to-eight entries long and only the attacker / blocked **ids** are
-    ///   read, so those go in exactly;
+    ///   read, so those go in;
     /// * the stack is not in the audit's `self.<field>` census, but the four
     ///   `evaluate_*` entries read whatever a catalog filter names, so its
     ///   depth goes in as a cheap witness.
     ///
-    /// ⚠ That last line is an *approximation*, and the open input set is why
-    /// [`gather_memo_agrees`](Self::gather_memo_agrees) re-gathers and
+    /// ⚠⚠ **THE FIVE SCALARS ARE COMPARED, NOT HASHED, AND THAT IS THE WHOLE
+    /// SHAPE OF THIS TYPE.** The first cut of `(-311)` folded them into one
+    /// `u64` opening with `h = battlefield.writes(); h ^= continuous.writes()`
+    /// — **a raw XOR of two small counters is not injective in the pair**
+    /// ((1, 0) and (2, 3) fold to the same word), and the fresh-seed sweep
+    /// found it on `cube` seed 1309 in seventeen seconds: a crewed Vehicle's
+    /// `AddCardType(Creature)` served off a memo stamped before it existed.
+    /// Chaining an XOR with an *unspread* small value stays weak even after
+    /// the first step — a collision then needs only the high bits of two
+    /// histories to agree, which is `2^-32`, not `2^-64`.
+    ///
+    /// ⚠ The variable-length halves (the seats, the attacker and blocked ids)
+    /// are still a 64-bit fold, because their length is not fixed — but every
+    /// value is **spread across all 64 bits before it is XOR'd in**, so a
+    /// collision there needs a full-width coincidence.
+    ///
+    /// ⚠ And the four `evaluate_*` entries keep the input set open, which is
+    /// why [`gather_memo_agrees`](Self::gather_memo_agrees) re-gathers and
     /// compares on every hit under `debug_assertions`: the suite and the
     /// fresh-seed sweep are the ratchet, exactly as `(-303)` asks.
     #[inline]
-    fn gather_key(&self) -> u64 {
-        const K: u64 = 0x9E37_79B9_7F4A_7C15;
-        let mut h = u64::from(self.battlefield.writes());
-        h = (h ^ u64::from(self.continuous_effects.writes())).wrapping_mul(K);
-        h = (h ^ u64::from(self.exile.writes())).wrapping_mul(K);
-        h = (h ^ self.active_player_idx as u64).wrapping_mul(K);
-        h = (h ^ self.stack.len() as u64).wrapping_mul(K);
+    fn gather_key(&self) -> GatherKey {
+        /// One list element, spread over all 64 bits before it folds in.
+        #[inline]
+        fn mix(h: u64, x: u64) -> u64 {
+            let x = x.wrapping_mul(0xff51_afd7_ed55_8ccd);
+            let x = x ^ (x >> 33);
+            (h ^ x).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        }
+        let mut lists = 0x243F_6A88_85A3_08D3_u64;
         for p in &self.players {
-            h = (h ^ u64::from(p.writes())).wrapping_mul(K);
+            lists = mix(lists, u64::from(p.writes()));
         }
         for a in &self.attacking {
-            h = (h ^ (u64::from(a.attacker.0) | 1 << 32)).wrapping_mul(K);
+            lists = mix(lists, u64::from(a.attacker.0) | 1 << 32);
         }
         for id in self.block_map.keys() {
-            h = (h ^ (u64::from(id.0) | 1 << 33)).wrapping_mul(K);
+            lists = mix(lists, u64::from(id.0) | 1 << 33);
         }
-        h
+        GatherKey {
+            scalars: [
+                self.battlefield.writes(),
+                self.continuous_effects.writes(),
+                self.exile.writes(),
+                self.active_player_idx as u32,
+                self.stack.len() as u32,
+            ],
+            lists,
+        }
     }
 
     /// The gathered set for **this state**, served from
@@ -11065,7 +11116,7 @@ impl GameState {
     /// under `debug_assertions`.
     fn cross_memo_hit(
         &self,
-        key: u64,
+        key: GatherKey,
     ) -> Option<(std::sync::Arc<Vec<ContinuousEffect>>, crate::game::layers::SecondPass)> {
         let hit = match &self.layer_freeze.lock().cross {
             Some((k, fx, gates)) if *k == key => Some((fx.clone(), *gates)),
@@ -11075,7 +11126,9 @@ impl GameState {
             debug_assert!(
                 self.gather_memo_agrees(fx, *gates),
                 "the state-level gather memo is stale: an input moved that `gather_key` \
-                 does not witness",
+                 does not witness\n  memo:  {:?}\n  fresh: {:?}",
+                fx,
+                self.gather_continuous_effects(),
             );
         }
         hit
@@ -11087,7 +11140,7 @@ impl GameState {
     /// mallocs on the first cut of this leg.
     fn store_cross_memo(
         &self,
-        key: u64,
+        key: GatherKey,
         fx: &std::sync::Arc<Vec<ContinuousEffect>>,
         gates: crate::game::layers::SecondPass,
     ) {

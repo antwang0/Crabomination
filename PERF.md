@@ -2987,6 +2987,77 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-14 (the gather-memo session, third of the day) — the head's #1 since `(-302)`, and the refactor it was blocked on that was never needed
+
+```text
+perf    **`(-311)`: the state-level gathered-effect memo — fixed -0.911 / cube -1.490 / sealed -0.517 %,
+        and 42-46 % of every gather off the program** (24,248 -> 13,166 / 44,258 -> 24,554 /
+        62,144 -> 36,002). `(-303)` priced this at ~1.8-2.5 % a pool and stopped on its key: 45 of the
+        gather's read sites are `self.players`, and `pub players: Vec<Player>` has ~2,400 mutation-shaped
+        sites that a `players_mut()` newtype turns into ~2,400 compile errors. ⚠⚠ **THE REFACTOR WAS
+        NEVER NEEDED — `Player` IS ALREADY A CoW HANDLE, so its `DerefMut` is already the one route into
+        a seat**, and a per-seat `writes: u32` bumped in that one line is the whole players half.
+        `CardPile` (exile) and `ContinuousEffects` took the same counter beside the memo word they
+        already clear on each `&mut` route; `Battlefield` has had one since `(-306)`. **A CoW handle is a
+        write chokepoint, and every group made copy-on-write for allocation reasons is a free epoch.**
+        Census first, as `(-87)` asks: **48.04 / 49.18 / 48.85 %** of gathers found the board-and-seats
+        key unmoved with **0 of those carrying a different answer**, and the gathered list is **1.3 /
+        0.9 / 0.0 effects** on average — so a hit is an `Arc` bump and a gather's cost is the scan.
+        Carrying the memo through `GameState::clone` is worth **0.24 / 0.22 / 0.14 points** of the
+        totals, measured against a no-carry build.
+
+bug     ⚠⚠ **THE FIRST KEY WAS A 64-BIT FOLD AND THE FRESH-SEED SWEEP BROKE IT IN SEVENTEEN SECONDS —
+        the suite's 19,549 tests never reached it.** `h = battlefield.writes(); h ^= continuous_effects.
+        writes()` is **not injective in the pair**: (1, 0) and (2, 3) fold to the same word, and `cube`
+        seed 1309 served a crewed Vehicle's `AddCardType(Creature)` off a memo stamped before the crew.
+        The five scalars are stored and **compared** now (`GatherKey`); only the variable-length halves
+        stay a fold, each value spread across 64 bits first, because an XOR chained with an *unspread*
+        small value needs only two histories' high halves to agree — `2^-32`, not `2^-64`. ⚠ **The
+        collision never moved the hit rate** (the gather counts are identical to four digits either
+        way), so nothing but the recompute-and-compare audit could have found it. Exactness cost
+        **0.09 / 0.08 / 0.06 points**. **A 64-bit fold is a probabilistic witness; a memo that gates
+        game state wants a compared one.**
+
+perf    ⚠ **`(-311)`'s first cut read -0.503 / -1.263 / -0.140 % and the whole gap was OVERHEAD, not hit
+        rate — three costs, each found by diffing the two self tables.** (a) The evicted box was dropped
+        rather than parked: 21,488 `Arc::drop_slow` on `sealed`; `fx_pool`'s feed is the memo's eviction
+        now and `end_of_scope` stopped parking a handle the cross memo still holds. (b) Three mutex locks
+        per hit (scope memo, cross memo, promotion) became one, and the key is not computed when the
+        scope memo answers. (c) ⚠ **`LayerFreezeState { cross, ..Default::default() }` cost two extra
+        `memcpy` calls per `GameState::clone`** — 130,496 -> 191,264 over `sealed` — because the struct
+        update builds a ~190-byte temporary (`perms` is eight inline slots) and moves it. **A memo is
+        priced by its entry point as much as by what it skips**: this one is ~150 Ir against a ~1,000 Ir
+        gather, and each of the three cost more than that.
+
+gate    **The memo's ratchet is real, not nominal.** `gather_key` witnesses every input `(-303)`'s read
+        audit names, and the audit's open tail (four `evaluate_*` entries that read whatever a catalog
+        filter names) is covered by a recompute-and-compare on **every hit** under `debug_assertions`.
+        19,549 suite tests green with it live; a deliberately constant key trips it at test **346**.
+        ⚠ A *shared* cross-clone cache was considered and rejected on soundness: two probes off one
+        parent both reach `writes + 1` with different boards, so the key is a witness only within one
+        state's lineage. `GameState` **1,616 -> 1,664** for the memo and its key.
+
+sweep   **fresh seeds 1308..1311: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 / stuck 0 /
+        draw 0` — clean, no 50,000-action re-run needed. `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`, **at the final tip on purpose**: the
+        memo's audit only fires on a hit and a hit needs a board the suite does not build. **Frontier
+        1312.** The FIRST run of this block, at the pre-fix tip, is the `bug` row above. All standing
+        audits 0: `audit_panics` **0 bare** (70 sites, 59 guarded, 11 lock-poison),
+        `audit_stash_in_loop` **0 unexplained**, `audit_seat_from_selector` **0 open**,
+        `audit_target_walkers --check` **0**, `audit_doc_drift` **0 body-wrong / 0 doc rot / 0 stale
+        notes**, `audit_variant_coverage` 0 dead capability (1 dead primitive, unchanged).
+
+gates   ⚠ **FOURTH BOX, 4 cores, rustc 1.95.0.** `--bench` **195,806 decisions / 27.49 turns / 611.9 per
+        game / 0 stalls**, byte-identical to the committed invariant, `determinism ok` and
+        `thread_determinism ok (3 vs 1)`; 444 and 479 games/s on two runs of two binaries, which says
+        nothing against any other block and not much against itself.
+        Suite **19,549 / 0 / 5** (`CRAB_ANSWER_LOG=strict`), clippy **0** (`--workspace --all-targets
+        --exclude crabomination_client`), golden traces unmoved, `cargo check --profile release-fast`
+        clean. **The A/B base was RE-TAKEN on this box** and reads 624,133,866 / 1,657,007,991 /
+        1,732,783,859 against the previous session's closing 625,328,472 / 1,658,424,377 / 1,734,359,459
+        — 0.09-0.19 % apart, which is the toolchain, not a change.
+```
+
 ### 2026-09-14 (the write-counter session, second of the day) — a per-object zone epoch, eight adds that add nothing, a defect class with a gate, and the id-compare family closed
 
 ```text
@@ -7068,6 +7139,112 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-311)` The state-level gather memo — **fixed -0.911 / cube -1.490 / sealed -0.517 %**, and the blocker the candidates head named does not exist
+
+`(-303)` measured the largest repeat rate on this page — 95-99.6 % of gathers
+return the previous gather's answer — and sized the memo that would serve them
+at ~1.8-2.5 % of every pool. It then stopped, on a prerequisite: a memo whose
+lifetime spans a mutation needs a key, `self.players` is 45 of the gather's
+read sites, and `pub players: Vec<Player>` has **~2,400 mutation-shaped sites**
+that a `players_mut()` newtype would turn into ~2,400 compile errors. NEXT
+carried "⚠ do not open it as a refactor" for two sessions.
+
+⚠⚠ **THE REFACTOR WAS NEVER NEEDED. `Player` IS ALREADY A CoW HANDLE, SO ITS
+`DerefMut` IS ALREADY THE ONE ROUTE INTO A SEAT** (`(-178)` put it there for
+the clone, not for this) — and a per-seat `writes: u32` bumped in that one line
+covers every one of the 2,400 sites. `CardPile` (exile) and `ContinuousEffects`
+already clear a memo word on each of their two `&mut` routes and took the same
+counter beside it; `Battlefield` has had one since `(-306)`. **The lesson is
+the one `(-306)` half-said: a CoW handle is a write chokepoint, and every group
+this codebase made copy-on-write for allocation reasons is a free epoch.**
+
+```text
+census first, as `(-87)` and `(-303)` ask — release-fast --features trig-census,
+CRAB_GATHER_CENSUS=1, gang mirror --games 6 --threads 1 --seed 1
+                   gathers   board+seats unmoved   of those, a DIFFERENT answer
+  fixed             24,248     11,648  48.04 %              0
+  cube              44,258     21,768  49.18 %              0
+  sealed            62,144     30,360  48.85 %              0
+  mean gathered list length: 1.3 / 0.9 / 0.0 effects
+```
+
+**Two numbers decided the build.** The joint rate is within 1.6-3.3 points of
+the battlefield-only 50 % `(-303)` reported, so adding the seats to the key
+costs almost nothing — and the list a hit hands back is *empty on average*, so
+the answer can be an `Arc` bump and a gather's cost is the scan, not the
+result.
+
+```text
+profiling-fast --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                            base            (-311)        delta
+  fixed              624,133,866       618,446,650     -0.911 %
+  cube             1,657,007,991     1,632,318,919     -1.490 %
+  sealed           1,732,783,859     1,723,820,812     -0.517 %
+
+  gathers actually taken off the program (release-fast, the shipped key)
+  fixed    24,248 -> 13,170  -45.7 %   gather_continuous_effects_inner self
+  cube     44,258 -> 24,554  -44.5 %     sealed 57.6 -> 33.9 M, cube -23.8 M,
+  sealed   62,144 -> 36,002  -42.1 %     fixed -10.9 M
+```
+
+The memo is `LayerFreezeState::cross`, beside the scope memo and **in the same
+mutex**, keyed on `GameState::gather_key` rather than on a scope — so it
+outlives both the scope and `GameState::clone`. `Clone for LayerFreeze` carries
+it (`clone_cross_only`), which is worth **0.24 / 0.22 / 0.14 points** of the
+totals above, measured against a no-carry build (-0.766 / -1.352 / -0.433 %).
+
+⚠ **THE FIRST CUT READ -0.503 / -1.263 / -0.140 % AND THE GAP WAS ALL
+OVERHEAD, NOT HIT RATE.** The gather saving never moved; three separate costs
+ate it, and each was found by diffing the two self tables rather than by
+reasoning:
+
+* **The evicted box was dropped instead of parked** — 21,488 `Arc::drop_slow`
+  and their mallocs on `sealed`. `store_cross_memo` hands the displaced handle
+  to `fx_pool` now, and `end_of_scope` stopped parking a handle the cross memo
+  still holds (`alloc` would pop it, fail the uniqueness check and drop it,
+  having displaced a box that could have come back). **The pool's feed is the
+  eviction now, not the scope exit.**
+* **Three mutex locks per hit** — the scope memo, the cross memo and the
+  promotion. `scope_or_cross_memo` asks both under one lock, and does **not**
+  compute the key when the scope memo answers, which is the path every computed
+  read inside a filled scope takes.
+* ⚠ **`LayerFreezeState { cross, ..Default::default() }` cost two extra
+  `memcpy` calls per `GameState::clone`** — 130,496 -> 191,264 over a `sealed`
+  run — because the struct update builds a ~190-byte temporary (`perms` is
+  eight inline slots) and moves it. Field by field, it is built in place.
+  **A struct-update literal over a type with large inline storage is a copy.**
+
+**Soundness, and it is the reason this is landable at all.** `gather_key`
+witnesses every input `(-303)`'s read audit names: the four zone counters
+(battlefield / players / exile / continuous_effects), `active_player_idx`, the
+attacker ids, the blocked ids, and the stack depth. The audit's last line — the
+four `evaluate_*` entries read whatever a catalog filter names — keeps the
+input set open, so **every hit re-gathers and compares under
+`debug_assertions`**: 19,549 suite tests green with that live, and a
+deliberately constant key trips it at test 346, so the ratchet is real rather
+than nominal. A *shared* cache across clones was considered and rejected: two
+probes off one parent both reach `writes + 1` with different boards, so the key
+is only a witness within one state's lineage.
+
+⚠⚠ **AND THE FIRST KEY WAS A 64-BIT FOLD, WHICH THE FRESH-SEED SWEEP BROKE IN
+SEVENTEEN SECONDS.** It opened `h = battlefield.writes(); h ^= continuous_
+effects.writes()` — **a raw XOR of two small counters is not injective in the
+pair**: (1, 0) and (2, 3) fold to the same word, and `cube` seed 1309 served a
+crewed Vehicle's `AddCardType(Creature)` off a memo stamped before the crew.
+The suite never reached it; **the sweep is what caught it, at cell one of
+twelve**. The five scalars are stored and *compared* now, not hashed
+(`GatherKey`), and only the variable-length halves (the seats' counters, the
+attacker and blocked ids) stay a fold — with every value spread across 64 bits
+before it is XOR'd in, because chaining an XOR with an *unspread* small value
+needs only the high halves of two histories to agree, which is `2^-32`.
+⚠ **The collision never showed in the hit rate** — the gather counts above are
+the same to four digits either way — so nothing but the audit could have found
+it. Exactness cost **0.09 / 0.08 / 0.06 points** of the totals.
+
+`GameState` **1,616 -> 1,664** for the memo and its key; the three new write
+counters cost nothing (`CardPile` and `ContinuousEffects` had padding for
+them).
 
 ### `(-310)` REFUTED — `sync/atomic.rs:3875` under the batch layer path is not `find_by_id` missing, and replacing it with a cursor gives `(-304)` back
 
@@ -11621,6 +11798,46 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+✅✅ **STATUS AT THE `(-311)` TIP (2026-09-14, third session of the day): THE
+HEAD'S #1 SINCE `(-302)` — THE STATE-LEVEL GATHERED-EFFECT MEMO — IS BUILT AND
+SHIPPED, `(-311)`, fixed -0.911 / cube -1.490 / sealed -0.517 %.** It takes
+**42-46 % of every gather off the program**. Read `(-311)` before anything
+else on this page.
+
+⚠⚠ **AND READ WHY THE BLOCKER THIS SECTION CARRIED FOR TWO SESSIONS WAS
+WRONG.** Everything below about `players_mut()` being "~2,400 compile errors"
+and "two orders of magnitude past what one pass can land" is *true and
+irrelevant*: **`Player` is already a CoW handle, so `DerefMut` is already the
+one route into a seat**, and a per-seat `writes: u32` bumped in that one line
+is the whole players half of the key. `CardPile` and `ContinuousEffects` took
+the same counter beside the memo word they already clear. **The transferable
+rule: a CoW handle is a write chokepoint. Every group this codebase made
+copy-on-write for allocation reasons is a free epoch, and the refactor its
+absence seems to demand is usually not needed.**
+
+⚠ **The other half of `(-311)` is the one to re-read before the next memo:
+the first cut read -0.503 / -1.263 / -0.140 % and the whole gap was
+OVERHEAD**, not hit rate — a dropped `fx_pool` box instead of a parked one,
+three mutex locks per hit where one would do, and a
+`Struct { field, ..Default::default() }` literal costing two `memcpy` calls a
+clone because the type has large inline storage. **A memo is priced by its
+entry point as much as by what it skips**; this one is ~150 Ir against a
+~1,000 Ir gather, and each of the three cost more than that.
+
+⚠⚠ **AND THE KEY ITSELF: a 64-bit fold of small counters is a PROBABILISTIC
+witness and the fresh-seed sweep broke `(-311)`'s first one in seventeen
+seconds, at cell one of twelve, where the suite's 19,549 tests never reached
+it.** A raw XOR of two small counters is not injective in the pair. Store and
+*compare* the fixed-width part of any key that gates game state; fold only
+what has no fixed width, and spread each value across 64 bits before it goes
+in. **The collision did not move the hit rate at all** — only the
+recompute-and-compare audit could see it.
+
+**Still open off this row:** `compute_permanents` is still 7.25 % of `cube`
+inclusive and the memo removed the *gather* half of it, not the layer passes
+(75.6 M on `cube`) or `frozen_effects` (19.4 M). The caller tree below is
+still the map.
 
 ✅ **STATUS AT THE `(-309)` TIP (2026-09-14, second session of the day): THE
 LAYER PASS ITSELF IS NOW THE CHEAPEST THING ON THIS PAGE TO MOVE, AND THE
