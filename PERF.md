@@ -7191,6 +7191,44 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-314)` `available_mana`'s relax scan asks the zone instead of every permanent — **fixed -0.058 / cube -0.046 / sealed -0.057 %**, and the sizing was 4x high
+
+`available_mana` opens with a fused scan for the two facts that invalidate a
+per-colour budget — a CR 609.4b spend-as-any-colour permission and a mana
+production multiplier — and it asked them **per battlefield permanent**, by
+probing that permanent's `static_abilities`. Its five variants split exactly
+across two presence questions the zone already answers once per board:
+`LANE_ANY_COLOR_STATIC`'s predicate is the three spend-as-any-colour variants
+verbatim, and the two multipliers set `dispatch_bits::MANA_STATIC`, so the
+mana-static lane covers them as an over-approximation (the sound direction —
+it only lets the exact scan run more often than it must).
+
+```text
+profiling-fast --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                          (-313)            (-314)          delta
+  fixed              616,627,144       616,268,430       -0.058 %
+  cube             1,626,871,769     1,626,125,608       -0.046 %
+  sealed           1,714,362,135     1,713,381,435       -0.057 %
+
+  available_mana self, sealed   19,725,137 -> 18,494,586   -6.2 % of the row
+```
+
+⚠ **The row moved 6.2 % and the program moved 0.057 %, and the gap is the
+lesson, not the arithmetic.** It was sized at ~0.23 % on the assumption that a
+`static_abilities.iter().any(..)` over an *empty* `Vec` costs ~7 Ir per
+permanent. It costs about two: the length load and the branch, with the
+closure never entered and nothing else to do. **A presence gate in front of a
+probe of an empty collection is priced by the collection's header loads, not
+by the walk it imagines** — the device is still right (`(-296)`, `(-299)`,
+this), but its yield is proportional to what the inner loop does on a HIT, and
+here the inner loop does nothing on a miss already.
+
+Kept rather than reverted: the win is exact, negative on all three pools, four
+lines, and the `debug_assert_eq!` under the loop — which compares
+`fused_relax` against `spend_mana_as_any_color_possible_for` and
+`mana_production_multiplier_for`, the two engine walks it fuses — was already
+there and is the gate's audit unchanged. `--bench` byte-identical.
+
 ### `(-313)` The affordability read asks its questions in the order that lets two of them be skipped — **fixed -0.294 / cube -0.334 / sealed -0.549 %**
 
 `can_afford_in_state_with` is ~3 % of every pool inclusive (18.5 M / 45.0 M /

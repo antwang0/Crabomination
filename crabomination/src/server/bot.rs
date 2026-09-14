@@ -13282,11 +13282,26 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         || state.players[seat].command.iter().any(|c| {
             state.card_may_grant_any_color_spend(c, seat)
         });
+    // **The per-permanent half of that scan is two lane reads on most
+    // boards.** Its five variants split exactly across two presence
+    // questions the zone already answers once per board: the three
+    // spend-as-any-colour ones are `LANE_ANY_COLOR_STATIC`'s predicate
+    // verbatim, and the two production multipliers set
+    // `dispatch_bits::MANA_STATIC`, so the mana-static lane covers them (as
+    // an over-approximation, which is the sound direction — it only lets the
+    // exact scan run more often than it must). With both lanes absent no
+    // permanent on the board carries any of the five and the `any()` below
+    // cannot fire, so the question is answered once per board instead of once
+    // per permanent. `(-296)`'s device, and the `debug_assert_eq!` under the
+    // loop — which compares `fused_relax` against the two engine walks it
+    // fuses — is already its audit.
+    let relax_reachable =
+        state.battlefield.has_any_color_static() || state.board_has_mana_static();
     // An untapped source whose mana shape this estimate cannot cost — see the
     // `is_countable_mana_ability` arm in the loop.
     let mut opaque_source = false;
     for p in state.battlefield.iter() {
-        if !fused_relax {
+        if !fused_relax && relax_reachable {
             use crate::effect::StaticEffect;
             let mine = p.controller == seat;
             fused_relax |= p.definition.static_abilities.iter().any(|sa| match sa.effect {
