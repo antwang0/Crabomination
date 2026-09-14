@@ -5571,22 +5571,19 @@ impl GameState {
             by_kind.push(Vec::new());
         }
 
-        // One lookup of the dealer, not two: the controller Phase 1b onward
-        // needs is a field of the card Phase 1 walks the battlefield to find.
-        //
-        // The `find` short-circuited, and the three attachment phases below
-        // each walked the whole battlefield to learn there was nothing
-        // attached to the dealer and no soulbond pair touching it. This walk
-        // does not short-circuit and answers both, so three walks become one
-        // that was already half paid for (PERF (-68)).
+        // The dealer off the hint-cached lookup, not out of the walk below.
+        // `(-68)` folded three whole-board walks into one and took the `find`
+        // along because it was "already half paid for" — but `find_by_id` was
+        // not hint-cached then, and now it is, so the fold is paying a compare
+        // and a conditional store per permanent for an answer that costs a
+        // load and a compare on its own (PERF `(-307)`; `(-304)`'s rule).
+        let dealer = self.battlefield.find_by_id(source);
         let mut attacker_controller = None;
-        let mut dealer: Option<&crate::card::CardInstance> = None;
+        // The two attachment facts the three phases below would each walk for.
+        // Still one walk, and it still does not short-circuit.
         let mut any_attached = false;
         let mut soulbond_pair = false;
         for c in self.battlefield.iter() {
-            if c.id == source {
-                dealer = Some(c);
-            }
             any_attached |= c.attached_to == Some(source);
             // Instance fields first, the definition deref last: `soulbond_
             // partner` is `None` on nearly every permanent, and the bonus

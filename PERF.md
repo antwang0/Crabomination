@@ -6966,6 +6966,41 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-307)` REFUTED as a lead — `(-68)`'s fused dealer walk is not where the combat-damage dispatch's 1.97 % lives
+
+`fire_combat_damage_triggers` is **32.8 M / 1.97 % of `cube` self** (23.3 M /
+1.34 % of `sealed`) over 83,874 calls, ~391 Ir each, and its callee table sums
+to 2.2 M — so nearly all of it is inline code. The visible shape is `(-68)`'s
+fused walk: one whole-board pass that finds the dealer *and* answers "is
+anything attached to it" and "is a soulbond pair touching it", written when
+`Battlefield::find_by_id` was not yet hint-cached. `(-304)`'s rule says a batch
+path that looks a card up by id per element is a grep target, and this one
+carries a compare and a conditional store per permanent for it.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                              fixed            cube          sealed
+  (-306)                  627,835,319   1,664,220,493   1,739,334,703
+  (-307)                  627,496,958   1,664,084,900   1,738,618,464
+                             -0.054 %        -0.008 %        -0.041 %
+  the function's self       —              32.79 -> 32.66 M  23.33 -> 22.62 M
+```
+
+**The line profile said so before the build did, and that is the transferable
+half**: of the function's 23.3 M on `sealed`, the three lines of the fused walk
+are **840 k — 3.6 %**, and the listener walk below it another 1.0 M. The other
+~90 % is the per-trigger work between them: the `by_kind` buckets, the `slot`
+closure's `EventKind` equality per (permanent, trigger), and the `Effect` /
+`SelectionRequirement` clones each push makes. **A whole-board walk inside a
+hot function is not automatically that function's cost** — price the walk's own
+lines before assuming it, which one `--dump-instr=yes` run answers.
+
+Kept rather than reverted: it is a win on every pool, it is the shape `(-304)`
+names, and the walk that is left no longer pretends to be a `find`. But it is
+0.03 %, not the 1 % the row's size suggested, and **the 90 % that is left is a
+per-trigger cost, not a per-permanent one** — the next reader should look at
+`slot()` and the clones, not at the walk.
+
 ### `(-306)` The zone's own write counter, and the SBA board fold behind it
 
 The candidates head's re-read put `check_state_based_actions_into` +
