@@ -2987,6 +2987,63 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-14 — the batch layer path's two cheap halves, a refuted memo, and the census/slot-walker pairing closed
+
+```text
+perf    **`(-304)`: `compute_permanents`' hinted lookup and the gates it already had — -0.371 / -0.337 /
+        -0.302 % (fixed / cube / sealed).** Two small things under the candidates head's #1 row that nobody
+        had looked for: `SecondPass::of(fx)` re-derived the CR 613.8 gate set per call by walking the whole
+        effect list, when inside a scope the memo **already stores those bits beside the list** (which is
+        what that field's doc comment says it is for) — `frozen_effects_and_gates` hands out both; and the
+        battlefield lookup was `bf.iter().find(|c| c.id == *id)`, a linear scan per id, against the
+        hint-cached `Battlefield::find_by_id`. Split: gates **-0.063 / -0.031 / -0.033**, hinted find plus
+        folding the frozen and unfrozen arms into one body **-0.308 / -0.306 / -0.269**. ⚠ **A batch path
+        that looks a card up by id per element is the shape to grep for** — that half is 5x the other.
+
+refut   **`(-304)`'s other half: routing `compute_permanents` through the freeze scope's `perms` memo is
+        +0.230 / +0.383 / +0.226 % AND ITS HIT RATE IS ZERO.** The candidates head had this as the second
+        of two composing devices ("it calls `apply_layers_one_gated` directly, so the two memoize nothing
+        for each other"). Built and measured: **36,258 ids asked, 36,258 layer passes run, not one already
+        in `perms`** — the batch path and the single-card path are asked about *disjoint* sets (the batch
+        runs at the top of its scope, before any single-card read has stored anything, and it names the
+        declaration's attackers and band members rather than the cards a later requirement walk asks about).
+        So it bought nothing and paid a `cp_pool` handle, a deep `ComputedPermanent` clone and a longer
+        linear `perms` scan per id. **A memo shared between two call sites is priced by the OVERLAP of what
+        they ask**; the head had sized it off the size of the row it would serve. Reverted.
+
+fix     **Rule 5d — the census and the slot walker are one answer, and twenty-two wrappers disagreed.**
+        One level up from `(-303)`'s tip-run rule 5c: the *wrappers*, not the selectors. `requires_target`
+        is exhaustive (the compiler names all 132), so an arm there that recurses into an inner body says
+        "a target in this body is chosen at cast time" — and `target_filter_for_slot_in_mode_kicked`, which
+        the cast path then asks for that slot's filter, ends in `_ => None`, which `check_target_legality`
+        reads as the RESTRICTIVE default rather than "unfiltered". `AtNextEndStep`, `VillainousChoice`,
+        `FlipCoinsChooseCount`, `LookTopMayBottomAllElse`, `EscalatingThisTurn`,
+        `DiscardUnlessPutCardOnTop`, `MayExileFromGraveyardElse` and fifteen more were in the first and not
+        the second, so a spell nesting a target under one would declare a slot it could never legally fill.
+        **Latent, not shipped** — no catalog card nests one yet, which is why the catalog gate
+        (`cr_601_2c_every_catalog_target_filter_is_surfaced`) and 19,547 tests were green.
+        ⚠ **The per-wrapper judgement did not have to be re-made**: `audit_target_walkers.py --check` now
+        *derives* the set from the census and counts only the disagreement (**22 of 50 -> 0**), so the two
+        walkers are gated against each other and the remaining 28 unnamed wrappers are visibly correct
+        omissions (the census answers `false`; a reflexive or delayed body picks its own targets, CR
+        603.7d). **Cost-free: +0.000 / +0.000 / -0.000 %** on the three pools. ENGINE_BACKLOG rule 5d; test
+        `target_walkers::every_wrapper_the_census_recurses_into_surfaces_its_slot_filter`.
+
+sweep   **fresh seeds 1296..1299 (claimed in NEXT before the run): 12 cells / 59,200 games / 0 failures**,
+        `cap 0 / board 0 / stuck 0 / draw 0` — a clean block, no re-run needed. Three pools x four seeds x
+        400 games on a `target-audit/overflow` build with `-C debug-assertions=yes` and
+        `CRAB_ANSWER_LOG=strict`, at the `(-304)` tip. **Frontier 1300.** `audit_panics` **0 bare** (70
+        sites off the bin/test paths, 59 guarded, 11 lock-poison), `audit_stash_in_loop` **0 unexplained**,
+        `audit_seat_from_selector` **0 open**, `audit_target_walkers --check` **0**.
+
+gates   ⚠⚠ **THIS BOX IS 4 CORES** and reads 678 games/s on `--bench` against the previous session's 418 —
+        no absolute in this file was taken on it, so only the counters are comparable. They are
+        byte-identical: **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, `determinism ok`.
+        Suite **19,548 / 0 / 5** (`CRAB_ANSWER_LOG=strict`; 19,547 plus the new walker test), clippy **0**
+        (`--workspace --all-targets --exclude crabomination_client`), golden traces unmoved. The
+        `debug-assertions = false` gate rides along with every `profiling-fast` A/B build.
+```
+
 ### 2026-09-13 (the cost-walk session, seventh of the day) — the reduction tail behind one bit, half the dispatches gated out, and a target class no shipped card had hit yet
 
 ```text

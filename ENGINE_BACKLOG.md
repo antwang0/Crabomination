@@ -2817,6 +2817,29 @@ aimed `who`, and its body targets as well, which is why `audit_target_fields`
 could see the class and the suite could not. Closed at the hundred-and-
 seventeenth pass; the audit reads **0 aimed**.
 
+**Rule 5d: the census and the slot walker are one answer too, and the census
+is the oracle.** Same one-list problem, one level up from 5c's selectors: the
+*wrappers*. `requires_target` is exhaustive (the compiler makes it name all
+132 `Effect` wrappers) and an arm there that recurses into an inner body is
+the statement "a target in this body is chosen at cast time". The cast path
+then asks `target_filter_for_slot_in_mode_kicked` for that slot's filter — and
+that walk ends in `_ => None`, which `check_target_legality` reads as the
+restrictive default rather than as "unfiltered". **Twenty-two wrappers were in
+the census and not in the walk** (`AtNextEndStep`, `VillainousChoice`,
+`FlipCoinsChooseCount`, `LookTopMayBottomAllElse`, `EscalatingThisTurn`,
+`DiscardUnlessPutCardOnTop`, `MayExileFromGraveyardElse`, …), so a spell that
+nested a target under one of them would declare a slot it could never legally
+fill. Latent: no catalog card nests one yet, which is why 19,547 tests were
+green and the catalog gate
+(`cr_601_2c_every_catalog_target_filter_is_surfaced`) could not see it.
+The judgement does **not** have to be re-made per wrapper — the census has
+already made it — so `scripts/audit_target_walkers.py --check` now *derives*
+the set and counts only the disagreement (22 of 50 when added, 0 after), and
+`core_rules::target_walkers::every_wrapper_the_census_recurses_into_surfaces_
+its_slot_filter` pins them by hand. The other 28 unnamed wrappers are correct
+omissions: the census answers `false` for them because a reflexive or delayed
+body picks its own targets later (CR 603.7d).
+
 **Rule 5b: an arm for a chooser above a shared `body` arm shadows it.**
 `MayDoBy { who }` placed above `MayDo { body } | MayDoBy { body }` silently
 takes the body's filter away. Clippy's `unreachable_pattern` catches it; merge

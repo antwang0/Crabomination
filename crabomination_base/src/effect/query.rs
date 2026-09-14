@@ -4687,6 +4687,79 @@ impl Effect {
                 Effect::SacrificeAnyNumber { per_each, .. } => {
                     eff_find(per_each, slot, mode, kicked)
                 }
+                // ── The wrappers `requires_target` descends into. ──────────
+                // Every arm below mirrors one in `requires_target`, and the
+                // pairing is what `audit_target_walkers.py` now gates: a
+                // wrapper that census says carries a cast-time target, and
+                // that this walk does not name, declares a slot whose filter
+                // the cast path cannot find. `None` here is not "unfiltered"
+                // — `check_target_legality` falls back to the restrictive
+                // default, so the spell rejects targets it should accept.
+                // Latent rather than shipped (no catalog card nests a target
+                // under one of these yet, which is why 19,547 tests are
+                // green), and the same shape as the `player_ref_selector`
+                // class: ENGINE_BACKLOG rule 5c.
+                Effect::FlipCoinBy { on_heads, on_tails, .. }
+                | Effect::EachPlayerFlipsCoin { on_heads, on_tails, .. } => {
+                    eff_find(on_heads, slot, mode, kicked)
+                        .or_else(|| eff_find(on_tails, slot, mode, kicked))
+                }
+                Effect::FlipCoinsChooseCount {
+                    per_win,
+                    per_loss,
+                    all_won,
+                    ..
+                } => eff_find(per_win, slot, mode, kicked)
+                    .or_else(|| eff_find(per_loss, slot, mode, kicked))
+                    .or_else(|| eff_find(all_won, slot, mode, kicked)),
+                Effect::FlipUntilLoss { per_win } => eff_find(per_win, slot, mode, kicked),
+                Effect::EachPlayerChoosesNumberHighestLoses { on_you_win, .. } => {
+                    eff_find(on_you_win, slot, mode, kicked)
+                }
+                Effect::MayPayRepeatedly { body, .. }
+                | Effect::AtNextEndStep { body }
+                | Effect::AtYourNextUpkeep { body }
+                | Effect::ChooseSector { body } => eff_find(body, slot, mode, kicked),
+                Effect::PayPerCounterOrSacrifice { then, .. }
+                | Effect::RevealUntilNonlandThen { then }
+                | Effect::ChooseCreatureTypeThen { then, .. }
+                | Effect::EachPlayerChoosesCreatureTypeThen { then }
+                | Effect::RevealDrawnCardThenIf { then, .. }
+                | Effect::AnyPlayerMayExileFromGraveyard { then, .. }
+                | Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => {
+                    eff_find(then, slot, mode, kicked)
+                }
+                Effect::LookTopMayBottomAllElse { then, else_, .. } => {
+                    eff_find(then, slot, mode, kicked)
+                        .or_else(|| eff_find(else_, slot, mode, kicked))
+                }
+                Effect::EscalatingThisTurn { modes } => modes
+                    .iter()
+                    .find_map(|e| eff_find(e, slot, mode, kicked)),
+                Effect::DiscardUnlessPutCardOnTop { who, then } => {
+                    implicit_player_for_ref_slot(who, slot)
+                        .or_else(|| eff_find(then, slot, mode, kicked))
+                }
+                Effect::MayExileFromGraveyardElse { who, otherwise } => {
+                    implicit_player_for_ref_slot(who, slot)
+                        .or_else(|| eff_find(otherwise, slot, mode, kicked))
+                }
+                Effect::RevealTopThenIf { who, then, else_, .. } => {
+                    implicit_player_for_ref_slot(who, slot)
+                        .or_else(|| eff_find(then, slot, mode, kicked))
+                        .or_else(|| {
+                            else_
+                                .as_ref()
+                                .and_then(|e| eff_find(e, slot, mode, kicked))
+                        })
+                }
+                Effect::VillainousChoice {
+                    who,
+                    option_a,
+                    option_b,
+                } => sel_find(who, slot)
+                    .or_else(|| eff_find(option_a, slot, mode, kicked))
+                    .or_else(|| eff_find(option_b, slot, mode, kicked)),
                 _ => None,
             }
         }

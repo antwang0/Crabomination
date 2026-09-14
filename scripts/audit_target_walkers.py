@@ -2,7 +2,9 @@
 """Which `Effect` wrappers each target walker forgets to recurse into.
 
 `Effect::requires_target` is an exhaustive match, so the compiler makes it
-name every wrapper. Its five siblings in `effect/query.rs` —
+name every wrapper — which is why it is also the ORACLE this audit checks the
+cast-time slot walker against (see LATENT). Its five siblings in
+`effect/query.rs` —
 `primary_target_filter`, `prefers_graveyard_target`,
 `may_target_offboard_card`, `accepts_player_target` and the cast-time slot
 walk `target_filter_for_slot_in_mode_kicked` — end in `_ => …`, so a wrapper
@@ -65,14 +67,22 @@ WALKERS = [
     "target_filter_for_slot_in_mode_kicked",
 ]
 
-# The sixth walker is LATENT, not a defect census, and it is counted apart from
-# `--check` for that reason. Its regime is the strictest one (`_ => None`, no
+# The sixth walker's regime is the strictest one (`_ => None`, no
 # `for_each_inner` deferral), so an unnamed wrapper means "a target slot
 # declared inside this wrapper's body is not surfaced at cast time" — which is
-# *correct* for the ~half of the list that chooses its targets later (`Reflexive`,
-# `ReflexiveTrigger`, `AtNextEndStep`, the `Whenever…ThisTurn` delayed triggers)
-# and a latent gap for the rest (`ChooseUpToN`, `MayRepeat`, `MillThenToHand`,
-# `VillainousChoice`, …). Nobody has made that judgement per wrapper.
+# *correct* for the half of the list that chooses its targets later
+# (`Reflexive`, `ReflexiveTrigger`, the `Whenever…ThisTurn` delayed triggers)
+# and a latent gap for the rest.
+#
+# ✅ **That per-wrapper judgement does not have to be made here: it is already
+# made, once, in `requires_target`.** An arm there that recurses into an inner
+# `Effect` is the statement "a target in this body is chosen at cast time";
+# the cast path then asks THIS walker for that slot's filter and
+# `check_target_legality`'s fallback is restrictive, so a wrapper in that set
+# and not in this walker is a declared slot the spell cannot fill. The audit
+# derives the set (`descends_in_requires_target`) and counts only the
+# disagreement, so `--check` gates the two walkers against each other. It was
+# 22 of 50 when the check was added; naming those 22 took it to 0.
 #
 # ⚠ **The shipped gate for this walker is the catalog, not this list** —
 # `core_rules::cr_rules::cr_601_2c_every_catalog_target_filter_is_surfaced`
@@ -98,6 +108,13 @@ INNER = {
 # Add a line here only with the reason; an unreviewed pair belongs in the
 # report, not in this list.
 ALLOWED: dict[str, set[str]] = {}
+
+# The wrapper whose omission from the LATENT walker is *correct*: one whose
+# body picks its own targets later (a reflexive or delayed trigger), so no
+# cast-time slot is declared for it. The audit derives this rather than
+# listing it — `requires_target` has already made the judgement for all 132,
+# and a wrapper it descends into declares a cast-time target by definition.
+# See `descends_in_requires_target`.
 
 
 def _brace_body(src: str, start: int) -> str:
@@ -142,6 +159,53 @@ def wrapper_variants() -> list[str]:
     return wrappers
 
 
+def _arm_rhs(body: str, variant: str) -> str | None:
+    """The right-hand side of the `match` arm that names `variant`.
+
+    Arms are grouped with `|`, so the pattern may be several lines above the
+    `=>`. Cut at the next line that starts a new arm at the same indent or
+    less — the file's formatting is regular enough for that, and the only
+    question asked of the result is whether it recurses.
+    """
+    m = re.search(r"(?m)^(\s*)\|?\s*Effect::" + variant + r"\b", body)
+    if not m:
+        return None
+    indent = len(m.group(1))
+    arrow = body.find("=>", m.end())
+    if arrow < 0:
+        return None
+    rest = body[arrow + 2 :].split("\n")
+    out = []
+    for line in rest:
+        stripped = line.lstrip()
+        if (
+            out
+            and stripped
+            and len(line) - len(stripped) <= indent
+            and (stripped.startswith(("Effect::", "|", "_ =>")))
+        ):
+            break
+        out.append(line)
+    return "\n".join(out)
+
+
+def descends_in_requires_target(body: str, wrappers: list[str]) -> set[str]:
+    """Wrappers whose `requires_target` arm recurses into an inner `Effect`.
+
+    That recursion is the statement "a target inside this body is chosen at
+    cast time". The cast path then asks the slot walker for that slot's
+    filter, so a wrapper in this set that the slot walker does not name is a
+    declared slot with no discoverable filter — and `check_target_legality`'s
+    fallback is restrictive, so the spell rejects targets it should accept.
+    """
+    out = set()
+    for w in wrappers:
+        rhs = _arm_rhs(body, w)
+        if rhs and ".requires_target()" in rhs:
+            out.add(w)
+    return out
+
+
 def walker_bodies() -> dict[str, str]:
     src = QUERY.read_text()
     return {f: _brace_body(src, src.index("fn " + INNER.get(f, f) + "(")) for f in WALKERS}
@@ -156,6 +220,7 @@ def main() -> int:
     print(f"{len(wrappers)} `Effect` wrappers (a variant with an `Effect` in its fields)")
     gaps = 0
     for f in WALKERS:
+        latent_missing: list[str] = []
         allowed = ALLOWED.get(f, set())
         missing = [
             w
@@ -189,17 +254,40 @@ def main() -> int:
         elif re.search(r"_ => true", bodies[f]):
             regime, counted = "fallback `true` — permitted, not a gap", 0
         elif f in LATENT:
-            regime, counted = (
-                "fallback RESTRICTS — LATENT, the catalog gate is "
-                "`cr_601_2c_every_catalog_target_filter_is_surfaced`",
-                0,
+            # Not every omission here is a gap — half the list chooses its
+            # targets later and correctly declares no cast-time slot. The
+            # judgement is already made, once, in `requires_target`: a
+            # wrapper it recurses into carries a cast-time target, so a
+            # wrapper in that set and not in this walker is an inconsistency
+            # between two walkers that must agree. That is the counted half.
+            descends = descends_in_requires_target(bodies["requires_target"], wrappers)
+            inconsistent = sorted(set(missing) & descends)
+            regime = (
+                "fallback RESTRICTS — "
+                + (
+                    "consistent with `requires_target`"
+                    if not inconsistent
+                    else f"⚠ {len(inconsistent)} "
+                    + ("DECLARES" if len(inconsistent) == 1 else "DECLARE")
+                    + " A CAST-TIME TARGET `requires_target` RECURSES INTO "
+                    "AND THIS WALK DOES NOT"
+                )
+                + "; the catalog gate is "
+                "`cr_601_2c_every_catalog_target_filter_is_surfaced`"
             )
+            counted = len(inconsistent)
+            # Report BOTH numbers: "0 unnamed" would be a lie (28 wrappers
+            # are unnamed and correctly so), and a bare "28 unnamed" is the
+            # noise that hid the real 22 for a hundred passes.
+            regime = f"{len(missing) - counted} of them correctly — " + regime
+            latent_missing = inconsistent if inconsistent else ([] if not show_all else missing)
         else:
             regime, counted = "fallback RESTRICTS — these are gaps", len(missing)
         gaps += counted
         print(f"\n{f}: {len(missing)} unnamed of {len(wrappers)}  [{regime}]")
+        listed = latent_missing if f in LATENT else missing
         if show_all or counted or f in LATENT:
-            for w in missing:
+            for w in listed:
                 print(f"    {w}")
     if check and gaps:
         print(f"\n{gaps} unreviewed (walker, wrapper) pairs", file=sys.stderr)

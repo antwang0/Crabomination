@@ -1469,3 +1469,93 @@ fn a_player_ref_that_reads_a_selector_carries_its_target() {
         );
     }
 }
+
+
+/// CR 601.2c — the two walkers that must agree about a cast-time target slot.
+///
+/// `requires_target` is exhaustive (the compiler makes it name all 132 `Effect`
+/// wrappers), so an arm there that recurses into an inner body is the
+/// statement "a target in this body is chosen when the spell is cast".
+/// `target_filter_for_slot_in_mode_kicked` is what the cast path then asks for
+/// that slot's filter, and its fallback is `_ => None` — which
+/// `check_target_legality` reads as the restrictive default, not as
+/// "unfiltered". **Twenty-two wrappers were in the first walker and not the
+/// second**, so a spell that nested a target under one of them declared a slot
+/// it could never legally fill. Latent rather than shipped: no catalog card
+/// nests one yet, which is why 19,547 tests were green.
+/// `scripts/audit_target_walkers.py --check` gates the pairing from now on;
+/// this pins the wrappers by hand so a rewrite of the audit cannot lose them.
+#[test]
+fn every_wrapper_the_census_recurses_into_surfaces_its_slot_filter() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, PlayerRef, Selector};
+
+    let aimed = || Effect::Destroy {
+        what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+    };
+    let b = |e: Effect| Box::new(e);
+    let noop = || Box::new(Effect::Noop);
+    let me = || PlayerRef::You;
+
+    let cases: Vec<(&str, Effect)> = vec![
+        ("FlipCoinBy", Effect::FlipCoinBy {
+            flipper: me(), on_heads: b(aimed()), on_tails: noop(),
+        }),
+        ("EachPlayerFlipsCoin", Effect::EachPlayerFlipsCoin {
+            who: me(), on_heads: b(aimed()), on_tails: noop(),
+        }),
+        ("FlipCoinsChooseCount", Effect::FlipCoinsChooseCount {
+            max: 3, per_win: b(aimed()), per_loss: noop(), all_won: noop(),
+            all_won_min: 1, stop_on_loss: false,
+        }),
+        ("FlipUntilLoss", Effect::FlipUntilLoss { per_win: b(aimed()) }),
+        ("EachPlayerChoosesNumberHighestLoses", Effect::EachPlayerChoosesNumberHighestLoses {
+            max: 3, on_you_win: b(aimed()),
+        }),
+        ("MayPayRepeatedly", Effect::MayPayRepeatedly {
+            who: me(), description: String::new(),
+            mana_cost: crabomination::mana::ManaCost::new(vec![]), body: b(aimed()),
+        }),
+        ("AtNextEndStep", Effect::AtNextEndStep { body: b(aimed()) }),
+        ("AtYourNextUpkeep", Effect::AtYourNextUpkeep { body: b(aimed()) }),
+        ("ChooseSector", Effect::ChooseSector { body: b(aimed()) }),
+        ("RevealUntilNonlandThen", Effect::RevealUntilNonlandThen { then: b(aimed()) }),
+        ("ChooseCreatureTypeThen", Effect::ChooseCreatureTypeThen {
+            who: me(), then: b(aimed()),
+        }),
+        ("EachPlayerChoosesCreatureTypeThen",
+            Effect::EachPlayerChoosesCreatureTypeThen { then: b(aimed()) }),
+        ("RevealDrawnCardThenIf", Effect::RevealDrawnCardThenIf {
+            filter: R::Creature, then: b(aimed()),
+        }),
+        ("EachPlayerMayExileAnyNumberFromGraveyard",
+            Effect::EachPlayerMayExileAnyNumberFromGraveyard { then: b(aimed()) }),
+        ("LookTopMayBottomAllElse", Effect::LookTopMayBottomAllElse {
+            who: None, count: crabomination::effect::Value::Const(1),
+            then: b(aimed()), else_: noop(),
+        }),
+        ("EscalatingThisTurn", Effect::EscalatingThisTurn { modes: vec![aimed()] }),
+        ("DiscardUnlessPutCardOnTop", Effect::DiscardUnlessPutCardOnTop {
+            who: me(), then: b(aimed()),
+        }),
+        ("MayExileFromGraveyardElse", Effect::MayExileFromGraveyardElse {
+            who: me(), otherwise: b(aimed()),
+        }),
+        ("VillainousChoice", Effect::VillainousChoice {
+            who: Selector::Player(me()), option_a: b(aimed()), option_b: noop(),
+        }),
+    ];
+
+    for (name, effect) in cases {
+        assert!(
+            effect.requires_target(),
+            "{name}: the census does not see the target — this case no longer tests anything",
+        );
+        assert_eq!(
+            effect.target_filter_for_slot(0),
+            Some(&R::Creature),
+            "{name}: the census declares a cast-time slot 0 the slot walker cannot filter, so \
+             `check_target_legality` rejects every target the spell should accept",
+        );
+    }
+}
