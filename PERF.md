@@ -7058,6 +7058,45 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-310)` REFUTED — `sync/atomic.rs:3875` under the batch layer path is not `find_by_id` missing, and replacing it with a cursor gives `(-304)` back
+
+The whole-program line profile's third-largest row at the `(-309)` tip is
+**`sync/atomic.rs:3875` under `compute_permanents::{{closure}}`, 7.32 M /
+0.50 % of `cube`** — an atomic operation inside the batch layer path, three
+times the next line in that closure. The only atomics there are
+`Battlefield::find_by_id`'s hint load and store, and the arithmetic reads as a
+smoking gun: ~110 k closure iterations, so **66 Ir of "atomic" per lookup**,
+which no relaxed load costs — plus `src/card.rs:13` (the `CardId` compare) at
+2.13 M in the same closure and `atomic.rs:3890` (the *store*) at 356 k, i.e.
+one hint store per ask. Read together that says the 16-slot direct-mapped hint
+is **evicted between calls** by the combat resolver and this path pays a full
+board scan per id.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                                          fixed      cube     sealed
+  a rolling cursor (try `cur`, else scan)  +0.344 %  +0.186 %  +0.301 %
+```
+
+**It is not. The hint hits, and the reading was the instrument.** A cursor
+that tries the previous index first and falls back to the scan is strictly
+cheaper than a full scan per id and it *loses on every pool* — which it can
+only do if the thing it replaced was already ~O(1). `(-304)` measured exactly
+that from the other side (the hinted `find_by_id` was **-0.30 %** against the
+linear scan this closure used to do); `(-310)` is the same measurement run
+backwards.
+
+⚠ **The transferable half is about the instrument, and it is the third
+refutation in a row from the same source.** `addr2line` resolves an address to
+its *innermost inlined frame*, and after optimization a hot loop's body can be
+interleaved with a one-instruction inlined callee and carry that callee's
+line. **A large self cost on a std line under an engine caller is not a cost
+you can act on** — it names where the optimizer put the line number, not what
+the code does. With `(-309)`'s two arms that is three consecutive
+line-profile-derived leads refuted at this tip; **`(-308)`'s win came from a
+line whose function was unambiguous (`i32::saturating_add`, eight named call
+sites in the source), and that is the shape the device is good for.**
+
 ### `(-309)` REFUTED (twice) — the id-compare family the line profile makes look big is a SHORT-SCAN family, and a memo in front of it loses
 
 The whole-program line profile's largest *family* after the allocator is
