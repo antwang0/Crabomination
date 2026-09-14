@@ -939,6 +939,13 @@ impl<'a> CostStaticSources<'a> {
     pub(crate) fn all(&self) -> impl Iterator<Item = &'a crate::card::CardInstance> {
         self.cards.iter().copied()
     }
+
+    /// Nothing on the board or in a live command zone carries a cost static
+    /// at all — the ordinary board, and what the bot's mana-value gate has to
+    /// know before it may skip the reduction derivation.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.cards.is_empty()
+    }
 }
 
 pub fn extra_cost_for_spell(

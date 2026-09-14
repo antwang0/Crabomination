@@ -2987,6 +2987,39 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-14 (the affordability-order session, fourth of the day) — two monotonicity arguments where three memos lost, and the row they leave behind
+
+```text
+perf    **`(-313)`: the affordability read's question order — fixed -0.294 / cube -0.334 / sealed
+        -0.549 %.** `can_afford_in_state_with` derived the whole cost (three whole-board static walks
+        and the 640-line reduction) before asking anything. Gate 1: every channel between the printed
+        cost and the total test except the reduction only RAISES the value, so with all six reduction
+        channels empty a relaxed printed mana value over the producible total already IS the answer —
+        it fires on **40.4 / 42.5 / 58.9 %** of calls and skips all three walks. Gate 2: `reduce_generic`
+        drains `Generic` symbols and nothing else, so the colour half of the payment test is
+        reduction-independent and the total half only needs the number when it is already short —
+        `can_afford_from` split into `colors_afford` + `total_affords` and the reduction derivation went
+        **49,140 -> 132 calls on `sealed`, 30,682 -> 698 on `cube`, 13,768 -> 0 on `fixed`**. The row
+        itself is -9.7 / -11.8 / -16.9 %. **Neither gate is a memo** — that is why they land where
+        `(-304)`, `(-309)` and `(-312)` did not.
+
+cand    **What `(-313)` leaves is bigger than what it took, and it was invisible until the walks came
+        off: `OnceCell::try_init` under the affordability read is 31.9 M on `cube` / 31.6 M on `sealed`,
+        1.8-2.0 % of the pool**, almost all of it `available_mana` — a whole-battlefield walk per
+        `SweepMana`, 15,884 of them on `sealed` against 17,016 `cast_candidates` calls. ⚠ Half of those
+        are `sim_spell_action_inner`'s, over a simulated state that genuinely cannot share; the other
+        half is plumbing. Candidates head carries the sizing and the two questions it needs.
+
+gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to the
+        committed invariant, `determinism ok`, `thread_determinism ok (3 vs 1)`. ⚠ Read on the
+        `profiling-fast` candidate binary rather than a fresh `--release` one: the counters are
+        deterministic and profile-independent, and the LTO build is 22 minutes. No throughput number
+        from this session goes in the Baseline.
+        **The A/B base reproduced the `(-311)` tip exactly on a fresh clone**: 618,446,275 /
+        1,632,319,194 / 1,723,819,585 against the recorded 618,446,650 / 1,632,318,919 / 1,723,820,812
+        — six significant figures, which is the measurement chain validating itself.
+```
+
 ### 2026-09-14 (the gather-memo session, third of the day) — the head's #1 since `(-302)`, and the refactor it was blocked on that was never needed
 
 ```text
@@ -7157,6 +7190,75 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-313)` The affordability read asks its questions in the order that lets two of them be skipped — **fixed -0.294 / cube -0.334 / sealed -0.549 %**
+
+`can_afford_in_state_with` is ~3 % of every pool inclusive (18.5 M / 45.0 M /
+52.1 M off `cast_candidates`) and it derived the *whole* cost — three
+whole-board static walks and the 640-line reduction derivation — before asking
+anything. Two orderings take most of that, and neither is a memo: they are
+monotonicity arguments about the derivation that was already there.
+
+**Gate 1 — the mana value answers the rejection.** What the read ends up
+testing is `mana value + extra > have.total`, and every channel between the
+printed cost and that value except one only ever RAISES it: the coloured
+surcharge adds symbols, `extra` adds generic, the relaxation folds each
+coloured pip into one generic mana of the same mana value. So when every
+reduction channel is empty — the board/command-zone sources, `(-299)`'s
+self-reduction bit, the three player-side discount lists and
+`extra_cast_reduction`, which is all six `+=` sites in
+`cost_reduction_for_spell_full_over` — a relaxed printed mana value over the
+producible total *is* that test's answer.
+
+**Gate 2 — the colour half of the payment test is reduction-independent.**
+`ManaCost::reduce_generic` drains `Generic` symbols and nothing else, so
+`AvailableMana::by_color`, the per-pip producibility test and the mana value
+all read the same before and after one; only the total moves, and only down.
+`can_afford_from` splits into `colors_afford` and `total_affords`: a colour
+failure can never be rescued by a reduction (answer now), and a total that
+passes at reduction 0 can never be broken by one (answer now). What is left —
+the right colours and not quite enough mana — is the only shape that has ever
+needed the number.
+
+```text
+profiling-fast --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                          (-312) tip         (-313)          delta
+  fixed              618,446,275       616,627,144      -0.294 %
+  cube             1,632,319,194     1,626,871,769      -0.334 %
+  sealed           1,723,819,585     1,714,362,135      -0.549 %
+
+  the row itself (inclusive, off cast_candidates)
+  fixed               18,505,936        16,708,583       -9.7 %
+  cube                45,021,078        39,705,228      -11.8 %
+  sealed              52,111,739        43,302,546      -16.9 %
+
+  what each gate removed (calls)
+                        gate 1: the three walks     gate 2: the reduction
+  fixed        13,768 ->  8,210   (40.4 % gone)     13,768 ->     0  (100 %)
+  cube         30,682 -> 17,644   (42.5 % gone)     30,682 ->   698  (97.7 %)
+  sealed       49,140 -> 20,184   (58.9 % gone)     49,140 ->   132  (99.7 %)
+```
+
+**The reduction derivation is effectively gone from the bot's hand sweep** —
+0 / 698 / 132 calls where it was one per hand card per decision — and it was
+the largest of the five callees on every pool. ⚠ The win is capped at about a
+third of a percent because **the tree is not the walks**: `OnceCell::try_init`
+under this read is **31.9 M on `cube` / 31.6 M on `sealed` (1.8-2.0 % of the
+pool)**, almost all of it `available_mana` at ~1,700-2,500 Ir a `SweepMana`,
+and neither gate touches it. That is the row this entry leaves behind — see
+the candidates head.
+
+⚠ **Both gates are arguments, so both carry a `debug_assert!` that re-runs the
+full derivation and compares** — gate 1 on every rejection, gate 2 on every
+early accept — and `cost_reduction_audited` keeps `(-296)`'s narrowed-filter
+audit on the reduction even though the hot path no longer computes it. A
+reduction channel added to `cost_reduction_for_spell_full_over` and not to
+`no_cost_reduction_possible` fails the suite; the fresh-seed sweep runs the
+same assertions over ~148,000 games a block.
+
+Behaviour-preserving: `--bench` byte-identical (195,806 decisions / 27.49
+turns / 611.9 per game / 0 stalls, `determinism ok`, `thread_determinism ok
+(3 vs 1)`), golden traces unmoved.
 
 ### `(-312)` REFUTED — `perms` past its scope is **+1.1 % on all three pools**, and the row it aims at moves 2.8 %
 
@@ -11869,6 +11971,50 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+✅ **STATUS AT THE `(-313)` TIP (2026-09-14, fourth session of the day): THE
+AFFORDABILITY READ'S ORDER IS TAKEN — `(-313)`, fixed -0.294 / cube -0.334 /
+sealed -0.549 %, and the reduction derivation is now 0 / 698 / 132 calls where
+it was one per hand card per decision.** Neither gate is a memo; both are
+monotonicity arguments about a derivation that was already there, which is why
+they land where three memos in a row did not. **The transferable rule: before
+building a witness over a hot derivation, ask which of its inputs can only
+move the answer ONE WAY.** A cost reduction can only make a spell more
+payable, so the colour half of the payment test never needed it and the total
+half only needed it when the total was already short; a cost surcharge can
+only make one less payable, so the printed mana value is a lower bound. Two
+`debug_assert!`s re-run the full derivation and compare.
+
+🔥 **AND `(-313)` LEAVES THE ROW THAT IS ACTUALLY BIGGEST IN THAT TREE, SIZED
+AT THE `(-313)` TIP AND NOT TAKEN: `available_mana`, 1.8-2.0 % OF THE POOL,
+AND IT IS A `OnceCell` INIT PER `SweepMana` RATHER THAN PER CARD.**
+
+```text
+profiling-fast --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+  callees of can_afford_in_state_with, (-313) tip
+                                        cube                 sealed
+    OnceCell::try_init          22,192 / 31.91 M     31,024 / 31.57 M   <- 1.96 % / 1.83 %
+      -> available_mana         11,096 / ~28 M       15,884 / 27.05 M   (~1,700-2,500 Ir a call)
+      -> CostStaticSources::gather   the rest
+    every other callee together        ~ 5.0 M              ~ 6.6 M
+```
+
+`available_mana` is a whole-battlefield walk per `SweepMana`, and a `SweepMana`
+is built per `cast_candidates` call: **15,884 of them on `sealed` against
+17,016 `cast_candidates` calls**, i.e. the `shared:` parameter that exists to
+amortise it is passed `None` by both of its hot callers. ⚠ **And the obvious
+plumbing fix does not apply to the bigger half**: `sim_spell_action_inner`
+(8,736 calls) runs over a *simulated* `GameState` that differs from the real
+one, so its read genuinely cannot be shared — `main_phase_action_with`'s 8,280
+is the half that could. The two questions this row needs, in order: (a) how
+much of `available_mana`'s ~1,700 Ir is the `grant_scan` / `grants_nothing_slow`
+/ `tap_ability_summoning_sick` callee tree (4.98 M / 1.75 M / 3.63 M over the
+`cube` run) rather than the walk, and (b) whether `(-306)`'s
+`battlefield.writes()` plus a seat epoch is a sound witness for it — ⚠ price
+that against `(-312)` first, which is the refutation of exactly this shape one
+lane over: **the bot writes between every pair of asks**, so a memo across
+asks converts almost nothing, and a memo *within* one tick is the plumbing
+question, not a key question.
 
 ✅✅ **STATUS AT THE `(-311)` TIP (2026-09-14, third session of the day): THE
 HEAD'S #1 SINCE `(-302)` — THE STATE-LEVEL GATHERED-EFFECT MEMO — IS BUILT AND

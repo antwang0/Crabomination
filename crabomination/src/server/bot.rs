@@ -13594,6 +13594,69 @@ fn can_afford_in_state_with(
         state.players[seat].hand.iter().any(|c| c.id == card.id),
         "can_afford_in_state_with wants a card in the seat's hand",
     );
+    // **GATE 1 — the mana value alone answers the rejection, with none of the
+    // walks.** What the derivation below ends up testing is
+    // `mana value + extra > have.total`, and the three channels that reach
+    // that value from the printed cost only ever RAISE it: the coloured
+    // surcharge adds symbols, `extra` adds generic, and the relaxation folds
+    // each coloured pip into one generic mana of the same mana value. Only the
+    // *reduction* lowers it. So with every reduction channel empty, a relaxed
+    // printed mana value over the producible total is already that test's
+    // answer, reached for a presence gate and a symbol sum instead of three
+    // whole-board static walks and a 640-line derivation. `legacy_pretap` pays
+    // out of the floating pool rather than the producible read and is excluded
+    // rather than reasoned about.
+    //
+    // ⚠ It is the *relaxed* printed cost, not the printed one: a monocoloured
+    // hybrid ({2/W}, mana value 2) relaxes to one generic, so the printed
+    // value is not a lower bound on a Lattice board.
+    if !w.legacy_pretap
+        && state.relax_cost_colors(&card.definition.cost).cmc() > have.get().total
+        && no_cost_reduction_possible(state, seat, card, have)
+    {
+        debug_assert!(
+            !can_afford_in_state_with_full(state, seat, card, w, have),
+            "the mana-value gate rejected an affordable spell ({})",
+            card.definition.name,
+        );
+        return false;
+    }
+    can_afford_in_state_with_full(state, seat, card, w, have)
+}
+
+/// Is every reduction channel `cost_reduction_for_spell_full_over` reads
+/// empty, for a spell `seat` casts from hand right now?
+///
+/// ⚠ **A reduction added to that function has to be answered here**, or
+/// `can_afford_in_state_with`'s gate 1 rejects a spell a discount would have
+/// paid for. The `debug_assert!` on every rejection is the ratchet, and the
+/// fresh-seed sweep runs it over ~148,000 games a block.
+fn no_cost_reduction_possible(
+    state: &GameState,
+    seat: usize,
+    card: &crate::card::CardInstance,
+    have: &SweepMana<'_>,
+) -> bool {
+    let p = &state.players[seat];
+    !card.has_self_cost_reduction()
+        && p.pending_is_discounts.is_empty()
+        && p.pending_spell_discounts.is_empty()
+        && p.turn_spell_discounts.is_empty()
+        && state.extra_cast_reduction == 0
+        // Last of the six: the only one that can force the source gather.
+        && have.cost_sources().is_empty()
+}
+
+/// The full affordability derivation — the static walks, the reduction
+/// derivation and the payment test. `can_afford_in_state_with` is the
+/// mana-value gate in front of it.
+fn can_afford_in_state_with_full(
+    state: &GameState,
+    seat: usize,
+    card: &crate::card::CardInstance,
+    w: &EvalWeights,
+    have: &SweepMana<'_>,
+) -> bool {
     // Three whole-board static walks per hand card, over one board — see
     // `CostStaticSources`. The list is lazy for the same reason
     // `SweepMana::get` is: `pick_combat_trick` usually filters its hand to
@@ -13605,14 +13668,6 @@ fn can_afford_in_state_with(
         card,
         None,
         srcs.battlefield(),
-    );
-    // Fold in generic cost *reductions* (Affinity, CostReduction statics,
-    // graveyard-affinity) the same way the real cast path does — otherwise the
-    // bot overestimates the cost of e.g. Tolarian Terror with a full graveyard
-    // and never casts it. Target-dependent reductions are skipped (no target
-    // chosen yet), so this stays conservative.
-    let reduction = crate::game::actions::cost_reduction_for_spell_full_over(
-        state, seat, card, None, false, false, srcs.all(),
     );
     // Coloured surcharges (the Leech cycle) can't ride the generic `extra`
     // channel, so they join the printed cost before relaxation. Borrowed when
@@ -13629,23 +13684,16 @@ fn can_afford_in_state_with(
     // `static_affects_spell_cost` admits one of its statics, so a variant that
     // predicate misses and one of the three walks matches is a source dropped
     // and a spell mispriced — silently, and only on a board that plays the
-    // card. Recompute all three over the unfiltered board and compare; the
-    // suite exercises every sweep this has, and the fresh-seed sweep runs with
-    // `debug-assertions` on over ~148,000 games a block.
+    // card. Recompute over the unfiltered board and compare; the suite
+    // exercises every sweep this has, and the fresh-seed sweep runs with
+    // `debug-assertions` on over ~148,000 games a block. (The reduction arm
+    // rides `cost_reduction_audited`, since the gate below can skip it.)
     #[cfg(debug_assertions)]
     {
         debug_assert_eq!(
             extra,
             crate::game::actions::extra_cost_for_spell(state, seat, card, None),
             "cost-static filter dropped an additional-cost source ({})",
-            card.definition.name,
-        );
-        debug_assert_eq!(
-            reduction,
-            crate::game::actions::cost_reduction_for_spell_full(
-                state, seat, card, None, false, false,
-            ),
-            "cost-static filter dropped a cost-reduction source ({})",
             card.definition.name,
         );
         debug_assert_eq!(
@@ -13666,49 +13714,131 @@ fn can_afford_in_state_with(
     // pass on a spell whose coloured pips any mana can now cover.
     let cost = state.relax_cost_colors(&printed);
     if w.legacy_pretap {
+        let reduction = cost_reduction_audited(state, seat, card, srcs);
         return can_afford_with_extra(&cost, &state.players[seat].mana_pool, extra, reduction);
     }
-    can_afford_from(&cost, have.get(), extra, reduction)
+    // **GATE 2 — the payment test's two halves, asked in the order that lets
+    // the reduction derivation be skipped.** `ManaCost::reduce_generic` drains
+    // `Generic` symbols and nothing else, so a reduction moves the *total*
+    // half and cannot move the colour half at all:
+    //
+    //   * the colour half says no  -> no reduction can rescue it. Answer now.
+    //   * the total half says yes at reduction 0 -> a reduction only lowers
+    //     the total further. Answer now.
+    //
+    // What is left — the right colours and not quite enough mana — is the only
+    // shape that has ever needed the number, and it is the narrow band. The
+    // derivation this skips is the largest callee of the affordability read.
+    let have = have.get();
+    if !colors_afford(&cost, have) {
+        return false;
+    }
+    if total_affords(&cost, have, extra, 0) {
+        debug_assert!(
+            total_affords(&cost, have, extra, cost_reduction_audited(state, seat, card, srcs)),
+            "a cost reduction made an affordable spell unaffordable ({})",
+            card.definition.name,
+        );
+        return true;
+    }
+    total_affords(&cost, have, extra, cost_reduction_audited(state, seat, card, srcs))
 }
 
-/// Could `printed` be paid from `have`? Three independent tests: enough
-/// total mana for the (taxed, reduced) mana value, a producible source for
-/// every coloured pip, and enough *of* each colour to cover its pips.
+/// The generic cost *reduction* half of the affordability read (Affinity,
+/// `CostReduction` statics, graveyard-affinity), folded the way the real cast
+/// path does — otherwise the bot overestimates the cost of e.g. Tolarian
+/// Terror with a full graveyard and never casts it. Target-dependent
+/// reductions are skipped (no target chosen yet), so this stays conservative.
 ///
-/// Hybrid pips pass if *either* half is producible and Phyrexian pips
-/// always pass (life is a legal payment), matching what the real payment
-/// funnel will accept. Neither is counted against a single colour's budget:
-/// a hybrid can go to whichever half is free and Phyrexian to life, so
-/// charging them to one colour would be an *under*-estimate, and this filter
-/// is only allowed to err the other way.
+/// Carries the reduction arm of `CostStaticSources`' narrowed-filter audit —
+/// see the block in [`can_afford_in_state_with_full`] for what it is for.
+fn cost_reduction_audited(
+    state: &GameState,
+    seat: usize,
+    card: &crate::card::CardInstance,
+    srcs: &crate::game::actions::CostStaticSources<'_>,
+) -> u32 {
+    let reduction = crate::game::actions::cost_reduction_for_spell_full_over(
+        state, seat, card, None, false, false, srcs.all(),
+    );
+    debug_assert_eq!(
+        reduction,
+        crate::game::actions::cost_reduction_for_spell_full(
+            state, seat, card, None, false, false,
+        ),
+        "cost-static filter dropped a cost-reduction source ({})",
+        card.definition.name,
+    );
+    reduction
+}
+
+/// Could `printed` be paid from `have`? The two halves below, which the
+/// affordability read asks separately so it can skip deriving `reduction` —
+/// see gate 2 in [`can_afford_in_state_with_full`].
 fn can_afford_from(
     printed: &ManaCost,
     have: &AvailableMana,
     extra_generic: u32,
     reduction: u32,
 ) -> bool {
+    total_affords(printed, have, extra_generic, reduction) && colors_afford(printed, have)
+}
+
+/// The *total* half of [`can_afford_from`]: enough producible mana for the
+/// reduced mana value plus the additional generic cost.
+///
+/// Reads the reduction rather than applying it. `ManaCost::reduce_generic`
+/// drains `Generic` symbols up to the amount there is and lowers the mana
+/// value by exactly what it drained, so the sum is the same and the `Cow`
+/// clone that existed only to give it something to mutate is gone (it ran
+/// 12,986 times over six bench games and allocated every time). {X} is zero
+/// here, as it is in `ManaCost::cmc`.
+fn total_affords(
+    printed: &ManaCost,
+    have: &AvailableMana,
+    extra_generic: u32,
+    reduction: u32,
+) -> bool {
     use crate::mana::ManaSymbol;
-    use std::borrow::Cow;
-    // Borrowed on the common path: the clone only exists so `reduce_generic`
-    // can mutate, and most costs have neither an {X} nor a reduction. This ran
-    // 12,986 times over six bench games and allocated every time.
-    let mut cost: Cow<'_, ManaCost> = if printed.has_x() {
-        Cow::Owned(printed.with_x_value(0))
+    let drainable: u32 = if reduction == 0 {
+        0
     } else {
-        Cow::Borrowed(printed)
+        printed
+            .symbols
+            .iter()
+            .map(|s| match s {
+                ManaSymbol::Generic(n) => *n,
+                _ => 0,
+            })
+            .sum()
     };
-    if reduction > 0 {
-        cost.to_mut().reduce_generic(reduction);
-    }
-    if cost.cmc() + extra_generic > have.total {
-        return false;
-    }
+    // No underflow: `drainable` is a sum of `Generic` amounts, every one of
+    // which `cmc` counted, so `reduction.min(drainable) <= printed.cmc()`.
+    printed.cmc() - reduction.min(drainable) + extra_generic <= have.total
+}
+
+/// The *colour* half of [`can_afford_from`]: a producible source for every
+/// coloured pip, and enough *of* each colour to cover its pips.
+///
+/// ⚠ **Independent of any generic reduction, and that is load-bearing** —
+/// `reduce_generic` touches `Generic` symbols only, which contribute to
+/// neither test, so this answer is the same before and after one. The
+/// affordability read asks it first for exactly that reason.
+///
+/// Hybrid pips pass if *either* half is producible and Phyrexian pips always
+/// pass (life is a legal payment), matching what the real payment funnel will
+/// accept. Neither is counted against a single colour's budget: a hybrid can
+/// go to whichever half is free and Phyrexian to life, so charging them to one
+/// colour would be an *under*-estimate, and this filter is only allowed to err
+/// the other way.
+fn colors_afford(printed: &ManaCost, have: &AvailableMana) -> bool {
+    use crate::mana::ManaSymbol;
     // Hall's condition on the singleton colour sets: `{G}{G}` off a lone
     // Forest has a producer for green and still cannot be paid. Counted in one
     // pass and compared against the board-derived budget, so this is five
     // adds and five compares per hand card. See `AvailableMana::by_color`.
     let mut need = [0u32; 5];
-    for s in cost.symbols.iter() {
+    for s in printed.symbols.iter() {
         if let ManaSymbol::Colored(c) = s {
             need[crate::game::actions::color_index(*c)] += 1;
         }
@@ -13716,7 +13846,7 @@ fn can_afford_from(
     if need.iter().zip(have.by_color.iter()).any(|(n, have)| n > have) {
         return false;
     }
-    cost.symbols.iter().all(|s| match s {
+    printed.symbols.iter().all(|s| match s {
         ManaSymbol::Colored(c) => have.colors.contains(*c),
         ManaSymbol::Hybrid(a, b) => have.colors.contains(*a) || have.colors.contains(*b),
         // Phyrexian pips are payable with 2 life, so they never gate.
