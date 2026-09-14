@@ -3054,9 +3054,12 @@ fix     **The gate generalised to a phrase table, and twelve more cards came off
         `audit_dropped_may` **240 -> 230**; nine more suite tests answer the new ask, the CR 701.7a
         retaliation watcher among them.
 
-sweep   **fresh seeds 1300..1303: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 / stuck 0 /
-        draw 2` — clean, no 50,000-action re-run needed. `target-audit/overflow` with
-        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict` at the `(-307)` tip. **Frontier 1304.**
+sweep   **fresh seeds 1300..1307, TWO blocks: 24 cells / 118,400 games / 0 failures**, `cap 0 / board 0 /
+        stuck 0 / draw 10` — clean, no 50,000-action re-run needed. The first block (1300..1303) ran at
+        the `(-307)` tip; **the second (1304..1307) ran at the FINAL tip on purpose**, because the 45
+        `MayDo` wrappers each add a decision and a resume path to a trigger, which is exactly what
+        `CRAB_ANSWER_LOG=strict` exists to audit, and the first block predates them.
+        `target-audit/overflow` with `-C debug-assertions=yes` both times. **Frontier 1308.**
         `audit_panics` **0 bare** (70 sites, 59 guarded, 11 lock-poison), `audit_stash_in_loop` **0
         unexplained**, `audit_seat_from_selector` **0 open**, `audit_target_walkers --check` **0**,
         `audit_doc_drift` **0 body-wrong / 0 doc rot / 0 stale "no X" notes**, `audit_variant_coverage`
