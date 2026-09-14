@@ -11,17 +11,20 @@ use crate::effect::{Duration, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, w};
 
 /// "Whenever you cast an enchantment spell, draw a card."
-fn enchantress_draw_trigger() -> TriggeredAbility {
+fn enchantress_may_draw_trigger() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
             Predicate::CastSpellMatches(SelectionRequirement::Enchantment),
         ),
-        effect: draw(1),
+        effect: Effect::MayDo {
+            description: "Draw a card?".into(),
+            body: Box::new(draw(1)),
+        },
     }
 }
 
 /// Mesa Enchantress — {1}{W}{W} 0/2 Human Druid. Whenever you cast an
-/// enchantment spell, draw a card.
+/// enchantment spell, you may draw a card.
 pub fn mesa_enchantress() -> CardDefinition {
     CardDefinition {
         name: "Mesa Enchantress",
@@ -33,13 +36,13 @@ pub fn mesa_enchantress() -> CardDefinition {
         },
         power: 0,
         toughness: 2,
-        triggered_abilities: vec![enchantress_draw_trigger()],
+        triggered_abilities: vec![enchantress_may_draw_trigger()],
         ..Default::default()
     }
 }
 
 /// Verduran Enchantress — {1}{G}{G} 0/2 Human Druid. Whenever you cast an
-/// enchantment spell, draw a card.
+/// enchantment spell, you may draw a card.
 pub fn verduran_enchantress() -> CardDefinition {
     CardDefinition {
         name: "Verduran Enchantress",
@@ -51,7 +54,7 @@ pub fn verduran_enchantress() -> CardDefinition {
         },
         power: 0,
         toughness: 2,
-        triggered_abilities: vec![enchantress_draw_trigger()],
+        triggered_abilities: vec![enchantress_may_draw_trigger()],
         ..Default::default()
     }
 }

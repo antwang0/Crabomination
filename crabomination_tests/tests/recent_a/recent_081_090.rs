@@ -103,6 +103,11 @@ mod recent81 {
             attacker: bear, target: AttackTarget::Player(1),
         }])).expect("attack");
         drain_stack(&mut g);
+        // The printed "you may": taken here so the assert below still
+        // reads the draw.
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
         advance_to(&mut g, TurnStep::CombatDamage);
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew from combat damage");

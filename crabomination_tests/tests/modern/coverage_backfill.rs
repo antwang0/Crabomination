@@ -1019,6 +1019,9 @@ fn fathom_mage_draws_when_it_evolves() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("bear castable");

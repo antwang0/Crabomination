@@ -963,6 +963,9 @@ fn battle_mammoth_draws_when_your_permanent_is_targeted_by_opponent() {
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.cast_spell(bolt, Some(Target::Permanent(bears)), vec![], None, None)
         .expect("opponent's Bolt targets your creature");
     drain_stack(&mut g);
@@ -1185,6 +1188,9 @@ fn temur_ascendancy_draws_only_for_power_4_plus_etb() {
         "low-power ETB should NOT trigger Temur draw");
 
     // Cast Serra Angel ({3}{W}{W}, 4/4, power 4) — filter passes, draw 1.
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let angel = g.add_card_to_hand(0, catalog::serra_angel());
     g.players[0].mana_pool.add_colorless(3);
     g.players[0].mana_pool.add(Color::White, 2);

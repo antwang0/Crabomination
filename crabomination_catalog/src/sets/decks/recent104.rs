@@ -139,7 +139,8 @@ pub fn paradox_haze() -> CardDefinition {
     }
 }
 
-/// Gilt-Leaf Archdruid — {3}{G}{G} 3/3 Elf Druid. Cast a Druid spell: draw.
+/// Gilt-Leaf Archdruid — {3}{G}{G} 3/3 Elf Druid. Cast a Druid spell: you may
+/// draw.
 /// Tap seven untapped Druids you control: steal target player's lands.
 pub fn gilt_leaf_archdruid() -> CardDefinition {
     let druids = SelectionRequirement::Creature
@@ -160,9 +161,12 @@ pub fn gilt_leaf_archdruid() -> CardDefinition {
                     CreatureType::Druid,
                 )),
             ),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::ONE,
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

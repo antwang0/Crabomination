@@ -29109,9 +29109,12 @@ pub fn rogues_gloves() -> CardDefinition {
         cost(&[generic(2)]),
         0,
         0,
-        Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(1),
+        Effect::MayDo {
+            description: "Draw a card?".into(),
+            body: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
         },
     )
 }
@@ -30550,9 +30553,12 @@ pub fn garruks_packleader() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource)
                         .and(SelectionRequirement::PowerAtLeast(3)),
                 }),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
@@ -38898,9 +38904,12 @@ pub fn puresteel_paladin() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
                 }),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
@@ -39090,9 +39099,12 @@ pub fn soul_of_the_harvest() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Creature.and(SelectionRequirement::NotToken),
                 }),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
@@ -42194,9 +42206,12 @@ fn aura_damage_draw(name: &'static str, mana: ManaCost) -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
+                effect: Effect::MayDo {
+                    description: "Draw a card?".into(),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                 },
             }],
             ..Default::default()
@@ -43013,8 +43028,7 @@ pub fn immaculate_magistrate() -> CardDefinition {
 }
 
 /// Coastal Piracy — {2}{U}{U} Enchantment. Whenever a creature you control deals
-/// combat damage to an opponent, you may draw a card. (The optional "may" is
-/// always taken — pure upside, so bots benefit.)
+/// combat damage to an opponent, you may draw a card.
 pub fn coastal_piracy() -> CardDefinition {
     CardDefinition {
         name: "Coastal Piracy",
@@ -43025,9 +43039,12 @@ pub fn coastal_piracy() -> CardDefinition {
                 EventKind::DealsCombatDamageToPlayer,
                 EventScope::YourControl,
             ),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()

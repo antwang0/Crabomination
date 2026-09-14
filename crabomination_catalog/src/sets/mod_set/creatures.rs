@@ -1454,9 +1454,12 @@ pub fn shadowmage_infiltrator() -> CardDefinition {
         keywords: vec![Keyword::Fear],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
@@ -4084,8 +4087,8 @@ pub fn tidehollow_sculler() -> CardDefinition {
 }
 
 /// Temur Ascendancy — {U}{R}{G} Enchantment. Creatures you control with
-/// power 4 or greater have haste; when one enters under your control, draw
-/// a card.
+/// power 4 or greater have haste; when one enters under your control, you may
+/// draw a card.
 pub fn temur_ascendancy() -> CardDefinition {
     use crate::effect::{Predicate, Selector as Sel, StaticEffect};
     CardDefinition {
@@ -4098,9 +4101,12 @@ pub fn temur_ascendancy() -> CardDefinition {
                     crate::card::Value::PowerOf(Box::new(Sel::TriggerSource)),
                     crate::card::Value::Const(4),
                 )),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         static_abilities: vec![StaticAbility {
@@ -5832,7 +5838,7 @@ pub fn experiment_one() -> CardDefinition {
 }
 
 /// Fathom Mage — {2}{G}{U}, 1/1 Human Wizard. "Evolve. Whenever a +1/+1
-/// counter is placed on Fathom Mage, draw a card."
+/// counter is placed on Fathom Mage, you may draw a card."
 pub fn fathom_mage() -> CardDefinition {
     use crate::effect::shortcut::evolve;
     CardDefinition {
@@ -5852,9 +5858,12 @@ pub fn fathom_mage() -> CardDefinition {
                     EventKind::CounterAdded(CounterType::PlusOnePlusOne),
                     EventScope::SelfSource,
                 ),
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
+                effect: Effect::MayDo {
+                    description: "Draw a card?".into(),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                 },
             },
         ],

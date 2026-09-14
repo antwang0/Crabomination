@@ -177,7 +177,13 @@ pub fn iterative_analysis() -> CardDefinition {
                         .and(R::NamedBySource),
                 },
             ),
-            effect: Effect::Draw { who: crate::effect::Selector::You, amount: Value::ONE },
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: crate::effect::Selector::You,
+                    amount: Value::ONE,
+                }),
+            },
         }],
         ..conspiracy("Iterative Analysis")
     }

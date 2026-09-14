@@ -1412,6 +1412,9 @@ fn shadowmage_infiltrator_draws_on_combat_damage() {
     let hand = g.players[0].hand.len();
     let trig = catalog::shadowmage_infiltrator().triggered_abilities[0].effect.clone();
     let ctx = crabomination::game::effects::EffectContext::for_trigger(inf, 0, None, 0);
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.resolve_effect(&trig, &ctx).unwrap();
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew on combat damage");
 }

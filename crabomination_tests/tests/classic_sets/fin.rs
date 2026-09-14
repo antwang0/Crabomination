@@ -2026,6 +2026,11 @@ fn rook_turret_loots_on_artifact_etb() {
     let hand_before = g.players[0].hand.len();
     g.add_card_to_library(0, catalog::forest()); // something to draw
     let art = g.add_card_to_battlefield(0, catalog::bonesplitter()); // another artifact
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
     drain_stack(&mut g);
     // Draw 1, discard 1 → net hand size unchanged, but a loot happened (library shrank).

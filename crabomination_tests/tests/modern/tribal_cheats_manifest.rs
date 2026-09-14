@@ -613,6 +613,8 @@ fn coastal_piracy_draws_on_combat_damage() {
         g.perform_action(GameAction::PassPriority).unwrap();
     }
     let hand_before = g.players[0].hand.len();
+    // The printed "you may": taken here so the assert below still reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker, target: AttackTarget::Player(1),
     }])).expect("attack");
@@ -969,6 +971,11 @@ fn curiosity_draws_on_combat_damage() {
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     let hand = g.players[0].hand.len();
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
         .expect("attack");
     for _ in 0..14 {

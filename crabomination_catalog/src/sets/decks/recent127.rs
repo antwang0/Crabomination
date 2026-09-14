@@ -271,7 +271,7 @@ pub fn congregation_gryff() -> CardDefinition {
 }
 
 /// Duelist of the Mind — {1}{U} */3 Human Advisor. Flying, vigilance; power =
-/// cards you've drawn this turn. Crime → loot 1 (once each turn).
+/// cards you've drawn this turn. Crime → you may loot 1 (once each turn).
 pub fn duelist_of_the_mind() -> CardDefinition {
     CardDefinition {
         name: "Duelist of the Mind",
@@ -287,17 +287,20 @@ pub fn duelist_of_the_mind() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
                 .once_per_turn(),
-            effect: Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::ONE,
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::ONE,
-                    random: false,
-                },
-            ]),
+            effect: Effect::MayDo {
+                description: "Draw a card, then discard a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                ])),
+            },
         }],
         ..Default::default()
     }

@@ -479,6 +479,11 @@ mod recent104 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         let hand_before = g.players[0].hand.len();
+        // The printed "you may": taken here so the assert below still
+        // reads the draw.
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
         g.perform_action(GameAction::CastSpell {
             card_id: hand_druid,
             target: None,

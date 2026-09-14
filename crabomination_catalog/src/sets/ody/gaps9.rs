@@ -270,7 +270,10 @@ pub fn gravestorm() -> CardDefinition {
         triggered_abilities: vec![upkeep(Effect::UnlessPlayerPays {
             who: PlayerRef::Target(0),
             cost: WardCost::ExileFromGraveyard(1),
-            then: Box::new(draw(1)),
+            then: Box::new(Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(draw(1)),
+            }),
             if_paid: None,
         })],
         ..enchantment("Gravestorm", cost(&[b(), b(), b()]))

@@ -264,6 +264,9 @@ fn garruks_packleader_draws_on_big_creature_etb() {
     let before = g.players[0].hand.len();
     // A 5/5 (power ≥ 3) entering triggers the draw.
     let ape = g.add_card_to_battlefield(0, catalog::silverback_ape());
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::PermanentEntered { card_id: ape }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before + 1, "drew off the big creature ETB");

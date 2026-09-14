@@ -1768,11 +1768,11 @@ pub fn doomskar() -> CardDefinition {
 
 /// Battle Mammoth — {3}{G}{G} Creature — Elephant, 6/5 (STA reprint,
 /// originally Kaldheim). "Trample / Whenever a permanent you control
-/// becomes the target of a spell or ability an opponent controls, draw
-/// a card."
+/// becomes the target of a spell or ability an opponent controls, you may
+/// draw a card."
 ///
 /// 6/5 Trample. "Whenever a permanent you control becomes the target of a
-/// spell or ability an opponent controls, draw a card"
+/// spell or ability an opponent controls, you may draw a card"
 /// (`EventScope::YourPermanentTargetedByOpponent` + `EventKind::BecameTarget`).
 pub fn battle_mammoth() -> CardDefinition {
     CardDefinition {
@@ -1792,9 +1792,12 @@ pub fn battle_mammoth() -> CardDefinition {
                 EventKind::BecameTarget,
                 EventScope::YourPermanentTargetedByOpponent,
             ),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()

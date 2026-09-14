@@ -1163,3 +1163,65 @@ fn a_fan_out_player_ref_naming_one_seat_resolves_singularly() {
     )
     .expect("one opponent is one seat");
 }
+
+/// A printed "you may draw a card" is a *resolution choice*, and modelling it
+/// as a bare `Effect::Draw` is a real bug in two directions: the controller
+/// can be forced to draw from an empty library and lose (CR 104.3c, at game
+/// 400 k of a training run), and the bot loses a decision it should own.
+/// Eighteen shipped cards carried it — Coastal Piracy, Rhystic Study, Mystic
+/// Remora, Jeskai Elder, both Enchantresses among them — found by
+/// `scripts/audit_dropped_may.py` and fixed together; this is the gate that
+/// stops the class coming back, since nothing else in the suite compares a
+/// definition against its printed text.
+///
+/// The oracle is the committed Scryfall cache and the model is the
+/// definition's `{:?}` rendering — the same single-oracle device
+/// `CardDefinition::wants_converge` uses, and for the same reason: a
+/// hand-written walker over 130-odd `Effect` variants is the rot this
+/// codebase has been bitten by. Over-permissive on purpose: any optional
+/// spelling *anywhere* in the card satisfies it, so this catches a card that
+/// models no choice at all, not a card that models one in the wrong place.
+#[test]
+fn every_printed_you_may_draw_is_a_choice() {
+    /// Every way a definition can spell "the controller may decline".
+    const OPTIONAL: [&str; 7] =
+        ["MayDo", "MayPay", "MayCast", "MayDoElse", "MayPayOrElse", "Optional", "ChooseMode"];
+    let cache = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../scripts/.scryfall_cache.json");
+    let text = std::fs::read_to_string(&cache).expect("the committed Scryfall cache");
+    let oracle: serde_json::Value = serde_json::from_str(&text).expect("cache is JSON");
+
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut checked = 0usize;
+    let mut bad: Vec<&'static str> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        // A miss is a synthesized name with no printing; a non-object entry is
+        // the cache's own "looked up, not found" marker.
+        let Some(printed) =
+            oracle.get(def.name).and_then(|c| c.get("oracle_text")).and_then(|t| t.as_str())
+        else {
+            continue;
+        };
+        if !printed.to_lowercase().contains("you may draw a card") {
+            continue;
+        }
+        checked += 1;
+        let rendered = format!("{def:?}");
+        if !OPTIONAL.iter().any(|k| rendered.contains(k)) {
+            bad.push(def.name);
+        }
+    }
+    assert!(checked >= 30, "only {checked} printed may-draws matched — the scan has gone vacuous");
+    bad.sort_unstable();
+    assert!(
+        bad.is_empty(),
+        "{} card(s) print \"you may draw a card\" and model it as a mandatory draw — \
+         wrap the body in `Effect::MayDo`:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}

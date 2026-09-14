@@ -324,6 +324,11 @@ fn rogues_gloves_draws_on_combat_damage() {
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // opp has no blockers
     let gloves = g.add_card_to_battlefield(0, catalog::rogues_gloves());
     g.battlefield_find_mut(gloves).unwrap().attached_to = Some(attacker);
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.add_card_to_library(0, catalog::island());
     g.clear_sickness(attacker);
     while g.step != TurnStep::DeclareAttackers {

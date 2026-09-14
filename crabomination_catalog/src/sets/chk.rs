@@ -1135,9 +1135,12 @@ pub fn sire_of_the_storm() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::Draw {
-            who: Selector::You,
-            amount: Value::ONE,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::MayDo {
+            description: "Draw a card?".into(),
+            body: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            }),
         })],
         ..Default::default()
     }

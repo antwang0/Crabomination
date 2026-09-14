@@ -162,6 +162,11 @@ fn iterative_analysis_draws_off_the_named_spell() {
     g.reveal_hidden_agenda(0, agenda);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     let library = g.players[0].library.len();
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     cast(&mut g, 0, bolt, Some(Target::Player(1)));
     assert_eq!(g.players[0].library.len(), library - 1);
 }

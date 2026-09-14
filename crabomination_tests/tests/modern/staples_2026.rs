@@ -1211,6 +1211,9 @@ fn mystic_remora_draws_off_noncreature_spells() {
     }).expect("creature spell");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before, "creature spell — no Remora draw");
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]));
     g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {

@@ -1101,6 +1101,11 @@ mod recent37 {
         let hand_before = g.players[0].hand.len();
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
+        // The printed "you may": taken here so the assert below still
+        // reads the draw.
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
         g.perform_action(GameAction::CastSpell {
             card_id: aura, target: Some(Target::Permanent(foe)), additional_targets: vec![],
             mode: None, x_value: None,

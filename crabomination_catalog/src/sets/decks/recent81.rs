@@ -118,7 +118,10 @@ pub fn blood_divination() -> CardDefinition {
 fn combat_damage_draw() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-        effect: draw(1),
+        effect: Effect::MayDo {
+            description: "Draw a card?".into(),
+            body: Box::new(draw(1)),
+        },
     }
 }
 

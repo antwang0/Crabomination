@@ -592,6 +592,9 @@ fn rhystic_study_draws_when_opponent_casts() {
     g.add_card_to_battlefield(0, catalog::rhystic_study());
     g.add_card_to_library(0, catalog::shock());
     let lib = g.players[0].library.len();
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]));
     opponent_casts_bolt(&mut g);
     assert_eq!(g.players[0].library.len(), lib - 1, "Rhystic Study drew a card");
 }
@@ -623,6 +626,9 @@ fn mystic_remora_draws_on_opponent_noncreature() {
     g.add_card_to_battlefield(0, catalog::mystic_remora());
     g.add_card_to_library(0, catalog::shock());
     let lib = g.players[0].library.len();
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]));
     opponent_casts_bolt(&mut g); // Bolt is noncreature
     assert_eq!(g.players[0].library.len(), lib - 1, "Mystic Remora drew a card");
 }

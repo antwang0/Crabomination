@@ -255,17 +255,20 @@ pub fn jeskai_elder() -> CardDefinition {
             crate::effect::shortcut::prowess(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::Seq(vec![
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
-                    },
-                ]),
+                effect: Effect::MayDo {
+                    description: "Draw a card, then discard a card?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                            random: false,
+                        },
+                    ])),
+                },
             },
         ],
         ..Default::default()

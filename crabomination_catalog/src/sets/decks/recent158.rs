@@ -150,9 +150,12 @@ pub fn cactarantula() -> CardDefinition {
                 actor_is_opponent: true,
                 ..EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
             },
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::ONE,
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         ..Default::default()

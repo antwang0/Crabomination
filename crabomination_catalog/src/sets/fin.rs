@@ -3515,7 +3515,8 @@ pub fn ultimecia_temporal_threat() -> CardDefinition {
 }
 
 /// Rook Turret — {3}{U} 3/3 Artifact Creature — Construct with flying. Whenever
-/// another artifact you control enters, draw a card, then discard a card.
+/// another artifact you control enters, you may draw a card, then discard a
+/// card.
 pub fn rook_turret() -> CardDefinition {
     CardDefinition {
         name: "Rook Turret",
@@ -3534,17 +3535,20 @@ pub fn rook_turret() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Artifact,
                 }),
-            effect: Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::ONE,
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::ONE,
-                    random: false,
-                },
-            ]),
+            effect: Effect::MayDo {
+                description: "Draw a card, then discard a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                ])),
+            },
         }],
         ..Default::default()
     }

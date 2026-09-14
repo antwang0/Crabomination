@@ -630,6 +630,9 @@ fn puresteel_paladin_draws_on_equipment() {
     let drawn = g.add_card_to_library(0, catalog::forest());
     let equip = g.add_card_to_hand(0, catalog::bonesplitter()); // an Equipment
     g.players[0].mana_pool.add_colorless(1);
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: equip, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Equipment");
@@ -725,6 +728,9 @@ fn soul_of_the_harvest_draws_on_creature_enter() {
     let drawn_lib = g.players[0].library.len();
     let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
     g.players[0].mana_pool.add(Color::Green, 1);
+    // The printed "you may": taken here so the assert below still
+    // reads the draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast elf");

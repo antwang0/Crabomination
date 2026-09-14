@@ -348,7 +348,8 @@ pub fn return_to_dust() -> CardDefinition {
 
 /// Rhystic Study — {2}{U} Enchantment. "Whenever an opponent casts a spell, you
 /// may draw a card unless that player pays {1}." The caster is asked to pay {1}
-/// (`UnlessPlayerPays`, `PlayerRef::Triggerer`); if they decline/can't, you draw.
+/// (`UnlessPlayerPays`, `PlayerRef::Triggerer`); if they decline/can't, you may
+/// draw.
 pub fn rhystic_study() -> CardDefinition {
     CardDefinition {
         name: "Rhystic Study",
@@ -359,9 +360,12 @@ pub fn rhystic_study() -> CardDefinition {
             effect: Effect::UnlessPlayerPays {
                 who: PlayerRef::Triggerer,
                 cost: crate::card::WardCost::generic(1),
-                then: Box::new(Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
+                then: Box::new(Effect::MayDo {
+                    description: "Draw a card?".into(),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                 }),
                 if_paid: None,
             },
@@ -373,7 +377,7 @@ pub fn rhystic_study() -> CardDefinition {
 /// Mystic Remora — {U} Enchantment. Cumulative upkeep {1} (CR 702.24).
 /// "Whenever an opponent casts a noncreature spell, you may draw a card unless
 /// that player pays {4}." The caster is asked to pay {4} (`UnlessPlayerPays`);
-/// if they decline/can't, you draw.
+/// if they decline/can't, you may draw.
 pub fn mystic_remora() -> CardDefinition {
     use crate::card::{CumulativeUpkeepCost, Keyword};
     CardDefinition {
@@ -393,9 +397,12 @@ pub fn mystic_remora() -> CardDefinition {
             effect: Effect::UnlessPlayerPays {
                 who: PlayerRef::Triggerer,
                 cost: crate::card::WardCost::generic(4),
-                then: Box::new(Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
+                then: Box::new(Effect::MayDo {
+                    description: "Draw a card?".into(),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                 }),
                 if_paid: None,
             },
