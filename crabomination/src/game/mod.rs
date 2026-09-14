@@ -618,6 +618,29 @@ struct LayerFreezeState {
     /// run. Three read sites (the scan, the push, the clear), which is what
     /// (-72) says the device needs.
     perms: SmallVec<[(CardId, std::sync::Arc<crate::game::layers::ComputedPermanent>); 8]>,
+    /// The **state-level** gathered-effect memo — PERF `(-303)`.
+    ///
+    /// `memo` above is a *scope* memo: it dies with the scope, and
+    /// `GameState::clone` starts every probe unfrozen by construction, so it
+    /// can never serve a simulation's first layer question — which is 47-56 %
+    /// of `compute_permanents`' gathers and half of every pool's. This one is
+    /// keyed on [`GameState::gather_key`] rather than on a scope, so
+    /// [`end_of_scope`](Self::end_of_scope) leaves it alone and
+    /// `Clone for LayerFreeze` carries it.
+    ///
+    /// It shares the scope memo's mutex on purpose: the frozen path asks both
+    /// questions, and two locks where one will do is most of what a memo this
+    /// cheap can afford (the whole entry point is ~150 Ir against a ~1,000 Ir
+    /// gather).
+    ///
+    /// Priced before it was built, `gang` mirror six games a pool at the
+    /// `(-310)` tip: **48.04 / 49.18 / 48.85 %** (fixed / cube / sealed) of
+    /// gathers found the board-and-seats half of the key where the previous
+    /// gather on that state left it, and **0 of those gathered a different
+    /// answer**. Shipped with the whole key it takes **45.7 / 44.5 / 42.1 %**
+    /// of all gathers off the program (24,248 -> 13,166 / 44,258 -> 24,554 /
+    /// 62,144 -> 36,002).
+    cross: Option<(u64, std::sync::Arc<Vec<ContinuousEffect>>, crate::game::layers::SecondPass)>,
 }
 
 /// The board questions with a presence gate, and the slot each one
@@ -686,6 +709,29 @@ impl LayerFreeze {
             g.store(0, std::sync::atomic::Ordering::Relaxed);
         }
     }
+
+    /// A fresh, unfrozen `LayerFreeze` carrying only
+    /// [`LayerFreezeState::cross`] — what `GameState::clone` wants. The scope
+    /// halves (`depth`, `gates`, `memo`, `perms`) describe a scope the clone
+    /// is not in; the cross memo describes the *state*, which the clone is a
+    /// copy of.
+    fn clone_cross_only(&self) -> Self {
+        let cross = self.lock().cross.clone();
+        Self {
+            depth: std::sync::atomic::AtomicU32::new(0),
+            gates: Default::default(),
+            // Field by field, NOT `..Default::default()`: `LayerFreezeState`
+            // is ~190 bytes (`perms` is eight inline slots), and the struct
+            // update built a temporary and memcpy'd it — two extra `memcpy`
+            // calls per `GameState::clone`, 60,768 of them over a `sealed`
+            // run, measured.
+            state: std::sync::Mutex::new(LayerFreezeState {
+                memo: None,
+                perms: SmallVec::new(),
+                cross,
+            }),
+        }
+    }
 }
 
 impl LayerFreezeState {
@@ -709,10 +755,20 @@ impl LayerFreezeState {
             debug_assert!(self.perms.is_empty(), "perms are only stored beside a memo");
             return;
         }
-        if let Some((fx, _)) = self.memo.take() {
+        // ⚠ **A handle the cross memo still holds must not be parked**, and
+        // since `(-303)` every list this scope gathered is in the cross memo
+        // too: `fx_pool::alloc` would pop it, fail its uniqueness check and
+        // drop it, having displaced a box that could have come back. The
+        // pool's feed is `store_cross_memo`'s eviction now, which hands over
+        // a box nothing else holds.
+        if let Some((fx, _)) = self.memo.take()
+            && std::sync::Arc::strong_count(&fx) == 1
+        {
             fx_pool::park(fx);
         }
-        cp_pool::recycle(self.perms.drain(..).map(|(_, cp)| cp));
+        if !self.perms.is_empty() {
+            cp_pool::recycle(self.perms.drain(..).map(|(_, cp)| cp));
+        }
     }
 }
 
@@ -763,10 +819,56 @@ pub mod gather_census {
     pub static GATHERS: AtomicU64 = AtomicU64::new(0);
     pub static REPEATS: AtomicU64 = AtomicU64::new(0);
     pub static NO_REACH: AtomicU64 = AtomicU64::new(0);
+    /// Gathers whose *own state's* battlefield counter is where the previous
+    /// gather on that state left it — the per-object twin of [`NO_REACH`],
+    /// and the number a clone-carried memo would actually see.
+    pub static STATE_NO_BF: AtomicU64 = AtomicU64::new(0);
+    /// …and whose whole [`GameState::gather_key`] is where the previous
+    /// gather on that state left it: the memo's actual hit rate.
+    pub static STATE_NO_ANY: AtomicU64 = AtomicU64::new(0);
+    /// Of those, how many nevertheless gathered a *different* answer — the
+    /// soundness column. Non-zero means the key misses an input, which
+    /// `(-303)`'s read audit says is possible (the four `evaluate_*` entries
+    /// read whatever a catalog filter names).
+    pub static STATE_WRONG: AtomicU64 = AtomicU64::new(0);
+    /// Total effects gathered, for the mean list length — what a memo would
+    /// have to hand back, and the reason it must hand back an `Arc`.
+    pub static EFFECTS: AtomicU64 = AtomicU64::new(0);
 
     thread_local! {
         static PREV: Cell<u64> = const { Cell::new(u64::MAX) };
         static PREV_REACHES: Cell<u64> = const { Cell::new(u64::MAX) };
+    }
+
+    /// The previous gather's key and answer-digest, carried **on the state**
+    /// so a clone inherits them. That is the whole difference from the two
+    /// thread-locals above: a bot probe clones, gathers, writes and is
+    /// dropped, and a global counter charges the probe's writes to the parent
+    /// (PERF `(-306)`, which is why `sba_census`' 18 % was unreachable).
+    pub struct PrevStamp {
+        stamp: AtomicU64,
+        digest: AtomicU64,
+        board: AtomicU64,
+    }
+
+    impl Default for PrevStamp {
+        fn default() -> Self {
+            Self {
+                stamp: AtomicU64::new(u64::MAX),
+                digest: AtomicU64::new(u64::MAX),
+                board: AtomicU64::new(u64::MAX),
+            }
+        }
+    }
+
+    impl Clone for PrevStamp {
+        fn clone(&self) -> Self {
+            Self {
+                stamp: AtomicU64::new(self.stamp.load(Relaxed)),
+                digest: AtomicU64::new(self.digest.load(Relaxed)),
+                board: AtomicU64::new(self.board.load(Relaxed)),
+            }
+        }
     }
 
     pub fn on() -> bool {
@@ -791,8 +893,9 @@ pub mod gather_census {
         h.finish()
     }
 
-    pub(crate) fn tick(fx: &[ContinuousEffect]) {
+    pub(crate) fn tick(state: &super::GameState, fx: &[ContinuousEffect]) {
         GATHERS.fetch_add(1, Relaxed);
+        EFFECTS.fetch_add(fx.len() as u64, Relaxed);
         let d = digest(fx);
         if PREV.with(|p| p.replace(d)) == d {
             REPEATS.fetch_add(1, Relaxed);
@@ -801,10 +904,36 @@ pub mod gather_census {
         if PREV_REACHES.with(|p| p.replace(now)) == now {
             NO_REACH.fetch_add(1, Relaxed);
         }
+        // The board's own write counter, and beside it the whole key the
+        // state-level memo is stamped with.
+        let bf = u64::from(state.battlefield.writes());
+        let prev_bf = state.gather_census_prev.board.swap(bf, Relaxed);
+        if prev_bf != u64::MAX && prev_bf == bf {
+            STATE_NO_BF.fetch_add(1, Relaxed);
+        }
+        let key = state.gather_key();
+        let prev = state.gather_census_prev.stamp.swap(key, Relaxed);
+        let prev_d = state.gather_census_prev.digest.swap(d, Relaxed);
+        if prev == key {
+            STATE_NO_ANY.fetch_add(1, Relaxed);
+            if prev_d != d {
+                STATE_WRONG.fetch_add(1, Relaxed);
+            }
+        }
     }
 
-    pub fn snapshot() -> (u64, u64, u64) {
-        (GATHERS.load(Relaxed), REPEATS.load(Relaxed), NO_REACH.load(Relaxed))
+    /// `(gathers, repeats, no_reach, state_no_bf, state_no_any, state_wrong,
+    /// effects)`.
+    pub fn snapshot() -> (u64, u64, u64, u64, u64, u64, u64) {
+        (
+            GATHERS.load(Relaxed),
+            REPEATS.load(Relaxed),
+            NO_REACH.load(Relaxed),
+            STATE_NO_BF.load(Relaxed),
+            STATE_NO_ANY.load(Relaxed),
+            STATE_WRONG.load(Relaxed),
+            EFFECTS.load(Relaxed),
+        )
     }
 }
 
@@ -2524,6 +2653,11 @@ pub struct GameState {
     /// printed types instead of recursing through `computed_permanent`.
     #[serde(skip)]
     pub(crate) in_layer_gather: std::sync::atomic::AtomicBool,
+    /// The gather census' per-state prev key — see [`gather_census`]. Carried
+    /// across clones on purpose; compiled away without `trig-census`.
+    #[cfg(feature = "trig-census")]
+    #[serde(skip)]
+    pub(crate) gather_census_prev: gather_census::PrevStamp,
     /// Scoped memo of the gathered continuous-effect set — see
     /// [`GameState::with_frozen_layers`]. Always `None` outside a freeze
     /// scope; clones and serde restores start unfrozen.
@@ -3501,7 +3635,13 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
-            layer_freeze: LayerFreeze::default(),
+            #[cfg(feature = "trig-census")]
+            gather_census_prev: self.gather_census_prev.clone(),
+            // Not `default()`: the scope halves reset (a clone starts
+            // unfrozen by construction) but the state-level gather memo is
+            // keyed on the state, not the scope, and carrying it into the
+            // probe is where most of `(-303)`'s win is.
+            layer_freeze: self.layer_freeze.clone_cross_only(),
             event_scratch: EventScratch::default(),
             // Always empty here (stamped and cleared inside one validation),
             // and the `clone` is the cheaper spelling anyway: a
@@ -3824,6 +3964,8 @@ impl GameState {
             nonland_permanent_left_bf_this_turn: false,
             mana_production_multiplier: 1,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
+            #[cfg(feature = "trig-census")]
+            gather_census_prev: gather_census::PrevStamp::default(),
             layer_freeze: LayerFreeze::default(),
             event_scratch: EventScratch::default(),
             target_slots_scratch: SmallVec::new(),
@@ -9895,8 +10037,9 @@ impl GameState {
         if let Some((fx, gates)) = self.frozen_effects_and_gates() {
             return pass(&fx, gates);
         }
-        let fx = self.gather_continuous_effects();
-        let gates = crate::game::layers::SecondPass::of(&fx);
+        // Outside a scope the state-level memo is the only one there is, and
+        // this is `check_state_based_actions_into`'s path — PERF `(-303)`.
+        let (fx, gates) = self.gathered_effects_and_gates_shared();
         pass(&fx, gates)
     }
 
@@ -10770,16 +10913,54 @@ impl GameState {
         {
             return None;
         }
-        if let Some((fx, gates)) = &self.layer_freeze.lock().memo {
-            return Some((fx.clone(), *gates));
+        // ONE lock for both memos: the scope's, and — a level up and keyed on
+        // the state rather than the scope — the cross memo `(-303)` priced.
+        // Asking them separately is three locks a call, and a memo whose whole
+        // entry point is ~150 Ir against a ~1,000 Ir gather cannot afford it.
+        if let Some(hit) = self.scope_or_cross_memo() {
+            return Some(hit);
         }
-        // First computed read in this scope: gather outside the lock (the
-        // gather itself re-enters `frozen_effects` via guarded eval paths).
-        let fx = fx_pool::alloc_with(|buf| self.gather_continuous_effects_with(buf));
-        let gates = crate::game::layers::SecondPass::of(&fx);
+        // First computed read in this scope with nothing memoized either way:
+        // gather outside the lock (the gather itself re-enters
+        // `frozen_effects` via guarded eval paths).
+        let (fx, gates) = self.gathered_effects_and_gates_shared();
         let mut st = self.layer_freeze.lock();
         st.memo = Some((fx.clone(), gates));
         Some((fx, gates))
+    }
+
+    /// The scope memo, else the cross memo when its key still matches —
+    /// promoted into the scope memo on the way past, under the one lock they
+    /// share. `None` means neither had it and the caller must gather.
+    fn scope_or_cross_memo(
+        &self,
+    ) -> Option<(std::sync::Arc<Vec<ContinuousEffect>>, crate::game::layers::SecondPass)> {
+        let mut st = self.layer_freeze.lock();
+        // The scope memo first and the key NOT computed for it: this is the
+        // path every computed read inside a filled scope takes, and it is an
+        // order more frequent than a gather.
+        if let Some((fx, gates)) = &st.memo {
+            return Some((fx.clone(), *gates));
+        }
+        if st.cross.is_none()
+            || self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
+        {
+            return None;
+        }
+        let key = self.gather_key();
+        let hit = match &st.cross {
+            Some((k, fx, gates)) if *k == key => Some((fx.clone(), *gates)),
+            _ => None,
+        };
+        let hit = hit?;
+        st.memo = Some(hit.clone());
+        drop(st);
+        debug_assert!(
+            self.gather_memo_agrees(&hit.0, hit.1),
+            "the state-level gather memo is stale: an input moved that `gather_key` \
+             does not witness",
+        );
+        Some(hit)
     }
 
     fn frozen_effects(&self) -> Option<std::sync::Arc<Vec<ContinuousEffect>>> {
@@ -10791,16 +10972,144 @@ impl GameState {
         if self.layer_freeze.depth() == 0 {
             return None;
         }
-        if let Some((fx, _)) = &self.layer_freeze.lock().memo {
-            return Some(fx.clone());
+        if let Some((fx, _)) = self.scope_or_cross_memo() {
+            return Some(fx);
         }
         // First computed read in this scope: gather outside the lock (the
         // gather itself re-enters `frozen_effects` via guarded eval paths).
-        let fx = fx_pool::alloc_with(|buf| self.gather_continuous_effects_with(buf));
-        let gates = crate::game::layers::SecondPass::of(&fx);
+        let (fx, gates) = self.gathered_effects_and_gates_shared();
         let mut st = self.layer_freeze.lock();
         st.memo = Some((fx.clone(), gates));
         Some(fx)
+    }
+
+    /// The key the state-level gather memo stamps itself with: a witness for
+    /// every input [`gather_continuous_effects_inner`](Self::gather_continuous_effects_inner)
+    /// reads that is not a card's own definition.
+    ///
+    /// PERF `(-303)`'s read audit is the list, and each entry is spelled here
+    /// as the cheapest *exact* witness it has:
+    ///
+    /// * `battlefield` (51 read sites), `exile` (5) and `continuous_effects`
+    ///   (1) carry their own `&mut` counters, bumped at the `DerefMut` /
+    ///   `push` chokepoints each already had for its memo lanes;
+    /// * `players` (45) is a `Vec<Player>` with no `players_mut()` — **and
+    ///   needs none**: `Player` is itself a CoW handle, so its `DerefMut` is
+    ///   already the one route to a seat, and a per-seat counter there covers
+    ///   the ~2,400 mutation-shaped sites a newtype refactor would have had
+    ///   to touch;
+    /// * `active_player_idx` (9) is a scalar and goes in whole;
+    /// * `attacking` (2) and `block_map` (1) have no chokepoint — they are
+    ///   two-to-eight entries long and only the attacker / blocked **ids** are
+    ///   read, so those go in exactly;
+    /// * the stack is not in the audit's `self.<field>` census, but the four
+    ///   `evaluate_*` entries read whatever a catalog filter names, so its
+    ///   depth goes in as a cheap witness.
+    ///
+    /// ⚠ That last line is an *approximation*, and the open input set is why
+    /// [`gather_memo_agrees`](Self::gather_memo_agrees) re-gathers and
+    /// compares on every hit under `debug_assertions`: the suite and the
+    /// fresh-seed sweep are the ratchet, exactly as `(-303)` asks.
+    #[inline]
+    fn gather_key(&self) -> u64 {
+        const K: u64 = 0x9E37_79B9_7F4A_7C15;
+        let mut h = u64::from(self.battlefield.writes());
+        h = (h ^ u64::from(self.continuous_effects.writes())).wrapping_mul(K);
+        h = (h ^ u64::from(self.exile.writes())).wrapping_mul(K);
+        h = (h ^ self.active_player_idx as u64).wrapping_mul(K);
+        h = (h ^ self.stack.len() as u64).wrapping_mul(K);
+        for p in &self.players {
+            h = (h ^ u64::from(p.writes())).wrapping_mul(K);
+        }
+        for a in &self.attacking {
+            h = (h ^ (u64::from(a.attacker.0) | 1 << 32)).wrapping_mul(K);
+        }
+        for id in self.block_map.keys() {
+            h = (h ^ (u64::from(id.0) | 1 << 33)).wrapping_mul(K);
+        }
+        h
+    }
+
+    /// The gathered set for **this state**, served from
+    /// [`LayerFreezeState::cross`] when nothing the gather reads has moved
+    /// since the last one.
+    ///
+    /// A hit is [`gather_key`](Self::gather_key), one mutex and an `Arc`
+    /// refcount bump — the gathered list averages 0.0-1.3 effects, so what a
+    /// gather costs is the *scan*, not the answer, and handing the answer
+    /// back is free.
+    ///
+    /// Mid-gather the memo is bypassed entirely: the reentrancy guard makes
+    /// layer-aware type filters fall back to printed types, so a gather taken
+    /// from inside one is a different function and must neither be served nor
+    /// stamped.
+    fn gathered_effects_and_gates_shared(
+        &self,
+    ) -> (std::sync::Arc<Vec<ContinuousEffect>>, crate::game::layers::SecondPass) {
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+            let fx = fx_pool::alloc_with(|buf| self.gather_continuous_effects_with(buf));
+            let gates = crate::game::layers::SecondPass::of(&fx);
+            return (fx, gates);
+        }
+        let key = self.gather_key();
+        if let Some(hit) = self.cross_memo_hit(key) {
+            return hit;
+        }
+        let fx = fx_pool::alloc_with(|buf| self.gather_continuous_effects_with(buf));
+        let gates = crate::game::layers::SecondPass::of(&fx);
+        self.store_cross_memo(key, &fx, gates);
+        (fx, gates)
+    }
+
+    /// The cross memo's answer for `key`, if it has one. Audited on every hit
+    /// under `debug_assertions`.
+    fn cross_memo_hit(
+        &self,
+        key: u64,
+    ) -> Option<(std::sync::Arc<Vec<ContinuousEffect>>, crate::game::layers::SecondPass)> {
+        let hit = match &self.layer_freeze.lock().cross {
+            Some((k, fx, gates)) if *k == key => Some((fx.clone(), *gates)),
+            _ => None,
+        };
+        if let Some((fx, gates)) = &hit {
+            debug_assert!(
+                self.gather_memo_agrees(fx, *gates),
+                "the state-level gather memo is stale: an input moved that `gather_key` \
+                 does not witness",
+            );
+        }
+        hit
+    }
+
+    /// Stamp the cross memo, and **park what it displaces** rather than let it
+    /// free: the evicted box is exactly the shape `fx_pool` hands back, and
+    /// dropping it instead cost 21,488 `Arc::drop_slow` calls and their
+    /// mallocs on the first cut of this leg.
+    fn store_cross_memo(
+        &self,
+        key: u64,
+        fx: &std::sync::Arc<Vec<ContinuousEffect>>,
+        gates: crate::game::layers::SecondPass,
+    ) {
+        let evicted = self.layer_freeze.lock().cross.replace((key, fx.clone(), gates));
+        if let Some((_, old, _)) = evicted {
+            fx_pool::park(old);
+        }
+    }
+
+    /// The memo's ratchet: re-gather and compare, on every hit under
+    /// `debug_assertions` (PERF `(-303)` point 2). Defined unconditionally —
+    /// a `#[cfg(debug_assertions)]` body behind a `debug_assert!` is the
+    /// release-only breakage CLAUDE.md warns about.
+    fn gather_memo_agrees(
+        &self,
+        fx: &[ContinuousEffect],
+        gates: crate::game::layers::SecondPass,
+    ) -> bool {
+        let fresh = self.gather_continuous_effects();
+        crate::game::layers::SecondPass::of(&fresh) == gates
+            && fresh.len() == fx.len()
+            && fresh.iter().zip(fx).all(|(a, b)| format!("{a:?}") == format!("{b:?}"))
     }
 
     /// Collect every continuous effect currently active in the game: the
@@ -10837,7 +11146,7 @@ impl GameState {
         // Compile-time gated, so the shipped binary does not carry the check.
         #[cfg(feature = "trig-census")]
         if gather_census::on() {
-            gather_census::tick(&out);
+            gather_census::tick(self, &out);
         }
         // The card-type presence gate's audit, run in the sound direction and
         // in the one place where the gather already happened, so it costs a
@@ -14726,8 +15035,7 @@ impl GameState {
         if needs_gather {
             // The scope's first computed read: fill `memo` exactly as
             // `frozen_effects` would, then store both memos under one guard.
-            let fx = fx_pool::alloc_with(|buf| self.gather_continuous_effects_with(buf));
-            let gates = crate::game::layers::SecondPass::of(&fx);
+            let (fx, gates) = self.gathered_effects_and_gates_shared();
             let cp = cp_pool::alloc(crate::game::layers::apply_layers_one_gated(
                 card, &fx, gates,
             ));

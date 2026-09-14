@@ -1095,7 +1095,32 @@ pub struct PlayerData {
 /// the plain struct, so `player.life -= 2` still works — it just unshares that
 /// one seat first. Same shape as [`crate::card::CardInstance`] one level down.
 #[derive(Clone)]
-pub struct Player(std::sync::Arc<PlayerData>);
+pub struct Player {
+    data: std::sync::Arc<PlayerData>,
+    /// How many times anything took `&mut` at this seat — the per-object twin
+    /// of [`crate::zone::Battlefield`]'s `writes` (PERF `(-306)`), and the
+    /// *players* half of the key a state-level gather memo needs (PERF
+    /// `(-303)`: 45 of the gather's reads are `self.players`).
+    ///
+    /// The counter costs nothing to place because the chokepoint already
+    /// exists: `Player` is a CoW handle, so every `&mut` reach into a seat
+    /// goes through [`DerefMut`](std::ops::DerefMut) below. **That is why
+    /// `pub players: Vec<Player>` needs no `players_mut()` refactor** — the
+    /// ~2,400 mutation-shaped sites NEXT priced all funnel through one line.
+    ///
+    /// Clones carry it, so a bot probe's seat starts stamped like its parent's
+    /// and diverges only once the probe writes. The starting value is
+    /// arbitrary — only a *change* is read.
+    writes: u32,
+}
+
+impl Player {
+    /// This seat's write counter — see [`Player::writes`].
+    #[inline]
+    pub fn writes(&self) -> u32 {
+        self.writes
+    }
+}
 
 /// Field access on the cold group reads like a `PlayerData` field.
 impl std::ops::Deref for PlayerData {
@@ -1118,7 +1143,7 @@ impl std::ops::Deref for Player {
     type Target = PlayerData;
     #[inline]
     fn deref(&self) -> &PlayerData {
-        &self.0
+        &self.data
     }
 }
 
@@ -1129,19 +1154,20 @@ impl std::ops::DerefMut for Player {
     fn deref_mut(&mut self) -> &mut PlayerData {
         // PERF `(-178)`: the same Weak-free uniqueness check as the other two
         // CoW handles — this `Arc` is a private field nothing downgrades.
-        crate::cow::make_mut(&mut self.0)
+        self.writes = self.writes.wrapping_add(1);
+        crate::cow::make_mut(&mut self.data)
     }
 }
 
 impl std::fmt::Debug for Player {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&*self.0, f)
+        std::fmt::Debug::fmt(&*self.data, f)
     }
 }
 
 impl From<PlayerData> for Player {
     fn from(data: PlayerData) -> Self {
-        Self(std::sync::Arc::new(data))
+        Self { data: std::sync::Arc::new(data), writes: 0 }
     }
 }
 
@@ -1149,7 +1175,7 @@ impl From<PlayerData> for Player {
 // before the handle existed round-trip unchanged.
 impl Serialize for Player {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        (*self.0).serialize(s)
+        (*self.data).serialize(s)
     }
 }
 

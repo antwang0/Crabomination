@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn game_state_stays_small() {
         let n = std::mem::size_of::<crate::game::GameState>();
-        assert!(n <= 1_616, "GameState grew to {n} bytes (cap 1,616) — see PERF (-144), (-280)");
+        assert!(n <= 1_648, "GameState grew to {n} bytes (cap 1,648) — see PERF (-144), (-280)");
     }
 
     #[test]

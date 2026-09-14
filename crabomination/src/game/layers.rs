@@ -227,6 +227,12 @@ pub struct ContinuousEffects {
     list: crate::cow::CowBox<Vec<ContinuousEffect>>,
     /// `mod_families::VALID | families`, or 0 while unknown.
     fold: std::sync::atomic::AtomicU32,
+    /// How many times anything took `&mut` at the list — the per-object twin
+    /// of [`crate::zone::Battlefield`]'s `writes` (PERF `(-306)`), bumped at
+    /// the same two places that clear `fold`. The resolved-effect list is one
+    /// of the gather's inputs, so the state-level gather memo's key needs it.
+    /// The starting value is arbitrary — only a *change* is read.
+    writes: u32,
 }
 
 impl ContinuousEffects {
@@ -268,8 +274,23 @@ impl ContinuousEffects {
     /// `Vec::push` through the `CowBox`'s unshare-aware push, clearing the fold.
     #[inline]
     pub fn push(&mut self, effect: ContinuousEffect) {
-        self.fold.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.note_write();
         self.list.push(effect);
+    }
+
+    /// One `&mut` reach at the list: clear the family fold and bump
+    /// [`writes`](Self::writes). The two call sites are this `push` and
+    /// `DerefMut`.
+    #[inline]
+    fn note_write(&mut self) {
+        self.fold.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.writes = self.writes.wrapping_add(1);
+    }
+
+    /// The list's write counter — see [`writes`](Self::writes).
+    #[inline]
+    pub fn writes(&self) -> u32 {
+        self.writes
     }
 }
 
@@ -284,7 +305,7 @@ impl std::ops::Deref for ContinuousEffects {
 impl std::ops::DerefMut for ContinuousEffects {
     #[inline]
     fn deref_mut(&mut self) -> &mut Vec<ContinuousEffect> {
-        self.fold.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.note_write();
         &mut self.list
     }
 }
@@ -296,13 +317,14 @@ impl Clone for ContinuousEffects {
             fold: std::sync::atomic::AtomicU32::new(
                 self.fold.load(std::sync::atomic::Ordering::Relaxed),
             ),
+            writes: self.writes,
         }
     }
 }
 
 impl From<Vec<ContinuousEffect>> for ContinuousEffects {
     fn from(list: Vec<ContinuousEffect>) -> Self {
-        Self { list: list.into(), fold: std::sync::atomic::AtomicU32::new(0) }
+        Self { list: list.into(), fold: std::sync::atomic::AtomicU32::new(0), writes: 0 }
     }
 }
 
@@ -315,7 +337,7 @@ impl Serialize for ContinuousEffects {
 impl<'de> Deserialize<'de> for ContinuousEffects {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         crate::cow::CowBox::<Vec<ContinuousEffect>>::deserialize(deserializer)
-            .map(|list| Self { list, fold: std::sync::atomic::AtomicU32::new(0) })
+            .map(|list| Self { list, fold: std::sync::atomic::AtomicU32::new(0), writes: 0 })
     }
 }
 
@@ -842,7 +864,7 @@ pub fn apply_layers(
 /// than three: on a board carrying none of the three (the common one) every
 /// `any()` runs to the end, so the early exit buys nothing and three walks
 /// cost three times one.
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct SecondPass {
     power: bool,
     type_changer: bool,

@@ -1914,12 +1914,22 @@ fn main() {
     // `CRAB_GATHER_CENSUS=1`.
     #[cfg(feature = "trig-census")]
     if crabomination::game::gather_census::on() {
-        let (gathers, repeats, no_reach) = crabomination::game::gather_census::snapshot();
+        let (gathers, repeats, no_reach, st_bf, st_any, st_wrong, effects) =
+            crabomination::game::gather_census::snapshot();
+        let pct = |n: u64| if gathers == 0 { 0.0 } else { 100.0 * n as f64 / gathers as f64 };
         println!(
             "  gather_census {repeats}/{gathers} repeats ({:.2} %), {no_reach} after no \
              &mut reach ({:.2} %)",
-            if gathers == 0 { 0.0 } else { 100.0 * repeats as f64 / gathers as f64 },
-            if gathers == 0 { 0.0 } else { 100.0 * no_reach as f64 / gathers as f64 },
+            pct(repeats),
+            pct(no_reach),
+        );
+        // The per-state key, which is the one a clone-carried memo would use.
+        println!(
+            "  gather_state  {st_bf} board unmoved ({:.2} %), {st_any} board+seats unmoved \
+             ({:.2} %), {st_wrong} of those changed answer, {:.1} effects/gather",
+            pct(st_bf),
+            pct(st_any),
+            if gathers == 0 { 0.0 } else { effects as f64 / gathers as f64 },
         );
     }
     // PERF (-138): how many affordance probes ever write the resolution-scratch

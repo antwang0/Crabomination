@@ -264,6 +264,12 @@ pub struct CardPile {
     /// One two-bit lane, packed like the other zones' so a single store on
     /// the write path clears it.
     lanes: AtomicU8,
+    /// How many times anything took `&mut` at this pile — the per-object twin
+    /// of [`Battlefield::writes`], bumped at the same two places that clear
+    /// `lanes`. `GameState::exile` is one of the gather's inputs (PERF
+    /// `(-303)`'s read audit, 5 sites), so the state-level gather memo's key
+    /// needs it. The starting value is arbitrary — only a *change* is read.
+    writes: u32,
 }
 
 /// CR 704.5d — a token is here.
@@ -313,8 +319,23 @@ impl CardPile {
     /// for the card. Inherent, so it shadows the `Deref`'d `Vec::push` at
     /// every existing call site.
     pub fn push(&mut self, card: CardInstance) {
-        self.lanes.store(0, Ordering::Relaxed);
+        self.note_write();
         self.cards.push(card);
+    }
+
+    /// One `&mut` reach at this pile: clear the lane word and bump
+    /// [`writes`](Self::writes). The two call sites are this `push` and
+    /// `DerefMut`, which the `&mut` `IntoIterator` arm routes through.
+    #[inline]
+    fn note_write(&mut self) {
+        self.lanes.store(0, Ordering::Relaxed);
+        self.writes = self.writes.wrapping_add(1);
+    }
+
+    /// This pile's write counter — see [`writes`](Self::writes).
+    #[inline]
+    pub fn writes(&self) -> u32 {
+        self.writes
     }
 
     /// True when both handles still share one allocation — the [`CowBox`]
@@ -337,11 +358,14 @@ impl CardPile {
 
 impl Clone for CardPile {
     /// The cards clone as a `CowBox` (a refcount bump); the memo describes
-    /// those same cards, so it comes along.
+    /// those same cards, so it comes along — and so does the write counter,
+    /// so a clone starts stamped like its parent and diverges on its own
+    /// first write.
     fn clone(&self) -> Self {
         Self {
             cards: self.cards.clone(),
             lanes: AtomicU8::new(self.lanes.load(Ordering::Relaxed)),
+            writes: self.writes,
         }
     }
 }
@@ -355,20 +379,20 @@ impl Deref for CardPile {
 
 impl DerefMut for CardPile {
     fn deref_mut(&mut self) -> &mut Vec<CardInstance> {
-        self.lanes.store(0, Ordering::Relaxed);
+        self.note_write();
         &mut self.cards
     }
 }
 
 impl From<Vec<CardInstance>> for CardPile {
     fn from(cards: Vec<CardInstance>) -> Self {
-        Self { cards: cards.into(), lanes: AtomicU8::new(0) }
+        Self { cards: cards.into(), lanes: AtomicU8::new(0), writes: 0 }
     }
 }
 
 impl From<CowBox<Vec<CardInstance>>> for CardPile {
     fn from(cards: CowBox<Vec<CardInstance>>) -> Self {
-        Self { cards, lanes: AtomicU8::new(0) }
+        Self { cards, lanes: AtomicU8::new(0), writes: 0 }
     }
 }
 
@@ -1689,6 +1713,13 @@ impl Battlefield {
     fn note_write(&mut self) {
         note_battlefield_reach();
         self.writes = self.writes.wrapping_add(1);
+    }
+
+    /// This zone's write counter — see [`writes`](Self::writes). Read by any
+    /// memo one level up that has to know whether the board moved.
+    #[inline]
+    pub fn writes(&self) -> u32 {
+        self.writes
     }
 
     /// A whole-board fold over *instance* fields, memoized on the zone.
