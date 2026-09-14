@@ -3037,13 +3037,14 @@ gate    **The memo's ratchet is real, not nominal.** `gather_key` witnesses ever
         parent both reach `writes + 1` with different boards, so the key is a witness only within one
         state's lineage. `GameState` **1,616 -> 1,664** for the memo and its key.
 
-sweep   **fresh seeds 1308..1319, TWO blocks: 36 cells / 177,600 games / 0 failures.** 1308..1311 reads
-        `cap 0 / board 0 / stuck 0 / draw 0` with no re-run needed; 1312..1319 reads `cap 6 / board 0 /
-        stuck 0 / draw 12` and **all six caps cleared at `CRAB_MAX_ACTIONS=50000`** (slow, not stuck —
-        `cube` 1316 and `all` 1316, both saturated-life boards, and the label decides nothing).
-        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`, **at the
-        final tip on purpose**: the memo's audit only fires on a hit and a hit needs a board the suite
-        does not build. **Frontier 1320.** The FIRST run of block one, at the pre-fix tip, is the `bug`
+sweep   **fresh seeds 1308..1327, THREE blocks: 60 cells / 296,000 games / 0 failures** — the largest
+        block this file records, and deliberately so: `(-311)` is a memo over game state and the sweep is
+        the only gate that runs its audit on a board the suite does not build. 1308..1311 `cap 0 / board
+        0 / stuck 0 / draw 0`; 1312..1319 `cap 6 / draw 12` with **all six caps cleared at
+        `CRAB_MAX_ACTIONS=50000`** (slow, not stuck — `cube`/`all` 1316, saturated-life boards, and the
+        label decides nothing); 1320..1327 `cap 0 / board 0 / stuck 0 / draw 2`.
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`, at the final
+        tip. **Frontier 1328.** The FIRST run of block one, at the pre-fix tip, is the `bug`
         row above — it aborted on cell one. All standing
         audits 0: `audit_panics` **0 bare** (70 sites, 59 guarded, 11 lock-poison),
         `audit_stash_in_loop` **0 unexplained**, `audit_seat_from_selector` **0 open**,
