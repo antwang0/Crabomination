@@ -3042,6 +3042,18 @@ fix     **A printed "you may draw a card" is a choice — 26 cards, and a catalo
         `decide_optional_trigger` reads the body, so bot play still draws; nineteen suite tests say
         `Bool(true)` at the ask now. `audit_dropped_may` **258 -> 240**.
 
+fix     **The gate generalised to a phrase table, and twelve more cards came off it.** Rows added:
+        **"you may gain"** (9 — Kor Firewalker, Soul's Attendant, Auriok Champion, Suture Priest, Patron
+        of the Kitsune, Ondu Cleric, Wall of Reverence, Renewed Faith, Archon of Redemption, excluding
+        "you may gain control"), **"you may put a +1/+1 counter"** (2 — Avenger of Zendikar, Mortician
+        Beetle) and **"you may destroy"** (1 — Karmic Justice). ⚠ **The rows that are NOT in the table
+        were measured, not guessed**: "you may pay" reads 308 unmodelled of 519 printed and is kicker /
+        ward / multikicker reminder text; "you may search" is CR 701.19c; "you may sacrifice" (116/155),
+        "you may exile" (58/107), "you may return" (30/147) and "you may mill" (13/21) are additional and
+        alternative costs and dredge reminder text. Each row carries its own vacuity floor.
+        `audit_dropped_may` **240 -> 230**; nine more suite tests answer the new ask, the CR 701.7a
+        retaliation watcher among them.
+
 sweep   **fresh seeds 1300..1303: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 / stuck 0 /
         draw 2` — clean, no 50,000-action re-run needed. `target-audit/overflow` with
         `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict` at the `(-307)` tip. **Frontier 1304.**
@@ -3056,8 +3068,12 @@ gates   ⚠⚠ **FOURTH BOX, 4 CORES, and it reads 479 games/s where the previou
         committed invariant, `determinism ok` and `thread_determinism ok (3 vs 1)`. Suite **19,549 / 0 / 5**
         (`CRAB_ANSWER_LOG=strict`; 19,548 plus the new catalog gate), clippy **0**
         (`--workspace --all-targets --exclude crabomination_client`), golden traces unmoved.
-        **Run total: fixed -0.609 %, cube -0.588 %, sealed -0.667 %** (629,145,557 -> 625,315,822 /
-        1,668,223,488 -> 1,658,415,998 / 1,746,010,430 -> 1,734,360,419).
+        **Run total at the committed tip: fixed -0.607 %, cube -0.587 %, sealed -0.667 %**
+        (629,145,557 -> 625,328,472 / 1,668,223,488 -> 1,658,424,377 / 1,746,010,430 -> 1,734,359,459).
+        ⚠ The tip is measured *after* the two catalog commits, and they cost **+0.002 / +0.001 / -0.000 %**
+        against the `(-308)` reading — 38 `MayDo` wrappers, and the six-game samples barely reach the
+        cards that carry them, which is also why `--bench` (four fixed archetypes, none of them among
+        the 38) is byte-identical.
 ```
 
 ### 2026-09-14 — the batch layer path's two cheap halves, a refuted memo, and the census/slot-walker pairing closed
