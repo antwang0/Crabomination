@@ -3023,6 +3023,17 @@ perf    **`(-307)`: the combat dispatch's dealer off the hint-cached lookup — 
         equality per (permanent, trigger), and the `Effect` / `SelectionRequirement` clones each push
         makes. **A whole-board walk inside a hot function is not automatically that function's cost.**
 
+refut   **`(-310)`: `sync/atomic.rs:3875` under the batch layer path is the INSTRUMENT, not a cost.** The
+        line reads 7.32 M / 0.50 % of `cube` under `compute_permanents::{{closure}}`, three times the next
+        line there, and the only atomics in that closure are `find_by_id`'s hint load and store — 66 Ir a
+        lookup, which no relaxed load costs. A rolling cursor (try the previous index, else scan) is
+        strictly cheaper than a scan-per-id and lost **+0.344 / +0.186 / +0.301 %**, which it can only do
+        if the hint was hitting; `(-304)` measured the same thing forwards. ⚠⚠ **`addr2line` resolves an
+        address to its innermost INLINED frame**, so a hot loop interleaved with a one-instruction callee
+        carries that callee's line. **Three consecutive line-derived leads refuted at this tip** —
+        `(-308)` won because its line was `i32::saturating_add`, a named function with eight call sites in
+        the source, and that is the only shape the device is good for.
+
 refut   **`(-309)`: the id-compare family is a SHORT-SCAN family, and both memos in front of it lose.**
         `card.rs:13` + `iter/macros.rs:349` is ~30 M / 1.8 % of `cube` over twenty sites. Move-to-front on
         `computed_permanent_hinted`'s `perms` read **+0.145 / +0.146 / +0.118 %**; four direct-mapped hint
