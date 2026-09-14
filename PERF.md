@@ -6966,6 +6966,59 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-306)` The zone's own write counter, and the SBA board fold behind it
+
+The candidates head's re-read put `check_state_based_actions_into` +
+`sba_board_scan` at 79.9 M / 4.8 % of `cube` as the biggest untaken pair. The
+scan is 1,066-1,418 Ir a call and every instruction of it is the per-card loop
+— eleven statements over ~20 (`cube`) to ~42 (`sealed`) permanents, each one
+2-4 Ir by the line profile, none of them a lead on its own.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                              fixed            cube          sealed
+  (-305)                  629,145,557   1,668,223,488   1,746,010,430
+  (-306)                  627,835,319   1,664,220,493   1,739,334,703
+                             -0.208 %        -0.240 %        -0.382 %
+  sba_board_scan self      11.6 -> 10.1 M  30.9 -> 26.3 M  34.2 -> 26.8 M
+  fold hit rate              10.57 %         10.70 %         18.87 %
+```
+
+**The device is not the memo, it is the counter the memo is stamped with.**
+`Battlefield`'s eight lanes are keyed on `definition_epoch`, so they survive an
+element write by construction — which is exactly why no memo over *instance*
+fields (tapped, damage, counters, `attached_to`, `controller`) could hang off
+them, and the scan reads five such fields. But the zone already funnels every
+`&mut` through **six** places, and they are named and commented as such
+(`cards_unchecked_mut`, `push`, `remove`, `retain`, `pop`, `DerefMut`) because
+`note_battlefield_reach()` — the census hook `(-128)` added — is already at all
+six. Bumping a per-object `writes: u32` in the same call turns that census into
+a gate: a memo stamped with `writes` is valid exactly while nothing has taken
+`&mut` at these cards, which is the scan's whole read set. `sba_board_walk`
+packs its answer (the `sba_bits` mask in the low 32, four instance-only flags
+at 32..35, the legendary count above) into one word; the one input that is not
+the battlefield, the Ring emblem's two player reads, stays outside the memo.
+
+⚠ **The per-object counter reads the SAME as the global one for this consumer,
+and that refutes the reason it was built per-object.** The hypothesis was that
+a probe clone's writes should not invalidate the parent's answer — the clone
+carries the stamp, its own writes bump its own counter, the parent's board is
+untouched — so the per-object hit rate should beat `sba_census`' `NO_REACH`
+(11.57 / 11.36 / 18.99 %). It reads **10.57 / 10.70 / 18.87 %**, i.e. *below*
+it, because a probe's sweeps are its own: each clone sweeps on a board it has
+just mutated, and the parent does not sweep again until a real action has
+written to it. **A clone-carried memo is priced by how often the PARENT is
+re-asked without writing, not by how often the clone writes.** The counter is
+still the right gate (it is the only sound one over instance fields); it is the
+hit rate that was sized wrong, the same error `(-304)` made about `perms`.
+
+`GameState`'s size guard went 1,600 -> 1,616 for the 16 bytes, which is what
+that guard asks for: a callgrind reading that says the field has to be inline.
+It does — the memo has to travel with the zone through `GameState::clone`, and
+the reading above already carries the growth. `writes` is 32-bit for the same
+reason: a false hit needs 2^32 `&mut` reaches at one zone between a store and
+the next read, against ~10^6 for a whole game.
+
 ### `(-305)` A `filter_map` erases the size hint, and the collect behind it grows from zero
 
 ```text

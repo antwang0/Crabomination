@@ -76,6 +76,30 @@ pub mod sba_census {
     pub fn snapshot() -> (u64, u64, u64) {
         (SWEEPS.load(Relaxed), REPEATS.load(Relaxed), NO_REACH.load(Relaxed))
     }
+
+    /// PERF `(-306)`: how often the zone's packed board fold is still valid
+    /// when `sba_board_scan` asks. Unlike `NO_REACH` above this counts *this
+    /// board's* writes, not the process's, so a probe clone's mutation does
+    /// not invalidate the parent's answer. Compile-time gated so the shipped
+    /// binary carries neither counter.
+    pub static FOLD_ASKS: AtomicU64 = AtomicU64::new(0);
+    pub static FOLD_HITS: AtomicU64 = AtomicU64::new(0);
+
+    #[cfg(feature = "trig-census")]
+    #[inline]
+    pub(crate) fn tick_fold(hit: bool) {
+        FOLD_ASKS.fetch_add(1, Relaxed);
+        FOLD_HITS.fetch_add(hit as u64, Relaxed);
+    }
+
+    #[cfg(not(feature = "trig-census"))]
+    #[inline(always)]
+    pub(crate) fn tick_fold(_hit: bool) {}
+
+    /// `(asks, hits)` for the board fold.
+    pub fn fold_snapshot() -> (u64, u64) {
+        (FOLD_ASKS.load(Relaxed), FOLD_HITS.load(Relaxed))
+    }
 }
 
 /// How much of the board the CR 704.5f/g/h death sweep has to compute layers
@@ -124,6 +148,15 @@ struct SbaBoardScan {
     sculptor: bool,
     sector_set: bool,
 }
+
+/// Where the four instance-only flags and the legendary count sit in
+/// [`GameState::sba_board_walk`]'s packed word. `sba_bits` occupies 8..29, so
+/// the low 32 are the mask's and these start above it.
+const SBA_BESTOWED: u32 = 32;
+const SBA_SOULBOND: u32 = 33;
+const SBA_SECTOR_SET: u32 = 34;
+const SBA_PM_BOTH: u32 = 35;
+const SBA_LEGENDARY_COUNT: u32 = 36;
 
 /// How a CR 514 cleanup round ended, telling the caller how to continue.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -5191,14 +5224,19 @@ impl GameState {
         sba_census::tick(h.finish());
     }
 
-    fn sba_board_scan(&self) -> SbaBoardScan {
+    /// The battlefield half of [`sba_board_scan`](Self::sba_board_scan),
+    /// packed into one word so the zone can hold it: `m` in the low 32 bits
+    /// (`sba_bits` occupies 8..29), the four instance-only flags above it, and
+    /// the legendary count in the top 32.
+    fn sba_board_walk(&self) -> u64 {
         use crate::card::{sba_bits as b, CounterType};
-        let mut s = SbaBoardScan::default();
         let mut m = 0u64;
+        let mut legendary_count = 0u32;
+        let mut flags = 0u64;
         for c in self.battlefield.iter() {
             let d = c.sba_scan_bits();
             m |= d & b::UNCONDITIONAL;
-            s.legendary_count += (d & b::LEGENDARY != 0) as u32;
+            legendary_count += (d & b::LEGENDARY != 0) as u32;
             if !c.flipped {
                 m |= d & b::UNFLIPPED;
             }
@@ -5208,15 +5246,54 @@ impl GameState {
             if c.attached_to.is_some() {
                 m |= d & b::EQUIPMENT;
             }
-            s.bestowed |= c.bestowed;
-            s.soulbond |= c.soulbond_partner.is_some();
-            s.sector_set |= c.sector.is_some();
+            flags |= (c.bestowed as u64) << SBA_BESTOWED;
+            flags |= (c.soulbond_partner.is_some() as u64) << SBA_SOULBOND;
+            flags |= (c.sector.is_some() as u64) << SBA_SECTOR_SET;
             // One walk per vector rather than one per flag.
             if !c.counters.is_empty() {
-                s.pm_both |= c.counter_count(CounterType::PlusOnePlusOne) > 0
-                    && c.counter_count(CounterType::MinusOneMinusOne) > 0;
+                flags |= ((c.counter_count(CounterType::PlusOnePlusOne) > 0
+                    && c.counter_count(CounterType::MinusOneMinusOne) > 0)
+                    as u64)
+                    << SBA_PM_BOTH;
             }
         }
+        debug_assert_eq!(m >> 32, 0, "sba_bits outgrew the low word of the packed fold");
+        debug_assert!(legendary_count < 1 << 28, "legendary count outgrew the packed fold");
+        m | flags | ((legendary_count as u64) << SBA_LEGENDARY_COUNT)
+    }
+
+    fn sba_board_scan(&self) -> SbaBoardScan {
+        use crate::card::sba_bits as b;
+        let mut s = SbaBoardScan::default();
+        // The walk reads instance fields, so it is keyed on the zone's write
+        // counter rather than on `definition_epoch` like the lanes beside it:
+        // a stamp that still matches means no `&mut` has reached these cards
+        // since, which is exactly the walk's read set (PERF `(-306)`). The
+        // one input that is *not* the battlefield — the Ring's emblem, two
+        // player reads — stays outside the memo at the bottom.
+        let fold = self.battlefield.sba_fold();
+        sba_census::tick_fold(fold.is_some());
+        let packed = match fold {
+            Some(hit) => {
+                debug_assert_eq!(
+                    hit,
+                    self.sba_board_walk(),
+                    "the SBA board fold is stale: a write reached the zone without bumping it",
+                );
+                hit
+            }
+            None => {
+                let packed = self.sba_board_walk();
+                self.battlefield.store_sba_fold(packed);
+                packed
+            }
+        };
+        let m = packed & 0xFFFF_FFFF;
+        s.legendary_count = (packed >> SBA_LEGENDARY_COUNT) as u32;
+        s.bestowed = packed & (1 << SBA_BESTOWED) != 0;
+        s.soulbond = packed & (1 << SBA_SOULBOND) != 0;
+        s.sector_set = packed & (1 << SBA_SECTOR_SET) != 0;
+        s.pm_both = packed & (1 << SBA_PM_BOTH) != 0;
         s.flip_keyword = m & b::FLIP_KEYWORD != 0;
         s.flip_predicate = m & b::FLIP_PREDICATE != 0;
         s.sacrifice_when = m & b::SACRIFICE_WHEN != 0;

@@ -42,11 +42,15 @@ mod tests {
     /// Raise it only with a `--bench`/callgrind reading that says the field
     /// has to be inline. Raised 1,536 -> 1,600 at PERF `(-280)`: the two
     /// hot-written scratch fields (64 bytes) left the CoW group, sealed
-    /// -0.59 % / cube -0.60 % / fixed -0.89 % Ir; the state is 1,584.
+    /// -0.59 % / cube -0.60 % / fixed -0.89 % Ir. Raised 1,600 -> 1,616 at
+    /// PERF `(-306)`: `Battlefield`'s write counter and the packed board fold
+    /// it stamps (16 bytes, inline because the memo has to travel with the
+    /// zone through a clone), fixed -0.208 / cube -0.240 / sealed -0.383 %
+    /// Ir *with* the growth already in the reading.
     #[test]
     fn game_state_stays_small() {
         let n = std::mem::size_of::<crate::game::GameState>();
-        assert!(n <= 1_600, "GameState grew to {n} bytes (cap 1,600) — see PERF (-144), (-280)");
+        assert!(n <= 1_616, "GameState grew to {n} bytes (cap 1,616) — see PERF (-144), (-280)");
     }
 
     #[test]

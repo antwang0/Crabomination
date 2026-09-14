@@ -1897,6 +1897,18 @@ fn main() {
             if sweeps == 0 { 0.0 } else { 100.0 * repeats as f64 / sweeps as f64 },
         );
     }
+    // PERF (-306): the packed board fold's hit rate, keyed on the zone's own
+    // write counter. Needs `--features trig-census`; zero without it.
+    #[cfg(feature = "trig-census")]
+    {
+        let (asks, hits) = crabomination::game::stack::sba_census::fold_snapshot();
+        if asks > 0 {
+            println!(
+                "  sba_fold   {hits}/{asks} hits ({:.2} %)",
+                100.0 * hits as f64 / asks as f64,
+            );
+        }
+    }
     // The gather memo's price, ahead of anyone building it — see
     // `game::gather_census`. Needs `--features trig-census` and
     // `CRAB_GATHER_CENSUS=1`.

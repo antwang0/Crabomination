@@ -1302,7 +1302,7 @@ const fn hint_slot(id: crate::card::CardId) -> usize {
     (id.0 as usize) & (FIND_HINTS - 1)
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Battlefield {
     cards: CowBox<Vec<CardInstance>>,
     /// Two-bit lanes; see the `LANE_*` constants.
@@ -1325,6 +1325,35 @@ pub struct Battlefield {
     /// Which indices satisfy [`card_has_any_grant_bits`], on the same
     /// contract under [`LANE_GRANT`].
     grant_members: std::sync::atomic::AtomicU64,
+    /// How many times anything took `&mut` at this zone — the per-object twin
+    /// of [`BATTLEFIELD_REACHES`], bumped at the same six chokepoints.
+    ///
+    /// The lanes above are keyed on *definitions* and so survive an element
+    /// write; a memo whose answer reads instance fields (tapped, damage,
+    /// counters, `attached_to`) cannot. This counter is what such a memo
+    /// stamps itself with: equal stamp means no `&mut` has reached these cards
+    /// since, so nothing the memo read can have moved. Starts at 1 so that 0
+    /// is "never stamped".
+    ///
+    /// **Per-object, not the global census counter, and that is the whole
+    /// point**: the bot clones a state, mutates the clone and drops it, and
+    /// the parent's board is untouched throughout. A global counter counts the
+    /// clone's write against the parent (which is what made `sba_census`' 18 %
+    /// a floor rather than a ceiling); this one does not.
+    ///
+    /// Plain `u32`: every writer holds `&mut self`, and the readers that
+    /// compare against it hold `&self` on the same thread. **32 bits because
+    /// `GameState`'s size guard is 16 bytes, not 24** — a false hit needs the
+    /// counter to come back to the *same* value, i.e. exactly 2^32 `&mut`
+    /// reaches at this one zone between a store and the next read, where a
+    /// whole game's battlefield takes on the order of 10^6 and a probe clone
+    /// a handful.
+    writes: u32,
+    /// The `writes` value `sba_fold` was computed at; 0 means "not computed"
+    /// (the counter starts at 1).
+    sba_stamp: std::sync::atomic::AtomicU32,
+    /// [`sba_fold`](Self::sba_fold)'s packed answer.
+    sba_fold: std::sync::atomic::AtomicU64,
 }
 
 impl Battlefield {
@@ -1648,8 +1677,42 @@ impl Battlefield {
     /// [`DerefMut`], which clears.
     #[inline]
     fn cards_unchecked_mut(&mut self) -> &mut Vec<CardInstance> {
-        note_battlefield_reach();
+        self.note_write();
         &mut self.cards
+    }
+
+    /// One `&mut` reach at this zone: the census tick and the per-object
+    /// [`writes`](Self::writes) bump, in the six places that hand out `&mut`
+    /// at the cards. Every instance-keyed memo on this zone is stamped with
+    /// the counter this advances.
+    #[inline]
+    fn note_write(&mut self) {
+        note_battlefield_reach();
+        self.writes = self.writes.wrapping_add(1);
+    }
+
+    /// A whole-board fold over *instance* fields, memoized on the zone.
+    ///
+    /// `Some(packed)` is the answer the last fold stored, and it is this
+    /// board's answer because no `&mut` has reached the cards since — the
+    /// contract [`writes`](Self::writes) documents. `None` means "fold, then
+    /// hand the result to [`store_sba_fold`](Self::store_sba_fold)".
+    ///
+    /// One consumer (`GameState::sba_board_scan`), named like the zone's other
+    /// lanes. The packing is the caller's business; this only holds a word.
+    #[inline]
+    pub fn sba_fold(&self) -> Option<u64> {
+        (self.sba_stamp.load(Ordering::Relaxed) == self.writes)
+            .then(|| self.sba_fold.load(Ordering::Relaxed))
+    }
+
+    /// Record what a fold found, valid until the next `&mut` at the cards.
+    /// The value goes down before the stamp: a reader that sees the stamp then
+    /// sees a value at least as new as it.
+    #[inline]
+    pub fn store_sba_fold(&self, packed: u64) {
+        self.sba_fold.store(packed, Ordering::Relaxed);
+        self.sba_stamp.store(self.writes, Ordering::Relaxed);
     }
 
     /// The miss path, out of line so the hit path stays a word load at each of
@@ -1979,7 +2042,7 @@ impl Battlefield {
     /// predicate ([`LANE_PREDICATES`]), and the two member-list lanes clear,
     /// their indices being what they hold (PERF `(-212)`, `(-213)`).
     pub fn push(&mut self, card: CardInstance) {
-        note_battlefield_reach();
+        self.note_write();
         self.lanes_after_push(&card);
         self.cards.push(card);
     }
@@ -1991,7 +2054,7 @@ impl Battlefield {
     /// removal route on the death path goes through here or
     /// [`take_by_id`](Self::take_by_id).
     pub fn remove(&mut self, index: usize) -> CardInstance {
-        note_battlefield_reach();
+        self.note_write();
         let card = self.cards.remove(index);
         self.lanes_after_removal(Some((index, &card)));
         card
@@ -2008,14 +2071,14 @@ impl Battlefield {
     /// see go, so every `PRESENT` lane and member list drops and every
     /// `ABSENT` lane stays.
     pub fn retain(&mut self, f: impl FnMut(&CardInstance) -> bool) {
-        note_battlefield_reach();
+        self.note_write();
         self.lanes_after_removal(None);
         self.cards.retain(f);
     }
 
     /// `Vec::pop`, shadowed, on the removal contract.
     pub fn pop(&mut self) -> Option<CardInstance> {
-        note_battlefield_reach();
+        self.note_write();
         let card = self.cards.pop();
         self.lanes_after_removal(card.as_ref().map(|c| (self.cards.len(), c)));
         card
@@ -2155,6 +2218,13 @@ impl Clone for Battlefield {
             grant_members: std::sync::atomic::AtomicU64::new(
                 self.grant_members.load(Ordering::Relaxed),
             ),
+            // The clone's cards are this zone's cards until something writes
+            // to one of them, and a write bumps the *clone's* counter — so a
+            // memo stamped before the clone describes the clone too, and
+            // carrying both is what makes a probe start warm.
+            writes: self.writes,
+            sba_stamp: std::sync::atomic::AtomicU32::new(self.sba_stamp.load(Ordering::Relaxed)),
+            sba_fold: std::sync::atomic::AtomicU64::new(self.sba_fold.load(Ordering::Relaxed)),
         }
     }
 }
@@ -2168,9 +2238,15 @@ impl Deref for Battlefield {
 
 impl DerefMut for Battlefield {
     fn deref_mut(&mut self) -> &mut Vec<CardInstance> {
-        note_battlefield_reach();
+        self.note_write();
         self.type_gates.store(0, Ordering::Relaxed);
         &mut self.cards
+    }
+}
+
+impl Default for Battlefield {
+    fn default() -> Self {
+        Self::from(Vec::new())
     }
 }
 
@@ -2190,6 +2266,9 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
             trig_members: std::sync::atomic::AtomicU64::new(0),
             dispatch_members: std::sync::atomic::AtomicU64::new(0),
             grant_members: std::sync::atomic::AtomicU64::new(0),
+            writes: 1,
+            sba_stamp: std::sync::atomic::AtomicU32::new(0),
+            sba_fold: std::sync::atomic::AtomicU64::new(0),
         }
     }
 }
