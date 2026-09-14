@@ -6966,6 +6966,43 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-309)` REFUTED (twice) — the id-compare family the line profile makes look big is a SHORT-SCAN family, and a memo in front of it loses
+
+The whole-program line profile's largest *family* after the allocator is
+`crabomination_base/src/card.rs:13` (the derived `CardId` equality) plus
+`core/src/iter/macros.rs:349` (`Iterator::find`'s inner loop): **~30 M / 1.8 %
+of `cube`** across some twenty call sites, the biggest of them
+`computed_permanent_hinted`'s `perms` scan (7.0 M / 0.48 %) and
+`declare_blockers`' `cp_of` / `kws_of` closures (4.5 M / 0.27 %). `(-38)` had
+already shown that a hint beats a scan at `Battlefield::find_by_id`, and
+`(-304)` re-took the same shape for **-0.30 %**, so the family reads as the
+obvious next lane. **Two independent devices were built against it and both
+lose.**
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                                              fixed      cube     sealed
+  (a) move-to-front on `perms` (swap 0, i)   +0.145 %  +0.146 %  +0.118 %
+  (b) four direct-mapped hint slots in
+      `declare_blockers`' subset lookup      +0.043 %  +0.083 %  +0.042 %
+```
+
+**The two disagree about the device and agree about the cause: these scans are
+already short.** `(a)` pays one 16-byte swap per hit and buys nothing, which
+means the entry it finds is usually at or near index 0 already — a freeze
+scope's `perms` holds the two or three permanents the scope asked about, and
+it is scanned in the order they were asked. `(b)` pays an index, a bounds
+check and a verify per ask against a subset of two to eight entries, and the
+scan it replaces costs about the same. ⚠ **`(-38)`'s break-even is a
+~23-entry zone; it does not transfer to a two-to-eight-entry local.** The rule
+that falls out is the one the line profile cannot express: **a compare-loop
+line is priced by its trip count, not by its total**, and 1.8 % spread over
+twenty sites of four compares each is not a lane — it is the program.
+
+Both reverted. **The family is closed**: do not re-open `card.rs:13` /
+`iter/macros.rs:349` from the line table without a *trip-count* reading
+(`cg_calls.py`'s Ir/call on the enclosing function) that says the scan is long.
+
 ### `(-308)` Eight saturating adds that add nothing, in front of a branch that says so
 
 `compute_permanent_pass` is the layer pass, 258,722 calls on `cube`, and the
