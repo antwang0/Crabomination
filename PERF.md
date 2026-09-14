@@ -3000,6 +3000,18 @@ perf    **`(-304)`: `compute_permanents`' hinted lookup and the gates it already
         folding the frozen and unfrozen arms into one body **-0.308 / -0.306 / -0.269**. ⚠ **A batch path
         that looks a card up by id per element is the shape to grep for** — that half is 5x the other.
 
+perf    **`(-305)`: a `filter_map` erases the size hint, and the collect behind it grows from zero —
+        -0.148 / -0.619 / -0.294 %**, bigger on `cube` than `(-304)` itself, for five lines.
+        `compute_permanents`' `ids.iter().filter_map(..).map(..).collect()` reports `(0, Some(n))`, so
+        `SpecFromIterNested` grows the `Vec` from zero — four reallocations for a five-permanent answer,
+        20,484 times a `cube` run. `ids.len()` is a tight upper bound the caller already holds.
+        ⚠ **The shape transfers, the site does not**: a `collect()` with any filtering adapter over a
+        known-length source is a grow loop. `SpecFromIterNested` is **57.6 M self / 3.4 % of `cube`**, the
+        #3 self row; its other hot callers are `check_state_based_actions_into` (16.0 M inclusive),
+        `bot::pick_attacks_inner` (14.0 M), `dispatch_triggers_for_events_slow` (10.6 M) and
+        `declare_attackers_banded` (6.4 M), none of them taken. And `with_capacity` allocates where an
+        all-rejecting `collect()` would not — check the hit rate before copying it.
+
 refut   **`(-304)`'s other half: routing `compute_permanents` through the freeze scope's `perms` memo is
         +0.230 / +0.383 / +0.226 % AND ITS HIT RATE IS ZERO.** The candidates head had this as the second
         of two composing devices ("it calls `apply_layers_one_gated` directly, so the two memoize nothing
@@ -6939,6 +6951,44 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-305)` A `filter_map` erases the size hint, and the collect behind it grows from zero
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                              fixed            cube          sealed
+  (-304)                  628,877,851   1,677,110,734   1,749,569,255
+  (-305)                  627,949,608   1,666,729,435   1,744,428,688
+                             -0.148 %        -0.619 %        -0.294 %
+```
+
+Five lines, and bigger on `cube` than `(-304)` was. `compute_permanents`
+ends in
+
+```rust
+ids.iter().filter_map(|id| …find_by_id(*id)).map(…).collect()
+```
+
+and **`filter_map` reports `(0, Some(n))`**, so `SpecFromIterNested` takes the
+lower bound and grows the `Vec` from zero — four reallocations and four
+`memcpy`s for a five-permanent answer, 20,484 times a `cube` run. `ids.len()`
+is a tight upper bound the caller already holds, so `Vec::with_capacity` plus
+a `for` loop allocates once and never grows.
+
+**This is the transferable shape, not the site**: a `collect()` whose iterator
+carries *any* filtering adapter over a known-length source is a grow loop
+wearing an allocation-free spelling. `SpecFromIterNested::from_iter` is
+348,054 calls / **57.6 M self / 3.4 % of `cube`** at the `(-304)` tip — the
+#3 self row — and its hottest callers by inclusive Ir are
+`compute_permanents` (70.6 M), `check_state_based_actions_into` (16.0 M),
+`bot::pick_attacks_inner` (14.0 M), `dispatch_triggers_for_events_slow`
+(10.6 M) and `declare_attackers_banded` (6.4 M). Only the first is taken.
+
+⚠ **`with_capacity` is not free** — it allocates even when everything
+filters out, where `collect()` of an empty iterator does not. It wins here
+because `compute_permanents` early-returns on an empty `ids` and its callers
+pass ids that are on the battlefield. A site whose filter usually rejects
+*everything* is the opposite trade; check the hit rate before copying this.
 
 ### `(-304)` `compute_permanents`' hinted lookup and the gates it already had — and the `perms` routing beside it is REFUTED
 

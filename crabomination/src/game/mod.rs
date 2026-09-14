@@ -9875,11 +9875,18 @@ impl GameState {
         }
         // `find_by_id` (hint-cached) rather than a linear scan of the
         // battlefield per id — the bigger half of `(-304)`.
+        // `with_capacity` + push, not `collect()`: the `filter_map` (an id may
+        // name a permanent that has left) erases the exact size hint, so
+        // `SpecFromIterNested` grows the Vec from zero — and `ids.len()` is a
+        // tight upper bound the caller already knows.
         let pass = |fx: &[ContinuousEffect], gates| {
-            ids.iter()
-                .filter_map(|id| self.battlefield.find_by_id(*id))
-                .map(|c| crate::game::layers::apply_layers_one_gated(c, fx, gates))
-                .collect()
+            let mut out = Vec::with_capacity(ids.len());
+            for id in ids {
+                if let Some(c) = self.battlefield.find_by_id(*id) {
+                    out.push(crate::game::layers::apply_layers_one_gated(c, fx, gates));
+                }
+            }
+            out
         };
         // One CR 613.8 gate walk for the whole list, as `apply_layers` does.
         // Inside a scope it is not a walk at all: the memo stores the gates
