@@ -3041,6 +3041,18 @@ fix     **Rule 5d — the census and the slot walker are one answer, and twenty-
         603.7d). **Cost-free: +0.000 / +0.000 / -0.000 %** on the three pools. ENGINE_BACKLOG rule 5d; test
         `target_walkers::every_wrapper_the_census_recurses_into_surfaces_its_slot_filter`.
 
+audit   **`audit_dropped_may` 309 -> 258, and the 51 that went were all one CR rule.** The largest bucket
+        was **56 "you may search your library"**, and CR 701.19c makes every one of them a false positive:
+        "a player isn't required to find" in a **hidden** zone, and every `Effect::Search` surfaces a
+        `Decision::SearchLibrary` whose answer is an `Option` (the engine's own resume comment already
+        cites the rule — "a searched library is shuffled whether or not anything was found, declines
+        included"). So "you may search your library" and "search your library" resolve identically and the
+        dropped "may" changes nothing. ⚠ **The exemption is the hidden zone, not the word "search"** — the
+        four "library **and/or graveyard**" cards keep their finding, because a public zone must be found
+        in if able — **and it is conditioned on the definition actually carrying a search**, which is what
+        kept the one true positive: Sift Through Sands has no search at all (its whole second half is
+        missing, already filed in CARD_BACKLOG as blocked on `Predicate::CastSpellNamedThisTurn`).
+
 sweep   **fresh seeds 1296..1299 (claimed in NEXT before the run): 12 cells / 59,200 games / 0 failures**,
         `cap 0 / board 0 / stuck 0 / draw 0` — a clean block, no re-run needed. Three pools x four seeds x
         400 games on a `target-audit/overflow` build with `-C debug-assertions=yes` and
@@ -3048,9 +3060,11 @@ sweep   **fresh seeds 1296..1299 (claimed in NEXT before the run): 12 cells / 59
         sites off the bin/test paths, 59 guarded, 11 lock-poison), `audit_stash_in_loop` **0 unexplained**,
         `audit_seat_from_selector` **0 open**, `audit_target_walkers --check` **0**.
 
-gates   ⚠⚠ **THIS BOX IS 4 CORES** and reads 678 games/s on `--bench` against the previous session's 418 —
-        no absolute in this file was taken on it, so only the counters are comparable. They are
-        byte-identical: **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, `determinism ok`.
+gates   ⚠⚠ **THIS BOX IS 4 CORES** and reads **635-678 games/s across two runs of the same binary** against
+        the previous session's 418 — no absolute in this file was taken on it, and a single `games_per_s`
+        does not even reproduce against itself, so only the counters are comparable. They are
+        byte-identical: **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, `determinism ok`
+        and `thread_determinism ok (3 vs 1 threads identical)`.
         Suite **19,548 / 0 / 5** (`CRAB_ANSWER_LOG=strict`; 19,547 plus the new walker test), clippy **0**
         (`--workspace --all-targets --exclude crabomination_client`), golden traces unmoved. The
         `debug-assertions = false` gate rides along with every `profiling-fast` A/B build.

@@ -11,6 +11,11 @@ mandatory once it triggers and the "may" was the only out.
     python3 scripts/audit_dropped_may.py            # ranked list
     python3 scripts/audit_dropped_may.py --count    # just the totals
 
+⚠ A library search's "may" is NOT a finding — CR 701.19c lets a player decline
+to find in a *hidden* zone, and every `Effect::Search` surfaces an `Option`
+answer, so the printed choice is already there. A graveyard or exile search is
+a public zone and keeps its finding. See `is_hidden_zone_search`.
+
 Reads `scripts/.scryfall_cache.json` (offline; `scripts/fetch_oracle.py`
 fills it). Cards whose name is not in the cache are **skipped and counted
 separately** — the catalog carries thousands of synthesized `(b###)` names
@@ -69,6 +74,39 @@ ORACLE_SKIP = (
 # resolution choice the effect tree owns. Flare of Malice and Fireblast are
 # implemented, not flattened.
 ORACLE_SKIP_CONTAINS = ("rather than pay",)
+
+# CR 701.19c — **a library search's printed "may" is already modeled, by the
+# rules rather than by a primitive.** "If a player is searching a hidden zone
+# for cards with stated qualities… that player isn't required to find some or
+# all of those cards." Every `Effect::Search` surfaces
+# `Decision::SearchLibrary`, whose answer is an `Option` and whose headless
+# default is `Search(None)`, so declining is available on a *mandatory* search
+# too — which means "you may search your library" and "search your library"
+# resolve identically and the dropped "may" changes nothing.
+#
+# It was 56 of 309 findings, the single largest bucket, and every one a false
+# positive. ⚠ **The exemption is the hidden zone, not the word "search"**: a
+# graveyard or exile search is a public zone, where a player MUST find if able,
+# so "you may search your library **and/or graveyard**" keeps its finding.
+SEARCH_MAY = re.compile(r"^you may search (your|target player's|a player's) librar")
+PUBLIC_ZONE = ("graveyard", "exile", "battlefield")
+
+
+# The exemption is only sound if the definition actually *searches* — a card
+# that dropped the search entirely has a different defect (a missing effect,
+# which `audit_incomplete` owns) and must not be hidden here.
+SEARCH_PRIMITIVE = ("Search", "search_")
+
+
+def is_hidden_zone_search(span: str, body: str) -> bool:
+    """A "you may search" that reaches only a hidden zone (CR 701.19c), on a
+    definition that does carry a search."""
+    if not SEARCH_MAY.match(span):
+        return False
+    head = span.split(" for ", 1)[0]
+    if any(z in head for z in PUBLIC_ZONE):
+        return False
+    return any(tok in body for tok in SEARCH_PRIMITIVE)
 
 
 def slug(name):
@@ -141,6 +179,7 @@ def main():
                     s for s in re.findall(r"you may[^.;\n]*", oracle)
                     if not any(s.startswith(p) for p in ORACLE_SKIP)
                     and not any(p in s for p in ORACLE_SKIP_CONTAINS)
+                    and not is_hidden_zone_search(s, body)
                 ]
                 if not spans:
                     continue
