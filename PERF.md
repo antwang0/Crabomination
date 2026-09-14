@@ -3050,6 +3050,20 @@ sweep   **fresh seeds 1308..1319, TWO blocks: 36 cells / 177,600 games / 0 failu
         `audit_target_walkers --check` **0**, `audit_doc_drift` **0 body-wrong / 0 doc rot / 0 stale
         notes**, `audit_variant_coverage` 0 dead capability (1 dead primitive, unchanged).
 
+refut   **`(-312)`: `perms` past its scope is +1.112 / +1.183 / +1.068 % — the lane in front of
+        `compute_permanent_pass` is CLOSED.** `(-311)` left it as the next move and the key is sound
+        (`apply_layers_one_gated` is a free function over `&CardInstance` and `&[ContinuousEffect]`, so
+        a `GatherKey` witnesses a `ComputedPermanent` too). **The hit is what fails**:
+        `compute_permanent_pass` — 61.7 M / 3.78 % of `cube` over 258,722 passes — moved **-1.72 M,
+        2.8 %**, because the key moves on every board write and the bot writes between every pair of
+        asks. `computed_permanent_hinted`'s 42 % in-scope hit rate is most of what there is, not a floor
+        a longer lifetime raises. ⚠⚠ **And `end_of_scope`'s drain WAS `cp_pool`'s feed** — the program's
+        largest allocation site by source line (`(-163)`) — which a *carried* entry cannot replace,
+        because it is shared between a parent and its probe and fails the pool's uniqueness check:
+        `Arc::drop_slow` **+7.91 M**, the allocator family **+10.7 M**, `SmallVec::extend` +2.65 M for
+        the per-clone copy. **A memo whose entries a pool recycles is priced by the pool it starves.**
+        Three memos in front of that row now, all refuted: `(-304)`, `(-309)`, `(-312)`.
+
 gates   ⚠ **FOURTH BOX, 4 cores, rustc 1.95.0.** `--bench` **195,806 decisions / 27.49 turns / 611.9 per
         game / 0 stalls**, byte-identical to the committed invariant, `determinism ok` and
         `thread_determinism ok (3 vs 1)`; 444 and 479 games/s on two runs of two binaries, which says
@@ -7142,6 +7156,59 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-312)` REFUTED — `perms` past its scope is **+1.1 % on all three pools**, and the row it aims at moves 2.8 %
+
+`(-311)` left this as the next move and it is wrong. The key is not the
+problem — `apply_layers_one_gated` is a free function over `&CardInstance` and
+`&[ContinuousEffect]`, so `(GatherKey)` is an exact witness for a
+`ComputedPermanent` too, and the implementation is small: `end_of_scope` stops
+draining `perms`, `revalidate_perms(key)` recycles it when the key moves, a
+`perms_ok` flag covers the window where the scan runs ahead of the memo read,
+and `clone_cross_only` carries `perms` beside `cross`.
+
+```text
+profiling-fast --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                          (-311)            (-312)         delta
+  fixed              618,446,650       625,325,837      +1.112 %
+  cube             1,632,318,919     1,651,627,189      +1.183 %
+  sealed           1,723,820,812     1,742,232,261      +1.068 %
+```
+
+**The decisive number is not the cost, it is the hit.** `compute_permanent_pass`
+— the row this exists to cut, 61.7 M / 3.78 % of `cube` over 258,722 passes —
+moved **-1.72 M, 2.8 %**. Carrying `perms` across scopes and across clones
+converts almost nothing, because **the key moves on every board write and the
+bot writes between every pair of asks**: `computed_permanent_hinted`'s 42 %
+in-scope hit rate is not a floor a longer lifetime raises, it is most of what
+there is.
+
+What it cost instead, and the shape is `(-311)`'s own lesson one level down:
+
+```text
+  cube, against the (-311) tip
+    Arc::drop_slow                +7.91 M   <- perms entries dropped, not recycled
+    _int_malloc / _int_free       +6.72 M
+    malloc / free                 +4.03 M
+    SmallVec::extend              +2.65 M   <- the perms clone per GameState::clone
+    __memcpy                      +2.30 M
+    GameState::clone              +1.27 M
+```
+
+⚠⚠ **`end_of_scope`'s drain WAS the `cp_pool` feed, and `computed_permanent_
+hinted` is the program's largest allocation site by source line (`(-163)`).**
+Taking the drain away to lengthen the memo's life starves the pool, and the
+eviction cannot replace it the way `(-311)`'s could: a carried entry is
+*shared* between a parent and its probe, so `Arc::strong_count(&cp) == 1`
+fails and the box is dropped rather than parked. **A memo whose entries a
+pool recycles is priced by the pool it starves, not only by the work it
+skips.**
+
+**The lane is CLOSED.** Three memos have now been built in front of
+`compute_permanent_pass` and all three lose: `(-304)` (the batch path shares
+`perms`, hit rate ZERO), `(-309)` (move-to-front on the scan, +0.146 %) and
+this one. What is left on that row is not a memo — it is the pass itself,
+238 Ir of self per permanent, which `(-308)` has already had one line out of.
 
 ### `(-311)` The state-level gather memo — **fixed -0.911 / cube -1.490 / sealed -0.517 %**, and the blocker the candidates head named does not exist
 
@@ -11855,8 +11922,19 @@ recompute-and-compare audit could see it.
     compute_permanents::{closure} 118,724 passes, NO memo at all
 ```
 
-⚠ **THE SOUND KEY FOR A `ComputedPermanent` NOW EXISTS AND THE BLOCKER IS
-WHERE THE TEST GOES, WHICH IS THE FINDING.** `apply_layers_one_gated` is a
+❌ **THE `ComputedPermanent` MEMO LANE IS CLOSED — `(-312)` BUILT IT AND IT IS
++1.1 % ON ALL THREE POOLS.** The key was never the problem; the hit was.
+`compute_permanent_pass` moved **2.8 %** for it, because the key moves on every
+board write and the bot writes between every pair of asks — the 42 % in-scope
+hit rate is most of what there is, not a floor a longer lifetime raises. And
+`end_of_scope`'s drain **was** `cp_pool`'s feed, which a carried (and therefore
+shared) entry cannot replace. Three memos in front of that row now, all
+refuted: `(-304)`, `(-309)`, `(-312)`. Read `(-312)` before proposing a fourth.
+The paragraph below is the analysis that led there and is kept for the key,
+which is sound and may serve something else.
+
+⚠ **THE SOUND KEY FOR A `ComputedPermanent` EXISTS AND THE BLOCKER WAS THOUGHT
+TO BE WHERE THE TEST GOES.** `apply_layers_one_gated` is a
 free function over `&CardInstance` and `&[ContinuousEffect]` — its whole input
 — so **(the effect list's `Arc` identity, `battlefield.writes()`)** is an exact
 witness, and `LayerFreezeState::perms` could outlive its scope and its clone on
