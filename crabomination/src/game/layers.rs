@@ -1262,18 +1262,39 @@ fn compute_permanent_pass(
     // Saturating, for `CardInstance::pump`'s reason: Exponential Growth can
     // put a pump bonus at `i32::MAX` in one resolution, and this is the sum
     // every consumer reads. An overflow here is a panic under
-    // `overflow-checks` and a large negative power in release.
-    power = power
-        .saturating_add(mod_power)
-        .saturating_add(card.power_bonus)
-        .saturating_add(card.perm_power_bonus);
-    toughness = toughness
-        .saturating_add(mod_toughness)
-        .saturating_add(card.toughness_bonus)
-        .saturating_add(card.perm_toughness_bonus);
-    // Counters applied after 7c (CR 613.7f).
-    power = power.saturating_add(counter_power_delta);
-    toughness = toughness.saturating_add(counter_toughness_delta);
+    // `overflow-checks` and a large negative power in release. The order is
+    // load-bearing and the saturation is per step, so the eight adds cannot
+    // be folded into one `i64` sum: `MAX + 1 - 1` is `MAX - 1` here and `MAX`
+    // there, and the sweep's saturated boards reach exactly that.
+    //
+    // What they *can* be is skipped. `x.saturating_add(0)` is `x`, and a
+    // permanent with no layer-7 modification, no pump, no permanent bonus and
+    // no P/T counter has all eight terms zero — most of a board, every
+    // recompute. One OR chain and one branch in front of eight `add`/`cmov`
+    // pairs: PERF `(-308)`, and the eight were 9.1 M / 0.60 % of `sealed`,
+    // the largest single line in this function by three times.
+    if (mod_power
+        | mod_toughness
+        | card.power_bonus
+        | card.toughness_bonus
+        | card.perm_power_bonus
+        | card.perm_toughness_bonus
+        | counter_power_delta
+        | counter_toughness_delta)
+        != 0
+    {
+        power = power
+            .saturating_add(mod_power)
+            .saturating_add(card.power_bonus)
+            .saturating_add(card.perm_power_bonus);
+        toughness = toughness
+            .saturating_add(mod_toughness)
+            .saturating_add(card.toughness_bonus)
+            .saturating_add(card.perm_toughness_bonus);
+        // Counters applied after 7c (CR 613.7f).
+        power = power.saturating_add(counter_power_delta);
+        toughness = toughness.saturating_add(counter_toughness_delta);
+    }
     if switched {
         std::mem::swap(&mut power, &mut toughness);
     }

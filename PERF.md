@@ -6966,6 +6966,44 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-308)` Eight saturating adds that add nothing, in front of a branch that says so
+
+`compute_permanent_pass` is the layer pass, 258,722 calls on `cube`, and the
+whole-program line profile says its largest single line by **three times** is
+`num/int_macros.rs:1895` — `i32::saturating_add`, **9.08 M / 0.60 % of
+`sealed`**. Eight of them run per computed permanent: layer-7's `mod_power` /
+`mod_toughness`, the instance `power_bonus` / `toughness_bonus` pair, the
+permanent pair, and the CR 613.7f counter deltas. Each is an `add` plus a
+sign-dependent `cmov`, and on most permanents every one of the eight terms is
+**zero**.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                              fixed            cube          sealed
+  (-307)+may-draw         627,497,407   1,664,086,057   1,738,618,906
+  (-308)                  625,315,822   1,658,415,998   1,734,360,419
+                             -0.348 %        -0.341 %        -0.245 %
+  compute_permanent_pass   24.27->22.10 M  67.53->61.73 M  54.34->50.09 M
+```
+
+**Exactly behaviour-preserving, and it has to be.** `x.saturating_add(0)` is
+`x`, so a single OR of the eight terms against zero decides whether any of
+them can change anything — one `or` chain and one branch in front of eight
+`add`/`cmov` pairs. ⚠ **The obvious alternative is unsound here**: folding the
+eight into one `i64` sum and clamping once is not the same function — the
+saturation is *per step* and the order is load-bearing, so `MAX + 1 - 1` is
+`MAX - 1` under the chain and `MAX` under the fold, and the sweep's saturated
+boards (Exponential Growth, the Beacon cells) reach exactly that. The comment
+above the chain says why the saturation is there; it now also says why it
+cannot be folded.
+
+⚠ **The transferable shape is "a hot arithmetic chain whose operands are
+usually the identity"** — the same reading that found it (`cg_lines.py` over a
+`profiling-lines` dump, `--in <function>`) will find the next one, and the
+guard is only a win where the zero rate is high enough to pay for the branch.
+It is here: every land, every vanilla creature with no anthem on it, every
+recompute.
+
 ### `(-307)` REFUTED as a lead — `(-68)`'s fused dealer walk is not where the combat-damage dispatch's 1.97 % lives
 
 `fire_combat_damage_triggers` is **32.8 M / 1.97 % of `cube` self** (23.3 M /
