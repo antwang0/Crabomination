@@ -55,6 +55,89 @@ OPTIONAL = (
     "SacrificeOrPayLife", "min_targets: 0",
 )
 
+# Optionality the ENGINE spells in the RESOLVER rather than in the definition.
+#
+# The list above reads the definition's `{:?}` shape, so an effect whose
+# printed "may" is modelled one level down — by the arm that resolves it —
+# reads as a dropped one. `Effect::PutFromHandOntoBattlefield` is the whole of
+# it at the `(-312)` tip (24 of 223 findings): it has no `up_to` field and no
+# `May…` wrapper, and its arm opens with `choose_up_to_cards(.., 0, ..)` under
+# a comment that says why ("Always optional (\"you may\"): min 0"). The
+# decision exists with a minimum of zero, so declining is available and the
+# word is modelled.
+#
+# ⚠ **The exemption is conditioned on the ENGINE and re-checked on every run**
+# — the same discipline as the CR 701.19c search carve-out below, which is
+# conditioned on the definition actually carrying a search. If the arm stops
+# calling its helper, `resolver_optional()` refuses the exemption and the
+# findings come back rather than staying hidden.
+ENGINE_EFFECTS = os.path.join(
+    ROOT, "crabomination", "src", "game", "effects", "mod.rs"
+)
+RESOLVER_OPTIONAL = {
+    # Effect variant: (the oracle phrase it covers, the helper that makes the
+    # arm optional)
+    "PutFromHandOntoBattlefield": ("you may put", "choose_up_to_cards"),
+}
+
+# ⚠ **`LookPickToHand` IS THE NEXT ONE AND IT IS NOT SAFE AT THIS GRANULARITY
+# — measured, not assumed (2026-09-14).** Its `take == 1` path builds a
+# `Decision::SearchLibrary`, whose answer is an `Option` with a `None`
+# headless default, so declining is available whatever `optional` says — the
+# same CR 701.19c argument as the search carve-out below, and it would clear
+# 11 findings. The `take > 1` path is the opposite: `min: if *optional { 0 }
+# else { take }` forces the picks, so those keep their finding.
+#
+# What stops it is the PHRASE, not the effect: "you may put" on those same
+# cards also matches the *rest* disposition rather than the pick — Bucolic
+# Ranch's "you may put it on the bottom of your library" and Break Out's "you
+# may put it onto the battlefield and it gains haste", both real choices the
+# pick's optionality says nothing about. A prefix match would hide them.
+# Taking this exemption needs the span matched to the pick ("from among them",
+# "from among the … cards") rather than to the effect variant.
+
+
+def resolver_optional():
+    """`{variant: phrase}` for each exemption the engine still earns.
+
+    Reads the arm out of `effects/mod.rs` by brace matching from
+    `Effect::<Variant>` and keeps the exemption only while the named helper is
+    in it. A variant whose arm cannot be found, or no longer calls the helper,
+    is dropped from the map with a note on stderr — the findings it was
+    hiding come back on the next line of output.
+    """
+    src = open(ENGINE_EFFECTS, encoding="utf-8").read()
+    out = {}
+    for variant, (phrase, helper) in RESOLVER_OPTIONAL.items():
+        m = re.search(r"Effect::%s\s*[{(]" % re.escape(variant), src)
+        if not m:
+            print(f"# exemption REFUSED: no `Effect::{variant}` arm", file=sys.stderr)
+            continue
+        i, depth = m.end() - 1, 0
+        opens, closes = ("{", "}") if src[i] == "{" else ("(", ")")
+        while i < len(src):
+            if src[i] == opens:
+                depth += 1
+            elif src[i] == closes:
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        # The arm body runs from the pattern's close to the next `Effect::`
+        # at the same level; a window is enough for a containment test and
+        # cannot reach the next variant's helper by accident at this size.
+        arm = src[i : i + 4000]
+        if helper not in arm:
+            print(
+                f"# exemption REFUSED: `Effect::{variant}`'s arm no longer calls "
+                f"`{helper}`",
+                file=sys.stderr,
+            )
+            continue
+        out[variant] = phrase
+    return out
+
+
 # "you may" phrasings that are not a resolution choice the effect tree owns.
 ORACLE_SKIP = (
     "you may cast",            # alternate-cost / from-exile permissions
@@ -156,7 +239,8 @@ def main():
         if isinstance(v, dict):
             lower.setdefault(k.split(" // ")[0].lower(), v)
 
-    hits, uncached, checked = [], 0, 0
+    resolver_exempt = resolver_optional()
+    hits, uncached, checked, exempted = [], 0, 0, 0
     for dirpath, _, files in os.walk(CATALOG):
         for f in files:
             if not f.endswith(".rs"):
@@ -185,6 +269,16 @@ def main():
                     continue
                 if any(tok in body for tok in OPTIONAL):
                     continue
+                # …and the optionality the resolver owns rather than the
+                # definition. Matched on the phrase as well as the variant so
+                # a card carrying one of these plus a *different* dropped
+                # "may" keeps its finding.
+                if any(
+                    f"Effect::{v}" in body and any(s.startswith(phrase) for s in spans)
+                    for v, phrase in resolver_exempt.items()
+                ):
+                    exempted += 1
+                    continue
                 hits.append((name, fn, os.path.relpath(path, ROOT), spans[0][:80]))
 
     hits.sort()
@@ -194,7 +288,8 @@ def main():
     print(
         f"# {len(hits)} definitions with a dropped 'you may', "
         f"{checked} checked against the oracle cache, {uncached} skipped as uncached "
-        f"(synthesized names have no oracle)"
+        f"(synthesized names have no oracle), {exempted} exempt because the "
+        f"RESOLVER carries the choice ({', '.join(sorted(resolver_exempt)) or 'none'})"
     )
 
 
