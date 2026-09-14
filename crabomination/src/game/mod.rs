@@ -9864,20 +9864,6 @@ impl GameState {
     /// view. Use it only where the consumers are all id lookups; a
     /// whole-board scan of the result would silently see a subset.
     pub(crate) fn compute_permanents(&self, ids: &[CardId]) -> Vec<ComputedPermanent> {
-        fn go(
-            bf: &[crate::card::CardInstance],
-            fx: &[ContinuousEffect],
-            ids: &[CardId],
-        ) -> Vec<ComputedPermanent> {
-            // One CR 613.8 gate walk for the whole list, as `apply_layers`
-            // does — the gates are a property of `fx`, and this used to pay
-            // that walk once per id.
-            let gates = crate::game::layers::SecondPass::of(fx);
-            ids.iter()
-                .filter_map(|id| bf.iter().find(|c| c.id == *id))
-                .map(|c| crate::game::layers::apply_layers_one_gated(c, fx, gates))
-                .collect()
-        }
         // `frozen_effects` *gathers* when this is its scope's first computed
         // question, so asking it for a list of no permanents pays a whole
         // gather for an empty answer. Both combat declarations reach here
@@ -9887,10 +9873,24 @@ impl GameState {
         if ids.is_empty() {
             return Vec::new();
         }
-        if let Some(fx) = self.frozen_effects() {
-            return go(&self.battlefield, &fx, ids);
+        // `find_by_id` (hint-cached) rather than a linear scan of the
+        // battlefield per id — the bigger half of `(-304)`.
+        let pass = |fx: &[ContinuousEffect], gates| {
+            ids.iter()
+                .filter_map(|id| self.battlefield.find_by_id(*id))
+                .map(|c| crate::game::layers::apply_layers_one_gated(c, fx, gates))
+                .collect()
+        };
+        // One CR 613.8 gate walk for the whole list, as `apply_layers` does.
+        // Inside a scope it is not a walk at all: the memo stores the gates
+        // beside the effect list precisely so a second reader needn't
+        // re-derive them, and this re-derived them once per call.
+        if let Some((fx, gates)) = self.frozen_effects_and_gates() {
+            return pass(&fx, gates);
         }
-        go(&self.battlefield, &self.gather_continuous_effects(), ids)
+        let fx = self.gather_continuous_effects();
+        let gates = crate::game::layers::SecondPass::of(&fx);
+        pass(&fx, gates)
     }
 
     /// Cheap over-approximation of "some battlefield permanent's *computed*
@@ -10746,6 +10746,33 @@ impl GameState {
             return None;
         }
         self.layer_freeze.lock().memo.as_ref().map(|(fx, _)| fx.clone())
+    }
+
+    /// [`frozen_effects`](Self::frozen_effects) with the scope's CR 613.8
+    /// gate set alongside the list. The memo stores the two together
+    /// precisely so a second reader needn't re-derive the gates by walking
+    /// the list — which is what `compute_permanents` did on every call.
+    fn frozen_effects_and_gates(
+        &self,
+    ) -> Option<(
+        std::sync::Arc<Vec<ContinuousEffect>>,
+        crate::game::layers::SecondPass,
+    )> {
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
+            || self.layer_freeze.depth() == 0
+        {
+            return None;
+        }
+        if let Some((fx, gates)) = &self.layer_freeze.lock().memo {
+            return Some((fx.clone(), *gates));
+        }
+        // First computed read in this scope: gather outside the lock (the
+        // gather itself re-enters `frozen_effects` via guarded eval paths).
+        let fx = fx_pool::alloc_with(|buf| self.gather_continuous_effects_with(buf));
+        let gates = crate::game::layers::SecondPass::of(&fx);
+        let mut st = self.layer_freeze.lock();
+        st.memo = Some((fx.clone(), gates));
+        Some((fx, gates))
     }
 
     fn frozen_effects(&self) -> Option<std::sync::Arc<Vec<ContinuousEffect>>> {

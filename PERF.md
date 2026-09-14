@@ -6883,6 +6883,64 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-304)` `compute_permanents`' hinted lookup and the gates it already had — and the `perms` routing beside it is REFUTED
+
+The candidates head named two devices on the `compute_permanents` row and said
+they compose. **One of them is not a device at all**, and the two cheap things
+sitting underneath the one that is are worth more than the head sized either at.
+
+```text
+profiling-fast, --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                                    fixed            cube          sealed
+  base (474a0749)               631,216,628   1,682,773,757   1,754,869,975
+  (-304)                        628,875,506   1,677,109,321   1,749,572,915
+                                   -0.371 %        -0.337 %        -0.302 %
+  of which: gates off the memo       -0.063          -0.031          -0.033
+            hinted find + one body   -0.308          -0.306          -0.269
+```
+
+Two pieces, both small:
+
+* **The gate set was re-derived once per call.** `SecondPass::of(fx)` walks
+  the whole effect list to rebuild three bits, and inside a scope the memo
+  **already stores those bits beside the list** — that is what the `memo`
+  field's own doc comment says it is for. `frozen_effects_and_gates` hands
+  both out, the way `frozen_effects` hands out the list.
+* **The battlefield lookup was a linear scan per id.** `bf.iter().find(|c| c.id
+  == *id)` against `Battlefield::find_by_id`, which is hint-cached. This is
+  the bigger half by 5x, and it generalizes: a batch path that looks a card up
+  by id per element is the shape to grep for.
+
+Folding the frozen and unfrozen arms into one body (a closure over `&[ContinuousEffect]`
++ gates, so both take the hinted lookup and there is one monomorphized loop)
+is worth ~0.15 points beyond the two pieces measured separately — the split
+row above is the two-arm form.
+
+⚠ **THE `perms` ROUTING LOSES AND THE REASON IS THAT ITS HIT RATE IS ZERO.**
+The head's second device — "route `compute_permanents` through the freeze
+scope's `perms` memo; it calls `apply_layers_one_gated` directly, so the two
+memoize nothing for each other" — built and measured **+0.230 / +0.383 /
++0.226 %**, and the callee table says why:
+
+```text
+callees of compute_permanents, cube            base            with perms routing
+  layer passes (compute_permanent_pass)      36,258 ids          36,258 passes
+  cp_pool handles (LocalKey::with)                 --            36,258
+  ComputedPermanent::clone                         --            36,258
+  drop_in_place<ComputedPermanent>, program       252,510           281,647
+```
+
+**36,258 ids asked, 36,258 layer passes run: not one of them was already in
+`perms`.** The scope's per-card memo and this batch path are asked about
+*disjoint* sets — the batch runs at the top of its scope, before any
+single-card read has put anything there, and the cards it names are the
+declaration's attackers and band members rather than the ones a later
+requirement walk asks about. So the routing bought nothing and paid a
+`cp_pool` handle, a deep `ComputedPermanent` clone and a longer linear
+`perms` scan per id. Reverted. **A memo shared between two call sites is
+priced by the overlap of what they ask, and nobody had measured it** — the
+head sized this device off the *size* of the row it would serve.
+
 ### `(-303)` The gather census: **95-99.6 % of gathers return the answer the previous one did**, and half follow no `&mut` reach at all
 
 The candidates head's new #1 (`compute_permanents`, 7.25 % of `cube`
@@ -11170,13 +11228,18 @@ continuous-effect set and re-running the layer pass for the combatants.
 
 **Two devices, neither taken, and they compose.**
 
-* **Route `compute_permanents` through the freeze scope's `perms` memo.** It
-  calls `apply_layers_one_gated` directly, so inside a scope it recomputes
-  permanents `computed_permanent_hinted` may already hold — the two memoize
-  nothing for each other. Its 20,484 collects are the single biggest
-  contributor to the `SpecFromIterNested` row that is **#3 on cube at 3.71 %
-  self** — the 75.6 M edge is *inclusive*, i.e. the layer passes, which is
-  exactly what a memo hit removes.
+* ⚠⚠ **REFUTED, `(-304)`: routing `compute_permanents` through the freeze
+  scope's `perms` memo is +0.230 / +0.383 / +0.226 % and its hit rate is
+  ZERO** — 36,258 ids asked, 36,258 layer passes run, not one already in
+  `perms`. The batch path and the single-card path are asked about *disjoint*
+  sets. **A memo shared between two call sites is priced by the overlap of
+  what they ask**, and this block sized it off the size of the row instead.
+  What the row did have was two cheap things nobody had looked for: the gate
+  set re-derived per call when the memo already stored it, and a linear
+  battlefield scan per id where `find_by_id` is hint-cached — **-0.371 /
+  -0.337 / -0.302 % together**, the hinted lookup five times the larger.
+  The `SpecFromIterNested` row is still #3 on cube; `compute_permanents`'
+  20,484 collects are no longer under it.
 * ⚠ **NOT "open a freeze scope one level up" — THAT IS ALREADY DONE AND THE
   NEXT READER SHOULD NOT SPEND A BUILD RE-DOING IT.** `declare_attackers_banded`
   and `declare_blockers` each already wrap their compute in
