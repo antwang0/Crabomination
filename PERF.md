@@ -2987,6 +2987,79 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-14 (the write-counter session, second of the day) — a per-object zone epoch, eight adds that add nothing, a defect class with a gate, and the id-compare family closed
+
+```text
+perf    **`(-306)`: the zone's own write counter, and the SBA board fold behind it — -0.208 / -0.240 /
+        -0.382 % (fixed / cube / sealed).** `Battlefield`'s eight lanes are keyed on `definition_epoch`
+        and so survive an element write by construction, which is exactly why nothing over *instance*
+        fields could hang off them — and `sba_board_scan` reads five (flipped, controller, attached_to,
+        bestowed, counters). The zone already funnels every `&mut` through **six** places and all six
+        already call `note_battlefield_reach()` for `(-128)`'s census; a per-object `writes: u32` bumped
+        in the same call turns that census into a gate. `sba_board_walk` packs its answer into one word
+        (the mask low, four instance flags at 32..35, the legendary count above); the Ring emblem's two
+        player reads stay outside the memo. Scan self **11.6 -> 10.1 / 30.9 -> 26.3 / 34.2 -> 26.8 M**.
+        ⚠ **The per-object counter reads the SAME as the global one here — 10.57 / 10.70 / 18.87 % hits
+        against `sba_census`' `NO_REACH` 11.57 / 11.36 / 18.99 % — and that refutes why it was built
+        per-object.** A probe clone's sweeps are its own, on a board it has just mutated; the parent is
+        not re-asked without writing in between. **A clone-carried memo is priced by how often the PARENT
+        is re-asked, not by how often the clone writes.** `GameState` 1,600 -> 1,616 for the 16 bytes,
+        which is the reading that guard asks for.
+
+perf    **`(-308)`: eight saturating adds that add nothing — -0.348 / -0.341 / -0.245 %.** The
+        whole-program line profile's largest single line inside `compute_permanent_pass`, by three times,
+        is `i32::saturating_add` (9.08 M / 0.60 % of `sealed`): layer-7's mod pair, the instance bonus
+        pair, the permanent pair and the CR 613.7f counter deltas, eight `add`/`cmov` pairs per computed
+        permanent, and on most permanents every term is zero. One OR chain and one branch.
+        `compute_permanent_pass` self **24.3 -> 22.1 / 67.5 -> 61.7 / 54.3 -> 50.1 M**. ⚠ The obvious
+        alternative — one `i64` sum and one clamp — is **not the same function**: the saturation is per
+        step, so `MAX + 1 - 1` is `MAX - 1` under the chain and `MAX` under the fold, and the sweep's
+        saturated boards reach exactly that.
+
+perf    **`(-307)`: the combat dispatch's dealer off the hint-cached lookup — -0.054 / -0.008 / -0.041 %,
+        and the entry is the refutation.** `fire_combat_damage_triggers` is 1.97 % of `cube` self and its
+        visible shape is `(-68)`'s fused whole-board walk; the line profile says that walk is **3.6 %** of
+        the function. The other ~90 % is per-trigger work — the `by_kind` buckets, `slot()`'s `EventKind`
+        equality per (permanent, trigger), and the `Effect` / `SelectionRequirement` clones each push
+        makes. **A whole-board walk inside a hot function is not automatically that function's cost.**
+
+refut   **`(-309)`: the id-compare family is a SHORT-SCAN family, and both memos in front of it lose.**
+        `card.rs:13` + `iter/macros.rs:349` is ~30 M / 1.8 % of `cube` over twenty sites. Move-to-front on
+        `computed_permanent_hinted`'s `perms` read **+0.145 / +0.146 / +0.118 %**; four direct-mapped hint
+        slots in `declare_blockers`' subset lookup read **+0.043 / +0.083 / +0.042 %**. They disagree
+        about the device and agree about the cause: the scans are already short. ⚠ **`(-38)`'s break-even
+        is a ~23-entry zone and does not transfer to a two-to-eight-entry local.** The family is closed
+        unless a *trip-count* reading says otherwise.
+
+fix     **A printed "you may draw a card" is a choice — 26 cards, and a catalog gate that stops the
+        class.** `audit_dropped_may` named eighteen shipped cards modelling it as a bare `Effect::Draw`:
+        the controller can be forced to draw from an empty library and lose (CR 104.3c), and the bot loses
+        a decision it should own. **The new gate found eight MORE than the script did** —
+        `every_printed_you_may_draw_is_a_choice` joins the committed Scryfall cache against each shipped
+        definition's `{:?}` rendering (`wants_converge`'s single-oracle device) and named Curiosity, Keen
+        Sense, Ophidian Eye, Curious Obsession, Snake Umbra, Rogue's Gloves, Gravestorm and Iterative
+        Analysis, none of which the source-text scan reached. Vacuity guard at 30 (50 in the catalog).
+        `decide_optional_trigger` reads the body, so bot play still draws; nineteen suite tests say
+        `Bool(true)` at the ask now. `audit_dropped_may` **258 -> 240**.
+
+sweep   **fresh seeds 1300..1303: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 / stuck 0 /
+        draw 2` — clean, no 50,000-action re-run needed. `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict` at the `(-307)` tip. **Frontier 1304.**
+        `audit_panics` **0 bare** (70 sites, 59 guarded, 11 lock-poison), `audit_stash_in_loop` **0
+        unexplained**, `audit_seat_from_selector` **0 open**, `audit_target_walkers --check` **0**,
+        `audit_doc_drift` **0 body-wrong / 0 doc rot / 0 stale "no X" notes**, `audit_variant_coverage`
+        0 dead capability (1 dead primitive, `GrantCastBackFromGraveyard`, unchanged).
+
+gates   ⚠⚠ **FOURTH BOX, 4 CORES, and it reads 479 games/s where the previous 4-core box read 635-678 on
+        its own binary.** No absolute here is comparable to any other block; the counters are.
+        `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to the
+        committed invariant, `determinism ok` and `thread_determinism ok (3 vs 1)`. Suite **19,549 / 0 / 5**
+        (`CRAB_ANSWER_LOG=strict`; 19,548 plus the new catalog gate), clippy **0**
+        (`--workspace --all-targets --exclude crabomination_client`), golden traces unmoved.
+        **Run total: fixed -0.609 %, cube -0.588 %, sealed -0.667 %** (629,145,557 -> 625,315,822 /
+        1,668,223,488 -> 1,658,415,998 / 1,746,010,430 -> 1,734,360,419).
+```
+
 ### 2026-09-14 — the batch layer path's two cheap halves, a refuted memo, and the census/slot-walker pairing closed
 
 ```text
@@ -11480,19 +11553,47 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-✅ **STATUS AT THE `(-305)` TIP (2026-09-14): THE CHEAP HALF OF THIS ROW IS
-TAKEN AND THE HEAD'S SECOND DEVICE IS REFUTED. Read `(-304)` and `(-305)`
-before re-reading the block below — its numbers are the `(-302)` tip's.**
+✅ **STATUS AT THE `(-309)` TIP (2026-09-14, second session of the day): THE
+LAYER PASS ITSELF IS NOW THE CHEAPEST THING ON THIS PAGE TO MOVE, AND THE
+ID-COMPARE FAMILY IS CLOSED.** Read `(-306)`, `(-308)` and `(-309)` first.
+`(-306)` gave `Battlefield` a **per-object `writes: u32`** bumped at its six
+`&mut` chokepoints — the first sound key any memo over the zone's *instance*
+fields can use, and the lanes beside it cannot (they are `definition_epoch`-
+keyed). Its first consumer, the SBA board fold, hits **10.6-18.9 %**, so the
+counter is built and priced: **anything keyed on "this board has not been
+written" is capped there**, and a clone-carried memo is priced by how often
+the PARENT is re-asked, not by how often the clone writes. `(-308)` took the
+layer pass's eight identity `saturating_add`s for **-0.25..-0.35 %** and its
+device — *a hot arithmetic chain whose operands are usually the identity* —
+is the one to grep for next, off a `profiling-lines` dump and
+`cg_lines.py --in <fn>`. `(-309)` closes the largest-looking family on the
+line table (`CardId` equality + `find`'s loop, 1.8 % over twenty sites): two
+memos in front of it, both lose, because the scans are two-to-eight entries
+long. **The head's original block below is the `(-302)` tip's; `(-304)` and
+`(-305)` took its cheap halves and refuted its second device.**
 `(-304)` took the gate re-derivation and the linear battlefield scan
 (**-0.371 / -0.337 / -0.302 %**), `(-305)` took the `filter_map`-erased size
 hint behind the `collect()` (**-0.148 / -0.619 / -0.294 %**), and the
 `perms`-memo device the block names below reads **+0.230 / +0.383 / +0.226 %
 with a ZERO hit rate** — the two call sites are asked about disjoint sets.
 **What is still open and still the biggest thing on this page is the
-state-level gathered-effect memo**, and it is still blocked on exactly what
-`(-303)` said: `self.players` has 45 read sites in the gather and no mutation
-chokepoint the way the `CowBox` zones do, so the prerequisite is a
-`players_mut()`-shaped accessor, not the memo.
+state-level gathered-effect memo** (`(-303)`: 95-99.6 % of gathers return the
+previous gather's answer; serving only the no-reach half is worth ~1.8-2.5 %
+of every pool). ⚠⚠ **ITS PREREQUISITE IS PRICED NOW AND THE PRICE IS THE
+ANSWER: a `players_mut()`-shaped chokepoint is NOT a mechanical refactor.**
+`pub players: Vec<Player>` is read at ~36 k sites and *written* at **~2,400**
+(917 in the engine, 1,457 in the suite, 13 in the client) by the mutation-
+shaped grep; a `Deref`-only newtype turns every one of those into a compile
+error, which is the device `(-91)` recommends and is two orders of magnitude
+past what one pass can land green. **Do not open it as a refactor.** ⚠ And the
+epoch would still not be sound on its own: `(-303)`'s read audit ends with
+four `evaluate_*` entries that read *whatever a catalog filter names*, so the
+input set is open and the memo's only ratchet is the recompute-and-compare
+audit under `debug_assertions`. What `(-306)` did build — the battlefield's own
+`writes` counter — is the *battlefield* half of that key, and it is free to
+reuse; the players half has no cheap sound spelling yet, and finding one (a
+narrow digest over the scalar tallies plus per-`CardPile` epochs, say) is the
+work this row actually needs.
 
 **THE QUEUE IS RE-SEEDED OFF A FRESH WHOLE-PROFILE READ AT `f59872cc`
 (2026-09-13, the `(-302)` tip), AND THE NEW #1 IS A CALLER AGAIN:
