@@ -10622,6 +10622,10 @@ fn cr_701_7a_opponent_destroy_fires_the_retaliation_watcher() {
             .any(|e| matches!(e, GameEvent::PermanentDestroyedByEffect { .. })),
         "the destroy funnel emitted the CR 701.7 event"
     );
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_none());

@@ -75,11 +75,14 @@ pub fn ondu_cleric() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::HasCreatureType(CreatureType::Ally),
                 }),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::CountOf(Box::new(Selector::EachPermanent(
-                    R::HasCreatureType(CreatureType::Ally).and(R::ControlledByYou),
-                ))),
+            effect: Effect::MayDo {
+                description: "Gain life equal to your Ally count?".into(),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Ally).and(R::ControlledByYou),
+                    ))),
+                }),
             },
         }],
         ..Default::default()

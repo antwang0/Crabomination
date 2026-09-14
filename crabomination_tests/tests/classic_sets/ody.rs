@@ -1773,6 +1773,10 @@ fn karmic_justice_answers_noncreature_removal() {
             &ctx,
         )
         .expect("opponent destroys it");
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_none(), "Karmic Justice took one back");

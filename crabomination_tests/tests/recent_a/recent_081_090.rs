@@ -174,6 +174,10 @@ mod recent81 {
         let life = g.players[0].life;
         g.active_player_idx = 0;
         g.step = TurnStep::End;
+        // The printed "you may": taken here so the assert below still holds.
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
         g.fire_step_triggers(TurnStep::End);
         drain_stack(&mut g);
         assert_eq!(g.players[0].life, life + 2, "gained life = target creature's power");
@@ -386,6 +390,10 @@ mod recent81 {
         let life2 = g.players[0].life;
         g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
         g.players[0].mana_pool.add_colorless(1);
+        // The printed "you may": taken here so the assert below still holds.
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
         g.perform_action(GameAction::Cycle { card_id: id2, x_value: None }).expect("cycle");
         drain_stack(&mut g);
         assert_eq!(g.players[0].life, life2 + 2, "gained 2 from the cycle trigger");

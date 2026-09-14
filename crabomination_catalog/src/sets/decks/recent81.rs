@@ -302,11 +302,14 @@ pub fn wall_of_reverence() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::End),
                 EventScope::ActivePlayer,
             ),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(
-                    R::Creature.and(R::ControlledByYou),
-                ))),
+            effect: Effect::MayDo {
+                description: "Gain life equal to a creature's power?".into(),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(
+                        R::Creature.and(R::ControlledByYou),
+                    ))),
+                }),
             },
         }],
         ..Default::default()
@@ -523,7 +526,10 @@ pub fn renewed_faith() -> CardDefinition {
         effect: gain_life(6),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
-            effect: gain_life(2),
+            effect: Effect::MayDo {
+                description: "Gain 2 life?".into(),
+                body: Box::new(gain_life(2)),
+            },
         }],
         ..Default::default()
     }

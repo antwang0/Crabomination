@@ -163,6 +163,10 @@ fn souls_attendant_gains_life_on_creature_etb() {
     g.add_card_to_battlefield(0, catalog::souls_attendant());
     let l0 = g.players[0].life;
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::PermanentEntered { card_id: bear }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, l0 + 1);

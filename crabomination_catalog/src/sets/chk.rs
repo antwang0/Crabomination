@@ -168,7 +168,10 @@ pub fn patron_of_the_kitsune() -> CardDefinition {
         alternative_cost: Some(offering(cost(&[generic(4), w(), w()]), CreatureType::Fox)),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer),
-            effect: gain_life(1),
+            effect: Effect::MayDo {
+                description: "Gain 1 life?".into(),
+                body: Box::new(gain_life(1)),
+            },
         }],
         ..Default::default()
     }

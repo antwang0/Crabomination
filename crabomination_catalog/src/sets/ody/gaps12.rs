@@ -49,8 +49,11 @@ pub fn karmic_justice() -> CardDefinition {
             // The printed clause scopes the retaliation to the destroying
             // opponent; the target filter is any opponent's permanent, which
             // is exact in a two-player game.
-            effect: Effect::Destroy {
-                what: target_filtered(R::Permanent.and(R::ControlledByOpponent)),
+            effect: Effect::MayDo {
+                description: "Destroy a permanent that opponent controls?".into(),
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(R::Permanent.and(R::ControlledByOpponent)),
+                }),
             },
         }],
         ..enchantment("Karmic Justice", cost(&[generic(2), w()]))

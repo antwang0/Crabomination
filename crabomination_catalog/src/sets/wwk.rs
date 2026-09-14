@@ -838,9 +838,12 @@ pub fn archon_of_redemption() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::HasKeyword(Keyword::Flying)),
                 }),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+            effect: Effect::MayDo {
+                description: "Gain life equal to that creature's power?".into(),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                }),
             },
         }],
         ..creature(

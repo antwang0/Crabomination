@@ -2183,9 +2183,12 @@ pub fn suture_priest() -> CardDefinition {
                         filter: SelectionRequirement::Creature
                             .and(SelectionRequirement::OtherThanSource),
                     }),
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(1),
+                effect: Effect::MayDo {
+                    description: "Gain 1 life?".into(),
+                    body: Box::new(Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                 },
             },
             TriggeredAbility {
@@ -3371,10 +3374,13 @@ pub fn avenger_of_zendikar() -> CardDefinition {
             // Landfall: +1/+1 counter on each Plant you control.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-                effect: Effect::AddCounter {
-                    what: your_plants,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
+                effect: Effect::MayDo {
+                    description: "Put a +1/+1 counter on each Plant you control?".into(),
+                    body: Box::new(Effect::AddCounter {
+                        what: your_plants,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
                 },
             },
         ],

@@ -113,6 +113,10 @@ fn avenger_of_zendikar_makes_plants_then_landfall_pumps() {
     assert_eq!(plants.len(), 3, "one 0/1 Plant per land you control");
     // Landfall: playing a land puts a +1/+1 counter on each Plant.
     let land = g.add_card_to_hand(0, catalog::forest());
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.perform_action(GameAction::PlayLand(land)).expect("play a land for landfall");
     drain_stack(&mut g);
     for pid in plants {

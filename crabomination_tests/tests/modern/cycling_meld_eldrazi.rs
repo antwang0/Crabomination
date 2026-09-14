@@ -1087,6 +1087,10 @@ fn kor_firewalker_gains_on_red_casts() {
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 1;
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
         mode: None, x_value: None,

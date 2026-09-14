@@ -1164,15 +1164,16 @@ fn a_fan_out_player_ref_naming_one_seat_resolves_singularly() {
     .expect("one opponent is one seat");
 }
 
-/// A printed "you may draw a card" is a *resolution choice*, and modelling it
-/// as a bare `Effect::Draw` is a real bug in two directions: the controller
-/// can be forced to draw from an empty library and lose (CR 104.3c, at game
-/// 400 k of a training run), and the bot loses a decision it should own.
-/// Eighteen shipped cards carried it — Coastal Piracy, Rhystic Study, Mystic
-/// Remora, Jeskai Elder, both Enchantresses among them — found by
-/// `scripts/audit_dropped_may.py` and fixed together; this is the gate that
-/// stops the class coming back, since nothing else in the suite compares a
-/// definition against its printed text.
+/// A printed "you may …" is a *resolution choice*, and modelling one as the
+/// bare effect is a real bug in two directions: the controller can be forced
+/// into something that loses the game (a draw from an empty library, CR
+/// 104.3c, at game 400 k of a training run), and the bot loses a decision it
+/// should own. Thirty-eight shipped cards carried one — Coastal Piracy,
+/// Rhystic Study, Mystic Remora, Jeskai Elder, both Enchantresses, Suture
+/// Priest, Avenger of Zendikar, Karmic Justice among them — found by
+/// `scripts/audit_dropped_may.py` and by this gate, and fixed together; this
+/// is what stops the class coming back, since nothing else in the suite
+/// compares a definition against its printed text.
 ///
 /// The oracle is the committed Scryfall cache and the model is the
 /// definition's `{:?}` rendering — the same single-oracle device
@@ -1181,19 +1182,38 @@ fn a_fan_out_player_ref_naming_one_seat_resolves_singularly() {
 /// codebase has been bitten by. Over-permissive on purpose: any optional
 /// spelling *anywhere* in the card satisfies it, so this catches a card that
 /// models no choice at all, not a card that models one in the wrong place.
+///
+/// ⚠ **The phrase table is the precision.** Only phrasings whose "may" is a
+/// resolution choice belong in it. "you may pay" (kicker / ward / multikicker
+/// reminder text), "you may search" (CR 701.19c — a hidden-zone search may
+/// always fail to find, so the engine's `Decision::SearchLibrary` already
+/// models it), "you may sacrifice" / "you may exile" / "you may return"
+/// (additional and alternative *costs*) and "you may mill" (dredge reminder
+/// text) were each measured and are each majority false positive — 308 of 519
+/// "unmodelled" for "you may pay" alone. Each row carries its own vacuity
+/// floor so a phrase that stops matching fails loudly instead of going quiet.
 #[test]
-fn every_printed_you_may_draw_is_a_choice() {
+fn every_printed_you_may_is_a_choice() {
     /// Every way a definition can spell "the controller may decline".
     const OPTIONAL: [&str; 7] =
         ["MayDo", "MayPay", "MayCast", "MayDoElse", "MayPayOrElse", "Optional", "ChooseMode"];
+    /// `(printed phrase, phrasing to exclude, vacuity floor)`, lowercased.
+    const PHRASES: [(&str, Option<&str>, usize); 4] = [
+        ("you may draw a card", None, 30),
+        // "you may gain control of" is a different mechanic with its own
+        // modelling; the life-gain phrasings are the resolution choice.
+        ("you may gain", Some("you may gain control"), 20),
+        ("you may put a +1/+1 counter", None, 15),
+        ("you may destroy", None, 15),
+    ];
     let cache = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../scripts/.scryfall_cache.json");
     let text = std::fs::read_to_string(&cache).expect("the committed Scryfall cache");
     let oracle: serde_json::Value = serde_json::from_str(&text).expect("cache is JSON");
 
     let mut seen: HashSet<&'static str> = HashSet::new();
-    let mut checked = 0usize;
-    let mut bad: Vec<&'static str> = Vec::new();
+    let mut checked = [0usize; PHRASES.len()];
+    let mut bad: Vec<String> = Vec::new();
     for factory in all_known_factories() {
         let def = factory();
         if !seen.insert(def.name) {
@@ -1206,21 +1226,35 @@ fn every_printed_you_may_draw_is_a_choice() {
         else {
             continue;
         };
-        if !printed.to_lowercase().contains("you may draw a card") {
-            continue;
-        }
-        checked += 1;
-        let rendered = format!("{def:?}");
-        if !OPTIONAL.iter().any(|k| rendered.contains(k)) {
-            bad.push(def.name);
+        let lower = printed.to_lowercase();
+        let mut rendered: Option<String> = None;
+        for (i, (phrase, except, _)) in PHRASES.iter().enumerate() {
+            if !lower.contains(phrase) {
+                continue;
+            }
+            if except.is_some_and(|e| lower.contains(e) && !lower.replace(e, "").contains(phrase)) {
+                continue;
+            }
+            checked[i] += 1;
+            let r = rendered.get_or_insert_with(|| format!("{def:?}"));
+            if !OPTIONAL.iter().any(|k| r.contains(k)) {
+                bad.push(format!("{}  (\"{phrase}\")", def.name));
+            }
         }
     }
-    assert!(checked >= 30, "only {checked} printed may-draws matched — the scan has gone vacuous");
-    bad.sort_unstable();
+    for (i, (phrase, _, floor)) in PHRASES.iter().enumerate() {
+        assert!(
+            checked[i] >= *floor,
+            "only {} card(s) print \"{phrase}\" (floor {floor}) — the scan has gone vacuous",
+            checked[i],
+        );
+    }
+    bad.sort();
+    bad.dedup();
     assert!(
         bad.is_empty(),
-        "{} card(s) print \"you may draw a card\" and model it as a mandatory draw — \
-         wrap the body in `Effect::MayDo`:\n  {}",
+        "{} card(s) print a \"you may\" and model it as mandatory — wrap the body in \
+         `Effect::MayDo`:\n  {}",
         bad.len(),
         bad.join("\n  "),
     );

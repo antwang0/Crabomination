@@ -3799,6 +3799,10 @@ fn mortician_beetle_grows_on_creature_sacrifice() {
         target: Some(crabomination::game::types::Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Tribute castable");
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == opp_bear), "opp sacrificed the bear");
     let b = g.computed_permanent(beetle).expect("beetle");

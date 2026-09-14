@@ -30153,9 +30153,12 @@ pub fn souls_attendant() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource),
                 },
             ),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Gain 1 life?".into(),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
@@ -30187,9 +30190,12 @@ pub fn auriok_champion() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource),
                 },
             ),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Gain 1 life?".into(),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
@@ -50645,9 +50651,12 @@ pub fn kor_firewalker() -> CardDefinition {
                     filter: SelectionRequirement::HasColor(Color::Red),
                 },
             ),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
+            effect: Effect::MayDo {
+                description: "Gain 1 life?".into(),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()

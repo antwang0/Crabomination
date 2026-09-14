@@ -2299,6 +2299,10 @@ mod recent59 {
         g.add_card_to_battlefield(0, ally());
         let life = g.players[0].life;
         let c = g.add_card_to_battlefield(0, catalog::ondu_cleric());
+        // The printed "you may": taken here so the assert below still holds.
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
         g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: c }]);
         drain_stack(&mut g);
         assert_eq!(g.players[0].life, life + 3, "gained life = number of Allies (3)");
