@@ -2990,6 +2990,17 @@ bump invalidates the Ir columns and has to re-take the A/B base.
 ### 2026-09-14 (the affordability-order session, fourth of the day) — two monotonicity arguments where three memos lost, and the row they leave behind
 
 ```text
+perf    **`(-314)`: `available_mana`'s relax scan asks the zone instead of every permanent — fixed -0.058 /
+        cube -0.046 / sealed -0.057 %**, the row itself -6.2 % (19,725,137 -> 18,494,586 on `sealed`). Its
+        five variants split exactly across `LANE_ANY_COLOR_STATIC` and `dispatch_bits::MANA_STATIC`, both
+        already answered once per board. ⚠ **Sized at ~0.23 % and it read 0.057 %**: a
+        `static_abilities.iter().any(..)` over an EMPTY `Vec` is about two instructions, not the ~7 the
+        estimate assumed. **A presence gate in front of a probe of an empty collection is priced by that
+        collection's header loads, not by the walk it imagines** — the device (`(-296)`, `(-299)`) is
+        still right, its yield is just proportional to what the inner loop does on a HIT. Kept: exact,
+        negative on all three pools, four lines, and the `debug_assert_eq!` under the loop was already
+        its audit.
+
 perf    **`(-313)`: the affordability read's question order — fixed -0.294 / cube -0.334 / sealed
         -0.549 %.** `can_afford_in_state_with` derived the whole cost (three whole-board static walks
         and the 640-line reduction) before asking anything. Gate 1: every channel between the printed
@@ -3010,8 +3021,22 @@ cand    **What `(-313)` leaves is bigger than what it took, and it was invisible
         are `sim_spell_action_inner`'s, over a simulated state that genuinely cannot share; the other
         half is plumbing. Candidates head carries the sizing and the two questions it needs.
 
+sweep   **fresh seeds 1328..1331 (claimed in NEXT before the run): 12 cells / 59,200 games / 0
+        failures**, `cap 0 / board 2 / stuck 0 / draw 0`, `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`, at the `(-313)` tip — so both of that
+        entry's new `debug_assert!`s (the gate-1 rejection audit and the gate-2 early-accept audit) ran
+        on every one of those games' boards, which is the coverage the suite cannot give a monotonicity
+        argument. **Frontier 1334** after the closing block at the `(-314)` tip.
+        ⚠ **The two board caps are a THIRD Scute Swarm runaway and it belongs beside `cube` 1215's**:
+        `cube` **1328**, 962 Swarms on a 990-permanent board at turn 68 with **574 of its own triggers
+        on the stack**, and the cell costs **344 s against 40-46 s for the three seeds either side** —
+        the same 8x signature, on a pool where `MAX_BATTLEFIELD` fires and the script correctly skips
+        the re-run. Not a defect; a standing cost. The candidates' "the bound stops the game and does
+        not stop the cost" row now has three worked examples and no fix.
+
 gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to the
-        committed invariant, `determinism ok`, `thread_determinism ok (3 vs 1)`. ⚠ Read on the
+        committed invariant on BOTH entries, `determinism ok`, `thread_determinism ok (3 vs 1)`.
+        Suite **19,549 / 0 / 5** (`CRAB_ANSWER_LOG=strict`, nextest) and clippy **0** re-run for each. ⚠ Read on the
         `profiling-fast` candidate binary rather than a fresh `--release` one: the counters are
         deterministic and profile-independent, and the LTO build is 22 minutes. No throughput number
         from this session goes in the Baseline.
