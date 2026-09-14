@@ -3037,11 +3037,14 @@ gate    **The memo's ratchet is real, not nominal.** `gather_key` witnesses ever
         parent both reach `writes + 1` with different boards, so the key is a witness only within one
         state's lineage. `GameState` **1,616 -> 1,664** for the memo and its key.
 
-sweep   **fresh seeds 1308..1311: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 / stuck 0 /
-        draw 0` — clean, no 50,000-action re-run needed. `target-audit/overflow` with
-        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`, **at the final tip on purpose**: the
-        memo's audit only fires on a hit and a hit needs a board the suite does not build. **Frontier
-        1312.** The FIRST run of this block, at the pre-fix tip, is the `bug` row above. All standing
+sweep   **fresh seeds 1308..1319, TWO blocks: 36 cells / 177,600 games / 0 failures.** 1308..1311 reads
+        `cap 0 / board 0 / stuck 0 / draw 0` with no re-run needed; 1312..1319 reads `cap 6 / board 0 /
+        stuck 0 / draw 12` and **all six caps cleared at `CRAB_MAX_ACTIONS=50000`** (slow, not stuck —
+        `cube` 1316 and `all` 1316, both saturated-life boards, and the label decides nothing).
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`, **at the
+        final tip on purpose**: the memo's audit only fires on a hit and a hit needs a board the suite
+        does not build. **Frontier 1320.** The FIRST run of block one, at the pre-fix tip, is the `bug`
+        row above — it aborted on cell one. All standing
         audits 0: `audit_panics` **0 bare** (70 sites, 59 guarded, 11 lock-poison),
         `audit_stash_in_loop` **0 unexplained**, `audit_seat_from_selector` **0 open**,
         `audit_target_walkers --check` **0**, `audit_doc_drift` **0 body-wrong / 0 doc rot / 0 stale
@@ -11834,10 +11837,48 @@ what has no fixed width, and spread each value across 64 bits before it goes
 in. **The collision did not move the hit rate at all** — only the
 recompute-and-compare audit could see it.
 
-**Still open off this row:** `compute_permanents` is still 7.25 % of `cube`
-inclusive and the memo removed the *gather* half of it, not the layer passes
-(75.6 M on `cube`) or `frozen_effects` (19.4 M). The caller tree below is
-still the map.
+**Still open off this row, re-profiled at the `(-311)` tip (`profiling-fast
+--no-default-features`, `cube`, 1,632,318,919 Ir).** The memo removed the
+*gather* half of `compute_permanents`; the layer passes are what is left.
+
+```text
+  dispatch_triggers_for_events_slow  75.7 M  4.64 %   <- #1 self row, line profile FLAT
+  compute_permanent_pass             61.7 M  3.78 %   <- 258,722 passes, 238 Ir self each
+  check_state_based_actions_into      49.2 M  3.02 %
+  the allocator family (system malloc — NOT the shipped one)   8.8 %
+  Arc::clone_from_ref_in              36.1 M  2.21 %   <- the CoW deep copies
+  SpecFromIterNested::from_iter       35.1 M  2.15 %   <- 341,720 calls, 103 Ir self each
+  gather_continuous_effects_inner     29.6 M  1.81 %   (was 53.4 M)
+
+  compute_permanent_pass' two callers
+    computed_permanent_hinted    133,858 passes of 230,016 asks  (perms serves 42 %)
+    compute_permanents::{closure} 118,724 passes, NO memo at all
+```
+
+⚠ **THE SOUND KEY FOR A `ComputedPermanent` NOW EXISTS AND THE BLOCKER IS
+WHERE THE TEST GOES, WHICH IS THE FINDING.** `apply_layers_one_gated` is a
+free function over `&CardInstance` and `&[ContinuousEffect]` — its whole input
+— so **(the effect list's `Arc` identity, `battlefield.writes()`)** is an exact
+witness, and `LayerFreezeState::perms` could outlive its scope and its clone on
+it. What stops it: `computed_permanent_hinted` scans `perms` **before** it has
+the effect list in hand (that ordering is `(-163)`/`(-175)`'s "one lock serves
+the whole read"), so the test has nothing to compare against at the point it is
+needed; re-ordering the function to fetch the list first is the work, and it
+changes the hot path's lock shape. The cheap alternative — validating with
+`gather_key()` per ask — is ~25 Ir against 230,016 asks (0.35 % of `cube`)
+before any win. ⚠⚠ **And the area has refused two memos already**: `(-304)`
+(the batch path shares nothing with `perms`, hit rate ZERO) and `(-309)`
+(move-to-front on the `perms` scan, +0.146 %). **Census the cross-scope hit
+rate before building this**, the way `(-303)` did for the gather.
+
+⚠ **The CoW deep-copy census was re-run at this tip and has no new lead.** The
+two instances are `CowBox<Vec<CardInstance>>` (33,744 copies / 21.5 M, callers
+`resolve_combat_into`, `cast_spell_with_convoke`, `on_left_battlefield`) and
+`PlayerData` (19,604 / 15.3 M, callers `Player::deref_mut`, `adjust_life`,
+`play_land_with_face`). **Every caller is a genuine mutation** — none of them
+is `(-280)`'s unguarded store over an empty collection. The instrument
+(`--demangle=no`, `cg_edges.py --callers make_mut_slow17h<hash>`) is spent for
+this pair of pools until something new lands in a cold group.
 
 ✅ **STATUS AT THE `(-309)` TIP (2026-09-14, second session of the day): THE
 LAYER PASS ITSELF IS NOW THE CHEAPEST THING ON THIS PAGE TO MOVE, AND THE
