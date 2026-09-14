@@ -11317,6 +11317,20 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+✅ **STATUS AT THE `(-305)` TIP (2026-09-14): THE CHEAP HALF OF THIS ROW IS
+TAKEN AND THE HEAD'S SECOND DEVICE IS REFUTED. Read `(-304)` and `(-305)`
+before re-reading the block below — its numbers are the `(-302)` tip's.**
+`(-304)` took the gate re-derivation and the linear battlefield scan
+(**-0.371 / -0.337 / -0.302 %**), `(-305)` took the `filter_map`-erased size
+hint behind the `collect()` (**-0.148 / -0.619 / -0.294 %**), and the
+`perms`-memo device the block names below reads **+0.230 / +0.383 / +0.226 %
+with a ZERO hit rate** — the two call sites are asked about disjoint sets.
+**What is still open and still the biggest thing on this page is the
+state-level gathered-effect memo**, and it is still blocked on exactly what
+`(-303)` said: `self.players` has 45 read sites in the gather and no mutation
+chokepoint the way the `CowBox` zones do, so the prerequisite is a
+`players_mut()`-shaped accessor, not the memo.
+
 **THE QUEUE IS RE-SEEDED OFF A FRESH WHOLE-PROFILE READ AT `f59872cc`
 (2026-09-13, the `(-302)` tip), AND THE NEW #1 IS A CALLER AGAIN:
 `GameState::compute_permanents` IS 7.25 % OF `cube` INCLUSIVE — bigger than
