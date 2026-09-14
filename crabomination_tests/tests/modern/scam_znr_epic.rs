@@ -1737,6 +1737,10 @@ fn the_ozolith_collects_and_unloads_counters() {
     // Begin combat on our turn: move them onto a creature.
     let target = g.add_card_to_battlefield(0, catalog::serra_angel());
     g.active_player_idx = 0;
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
     assert_eq!(

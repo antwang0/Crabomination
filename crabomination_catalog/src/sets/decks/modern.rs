@@ -39,6 +39,10 @@ pub fn ponder() -> CardDefinition {
                 who: PlayerRef::You,
                 amount: Value::Const(3),
             },
+            Effect::MayDo {
+                description: "Shuffle your library?".into(),
+                body: Box::new(Effect::ShuffleLibrary { who: PlayerRef::You }),
+            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -38033,20 +38037,23 @@ pub fn wirewood_hivemaster() -> CardDefinition {
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Elf)
                         .and(SelectionRequirement::NotToken),
                 }),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
-                    name: "Insect".into(),
-                    power: 1,
-                    toughness: 1,
-                    card_types: vec![CardType::Creature],
-                    colors: vec![Color::Green],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Insect],
+            effect: Effect::MayDo {
+                description: "Create a 1/1 green Insect?".into(),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(TokenDefinition {
+                        name: "Insect".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Insect],
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
+                    }),
                 }),
             },
         }],
@@ -39075,10 +39082,13 @@ pub fn lys_alana_huntmaster() -> CardDefinition {
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Elf),
                 },
             ),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(elf_warrior_1_1_token()),
+            effect: Effect::MayDo {
+                description: "Create a 1/1 green Elf Warrior?".into(),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(elf_warrior_1_1_token()),
+                }),
             },
         }],
         ..Default::default()
@@ -51997,10 +52007,13 @@ pub fn emeria_angel() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![landfall(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: Box::new(bird),
+        triggered_abilities: vec![landfall(Effect::MayDo {
+            description: "Create a 1/1 white Bird with flying?".into(),
+            body: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(bird),
+            }),
         })],
         ..Default::default()
     }
@@ -55110,9 +55123,12 @@ pub fn the_ozolith() -> CardDefinition {
                 dealer_filter: None,
                 causer_filter: None,
             },
-            effect: Effect::MoveAllCounters {
-                from: Selector::This,
-                to: target_filtered(SelectionRequirement::Creature),
+            effect: Effect::MayDo {
+                description: "Move all counters onto target creature?".into(),
+                body: Box::new(Effect::MoveAllCounters {
+                    from: Selector::This,
+                    to: target_filtered(SelectionRequirement::Creature),
+                }),
             },
         }],
         ..Default::default()

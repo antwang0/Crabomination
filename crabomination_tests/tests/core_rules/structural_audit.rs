@@ -1194,17 +1194,29 @@ fn a_fan_out_player_ref_naming_one_seat_resolves_singularly() {
 /// floor so a phrase that stops matching fails loudly instead of going quiet.
 #[test]
 fn every_printed_you_may_is_a_choice() {
-    /// Every way a definition can spell "the controller may decline".
-    const OPTIONAL: [&str; 7] =
-        ["MayDo", "MayPay", "MayCast", "MayDoElse", "MayPayOrElse", "Optional", "ChooseMode"];
-    /// `(printed phrase, phrasing to exclude, vacuity floor)`, lowercased.
-    const PHRASES: [(&str, Option<&str>, usize); 4] = [
+    /// Every way a definition can spell "the controller may decline" — the
+    /// `May…` primitives, and the *shapes* that carry the choice without a
+    /// name (`up_to`, a zero minimum, an any-number selector), which is the
+    /// same list `scripts/audit_dropped_may.py` keeps and for the same reason.
+    const OPTIONAL: [&str; 12] = [
+        "MayDo", "MayPay", "MayCast", "MayDoElse", "MayPayOrElse", "Optional", "ChooseMode",
+        "AnyNumber", "up_to", "min_targets: 0", "OneOf", "one_of",
+    ];
+    /// `(printed phrase, phrasing to exclude, vacuity floor)`, lowercased and
+    /// matched against the oracle with reminder text removed.
+    const PHRASES: [(&str, Option<&str>, usize); 7] = [
         ("you may draw a card", None, 30),
         // "you may gain control of" is a different mechanic with its own
         // modelling; the life-gain phrasings are the resolution choice.
         ("you may gain", Some("you may gain control"), 20),
         ("you may put a +1/+1 counter", None, 15),
         ("you may destroy", None, 15),
+        ("you may create", None, 15),
+        ("you may move", None, 3),
+        // The sentence, not the prefix: "You may shuffle." is Ponder's own
+        // choice, "you may shuffle up to four target cards" is an `up_to`
+        // pick the engine already asks for.
+        ("you may shuffle.", None, 2),
     ];
     let cache = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../scripts/.scryfall_cache.json");
@@ -1226,7 +1238,20 @@ fn every_printed_you_may_is_a_choice() {
         else {
             continue;
         };
-        let lower = printed.to_lowercase();
+        // Reminder text is parenthesised and is never the card's own choice:
+        // myriad's "you may create a token copy", kicker's "you may pay",
+        // dredge's "you may mill". Stripping it is what makes a phrase like
+        // "you may create" precise enough to gate on at all.
+        let mut lower = String::new();
+        let mut depth = 0usize;
+        for ch in printed.to_lowercase().chars() {
+            match ch {
+                '(' => depth += 1,
+                ')' => depth = depth.saturating_sub(1),
+                c if depth == 0 => lower.push(c),
+                _ => {}
+            }
+        }
         let mut rendered: Option<String> = None;
         for (i, (phrase, except, _)) in PHRASES.iter().enumerate() {
             if !lower.contains(phrase) {
@@ -1259,3 +1284,4 @@ fn every_printed_you_may_is_a_choice() {
         bad.join("\n  "),
     );
 }
+

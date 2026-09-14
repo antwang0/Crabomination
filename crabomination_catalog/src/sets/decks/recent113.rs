@@ -719,6 +719,10 @@ pub fn pondering_mage() -> CardDefinition {
                 who: PlayerRef::You,
                 amount: Value::Const(3),
             },
+            Effect::MayDo {
+                description: "Shuffle your library?".into(),
+                body: Box::new(Effect::ShuffleLibrary { who: PlayerRef::You }),
+            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),

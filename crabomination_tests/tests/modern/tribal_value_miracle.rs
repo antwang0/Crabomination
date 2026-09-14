@@ -228,6 +228,10 @@ fn wirewood_hivemaster_spawns_insect() {
     g.add_card_to_battlefield(0, catalog::wirewood_hivemaster());
     let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
     g.players[0].mana_pool.add(Color::Green, 1);
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.perform_action(GameAction::CastSpell {
         card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast elf");
@@ -712,6 +716,10 @@ fn lys_alana_makes_token_on_elf_spell() {
     g.add_card_to_battlefield(0, catalog::lys_alana_huntmaster());
     let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
     g.players[0].mana_pool.add(Color::Green, 1);
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.perform_action(GameAction::CastSpell {
         card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast elf spell");

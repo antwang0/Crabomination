@@ -1551,10 +1551,13 @@ pub fn pawn_of_ulamog() -> CardDefinition {
                     filter: SelectionRequirement::NotToken,
                 },
             ),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(eldrazi_spawn_token()),
+            effect: Effect::MayDo {
+                description: "Create an Eldrazi Spawn?".into(),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(eldrazi_spawn_token()),
+                }),
             },
         }],
         ..Default::default()

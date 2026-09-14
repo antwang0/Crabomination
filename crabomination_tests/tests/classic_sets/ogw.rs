@@ -702,6 +702,10 @@ fn pawn_of_ulamog_mints_on_own_death() {
     let pawn = g.add_card_to_battlefield(0, catalog::pawn_of_ulamog());
     let spawn_before = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count();
     g.battlefield_find_mut(pawn).unwrap().damage = 99;
+    // The printed "you may": taken here so the assert below still holds.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.check_state_based_actions();
     drain_stack(&mut g);
     let spawn_after = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count();
