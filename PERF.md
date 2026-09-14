@@ -11972,6 +11972,30 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+📐 **ORIENTATION — WHERE THE BENCH'S INSTRUCTIONS ACTUALLY ARE, read once at
+the `(-313)` tip so nobody re-derives it.** The inclusive spine of a `cube`
+dump, top to bottom:
+
+```text
+  play_one_game_traced                    99.43 %
+    HeuristicBot::next_action_settled     93.46 %   <- the bot IS the workload
+      pick_attacks_scored                 62.46 %   <- 1,936 rollouts
+        simulate_attack_outcome_once      61.8  %
+          sim_step -> perform_action_inner  411 M
+          perform_action_inner (direct)     221 M   = ~39 % of the pool in the ENGINE
+          sim_spell_action_inner            212 M
+          with_frozen_layers                 93 M
+```
+
+**Two consequences and they point opposite ways.** (a) Any engine-level Ir
+win is multiplied by the rollout count — which is why the Log's rows, each
+0.1-1.5 % of a whole pool, are worth taking at all, and why a bot-side row
+(the affordability read, `(-313)`) is capped at a third of a percent however
+well it is cut. (b) The single biggest lever on this page is not on this page:
+it is **how many rollouts `pick_attacks_scored` runs**, which is a strength
+question, not a perf one, and belongs to the ladder rather than to Ir. Do not
+open it as a perf row without a gate run behind it.
+
 ✅ **STATUS AT THE `(-313)` TIP (2026-09-14, fourth session of the day): THE
 AFFORDABILITY READ'S ORDER IS TAKEN — `(-313)`, fixed -0.294 / cube -0.334 /
 sealed -0.549 %, and the reduction derivation is now 0 / 698 / 132 calls where
