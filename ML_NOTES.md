@@ -4939,3 +4939,90 @@ measured 19:34–20:38 read progressively slower (26, then 20 steps/s) and a
 final interval with 62 ms a step unaccounted — Counter-Strike on the GPU
 (98 %, 8 GB, five cores). A timing arm on this box has to check
 `pgrep -x cs2` and `nvidia-smi` first; the ABC script does.
+
+## Round 73 — the policy gradient on the SETTLED successor: pre-registered (2026-09-13, late)
+
+Round 72's gradient was real and its pilot was unusable for one reason: the
+head ranked the one-action successor, a state the trunk never saw (−26.4).
+Round 73 trains and consumes the head on the state each picker's score was
+actually read from. `settle_to_quiescence` + `settle_through_combat` +
+`settled_successor` are `evaluate_action_outcome`'s path with the state handed
+back instead of scored (the quiescence loop is now shared, a
+behaviour-preserving refactor; lookahead follow-ups are not applied — the
+state of *this* line); `simulate_attack_leaf` / `simulate_block_leaf` are the
+two combat sims split at the point they score, redeal `k = 0` as the sims
+use. The recorder's `set_settled(true)` (`--capture-settled`) makes the three
+capture sites hand it those states (`maybe_states`; a failed settle drops the
+candidate with the remap, like a rejected action); `EvalWeights::policy_settled`
+(profile `net67-pols`) makes the pickers rank on them. Tests:
+`policy_settled_ranks_attacks_on_the_sim_leaf` (a head that wants the
+opponent's life low attacks under settled and cannot tell the candidates
+apart under one-action — the r72 hole in one assertion),
+`settled_capture_records_the_leaf_not_the_declaration`,
+`supplied_successors_are_recorded_and_a_failed_settle_is_dropped`.
+
+Design, gates and readings: `.ladder/run_r73_settled.sh`. Same recipe as r72
+except the measured throughput recipe (batch 1024 / lr 6e-4 / 10 k steps, the
+same 10.24 M samples) and `ACTORS=4` (settled capture is one extra sim per
+candidate on the actor path). Three arms: `pol` (trained), `init` (the
+untrained copy of the win head on the settled successor), `ctrl` (`net67`,
+r72's cells re-used — same binary date, same default). Pre-registered:
+CHECK `init − ctrl` within ±1.0 (the consumption is the sims' own state);
+PRIMARY `pol − init > +0.5`; HEADLINE `pol − ctrl` (the first training-side
+adoption candidate since the deck net if > +0.5, and PPO next).
+
+**Round 73 RESULT (2026-09-14): the settled consumption closes the hole
+(`init − ctrl` +0.28 ±0.12) and the policy gradient on those states is a NULL
+(`pol − init` +0.05 ±1.20; headline `pol − ctrl` +0.32 ±1.26). Round 72's +6.8
+was the head re-learning what the sims already knew about unsettled states — a
+representation gap, not a policy gap. Head-only PG is CLOSED.** Four seeds at
+batch 512 / lr 4.2e-4 / 20 000 steps (10.24 M samples; the first attempt at
+batch 1024 died at seed 97 step 8 000 with `CUDA_ERROR_OUT_OF_MEMORY` in the
+PG step — seed 43 had survived it; allocator fragmentation over varying padded
+shapes is the likely cause, the GPU held only the desktop's 3 GB at relaunch),
+`--capture-settled`, `--pilot net67`, ~78 k games a seed, ~13 min a seed at 4
+actors. Probe first: the untrained settled head vs `net67` on the same file
+read **50.0 %** [48.3, 51.7] where round 72's one-action head read 23.6 —
+the consumption is the sims' own state.
+
+| training seed | pol (g43 / g97) | init (g43 / g97) | ctrl (g43 / g97) | pol − init | init − ctrl | pol − ctrl |
+|---|---|---|---|---|---|---|
+| 43 | 51.2 / 52.0 | 51.0 / 51.6 | 50.7 / 51.1 | +0.30 | +0.40 | +0.70 |
+| 97 | 51.9 / 52.0 | 50.7 / 51.6 | 50.5 / 51.3 | +0.80 | +0.25 | +1.05 |
+| 151 | 49.3 / 50.7 | 51.0 / 51.4 | 50.8 / 51.2 | **−1.20** | +0.20 | −1.00 |
+| 199 | 51.3 / 51.9 | 51.0 / 51.6 | 50.7 / 51.4 | +0.30 | +0.25 | +0.55 |
+| pooled | 51.2 | 51.2 | 50.96 | **+0.05 ±1.20** | **+0.28 ±0.12** | +0.32 ±1.26 |
+
+**Readings, against the pre-registration.** (1) CHECK passes, and tightly:
+the win head over the settled successor is `net67`'s own ranking plus a
+quarter point (all four seeds +0.2 to +0.4, ±0.12 pooled — the residual is the
+lookahead follow-ups and the decided-game clamp the pilot has and the head
+does not). The r72 hole was entirely the state, never the head. (2) PRIMARY is
+the "within ±0.5" branch: three seeds +0.3 / +0.8 / +0.3, one −1.2, pooled
++0.05. On the states the sims score, 10 M off-policy samples through a
+truncated ratio teach a 257-parameter head nothing the win head's ranking did
+not already carry. Seed 151 is the one whose head barely moved in training
+(`pg_entropy` 0.95 against 0.64–0.79, `pg_adv_mean` −0.005) and whose pilot
+lost 1.2 — a head that drifted rather than learned. (3) HEADLINE +0.32 ±1.26:
+`net67-pols` is not an adoption candidate, and a scored pilot is not the lobby
+in any case.
+
+**What round 72's +6.8 was.** A frozen-trunk head, trained on the game
+result, recovered a quarter of the 26-point gap between "the win head on a
+declaration" and "the win head on the board that declaration leads to" — i.e.
+it learned a crude combat model from returns. Round 73 hands it that board
+directly and the gradient has nothing left to add. The signal was real; its
+content was the sims'.
+
+**Consequences.** Head-only PG is closed on both consumptions. The two arms
+left standing both need the representation to move: `--pg-trunk` with value
+steps (the trunk learns from returns; the value steps keep the win head the
+sims read calibrated), and the on-policy loop (PPO — actors reloading
+`latest`, compounding across generations). Their prior just dropped: with the
+consumption fixed, the win head already ranks the sims' states as well as
+10 M samples of return could teach a linear head. Recorded, not queued. What
+this round leaves behind that is worth keeping: the settled consumption
+(`policy_settled`, `--capture-settled`), which turns any future head into a
+drop-in for the sims' leaf; the split sims (`simulate_attack_leaf` /
+`simulate_block_leaf`, `settle_to_quiescence`, `settle_through_combat`); the
+OOM note (batch 512 is the ceiling for a settled-state PG batch on the 4090).

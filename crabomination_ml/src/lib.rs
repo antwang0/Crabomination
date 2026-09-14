@@ -646,6 +646,9 @@ pub struct DecisionRow {
     pub turn: u32,
     /// `TrainRow::ply` of the seat's latest snapshot at the decision.
     pub ply: u16,
+    /// Whether `successors` are settled states (round 73) or one-action
+    /// successors. Analysis tag only.
+    pub settled: bool,
     /// The game result for `seat` (1.0 won, 0.0 lost), stamped when the
     /// game decides; NaN until then, and a NaN row takes no part in a
     /// policy-gradient step.
@@ -666,6 +669,7 @@ impl Default for DecisionRow {
             seat: 0,
             turn: 0,
             ply: 0,
+            settled: false,
             ret: f32::NAN,
         }
     }

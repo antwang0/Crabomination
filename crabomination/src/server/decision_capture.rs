@@ -53,6 +53,21 @@ use crabomination_nn::EncodedState;
 use crate::game::{GameAction, GameState};
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
+/// Round 73: record each candidate's SETTLED successor (the state the
+/// picker's score was read from — a main-phase action resolved and walked
+/// through combat, a declaration at its sim's leaf) instead of the
+/// one-action successor. The pickers read this and hand the recorder the
+/// states through [`maybe_states`]; the flag never changes a pick.
+static SETTLED: AtomicBool = AtomicBool::new(false);
+
+/// Switch the recorder to settled successors (see [`SETTLED`]).
+pub fn set_settled(on: bool) {
+    SETTLED.store(on, Ordering::Relaxed);
+}
+
+pub fn settled() -> bool {
+    SETTLED.load(Ordering::Relaxed)
+}
 
 thread_local! {
     /// Thread-scoped override, ANDed with the global flag. A mixed actor
@@ -127,6 +142,9 @@ pub struct CapturedDecision {
     /// stream's row and its λ-return. Set by the recorder through
     /// [`set_ply`]; 0 outside a recorded game.
     pub ply: u16,
+    /// True when `successors` are settled states ([`set_settled`]), false
+    /// when they are one-action successors.
+    pub settled: bool,
 }
 
 thread_local! {
@@ -241,21 +259,56 @@ pub fn maybe_full(
     if !enabled() || state.game_over.is_some() || candidates.len() < 2 {
         return;
     }
+    let successors: Vec<Option<GameState>> = candidates
+        .iter()
+        .map(|a| {
+            let mut next = state.clone();
+            // A rejected candidate is thrown away, so `perform_action`'s
+            // transaction checkpoint (a second clone of the whole state, and
+            // one that shares every CoW zone) would never be read. Same
+            // reasoning as `bot::dry_run`.
+            next.perform_action_inner(a.clone()).ok().map(|_| next)
+        })
+        .collect();
+    record(state, seat, successors, chosen, prov, false);
+}
+
+/// [`maybe_full`] with the successor states supplied by the caller — the
+/// settled-successor mode (round 73): the pickers already hold (or can
+/// rebuild) the state each score was read from. `None` marks a candidate
+/// whose settle failed; it is dropped and `chosen` remapped, exactly as a
+/// rejected action is in [`maybe_full`].
+pub fn maybe_states(
+    state: &GameState,
+    seat: usize,
+    successors: Vec<Option<GameState>>,
+    chosen: usize,
+    prov: Provenance<'_>,
+) {
+    if !enabled() || state.game_over.is_some() || successors.len() < 2 {
+        return;
+    }
+    record(state, seat, successors, chosen, prov, true);
+}
+
+/// The shared tail: encode the surviving successors, remap `chosen` and
+/// every per-candidate slice onto them, and push.
+fn record(
+    state: &GameState,
+    seat: usize,
+    candidates: Vec<Option<GameState>>,
+    chosen: usize,
+    prov: Provenance<'_>,
+    settled: bool,
+) {
     let vocab = super::net_eval::vocab();
     let mut successors = Vec::with_capacity(candidates.len());
     let mut kept_values: Vec<f32> = Vec::new();
     let mut kept_visits: Vec<u32> = Vec::new();
     let mut kept_scores: Vec<i32> = Vec::new();
     let mut chosen_idx = None;
-    for (i, a) in candidates.iter().enumerate() {
-        let mut next = state.clone();
-        // A rejected candidate is thrown away, so `perform_action`'s
-        // transaction checkpoint (a second clone of the whole state, and
-        // one that shares every CoW zone) would never be read. Same
-        // reasoning as `bot::dry_run`.
-        if next.perform_action_inner(a.clone()).is_err() {
-            continue;
-        }
+    for (i, next) in candidates.iter().enumerate() {
+        let Some(next) = next else { continue };
         if i == chosen {
             chosen_idx = Some(successors.len());
         }
@@ -274,7 +327,7 @@ pub fn maybe_full(
         {
             kept_scores.push(*x);
         }
-        successors.push(super::encode::encode_state(&next, seat, vocab));
+        successors.push(super::encode::encode_state(next, seat, vocab));
     }
     let Some(chosen) = chosen_idx else {
         // The played action did not survive re-application, so nothing
@@ -307,6 +360,7 @@ pub fn maybe_full(
             temp: prov.temp,
             net_scored: prov.net_scored,
             ply: ply(),
+            settled,
         });
     });
 }
@@ -771,6 +825,40 @@ mod tests {
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].ply, 7);
         assert_eq!(ply(), 0, "the cell is reset for the next game");
+    }
+
+    /// Round 73: supplied successors are recorded as given, tagged
+    /// settled, and a `None` candidate drops out with the remap.
+    #[test]
+    fn supplied_successors_are_recorded_and_a_failed_settle_is_dropped() {
+        let _guard = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let (g, cands) = two_choice_state();
+        let succ: Vec<Option<GameState>> = cands
+            .iter()
+            .map(|a| {
+                let mut n = g.clone();
+                n.perform_action(a.clone()).unwrap();
+                Some(n)
+            })
+            .collect();
+        set_enabled(true);
+        let mut with_hole = vec![None];
+        with_hole.extend(succ);
+        maybe_states(&g, 0, with_hole, 2, Provenance { scores: Some(&[99, 10, 20]), ..Default::default() });
+        let got = drain();
+        set_enabled(false);
+        assert_eq!(got.len(), 1);
+        let d = &got[0];
+        assert!(d.settled);
+        assert_eq!(d.successors.len(), 2, "the failed settle is dropped");
+        assert_eq!(d.chosen, 1, "and chosen is remapped past it");
+        assert_eq!(d.scores.as_deref(), Some(&[10, 20][..]));
+        // The plain hook tags the other way.
+        set_enabled(true);
+        maybe(&g, 0, &cands, 0);
+        let plain = drain();
+        set_enabled(false);
+        assert!(!plain[0].settled);
     }
 
     /// The cap discards, and says so: the counter is the only way an actor

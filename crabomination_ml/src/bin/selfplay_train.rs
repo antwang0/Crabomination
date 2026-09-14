@@ -338,6 +338,10 @@ struct Args {
     /// the step (default). `--pg-no-prefetch` packs inline — the control
     /// arm for the throughput A/B.
     pg_prefetch: bool,
+    /// Round 73: record each decision's SETTLED successors (the states the
+    /// pickers' scores were read from) instead of the one-action ones —
+    /// `decision_capture::set_settled`. Pairs with the `net67-pols` pilot.
+    capture_settled: bool,
     /// Actor profile under `--use-best`: `net67` (= `dflt` + the net
     /// leaf, the gate's pilot) instead of the historical `net_eval_det1`,
     /// which chains from a base four adoptions behind the default.
@@ -459,6 +463,7 @@ fn parse_args() -> Args {
         pg_lambda: 1.0,
         pg_trunk: false,
         pg_prefetch: true,
+        capture_settled: false,
         pilot_net67: false,
     };
     let mut it = std::env::args().skip(1);
@@ -558,6 +563,7 @@ fn parse_args() -> Args {
             "--pg-lambda" => a.pg_lambda = val().parse().expect("--pg-lambda"),
             "--pg-trunk" => a.pg_trunk = true,
             "--pg-no-prefetch" => a.pg_prefetch = false,
+            "--capture-settled" => a.capture_settled = true,
             "--pilot" => {
                 a.pilot_net67 = match val().as_str() {
                     "net67" => true,
@@ -909,6 +915,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                                 seat: d.seat as u8,
                                 turn: d.turn,
                                 ply: d.ply,
+                                settled: d.settled,
                                 ret,
                             },
                         )
@@ -1784,6 +1791,10 @@ fn main() {
 
     if args.record_decisions {
         crabomination::server::decision_capture::set_enabled(true);
+        if args.capture_settled {
+            crabomination::server::decision_capture::set_settled(true);
+            eprintln!("recording SETTLED successors (round 73)");
+        }
         if args.policy_every == 0 {
             eprintln!("recording decisions, MEASURING ONLY (no policy training)");
         } else {

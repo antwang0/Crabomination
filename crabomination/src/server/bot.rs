@@ -195,24 +195,27 @@ fn choose_scored_recorded(
     w: &EvalWeights,
     scored: &[(usize, i32)],
     to_action: impl Fn(usize) -> GameAction,
+    leaf: impl Fn(usize) -> Option<GameState>,
 ) -> Option<usize> {
     let chosen = choose_scored(state.turn_number, scored)?;
     if super::decision_capture::enabled() && scored.len() >= 2 {
-        let actions: Vec<GameAction> = scored.iter().map(|&(i, _)| to_action(i)).collect();
         let scores: Vec<i32> = scored.iter().map(|&(_, s)| s).collect();
         let chosen_pos = scored.iter().position(|&(i, _)| i == chosen).unwrap_or(0);
-        super::decision_capture::maybe_full(
-            state,
-            seat,
-            &actions,
-            chosen_pos,
-            super::decision_capture::Provenance {
-                scores: Some(&scores),
-                temp: sampling_temp(state.turn_number).map_or(0, |t| t as i32),
-                net_scored: w.net_slot != 0,
-                ..Default::default()
-            },
-        );
+        let prov = super::decision_capture::Provenance {
+            scores: Some(&scores),
+            temp: sampling_temp(state.turn_number).map_or(0, |t| t as i32),
+            net_scored: w.net_slot != 0,
+            ..Default::default()
+        };
+        if super::decision_capture::settled() {
+            // Round 73: the successor recorded is the sim's leaf — the
+            // state the score beside it was read from.
+            let leaves: Vec<Option<GameState>> = scored.iter().map(|&(i, _)| leaf(i)).collect();
+            super::decision_capture::maybe_states(state, seat, leaves, chosen_pos, prov);
+        } else {
+            let actions: Vec<GameAction> = scored.iter().map(|&(i, _)| to_action(i)).collect();
+            super::decision_capture::maybe_full(state, seat, &actions, chosen_pos, prov);
+        }
     }
     Some(chosen)
 }
@@ -807,6 +810,15 @@ pub struct EvalWeights {
     /// policies, the response layers — keeps the win head through
     /// `net_slot`. Off by default; profile `net67-pol`.
     pub policy_rank: bool,
+    /// With [`policy_rank`](Self::policy_rank): rank on each candidate's
+    /// SETTLED successor — the state the sims score (round 73: the
+    /// one-action successor cost 26 points, r72's `init − ctrl`, because
+    /// the trunk never saw it) — a main-phase action resolved to
+    /// quiescence and walked through combat (`settled_successor`), a
+    /// declaration at its sim's leaf (`simulate_attack_leaf` /
+    /// `simulate_block_leaf`, redeal `k = 0`). The recorder's
+    /// `set_settled(true)` captures the same states. Profile `net67-pols`.
+    pub policy_settled: bool,
     /// Sequence the land drop instead of taking the first land that
     /// covers the most missing colors. Two additions:
     ///
@@ -1204,6 +1216,7 @@ impl EvalWeights {
             legacy_fetch: false,
             net_quantize: 0,
             policy_rank: false,
+            policy_settled: false,
         }
     }
 
@@ -1309,6 +1322,7 @@ impl EvalWeights {
             legacy_fetch: false,
             net_quantize: 0,
             policy_rank: false,
+            policy_settled: false,
         }
     }
 
@@ -1397,6 +1411,7 @@ impl EvalWeights {
             legacy_fetch: false,
             net_quantize: 0,
             policy_rank: false,
+            policy_settled: false,
         }
     }
 
@@ -2036,6 +2051,13 @@ impl EvalWeights {
     /// nothing else.
     pub const fn net_on_default_policy_rank() -> Self {
         Self { policy_rank: true, ..Self::net_on_default() }
+    }
+
+    /// [`net_on_default_policy_rank`](Self::net_on_default_policy_rank) on
+    /// the settled successor ([`policy_settled`](Self::policy_settled)) —
+    /// round 73's gate pilot, ladder `net67-pols`.
+    pub const fn net_on_default_policy_settled() -> Self {
+        Self { policy_settled: true, ..Self::net_on_default_policy_rank() }
     }
 
     /// [`net_eval_det1`](Self::net_eval_det1) averaging three redeals per
@@ -10570,7 +10592,7 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
         let score = if by_policy {
-            policy_rank_score(state, seat, &GameAction::DeclareAttackers(cand.clone()), None, w)
+            policy_declaration_score(state, &starts, seat, w, GameAction::DeclareAttackers(cand.clone()))
         } else {
             simulate_attack_outcome_from(&starts, seat, cand, w)
         };
@@ -10603,7 +10625,7 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
         // under `policy_rank` the menu is in head units and the chain's
         // set has to be re-scored in the same currency to join the argmax.
         let score = if by_policy {
-            policy_rank_score(state, seat, &GameAction::DeclareAttackers(chain.clone()), None, w)
+            policy_declaration_score(state, &starts, seat, w, GameAction::DeclareAttackers(chain.clone()))
         } else {
             Some(score)
         };
@@ -10612,9 +10634,14 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
             scored.push((menu_len, score));
         }
     }
-    let chosen = choose_scored_recorded(state, seat, w, &scored, |i| {
-        GameAction::DeclareAttackers(candidates[i].clone())
-    })
+    let chosen = choose_scored_recorded(
+        state,
+        seat,
+        w,
+        &scored,
+        |i| GameAction::DeclareAttackers(candidates[i].clone()),
+        |i| simulate_attack_leaf(starts.base(0), seat, &candidates[i], w),
+    )
     .unwrap_or(0);
     if attack_census::on() {
         attack_census::tick(
@@ -11085,12 +11112,15 @@ fn sim_outcome(
     }
 }
 
-fn simulate_attack_outcome_once(
+/// The board this declaration leads to — the state `simulate_attack_outcome_once`
+/// scores, handed back whole (round 73: the settled successor the policy
+/// head trains on and ranks). `None` when the sim cannot complete.
+fn simulate_attack_leaf(
     base: &GameState,
-    seat: usize,
+    _seat: usize,
     attacks: &[Attack],
     w: &EvalWeights,
-) -> Option<i32> {
+) -> Option<GameState> {
     let mut g = base.clone();
     dry_run(&mut g, GameAction::DeclareAttackers(attacks.to_vec())).ok()?;
     let start_turn = g.turn_number;
@@ -11185,6 +11215,16 @@ fn simulate_attack_outcome_once(
             return None;
         }
     }
+    Some(g)
+}
+
+fn simulate_attack_outcome_once(
+    base: &GameState,
+    seat: usize,
+    attacks: &[Attack],
+    w: &EvalWeights,
+) -> Option<i32> {
+    let g = simulate_attack_leaf(base, seat, attacks, w)?;
     let v = eval_material(&g, seat, w);
     super::leaf_capture::maybe(&g, seat, v);
     Some(v)
@@ -11905,7 +11945,7 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
     let mut scored: Vec<(usize, i32)> = Vec::new();
     for (i, cand) in candidates.iter().enumerate() {
         let score = if by_policy {
-            policy_rank_score(state, seat, &GameAction::DeclareBlockers(cand.clone()), None, w)
+            policy_declaration_score(state, &starts, seat, w, GameAction::DeclareBlockers(cand.clone()))
         } else {
             simulate_block_outcome_from(&starts, seat, cand, w)
         };
@@ -11951,7 +11991,7 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
                 // Same currency rule as the attack picker: the chain's plan
                 // is re-scored by the head under `policy_rank`.
                 let score = if by_policy {
-                    policy_rank_score(state, seat, &GameAction::DeclareBlockers(chain.clone()), None, w)
+                    policy_declaration_score(state, &starts, seat, w, GameAction::DeclareBlockers(chain.clone()))
                 } else {
                     Some(score)
                 };
@@ -11963,9 +12003,14 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
             }
         }
     }
-    let chosen = choose_scored_recorded(state, seat, w, &scored, |i| {
-        GameAction::DeclareBlockers(candidates[i].clone())
-    })
+    let chosen = choose_scored_recorded(
+        state,
+        seat,
+        w,
+        &scored,
+        |i| GameAction::DeclareBlockers(candidates[i].clone()),
+        |i| simulate_block_leaf(starts.base(0), seat, &candidates[i], w),
+    )
     .unwrap_or(0);
     if block_census::on() {
         block_census::tick(menu_len, chosen, chain_novel, menu_winner);
@@ -12355,12 +12400,15 @@ fn simulate_block_outcome_from(
     simulate_block_outcome_once(starts.base(0), seat, blocks, w)
 }
 
-fn simulate_block_outcome_once(
+/// The board this declaration leads to — the state `simulate_block_outcome_once`
+/// scores, handed back whole (round 73: the settled successor the policy
+/// head trains on and ranks). `None` when the sim cannot complete.
+fn simulate_block_leaf(
     base: &GameState,
-    seat: usize,
+    _seat: usize,
     blocks: &[(CardId, CardId)],
     w: &EvalWeights,
-) -> Option<i32> {
+) -> Option<GameState> {
     let mut g = base.clone();
     dry_run(&mut g, GameAction::DeclareBlockers(blocks.to_vec())).ok()?;
     let turn = g.turn_number;
@@ -12392,6 +12440,16 @@ fn simulate_block_outcome_once(
             return None;
         }
     }
+    Some(g)
+}
+
+fn simulate_block_outcome_once(
+    base: &GameState,
+    seat: usize,
+    blocks: &[(CardId, CardId)],
+    w: &EvalWeights,
+) -> Option<i32> {
+    let g = simulate_block_leaf(base, seat, blocks, w)?;
     let v = eval_material(&g, seat, w);
     super::leaf_capture::maybe(&g, seat, v);
     Some(v)
@@ -15361,15 +15419,43 @@ fn policy_rank_score(
     settled: Option<&GameState>,
     w: &EvalWeights,
 ) -> Option<i32> {
-    let logit = match settled {
-        Some(g) => super::net_eval::policy_logit(g, seat, w.net_slot)?,
+    if w.policy_settled {
+        return policy_logit_of(&settled_successor(state, seat, action, settled, w)?, seat, w);
+    }
+    match settled {
+        Some(g) => policy_logit_of(g, seat, w),
         None => {
             let mut g = state.clone();
             dry_run(&mut g, action.clone()).ok()?;
-            super::net_eval::policy_logit(&g, seat, w.net_slot)?
+            policy_logit_of(&g, seat, w)
         }
-    };
-    Some((logit * 1000.0) as i32)
+    }
+}
+
+/// The policy head's logit for `g`, on the pickers' i32 scale.
+fn policy_logit_of(g: &GameState, seat: usize, w: &EvalWeights) -> Option<i32> {
+    super::net_eval::policy_logit(g, seat, w.net_slot).map(|l| (l * 1000.0) as i32)
+}
+
+/// A declaration's policy score: on its sim leaf under `policy_settled`
+/// (the same `k = 0` redeal the sims start from), else on the one-action
+/// successor.
+fn policy_declaration_score(
+    state: &GameState,
+    starts: &SimStarts,
+    seat: usize,
+    w: &EvalWeights,
+    action: GameAction,
+) -> Option<i32> {
+    if w.policy_settled {
+        let leaf = match &action {
+            GameAction::DeclareAttackers(a) => simulate_attack_leaf(starts.base(0), seat, a, w)?,
+            GameAction::DeclareBlockers(b) => simulate_block_leaf(starts.base(0), seat, b, w)?,
+            _ => return None,
+        };
+        return policy_logit_of(&leaf, seat, w);
+    }
+    policy_rank_score(state, seat, &action, None, w)
 }
 
 /// decision that surfaces until the stack empties. `None` on rejection or
@@ -15420,6 +15506,29 @@ fn evaluate_action_sequence(
     w: &EvalWeights,
     depth: u8,
 ) -> Option<i32> {
+    let g = settle_to_quiescence(state, action, settled, w)?;
+    // The value of stopping here.
+    let mut best = score_settled_state(&g, seat, w)?;
+    if depth > 0 {
+        for follow in follow_up_candidates(&g, seat, w) {
+            if let Some(v) = evaluate_action_sequence(&g, seat, &follow, None, w, depth - 1) {
+                best = best.max(v);
+            }
+        }
+    }
+    Some(best)
+}
+
+/// `state` with `action` run and the stack resolved to quiescence under the
+/// bot's own pending-decision policy — the state `evaluate_action_sequence`
+/// scores at depth 0, handed back whole. `None` on rejection or a
+/// resolution that won't settle within the fuel.
+fn settle_to_quiescence(
+    state: &GameState,
+    action: &GameAction,
+    settled: Option<&GameState>,
+    w: &EvalWeights,
+) -> Option<GameState> {
     // `settled` is `state` with `action` already run on it, handed over by the
     // probe that validated the candidate — see [`Finalist`]. Cloning it is the
     // same two lines below minus the cast.
@@ -15449,16 +15558,46 @@ fn evaluate_action_sequence(
         }
         fuel = fuel.checked_sub(1)?;
     }
-    // The value of stopping here.
-    let mut best = score_settled_state(&g, seat, w)?;
-    if depth > 0 {
-        for follow in follow_up_candidates(&g, seat, w) {
-            if let Some(v) = evaluate_action_sequence(&g, seat, &follow, None, w, depth - 1) {
-                best = best.max(v);
-            }
-        }
+    Some(g)
+}
+
+/// The board `score_settled_state` scores, handed back whole: `g` itself
+/// when the profile is not combat-aware or the combat walk would be a
+/// no-op, otherwise `g` run through this turn's combat. `None` on a torn
+/// combat, as the scorer refuses it.
+fn settle_through_combat(g: &GameState, w: &EvalWeights) -> Option<GameState> {
+    if !w.combat_aware || combat_sim_skips(g) {
+        return Some(g.clone());
     }
-    Some(best)
+    let mut sim = g.clone();
+    let mut combat_fuel = 256u32;
+    match simulate_through_combat(&mut sim, &mut combat_fuel, w) {
+        CombatSim::Incomplete => None,
+        CombatSim::Skipped | CombatSim::Completed => Some(sim),
+    }
+}
+
+/// The settled successor of a main-phase action (round 73): exactly the
+/// state `evaluate_action_outcome` would score at depth 0 — the same
+/// redeal (`k = 0`) when the profile determinizes, the stack resolved,
+/// combat walked when the profile is combat-aware. What the policy head is
+/// trained on and ranks under `EvalWeights::policy_settled`. Lookahead
+/// follow-ups are not applied: the state of *this* line, not of its best
+/// continuation.
+fn settled_successor(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    settled: Option<&GameState>,
+    w: &EvalWeights,
+) -> Option<GameState> {
+    let q = if w.determinize > 0 {
+        let g = sim_start_state(state, seat, w, 0);
+        settle_to_quiescence(&g, action, None, w)?
+    } else {
+        settle_to_quiescence(state, action, settled, w)?
+    };
+    settle_through_combat(&q, w)
 }
 
 /// Score a state that has resolved to quiescence, running it through this
@@ -15717,20 +15856,24 @@ fn capture_decision(
     if !super::decision_capture::enabled() {
         return;
     }
-    let actions: Vec<GameAction> = evd.iter().map(|(_, f)| f.action.clone()).collect();
     let scores: Vec<i32> = evd.iter().map(|(ev, _)| *ev).collect();
-    super::decision_capture::maybe_full(
-        state,
-        seat,
-        &actions,
-        chosen,
-        super::decision_capture::Provenance {
-            scores: Some(&scores),
-            temp,
-            net_scored: w.net_slot != 0,
-            ..Default::default()
-        },
-    );
+    let prov = super::decision_capture::Provenance {
+        scores: Some(&scores),
+        temp,
+        net_scored: w.net_slot != 0,
+        ..Default::default()
+    };
+    if super::decision_capture::settled() {
+        // Round 73: the settled successor `evaluate_action_outcome` scored.
+        let leaves: Vec<Option<GameState>> = evd
+            .iter()
+            .map(|(_, f)| settled_successor(state, seat, &f.action, f.settled.as_deref(), w))
+            .collect();
+        super::decision_capture::maybe_states(state, seat, leaves, chosen, prov);
+    } else {
+        let actions: Vec<GameAction> = evd.iter().map(|(_, f)| f.action.clone()).collect();
+        super::decision_capture::maybe_full(state, seat, &actions, chosen, prov);
+    }
 }
 
 /// True when `e`'s tree contains a leaf whose apparent value REVERSES
@@ -25670,6 +25813,82 @@ mod tail_guard_tests {
             pick_attacks_scored(&g, 1, &w)
         });
         assert!(pick.iter().any(|a| a.attacker == flyer), "fallback is the material attack");
+    }
+
+    /// A net whose policy head wants the opponent's life LOW (global 1)
+    /// — a net that likes damage dealt — and its mirror that wants it high.
+    struct OppLifeNet(f32);
+    impl crabomination_nn::NetEvaluator for OppLifeNet {
+        fn eval(&self, _s: crabomination_nn::EncodedState) -> f32 {
+            0.5
+        }
+        fn eval_policy(&self, s: crabomination_nn::EncodedState) -> Option<f32> {
+            Some(self.0 * s.global[1])
+        }
+        fn has_policy(&self) -> bool {
+            true
+        }
+    }
+
+    /// Round 73: under `policy_settled` the head sees the sim's leaf, where
+    /// the free attack has dealt its damage — so a head that wants the
+    /// opponent's life low attacks and its mirror holds. Under plain
+    /// `policy_rank` both see the declaration only (no damage yet), tie,
+    /// and first-wins-ties keeps greedy: the one-action successor cannot
+    /// tell the two apart, which is the hole round 72 measured.
+    #[test]
+    fn policy_settled_ranks_attacks_on_the_sim_leaf() {
+        let (g, flyer) = free_attack_board();
+        let pick = |net: Arc<dyn crabomination_nn::NetEvaluator>, w: EvalWeights| {
+            with_net(net, |slot| {
+                let mut w = w;
+                w.net_slot = slot;
+                pick_attacks_scored(&g, 1, &w)
+            })
+        };
+        let lower = pick(Arc::new(OppLifeNet(-1.0)), EvalWeights::net_on_default_policy_settled());
+        assert!(lower.iter().any(|a| a.attacker == flyer), "settled: wants damage, attacks");
+        let higher = pick(Arc::new(OppLifeNet(1.0)), EvalWeights::net_on_default_policy_settled());
+        assert!(higher.is_empty(), "settled: wants the opponent alive, holds; got {higher:?}");
+        let blind = pick(Arc::new(OppLifeNet(1.0)), EvalWeights::net_on_default_policy_rank());
+        assert!(
+            blind.iter().any(|a| a.attacker == flyer),
+            "one-action: no damage dealt yet, a tie, greedy keeps the attack"
+        );
+    }
+
+    /// Round 73: in settled mode the recorder stores the sim's leaf, not
+    /// the declaration — the chosen attack's successor carries the damage.
+    #[test]
+    fn settled_capture_records_the_leaf_not_the_declaration() {
+        let _serial = super::super::decision_capture::TEST_SERIAL
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        use super::super::decision_capture as cap;
+        let (g, flyer) = free_attack_board();
+        let _ = cap::drain();
+        cap::set_enabled(true);
+        cap::set_settled(true);
+        let picked = pick_attacks_scored(&g, 1, &EvalWeights::default());
+        cap::set_settled(false);
+        let got = cap::drain();
+        cap::set_enabled(false);
+        assert!(picked.iter().any(|a| a.attacker == flyer), "fixture: the attack is picked");
+        assert_eq!(got.len(), 1);
+        let d = &got[0];
+        assert!(d.settled, "the decision is tagged settled");
+        let vocab = super::super::net_eval::vocab();
+        let mut declared = g.clone();
+        declared.perform_action(GameAction::DeclareAttackers(picked.clone())).unwrap();
+        let one_action = super::super::encode::encode_state(&declared, 1, vocab);
+        assert_ne!(d.successors[d.chosen], one_action, "the leaf is not the declaration");
+        let before = super::super::encode::encode_state(&g, 1, vocab).global[1];
+        assert!(
+            d.successors[d.chosen].global[1] < before,
+            "the leaf has the damage dealt: opp life {} -> {}",
+            before,
+            d.successors[d.chosen].global[1]
+        );
     }
 
     /// Round 72: the attack picker's final menu reaches the decision
