@@ -3021,12 +3021,13 @@ cand    **What `(-313)` leaves is bigger than what it took, and it was invisible
         are `sim_spell_action_inner`'s, over a simulated state that genuinely cannot share; the other
         half is plumbing. Candidates head carries the sizing and the two questions it needs.
 
-sweep   **fresh seeds 1328..1331 (claimed in NEXT before the run): 12 cells / 59,200 games / 0
-        failures**, `cap 0 / board 2 / stuck 0 / draw 0`, `target-audit/overflow` with
-        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`, at the `(-313)` tip — so both of that
-        entry's new `debug_assert!`s (the gate-1 rejection audit and the gate-2 early-accept audit) ran
-        on every one of those games' boards, which is the coverage the suite cannot give a monotonicity
-        argument. **Frontier 1334** after the closing block at the `(-314)` tip.
+sweep   **fresh seeds 1328..1333, TWO blocks: 18 cells / 88,800 games / 0 failures.** 1328..1331 at the
+        `(-313)` tip, 12 cells / 59,200 games, `cap 0 / board 2 / stuck 0 / draw 0`; 1332..1333 at the
+        CLOSING `(-314)` tip, 6 cells / 29,600 games, `cap 0 / board 0 / stuck 0 / draw 2`.
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict` throughout —
+        so both of `(-313)`'s new `debug_assert!`s (the gate-1 rejection audit and the gate-2
+        early-accept audit) and `(-314)`'s pre-existing `fused_relax` audit ran on every one of those
+        boards, which is the coverage the suite cannot give a monotonicity argument. **Frontier 1334.**
         ⚠ **The two board caps are a THIRD Scute Swarm runaway and it belongs beside `cube` 1215's**:
         `cube` **1328**, 962 Swarms on a 990-permanent board at turn 68 with **574 of its own triggers
         on the stack**, and the cell costs **344 s against 40-46 s for the three seeds either side** —
