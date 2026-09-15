@@ -551,11 +551,17 @@ const LANE_LIFE_STATIC: u32 = 54;
 /// (`attached_to`, `soulbond_partner`) are over-approximated, a lane
 /// predicate reading no instance field. See [`card_has_attach_grant`].
 const LANE_ATTACH_GRANT: u32 = 56;
+/// Any permanent's definition lets its controller activate a summoning-sick
+/// creature's abilities as though it had haste (Tyvar, CR 602.5g) — the walk
+/// `tap_ability_summoning_sick` closes with, once per untapped summoning-sick
+/// creature the bot's mana sweep and every activation gate meet (PERF
+/// `(-316)`). See [`card_has_haste_static`].
+const LANE_HASTE_STATIC: u32 = 58;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
-/// The lane count the predicate table below covers (shift 0 ..= 56).
-const LANE_COUNT: usize = 29;
+/// The lane count the predicate table below covers (shift 0 ..= 58).
+const LANE_COUNT: usize = 30;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -600,6 +606,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_untap_static),                         // LANE_UNTAP_STATIC
     Some(card_has_life_static),                          // LANE_LIFE_STATIC
     Some(crate::game::actions::card_has_attach_grant),   // LANE_ATTACH_GRANT
+    Some(card_has_haste_static),                         // LANE_HASTE_STATIC
 ];
 
 /// Does this permanent contribute anything to
@@ -893,6 +900,29 @@ fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
         | S::PlayerCannotGainLife { .. }
         | S::PlayerCannotLoseLife { .. }
         | S::OpponentLifeLossDoubledDuringYourTurn => true,
+        _ => false,
+    }
+}
+
+/// Does this permanent's definition let its controller activate a
+/// summoning-sick creature's abilities as though it had haste (Tyvar, CR
+/// 602.5g), under any of the `While*` wrappers (peeled unconditionally here,
+/// the sound direction — the walk this gates matches the effect bare)? The
+/// [`LANE_HASTE_STATIC`] predicate; definition-only, so the walk's
+/// `controller == p` test stays the caller's.
+fn card_has_haste_static(c: &CardInstance) -> bool {
+    c.definition.static_abilities.iter().any(|sa| static_effect_is_haste_gate(&sa.effect))
+}
+
+fn static_effect_is_haste_gate(e: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as S;
+    match e {
+        S::WhileClassLevelAtLeast { inner, .. }
+        | S::WhileYourTurn { inner }
+        | S::WhileNotYourTurn { inner }
+        | S::WhileCountersAtLeast { inner, .. }
+        | S::WhileCondition { inner, .. } => static_effect_is_haste_gate(inner),
+        S::ControllerCreatureAbilitiesAsThoughHaste => true,
         _ => false,
     }
 }
@@ -1657,6 +1687,16 @@ impl Battlefield {
     #[inline]
     pub fn has_attach_grant(&self) -> bool {
         self.lane(LANE_ATTACH_GRANT, crate::game::actions::card_has_attach_grant)
+    }
+
+    /// Does any permanent here let its controller activate a summoning-sick
+    /// creature's abilities as though it had haste
+    /// ([`card_has_haste_static`])? Read by `tap_ability_summoning_sick`, once
+    /// per untapped summoning-sick creature the mana sweep and the activation
+    /// gate meet (PERF `(-316)`).
+    #[inline]
+    pub fn has_haste_static(&self) -> bool {
+        self.lane(LANE_HASTE_STATIC, card_has_haste_static)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

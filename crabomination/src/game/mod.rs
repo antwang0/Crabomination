@@ -10477,6 +10477,15 @@ impl GameState {
         {
             return false;
         }
+        // The last of the three, and the one that used to run on every
+        // summoning-sick creature the sweep met: one permanent in the whole
+        // catalog carries this static, so the lane answers `ABSENT` for a word
+        // load on every board without it and the walk never starts (PERF
+        // `(-316)`). `controller == p` stays here — a lane predicate reads no
+        // instance field.
+        if !self.battlefield.has_haste_static() {
+            return true;
+        }
         !self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| {
