@@ -17014,6 +17014,56 @@ impl GameState {
         None
     }
 
+    /// The two things [`Self::blocker_pair_block`] can bar a block on that are
+    /// neither side's keywords: CR 702.158d's sector lock and the
+    /// "can't block this creature this turn" pair list. Both are board facts,
+    /// so a planner looping one side inside the other asks them once rather
+    /// than once per pair (PERF `(-333)`).
+    #[inline]
+    pub(crate) fn block_pair_board_gates(&self) -> bool {
+        self.sector_block_lock_turn == Some(self.turn_number)
+            || !self.cant_block_pairs.is_empty()
+    }
+
+    /// [`Self::blocker_can_block_attacker_pair`] with the per-*side* halves of
+    /// its gate already answered.
+    ///
+    /// `bars` is `block_pair_board_gates() || <the attacker carries an
+    /// `attacker_block_bar_kw`, or is a tempted Ring-bearer> || <the blocker
+    /// carries a `blocker_block_bar_kw`>`. Every `return`-a-bar in
+    /// [`Self::blocker_pair_block`] and [`can_block_attacker_computed`] is
+    /// reached only through one of those, so `bars == false` *is* the answer
+    /// `None` — and the block planner, which asks 13-17 pairs per call, pays
+    /// each side once instead of once per pair.
+    ///
+    /// ⚠ **The `debug_assert!` is the ratchet, and it is what makes the two
+    /// keyword families safe to keep by hand.** A keyword added to either
+    /// body's `match` without being added to its family would be skipped
+    /// silently here; instead the suite's 19.5 k boards and the fresh-seed
+    /// sweep's ~118 k games (both with `debug-assertions` on) assert the gate
+    /// against the full check on every pair it skips. Same shape as
+    /// `cast_lock_scan`'s audit.
+    #[inline]
+    pub(crate) fn blocker_can_block_attacker_pair_gated(
+        &self,
+        bars: bool,
+        blocker: &CardInstance,
+        blocker_cp: &ComputedPermanent,
+        attacker: &CardInstance,
+        atk_cp: Option<&ComputedPermanent>,
+    ) -> bool {
+        if !bars {
+            debug_assert!(
+                self.blocker_can_block_attacker_pair(blocker, blocker_cp, attacker, atk_cp),
+                "the block-bar gate skipped a pair the full check rejects: {} blocking {}",
+                blocker.definition.name,
+                attacker.definition.name,
+            );
+            return true;
+        }
+        self.blocker_can_block_attacker_pair(blocker, blocker_cp, attacker, atk_cp)
+    }
+
     /// [`blocker_pair_block`](Self::blocker_pair_block) as a bool, for the
     /// callers that only need the answer. **Callers must have checked
     /// [`blocker_can_block_anything`](Self::blocker_can_block_anything)
@@ -28432,6 +28482,80 @@ pub(crate) fn affected_from_requirement(
 
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// **Every keyword on the ATTACKER's side that can bar a block**, i.e. the
+/// union of the `match` tags in [`GameState::blocker_pair_block`]'s `atk_kws`
+/// loop and in [`can_block_attacker_computed`]'s attacker pass.
+///
+/// An attacker carrying none of these cannot contribute a bar — which is what
+/// lets [`GameState::blocker_can_block_attacker_pair_gated`] skip the whole
+/// pair check. ⚠ **A keyword added to either of those `match`es belongs here
+/// too**; the `debug_assert!` in the gated form is the ratchet that says so.
+pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
+    matches!(
+        k,
+        // `blocker_pair_block`'s attacker loop.
+        Keyword::CantBeBlockedIfDefenderControls(_)
+            | Keyword::ProtectionFromMatching(_)
+            | Keyword::Landwalk(_)
+            | Keyword::LandwalkFiltered(_)
+            | Keyword::LegendaryLandwalk
+            | Keyword::DomainLandwalk
+            | Keyword::CantBeBlockedIfControllerCastSpells(_)
+            | Keyword::CantBeBlockedUnlessDefenderSharedType(_)
+            | Keyword::CantBeBlockedByPowerLessThanCount(_)
+            // `can_block_attacker_computed`'s attacker pass.
+            | Keyword::Unblockable
+            | Keyword::ProtectionFromCreatures
+            | Keyword::ProtectionFromEverything
+            | Keyword::Flying
+            | Keyword::Horsemanship
+            | Keyword::Shadow
+            | Keyword::Skulk
+            | Keyword::CantBeBlockedByPowerLess
+            | Keyword::CantBeBlockedByPowerAtMost(_)
+            | Keyword::CantBeBlockedByPowerAtLeast(_)
+            | Keyword::CantBeBlockedByCreatureType(_)
+            | Keyword::Fear
+            | Keyword::Intimidate
+            | Keyword::Protection(_)
+            | Keyword::ProtectionFromOwnColors
+            | Keyword::ProtectionFromCreatureType(_)
+            | Keyword::ProtectionFromManaValueExcept(_)
+            | Keyword::ProtectionFromManaValueParity { .. }
+            | Keyword::ProtectionFromMulticolored
+            | Keyword::ProtectionFromMonocolored
+            | Keyword::ProtectionFromCardType(_)
+            | Keyword::CantBeBlockedExceptBy(_)
+            | Keyword::CantBeBlockedBy(_)
+    )
+}
+
+/// **Every keyword on the BLOCKER's side that can bar a block** — the
+/// sibling of [`attacker_block_bar_kw`], and shorter for a reason: the
+/// blocker's pass in [`can_block_attacker_computed`] mostly sets flags that
+/// *enable* a block (Flying, Reach, Horsemanship, CanBlockShadow), and a flag
+/// that only ever enables cannot bar. What is here is the five rules in
+/// [`GameState::blocker_pair_block`]'s blocker loop, the three power gates,
+/// and the two flags whose default is restrictive (`CanBlockOnlyFlying` bars
+/// a non-flier, `Shadow` bars a non-shadow).
+pub fn blocker_block_bar_kw(k: &Keyword) -> bool {
+    matches!(
+        k,
+        // `blocker_pair_block`'s blocker loop.
+        Keyword::CantBlockUnlessMoreCreaturesThanAttacker
+            | Keyword::CantBlockMatching(_)
+            | Keyword::CantBlockCreatureType(_)
+            | Keyword::CantBlockPowerAtLeastOwnToughness
+            | Keyword::CantBlockUnlessMoreLandsThanAttacker
+            // `can_block_attacker_computed`'s blocker pass.
+            | Keyword::CanBlockOnlyFlying
+            | Keyword::Shadow
+            | Keyword::CantBlockPowerAtLeast(_)
+            | Keyword::CantBlockPowerAtMost(_)
+            | Keyword::CantBlockGreaterPowerThanSelf
+    )
+}
 
 /// Returns true if `blocker` is legally allowed to block `attacker`.
 /// Uses `blocker_kws` / `attacker_kws` as the effective keyword sets

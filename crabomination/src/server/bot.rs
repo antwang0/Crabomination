@@ -12519,6 +12519,11 @@ struct AttackerFacts<'a> {
     first_strike: bool,
     trample: bool,
     indestructible: bool,
+    /// The attacker's half of the block-legality gate: it carries a keyword
+    /// `attacker_block_bar_kw` names, or it is a tempted Ring-bearer. False on
+    /// essentially every attacker, and then no blocker needs the pair check
+    /// at all (PERF `(-333)`).
+    bars_blocks: bool,
     /// CR 702.16 — this attacker's view carries protection from something, so
     /// the pair loop's "does the blocker's damage bounce off it" question is
     /// worth asking. False on essentially every attacker (PERF `(-331)`).
@@ -12604,6 +12609,14 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 protected: cp
                     .as_deref()
                     .is_some_and(crate::game::GameState::view_has_protection),
+                bars_blocks: cp
+                    .as_deref()
+                    .is_some_and(|c| {
+                        c.keywords().iter().any(crate::game::attacker_block_bar_kw)
+                    })
+                    // CR 701.54c — the Ring-bearer power bar is not a keyword.
+                    || (state.effective_ring_bearer(a.controller) == Some(atk.attacker)
+                        && state.players[a.controller].ring_temptations >= 1),
                 // CR 509.1c — the *computed* set, for the same reason as
                 // `min_blockers` below: `declare_blockers` reads the computed
                 // keyword and a granted `MustBeBlocked` (Nemesis Mask and the
@@ -12747,6 +12760,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     let mut attacker_block_count: crate::game::types::SmallIdMap<CardId, i32> =
         Default::default();
     let mut assignments: Vec<(CardId, CardId)> = Vec::new();
+    // CR 702.158d's sector lock and the "can't block this creature" pair list
+    // — the two bars that are neither side's keywords, asked once for the
+    // whole nested loop (PERF `(-333)`).
+    let board_block_gates = state.block_pair_board_gates();
 
     for BlockerFacts {
         card: blk_card,
@@ -12769,6 +12786,12 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         // CR 702.16 — the target half of `protection_prevents_views`' gate,
         // asked once per blocker instead of once per (blocker, attacker) pair.
         let blk_protected = crate::game::GameState::view_has_protection(blk_view);
+        // CR 509.1b — the blocker's half of the block-legality gate, likewise
+        // once per blocker. With the board half and the attacker's half both
+        // clear, nothing in `blocker_pair_block` can bar the pair (PERF
+        // `(-333)`); the gated form `debug_assert!`s that on every skip.
+        let blk_bars = board_block_gates
+            || blk_view.keywords().iter().any(crate::game::blocker_block_bar_kw);
         let bkw = blk_card.combat_keywords();
         let blk_first_strike =
             bkw & (combat_kw::FIRST_STRIKE | combat_kw::DOUBLE_STRIKE) != 0;
@@ -12784,8 +12807,13 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // protection, shadow, etc. Skip attackers this blocker can't
             // legally be assigned to, so the bot never submits a block batch
             // the engine will reject.
-            if !state.blocker_can_block_attacker_pair(blk_card, blk_view, a.card, a.cp.as_deref())
-            {
+            if !state.blocker_can_block_attacker_pair_gated(
+                blk_bars || a.bars_blocks,
+                blk_card,
+                blk_view,
+                a.card,
+                a.cp.as_deref(),
+            ) {
                 continue;
             }
             // Skip attackers that already have at least their toughness
