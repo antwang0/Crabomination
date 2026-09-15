@@ -3020,6 +3020,12 @@ is not comparable with one from the sixth**, and every row below is a
 same-box A/B. The counters and the Ir *deltas* are what carry across.
 
 ```text
+perf    **`(-329)`: the two command-zone tails go behind one emptiness test — fixed -0.148 / cube
+        -0.083 / sealed -0.111 %**, `dispatch_board_scan` self -10.2..-11.5 % a call,
+        `fire_step_triggers` a further -5.0..-6.5 %. Two `Filter` chains over an always-empty
+        command zone, once per dispatch and once per step; `command_zones_are_empty` gates all
+        three sites now.
+
 perf    **`(-328)`: the two equip-trigger walks take the dispatcher's member lane — fixed -0.393 /
         cube -0.167 / sealed -0.189 %**, `fire_step_triggers` self -22.4 / -16.1 / -12.8 % a call.
         An ungated `for eq in &self.battlefield` on every step of every turn, whose definition half
@@ -3083,17 +3089,17 @@ perf    **`(-322)`: the block pair gate makes one walk per side, not nine — fi
         combat is lost in them. ⚠ **Price a write-counter gate against the census, not against the
         call count of the site you are gating.**
 
-perf    **Cumulative over the session (ten legs, eight taken, two reverted): fixed 596,342,781 ->
-        588,492,756 (-1.316 %), cube 1,585,705,950 -> 1,562,329,651 (-1.474 %), sealed
-        1,676,524,999 -> 1,659,113,327 (-1.038 %).**
+perf    **Cumulative over the session (eleven legs, nine taken, two reverted): fixed 596,342,781 ->
+        587,622,893 (-1.463 %), cube 1,585,705,950 -> 1,561,037,694 (-1.556 %), sealed
+        1,676,524,999 -> 1,657,275,430 (-1.148 %).**
 
-sweep   **TWO blocks: fresh seeds 1354..1357 at the `(-327)` tip and 1358..1361 at the shape-fix
-        tip — 24 cells / 118,400 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 16` on
-        each, pools `cube all sealed`, `target-audit/overflow` with `-C debug-assertions=yes` and
-        `CRAB_ANSWER_LOG=strict`. They are what audit `(-324)`'s new `has_combat_cap_static` lane,
-        `(-323)`'s exact-tax `debug_assert!` and (the second block) the nine loops that now keep
-        their lanes across a write, on dflt-pilot boards the suite never builds.
-        **Frontier 1362.**
+sweep   **THREE blocks — fresh seeds 1354..1357 at the `(-327)` tip, 1358..1361 at the shape-fix
+        tip, 1362..1365 at the `(-329)` tip: 36 cells / 177,600 games / 0 failures**,
+        `cap 0 / board 0 / stuck 0` on all three (`draw 16 / 16 / 4`), pools `cube all sealed`,
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. They
+        audit `(-324)`'s new `has_combat_cap_static` lane, `(-323)`'s exact-tax `debug_assert!`,
+        the nine loops that now keep their lanes across a write, and `(-326)`/`(-328)`'s shared
+        member-lane walker — on dflt-pilot boards the suite never builds. **Frontier 1366.**
 
 gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to
         the committed invariant, `determinism ok`. Suite **19,549 / 0 / 5** under
@@ -7478,6 +7484,40 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-329)` The two command-zone tails go behind one emptiness test — **fixed -0.148 / cube -0.083 / sealed -0.111 %**
+
+`dispatch_board_scan`'s CR 315.5 conspiracy tail and `fire_step_triggers`'
+CR 902.5 Vanguard tail each built **two `Filter` chains** over every seat's
+command zone — once per dispatch (50,212 / 79,006 / 112,524 a six-game run) and
+once per step of every turn (16,004 / 22,436 / 31,554). No format the simulator
+plays puts anything in a command zone, so both were pure iterator machinery.
+`command_zones_are_empty` — the test `sweep_finished_schemes` already used and
+`trigger_grant_sources` had open-coded — is `pub(crate)` now and gates all three.
+
+```text
+                    (-328)            (-329)          delta
+  fixed              588,492,756       587,622,893       -0.1478 %
+  cube             1,562,329,651     1,561,037,694       -0.0827 %
+  sealed           1,659,113,327     1,657,275,430       -0.1108 %
+
+  dispatch_board_scan self   78.4 -> 69.4 Ir/call   -11.5 %
+                             88.4 -> 79.4           -10.2 %
+                             78.9 -> 69.9           -11.4 %
+  fire_step_triggers self   400.7 -> 374.7           -6.5 %
+                            512.8 -> 487.0           -5.0 %
+                            508.9 -> 482.9           -5.1 %
+```
+
+⚠ **The device is (b) with the collection, not the predicate, empty — and it is
+worth more than the arithmetic suggests.** Two seats' empty command zones look
+like ~10 Ir; the measured row is ~9 Ir a call on `dispatch_board_scan` alone,
+because each `Filter` in the chain forwards its closure through `&mut
+F::call_mut` per *seat* and the chain is rebuilt per call (`(-78)`'s tax). **A
+`Filter`/`FlatMap` chain over a collection that is empty on every board the
+simulator plays is a row even when the collection is empty**; the sibling
+one-liner is the emblem walk two blocks down, and that one has no filters, so it
+is ~0.014 % and DECLINED.
 
 ### `(-328)` The two equip-trigger walks take the dispatcher's member lane — **fixed -0.393 / cube -0.167 / sealed -0.189 %**
 
@@ -12830,9 +12870,9 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-✅✅ **STATUS AT THE `(-328)` TIP (2026-09-15, the block-gate session): SEVEN ROWS
-TAKEN, TWO REFUTED, cumulative fixed -1.316 / cube -1.474 / sealed -1.038 %.**
-All seven came off **one question asked of the combat/declaration/dispatch spine:
+✅✅ **STATUS AT THE `(-329)` TIP (2026-09-15, the block-gate session): EIGHT ROWS
+TAKEN, TWO REFUTED, cumulative fixed -1.463 / cube -1.556 / sealed -1.148 %.**
+All eight came off **one question asked of the combat/declaration/dispatch spine:
 how many times does this function walk a short slice or the whole board when
 once (or none) would do?** None of them was in a self table as itself.
 
@@ -12844,6 +12884,7 @@ once (or none) would do?** None of them was in a self table as itself.
   (-326)  statics_granted_dying_triggers: the lane already existed -0.233 / -0.363 / -0.218 %
   (-327)  apply_soulbond_pairing: joins the gate-keyword union   -0.108 / -0.156 / -0.110 %
   (-328)  the two equip-trigger walks take the member lane       -0.393 / -0.167 / -0.189 %
+  (-329)  the two command-zone tails behind one emptiness test    -0.148 / -0.083 / -0.111 %
   shape   the nine `&mut battlefield` loops take `iter_mut`       NEUTRAL, see the Baseline
 ```
 
@@ -12865,8 +12906,14 @@ over ~0.3 % on any pool, read the body and classify every walk it makes:
      they are inside it (`(-320)`, `(-321)`), and **an addition to an existing
      lane's union if the predicate is printed-keyword-shaped** (`(-327)`).
  (c) **a whole-board walk another function already memoizes** — take its
-     walker (`(-326)`). Grep before building.
+     walker (`(-326)`, `(-328)`). Grep before building.
  (d) **a zone scan from the wrong end** (`(-325)`).
+ (e) **a `Filter`/`FlatMap` chain over a collection that is EMPTY on every board
+     the simulator plays** — an emptiness test in front of it (`(-329)`). ⚠ It
+     is worth more than the arithmetic: the chain is rebuilt per call and each
+     `Filter` forwards its closure through `&mut F::call_mut` per element, so
+     two seats' empty command zones read ~9 Ir a call, not ~2. A chain with **no**
+     filters (the emblem walk) is ~0.014 % and not a row.
 `fire_step_triggers` is `(-328)`. Still unread at this tip:
 `perform_action_inner` (1.70 % self on `cube`, 219 Ir over 121,844 calls — a
 `match` dispatch, so expect (a) not (b)), `resolve_top_of_stack_inner` (0.79 %,
