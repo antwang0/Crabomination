@@ -5026,3 +5026,31 @@ this round leaves behind that is worth keeping: the settled consumption
 drop-in for the sims' leaf; the split sims (`simulate_attack_leaf` /
 `simulate_block_leaf`, `settle_to_quiescence`, `settle_through_combat`); the
 OOM note (batch 512 is the ceiling for a settled-state PG batch on the 4090).
+
+## Round 74 — the net leaf inside the 256-search, re-read on the current default and ADOPTED in the lobby and the client (2026-09-15)
+
+Round 69's search cells (`mcts-net67-256` vs `mcts-dflt-256`, the committed
+champion: 53.0 / 55.5, pooled +4.25) were "recorded, not adopted" — a
+program decision on the lobby's net dependency — and were taken on the
+round-67 default; rounds 68, 70 and 71 have moved `dflt` since. Re-read
+(`.ladder/r74/search_reread.sh`, pre-registered: pooled > +2.0 → adopt),
+sealed, paired, 500 games × 12 decks a cell, ±0.95:
+
+| seed | round 69 | round 74 |
+|---|---|---|
+| 43 | 53.0 [52.1, 54.0] | **53.3** [52.4, 54.3] |
+| 97 | 55.5 [54.6, 56.4] | **55.2** [54.3, 56.2] |
+| pooled | +4.25 | **+4.25** |
+
+Identical to the tenth. **Adopted**: `lobby::default_bot` and the client's
+`local_bot` now search on `EvalWeights::net_on_default()` (ladder
+`mcts-net67-256`); the client loads `CRAB_NET` / `nets/champion.safetensors`
+once on first use and falls back to the material leaf (the round-64 pilot)
+with a stderr line when the file is missing or bad — the server already
+booted the champion into `SLOT_BEST`. The largest measured unclaimed gain
+in the record, one line of profile each side. What it does NOT change: the
+ladder's `mcts-dflt-256` reference, `EvalWeights::default()`, golden traces,
+`--bench`. The dependency it re-introduces: the vocabulary freeze coupling
+(`server::vocab_snapshot`) is now load-bearing for the lobby again — a
+vocabulary move without a champion retrain would degrade the lobby to the
+material leaf on a load refusal, which the boot check makes loud.

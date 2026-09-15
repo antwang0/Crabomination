@@ -46,11 +46,13 @@ falls back to a generated build, with the reason on stderr.
 
 **The opponent** is the lobby's pilot: a determinized Monte Carlo search
 at 256 iterations over a 3-turn horizon, scoring rollouts with the
-material evaluator — no value net is loaded for play. Round 64
-(2026-09-05) read 64 / 128 / 256 iterations at 52.35 / 54.75 / 55.25 %
-against the heuristic default, and round 62 read the champion net's leaf
-at +0.25 inside the search, so the net stays out of the client. Expect
-about half a second per searched decision, a few seconds on a busy board.
+champion value net (`nets/champion.safetensors`, or `CRAB_NET`) as the
+leaf. Round 64 (2026-09-05) read 64 / 128 / 256 iterations at 52.35 /
+54.75 / 55.25 % against the heuristic default on the material leaf, and
+round 74 (2026-09-15) read the net leaf at 53.3 / 55.2 % over that
+material-leaf search. A checkout without the net file plays the
+material leaf and says so on stderr. Expect about half a second per
+searched decision, a few seconds on a busy board.
 
 ## Status & roadmap
 

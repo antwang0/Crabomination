@@ -1573,25 +1573,48 @@ pub(crate) fn menu_player_name(world: &World) -> String {
         .unwrap_or_else(|| "Player".to_string())
 }
 
-/// The bot a local seat gets: the lobby's pilot, the net-free search at
-/// 256 iterations on the adopted default — the same rule
-/// `server::lobby::default_bot` follows, so single-player and hosted
-/// games face the same opponent. Round 64 (2026-09-05) read 64 / 128 /
-/// 256 iterations on the material leaf at 52.35 / 54.75 / 55.25 against
-/// the heuristic default; round 62 read the champion net's leaf at +0.25
-/// inside the search and the search itself at +2.5, so no net is loaded
-/// for play. Before this the client built its own pilot — `net_eval_det1`
-/// at 64 iterations behind a loaded net, without the combat chains — and
-/// forty September replays showed its attack judgment two generations
+/// The bot a local seat gets: the lobby's pilot — the 256-iteration
+/// search on the adopted default with the champion value net as its leaf
+/// (round 74, 2026-09-15: 53.3 / 55.2 over the material leaf inside the
+/// search, `server::lobby::default_bot` has the record) — so single-player
+/// and hosted games face the same opponent. The net is loaded here on
+/// first use from `CRAB_NET` or `nets/champion.safetensors`; a checkout
+/// without the file plays the material leaf (the round-64 pilot, 55.25
+/// over the heuristic default) and says so once on stderr, the same
+/// fallback the server has. Before round 65 the client built its own
+/// pilot — `net_eval_det1` at 64 iterations without the combat chains —
+/// and forty September replays showed its attack judgment two generations
 /// behind the lobby's (ML_NOTES "Round 65").
 fn local_bot() -> Box<dyn crabomination::server::Bot> {
+    load_champion_once();
     Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
         iterations: 256,
         horizon_turns: 3,
-        weights: crabomination::server::EvalWeights::default(),
+        weights: crabomination::server::EvalWeights::net_on_default(),
         search_threads: bot_search_threads(),
         ..crabomination::server::MctsConfig::default()
     }))
+}
+
+/// Load the champion value net into the bot's slot, once per process.
+/// Missing file: the material leaf, announced. Bad file: announced and
+/// the material leaf — a game must still start, unlike the server, whose
+/// boot refuses a bad net because it advertises the bot's strength.
+fn load_champion_once() {
+    use crabomination::server::net_eval;
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let path = std::env::var("CRAB_NET").unwrap_or_else(|_| "nets/champion.safetensors".to_string());
+        let p = std::path::Path::new(&path);
+        if !p.exists() {
+            eprintln!("value net {path} not found; the local bot searches on the material leaf");
+            return;
+        }
+        match net_eval::load_slot(net_eval::SLOT_BEST, p) {
+            Ok(()) => eprintln!("value net loaded from {path}; the local bot searches on its leaf"),
+            Err(e) => eprintln!("value net {path}: {e}; the local bot searches on the material leaf"),
+        }
+    });
 }
 
 /// Worker threads for the bot's root search.

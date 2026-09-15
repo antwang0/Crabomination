@@ -31,27 +31,31 @@ use super::{
     SeatChannel, SeatOccupant,
 };
 
-/// The bot a lobby seat gets: the strongest adopted pilot, which since
-/// round 64 (2026-09-05) needs no net. Round 62 read the champion value
-/// net at +0.05 as a scored pilot and +0.25 as the search leaf on top of
-/// the chained heuristic; the search itself is the margin, and round 64
-/// priced its depth on the material leaf against the default: 64
-/// iterations 52.35, 128 **54.75**, 256 **55.25** (seeds 43/97, 500 games
-/// × 12 decks each). 256 is the pre-registered reading ("clearly above
-/// 64"), at roughly half a second a searched decision single-threaded —
-/// the client's latency budget. The ladder name is `mcts-dflt-256`. The
-/// net is still loaded by the server for the belief redeal and the
-/// `net-*` reference family; nothing here reads it.
+/// The bot a lobby seat gets: the strongest adopted pilot — since round
+/// 74 (2026-09-15) the 256-iteration search on the adopted default with
+/// the champion value net as its **leaf** (`EvalWeights::net_on_default`,
+/// ladder `mcts-net67-256`). Round 69 read that leaf at +4 to +5 over the
+/// material leaf inside the search (53.0 / 55.5 vs `mcts-dflt-256`, the
+/// committed champion), and round 74 re-read it on the current default at
+/// **53.3 / 55.2** (seeds 43/97, 500 games × 12 decks, ±0.95 each; the
+/// pre-registered adopt line was pooled > +2.0). Round 62's "+0.25" was
+/// the leaf at 64 iterations on a profile four adoptions behind the
+/// default; a deeper search leans harder on its leaf, and the material
+/// eval is what the sims already price, so the net only separates the
+/// lines the sims tie — which at 256 is worth four points.
 ///
-/// Before round 64 this was `mcts-net-deep` on `client_pilot()` (det1 +
-/// the saturation fallback + the chains) behind a loaded net, with the
-/// heuristic as the no-net fallback; `mcts-client` keeps that shape on
-/// the ladder.
+/// The slot is a runtime input, not a build requirement: the server boots
+/// `nets/champion.safetensors` (or `CRAB_NET`) into `SLOT_BEST`, and on a
+/// checkout without the file `net_on_default` falls through to the
+/// material leaf — exactly the round-64 pilot (`mcts-dflt-256`, 64 / 128 /
+/// 256 iterations at 52.35 / 54.75 / 55.25 over the heuristic default).
+/// The forward pass is vectorized, so the leaf costs no measurable wall
+/// clock at this depth (~half a second a searched decision, single-threaded).
 fn default_bot() -> Box<dyn super::Bot> {
     Box::new(MctsBot::new(MctsConfig {
         iterations: 256,
         horizon_turns: 3,
-        weights: super::EvalWeights::default(),
+        weights: super::EvalWeights::net_on_default(),
         ..MctsConfig::default()
     }))
 }
