@@ -6760,6 +6760,62 @@ impl KeywordSlice for [Keyword] {
     }
 }
 
+/// The value-less keywords the combat heuristics ask a permanent about, as
+/// bits of [`CardInstance::combat_keywords`]' one-pass answer.
+///
+/// Every variant here is a unit one, so the discriminant test `has_kw` makes
+/// is the whole comparison and a `match` arm answers it with no `Keyword::eq`.
+/// A valued keyword (Rampage N, Toxic N) does not belong here — its callers
+/// want the value, not presence.
+pub mod combat_kw {
+    use super::Keyword;
+
+    pub const FLYING: u32 = 1 << 0;
+    pub const REACH: u32 = 1 << 1;
+    pub const TRAMPLE: u32 = 1 << 2;
+    pub const INDESTRUCTIBLE: u32 = 1 << 3;
+    pub const LIFELINK: u32 = 1 << 4;
+    pub const DEATHTOUCH: u32 = 1 << 5;
+    pub const MENACE: u32 = 1 << 6;
+    pub const FIRST_STRIKE: u32 = 1 << 7;
+    pub const DOUBLE_STRIKE: u32 = 1 << 8;
+    pub const INFECT: u32 = 1 << 9;
+    pub const MUST_BE_BLOCKED: u32 = 1 << 10;
+
+    /// The family, for the agreement test.
+    pub const ALL: [(u32, Keyword); 11] = [
+        (FLYING, Keyword::Flying),
+        (REACH, Keyword::Reach),
+        (TRAMPLE, Keyword::Trample),
+        (INDESTRUCTIBLE, Keyword::Indestructible),
+        (LIFELINK, Keyword::Lifelink),
+        (DEATHTOUCH, Keyword::Deathtouch),
+        (MENACE, Keyword::Menace),
+        (FIRST_STRIKE, Keyword::FirstStrike),
+        (DOUBLE_STRIKE, Keyword::DoubleStrike),
+        (INFECT, Keyword::Infect),
+        (MUST_BE_BLOCKED, Keyword::MustBeBlocked),
+    ];
+
+    #[inline]
+    pub(crate) fn bit_of(k: &Keyword) -> u32 {
+        match k {
+            Keyword::Flying => FLYING,
+            Keyword::Reach => REACH,
+            Keyword::Trample => TRAMPLE,
+            Keyword::Indestructible => INDESTRUCTIBLE,
+            Keyword::Lifelink => LIFELINK,
+            Keyword::Deathtouch => DEATHTOUCH,
+            Keyword::Menace => MENACE,
+            Keyword::FirstStrike => FIRST_STRIKE,
+            Keyword::DoubleStrike => DOUBLE_STRIKE,
+            Keyword::Infect => INFECT,
+            Keyword::MustBeBlocked => MUST_BE_BLOCKED,
+            _ => 0,
+        }
+    }
+}
+
 /// Presence bits the state-based-action sweep's board scan reads off a
 /// definition, at their storage offsets inside [`CardMemo`] so the scan ORs
 /// the memo word straight into its accumulator.
@@ -8643,6 +8699,39 @@ impl CardInstance {
         self.definition.keywords.has_kw(kw)
             || self.granted_keywords_eot.has_kw(kw)
             || self.keyword_counters.get(kw).copied().unwrap_or(0) > 0
+    }
+
+    /// **One pass over the four keyword sources for [`combat_kw`]'s family.**
+    /// [`Self::has_keyword`] walks up to three slices per ask and the bot's
+    /// attack and block pickers ask eight or nine of these per candidate —
+    /// 87 % of every `has_keyword` call in the program came from those two
+    /// (PERF `(-330)`). Same answer as `has_keyword` for every bit, asserted
+    /// over all four sources by `combat_keywords_agrees_with_has_keyword`.
+    pub fn combat_keywords(&self) -> u32 {
+        let mut m = 0u32;
+        for k in self.definition.keywords.iter() {
+            m |= combat_kw::bit_of(k);
+        }
+        for k in self.granted_keywords_eot.iter() {
+            m |= combat_kw::bit_of(k);
+        }
+        // CR 122.1b — a keyword counter grants its keyword. No zero-valued
+        // entry is ever stored, so presence is the whole test.
+        for (k, _) in self.keyword_counters.iter() {
+            m |= combat_kw::bit_of(k);
+        }
+        // A removal beats all three positive sources, as in
+        // `has_keyword_exact`. Both lists are empty on nearly every
+        // permanent, and neither can strip a bit nothing granted.
+        if m != 0 {
+            for k in self.removed_keywords_eot.iter() {
+                m &= !combat_kw::bit_of(k);
+            }
+            for k in self.removed_keywords.iter() {
+                m &= !combat_kw::bit_of(k);
+            }
+        }
+        m
     }
 
     /// True if this permanent has Toxic N for any N (printed or EOT-granted).

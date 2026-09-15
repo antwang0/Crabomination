@@ -11,7 +11,7 @@ use crate::game::KeywordSlice;
 use rand::{RngExt, SeedableRng, rng};
 use rand::rngs::StdRng;
 
-use crate::card::{CardDefinition, CardId};
+use crate::card::{combat_kw, CardDefinition, CardId};
 use crate::decision::{AutoDecider, Decider};
 use crate::effect::Effect;
 // The printed-mana-ability shape questions, moved to `game::mana_shape` so
@@ -9530,12 +9530,12 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
         let through: i32 = dmg.iter().skip(opp_blockers.len()).sum();
         through >= opp_life
     };
-    let has_ground_deathtouch = opp_blockers
-        .iter()
-        .any(|b| b.has_keyword(&Keyword::Deathtouch) && !b.has_keyword(&Keyword::Flying));
+    let has_ground_deathtouch = opp_blockers.iter().any(|b| {
+        b.combat_keywords() & (combat_kw::DEATHTOUCH | combat_kw::FLYING) == combat_kw::DEATHTOUCH
+    });
     let max_ground_blocker_power: i32 = opp_blockers
         .iter()
-        .filter(|b| !b.has_keyword(&Keyword::Flying))
+        .filter(|b| b.combat_keywords() & combat_kw::FLYING == 0)
         .map(|b| b.power())
         .max()
         .unwrap_or(0);
@@ -9574,26 +9574,31 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
             {
                 return true;
             }
-            let flying = c.has_keyword(&Keyword::Flying);
+            // **One walk over this candidate's keyword sources**, read here
+            // rather than at the top of the closure so the three early
+            // returns above still cost no keyword walk at all. The nine
+            // `has_keyword` asks below were nine walks of the same three
+            // slices (PERF `(-330)`).
+            let kw = c.combat_keywords();
+            let flying = kw & combat_kw::FLYING != 0;
             // Evasive attackers (flying) — only block-
             // worried if there's a flying opp blocker.
             // Skip the deathtouch / ground-power filter
             // for them; assume they're safe.
             if flying {
                 let opp_has_flying_blocker = opp_blockers.iter()
-                    .any(|b| b.has_keyword(&Keyword::Flying)
-                          || b.has_keyword(&Keyword::Reach));
+                    .any(|b| b.combat_keywords() & (combat_kw::FLYING | combat_kw::REACH) != 0);
                 if !opp_has_flying_blocker {
                     return true; // free swing
                 }
             }
             // Trample: tougher creatures still come in
             // (we'll get some damage through chumps).
-            if c.has_keyword(&Keyword::Trample) {
+            if kw & combat_kw::TRAMPLE != 0 {
                 return true;
             }
             // Indestructible: safe to swing (won't die).
-            if c.has_keyword(&Keyword::Indestructible) {
+            if kw & combat_kw::INDESTRUCTIBLE != 0 {
                 return true;
             }
             // Shield counter on the attacker — the first
@@ -9604,27 +9609,26 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
             }
             // Lifelink: even if we trade, we gain life —
             // worth swinging when we can race.
-            if c.has_keyword(&Keyword::Lifelink) {
+            if kw & combat_kw::LIFELINK != 0 {
                 return true;
             }
             // Deathtouch attacker: any blocker that deals
             // with it dies (CR 702.2), so blocking is at
             // best an even trade for the opponent — swinging
             // is always at least fine.
-            if c.has_keyword(&Keyword::Deathtouch) && c.power() >= 1 {
+            if kw & combat_kw::DEATHTOUCH != 0 && c.power() >= 1 {
                 return true;
             }
             // Menace (CR 702.111): needs two+ blockers. If
             // the opponent has fewer than two creatures that
             // can legally block this attacker, it gets
             // through unblocked — safe to swing.
-            if c.has_keyword(&Keyword::Menace) {
+            if kw & combat_kw::MENACE != 0 {
                 let able = opp_blockers
                     .iter()
                     .filter(|b| {
                         !flying
-                            || b.has_keyword(&Keyword::Flying)
-                            || b.has_keyword(&Keyword::Reach)
+                            || b.combat_keywords() & (combat_kw::FLYING | combat_kw::REACH) != 0
                     })
                     .count();
                 if able < 2 {
@@ -9634,12 +9638,10 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
             // First strike + bigger power than blockers'
             // toughness — we kill the blocker before it
             // strikes back. Safe attack (push XXVI).
-            if c.has_keyword(&Keyword::FirstStrike)
-                || c.has_keyword(&Keyword::DoubleStrike)
-            {
+            if kw & (combat_kw::FIRST_STRIKE | combat_kw::DOUBLE_STRIKE) != 0 {
                 let max_blocker_toughness: i32 = opp_blockers
                     .iter()
-                    .filter(|b| !b.has_keyword(&Keyword::Flying) || flying)
+                    .filter(|b| b.combat_keywords() & combat_kw::FLYING == 0 || flying)
                     .map(|b| b.toughness())
                     .max()
                     .unwrap_or(0);
@@ -12576,6 +12578,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // permanent.
             let a = state.battlefield.find_by_id(atk.attacker)?;
             let cp = state.computed_permanent_on(a);
+            // **One walk over the attacker's keyword sources** for the six
+            // presence questions below; `has_keyword` walks three slices per
+            // ask (PERF `(-330)`).
+            let akw = a.combat_keywords();
             Some(AttackerFacts {
                 id: atk.attacker,
                 card: a,
@@ -12583,12 +12589,14 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 target: atk.target,
                 power: attacker_damage_value_on(state, a),
                 toughness: a.toughness(),
-                flying: a.has_keyword(&Keyword::Flying),
-                deathtouch: a.has_keyword(&Keyword::Deathtouch),
-                first_strike: a.has_keyword(&Keyword::FirstStrike)
-                    || a.has_keyword(&Keyword::DoubleStrike),
-                trample: a.has_keyword(&Keyword::Trample),
-                indestructible: a.is_indestructible(),
+                flying: akw & combat_kw::FLYING != 0,
+                deathtouch: akw & combat_kw::DEATHTOUCH != 0,
+                first_strike: akw & (combat_kw::FIRST_STRIKE | combat_kw::DOUBLE_STRIKE) != 0,
+                trample: akw & combat_kw::TRAMPLE != 0,
+                // CR 122.1 — the counter is the other half of
+                // `is_indestructible`, which the mask replaces.
+                indestructible: akw & combat_kw::INDESTRUCTIBLE != 0
+                    || a.counter_count(crate::card::CounterType::Indestructible) > 0,
                 // CR 509.1c — the *computed* set, for the same reason as
                 // `min_blockers` below: `declare_blockers` reads the computed
                 // keyword and a granted `MustBeBlocked` (Nemesis Mask and the
@@ -12620,7 +12628,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 },
                 poison: {
                     let mut p = 0u32;
-                    if a.has_keyword(&Keyword::Infect) {
+                    if akw & combat_kw::INFECT != 0 {
                         p = p.saturating_add(a.power().max(0) as u32);
                     }
                     p += a
@@ -12751,9 +12759,11 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         // trade math below asks both on every pair. The attacker-independent
         // half of block legality (CR 509.1a/b) is `legal_blockers`' filter,
         // already applied to every entry here.
-        let blk_first_strike = blk_card.has_keyword(&Keyword::FirstStrike)
-            || blk_card.has_keyword(&Keyword::DoubleStrike);
-        let blocker_indestructible = blk_card.is_indestructible();
+        let bkw = blk_card.combat_keywords();
+        let blk_first_strike =
+            bkw & (combat_kw::FIRST_STRIKE | combat_kw::DOUBLE_STRIKE) != 0;
+        let blocker_indestructible = bkw & combat_kw::INDESTRUCTIBLE != 0
+            || blk_card.counter_count(crate::card::CounterType::Indestructible) > 0;
         for a in &attacker_info {
             let (a_id, a_pow, a_tough, a_dt) = (&a.id, &a.power, &a.toughness, &a.deathtouch);
             if evasion_bars_block(a.flying, b_flying, b_reach) {

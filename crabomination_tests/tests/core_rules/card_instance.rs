@@ -222,3 +222,59 @@ fn a_colour_indicator_is_the_printed_colour_when_the_cost_has_no_pip() {
         assert_eq!(c.printed_color_set(), want, "{name}");
     }
 }
+
+/// `combat_keywords` is a one-pass restatement of `has_keyword` for eleven
+/// unit keywords (PERF `(-330)`); the two must agree over every source a
+/// keyword can come from — printed, EOT-granted, keyword counter (CR 122.1b)
+/// — and over both removal lists, which beat all three.
+#[test]
+fn combat_keywords_agrees_with_has_keyword() {
+    use crabomination::card::combat_kw;
+    let base = || CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
+    let check = |c: &CardInstance, what: &str| {
+        let m = c.combat_keywords();
+        for (bit, kw) in combat_kw::ALL {
+            assert_eq!(
+                m & bit != 0,
+                c.has_keyword(&kw),
+                "{what}: {kw:?} disagrees (mask {m:#x})"
+            );
+        }
+    };
+    check(&base(), "vanilla");
+    for (_, kw) in combat_kw::ALL {
+        // Printed.
+        let mut c = base();
+        std::sync::Arc::make_mut(c.definition_mut()).keywords.push(kw.clone());
+        check(&c, "printed");
+        // Printed, then stripped for the turn and permanently.
+        let mut d = c.clone();
+        d.removed_keywords_eot.push(kw.clone());
+        check(&d, "printed + removed_eot");
+        let mut d = c.clone();
+        d.removed_keywords.push(kw.clone());
+        check(&d, "printed + removed");
+        // Granted until end of turn.
+        let mut c = base();
+        c.granted_keywords_eot.push(kw.clone());
+        check(&c, "granted_eot");
+        let mut d = c.clone();
+        d.removed_keywords_eot.push(kw.clone());
+        check(&d, "granted_eot + removed_eot");
+        // CR 122.1b keyword counter.
+        let mut c = base();
+        c.keyword_counters.add(kw.clone(), 1);
+        check(&c, "counter");
+        let mut d = c.clone();
+        d.removed_keywords.push(kw.clone());
+        check(&d, "counter + removed");
+    }
+    // A keyword outside the family sets no bit, and a removal of one strips
+    // nothing.
+    let mut c = base();
+    std::sync::Arc::make_mut(c.definition_mut()).keywords.push(Keyword::Vigilance);
+    std::sync::Arc::make_mut(c.definition_mut()).keywords.push(Keyword::Flying);
+    c.removed_keywords_eot.push(Keyword::Vigilance);
+    check(&c, "off-family");
+    assert_eq!(c.combat_keywords(), combat_kw::FLYING);
+}
