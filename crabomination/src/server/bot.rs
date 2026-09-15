@@ -12519,6 +12519,10 @@ struct AttackerFacts<'a> {
     first_strike: bool,
     trample: bool,
     indestructible: bool,
+    /// CR 702.16 — this attacker's view carries protection from something, so
+    /// the pair loop's "does the blocker's damage bounce off it" question is
+    /// worth asking. False on essentially every attacker (PERF `(-331)`).
+    protected: bool,
     /// CR 509.1c — "must be blocked if able".
     must_be_blocked: bool,
     /// CR 702.23 — Rampage N, the per-extra-blocker pump.
@@ -12597,6 +12601,9 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 // `is_indestructible`, which the mask replaces.
                 indestructible: akw & combat_kw::INDESTRUCTIBLE != 0
                     || a.counter_count(crate::card::CounterType::Indestructible) > 0,
+                protected: cp
+                    .as_deref()
+                    .is_some_and(crate::game::GameState::view_has_protection),
                 // CR 509.1c — the *computed* set, for the same reason as
                 // `min_blockers` below: `declare_blockers` reads the computed
                 // keyword and a granted `MustBeBlocked` (Nemesis Mask and the
@@ -12759,6 +12766,9 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         // trade math below asks both on every pair. The attacker-independent
         // half of block legality (CR 509.1a/b) is `legal_blockers`' filter,
         // already applied to every entry here.
+        // CR 702.16 — the target half of `protection_prevents_views`' gate,
+        // asked once per blocker instead of once per (blocker, attacker) pair.
+        let blk_protected = crate::game::GameState::view_has_protection(blk_view);
         let bkw = blk_card.combat_keywords();
         let blk_first_strike =
             bkw & (combat_kw::FIRST_STRIKE | combat_kw::DOUBLE_STRIKE) != 0;
@@ -12804,10 +12814,12 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // none (won't be killed). Factor both into the trade math.
             // Both views are in hand, so the `_views` form: the by-id form
             // re-asks the scope memo for each, twice a pair.
-            let blocker_takes_no_dmg =
-                state.protection_prevents_views(*a_id, a.cp.as_deref(), blk_view);
+            let blocker_takes_no_dmg = blk_protected
+                && state.protection_prevents_views(*a_id, a.cp.as_deref(), blk_view);
             let attacker_takes_no_dmg = match a.cp.as_deref() {
-                Some(acp) => state.protection_prevents_views(b_id, Some(blk_view), acp),
+                Some(acp) => {
+                    a.protected && state.protection_prevents_views(b_id, Some(blk_view), acp)
+                }
                 None => state.damage_prevented_by_protection(b_id, *a_id),
             };
             // CR 702.12 — an indestructible permanent isn't destroyed by lethal

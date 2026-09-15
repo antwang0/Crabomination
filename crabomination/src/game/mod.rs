@@ -15789,6 +15789,19 @@ impl GameState {
         ProtectionKind::of(kw).is_some()
     }
 
+    /// CR 702.16 — does this view carry protection from *anything*?
+    ///
+    /// The whole-slice half of [`Self::protection_prevents_views`]' early-out,
+    /// named so a caller that asks one target about many sources pays it once:
+    /// the bot's block planner asks the same blocker's view about every
+    /// attacker and the same attacker's view about every blocker, and almost
+    /// no permanent ever carries protection (PERF `(-331)`). One definition,
+    /// so the gate and the body cannot drift.
+    #[inline]
+    pub(crate) fn view_has_protection(tgt: &crate::game::layers::ComputedPermanent) -> bool {
+        tgt.keywords().iter().any(Self::protection_keyword)
+    }
+
     pub fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
         // Both sides read through the layer system — share one gather.
         self.with_frozen_layers(|g| g.damage_prevented_by_protection_inner(source, target))
@@ -15817,7 +15830,7 @@ impl GameState {
         // lookup and two `Vec` clones — and none of it can change the answer
         // unless the target carries a protection keyword. Most permanents
         // never do, so gate on the one thing that is already computed.
-        if !tgt.keywords().iter().any(Self::protection_keyword) {
+        if !Self::view_has_protection(&tgt) {
             return false;
         }
         self.protection_prevents_views(source, self.computed_permanent(source).as_deref(), &tgt)
@@ -15837,7 +15850,7 @@ impl GameState {
         src_cp: Option<&crate::game::layers::ComputedPermanent>,
         tgt: &crate::game::layers::ComputedPermanent,
     ) -> bool {
-        if !tgt.keywords().iter().any(Self::protection_keyword) {
+        if !Self::view_has_protection(tgt) {
             return false;
         }
         let src_colors: crate::mana::ColorSet = src_cp.map(|c| c.colors).unwrap_or_else(|| {
