@@ -12524,6 +12524,11 @@ struct AttackerFacts<'a> {
     /// essentially every attacker, and then no blocker needs the pair check
     /// at all (PERF `(-333)`).
     bars_blocks: bool,
+    /// CR 702.9 — `Flying` on the attacker's **computed** set, kept out of
+    /// `bars_blocks` because its rule is a pair test the planner holds both
+    /// halves of (PERF `(-334)`). ⚠ Not `flying` above, which is the
+    /// *instance* walk the trade math uses.
+    cp_flying: bool,
     /// CR 702.16 — this attacker's view carries protection from something, so
     /// the pair loop's "does the blocker's damage bounce off it" question is
     /// worth asking. False on essentially every attacker (PERF `(-331)`).
@@ -12617,6 +12622,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     // CR 701.54c — the Ring-bearer power bar is not a keyword.
                     || (state.effective_ring_bearer(a.controller) == Some(atk.attacker)
                         && state.players[a.controller].ring_temptations >= 1),
+                cp_flying: match &cp {
+                    Some(c) => c.keywords().has_kw(&Keyword::Flying),
+                    None => false,
+                },
                 // CR 509.1c — the *computed* set, for the same reason as
                 // `min_blockers` below: `declare_blockers` reads the computed
                 // keyword and a granted `MustBeBlocked` (Nemesis Mask and the
@@ -12808,7 +12817,12 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // legally be assigned to, so the bot never submits a block batch
             // the engine will reject.
             if !state.blocker_can_block_attacker_pair_gated(
-                blk_bars || a.bars_blocks,
+                blk_bars
+                    || a.bars_blocks
+                    // CR 702.9 — the one family member common enough to be
+                    // worth a pair test: a flier bars only a blocker with
+                    // neither flying nor reach, and both halves are in hand.
+                    || (a.cp_flying && !(b_flying || b_reach)),
                 blk_card,
                 blk_view,
                 a.card,

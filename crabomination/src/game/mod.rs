@@ -28491,6 +28491,17 @@ pub(crate) fn affected_from_requirement(
 /// lets [`GameState::blocker_can_block_attacker_pair_gated`] skip the whole
 /// pair check. ⚠ **A keyword added to either of those `match`es belongs here
 /// too**; the `debug_assert!` in the gated form is the ratchet that says so.
+///
+/// ⚠⚠ **`Keyword::Flying` is deliberately NOT here** — it is the one member of
+/// the family common enough to decide the gate on its own (three of `fixed`'s
+/// four decks fly, and `(-333)` read flat there because of it), and its rule
+/// is a *pair* test the planner already holds both halves of: it bars only
+/// `if !b_flying && !b_reach`. The caller passes it as part of `bars`
+/// (`attacker_is_flying && !(blocker_flying || blocker_reach)`), off the
+/// **computed** sets on both sides. Nothing else in either body reads the
+/// attacker's `Flying` except `a_flying`, which only feeds
+/// `b_only_flying && !a_flying` — and `CanBlockOnlyFlying` is in the blocker
+/// family, so that pair never reaches the gate. PERF `(-334)`.
 pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
     matches!(
         k,
@@ -28508,7 +28519,6 @@ pub fn attacker_block_bar_kw(k: &Keyword) -> bool {
             | Keyword::Unblockable
             | Keyword::ProtectionFromCreatures
             | Keyword::ProtectionFromEverything
-            | Keyword::Flying
             | Keyword::Horsemanship
             | Keyword::Shadow
             | Keyword::Skulk
