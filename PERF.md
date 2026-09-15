@@ -3046,11 +3046,31 @@ census  **The two pickers were never in a self table as the keyword cost, and th
         existed; what nobody had asked is `cg_edges.py --callers` of it, which puts 87 % of the
         calls in two functions. **A shared leaf's row is a caller question, not a leaf question.**
 
-gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to
-        the committed invariant, with `determinism ok` and `thread_determinism ok (3 vs 1)`.
-        The 48 `CRAB_DUMP_TRACES` cube games are identical across all three binaries
-        (`(-329)`, `(-330)`, `(-331)`) — both rows are behaviour-preserving by trace, not just by
-        counter. Suite, clippy and the `release-fast` typecheck are in the NEXT block.
+sweep   **TWO blocks — fresh seeds 1366..1369 and 1370..1373, both at the `(-332)` tip plus the
+        `KeywordCounters::insert` invariant fix: 24 cells / 118,400 games / 0 failures**,
+        `cap 0 / board 0 / stuck 0` on both (`draw 4 / 8`), pools `cube all sealed`,
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
+        They audit `(-330)`'s one-pass keyword mask and `(-331)`'s hoisted protection gate on
+        dflt-pilot combats the suite never builds — both are combat-legality *paths*, and the
+        trace diff only covers `gang`. **Frontier 1374.** Cells run 24-69 s here; a whole block
+        is ~10 minutes, which is cheaper than one `profiling-fast` build — take one.
+
+gates   `--bench` on `target/release/bot_ladder` at the tip: **195,806 decisions / 27.49 turns /
+        611.9 per game / 0 stalls**, byte-identical to the committed invariant, with
+        `determinism ok` and `thread_determinism ok (3 vs 1)`; `games_per_s 540.61`,
+        `peak_rss_mib 25.1`, `bin_bytes 84,957,464` (one run, so it says nothing against any other
+        box). Suite **19,550 / 0 / 5** (`CRAB_ANSWER_LOG=strict`; 19,549 plus the two new
+        `card_instance` tests, one of which is the `combat_keywords` / `has_keyword` agreement
+        proof over all four keyword sources and both removal lists), clippy **0**
+        (`--workspace --all-targets --exclude crabomination_client`, and again
+        `--features trig-census`), `cargo check --profile release-fast -p crabomination --bin
+        bot_ladder` clean. The 48 `CRAB_DUMP_TRACES` cube games are identical across all four
+        binaries (`(-329)`, `(-330)`, `(-331)`, `(-332)`) — every row is behaviour-preserving by
+        **trace**, not just by counter.
+        ⚠ Cold `release` here is **27m51s**, against `profiling-fast`'s 9m01s: the bench gate is
+        the most expensive single thing in the loop on this box, and an edit to
+        `crabomination_base` after starting it makes `cargo run --release` rebuild the whole graph
+        again. Land base changes before the gate, not after.
 ```
 
 ### 2026-09-15 (the block-gate session) — four rows off one device, and the device is "count the walks, not the calls"
@@ -13080,6 +13100,41 @@ costs a cold build.
      them into a single walk over `opp_blockers` is ~8,600 passes / 0.26 M on
      `cube`. Take it as clarity, not as a row.
 ```
+
+📐 **AND THE REST OF THE SHARED-LEAF POPULATION IS DIFFUSE — censused at the
+`(-332)` tip so the next run does not repeat it.** `cg_edges.py --callers` of
+every remaining leaf over ~40 k calls on `cube`:
+
+```text
+  counter_count       225,536 calls / 2.53 M — top caller 39,070 (17 %),
+                      31 more rows holding 28 %. No hoistable cluster.
+  CardInstance::toughness  79,198 / 2.82 M — 34,930 in `check_state_based_actions_into`
+                      (FLAT by line profile) and 12,534 in `dies_to_sba`.
+  CardInstance::power      44,976 / 1.53 M — 28,558 in `pick_attacks_inner`, which
+                      is the ONE clustered row left in the pickers and is ~5 Ir
+                      a call of body: the caller asks `c.power()` three times
+                      down the filter chain. Worth ~0.03 %; take it with (D).
+  same_team            87,764 / 1.41 M — 36,598 in `declare_attackers_banded`,
+                      the rest spread over 17 callers.
+  event_kind_bits     256,878 / 3.10 M — 251,404 of them the dispatcher's mask
+                      loop at ~1 per event. Inherent; the KEPT_BITS re-derivation
+                      is NOT the cost (3.41 calls a dispatch against 3.4 events).
+```
+
+**The conclusion, and it is the useful half: `has_keyword` and
+`protection_prevents_views` were the only two leaves in the dump with a single
+dominant caller.** The device is not exhausted because it is cheap — it is
+exhausted because the population is.
+
+🔎 **`Player::deref_mut` under `declare_attackers_banded` — 27,312 calls
+(exactly two a declaration) / 2.69 M inclusive, 98.6 Ir a call — is UNREAD.**
+That is the `(-280)` family's shape on the *seat* rather than the card, and
+nothing in the Log has looked at the attack declaration's two seat writes. The
+`CardData` side of the same family is where `Arc::clone_from_ref_in` (33,744
+calls / 14.89 M, **0.96 % of `cube`**) lives, and its callers are the ones the
+family already names: `resolve_combat_into` 11,682, `cast_spell_with_convoke`
+7,354, `on_left_battlefield` 6,120 (refuted at the `(-329)` tip — real per-card
+writes, not bookkeeping).
 
 ❌ **REFUTED THIS SESSION WITH NO BUILD SPENT — `perform_action_inner`'s five
 `is_cast()` evaluations.** The body asks the same ~35-variant classification in
