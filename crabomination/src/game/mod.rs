@@ -25880,6 +25880,12 @@ impl GameState {
     /// the last thing worth looking at rather than the third. The cast path
     /// asks this for spells that are on the stack: those calls used to walk
     /// both libraries first, and were ~65 % of the function's cost.
+    ///
+    /// **Graveyards and exile are scanned back to front**, which is the rule
+    /// [`find_card_zone`](Self::find_card_zone) already carried and this pair
+    /// did not: both are push-only, so a card that has just arrived there —
+    /// which is what `on_left_battlefield` and the death paths ask about — hits
+    /// on the first comparison instead of the last (PERF `(-325)`).
     pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
@@ -25892,7 +25898,7 @@ impl GameState {
             }
         }
         for p in &self.players {
-            if let Some(c) = p.graveyard.iter().find(|c| c.id == id) {
+            if let Some(c) = p.graveyard.iter().rev().find(|c| c.id == id) {
                 return Some(c);
             }
             if let Some(c) = p.hand.iter().find(|c| c.id == id) {
@@ -25904,7 +25910,7 @@ impl GameState {
                 return Some(c);
             }
         }
-        if let Some(c) = self.exile.iter().find(|c| c.id == id) {
+        if let Some(c) = self.exile.iter().rev().find(|c| c.id == id) {
             return Some(c);
         }
         for p in &self.players {
@@ -25951,35 +25957,41 @@ impl GameState {
         }
         // Locate first with shared borrows, then take the one `&mut`: `Player`
         // is a CoW handle, so an `iter_mut()` per zone would both borrow the
-        // whole seat *and* unshare it on every miss.
+        // whole seat *and* unshare it on every miss. The graveyard is walked
+        // back to front, for [`find_card_anywhere`]'s reason.
         let found = self.players.iter().enumerate().find_map(|(pi, p)| {
-            let zone = |z: usize, v: &[CardInstance]| {
-                v.iter().position(|c| c.id == id).map(|i| (pi, z, i))
-            };
-            zone(0, &p.hand)
-                .or_else(|| zone(1, &p.graveyard))
-                .or_else(|| zone(3, &p.ante))
+            p.hand
+                .iter()
+                .position(|c| c.id == id)
+                .map(|i| (pi, 0usize, i))
+                .or_else(|| {
+                    p.graveyard.iter().rposition(|c| c.id == id).map(|i| (pi, 1, i))
+                })
+                .or_else(|| p.ante.iter().position(|c| c.id == id).map(|i| (pi, 2, i)))
         });
         if let Some((pi, z, i)) = found {
             let p = &mut self.players[pi];
             return Some(match z {
                 0 => &mut p.hand[i],
                 1 => &mut p.graveyard[i],
-                2 => &mut p.library[i],
                 _ => &mut p.ante[i],
             });
         }
-        if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
-            return Some(c);
+        // Exile and the stack are located the same way, for the same reason:
+        // both are CoW, so an `iter_mut()` that finds nothing unshares the
+        // zone for a miss.
+        if let Some(i) = self.exile.iter().rposition(|c| c.id == id) {
+            return Some(&mut self.exile[i]);
         }
         // A spell resolving its own effect (Spoils of the Vault's NameCard)
         // is still on the stack.
-        for si in &mut self.stack {
-            if let crate::game::types::StackItem::Spell { card, .. } = si
-                && card.id == id
-            {
-                return Some(card);
-            }
+        let on_stack = self.stack.iter().position(|si| {
+            matches!(si, crate::game::types::StackItem::Spell { card, .. } if card.id == id)
+        });
+        if let Some(i) = on_stack
+            && let crate::game::types::StackItem::Spell { card, .. } = &mut self.stack[i]
+        {
+            return Some(card);
         }
         // Libraries last, for the reason `find_card_anywhere` gives.
         let lib = self
