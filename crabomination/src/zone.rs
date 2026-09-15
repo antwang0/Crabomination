@@ -671,12 +671,19 @@ fn card_has_activated_grant(c: &CardInstance) -> bool {
 /// carries one. A caller asking about a keyword missing from this list gets a
 /// wrong `false` on the printed leg — which is what the gate's own
 /// `debug_assert!` (recomputing the board's keywords) fires on.
+///
+/// ⚠ `Soulbond` is in the list for a *second* consumer that does not go
+/// through `board_keyword_matching` at all: `apply_soulbond_pairing` reads the
+/// lane directly (PERF `(-327)`), because its walk asks the printed keywords
+/// and nothing else. Widening the union costs the other callers only on a
+/// board that plays the keyword.
 pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
     use crate::card::Keyword::*;
     c.definition.keywords.iter().any(|k| {
         matches!(
             k,
-            MustAttack
+            Soulbond
+                | MustAttack
                 | MustAttackOrBlock
                 | MustAttackIfAnotherAttacks
                 | MustBlock

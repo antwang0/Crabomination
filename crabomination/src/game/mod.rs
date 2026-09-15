@@ -19778,6 +19778,14 @@ impl GameState {
         }
         let controller = card.controller;
         let entered_has_soulbond = card.definition.keywords.has_kw(&Keyword::Soulbond);
+        // CR 702.95 — a pair needs Soulbond on one of its two halves, and the
+        // walk below reads the *printed* keywords, so the zone's gate-keyword
+        // lane is the exact superset of its second disjunct: `false` there and
+        // no Soulbond on the entering creature means no partner exists, on
+        // every board that does not play the mechanic (PERF `(-327)`).
+        if !entered_has_soulbond && !self.battlefield.has_gate_keyword() {
+            return;
+        }
         let partner = self
             .battlefield
             .iter()
