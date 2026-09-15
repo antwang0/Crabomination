@@ -2990,6 +2990,25 @@ bump invalidates the Ir columns and has to re-take the A/B base.
 ### 2026-09-15 (the ungated-walk session) — the two board walks nobody had gated, found by reading the callee table rather than the self table
 
 ```text
+perf    **`(-317)`: `available_mana` reads its per-permanent answer off the definition — fixed -0.842 /
+        cube -0.496 / sealed -0.540 %**, the row -43.9 / -35.6 / -36.8 % (9,276,278 -> 5,199,999 /
+        16,566,906 -> 10,674,141 / 18,494,586 -> 11,696,013). The third device on a row whose other two
+        (`(-314)`-shape gating, the `(-87)` member list) `e8308d53` closed: it leaves the iteration
+        alone and makes the per-permanent BODY cheaper, by packing the printed ability list's whole
+        contribution into `mana_summary`'s last four free bit-fields. `AM_EXACT` clear means "run the
+        walk", so the pack can only decline, never mislead. ⚠⚠ **The precondition to ask for is the one
+        the WALK depends on, not the stronger one standing next to it** — two shapes gated on
+        `grants_nothing` and read -0.69 / -0.36 / -0.42 %, and both evaluated it twice per granted
+        permanent; `granted.is_empty()` is what the walk actually needs, and it both widens the
+        population and deletes the duplicate.
+
+build   **A mechanical file move is NOT free under `release-fast`.** Moving the four mana-shape
+        predicates out of `bot.rs` (the prerequisite for `(-317)`) read **+0.179 / +0.097 / +0.100 %**
+        with no `#[inline]` on them, and took `accumulate_mana_colors` from **53,844 Ir to 2,320,396**
+        on `cube` — codegen-units 16 with no LTO makes a cross-module callee a call. With `#[inline]`
+        the move is **+0.011 % on all three pools**, i.e. layout. Check the moved symbols' rows after
+        any module split; a "mechanical" move can be a tenth of a percent.
+
 perf    **`(-315)`: `grant_scan`'s Equipment/Soulbond pass goes behind `LANE_ATTACH_GRANT` — fixed
         -0.188 / cube -0.113 / sealed -0.203 %**, the row itself -36.4 / -29.5 / -47.1 %
         (3,726,166 -> 2,371,372 / 8,055,486 -> 5,681,644 / 8,391,090 -> 4,439,302). Three of the
@@ -3024,12 +3043,15 @@ gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls*
         **3m50s-4m02s**, `target-audit/overflow` cold is **10m53s**, and `cargo check --profile
         release-fast` is **2m06s**.
 
-sweep   **fresh seeds 1334..1337: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 / stuck 0
-        / draw 16` over `cube` / `all` / `sealed`, `target-audit/overflow` with `-C
-        debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. ⚠ **That is the gate a new memo needs and
-        the suite cannot give it**: `Battlefield::lane`'s `debug_assert!` recomputes the handed
-        predicate against the stored bit on EVERY read, so both new lanes were audited on every board
-        those 59,200 games dealt. No Scute Swarm cell this block; cells ran 43-94 s. **Frontier 1338.**
+sweep   **fresh seeds 1334..1341 in TWO blocks: 24 cells / 118,400 games / 0 failures.** 1334..1337 at
+        the `(-316)` tip (`cap 0 / board 0 / stuck 0 / draw 16`) and 1338..1341 at the CLOSING
+        `(-317)` tip (`cap 0 / board 0 / stuck 0 / draw 0`), over `cube` / `all` / `sealed`,
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. ⚠ **That
+        is the gate a new memo needs and the suite cannot give it**: `Battlefield::lane`'s
+        `debug_assert!` recomputes the handed predicate against the stored bit on EVERY read, and
+        `(-317)`'s `debug_assert_eq!` re-runs the WHOLE walk against every packed answer it takes —
+        both audited on every board those 118,400 games dealt. No Scute Swarm cell in either block.
+        **Frontier 1342.**
         All standing audits re-run and 0 (`audit_panics` 0 bare / 70 sites, `audit_stash_in_loop` 0
         unexplained, `audit_seat_from_selector` 0 open, `audit_target_walkers --check` 0,
         `audit_doc_drift` 0 body-wrong / 0 doc rot / 0 stale notes).
@@ -7264,6 +7286,64 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-317)` The producible-mana estimate reads its answer off the definition — **fixed -0.842 / cube -0.496 / sealed -0.540 %**
+
+`available_mana` is the bot's per-tick producible-mana read. `e8308d53`'s
+census left its **own walk** as the majority of the row (self 16.57 M / 58 % on
+`cube`, 18.49 M / 68 % on `sealed`) after closing the two devices that would
+have cut the *iteration*: more presence gating, capped at a third of the row,
+and an `(-87)` member list, which on this board is 65-81 % of the permanents.
+This is the third device and it leaves the iteration alone — it makes the
+per-permanent **body** cheaper.
+
+For an untapped, non-summoning-sick permanent that is **granted nothing**, the
+loop's whole job is a pure function of the printed ability list:
+`is_countable_mana_ability` (fifteen field tests, all of which a basic land
+passes), `mana_ability_output`, `mana_amount_is_dynamic`, and the
+`opaque_source` arm. `mana_summary_of` packs that answer into the memo word's
+last free bits:
+
+```text
+  bits 51-55  AM_COLORS     the countable abilities' colour set
+  bit  56     AM_COLORLESS  some countable ability makes true {C}
+  bit  57     AM_BEST_ONE   the best single activation is one mana, not zero
+  bit  58     AM_EXACT      the three above ARE this list's contribution
+```
+
+`AM_EXACT` is clear — "run the walk" — on every list the pack cannot state: a
+best above one mana, a dynamic amount, or an ability the estimate cannot cost
+that still produces colour. **The pack can only decline, never mislead**, and
+`available_mana`'s `debug_assert_eq!` re-runs the walk against every answer it
+takes. The four predicates are `game::mana_shape`'s — one copy, read by both
+the pack and the walk.
+
+```text
+profiling-fast --no-default-features, gang mirror --games 6 --threads 1 --seed 1
+                       move tip            (-317)          delta
+  fixed              615,173,670       609,992,918       -0.8421 %
+  cube             1,623,749,646     1,615,703,398       -0.4955 %
+  sealed           1,709,610,657     1,700,369,346       -0.5405 %
+
+  available_mana self
+  fixed                9,276,278         5,199,999       -43.9 %
+  cube                16,566,906        10,674,141       -35.6 %
+  sealed              18,494,586        11,696,013       -36.8 %
+```
+
+⚠⚠ **THE PRECONDITION TO ASK FOR IS THE ONE THE WALK DEPENDS ON, NOT THE
+STRONGER ONE STANDING NEXT TO IT — and that was worth a fifth of the win.**
+Two earlier shapes gated the fast path on `grants_nothing` and read
+**-0.696 / -0.359 / -0.419 %** (test before the memo read) and
+**-0.689 / -0.361 / -0.419 %** (after it). Both also evaluated
+`grants_nothing` **twice** for any permanent that has a grant, because
+`granted_abilities_of` asks it again — +1,790 `grants_nothing_slow` calls on
+`cube`, and re-ordering the two tests did not fix it. What the walk actually
+needs is only that `granted` is **empty**: a live grant that hands *this*
+permanent nothing still leaves printed == printed. Asking
+`granted_abilities_of` once and testing `granted.is_empty()` widens the
+population *and* deletes the duplicate; `grants_nothing_slow` is back to its
+pre-change 20,096.
 
 ### `(-316)` The CR 602.5g haste gate asks the zone instead of walking the board — **fixed -0.002 / cube -0.044 / sealed -0.028 %**
 
@@ -12199,67 +12279,63 @@ of its own, so neither was ever in a self table; what named them was reading
 passes is gated**. `grant_scan` had four passes and three gates; the fourth ran
 on all 24,242 calls a `cube` run makes.
 
-🔥 **AND WHAT `(-315)`/`(-316)` LEAVE ON `available_mana` IS ITS OWN WALK —
-WHICH IS THE HALF THE "`available_mana` CLOSED" BLOCK BELOW MEASURED AND DID
-NOT CLOSE.** ⚠ Read that block first: it closes **gating** (capped at a third
-of the row, and `(-315)`/`(-316)` then took most of that third) and it closes
-the **`(-87)` member list** (the list is the board — 65-81 % of permanents are
-in it). It does **not** close a device that leaves the iteration alone and
-makes the per-permanent *body* cheaper, which is what the paragraph below is.
-Its own census is the sizing: self **16.57 M / 58 %** of the row on `cube` and
-**18.49 M / 68 %** on `sealed`, with **4.4-6.3 of 14-18 permanents a call**
-reaching the ability loop. The callee tree at the `(-316)` tip, for the
-arithmetic:
+✅✅ **AND THE ROW THEY LEFT IS TAKEN: `(-317)`, fixed -0.842 / cube -0.496 /
+sealed -0.540 %, `available_mana`'s own row -43.9 / -35.6 / -36.8 %.** Read
+`(-317)` and the "`available_mana` CLOSED" block below together — the closure
+is about the **iteration** (more gating, capped at a third of the row; the
+`(-87)` member list, which is 65-81 % of the board), and `(-317)` is about the
+**body**, which the same census had measured at 58-68 % of the row. A row can
+have three devices in front of it and two of them be dead.
+
+📐 **The transferable half is the precondition, and it was worth a fifth of
+the win.** A packed answer needs the condition the WALK depends on, not the
+stronger one standing next to it: two shapes of `(-317)` gated on
+`grants_nothing` (-0.69 / -0.36 / -0.42 %) and both evaluated it **twice** for
+any permanent with a grant, because `granted_abilities_of` asks it again. The
+walk only needs `granted.is_empty()`. **Ask for the weakest precondition that
+makes the pack sound, and ask for it once.**
+
+⚠ **What is left on `available_mana` after `(-317)` is the iteration the
+closure priced, and it is closed.** Self is 5.2 M / 10.7 M / 11.7 M
+(0.85 / 0.66 / 0.69 %) and its callee tree on `cube` is `grant_scan` 3.89 M,
+`tap_ability_summoning_sick` 2.56 M, `grants_nothing_slow` 1.75 M — each
+already behind the gate its own Log entry built. Do not re-open the row
+without a device that is none of the three.
+
+🧩 **AND THE FREE BITS OF THE MANA WORD ARE NOW GONE.** 43-50 are
+`PLAIN_TAP` / `PLAIN_LAND` / `LAND_MANA_REPLACER`, 51-58 are `(-317)`'s, 59-62
+the four marker bits, 63 the memo's. **A sixth per-definition family needs a
+sixth `CardMemo` word** — a `crabomination_base` change and therefore a
+~70-minute cold rebuild on this box, so batch it with something else.
+
+
+🆕 **NEWLY SIZED AND NOT TAKEN — `fire_combat_damage_triggers` IS THE FOURTH
+BIGGEST SELF ROW ON `cube` AND NO CANDIDATE HAS EVER NAMED IT.** Read at the
+`(-317)` tip:
 
 ```text
-profiling-fast, (-316) tip, callees of bot::available_mana
-                                   cube (11,548 calls)   sealed (16,264)
-  grants_nothing_slow                 20,096 / 1.75 M       9,642 / 0.67 M
-  grant_scan                          11,548 / 3.89 M      16,264 / 2.45 M
-  board_has_mana_static               11,548 / 0.41 M      16,264 / 0.49 M
-  tap_ability_summoning_sick           4,736 / 2.56 M       5,620 / 1.78 M
-  granted_abilities_of_inner           1,790 / 0.45 M            (below floor)
-  effect_produced_colors               7,894 / 0.25 M       6,882 / 0.15 M
-  ---------------------------------------------------------------------
-  INCLUSIVE (off OnceCell::try_init)  11,244 / 25.69 M     15,884 / 23.46 M
+  self                     fixed 6,920,234 (1.13 %)   cube 32,699,392 (2.02 %)   sealed 22,660,994 (1.33 %)
+  calls (cube)             22,008 total — 14,424 resolve_combat_into,
+                           7,362 fire_combat_damage_to_player_triggers, 194 first strike
+  its whole callee tree    ~2.1 M  ->  the self IS the work, ~1,486 Ir a call
 ```
 
-📐 **THE NEXT MOVE ON IT IS SPECIFIED, NOT JUST NAMED — a per-definition
-budget summary on `mana_summary`'s free bits, which are 51-58.** The loop's
-whole per-permanent job, for an **untapped, non-summoning-sick** permanent
-that `grants_nothing`, is a pure function of the printed ability list:
-`is_countable_mana_ability` (fifteen field tests, all of which a basic land
-passes), `mana_ability_output`, `mana_amount_is_dynamic` and the
-`opaque_source` arm. Pack the answer:
+Its first act is a **whole-battlefield walk that does not short-circuit**,
+folding two facts — `any_attached` (`c.attached_to == Some(source)`) and
+`soulbond_pair` — once per call, on a board where nearly nothing is attached.
+⚠ **Both halves read INSTANCE fields, so this is not a definition lane**
+(`(-315)`'s device does not apply). The sound key is `(-306)`'s
+`battlefield.writes()`, the way `sba_fold` already uses it: fold
+`any_attachment` (any `attached_to.is_some()`) and `any_soulbond` once per
+board write, source-independent, and gate the exact walk on the pair.
 
-```text
-  bits 51-55  AM_COLORS     the countable abilities' colour set
-  bit  56     AM_COLORLESS  some countable ability makes true {C}
-  bit  57     AM_EXACT      best == 1, no dynamic amount, no non-countable
-                            ability produces colour — i.e. the three fields
-                            above ARE the loop's whole contribution
-```
-
-`AM_EXACT` clear means "run the loop", so it is never wrong in the permissive
-direction, and `best == 1` (rather than a 2-3 bit field) is what keeps it to
-seven bits — it covers every basic, every dual, every one-mana dork, and
-declines Sol Ring. ⚠ **Size it off `mana_census`, not off the board**: the
-population is the **4.4-6.3 permanents a call that reach `granted_abilities_of`**,
-not the 14-18 the loop iterates. At ~60-85 Ir each that is **~0.2-0.35 % of
-`cube` and `sealed`** — the largest non-structural row left, and the only
-device on the majority half of `available_mana` that its closure does not
-cover.
-
-⚠⚠ **ITS PREREQUISITE IS A MECHANICAL MOVE AND IT MUST BE ITS OWN COMMIT.**
-`mana_summary_of` lives in `game/actions.rs` and the four predicates live in
-`server/bot.rs`; `actions.rs` has **zero** references to `crate::server::bot`
-today and must keep zero. Move `is_countable_mana_ability`,
-`mana_ability_output`, `mana_amount_is_dynamic`, `accumulate_mana_colors`,
-`accumulate_mana_colors_seq` and `accumulate_payload_colors` beside
-`effect_produced_colors` / `is_mana_ability` — a new `game/mana_shape.rs` is
-the better seam than either oversized file. **Do not reimplement them in
-`actions.rs`**: two hand-written copies of the same predicate is the bug class
-this branch keeps closing.
+⚠⚠ **CENSUS THE HIT RATE BEFORE BUILDING IT.** The gate only pays on boards
+with *no* attached permanent at all, and an Aura or an Equipment is enough to
+make it `PRESENT` — this is the shape `(-312)` refuted one lane over. The
+question is one counter: what fraction of `fire_combat_damage_triggers` calls
+see a board with zero `attached_to.is_some()`. If it is low, the row's cost is
+in the three trigger phases below the walk instead, and that wants a
+`profiling-lines` dump (cold) rather than a gate.
 
 🔎 **THE DEVICE IS NOW A CHECKLIST AND IT HAS NOT BEEN RUN TO THE END.** The
 question "which whole-board walk on a hot path still has no presence lane" has
