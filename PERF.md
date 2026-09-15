@@ -2385,11 +2385,29 @@ size does not move; the test-binary rebuild is 33-41 s of **relinking twenty
 integration binaries**, and its spread does not order by file size either (the
 266-line file was the slowest of the second round).
 
-**So: do not split `effects/mod.rs` (36.7 k lines), `game/mod.rs` (23.7 k) or
-`actions.rs` (16.5 k) for build time.** There may be other reasons to split
+**So: do not split `effects/mod.rs` (38.2 k lines), `game/mod.rs` (28.6 k) or
+`actions.rs` (18.8 k) for build time.** There may be other reasons to split
 them — reviewability, merge conflicts with a concurrent session — but the
 iteration loop is not one, and a mechanical move of a 34.7 k-line `impl
 GameState` block is not free of risk.
+
+⚠⚠ **AND THE RISK NOW HAS A NUMBER (2026-09-15).** Moving **four small pure
+functions** out of `bot.rs` into a new module — the `(-317)` prerequisite, about
+130 lines — read **+0.179 % on `fixed`, +0.097 % on `cube`, +0.100 % on
+`sealed`** until each got `#[inline]`, and took `accumulate_mana_colors` from
+**53,844 Ir to 2,320,396**. `release-fast` is codegen-units 16 with no LTO, so
+a callee in another module is a *call*. With the attributes it is +0.011 % on
+all three, i.e. layout. **Any module split of the engine gets an Ir A/B and a
+look at the moved symbols' own rows**, and a split of a *hot* body without
+`#[inline]` on what it now calls across the seam can cost a tenth of a percent
+per move. The measurement above says the split buys nothing; this says it can
+also cost something.
+
+⚠ **`effects/mod.rs`'s 38.2 k lines are 69 methods**, and the bulk sits in a
+handful of enormous ones (the effect match). So a split "along existing module
+seams" moves about a thousand lines of ask/answer-log helpers and cannot move
+the number either way — the only split that would touch the compile cost is
+breaking up a single giant `match`, which is not a mechanical move.
 
 **A SECOND REASON WAS PROPOSED AT `(-109)` AND `(-110)` REFUTED IT — SO THIS
 SECTION STANDS UNCHANGED, AND THE ROUND TRIP IS WORTH READING.** `(-109)`
@@ -12479,6 +12497,36 @@ CALL SITE.** The same key reads **50.4 / 67.9 / 53.4 %** here, because several
 write between them. **Census the key at the call site that will use it**; a
 `writes`-keyed memo is priced by how often its *caller* is re-asked without a
 write, not by how often the board is quiet in general.
+
+❌❌ **AND THE ALLOCATION CENSUS AT THE `(-319)` TIP IS FLAT TOO, so the "one
+fat allocator row" idea is closed with a number.** Off the same instrumented
+`cube` dump, no build:
+
+```text
+  __rust_alloc            759,943 calls        its callers, top eight
+    finish_grow           150,029   14.24 M      <- a Vec growing
+    Arc::clone_from_ref_in 87,152    8.50 M      <- the CoW deep copies
+    SpecFromIterNested     59,712    5.92 M
+    Vec::clone             53,898    4.82 M
+    GameState::clone       48,024    3.63 M
+    CowBox::push           36,724    2.86 M
+    make_mut_slow          32,718    2.72 M
+    resolve_combat_into    22,116    1.31 M
+
+  and `finish_grow`'s own 153,932 growths, top caller:
+    dispatch_scan_card     10,806   (7.0 % of them)
+    IdSet::insert          10,246
+    deal_combat_damage_to_target 8,600
+    ... 92 more callers holding 32.8 % between them
+```
+
+**The top *grower* is 7 % of the growths and the tail is ninety-two callers**,
+so there is no `with_capacity` to add that moves a pool. The allocator family's
+8.9 % of `cube` is the *system* allocator under valgrind (the shipped binary is
+mimalloc), so its Ir over-reads what production pays, and the count behind it
+has no concentration to attack. ⚠ The CoW half (`Arc::clone_from_ref_in`,
+`make_mut_slow`) was separately censused at the `(-313)` tip and every caller
+was a genuine mutation.
 
 🔎 **THE DEVICE IS NOW A CHECKLIST AND IT HAS NOT BEEN RUN TO THE END.** The
 question "which whole-board walk on a hot path still has no presence lane" has
