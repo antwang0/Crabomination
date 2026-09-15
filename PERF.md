@@ -13188,6 +13188,26 @@ costs a cold build.
      call. The open question is whether the *pair count* can be cut — an
      evasion/legality prefilter keyed on the blocker — not whether the body can.
 
+  E. **`pick_blocks_inner` ITSELF, and it has never been line-profiled.**
+     self 2,734,232 / 15,349,700 / 8,942,732 (**0.47 / 1.00 / 0.54 %**) at the
+     `(-334)` tip over 4,384 `cube` calls — **3,501 Ir of SELF a call**, the
+     largest self row in the bot and the third largest in the program. Its
+     callees are now all gated (`legal_blockers` 16.0 M inclusive,
+     `blocker_pair_block` 2.37 M, `protection_prevents_views` 1.48 M), so what
+     is left is the body: the `attacker_info` `filter_map` (26.8 M INCLUSIVE
+     over 4,384 collects, 6,113 Ir a call), the `blockers` map, the pair
+     loop's arithmetic and its two `SmallIdMap` lookups a pair.
+     ⚠ **This is the one hot function `(-319)`'s "do not spend another
+     `profiling-lines` build" verdict does NOT cover** — that entry names
+     `fire_combat_damage_triggers`, `dispatch_triggers_for_events_slow` and
+     `check_state_based_actions_into`. A cold `profiling-lines` build is
+     ~28 min on this box; spend it here, not on those three.
+     Smaller and already sized inside it: `cp.clone()` per `AttackerFacts`
+     is an `Arc` bump the struct literal only needs because `must_be_blocked`
+     and `min_blockers` borrow `cp` after it (~20 k a `cube` run, ~0.04 %),
+     and `legal_blockers`' `computed_permanent_hinted` is 15,876 calls at
+     612 Ir — 3.62 candidate blockers a call, each paying a scope memo read.
+
   D. the remaining keyword-ask ratio in `pick_attacks_inner` — DECLINED, ~0.017 %.
      See `(-330)`'s Log entry: the five per-blocker sites now take one
      `combat_keywords` pass each where they took one ask each, and collapsing
