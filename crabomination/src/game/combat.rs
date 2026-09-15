@@ -293,8 +293,17 @@ impl GameState {
     /// CR 506.2 / 509.1b — the tightest "no more than N creatures can
     /// attack/block each combat" cap in play (Silent Arbiter), or `None` when
     /// nothing caps participation.
+    ///
+    /// Behind the battlefield's `has_combat_cap_static` lane: both flavours of
+    /// the static share one definition-only answer, so a board that plays
+    /// neither never makes the `flat_map` (PERF `(-324)`). A lane rather than a
+    /// presence slot because all four callers — the two declaration gates and
+    /// the bot's two attack plans — are outside a freeze scope.
     pub(crate) fn combat_participation_cap(&self, blocking: bool) -> Option<u32> {
         use crate::effect::StaticEffect;
+        if !self.battlefield.has_combat_cap_static() {
+            return None;
+        }
         self.battlefield
             .iter()
             .flat_map(|c| c.definition.static_abilities.iter())

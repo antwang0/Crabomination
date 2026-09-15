@@ -557,6 +557,14 @@ const LANE_ATTACH_GRANT: u32 = 56;
 /// creature the bot's mana sweep and every activation gate meet (PERF
 /// `(-316)`). See [`card_has_haste_static`].
 const LANE_HASTE_STATIC: u32 = 58;
+/// Any permanent's definition caps how many creatures may attack or block in
+/// one combat (Silent Arbiter, Dueling Grounds) — the ungated
+/// `flat_map` over every permanent's `static_abilities` that
+/// `combat_participation_cap` used to make once per declaration and once per
+/// attack plan, real or simulated (PERF `(-324)`). One lane for both
+/// flavours: a board carrying neither answers both asks from the word.
+/// See [`card_has_combat_cap_static`].
+const LANE_COMBAT_CAP: u32 = 60;
 /// [`Battlefield::attach_fold`]'s stamp half (bits 0-30) and its one-bit
 /// answer (bit 31). A word of 0 is "never folded"; `writes` starts at 1.
 const ATTACH_STAMP: u32 = 0x7fff_ffff;
@@ -564,8 +572,8 @@ const ATTACH_PRESENT: u32 = 1 << 31;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
-/// The lane count the predicate table below covers (shift 0 ..= 58).
-const LANE_COUNT: usize = 30;
+/// The lane count the predicate table below covers (shift 0 ..= 60).
+const LANE_COUNT: usize = 31;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -611,6 +619,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_life_static),                          // LANE_LIFE_STATIC
     Some(crate::game::actions::card_has_attach_grant),   // LANE_ATTACH_GRANT
     Some(card_has_haste_static),                         // LANE_HASTE_STATIC
+    Some(card_has_combat_cap_static),                    // LANE_COMBAT_CAP
 ];
 
 /// Does this permanent contribute anything to
@@ -834,6 +843,18 @@ fn card_has_prevent_static(c: &CardInstance) -> bool {
                 | S::PreventDamageToThisRedirect
                 | S::PreventAllDamageToControllerFromOthersSources
         )
+    })
+}
+
+/// Does this permanent's definition cap how many creatures may attack or
+/// block in one combat (Silent Arbiter, Dueling Grounds)? The
+/// [`LANE_COMBAT_CAP`] predicate — the same `sa.effect` test
+/// `combat_participation_cap` makes, both flavours in one answer;
+/// definition-only.
+fn card_has_combat_cap_static(c: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as SE;
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(sa.effect, SE::MaxAttackersPerCombat(_) | SE::MaxBlockersPerCombat(_))
     })
 }
 
@@ -1679,6 +1700,16 @@ impl Battlefield {
     #[inline]
     pub fn has_block_tax_static(&self) -> bool {
         self.lane(LANE_BLOCK_TAX_STATIC, card_has_block_tax_static)
+    }
+
+    /// Does any permanent here cap combat participation
+    /// ([`card_has_combat_cap_static`])? Read by
+    /// `combat_participation_cap`, whose four callers are two declaration
+    /// gates and two of the bot's plans — all outside a freeze scope, which
+    /// is why this is a lane and not a presence slot (PERF `(-324)`).
+    #[inline]
+    pub fn has_combat_cap_static(&self) -> bool {
+        self.lane(LANE_COMBAT_CAP, card_has_combat_cap_static)
     }
 
     /// Does any permanent here carry a static the untap step reads
