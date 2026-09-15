@@ -3005,6 +3005,59 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-15 (the block-gate session) — four rows off one device, and the device is "count the walks, not the calls"
+
+⚠⚠ **SEVENTH BOX, 4 cores, rustc 1.95.0, valgrind 3.22.0 — and the A/B base does
+NOT reproduce the `(-321)` record to six significant figures the way the sixth
+box did.** Base here: fixed **596,342,781** / cube **1,585,705,950** / sealed
+**1,676,524,999**, against the filed `(-321)` tip's 595,221,499 / 1,584,372,532 /
+1,675,131,756 — **+0.188 / +0.084 / +0.083 %**, two to twenty times the
+source-hash layout noise the census measured (0.0001-0.0004 %). It is **not the
+engine**: `blocker_self_block`'s `cube` self row reads 7,669,428 here, the filed
+`(-321)` number to the digit. The difference is outside the code — container
+environment, libc, the `getenv`/allocator rows — so **an absolute from this box
+is not comparable with one from the sixth**, and every row below is a
+same-box A/B. The counters and the Ir *deltas* are what carry across.
+
+```text
+perf    **`(-325)`: the two zone walkers take `find_card_zone`'s visit rule — fixed -0.039 / cube
+        -0.069 / sealed -0.018 %.** Graveyards and exile are push-only and were scanned front to
+        back; `on_left_battlefield` asks about a card that reached its graveyard one instant
+        earlier. `find_card_anywhere_mut` 452.0 -> 378.2 Ir/call on `cube`.
+
+perf    **`(-324)`: the combat-participation cap asks the board's lane first — fixed -0.308 / cube
+        -0.194 / sealed -0.213 %**, the row itself -87.6 / -87.4 / -86.1 %. An ungated `flat_map`
+        over every permanent's `static_abilities`, 12,728 / 19,644 / 28,238 times a run, returning
+        `None` on every board that plays neither Silent Arbiter nor Dueling Grounds.
+        ⚠ **Lane shift 60 spent — 62 is the last one.**
+
+perf    **`(-323)`: the block tax question is noted by the walk that is already there — fixed
+        -0.080 / cube -0.086 / sealed -0.081 %.** `attack_block_keyword_tax` calls on `cube`
+        65,610 -> 39,068.
+
+perf    **`(-322)`: the block pair gate makes one walk per side, not nine — fixed -0.163 / cube
+        -0.448 / sealed -0.215 %**, `blocker_pair_block` self -44.6 / -44.1 / -44.1 %
+        (222 -> 124 Ir/call on `cube`). Nine `has_kw` / `iter().any()` scans of two short slices
+        collapse into one `match` per side.
+
+perf    **Cumulative over the session: fixed 596,342,781 -> 592,834,860 (-0.588 %), cube
+        1,585,705,950 -> 1,573,106,814 (-0.795 %), sealed 1,676,524,999 -> 1,667,708,894
+        (-0.526 %).**
+
+gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to
+        the committed invariant, `determinism ok`. Suite **19,549 / 0 / 5** under
+        `CRAB_ANSWER_LOG=strict`, clippy **0** (workspace and `--features trig-census`), golden
+        traces unmoved, `cargo check --profile release-fast -p crabomination --bin bot_ladder`
+        clean. Standing audits all 0 (`audit_panics` 0 bare / 70 sites, `audit_engine_stack` 0,
+        `audit_stash_in_loop` 0 unexplained, `audit_seat_from_selector` 0 open,
+        `audit_target_walkers --check` 0, `audit_doc_drift` 0/0/0, `audit_incomplete` 0 structural,
+        `audit_stubs` 0).
+
+timing  This box: cold `release` (cgu 1 + thin LTO) `bot_ladder` **~70 min under contention**;
+        cold `profiling-fast` **9m30s**, warm engine-only **~3m10s**; `cargo check --profile
+        release-fast` ~30 s warm; a three-pool callgrind **~2 min in parallel**; the debug suite
+        **~2 min to run** after a ~4 min rebuild; `cargo clippy --workspace --all-targets` ~3 min.
+
 ### 2026-09-15 (the legal_blockers session) — the biggest row this branch has taken, in the bot spine
 
 ⚠⚠ **SIXTH BOX (this session), 4 cores, rustc 1.95.0 — the A/B base was re-taken here
@@ -7374,6 +7427,124 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-325)` The two zone walkers take `find_card_zone`'s visit rule — **fixed -0.039 / cube -0.069 / sealed -0.018 %**
+
+`find_card_zone`'s doc has carried the rule for passes — graveyards and exile
+are push-only, so scan them **back to front** and a card that has just moved
+there hits on the first comparison — and neither `find_card_anywhere` nor
+`find_card_anywhere_mut` did it. The hot caller of the `_mut` form is
+`on_left_battlefield`, which asks about a card that reached its graveyard one
+instant earlier.
+
+```text
+                    (-324)            (-325)          delta
+  fixed              593,065,972       592,834,860       -0.0390 %
+  cube             1,574,196,345     1,573,106,814       -0.0692 %
+  sealed           1,668,003,925     1,667,708,894       -0.0177 %
+
+  find_card_anywhere_mut Ir/call   285.7 -> 244.0   -14.6 %
+                                   452.0 -> 378.2   -16.3 %
+                                   262.7 -> 246.6    -6.1 %
+  find_card_anywhere     Ir/call   253.9 -> 247.0    -2.7 %  (cube)
+```
+
+The `_mut` form also locates exile and the stack with a shared borrow, the way
+it already located the players' zones: both are CoW, so an `iter_mut()` that
+finds nothing unshares the zone for a miss. A `CardId` names one object in one
+zone, so the direction picks how long the answer takes and never which answer
+comes back. Call counts unchanged on all three pools.
+
+### `(-324)` The combat-participation cap asks the board's lane first — **fixed -0.308 / cube -0.194 / sealed -0.213 %**
+
+`combat_participation_cap` is the CR 506.2 / 509.1b "no more than N creatures
+can attack/block each combat" question (Silent Arbiter, Dueling Grounds), and
+it was an ungated `flat_map` over every permanent's `static_abilities` —
+`FlatMap::next` at ~20 Ir a permanent whether any list has anything in it
+(`(-78)`). Its four callers are both declaration gates and both of the bot's
+attack plans, so a six-game run makes 12,728 / 19,644 / 28,238 of them and every
+one returns `None` on a board that plays neither card.
+
+```text
+                    (-323)            (-324)          delta
+  fixed              594,897,507       593,065,972       -0.3079 %
+  cube             1,577,249,139     1,574,196,345       -0.1936 %
+  sealed           1,671,565,647     1,668,003,925       -0.2131 %
+
+  combat_participation_cap inclusive   2,281,776 ->   282,060   -87.6 %
+                                       3,989,788 ->   500,992   -87.4 %
+                                       4,670,200 ->   651,172   -86.1 %
+```
+
+`Battlefield::has_combat_cap_static` is the `(-87)` lane for it — **shift 60,
+one of the `u64`'s last two** — with the predicate exactly the `sa.effect` test
+the walk makes and both flavours folded into one answer (`attach_fold`'s "one
+bit, not two"). ⚠ **A lane rather than a `PresenceGate` slot, and that is the
+transferable half**: every caller here is outside a freeze scope, where a
+presence slot memoizes nothing and costs a depth load for it. Ask *where the
+callers stand* before choosing between the two devices — `(-320)`/`(-321)` are
+inside the planner's scope, this one is not.
+
+### `(-323)` The block tax question is noted by the walk that is already there — **fixed -0.080 / cube -0.086 / sealed -0.081 %**
+
+`blocker_self_block` closed with `attack_block_keyword_tax(.., for_attack =
+false)`, which re-walks the computed keyword slice — out of line, so a call
+frame too — once per candidate blocker on every board. The four families it can
+price are noted by the one walk the function already makes.
+
+```text
+                    (-322)            (-323)          delta
+  fixed              595,370,862       594,897,507       -0.0795 %
+  cube             1,578,600,796     1,577,249,139       -0.0856 %
+  sealed           1,672,926,834     1,671,565,647       -0.0814 %
+
+  blocker_self_block self   1,775,490 -> 1,666,688   -6.1 %
+                            7,669,428 -> 7,352,782   -4.1 %
+                            6,436,774 -> 6,102,782   -5.2 %
+  attack_block_keyword_tax calls (cube)   65,610 -> 39,068
+```
+
+The gate is **exact, not an approximation**: the tax is 0 for every other
+keyword, so `taxed == false` implies `tax == 0`, and a `debug_assert!` re-runs
+the full derivation on every skipped blocker and compares.
+`CantAttackUnlessPay` is attack-only and stays out, as it was.
+
+### `(-322)` The block pair gate makes one walk per side, not nine — **fixed -0.163 / cube -0.448 / sealed -0.215 %**
+
+`blocker_pair_block` is the bot's per-(blocker x attacker) gate — 72,918 calls
+on a six-game `cube` run at 222 Ir of self apiece — and it asked its keyword
+families one `has_kw` / `iter().any()` scan at a time: **five** over the
+blocker's computed set (Mogg Toady, Gibbering Hyenas, Burden of Proof, Ironclaw
+Curse, Monstrous Hound) and **four** over the attacker's (Neurok Spy, Harbinger
+of Spring, and the eight-arm evasion loop that was already one pass). They
+collapse into one `match` per side — the shape `attacker_self_block` and
+`can_block_attacker_computed` already carry, each with a comment saying why.
+
+```text
+                    (-321) here       (-322)          delta
+  fixed              596,342,781       595,370,862       -0.1630 %
+  cube             1,585,705,950     1,578,600,796       -0.4481 %
+  sealed           1,676,524,999     1,672,926,834       -0.2146 %
+
+  blocker_pair_block self   2,209,350 -> 1,223,166   -44.6 %   (218 -> 121 Ir/call)
+                           16,208,010 -> 9,062,474   -44.1 %   (222 -> 124)
+                            8,153,278 -> 4,557,290   -44.1 %   (216 -> 121)
+```
+
+It is the **only** row that moves on any of the three pools, the call counts are
+unchanged (10,114 / 72,918 / 37,716), and `can_block_attacker_computed` is still
+reached exactly 72,404 times on `cube` — the same pairs reach the same last
+gate. Every rule returns `CannotBlock(blocker.id)`, so their order is not
+load-bearing; the `line!()` each arm carries is diagnostic only
+(`reject_trace_level() >= 2`).
+
+⚠ **Why the collapse is sound at all**: each merged keyword read is a *unit*
+variant or a payload read in its own arm, so a match arm is exactly the
+discriminant compare `has_kw` was making. `block_barred_by_protection_filter`
+had one caller and is gone; `blocker_matching_restriction_bars` keeps its second
+caller and now shares `cant_block_matching_bars` with the merged arm, so the two
+cannot drift on what the filter means. **A helper with one caller inlines into
+the merged walk; a helper with two keeps its body and gives up its rule.**
 
 ### `(-321)` The CR 509.1b tapped-block walk goes behind a presence slot — **fixed -0.009 / cube -0.042 / sealed -0.021 %**
 

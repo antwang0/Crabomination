@@ -4425,39 +4425,7 @@ impl GameState {
     pub(crate) fn trigger_grant_sources(&self) -> Vec<TriggerGrant<'_>> {
         use crate::card::dispatch_bits as db;
         let mut out = Vec::new();
-        // `GRANT_TRIGGER` is one of the bits the dispatcher's board-scan lane
-        // covers, so `ABSENT` is authoritative here too: no battlefield
-        // permanent grants a trigger. And when the lane is unknown this walk
-        // fills it, because it is already loading the same word per card —
-        // the two walks feed each other's hit rate. See
-        // `zone::Battlefield::dispatch_lane`.
-        // The lane holds a member list now (PERF `(-215)`): a hit visits
-        // only the contributors, a miss walks once and stores the list.
-        match self.battlefield.dispatch_members() {
-            Ok(mut members) => {
-                while members != 0 {
-                    let i = members.trailing_zeros() as usize;
-                    members &= members - 1;
-                    let src = &self.battlefield[i];
-                    if src.dispatch_scan_bits() & db::GRANT_TRIGGER != 0 {
-                        self.push_trigger_grants(src, &mut out);
-                    }
-                }
-            }
-            Err(epoch) => {
-                let mut members = 0u64;
-                for (i, src) in self.battlefield.iter().enumerate() {
-                    let bits = src.dispatch_scan_bits();
-                    if bits & db::BOARD_SCAN != 0 && i < 64 {
-                        members |= 1 << i;
-                    }
-                    if bits & db::GRANT_TRIGGER != 0 {
-                        self.push_trigger_grants(src, &mut out);
-                    }
-                }
-                self.battlefield.store_dispatch_members(epoch, members);
-            }
-        }
+        self.for_each_trigger_grant_source(|src| self.push_trigger_grants(src, &mut out));
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
         if self.players.iter().any(|p| !p.command.is_empty()) {
             for p in &self.players {
@@ -4469,6 +4437,54 @@ impl GameState {
             }
         }
         out
+    }
+
+    /// Visit every battlefield permanent whose definition can grant a
+    /// triggered ability (`dispatch_bits::GRANT_TRIGGER`).
+    ///
+    /// `GRANT_TRIGGER` is one of the bits the dispatcher's board-scan lane
+    /// covers, so `ABSENT` is authoritative: no battlefield permanent grants a
+    /// trigger. The lane holds a member list (PERF `(-215)`) — a hit visits
+    /// only the contributors, a miss walks once and stores the list, because
+    /// it is already loading the same word per card. See
+    /// `zone::Battlefield::dispatch_lane`.
+    ///
+    /// **One walker for the two callers.**
+    /// [`trigger_grant_sources`](Self::trigger_grant_sources) and
+    /// [`statics_granted_dying_triggers`](Self::statics_granted_dying_triggers)
+    /// ask exactly this question; the second used to spell it as a plain
+    /// battlefield walk, which both missed the lane and was a second hand-written
+    /// copy of "which permanents can grant" (PERF `(-326)`).
+    pub(crate) fn for_each_trigger_grant_source<'a>(
+        &'a self,
+        mut f: impl FnMut(&'a CardInstance),
+    ) {
+        use crate::card::dispatch_bits as db;
+        match self.battlefield.dispatch_members() {
+            Ok(mut members) => {
+                while members != 0 {
+                    let i = members.trailing_zeros() as usize;
+                    members &= members - 1;
+                    let src = &self.battlefield[i];
+                    if src.dispatch_scan_bits() & db::GRANT_TRIGGER != 0 {
+                        f(src);
+                    }
+                }
+            }
+            Err(epoch) => {
+                let mut members = 0u64;
+                for (i, src) in self.battlefield.iter().enumerate() {
+                    let bits = src.dispatch_scan_bits();
+                    if bits & db::BOARD_SCAN != 0 && i < 64 {
+                        members |= 1 << i;
+                    }
+                    if bits & db::GRANT_TRIGGER != 0 {
+                        f(src);
+                    }
+                }
+                self.battlefield.store_dispatch_members(epoch, members);
+            }
+        }
     }
 
     /// One source's live `GrantTriggeredAbility` statics, appended to `out`.
@@ -4586,31 +4602,45 @@ impl GameState {
         snap: &CardInstance,
     ) -> Vec<crate::card::TriggeredAbility> {
         let mut out = Vec::new();
+        // The board's grant sources through the dispatcher's member lane, not
+        // a walk of its own: the question is the one
+        // `for_each_trigger_grant_source` answers, and asking it there is both
+        // the memo and the guarantee that the two callers agree about which
+        // permanents can grant (PERF `(-326)`).
+        self.for_each_trigger_grant_source(|src| self.push_dying_grants(src, snap, &mut out));
         // CR 603.10a — the dying permanent's *own* self-granting static
         // ("Threshold — this creature has 'when this dies, …'") is read off
         // the snapshot; it is no longer on the battlefield to be walked.
-        let sources = self
-            .battlefield
-            .iter()
-            .chain(std::iter::once(snap).filter(|s| self.battlefield_find(s.id).is_none()))
-            .filter(|c| c.dispatch_scan_bits() & crate::card::dispatch_bits::GRANT_TRIGGER != 0);
-        for src in sources {
-            for sa in &src.definition.static_abilities {
-                if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
-                    filter,
-                    ability,
-                }) = self.active_static(&sa.effect, src)
-                    && self.evaluate_requirement_on_card(
-                        &filter.resolve_is_source(src.id == snap.id),
-                        snap,
-                        src.controller,
-                    )
-                {
-                    out.push((**ability).clone());
-                }
-            }
+        if snap.dispatch_scan_bits() & crate::card::dispatch_bits::GRANT_TRIGGER != 0
+            && self.battlefield_find(snap.id).is_none()
+        {
+            self.push_dying_grants(snap, snap, &mut out);
         }
         out
+    }
+
+    /// One grant source's share of
+    /// [`statics_granted_dying_triggers`](Self::statics_granted_dying_triggers)
+    /// — the abilities it hands `snap`, appended to `out`. The shared body of
+    /// that function's two legs (the board and the snapshot itself).
+    fn push_dying_grants(
+        &self,
+        src: &CardInstance,
+        snap: &CardInstance,
+        out: &mut Vec<crate::card::TriggeredAbility>,
+    ) {
+        for sa in &src.definition.static_abilities {
+            if let Some(crate::effect::StaticEffect::GrantTriggeredAbility { filter, ability }) =
+                self.active_static(&sa.effect, src)
+                && self.evaluate_requirement_on_card(
+                    &filter.resolve_is_source(src.id == snap.id),
+                    snap,
+                    src.controller,
+                )
+            {
+                out.push((**ability).clone());
+            }
+        }
     }
 
     /// The battlefield attachments that hand their `equipped_bonus` triggered
