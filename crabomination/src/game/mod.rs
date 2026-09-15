@@ -15334,15 +15334,20 @@ impl GameState {
     /// CR 106.4 override — empty every player's mana pool, except that a
     /// player with an `UnspentManaBecomesColorless` static (Kruphix) keeps
     /// the total as colorless mana.
+    /// **The empty pool, answered at the call site.** The gate below is the
+    /// one the body already had, moved out of it: the body's own early return
+    /// still cost the call, the prologue, and the frame for three battlefield
+    /// scans and two `Vec`s to reach — 28 k / 41 k / 59 k times a six-game run
+    /// at 64-67 Ir of self apiece, for a question that answers "nothing to
+    /// empty" on the overwhelming majority. `dispatch_triggers_for_events`'
+    /// shape (PERF `(-300)`, `(-332)`).
+    ///
+    /// The per-seat fast path inside [`Self::empty_mana_pools_slow`] skips a
+    /// seat with no floating mana, no kept mana and no firebending mana
+    /// *whatever* the board says, so when every seat is in that state the
+    /// scans answer a question nobody goes on to ask.
+    #[inline]
     pub fn empty_mana_pools(&mut self) {
-        use crate::effect::StaticEffect;
-        // Cheap global gate before the three battlefield scans below (two of
-        // which allocate a `Vec`). The per-seat fast path in the loop skips a
-        // seat with no floating mana, no kept mana and no firebending mana
-        // *whatever* the board says, so when every seat is in that state the
-        // scans answer a question nobody goes on to ask. This runs at every
-        // step change and every resolution — 51 k times per six bot games —
-        // and the overwhelming majority have nothing to empty.
         if self.players.iter().all(|p| {
             p.firebending_kept_red == 0
                 && p.mana_pool.is_empty()
@@ -15350,6 +15355,11 @@ impl GameState {
         }) {
             return;
         }
+        self.empty_mana_pools_slow();
+    }
+
+    fn empty_mana_pools_slow(&mut self) {
+        use crate::effect::StaticEffect;
         let keepers: Vec<usize> = self
             .battlefield
             .iter()
