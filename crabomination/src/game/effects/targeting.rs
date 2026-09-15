@@ -955,9 +955,14 @@ fn first_legal_graveyard_card(
 /// dump shows one edge with 11,178 calls and no way to say which block owns
 /// them. `#[track_caller]` on the wrapper gives the line for free.
 ///
-/// Compile-time gated on `trig-census` so the shipped binary is
-/// byte-identical, then `CRAB_TARGET_SITE_CENSUS=1` at run time. `bot_ladder`
-/// prints the table, heaviest first.
+/// Compile-time gated on `trig-census` so the shipped binary carries none of
+/// it — `#[track_caller]` included — then `CRAB_TARGET_SITE_CENSUS=1` at run
+/// time. `bot_ladder` prints the table, heaviest first. ⚠ Measured, not
+/// asserted: a `profiling-fast` build with the feature off reads **-2,450 Ir
+/// on `fixed` and +911 on `cube`** against the pre-census tip, 0.0001-0.0004 %
+/// — code layout moving under a changed source-file hash, not a semantic
+/// change. The debuginfo differs, so `md5sum` is not the check here; the
+/// counter is.
 #[cfg(feature = "trig-census")]
 pub mod call_site_census {
     use std::sync::Mutex;

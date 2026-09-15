@@ -12082,7 +12082,13 @@ cannot split it — all ~26 call sites inline into `bot::cast_candidates`, so
 the dump shows one edge and no way to say which block owns it.
 `call_site_census` (new, `trig-census` + `CRAB_TARGET_SITE_CENSUS=1`, printed
 by `bot_ladder`) reads the caller off `#[track_caller]` on the wrapper and
-splits it in one run:
+splits it in one run. ⚠ **The "the census costs the shipped binary nothing"
+claim is MEASURED here, not asserted**: with the feature off a `profiling-fast`
+build reads **-2,450 Ir on `fixed` and +911 on `cube`** against the pre-census
+tip — 0.0001-0.0004 %, i.e. code layout moving under a changed source-file
+hash. ⚠⚠ **`md5sum` is not the check for this**: `profiling-fast` carries
+debuginfo, which embeds the source hash, so two binaries with identical code
+have different digests. The counter is the check.
 
 ```text
   enumerations by call site, gang mirror --games 6 --threads 1 --seed 1

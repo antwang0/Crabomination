@@ -13255,9 +13255,10 @@ struct AvailableMana {
 /// sizing PERF's candidates head asks for before anyone builds a member list
 /// in front of it.
 ///
-/// Compile-time gated on `trig-census` so the shipped binary is
-/// byte-identical, then `CRAB_MANA_CENSUS=1` at run time. `bot_ladder` prints
-/// it.
+/// Compile-time gated on `trig-census` so the shipped binary carries none of
+/// it, then `CRAB_MANA_CENSUS=1` at run time. `bot_ladder` prints it. See
+/// `call_site_census` for the measured residual (0.0001-0.0004 % of Ir, code
+/// layout under a changed source-file hash).
 #[cfg(feature = "trig-census")]
 pub mod mana_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
