@@ -4922,9 +4922,22 @@ impl GameState {
         // keywords and the board, never the attacker.
         let mut control_count: Option<(crate::card::SelectionRequirement, u32, bool)> = None;
         let mut tap_another: Option<crate::card::SelectionRequirement> = None;
+        // CR 508.1g's block half, noted here and charged below: the four
+        // families `attack_block_keyword_tax(.., for_attack = false)` can
+        // price. Without the flag the tax question re-walks this same slice —
+        // and calls out of line to do it — once per candidate blocker on every
+        // board, and the answer is 0 on all of them but these.
+        let mut taxed = false;
         for k in cp.keywords().iter() {
             let barred = match k {
                 Keyword::CantBlock | Keyword::Decayed => true,
+                Keyword::CantAttackOrBlockUnlessPay(_)
+                | Keyword::CantAttackOrBlockUnlessPayPerCounter(_)
+                | Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand
+                | Keyword::CantAttackOrBlockUnlessPayPerPermanent(_) => {
+                    taxed = true;
+                    false
+                }
                 Keyword::CantAttackOrBlockUnlessEvenCounters => {
                     blocker.counters.values().sum::<u32>() % 2 != 0
                 }
@@ -5002,10 +5015,19 @@ impl GameState {
         // declaration charges the *sum* over blockers later; one blocker's
         // own tax being unpayable makes that sum unpayable too, so asking
         // here is sound and names the blocker instead of `assignments[0]`.
-        let tax = self.attack_block_keyword_tax(blocker.id, cp.keywords(), false);
-        if tax > 0 && !self.could_pay_generic(owner, tax) {
-            return no(line!());
+        // Behind `taxed`, which the walk above set: the exact tax is 0 unless
+        // one of those four families is present, so the gate is exact and not
+        // an approximation.
+        if taxed {
+            let tax = self.attack_block_keyword_tax(blocker.id, cp.keywords(), false);
+            if tax > 0 && !self.could_pay_generic(owner, tax) {
+                return no(line!());
+            }
         }
+        debug_assert!(
+            taxed || self.attack_block_keyword_tax(blocker.id, cp.keywords(), false) == 0,
+            "the block-tax gate skipped a blocker whose keyword tax is non-zero",
+        );
         None
     }
 
