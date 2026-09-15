@@ -1188,7 +1188,16 @@ impl KeywordCounters {
         }
         removed
     }
+    /// Set `kw`'s count outright. `n == 0` *removes* the entry rather than
+    /// storing a zero: [`Self::has_tag`]'s doc comment, and
+    /// [`CardInstance::combat_keywords`]'s one-pass read, both rest on the
+    /// invariant `add`/`remove_up_to` keep — that a stored entry is a granted
+    /// keyword — and this was the one setter that could break it.
     pub fn insert(&mut self, kw: Keyword, n: u32) {
+        if n == 0 {
+            self.remove(&kw);
+            return;
+        }
         match self.0.iter_mut().find(|(k, _)| *k == kw) {
             Some((_, have)) => *have = n,
             None => self.0.push((kw, n)),
@@ -8716,7 +8725,8 @@ impl CardInstance {
             m |= combat_kw::bit_of(k);
         }
         // CR 122.1b — a keyword counter grants its keyword. No zero-valued
-        // entry is ever stored, so presence is the whole test.
+        // entry is ever stored — `add`, `remove_up_to` and `insert` all drop
+        // an entry that reaches zero — so presence is the whole test.
         for (k, _) in self.keyword_counters.iter() {
             m |= combat_kw::bit_of(k);
         }

@@ -278,3 +278,26 @@ fn combat_keywords_agrees_with_has_keyword() {
     check(&c, "off-family");
     assert_eq!(c.combat_keywords(), combat_kw::FLYING);
 }
+
+/// `KeywordCounters` stores no zero-valued entry — `add` and `remove_up_to`
+/// drop one that reaches zero, and `insert(kw, 0)` removes rather than
+/// stores. `has_tag`'s soundness as a negative test and
+/// `combat_keywords`' one-pass read both rest on it.
+#[test]
+fn a_zero_keyword_counter_is_no_counter() {
+    use crabomination::card::combat_kw;
+    let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
+    c.keyword_counters.insert(Keyword::Flying, 0);
+    assert!(c.keyword_counters.is_empty(), "insert(_, 0) stored an entry");
+    assert!(!c.has_keyword(&Keyword::Flying));
+    assert_eq!(c.combat_keywords() & combat_kw::FLYING, 0);
+    c.keyword_counters.insert(Keyword::Flying, 2);
+    assert!(c.has_keyword(&Keyword::Flying));
+    c.keyword_counters.insert(Keyword::Flying, 0);
+    assert!(c.keyword_counters.is_empty(), "insert(_, 0) kept a stale entry");
+    assert_eq!(c.combat_keywords() & combat_kw::FLYING, 0);
+    // `remove_up_to` to exactly zero is the same rule from the other side.
+    c.keyword_counters.add(Keyword::Trample, 1);
+    c.keyword_counters.remove_up_to(&Keyword::Trample, 1);
+    assert!(c.keyword_counters.is_empty());
+}
