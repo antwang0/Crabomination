@@ -3005,7 +3005,7 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
-### 2026-09-15 (the bot-combat session, third of the day) — two rows off the *bot's* side of combat, which no candidate had ever ranked
+### 2026-09-15 (the bot-combat session, third of the day) — five rows off the *bot's* side of combat, which no candidate had ever ranked
 
 ⚠⚠ **EIGHTH BOX, 4 cores, rustc 1.95.0, valgrind 3.22.0 — and the A/B base does
 NOT reproduce the seventh box's absolutes either.** Base here (the `(-329)`
@@ -3023,6 +3023,19 @@ parallel; the build is the whole cost of an A/B here, and it is a third of what
 the seventh box's notes imply).
 
 ```text
+perf    **`(-334)`: Flying leaves the attacker bar family for a pair test — fixed -0.019 / cube
+        -0.211 / sealed -0.008 %.** `(-333)` read flat on `fixed` because three of its four decks
+        fly and Flying was in the family; its rule is a pair test the planner holds both halves
+        of, so it comes out as one bool a side. **A presence family is only as good as its
+        commonest member — census the members against the pools before filing the row.**
+
+perf    **`(-333)`: the block planner's pair check goes behind a per-side keyword gate — fixed
+        -0.006 / cube -0.394 / sealed -0.137 %**, and with `(-334)` **fixed -0.025 / cube -0.604 /
+        sealed -0.145 %**, `blocker_pair_block` calls 72,918 -> 17,528 on `cube`. Every bar
+        `blocker_pair_block` and `can_block_attacker_computed` can return is answerable per side —
+        an attacker keyword, a blocker keyword, or a board fact. The two families are kept by hand
+        and a `debug_assert!` on every skipped pair is the ratchet; suite and sweep are green.
+
 perf    **`(-332)`: the empty mana pool is answered at the call site — fixed -0.096 / cube -0.053 /
         sealed -0.070 %.** `empty_mana_pools`' own gate already answered 28 k / 41 k / 59 k calls
         a run, behind a call, a prologue and a frame for three battlefield scans and two `Vec`s.
@@ -3046,26 +3059,30 @@ census  **The two pickers were never in a self table as the keyword cost, and th
         existed; what nobody had asked is `cg_edges.py --callers` of it, which puts 87 % of the
         calls in two functions. **A shared leaf's row is a caller question, not a leaf question.**
 
-sweep   **TWO blocks — fresh seeds 1366..1369 and 1370..1373, both at the `(-332)` tip plus the
-        `KeywordCounters::insert` invariant fix: 24 cells / 118,400 games / 0 failures**,
-        `cap 0 / board 0 / stuck 0` on both (`draw 4 / 8`), pools `cube all sealed`,
-        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
-        They audit `(-330)`'s one-pass keyword mask and `(-331)`'s hoisted protection gate on
-        dflt-pilot combats the suite never builds — both are combat-legality *paths*, and the
-        trace diff only covers `gang`. **Frontier 1374.** Cells run 24-69 s here; a whole block
-        is ~10 minutes, which is cheaper than one `profiling-fast` build — take one.
+sweep   **THREE blocks — fresh seeds 1366..1369 and 1370..1373 at the `(-332)` tip plus the
+        `KeywordCounters::insert` fix, and 1374..1377 at the `(-334)` tip: 36 cells /
+        177,600 games / 0 failures**, `cap 0 / board 0 / stuck 0` on all three
+        (`draw 4 / 8 / 4`), pools `cube all sealed`, `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. The first two audit `(-330)`'s
+        one-pass keyword mask and `(-331)`'s hoisted protection gate; **the third is the ratchet
+        for `(-333)`/`(-334)`'s two hand-kept keyword families** — 59,200 dflt games asserting the
+        gate against the full pair check on every pair it skips, on boards the suite never builds
+        and the `gang` trace diff never reaches. **Frontier 1378.** Cells run 24-69 s here; a
+        whole block is ~10 minutes, cheaper than one `profiling-fast` build — take one.
 
-gates   `--bench` on `target/release/bot_ladder` at the tip: **195,806 decisions / 27.49 turns /
-        611.9 per game / 0 stalls**, byte-identical to the committed invariant, with
-        `determinism ok` and `thread_determinism ok (3 vs 1)`; `games_per_s 540.61`,
-        `peak_rss_mib 25.1`, `bin_bytes 84,957,464` (one run, so it says nothing against any other
-        box). Suite **19,550 / 0 / 5** (`CRAB_ANSWER_LOG=strict`; 19,549 plus the two new
-        `card_instance` tests, one of which is the `combat_keywords` / `has_keyword` agreement
-        proof over all four keyword sources and both removal lists), clippy **0**
+gates   `--bench` on `target/release/bot_ladder`, re-taken at the `(-334)` tip: **195,806
+        decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to the committed
+        invariant, with `determinism ok` and `thread_determinism ok (3 vs 1)`;
+        `games_per_s 552.09` against **540.61** at the `(-332)` tip on the same box
+        (+2.1 %, the right sign for a -1.2 % `cube` Ir change, and one run each, so it is a
+        sanity check and not a measurement — `bench_ab.py` is what resolves wall clock),
+        `peak_rss_mib 25.1`. Suite **19,551 / 0 / 5** (`CRAB_ANSWER_LOG=strict`; 19,549 plus the two new
+        `card_instance` tests — the `combat_keywords` / `has_keyword` agreement proof over all
+        four keyword sources and both removal lists, and the zero-keyword-counter invariant), clippy **0**
         (`--workspace --all-targets --exclude crabomination_client`, and again
         `--features trig-census`), `cargo check --profile release-fast -p crabomination --bin
         bot_ladder` clean. The 48 `CRAB_DUMP_TRACES` cube games are identical across all four
-        binaries (`(-329)`, `(-330)`, `(-331)`, `(-332)`) — every row is behaviour-preserving by
+        binaries (`(-329)` through `(-334)`) — every row is behaviour-preserving by
         **trace**, not just by counter.
         ⚠ Cold `release` here is **27m51s**, against `profiling-fast`'s 9m01s: the bench gate is
         the most expensive single thing in the loop on this box, and an edit to
@@ -7552,6 +7569,70 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-334)` Flying leaves the attacker bar family for a pair test — **fixed -0.019 / cube -0.211 / sealed -0.008 %**
+
+`(-333)` read flat on `fixed` for one reason: `Keyword::Flying` was in
+`attacker_block_bar_kw` and three of that pool's four decks fly, so the gate
+failed on nearly every attacker and the per-side walks were paid for nothing.
+Flying is the one member of the family common enough to decide the gate by
+itself — and also the one whose rule is a **pair** test the planner already
+holds both halves of (`if !b_flying && !b_reach`). `AttackerFacts` carries the
+attacker's *computed* Flying beside the instance one the trade math uses, and
+the caller ANDs it with the blocker's flying/reach off the same computed view.
+
+```text
+                    (-333)            (-334)          delta
+  fixed              583,643,820       583,531,157       -0.0193 %
+  cube             1,543,745,499     1,540,494,884       -0.2106 %
+  sealed           1,645,574,074     1,645,443,450       -0.0079 %
+
+  the two rows together, against `(-332)`:
+                            fixed -0.025 / cube -0.604 / sealed -0.145 %
+  blocker_pair_block calls  10,114 -> 4,874 / 72,918 -> 17,528 / 37,716 -> 14,524
+```
+
+📐 **The transferable half: a presence family is only as good as its
+commonest member.** `(-333)`'s gate was sound and skipped 57 % of the pairs,
+and on the pool where its family's commonest keyword is on every attacker it
+bought nothing. **Census the family's members against the pools before filing
+the row**, and pull any member the caller can decide cheaply out into its own
+test — Flying cost one bool on each side and moved `cube` a further 0.21 %.
+
+### `(-333)` The block planner's pair check goes behind a per-side keyword gate — **fixed -0.006 / cube -0.394 / sealed -0.137 %**
+
+`pick_blocks_inner` asked `blocker_can_block_attacker_pair` for every
+(blocker, attacker) pair that clears the evasion prefilter — 58,880 of the
+program's 72,918 calls on `cube`, at 124 + 87 Ir between `blocker_pair_block`
+and `can_block_attacker_computed`, i.e. **~1 % of the pool**. Every bar those
+two bodies can return comes from one of three places and all three are
+answerable per *side*: a keyword in the attacker's computed set, one in the
+blocker's, or a board fact (CR 702.158d's sector lock, the "can't block this
+creature" pair list, the tempted Ring-bearer).
+
+```text
+                    (-332)            (-333)          delta
+  fixed              583,677,582       583,643,820       -0.0058 %
+  cube             1,549,854,153     1,543,745,499       -0.3941 %
+  sealed           1,647,827,842     1,645,574,074       -0.1368 %
+
+  blocker_pair_block calls  10,114 -> 5,850 / 72,918 -> 31,320 / 37,716 -> 16,208
+```
+
+⚠ **The two families are kept by hand, and the `debug_assert!` in
+`blocker_can_block_attacker_pair_gated` is what makes that safe.** It runs the
+full check on every pair the gate skips, so a keyword added to either body's
+`match` without being added to its family fires on the first board that has
+it: the suite's 19,551 tests and the fresh-seed sweep's 59,200 dflt games
+(both with `debug-assertions` on) are the ratchet, and both are green at this
+tip. Same shape as `cast_lock_scan`'s audit — **a hand-kept mirror of a
+`match` is acceptable exactly when an assertion proves it on every skip.**
+
+📐 **And this is `(-331)`'s device one level up.** `(-331)` hoisted a guard
+that was the *whole body* of one function; this one hoists the *union of the
+guards* of two, by asking which side each can fire from. The population
+`cg_calls.py` ranks is functions; the population this reads is **`match`
+arms**, and the question is "which of my arguments does this arm need".
 
 ### `(-332)` The empty mana pool is answered at the call site — **fixed -0.096 / cube -0.053 / sealed -0.070 %**
 
@@ -13031,16 +13112,29 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-✅✅ **STATUS AT THE `(-332)` TIP (2026-09-15, the bot-combat session, eighth
-box): THREE ROWS TAKEN, cumulative fixed -0.481 / cube -0.630 / sealed
--0.485 %, and all three came out of the SAME question asked of a leaf instead
-of a caller: `cg_edges.py --callers` of a shared leaf row.**
+✅✅ **STATUS AT THE `(-334)` TIP (2026-09-15, the bot-combat session, eighth
+box): FIVE ROWS TAKEN, cumulative fixed -0.505 / cube -1.230 / sealed
+-0.629 %, and every one came out of the SAME question asked of a leaf instead
+of a caller: `cg_edges.py --callers` of a shared leaf row, then "which of my
+arguments does this guard need".**
 
 ```text
   (-330)  the two pickers' keyword asks take one pass    -0.224 / -0.237 / -0.229 %
   (-331)  the protection gate is asked per view          -0.162 / -0.341 / -0.186 %
   (-332)  the empty mana pool answered at the call site  -0.096 / -0.053 / -0.070 %
+  (-333)  the pair check behind a per-side keyword gate  -0.006 / -0.394 / -0.137 %
+  (-334)  Flying out of that family, into a pair test    -0.019 / -0.211 / -0.008 %
 ```
+
+🔎 **THE LADDER THE FIVE CLIMB, AND IT IS THE THING TO CARRY FORWARD.**
+`(-330)` collapses N asks of one leaf into one pass. `(-331)` notices that the
+leaf's *whole body* is behind a guard the caller can hoist. `(-333)` does that
+for the *union of two bodies' guards* by asking which argument each `match`
+arm needs. `(-332)` is the same question about a function's frame rather than
+its guard. **The population to read is not functions — it is `match` arms and
+the arguments they touch**, and `pick_blocks_inner`'s (blocker x attacker)
+loop paid all four because it is the one place in the program that nests two
+sides of a rule.
 
 🔎 **THE DEVICE, AND IT IS THE CHEAPEST ONE ON THIS PAGE: rank the dump by call
 count (`cg_calls.py`), take every `crabomination_base` / shared-leaf row, and
