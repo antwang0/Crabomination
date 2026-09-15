@@ -3021,19 +3021,13 @@ same-box A/B. The counters and the Ir *deltas* are what carry across.
 
 ```text
 perf    **`(-327)`: the Soulbond pairing walk reads the board's keyword lane first — fixed -0.108 /
-        cube -0.156 / sealed -0.110 %**, `apply_soulbond_pairing` inclusive -74 / -82 / -74 %.
-        CR 702.95's per-entering-creature attempt was a whole-battlefield printed-keyword walk on
-        every board; `Soulbond` joins the zone's gate-keyword lane union. ⚠ **Transcribed from
-        `cd25d07f`'s commit message**, same as `(-326)` below.
+        cube -0.156 / sealed -0.110 %**, the row -74.2 / -81.8 / -74.1 %. `Soulbond` joins the
+        gate-keyword lane's union rather than taking the last lane shift.
 
 perf    **`(-326)`: one lane walk for the two grant-source callers — fixed -0.233 / cube -0.363 /
-        sealed -0.218 %.** `statics_granted_dying_triggers`' plain `battlefield.iter().filter(
-        GRANT_TRIGGER)` (once per dying permanent) moves into
-        `GameState::for_each_trigger_grant_source`, which `trigger_grant_sources` already reached
-        through the dispatcher's member lane — so the memo is shared and the two cannot drift.
-        Its self row goes to 0 on all three pools (inlined; the body is a lane read).
-        ⚠ **Transcribed from `d75575c6`'s commit message** — that commit wrote this block for
-        `(-322)`..`(-325)` and omitted its own row, so the tip's absolutes lived only in `git log`.
+        sealed -0.218 %.** `statics_granted_dying_triggers` was a second hand-written copy of the
+        question `trigger_grant_sources` already asks through the dispatcher's member lane; the row
+        goes to zero and `dispatch_triggers_for_events_slow` drops 104 k / 160 k / 725 k with it.
 
 perf    **`(-325)`: the two zone walkers take `find_card_zone`'s visit rule — fixed -0.039 / cube
         -0.069 / sealed -0.018 %.** Graveyards and exile are push-only and were scanned front to
@@ -3055,10 +3049,20 @@ perf    **`(-322)`: the block pair gate makes one walk per side, not nine — fi
         (222 -> 124 Ir/call on `cube`). Nine `has_kw` / `iter().any()` scans of two short slices
         collapse into one `match` per side.
 
-perf    **Cumulative over the session, `(-322)`..`(-327)`: fixed 596,342,781 -> 590,813,598
+❌ perf  **REFUTED AND REVERTED — `on_left_battlefield` reading its ten guards through the SHARED
+        walker before taking `&mut`: fixed +0.179 / cube +0.217 / sealed +0.112 %.** See the
+        candidates section; `find_card_anywhere_mut` does not unshare on the way in, and the guard
+        is TRUE on 7,168 of 10,826 leaves.
+
+perf    **Cumulative over the session (seven legs, six taken): fixed 596,342,781 -> 590,813,598
         (-0.927 %), cube 1,585,705,950 -> 1,564,952,530 (-1.309 %), sealed 1,676,524,999 ->
-        1,662,254,394 (-0.851 %).** (The six-row figure; the four-row one this line carried
-        before `(-326)`/`(-327)` were filed was fixed -0.588 / cube -0.795 / sealed -0.526 %.)
+        1,662,254,394 (-0.851 %).**
+
+sweep   **fresh seeds 1354..1357 at the `(-327)` tip: 12 cells / 59,200 games / 0 failures**,
+        `cap 0 / board 0 / stuck 0 / draw 16`, pools `cube all sealed`, `target-audit/overflow`
+        with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. It is what audits `(-324)`'s
+        new `has_combat_cap_static` lane and `(-323)`'s exact-tax `debug_assert!` on dflt-pilot
+        boards the suite never builds. **Frontier 1358.**
 
 gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to
         the committed invariant, `determinism ok`. Suite **19,549 / 0 / 5** under
@@ -7446,20 +7450,12 @@ Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
 ### `(-327)` The Soulbond pairing walk reads the board's keyword lane first — **fixed -0.108 / cube -0.156 / sealed -0.110 %**
 
-⚠ **Transcribed from `cd25d07f`'s commit message** — see the note under
-`(-326)`; that session filed `(-322)`..`(-325)` and has now pushed two more
-rows without their prose.
-
 CR 702.95's pairing is attempted once per creature that enters, and the attempt
 was a whole-battlefield walk asking `definition.keywords.has_kw(Soulbond)` per
 permanent — on every board, including the ones that do not play the mechanic.
-The walk's second disjunct is exactly what the zone's gate-keyword lane answers,
-so `Soulbond` joins that lane's union and the walk runs only when the entering
-creature carries the keyword or some permanent's printed keywords do. The lane
-predicate reads printed keywords and so does the walk, so the gate is exact in
-the sound direction; widening the union costs `board_keyword_matching`'s other
-callers only on a board that plays the keyword, and the lane's own
-`debug_assert!` recomputes the predicate on every read.
+`Soulbond` joins the zone's gate-keyword lane union, and the walk runs only when
+the entering creature carries the keyword or some permanent's printed keywords
+do.
 
 ```text
                     (-326)            (-327)          delta
@@ -7467,32 +7463,29 @@ callers only on a board that plays the keyword, and the lane's own
   cube             1,567,402,983     1,564,952,530       -0.1563 %
   sealed           1,664,080,066     1,662,254,394       -0.1097 %
 
-  apply_soulbond_pairing inclusive     855,988 ->   220,640   -74.2 %
-                                     3,025,814 ->   549,546   -81.8 %
-                                     2,453,774 ->   634,864   -74.1 %
+  apply_soulbond_pairing inclusive     855,988 -> 220,640   -74.2 %
+                                     3,025,814 -> 549,546   -81.8 %
+                                     2,453,774 -> 634,864   -74.1 %
 ```
 
-Call counts unchanged (3,794 / 8,428 / 10,022).
+⚠ **The lane's union is a shared resource and this is the first consumer that
+does not go through `board_keyword_matching`.** The predicate reads printed
+keywords and so does the walk, so the gate is exact in the sound direction;
+widening the union costs the gate's other callers only on a board that plays the
+keyword, and the lane's own `debug_assert!` recomputes the predicate on every
+read. **Adding to an existing lane's union is cheaper than a new lane shift when
+the walk's predicate is printed-keyword-shaped** — and there is one shift left.
 
 ### `(-326)` One lane walk for the two grant-source callers — **fixed -0.233 / cube -0.363 / sealed -0.218 %**
-
-⚠ **This entry is TRANSCRIBED from `d75575c6`'s commit message, not re-measured
-here.** That commit wrote the Log and Baseline prose for `(-322)`..`(-325)` and
-omitted its own, so the tip's absolutes lived only in `git log` — which is the
-one place this file exists so nobody has to look. The numbers below are the
-authoring session's, on **its** box (see the Baseline block's box warning); the
-deltas carry, the absolutes do not. ⚠ **If that session files these two rows
-itself later, reconcile — do not leave both.**
 
 `statics_granted_dying_triggers` asked "which battlefield permanents can grant a
 triggered ability" as a plain `battlefield.iter().filter(GRANT_TRIGGER)` walk,
 once per dying permanent. `trigger_grant_sources` asks the same question through
 the dispatcher's member lane (`(-215)`), where a hit visits only the
-contributors and a miss walks once and stores the list. The walk moved into
-`GameState::for_each_trigger_grant_source` and both callers take it, so the memo
-is shared and the two cannot drift on which permanents can grant. `GRANT_TRIGGER`
-is one of `dispatch_bits::BOARD_SCAN`, so the lane's member list is a superset of
-what this walk wants and `ABSENT` is authoritative.
+contributors. The walk moved into `GameState::for_each_trigger_grant_source` and
+both callers take it. `GRANT_TRIGGER` is one of `dispatch_bits::BOARD_SCAN`, so
+the lane's member list is a superset of what this walk wants and `ABSENT` is
+authoritative.
 
 ```text
                     (-325)            (-326)          delta
@@ -7500,16 +7493,20 @@ what this walk wants and `ABSENT` is authoritative.
   cube             1,573,106,814     1,567,402,983       -0.3626 %
   sealed           1,667,708,894     1,664,080,066       -0.2176 %
 
-  statics_granted_dying_triggers self   1,282,168 -> 0 (inlined; the body is a lane read)
+  statics_granted_dying_triggers self   1,282,168 -> 0   (inlined; the body is a lane read)
                                         5,567,322 -> 0
                                         2,906,304 -> 0
   its new per-source body, push_dying_grants: 18,528 Ir on cube
+  dispatch_triggers_for_events_slow also drops 104 k / 160 k / 725 k
 ```
 
-It is the only row that moves; `dispatch_triggers_for_events_slow` drops a
-further 104 k / 160 k / 725 k with it. The CR 603.10a snapshot leg is unchanged
-— the dying permanent's own self-granting static is still read off `snap`, still
-after the board's sources and still behind the same `GRANT_TRIGGER` test.
+⚠⚠ **THE DEVICE IS "TWO CALLERS, ONE WALK", AND THE PROFILE CANNOT RANK IT
+EITHER.** Nothing in a self or callee table says "this walk has a memo one
+function over"; what named it was reading `dispatch_triggers_for_events_slow`'s
+callee list for rows with a *plain battlefield walk in the body* and asking
+which of them a lane already answers. **Grep the engine for
+`battlefield.iter().filter(...dispatch_scan_bits...)` before building a new
+lane — the lane may exist and have a caller.**
 
 ### `(-325)` The two zone walkers take `find_card_zone`'s visit rule — **fixed -0.039 / cube -0.069 / sealed -0.018 %**
 
@@ -12771,6 +12768,101 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+✅✅ **STATUS AT THE `(-327)` TIP (2026-09-15, the block-gate session): SIX ROWS
+TAKEN, ONE REFUTED, cumulative fixed -0.927 / cube -1.309 / sealed -0.851 %.**
+All six came off **one question asked of the combat/declaration/dispatch spine:
+how many times does this function walk a short slice or the whole board when
+once (or none) would do?** None of them was in a self table as itself.
+
+```text
+  (-322)  blocker_pair_block: nine slice walks -> two            -0.163 / -0.448 / -0.215 %
+  (-323)  blocker_self_block: the tax pass folded into the walk  -0.080 / -0.086 / -0.081 %
+  (-324)  combat_participation_cap: a lane in front of it        -0.308 / -0.194 / -0.213 %
+  (-325)  the two zone walkers take find_card_zone's order       -0.039 / -0.069 / -0.018 %
+  (-326)  statics_granted_dying_triggers: the lane already existed -0.233 / -0.363 / -0.218 %
+  (-327)  apply_soulbond_pairing: joins the gate-keyword union   -0.108 / -0.156 / -0.110 %
+```
+
+🔎 **THE CHECKLIST THE SESSION RAN, AND IT IS NOT FINISHED.** For each function
+over ~0.3 % on any pool, read the body and classify every walk it makes:
+ (a) **a slice asked N times** (`has_kw` / `iter().any()` per family) — collapse
+     to one `match`, the `attacker_self_block` shape. `(-322)`, `(-323)`.
+ (b) **a whole-board walk with a definition-only predicate** — a lane if the
+     callers are outside a freeze scope (`(-324)`), a `PresenceGate` slot if
+     they are inside it (`(-320)`, `(-321)`), and **an addition to an existing
+     lane's union if the predicate is printed-keyword-shaped** (`(-327)`).
+ (c) **a whole-board walk another function already memoizes** — take its
+     walker (`(-326)`). Grep before building.
+ (d) **a zone scan from the wrong end** (`(-325)`).
+Still unread at this tip: `perform_action_inner` (1.70 % self on `cube`),
+`resolve_combat_into` (1.51 %), `fire_step_triggers` (0.87 %),
+`cast_candidates` (1.04 %), `pick_attacks_inner` / `pick_blocks_inner`.
+
+📐 **THE QUEUE THE SESSION LEAVES, SIZED AT THE `(-327)` TIP (`profiling-fast
+--no-default-features`, gang mirror `--games 6 --threads 1 --seed 1`; totals
+fixed 590,813,598 / cube 1,564,952,530 / sealed 1,662,254,394).**
+
+```text
+  1. the dispatcher's event FOLD                fixed 3,356,631  cube 10,531,808  sealed 8,325,372
+     `SpecFromIterNested::from_iter` under        (0.57 %)        (0.67 %)         (0.50 %)
+     `dispatch_triggers_for_events_slow`, 6,218 / 11,054 / 14,546 calls at ~950 Ir apiece.
+     Two collects can own it: `synthesized` (the PermanentDied / ControlChanged
+     batch) and `folded = events.iter().cloned().chain(synthesized).collect()`.
+     ⚠ The obvious half — `events.is_empty()` means `folded = synthesized`, a move
+     rather than N clones — is UNSIZED: the caller is `perform_action_inner`, which
+     passes its action's own event list, so `events` may never be empty here.
+     **Census which of the two before building either**; a `#[cfg(feature =
+     "trig-census")]` counter at the two sites is one build.
+
+  2. `dispatch_board_scan`'s command-zone tail   46,718 / 73,754 / 105,132 calls,
+     8,989,672 Ir on cube for the whole function (122 Ir/call). Its
+     `for p in &self.players { for src in p.command.iter()... } }` runs on every
+     dispatch; `trigger_grant_sources` gates the same loop behind
+     `players.iter().any(|p| !p.command.is_empty())`. Worth ~15-20 Ir a call,
+     i.e. ~0.07 % — at the bottom of the "worth a build" band, and free.
+
+  3. `CardDefinition::debug_flags`               cube 20,710 calls / ~22.6 M INCLUSIVE (1.4 %)
+     ⚠⚠ **AND IT DOES NOT SCALE — do not rank it.** `spell_kind` reaches it 7,306
+     times for 21.8 M, but the work behind that is 234 `format!`s of a whole
+     definition plus ~11 substring searches each, i.e. **once per distinct card
+     name per process**. It is the `wants_converge` class PERF's "How to measure"
+     already warns about, one order of magnitude bigger. The count behind it
+     grows only with distinct card NAMES (`wants_converge` measured 217 -> 262
+     from 6 to 18 games), so its *share* falls roughly with the game count and is
+     ~nothing in the 10-30 k-game gate runs the engine actually serves.
+     **It also dilutes every percentage on this page by ~1.4 % of `cube`** — the
+     deltas are unaffected (it is a constant additive term on both sides).
+
+  4. `ManaCost::cmc`                             cube 147,862 calls / 3,656,280 Ir (0.23 %)
+     `can_afford_in_state_with` 42,988, `permanent_value_with` 39,502,
+     `blocker_self_block` 26,676 (the Void Winnower even-MV test, whose two cheap
+     terms are ordered `cmc()` first). 24.7 Ir a call for a sum over the printed
+     symbols. A per-definition memo needs a sixth `CardMemo` word — batch it with
+     another `crabomination_base` change, per the mana-word note below.
+
+  5. the three `continuous_effects.iter().any(|e| e.duration == ..)` scans in
+     `check_state_based_actions_into` — **SIZED AND DECLINED**: the stored list is
+     a handful of entries, so three scans a sweep is ~0.03 % of `cube`, under the
+     0.05 % bar. `ContinuousEffects::fold` has bits 8..30 free if a later pass
+     wants durations in the same word for a different reason.
+```
+
+❌❌ **REFUTED THIS SESSION, DO NOT REBUILD: `on_left_battlefield` reading its ten
+guards through the SHARED walker before taking `&mut` — fixed +0.179 / cube
++0.217 / sealed +0.112 %, reverted.** The hypothesis was the CoW rule
+(`(-280)`..`(-287)`): `find_card_anywhere_mut` hands back a `&mut CardInstance`,
+so producing one unshares the pile the card landed in, before either guard is
+evaluated. **Both halves of the hypothesis are wrong, and the dump says so.**
+(a) `find_card_anywhere_mut` already locates with shared borrows and takes its
+one `&mut` on the hit, so nothing is unshared on the way in — `make_mut_slow`
+under `on_left_battlefield` reads **6,168 calls / 4,622,852 Ir on BOTH sides**.
+(b) The guard is **TRUE on 7,168 of 10,826 leaves (66 %)**, so the second walk
+the read-first shape needs runs two thirds of the time and costs 5.15 M on
+`cube` against nothing saved. ⚠ **The transferable rule: the `(-280)` device is
+priced by how often the guard is FALSE, and that is a census, not an
+assumption.** Take `--callees <fn>` on the base first; a `make_mut_slow` edge
+that does not move is the whole answer.
 
 ✅✅ **STATUS AT THE `(-320)` TIP (2026-09-15): THE BIGGEST ROW THIS BRANCH HAS
 TAKEN — `bot::legal_blockers` was asking the layer view about every permanent
