@@ -2990,6 +2990,22 @@ bump invalidates the Ir columns and has to re-take the A/B base.
 ### 2026-09-15 (the ungated-walk session) — the two board walks nobody had gated, found by reading the callee table rather than the self table
 
 ```text
+perf    **`(-318)`: the combat-damage fold asks the zone whether anything is attached — fixed -0.061 /
+        cube -0.417 / sealed -0.195 %**, the row -5.7 / -20.7 / -14.9 %. `fire_combat_damage_triggers`
+        opened with a whole-battlefield walk that does not short-circuit; both its facts are INSTANCE
+        fields, so `(-306)`'s write counter is the key rather than a lane, and `combat_census` priced
+        it at **50-68 %** where the `sba_fold` precedent predicts 10.6-18.9 % (several calls land per
+        damage step with no board write between them). ⚠⚠ **A presence gate belongs in its OWN
+        short-circuiting `any`, not folded into the loop it guards**: the fused shape taxed every miss
+        and still paid the dear walk on an empty board — **+0.018 % on `fixed`**, -0.280 / -0.096 % on
+        the others — and it could only skip when the fold HIT, 28.8 / 52.9 / 50.9 % of calls against
+        the split form's **61.9 / 78.6 / 100.0 %**. The split form wins on all three. ⚠ The size guard
+        moves 1,664 -> 1,672, with the growth already in the reading.
+
+census  **`combat_census`, `trig-census`-gated, in the tree and re-runnable.** It is why `(-318)` was a
+        build rather than a design question, and it is the second census this branch has used to price
+        a key BEFORE building one (`(-303)` was the first). Numbers in `(-318)`'s Log entry.
+
 perf    **`(-317)`: `available_mana` reads its per-permanent answer off the definition — fixed -0.842 /
         cube -0.496 / sealed -0.540 %**, the row -43.9 / -35.6 / -36.8 % (9,276,278 -> 5,199,999 /
         16,566,906 -> 10,674,141 / 18,494,586 -> 11,696,013). The third device on a row whose other two
@@ -3043,15 +3059,15 @@ gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls*
         **3m50s-4m02s**, `target-audit/overflow` cold is **10m53s**, and `cargo check --profile
         release-fast` is **2m06s**.
 
-sweep   **fresh seeds 1334..1341 in TWO blocks: 24 cells / 118,400 games / 0 failures.** 1334..1337 at
-        the `(-316)` tip (`cap 0 / board 0 / stuck 0 / draw 16`) and 1338..1341 at the CLOSING
-        `(-317)` tip (`cap 0 / board 0 / stuck 0 / draw 0`), over `cube` / `all` / `sealed`,
-        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. ⚠ **That
-        is the gate a new memo needs and the suite cannot give it**: `Battlefield::lane`'s
-        `debug_assert!` recomputes the handed predicate against the stored bit on EVERY read, and
-        `(-317)`'s `debug_assert_eq!` re-runs the WHOLE walk against every packed answer it takes —
-        both audited on every board those 118,400 games dealt. No Scute Swarm cell in either block.
-        **Frontier 1342.**
+sweep   **fresh seeds 1334..1345 in THREE blocks: 36 cells / 177,600 games / 0 failures.** 1334..1337
+        at the `(-316)` tip (`cap 0 / board 0 / stuck 0 / draw 16`), 1338..1341 at the `(-317)` tip
+        and 1342..1345 at the CLOSING `(-318)` tip (both `cap 0 / board 0 / stuck 0 / draw 0`), over
+        `cube` / `all` / `sealed`, `target-audit/overflow` with `-C debug-assertions=yes` and
+        `CRAB_ANSWER_LOG=strict`. ⚠ **That is the gate a new memo needs and the suite cannot give
+        it**: `Battlefield::lane`'s `debug_assert!` recomputes the handed predicate against the stored
+        bit on EVERY read, `(-317)`'s `debug_assert_eq!` re-runs the WHOLE walk against every packed
+        answer it takes, and `(-318)`'s re-walks the board on every skip — all three audited on every
+        board those 177,600 games dealt. No Scute Swarm cell in any block. **Frontier 1346.**
         All standing audits re-run and 0 (`audit_panics` 0 bare / 70 sites, `audit_stash_in_loop` 0
         unexplained, `audit_seat_from_selector` 0 open, `audit_target_walkers --check` 0,
         `audit_doc_drift` 0 body-wrong / 0 doc rot / 0 stale notes).
@@ -7286,6 +7302,73 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-318)` The combat-damage fold asks the zone whether anything is attached — **fixed -0.061 / cube -0.417 / sealed -0.195 %**
+
+`fire_combat_damage_triggers` is the fourth biggest self row on `cube` (32.7 M
+/ 2.02 %) and opens with a whole-battlefield walk that does not short-circuit,
+folding `any_attached` and `soulbond_pair` once per call. `combat_census` —
+built first, `trig-census`-gated, in the tree — priced both questions:
+
+```text
+release-fast --features trig-census, CRAB_COMBAT_CENSUS=1, gang mirror --games 6 --threads 1 --seed 1
+                                  fixed        cube      sealed
+  calls                           7,258      22,028      21,184
+  permanents walked / call         20.8        35.6        19.3
+  boards with NO attachment       61.9 %      78.6 %     100.0 %
+  found any_attached               9.9 %       1.3 %       0.0 %
+  found soulbond_pair              0.0 %       0.0 %       0.0 %
+  a writes()-keyed fold HITS      50.4 %      67.9 %      53.4 %
+  the SHIPPED shape skips on      61.9 %      78.6 %     100.0 %   <- re-read after
+  ... a FUSED shape would have    28.8 %      52.9 %      50.9 %      (-318) landed
+```
+
+⚠ **Both facts read INSTANCE fields, so the `definition_epoch`-keyed lanes
+`(-315)`/`(-316)` used cannot hold them** — the lanes deliberately survive an
+element write, which is exactly what an `attached_to` assignment is. The key is
+`(-306)`'s write counter, folded beside `sba_fold`; the surprise is that it
+hits **50-68 %** where the `sba_fold` precedent predicts 10.6-18.9 %, because
+several calls land per combat damage step with no board write between them.
+**One bit, folded source-independently**, so one answer serves every dealer.
+
+```text
+profiling-fast --no-default-features, same recipe
+                    census tip            (-318)          delta
+  fixed              609,990,759       609,619,688       -0.0608 %
+  cube             1,615,704,046     1,608,960,836       -0.4174 %
+  sealed           1,700,369,351     1,697,060,293       -0.1946 %
+
+  fire_combat_damage_triggers self
+  fixed                6,920,234         6,522,482        -5.7 %
+  cube                32,699,392        25,919,276       -20.7 %
+  sealed              22,660,994        19,287,252       -14.9 %
+```
+
+⚠⚠ **A PRESENCE GATE BELONGS IN ITS OWN SHORT-CIRCUITING `any`, NOT FOLDED
+INTO THE LOOP IT GUARDS — and that was the difference between a regression and
+the win.** The first shape computed the two presence bits as two more `|=`
+inside the existing walk. It taxed every *miss* two instructions a permanent
+and, worse, still paid the **dear** walk — a `soulbond_bonus` pointer chase
+into the definition per permanent — on a board where nothing is attached. It
+read **+0.018 % on `fixed`** (lowest skip rate of the three) and only
+**-0.280 / -0.096 %** on the other two. As a separate `any` the miss path stops
+at the first attachment and a board with none pays one *cheap* pass instead of
+the dear one, which is why the split form wins on **all three** pools rather
+than two — and the skip stops being conditional on a fold hit at all:
+**28.8 / 52.9 / 50.9 % of calls fused against 61.9 / 78.6 / 100.0 % split**,
+the latter being simply every board with nothing attached. The fold then
+removes the *presence* pass on top, on the 50.4 / 67.9 / 53.4 % it hits. The
+`debug_assert!` under the gate re-walks on every skip.
+
+⚠ **`GameState`'s size guard moves 1,664 -> 1,672.** The fold is one
+`AtomicU32` (a 31-bit `writes` stamp and its one-bit answer) and costs eight
+bytes, because `Battlefield` is `u64`-aligned and carries no hole — a
+stamp-plus-byte pair costs the same as one word. The growth is **already in
+the reading above**: the A/B clones the bigger state on every probe. The free
+alternative is written down beside the guard rather than taken — steal bits
+from `sba_fold`'s word (its legendary count needs 11 of the 28 it has) under a
+shared stamp with a per-half "computed" flag; sound, and it re-plumbs the SBA
+memo's store path for eight bytes.
 
 ### `(-317)` The producible-mana estimate reads its answer off the definition — **fixed -0.842 / cube -0.496 / sealed -0.540 %**
 
@@ -12309,9 +12392,14 @@ sixth `CardMemo` word** — a `crabomination_base` change and therefore a
 ~70-minute cold rebuild on this box, so batch it with something else.
 
 
-🆕 **NEWLY SIZED AND NOT TAKEN — `fire_combat_damage_triggers` IS THE FOURTH
-BIGGEST SELF ROW ON `cube` AND NO CANDIDATE HAS EVER NAMED IT.** Read at the
-`(-317)` tip:
+✅ **TAKEN, `(-318)` — `fire_combat_damage_triggers` was the fourth biggest
+self row on `cube` and no candidate had ever named it. Its opening fold is now
+behind a `writes`-keyed presence gate: fixed -0.061 / cube -0.417 / sealed
+-0.195 %, the row -5.7 / -20.7 / -14.9 %, leaving it at 6.52 M / 25.92 M /
+19.29 M (1.07 / 1.61 / 1.14 %).** What is left is the three trigger phases
+below the walk, and the next look at them wants a `profiling-lines` dump,
+cold, with ⚠ `(-310)`'s rule about inlined frames. The sizing that opened it,
+kept for the method:
 
 ```text
   self                     fixed 6,920,234 (1.13 %)   cube 32,699,392 (2.02 %)   sealed 22,660,994 (1.33 %)
@@ -12320,22 +12408,13 @@ BIGGEST SELF ROW ON `cube` AND NO CANDIDATE HAS EVER NAMED IT.** Read at the
   its whole callee tree    ~2.1 M  ->  the self IS the work, ~1,486 Ir a call
 ```
 
-Its first act is a **whole-battlefield walk that does not short-circuit**,
-folding two facts — `any_attached` (`c.attached_to == Some(source)`) and
-`soulbond_pair` — once per call, on a board where nearly nothing is attached.
-⚠ **Both halves read INSTANCE fields, so this is not a definition lane**
-(`(-315)`'s device does not apply). The sound key is `(-306)`'s
-`battlefield.writes()`, the way `sba_fold` already uses it: fold
-`any_attachment` (any `attached_to.is_some()`) and `any_soulbond` once per
-board write, source-independent, and gate the exact walk on the pair.
-
-⚠⚠ **CENSUS THE HIT RATE BEFORE BUILDING IT.** The gate only pays on boards
-with *no* attached permanent at all, and an Aura or an Equipment is enough to
-make it `PRESENT` — this is the shape `(-312)` refuted one lane over. The
-question is one counter: what fraction of `fire_combat_damage_triggers` calls
-see a board with zero `attached_to.is_some()`. If it is low, the row's cost is
-in the three trigger phases below the walk instead, and that wants a
-`profiling-lines` dump (cold) rather than a gate.
+⚠⚠ **AND THE RULE THE CENSUS PRODUCED IS THE ONE TO CARRY FORWARD: `sba_fold`'s
+10.6-18.9 % IS NOT THE PRICE OF THE WRITE COUNTER, IT IS THE PRICE OF THAT ONE
+CALL SITE.** The same key reads **50.4 / 67.9 / 53.4 %** here, because several
+`fire_combat_damage_triggers` calls land per combat damage step with no board
+write between them. **Census the key at the call site that will use it**; a
+`writes`-keyed memo is priced by how often its *caller* is re-asked without a
+write, not by how often the board is quiet in general.
 
 🔎 **THE DEVICE IS NOW A CHECKLIST AND IT HAS NOT BEEN RUN TO THE END.** The
 question "which whole-board walk on a hot path still has no presence lane" has
