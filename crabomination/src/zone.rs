@@ -545,11 +545,17 @@ const LANE_UNTAP_STATIC: u32 = 52;
 /// board for, up to seven walks per life change, real or simulated (PERF
 /// `(-262)`). See [`card_has_life_static`].
 const LANE_LIFE_STATIC: u32 = 54;
+/// Any permanent's *definition* can grant activated abilities along an
+/// attachment or a Soulbond pairing — the second, ungated battlefield walk
+/// every `grant_scan` used to make (PERF `(-315)`). The two instance gates
+/// (`attached_to`, `soulbond_partner`) are over-approximated, a lane
+/// predicate reading no instance field. See [`card_has_attach_grant`].
+const LANE_ATTACH_GRANT: u32 = 56;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
-/// The lane count the predicate table below covers (shift 0 ..= 54).
-const LANE_COUNT: usize = 28;
+/// The lane count the predicate table below covers (shift 0 ..= 56).
+const LANE_COUNT: usize = 29;
 
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
@@ -593,6 +599,7 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(card_has_block_tax_static),                     // LANE_BLOCK_TAX_STATIC
     Some(card_has_untap_static),                         // LANE_UNTAP_STATIC
     Some(card_has_life_static),                          // LANE_LIFE_STATIC
+    Some(crate::game::actions::card_has_attach_grant),   // LANE_ATTACH_GRANT
 ];
 
 /// Does this permanent contribute anything to
@@ -1641,6 +1648,15 @@ impl Battlefield {
     #[inline]
     pub fn has_life_static(&self) -> bool {
         self.lane(LANE_LIFE_STATIC, card_has_life_static)
+    }
+
+    /// Does any permanent here carry an attachment- or pairing-scoped grant of
+    /// activated abilities ([`card_has_attach_grant`])? Read once per
+    /// `grant_scan`, in front of the walk that collects the Equipment and
+    /// Soulbond halves (PERF `(-315)`).
+    #[inline]
+    pub fn has_attach_grant(&self) -> bool {
+        self.lane(LANE_ATTACH_GRANT, crate::game::actions::card_has_attach_grant)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

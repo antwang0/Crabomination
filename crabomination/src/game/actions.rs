@@ -116,6 +116,21 @@ pub(crate) fn card_grants_to_countered(c: &CardInstance) -> bool {
         .is_none_or(|w| w & mana_summary::COUNTER_GRANT != 0)
 }
 
+/// The attach-grant lane's predicate: the definition can hand a *second*
+/// permanent activated abilities along a link — an `equipped_bonus` (CR
+/// 702.6e, Equipment and Auras) or a `soulbond_bonus` carrying activated
+/// abilities (CR 702.95). Definition-only, so the two instance gates
+/// [`GameState::grant_scan`]'s walk applies (`attached_to`,
+/// `soulbond_partner`) are over-approximated — the sound direction, since the
+/// lane only ever lets the exact walk run more often than it must.
+pub(crate) fn card_has_attach_grant(c: &CardInstance) -> bool {
+    c.definition.equipped_bonus.is_some()
+        || c.definition
+            .soulbond_bonus
+            .as_ref()
+            .is_some_and(|b| !b.activated_abilities.is_empty())
+}
+
 /// A `GrantActivatedAbility` filter reduced to the printed-line tests the
 /// requirement walker would make anyway, resolved once per [`GrantScan`]
 /// rather than once per (permanent x grant). `granted_abilities_of_inner`
@@ -14425,22 +14440,31 @@ impl GameState {
                 }
             }
         }
-        for src in self.battlefield.iter() {
-            // CR 702.95 — Soulbond-granted activated abilities (Deadeye
-            // Navigator's flicker). A paired creature carrying a
-            // `soulbond_bonus` with `activated_abilities` grants them to BOTH
-            // itself and its partner.
-            if let Some(bonus) = &src.definition.soulbond_bonus
-                && !bonus.activated_abilities.is_empty()
-                && let Some(partner) = src.soulbond_partner
-                && self.battlefield.iter().any(|c| c.id == partner)
-            {
-                scan.soulbond.push((src.id, partner, &bonus.activated_abilities));
-            }
-            // CR 702.6e — Equipment/Aura-granted activated abilities, matched
-            // per card by `attached_to`.
-            if src.attached_to.is_some() && src.definition.equipped_bonus.is_some() {
-                scan.equipment.push(src);
+        // **The attachment/pairing half was the scan's one ungated walk.** The
+        // battlefield pass above is behind `act_grant_lane` and the graveyard
+        // pass behind each pile's own, but this one ran on every `grant_scan`
+        // — thirteen call sites, `available_mana` and `mana_source_table`
+        // among them — over a board where nearly nothing carries either bonus.
+        // `(-296)`'s device: one presence lane, definition-only, so `ABSENT`
+        // answers the whole pass for a word load.
+        if self.battlefield.has_attach_grant() {
+            for src in self.battlefield.iter() {
+                // CR 702.95 — Soulbond-granted activated abilities (Deadeye
+                // Navigator's flicker). A paired creature carrying a
+                // `soulbond_bonus` with `activated_abilities` grants them to
+                // BOTH itself and its partner.
+                if let Some(bonus) = &src.definition.soulbond_bonus
+                    && !bonus.activated_abilities.is_empty()
+                    && let Some(partner) = src.soulbond_partner
+                    && self.battlefield.iter().any(|c| c.id == partner)
+                {
+                    scan.soulbond.push((src.id, partner, &bonus.activated_abilities));
+                }
+                // CR 702.6e — Equipment/Aura-granted activated abilities,
+                // matched per card by `attached_to`.
+                if src.attached_to.is_some() && src.definition.equipped_bonus.is_some() {
+                    scan.equipment.push(src);
+                }
             }
         }
         #[cfg(feature = "trig-census")]
