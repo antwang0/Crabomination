@@ -10834,6 +10834,47 @@ impl GameState {
     /// "is layer 7 live" gate would answer `true` on most boards and be worth
     /// nothing. `gather_continuous_effects` `debug_assert!`s the implication
     /// in the sound direction, so the whole suite audits the enumeration.
+    /// Is anything on the battlefield attached to anything, or Soulbond-paired?
+    ///
+    /// **`false` is authoritative for the whole `attached_to == Some(..)`
+    /// family**: with nothing attached, no walk that asks it can find a thing,
+    /// so any of the forty such walks in the tree can open on this. Off the
+    /// zone's `writes`-keyed fold (PERF `(-318)`), so it is a word load on
+    /// 50-68 % of asks and a short-circuiting `any` on the rest — and the
+    /// answer it stores serves every later ask on the same board, whatever
+    /// *that* one is asking about.
+    ///
+    /// ⚠ Only the two sites the line profile charges for actually open on it
+    /// (`fire_combat_damage_triggers` and the SBA death sweep's equipment
+    /// leg). The other thirty-eight are cold, and a gate in front of a cold
+    /// walk is a fold read for nothing.
+    #[inline]
+    pub(crate) fn attachment_in_scope(&self) -> bool {
+        let present = match self.battlefield.attach_fold() {
+            Some(p) => p,
+            None => {
+                let p = self
+                    .battlefield
+                    .iter()
+                    .any(|c| c.attached_to.is_some() || c.soulbond_partner.is_some());
+                self.battlefield.store_attach_fold(p);
+                p
+            }
+        };
+        // The audit lives here rather than at each caller, so a site added
+        // later inherits it: a stale `false` is the only way this can be
+        // wrong, and it re-walks on every one.
+        debug_assert!(
+            present
+                || !self
+                    .battlefield
+                    .iter()
+                    .any(|c| c.attached_to.is_some() || c.soulbond_partner.is_some()),
+            "the attachment fold said an empty board and the board is not empty",
+        );
+        present
+    }
+
     pub(crate) fn pt_reduction_in_scope(&self) -> bool {
         self.continuous_effects.has_family(mod_families::TOUGHNESS_REDUCE)
             || self.battlefield.has_toughness_reducer(card_can_reduce_toughness)

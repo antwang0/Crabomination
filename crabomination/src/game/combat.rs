@@ -5674,17 +5674,7 @@ impl GameState {
         // skip rate is the lowest of the three; as a short-circuiting `any`
         // the miss path pays a scan that stops at the first attachment, and
         // the board that has none pays one cheap pass instead of the dear one.
-        let present = match self.battlefield.attach_fold() {
-            Some(p) => p,
-            None => {
-                let p = self
-                    .battlefield
-                    .iter()
-                    .any(|c| c.attached_to.is_some() || c.soulbond_partner.is_some());
-                self.battlefield.store_attach_fold(p);
-                p
-            }
-        };
+        let present = self.attachment_in_scope();
         if present {
             for c in self.battlefield.iter() {
                 any_attached |= c.attached_to == Some(source);
@@ -5716,13 +5706,6 @@ impl GameState {
             combat_census::add(6, u64::from(prev == w));
             combat_census::add(7, u64::from(!present));
         }
-        debug_assert!(
-            present
-                || !self.battlefield.iter().any(|c| {
-                    c.attached_to.is_some() || c.soulbond_partner.is_some()
-                }),
-            "the attachment fold said an empty board and the board is not empty",
-        );
         if let Some(c) = dealer {
             attacker_controller = Some(c.controller);
             // Printed + statics-granted ("Slivers you control have

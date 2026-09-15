@@ -6373,15 +6373,28 @@ impl GameState {
             // info — or the attachment under `triggers_on_equipment`; the
             // creature stays the subject either way. Controller is the
             // creature's controller.
-            for eq in &self.battlefield {
-                if eq.attached_to != Some(id) {
-                    continue;
-                }
-                let Some(bonus) = &eq.definition.equipped_bonus else { continue };
-                let src = if bonus.triggers_on_equipment { eq.id } else { id };
-                for ta in &bonus.triggered_abilities {
-                    if ta.event.kind == EventKind::CreatureDied && !dies_suppressed {
-                        die_triggers.push((src, ta.effect.clone(), controller_idx, ta.event.filter.clone()));
+            // One whole-battlefield walk per dying creature, and the line
+            // profile charges it **1.4 M x 2 lines on `cube`** — 0.17 % of the
+            // pool for a leg that fires on the boards carrying an Equipment.
+            // `attachment_in_scope` is `(-318)`'s fold read: `false` is
+            // authoritative for the whole `attached_to == Some(..)` family, so
+            // this opens on it (PERF `(-319)`).
+            if self.attachment_in_scope() {
+                for eq in &self.battlefield {
+                    if eq.attached_to != Some(id) {
+                        continue;
+                    }
+                    let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+                    let src = if bonus.triggers_on_equipment { eq.id } else { id };
+                    for ta in &bonus.triggered_abilities {
+                        if ta.event.kind == EventKind::CreatureDied && !dies_suppressed {
+                            die_triggers.push((
+                                src,
+                                ta.effect.clone(),
+                                controller_idx,
+                                ta.event.filter.clone(),
+                            ));
+                        }
                     }
                 }
             }
