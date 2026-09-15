@@ -1118,27 +1118,41 @@ impl GameState {
         }
         // CR 902.5 — a Vanguard avatar's step triggers fire from the command
         // zone ("at the beginning of your upkeep" — Arcbound Overseer Avatar).
-        for (seat, player) in self.players.iter().enumerate() {
-            for c in player
-                .command
-                .iter()
-                .filter(|c| c.command_zone_abilities_active() || c.definition.is_scheme())
-            {
-                // CR 901.6 — a plane's controller is the planar controller,
-                // normally the active player, so its "your" triggers fire on
-                // every turn regardless of who owns the planar deck.
-                let plane = c.definition.is_plane();
-                for t in &c.definition.triggered_abilities {
-                    let scoped_to_owner = matches!(
-                        t.event.scope,
-                        EventScope::YourControl | EventScope::ActivePlayer | EventScope::SelfSource
-                    );
-                    if t.event.kind == kind
-                        && (matches!(t.event.scope, EventScope::AnyPlayer)
-                            || (scoped_to_owner && (plane || seat == active)))
-                    {
-                        let controller = if plane { active } else { seat };
-                        candidates.push((c.id, t.effect.clone(), controller, t.event.filter.clone()));
+        // Behind one emptiness test, the shape `sweep_finished_schemes` and
+        // `trigger_grant_sources` already use: this fires on every step of
+        // every turn and no format the simulator plays puts anything in a
+        // command zone, so the two `Filter` chains were pure iterator
+        // machinery (PERF `(-329)`).
+        if !self.command_zones_are_empty() {
+            for (seat, player) in self.players.iter().enumerate() {
+                for c in player
+                    .command
+                    .iter()
+                    .filter(|c| c.command_zone_abilities_active() || c.definition.is_scheme())
+                {
+                    // CR 901.6 — a plane's controller is the planar controller,
+                    // normally the active player, so its "your" triggers fire on
+                    // every turn regardless of who owns the planar deck.
+                    let plane = c.definition.is_plane();
+                    for t in &c.definition.triggered_abilities {
+                        let scoped_to_owner = matches!(
+                            t.event.scope,
+                            EventScope::YourControl
+                                | EventScope::ActivePlayer
+                                | EventScope::SelfSource
+                        );
+                        if t.event.kind == kind
+                            && (matches!(t.event.scope, EventScope::AnyPlayer)
+                                || (scoped_to_owner && (plane || seat == active)))
+                        {
+                            let controller = if plane { active } else { seat };
+                            candidates.push((
+                                c.id,
+                                t.effect.clone(),
+                                controller,
+                                t.event.filter.clone(),
+                            ));
+                        }
                     }
                 }
             }
@@ -1668,7 +1682,7 @@ impl GameState {
     }
 
     /// The presence gate the two command-zone sweeps share.
-    fn command_zones_are_empty(&self) -> bool {
+    pub(crate) fn command_zones_are_empty(&self) -> bool {
         self.players.iter().all(|p| p.command.is_empty())
     }
 

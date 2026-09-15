@@ -4427,7 +4427,7 @@ impl GameState {
         let mut out = Vec::new();
         self.for_each_trigger_grant_source(|src| self.push_trigger_grants(src, &mut out));
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
-        if self.players.iter().any(|p| !p.command.is_empty()) {
+        if !self.command_zones_are_empty() {
             for p in &self.players {
                 for src in p.command.iter().filter(|c| c.command_zone_abilities_active()) {
                     if src.dispatch_scan_bits() & db::GRANT_TRIGGER != 0 {
@@ -4804,23 +4804,29 @@ impl GameState {
             }
         }
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
-        for p in &self.players {
-            for src in p
-                .command
-                .iter()
-                .filter(|c| c.command_zone_abilities_active())
-                .filter(|c| c.dispatch_scan_bits() & db::GRANT_TRIGGER != 0)
-            {
-                for sa in &src.definition.static_abilities {
-                    if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
-                        self.active_static(&sa.effect, src)
-                    {
-                        scan.trigger_grants.push(TriggerGrant {
-                            filter: filter.resolve_named_by_source(src.named_card.as_deref()),
-                            ability,
-                            controller: src.controller,
-                            source: src.id,
-                        });
+        // Behind one emptiness test, the shape `trigger_grant_sources` already
+        // carries: this runs once per dispatch — 73,754 on a six-game `cube`
+        // run — and the two `Filter` chains it built were pure iterator
+        // machinery on every format the simulator plays (PERF `(-329)`).
+        if !self.command_zones_are_empty() {
+            for p in &self.players {
+                for src in p
+                    .command
+                    .iter()
+                    .filter(|c| c.command_zone_abilities_active())
+                    .filter(|c| c.dispatch_scan_bits() & db::GRANT_TRIGGER != 0)
+                {
+                    for sa in &src.definition.static_abilities {
+                        if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
+                            self.active_static(&sa.effect, src)
+                        {
+                            scan.trigger_grants.push(TriggerGrant {
+                                filter: filter.resolve_named_by_source(src.named_card.as_deref()),
+                                ability,
+                                controller: src.controller,
+                                source: src.id,
+                            });
+                        }
                     }
                 }
             }
