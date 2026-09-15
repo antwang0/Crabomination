@@ -16661,8 +16661,11 @@ impl GameState {
 
     /// CR 509.1b — "this creature can't block [filter] creatures" (Gibbering
     /// Hyenas). The attacker is matched with the full requirement walker, so
-    /// unlike the keyword-only restrictions it needs `self`; every
-    /// block-legality path routes through here.
+    /// unlike the keyword-only restrictions it needs `self`. The scan form,
+    /// for a caller with no keyword walk of its own;
+    /// [`blocker_pair_block`](Self::blocker_pair_block) carries the same rule
+    /// as an arm of the one walk it already makes, and both reach it through
+    /// [`cant_block_matching_bars`](Self::cant_block_matching_bars).
     pub(crate) fn blocker_matching_restriction_bars(
         &self,
         blocker: &CardInstance,
@@ -16670,14 +16673,31 @@ impl GameState {
         attacker_id: CardId,
     ) -> bool {
         blocker_kws.iter().any(|k| match k {
-            Keyword::CantBlockMatching(f) => self.evaluate_requirement_static(
-                f,
-                &Target::Permanent(attacker_id),
-                blocker.controller,
-                Some(blocker.id),
-            ),
+            Keyword::CantBlockMatching(f) => {
+                self.cant_block_matching_bars(blocker, f, attacker_id)
+            }
             _ => false,
         })
+    }
+
+    /// The rule behind one `Keyword::CantBlockMatching` filter: does the
+    /// attacker match it? Shared by
+    /// [`blocker_matching_restriction_bars`](Self::blocker_matching_restriction_bars)
+    /// and the arm `blocker_pair_block`'s single keyword walk carries, so the
+    /// two cannot disagree about what the filter means.
+    #[inline]
+    pub(crate) fn cant_block_matching_bars(
+        &self,
+        blocker: &CardInstance,
+        filter: &SelectionRequirement,
+        attacker_id: CardId,
+    ) -> bool {
+        self.evaluate_requirement_static(
+            filter,
+            &Target::Permanent(attacker_id),
+            blocker.controller,
+            Some(blocker.id),
+        )
     }
 
     /// CR 509.1a/b — the whole blocker-side half of
@@ -16740,34 +16760,9 @@ impl GameState {
         {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
-        // CR 509.1b — Mogg Toady: strictly more creatures than the attacker's
-        // controller. Attacker-dependent, so it stays here.
-        if blocker_cp.keywords().has_kw(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
-            && self.creature_count(blocker.controller) <= self.creature_count(attacker.controller)
-        {
-            return Some((line!(), GameError::CannotBlock(blocker.id)));
-        }
         let atk_kws = atk_cp.map(|c| c.keywords()).unwrap_or(&[]);
         let atk_colors = atk_cp.map(|c| c.colors).unwrap_or_default();
         let atk_power = atk_cp.map(|c| c.power).unwrap_or_else(|| attacker.power());
-        // CR 509.1b — "can't be blocked as long as defending player controls a
-        // [filter]" (Neurok Spy, Hazy Homunculus). Enforced in
-        // `declare_blockers` too; mirrored here so the UI/bot never offers the
-        // block.
-        if atk_kws.iter().any(|kw| match kw {
-            Keyword::CantBeBlockedIfDefenderControls(f) => self.battlefield.iter().any(|c| {
-                c.controller == blocker.controller
-                    && self.evaluate_requirement_static_on(
-                        f.as_ref(),
-                        c,
-                        blocker.controller,
-                        None,
-                    )
-            }),
-            _ => false,
-        }) {
-            return Some((line!(), GameError::CannotBlock(blocker.id)));
-        }
         // CR 701.54c (level 1+) — "Your Ring-bearer … can't be blocked by
         // creatures with greater power." Same shape as Skulk, but keyed on the
         // attacker being its controller's Ring-bearer.
@@ -16777,21 +16772,42 @@ impl GameState {
         {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
-        if self.block_barred_by_protection_filter(atk_kws, attacker.controller, blocker.id) {
-            return Some((line!(), GameError::CannotBlock(blocker.id)));
-        }
-        if self.blocker_matching_restriction_bars(blocker, blocker_cp.keywords(), attacker_id) {
-            return Some((line!(), GameError::CannotBlock(blocker.id)));
-        }
-        // The rest of `declare_blockers`' attacker-keyword gates, in one pass
-        // over the computed set. **They were missing here and the bot noticed
-        // it 82 times in a twenty-game `cube` run** — an evasion keyword the
-        // planner could not see produced a batch the engine rejected, and the
-        // engine rejects the *batch*, so one islandwalker against a defender
-        // holding an Island cost the bot every block it had planned. See
-        // ENGINE_BACKLOG P3.
+        // **One walk over the attacker's computed keywords.** All of
+        // `declare_blockers`' attacker-side gates, plus the two that used to
+        // take a scan of the same short slice apiece. **They were missing here
+        // and the bot noticed it 82 times in a twenty-game `cube` run** — an
+        // evasion keyword the planner could not see produced a batch the
+        // engine rejected, and the engine rejects the *batch*, so one
+        // islandwalker against a defender holding an Island cost the bot every
+        // block it had planned. See ENGINE_BACKLOG P3.
         for kw in atk_kws {
             let barred = match kw {
+                // CR 509.1b — "can't be blocked as long as defending player
+                // controls a [filter]" (Neurok Spy, Hazy Homunculus).
+                // Enforced in `declare_blockers` too; mirrored here so the
+                // UI/bot never offers the block.
+                Keyword::CantBeBlockedIfDefenderControls(f) => {
+                    self.battlefield.iter().any(|c| {
+                        c.controller == blocker.controller
+                            && self.evaluate_requirement_static_on(
+                                f.as_ref(),
+                                c,
+                                blocker.controller,
+                                None,
+                            )
+                    })
+                }
+                // CR 702.16 — the state-aware half of the protection block
+                // gate: an attacker with `ProtectionFromMatching` can't be
+                // blocked by a creature matching that filter (Harbinger of
+                // Spring). The filter needs game state, so it can't live in
+                // the pure `can_block_attacker_computed`.
+                Keyword::ProtectionFromMatching(f) => self.evaluate_requirement_static(
+                    f,
+                    &Target::Permanent(blocker.id),
+                    attacker.controller,
+                    None,
+                ),
                 // CR 702.15 — plain landwalk, unless a `LandwalkIgnored`
                 // static blanks that flavour (Great Wall and friends).
                 Keyword::Landwalk(lt) => {
@@ -16855,28 +16871,59 @@ impl GameState {
         if self.cant_block_pairs.contains(&(blocker.id, attacker_id)) {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
-        // Burden of Proof — "can't block [creature type]s".
-        if let Some(a) = atk_cp
-            && blocker_cp.keywords().iter().any(|k| {
-                matches!(k, Keyword::CantBlockCreatureType(t)
-                    if a.subtypes().creature_types.contains(t))
-            })
-        {
-            return Some((line!(), GameError::CannotBlock(blocker.id)));
-        }
-        // Ironclaw Curse — "can't block creatures with power equal to or
-        // greater than this creature's toughness".
-        if blocker_cp.keywords().has_kw(&Keyword::CantBlockPowerAtLeastOwnToughness)
-            && atk_cp.is_some_and(|a| a.power >= blocker_cp.toughness)
-        {
-            return Some((line!(), GameError::CannotBlock(blocker.id)));
-        }
-        // Monstrous Hound — more lands than the attacker's controller.
-        if blocker_cp.keywords().has_kw(&Keyword::CantBlockUnlessMoreLandsThanAttacker)
-            && self.player_tally(blocker.controller, crate::card::PlayerTally::LandsControlled)
-                <= self.player_tally(attacker.controller, crate::card::PlayerTally::LandsControlled)
-        {
-            return Some((line!(), GameError::CannotBlock(blocker.id)));
+        // **One walk over the blocker's computed keywords**, the shape
+        // `attacker_self_block` and `can_block_attacker_computed` already use:
+        // five `has_kw` / `iter().any()` scans of one short slice is five
+        // times the loop, and this runs once per (blocker x attacker) pair
+        // inside the bot's block planner. Every rule here returns the same
+        // error, so their order is not load-bearing, and each keyword read is
+        // either a unit variant or a payload read in its own arm — so a match
+        // arm is exactly the discriminant compare `has_kw` was making.
+        for k in blocker_cp.keywords().iter() {
+            match k {
+                // CR 509.1b — Mogg Toady: strictly more creatures than the
+                // attacker's controller.
+                Keyword::CantBlockUnlessMoreCreaturesThanAttacker
+                    if self.creature_count(blocker.controller)
+                        <= self.creature_count(attacker.controller) =>
+                {
+                    return Some((line!(), GameError::CannotBlock(blocker.id)));
+                }
+                // CR 509.1b — Gibbering Hyenas: "can't block [filter]
+                // creatures". The rule is `cant_block_matching_bars`, which
+                // `blocker_matching_restriction_bars` calls too, so the two
+                // sites cannot drift on what the filter means.
+                Keyword::CantBlockMatching(f)
+                    if self.cant_block_matching_bars(blocker, f, attacker_id) =>
+                {
+                    return Some((line!(), GameError::CannotBlock(blocker.id)));
+                }
+                // Burden of Proof — "can't block [creature type]s".
+                Keyword::CantBlockCreatureType(t)
+                    if atk_cp.is_some_and(|a| a.subtypes().creature_types.contains(t)) =>
+                {
+                    return Some((line!(), GameError::CannotBlock(blocker.id)));
+                }
+                // Ironclaw Curse — "can't block creatures with power equal to
+                // or greater than this creature's toughness".
+                Keyword::CantBlockPowerAtLeastOwnToughness
+                    if atk_cp.is_some_and(|a| a.power >= blocker_cp.toughness) =>
+                {
+                    return Some((line!(), GameError::CannotBlock(blocker.id)));
+                }
+                // Monstrous Hound — more lands than the attacker's controller.
+                Keyword::CantBlockUnlessMoreLandsThanAttacker
+                    if self
+                        .player_tally(blocker.controller, crate::card::PlayerTally::LandsControlled)
+                        <= self.player_tally(
+                            attacker.controller,
+                            crate::card::PlayerTally::LandsControlled,
+                        ) =>
+                {
+                    return Some((line!(), GameError::CannotBlock(blocker.id)));
+                }
+                _ => {}
+            }
         }
         if !can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power) {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
@@ -16918,28 +16965,6 @@ impl GameState {
             !c.definition.static_abilities.is_empty()
                 && c.definition.static_abilities.iter().any(|sa| pred(&sa.effect))
                 && !self.same_team(c.controller, seat)
-        })
-    }
-
-    /// CR 702.16 — the state-aware half of the protection block gate: an
-    /// attacker with `Keyword::ProtectionFromMatching` can't be blocked by a
-    /// creature matching that filter (Harbinger of Spring). The keyword's
-    /// filter needs game state, so it lives here rather than in the pure
-    /// `can_block_attacker_computed`.
-    pub(crate) fn block_barred_by_protection_filter(
-        &self,
-        attacker_kws: &[Keyword],
-        attacker_controller: usize,
-        blocker_id: CardId,
-    ) -> bool {
-        attacker_kws.iter().any(|kw| {
-            matches!(kw, Keyword::ProtectionFromMatching(f)
-                if self.evaluate_requirement_static(
-                    f,
-                    &Target::Permanent(blocker_id),
-                    attacker_controller,
-                    None,
-                ))
         })
     }
 
