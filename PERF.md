@@ -12476,25 +12476,26 @@ reading the *callee* tree of a bot-spine row (`pick_blocks_inner` ->
 `legal_blockers` -> `computed_permanent_hinted`, 29.1 M on `cube`) and asking
 which of its per-permanent calls the printed shape already answers.
 
-🔎 **THE SAME GATE IS OPEN ON `permanent_value_with` AND IT IS THE NEXT ROW,
-BUT IT NEEDS A PRIMITIVE THAT DOES NOT EXIST.** `permanent_value_with`
-(`eval_material_inner`'s per-permanent value) is the largest remaining
-`computed_permanent_hinted` caller — **32.1 M / cube, 38,972 calls** — and it
-reads the computed view for exactly three things: `card_types().contains(Creature)`,
-`.contains(Planeswalker)`, and `supertypes().contains(Legendary)`. For a
-printed non-creature / non-PW / non-legendary permanent (an artifact or
-enchantment) with no type change in scope, the first two are printed-derivable
-and the whole view is unused **except** the legendary term (`+2*w.unit`).
-Skipping it wrongly changes the bot's eval and so the traces — behaviour, not
-perf. So it needs a **legendary-grant presence gate** that
-`card_type_change_in_scope` is not: AddSupertype comes from
-`StaticEffect::AllNonlandPermanentsAreLegendary` (Leyline of Singularity) and
-`ring_temptations >= 1`. The ring half is a two-player scalar read; the static
-half has no `mod_families` bit (AddSupertype isn't in the layer fold). Give it
-one — a `SUPERTYPE` family bit and a `supertype_change_in_scope()` slot — then
-the gate is `!type_change && !supertype_grant && printed-not-creature-not-pw`,
-worth an estimated 0.3-0.8 % of `cube`. One presence-slot addition, then the
-same `(-320)` shape.
+❌ **THE SAME GATE ON `permanent_value_with` IS BUILT AND REFUTED — fixed
++0.009 / cube -0.092 / sealed +0.144 %, flat and mixed-sign, reverted.**
+`permanent_value_with` (`eval_material_inner`'s per-permanent value) is the
+largest remaining `computed_permanent_hinted` caller — 32.1 M / cube, 38,972
+calls — and reads the view for three things: `card_types().contains(Creature)`,
+`.contains(Planeswalker)`, `supertypes().contains(Legendary)`. The gate built
+`PresenceGate::Supertype` (a sound `supertype_change_in_scope()`: the two
+gather emitters are `AllNonlandPermanentsAreLegendary` + `ring_temptations >= 1`,
+verified — no resolved `continuous_effect` carries an `AddSupertype`) and skipped
+the view for a printed non-creature/non-PW on a board with neither a type
+change nor a supertype grant, reading the legendary term off the printed flag.
+**It does not pay off, unlike `(-320)`, and the reason is the population**: in
+`eval_material` almost every non-land permanent that carries value IS a creature,
+so the artifacts/enchantments the gate skips are few, and the two presence-slot
+reads plus the split `permanent_value_full` call boundary cost about what the
+skipped views saved. `(-320)`'s `legal_blockers` walks the WHOLE seat's board
+(lands and all) and most of it is non-creatures; this one walks a set already
+mostly creatures. **A printed-shape gate is priced by how much of its walk is
+the printed-negative case** — the same lesson as the `(-87)` member list, one
+altitude up. Do not rebuild it without a different eval structure behind it.
 
 📐 **ORIENTATION — WHERE THE BENCH'S INSTRUCTIONS ACTUALLY ARE, read once at
 the `(-313)` tip so nobody re-derives it.** The inclusive spine of a `cube`
