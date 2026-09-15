@@ -664,10 +664,11 @@ struct LayerFreezeState {
 pub(crate) enum PresenceGate {
     Card = 0,
     BlockEvenMv = 1,
+    TappedBlock = 2,
 }
 
 impl PresenceGate {
-    const COUNT: usize = 2;
+    const COUNT: usize = 3;
 }
 
 impl LayerFreeze {
@@ -10366,6 +10367,26 @@ impl GameState {
     /// It is a per-card flag, so a caller reads it off the card directly.
     pub(crate) fn card_type_change_in_scope(&self) -> bool {
         self.presence_gate(PresenceGate::Card, || self.card_type_change_unscoped())
+    }
+
+    /// CR 509.1b — does **any** permanent on this board carry a
+    /// `TappedCreaturesCanBlock` static? The seat-independent superset of
+    /// [`tapped_creatures_can_block`](Self::tapped_creatures_can_block), so
+    /// `false` is authoritative for every seat and the per-blocker walk that
+    /// question used to make runs only on a board that plays the card.
+    ///
+    /// Same iteration as the exact walk minus the `controller` compare, so an
+    /// unscoped caller pays what it paid before; inside a freeze scope the
+    /// planner's blockers answer from the memoized slot instead of one board
+    /// walk per tapped candidate.
+    pub(crate) fn tapped_block_static_in_scope(&self) -> bool {
+        self.presence_gate(PresenceGate::TappedBlock, || {
+            self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::TappedCreaturesCanBlock)
+                })
+            })
+        })
     }
 
     /// One presence gate's answer, memoized per freeze scope — see

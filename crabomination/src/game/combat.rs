@@ -371,13 +371,19 @@ impl GameState {
     /// the Humorless).
     pub(crate) fn tapped_creatures_can_block(&self, controller: usize) -> bool {
         use crate::effect::StaticEffect;
-        self.battlefield.iter().any(|c| {
-            c.controller == controller
-                && c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::TappedCreaturesCanBlock))
-        })
+        // `blocker_self_block` asks this once per TAPPED candidate blocker, and
+        // the exact answer is a whole-battlefield `static_abilities` scan. The
+        // seat-independent superset goes through the freeze scope's presence
+        // slot first, so a board with no such static answers from a word after
+        // the scope's first ask; `false` there is authoritative for every seat.
+        self.tapped_block_static_in_scope()
+            && self.battlefield.iter().any(|c| {
+                c.controller == controller
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::TappedCreaturesCanBlock))
+            })
     }
 
     /// The seat that declares attackers this turn — the active player unless a

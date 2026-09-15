@@ -3013,6 +3013,23 @@ cube 1,608,297,043 / sealed 1,696,358,940 against the filed 609,523,889 / 1,608,
 1,696,358,147; +0.0004 %, source-hash layout). All numbers below are on this box.
 
 ```text
+perf    **`(-321)`: the CR 509.1b tapped-block walk goes behind `PresenceGate::TappedBlock` — fixed
+        -0.009 / cube -0.042 / sealed -0.021 %**, `blocker_self_block` self -3.3 / -8.1 / -5.4 %.
+        `tapped_creatures_can_block` is a whole-battlefield `static_abilities` scan asked once per
+        TAPPED candidate blocker; the seat-independent superset memoizes per scope and `false` there
+        is authoritative for every seat. ⚠ **It has ZERO callgrind edges** (wholly inlined into
+        `blocker_self_block`), so no self / callee / call-count table could name it — it was found by
+        reading the function's source after `(-320)` put it in view. That is the same population as
+        the checklist's 285 `battlefield.iter().any(` sites.
+
+sweep   **fresh seeds 1350..1353 and a re-take of 1342..1345, at the `(-320)` tip: 24 cells /
+        118,400 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 0` on both blocks,
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. ⚠ The
+        1342..1345 block is a RE-TAKE, not frontier: those seeds were last swept at the `(-318)` tip
+        and the re-run is what audits `(-320)`'s new `debug_assert!` (it re-runs the skipped
+        `computed_permanent_on` + `blocker_can_block_anything` on every gated permanent) on boards the
+        suite never builds. 1350..1353 is the frontier block. **Frontier 1354.**
+
 perf    **`(-320)`: `bot::legal_blockers` reads the printed creature gate before the layer view —
         fixed -2.338 / cube -1.446 / sealed -1.231 %**, the row itself -68.7 / -55.5 / -55.0 %
         (19,546,684 -> 6,115,882 / 37,583,767 -> 16,711,545 / 35,030,888 -> 15,768,188). It asked
@@ -7357,6 +7374,42 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-321)` The CR 509.1b tapped-block walk goes behind a presence slot — **fixed -0.009 / cube -0.042 / sealed -0.021 %**
+
+`blocker_self_block` asks `tapped_creatures_can_block(controller)` once per
+**tapped** candidate blocker, and the exact answer is a whole-battlefield
+`static_abilities` scan. `GameState::tapped_block_static_in_scope` is the
+seat-independent superset — does *any* permanent carry
+`TappedCreaturesCanBlock` — behind `PresenceGate::TappedBlock`, so a board that
+does not play the card answers from a word after the scope's first ask. `false`
+from the superset is authoritative for every seat, so the exact walk is
+unchanged behind it.
+
+```text
+                    (-320)            (-321)          delta
+  fixed              595,277,401       595,221,499       -0.0094 %
+  cube             1,585,037,968     1,584,372,532       -0.0420 %
+  sealed           1,675,477,985     1,675,131,756       -0.0207 %
+
+  blocker_self_block self   1,836,026 -> 1,775,490   -3.3 %
+                            8,347,176 -> 7,669,428   -8.1 %
+                            6,800,984 -> 6,436,774   -5.4 %
+```
+
+⚠ **The unscoped caller pays nothing for it**, which is why the superset is the
+right shape rather than a lane: `declare_blockers` is `&mut self` and therefore
+provably outside every freeze scope, and there the slot falls through to the
+same iteration the exact walk made, minus the `controller` compare. Only a
+board that actually carries the static pays two walks.
+
+⚠ **It was not visible in any table.** `tapped_creatures_can_block` has **zero
+callgrind edges** — it inlines wholly into `blocker_self_block`, whose own self
+row is 0.53 % of `cube` — so neither the self table, the callee table nor the
+call-count table names it. What found it was reading `blocker_self_block`'s
+*source* for whole-board walks after `(-320)` put the function in view. **The
+checklist's 285 `battlefield.iter().any(` sites are exactly this population:
+most have no symbol at all.**
 
 ### `(-320)` `legal_blockers` reads the printed creature gate before the layer view — **fixed -2.338 / cube -1.446 / sealed -1.231 %**
 
@@ -12620,10 +12673,22 @@ has no concentration to attack. ⚠ The CoW half (`Arc::clone_from_ref_in`,
 `make_mut_slow`) was separately censused at the `(-313)` tip and every caller
 was a genuine mutation.
 
+⚠⚠ **AND `(-321)` IS THE PROOF THAT THE PROFILE CANNOT RANK THEM — READ THIS
+BEFORE TRUSTING A TABLE TO FIND THE NEXT ONE.** `tapped_creatures_can_block` is
+a whole-battlefield `static_abilities` scan asked once per tapped candidate
+blocker, and it has **zero callgrind edges**: it inlines wholly into
+`blocker_self_block`, so the self table, the callee table and the call-count
+table are all silent about it. It was worth **fixed -0.009 / cube -0.042 /
+sealed -0.021 %** and it was found by *reading the source* of a function
+`(-320)` had just put in view. **Most of the 285 sites are in exactly that
+state.** The profile tells you which FUNCTION to open; the walks inside it have
+to be read, not ranked.
+
 🔎 **THE DEVICE IS NOW A CHECKLIST AND IT HAS NOT BEEN RUN TO THE END.** The
 question "which whole-board walk on a hot path still has no presence lane" has
 285 `battlefield.iter().any(` sites to ask it of, and the profile ranks them:
-take the callee tree of anything over ~0.5 % and read each callee's passes.
+take the callee tree of anything over ~0.5 % and read each callee's passes —
+**then read the body for the walks that have no symbol at all** (`(-321)`).
 ❌ **The next two off that checklist are SIZED AND DECLINED, so nobody spends a
 build on them.** `main_phase_action_with`'s `has_magecraft` (bot.rs:7662) and
 `has_opus` (bot.rs:7706) are whole-battlefield walks with definition-only
