@@ -4,6 +4,67 @@ use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 use smallvec::SmallVec;
 
+/// What a `battlefield.writes()`-keyed gate in front of
+/// `fire_combat_damage_triggers`' opening fold would actually buy, priced
+/// before anyone builds it — PERF's candidates head names the row (fourth
+/// biggest self on `cube`, 32.7 M / 2.02 %, and its whole callee tree is
+/// 2.1 M, so the self IS the work).
+///
+/// The fold is a whole-battlefield walk that does not short-circuit, for two
+/// facts: `any_attached` (some permanent's `attached_to` names the dealer) and
+/// `soulbond_pair`. Both read **instance** fields, so `(-315)`'s
+/// definition-keyed lane cannot hold them; the sound key is `(-306)`'s write
+/// counter. The gate only pays on a board where **nothing is attached to
+/// anything and nothing is paired** — one Aura or Equipment defeats it, which
+/// is the shape `(-312)` refuted one lane over, so the rate is the whole
+/// question.
+///
+/// Compile-time gated on `trig-census` so the shipped binary is unchanged;
+/// `CRAB_COMBAT_CENSUS=1` at run time, printed by `bot_ladder`.
+#[cfg(feature = "trig-census")]
+pub mod combat_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// `[calls, permanents walked, calls whose board has NO attachment at all,
+    /// calls whose board has no attachment AND no soulbond pairing, calls that
+    /// found `any_attached` for this dealer, calls that found `soulbond_pair`,
+    /// calls a `battlefield.writes()`-keyed fold would have HIT]`.
+    ///
+    /// The last one is the one that decides the key, and it is the reason this
+    /// census exists rather than a build: `writes` bumps at every `&mut` reach
+    /// at the cards, and combat damage is a write, so a fold keyed on it is
+    /// re-taken between calls. A low number here says the sound-and-cheap key
+    /// has to be something else — a definition-only lane over "can this
+    /// definition be attached", which is an *inference* over the 26 sites that
+    /// assign `attached_to` rather than a match against one walk, and so needs
+    /// its own `debug_assert!` in the ABSENT arm.
+    pub static N: [AtomicU64; 7] = [const { AtomicU64::new(0) }; 7];
+
+    /// The `writes()` this census last saw, for the hit-rate column. Single
+    /// thread by the census's contract (`--threads 1`), and wrong rather than
+    /// unsound if that is broken.
+    pub static LAST_WRITES: AtomicU64 = AtomicU64::new(u64::MAX);
+
+    pub fn on() -> bool {
+        static LEVEL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_COMBAT_CENSUS") {
+            Ok(v) => !v.is_empty() && v != "0",
+            _ => false,
+        })
+    }
+
+    #[inline]
+    pub(super) fn add(i: usize, n: u64) {
+        if n > 0 {
+            N[i].fetch_add(n, Relaxed);
+        }
+    }
+
+    pub fn snapshot() -> [u64; 7] {
+        std::array::from_fn(|i| N[i].load(Relaxed))
+    }
+}
+
 /// One combat/noncombat damage trigger gathered by `fire_combat_damage_
 /// triggers`, before its intervening-'if' runs: `(source, effect,
 /// controller, intervening-if, bind_dealer, once)`. `bind_dealer` binds the
@@ -5583,7 +5644,16 @@ impl GameState {
         // Still one walk, and it still does not short-circuit.
         let mut any_attached = false;
         let mut soulbond_pair = false;
+        #[cfg(feature = "trig-census")]
+        let census = combat_census::on();
+        #[cfg(feature = "trig-census")]
+        let (mut any_attach_at_all, mut any_pair_at_all) = (false, false);
         for c in self.battlefield.iter() {
+            #[cfg(feature = "trig-census")]
+            if census {
+                any_attach_at_all |= c.attached_to.is_some();
+                any_pair_at_all |= c.soulbond_partner.is_some();
+            }
             any_attached |= c.attached_to == Some(source);
             // Instance fields first, the definition deref last: `soulbond_
             // partner` is `None` on nearly every permanent, and the bonus
@@ -5591,6 +5661,19 @@ impl GameState {
             soulbond_pair |= c.soulbond_partner.is_some()
                 && (c.id == source || c.soulbond_partner == Some(source))
                 && c.definition.soulbond_bonus.is_some();
+        }
+        #[cfg(feature = "trig-census")]
+        if census {
+            combat_census::add(0, 1);
+            combat_census::add(1, self.battlefield.len() as u64);
+            combat_census::add(2, u64::from(!any_attach_at_all));
+            combat_census::add(3, u64::from(!any_attach_at_all && !any_pair_at_all));
+            combat_census::add(4, u64::from(any_attached));
+            combat_census::add(5, u64::from(soulbond_pair));
+            let w = u64::from(self.battlefield.writes());
+            let prev = combat_census::LAST_WRITES
+                .swap(w, std::sync::atomic::Ordering::Relaxed);
+            combat_census::add(6, u64::from(prev == w));
         }
         if let Some(c) = dealer {
             attacker_controller = Some(c.controller);

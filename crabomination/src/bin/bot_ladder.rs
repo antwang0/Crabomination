@@ -1944,6 +1944,26 @@ fn main() {
             if n[0] == 0 { 0.0 } else { 100.0 * n[5] as f64 / n[0] as f64 },
         );
     }
+    // What a write-counter gate in front of `fire_combat_damage_triggers`'
+    // opening fold would buy — see `game::combat::combat_census`. Needs
+    // `--features trig-census` and `CRAB_COMBAT_CENSUS=1`.
+    #[cfg(feature = "trig-census")]
+    if crabomination::game::combat::combat_census::on() {
+        let n = crabomination::game::combat::combat_census::snapshot();
+        let pct = |i: usize| if n[0] == 0 { 0.0 } else { 100.0 * n[i] as f64 / n[0] as f64 };
+        println!(
+            "  combat_census {} calls, {:.1} walked/call, {:.1} % boards with NO attachment, \
+             {:.1} % with none and no pairing, {:.1} % found any_attached, {:.1} % soulbond_pair, \
+             {:.1} % a writes()-keyed fold would HIT",
+            n[0],
+            if n[0] == 0 { 0.0 } else { n[1] as f64 / n[0] as f64 },
+            pct(2),
+            pct(3),
+            pct(4),
+            pct(5),
+            pct(6),
+        );
+    }
     // The gather memo's price, ahead of anyone building it — see
     // `game::gather_census`. Needs `--features trig-census` and
     // `CRAB_GATHER_CENSUS=1`.
