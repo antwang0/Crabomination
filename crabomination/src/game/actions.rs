@@ -529,6 +529,29 @@ mod mana_summary {
     /// Station band — the two definition-only reasons it can be granted
     /// something. Set by `mana_summary_of`, never read by `unpack`.
     pub(super) const SELF_GRANT: u64 = 1 << 61;
+    /// Bits 51-58 are `available_mana`'s per-definition budget (PERF
+    /// `(-317)`): what the bot's producible-mana estimate accumulates for a
+    /// permanent with this definition that is **untapped, not summoning-sick
+    /// and granted nothing**. [`AM_EXACT`] is the claim and the three fields
+    /// beside it are the answer; clear means "run the walk", so the pack is
+    /// never wrong in the permissive direction — it only declines to answer.
+    /// Read through [`GameState::printed_mana_budget`]; the packing stays
+    /// here, as every other family on this word does.
+    ///
+    /// These are the LAST free bits of the mana word (43-50 are
+    /// `PLAIN_TAP`/`PLAIN_LAND`/`LAND_MANA_REPLACER`, 59-62 the four marker
+    /// bits, 63 the memo's). A sixth family needs a sixth `CardMemo` word.
+    pub(super) const AM_COLORS_SHIFT: u32 = 51;
+    /// Bit 56: some countable ability produces true colourless `{C}`.
+    pub(super) const AM_COLORLESS: u64 = 1 << 56;
+    /// Bit 57: the best single activation is one mana rather than zero — the
+    /// only two values [`AM_EXACT`] admits.
+    pub(super) const AM_BEST_ONE: u64 = 1 << 57;
+    /// Bit 58: the fields above ARE this list's whole contribution — no
+    /// countable ability has a dynamic amount, no ability the estimate cannot
+    /// cost still produces colour, and the best is zero or one.
+    pub(super) const AM_EXACT: u64 = 1 << 58;
+
     /// The definition carries Agatha's Soul Cauldron's
     /// `CounteredCreaturesHaveAbilitiesOfExiledWithSource` — the
     /// counter-grant lane's predicate reads it here.
@@ -646,7 +669,52 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             _ => {}
         }
     }
+    flags |= available_mana_bits(def);
     packed.map(|w| w | flags)
+}
+
+/// [`mana_summary`]'s `AM_*` half: what `bot::available_mana` would
+/// accumulate for an untapped, non-summoning-sick permanent with this
+/// definition that is granted nothing — or `0`, declining to answer, when the
+/// printed list is not simple enough to state.
+///
+/// It declines on exactly the three things that make the estimate's walk do
+/// more than accumulate: an ability the estimate cannot cost that still
+/// produces colour (the `opaque_source` arm), a countable ability whose
+/// amount is a runtime value (the other `opaque_source` arm), and a best
+/// above one mana (which would need a wider field than the word has left).
+/// The four predicates are [`crate::game::mana_shape`]'s — the same ones the
+/// walk uses, so the pack and the walk cannot drift, and `available_mana`'s
+/// `debug_assert_eq!` re-runs the walk against every packed answer it takes.
+fn available_mana_bits(def: &crate::card::CardDefinition) -> u64 {
+    use crate::game::mana_shape::{
+        is_countable_mana_ability, mana_ability_output, mana_amount_is_dynamic,
+    };
+    let mut colors = crate::mana::ColorSet::empty();
+    let mut colorless = false;
+    let mut best = 0u32;
+    for a in &def.activated_abilities {
+        if !is_countable_mana_ability(a) {
+            if !effect_produced_colors(&a.effect).is_empty() {
+                return 0;
+            }
+            continue;
+        }
+        if mana_amount_is_dynamic(&a.effect) {
+            return 0;
+        }
+        let (amount, cs, cl) = mana_ability_output(&a.effect);
+        best = best.max(amount);
+        colors = colors.union(cs);
+        colorless |= cl;
+    }
+    if best > 1 {
+        return 0;
+    }
+    mana_summary::AM_EXACT
+        | (u64::from(colors.0 & 0x1f) << mana_summary::AM_COLORS_SHIFT)
+        | if colorless { mana_summary::AM_COLORLESS } else { 0 }
+        | if best == 1 { mana_summary::AM_BEST_ONE } else { 0 }
 }
 
 /// Test switch: `true` sends every activation down the generic path, so a
@@ -687,6 +755,30 @@ pub(crate) fn card_has_mana_static(c: &CardInstance) -> bool {
     c.dispatch_scan_bits() & crate::card::dispatch_bits::MANA_STATIC != 0
         || c.mana_summary(mana_summary_of)
             .is_none_or(|w| w & mana_summary::LAND_MANA_REPLACER != 0)
+}
+
+/// `available_mana`'s per-definition budget, off the mana-summary memo word:
+/// `Some((best single activation, the colours it could make, produces true
+/// colourless))` when the pack states this definition's whole contribution to
+/// that estimate, `None` when the caller must run its own walk (PERF
+/// `(-317)`).
+///
+/// ⚠ **Only sound for a permanent that is untapped, not summoning-sick and
+/// granted nothing** — the pack reads the printed list alone, and the walk it
+/// replaces skips tap abilities on the first two and chains the scan's grants
+/// on the third. The caller establishes all three; `available_mana`'s
+/// `debug_assert_eq!` is the ratchet.
+pub(crate) fn printed_mana_budget(
+    c: &CardInstance,
+) -> Option<(u32, crate::mana::ColorSet, bool)> {
+    let w = c.mana_summary(mana_summary_of)?;
+    (w & mana_summary::AM_EXACT != 0).then(|| {
+        (
+            u32::from(w & mana_summary::AM_BEST_ONE != 0),
+            crate::mana::ColorSet(((w >> mana_summary::AM_COLORS_SHIFT) & 0x1f) as u8),
+            w & mana_summary::AM_COLORLESS != 0,
+        )
+    })
 }
 
 /// The death-redirect lane's predicate: the definition carries one of the

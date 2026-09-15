@@ -13204,6 +13204,55 @@ struct AvailableMana {
     colorless: bool,
 }
 
+/// One permanent's contribution to [`available_mana`]: `(best single
+/// activation, the colours it could make, produces true colourless, a shape
+/// this estimate cannot cost)`. The printed abilities plus `granted`, which
+/// the caller has already asked `granted_abilities_of` for.
+///
+/// Split out of the loop so `(-317)`'s packed fast path can
+/// `debug_assert_eq!` against it. It is **not** dead in an optimized build:
+/// the slow half of that branch is its other caller, which is what keeps the
+/// audit honest rather than `#[allow(dead_code)]`.
+#[inline]
+fn permanent_mana_budget(
+    p: &crate::card::CardInstance,
+    granted: &[&crate::effect::ActivatedAbility],
+    no_tap: bool,
+) -> (u32, crate::mana::ColorSet, bool, bool) {
+    use crate::mana::ColorSet;
+    let mut best = 0u32;
+    let mut mine = ColorSet::empty();
+    let mut colorless = false;
+    let mut opaque = false;
+    for a in p.definition.activated_abilities.iter().chain(granted.iter().copied()) {
+        if no_tap && a.tap_cost {
+            continue;
+        }
+        if !is_countable_mana_ability(a) {
+            // Auto-tap reads its table through `effect_produced_colors`,
+            // which sees mana shapes this estimate does not: a filter land's
+            // `{R}, {T}: add {R}{R}` (non-empty `mana_cost`), a Lotus Petal
+            // (`sac_cost`), Crystalline Crawler (no `{T}` at all — a counter
+            // cost, so it can even fire twice). `total` and `colors` have
+            // always under-counted those on purpose — the bot would rather
+            // not commit to a line it can only pay by spending the source —
+            // but a *budget* that under-counts becomes a rejection, so a
+            // source with one of these gets no per-colour budget at all.
+            opaque |= !crate::game::actions::effect_produced_colors(&a.effect).is_empty();
+            continue;
+        }
+        let (amount, colors, cl) = mana_ability_output(&a.effect);
+        // A dynamic amount ("add {G} for each creature you control") is
+        // rounded down to one by `mana_ability_output`; the engine gets
+        // however many it really is. Same reasoning as the arm above.
+        opaque |= mana_amount_is_dynamic(&a.effect);
+        best = best.max(amount);
+        mine = mine.union(colors);
+        colorless |= cl;
+    }
+    (best, mine, colorless, opaque)
+}
+
 /// Estimate [`AvailableMana`] for `seat`.
 ///
 /// Deliberately **optimistic**: it ignores the assignment problem (which
@@ -13388,38 +13437,44 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         if census {
             mana_census::add(3, 1);
         }
+        // Printed abilities plus anything granted to it (Cryptolith Rite
+        // turning creatures into mana sources, Urza's Saga chapters), so a
+        // granted mana ability doesn't read as "no mana here".
         let granted = state.granted_abilities_of(p, &scan);
-        let mut best = 0u32;
-        let mut mine = ColorSet::empty();
-        for a in p.definition.activated_abilities.iter().chain(granted.iter().copied()) {
-            if no_tap && a.tap_cost {
-                continue;
-            }
-            if !is_countable_mana_ability(a) {
-                // Auto-tap reads its table through `effect_produced_colors`,
-                // which sees mana shapes this estimate does not: a filter
-                // land's `{R}, {T}: add {R}{R}` (non-empty `mana_cost`), a
-                // Lotus Petal (`sac_cost`), Crystalline Crawler (no `{T}` at
-                // all — a counter cost, so it can even fire twice). `total`
-                // and `colors` have always under-counted those on purpose —
-                // the bot would rather not commit to a line it can only pay
-                // by spending the source — but a *budget* that under-counts
-                // becomes a rejection, so a source with one of these gets no
-                // per-colour budget at all.
-                opaque_source |=
-                    !crate::game::actions::effect_produced_colors(&a.effect).is_empty();
-                continue;
-            }
-            let (amount, colors, colorless) = mana_ability_output(&a.effect);
-            // A dynamic amount ("add {G} for each creature you control") is
-            // rounded down to one by `mana_ability_output`; the engine gets
-            // however many it really is. Same reasoning as the arm above.
-            opaque_source |= mana_amount_is_dynamic(&a.effect);
-            best = best.max(amount);
-            mine = mine.union(colors);
-            out.colors = out.colors.union(colors);
+        // **With nothing granted and the permanent able to tap, the walk
+        // below is a pure function of the PRINTED ability list** — so
+        // `mana_summary_of` packs its answer per definition and this reads it
+        // back off the memo word (PERF `(-317)`). The pack declines (`None`)
+        // on every list it cannot state — a best above one mana, a dynamic
+        // amount, a shape the estimate cannot cost — so the walk is still the
+        // oracle, and the `debug_assert_eq!` re-runs it against every answer
+        // taken. ⚠ The precondition is `granted.is_empty()`, not
+        // `grants_nothing`: it is the weaker of the two (a live grant that
+        // hands this permanent nothing still leaves printed == printed), it is
+        // the one the walk actually depends on, and asking the list once is
+        // what stops `grants_nothing` being evaluated twice per permanent.
+        if !no_tap
+            && granted.is_empty()
+            && let Some((best, mine, colorless)) = crate::game::actions::printed_mana_budget(p)
+        {
+            debug_assert_eq!(
+                (best, mine, colorless, false),
+                permanent_mana_budget(p, &granted, no_tap),
+                "the printed mana budget disagrees with the walk it replaces ({})",
+                p.definition.name,
+            );
+            out.total += best;
+            out.colors = out.colors.union(mine);
             out.colorless |= colorless;
+            for c in mine.iter() {
+                out.by_color[color_index(c)] += best;
+            }
+            continue;
         }
+        let (best, mine, colorless, opaque) = permanent_mana_budget(p, &granted, no_tap);
+        opaque_source |= opaque;
+        out.colors = out.colors.union(mine);
+        out.colorless |= colorless;
         out.total += best;
         // The source's whole budget against each colour it could make — see
         // `by_color`'s doc for why over-counting here is the sound direction.
