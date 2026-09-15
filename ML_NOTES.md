@@ -5054,3 +5054,36 @@ ladder's `mcts-dflt-256` reference, `EvalWeights::default()`, golden traces,
 (`server::vocab_snapshot`) is now load-bearing for the lobby again — a
 vocabulary move without a champion retrain would degrade the lobby to the
 material leaf on a load refusal, which the boot check makes loud.
+
+## Round 75 — the attack blocker guard under the 256-search, PAIRED: 48.5 / 48.8, the park is confirmed and the lead is closed (2026-09-15)
+
+Round 65 parked `attack_blocker_guard` off the default on two unpaired cells
+against round 64's stale reference (−1.0 / −1.3, ±0.95 a side) and named the
+clean instrument: a paired `mcts-guard-256` vs `mcts-dflt-256`. Run as
+pre-registered (`.ladder/run_r75_guard_search.sh`; sealed, paired, 500 games
+× 12 decks a cell):
+
+| seed | guard vs default, both at 256 |
+|---|---|
+| 43 | **48.5** [47.6, 49.4] |
+| 97 | **48.8** [47.9, 49.7] |
+
+Both cells at or below the 49.0 park line, intervals disjoint from 50. The
+guard that is strength-neutral as a scored pilot (r65 stage 1, +0.0 on four
+seeds) costs the search 1.2–1.5 points — and now the mechanism round 65
+argued is measured rather than inferred: the guard is threaded through the
+rollouts' greedy (`pick_attacks_w` on both seats), and a rollout opponent that
+never suicides makes every line look harder than the real one, so the search
+under-values its own attacks. **Closed**: the flag stays as `atk-guard` /
+`mcts-guard-256` for the record; the client-quality case (the seven replay
+suicides) is already covered by the search's own sims, which the round-65
+probe table showed correcting every suicide shape.
+
+The standing-open-lead list after rounds 72–75, for the next menu-hole
+round: the puzzle corpus certifies one item (`save_the_removal`: hold
+removal for the lethal threat), failed by the default — the
+reactive-deployment family, one item; the audit shortlist's `ChooseModes`
+(always the card default) and X-as-a-branch (always max affordable) still
+have no census; the block chain's "other" board (11 sims a search for a 40 %
+win) is a cost lead, not a strength one; the trick blind spot's two sims were
+nulls at their incidence (r63/r64).
