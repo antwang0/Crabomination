@@ -1066,17 +1066,31 @@ impl GameState {
         // (unless `triggers_on_equipment`); "your" scope keys on the host's
         // controller. Combat-damage/dies equip triggers use other kinds and so
         // are untouched here.
-        for eq in &self.battlefield {
-            let Some(host_id) = eq.attached_to else { continue };
-            let Some(bonus) = &eq.definition.equipped_bonus else { continue };
-            let Some(host) = self.battlefield.find_by_id(host_id) else { continue };
-            for t in &bonus.triggered_abilities {
-                if t.event.kind == kind && scope_matches(&t.event.scope, host.controller) {
-                    let source = if bonus.triggers_on_equipment { eq.id } else { host_id };
-                    candidates.push((source, t.effect.clone(), host.controller, t.event.filter.clone()));
+        //
+        // Through the dispatcher's member lane on `EQUIP_TRIGGER_GRANT`, not a
+        // walk of its own: the definition half of the question is exactly that
+        // bit, and this fires on every step of every turn, real or simulated
+        // (PERF `(-328)`). The `attached_to` half stays here — the bit is
+        // definition-only, as a lane predicate must be.
+        self.for_each_board_scan_source(
+            crate::card::dispatch_bits::EQUIP_TRIGGER_GRANT,
+            |eq| {
+                let Some(host_id) = eq.attached_to else { return };
+                let Some(bonus) = &eq.definition.equipped_bonus else { return };
+                let Some(host) = self.battlefield.find_by_id(host_id) else { return };
+                for t in &bonus.triggered_abilities {
+                    if t.event.kind == kind && scope_matches(&t.event.scope, host.controller) {
+                        let source = if bonus.triggers_on_equipment { eq.id } else { host_id };
+                        candidates.push((
+                            source,
+                            t.effect.clone(),
+                            host.controller,
+                            t.event.filter.clone(),
+                        ));
+                    }
                 }
-            }
-        }
+            },
+        );
         // Walk the graveyards for graveyard-scoped step triggers:
         // `FromYourGraveyard` on its owner's step (Ichorid's "at the
         // beginning of your upkeep"), `FromYourGraveyardAnyPlayer` on every

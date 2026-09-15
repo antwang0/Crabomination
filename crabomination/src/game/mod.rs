@@ -4455,18 +4455,34 @@ impl GameState {
     /// ask exactly this question; the second used to spell it as a plain
     /// battlefield walk, which both missed the lane and was a second hand-written
     /// copy of "which permanents can grant" (PERF `(-326)`).
-    pub(crate) fn for_each_trigger_grant_source<'a>(
+    pub(crate) fn for_each_trigger_grant_source<'a>(&'a self, f: impl FnMut(&'a CardInstance)) {
+        self.for_each_board_scan_source(crate::card::dispatch_bits::GRANT_TRIGGER, f);
+    }
+
+    /// Visit every battlefield permanent whose `dispatch_scan_bits` carry
+    /// `bit`, through the dispatcher's member lane — see
+    /// [`for_each_trigger_grant_source`](Self::for_each_trigger_grant_source)
+    /// for why the lane is sound and what a miss costs.
+    ///
+    /// `bit` must be inside [`dispatch_bits::BOARD_SCAN`], because that is the
+    /// mask the member list is built from; anything else would read an empty
+    /// list as "absent" and be wrong.
+    ///
+    /// [`dispatch_bits::BOARD_SCAN`]: crate::card::dispatch_bits::BOARD_SCAN
+    pub(crate) fn for_each_board_scan_source<'a>(
         &'a self,
+        bit: u64,
         mut f: impl FnMut(&'a CardInstance),
     ) {
         use crate::card::dispatch_bits as db;
+        debug_assert_eq!(bit & db::BOARD_SCAN, bit, "the member lane does not cover this bit");
         match self.battlefield.dispatch_members() {
             Ok(mut members) => {
                 while members != 0 {
                     let i = members.trailing_zeros() as usize;
                     members &= members - 1;
                     let src = &self.battlefield[i];
-                    if src.dispatch_scan_bits() & db::GRANT_TRIGGER != 0 {
+                    if src.dispatch_scan_bits() & bit != 0 {
                         f(src);
                     }
                 }
@@ -4478,7 +4494,7 @@ impl GameState {
                     if bits & db::BOARD_SCAN != 0 && i < 64 {
                         members |= 1 << i;
                     }
-                    if bits & db::GRANT_TRIGGER != 0 {
+                    if bits & bit != 0 {
                         f(src);
                     }
                 }
@@ -4656,20 +4672,28 @@ impl GameState {
     pub(crate) fn equip_granted_trigger_sources(
         &self,
     ) -> Vec<(CardId, CardId, &[crate::card::TriggeredAbility])> {
-        self.battlefield
-            .iter()
-            .filter_map(|eq| {
-                let host = eq.attached_to?;
-                let bonus = eq.definition.equipped_bonus.as_ref()?;
-                // Same emptiness rule as `dispatch_board_scan`'s leg, which
-                // this function is the `debug_assert!` cross-check for.
-                (!bonus.triggered_abilities.is_empty()).then_some((
-                    host,
-                    if bonus.triggers_on_equipment { eq.id } else { host },
-                    bonus.triggered_abilities.as_slice(),
-                ))
-            })
-            .collect()
+        let mut out = Vec::new();
+        // The definition half of the filter *is* `EQUIP_TRIGGER_GRANT`
+        // (`equipped_bonus` present with a non-empty `triggered_abilities`),
+        // so the dispatcher's member lane answers it and the walk visits only
+        // the contributors (PERF `(-328)`). The `attached_to` half is an
+        // instance field and stays here, which is what "attachment-gated" in
+        // that bit's doc means.
+        self.for_each_board_scan_source(crate::card::dispatch_bits::EQUIP_TRIGGER_GRANT, |eq| {
+            let Some(host) = eq.attached_to else { return };
+            let Some(bonus) = eq.definition.equipped_bonus.as_ref() else { return };
+            // Same emptiness rule as `dispatch_board_scan`'s leg, which this
+            // function is the `debug_assert!` cross-check for.
+            if bonus.triggered_abilities.is_empty() {
+                return;
+            }
+            out.push((
+                host,
+                if bonus.triggers_on_equipment { eq.id } else { host },
+                bonus.triggered_abilities.as_slice(),
+            ));
+        });
+        out
     }
 
     /// The equipment-granted triggered abilities on `card`, each with the
