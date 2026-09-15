@@ -54,10 +54,20 @@ mod tests {
     /// **compared**, not hashed, and that is 16 of the 48 bytes: a 64-bit fold
     /// of small counters is a probabilistic witness and the first cut's fold
     /// collided inside one sweep cell.
+    /// Raised 1,664 -> 1,672 at PERF `(-318)`: `Battlefield`'s attachment
+    /// fold, one `AtomicU32` (a 31-bit `writes` stamp and its one-bit answer)
+    /// that costs eight bytes because the zone is `u64`-aligned and carries no
+    /// hole — fixed -0.061 / cube -0.418 / sealed -0.195 % Ir **with the
+    /// growth already in the reading**, since the A/B clones the bigger state
+    /// on every probe. ⚠ The free alternative was stealing bits from
+    /// `sba_fold`'s word (its legendary count needs 11 of the 28 it has) under
+    /// a shared stamp with a per-half "computed" flag; it is sound and it is
+    /// written down here rather than taken, because it re-plumbs the SBA
+    /// memo's store path for eight bytes.
     #[test]
     fn game_state_stays_small() {
         let n = std::mem::size_of::<crate::game::GameState>();
-        assert!(n <= 1_664, "GameState grew to {n} bytes (cap 1,664) — see PERF (-144), (-280)");
+        assert!(n <= 1_672, "GameState grew to {n} bytes (cap 1,672) — see PERF (-144), (-280), (-318)");
     }
 
     #[test]

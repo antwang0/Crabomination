@@ -1954,7 +1954,7 @@ fn main() {
         println!(
             "  combat_census {} calls, {:.1} walked/call, {:.1} % boards with NO attachment, \
              {:.1} % with none and no pairing, {:.1} % found any_attached, {:.1} % soulbond_pair, \
-             {:.1} % a writes()-keyed fold would HIT",
+             {:.1} % a writes()-keyed fold would HIT, {:.1} % SKIPPED by the fold",
             n[0],
             if n[0] == 0 { 0.0 } else { n[1] as f64 / n[0] as f64 },
             pct(2),
@@ -1962,6 +1962,7 @@ fn main() {
             pct(4),
             pct(5),
             pct(6),
+            pct(7),
         );
     }
     // The gather memo's price, ahead of anyone building it — see

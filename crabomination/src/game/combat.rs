@@ -28,7 +28,8 @@ pub mod combat_census {
     /// `[calls, permanents walked, calls whose board has NO attachment at all,
     /// calls whose board has no attachment AND no soulbond pairing, calls that
     /// found `any_attached` for this dealer, calls that found `soulbond_pair`,
-    /// calls a `battlefield.writes()`-keyed fold would have HIT]`.
+    /// calls a `battlefield.writes()`-keyed fold would have HIT, calls
+    /// `(-318)`'s fold actually SKIPPED the walk on]`.
     ///
     /// The last one is the one that decides the key, and it is the reason this
     /// census exists rather than a build: `writes` bumps at every `&mut` reach
@@ -38,7 +39,7 @@ pub mod combat_census {
     /// definition be attached", which is an *inference* over the 26 sites that
     /// assign `attached_to` rather than a match against one walk, and so needs
     /// its own `debug_assert!` in the ABSENT arm.
-    pub static N: [AtomicU64; 7] = [const { AtomicU64::new(0) }; 7];
+    pub static N: [AtomicU64; 8] = [const { AtomicU64::new(0) }; 8];
 
     /// The `writes()` this census last saw, for the hit-rate column. Single
     /// thread by the census's contract (`--threads 1`), and wrong rather than
@@ -60,7 +61,7 @@ pub mod combat_census {
         }
     }
 
-    pub fn snapshot() -> [u64; 7] {
+    pub fn snapshot() -> [u64; 8] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -5646,35 +5647,82 @@ impl GameState {
         let mut soulbond_pair = false;
         #[cfg(feature = "trig-census")]
         let census = combat_census::on();
-        #[cfg(feature = "trig-census")]
-        let (mut any_attach_at_all, mut any_pair_at_all) = (false, false);
-        for c in self.battlefield.iter() {
-            #[cfg(feature = "trig-census")]
-            if census {
-                any_attach_at_all |= c.attached_to.is_some();
-                any_pair_at_all |= c.soulbond_partner.is_some();
+        // **The walk below finds nothing on 62-100 % of boards, and the zone
+        // can say so for a word load** — PERF `(-318)`. Its two facts are
+        // *instance* fields (`attached_to`, `soulbond_partner`), so the
+        // definition-keyed lanes cannot hold them; `battlefield.writes()` is
+        // the key, folded source-independently ("is ANYTHING attached / paired
+        // here") so one answer serves every dealer on the board. With both
+        // clear, no permanent can satisfy either test below and the walk
+        // cannot fire — `combat_census` priced the hit at 50-68 % before this
+        // was built, well past the 10.6-18.9 % the `sba_fold` precedent
+        // predicted, because several calls land per damage step with no board
+        // write between them.
+        // **The walk below finds nothing on 62-100 % of boards, and the zone
+        // can say so for a word load** — PERF `(-318)`. Its two facts are
+        // *instance* fields (`attached_to`, `soulbond_partner`), so the
+        // definition-keyed lanes cannot hold them; `battlefield.writes()` is
+        // the key, folded source-independently ("is ANYTHING attached or
+        // paired here") so one answer serves every dealer on the board. With
+        // it clear, no permanent can satisfy either test below and the walk
+        // cannot fire. `combat_census` priced the key at 50-68 % and the skip
+        // at 28.8 / 52.9 / 50.9 % before this was built.
+        //
+        // ⚠ **The presence walk is its own `any`, not two more `|=` folded
+        // into the loop below.** The fused form taxed every *miss* two
+        // instructions a permanent and read **+0.018 % on `fixed`**, whose
+        // skip rate is the lowest of the three; as a short-circuiting `any`
+        // the miss path pays a scan that stops at the first attachment, and
+        // the board that has none pays one cheap pass instead of the dear one.
+        let present = match self.battlefield.attach_fold() {
+            Some(p) => p,
+            None => {
+                let p = self
+                    .battlefield
+                    .iter()
+                    .any(|c| c.attached_to.is_some() || c.soulbond_partner.is_some());
+                self.battlefield.store_attach_fold(p);
+                p
             }
-            any_attached |= c.attached_to == Some(source);
-            // Instance fields first, the definition deref last: `soulbond_
-            // partner` is `None` on nearly every permanent, and the bonus
-            // read is a pointer chase into the definition (PERF `(-211)`).
-            soulbond_pair |= c.soulbond_partner.is_some()
-                && (c.id == source || c.soulbond_partner == Some(source))
-                && c.definition.soulbond_bonus.is_some();
+        };
+        if present {
+            for c in self.battlefield.iter() {
+                any_attached |= c.attached_to == Some(source);
+                // Instance fields first, the definition deref last:
+                // `soulbond_partner` is `None` on nearly every permanent, and
+                // the bonus read is a pointer chase into the definition (PERF
+                // `(-211)`).
+                soulbond_pair |= c.soulbond_partner.is_some()
+                    && (c.id == source || c.soulbond_partner == Some(source))
+                    && c.definition.soulbond_bonus.is_some();
+            }
         }
         #[cfg(feature = "trig-census")]
         if census {
+            let (mut a, mut pr) = (false, false);
+            for c in self.battlefield.iter() {
+                a |= c.attached_to.is_some();
+                pr |= c.soulbond_partner.is_some();
+            }
             combat_census::add(0, 1);
             combat_census::add(1, self.battlefield.len() as u64);
-            combat_census::add(2, u64::from(!any_attach_at_all));
-            combat_census::add(3, u64::from(!any_attach_at_all && !any_pair_at_all));
+            combat_census::add(2, u64::from(!a));
+            combat_census::add(3, u64::from(!a && !pr));
             combat_census::add(4, u64::from(any_attached));
             combat_census::add(5, u64::from(soulbond_pair));
             let w = u64::from(self.battlefield.writes());
             let prev = combat_census::LAST_WRITES
                 .swap(w, std::sync::atomic::Ordering::Relaxed);
             combat_census::add(6, u64::from(prev == w));
+            combat_census::add(7, u64::from(!present));
         }
+        debug_assert!(
+            present
+                || !self.battlefield.iter().any(|c| {
+                    c.attached_to.is_some() || c.soulbond_partner.is_some()
+                }),
+            "the attachment fold said an empty board and the board is not empty",
+        );
         if let Some(c) = dealer {
             attacker_controller = Some(c.controller);
             // Printed + statics-granted ("Slivers you control have

@@ -557,6 +557,10 @@ const LANE_ATTACH_GRANT: u32 = 56;
 /// creature the bot's mana sweep and every activation gate meet (PERF
 /// `(-316)`). See [`card_has_haste_static`].
 const LANE_HASTE_STATIC: u32 = 58;
+/// [`Battlefield::attach_fold`]'s stamp half (bits 0-30) and its one-bit
+/// answer (bit 31). A word of 0 is "never folded"; `writes` starts at 1.
+const ATTACH_STAMP: u32 = 0x7fff_ffff;
+const ATTACH_PRESENT: u32 = 1 << 31;
 const LANE_MASK: u64 = 0b11;
 /// Bit 0 of every lane field — set exactly on the `ABSENT` lanes.
 const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
@@ -1415,6 +1419,19 @@ pub struct Battlefield {
     sba_stamp: std::sync::atomic::AtomicU32,
     /// [`sba_fold`](Self::sba_fold)'s packed answer.
     sba_fold: std::sync::atomic::AtomicU64,
+    /// [`attach_fold`](Self::attach_fold): its one-bit answer in bit 31, the
+    /// `writes` it was folded at in bits 0-30, and **0 means "not computed"**
+    /// (the counter starts at 1).
+    ///
+    /// One word rather than a stamp plus a byte, because `GameState` has a
+    /// size guard (`cow::tests::game_state_stays_small`, 1,664 bytes) and the
+    /// pair costs eight bytes against this one's four. It needs its own stamp
+    /// rather than `sba_stamp`'s — the two folds are taken at different
+    /// moments, so a shared stamp would let either validate the other — and
+    /// the 31-bit stamp keeps `writes`' own argument: a false hit needs the
+    /// counter to return to the same value modulo 2^31, against ~10^6 `&mut`
+    /// reaches in a whole game.
+    attach_fold: std::sync::atomic::AtomicU32,
 }
 
 impl Battlefield {
@@ -1800,6 +1817,39 @@ impl Battlefield {
     pub fn store_sba_fold(&self, packed: u64) {
         self.sba_fold.store(packed, Ordering::Relaxed);
         self.sba_stamp.store(self.writes, Ordering::Relaxed);
+    }
+
+    /// Is any permanent here attached to something, or Soulbond-paired?
+    /// `Some(present)` when the answer is this board's — no `&mut` has reached
+    /// the cards since it was folded — and `None` means "walk, then hand the
+    /// answer to [`store_attach_fold`](Self::store_attach_fold)".
+    ///
+    /// ⚠ **Both facts read INSTANCE fields, so this is a `writes`-keyed fold
+    /// like [`sba_fold`](Self::sba_fold) and NOT a `definition_epoch`-keyed
+    /// lane**: the lanes deliberately survive an element write, which is
+    /// exactly what an `attached_to` assignment is. PERF `(-318)`;
+    /// `combat_census` priced the key at 50-68 % before it was built, against
+    /// the 10.6-18.9 % the `sba_fold` precedent would have predicted — several
+    /// `fire_combat_damage_triggers` calls land per combat damage step with no
+    /// board write between them.
+    ///
+    /// **One bit, not two.** The pairing half reads 0.0 % on all three pools,
+    /// and its consumer skips the same walk the attachment half does, so they
+    /// fold into one `any` that short-circuits — which is what keeps the miss
+    /// path from taxing the walk it is meant to save.
+    #[inline]
+    pub fn attach_fold(&self) -> Option<bool> {
+        let w = self.attach_fold.load(Ordering::Relaxed);
+        (w != 0 && w & ATTACH_STAMP == self.writes & ATTACH_STAMP)
+            .then_some(w & ATTACH_PRESENT != 0)
+    }
+
+    /// Record what an attachment walk found, valid until the next `&mut` at
+    /// the cards. One store, answer and stamp together.
+    #[inline]
+    pub fn store_attach_fold(&self, present: bool) {
+        let w = (self.writes & ATTACH_STAMP) | if present { ATTACH_PRESENT } else { 0 };
+        self.attach_fold.store(w, Ordering::Relaxed);
     }
 
     /// The miss path, out of line so the hit path stays a word load at each of
@@ -2312,6 +2362,9 @@ impl Clone for Battlefield {
             writes: self.writes,
             sba_stamp: std::sync::atomic::AtomicU32::new(self.sba_stamp.load(Ordering::Relaxed)),
             sba_fold: std::sync::atomic::AtomicU64::new(self.sba_fold.load(Ordering::Relaxed)),
+            attach_fold: std::sync::atomic::AtomicU32::new(
+                self.attach_fold.load(Ordering::Relaxed),
+            ),
         }
     }
 }
@@ -2356,6 +2409,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
             writes: 1,
             sba_stamp: std::sync::atomic::AtomicU32::new(0),
             sba_fold: std::sync::atomic::AtomicU64::new(0),
+            attach_fold: std::sync::atomic::AtomicU32::new(0),
         }
     }
 }
