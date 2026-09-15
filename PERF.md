@@ -3020,6 +3020,21 @@ is not comparable with one from the sixth**, and every row below is a
 same-box A/B. The counters and the Ir *deltas* are what carry across.
 
 ```text
+perf    **`(-327)`: the Soulbond pairing walk reads the board's keyword lane first — fixed -0.108 /
+        cube -0.156 / sealed -0.110 %**, `apply_soulbond_pairing` inclusive -74 / -82 / -74 %.
+        CR 702.95's per-entering-creature attempt was a whole-battlefield printed-keyword walk on
+        every board; `Soulbond` joins the zone's gate-keyword lane union. ⚠ **Transcribed from
+        `cd25d07f`'s commit message**, same as `(-326)` below.
+
+perf    **`(-326)`: one lane walk for the two grant-source callers — fixed -0.233 / cube -0.363 /
+        sealed -0.218 %.** `statics_granted_dying_triggers`' plain `battlefield.iter().filter(
+        GRANT_TRIGGER)` (once per dying permanent) moves into
+        `GameState::for_each_trigger_grant_source`, which `trigger_grant_sources` already reached
+        through the dispatcher's member lane — so the memo is shared and the two cannot drift.
+        Its self row goes to 0 on all three pools (inlined; the body is a lane read).
+        ⚠ **Transcribed from `d75575c6`'s commit message** — that commit wrote this block for
+        `(-322)`..`(-325)` and omitted its own row, so the tip's absolutes lived only in `git log`.
+
 perf    **`(-325)`: the two zone walkers take `find_card_zone`'s visit rule — fixed -0.039 / cube
         -0.069 / sealed -0.018 %.** Graveyards and exile are push-only and were scanned front to
         back; `on_left_battlefield` asks about a card that reached its graveyard one instant
@@ -3040,9 +3055,10 @@ perf    **`(-322)`: the block pair gate makes one walk per side, not nine — fi
         (222 -> 124 Ir/call on `cube`). Nine `has_kw` / `iter().any()` scans of two short slices
         collapse into one `match` per side.
 
-perf    **Cumulative over the session: fixed 596,342,781 -> 592,834,860 (-0.588 %), cube
-        1,585,705,950 -> 1,573,106,814 (-0.795 %), sealed 1,676,524,999 -> 1,667,708,894
-        (-0.526 %).**
+perf    **Cumulative over the session, `(-322)`..`(-327)`: fixed 596,342,781 -> 590,813,598
+        (-0.927 %), cube 1,585,705,950 -> 1,564,952,530 (-1.309 %), sealed 1,676,524,999 ->
+        1,662,254,394 (-0.851 %).** (The six-row figure; the four-row one this line carried
+        before `(-326)`/`(-327)` were filed was fixed -0.588 / cube -0.795 / sealed -0.526 %.)
 
 gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to
         the committed invariant, `determinism ok`. Suite **19,549 / 0 / 5** under
@@ -7427,6 +7443,73 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-327)` The Soulbond pairing walk reads the board's keyword lane first — **fixed -0.108 / cube -0.156 / sealed -0.110 %**
+
+⚠ **Transcribed from `cd25d07f`'s commit message** — see the note under
+`(-326)`; that session filed `(-322)`..`(-325)` and has now pushed two more
+rows without their prose.
+
+CR 702.95's pairing is attempted once per creature that enters, and the attempt
+was a whole-battlefield walk asking `definition.keywords.has_kw(Soulbond)` per
+permanent — on every board, including the ones that do not play the mechanic.
+The walk's second disjunct is exactly what the zone's gate-keyword lane answers,
+so `Soulbond` joins that lane's union and the walk runs only when the entering
+creature carries the keyword or some permanent's printed keywords do. The lane
+predicate reads printed keywords and so does the walk, so the gate is exact in
+the sound direction; widening the union costs `board_keyword_matching`'s other
+callers only on a board that plays the keyword, and the lane's own
+`debug_assert!` recomputes the predicate on every read.
+
+```text
+                    (-326)            (-327)          delta
+  fixed              591,451,255       590,813,598       -0.1078 %
+  cube             1,567,402,983     1,564,952,530       -0.1563 %
+  sealed           1,664,080,066     1,662,254,394       -0.1097 %
+
+  apply_soulbond_pairing inclusive     855,988 ->   220,640   -74.2 %
+                                     3,025,814 ->   549,546   -81.8 %
+                                     2,453,774 ->   634,864   -74.1 %
+```
+
+Call counts unchanged (3,794 / 8,428 / 10,022).
+
+### `(-326)` One lane walk for the two grant-source callers — **fixed -0.233 / cube -0.363 / sealed -0.218 %**
+
+⚠ **This entry is TRANSCRIBED from `d75575c6`'s commit message, not re-measured
+here.** That commit wrote the Log and Baseline prose for `(-322)`..`(-325)` and
+omitted its own, so the tip's absolutes lived only in `git log` — which is the
+one place this file exists so nobody has to look. The numbers below are the
+authoring session's, on **its** box (see the Baseline block's box warning); the
+deltas carry, the absolutes do not. ⚠ **If that session files these two rows
+itself later, reconcile — do not leave both.**
+
+`statics_granted_dying_triggers` asked "which battlefield permanents can grant a
+triggered ability" as a plain `battlefield.iter().filter(GRANT_TRIGGER)` walk,
+once per dying permanent. `trigger_grant_sources` asks the same question through
+the dispatcher's member lane (`(-215)`), where a hit visits only the
+contributors and a miss walks once and stores the list. The walk moved into
+`GameState::for_each_trigger_grant_source` and both callers take it, so the memo
+is shared and the two cannot drift on which permanents can grant. `GRANT_TRIGGER`
+is one of `dispatch_bits::BOARD_SCAN`, so the lane's member list is a superset of
+what this walk wants and `ABSENT` is authoritative.
+
+```text
+                    (-325)            (-326)          delta
+  fixed              592,834,860       591,451,255       -0.2334 %
+  cube             1,573,106,814     1,567,402,983       -0.3626 %
+  sealed           1,667,708,894     1,664,080,066       -0.2176 %
+
+  statics_granted_dying_triggers self   1,282,168 -> 0 (inlined; the body is a lane read)
+                                        5,567,322 -> 0
+                                        2,906,304 -> 0
+  its new per-source body, push_dying_grants: 18,528 Ir on cube
+```
+
+It is the only row that moves; `dispatch_triggers_for_events_slow` drops a
+further 104 k / 160 k / 725 k with it. The CR 603.10a snapshot leg is unchanged
+— the dying permanent's own self-granting static is still read off `snap`, still
+after the board's sources and still behind the same `GRANT_TRIGGER` test.
 
 ### `(-325)` The two zone walkers take `find_card_zone`'s visit rule — **fixed -0.039 / cube -0.069 / sealed -0.018 %**
 
