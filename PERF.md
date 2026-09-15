@@ -12073,8 +12073,61 @@ half only needed it when the total was already short; a cost surcharge can
 only make one less payable, so the printed mana value is a lower bound. Two
 `debug_assert!`s re-run the full derivation and compare.
 
-🔥 **AND `(-313)` LEAVES THE ROW THAT IS ACTUALLY BIGGEST IN THAT TREE, SIZED
-AT THE `(-313)` TIP AND NOT TAKEN: `available_mana`, 1.8-2.0 % OF THE POOL,
+❌ **`available_mana` — BOTH QUESTIONS THIS ROW ASKED ARE ANSWERED AND THE
+ANSWER IS THAT THERE IS NO DEVICE HERE. Read this before spending a build on
+it.** `mana_census` (compile-time gated on `trig-census`, `CRAB_MANA_CENSUS=1`,
+printed by `bot_ladder`) and one `profiling-fast` dump at the `(-314)` tip:
+
+```text
+                              fixed        cube       sealed
+  available_mana calls         6,044      11,548      16,264
+  permanents walked / call      16.8        17.7        14.3
+  ... controlled by the seat     8.31        9.01        7.10
+  ... reaching granted_abilities_of (the expensive half)
+                                 6.34        6.32        4.35
+  ... carrying a mana ability by DEFINITION
+                                13.59       11.52       10.08
+  calls with `relax_reachable` clear   100.0 %     100.0 %     100.0 %
+
+  self vs callee tree (inclusive ~28.5 M cube / ~27.1 M sealed)
+    self (the walk)     16.57 M  58 %      18.49 M  68 %
+    callee tree         11.9  M  42 %       8.6  M  32 %
+      grant_scan 4.97 / 4.49 M, tap_ability_summoning_sick 3.63 / 2.65 M,
+      grants_nothing_slow 1.75 / 0.67 M, board_has_mana_static 0.41 / 0.49 M
+```
+
+(a) **The walk is the majority, not the callee tree** — 58 / 68 % — so more
+gating of the `(-314)` shape is capped at a third of the row even if it took
+*all* of it.
+
+(b) ⚠⚠ **And the member list that would cut the walk IS THE BOARD.** The
+`(-87)` device asks for a `definition_epoch`-keyed lane holding the permanents
+that can reach `out` — a definition carrying a mana-shaped activated ability
+(`is_countable_mana_ability` or a non-empty `effect_produced_colors`, both
+definition-only, so the lane would be sound). **11.5 of 17.7 permanents on
+`cube` are in it, 13.6 of 16.8 on `fixed`, 10.1 of 14.3 on `sealed` — 65-81 %
+of the board**, because lands are most of a board and every land is a mana
+source. The list would skip a fifth to a third of the iterations, and those are
+exactly the cheap ones (`p.controller != seat`, one load and a branch). **A
+member list is priced by how much of the collection it excludes, and this one
+excludes almost nothing.**
+
+(c) `relax_reachable` is clear on **100 % of calls in all three pools**, so
+`(-314)`'s gate is fully effective and the fused-relax block never runs —
+there is nothing left on that half either.
+
+**What is left is the work, and it is already gated**: 4.4-6.3 permanents a
+call reach `granted_abilities_of` and the ability loop, on a board of 14-18.
+The plumbing story the block below tells is also smaller than it reads — the
+`OnceCell` already amortises (48,596 affordability checks on `sealed` collapse
+to 15,884 `available_mana` inits plus 15,140 `CostStaticSources` gathers), and
+there is no duplicate inside a tick to remove: `main_phase_action_with` runs
+once per tick and `sim_spell_action_inner`'s half is over simulated states that
+genuinely cannot share. **Row closed pending a different idea, not a bigger
+version of one of these.**
+
+🔥 **THE ORIGINAL SIZING, KEPT FOR THE NUMBERS — `(-313)` LEFT THIS AS THE ROW
+THAT IS BIGGEST IN THAT TREE: `available_mana`, 1.8-2.0 % OF THE POOL,
 AND IT IS A `OnceCell` INIT PER `SweepMana` RATHER THAN PER CARD.**
 
 ```text

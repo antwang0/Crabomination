@@ -13251,6 +13251,57 @@ struct AvailableMana {
 /// engine's real auto-tap. An over-permissive estimate costs a few extra
 /// dry-run probes; an under-permissive one silently makes castable spells
 /// invisible to the bot, which is exactly the failure being fixed here.
+/// What `available_mana`'s whole-battlefield walk actually touches — the
+/// sizing PERF's candidates head asks for before anyone builds a member list
+/// in front of it.
+///
+/// Compile-time gated on `trig-census` so the shipped binary is
+/// byte-identical, then `CRAB_MANA_CENSUS=1` at run time. `bot_ladder` prints
+/// it.
+#[cfg(feature = "trig-census")]
+pub mod mana_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// `[calls, permanents walked, of those controlled by the asking seat,
+    /// of those reaching `granted_abilities_of` (the expensive half), of
+    /// those whose DEFINITION carries a mana-shaped activated ability (the
+    /// member list a lane would hold), calls whose `relax_reachable` was
+    /// clear]`.
+    pub static N: [AtomicU64; 6] = [const { AtomicU64::new(0) }; 6];
+
+    pub fn on() -> bool {
+        static LEVEL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_MANA_CENSUS") {
+            Ok(v) => !v.is_empty() && v != "0",
+            _ => false,
+        })
+    }
+
+    #[inline]
+    pub(super) fn add(i: usize, n: u64) {
+        if n > 0 {
+            N[i].fetch_add(n, Relaxed);
+        }
+    }
+
+    pub fn snapshot() -> [u64; 6] {
+        std::array::from_fn(|i| N[i].load(Relaxed))
+    }
+}
+
+/// The membership a `Battlefield` lane would hold for [`available_mana`]:
+/// a definition that carries no mana-shaped activated ability can only reach
+/// `out` through a *granted* one. Definition-only, so it is
+/// `definition_epoch`-keyed and survives an element write — the `(-87)`
+/// contract. Census-only for now; see `mana_census`.
+#[cfg(feature = "trig-census")]
+fn def_carries_mana_ability(p: &crate::card::CardInstance) -> bool {
+    p.definition.activated_abilities.iter().any(|a| {
+        is_countable_mana_ability(a)
+            || !crate::game::actions::effect_produced_colors(&a.effect).is_empty()
+    })
+}
+
 fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     use crate::mana::{Color, ColorSet};
     let pool = &state.players[seat].mana_pool;
@@ -13297,10 +13348,23 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     // fuses — is already its audit.
     let relax_reachable =
         state.battlefield.has_any_color_static() || state.board_has_mana_static();
+    #[cfg(feature = "trig-census")]
+    let census = mana_census::on();
+    #[cfg(feature = "trig-census")]
+    if census {
+        mana_census::add(0, 1);
+        mana_census::add(5, u64::from(!relax_reachable));
+    }
     // An untapped source whose mana shape this estimate cannot cost — see the
     // `is_countable_mana_ability` arm in the loop.
     let mut opaque_source = false;
     for p in state.battlefield.iter() {
+        #[cfg(feature = "trig-census")]
+        if census {
+            mana_census::add(1, 1);
+            mana_census::add(2, u64::from(p.controller == seat));
+            mana_census::add(4, u64::from(def_carries_mana_ability(p)));
+        }
         if !fused_relax && relax_reachable {
             use crate::effect::StaticEffect;
             let mine = p.controller == seat;
@@ -13356,6 +13420,10 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         // Printed abilities plus anything granted to it (Cryptolith Rite
         // turning creatures into mana sources, Urza's Saga chapters), so a
         // granted mana ability doesn't read as "no mana here".
+        #[cfg(feature = "trig-census")]
+        if census {
+            mana_census::add(3, 1);
+        }
         let granted = state.granted_abilities_of(p, &scan);
         let mut best = 0u32;
         let mut mine = ColorSet::empty();

@@ -1909,6 +1909,25 @@ fn main() {
             );
         }
     }
+    // What `available_mana`'s whole-board walk touches — see
+    // `server::bot::mana_census`. Needs `--features trig-census` and
+    // `CRAB_MANA_CENSUS=1`.
+    #[cfg(feature = "trig-census")]
+    if crabomination::server::bot::mana_census::on() {
+        let n = crabomination::server::bot::mana_census::snapshot();
+        let per = |i: usize| if n[0] == 0 { 0.0 } else { n[i] as f64 / n[0] as f64 };
+        println!(
+            "  mana_census {} calls, {:.1} walked/call, {:.2} controlled, {:.2} reach \
+             granted_abilities_of, {:.2} carry a mana ability by DEFINITION, \
+             {:.1} % with relax unreachable",
+            n[0],
+            per(1),
+            per(2),
+            per(3),
+            per(4),
+            if n[0] == 0 { 0.0 } else { 100.0 * n[5] as f64 / n[0] as f64 },
+        );
+    }
     // The gather memo's price, ahead of anyone building it — see
     // `game::gather_census`. Needs `--features trig-census` and
     // `CRAB_GATHER_CENSUS=1`.
