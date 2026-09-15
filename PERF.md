@@ -12073,6 +12073,51 @@ half only needed it when the total was already short; a cost surcharge can
 only make one less payable, so the printed mana value is a lower bound. Two
 `debug_assert!`s re-run the full derivation and compare.
 
+❌ **THE TARGET ENUMERATOR IS CHARACTERISED AND THE "ENUMERATION OR WITNESS"
+QUESTION IS ANSWERED: IT IS AN ENUMERATION, THE TARGET IS CONSUMED, AND THE
+SITE THAT OWNS MOST OF IT IS ALREADY GATED.**
+`auto_targets_for_effect_all_slots_kicked` is **3.63 % of `sealed`
+inclusive** (62.3 M over 11,178 calls) and **1.2 % of `cube`**, and callgrind
+cannot split it — all ~26 call sites inline into `bot::cast_candidates`, so
+the dump shows one edge and no way to say which block owns it.
+`call_site_census` (new, `trig-census` + `CRAB_TARGET_SITE_CENSUS=1`, printed
+by `bot_ladder`) reads the caller off `#[track_caller]` on the wrapper and
+splits it in one run:
+
+```text
+  enumerations by call site, gang mirror --games 6 --threads 1 --seed 1
+                                      sealed              cube
+    bot.rs:6181  plain-cast block   6,618  58.8 %     2,934  87.7 %
+    bot.rs:6458  Spree / Tiered     3,584  31.9 %         0
+    bot.rs:6913  split-card right     616   5.5 %       244   7.3 %
+    bot.rs:6495  prepare-spell        360   3.2 %        22   0.7 %
+    effects/mod.rs:16595                72   0.6 %         0
+```
+
+* **The 59-88 % site is the main plain-cast block and it already has the
+  `(-313)` ordering**: `if !can_afford_in_state_with(..) { continue }` runs
+  *before* the enumeration, and the loop under it is one enumeration per mode
+  per affordable hand card per tick. There is no wasted call to reorder away.
+* **The 31.9 % site is the Spree / Tiered / `ChooseModesCast` block, and it is
+  ungated by design** — its comment says so ("`would_accept` gates
+  affordability, so unpayable combinations drop out on their own"). ⚠ **The
+  obvious de-duplication is NOT there**: the all-modes combination that would
+  re-ask for modes the single-mode candidates already asked about exists only
+  for `Effect::Spree` with >1 mode, and the cards that are hot here are
+  `Tiered` / `ChooseModesCast`, which have no combo. **Built and measured
+  anyway — hoisting the per-mode enumeration out of the candidate loop is
+  -0.035 / -0.021 / +0.036 %, i.e. nothing, and the census confirms the call
+  count is unchanged at 3,584. Reverted.**
+* So the Spree block's only lever is an **affordability pre-gate, and that is
+  a behaviour change, not a reordering**: the bot's own `available_mana` is
+  biased downward on purpose, so gating on it would drop candidates
+  `would_accept` accepts; and the exact oracle (`could_pay_cost`) clones the
+  state, which costs more than the enumeration it would save. **Do not take it
+  as a perf row without a ladder run behind it.**
+* The enumerator's internals are already twice-refuted: `(-301)` rebuilt
+  `printed_requirement_impl`'s spine as a loop twice (+0.458 %, +1.410 %) and
+  `(-302)` warns its card-type pre-test must not be widened (+0.259..0.369 %).
+
 ❌ **`available_mana` — BOTH QUESTIONS THIS ROW ASKED ARE ANSWERED AND THE
 ANSWER IS THAT THERE IS NO DEVICE HERE. Read this before spending a build on
 it.** `mana_census` (compile-time gated on `trig-census`, `CRAB_MANA_CENSUS=1`,

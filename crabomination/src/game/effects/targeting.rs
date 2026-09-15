@@ -667,12 +667,19 @@ impl GameState {
             if !crate::game::actions::ward_cost_is_trivial(w)))
     }
 
+    #[cfg_attr(feature = "trig-census", track_caller)]
     pub fn auto_targets_for_effect_all_slots(
         &self,
         eff: &Effect,
         controller: usize,
         mode: Option<usize>,
     ) -> (Option<Target>, Vec<Target>) {
+        // Which of the ~26 call sites the enumerator's 3.6 % of `sealed`
+        // actually comes from — see `call_site_census`. `#[track_caller]`
+        // rather than a counter per site: the attribute is behind the
+        // feature, so the shipped wrapper is the one line it always was.
+        #[cfg(feature = "trig-census")]
+        call_site_census::note(std::panic::Location::caller());
         self.auto_targets_for_effect_all_slots_kicked(eff, controller, mode, false, None)
     }
 
@@ -937,4 +944,53 @@ fn first_legal_graveyard_card(
         }
     }
     None
+}
+
+
+/// Which call site each `auto_targets_for_effect_all_slots` enumeration comes
+/// from.
+///
+/// The enumerator is **3.63 % of `sealed` inclusive** and callgrind cannot
+/// split it: all ~26 sites are inlined into `bot::cast_candidates`, so the
+/// dump shows one edge with 11,178 calls and no way to say which block owns
+/// them. `#[track_caller]` on the wrapper gives the line for free.
+///
+/// Compile-time gated on `trig-census` so the shipped binary is
+/// byte-identical, then `CRAB_TARGET_SITE_CENSUS=1` at run time. `bot_ladder`
+/// prints the table, heaviest first.
+#[cfg(feature = "trig-census")]
+pub mod call_site_census {
+    use std::sync::Mutex;
+
+    /// `file:line -> enumerations`. A `Mutex<Vec<_>>` rather than an atomic
+    /// array because the key set is not known until the run: this is a
+    /// census, and nothing runs it unless the variable is set.
+    static SITES: Mutex<Vec<(&'static str, u32, u64)>> = Mutex::new(Vec::new());
+
+    pub fn on() -> bool {
+        static LEVEL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_TARGET_SITE_CENSUS") {
+            Ok(v) => !v.is_empty() && v != "0",
+            _ => false,
+        })
+    }
+
+    pub(super) fn note(loc: &'static std::panic::Location<'static>) {
+        if !on() {
+            return;
+        }
+        let Ok(mut sites) = SITES.lock() else { return };
+        match sites.iter_mut().find(|(f, l, _)| *f == loc.file() && *l == loc.line()) {
+            Some((_, _, n)) => *n += 1,
+            None => sites.push((loc.file(), loc.line(), 1)),
+        }
+    }
+
+    /// The table, heaviest first.
+    pub fn snapshot() -> Vec<(&'static str, u32, u64)> {
+        let Ok(sites) = SITES.lock() else { return Vec::new() };
+        let mut out = sites.clone();
+        out.sort_by_key(|(_, _, n)| std::cmp::Reverse(*n));
+        out
+    }
 }

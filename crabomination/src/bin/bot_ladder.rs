@@ -1909,6 +1909,22 @@ fn main() {
             );
         }
     }
+    // Which call site the target enumerator's 3.6 % of `sealed` comes from —
+    // see `game::effects::targeting::call_site_census`. Needs
+    // `--features trig-census` and `CRAB_TARGET_SITE_CENSUS=1`.
+    #[cfg(feature = "trig-census")]
+    if crabomination::game::effects::call_site_census::on() {
+        let sites = crabomination::game::effects::call_site_census::snapshot();
+        let total: u64 = sites.iter().map(|(_, _, n)| *n).sum();
+        println!("  target_sites {total} enumerations over {} sites", sites.len());
+        for (file, line, n) in sites.iter().take(10) {
+            println!(
+                "    {n:>8}  ({:.1} %)  {}:{line}",
+                if total == 0 { 0.0 } else { 100.0 * *n as f64 / total as f64 },
+                file,
+            );
+        }
+    }
     // What `available_mana`'s whole-board walk touches — see
     // `server::bot::mana_census`. Needs `--features trig-census` and
     // `CRAB_MANA_CENSUS=1`.

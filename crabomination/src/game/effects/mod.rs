@@ -12,6 +12,11 @@ pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
 mod targeting;
+/// The target enumerator's call-site census — see
+/// [`targeting::call_site_census`]. Re-exported for `bot_ladder` under the
+/// census feature only; the module itself stays private.
+#[cfg(feature = "trig-census")]
+pub use targeting::call_site_census;
 
 // Token factories now live in `crabomination_base`; re-exported here so the
 // engine's `game::effects::*_token` paths keep working.
