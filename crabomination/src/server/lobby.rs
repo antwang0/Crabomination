@@ -884,24 +884,41 @@ fn apply<G: Send + 'static>(
 
         let hook = Arc::clone(on_match_end);
         let done = done_tx.clone();
+        // Kept for the spawn-failure path below, where the closure that owns
+        // `tokens` never runs and the driver would otherwise never prune them.
+        let tokens_for_cleanup = tokens.clone();
         eprintln!("lobby: starting {} match ({humans} human, {bots} bot)", format.label());
-        thread::spawn(move || {
-            // Hold the per-connection guards for the match's lifetime so a
-            // connection cap acquired at accept time isn't released early.
-            let _guards = guards;
-            let started = Instant::now();
-            let outcome = run_match_reconnectable_spectatable(
-                start.state,
-                occupants,
-                vec![],
-                None,
-                Some(reattach_rx),
-                Some(spectate_rx),
-            );
-            // Match over — let the driver prune our resume tokens + registry.
-            let _ = done.send(MatchDone { match_id, tokens });
-            hook(format, started.elapsed(), outcome);
-        });
+        // **The engine's stack, like every other thread in the tree that
+        // resolves effects** — this one ran a whole match on the 2 MB default
+        // until 2026-09-15, and a stack overflow is a `SIGSEGV` with no
+        // message rather than a panic. See `server::ENGINE_STACK_BYTES`.
+        let spawned = thread::Builder::new()
+            .name("crab-match".into())
+            .stack_size(crate::server::ENGINE_STACK_BYTES)
+            .spawn(move || {
+                // Hold the per-connection guards for the match's lifetime so a
+                // connection cap acquired at accept time isn't released early.
+                let _guards = guards;
+                let started = Instant::now();
+                let outcome = run_match_reconnectable_spectatable(
+                    start.state,
+                    occupants,
+                    vec![],
+                    None,
+                    Some(reattach_rx),
+                    Some(spectate_rx),
+                );
+                // Match over — let the driver prune our resume tokens + registry.
+                let _ = done.send(MatchDone { match_id, tokens });
+                hook(format, started.elapsed(), outcome);
+            });
+        if spawned.is_err() {
+            // Thread creation failed (fd or memory pressure). The closure never
+            // ran, so nothing will ever send `MatchDone` for this match —
+            // prune it here or the driver keeps its resume tokens for ever.
+            eprintln!("lobby: could not spawn match thread; dropping match {match_id:?}");
+            let _ = done_tx.send(MatchDone { match_id, tokens: tokens_for_cleanup });
+        }
     }
 }
 

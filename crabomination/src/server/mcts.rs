@@ -531,7 +531,7 @@ pub struct MctsBot {
 /// take 32 MB for the same reason: effect resolution recurses through
 /// trigger and token-copy chains, and an unoptimized build's frames brush
 /// the 8 MB default.
-const WORKER_STACK_BYTES: usize = 32 * 1024 * 1024;
+use crate::server::ENGINE_STACK_BYTES as WORKER_STACK_BYTES;
 
 impl MctsBot {
     pub fn new(cfg: MctsConfig) -> Self {

@@ -66,6 +66,25 @@ impl SnapshotSinkState {
 
 pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
 
+/// The stack every thread that **resolves effects** is built with.
+///
+/// A resolution runs recursive trigger / copy / replacement chains, and the
+/// default 8 MB main (2 MB spawned) stack is not enough for them in an
+/// unoptimized build — `.cargo/config.toml` carries `RUST_MIN_STACK` for the
+/// processes cargo launches, and PERF's standing "effect-resolution recursion
+/// depth" constraint is the same number. **`RUST_MIN_STACK` only reaches a
+/// process cargo started**, so a thread the tree spawns itself has to state
+/// the size, and every binary's game threads already do.
+///
+/// ⚠ **The three the server ran a whole match on were the exception, and a
+/// stack overflow is a `SIGSEGV` with no message — strictly worse than the
+/// panic class the robustness filters chase.** Named here so there is one
+/// number and one place to find every thread that needs it: `mcts`'s rollout
+/// workers, the lobby's match driver, and `crabomination_server`'s bot-match
+/// and pair-match threads. Lazily committed on Linux, so an idle thread's
+/// resident cost is a page, not 32 MB.
+pub const ENGINE_STACK_BYTES: usize = 32 * 1024 * 1024;
+
 pub mod mcts;
 pub mod bot;
 pub mod encode;

@@ -159,10 +159,24 @@ fn main() {
                 }
             };
             eprintln!("client {peer} → bot match");
-            thread::spawn(move || {
-                let _slot = guard;
-                run_bot_match(stream, peer, format);
-            });
+            // **The engine's stack**: this thread runs a whole match, and a
+            // resolution recurses through trigger / copy / replacement chains
+            // that the 2 MB spawned default does not hold. It ran on the
+            // default until 2026-09-15, and a stack overflow is a `SIGSEGV`
+            // with no message rather than a panic. See
+            // `crabomination::server::ENGINE_STACK_BYTES`.
+            let spawned = thread::Builder::new()
+                .name("crab-bot-match".into())
+                .stack_size(crabomination::server::ENGINE_STACK_BYTES)
+                .spawn(move || {
+                    let _slot = guard;
+                    run_bot_match(stream, peer, format);
+                });
+            if spawned.is_err() {
+                // The closure never ran, so the slot guard it owned was never
+                // constructed and the connection is still ours to close.
+                eprintln!("client {peer}: could not spawn match thread");
+            }
         }
     } else {
         loop {
@@ -218,11 +232,19 @@ fn main() {
                 }
             };
             eprintln!("seat 1: {b_peer} → starting match {a_peer} ↔ {b_peer}");
-            thread::spawn(move || {
-                let _a = a_guard;
-                let _b = b_guard;
-                run_pair_match(a_stream, a_peer, b_stream, b_peer, format);
-            });
+            // The engine's stack, for the same reason as the bot-match thread
+            // above — see `crabomination::server::ENGINE_STACK_BYTES`.
+            let spawned = thread::Builder::new()
+                .name("crab-pair-match".into())
+                .stack_size(crabomination::server::ENGINE_STACK_BYTES)
+                .spawn(move || {
+                    let _a = a_guard;
+                    let _b = b_guard;
+                    run_pair_match(a_stream, a_peer, b_stream, b_peer, format);
+                });
+            if spawned.is_err() {
+                eprintln!("match {a_peer} ↔ {b_peer}: could not spawn match thread");
+            }
         }
     }
 }
