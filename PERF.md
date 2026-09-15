@@ -3020,6 +3020,26 @@ is not comparable with one from the sixth**, and every row below is a
 same-box A/B. The counters and the Ir *deltas* are what carry across.
 
 ```text
+perf    **`(-328)`: the two equip-trigger walks take the dispatcher's member lane — fixed -0.393 /
+        cube -0.167 / sealed -0.189 %**, `fire_step_triggers` self -22.4 / -16.1 / -12.8 % a call.
+        An ungated `for eq in &self.battlefield` on every step of every turn, whose definition half
+        is `dispatch_bits::EQUIP_TRIGGER_GRANT`; `for_each_trigger_grant_source` generalises into
+        `for_each_board_scan_source(bit, f)` and `equip_granted_trigger_sources` takes it too.
+
+shape   **The nine `for c in &mut self.battlefield` loops take `Battlefield::iter_mut` — NEUTRAL,
+        and filed so nobody looks for a win there.** `DerefMut for Battlefield` does
+        `type_gates.store(0)`, i.e. drops every presence lane and both member lists; `.iter_mut()`
+        is the inherent non-invalidating route and its doc already claimed these call sites. The
+        A/B reads **-2,166 / -2,928 / -2,340 Ir (0.0002-0.0004 %)**, inside the source-hash layout
+        band — so **full-lane invalidation from those nine loops was costing nothing**. What the
+        change buys is the hazard: a lane added later whose consumers sit just after combat or the
+        untap step would have lost its memo silently.
+
+census  **`sba_fold` 2,332 / 21,798 asks = 10.70 % hits on `cube` at the `(-328)` tip**
+        (`--features trig-census`, `CRAB_SBA_CENSUS=1`, gang mirror `--games 6 --threads 1
+        --seed 1`), and `sba_census` 3,320 / 21,626 repeats = 15.35 %. Both are where `(-306)` and
+        `(-88)` left them; the fold's misses are real per-card writes, not bookkeeping.
+
 perf    **`(-327)`: the Soulbond pairing walk reads the board's keyword lane first — fixed -0.108 /
         cube -0.156 / sealed -0.110 %**, the row -74.2 / -81.8 / -74.1 %. `Soulbond` joins the
         gate-keyword lane's union rather than taking the last lane shift.
@@ -3054,15 +3074,26 @@ perf    **`(-322)`: the block pair gate makes one walk per side, not nine — fi
         candidates section; `find_card_anywhere_mut` does not unshare on the way in, and the guard
         is TRUE on 7,168 of 10,826 leaves.
 
-perf    **Cumulative over the session (seven legs, six taken): fixed 596,342,781 -> 590,813,598
-        (-0.927 %), cube 1,585,705,950 -> 1,564,952,530 (-1.309 %), sealed 1,676,524,999 ->
-        1,662,254,394 (-0.851 %).**
+❌ perf  **REFUTED AND REVERTED — `resolve_combat_into`'s `must_block` clear reading before it
+        takes `iter_mut`, so a combat that clears nothing does not bump the zone's `writes`
+        counter: fixed -0.023 / cube -0.016 / sealed +0.015 %, flat and mixed-sign.** The
+        hypothesis was that the spurious bump was costing `sba_fold` and `attach_fold` their memo
+        on 7,664 combat resolutions. The census above says why it is not: the fold's 89 % miss
+        rate is **real per-card writes** (taps, damage, counters), and one bookkeeping bump a
+        combat is lost in them. ⚠ **Price a write-counter gate against the census, not against the
+        call count of the site you are gating.**
 
-sweep   **fresh seeds 1354..1357 at the `(-327)` tip: 12 cells / 59,200 games / 0 failures**,
-        `cap 0 / board 0 / stuck 0 / draw 16`, pools `cube all sealed`, `target-audit/overflow`
-        with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. It is what audits `(-324)`'s
-        new `has_combat_cap_static` lane and `(-323)`'s exact-tax `debug_assert!` on dflt-pilot
-        boards the suite never builds. **Frontier 1358.**
+perf    **Cumulative over the session (ten legs, eight taken, two reverted): fixed 596,342,781 ->
+        588,492,756 (-1.316 %), cube 1,585,705,950 -> 1,562,329,651 (-1.474 %), sealed
+        1,676,524,999 -> 1,659,113,327 (-1.038 %).**
+
+sweep   **TWO blocks: fresh seeds 1354..1357 at the `(-327)` tip and 1358..1361 at the shape-fix
+        tip — 24 cells / 118,400 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 16` on
+        each, pools `cube all sealed`, `target-audit/overflow` with `-C debug-assertions=yes` and
+        `CRAB_ANSWER_LOG=strict`. They are what audit `(-324)`'s new `has_combat_cap_static` lane,
+        `(-323)`'s exact-tax `debug_assert!` and (the second block) the nine loops that now keep
+        their lanes across a write, on dflt-pilot boards the suite never builds.
+        **Frontier 1362.**
 
 gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to
         the committed invariant, `determinism ok`. Suite **19,549 / 0 / 5** under
@@ -7447,6 +7478,36 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-328)` The two equip-trigger walks take the dispatcher's member lane — **fixed -0.393 / cube -0.167 / sealed -0.189 %**
+
+`fire_step_triggers` closed with an ungated `for eq in &self.battlefield` looking
+for an `equipped_bonus` with a step trigger, once per step of every turn, real or
+simulated — 16,004 / 22,436 / 31,554 calls a six-game run. The definition half of
+that question is exactly `dispatch_bits::EQUIP_TRIGGER_GRANT`, one of
+`BOARD_SCAN`, so the dispatcher's member lane (`(-215)`) answers it.
+`equip_granted_trigger_sources` — the second hand-written copy of the same
+filter — takes the same walker.
+
+```text
+                    (-327)+shape      (-328)          delta
+  fixed              590,811,432       588,492,756       -0.3925 %
+  cube             1,564,949,602     1,562,329,651       -0.1674 %
+  sealed           1,662,252,054     1,659,113,327       -0.1888 %
+
+  fire_step_triggers self   516.3 -> 400.7 Ir/call   -22.4 %
+                            611.1 -> 512.8           -16.1 %
+                            583.4 -> 508.9           -12.8 %
+```
+
+`for_each_trigger_grant_source` generalises into `for_each_board_scan_source(bit,
+f)` for it, with a `debug_assert!` that the bit is inside `BOARD_SCAN` — the mask
+the member list is built from, so anything outside it would read an empty list as
+"absent" and be wrong. ⚠ **`equip_granted_trigger_sources` picks up a symbol of
+its own (+146 k / +343 k / +308 k) because the closure form stops it inlining
+into its caller**, and the row is still strongly positive: this is `(-182)`'s
+rule seen from the winning side — a one-caller wrapper that grows a closure stops
+being inlined, and that is a cost to pay, not a reason not to.
 
 ### `(-327)` The Soulbond pairing walk reads the board's keyword lane first — **fixed -0.108 / cube -0.156 / sealed -0.110 %**
 
@@ -12769,9 +12830,9 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-✅✅ **STATUS AT THE `(-327)` TIP (2026-09-15, the block-gate session): SIX ROWS
-TAKEN, ONE REFUTED, cumulative fixed -0.927 / cube -1.309 / sealed -0.851 %.**
-All six came off **one question asked of the combat/declaration/dispatch spine:
+✅✅ **STATUS AT THE `(-328)` TIP (2026-09-15, the block-gate session): SEVEN ROWS
+TAKEN, TWO REFUTED, cumulative fixed -1.316 / cube -1.474 / sealed -1.038 %.**
+All seven came off **one question asked of the combat/declaration/dispatch spine:
 how many times does this function walk a short slice or the whole board when
 once (or none) would do?** None of them was in a self table as itself.
 
@@ -12782,7 +12843,18 @@ once (or none) would do?** None of them was in a self table as itself.
   (-325)  the two zone walkers take find_card_zone's order       -0.039 / -0.069 / -0.018 %
   (-326)  statics_granted_dying_triggers: the lane already existed -0.233 / -0.363 / -0.218 %
   (-327)  apply_soulbond_pairing: joins the gate-keyword union   -0.108 / -0.156 / -0.110 %
+  (-328)  the two equip-trigger walks take the member lane       -0.393 / -0.167 / -0.189 %
+  shape   the nine `&mut battlefield` loops take `iter_mut`       NEUTRAL, see the Baseline
 ```
+
+⚠ **AND THE TWO REFUTATIONS ARE THE SAME MISTAKE TWICE: a memo's miss rate was
+assumed instead of censused.** `on_left_battlefield`'s read-first shape assumed
+`find_card_anywhere_mut` unshares on the way in (it does not) and that its guard
+is usually false (it is true 66 % of the time); `resolve_combat_into`'s assumed
+a bookkeeping `writes` bump was what `sba_fold` was missing on (the fold's 89 %
+miss is real per-card writes — 2,332 / 21,798 hits, censused at this tip).
+**Both cost a build each and both were one `--callees` read or one census run
+away from being declined for free.**
 
 🔎 **THE CHECKLIST THE SESSION RAN, AND IT IS NOT FINISHED.** For each function
 over ~0.3 % on any pool, read the body and classify every walk it makes:
@@ -12795,9 +12867,22 @@ over ~0.3 % on any pool, read the body and classify every walk it makes:
  (c) **a whole-board walk another function already memoizes** — take its
      walker (`(-326)`). Grep before building.
  (d) **a zone scan from the wrong end** (`(-325)`).
-Still unread at this tip: `perform_action_inner` (1.70 % self on `cube`),
-`resolve_combat_into` (1.51 %), `fire_step_triggers` (0.87 %),
-`cast_candidates` (1.04 %), `pick_attacks_inner` / `pick_blocks_inner`.
+`fire_step_triggers` is `(-328)`. Still unread at this tip:
+`perform_action_inner` (1.70 % self on `cube`, 219 Ir over 121,844 calls — a
+`match` dispatch, so expect (a) not (b)), `resolve_top_of_stack_inner` (0.79 %,
+1,069 Ir a call), `advance_step` (0.66 %), `cast_candidates` (1.04 %),
+`pick_attacks_inner` / `pick_blocks_inner`, `pass_priority` (0.48 %, and its
+body is already lean).
+
+📐 **AND THE (b)/(c) POPULATION HAS A SCRIPTABLE RANKING NOW.** Join every
+`battlefield.iter()` / `for _ in &self.battlefield` site against the cube self
+table by *enclosing function*, keeping only the ones with no gate token
+(`has_*()`, `*_in_scope()`, `scan.`, `statics &`, `dispatch_members`,
+`is_empty()`) in the six lines above them. That is how `(-328)` was found; the
+survivors at this tip are almost all `find(|c| c.id == x)` lookups inside
+already-gated arms, plus the gather's per-effect value walks (which only run for
+an effect that exists), plus the prowess fallback in the dispatcher — **sized
+and declined: ~917 walks a `cube` run, under 0.06 %.**
 
 📐 **THE QUEUE THE SESSION LEAVES, SIZED AT THE `(-327)` TIP (`profiling-fast
 --no-default-features`, gang mirror `--games 6 --threads 1 --seed 1`; totals

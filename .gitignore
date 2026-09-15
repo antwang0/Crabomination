@@ -133,3 +133,7 @@ cg.out
 # Scratch target dir for the debug-assertions ladder sweep (see
 # [profile.overflow] in Cargo.toml).
 /target-audit/
+
+# Scratch target dir for a `--features trig-census` build — the census
+# binaries must never be the ones a PERF reading comes from.
+/target-census/
