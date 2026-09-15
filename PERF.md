@@ -2990,6 +2990,21 @@ bump invalidates the Ir columns and has to re-take the A/B base.
 ### 2026-09-15 (the ungated-walk session) — the two board walks nobody had gated, found by reading the callee table rather than the self table
 
 ```text
+perf    **`(-319)`: one entry point for the `attached_to` walk family — fixed -0.016 / cube -0.041 /
+        sealed -0.041 %.** `GameState::attachment_in_scope` names `(-318)`'s fold beside the other
+        presence gates and carries the `debug_assert!`, so a site added later inherits the audit. A
+        cold `profiling-lines` dump ranks the family's forty walks: **two are hot, thirty-eight are
+        cold**, and a gate in front of a cold walk is a fold read for nothing. ⚠⚠ **The line table
+        over-read the second site about THREE times** (1,399,664 Ir on each of two lines, 0.17 % of
+        `cube`, against a measured 0.041 %) — a line's cost under an optimized build is the cost of
+        the addresses `addr2line` maps there, not of the source construct.
+
+lines   **The `profiling-lines` build is spent on the two rows it was built for, and the verdict on
+        both is FLAT.** `fire_combat_damage_triggers` 112 lines / 27.3 M, top row 0.22 %;
+        `check_state_based_actions_into` 309 lines / 55.7 M, top row 0.22 %. Neither has a line to
+        take; they join `dispatch_triggers_for_events_slow` as **structural** rows. Cold
+        `profiling-lines` build here: **7m08s**, and the instrumented dump is ~6 MB / ~4 min.
+
 perf    **`(-318)`: the combat-damage fold asks the zone whether anything is attached — fixed -0.061 /
         cube -0.417 / sealed -0.195 %**, the row -5.7 / -20.7 / -14.9 %. `fire_combat_damage_triggers`
         opened with a whole-battlefield walk that does not short-circuit; both its facts are INSTANCE
@@ -3059,15 +3074,16 @@ gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls*
         **3m50s-4m02s**, `target-audit/overflow` cold is **10m53s**, and `cargo check --profile
         release-fast` is **2m06s**.
 
-sweep   **fresh seeds 1334..1345 in THREE blocks: 36 cells / 177,600 games / 0 failures.** 1334..1337
-        at the `(-316)` tip (`cap 0 / board 0 / stuck 0 / draw 16`), 1338..1341 at the `(-317)` tip
-        and 1342..1345 at the CLOSING `(-318)` tip (both `cap 0 / board 0 / stuck 0 / draw 0`), over
+sweep   **fresh seeds 1334..1349 in FOUR blocks: 48 cells / 236,800 games / 0 failures.** 1334..1337
+        at the `(-316)` tip (`cap 0 / board 0 / stuck 0 / draw 16`), then 1338..1341, 1342..1345 and
+        1346..1349 at the `(-317)`, `(-318)` and CLOSING `(-319)` tips (all `cap 0 / board 0 /
+        stuck 0 / draw 0`), over
         `cube` / `all` / `sealed`, `target-audit/overflow` with `-C debug-assertions=yes` and
         `CRAB_ANSWER_LOG=strict`. ⚠ **That is the gate a new memo needs and the suite cannot give
         it**: `Battlefield::lane`'s `debug_assert!` recomputes the handed predicate against the stored
         bit on EVERY read, `(-317)`'s `debug_assert_eq!` re-runs the WHOLE walk against every packed
         answer it takes, and `(-318)`'s re-walks the board on every skip — all three audited on every
-        board those 177,600 games dealt. No Scute Swarm cell in any block. **Frontier 1346.**
+        board those 236,800 games dealt. No Scute Swarm cell in any block. **Frontier 1350.**
         All standing audits re-run and 0 (`audit_panics` 0 bare / 70 sites, `audit_stash_in_loop` 0
         unexplained, `audit_seat_from_selector` 0 open, `audit_target_walkers --check` 0,
         `audit_doc_drift` 0 body-wrong / 0 doc rot / 0 stale notes).
@@ -7302,6 +7318,47 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-319)` One entry point for the `attached_to` walk family — **fixed -0.016 / cube -0.041 / sealed -0.041 %**
+
+`(-318)`'s fold answers a question **forty** walks in the tree ask
+(`attached_to == Some(x)`): with nothing attached to anything, none of them can
+find a thing, so `false` from the fold is authoritative for the whole family.
+`GameState::attachment_in_scope` gives it a name beside
+`land_type_change_in_scope` / `ability_strip_in_scope` /
+`pt_reduction_in_scope`, and the `debug_assert!` moves **into** it, so a site
+added later inherits the audit instead of needing its own.
+
+⚠ **Only the second site the line profile charges for opens on it.** A cold
+`profiling-lines` dump ranks the family: the SBA death sweep's equipment leg
+(`stack.rs:6376`, one whole-battlefield walk per dying creature, 9,820 of them
+on `cube`) is the only one besides `fire_combat_damage_triggers`' that appears
+at all. The other thirty-eight are cold; **a gate in front of a cold walk is a
+fold read for nothing**.
+
+```text
+                    (-318)            (-319)          delta
+  fixed              609,619,688       609,523,889       -0.0157 %
+  cube             1,608,960,836     1,608,296,018       -0.0413 %
+  sealed           1,697,060,293     1,696,358,147       -0.0414 %
+```
+
+⚠⚠ **THE LINE TABLE OVER-READ IT ABOUT THREE TIMES, AND THAT IS THE
+CALIBRATION TO KEEP.** `cg_lines.py --in check_state_based_actions_into` put
+**1,399,664 Ir on each of two lines** inside that loop — 0.17 % of `cube` for
+the walk — against a measured 0.041 %. The gate only skips the 78.6 % of
+boards with nothing attached, and the inner `for ta in
+&bonus.triggered_abilities` scan and the `push` still run on the rest. **A
+line's cost under an optimized build is the cost of the addresses `addr2line`
+maps there, not of the source construct**, and a loop body spreads across the
+lines around it. Same lesson as `(-314)`'s 4x sizing miss, one instrument over.
+
+📐 **And the line instrument's whole-run verdict on the two rows it was built
+for: BOTH ARE FLAT.** `fire_combat_damage_triggers` is 112 lines / 27.3 M with
+a 0.22 % top row (`ptr/non_null.rs:444`, iterator machinery);
+`check_state_based_actions_into` is 309 lines / 55.7 M with a 0.22 % top row.
+Neither has a line to take — they join `dispatch_triggers_for_events_slow` as
+**structural** rows, and the `profiling-lines` build is spent on them.
 
 ### `(-318)` The combat-damage fold asks the zone whether anything is attached — **fixed -0.061 / cube -0.417 / sealed -0.195 %**
 
@@ -12392,14 +12449,21 @@ sixth `CardMemo` word** — a `crabomination_base` change and therefore a
 ~70-minute cold rebuild on this box, so batch it with something else.
 
 
-✅ **TAKEN, `(-318)` — `fire_combat_damage_triggers` was the fourth biggest
-self row on `cube` and no candidate had ever named it. Its opening fold is now
-behind a `writes`-keyed presence gate: fixed -0.061 / cube -0.417 / sealed
--0.195 %, the row -5.7 / -20.7 / -14.9 %, leaving it at 6.52 M / 25.92 M /
-19.29 M (1.07 / 1.61 / 1.14 %).** What is left is the three trigger phases
-below the walk, and the next look at them wants a `profiling-lines` dump,
-cold, with ⚠ `(-310)`'s rule about inlined frames. The sizing that opened it,
-kept for the method:
+✅ **TAKEN, `(-318)`/`(-319)` — `fire_combat_damage_triggers` was the fourth
+biggest self row on `cube` and no candidate had ever named it. Its opening fold
+is now behind a `writes`-keyed presence gate: fixed -0.061 / cube -0.417 /
+sealed -0.195 %, the row -5.7 / -20.7 / -14.9 %, leaving it at 6.52 M /
+25.92 M / 19.29 M (1.07 / 1.61 / 1.14 %); `(-319)` then named the gate for the
+whole `attached_to` family and took its one other hot site.**
+
+❌ **AND THE `profiling-lines` DUMP IS TAKEN AND THE ANSWER IS "STRUCTURAL":
+what is left of this row is FLAT.** 112 lines / 27.3 M with a 0.22 % top row
+(`ptr/non_null.rs:444`, iterator machinery) — the three trigger phases below
+the walk have no line to take, exactly like
+`dispatch_triggers_for_events_slow` (and
+`check_state_based_actions_into`, 309 lines / 55.7 M, same 0.22 % top row,
+measured in the same dump). **Do not spend another `profiling-lines` build on
+any of the three.** The sizing that opened the row, kept for the method:
 
 ```text
   self                     fixed 6,920,234 (1.13 %)   cube 32,699,392 (2.02 %)   sealed 22,660,994 (1.33 %)
