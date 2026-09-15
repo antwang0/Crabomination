@@ -3005,6 +3005,54 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-15 (the bot-combat session, third of the day) — two rows off the *bot's* side of combat, which no candidate had ever ranked
+
+⚠⚠ **EIGHTH BOX, 4 cores, rustc 1.95.0, valgrind 3.22.0 — and the A/B base does
+NOT reproduce the seventh box's absolutes either.** Base here (the `(-329)`
+tip, freshly built): fixed **586,500,865** / cube **1,559,677,461** / sealed
+**1,655,852,494**, against the filed `(-329)` closing 587,622,893 /
+1,561,037,694 / 1,657,275,430 — **-0.191 / -0.087 / -0.086 %**, the same
+magnitude and the opposite sign to the seventh box's gap against the sixth.
+**Absolutes do not cross boxes; deltas and counters do.** Every row below is a
+same-box A/B against the line above it.
+
+Timings this box, for the next run's planning: cold `profiling-fast`
+(deps + catalog + engine) **9m01s**, a `crabomination_base` change **8m52s**,
+an engine-only change **3m05s**, a three-pool callgrind **20 s** (all three in
+parallel; the build is the whole cost of an A/B here, and it is a third of what
+the seventh box's notes imply).
+
+```text
+perf    **`(-332)`: the empty mana pool is answered at the call site — fixed -0.096 / cube -0.053 /
+        sealed -0.070 %.** `empty_mana_pools`' own gate already answered 28 k / 41 k / 59 k calls
+        a run, behind a call, a prologue and a frame for three battlefield scans and two `Vec`s.
+        `(-300)`'s split; the symbol disappears. ⚠ What is left is `ManaPool::is_empty` at 30 Ir a
+        call, and that is a `release-fast` artifact — see the Log entry.
+
+perf    **`(-331)`: the block planner's protection gate is asked per view, not per pair — fixed
+        -0.162 / cube -0.341 / sealed -0.186 %.** `protection_prevents_views` is entirely behind
+        "does the target carry protection", and `pick_blocks_inner` asked it twice per (blocker,
+        attacker) pair; both targets are loop-invariant. Calls 100,796 -> 16,820 on `cube`.
+        `GameState::view_has_protection` is the one definition the body and both hoists share.
+
+perf    **`(-330)`: the two combat pickers' keyword asks take one pass — fixed -0.224 / cube
+        -0.237 / sealed -0.229 %.** 87 % of every `has_keyword` call in the program came from
+        `pick_attacks_inner` and `pick_blocks_inner`, at eight or nine asks a candidate.
+        `CardInstance::combat_keywords` answers the eleven-unit-keyword family in one pass;
+        `has_keyword` calls fall 66-71 % and `has_keyword_exact` by 86-99 %.
+
+census  **The two pickers were never in a self table as the keyword cost, and that is the finding.**
+        `has_keyword` had its own row at 0.48-0.50 % on all three pools for as long as the file has
+        existed; what nobody had asked is `cg_edges.py --callers` of it, which puts 87 % of the
+        calls in two functions. **A shared leaf's row is a caller question, not a leaf question.**
+
+gates   `--bench` **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls**, byte-identical to
+        the committed invariant, with `determinism ok` and `thread_determinism ok (3 vs 1)`.
+        The 48 `CRAB_DUMP_TRACES` cube games are identical across all three binaries
+        (`(-329)`, `(-330)`, `(-331)`) — both rows are behaviour-preserving by trace, not just by
+        counter. Suite, clippy and the `release-fast` typecheck are in the NEXT block.
+```
+
 ### 2026-09-15 (the block-gate session) — four rows off one device, and the device is "count the walks, not the calls"
 
 ⚠⚠ **SEVENTH BOX, 4 cores, rustc 1.95.0, valgrind 3.22.0 — and the A/B base does
@@ -7484,6 +7532,99 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-332)` The empty mana pool is answered at the call site — **fixed -0.096 / cube -0.053 / sealed -0.070 %**
+
+`empty_mana_pools` already opened with the gate that answers "nothing to empty"
+on the overwhelming majority of its calls — but the body around that gate
+declares three battlefield scans and two `Vec`s, so every call paid the call,
+the prologue and the frame to reach it. The gate moves into an `#[inline]`
+wrapper; the body becomes `empty_mana_pools_slow`. `(-300)`'s shape, and the
+predicate is untouched.
+
+```text
+                    (-331)            (-332)          delta
+  fixed              584,240,347       583,677,582       -0.0963 %
+  cube             1,550,668,409     1,549,854,153       -0.0525 %
+  sealed           1,648,979,146     1,647,827,842       -0.0698 %
+
+  calls                     28,434 / 41,428 / 58,748
+  empty_mana_pools self  1.82 / 2.77 / 3.91 M  ->  no symbol (inlined away)
+```
+
+⚠ **What is left of the row is `ManaPool::is_empty` — 60,660 / 88,680 / 125,774
+calls at 29.9 Ir, i.e. 0.31 / 0.17 / 0.23 % — and it is a `release-fast`
+ARTIFACT, not a row.** It is a non-generic `crabomination_base` leaf with no
+`#[inline]`: `release`'s thin LTO inlines it and this profile structurally
+cannot, so an `#[inline]` here would read as a win on every A/B in this file
+and buy the shipped binary nothing. **Before ranking any `crabomination_base`
+leaf off a `release-fast` dump, ask whether its row is the call or the body**;
+`profiling-lto` is the instrument that separates them, and it costs a cold
+build.
+
+### `(-331)` The block planner's protection gate is asked per view, not per pair — **fixed -0.162 / cube -0.341 / sealed -0.186 %**
+
+`protection_prevents_views` opens with "does the *target* carry protection at
+all", and `pick_blocks_inner` asked it **twice per (blocker, attacker) pair** —
+100,796 calls on a six-game `cube` run. Both targets are loop-invariant:
+`blocker_takes_no_dmg`'s is the blocker's view, held for the whole attacker
+loop, and `attacker_takes_no_dmg`'s is the attacker's, fixed when
+`AttackerFacts` is built. `GameState::view_has_protection` names the guard so
+the two hoists and the body itself share one definition.
+
+```text
+                    (-330)            (-331)          delta
+  fixed              585,186,673       584,240,347       -0.1617 %
+  cube             1,555,979,603     1,550,668,409       -0.3413 %
+  sealed           1,652,059,257     1,648,979,146       -0.1864 %
+
+  protection_prevents_views   13,458 ->  4,660 calls,  718 ->  356 k (fixed)
+                             100,796 -> 16,820 calls, 4.92 -> 1.48 M (cube)
+                              49,818 -> 11,834 calls, 2.03 -> 0.48 M (sealed)
+  pick_blocks_inner self      15.82 -> 15.36 M on cube; +23 k / +31 k on the
+                              other two — the per-blocker walk the hoist adds.
+```
+
+⚠ **The device is (b) read from the callee's side: a function whose whole body
+is behind one guard is a function whose guard the caller can hoist**, and the
+ratio is the caller's loop nesting, not the guard's cost. `cube` pays three
+times what `fixed` does here for the same change because its boards field more
+blockers per combat, so the pair count — not the call count — is what the
+hoist divides.
+
+### `(-330)` The two combat pickers' keyword asks take one pass — **fixed -0.224 / cube -0.237 / sealed -0.229 %**
+
+`pick_attacks_inner` and `pick_blocks_inner` asked `has_keyword` eight or nine
+times per candidate and `has_keyword` walks up to three slices per ask:
+**87 % of every `has_keyword` call in the program** (207 k of 238 k on `cube`)
+came from those two. `CardInstance::combat_keywords` answers the whole
+value-less family — the eleven unit keywords in `card::combat_kw` — in one pass
+over the same four sources with the same removal rule.
+
+```text
+                    (-329)            (-330)          delta
+  fixed              586,500,865       585,186,673       -0.2241 %
+  cube             1,559,677,461     1,555,979,603       -0.2371 %
+  sealed           1,655,852,494     1,652,059,257       -0.2291 %
+
+  has_keyword calls     91,628 ->  31,308 / 237,912 -> 75,608 / 243,542 -> 70,960
+  has_keyword self        2.94 -> 1.02 M / 7.71 -> 2.46 M / 7.96 -> 2.34 M
+  has_keyword_exact        307 -> 43 k   /  423 -> 4.5 k /  480 -> 7.3 k
+  combat_keywords (new)    664,648       / 1,510,984     / 1,788,524
+```
+
+⚠ **It replaces 3.27 asks per pass, not the eight the source reads, and the
+gap is where the next row is.** The per-*blocker* sites in `pick_attacks_inner`
+(`has_ground_deathtouch`, `max_ground_blocker_power`, the flier test, the two
+conditional filters) each asked one keyword and now each take one pass — a
+1-for-1 swap that dilutes the ratio. Collapsing those five into one walk over
+`opp_blockers` is sized at ~8,600 passes / 0.26 M on `cube` (**0.017 %**) and
+is therefore DECLINED as a perf row; take it only as a clarity change.
+
+📐 **And the mask goes where the short-circuits were, not at the top of the
+closure.** `pick_attacks_inner`'s filter returns early three times (the guarded
+arm, `lethal_swing`, the unblockable test) before any keyword is read; hoisting
+the pass above them would have paid it on candidates that never ask.
 
 ### `(-329)` The two command-zone tails go behind one emptiness test — **fixed -0.148 / cube -0.083 / sealed -0.111 %**
 
@@ -12869,6 +13010,90 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+✅✅ **STATUS AT THE `(-332)` TIP (2026-09-15, the bot-combat session, eighth
+box): THREE ROWS TAKEN, cumulative fixed -0.481 / cube -0.630 / sealed
+-0.485 %, and all three came out of the SAME question asked of a leaf instead
+of a caller: `cg_edges.py --callers` of a shared leaf row.**
+
+```text
+  (-330)  the two pickers' keyword asks take one pass    -0.224 / -0.237 / -0.229 %
+  (-331)  the protection gate is asked per view          -0.162 / -0.341 / -0.186 %
+  (-332)  the empty mana pool answered at the call site  -0.096 / -0.053 / -0.070 %
+```
+
+🔎 **THE DEVICE, AND IT IS THE CHEAPEST ONE ON THIS PAGE: rank the dump by call
+count (`cg_calls.py`), take every `crabomination_base` / shared-leaf row, and
+ask `cg_edges.py --callers` of it.** `has_keyword` had had its own 0.48-0.50 %
+row for as long as this file has existed and nobody had asked whose it was:
+**87 % of it is two functions** (`pick_attacks_inner`, `pick_blocks_inner`), at
+eight or nine asks a candidate. `protection_prevents_views` is the same shape
+one level up — a function whose *whole body* is behind one guard, asked twice
+per (blocker, attacker) pair with a loop-invariant target. **A shared leaf's
+row is a caller question, not a leaf question**, and neither of these two was
+ever in a candidates list.
+
+⚠ **AND THE OTHER HALF OF THAT DEVICE IS A TRAP: a non-generic
+`crabomination_base` leaf's CALL is a `release-fast` artifact.** `release`'s
+thin LTO inlines it; this profile cannot. `ManaPool::is_empty` (0.31 / 0.17 /
+0.23 %), `ManaCost::cmc` (0.28 / 0.24 / 0.31 %) and `CardInstance::power`,
+`counter_count`, `can_block`, `toughness` are all in that class. **Rank them by
+the BODY, not the row** — an `#[inline]` on any of them reads as a win here and
+buys the shipped binary nothing, and `(-330)`'s win is real precisely because
+it removed *asks*, not call overhead. `profiling-lto` separates the two and
+costs a cold build.
+
+📐 **SIZED THIS SESSION AND STILL OPEN, at the `(-332)` tip (totals fixed
+583,677,582 / cube 1,549,854,153 / sealed 1,647,827,842).**
+
+```text
+  A. `ManaCost::cmc`                 58,526 / 147,862 / 171,723 calls
+     1,648,604 / 3,656,280 / 5,062,452 Ir   (0.28 / 0.24 / 0.31 %)
+     ✅ **AND THE FILED BLOCKER IS WRONG — it does NOT need a sixth `CardMemo`
+     word.** The second word has bits **55-62 free** (0-52 `gather_spec`, 53-54
+     `COSTRED`, 63 `GATHER_VALID`), which is seven bits of value plus a valid
+     flag; no printed cost reaches 127. ⚠ But the three big callers do not all
+     want the *printed* cost: `can_afford_in_state_with`'s 42,988 are
+     `state.relax_cost_colors(&card.definition.cost).cmc()`, a DERIVED cost, so
+     a `CardData::printed_cmc` memo reaches `permanent_value_with` (38,972),
+     `blocker_self_block` (26,676), `event_amount_for` (13,178) and
+     `score_candidate` (9,246) — call the ~90 k, not the 148 k.
+
+  B. `CardInstance::clear_end_of_turn_effects`   36,634 / 51,750 / 55,258 calls
+     2,781,234 / 4,319,838 / 4,468,588 Ir   (0.48 / 0.28 / 0.27 %)
+     Already guarded by `end_of_turn_effects_are_clear`, which probes the
+     **26** fields `eot_wear_off!` names, at ~3 Ir a probe — so the guard IS
+     the row and the only device left is a dirty bit. That is a `CardData`
+     state change under the CoW rule (a write per EOT grant), so price the
+     write side before building it.
+
+  C. `blocker_pair_block`            10,114 / 72,918 / 37,716 calls
+     1,223,166 / 9,062,474 / 4,557,290 Ir   (0.21 / 0.58 / 0.28 %) at 121-124
+     Ir a call. `(-322)` took its nine slice walks down to two; what is left is
+     the per-pair body itself, and `pick_blocks_inner` asks it 13.4 times a
+     call. The open question is whether the *pair count* can be cut — an
+     evasion/legality prefilter keyed on the blocker — not whether the body can.
+
+  D. the remaining keyword-ask ratio in `pick_attacks_inner` — DECLINED, ~0.017 %.
+     See `(-330)`'s Log entry: the five per-blocker sites now take one
+     `combat_keywords` pass each where they took one ask each, and collapsing
+     them into a single walk over `opp_blockers` is ~8,600 passes / 0.26 M on
+     `cube`. Take it as clarity, not as a row.
+```
+
+❌ **REFUTED THIS SESSION WITH NO BUILD SPENT — `perform_action_inner`'s five
+`is_cast()` evaluations.** The body asks the same ~35-variant classification in
+`pays_a_cost`, `is_cast_or_loyalty`, the epic gate, the `locks` gate and
+`action_lock_rejection`, which reads like `(-322)`'s shape at the enum level
+and is worth ~0.31 % if each ask is ~10 Ir. **`objdump` says each ask is three
+instructions** — LLVM compiles the whole `matches!` to
+`movabs $0x7fc3feffffe47d0,%rax; bt %r14,%rax; jae`, a 64-bit discriminant
+bitmask — so four redundant asks are ~12 Ir a call, **0.09 %**, and some of
+them are CSE'd already. ⚠ **A `matches!` over many unit-ish variants is a
+bitmask test, not a walk; disassemble one arm before ranking a family of
+them.** (What the same disassembly *did* show is a **7.4 KB stack frame with a
+probe** on `perform_action_inner` — no Ir to speak of, but it is where part of
+the 32 MB stack requirement lives.)
 
 ✅✅ **STATUS AT THE `(-329)` TIP (2026-09-15, the block-gate session): EIGHT ROWS
 TAKEN, TWO REFUTED, cumulative fixed -1.463 / cube -1.556 / sealed -1.148 %.**
