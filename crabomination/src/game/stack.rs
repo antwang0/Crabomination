@@ -3921,7 +3921,7 @@ impl GameState {
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
-        for card in &mut self.battlefield {
+        for card in self.battlefield.iter_mut() {
             if untappers.contains(&card.controller) || filtered_untap.contains(&card.id) {
                 // Summoning sickness clears only for the *active* player at the
                 // turn boundary (CR 302.1 / 506.4). A Seedborn-untapped
@@ -4060,7 +4060,7 @@ impl GameState {
         // battlefield twice more for nothing. The `&mut` iteration is not a
         // second unshare (the untap loop above already took it), just the walk.
         if any_static {
-            for card in &mut self.battlefield {
+            for card in self.battlefield.iter_mut() {
                 if untappers.contains(&card.controller) {
                     continue;
                 }
@@ -4113,7 +4113,7 @@ impl GameState {
         // Every write below is gated on the field not already holding the
         // value: each is a `DerefMut` on a CoW `CardData`, i.e. a deep copy
         // of the permanent, and on a quiet board none of these flags is set.
-        for card in &mut self.battlefield {
+        for card in self.battlefield.iter_mut() {
             if card.goaded_by.contains(&p) {
                 card.goaded_by.retain(|&g| g != p);
             }
@@ -5039,7 +5039,7 @@ impl GameState {
         }
         if sculptors.is_empty() {
             if any_sector {
-                for c in &mut self.battlefield {
+                for c in self.battlefield.iter_mut() {
                     c.sector = None;
                 }
             }
@@ -5065,7 +5065,7 @@ impl GameState {
                 .iter()
                 .filter(|c| c.controller == seat && c.sector.is_some())
                 .count();
-            for c in &mut self.battlefield {
+            for c in self.battlefield.iter_mut() {
                 if c.controller == seat && c.definition.is_creature() && c.sector.is_none() {
                     c.sector = Some(Sector::ALL[next % Sector::ALL.len()]);
                     next += 1;
@@ -5906,7 +5906,7 @@ impl GameState {
         // The `&mut` walk unshares the zone, so skip it unless a permanent
         // actually holds both kinds.
         if scan.pm_both {
-            for card in &mut self.battlefield {
+            for card in self.battlefield.iter_mut() {
                 let plus = card
                     .counters
                     .get(&crate::card::CounterType::PlusOnePlusOne)
@@ -5932,7 +5932,7 @@ impl GameState {
         // new `CardDefinition.max_counters_of_kind: Option<(CounterType,
         // u32)>` field — None ⇒ no cap, the default.
         if scan.max_counters {
-            for card in &mut self.battlefield {
+            for card in self.battlefield.iter_mut() {
                 if let Some((kind, max)) = card.definition.max_counters_of_kind {
                     let current = card.counters.get(&kind).copied().unwrap_or(0);
                     if current > max {
@@ -6780,7 +6780,7 @@ impl GameState {
         if scan.soulbond {
             let on_bf: crate::fxhash::HashSet<CardId> =
                 self.battlefield.iter().map(|c| c.id).collect();
-            for c in &mut self.battlefield {
+            for c in self.battlefield.iter_mut() {
                 if let Some(p) = c.soulbond_partner
                     && !on_bf.contains(&p)
                 {

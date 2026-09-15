@@ -2822,7 +2822,7 @@ impl GameState {
         // Gated: the write is a `DerefMut` on a CoW `CardData`, so clearing
         // the `None` almost every permanent already holds deep-copied the
         // whole battlefield once per combat.
-        for c in &mut self.battlefield {
+        for c in self.battlefield.iter_mut() {
             if c.must_block.is_some() {
                 c.must_block = None;
             }

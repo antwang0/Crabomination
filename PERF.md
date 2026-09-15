@@ -12807,13 +12807,19 @@ fixed 590,813,598 / cube 1,564,952,530 / sealed 1,662,254,394).**
   1. the dispatcher's event FOLD                fixed 3,356,631  cube 10,531,808  sealed 8,325,372
      `SpecFromIterNested::from_iter` under        (0.57 %)        (0.67 %)         (0.50 %)
      `dispatch_triggers_for_events_slow`, 6,218 / 11,054 / 14,546 calls at ~950 Ir apiece.
-     Two collects can own it: `synthesized` (the PermanentDied / ControlChanged
-     batch) and `folded = events.iter().cloned().chain(synthesized).collect()`.
-     ⚠ The obvious half — `events.is_empty()` means `folded = synthesized`, a move
-     rather than N clones — is UNSIZED: the caller is `perform_action_inner`, which
-     passes its action's own event list, so `events` may never be empty here.
-     **Census which of the two before building either**; a `#[cfg(feature =
-     "trig-census")]` counter at the two sites is one build.
+     ⚠ **SPLIT WITH NO BUILD, off `GameEvent::clone`'s caller row.** Two collects
+     can own it: `synthesized` (the PermanentDied / ControlChanged batch, which
+     *constructs* its events) and `folded = events.iter().cloned()
+     .chain(synthesized).collect()`, which is the only `GameEvent::clone` caller
+     in the program — **51,788 clones / 1,301,252 Ir on `cube`**. `folded` runs
+     exactly when `synthesized` is non-empty, so the two collects run together:
+     ~5,527 calls each, and `folded` clones **~9.4 events apiece**.
+     ❌ **That kills the obvious half before anyone builds it**: `events.is_empty()
+     => folded = synthesized` (a move, no clones) would fire on ~none of them,
+     because `events` carries 9.4 entries when `folded` runs. What is left is the
+     clone itself (1.3 M) plus one alloc/free pair a call, and taking either needs
+     the consumers to read two slices or the caller to own the buffer — a
+     signature change at ~8 call sites. **Size that before starting it.**
 
   2. `dispatch_board_scan`'s command-zone tail   46,718 / 73,754 / 105,132 calls,
      8,989,672 Ir on cube for the whole function (122 Ir/call). Its
