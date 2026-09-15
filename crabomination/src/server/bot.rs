@@ -13,7 +13,14 @@ use rand::rngs::StdRng;
 
 use crate::card::{CardDefinition, CardId};
 use crate::decision::{AutoDecider, Decider};
-use crate::effect::{ActivatedAbility, Effect, ManaPayload};
+use crate::effect::Effect;
+// The printed-mana-ability shape questions, moved to `game::mana_shape` so
+// `game::actions::mana_summary_of` can pack their answers per definition
+// without `actions.rs` depending on `server::bot` (PERF `(-317)`).
+use crate::game::mana_shape::{
+    accumulate_mana_colors, is_countable_mana_ability, mana_ability_output,
+    mana_amount_is_dynamic,
+};
 use crate::game::actions::AbilityRef;
 use crate::game::{Attack, AttackTarget, GameAction, GameState, Target, TurnStep};
 use crate::mana::{ManaCost, ManaPool};
@@ -5467,50 +5474,6 @@ fn decide_optional_by_outcome(state: &GameState, seat: usize, w: &EvalWeights) -
     let yes = settle_answer(state, seat, w, DecisionAnswer::Bool(true))?;
     let no = settle_answer(state, seat, w, DecisionAnswer::Bool(false))?;
     Some(yes > no)
-}
-
-fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
-    match eff {
-        Effect::AddMana { pool, .. } => accumulate_payload_colors(pool, set),
-        // The recursion is the only `call` site and it fires on 1 % of asks;
-        // out of line the rest pay no frame. See `(-136)`.
-        Effect::Seq(v) => accumulate_mana_colors_seq(v, set),
-        _ => {}
-    }
-}
-
-#[inline(never)]
-fn accumulate_mana_colors_seq(v: &[Effect], set: &mut crate::mana::ColorSet) {
-    v.iter().for_each(|e| accumulate_mana_colors(e, set));
-}
-
-fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet) {
-    match pool {
-        ManaPayload::Colors(cs) | ManaPayload::OfColors(cs, _) => {
-            cs.iter().for_each(|c| set.insert(*c))
-        }
-        ManaPayload::OfColor(c, _) => set.insert(*c),
-        ManaPayload::AnyOneColor(_)
-        | ManaPayload::AnyColors(_)
-        | ManaPayload::AnyColorOpponentCouldProduce
-        | ManaPayload::AnyColorYouCouldProduce
-        | ManaPayload::AnyTypeTriggerSourceProduces
-        | ManaPayload::AnyTypeSacrificedLandProduces
-        | ManaPayload::DevotionOfChosenColor => *set = crate::mana::ColorSet::all(),
-        ManaPayload::Colorless(_) => {}
-        // Could produce any single color the rock was set to — treat as
-        // potentially any color for the bot's mana-base reasoning.
-        ManaPayload::ChosenColorOfSource
-        | ManaPayload::DraftNotedColorOfSource
-        | ManaPayload::ImprintedCardColor
-        | ManaPayload::AnyColorAmongLegendaries
-        | ManaPayload::AnyColorAmongExiledWithSource
-        | ManaPayload::AnyColorAmongYourPermanents => *set = crate::mana::ColorSet::all(),
-        ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner)
-                    | ManaPayload::RestrictedToChosenTypePlain(inner) => {
-            accumulate_payload_colors(inner, set)
-        }
-    }
 }
 
 /// Play `g` forward `turns` turns with both seats on the heuristic policy,
@@ -13495,92 +13458,6 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         out.by_color = [u32::MAX; 5];
     }
     out
-}
-
-/// A mana ability the bot is willing to count toward affordability: it
-/// costs a tap and nothing the bot would regret.
-///
-/// We only need to know the mana *could* be paid, so color-choice sources
-/// (dual lands, Birds of Paradise) and painland-style life costs count --
-/// the engine's auto-tap will happily use them. Sources that consume a
-/// real resource to fire (sacrifice, discard, exile, energy) are excluded:
-/// counting them would have the bot commit to lines it can only pay for by
-/// spending something it would rather keep.
-fn is_countable_mana_ability(a: &ActivatedAbility) -> bool {
-    a.tap_cost
-        && a.mana_cost.symbols.is_empty()
-        && !a.sac_cost
-        && a.sac_other_filter.is_none()
-        && a.sac_other_second.is_none()
-        && a.bounce_other_filter.is_none()
-        && a.tap_other_filter.is_none()
-        && a.tap_n_filter.is_none()
-        && a.exile_other_filter.is_none()
-        && a.discard_cost.is_none()
-        && !a.exile_self_cost
-        && a.energy_cost == 0
-        && a.collect_evidence_cost.is_none()
-        && a.condition.is_none()
-        && !a.from_graveyard
-        && !a.from_hand
-        && matches!(a.effect, Effect::AddMana { .. })
-}
-
-/// Whether a mana ability's amount is a runtime `Value` rather than a
-/// constant — [`mana_ability_output`] reports one for those, which is a
-/// *lower* bound and so cannot be spent as a per-colour budget.
-fn mana_amount_is_dynamic(eff: &Effect) -> bool {
-    use crate::effect::Value;
-    let Effect::AddMana { pool, .. } = eff else { return false };
-    let dynamic = |v: &Value| !matches!(v, Value::Const(_));
-    match pool {
-        ManaPayload::Colorless(v)
-        | ManaPayload::OfColor(_, v)
-        | ManaPayload::OfColors(_, v)
-        | ManaPayload::AnyOneColor(v)
-        | ManaPayload::AnyColors(v) => dynamic(v),
-        ManaPayload::Colors(_) => false,
-        // The rest are board-dependent palettes `mana_ability_output` answers
-        // with a flat one — never a bound.
-        _ => true,
-    }
-}
-
-/// `(most mana produced, colors it could be, produces true colorless)` for
-/// a mana ability's effect. Dynamic amounts (`{T}: add {G} equal to this
-/// creature's power`) count as one -- enough to keep the source visible
-/// without inventing a board state to measure it against.
-fn mana_ability_output(eff: &Effect) -> (u32, crate::mana::ColorSet, bool) {
-    use crate::effect::Value;
-    use crate::mana::{Color, ColorSet};
-    let mut colors = ColorSet::empty();
-    accumulate_mana_colors(eff, &mut colors);
-    let amount_of = |v: &Value| match v {
-        Value::Const(n) => (*n).max(0) as u32,
-        _ => 1,
-    };
-    let Effect::AddMana { pool, .. } = eff else { return (0, colors, false) };
-    let (amount, colorless) = match pool {
-        ManaPayload::Colors(cs) => (cs.len() as u32, false),
-        ManaPayload::Colorless(v) => (amount_of(v), true),
-        ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => (amount_of(v), false),
-        ManaPayload::AnyOneColor(v) | ManaPayload::AnyColors(v) => {
-            for c in Color::ALL {
-                colors.insert(c);
-            }
-            (amount_of(v), false)
-        }
-        // "Any color an opponent's land could produce" and friends: the
-        // exact palette depends on a board read this estimate doesn't do,
-        // so assume the source is live for any color.
-        _ => {
-            for c in Color::ALL {
-                colors.insert(c);
-            }
-            (1, true)
-        }
-    };
-    (amount, colors, colorless)
 }
 
 /// Whether `seat` can produce enough of each *colour* `cost` demands.

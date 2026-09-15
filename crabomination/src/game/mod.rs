@@ -123,6 +123,9 @@ pub mod combat;
 #[doc(hidden)]
 pub mod effects;
 pub mod layers;
+/// The printed-mana-ability shape predicates, shared by the bot's
+/// producible-mana estimate and `actions::mana_summary_of`'s pack.
+pub(crate) mod mana_shape;
 pub mod rng;
 #[doc(hidden)]
 pub mod stack;
