@@ -3005,6 +3005,27 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-15 (the legal_blockers session) — the biggest row this branch has taken, in the bot spine
+
+⚠⚠ **SIXTH BOX (this session), 4 cores, rustc 1.95.0 — the A/B base was re-taken here
+and reproduces the `(-319)` record to six significant figures** (fixed 609,526,234 /
+cube 1,608,297,043 / sealed 1,696,358,940 against the filed 609,523,889 / 1,608,296,018 /
+1,696,358,147; +0.0004 %, source-hash layout). All numbers below are on this box.
+
+```text
+perf    **`(-320)`: `bot::legal_blockers` reads the printed creature gate before the layer view —
+        fixed -2.338 / cube -1.446 / sealed -1.231 %**, the row itself -68.7 / -55.5 / -55.0 %
+        (19,546,684 -> 6,115,882 / 37,583,767 -> 16,711,545 / 35,030,888 -> 15,768,188). It asked
+        `computed_permanent` about every permanent the seat controls; `blocker_self_block` opens with
+        the CR 509.1a creature check, which reads the computed line — but with no type change in scope
+        that IS the printed line, so a printed non-creature never builds its view. Gated on the
+        `card_type_change_in_scope()` presence slot `death_sweep_scope` already uses; a `debug_assert!`
+        re-runs the skipped path per gated permanent. `compute_permanent_pass` calls fell
+        88,322 -> 67,412 / 258,722 -> 226,544 / 227,102 -> 191,598. `--bench` byte-identical, golden
+        traces unmoved. ⚠ Same device as `(-317)` one function up; the twin row `permanent_value_with`
+        wants a legendary-grant presence gate that does not exist yet (see the candidates section).
+```
+
 ### 2026-09-15 (the ungated-walk session) — the two board walks nobody had gated, found by reading the callee table rather than the self table
 
 ```text
@@ -7336,6 +7357,45 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-320)` `legal_blockers` reads the printed creature gate before the layer view — **fixed -2.338 / cube -1.446 / sealed -1.231 %**
+
+The biggest single row this branch has taken, and it was in the bot spine
+nobody had gated. `bot::legal_blockers` asked `computed_permanent` about
+**every permanent the seat controls** — lands, artifacts, enchantments — and
+`blocker_self_block`'s first act is `if !cp.card_types().contains(&Creature)
+{ return no }`. CR 509.1a reads the *computed* type line, so the view had to
+be built to answer "is this a creature" — except when nothing on the board can
+change a type, where the computed line **is** the printed one. Gate on
+`card_type_change_in_scope()` (the presence slot `death_sweep_scope` and
+`compute_battlefield_creatures` already use, one word inside the planner's
+freeze scope): a permanent printed without the Creature type then skips the
+whole `apply_layers_one` on the scope's first ask.
+
+```text
+                    (-319)            (-320)          delta
+  fixed              609,526,234       595,275,688       -2.338 %
+  cube             1,608,297,043     1,585,037,053       -1.446 %
+  sealed           1,696,358,940     1,675,477,943       -1.231 %
+```
+
+The row itself (`bot::legal_blockers` inclusive) **-68.7 / -55.5 / -55.0 %**
+(19,546,684 -> 6,115,882 / 37,583,767 -> 16,711,545 / 35,030,888 ->
+15,768,188), and `compute_permanent_pass`'s call count fell with it
+(88,322 -> 67,412 / 258,722 -> 226,544 / 227,102 -> 191,598). A
+`debug_assert!` re-runs the skipped `computed_permanent_on` +
+`blocker_can_block_anything` per gated permanent, so the suite audits the
+claim that a non-creature printing can never block. Suite 19,549/0/5
+(`CRAB_ANSWER_LOG=strict`), golden traces unmoved, `--bench` counters
+byte-identical (195,806 / 27.49 / 611.9 / 0 stalls).
+
+⚠ The transferable half: this is `(-317)`'s lesson one function up — **the
+weakest precondition the answer depends on, asked once for the board.** The
+walk's real dependency is "could this printing's computed type line differ
+from its printed one", not "build the view and read it". The same gate is
+open on `permanent_value_with` (the other big `computed_permanent_hinted`
+caller, 32.1 M / cube) but wants a *legendary-grant* presence gate too, which
+does not exist yet — see the candidate.
 
 ### `(-319)` One entry point for the `attached_to` walk family — **fixed -0.016 / cube -0.041 / sealed -0.041 %**
 
@@ -12404,6 +12464,37 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+✅✅ **STATUS AT THE `(-320)` TIP (2026-09-15): THE BIGGEST ROW THIS BRANCH HAS
+TAKEN — `bot::legal_blockers` was asking the layer view about every permanent
+the seat controls, and CR 509.1a's creature gate needs the PRINTED type line
+when nothing can change a type. fixed -2.338 / cube -1.446 / sealed -1.231 %,
+the row itself -68.7 / -55.5 / -55.0 %.** Same device as `(-317)`, one function
+up: gate on `card_type_change_in_scope()` and a printed non-creature never
+builds its `ComputedPermanent`. It was found the way `(-315)`/`(-316)` were —
+reading the *callee* tree of a bot-spine row (`pick_blocks_inner` ->
+`legal_blockers` -> `computed_permanent_hinted`, 29.1 M on `cube`) and asking
+which of its per-permanent calls the printed shape already answers.
+
+🔎 **THE SAME GATE IS OPEN ON `permanent_value_with` AND IT IS THE NEXT ROW,
+BUT IT NEEDS A PRIMITIVE THAT DOES NOT EXIST.** `permanent_value_with`
+(`eval_material_inner`'s per-permanent value) is the largest remaining
+`computed_permanent_hinted` caller — **32.1 M / cube, 38,972 calls** — and it
+reads the computed view for exactly three things: `card_types().contains(Creature)`,
+`.contains(Planeswalker)`, and `supertypes().contains(Legendary)`. For a
+printed non-creature / non-PW / non-legendary permanent (an artifact or
+enchantment) with no type change in scope, the first two are printed-derivable
+and the whole view is unused **except** the legendary term (`+2*w.unit`).
+Skipping it wrongly changes the bot's eval and so the traces — behaviour, not
+perf. So it needs a **legendary-grant presence gate** that
+`card_type_change_in_scope` is not: AddSupertype comes from
+`StaticEffect::AllNonlandPermanentsAreLegendary` (Leyline of Singularity) and
+`ring_temptations >= 1`. The ring half is a two-player scalar read; the static
+half has no `mod_families` bit (AddSupertype isn't in the layer fold). Give it
+one — a `SUPERTYPE` family bit and a `supertype_change_in_scope()` slot — then
+the gate is `!type_change && !supertype_grant && printed-not-creature-not-pw`,
+worth an estimated 0.3-0.8 % of `cube`. One presence-slot addition, then the
+same `(-320)` shape.
 
 📐 **ORIENTATION — WHERE THE BENCH'S INSTRUCTIONS ACTUALLY ARE, read once at
 the `(-313)` tip so nobody re-derives it.** The inclusive spine of a `cube`

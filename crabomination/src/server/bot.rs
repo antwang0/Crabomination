@@ -12463,9 +12463,27 @@ fn legal_blockers(
     // fat-capture shape PERF's `call_mut` census says to fix. The loop is the
     // same walk with no forwards; `Vec::from_iter` off a `filter_map` starts
     // empty too, so the allocation behaviour is unchanged.
+    // CR 509.1a is read off the *computed* type line, which is why this asked
+    // the layer view about every permanent the seat controls — lands and
+    // enchantments included, at a whole `apply_layers_one` apiece on the
+    // scope's first ask. With no type-changing effect in scope the computed
+    // line IS the printed one, so a permanent printed without the Creature
+    // type cannot be a blocker and the view is never built for it. The gate is
+    // `death_sweep_scope`'s and `compute_battlefield_creatures`', asked once
+    // for the board through the freeze scope's presence slot.
+    let type_change = state.card_type_change_in_scope();
     let mut out = Vec::new();
     for c in &state.battlefield {
         if c.controller != seat {
+            continue;
+        }
+        if !type_change && !c.definition.is_creature() {
+            debug_assert!(
+                !state
+                    .computed_permanent_on(c)
+                    .is_some_and(|cp| state.blocker_can_block_anything(c, &cp)),
+                "the printed-creature gate skipped a permanent that can block",
+            );
             continue;
         }
         let Some(cp) = state.computed_permanent_on(c) else { continue };
