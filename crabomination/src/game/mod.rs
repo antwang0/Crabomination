@@ -28868,9 +28868,16 @@ fn blocker_matches_block_filter(
     use SelectionRequirement as R;
     match req {
         R::Any | R::Permanent | R::Creature => true,
-        R::Artifact => blocker.definition.is_artifact(),
-        R::Enchantment => blocker.definition.is_enchantment(),
-        R::Land => blocker.definition.is_land(),
+        // ⚠ Every characteristic the computed view carries is read off it,
+        // not off `blocker.definition` — the doc above has said "computed"
+        // since this function was written, but the five type leaves read the
+        // print until 2026-09-16. A creature animated into an artifact
+        // (Liquimetal Coating) or retyped into a Wall (Arcane Adaptation)
+        // could not block "except by artifact creatures" / "except by Walls".
+        // `is_token` and `mutate` are instance/printed facts with no layer.
+        R::Artifact => computed.card_types().contains(&CardType::Artifact),
+        R::Enchantment => computed.card_types().contains(&CardType::Enchantment),
+        R::Land => computed.card_types().contains(&CardType::Land),
         R::IsToken => blocker.is_token,
         R::NotToken => !blocker.is_token,
         R::HasColor(c) => computed.colors.contains(c),
@@ -28879,15 +28886,15 @@ fn blocker_matches_block_filter(
         R::HasToxic => computed.keywords().iter().any(|k| matches!(k, Keyword::Toxic(_))),
         R::HasModular => computed.keywords().iter().any(|k| matches!(k, Keyword::Modular(_))),
         R::HasMutate => blocker.definition.mutate.is_some(),
-        R::HasCreatureType(t) => blocker.definition.subtypes.creature_types.contains(t)
+        R::HasCreatureType(t) => computed.subtypes().creature_types.contains(t)
             || computed.keywords().has_kw(&Keyword::Changeling),
-        R::HasArtifactSubtype(a) => blocker.definition.subtypes.artifact_subtypes.contains(a),
+        R::HasArtifactSubtype(a) => computed.subtypes().artifact_subtypes.contains(a),
         R::PowerAtMost(n) => computed.power <= *n,
         R::PowerAtLeast(n) => computed.power >= *n,
         R::ToughnessAtMost(n) => computed.toughness <= *n,
         R::ToughnessAtLeast(n) => computed.toughness >= *n,
         R::ToughnessGreaterThanPower => computed.toughness > computed.power,
-        R::HasCardType(ct) => blocker.definition.card_types.contains(ct),
+        R::HasCardType(ct) => computed.card_types().contains(ct),
         R::And(a, b) => {
             blocker_matches_block_filter(blocker, computed, a)
                 && blocker_matches_block_filter(blocker, computed, b)

@@ -82,6 +82,42 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-16 (thirtieth find) — the block-restriction walker's five TYPE leaves read the print while its own doc comment said "computed"
+
+The fifth requirement walker: `mod.rs`'s `blocker_matches_block_filter`,
+which answers CR 509.1b's "can't be blocked except by [filter]" /
+"can't be blocked by [filter]". Its doc has said *"against a blocker's
+**computed** characteristics"* since it was written, and the colour, keyword
+and power/toughness leaves do read `computed`. The five type leaves did not:
+
+```rust
+R::Artifact            => blocker.definition.is_artifact(),
+R::Enchantment         => blocker.definition.is_enchantment(),
+R::Land                => blocker.definition.is_land(),
+R::HasCardType(ct)     => blocker.definition.card_types.contains(ct),
+R::HasCreatureType(t)  => blocker.definition.subtypes.creature_types.contains(t) || ...,
+R::HasArtifactSubtype(a) => blocker.definition.subtypes.artifact_subtypes.contains(a),
+```
+
+CR 613 layer 4 is exactly what a block restriction has to see. A creature
+retyped into a Wall (Arcane Adaptation, Graaz's "are Juggernauts in addition
+to their other creature types") could not block an attacker only Walls may
+block; a creature turned into an artifact (Liquimetal Coating, Ygra's Food
+static) could not block an "except by artifact creatures" attacker; and the
+restriction's *negative* form (`CantBeBlockedBy`) let the same creature
+through when it should have been stopped. All six now read `computed`.
+`is_token` and `mutate` stay where they are — neither has a layer.
+
+Cost, callgrind three-pool A/B together with the twenty-ninth find: fixed
+-0.002 / cube +0.001 / sealed -0.000 %. Test
+`cr_509_1b_a_block_restriction_reads_the_blockers_computed_types`, verified
+to FAIL on the pre-fix line.
+
+📐 **Running total for the walker-diff method: five walkers, four finds, four
+runs' worth of `audit_*` scripts that reported nothing.** The method is the
+transferable half — extract each `R::` arm's body per walker, normalise
+comments and whitespace away, and read the arms that differ.
+
 ## FIXED 2026-09-16 (twenty-ninth find) — `WithAnyCounter` and `HasNoCounters` are not complements, and the two disagreeing lines are TEN APART IN THE SAME WALKER
 
 Found by doing what the twenty-eighth find's fix suggested: diffing the

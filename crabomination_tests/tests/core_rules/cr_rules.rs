@@ -10967,3 +10967,59 @@ fn cr_122_1b_a_keyword_counter_answers_with_any_counter() {
     assert!(g.evaluate_requirement_on_card(&R::WithAnyCounter, &c, 0));
     assert!(!g.evaluate_requirement_on_card(&R::HasNoCounters, &c, 0));
 }
+
+/// CR 509.1b / 613 — "can't be blocked except by [filter]" reads the
+/// blocker's **computed** characteristics, and the five type leaves of
+/// `blocker_matches_block_filter` read the print until this fix. Its own doc
+/// comment had said "computed" since it was written, and the colour, keyword
+/// and P/T leaves beside them did; the type ones did not. So a creature
+/// retyped by a layer-4 static (Arcane Adaptation, Graaz) could not block an
+/// attacker that only Walls may block, and a creature turned into an artifact
+/// could not block an "except by artifact creatures" attacker.
+#[test]
+fn cr_509_1b_a_block_restriction_reads_the_blockers_computed_types() {
+    use crabomination::card::{
+        CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
+        StaticAbility,
+    };
+    use crabomination::effect::{Selector, StaticEffect};
+    let mut g = two_player_game();
+    let sneak = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Wall-Shy Raider",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::CantBeBlockedExceptBy(Box::new(R::HasCreatureType(
+            CreatureType::Wall,
+        )))],
+        ..Default::default()
+    });
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(
+        !g.blocker_can_block_attacker(bear, sneak),
+        "a printed Bear is not a Wall",
+    );
+
+    // Layer 4 — "creatures your opponents control are Walls in addition to
+    // their other types". The bear is now a Wall and may block.
+    g.add_card_to_battlefield(1, CardDefinition {
+        name: "Masonry Edict",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control are Walls in addition to their other types.",
+            effect: StaticEffect::AddCreatureTypeToMatching {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                creature_type: CreatureType::Wall,
+            },
+        }],
+        ..Default::default()
+    });
+    assert!(
+        g.computed_permanent(bear).unwrap().subtypes().creature_types.contains(&CreatureType::Wall),
+        "the static did not retype the bear",
+    );
+    assert!(
+        g.blocker_can_block_attacker(bear, sneak),
+        "a computed Wall was refused the block",
+    );
+}
