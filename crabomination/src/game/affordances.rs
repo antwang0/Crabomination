@@ -2058,17 +2058,7 @@ impl GameState {
         self.players[seat]
             .hand
             .iter()
-            .filter(|c| {
-                c.definition.keywords.iter().any(|k| {
-                    matches!(
-                        k,
-                        crate::card::Keyword::Morph(_)
-                            | crate::card::Keyword::MorphCost(_)
-                            | crate::card::Keyword::Megamorph(_)
-                            | crate::card::Keyword::Disguise(_)
-                    )
-                })
-            })
+            .filter(|c| c.definition.has_morph_ability())
             .map(|c| c.id)
             .filter(|&id| Self::would_accept_on(template, GameAction::CastFaceDown { card_id: id }))
             .collect()

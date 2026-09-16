@@ -6978,7 +6978,7 @@ fn cast_candidates<'a>(
             }
             castable.push((action, false));
         }
-        if c.definition.keywords.iter().any(|k| matches!(k, Keyword::Disturb(_))) {
+        if c.definition.has_disturb() {
             // The back face goes on the stack; an Aura back needs an enchant
             // target (creature backs need none).
             let back = c.definition.back_face.as_deref();
@@ -7480,19 +7480,11 @@ fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
 /// One walk of the seat's hand, battlefield and graveyard for every fallback
 /// generator's entry predicate — see [`sink`].
 fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
-    use crate::card::{ArtifactSubtype, Keyword};
+    use crate::card::ArtifactSubtype;
     let mut m = 0;
     for c in state.players[seat].hand.iter() {
-        for kw in &c.definition.keywords {
-            if matches!(
-                kw,
-                Keyword::Morph(_)
-                    | Keyword::MorphCost(_)
-                    | Keyword::Megamorph(_)
-                    | Keyword::Disguise(_)
-            ) {
-                m |= sink::MORPH;
-            }
+        if c.definition.has_morph_ability() {
+            m |= sink::MORPH;
         }
         if c.definition.discard_activated.is_some() {
             m |= sink::DISCARD_ACT;
@@ -7569,21 +7561,10 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
 
 /// Cast a hand card face down for {3} (CR 702.36 Morph / 702.166 Disguise).
 fn pick_face_down_cast(state: &GameState, seat: usize, probe: &GameState) -> Option<GameAction> {
-    use crate::card::Keyword;
     state.players[seat]
         .hand
         .iter()
-        .filter(|c| {
-            c.definition.keywords.iter().any(|k| {
-                matches!(
-                    k,
-                    Keyword::Morph(_)
-                        | Keyword::MorphCost(_)
-                        | Keyword::Megamorph(_)
-                        | Keyword::Disguise(_)
-                )
-            })
-        })
+        .filter(|c| c.definition.has_morph_ability())
         .map(|c| GameAction::CastFaceDown { card_id: c.id })
         .find(|a| GameState::would_accept_on(probe, a.clone()))
 }

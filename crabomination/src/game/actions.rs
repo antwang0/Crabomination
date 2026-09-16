@@ -6087,17 +6087,7 @@ impl GameState {
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .map(|c| {
-                c.definition.keywords.iter().any(|k| {
-                    matches!(
-                        k,
-                        Keyword::Morph(_)
-                            | Keyword::MorphCost(_)
-                            | Keyword::Megamorph(_)
-                            | Keyword::Disguise(_)
-                    )
-                })
-            })
+            .map(|c| c.definition.has_morph_ability())
             .ok_or(GameError::CardNotInHand(card_id))?;
         if !has_morph {
             return Err(GameError::CardNotInHand(card_id));

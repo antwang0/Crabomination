@@ -4026,33 +4026,11 @@ impl GameState {
                     R::HasToxic => card.has_toxic(),
                     R::HasModular => card.has_modular(),
                     R::HasMutate => card.definition.mutate.is_some(),
-                    R::HasMorphAbility => card.definition.keywords.iter().any(|k| matches!(
-                        k,
-                        crate::card::Keyword::Morph(_)
-                            | crate::card::Keyword::MorphCost(_)
-                            | crate::card::Keyword::Megamorph(_)
-                            | crate::card::Keyword::Disguise(_)
-                    )),
+                    R::HasMorphAbility => card.definition.has_morph_ability(),
                     R::HasNoAbilities => card.definition.has_no_abilities(),
-                    R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
-                        k,
-                        crate::card::Keyword::Cycling(_)
-                            | crate::card::Keyword::CyclingLife(_)
-                            | crate::card::Keyword::Landcycling(_, _)
-                            | crate::card::Keyword::Typecycling(_)
-                    )),
-                    R::HasDisturb => card
-                        .definition
-                        .keywords
-                        .iter()
-                        .any(|k| matches!(k, crate::card::Keyword::Disturb(_))),
-                    R::HasFlashback => card.definition.keywords.iter().any(|k| {
-                        matches!(
-                            k,
-                            crate::card::Keyword::Flashback(_)
-                                | crate::card::Keyword::FlashbackTap { .. }
-                        )
-                    }),
+                    R::HasCyclingAbility => card.definition.has_cycling_ability(),
+                    R::HasDisturb => card.definition.has_disturb(),
+                    R::HasFlashback => card.definition.has_flashback_ability(),
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
                     // CR 613 — the P/T thresholds read the *computed* view, so
@@ -4915,33 +4893,11 @@ impl GameState {
             R::HasToxic => card.has_toxic(),
             R::HasModular => card.has_modular(),
             R::HasMutate => card.definition.mutate.is_some(),
-            R::HasMorphAbility => card.definition.keywords.iter().any(|k| matches!(
-                k,
-                crate::card::Keyword::Morph(_)
-                    | crate::card::Keyword::MorphCost(_)
-                    | crate::card::Keyword::Megamorph(_)
-                    | crate::card::Keyword::Disguise(_)
-            )),
+            R::HasMorphAbility => card.definition.has_morph_ability(),
             R::HasNoAbilities => card.definition.has_no_abilities(),
-            R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
-                k,
-                crate::card::Keyword::Cycling(_)
-                    | crate::card::Keyword::CyclingLife(_)
-                    | crate::card::Keyword::Landcycling(_, _)
-                    | crate::card::Keyword::Typecycling(_)
-            )),
-            R::HasDisturb => card
-                .definition
-                .keywords
-                .iter()
-                .any(|k| matches!(k, crate::card::Keyword::Disturb(_))),
-            R::HasFlashback => card.definition.keywords.iter().any(|k| {
-                matches!(
-                    k,
-                    crate::card::Keyword::Flashback(_)
-                        | crate::card::Keyword::FlashbackTap { .. }
-                )
-            }),
+            R::HasCyclingAbility => card.definition.has_cycling_ability(),
+            R::HasDisturb => card.definition.has_disturb(),
+            R::HasFlashback => card.definition.has_flashback_ability(),
             // No source context in the on-card evaluator; the exile-linked
             // share check only resolves through `evaluate_requirement_static`.
             R::SharesCardTypeWithExiledBySource => false,

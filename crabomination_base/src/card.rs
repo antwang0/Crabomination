@@ -6202,6 +6202,53 @@ impl CardDefinition {
         from_effect(&self.effect)
     }
 
+    /// CR 702.36 / 702.109 / 702.166 — does this card print a *cast face
+    /// down* ability? Morph, Morph-with-cost, Megamorph and Disguise are one
+    /// question to every caller that asks it, and there were **six**
+    /// hand-written copies of this four-variant `matches!` (two requirement
+    /// walkers, `cast_face_down`'s legality check, the affordance
+    /// enumerator and two bot sinks) that all had to agree for a seventh
+    /// keyword to be safe to add. One place now.
+    pub fn has_morph_ability(&self) -> bool {
+        self.keywords.iter().any(|k| {
+            matches!(
+                k,
+                Keyword::Morph(_)
+                    | Keyword::MorphCost(_)
+                    | Keyword::Megamorph(_)
+                    | Keyword::Disguise(_)
+            )
+        })
+    }
+
+    /// CR 702.29 — does this card print a cycling ability of any kind
+    /// (plain, life-paying, landcycling or typecycling)?
+    pub fn has_cycling_ability(&self) -> bool {
+        self.keywords.iter().any(|k| {
+            matches!(
+                k,
+                Keyword::Cycling(_)
+                    | Keyword::CyclingLife(_)
+                    | Keyword::Landcycling(_, _)
+                    | Keyword::Typecycling(_)
+            )
+        })
+    }
+
+    /// CR 702.146 — does this card print Disturb?
+    pub fn has_disturb(&self) -> bool {
+        self.keywords.iter().any(|k| matches!(k, Keyword::Disturb(_)))
+    }
+
+    /// CR 702.33 — does this card print Flashback in either form? The
+    /// presence question; [`Self::has_flashback`] and
+    /// [`Self::has_flashback_tap`] are the two cost questions.
+    pub fn has_flashback_ability(&self) -> bool {
+        self.keywords
+            .iter()
+            .any(|k| matches!(k, Keyword::Flashback(_) | Keyword::FlashbackTap { .. }))
+    }
+
     pub fn has_flashback(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Flashback(cost) = kw { Some(cost) } else { None }
