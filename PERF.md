@@ -3005,6 +3005,34 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-16 (the block-planner session) — the walks a keyword ask costs that are not the walk
+
+⚠⚠ **NINTH BOX, 4 cores, 15 GB, rustc 1.95.0, valgrind 3.22.0 — and the A/B
+base does not reproduce the eighth box's absolutes either.** Base here (the
+`(-334)` tip, freshly built): fixed **584,628,163** / cube **1,542,256,537** /
+sealed **1,647,823,868**, against the filed `(-334)` closing 583,531,157 /
+1,540,494,884 / 1,645,443,450 — **+0.188 / +0.114 / +0.145 %**. That is the
+seventh box's sign and magnitude, and the opposite of the eighth's. **Three
+boxes in a row now: absolutes do not cross boxes, deltas and counters do.**
+The confirmation is the counter, not the total — `pick_blocks_inner` self reads
+**15,349,700** here, the filed `(-334)` figure to the digit.
+
+Timings this box: cold `profiling-fast` (deps + catalog + engine) **11m02s**, a
+`crabomination_base` change **10m57s** (i.e. the same — a base change rebuilds
+the catalog, and the catalog is the whole cost), an engine-only change ~3 min,
+a three-pool callgrind **25 s** (all three in parallel), workspace `cargo
+check` 2m29s cold / 27 s warm.
+
+```text
+perf    **`(-335)`: the block planner's computed-keyword asks take one pass — fixed -0.099 /
+        cube -0.108 / sealed -0.099 %.** Five walks of `cp.keywords()` per attacker and five
+        per blocker, each paying an `OverlayList::get` to reach the slice, become one pass.
+        `pick_blocks_inner` self -6.96 / -3.74 / -6.19 %. ⚠ The self row is a third of the win:
+        `&mut F::call_mut` is 46 % of it and `Keyword::eq` another 6 %. See the Log entry —
+        **an `iter().any(fn_item)` forwards through `call_mut` per element**, so a redundant
+        walk costs more than the walk.
+```
+
 ### 2026-09-15 (the bot-combat session, third of the day) — five rows off the *bot's* side of combat, which no candidate had ever ranked
 
 ⚠⚠ **EIGHTH BOX, 4 cores, rustc 1.95.0, valgrind 3.22.0 — and the A/B base does
@@ -7569,6 +7597,61 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-335)` The block planner's computed-keyword asks take one pass — **fixed -0.099 / cube -0.108 / sealed -0.099 %**
+
+`(-330)`'s device on the *view* rather than the instance.
+`ComputedPermanent::keywords()` is an `OverlayList::get` per ask, and
+`pick_blocks_inner` asked it five times per attacker (protection, the
+attacker bar family, `Flying`, `MustBeBlocked`, the minimum block count) and
+five times per blocker (protection, the blocker bar family, `Flying`,
+`Reach`, `Deathtouch`). `crate::game::view_block_facts` answers all ten in
+one pass over the slice, reusing the four existing predicates plus
+`combat_kw::bit_of`; `min_blockers_required_kws` folds a shared
+`min_blockers_of_kw` so the whole-slice walk and the one-pass fold cannot
+drift.
+
+```text
+                    base              (-335)          delta
+  fixed              584,628,163       584,047,449       -0.0993 %
+  cube             1,542,256,537     1,540,593,903       -0.1078 %
+  sealed           1,647,823,868     1,646,191,032       -0.0991 %
+
+  pick_blocks_inner self   2,734,232 -> 2,544,044   (-6.96 %)
+                          15,349,700 -> 14,775,618  (-3.74 %)
+                           8,942,732 ->  8,388,818  (-6.19 %)
+```
+
+📐 **AND THE SELF ROW IS ONLY A THIRD OF IT — the rest is what an
+`iter().any(fn_item)` costs that nothing in this file had priced.** The
+`cube` self table accounts for the whole 1,662,634:
+
+```text
+  &mut F::call_mut          19,182,580 -> 18,414,310    -768,270   (46 %)
+  pick_blocks_inner self    15,349,700 -> 14,775,618    -574,082   (35 %)
+  Map::fold                 19,350,247 -> 19,141,627    -208,620   (13 %)
+  Keyword::eq                1,714,677 ->  1,606,961    -107,716    (6 %)
+                                                      ----------
+                                                      -1,658,688   vs -1,662,634 total
+```
+
+**Two costs hide behind a keyword walk and neither is the walk.** An
+`iter().any(pred)` over a *function item* still forwards each element through
+`&mut F::call_mut` — the same shape `(-329)` found in the command-zone
+`Filter` chains — so N walks are N forwards per keyword, and that is the
+single biggest line here at 46 %. And `has_kw` compares discriminants and then
+runs `Keyword::eq` on a tag match, which a `match`-based fold never pays at
+all. **Rank a redundant-walk row by `call_mut` + `Keyword::eq` + self, not by
+self**; read as a self-table row alone this one would have been sized at a
+third of its value and very likely declined.
+
+⚠ **And the build cost is the other lesson: `combat_kw::bit_of` had to go
+from `pub(crate)` to `pub`, which is a `crabomination_base` change, which is a
+full base -> catalog -> engine rebuild — 10m57s here against ~3 min for an
+engine-only one.** The alternative was a sixth hand-written keyword walker in
+the engine crate, i.e. exactly the drift class `(-333)`'s `debug_assert!`
+ratchet exists to make survivable. Pay the rebuild; but **batch base changes**
+— this one bought one row and cost what three engine-only rows would have.
 
 ### `(-334)` Flying leaves the attacker bar family for a pair test — **fixed -0.019 / cube -0.211 / sealed -0.008 %**
 
