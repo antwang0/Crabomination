@@ -11176,3 +11176,52 @@ fn a_two_creature_type_static_filter_is_a_conjunction() {
         "an Elf that is no Warrior was pumped: the conjunction collapsed to Elf",
     );
 }
+
+/// CR 613 — a P/T *comparison* filter reads the computed view on both sides,
+/// exactly as the P/T *threshold* filters beside it always have. The seven
+/// comparison arms of `evaluate_requirement_static_hinted`
+/// (`PowerGreaterThanSource`, `PowerLessThanSource`, `PowerAtMostSourcePower`,
+/// `GreaterPowerOrToughnessThanSource`, `ToughnessGreaterThanPower`,
+/// `PowerPlusToughnessAtMost`, `PowerGreaterThanBasePower`) read
+/// `CardInstance::power()` — base + counters + pump, blind to every layer-7
+/// static — so "creature with power greater than [source]'s power" compared
+/// two un-anthemed numbers. Shipped cards use these filters (Warmonger's
+/// Chariot, Ghor-Clan Savage, Nettletooth Djinn, Rakdos Ragemutt).
+#[test]
+fn cr_613_a_power_comparison_filter_reads_the_anthem() {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R, StaticAbility};
+    use crabomination::effect::{Selector, StaticEffect};
+    let mut g = two_player_game();
+    let source = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ask = |g: &crabomination::game::GameState, req: &R| {
+        g.evaluate_requirement_static(req, &Target::Permanent(other), 0, Some(source))
+    };
+    // 2/2 against 2/2: none of the three strict comparisons hold.
+    assert!(!ask(&g, &R::PowerGreaterThanSource));
+    assert!(!ask(&g, &R::PowerLessThanSource));
+    assert!(!ask(&g, &R::GreaterPowerOrToughnessThanSource));
+    assert!(ask(&g, &R::PowerAtMostSourcePower));
+
+    // Seat 1's own anthem: the candidate is a 3/3, the source still a 2/2.
+    g.add_card_to_battlefield(1, CardDefinition {
+        name: "Seat One Standard",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    });
+    assert_eq!(g.computed_permanent(other).expect("computed").power, 3, "anthem did not apply");
+    assert!(ask(&g, &R::PowerGreaterThanSource), "3 is not greater than 2 without the anthem");
+    assert!(ask(&g, &R::GreaterPowerOrToughnessThanSource));
+    assert!(!ask(&g, &R::PowerLessThanSource));
+    assert!(!ask(&g, &R::PowerAtMostSourcePower), "3 <= 2 read as true");
+    // The threshold arms agreed all along — they are the model this follows.
+    assert!(g.evaluate_requirement_static(&R::PowerAtLeast(3), &Target::Permanent(other), 0, None));
+}

@@ -82,6 +82,54 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-16 (thirty-third find) — the P/T THRESHOLD filters read the computed view and the P/T COMPARISON filters beside them did not, under a comment that says they all do
+
+`evaluate_requirement_static_hinted`'s P/T block opens with
+
+```rust
+// CR 613 — the P/T thresholds read the *computed* view, so
+// an anthem or a shrink (The Hippodrome's -5/-0) counts.
+R::PowerAtMost(n)  => ... self.effective_power(card) <= *n,
+R::PowerAtLeast(n) => ... self.effective_power(card) >= *n,
+```
+
+and then **seven** arms in the same block read `CardInstance::power()` /
+`toughness()` — base plus counters plus pump bonuses, blind to every layer-7
+static:
+
+```text
+  PowerAtMostSourcePower            card.power() <= src.power()
+  PowerLessThanSource               card.power() <  src.power()
+  PowerGreaterThanSource            card.power() >  src.power()
+  GreaterPowerOrToughnessThanSource card.power() >  src.power() || toughness...
+  ToughnessGreaterThanPower         card.toughness() > card.power()
+  PowerPlusToughnessAtMost(n)       card.power() + card.toughness() <= n
+  PowerGreaterThanBasePower         card.power() > card.definition.power
+```
+
+So "target creature with power greater than [this creature]'s power" compared
+two **un-anthemed** numbers on both sides: a 2/2 under a Glorious Anthem was
+not a legal target for a 2/2's fight, and a 5/5 under an opposing shrink still
+was. Shipped cards reach every one of these filters (Warmonger's Chariot,
+Ghor-Clan Savage, Nettletooth Djinn, Rakdos Ragemutt, the Strixhaven
+lesser-power riders).
+
+All seven read `effective_power` / `effective_toughness` now — which is
+reentrancy-safe by construction: `layer_reads_are_printed()` makes it fall
+back to the printed value inside a gather, and the threshold arms beside them
+have exercised that path since they were written. `PowerGreaterThanBasePower`
+keeps `definition.power` on its right-hand side, because *base* power is what
+that wording names. The **off-battlefield** walker keeps `card.power()`: there
+is no layer view off the battlefield. The layer walker's
+`ToughnessGreaterThanPower` keeps the printed+counters approximation its own
+comment documents — it runs inside the gather.
+
+Cost, callgrind three-pool A/B: **fixed +0.001 / cube +0.001 / sealed
+-0.000 %** — the arms are rare filters and the memo read is the one
+`PowerAtMost` already paid. Test
+`cr_613_a_power_comparison_filter_reads_the_anthem`, verified to FAIL on the
+pre-fix arms.
+
 ## FIXED 2026-09-16 (thirty-second find) — a conjunction of two creature types flattens into ONE slot, and the second leaf silently widens the static
 
 Found while reading the routing the thirty-first find's test exposed.

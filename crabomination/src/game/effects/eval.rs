@@ -4033,16 +4033,22 @@ impl GameState {
                     R::HasFlashback => card.definition.has_flashback_ability(),
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
-                    // CR 613 — the P/T thresholds read the *computed* view, so
-                    // an anthem or a shrink (The Hippodrome's -5/-0) counts.
+                    // CR 613 — **every** P/T leaf below reads the *computed*
+                    // view, so an anthem or a shrink (The Hippodrome's -5/-0)
+                    // counts. The threshold arms always did; the seven
+                    // comparison arms (against the source, against each other,
+                    // against the base line) read `CardInstance::power()` —
+                    // base + counters + pump, blind to every layer-7 static —
+                    // until 2026-09-16, so "power greater than [source]'s
+                    // power" compared two un-anthemed numbers.
                     R::PowerAtMost(n) => {
                         card.definition.is_creature() && self.effective_power(card) <= *n
                     }
                     R::PowerAtMostSourcePower => {
                         card.definition.is_creature()
-                            && source
-                                .and_then(|s| self.battlefield_find(s))
-                                .is_some_and(|src| card.power() <= src.power())
+                            && source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
+                                self.effective_power(card) <= self.effective_power(src)
+                            })
                     }
                     R::ToughnessAtMost(n) => {
                         card.definition.is_creature() && self.effective_toughness(card) <= *n
@@ -4054,37 +4060,42 @@ impl GameState {
                         card.definition.is_creature() && self.effective_toughness(card) >= *n
                     }
                     R::ToughnessGreaterThanPower => {
-                        card.definition.is_creature() && card.toughness() > card.power()
+                        card.definition.is_creature()
+                            && self.effective_toughness(card) > self.effective_power(card)
                     }
+                    // "…has power greater than its *base* power": the left
+                    // half is the CR 613 answer, the right half is the
+                    // printed line the wording names.
                     R::PowerGreaterThanBasePower => {
-                        card.definition.is_creature() && card.power() > card.definition.power
+                        card.definition.is_creature()
+                            && self.effective_power(card) > card.definition.power
                     }
                     R::PowerPlusToughnessAtMost(n) => {
                         card.definition.is_creature()
-                    && card.power().saturating_add(card.toughness()) <= *n
+                            && self
+                                .effective_power(card)
+                                .saturating_add(self.effective_toughness(card))
+                                <= *n
                     }
                     R::PowerLessThanSource => {
-                        source
-                            .and_then(|s| self.battlefield_find(s))
-                            .is_some_and(|src| {
-                                card.definition.is_creature() && card.power() < src.power()
-                            })
+                        source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
+                            card.definition.is_creature()
+                                && self.effective_power(card) < self.effective_power(src)
+                        })
                     }
                     R::GreaterPowerOrToughnessThanSource => {
-                        source
-                            .and_then(|s| self.battlefield_find(s))
-                            .is_some_and(|src| {
-                                card.definition.is_creature()
-                                    && (card.power() > src.power()
-                                        || card.toughness() > src.toughness())
-                            })
+                        source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
+                            card.definition.is_creature()
+                                && (self.effective_power(card) > self.effective_power(src)
+                                    || self.effective_toughness(card)
+                                        > self.effective_toughness(src))
+                        })
                     }
                     R::PowerGreaterThanSource => {
-                        source
-                            .and_then(|s| self.battlefield_find(s))
-                            .is_some_and(|src| {
-                                card.definition.is_creature() && card.power() > src.power()
-                            })
+                        source.and_then(|s| self.battlefield_find(s)).is_some_and(|src| {
+                            card.definition.is_creature()
+                                && self.effective_power(card) > self.effective_power(src)
+                        })
                     }
                     R::WithCounter(k) => card.counter_count(*k) > 0,
                     R::WithCounterAtLeast(k, n) => card.counter_count(*k) >= *n,
