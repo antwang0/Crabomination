@@ -1523,7 +1523,12 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         R::WithAnyCounter | R::WithCounter(_) => true,
         R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
-        | R::HasKeyword(_) | R::HasToxic | R::HasModular | R::HasMutate => true,
+        | R::HasMutate => true,
+        // Keyword presence is live `CardInstance` state too — the grant, the
+        // keyword counter and the two removal lists are all instance fields
+        // that effect resolution writes, so `requirement_matches_card` reads
+        // them off `has_keyword` on every layer recompute. See its doc.
+        R::HasKeyword(_) | R::HasToxic | R::HasModular => true,
         // OtherThanSource is matched in `affects()` (which knows the source id),
         // so it's safe to route a filter containing it through CardMatch.
         R::OtherThanSource => true,
@@ -1555,6 +1560,19 @@ fn requirement_mentions_other_than_source(req: &SelectionRequirement) -> bool {
 /// Evaluate a card-only requirement (see [`requirement_is_card_only`]) against
 /// a single permanent. `source_controller` resolves `ControlledByYou` /
 /// `ControlledByOpponent`. Unsupported leaves resolve to `false`.
+///
+/// ⚠ **The keyword leaves read the instance's four sources, not
+/// `definition.keywords`** — `CardInstance::has_keyword` and its
+/// value-agnostic sibling `has_keyword_tag`. `granted_keywords_eot`,
+/// `keyword_counters` (CR 122.1b) and the two removal lists are live
+/// `CardInstance` fields written by effect resolution, exactly like the
+/// `Tapped` / `FaceDown` / `WithCounter` leaves above them — they are *inputs*
+/// to the layer pass, not its output, so reading them here is not circular.
+/// They used to be skipped, and a static anthem filtered on a keyword then
+/// missed a creature that gained the keyword until end of turn or off a
+/// keyword counter, and still pumped one whose keyword had been stripped.
+/// The *type* leaves stay printed: creature types are layer-4 output and
+/// `AllWithCreatureType` plus `gate_types` is the machinery for that.
 pub(crate) fn requirement_matches_card(
     req: &SelectionRequirement,
     card: &crate::card::CardInstance,
@@ -1589,13 +1607,13 @@ pub(crate) fn requirement_matches_card(
         R::HasCardType(t) => def.card_types.contains(t),
         R::HasSupertype(s) => def.supertypes.contains(s),
         R::HasCreatureType(ct) => def.subtypes.creature_types.contains(ct)
-            || def.keywords.has_kw(&Keyword::Changeling),
+            || card.has_keyword(&Keyword::Changeling),
         R::HasLandType(lt) => def.subtypes.land_types.contains(lt),
         R::HasArtifactSubtype(a) => def.subtypes.artifact_subtypes.contains(a),
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
-        R::HasKeyword(k) => def.keywords.contains(k),
-        R::HasToxic => def.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Toxic(_))),
-        R::HasModular => def.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Modular(_))),
+        R::HasKeyword(k) => card.has_keyword(k),
+        R::HasToxic => card.has_toxic(),
+        R::HasModular => card.has_modular(),
         R::HasMutate => def.mutate.is_some(),
         R::HasColor(c) => def
             .cost
@@ -1604,7 +1622,7 @@ pub(crate) fn requirement_matches_card(
             .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(col) if col == c)),
         // CR 702.114 — Devoid is a CDA: the object is colorless regardless of
         // its (possibly colored) cost pips.
-        R::Colorless => def.keywords.has_kw(&crate::card::Keyword::Devoid)
+        R::Colorless => card.has_keyword(&crate::card::Keyword::Devoid)
             || !def
                 .cost
                 .symbols

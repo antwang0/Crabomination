@@ -82,6 +82,47 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-16 (twenty-eighth find) — the layer pass's own requirement walker answers `HasKeyword` off the PRINTED list, so a keyword-filtered static anthem misses every granted keyword
+
+The twenty-seventh find closed the value-agnostic accessors on
+`CardInstance`. Reading the code one level out — `affected_includes_gated`,
+which decides whether a `ContinuousEffect` applies to a permanent — found the
+**third** hand-written requirement walker, `layers::requirement_matches_card`,
+with the same defect and a wider blast radius:
+
+```rust
+R::HasKeyword(k) => def.keywords.contains(k),                       // printed ONLY
+R::HasToxic      => def.keywords.iter().any(|k| matches!(k, Toxic(_))),
+R::HasModular    => def.keywords.iter().any(|k| matches!(k, Modular(_))),
+R::HasCreatureType(ct) => ... || def.keywords.has_kw(&Changeling),
+R::Colorless     => def.keywords.has_kw(&Devoid) || ...
+```
+
+`requirement_is_card_only` routes `HasKeyword` / `HasToxic` / `HasModular`
+through this walker, so **every** static ability whose filter names a keyword
+read the printed list alone. Crosswinds ("creatures with flying get -2/-0")
+missed a creature granted flying until end of turn or carrying a flying
+counter (CR 122.1b), and still shrank one whose flying had been stripped by
+`removed_keywords_eot`. Meanwhile `eval.rs`'s battlefield walker answers the
+same `R::HasKeyword` with `card.has_keyword(kw)` — all four sources — so the
+two walkers disagreed about the same filter depending on which path evaluated
+it. That is the drift class exactly.
+
+⚠ **The fix is not circular, and that is the whole argument.**
+`granted_keywords_eot`, `keyword_counters` and the two removal lists are live
+`CardInstance` fields written by effect *resolution* — inputs to the layer
+pass, not its output — precisely like the `Tapped` / `FaceDown` /
+`WithCounter` leaves sitting beside them in the same walker, whose comments
+already say so. The **type** leaves stay printed: creature types are layer-4
+output and `AllWithCreatureType` + `gate_types` is the machinery for those.
+
+Fixed by routing the five keyword leaves through `CardInstance::has_keyword` /
+`has_toxic` / `has_modular` (so all three walkers now share one accessor and
+cannot drift again). Cost, callgrind three-pool A/B: **fixed +0.003 / cube
++0.004 / sealed +0.002 %** — free. Suite 19,579 / 0 / 5, traces unmoved. Test:
+`cr_613_6_a_keyword_filtered_static_reads_all_four_keyword_sources`, verified
+to FAIL on the pre-fix line before it was filed.
+
 ## FIXED 2026-09-16 (twenty-seventh find) — the block planner's poison clock reads Toxic off the PRINTED list while Infect beside it reads all four sources
 
 `pick_blocks_inner`'s `AttackerFacts::poison` is the chump-block trigger: the

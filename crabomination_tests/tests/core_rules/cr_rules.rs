@@ -10884,3 +10884,47 @@ fn cr_603_6_one_exit_is_one_leaves_battlefield_trigger() {
         "an exile is ONE leave too",
     );
 }
+
+/// CR 613.6 / 122.1b — a static ability filtered on a keyword reads the
+/// permanent's *four* keyword sources, not its printed list. `layers.rs`'
+/// `requirement_matches_card` — the third hand-written requirement walker,
+/// the one the layer pass itself runs — answered `HasKeyword` off
+/// `definition.keywords` alone, so Crosswinds ("creatures with flying get
+/// -2/-0") missed a creature granted flying until end of turn or by a
+/// keyword counter, and still shrank one whose flying had been stripped.
+/// The grant, the counter and the two removal lists are live `CardInstance`
+/// fields that effect resolution writes — inputs to the layer pass, not its
+/// output — so reading them is not circular, exactly as the `Tapped` /
+/// `WithCounter` leaves beside them already do.
+#[test]
+fn cr_613_6_a_keyword_filtered_static_reads_all_four_keyword_sources() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::crosswinds());
+    let power = |g: &crabomination::game::GameState| {
+        g.computed_permanent(bear).expect("computed").power
+    };
+    assert_eq!(power(&g), 2, "a grounded bear is untouched");
+
+    // Granted until end of turn.
+    g.battlefield_find_mut(bear).unwrap().granted_keywords_eot.push(Keyword::Flying);
+    assert_eq!(power(&g), 0, "an EOT-granted flier did not see Crosswinds");
+    g.battlefield_find_mut(bear).unwrap().granted_keywords_eot.clear();
+    assert_eq!(power(&g), 2);
+
+    // CR 122.1b — a flying counter grants the keyword.
+    g.battlefield_find_mut(bear).unwrap().keyword_counters.add(Keyword::Flying, 1);
+    assert_eq!(power(&g), 0, "a keyword counter did not see Crosswinds");
+    g.battlefield_find_mut(bear).unwrap().keyword_counters.remove(&Keyword::Flying);
+    assert_eq!(power(&g), 2);
+
+    // And a removal beats the printed keyword from the other side.
+    let flier = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let flier_power = |g: &crabomination::game::GameState| {
+        g.computed_permanent(flier).expect("computed").power
+    };
+    assert_eq!(flier_power(&g), 2, "a printed flier is shrunk");
+    g.battlefield_find_mut(flier).unwrap().removed_keywords_eot.push(Keyword::Flying);
+    assert_eq!(flier_power(&g), 4, "a stripped flier was still shrunk");
+}
