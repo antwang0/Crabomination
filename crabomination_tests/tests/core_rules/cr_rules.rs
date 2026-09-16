@@ -10928,3 +10928,42 @@ fn cr_613_6_a_keyword_filtered_static_reads_all_four_keyword_sources() {
     g.battlefield_find_mut(flier).unwrap().removed_keywords_eot.push(Keyword::Flying);
     assert_eq!(flier_power(&g), 4, "a stripped flier was still shrunk");
 }
+
+/// CR 122.1b — a keyword counter is a counter, so `WithAnyCounter` and
+/// `HasNoCounters` must be exact complements whichever requirement walker
+/// answers them. They were not: the off-battlefield walker's `HasNoCounters`
+/// read both counter maps and its `WithAnyCounter` ten lines below read only
+/// `counters`, so a creature carrying nothing but a flying counter answered
+/// **false to both**. `layers::requirement_matches_card` had the same gap, so
+/// a static filtered on "with counters on them" skipped it too. All three now
+/// share `CardInstance::has_any_counter`.
+#[test]
+fn cr_122_1b_a_keyword_counter_answers_with_any_counter() {
+    use crabomination::card::{Keyword, SelectionRequirement as R};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let c = g.battlefield_find(bear).expect("alive").clone();
+    assert!(!g.evaluate_requirement_on_card(&R::WithAnyCounter, &c, 0));
+    assert!(g.evaluate_requirement_on_card(&R::HasNoCounters, &c, 0));
+
+    g.battlefield_find_mut(bear).unwrap().keyword_counters.add(Keyword::Flying, 1);
+    let c = g.battlefield_find(bear).expect("alive").clone();
+    assert!(
+        g.evaluate_requirement_on_card(&R::WithAnyCounter, &c, 0),
+        "a keyword counter is a counter (CR 122.1b)",
+    );
+    assert!(
+        !g.evaluate_requirement_on_card(&R::HasNoCounters, &c, 0),
+        "the two leaves disagreed: false to both",
+    );
+    // The battlefield walker already agreed, and still does.
+    assert!(g.evaluate_requirement_static(&R::WithAnyCounter, &Target::Permanent(bear), 0, None));
+
+    // A plain counter answers the same way from either walker.
+    g.battlefield_find_mut(bear).unwrap().keyword_counters.remove(&Keyword::Flying);
+    g.battlefield_find_mut(bear).unwrap().counters.add(CounterType::PlusOnePlusOne, 1);
+    let c = g.battlefield_find(bear).expect("alive").clone();
+    assert!(g.evaluate_requirement_on_card(&R::WithAnyCounter, &c, 0));
+    assert!(!g.evaluate_requirement_on_card(&R::HasNoCounters, &c, 0));
+}

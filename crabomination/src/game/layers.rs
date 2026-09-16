@@ -1600,7 +1600,7 @@ pub(crate) fn requirement_matches_card(
         R::FaceDown => card.face_down,
         R::Untapped => !card.tapped,
         R::WithCounter(k) => card.counter_count(*k) > 0,
-        R::WithAnyCounter => card.counters.values().any(|&n| n > 0),
+        R::WithAnyCounter => card.has_any_counter(),
         R::ControlledByYou => card.controller == source_controller,
         R::ControlledByOpponent => card.controller != source_controller,
         R::OwnedByYou => card.owner == source_controller,

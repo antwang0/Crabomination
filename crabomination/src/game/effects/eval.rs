@@ -4088,14 +4088,8 @@ impl GameState {
                     }
                     R::WithCounter(k) => card.counter_count(*k) > 0,
                     R::WithCounterAtLeast(k, n) => card.counter_count(*k) >= *n,
-                    R::WithAnyCounter => {
-                        card.counters.values().any(|&n| n > 0)
-                            || card.keyword_counters.values().any(|&n| n > 0)
-                    }
-                    R::HasNoCounters => {
-                        card.counters.values().all(|&n| n == 0)
-                            && card.keyword_counters.values().all(|&n| n == 0)
-                    }
+                    R::WithAnyCounter => card.has_any_counter(),
+                    R::HasNoCounters => !card.has_any_counter(),
                     R::HasSupertype(st) => has_stype(st),
                     R::HasCreatureType(ct) => has_ctype(ct)
                         || card.has_keyword(&crate::card::Keyword::Changeling),
@@ -5257,10 +5251,7 @@ impl GameState {
             // the card definition — same answer in any zone.
             R::HasBackFace => card.definition.back_face.is_some(),
             R::HasPrepareSpell => card.definition.prepare_spell.is_some(),
-            R::HasNoCounters => {
-                card.counters.values().all(|&n| n == 0)
-                    && card.keyword_counters.values().all(|&n| n == 0)
-            }
+            R::HasNoCounters => !card.has_any_counter(),
             // "With different names" — excludes anything sharing a name with
             // a card already moved this resolution (Saheeli Rai -7).
             R::NameDiffersFromLastMoved => !self.scratch.last_moved_cards.iter().any(|id| {
@@ -5300,7 +5291,7 @@ impl GameState {
             // land scope resolves through this path.
             R::WithCounter(k) => card.counter_count(*k) > 0,
             R::WithCounterAtLeast(k, n) => card.counter_count(*k) >= *n,
-            R::WithAnyCounter => card.counters.values().any(|&n| n > 0),
+            R::WithAnyCounter => card.has_any_counter(),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped
             | R::IsUnblocked | R::IsBlocked | R::IsBlocking | R::InCombatWithSource

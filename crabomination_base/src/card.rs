@@ -8831,6 +8831,21 @@ impl CardInstance {
             || self.keyword_counters.iter().any(|(k, _)| kept(k))
     }
 
+    /// CR 122.1 — does this object have **any** counter on it? Both maps:
+    /// `counters` (a [`CounterType`]) and `keyword_counters` (CR 122.1b — a
+    /// keyword counter is a counter).
+    ///
+    /// The two requirement leaves that ask — `WithAnyCounter` and
+    /// `HasNoCounters` — are exact complements and must stay that way. Three
+    /// hand-written copies disagreed about the second map: the
+    /// off-battlefield walker's `HasNoCounters` read both and its
+    /// `WithAnyCounter` ten lines below read only `counters`, so a creature
+    /// carrying nothing but a keyword counter answered **false to both**.
+    pub fn has_any_counter(&self) -> bool {
+        self.counters.values().any(|&n| n > 0)
+            || self.keyword_counters.values().any(|&n| n > 0)
+    }
+
     /// True if this permanent has Toxic N for any N, from any of the four
     /// keyword sources (CR 702.180).
     pub fn has_toxic(&self) -> bool {

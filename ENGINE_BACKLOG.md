@@ -82,6 +82,47 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-16 (twenty-ninth find) — `WithAnyCounter` and `HasNoCounters` are not complements, and the two disagreeing lines are TEN APART IN THE SAME WALKER
+
+Found by doing what the twenty-eighth find's fix suggested: diffing the
+requirement walkers arm by arm instead of reading one. **116 arms are shared
+between `eval.rs`'s battlefield walker (`evaluate_requirement_static_hinted`,
+160 arms) and its off-battlefield one (`evaluate_requirement_on_card`, 138),
+and 50 of them differ textually.** Most differ legitimately — the
+off-battlefield walker answers `false` to every battlefield-state predicate,
+and `cid` versus `card.id` is not a difference. One was a bug:
+
+```rust
+// evaluate_requirement_on_card, line 5260:
+R::HasNoCounters => card.counters.values().all(|&n| n == 0)
+                    && card.keyword_counters.values().all(|&n| n == 0),   // both maps
+// ...and line 5303, ten arms below:
+R::WithAnyCounter => card.counters.values().any(|&n| n > 0),              // ONE map
+```
+
+CR 122.1b — a keyword counter **is** a counter, and the battlefield walker
+says so. So a creature carrying nothing but a flying counter answered
+**`false` to both leaves** through the off-battlefield path: the two are exact
+complements and one of them was wrong. That path serves library and graveyard
+searches and — the case that bites — the died-card LKI snapshots the delayed
+`MatchingCreatureDiesThisTurn` dispatch evaluates, so "whenever a creature
+with a counter on it dies" skipped a creature whose only counter was a keyword
+counter. `layers::requirement_matches_card` had the same one-map read, so a
+static filtered on "permanents you control with counters on them"
+(Innkeeper's Talent) skipped it too.
+
+Fixed as a class: `CardInstance::has_any_counter` reads both maps, all three
+walkers call it, and `HasNoCounters` is spelled `!card.has_any_counter()` so
+the complement cannot drift again. Test
+`cr_122_1b_a_keyword_counter_answers_with_any_counter`, verified to FAIL on
+the pre-fix line.
+
+⚠ **The other 49 differing arms are still unread**, and the method is cheap:
+extract each `R::` arm's body from the four walkers' line ranges with a small
+`re` script and normalise whitespace and comments away before comparing. Two
+of the four walkers (`layers::requirement_matches_card` and `mod.rs`'s
+computed-view one) were not in this diff at all.
+
 ## FIXED 2026-09-16 (twenty-eighth find) — the layer pass's own requirement walker answers `HasKeyword` off the PRINTED list, so a keyword-filtered static anthem misses every granted keyword
 
 The twenty-seventh find closed the value-agnostic accessors on
