@@ -3005,6 +3005,62 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-16 (the block-planner session, CONCURRENT with the spare-capacity one) — two agents on one branch, and what that cost
+
+⚠⚠ **TWO SESSIONS RAN THIS BRANCH AT THE SAME TIME AND BOTH MEASURED
+`(-336)`.** This one opened `(-335)` and `(-336)`; the spare-capacity session
+below rebased on top of them, re-measured `(-336)` independently, and reached
+fixed -0.2135 / cube -0.4175 / sealed -0.2446 % against this session's
+unprovable -0.213 / -0.412 / -0.245 %. **The duplicate cost one ~11-minute
+build and bought one thing worth having: an independent reproduction to three
+decimals of a number whose binary could not be proven to match its tree.** It
+is not a reason to run two agents; it is the reason the *pending-numbers*
+convention below is safe.
+
+📐 **The conventions that fell out, and they are cheap to keep.**
+ * **A perf commit whose A/B has not finished says so in its own message**, in
+   the imperative ("reverted if it does not reproduce"), and the numbers land
+   in the following PERF commit. A push that cannot wait for an 11-minute
+   build is not a reason to push an unqualified claim.
+ * **`git fetch` before every push AND before every rebase-into-a-build.** The
+   concurrent session's commits touch `bot.rs` and `game/mod.rs`; rebasing
+   while a candidate build is in flight silently re-times its own sources.
+ * ⚠ **Never `git stash` while a build of those sources is running.** Done here
+   to hand the hook a clean tree; the resulting binary could not be shown to
+   match either tree and had to be discarded.
+
+```text
+perf    **`(-335)`: the block planner's computed-keyword asks take one pass — fixed -0.099 /
+        cube -0.108 / sealed -0.099 %.** Five walks of `cp.keywords()` per attacker and five
+        per blocker, each paying an `OverlayList::get`, become one. See the Log entry: the
+        function's own self row is a THIRD of the win — `&mut F::call_mut` is 46 % of it and
+        `Keyword::eq` 6 %, because `iter().any(fn_item)` forwards every element through
+        `call_mut` and `has_kw` runs `Keyword::eq` on a tag match. **Rank a redundant-walk
+        row by `call_mut` + `Keyword::eq` + self, not by self**, or size it at a third.
+
+bug     **The block planner's poison clock read Toxic off `definition.keywords` while the
+        Infect leg one line above read the instance's four sources.** The damage step reads
+        both off the COMPUTED set, which lifts `granted_keywords_eot` into layer-6
+        `AddKeyword` effects, pushes keyword counters (CR 122.1b), and keeps Toxic/Poisonous
+        instances CUMULATIVELY (CR 702.180b / 702.70b). So a granted toxic, and every
+        stacked instance past the first, scored zero on the flag that turns on chump-blocking.
+        Both legs read the view now and the fold is shared with the damage step
+        (`combat::toxic_poison_value`) so the two walkers cannot drift again. Traces unmoved —
+        no trace deck plays poison. **Found by reading the body of a function being optimised**,
+        with every `audit_*` clean and NEXT reporting "bugs/robustness: nothing open".
+
+gates   Suite **19,575 / 0 / 5** (`CRAB_ANSWER_LOG=strict`) at `3cfdc7ac`, the 19,574 of the
+        session below plus `granted_toxic_reaches_the_block_planners_poison_clock`; the 12
+        golden traces among them unmoved.
+
+timings **NINTH BOX, 4 cores, 15 GB**: cold `profiling-fast` **11m02s**, a `crabomination_base`
+        change **10m57s** — i.e. the SAME, because a base change rebuilds the catalog and the
+        catalog is the whole cost. Engine-only ~3 min, three-pool callgrind 25 s in parallel,
+        workspace `cargo check` 2m29s cold / 27 s warm, debug suite 127 s after a ~5 min build.
+        **Batch `crabomination_base` changes**: `(-335)` needed one `pub(crate)` -> `pub` and
+        paid a full catalog rebuild for it.
+```
+
 ### 2026-09-16 (the spare-capacity session) — a box that DOES reproduce, a gate whose win is mostly its caller's, and a cost class no profiler can see
 
 ⚠⚠ **THE SESSION'S LARGEST ROW WAS FOUND BY `grep`, NOT BY A DUMP, AND THAT IS
