@@ -82,6 +82,41 @@ the handoff.
 
 # Bugs & robustness
 
+## OPEN 2026-09-16 (twenty-seventh find) — the block planner's poison clock reads Toxic off the PRINTED list while Infect beside it reads all four sources
+
+`pick_blocks_inner`'s `AttackerFacts::poison` is the chump-block trigger: the
+sum over the attackers feeds `poison_threatened`, which feeds
+`life_threatened`, which is what turns on chump-blocking and the whole gang
+pass. Its two halves disagree about where a keyword lives:
+
+```rust
+if akw & combat_kw::INFECT != 0 { p = a.power().max(0) as u32 }   // all four sources
+p += a.definition.keywords.iter()                                  // PRINTED only
+       .filter_map(|k| match k { Toxic(n) | Poisonous(n) => Some(*n), _ => None })
+       .sum::<u32>();
+```
+
+`akw` is `CardInstance::combat_keywords()`, which folds definition +
+`granted_keywords_eot` + keyword counters and subtracts both removal lists.
+The Toxic/Poisonous leg one line below reads `definition.keywords` and nothing
+else — so a **granted** Toxic (an EOT grant, a keyword counter, a layer-6
+`AddKeyword`) adds nothing to the clock, and the bot will take a lethal
+poison swing it would have chumped had the same keyword been printed. It is
+narrower even than `CardInstance::has_toxic`, which at least chains
+`granted_keywords_eot` — so the planner's own leg is the narrowest reading of
+Toxic in the tree.
+
+Not taken with `(-335)`/`(-336)`: those are behaviour-preserving perf rows and
+this one moves block decisions, so it re-blesses golden traces and wants its
+own commit with the justification in the message. And it sits beside a family
+worth auditing in the same pass: `has_toxic` and `has_modular` both read
+`definition.keywords` chained with `granted_keywords_eot` and stop there — no
+keyword counters (CR 122.1b grants the keyword), no removal lists. **Ask
+whether the whole family should read the four sources before patching one
+leg**, so it closes as a class rather than a one-off; `combat_keywords` is the
+shape that already does, and the valued keywords are exactly the ones its
+`u32` mask cannot carry.
+
 ## FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress
 
 `all` seed **1159** was the first and only cap in the fresh-seed sweep's
