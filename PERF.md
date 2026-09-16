@@ -13787,13 +13787,42 @@ ever in a candidates list.
 
 ⚠ **AND THE OTHER HALF OF THAT DEVICE IS A TRAP: a non-generic
 `crabomination_base` leaf's CALL is a `release-fast` artifact.** `release`'s
-thin LTO inlines it; this profile cannot. `ManaPool::is_empty` (0.31 / 0.17 /
-0.23 %), `ManaCost::cmc` (0.28 / 0.24 / 0.31 %) and `CardInstance::power`,
-`counter_count`, `can_block`, `toughness` are all in that class. **Rank them by
-the BODY, not the row** — an `#[inline]` on any of them reads as a win here and
-buys the shipped binary nothing, and `(-330)`'s win is real precisely because
-it removed *asks*, not call overhead. `profiling-lto` separates the two and
-costs a cold build.
+thin LTO inlines it; this profile cannot. **Rank them by the BODY, not the
+row** — an `#[inline]` on any of them reads as a win here and buys the shipped
+binary nothing, and `(-330)`'s win is real precisely because it removed *asks*,
+not call overhead.
+
+✅✅ **AND THE LIST THIS ENTRY USED TO GUESS AT IS NOW MEASURED — IT WAS WRONG
+IN BOTH DIRECTIONS.** It named `ManaPool::is_empty`, `ManaCost::cmc`,
+`CardInstance::power`, `counter_count`, `can_block` and `toughness` as "all in
+that class". Two of them are not. `scripts/inline_check.py` settles it with
+**no build** — the `--bench` gate already leaves `target/release/bot_ladder` on
+disk, so it is `nm -C -S` plus `objdump -d` over the byte range:
+
+```text
+  symbol                        release          profiling-fast   verdict
+  ManaCost::cmc                 inlined away     25 insn          ARTIFACT
+  ManaPool::is_empty            inlined away     32 insn          ARTIFACT
+  CardInstance::counter_count   inlined away     16 insn          ARTIFACT
+  CardInstance::can_block       inlined away     19 insn          ARTIFACT
+  CardInstance::power           75 insn (0x117)  75 insn (0x117)  REAL
+  CardInstance::toughness       68 insn (0x104)  68 insn (0x104)  REAL
+  LocalKey<T>::with             inlined away    102 insn 8call    ARTIFACT
+```
+
+**`power` (44,976 calls on `cube`) and `toughness` (79,198) survive thin LTO at
+byte-identical size in both binaries — their rows are real and rankable.** The
+other four are confirmed artifacts, which is what this entry always suspected
+but had never checked.
+
+⚠⚠ **This also re-prices candidate (A).** `ManaCost::cmc`'s 0.28 / 0.24 /
+0.31 % is call **plus** body, and `release` already removes the call — so a
+`CardData::printed_cmc` memo's ceiling is the 25-instruction body on the ~90 k
+reachable calls, not the filed row, and LLVM can fold part of even that once
+inlined. Price it against the body before spending a `CardMemo` word and the
+two ~11-minute base-plus-catalog builds that a `crabomination_base` change
+costs. `profiling-lto` separates the two as well but costs a cold build;
+`inline_check.py` costs nothing.
 
 📐 **SIZED THIS SESSION AND STILL OPEN, at the `(-332)` tip (totals fixed
 583,677,582 / cube 1,549,854,153 / sealed 1,647,827,842).**
