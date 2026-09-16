@@ -5142,7 +5142,7 @@ fn decide_choose_cards(
     // permanents instead gives up the least valuable.
     let all_on_battlefield = candidates
         .iter()
-        .all(|(id, _)| state.battlefield.iter().any(|c| c.id == *id));
+        .all(|(id, _)| state.battlefield.find_by_id(*id).is_some());
     if all_on_battlefield {
         let own_least_valuable_first = || -> Vec<crate::card::CardId> {
             let mut own: Vec<(crate::card::CardId, i32)> = candidates
@@ -7392,7 +7392,7 @@ fn gate_blame(state: &GameState, action: Option<&GameAction>) -> String {
         .get(*ability_index)
         .map(|ab| format!("{:?} gy={} hand={} exile={}", ab.mana_cost.symbols, ab.from_graveyard, ab.from_hand, ab.from_exile))
         .unwrap_or_else(|| String::from("(granted)"));
-    let zone = if state.battlefield.iter().any(|c| c.id == *card_id) { "battlefield" } else { "elsewhere" };
+    let zone = if state.battlefield.find_by_id(*card_id).is_some() { "battlefield" } else { "elsewhere" };
     let have = available_mana(state, card.controller);
     // The seat's hand and board, so a source the estimate never visits (a
     // Simian Spirit Guide in hand, a summoning-sick Skirk Prospector) names

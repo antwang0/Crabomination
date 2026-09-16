@@ -4240,7 +4240,7 @@ impl GameState {
                         c.id == card.id
                             && target.iter().chain(additional_targets.iter()).any(|t| {
                                 matches!(t, crate::game::types::Target::Permanent(id)
-                                    if self.battlefield.iter().any(|o| o.id == *id && o.definition.is_creature()))
+                                    if self.battlefield.find_by_id(*id).is_some_and(|o| o.definition.is_creature()))
                             })
                     }),
                     R::SpellTargetsMatching(inner) => self.stack.iter().any(|si| {

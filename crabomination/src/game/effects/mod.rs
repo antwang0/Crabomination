@@ -11831,7 +11831,7 @@ impl GameState {
                         // "exile that creature") is exiled from wherever it
                         // went instead of silently no-oping.
                         EntityRef::Permanent(cid)
-                            if !self.battlefield.iter().any(|c| c.id == cid) =>
+                            if self.battlefield.find_by_id(cid).is_none() =>
                         {
                             self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                         }
@@ -11866,7 +11866,7 @@ impl GameState {
                     .filter_map(|e| e.as_card_id())
                     .collect();
                 for cid in ids {
-                    if self.battlefield.iter().any(|c| c.id == cid) {
+                    if self.battlefield.find_by_id(cid).is_some() {
                         self.remove_from_battlefield_to_exile(cid);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
                     } else {
@@ -11902,7 +11902,7 @@ impl GameState {
                     return Ok(());
                 }
                 // The pile is empty: sacrifice this and take an extra turn.
-                if self.battlefield.iter().any(|c| c.id == source) {
+                if self.battlefield.find_by_id(source).is_some() {
                     let mut die = self.remove_to_graveyard_with_triggers(source);
                     events.append(&mut die);
                     self.players[ctx.controller].extra_turns += 1;
@@ -12151,7 +12151,7 @@ impl GameState {
                     // Route battlefield exits through the LTB path; anything
                     // in another zone (the common graveyard-hate case) just
                     // relocates via `move_card_to`.
-                    if self.battlefield.iter().any(|c| c.id == cid) {
+                    if self.battlefield.find_by_id(cid).is_some() {
                         self.remove_from_battlefield_to_exile(cid);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
                     } else {
@@ -18563,7 +18563,7 @@ impl GameState {
                     for _ in 0..copies {
                         let def = token_card_arc(&incubator_token());
                         let id = self.mint_token_onto_battlefield(def, p, false, events);
-                        if n > 0 && self.battlefield.iter().any(|c| c.id == id) {
+                        if n > 0 && self.battlefield.find_by_id(id).is_some() {
                             // CR 614.16 — counter replacements apply to the +1/+1s.
                             let scaled =
                                 self.scaled_counter_count(p, CounterType::PlusOnePlusOne, n, true);
@@ -18615,7 +18615,7 @@ impl GameState {
                     }
                 };
                 // CR 614.16 — counter replacement effects apply to the amass.
-                if n > 0 && self.battlefield.iter().any(|c| c.id == army) {
+                if n > 0 && self.battlefield.find_by_id(army).is_some() {
                     let scaled =
                         self.scaled_counter_count(p, CounterType::PlusOnePlusOne, n, true);
                     if let Some(c) = self.battlefield_find_mut(army) {
@@ -18660,7 +18660,7 @@ impl GameState {
                     let id = self.mint_token_onto_battlefield(def.clone(), p, true, events);
                     // Join combat tapped + attacking (CR 508.3a) — bypasses the
                     // declare-attackers timing/sickness gates, like Ninjutsu.
-                    if self.battlefield.iter().any(|c| c.id == id) {
+                    if self.battlefield.find_by_id(id).is_some() {
                         self.attacking.push(Attack { attacker: id, target });
                         if let Some(c) = self.battlefield.find_by_id_mut(id) {
                             c.attacked_this_turn = true;
@@ -18740,7 +18740,7 @@ impl GameState {
                     .collect();
                 for opp in opps {
                     let id = self.mint_token_onto_battlefield(def.clone(), ctrl, true, events);
-                    if self.battlefield.iter().any(|c| c.id == id) {
+                    if self.battlefield.find_by_id(id).is_some() {
                         self.attacking.push(Attack { attacker: id, target: AttackTarget::Player(opp) });
                         if let Some(c) = self.battlefield_find_mut(id) {
                             c.attacked_this_turn = true;
@@ -20252,7 +20252,7 @@ impl GameState {
 
             Effect::ExileSource => {
                 if let Some(id) = ctx.source
-                    && self.battlefield.iter().any(|c| c.id == id)
+                    && self.battlefield.find_by_id(id).is_some()
                 {
                     self.remove_from_battlefield_to_exile(id);
                     if ctx.controller < self.players.len() {
@@ -24092,7 +24092,7 @@ impl GameState {
                     };
                     self.move_card_to(id, &dest, ctx, events);
                     if let Some(target) = target
-                        && self.battlefield.iter().any(|c| c.id == id)
+                        && self.battlefield.find_by_id(id).is_some()
                     {
                         self.attacking.push(Attack { attacker: id, target });
                         if let Some(c) = self.battlefield_find_mut(id) {
@@ -24143,7 +24143,7 @@ impl GameState {
                 };
                 for cid in milled {
                     self.move_card_to(cid, &dest, ctx, events);
-                    if self.battlefield.iter().any(|c| c.id == cid) {
+                    if self.battlefield.find_by_id(cid).is_some() {
                         self.grant_keyword_eot(cid, Keyword::Haste);
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                             controller: p,
@@ -24292,7 +24292,7 @@ impl GameState {
                 };
                 for id in &picks {
                     self.move_card_to(*id, &dest, ctx, events);
-                    if self.battlefield.iter().any(|c| c.id == *id) {
+                    if self.battlefield.find_by_id(*id).is_some() {
                         self.scratch.last_moved_cards.push(*id);
                     }
                 }
@@ -29869,7 +29869,7 @@ impl GameState {
                 // spell (Spoils of the Vault) wants its controller's most
                 // common library name.
                 let pool: Vec<&crate::card::CardInstance> =
-                    if self.battlefield.iter().any(|c| c.id == target_id) {
+                    if self.battlefield.find_by_id(target_id).is_some() {
                         self.battlefield
                             .iter()
                             .filter(|c| {
@@ -31814,7 +31814,7 @@ impl GameState {
                 // chapter), but a graveyard-activated ability can also return
                 // the card transformed (Garland's "return this card from your
                 // graveyard to the battlefield transformed").
-                let on_bf = self.battlefield.iter().any(|c| c.id == id);
+                let on_bf = self.battlefield.find_by_id(id).is_some();
                 let has_back = self
                     .find_card_anywhere(id)
                     .is_some_and(|c| c.definition.back_face.is_some());
@@ -35163,7 +35163,7 @@ impl GameState {
                         .or_else(|| self.leaves_bf_lki.get(&s))
                 })
                 .and_then(|c| c.chosen_permanent)
-                .filter(|cid| self.battlefield.iter().any(|c| c.id == *cid))
+                .filter(|cid| self.battlefield.find_by_id(*cid).is_some())
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
@@ -35184,7 +35184,7 @@ impl GameState {
                 let blocked_by = |blocker: CardId| -> Vec<EntityRef> {
                     self.attackers_blocked_by(blocker)
                         .iter()
-                        .filter(|aid| self.battlefield.iter().any(|c| c.id == **aid))
+                        .filter(|aid| self.battlefield.find_by_id(**aid).is_some())
                         .map(|aid| EntityRef::Permanent(*aid))
                         .collect()
                 };
@@ -35269,7 +35269,7 @@ impl GameState {
                 let blocking = |attacker: CardId| -> Vec<EntityRef> {
                     self.blockers_of(attacker)
                         .into_iter()
-                        .filter(|bid| self.battlefield.iter().any(|c| c.id == *bid))
+                        .filter(|bid| self.battlefield.find_by_id(*bid).is_some())
                         .map(EntityRef::Permanent)
                         .collect()
                 };
@@ -35287,7 +35287,7 @@ impl GameState {
                 .source
                 .and_then(|s| self.battlefield_find(s))
                 .and_then(|c| c.created_by)
-                .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                .filter(|id| self.battlefield.find_by_id(*id).is_some())
                 .map(|id| vec![EntityRef::Permanent(id)])
                 .unwrap_or_default(),
             Selector::LastCardYouDrew => self.players[ctx.controller]
@@ -35311,7 +35311,7 @@ impl GameState {
                     .iter()
                     .filter(|(b, _)| *b == src)
                     .map(|(_, a)| *a)
-                    .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                    .filter(|id| self.battlefield.find_by_id(*id).is_some())
                     .map(EntityRef::Permanent)
                     .collect()
             }
@@ -35321,7 +35321,7 @@ impl GameState {
                     .map(|c| c.saddled_by.clone())
                     .unwrap_or_default()
                     .into_iter()
-                    .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                    .filter(|id| self.battlefield.find_by_id(*id).is_some())
                     .map(EntityRef::Permanent)
                     .collect()
             }
@@ -35336,7 +35336,7 @@ impl GameState {
                     .iter()
                     .filter(|(b, _)| *b == blocker)
                     .map(|(_, a)| *a)
-                    .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                    .filter(|id| self.battlefield.find_by_id(*id).is_some())
                     .map(EntityRef::Permanent)
                     .collect()
             }
@@ -35364,7 +35364,7 @@ impl GameState {
                     }));
                 }
                 out.into_iter()
-                    .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                    .filter(|id| self.battlefield.find_by_id(*id).is_some())
                     .map(EntityRef::Permanent)
                     .collect()
             }
@@ -35400,7 +35400,7 @@ impl GameState {
                     }
                     _ => None,
                 })
-                .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                .filter(|id| self.battlefield.find_by_id(*id).is_some())
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
@@ -35408,7 +35408,7 @@ impl GameState {
                 .scratch.last_created_tokens
                 .iter()
                 .copied()
-                .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                .filter(|id| self.battlefield.find_by_id(*id).is_some())
                 .map(EntityRef::Permanent)
                 .collect(),
             Selector::SacrificedCard => self

@@ -5993,7 +5993,7 @@ impl GameState {
                 if src.id != source && partner != source {
                     continue;
                 }
-                if !self.battlefield.iter().any(|c| c.id == partner) {
+                if self.battlefield.find_by_id(partner).is_none() {
                     continue;
                 }
                 for t in &bonus.triggered_abilities {

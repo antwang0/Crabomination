@@ -1775,7 +1775,7 @@ fn project_permanent(
         // CR 702.95 — Soulbond partner (only while still on the battlefield).
         soulbond_partner: card
             .soulbond_partner
-            .filter(|p| battlefield.iter().any(|o| o.id == *p)),
+            .filter(|p| battlefield.find_by_id(*p).is_some()),
         saga_final_chapter: card
             .definition
             .saga_chapters

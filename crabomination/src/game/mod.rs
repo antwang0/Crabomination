@@ -8837,7 +8837,7 @@ impl GameState {
         card: &crate::card::CardInstance,
     ) -> Vec<crate::card::CreatureType> {
         use crate::effect::StaticEffect;
-        if self.battlefield.iter().any(|c| c.id == card.id) {
+        if self.battlefield.find_by_id(card.id).is_some() {
             return Vec::new();
         }
         let Some(owner) = self.players.get(card.owner) else { return Vec::new() };
@@ -11687,7 +11687,7 @@ impl GameState {
                 ),
             });
             let Some(target) = card.attached_to else { continue };
-            if x == 0 || !self.battlefield.iter().any(|c| c.id == target) {
+            if x == 0 || self.battlefield.find_by_id(target).is_none() {
                 continue;
             }
             all_effects.push(ContinuousEffect {
@@ -12052,7 +12052,7 @@ impl GameState {
         for card in if any_soulbond_bonus { &self.battlefield[..] } else { &[] } {
             let Some(bonus) = &card.definition.soulbond_bonus else { continue };
             let Some(partner) = card.soulbond_partner else { continue };
-            if !self.battlefield.iter().any(|c| c.id == partner) {
+            if self.battlefield.find_by_id(partner).is_none() {
                 continue;
             }
             for &id in &[card.id, partner] {
@@ -16127,7 +16127,7 @@ impl GameState {
         }
         let mut kept = Vec::new();
         for tc in std::mem::take(&mut self.temporary_control) {
-            let on_battlefield = self.battlefield.iter().any(|c| c.id == tc.card);
+            let on_battlefield = self.battlefield.find_by_id(tc.card).is_some();
             if !on_battlefield {
                 continue; // card left play — nothing to revert
             }
@@ -16166,7 +16166,7 @@ impl GameState {
         }
         let mut kept = Vec::new();
         for tc in std::mem::take(&mut self.temporary_copies).into_iter().rev() {
-            if !self.battlefield.iter().any(|c| c.id == tc.card) {
+            if self.battlefield.find_by_id(tc.card).is_none() {
                 continue; // card left play — nothing to revert
             }
             if which.contains(&tc.duration) {
@@ -16204,7 +16204,7 @@ impl GameState {
             return events;
         }
         for (id, kind) in std::mem::take(&mut self.attacking_token_cleanup) {
-            if !self.battlefield.iter().any(|c| c.id == id) {
+            if self.battlefield.find_by_id(id).is_none() {
                 continue; // already gone (died in combat, bounced, etc.)
             }
             let who = self.battlefield_find(id).map(|c| c.controller).unwrap_or(0);
@@ -19388,7 +19388,7 @@ impl GameState {
         // it's strictly cheaper on the printed cards.
         if fortify.is_none()
             && let Some(tok_cost) = &self.battlefield[equip_pos].definition.equip_token_cost
-            && self.battlefield.iter().any(|c| c.id == target && c.is_token)
+            && self.battlefield.find_by_id(target).is_some_and(|c| c.is_token)
         {
             equip_cost = tok_cost.clone();
         }
@@ -19842,7 +19842,7 @@ impl GameState {
         );
         // It enters attacking the same defender the returned creature was
         // attacking — bypassing the declare-attackers timing/sickness gates.
-        if self.battlefield.iter().any(|c| c.id == ninja) {
+        if self.battlefield.find_by_id(ninja).is_some() {
             self.attacking.push(Attack { attacker: ninja, target: atk.target });
             if let Some(c) = self.battlefield.find_by_id_mut(ninja) {
                 c.attacked_this_turn = true;
@@ -22100,7 +22100,7 @@ impl GameState {
                     legal.into_iter().partition(|t| match t {
                         Target::Player(_) => true,
                         Target::Permanent(id) => {
-                            self.battlefield.iter().any(|c| c.id == *id)
+                            self.battlefield.find_by_id(*id).is_some()
                         }
                     });
                 // Modal only when the effect genuinely targets an off-board
@@ -26085,7 +26085,7 @@ impl GameState {
         &mut self,
         id: CardId,
     ) -> Option<&mut CardInstance> {
-        if self.battlefield.iter().any(|c| c.id == id) {
+        if self.battlefield.find_by_id(id).is_some() {
             return self.battlefield.find_by_id_mut(id);
         }
         // Locate first with shared borrows, then take the one `&mut`: `Player`
@@ -26155,7 +26155,7 @@ impl GameState {
     /// [`find_card_anywhere`]: Self::find_card_anywhere
     pub(crate) fn find_card_zone(&self, id: CardId) -> Option<crate::card::Zone> {
         use crate::card::Zone;
-        if self.battlefield.iter().any(|c| c.id == id) {
+        if self.battlefield.find_by_id(id).is_some() {
             return Some(Zone::Battlefield);
         }
         for p in &self.players {

@@ -7345,7 +7345,7 @@ impl GameState {
             let creature_target = matches!(
                 target,
                 Some(Target::Permanent(tid))
-                    if self.battlefield.iter().any(|c| c.id == tid && c.definition.is_creature())
+                    if self.battlefield.find_by_id(tid).is_some_and(|c| c.definition.is_creature())
             );
             if !creature_target {
                 self.players[p].hand.push(card);
@@ -14540,7 +14540,7 @@ impl GameState {
                 if let Some(bonus) = &src.definition.soulbond_bonus
                     && !bonus.activated_abilities.is_empty()
                     && let Some(partner) = src.soulbond_partner
-                    && self.battlefield.iter().any(|c| c.id == partner)
+                    && self.battlefield.find_by_id(partner).is_some()
                 {
                     scan.soulbond.push((src.id, partner, &bonus.activated_abilities));
                 }

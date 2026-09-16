@@ -2676,7 +2676,7 @@ impl GameState {
                         .iter()
                         .any(|c| c.id == card_id && (c.definition.is_aura() || c.bestowed))
                         && let Some(crate::game::types::Target::Permanent(tid)) = target
-                        && self.battlefield.iter().any(|c| c.id == tid)
+                        && self.battlefield.find_by_id(tid).is_some()
                         && let Some(aura) =
                             self.battlefield.find_by_id_mut(card_id)
                     {
@@ -2684,7 +2684,7 @@ impl GameState {
                         // CR 303.4 — fire "an Aura you control became attached"
                         // triggers (Siona). Only for true Auras, not bestowed
                         // creature spells (which entered as creatures).
-                        if self.battlefield.iter().any(|c| c.id == card_id && c.definition.is_aura())
+                        if self.battlefield.find_by_id(card_id).is_some_and(|c| c.definition.is_aura())
                         {
                             events.push(GameEvent::AuraAttached { aura: card_id, attached_to: tid });
                         }
@@ -2708,7 +2708,7 @@ impl GameState {
                     // end step. Grant haste on the entering instance and arm
                     // the delayed bounce.
                     if dashed
-                        && self.battlefield.iter().any(|c| c.id == card_id)
+                        && self.battlefield.find_by_id(card_id).is_some()
                     {
                         self.grant_keyword_eot(card_id, Keyword::Haste);
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
@@ -2735,7 +2735,7 @@ impl GameState {
                     // "When this creature dies, draw a card," and is sacrificed
                     // at the beginning of the next end step. Grant haste on the
                     // entering instance and arm the two delayed triggers.
-                    if self.battlefield.iter().any(|c| c.id == card_id && c.blitzed) {
+                    if self.battlefield.find_by_id(card_id).is_some_and(|c| c.blitzed) {
                         self.grant_keyword_eot(card_id, Keyword::Haste);
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                             controller: caster,
@@ -6427,8 +6427,9 @@ impl GameState {
                 self.note_creature_death(id);
                 // Zubera cycle: count Zubera deaths separately (read off the
                 // still-present dying creature's subtypes).
-                if self.battlefield.iter().any(|c| c.id == id
-                    && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera))
+                if self.battlefield.find_by_id(id).is_some_and(|c| {
+                    c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera)
+                })
                 {
                     self.players[controller_idx].zuberas_died_this_turn =
                         self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
@@ -6501,7 +6502,7 @@ impl GameState {
             self.return_persist_undying(
                 id, owner, (has_persist, has_undying, minus_count, plus_count), events,
             );
-            if (has_persist || has_undying) && self.battlefield.iter().any(|c| c.id == id) {
+            if (has_persist || has_undying) && self.battlefield.find_by_id(id).is_some() {
                 board_grew = true;
             }
             let _ = controller_idx; // used via closure above
@@ -6619,7 +6620,7 @@ impl GameState {
                     // basic land you control"), and sweeping it on the turn
                     // it enters is strictly worse than leaving it.
                     None => c.definition.attaches_itself(),
-                    Some(attached_id) => !self.battlefield.iter().any(|b| b.id == attached_id),
+                    Some(attached_id) => self.battlefield.find_by_id(attached_id).is_none(),
                 }
             })
             .map(|c| c.id)
@@ -6632,7 +6633,7 @@ impl GameState {
             // when the lost host is gone (the common death case).
             if let Some(aura) = self.battlefield.find_by_id(id)
                 && let Some(host) = aura.attached_to
-                && !self.battlefield.iter().any(|b| b.id == host)
+                && self.battlefield.find_by_id(host).is_none()
             {
                 let (aura_controller, aura_snapshot) = (aura.controller, aura.clone());
                 self.auras_at_death.entry(host).or_default().push((id, aura_controller));
@@ -6662,7 +6663,7 @@ impl GameState {
             .filter(|c| c.definition.is_aura() && !c.bestowed)
             .filter_map(|c| {
                 let host = c.attached_to?;
-                if !self.battlefield.iter().any(|b| b.id == host) {
+                if self.battlefield.find_by_id(host).is_none() {
                     return None; // missing host: handled by the sweep above
                 }
                 // CR 704.5m — protection covers "can't be Enchanted by": a
@@ -7606,8 +7607,9 @@ impl GameState {
             self.creatures_died_this_resolution =
                 self.creatures_died_this_resolution.saturating_add(1);
             self.note_creature_death(id);
-            if self.battlefield.iter().any(|c| c.id == id
-                && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera))
+            if self.battlefield.find_by_id(id).is_some_and(|c| {
+                c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera)
+            })
             {
                 self.players[controller_idx].zuberas_died_this_turn =
                     self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
