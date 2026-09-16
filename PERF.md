@@ -3005,6 +3005,56 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-16 (the carried-memo session, TWELFTH box) — the absolutes reproduce, and the mimalloc trap cost a build
+
+**TIP ABSOLUTES at `012e0e21`** (`profiling-fast`, **system allocator**, `--a
+gang --b gang --games 6 --threads 1 --seed 1`): fixed **579,179,120** / cube
+**1,509,871,383** / sealed **1,631,936,758**.
+
+✅ **THE TWELFTH BOX REPRODUCES THE ELEVENTH'S, second time running.** Against
+the `3c2b4e50` absolutes carried forward through `(-342)`'s filed row
+(fixed +0.001 / cube -0.249 / sealed -0.046 %) this tree reads **+0.196 /
++0.090 / +0.089 %**, and the only code between them is a cold-path keyword
+accessor. Different CPU (Xeon @ 2.10 GHz against @ 2.80), same toolchain
+(1.95.0). **"Absolutes do not cross boxes" is still not a law** — take them
+fresh, but do not discard a filed one unread.
+
+❌ **AND THE MIMALLOC TRAP IS REAL AND COST A 7m29s BUILD. "How to measure"
+warns about it; this is what it looks like from the inside.**
+`cargo build --profile profiling-fast --bin bot_ladder` — **no `-p`** — keeps
+mimalloc, and the three pools then read fixed 544,896,522 / cube
+1,408,436,620 / sealed 1,519,088,685: **-5.9 / -6.7 / -6.9 %** against the
+system-allocator numbers above, i.e. a free 6-7 % "win" that no shipped binary
+has. The positive test is one line and it is the only one that works:
+
+```text
+  nm target/profiling-fast/bot_ladder | grep -cE " (T|t) (_)?mi_"   # 0 = correct
+  grep -c 'fn=.*mi_' cg.out                                        # 0 = correct
+```
+
+⚠ **`-p crabomination` AND `--no-default-features` are both load-bearing** —
+the feature is the engine crate's default, so `--no-default-features` without
+`-p` resolves against the workspace and never reaches it. Rebuild cost: the
+feature flip is a full engine + catalog rebuild, 7m19s here.
+
+**Box timings (twelfth box, 4 cores, 15 GB):** cold `profiling-fast` **7m29s**,
+the allocator-feature flip **7m19s**, **engine-only 2m13s**, workspace
+`cargo check --all-targets` 2m31s cold / 1m24s for the engine alone,
+`cargo nextest run -E 'binary(core_rules)'` 3m23s including the build,
+three-pool callgrind ~35 s in parallel, a single `cube` callgrind **15 s**,
+`cg_lines.py` over a 443 k-address dump **7 s**.
+
+🔎 **AND `cg_lines.py` DOES NOT NEED A `profiling-lines` BUILD for
+function-level line attribution.** `split-debuginfo = "unpacked"` moves
+`.debug_info` to `.dwo`, not `.debug_line`, so `addr2line` resolves
+`file:line` off the `profiling-fast` binary fine — what it loses is the
+*inline* chain, which is what `cg_alloc_sites.py` needs and `cg_lines.py`
+does not. One `--dump-instr=yes` callgrind run (15 s) plus 7 s of script is
+the whole cost of the `(-342)` grouping device; the entry that priced it at a
+cold 8m19s build was pricing the wrong instrument. ⚠ `cg_lines.py` must be
+handed **the binary the dump was taken from** (it checks the `ob=` record and
+refuses otherwise), so keep the A/B copy beside the dump.
+
 ### 2026-09-16 (the payment-restore session, THIRD concurrent agent, eleventh box) — the line profile read by SOURCE LINE instead of by function
 
 **TIP ABSOLUTES at `3c2b4e50`** (`profiling-fast`, system allocator, `--a gang
@@ -13821,6 +13871,64 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+❌❌ **`(-303)`'s DEVICE APPLIED TO THE *PER-CARD* MEMO — BUILT, MEASURED AND
+REVERTED 2026-09-16 (the twelfth box). The idea is natural, the soundness
+argument is airtight, and it LOSES. Do not re-open it.**
+
+`LayerFreezeState::perms` is a scope memo: it dies with the freeze scope, so
+every scope recomputes `compute_permanent_pass` for permanents the *previous*
+scope already computed. `(-303)` fixed exactly that shape for the gather by
+stamping the answer with [`GameState::gather_key`], and the same key vouches
+for the pass: `compute_permanent_pass` is a free function over
+(`&CardInstance`, `&[ContinuousEffect]`, gates) with no `&GameState` to read
+anything else through, and the key carries `battlefield.writes()`, which
+**all eight** `&mut` routes at the board bump (`push`/`remove`/`retain`/`pop`/
+`take_by_id`/`DerefMut`/`cards_unchecked_mut`, verified by grep of
+`note_write()`), so an unchanged key means every battlefield `CardInstance` is
+byte-identical. Built as: `perms_key: Option<GatherKey>` beside `perms`, one
+reconcile point (`install_scope_memo`, the only place `st.memo` goes
+`None -> Some`, so a scope cannot reach the carried entries before the key that
+validates them has been compared), `end_of_scope` no longer draining `perms`,
+and a `perms_memo_agrees` re-run-and-compare `debug_assert!` on every hit —
+`(-303)`'s point 2.
+
+```text
+                                            cube Ir          vs base
+  base (012e0e21)                        1,509,871,383            —
+  carried perms, PERMS_CAP = 8           1,526,972,609       +1.133 %
+  carried perms, uncapped                1,520,456,619       +0.701 %
+  (fixed +0.504 / sealed +0.705 % at the capped cut)
+
+  compute_permanent_pass calls   226,544 -> 219,568   = 6,976 carried hits
+  malloc                         757,012 -> 797,292   = +40,280 allocations
+  Arc::drop_slow (cp_pool box)     3,948 ->  45,234
+```
+
+📐 **TWO NUMBERS COME OUT OF IT AND BOTH ARE WORTH MORE THAN THE ROW WOULD
+HAVE BEEN.**
+
+1. **The carried hit rate is 3.1 %** (6,976 of 226,544 passes). That is a
+   measurement of how often a freeze scope opens on a board that has not moved
+   since the last computed read, and the answer is **once in thirty-two**. The
+   cross *gather* memo hits 23.7 % (32,170 asks, 24,554 gathers) because a
+   gather is asked once a scope while a pass is asked once a permanent — so
+   **`(-303)`'s hit rate is not transferable to a memo with a finer key**, and
+   that is the general lesson: a state-level memo pays off in proportion to how
+   much work one key change invalidates, and a per-card answer is the wrong
+   granularity for a per-board key.
+2. **`cp_pool` is worth ~40,000 allocations a six-game `cube` run** (5.3 % of
+   the program's 757,012), and nobody had priced it. The pool's *feed* is the
+   scope-end release — carrying the entries starves it, and each starved box
+   costs a `malloc` + `free` + `Arc::drop_slow` that is about what the pass it
+   saved cost. **The two devices are mutually exclusive by construction**: a
+   carried entry is by definition not a free box.
+
+⚠ And the cap is its own datum: `PERMS_CAP = 8` (the `SmallVec`'s inline
+capacity, chosen so the set never spills) was **+0.43 points worse than
+uncapped** — 4,952 extra passes — because a scope that computes more than
+eight permanents then re-computes the rest on every ask. If `perms` is ever
+touched again, it stays unbounded.
 
 ❌❌ **THE `release-fast` TRAP IS WIDER THAN THIS FILE SAYS, AND
 `cg_calls.py`'S DOCSTRING IS WRONG ABOUT IT. Refuted 2026-09-16 with NO BUILD
