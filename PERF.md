@@ -3005,6 +3005,104 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-16 (the payment-restore session, THIRD concurrent agent, eleventh box) — the line profile read by SOURCE LINE instead of by function
+
+**TIP ABSOLUTES at `3c2b4e50`** (`profiling-fast`, system allocator, `--a gang
+--b gang --games 6 --threads 1 --seed 1`): fixed **578,037,636** / cube
+**1,512,279,098** / sealed **1,631,233,534**.
+
+⚠ **RE-TAKE THEM; DO NOT DERIVE THEM FROM A CUMULATIVE PERCENTAGE.** This
+session's A/B was first run against the `(-339)` tip in a tree that predated
+`(-340)`/`(-341)`, and the derived base was 0.023-0.026 % out on every pool
+because `3cfdc7ac` had landed after `(-339)`'s numbers were filed. A three-decimal
+cumulative cannot resolve that.
+
+✅ **AND THE ROW ITSELF REPRODUCED ACROSS THE REBASE TO THE DIGIT** —
+`(-342)` re-measured on the new tip reads `-0.0005 / -0.2472 / -0.0460 %` before
+and `+0.0006 / -0.2486 / -0.0457 %` after, with `restore_payment_state` self
+**1,252,818 / 430,064** both times. A row whose callees did not move re-measures
+identically; it is the tip that moves, not the row.
+
+🔎 **THE DEVICE, AND IT IS NEW HERE: GROUP THE LINE PROFILE BY SOURCE LINE ACROSS
+THE WHOLE PROGRAM, NOT BY FUNCTION.** `cg_lines.py <instr dump> <binary> --rows 0`,
+then sum the `file:line` column instead of reading the top rows:
+
+```text
+  card.rs:13-14   CardId's derived PartialEq    22,214,350   1.47 % of cube
+                  over ~90 functions: computed_permanent_hinted 2.15 M,
+                  compute_permanents::{{closure}} 2.15 M, restore_payment_state
+                  1.48 M, declare_attackers_banded 1.27 M, find_card_anywhere 1.23 M,
+                  resolve_combat_into 1.22 M, declare_blockers 0.92 M
+  sync/atomic.rs  the memo stamps + find_hints  41,046,116   2.71 %
+                  7.40 M of it in compute_permanents::{{closure}} ALONE — UNREAD.
+                  ⚠ That is 32.7 Ir a computed id for what is a relaxed load and a
+                  relaxed store, so the first question is whether the attribution
+                  survives a disassembly, not how to make the atomics cheaper.
+  str/pattern + fmt   CardDefinition::debug_flags' {:?} scan  ~12.6 M   0.83 %
+                  (is_contained_in 8.29 M + SmallVec Debug 1.79 M + String::write_str
+                  2.50 M). ⚠ ONCE PER DISTINCT CARD NAME PER PROCESS — 2,569
+                  `contains` calls over ~234 names. It saturates; no 10-30 k-game
+                  run pays it. **Do not rank it**, and do not read a change that
+                  moves it as a win.
+```
+
+**That is `(-339)`'s class stated as a number instead of grepped for**, and it is
+what named `(-342)`: `restore_payment_state` is 2,071 Ir a call over 2,494 calls
+and **590 of those instructions are `CardId` compares** — an O(n x m) shape
+written down in one line, in a function no self table ranks (0.34 % of `cube`).
+
+⚠⚠ **AND THE TRAP IN THE SAME DEVICE COST A BUILD: a line attributed to
+`card.rs:13` inside a function does NOT tell you WHICH scan it is.** `find_by_id`
+is `#[inline]`, so its own `c.id == id` compares land on the caller's row under
+the caller's source line. `computed_permanent_hinted`'s 2.15 M read as four
+compares a call against the freeze scope's `perms` list — the shape `FIND_HINTS`
+exists for — and a `[u8; 16]` slot table on `LayerFreezeState` (validated against
+the entry's id, so needing no invalidation) read **cube +0.151 / fixed +0.230 /
+sealed +0.242 %** with `computed_permanent_hinted` self **unchanged to 0.05 %**
+(22,037,032 -> 22,026,392). The 2.15 M was the inlined battlefield scan; the
+function's self row not moving is the proof. And the 16 bytes went into a struct
+`GameState::clone` copies 22,034 times, which is where the +0.2 % came from.
+**Confirm the scan is the caller's own before front-ending it** — `--callees`, or
+a line inside the loop body rather than on the compare.
+
+🔎 **`profiling-lines` IS CODEGEN-IDENTICAL TO `profiling-fast`, MEASURED:**
+`--dump-instr=yes` on the `profiling-lines` binary totals **1,514,412,257** on
+`cube` against `profiling-fast`'s **1,514,422,113** at the same tip — **0.0007 %
+apart**, so the profile comment's claim is now a measurement. A line reading and a
+self reading can be quoted side by side; keep the A/B on `profiling-fast` anyway.
+⚠ And a cold `profiling-lines` build is **8m19s** on a 4-core box, not the ~28 min
+the `(-334)`-era candidates entry assumed.
+
+```text
+perf    **`(-342)`: `restore_payment_state`'s per-permanent snapshot scan becomes one merge walk —
+        fixed +0.001 / cube -0.249 / sealed -0.046 %.** The snapshot is taken in battlefield order,
+        so it is an ordered subsequence of the board: one cursor answers every entry at a single
+        `CardId` compare per board card where the `find` per permanent was O(board x snapshot),
+        twice. restore self **-75.7 % `cube` / -64.0 % `sealed`**; the snapshot row unmoved to the
+        digit. ⚠ **Two earlier shapes were refuted because they paid on the SNAPSHOT to save on the
+        RESTORE** — 8,806 snapshots against 2,494 restores, so 1 unit spent there needs 3.5 back.
+
+gates   Outcomes identical base vs candidate on all three pools (48 / 24 / 72 decided, 0
+        undecided); `CRAB_DUMP_TRACES` on all three **144 / 144 files, 0 differing**; suite
+        **19,575 / 0 / 5** under `CRAB_ANSWER_LOG=strict`; clippy 0 on `crabomination`
+        before and after; `--bench` **195,806 / 27.49 / 611.9 / 0 stalls**, byte-identical to
+        the committed invariant, `determinism ok`, `thread_determinism ok (3 vs 1)`,
+        `peak_rss_mib 25.2`, at `games_per_s 546.28` / `host_calib_ms 46`.
+
+timings This box: cold `profiling-fast` **8m05s**, cold `profiling-lines` **8m19s**, engine-only
+        **2m30s**, cold `release` **9m36s** (deps warm), cold `overflow` in a second target dir
+        **7m50s**, three-pool callgrind ~40 s in parallel, `cargo check -p crabomination
+        --all-targets` 1m46s, workspace clippy **5m10s**, the suite 5m14s cold / 2m26s warm,
+        `cargo check --profile release-fast` 1m18s.
+
+⚠⚠ **AND THE ONE OPERATIONAL RULE THIS SESSION ADDS: when a foreground build overruns the
+tool's 600 s timeout and is moved to the background, RE-ISSUE THE SAME `cargo build` IN THE
+FOREGROUND.** It blocks on the artifact-directory lock, and that block *is* the wait — it
+returns when the background build finishes. `Monitor`, `until`-loops and polling a task's
+output file all fail, because the container advances ~18 s of wall clock across several
+model turns.
+```
+
 ### 2026-09-16 (the block-planner session, CONCURRENT with the spare-capacity one) — two agents on one branch, and what that cost
 
 ⚠⚠ **TWO SESSIONS RAN THIS BRANCH AT THE SAME TIME AND BOTH MEASURED
@@ -13927,6 +14025,28 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      the row and the only device left is a dirty bit. That is a `CardData`
      state change under the CoW rule (a write per EOT grant), so price the
      write side before building it.
+     📐 **RE-SIZED 2026-09-16 at the `(-341)` tip, and the write side is
+     priced: it is not the blocker.** `cg_frames.py` reads **51,750 calls,
+     83.5 Ir a call, `out/call` 0.04** — 96 % of calls make no outgoing call
+     at all, i.e. the guard runs all 26 probes and returns — against
+     `cleanup_wear_off`'s 2,650 calls, so this is **19.5 permanents a cleanup,
+     each paying 26 field probes to find nothing.** The dirty bit's *width*
+     cost is ~0.44 Ir a `CardData` copy x 68,610 copies = **~30 k Ir, nothing**,
+     and every one of the 26 fields is written through a `&mut` that has
+     already paid the CoW unshare, so the *store* is free too.
+     ⚠⚠ **The blocker is correctness, not cost: the 26 fields are written at
+     scattered sites through `Deref`/`DerefMut`, and one missed write leaves a
+     stale until-end-of-turn effect past cleanup — a rules bug the suite may
+     not build a board for.** The shape that makes it safe is `(-337)`/`(-338)`'s:
+     keep `end_of_turn_effects_are_clear` as a `debug_assert!` on the
+     not-dirty path, so the suite and every `debug-assertions` sweep audit the
+     bit. ❌ **And the cheap-looking place to put the bit is dead on arrival** —
+     a "`&mut` reached this card" flag at `CardInstance`'s `DerefMut` would be
+     free but is **true for nearly every permanent by cleanup** (the untap
+     step, the damage step and the counter writes all reach through it). Same
+     for a `GameState`-level "an EOT grant happened this turn" counter:
+     combat damage writes three of the 26 on every creature in combat, so
+     **price the hit rate before the write.**
 
   C. `blocker_pair_block`            10,114 / 72,918 / 37,716 calls
      1,223,166 / 9,062,474 / 4,557,290 Ir   (0.21 / 0.58 / 0.28 %) at 121-124
@@ -13935,7 +14055,18 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      call. The open question is whether the *pair count* can be cut — an
      evasion/legality prefilter keyed on the blocker — not whether the body can.
 
-  E. **`pick_blocks_inner` ITSELF, and it has never been line-profiled.**
+  ❌ E. **`pick_blocks_inner` ITSELF — LINE-PROFILED 2026-09-16 (the
+     payment-restore session) AND IT IS DIFFUSE. CLOSED.** 11,320,804 self on
+     `cube` at the `(-339)`+`3cfdc7ac` tip (0.75 %, after `(-336)` took 23 %
+     off it) over 4,384 calls, and **the largest `server/bot.rs` line in the
+     whole body is 467,020 Ir / 0.03 %** (`bot.rs:13052`, inside the pair
+     loop). The rest is sixty-odd `iter/macros.rs` / `ptr/non_null.rs` /
+     `option.rs` rows of a few hundred thousand each, plus 763,644 on
+     `CardId::eq`. **There is no row in here — the body IS the cost**, which is
+     the same verdict `(-319)` gave the other three. Do not spend another
+     `profiling-lines` build on it; the two sub-items at the end of this entry
+     are still open and still unpriced.
+     The `(-334)`-tip sizing, kept for them:
      self 2,734,232 / 15,349,700 / 8,942,732 (**0.47 / 1.00 / 0.54 %**) at the
      `(-334)` tip over 4,384 `cube` calls — **3,501 Ir of SELF a call**, the
      largest self row in the bot and the third largest in the program. Its
@@ -13944,11 +14075,9 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      is left is the body: the `attacker_info` `filter_map` (26.8 M INCLUSIVE
      over 4,384 collects, 6,113 Ir a call), the `blockers` map, the pair
      loop's arithmetic and its two `SmallIdMap` lookups a pair.
-     ⚠ **This is the one hot function `(-319)`'s "do not spend another
-     `profiling-lines` build" verdict does NOT cover** — that entry names
-     `fire_combat_damage_triggers`, `dispatch_triggers_for_events_slow` and
-     `check_state_based_actions_into`. A cold `profiling-lines` build is
-     ~28 min on this box; spend it here, not on those three.
+     ⚠ The `profiling-lines` build was spent here and the verdict is at the
+     top of this entry. (It is **8m19s** cold on a 4-core box, not the ~28 min
+     this entry used to assume.)
      Smaller and already sized inside it: `cp.clone()` per `AttackerFacts`
      is an `Arc` bump the struct literal only needs because `must_be_blocked`
      and `min_blockers` borrow `cp` after it (~20 k a `cube` run, ~0.04 %),
@@ -13970,6 +14099,22 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      ~60 more sites in `server/view.rs` and `snapshot.rs`. Not hot; take them
      only as tidying. And the same question is unasked for the OTHER zones'
      hand-written scans (`graveyard`, `exile`, `hand`) — grep before profiling.
+
+  ❌ I. **THE LAST BATTLEFIELD ADAPTER — `.position(|c| c.id == x)` — CENSUSED
+     AND DECLINED, no build spent.** `(-339)` took `find`, `(-340)` took `.any`;
+     `.position` is 10 sites, of which 5 are test bodies (`server/view.rs` x3,
+     `server/bot.rs` x2) and one (`apply_loss_reset`) has no self row. Of the
+     four that run, **two are search-everywhere probes that expect to MISS** —
+     `move_card_to`'s "try battlefield first" and `activate_ability_inner`'s
+     `bf_pos`, which also serves graveyard and hand activations — and those are
+     exactly what `(-341)` reverted at +466 k Ir. `run_effect`'s site is inside
+     the phasing arm and removes in a loop (each removal invalidates the hint it
+     would set). That leaves **one** always-hit warm site,
+     `apply_enters_tapped_replacement` in a 1,750,928-Ir function: worth
+     ~0.005 %. A hinted index (`Battlefield::index_of_id`, `find_by_id`'s body
+     returning the position) was written and reverted unmeasured on that
+     arithmetic. **The adapter class is closed; grep also finds zero production
+     `find_map` / `filter(..).next()` battlefield-by-id sites.**
 
   H. **`(-339)`'s grep on the OTHER zones — CENSUSED, NOT TAKEN, and the census
      cost no build.** 138 production `<zone>.iter().find(|c| c.id == x)` sites:
