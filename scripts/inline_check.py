@@ -26,12 +26,24 @@ does — its size, instruction count and call count.
 
 How to read the output:
 
-* **absent in `release`, present in `profiling-fast`** — the row is an
-  ARTIFACT. `release` inlined it. Do not rank it, and do not `#[inline]` it.
 * **present in both** — the call is real in the shipped binary. Rank it by its
   BODY (instructions minus the prologue), not by the dump's call count.
-* **absent in both** — it is inlined everywhere and the dump's row is somebody
-  else's code attributed to a symbol that no longer exists.
+* **absent in `release`, present in `profiling-fast`** — `release` inlined the
+  call. What that is worth depends entirely on the BODY, and the script prints
+  it rather than deciding for you:
+  * a **small** body (a field read, a discriminant test — tens of instructions)
+    is nearly all call overhead, so the row is an ARTIFACT: ranking it or
+    `#[inline]`-ing it buys the shipped binary nothing. `ManaCost::cmc` at 25
+    instructions and `counter_count` at 16 are this.
+  * a **large** body is REAL WORK that `release` merely moved into its callers.
+    Its Ir does not disappear from the program, it disappears from the *row*.
+    `Arc::clone_from_ref_in` — 91 instructions and 9 calls, the CoW unshare
+    `(-280)`..`(-287)` spent eight legs on — is this, and calling it an
+    artifact because the symbol vanishes would throw away a real 2.3 % of
+    `cube`.
+  ⚠ **"Inlined away" is a statement about the SYMBOL, never about the cost.**
+* **absent in both** — inlined everywhere; the dump's row is somebody else's
+  code attributed to a symbol that no longer exists.
 
 ⚠ Grep disassembly with `\\bcall\\b`, never `\\tcall`: objdump's column layout
 makes the latter match nothing, which reads as "no calls" and turns a
@@ -41,6 +53,10 @@ import argparse
 import re
 import subprocess
 import sys
+
+# A body at or under this many instructions is call overhead once inlined;
+# above it, inlining moves real work into the caller rather than removing it.
+SMALL_BODY = 40
 
 CALL = re.compile(r"\bcall\b")
 INSN = re.compile(r"^\s+[0-9a-f]+:")
@@ -89,26 +105,35 @@ def main():
 
     print(f"{'symbol':<44}{'release':>22}{'profiling-fast':>22}  verdict")
     for sym in a.symbols:
-        cells, present = [], []
+        cells, present, sizes = [], [], []
         for binary in (a.release, a.fast):
             hit = find_symbol(binary, sym)
             if hit is None:
                 cells.append(f"{'inlined away':>22}")
                 present.append(False)
+                sizes.append(0)
                 continue
             addr, size = hit
             n, calls, fs = body(binary, addr, size)
             extra = f" {fs}fs" if fs else ""
             cells.append(f"{n:>10} insn {calls:>2}call{extra:>5}")
             present.append(True)
+            sizes.append(n)
         if present[0] and present[1]:
             verdict = "REAL — rank by the body"
         elif present[1] and not present[0]:
-            verdict = "ARTIFACT — release inlines it"
+            # The body decides what the inlining is worth: a small one is call
+            # overhead (an artifact), a large one is real work release merely
+            # moved into the callers. See the module docstring.
+            verdict = (
+                f"call inlined; body {sizes[1]} insn — "
+                + ("ARTIFACT, overhead only" if sizes[1] <= SMALL_BODY
+                   else "REAL WORK, moved into callers")
+            )
         elif not any(present):
             verdict = "inlined in both — row is someone else's code"
         else:
-            verdict = "odd: in release only"
+            verdict = "in release only — profiling-fast inlined it into its caller"
         print(f"{sym[:43]:<44}{cells[0]}{cells[1]}  {verdict}")
 
 

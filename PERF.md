@@ -13664,18 +13664,36 @@ gate already built, so this costs nothing:
       LocalKey::with / FnOnce::call_once:      ABSENT
       %fs: segment references:                 12   <- the TLS read, inlined
   cp_pool::alloc, profiling-fast:  no symbol at all (inlined into its caller),
-      and `LocalKey::with` + `call_once` left behind as separate rows.
+      and `LocalKey::with` (102 insn) + `call_once` left behind as rows.
 ```
 
-**So the whole thread-local access is inlined in the shipped binary and the
-0.67 % is an artifact of the profile.** ⚠ **The instrument is free and nobody
-had used it this way: `nm -C` the `release` binary for the symbol, `objdump -d`
-the byte range, and count `call` against `%fs:` / the arithmetic.** The
-`--bench` gate builds that binary every run anyway. Do this before ranking ANY
-row whose name is a std generic or a small leaf — it is the same device the
-`perform_action_inner` `is_cast` refutation used, applied to the other side of
-the inlining question. ⚠ And grep the disassembly with `-P '\bcall\b'`, not
-`'\tcall'`: the latter silently matches nothing and reads as "no calls".
+⚠⚠ **CORRECTION, SAME DAY, AND IT IS THE POINT OF THE ENTRY. The first version
+of this block said "the 0.67 % is an artifact of the profile". That is WRONG
+and it overstates by about 6x.** `LocalKey::with`'s 102-instruction body in
+`profiling-fast` is mostly `cp_pool::alloc`'s *work* — the pool `pop` loop and
+the `*slot = cp` assignment, which is why `drop_in_place<ComputedPermanent>`
+(97,732 calls) shows up as its **callee**. `release` does that same work inside
+`cp_pool::alloc`'s 115 instructions. What `release` actually removes is the two
+call/return pairs per access, order **0.1 %**, not 0.67 %. The rest of the row
+is real work wearing a std generic's name.
+
+📐 **So the general rule is narrower than "std generics are artifacts too", and
+this is what `scripts/inline_check.py` prints rather than decides:
+"inlined away" is a statement about the SYMBOL, never about the cost.** Judge
+it by the body the script reports — a 16-to-25-instruction accessor
+(`counter_count`, `ManaCost::cmc`) really is call overhead and really does
+vanish; a 91-instruction `Arc::clone_from_ref_in` or a 102-instruction
+`LocalKey::with` is work that `release` merely *moves into its callers*, and
+calling it an artifact because the symbol disappeared would throw away a real
+2.3 % of `cube` in the CoW family's case.
+
+⚠ **The instrument is free and nobody had used it this way: `nm -C -S` the
+`release` binary for the symbol, `objdump -d` the byte range, count `call`
+against `%fs:` and read the instruction count.** The `--bench` gate builds that
+binary every run anyway. Do this before ranking ANY row whose name is a std
+generic or a small leaf. ⚠ And grep the disassembly with `-P '\bcall\b'`, not
+`'\tcall'`: the latter silently matches nothing and reads as "no calls", which
+is how the first version of this entry got written.
 
 ❌ **DECLINED with no build — `computed_permanent(x.id)` -> `computed_permanent_on(x)`,
 58 sites.** The `_on` form exists to skip a linear `battlefield.iter().find(id)`

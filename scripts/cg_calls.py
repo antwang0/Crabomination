@@ -17,20 +17,19 @@ How to read the Ir/call column:
   *profile artifact* — `release`'s thin LTO inlines it, and `release-fast`
   (which `profiling-fast` inherits) does not, so `CardDefinition::is_creature`
   reads a million calls here and none in the shipped binary.
-  ⚠ **This line used to say "a std generic the local inliner declined is
-  *real*". It is not, and that was refuted on 2026-09-16.**
-  `std::thread::local::LocalKey<T>::with` reads 148,514 calls / 0.67 % of
-  `cube` here with `FnOnce::call_once` under it — two non-inlined calls per
-  `cp_pool` access, the textbook "restructure the call site" shape — and in
-  `target/release/bot_ladder` the whole thread-local access is inlined into
-  `cp_pool::alloc`: 115 instructions, **zero** `LocalKey`/`call_once` calls,
-  12 direct `%fs:` references. A std generic is exactly as much of a profile
-  artifact as a base-crate leaf. **Decide it, don't assume it** — the
-  `--bench` gate already built the `release` binary, so it is free:
-      nm -C target/release/bot_ladder | grep '<the symbol>'
-      objdump -d --start-address=0xADDR --stop-address=0xEND target/release/bot_ladder
-  and count `call` against `%fs:` / the arithmetic. ⚠ Grep it with
-  `-P '\bcall\b'`; `'\tcall'` matches nothing and reads as "no calls".
+  ⚠ **A std generic the local inliner declined is NOT automatically "real"
+  either — decide it, don't assume it, and `scripts/inline_check.py` decides
+  it for free.** `LocalKey<T>::with` reads 148,514 calls / 0.67 % of `cube`
+  here with `FnOnce::call_once` under it, and `release` inlines both into
+  `cp_pool::alloc` — but its 102-instruction body is mostly the pool's own
+  work, so what `release` removes is ~2 call/return pairs an access (~0.1 %),
+  not the row. **"Inlined away" is a statement about the SYMBOL, never about
+  the cost:** a 16-25-instruction accessor that vanishes really was overhead,
+  a 91-instruction `Arc::clone_from_ref_in` that vanishes is real work moved
+  into its callers. Read the body, not the presence:
+      python3 scripts/inline_check.py '<substring of the symbol>'
+  The `--bench` gate already leaves `target/release/bot_ladder` on disk, so
+  this costs nothing.
 * **A whole-board presence walk divides into card visits here**, which is what
   says whether its row is body or iteration: pass 89 found
   `creature_type_change_in_scope`'s closure at 27,794 calls x 642 Ir, i.e. ~20
