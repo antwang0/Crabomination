@@ -3005,6 +3005,43 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-16 (the spare-capacity session) — a box that DOES reproduce, and a gate whose win is mostly its caller's
+
+✅✅ **TENTH BOX, 4 cores, 15 GB, rustc 1.95.0, valgrind 3.22.0 — and this one
+REPRODUCES the ninth box's absolutes, which breaks a three-box streak.** The
+`(-335)` tip rebuilt here reads fixed **584,047,874** / cube **1,540,593,800** /
+sealed **1,646,192,215** against the filed 584,047,449 / 1,540,593,903 /
+1,646,191,032 — **+0.00007 / -0.00001 / +0.00007 %**, i.e. 425 / -103 / 1,183
+instructions on runs of half a billion and upward. `pick_blocks_inner` self
+reads 2,544,044 / 14,775,618 / 8,388,818, the filed `(-335)` figures **to the
+digit** on all three pools.
+
+📐 **So "absolutes do not cross boxes" is not a law, and the useful form is
+narrower: an absolute is reproducible when the toolchain, the profile and the
+source tree are, and the three boxes that disagreed were telling you one of
+those three had moved.** Keep confirming on the counter — it costs nothing and
+it is what proved this base was the right one — but do not discard a filed
+absolute as unreachable before re-taking it.
+
+Timings this box: cold `profiling-fast` (deps + catalog + engine) **8m58s**, an
+engine-only change **2m39s**, a three-pool callgrind **~40 s** (all three in
+parallel; the runs themselves are 6.1 / 15.7 / 16.3 s).
+
+```text
+perf    **`(-336)`: the block planner's spare-capacity pass goes behind a board gate — fixed
+        -0.213 / cube -0.417 / sealed -0.245 %.** The pass asks every legal blocker about
+        `CanBlockAnyNumber` / `CanBlockAdditional(N)` at a `battlefield_find` + a `has_keyword`
+        + a `computed_permanent` apiece, for a keyword pair no ordinary board carries.
+        `pick_blocks_inner` self **-23.1 / -23.4 / -24.3 %**. ⚠ **The two leaf counters size
+        this row at 40 % of its value**: `compute_permanent_pass` does not move, so the deleted
+        memo asks were hits, and the rest of the win is the pass's own inlined board walk,
+        charged to the CALLER's self row. See the Log entry.
+
+gates   Outcomes identical base vs candidate on all three pools (48 / 24 / 72 decided,
+        0 undecided) and `pick_blocks_inner`'s call count identical (2,686 / 4,384 / 6,374) —
+        the gate only skips a pass that would find nothing.
+```
+
 ### 2026-09-16 (the block-planner session) — the walks a keyword ask costs that are not the walk
 
 ⚠⚠ **NINTH BOX, 4 cores, 15 GB, rustc 1.95.0, valgrind 3.22.0 — and the A/B
@@ -7597,6 +7634,49 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-336)` The block planner's spare-capacity pass goes behind a board gate — **fixed -0.213 / cube -0.417 / sealed -0.245 %**
+
+`pick_blocks_inner`'s last pass asks every legal blocker whether it can block
+extra attackers (`CanBlockAnyNumber` / `CanBlockAdditional(N)`) at a
+`battlefield_find` + a `has_keyword` + a `computed_permanent` apiece, for a
+keyword pair no ordinary board carries. `board_keyword_in_scope` answers the
+whole pass at 141 Ir; the two keywords join `card_has_gate_keyword`'s union.
+`enforce_block_caps`, ten lines below, already had this shape.
+
+```text
+                    base              (-336)          delta
+  fixed              584,047,874       582,801,030       -0.2135 %
+  cube             1,540,593,800     1,534,162,464       -0.4175 %
+  sealed           1,646,192,215     1,642,166,284       -0.2446 %
+
+  pick_blocks_inner self   2,544,044 ->  1,957,398   (-23.06 %)
+                          14,775,618 -> 11,320,804   (-23.38 %)
+                           8,388,818 ->  6,350,232   (-24.30 %)
+
+  cube counters       has_keyword               75,608 -> 55,394   (-20,214)
+                      computed_permanent_hinted 197,066 -> 176,852  (-20,214)
+                      board_keyword_in_scope     31,650 -> 36,034   (+4,384, one a call)
+                      compute_permanent_pass    226,544 -> 226,544  (UNCHANGED)
+```
+
+📐 **The removed memo asks were all HITS, and that is why the win is three
+times the leaf rows.** `compute_permanent_pass` does not move at all, so the
+20,214 `computed_permanent_hinted` calls this deletes were 124.6-Ir hits, not
+328-Ir misses — 2.52 M — and `has_keyword` another 0.66 M. Neither accounts for
+the 6.43 M. **The rest is the pass's own inlined board walk**, which is
+`pick_blocks_inner` SELF: -3.45 M on `cube`, a 23 % cut to the largest self row
+in the bot. A `battlefield_find` + a `has_keyword` per seed is a whole-board
+walk per seed, and it is charged to the caller, not to either leaf — so the two
+leaf counters together size this row at 40 % of its value.
+
+⚠ The `(-336)` commit landed with its numbers pending: the first candidate
+build overlapped a `git stash` of its own sources and could not be proven to
+match the tree. Rebuilt from touched sources on a fresh box, the unprovable
+read (fixed -0.213 / cube -0.412 / sealed -0.245 %) reproduces to three
+decimals. Outcomes identical on all three pools (48 / 24 / 72 decided, 0
+undecided), call counts of `pick_blocks_inner` identical (2,686 / 4,384 /
+6,374).
 
 ### `(-335)` The block planner's computed-keyword asks take one pass — **fixed -0.099 / cube -0.108 / sealed -0.099 %**
 
