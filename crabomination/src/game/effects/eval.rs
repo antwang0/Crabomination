@@ -4556,7 +4556,10 @@ impl GameState {
                         if !self.evaluate_requirement_static_hinted(inner, target, controller, source, hint) {
                             return false;
                         }
-                        let cand_pow = cand.power();
+                        // CR 613 — "greatest power" is the computed power on
+                        // both sides; the raw instance read here made an
+                        // anthem invisible to the comparison.
+                        let cand_pow = self.effective_power(cand);
                         let cand_ctrl = cand.controller;
                         !self.battlefield.iter().any(|other| {
                             other.controller == cand_ctrl
@@ -4567,7 +4570,7 @@ impl GameState {
                                     controller,
                                     source,
                                 )
-                                && other.power() > cand_pow
+                                && self.effective_power(other) > cand_pow
                         })
                     }
                     R::HasGreatestPowerAmongAllCreatures => {
@@ -4575,11 +4578,12 @@ impl GameState {
                         if !cand.definition.is_creature() {
                             return false;
                         }
-                        let cand_pow = cand.power();
+                        // CR 613, as in the `AmongControlled` sibling above.
+                        let cand_pow = self.effective_power(cand);
                         !self.battlefield.iter().any(|other| {
                             other.id != *cid
                                 && other.definition.is_creature()
-                                && other.power() > cand_pow
+                                && self.effective_power(other) > cand_pow
                         })
                     }
                     R::HasName(name) => {

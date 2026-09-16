@@ -130,6 +130,18 @@ Cost, callgrind three-pool A/B: **fixed +0.001 / cube +0.001 / sealed
 `cr_613_a_power_comparison_filter_reads_the_anthem`, verified to FAIL on the
 pre-fix arms.
 
+**And the same class holds two more arms, fixed with it**:
+`HasGreatestPowerAmongControlled` (Professor Onyx's −3) and
+`HasGreatestPowerAmongAllCreatures` (Fleetfoot Panther's set, Cogwork
+Librarian's, recent239) both read `cand.power()` against `other.power()` over
+a battlefield walk, so "the creature with the greatest power" ranked
+un-anthemed numbers: a 2/2 under a +3/+3 anthem lost to an un-anthemed 4/4.
+Both sides read `effective_power` now. Second A/B, on top of the seven:
+**fixed +0.000 / cube +0.000 / sealed +0.000 %** — the walk was already there
+and the memo read is a hit. Test
+`cr_613_greatest_power_is_a_computed_comparison`, verified to FAIL on the
+pre-fix arms.
+
 ## FIXED 2026-09-16 (thirty-second find) — a conjunction of two creature types flattens into ONE slot, and the second leaf silently widens the static
 
 Found while reading the routing the thirty-first find's test exposed.

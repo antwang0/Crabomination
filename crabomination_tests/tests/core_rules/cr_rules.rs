@@ -11225,3 +11225,46 @@ fn cr_613_a_power_comparison_filter_reads_the_anthem() {
     // The threshold arms agreed all along — they are the model this follows.
     assert!(g.evaluate_requirement_static(&R::PowerAtLeast(3), &Target::Permanent(other), 0, None));
 }
+
+/// CR 613 — "the creature with the greatest power" is a comparison of
+/// *computed* powers, so an anthem decides it. Both greatest-power filters
+/// read `CardInstance::power()` on both sides until this fix, so a 2/2 under
+/// a Glorious Anthem lost the comparison to an un-anthemed 3/3.
+/// Reached by Rise of the Hobgoblins-era exiles (Fleetfoot Panther set),
+/// Cogwork Librarian's set and Professor Onyx's -3.
+#[test]
+fn cr_613_greatest_power_is_a_computed_comparison() {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R, StaticAbility};
+    use crabomination::effect::{Selector, StaticEffect};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let greatest = |g: &crabomination::game::GameState, id| {
+        g.evaluate_requirement_static(
+            &R::HasGreatestPowerAmongAllCreatures,
+            &Target::Permanent(id),
+            0,
+            None,
+        )
+    };
+    assert!(!greatest(&g, bear), "a 2/2 is not the biggest next to a 4/4");
+    assert!(greatest(&g, big));
+
+    // +3/+3 to seat 0's creatures: the bear is now a 5/5 and the Angel is not.
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Titanic Standard",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +3/+3.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: 3,
+                toughness: 3,
+            },
+        }],
+        ..Default::default()
+    });
+    assert_eq!(g.computed_permanent(bear).expect("computed").power, 5);
+    assert!(greatest(&g, bear), "the anthem was invisible to the comparison");
+    assert!(!greatest(&g, big), "a 4/4 outranked an anthemed 5/5");
+}
