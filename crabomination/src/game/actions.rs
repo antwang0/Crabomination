@@ -12736,24 +12736,65 @@ impl GameState {
     /// battlefield (the caller is responsible for any zone-change rollback).
     pub(crate) fn restore_payment_state(&mut self, payer: usize, snapshot: PaymentSnapshot) {
         self.players[payer].mana_pool = snapshot.pool;
-        // `battlefield` is a `CowBox`, so **any** `iter_mut` deep-copies the
-        // zone whenever a probe clone still shares it — and this asked for
-        // one per snapshot entry, on a path whose common case is "the
-        // payment left every flag where it found it". 67,750 `Arc::make_mut`
-        // calls / 24.0 M Ir on a cube run at the fifty-fifth tip. Ask with a
-        // shared borrow, then take the one mutable borrow only if a flag
-        // actually moved.
+        // **The snapshot is taken in battlefield order, so it is an ordered
+        // subsequence of the board** unless the payment moved a permanent —
+        // one merge walk then answers every entry at a single `CardId`
+        // compare per board card, where asking
+        // `snapshot.tapped.iter().find(id)` per permanent was O(board x
+        // snapshot) and the opponent's half of the board paid a full scan
+        // each to find nothing. The cursor reaching the end of the snapshot
+        // is the proof the merge was valid: a greedy in-order match that
+        // consumes every entry has matched each one against the board card
+        // carrying its id. PERF `(-340)`.
+        let snap = &snapshot.tapped[..];
+        let mut cursor = 0usize;
+        let mut moved: SmallVec<[(usize, bool); 4]> = SmallVec::new();
+        for (i, c) in self.battlefield.iter().enumerate() {
+            if let Some(&(id, was)) = snap.get(cursor)
+                && id == c.id
+            {
+                if c.tapped != was {
+                    moved.push((i, was));
+                }
+                cursor += 1;
+            }
+        }
+        if cursor == snap.len() {
+            debug_assert!(
+                self.battlefield
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, c)| snapshot
+                        .tapped
+                        .iter()
+                        .find(|(id, _)| *id == c.id)
+                        .map(|&(_, was)| (i, was))
+                        .filter(|&(_, was)| was != c.tapped))
+                    .eq(moved.iter().copied()),
+                "the merge walk disagrees with the by-id scan it replaces",
+            );
+            // `CardInstance` is a CoW handle, so each write below is an
+            // unshare of that card — and `battlefield` is a `CowBox`, so the
+            // `iter_mut` this replaces deep-copied the whole zone whenever a
+            // probe clone still shared it, to put back the one or two lands
+            // auto-tap had touched. Nothing at all in the common case, where
+            // the payment left every flag where it found it.
+            for (i, was) in moved {
+                if let Some(c) = self.battlefield.get_mut(i) {
+                    c.tapped = was;
+                }
+            }
+            return;
+        }
+        // The board moved under the payment (a mana ability that sacrificed
+        // a source, a token that entered), so the merge cannot speak for the
+        // entries it never reached: fall back to the by-id scan.
         let restore = |c: &crate::card::CardInstance| {
             snapshot.tapped.iter().find(|(id, _)| *id == c.id).map(|(_, was)| *was)
         };
         if !self.battlefield.iter().any(|c| restore(c).is_some_and(|was| was != c.tapped)) {
             return;
         }
-        // `CardInstance` is a CoW handle too, so the write below is a second
-        // unshare — per card. The gate above says *some* flag moved, not
-        // that this one did, and a snapshot covers every permanent the payer
-        // owns: rewriting all of them deep-copied the whole owned board to
-        // put back the one or two lands auto-tap had touched.
         for c in self.battlefield.iter_mut() {
             if let Some(was) = snapshot.tapped.iter().find(|(id, _)| *id == c.id).map(|(_, w)| *w)
                 && c.tapped != was

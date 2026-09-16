@@ -7780,6 +7780,68 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-342)` `restore_payment_state`'s per-permanent snapshot scan becomes one merge walk — **fixed +0.001 / cube -0.249 / sealed -0.046 %**
+
+`snapshot_payment_state` records `(id, tapped)` for every permanent the payer
+controls, in **battlefield order**; the restore walked the *board* and asked
+`snapshot.tapped.iter().find(|(id, _)| *id == c.id)` per permanent — twice, once
+for the "did anything move" gate and once for the write loop. That is
+O(board x snapshot) `CardId` compares, and the opponent's half of the board paid
+a full scan each to find nothing.
+
+Because the snapshot is taken in board order it is an ordered **subsequence** of
+the board unless the payment moved a permanent, so one merge walk with a cursor
+answers every entry at a single compare per board card. **The cursor reaching the
+end of the snapshot is the proof the merge was valid**: a greedy in-order match
+that consumes every entry has matched each entry against the board card carrying
+its id. When it does not (a mana ability sacrificed a source, a token entered)
+the by-id scan is still there as the fallback.
+
+```text
+                    (-341) tip        (-342)            delta
+  fixed              578,037,636       578,041,245       +0.0006 %
+  cube             1,512,279,098     1,508,519,578       -0.2486 %
+  sealed           1,631,233,534     1,630,488,593       -0.0457 %
+
+  rows:  restore_payment_state   cube 5,165,044 -> 1,252,818 (-75.7 %)
+                                 sealed 1,196,138 -> 430,064 (-64.0 %)
+                                 fixed below the 0.15 % floor both sides
+         snapshot_payment_state  2,986,722 / 1,053,296 / 2,462,808 — UNMOVED
+                                 to the digit on all three pools
+```
+
+✅ **AND THE ROW REPRODUCES ACROSS A REBASE, WHICH IS WORTH RECORDING.** The A/B
+was first taken at the `(-339)` tip in a separate session and read
+`-0.0005 / -0.2472 / -0.0460 %` with restore self **1,252,818 / 430,064** — the
+same two absolutes to the digit against a tree that has since taken `(-340)` and
+`(-341)`. A row whose callees did not move re-measures identically; re-take the
+*tip's* absolutes, not the row's.
+
+📐 **AND THE SNAPSHOT ROW STAYING PUT IS THE POINT — two earlier shapes of this
+same row were refuted because they paid on the snapshot's whole-board walk to
+save on the restore.** (a) Carrying the battlefield **index** in the entry so the
+restore is an indexed read: `cube -0.228 / fixed +0.010 / sealed +0.025 %` as a
+12-byte entry, `cube -0.215 / fixed +0.052 / sealed -0.013 %` packed back to 8
+bytes as `index << 1 | tapped`. Both won on `cube` and **lost on `fixed`**, where
+the restore is below the floor and the `enumerate` is pure cost: snapshot 1.05 ->
+1.35 M. (b) Stamping the snapshot with `Battlefield::writes` for an O(1) "nothing
+took `&mut`, so no flag moved" gate — **the counter has almost always moved by
+restore time** (cube restore 5.17 -> 4.98 M, -4 %) and the stamp cost more in the
+snapshot than it saved: `cube +0.015 / fixed +0.014 / sealed -0.007 %`.
+⚠ **A restore is called ~2,494 times on `cube` against ~8,806 snapshots, so a
+device that costs the snapshot 1 unit must save the restore 3.5 to break even.**
+Count the two call sites before moving work from one to the other.
+
+The merge carries a `debug_assert!` that its result equals the by-id scan it
+replaces, element for element and in board order, so the suite and any
+`debug-assertions` sweep audit the subsequence premise on every payment failure.
+Its Ir cost in the optimized profiles is under a thousand instructions across
+three pools, i.e. nothing.
+
+Behaviour-preserving: suite **19,575 / 0 / 5** under `CRAB_ANSWER_LOG=strict`,
+outcomes identical on all three pools (24 / 48 / 72 decided, 0 undecided), and
+`CRAB_DUMP_TRACES` on all three gives **144 / 144 trace files with 0 differing**.
+
 ### `(-341)` The two search-everywhere probes keep the UNHINTED scan — **fixed -0.018 / cube -0.031 / sealed -0.015 %**
 
 `(-340)`'s own attribution named its regression: `find_card_anywhere_mut`
