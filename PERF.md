@@ -14067,6 +14067,30 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      for a `GameState`-level "an EOT grant happened this turn" counter:
      combat damage writes three of the 26 on every creature in combat, so
      **price the hit rate before the write.**
+     📐 **The write sites are censused: 114 across the 26 fields**
+     (`granted_alt_cast_cost_eot` 21, `granted_keywords_eot` 9, `power_bonus` 7,
+     `granted_activated_eot` 7, the three damage flags 6 each, the rest 1-5),
+     all through `Deref`/`DerefMut` on public fields — so an exact bit means
+     touching all 114, or privatising 26 fields and letting the compiler find
+     every reader too. **That is a refactor with a rules-bug risk, not a
+     mechanical change.**
+     💡 **The one shape that needs NO write-site change, and the next thing to
+     price: 11 of the 26 live in `CardCold`** (`granted_activated_eot`,
+     `once_per_turn_used`, `removed_keywords_eot`, `saddled_by`, `crewed_by`,
+     `granted_keywords_eot`, `granted_keywords_eot_ts`, `granted_flashback_eot`,
+     `granted_harmonize_eot`, `granted_alt_cast_cost_eot`,
+     `granted_cast_surcharge_eot`), and `CardCold` sits behind
+     `CowBox<CardCold>` built with `CowBox::default()` per card
+     (`card.rs:8543`). Give that default **one process-wide `Arc`** and
+     `Arc::ptr_eq` against it is a 1-instruction, always-conservative "this card
+     has never written cold": it skips 11 of the 26 probes (~40 % of the row,
+     **~0.12 % of `cube`**) and saves an allocation per card built.
+     ⚠ **Two things to price first:** the hit rate — cold also holds
+     `named_card`, `chosen_colors`, `keyword_counters`, `pending_etb_counters`,
+     `front_face` and `exiled_by`, so a permanent that ever wrote any of them is
+     unshared for the rest of the game and **the gate DEGRADES over a game** —
+     and the build, because this is a `crabomination_base` change and the
+     catalog rebuild puts it at **~11 min a side**.
 
   C. `blocker_pair_block`            10,114 / 72,918 / 37,716 calls
      1,223,166 / 9,062,474 / 4,557,290 Ir   (0.21 / 0.58 / 0.28 %) at 121-124
