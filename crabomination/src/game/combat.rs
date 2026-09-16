@@ -288,6 +288,27 @@ fn max_blocks_for(kws: &[Keyword]) -> usize {
         .sum::<usize>()
 }
 
+/// CR 702.180 / 702.70 — the total poison a creature's combat damage adds on
+/// top of its damage: Toxic N and Poisonous N fold into one rider.
+///
+/// ⚠ **Cumulative, and that is why it is a sum rather than a `has_kw`.** Layer
+/// 6 pushes every granted `Toxic(_)` / `Poisonous(_)` instance instead of
+/// collapsing duplicates (CR 702.180b / 702.70b — Plague Nurse's granted
+/// toxic 1 stacks with a printed toxic 1), so the *computed* list is the only
+/// set that carries the right total.
+///
+/// One definition because two callers must agree: the damage step's
+/// `AttackerInfo` and the bot's block planner, whose own copy read
+/// `definition.keywords` and so scored a granted or stacked Toxic as zero.
+pub(crate) fn toxic_poison_value(kws: &[Keyword]) -> u32 {
+    kws.iter()
+        .filter_map(|k| match k {
+            Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
+            _ => None,
+        })
+        .sum()
+}
+
 impl GameState {
     /// CR 702.22d/j — the qualities named by "bands with other [quality]" on
     /// any of `ids`, read from the computed keyword set so granted instances
@@ -3687,12 +3708,7 @@ impl GameState {
                     has_deathtouch: kws.has_kw(&Keyword::Deathtouch),
                     has_infect: kws.has_kw(&Keyword::Infect),
                     has_wither: kws.has_kw(&Keyword::Wither),
-                    toxic: kws.iter().filter_map(|k| match k {
-                        // Poisonous N (CR 702.70) folds into the same
-                        // combat-damage poison rider as Toxic (CR 702.180).
-                        Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
-                        _ => None,
-                    }).sum(),
+                    toxic: toxic_poison_value(kws),
                     assigns_as_unblocked: kws
                         .has_kw(&Keyword::AssignsDamageAsThoughUnblocked),
                     free_divider: kws

@@ -12815,20 +12815,27 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     Some(v) => v.min_blockers,
                     None => min_blockers_required(a),
                 },
+                // CR 702.90 / 702.180 / 702.70 — read off the **computed** set,
+                // which is what the damage step's `AttackerInfo` reads. The
+                // Toxic leg used to walk `definition.keywords` alone while the
+                // Infect leg beside it walked the instance's four sources, so a
+                // granted Toxic — and every instance past the first, which
+                // layer 6 keeps *cumulatively* — scored zero on the clock that
+                // turns on chump-blocking. `toxic_poison_value` is the damage
+                // step's own fold, shared so the two cannot drift again.
                 poison: {
                     let mut p = 0u32;
-                    if akw & combat_kw::INFECT != 0 {
+                    let infect = match &cp {
+                        Some(c) => c.keywords().has_kw(&Keyword::Infect),
+                        None => akw & combat_kw::INFECT != 0,
+                    };
+                    if infect {
                         p = p.saturating_add(a.power().max(0) as u32);
                     }
-                    p += a
-                        .definition
-                        .keywords
-                        .iter()
-                        .filter_map(|k| match k {
-                            Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
-                            _ => None,
-                        })
-                        .sum::<u32>();
+                    p += match &cp {
+                        Some(c) => crate::game::combat::toxic_poison_value(c.keywords()),
+                        None => crate::game::combat::toxic_poison_value(&a.definition.keywords),
+                    };
                     p
                 },
             })
@@ -19218,6 +19225,34 @@ mod tests {
         g.step = TurnStep::DeclareBlockers;
         g.priority.player_with_priority = 1;
         (g, ids)
+    }
+
+    /// CR 702.180b / 702.70b — the block planner's poison clock reads the
+    /// **computed** keyword set, so a *granted* Toxic counts and stacked
+    /// instances sum.
+    ///
+    /// Regression: the Toxic/Poisonous leg summed `definition.keywords` alone
+    /// while the Infect leg one line above it read the instance's four
+    /// sources, so a granted toxic scored zero on `poison_threatened` — the
+    /// flag that turns on chump-blocking and the gang pass — and the bot took
+    /// a lethal poison swing it would otherwise have chumped.
+    #[test]
+    fn granted_toxic_reaches_the_block_planners_poison_clock() {
+        use crate::card::Keyword;
+        let (mut g, atk) = attacked_board(&[catalog::hill_giant()], 1);
+        // A 2/2 into a 3/3 kills nothing and dies, so nothing but the poison
+        // clock can make the bot block this board.
+        assert!(
+            pick_blocks(&g, 1).is_empty(),
+            "a 2/2 does not value-block a 3/3 at a healthy life total",
+        );
+        g.players[1].poison_counters = 9;
+        g.grant_keyword_eot(atk[0], Keyword::Toxic(1));
+        assert_eq!(
+            pick_blocks(&g, 1).len(),
+            1,
+            "a granted toxic 1 at 9 poison counters is lethal and must be chumped",
+        );
     }
 
     /// The block chain's finished plan is a declaration the engine accepts,
