@@ -3034,10 +3034,8 @@ then sum the `file:line` column instead of reading the top rows:
                   1.48 M, declare_attackers_banded 1.27 M, find_card_anywhere 1.23 M,
                   resolve_combat_into 1.22 M, declare_blockers 0.92 M
   sync/atomic.rs  the memo stamps + find_hints  41,046,116   2.71 %
-                  7.40 M of it in compute_permanents::{{closure}} ALONE — UNREAD.
-                  ⚠ That is 32.7 Ir a computed id for what is a relaxed load and a
-                  relaxed store, so the first question is whether the attribution
-                  survives a disassembly, not how to make the atomics cheaper.
+                  7.40 M of it in compute_permanents::{{closure}} ALONE.
+                  ❌ **REFUTED BY THE DISASSEMBLY, BELOW — it is smearing, not cost.**
   str/pattern + fmt   CardDefinition::debug_flags' {:?} scan  ~12.6 M   0.83 %
                   (is_contained_in 8.29 M + SmallVec Debug 1.79 M + String::write_str
                   2.50 M). ⚠ ONCE PER DISTINCT CARD NAME PER PROCESS — 2,569
@@ -3051,8 +3049,30 @@ what named `(-342)`: `restore_payment_state` is 2,071 Ir a call over 2,494 calls
 and **590 of those instructions are `CardId` compares** — an O(n x m) shape
 written down in one line, in a function no self table ranks (0.34 % of `cube`).
 
-⚠⚠ **AND THE TRAP IN THE SAME DEVICE COST A BUILD: a line attributed to
-`card.rs:13` inside a function does NOT tell you WHICH scan it is.** `find_by_id`
+❌❌ **AND THE `sync/atomic.rs` ROW IS THE SAME TRAP, SETTLED BY `objdump` FOR
+FREE: 2.71 % of the program is NOT on atomics.** `compute_permanents::{{closure}}`
+is at `0x890110` in the `profiling-fast` binary, and `find_by_id`'s whole hint
+mechanism inside it is **two instructions**:
+
+```text
+  89022d:  mov 0x2f8(%r12,%rdx,4),%edi     # find_hints[slot].load(Relaxed)
+  8902ac:  mov %edi,0x2f8(%r12,%rcx,4)     # find_hints[slot].store(i, Relaxed)
+```
+
+A relaxed load and a relaxed store on x86 are one `mov` each — the hit path is
+~7 instructions end to end (load hint, bounds compare, index, compare id) and
+the miss path is the 8-instruction scan loop at `0x890290`. The dump's 7.40 M is
+**32.7 Ir a computed id**, which those two `mov`s cannot be: the DWARF inline
+record for the atomic accessor covers a range that the surrounding block's
+addresses fall into, so the *scan* is charged to `atomic.rs`. ⚠ **A line row in
+an `#[inline]`-heavy build is an address range, not a statement** — before
+ranking one, `objdump -d --start-address=<sym>` the enclosing symbol and count
+the instructions the row claims. It costs nothing and the binary is already on
+disk.
+
+⚠⚠ **AND THE `card.rs:13` ROW IS THE SAME TRAP THE OTHER WAY, WHICH COST A BUILD:
+a line attributed to `card.rs:13` inside a function does NOT tell you WHICH scan
+it is.** `find_by_id`
 is `#[inline]`, so its own `c.id == id` compares land on the caller's row under
 the caller's source line. `computed_permanent_hinted`'s 2.15 M read as four
 compares a call against the freeze scope's `perms` list — the shape `FIND_HINTS`
