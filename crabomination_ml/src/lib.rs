@@ -271,9 +271,12 @@ pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResu
 /// batch 256 — more than the packing it hid; round 72's arm C.)
 pub struct PackedHost {
     b: usize,
-    groups: Vec<(usize, Vec<u32>, Vec<f32>, Vec<f32>)>,
+    groups: Vec<PackedGroup>,
     global: Vec<f32>,
 }
+
+/// One group's `(n, ids, feats, mask)` inside a [`PackedHost`].
+type PackedGroup = (usize, Vec<u32>, Vec<f32>, Vec<f32>);
 
 fn pack_states_host(states: &[&EncodedState]) -> PackedHost {
     let b = states.len();

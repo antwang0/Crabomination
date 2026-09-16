@@ -2344,6 +2344,11 @@ fn pg_temperature_sanity(pb: &crabomination_ml::PgBatch, temp: i32) {
     }
 }
 
+// Seventeen arguments because it is the one place that writes a checkpoint and
+// it needs every piece of the run's state to do it; grouping them into a struct
+// would be the same seventeen fields one indirection away. Same call as the
+// server's wide helpers (`server/mod.rs`, `recommend.rs`).
+#[allow(clippy::too_many_arguments)]
 fn checkpoint(
     trainer: &Trainer,
     deck_trainer: &DeckTrainer,
