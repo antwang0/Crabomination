@@ -9110,8 +9110,7 @@ impl GameState {
         // of each. The extra mints aren't re-replaced (CR 614.5).
         let minted_name = self
             .battlefield
-            .iter()
-            .find(|c| c.id == id)
+            .find_by_id(id)
             .map(|c| c.definition.name)
             .unwrap_or_default();
         if !self.in_token_replacement
@@ -11726,8 +11725,7 @@ impl GameState {
                 // controller's zones, which may be an opponent).
                 let host_controller = self
                     .battlefield
-                    .iter()
-                    .find(|c| c.id == target)
+                    .find_by_id(target)
                     .map(|c| c.controller);
                 let n = if let Some(att_filter) = &scale.count_host_attachments {
                     // "+1/+0 for each Equipment attached to it" (Golem-Skin
@@ -11793,8 +11791,7 @@ impl GameState {
                     // "+1/+1 for each of the host's colors" (Blessing of the
                     // Nephilim) — read the host's printed colors.
                     self.battlefield
-                        .iter()
-                        .find(|c| c.id == target)
+                        .find_by_id(target)
                         .map(|c| c.definition.printed_colors().len() as i32)
                         .unwrap_or(0)
                 } else {
@@ -11997,8 +11994,7 @@ impl GameState {
             for cond in &bonus.conditional {
                 let host_matches = self
                     .battlefield
-                    .iter()
-                    .find(|c| c.id == target)
+                    .find_by_id(target)
                     .is_some_and(|host| {
                         self.evaluate_requirement_on_card(&cond.host_filter, host, card.controller)
                     });
@@ -19612,8 +19608,7 @@ impl GameState {
     pub(crate) fn crew_saddle_uses_toughness(&self, cid: crate::card::CardId) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield
-            .iter()
-            .find(|c| c.id == cid)
+            .find_by_id(cid)
             .is_some_and(|c| {
                 c.definition
                     .static_abilities
@@ -19657,8 +19652,7 @@ impl GameState {
             }
             let tapped = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == cid)
+                .find_by_id(cid)
                 .map(|c| c.tapped)
                 .unwrap_or(true);
             if tapped {
@@ -19744,8 +19738,7 @@ impl GameState {
             }
             let tapped = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == cid)
+                .find_by_id(cid)
                 .map(|c| c.tapped)
                 .unwrap_or(true);
             if tapped {
@@ -19800,8 +19793,7 @@ impl GameState {
         };
         let returning_controller = self
             .battlefield
-            .iter()
-            .find(|c| c.id == returning)
+            .find_by_id(returning)
             .map(|c| c.controller);
         if returning_controller != Some(p) {
             return Err(GameError::NotYourPriority);

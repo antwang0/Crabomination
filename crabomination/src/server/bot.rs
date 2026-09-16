@@ -4465,8 +4465,7 @@ fn removal_targets_own_permanent(state: &GameState, body: &Effect) -> bool {
 fn optional_trigger_def(state: &GameState, source: CardId) -> Option<&CardDefinition> {
     state
         .battlefield
-        .iter()
-        .find(|c| c.id == source)
+        .find_by_id(source)
         .map(|c| &**c.definition)
         .or_else(|| {
             state
@@ -9862,8 +9861,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack
         for id in attackers.drain(..) {
             let pow = state
                 .battlefield
-                .iter()
-                .find(|c| c.id == id)
+                .find_by_id(id)
                 .map(|c| c.power())
                 .unwrap_or(0);
             if budget > 0 && pow > 0 {

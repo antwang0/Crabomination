@@ -3028,6 +3028,15 @@ engine-only change **2m39s**, a three-pool callgrind **~40 s** (all three in
 parallel; the runs themselves are 6.1 / 15.7 / 16.3 s).
 
 ```text
+perf    **`(-339)`: the engine's 53 raw battlefield-by-id scans take the hint cache — fixed
+        -0.503 / cube -0.814 / sealed -0.473 %**, and with `(-337)`/`(-338)` **fixed -0.668 /
+        cube -1.313 / sealed -0.665 %**. 🔎 **A grep found in a minute what six callgrind passes
+        could not: a hand-written `iter().find()` inlines into its caller and HAS NO SYMBOL**, so
+        every device in the candidates list — self tables, call counts, edges, line profiles — is
+        structurally blind to it. When a hot-path helper exists, grep for its hand-written
+        spelling before profiling for it. ⚠ `cargo fmt` is not clean on this tree (59 files,
+        +31,119/-14,042) — format touched lines by hand.
+
 perf    **`(-338)`: `declare_attackers_banded`'s per-attacker keyword asks take one pass — fixed
         -0.114 / cube -0.308 / sealed -0.118 %**, and with `(-337)` **fixed -0.165 / cube -0.503 /
         sealed -0.193 %**. Six `computed_kw(id)` per declared attacker become one `match` fold;
@@ -7650,6 +7659,50 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-339)` The engine's 53 raw battlefield-by-id scans take the hint cache — **fixed -0.503 / cube -0.814 / sealed -0.473 %**
+
+`Battlefield::find_by_id` has had a per-id hint cache since PERF `(-38)` and
+`(-304)` filed "the hint-cached finder rather than a linear scan" as the bigger
+half of that row. **Fifty-three call sites in the engine never took it**, spelled
+`battlefield.iter().find(|c| c.id == x)` by hand — eight in `actions.rs`, six in
+`combat.rs`, seventeen in `stack.rs`, nine in `effects/`, eight in
+`game/mod.rs`, three in `server/`. Mechanical: ids are unique on the
+battlefield (`find_by_id`'s own `debug_assert!` audits it on every scan-path
+hit), so the two forms return the same permanent.
+
+```text
+                    (-338)            (-339)          delta
+  fixed              581,837,771       578,910,389       -0.5031 %
+  cube             1,526,450,208     1,514,018,968       -0.8144 %
+  sealed           1,639,004,351     1,631,252,648       -0.4730 %
+
+  the three rows together, against the `(-336)` tip:
+                            fixed -0.668 / cube -1.313 / sealed -0.665 %
+```
+
+🔎 **AND THE FINDING IS THE METHOD, NOT THE ROW: a grep found in one minute
+what six passes of callgrind could not, because a hand-written `iter().find()`
+INLINES INTO ITS CALLER AND HAS NO ROW.** Every device in this file's candidate
+list ranks *symbols* — self tables, call counts, caller/callee edges, line
+profiles — and all of them are blind to a cost that never becomes a symbol.
+`find_by_id` itself reads 234 calls on `cube` at the `(-339)` tip; the 53 scans
+it replaced read **zero**, on every dump this file has ever taken. **When a
+hot-path helper exists, grep for its hand-written spelling before profiling for
+it** — the population is a syntactic one and the profiler cannot see it.
+
+📐 It also reframes `(-337)`'s queue item (G), which sized *one* of these sites
+at ~0.07 % and was nearly declined as marginal. The site was marginal; the
+*class* is the third-largest row in this file's recent history. **Prefer the
+grep that finds every instance to the profile that ranks one.**
+
+Behaviour-preserving: suite **19,574 / 0 / 5** with `CRAB_ANSWER_LOG=strict`,
+outcomes identical on all three pools (24 / 48 / 72 decided, 0 undecided). No
+logic changed — the diff is 53 substitutions and nothing else.
+
+⚠ `cargo fmt` is NOT clean on this tree: running it on `crabomination` after
+the substitution reformatted **59 files, +31,119 / -14,042**. Format the lines
+you touch by hand; a `cargo fmt -p` here buries a mechanical commit.
 
 ### `(-338)` `declare_attackers_banded`'s per-attacker keyword asks take one pass — **fixed -0.114 / cube -0.308 / sealed -0.118 %**
 
@@ -13518,11 +13571,17 @@ costs a cold build.
      -0.308 / sealed -0.118 %, self -8.1 / -18.2 / -9.7 %. What is left in it
      is the body proper, at 2,023 / 3,583 / 2,315 Ir a call.
 
-  G. **`declare_blockers`' validation loop re-finds the blocker with a raw
-     linear battlefield scan** — `self.battlefield.iter().find(|c| c.id ==
-     blocker_id)`, once per assignment, two lines above a `battlefield_find`
-     on the attacker that uses the hint cache. `(-304)`'s device, and the
-     smaller half of what `(-337)` left in that function.
+  ✅ G. TAKEN as `(-339)`, and as the whole CLASS rather than that one site:
+     53 raw `battlefield.iter().find(|c| c.id == x)` scans across the engine,
+     fixed -0.503 / cube -0.814 / sealed -0.473 %. The single site was worth
+     ~0.07 % and was nearly declined; the class is the largest row of the
+     session. **Prefer the grep that finds every instance to the profile that
+     ranks one** — these scans inline into their callers and have no symbol,
+     so no dump in this file has ever shown them.
+     ⏳ What remains of the same class, untouched because it is test bodies:
+     ~60 more sites in `server/view.rs` and `snapshot.rs`. Not hot; take them
+     only as tidying. And the same question is unasked for the OTHER zones'
+     hand-written scans (`graveyard`, `exile`, `hand`) — grep before profiling.
 
   D. the remaining keyword-ask ratio in `pick_attacks_inner` — DECLINED, ~0.017 %.
      See `(-330)`'s Log entry: the five per-blocker sites now take one

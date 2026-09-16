@@ -2677,8 +2677,7 @@ impl GameState {
                 // destination seat.
                 let etb_ctrl = self
                     .battlefield
-                    .iter()
-                    .find(|c| c.id == cid)
+                    .find_by_id(cid)
                     .map(|c| c.controller)
                     .unwrap_or(p);
                 self.fire_self_etb_triggers(cid, etb_ctrl);

@@ -1770,16 +1770,14 @@ impl GameState {
     ) -> bool {
         let spec = self
             .battlefield
-            .iter()
-            .find(|c| c.id == card_id)
+            .find_by_id(card_id)
             .and_then(|c| c.definition.enters_as_copy.clone());
         let Some(spec) = spec else { return false };
         // Capture the copier's own printed name before the copy rewrite, for
         // the CR 707.2 name-retention exception (Mockingbird).
         let original_name: &'static str = self
             .battlefield
-            .iter()
-            .find(|c| c.id == card_id)
+            .find_by_id(card_id)
             .map(|c| c.definition.name)
             .unwrap_or("");
         // Every legal copy source, never the copier itself.
@@ -1928,8 +1926,7 @@ impl GameState {
     pub(crate) fn apply_enters_as_choice(&mut self, card_id: CardId) -> bool {
         let modes = self
             .battlefield
-            .iter()
-            .find(|c| c.id == card_id)
+            .find_by_id(card_id)
             .and_then(|c| c.definition.enters_as_choice.clone());
         let Some(modes) = modes else { return false };
         if modes.is_empty() {
@@ -1993,8 +1990,7 @@ impl GameState {
     pub(crate) fn apply_enters_mode_choice(&mut self, card_id: CardId) -> bool {
         let modes = self
             .battlefield
-            .iter()
-            .find(|c| c.id == card_id)
+            .find_by_id(card_id)
             .and_then(|c| c.definition.enter_modes.clone());
         let Some(modes) = modes else { return false };
         if modes.is_empty() {
@@ -15402,8 +15398,7 @@ impl GameState {
                     // word names a color the rewriter *doesn't* attack with.
                     let friendly = self
                         .battlefield
-                        .iter()
-                        .find(|c| c.id == cid)
+                        .find_by_id(cid)
                         .is_some_and(|c| self.same_team(c.controller, ctx.controller));
                     let want = if friendly {
                         self.densest_color_among_opponents(ctx.controller)
@@ -15467,8 +15462,7 @@ impl GameState {
                     // wants; an opponent's should stop producing their densest.
                     let friendly = self
                         .battlefield
-                        .iter()
-                        .find(|c| c.id == cid)
+                        .find_by_id(cid)
                         .is_some_and(|c| self.same_team(c.controller, ctx.controller));
                     let want = if friendly {
                         self.densest_color_of(ctx.controller)
@@ -18839,8 +18833,7 @@ impl GameState {
                 // the card after it's been exiled as the activation cost.
                 let source_def = self
                     .battlefield
-                    .iter()
-                    .find(|c| c.id == src_id)
+                    .find_by_id(src_id)
                     .or_else(|| self.exile.iter().find(|c| c.id == src_id))
                     .or_else(|| {
                         self.players
@@ -19001,8 +18994,7 @@ impl GameState {
                 let Some(src_id) = pick else { return Ok(()); };
                 let Some(def) = self
                     .battlefield
-                    .iter()
-                    .find(|c| c.id == src_id)
+                    .find_by_id(src_id)
                     .map(|c| c.definition.arc())
                 else {
                     return Ok(());

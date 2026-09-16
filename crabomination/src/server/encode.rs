@@ -340,7 +340,7 @@ fn encode_state_inner(
     // actually trade on.
     let no_combat = ablated(ABLATE_COMBAT);
     let eff_pt = |id: crate::card::CardId| {
-        g.battlefield.iter().find(|c| c.id == id).and_then(|c| {
+        g.battlefield.find_by_id(id).and_then(|c| {
             let cp = g.computed_permanent_on(c)?;
             Some((cp.power.max(0), cp.toughness.saturating_sub(damage_i32(c)).max(0)))
         })
@@ -575,7 +575,7 @@ fn encode_state_inner(
                 let blocked = g.blocked_attackers().contains(&a.attacker)
                     || blocker_sums.contains_key(&a.attacker)
                     || g.block_map.values().any(|att| att.contains(&a.attacker));
-                let Some(c) = g.battlefield.iter().find(|c| c.id == a.attacker) else {
+                let Some(c) = g.battlefield.find_by_id(a.attacker) else {
                     continue;
                 };
                 // Computed power and trample: a granted trample (sword,

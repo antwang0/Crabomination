@@ -920,8 +920,7 @@ impl GameState {
         for id in candidates {
             let Some(pred) = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == id)
+                .find_by_id(id)
                 .and_then(|c| c.definition.case.as_ref().map(|d| d.to_solve.clone()))
             else {
                 continue;
@@ -1380,8 +1379,7 @@ impl GameState {
         }
         let effects: Vec<Effect> = self
             .battlefield
-            .iter()
-            .find(|c| c.id == card_id)
+            .find_by_id(card_id)
             .map(|card| {
                 card.definition
                     .saga_chapters
@@ -2201,8 +2199,7 @@ impl GameState {
                         // host's live definition).
                         let mutate_effects: Vec<Effect> = self
                             .battlefield
-                            .iter()
-                            .find(|c| c.id == host_id)
+                            .find_by_id(host_id)
                             .map(|c| {
                                 c.definition
                                     .triggered_abilities
@@ -2425,8 +2422,7 @@ impl GameState {
                     // card's type).
                     let is_creature_resolve = self
                         .battlefield
-                        .iter()
-                        .find(|c| c.id == card_id)
+                        .find_by_id(card_id)
                         .map(|c| c.definition.is_creature())
                         .unwrap_or(false);
                     let mut counter_specs: Vec<(crate::card::CounterType, crate::effect::Value)> =
@@ -2526,8 +2522,7 @@ impl GameState {
                         let mut etb_ctx = crate::game::effects::EffectContext::for_spell_with_source(
                             card_id,
                             self.battlefield
-                                .iter()
-                                .find(|c| c.id == card_id)
+                                .find_by_id(card_id)
                                 .map(|c| c.definition.name)
                                 .unwrap_or(""),
                             caster,
@@ -2546,8 +2541,7 @@ impl GameState {
                             // replacement (Pestseed / Doubling Season / etc.).
                             let target_ctrl = self
                                 .battlefield
-                                .iter()
-                                .find(|c| c.id == card_id)
+                                .find_by_id(card_id)
                                 .map(|c| c.controller);
                             let mut n = base as u32;
                             if let Some(ctrl) = target_ctrl {
@@ -2598,8 +2592,7 @@ impl GameState {
                         // empty); re-read it from the post-copy definition.
                         etb_triggers = self
                             .battlefield
-                            .iter()
-                            .find(|c| c.id == card_id)
+                            .find_by_id(card_id)
                             .map(|c| {
                                 c.definition
                                     .triggered_abilities
@@ -6280,8 +6273,7 @@ impl GameState {
             // and heals marked damage instead of letting it die.
             let dies_by_lethal_toughness = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == id)
+                .find_by_id(id)
                 .map(|c| {
                     let ct = computed
                         .iter()
@@ -6293,8 +6285,7 @@ impl GameState {
                 .unwrap_or(false);
             let has_regen = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == id)
+                .find_by_id(id)
                 .map(|c| c.regeneration_shields > 0 && !c.cant_regenerate_this_turn)
                 .unwrap_or(false);
             if has_regen && !dies_by_lethal_toughness {
@@ -6332,8 +6323,7 @@ impl GameState {
                 controller_idx,
             ) = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == id)
+                .find_by_id(id)
                 .map(|c| {
                     // CR 603.10a — "leaves-the-battlefield" triggers look
                     // back in time at the dying card. Only fire the dying
@@ -6455,8 +6445,7 @@ impl GameState {
             }
             let was_land = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == id)
+                .find_by_id(id)
                 .is_some_and(|c| c.definition.is_land());
             self.remove_from_battlefield_to_graveyard_raw(id);
             // CR 700 — emit the graveyard-arrival event (only when the card
@@ -6576,7 +6565,7 @@ impl GameState {
             .filter(|c| match c.attached_to {
                 None => true,
                 Some(host) => {
-                    let Some(h) = self.battlefield.iter().find(|b| b.id == host) else {
+                    let Some(h) = self.battlefield.find_by_id(host) else {
                         return true;
                     };
                     // The host must still be legal to enchant: a creature, not
@@ -7502,8 +7491,7 @@ impl GameState {
         // graveyard to be returned from).
         let exiled_instead = self
             .battlefield
-            .iter()
-            .find(|c| c.id == id)
+            .find_by_id(id)
             .is_some_and(|c| self.graveyard_exiled_for(c) || c.disturb_back_exiles());
         let dies_suppressed = dies_suppressed || exiled_instead;
         // CR 603.10 — record the Auras riding this permanent before it
@@ -7527,8 +7515,7 @@ impl GameState {
         }
         let (leave_triggers, dying_creature_controller): (Vec<DeathTrigger>, Option<usize>) = self
             .battlefield
-            .iter()
-            .find(|c| c.id == id)
+            .find_by_id(id)
             .map(|c| {
                 let is_creature = c.definition.is_creature();
                 // Walk printed SelfSource LTB triggers + any transient
@@ -7594,8 +7581,7 @@ impl GameState {
         // Capture Persist/Undying info before the card leaves the battlefield.
         let (persist_has, undying_has, persist_minus, persist_plus, persist_owner) = self
             .battlefield
-            .iter()
-            .find(|c| c.id == id)
+            .find_by_id(id)
             .map(|c| {
                 (
                     c.definition.keywords.has_kw(&Keyword::Persist),
@@ -7633,8 +7619,7 @@ impl GameState {
         // event but the source is already gone by dispatch time — Carrot Cake).
         let has_sac_self_trigger = self
             .battlefield
-            .iter()
-            .find(|c| c.id == id)
+            .find_by_id(id)
             .map(|c| {
                 c.definition
                     .triggered_abilities
@@ -7666,8 +7651,7 @@ impl GameState {
         // graveyard (Finality / dies-to-exile redirects send it elsewhere).
         let gy_info = self
             .battlefield
-            .iter()
-            .find(|c| c.id == id)
+            .find_by_id(id)
             .map(|c| (c.owner, c.definition.card_types.contains(&crate::card::CardType::Land)));
         self.remove_from_battlefield_to_graveyard_raw(id);
         let mut out = Vec::new();

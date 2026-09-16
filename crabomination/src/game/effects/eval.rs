@@ -2608,8 +2608,7 @@ impl GameState {
                 let target_name = ctx.source_name.or_else(|| {
                     ctx.source.and_then(|cid| {
                         self.battlefield
-                            .iter()
-                            .find(|c| c.id == cid)
+                            .find_by_id(cid)
                             .map(|c| c.definition.name)
                     })
                 });

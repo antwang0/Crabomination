@@ -1674,8 +1674,7 @@ impl GameState {
                 .iter()
                 .map(|atk| {
                     self.battlefield
-                        .iter()
-                        .find(|c| c.id == atk.attacker)
+                        .find_by_id(atk.attacker)
                         .map(|c| {
                             (
                                 self.statics_granted_triggers_with(c, &trigger_grants),
@@ -2213,8 +2212,7 @@ impl GameState {
 
             let blocker = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == blocker_id)
+                .find_by_id(blocker_id)
                 .ok_or(GameError::CardNotOnBattlefield(blocker_id))?;
 
             // CR 509.1a: any creature controlled by the defending player
@@ -4225,8 +4223,7 @@ impl GameState {
                         if bc.keywords().has_kw(&Keyword::Lifelink) {
                             let controller = self
                                 .battlefield
-                                .iter()
-                                .find(|c| c.id == bid)
+                                .find_by_id(bid)
                                 .map(|c| c.controller)
                                 .unwrap_or(atk.defender_player);
                             *lifelink_by_controller.entry(controller).or_insert(0) += dmg as i32;
@@ -4792,8 +4789,7 @@ impl GameState {
                 // CR 725 — a creature dealing combat damage to the monarch
                 // makes its controller the new monarch.
                 if amount > 0 && self.monarch == Some(p) {
-                    let ctrl = self.battlefield.iter()
-                        .find(|c| c.id == atk.id).map(|c| c.controller);
+                    let ctrl = self.battlefield.find_by_id(atk.id).map(|c| c.controller);
                     if let Some(ctrl) = ctrl
                         && ctrl != p {
                             self.set_monarch(ctrl, events);
@@ -4801,8 +4797,7 @@ impl GameState {
                 }
                 // CR 726.2 — the same handover for the initiative.
                 if amount > 0 && self.initiative == Some(p) {
-                    let ctrl = self.battlefield.iter()
-                        .find(|c| c.id == atk.id).map(|c| c.controller);
+                    let ctrl = self.battlefield.find_by_id(atk.id).map(|c| c.controller);
                     if let Some(ctrl) = ctrl
                         && ctrl != p {
                             self.take_initiative(ctrl, events);
@@ -5755,8 +5750,7 @@ impl GameState {
     /// uses `statics_granted_triggers_with` (see the CR 510.2 loop).
     fn static_granted_triggers_of(&self, source: CardId) -> Vec<crate::card::TriggeredAbility> {
         self.battlefield
-            .iter()
-            .find(|c| c.id == source)
+            .find_by_id(source)
             .map(|c| self.statics_granted_triggers_for(c))
             .unwrap_or_default()
     }

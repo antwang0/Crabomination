@@ -2304,8 +2304,7 @@ pub fn etb_trigger_multiplier(
     if let Some(id) = entering
         && state
             .battlefield
-            .iter()
-            .find(|c| c.id == id)
+            .find_by_id(id)
             .is_some_and(|c| c.definition.is_creature())
         && creature_etb_triggers_suppressed(state)
     {
@@ -2316,8 +2315,7 @@ pub fn etb_trigger_multiplier(
     if let Some(id) = entering
         && state
             .battlefield
-            .iter()
-            .find(|c| c.id == id)
+            .find_by_id(id)
             .is_some_and(|c| c.definition.card_types.contains(&crate::card::CardType::Artifact))
         && state.battlefield.iter().any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
@@ -3286,8 +3284,7 @@ impl crate::game::GameState {
     /// modeled rules text.
     pub(crate) fn printed_color_words(&self, cid: CardId) -> Vec<ManaColor> {
         self.battlefield
-            .iter()
-            .find(|c| c.id == cid)
+            .find_by_id(cid)
             .map(|c| {
                 c.definition
                     .keywords
@@ -4084,8 +4081,7 @@ impl GameState {
         #[allow(clippy::type_complexity)]
         let etb_triggers: Vec<(Effect, Option<crate::effect::Predicate>)> = self
             .battlefield
-            .iter()
-            .find(|c| c.id == card_id)
+            .find_by_id(card_id)
             .map(|c| {
                 // Printed + statics-granted ETBs ("Slivers you control have
                 // 'When this enters…'" — Lavabelly) fire alike.
@@ -4114,8 +4110,7 @@ impl GameState {
         // evaluate against the real X rather than 0 (Dune Drifter).
         let cast_x = self
             .battlefield
-            .iter()
-            .find(|c| c.id == card_id)
+            .find_by_id(card_id)
             .map(|c| c.cast_x_value)
             .unwrap_or(0);
         for (effect, filter) in etb_triggers {
@@ -6248,8 +6243,7 @@ impl GameState {
         // CR 702.36e — Megamorph turns the permanent up with a +1/+1 counter.
         let megamorph = self
             .battlefield
-            .iter()
-            .find(|c| c.id == card_id)
+            .find_by_id(card_id)
             .and_then(|c| c.face_up_def.as_ref())
             .map(|d| d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_))))
             .unwrap_or(false);
@@ -9529,8 +9523,7 @@ impl GameState {
             self.push_first_targeting_counter(perm_id, target_for_trigger);
             let (ward_cost, ward_controller) = match self
                 .battlefield
-                .iter()
-                .find(|c| c.id == perm_id)
+                .find_by_id(perm_id)
             {
                 Some(c) if c.controller != actor => {
                     // A whole-game gather per opposing target, for a keyword
@@ -10127,8 +10120,7 @@ impl GameState {
         let tap_power = if let Some(cid) = tap_creature {
             let c = self
                 .battlefield
-                .iter()
-                .find(|c| c.id == cid)
+                .find_by_id(cid)
                 .ok_or(GameError::FlashbackTapInvalid)?;
             if c.tapped || c.controller != p || !c.definition.is_creature() {
                 return Err(GameError::FlashbackTapInvalid);
