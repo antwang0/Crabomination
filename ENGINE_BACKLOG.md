@@ -82,7 +82,7 @@ the handoff.
 
 # Bugs & robustness
 
-## OPEN 2026-09-16 (twenty-seventh find) — the block planner's poison clock reads Toxic off the PRINTED list while Infect beside it reads all four sources
+## FIXED 2026-09-16 (twenty-seventh find) — the block planner's poison clock reads Toxic off the PRINTED list while Infect beside it reads all four sources
 
 `pick_blocks_inner`'s `AttackerFacts::poison` is the chump-block trigger: the
 sum over the attackers feeds `poison_threatened`, which feeds
@@ -116,6 +116,24 @@ whether the whole family should read the four sources before patching one
 leg**, so it closes as a class rather than a one-off; `combat_keywords` is the
 shape that already does, and the valued keywords are exactly the ones its
 `u32` mask cannot carry.
+
+**Both halves are fixed.** The planner's leg went at `3cfdc7ac` with the fold
+shared with the damage step (`combat::toxic_poison_value`). The family went as
+a class: `CardInstance::has_keyword_tag` is `has_keyword` with the value
+ignored — same three-source tag prefilter, same `#[inline(never)]` exact half,
+same removal precedence (removals still match by *value*, so stripping
+`Toxic(1)` leaves a granted `Toxic(2)`) — and `has_toxic` / `has_modular` are
+now one line each on top of it. There is no hand-rolled value-agnostic scan
+left on `CardInstance`; a new one is a one-liner against the shared accessor.
+⚠ **The rest of the `definition.keywords.iter()` census (36 sites) is NOT this
+bug**: `first_strike_possible`'s three-source read is a deliberate
+over-approximation gate, `PumpPerBushido` runs *inside* the layer gather (no
+computed view yet, and its comment says so), and the cast-time keywords
+(Disturb / Cycling / Flashback / Morph / Suspend) are asked of cards outside
+the battlefield, where the three instance sources are empty by construction.
+Tests: `has_keyword_tag_reads_the_same_four_sources_as_has_keyword` (table over
+four sources x three valued keywords), `has_keyword_tag_ignores_the_value_but_a_removal_does_not`,
+`toxic_and_modular_see_grants_and_keyword_counters`.
 
 ## FIXED 2026-09-13 (twenty-sixth find) — the sweep's only surviving cap, and the field in the digest that was bookkeeping rather than progress
 

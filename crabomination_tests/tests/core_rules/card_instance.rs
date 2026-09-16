@@ -301,3 +301,68 @@ fn a_zero_keyword_counter_is_no_counter() {
     c.keyword_counters.remove_up_to(&Keyword::Trample, 1);
     assert!(c.keyword_counters.is_empty());
 }
+
+/// `has_keyword_tag` is `has_keyword` with the value ignored, so it must see
+/// the same four sources and honour the same removal precedence. Before it
+/// existed each value-agnostic caller hand-rolled the scan over a subset:
+/// `has_toxic`/`has_modular` read printed + `granted_keywords_eot` and
+/// stopped, so a Toxic granted by a keyword counter (CR 122.1b) read as
+/// absent. Table-driven over the four sources x three valued keywords.
+#[test]
+fn has_keyword_tag_reads_the_same_four_sources_as_has_keyword() {
+    let base = || CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
+    for kw in [Keyword::Toxic(2), Keyword::Modular(1), Keyword::Ward(
+        crabomination::card::WardCost::Life(2),
+    )] {
+        let sample = &kw;
+        assert!(!base().has_keyword_tag(sample), "{kw:?}: vanilla answered true");
+
+        let mut c = base();
+        std::sync::Arc::make_mut(c.definition_mut()).keywords.push(kw.clone());
+        assert!(c.has_keyword_tag(sample), "{kw:?}: printed not seen");
+        let mut d = c.clone();
+        d.removed_keywords_eot.push(kw.clone());
+        assert!(!d.has_keyword_tag(sample), "{kw:?}: removed_eot not honoured");
+        let mut d = c.clone();
+        d.removed_keywords.push(kw.clone());
+        assert!(!d.has_keyword_tag(sample), "{kw:?}: removed not honoured");
+
+        let mut c = base();
+        c.granted_keywords_eot.push(kw.clone());
+        assert!(c.has_keyword_tag(sample), "{kw:?}: granted_eot not seen");
+
+        let mut c = base();
+        c.keyword_counters.add(kw.clone(), 1);
+        assert!(c.has_keyword_tag(sample), "{kw:?}: keyword counter not seen");
+        // `has_keyword` and `has_keyword_tag` agree on the exact value too.
+        assert_eq!(c.has_keyword(sample), c.has_keyword_tag(sample));
+    }
+}
+
+/// The value is genuinely ignored — a granted Toxic 3 answers a Toxic 1 ask —
+/// and a removal is matched by value, so stripping Toxic 1 leaves Toxic 3.
+#[test]
+fn has_keyword_tag_ignores_the_value_but_a_removal_does_not() {
+    let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
+    c.granted_keywords_eot.push(Keyword::Toxic(3));
+    assert!(c.has_keyword_tag(&Keyword::Toxic(1)));
+    assert!(!c.has_keyword(&Keyword::Toxic(1)));
+    c.removed_keywords_eot.push(Keyword::Toxic(1));
+    assert!(c.has_keyword_tag(&Keyword::Toxic(1)), "Toxic 1's removal ate Toxic 3");
+    c.removed_keywords_eot.push(Keyword::Toxic(3));
+    assert!(!c.has_keyword_tag(&Keyword::Toxic(1)));
+}
+
+/// CR 702.180 / 702.43 — the two value-agnostic accessors ride
+/// `has_keyword_tag`, so a granted or countered Toxic/Modular counts.
+#[test]
+fn toxic_and_modular_see_grants_and_keyword_counters() {
+    let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
+    assert!(!c.has_toxic() && !c.has_modular());
+    c.granted_keywords_eot.push(Keyword::Toxic(1));
+    assert!(c.has_toxic());
+    c.keyword_counters.add(Keyword::Modular(1), 1);
+    assert!(c.has_modular());
+    c.removed_keywords.push(Keyword::Toxic(1));
+    assert!(!c.has_toxic(), "a permanent removal did not strip a granted Toxic");
+}

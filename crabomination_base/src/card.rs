@@ -8747,17 +8747,53 @@ impl CardInstance {
         m
     }
 
-    /// True if this permanent has Toxic N for any N (printed or EOT-granted).
-    /// The value-agnostic sibling of `has_keyword(&Toxic(n))`.
-    pub fn has_toxic(&self) -> bool {
-        self.definition.keywords.iter().chain(self.granted_keywords_eot.iter())
-            .any(|k| matches!(k, Keyword::Toxic(_)))
+    /// [`Self::has_keyword`]'s **value-agnostic** sibling: true when any of
+    /// the same four sources carries a keyword of `sample`'s variant that no
+    /// removal list strips. `has_keyword(&Toxic(1))` asks about one exact
+    /// value; a `Toxic N` / `Modular N` caller wants the variant, and every
+    /// such caller used to hand-roll the scan over a *subset* of the sources
+    /// (`granted_keywords_eot` at best, printed only at worst) — so a granted
+    /// or countered valued keyword read as absent. Same three-source tag
+    /// prefilter and same removal precedence as `has_keyword`, so the two
+    /// cannot drift.
+    pub fn has_keyword_tag(&self, sample: &Keyword) -> bool {
+        let want = std::mem::discriminant(sample);
+        if !self.definition.keywords.has_kw_tag(want)
+            && !self.granted_keywords_eot.has_kw_tag(want)
+            && !self.keyword_counters.has_tag(want)
+        {
+            return false;
+        }
+        self.has_keyword_tag_exact(want)
     }
 
-    /// True if this permanent has Modular N for any N (CR 702.43).
+    /// `has_keyword_tag`'s exact half — reached only once a tag matched.
+    /// A removal is matched by *value*, as in [`Self::has_keyword_exact`], so
+    /// stripping `Toxic(1)` does not strip a granted `Toxic(2)`.
+    #[inline(never)]
+    fn has_keyword_tag_exact(&self, want: std::mem::Discriminant<Keyword>) -> bool {
+        let kept = |k: &Keyword| {
+            std::mem::discriminant(k) == want
+                && !self.removed_keywords_eot.has_kw(k)
+                && !self.removed_keywords.has_kw(k)
+        };
+        self.definition.keywords.iter().any(&kept)
+            || self.granted_keywords_eot.iter().any(&kept)
+            // CR 122.1b — a keyword counter grants its keyword; no zero-valued
+            // entry is ever stored, so presence is the whole test.
+            || self.keyword_counters.iter().any(|(k, _)| kept(k))
+    }
+
+    /// True if this permanent has Toxic N for any N, from any of the four
+    /// keyword sources (CR 702.180).
+    pub fn has_toxic(&self) -> bool {
+        self.has_keyword_tag(&Keyword::Toxic(0))
+    }
+
+    /// True if this permanent has Modular N for any N (CR 702.43), from any
+    /// of the four keyword sources.
     pub fn has_modular(&self) -> bool {
-        self.definition.keywords.iter().chain(self.granted_keywords_eot.iter())
-            .any(|k| matches!(k, Keyword::Modular(_)))
+        self.has_keyword_tag(&Keyword::Modular(0))
     }
 
     /// True if this permanent can't be destroyed — either the
