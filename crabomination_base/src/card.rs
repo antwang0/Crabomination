@@ -6806,8 +6806,11 @@ pub mod combat_kw {
         (MUST_BE_BLOCKED, Keyword::MustBeBlocked),
     ];
 
+    /// The family's per-keyword half. `pub` because the engine's block
+    /// planner folds a *computed* keyword slice with it — same bits, one
+    /// definition, so the instance and view answers cannot drift.
     #[inline]
-    pub(crate) fn bit_of(k: &Keyword) -> u32 {
+    pub fn bit_of(k: &Keyword) -> u32 {
         match k {
             Keyword::Flying => FLYING,
             Keyword::Reach => REACH,

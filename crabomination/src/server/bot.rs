@@ -12715,6 +12715,12 @@ struct BlockerFacts<'a> {
     flying: bool,
     reach: bool,
     deathtouch: bool,
+    /// CR 702.16 — [`crate::game::GameState::view_has_protection`], off the
+    /// same pass as the three keywords above (PERF `(-335)`).
+    protected: bool,
+    /// CR 509.1b — this blocker's half of the block-legality gate
+    /// ([`crate::game::blocker_block_bar_kw`]), likewise.
+    bars: bool,
 }
 
 fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
@@ -12756,6 +12762,11 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // presence questions below; `has_keyword` walks three slices per
             // ask (PERF `(-330)`).
             let akw = a.combat_keywords();
+            // And one over the **computed** set for the five below it —
+            // protection, the attacker bar family, Flying, MustBeBlocked and
+            // the minimum block count were a walk each, plus an
+            // `OverlayList::get` per ask (PERF `(-335)`).
+            let vf = cp.as_deref().map(crate::game::view_block_facts);
             Some(AttackerFacts {
                 id: atk.attacker,
                 card: a,
@@ -12771,28 +12782,19 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 // `is_indestructible`, which the mask replaces.
                 indestructible: akw & combat_kw::INDESTRUCTIBLE != 0
                     || a.counter_count(crate::card::CounterType::Indestructible) > 0,
-                protected: cp
-                    .as_deref()
-                    .is_some_and(crate::game::GameState::view_has_protection),
-                bars_blocks: cp
-                    .as_deref()
-                    .is_some_and(|c| {
-                        c.keywords().iter().any(crate::game::attacker_block_bar_kw)
-                    })
+                protected: vf.is_some_and(|v| v.protected),
+                bars_blocks: vf.is_some_and(|v| v.attacker_bars)
                     // CR 701.54c — the Ring-bearer power bar is not a keyword.
                     || (state.effective_ring_bearer(a.controller) == Some(atk.attacker)
                         && state.players[a.controller].ring_temptations >= 1),
-                cp_flying: match &cp {
-                    Some(c) => c.keywords().has_kw(&Keyword::Flying),
-                    None => false,
-                },
+                cp_flying: vf.is_some_and(|v| v.kw & combat_kw::FLYING != 0),
                 // CR 509.1c — the *computed* set, for the same reason as
                 // `min_blockers` below: `declare_blockers` reads the computed
                 // keyword and a granted `MustBeBlocked` (Nemesis Mask and the
                 // Lure family are auras and equipment, so the keyword is
                 // almost always a grant) is invisible to the instance walk.
-                must_be_blocked: match &cp {
-                    Some(c) => c.keywords().has_kw(&Keyword::MustBeBlocked),
+                must_be_blocked: match vf {
+                    Some(v) => v.kw & combat_kw::MUST_BE_BLOCKED != 0,
                     None => a.has_keyword(&Keyword::MustBeBlocked),
                 },
                 rampage: a
@@ -12811,8 +12813,8 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 // layer-6 `AddKeyword`, a keyword counter, CR 701.60 Suspect)
                 // is invisible to the instance walk. An under-filled
                 // multi-block is rejected as a whole batch.
-                min_blockers: match &cp {
-                    Some(c) => min_blockers_required_kws(c.keywords()),
+                min_blockers: match vf {
+                    Some(v) => v.min_blockers,
                     None => min_blockers_required(a),
                 },
                 poison: {
@@ -12906,14 +12908,22 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // already held.
     let mut blockers: Vec<BlockerFacts> = may_block
         .iter()
-        .map(|(c, cp)| BlockerFacts {
-            card: c,
-            view: cp,
-            power: c.power(),
-            toughness: c.toughness(),
-            flying: cp.keywords().has_kw(&Keyword::Flying),
-            reach: cp.keywords().has_kw(&Keyword::Reach),
-            deathtouch: cp.keywords().has_kw(&Keyword::Deathtouch),
+        .map(|(c, cp)| {
+            // One pass over the view for all five, where each was a walk of
+            // what `keywords()` returns plus the `OverlayList::get` that
+            // returns it (PERF `(-335)`).
+            let v = crate::game::view_block_facts(cp);
+            BlockerFacts {
+                card: c,
+                view: cp,
+                power: c.power(),
+                toughness: c.toughness(),
+                flying: v.kw & combat_kw::FLYING != 0,
+                reach: v.kw & combat_kw::REACH != 0,
+                deathtouch: v.kw & combat_kw::DEATHTOUCH != 0,
+                protected: v.protected,
+                bars: v.blocker_bars,
+            }
         })
         .collect();
     blockers.sort_by_key(|b| b.power);
@@ -12942,6 +12952,8 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         flying: b_flying,
         reach: b_reach,
         deathtouch: b_dt,
+        protected: blk_protected,
+        bars: blk_keyword_bars,
     } in blockers
     {
         let b_id = blk_card.id;
@@ -12953,14 +12965,13 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         // half of block legality (CR 509.1a/b) is `legal_blockers`' filter,
         // already applied to every entry here.
         // CR 702.16 — the target half of `protection_prevents_views`' gate,
-        // asked once per blocker instead of once per (blocker, attacker) pair.
-        let blk_protected = crate::game::GameState::view_has_protection(blk_view);
-        // CR 509.1b — the blocker's half of the block-legality gate, likewise
-        // once per blocker. With the board half and the attacker's half both
-        // clear, nothing in `blocker_pair_block` can bar the pair (PERF
-        // `(-333)`); the gated form `debug_assert!`s that on every skip.
-        let blk_bars = board_block_gates
-            || blk_view.keywords().iter().any(crate::game::blocker_block_bar_kw);
+        // and CR 509.1b — the blocker's half of the block-legality gate: both
+        // are per blocker, not per (blocker, attacker) pair, and both come off
+        // `BlockerFacts`' one pass now (PERF `(-331)`, `(-333)`, `(-335)`).
+        // With the board half and the attacker's half both clear, nothing in
+        // `blocker_pair_block` can bar the pair; the gated form
+        // `debug_assert!`s that on every skip.
+        let blk_bars = board_block_gates || blk_keyword_bars;
         let bkw = blk_card.combat_keywords();
         let blk_first_strike =
             bkw & (combat_kw::FIRST_STRIKE | combat_kw::DOUBLE_STRIKE) != 0;
@@ -13385,14 +13396,9 @@ fn min_blockers_required(attacker: &crate::card::CardInstance) -> usize {
 /// by N" check reads the computed set, so a planner that reads the printed
 /// one under-fills a multi-block and the engine rejects the whole batch.
 fn min_blockers_required_kws(kws: &[crate::card::Keyword]) -> usize {
-    use crate::card::Keyword;
     let mut min = 1usize;
     for kw in kws {
-        match kw {
-            Keyword::Menace => min = min.max(2),
-            Keyword::CantBeBlockedExceptByN(n) => min = min.max(*n as usize),
-            _ => {}
-        }
+        min = min.max(crate::game::min_blockers_of_kw(kw));
     }
     min
 }

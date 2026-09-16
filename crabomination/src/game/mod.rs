@@ -28567,6 +28567,66 @@ pub fn blocker_block_bar_kw(k: &Keyword) -> bool {
     )
 }
 
+/// CR 509.1b — the minimum blocker count this one keyword imposes, else 1.
+///
+/// The per-keyword half of the block planner's `min_blockers_required_kws`,
+/// so the whole-slice walk and [`view_block_facts`]' one-pass fold cannot
+/// drift.
+#[inline]
+pub fn min_blockers_of_kw(k: &Keyword) -> usize {
+    match k {
+        Keyword::Menace => 2,
+        Keyword::CantBeBlockedExceptByN(n) => *n as usize,
+        _ => 1,
+    }
+}
+
+/// Everything the block planner asks a **computed** keyword set, in one pass.
+///
+/// `ComputedPermanent::keywords` is an `OverlayList::get` per ask and each
+/// question below was its own walk of what it returns — five per attacker
+/// (protection, the attacker bar family, Flying, MustBeBlocked, the minimum
+/// count) and five per blocker (protection, the blocker bar family, Flying,
+/// Reach, Deathtouch). PERF `(-335)`; `(-330)`'s device on the view rather
+/// than the instance.
+#[derive(Clone, Copy)]
+pub(crate) struct ViewBlockFacts {
+    /// [`crate::card::combat_kw`] bits — FLYING / REACH / DEATHTOUCH /
+    /// MUST_BE_BLOCKED are the four this caller reads; the rest ride along
+    /// because `bit_of` is one `match`.
+    pub kw: u32,
+    /// CR 702.16 — [`GameState::view_has_protection`].
+    pub protected: bool,
+    /// [`attacker_block_bar_kw`] over the whole set.
+    pub attacker_bars: bool,
+    /// [`blocker_block_bar_kw`] over the whole set.
+    pub blocker_bars: bool,
+    /// CR 509.1b — the max of [`min_blockers_of_kw`], floor 1.
+    pub min_blockers: usize,
+}
+
+/// [`ViewBlockFacts`] for one computed view. `#[inline]` because what it
+/// replaces was five inlined walks: a call here would be a regression the
+/// removed iteration has to pay for.
+#[inline]
+pub(crate) fn view_block_facts(cp: &ComputedPermanent) -> ViewBlockFacts {
+    let mut f = ViewBlockFacts {
+        kw: 0,
+        protected: false,
+        attacker_bars: false,
+        blocker_bars: false,
+        min_blockers: 1,
+    };
+    for k in cp.keywords() {
+        f.kw |= crate::card::combat_kw::bit_of(k);
+        f.protected |= GameState::protection_keyword(k);
+        f.attacker_bars |= attacker_block_bar_kw(k);
+        f.blocker_bars |= blocker_block_bar_kw(k);
+        f.min_blockers = f.min_blockers.max(min_blockers_of_kw(k));
+    }
+    f
+}
+
 /// Returns true if `blocker` is legally allowed to block `attacker`.
 /// Uses `blocker_kws` / `attacker_kws` as the effective keyword sets
 /// (from `ComputedPermanent`) instead of the raw definition keywords.
