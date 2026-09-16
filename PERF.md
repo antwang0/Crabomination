@@ -7758,6 +7758,92 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-341)` The two search-everywhere probes keep the UNHINTED scan — **fixed -0.018 / cube -0.031 / sealed -0.015 %**
+
+`(-340)`'s own attribution named its regression: `find_card_anywhere_mut`
++466,028 Ir on `cube`. Reverting it and `find_card_zone` to the plain scan
+takes the row back **to the digit** — 4,577,326 -> 4,111,298, exactly the
+pre-`(-340)` value — which proves the whole +466 k was the hint check on a path
+that misses.
+
+```text
+                    (-340)            (-341)          delta
+  fixed              578,140,967       578,038,372       -0.0177 %
+  cube             1,512,744,147     1,512,279,525       -0.0307 %
+  sealed           1,631,482,051     1,631,233,390       -0.0152 %
+
+  the two rows together, against the `(-339)` tip:
+                            fixed -0.174 / cube -0.142 / sealed -0.023 %
+```
+
+📐 **The rule, and it generalises past this memo: a hinted lookup is priced by
+its caller's HIT rate, and a "find it anywhere" probe has the worst one in the
+program.** `find_by_id` costs a load, a compare and (on a hit) a store; a
+caller that expects the id to be present amortises that against ~23 `Arc`
+compares, and a caller that expects it absent pays it on top of the same scan.
+`find_card_anywhere_mut` walks battlefield -> stack -> hand -> graveyard ->
+ante -> exile -> library, so the battlefield leg answers `false` for every card
+that is not a permanent. **`(-339)`'s grep finds the sites; it does not say
+which of them want the hint.**
+
+### `(-340)` The battlefield's hand-written EXISTENCE scans take the hint cache — **fixed -0.157 / cube -0.111 / sealed -0.008 %**
+
+`(-339)` converted 53 hand-written `battlefield.iter().find(|c| c.id == x)`
+scans to `find_by_id`. It converted **one spelling**. The same whole-board scan
+written `.any(|c| c.id == x)` was 52 more production sites, and the same grep
+finds them.
+
+```text
+                    (-339)+           (-340)          delta
+  fixed              579,048,110       578,140,967       -0.1567 %
+  cube             1,514,422,562     1,512,744,147       -0.1108 %
+  sealed           1,631,606,657     1,631,482,051       -0.0076 %
+```
+
+❌📐 **AND THE ATTRIBUTION REFUTES THE CENSUS THAT CHOSE THE TARGETS — read this
+before ranking the next class conversion.** The sites were censused by
+enclosing function against the `cube` self table *before* converting, and that
+census picked exactly the wrong two. What the A/B says:
+
+```text
+  check_state_based_actions_into   -2,020,828   <- dismissed as "per-death, not per-sweep"
+  resolve_top_of_stack_inner         -529,230   <- dismissed as "fires only in its own arm"
+  &mut F::call_mut                   -181,042
+  ...
+  gather_continuous_effects_inner    +192,562
+  find_card_anywhere_mut             +466,028   <- PREDICTED as one of the two real targets
+```
+
+⚠⚠ **The hint is a WIN on a lookup that expects to HIT and a LOSS on one that
+expects to MISS**, and `find_by_id`'s own doc already said so — "break-even is
+a repeat rate of about a tenth". `find_card_anywhere_mut` and `find_card_zone`
+exist to search *every* zone, so their battlefield leg is a miss more often
+than a hit, and on a miss the hint is a load and a compare **on top of the scan
+it was going to make anyway**: +466 k Ir on `cube` over 10,870 calls, ~43 Ir a
+call. Both are reverted to the unhinted scan in `(-341)` with the reason in a
+comment beside them. **Before converting a by-id scan, ask whether its caller
+expects the id to be there** — a probe is not a lookup.
+
+📐 **And the rest of the lesson is that "cold" was the wrong read.** The
+per-death sites in the SBA sweep and the per-arm sites in stack resolution
+carried the entire win: deaths and resolutions are frequent enough in `cube`
+that "only when its arm fires" is not the same as "rare". `sealed` reading
+-0.008 % against `fixed`'s -0.157 % is the same fact from the other side — the
+pool with the least combat moves least. **Rank a class conversion by converting
+it and measuring, not by arguing about which members are hot**; the conversion
+is mechanical and the compiler is its ratchet.
+
+⚠ One site is deliberately unconverted: `computed_permanent_hinted`'s
+`debug_assert!` that its hint belongs to this battlefield. That assertion
+validates the hint, so routing it through the hinted lookup makes it circular.
+
+⚠ **The mechanical edit was not safe on its own.** A regex over
+`.any(|c| c.id == EXPR)` swallowed `&& c.blitzed` and `&& c.is_token` into the
+id argument at two sites, and matched two test sites whose `battlefield` is a
+`Vec<PermanentView>` and has no `find_by_id`. All four were caught by `cargo
+check --workspace --all-targets` and none by reading the diff. **A grep-driven
+class conversion needs the compiler as its ratchet.**
+
 ### `(-339)` The engine's 53 raw battlefield-by-id scans take the hint cache — **fixed -0.503 / cube -0.814 / sealed -0.473 %**
 
 `Battlefield::find_by_id` has had a per-id hint cache since PERF `(-38)` and

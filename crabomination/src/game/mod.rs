@@ -26085,7 +26085,14 @@ impl GameState {
         &mut self,
         id: CardId,
     ) -> Option<&mut CardInstance> {
-        if self.battlefield.find_by_id(id).is_some() {
+        // ⚠ NOT `find_by_id`: this is a search-EVERYWHERE probe, so the
+        // battlefield leg is a miss more often than a hit, and on a miss the
+        // hint is a load and a compare on top of the scan it was going to make
+        // anyway. `find_by_id`'s own break-even is a repeat rate of ~1/10 and
+        // an arbitrary-id probe is nowhere near it — measured +466 k Ir on
+        // `cube` when PERF `(-340)` converted it. The hinted form belongs on
+        // the lookups that expect to hit.
+        if self.battlefield.iter().any(|c| c.id == id) {
             return self.battlefield.find_by_id_mut(id);
         }
         // Locate first with shared borrows, then take the one `&mut`: `Player`
@@ -26155,7 +26162,9 @@ impl GameState {
     /// [`find_card_anywhere`]: Self::find_card_anywhere
     pub(crate) fn find_card_zone(&self, id: CardId) -> Option<crate::card::Zone> {
         use crate::card::Zone;
-        if self.battlefield.find_by_id(id).is_some() {
+        // Same as `find_card_anywhere_mut`: a zone probe expects to miss the
+        // battlefield, so it keeps the unhinted scan (PERF `(-340)`).
+        if self.battlefield.iter().any(|c| c.id == id) {
             return Some(Zone::Battlefield);
         }
         for p in &self.players {
