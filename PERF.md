@@ -3028,6 +3028,14 @@ engine-only change **2m39s**, a three-pool callgrind **~40 s** (all three in
 parallel; the runs themselves are 6.1 / 15.7 / 16.3 s).
 
 ```text
+perf    **`(-338)`: `declare_attackers_banded`'s per-attacker keyword asks take one pass — fixed
+        -0.114 / cube -0.308 / sealed -0.118 %**, and with `(-337)` **fixed -0.165 / cube -0.503 /
+        sealed -0.193 %**. Six `computed_kw(id)` per declared attacker become one `match` fold;
+        self **-8.1 / -18.2 / -9.7 %**. The cheaper half was a predicate ordering — the CR 508.1d
+        must-attack loop computed `must` (three subset finds) for every permanent on the board
+        and tested `c.controller != p` after. ⚠ The Firebending **amount** is deliberately NOT
+        folded: the Melee pump runs between the keyword read and the payment. See the Log entry.
+
 perf    **`(-337)`: `declare_blockers`' per-attacker requirements take one pass — fixed -0.051 /
         cube -0.195 / sealed -0.074 %.** Six CR 509.1b/c requirements, six `for atk in
         &self.attacking` loops, six `kws_of(atk.attacker)` — folded to one `match` pass an
@@ -7642,6 +7650,53 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-338)` `declare_attackers_banded`'s per-attacker keyword asks take one pass — **fixed -0.114 / cube -0.308 / sealed -0.118 %**
+
+`(-337)` on the attack side, and the larger of the two rows. The commit loop
+asked `computed_kw(id)` six times per declared attacker (`Decayed`,
+`Vigilance`, `Exert`, `Melee`, then `Annihilator` and `Firebending` as
+`find_map`s); `attacker_decl_facts` folds all six in one `match` pass.
+
+```text
+                    (-337)            (-338)          delta
+  fixed              582,502,325       581,837,771       -0.1141 %
+  cube             1,531,164,775     1,526,450,208       -0.3079 %
+  sealed           1,640,945,283     1,639,004,351       -0.1183 %
+
+  the two rows together, against the `(-336)` tip:
+                            fixed -0.165 / cube -0.503 / sealed -0.193 %
+
+  declare_attackers_banded self  9,216,764 ->  8,466,122   (-8.14 %)
+                                27,353,152 -> 22,369,110   (-18.22 %)
+                                22,554,572 -> 20,363,624   (-9.71 %)
+```
+
+📐 **The other half is a predicate ordering, and it is the cheaper half to
+find: the CR 508.1d must-attack loop computed `must` — three `computed_kw`
+subset finds and three slice walks — for every permanent on the board, and
+*then* tested `c.controller != p`.** Most of a board is the opponent's, so most
+of that work was discarded one line later. The controller test is a field
+compare and the predicate is pure, so hoisting it is free. **When a
+whole-board loop's guard is a conjunction, order it by cost, not by how the
+rule reads.**
+
+⚠ **And the half that must NOT be folded: the two derived Firebending amounts.**
+`FirebendingPower` reads the attacker's computed power and
+`FirebendingCreaturesYouControl` counts the board — and the loop pumps the
+attacker for CR 702.121 Melee *between* the keyword read and the payment. So
+`AttackerDeclFacts` carries the Firebending **kind** and the amount is still
+computed where it was. A fold that had hoisted the value would have paid a
+Melee attacker's Firebending X at its pre-pump power. `Annihilator` and
+`Firebending` also keep `find_map`'s **first-match** rule rather than taking a
+max, because that is what the arms they replace did — the opposite of
+`AttackerBlockReqs`, where the decision is "any bound unmet" and a max decides
+it.
+
+Behaviour-preserving: suite **19,574 / 0 / 5** with `CRAB_ANSWER_LOG=strict`,
+outcomes identical on all three pools (24 / 48 / 72 decided, 0 undecided),
+`declare_attackers_banded` call counts identical (4,186 / 6,244 / 8,796), and
+the fold carries a `debug_assert!` against the asks it replaces.
 
 ### `(-337)` `declare_blockers`' per-attacker requirements take one pass — **fixed -0.051 / cube -0.195 / sealed -0.074 %**
 
@@ -13459,19 +13514,9 @@ costs a cold build.
      and `legal_blockers`' `computed_permanent_hinted` is 15,876 calls at
      612 Ir — 3.62 candidate blockers a call, each paying a scope memo read.
 
-  F. **`declare_attackers_banded` — the same shape `(-337)` took out of
-     `declare_blockers`, and it is the larger of the two rows.** 6,244 calls /
-     27,353,152 self on `cube` (**1.78 %**) at **4,381 Ir a call**. Its commit
-     loop asks `computed_kw(id)` — a linear `find` over the gated subset, then
-     `keywords()`' `OverlayList::get`, then a slice walk — SIX times per
-     declared attacker (`Decayed`, `Vigilance`, `Exert`, `Melee`, then
-     `Annihilator` and `Firebend` as `find_map`s), and the must-attack loop
-     above it asks three more times per candidate (`MustAttack`,
-     `MustAttackOrBlock`, `MustAttackIfAnotherAttacks`). `computed_kw` borrows
-     a local, not `self`, so every ask hoists above the `iter_mut` with no
-     borrow work. Take it exactly as `(-337)`: one fold per attacker beside
-     `attacker_block_reqs`, loops consume the facts, order and rejection order
-     unchanged, one `debug_assert!` against the asks it replaces.
+  ✅ F. `declare_attackers_banded` is TAKEN as `(-338)` — fixed -0.114 / cube
+     -0.308 / sealed -0.118 %, self -8.1 / -18.2 / -9.7 %. What is left in it
+     is the body proper, at 2,023 / 3,583 / 2,315 Ir a call.
 
   G. **`declare_blockers`' validation loop re-finds the blocker with a raw
      linear battlefield scan** — `self.battlefield.iter().find(|c| c.id ==

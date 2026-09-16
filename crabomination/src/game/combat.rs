@@ -161,6 +161,77 @@ fn block_reject(line: u32, e: GameError) -> GameError {
     e
 }
 
+/// CR 702.189a — which Firebending keyword an attacker carries, without the
+/// amount. The amount for the two derived arms reads board state that the
+/// commit loop *changes* between the fold and the payment (CR 702.121 Melee
+/// pumps the attacker), so the kind is folded with the rest of the keywords
+/// and the value is still computed where it was. See [`AttackerDeclFacts`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum FirebendKind {
+    /// `Firebending(n)`.
+    N(u32),
+    /// Firebending X = this creature's computed power, clamped at 0.
+    Power,
+    /// Firebending = creatures you control.
+    CreaturesYouControl,
+}
+
+/// What [`GameState::declare_attackers_banded`]'s commit loop asks of one
+/// attacker's **computed** keyword set, in one pass.
+///
+/// `(-337)`'s device on the attack side, and the larger of the two rows: each
+/// field below was its own `computed_kw(id)` — a linear `find` over the gated
+/// subset, then `keywords()`' `OverlayList::get`, then a slice walk — six of
+/// them per declared attacker. PERF `(-338)`.
+///
+/// ⚠ The two payload fields keep `find_map`'s **first-match** rule rather than
+/// taking a max, because that is what the arms they replace did: with two
+/// Annihilator keywords on one body the first in the computed set is the one
+/// that fired, and this fold has to fire the same one. (`AttackerBlockReqs`
+/// takes a max for the opposite reason — there the *decision* is "any bound
+/// unmet", which the max decides.)
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
+struct AttackerDeclFacts {
+    /// CR 702.147 — Decayed.
+    decayed: bool,
+    /// CR 702.20 — Vigilance.
+    vigilance: bool,
+    /// CR 702.83 — Exert.
+    exert: bool,
+    /// CR 702.121 — Melee.
+    melee: bool,
+    /// CR 702.85a — the first `Annihilator(n)`.
+    annihilator: Option<u32>,
+    /// CR 702.189a — the first Firebending arm.
+    firebending: Option<FirebendKind>,
+}
+
+/// [`AttackerDeclFacts`] for one computed keyword set.
+#[inline]
+fn attacker_decl_facts(kws: &[Keyword]) -> AttackerDeclFacts {
+    let mut f = AttackerDeclFacts::default();
+    for k in kws {
+        match k {
+            Keyword::Decayed => f.decayed = true,
+            Keyword::Vigilance => f.vigilance = true,
+            Keyword::Exert => f.exert = true,
+            Keyword::Melee => f.melee = true,
+            Keyword::Annihilator(n) if f.annihilator.is_none() => f.annihilator = Some(*n),
+            Keyword::Firebending(n) if f.firebending.is_none() => {
+                f.firebending = Some(FirebendKind::N(*n))
+            }
+            Keyword::FirebendingPower if f.firebending.is_none() => {
+                f.firebending = Some(FirebendKind::Power)
+            }
+            Keyword::FirebendingCreaturesYouControl if f.firebending.is_none() => {
+                f.firebending = Some(FirebendKind::CreaturesYouControl)
+            }
+            _ => {}
+        }
+    }
+    f
+}
+
 /// See [`attack_static`]. One battlefield walk; `u32::MAX` is the ungated
 /// reading every gated site `debug_assert!`s against.
 pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
@@ -1227,17 +1298,36 @@ impl GameState {
 
         if attack_requirement {
             for c in &self.battlefield {
+                // The controller test first: it decides the whole iteration
+                // and costs a field compare, where `must` below costs three
+                // `computed_kw` subset finds and three slice walks — paid for
+                // every permanent on the board, most of them the opponent's.
+                // Pure predicate, so hoisting the cheap half is free
+                // (PERF `(-338)`).
+                if c.controller != p {
+                    continue;
+                }
                 // A creature must be declared if it carries MustAttack
                 // (Juggernaut) or is goaded (CR 701.38 — "attacks each
-                // combat if able").
-                let must = computed_kw(c.id).has_kw(&Keyword::MustAttack)
-                    || computed_kw(c.id).has_kw(&Keyword::MustAttackOrBlock)
-                    // CR 508.1d — Ekundu Cyclops only has to join an attack
-                    // someone else already started.
-                    || (computed_kw(c.id).has_kw(&Keyword::MustAttackIfAnotherAttacks)
-                        && attacks.iter().any(|a| a.attacker != c.id))
+                // combat if able"). One pass over the computed set for the
+                // three keywords, where each was its own ask.
+                let ckw = computed_kw(c.id);
+                let (mut must_attack, mut must_either, mut must_if_another) = (false, false, false);
+                for k in ckw {
+                    match k {
+                        Keyword::MustAttack => must_attack = true,
+                        Keyword::MustAttackOrBlock => must_either = true,
+                        // CR 508.1d — Ekundu Cyclops only has to join an
+                        // attack someone else already started.
+                        Keyword::MustAttackIfAnotherAttacks => must_if_another = true,
+                        _ => {}
+                    }
+                }
+                let must = must_attack
+                    || must_either
+                    || (must_if_another && attacks.iter().any(|a| a.attacker != c.id))
                     || !c.goaded_by.is_empty();
-                if c.controller != p || !must {
+                if !must {
                     continue;
                 }
                 if able_to_attack(c) && !attacks.iter().any(|atk| atk.attacker == c.id) {
@@ -1608,14 +1698,32 @@ impl GameState {
             // for its current controller.
             // Both of these read the cold group, whose `Deref` borrows the
             // whole state — take them before the battlefield `&mut`.
-            let decayed = computed_kw(id).has_kw(&Keyword::Decayed);
+            //
+            // One pass over the computed set for the six keywords this loop
+            // reads, where each was its own `computed_kw(id)` — and that is a
+            // linear find over the gated subset before it is an
+            // `OverlayList::get` (PERF `(-338)`).
+            let dfacts = attacker_decl_facts(computed_kw(id));
+            debug_assert!(
+                dfacts.decayed == computed_kw(id).has_kw(&Keyword::Decayed)
+                    && dfacts.vigilance == computed_kw(id).has_kw(&Keyword::Vigilance)
+                    && dfacts.exert == computed_kw(id).has_kw(&Keyword::Exert)
+                    && dfacts.melee == computed_kw(id).has_kw(&Keyword::Melee)
+                    && dfacts.annihilator
+                        == computed_kw(id).iter().find_map(|kw| match kw {
+                            Keyword::Annihilator(n) => Some(*n),
+                            _ => None,
+                        }),
+                "attacker_decl_facts disagrees with the per-keyword asks it replaced",
+            );
+            let decayed = dfacts.decayed;
             let granted: Vec<crate::card::TriggeredAbility> = self.granted_triggers(id).cloned().collect();
             let card = self
                 .battlefield
                 .iter_mut()
                 .find(|c| c.id == id && c.controller == p)
                 .ok_or(GameError::CardNotOnBattlefield(id))?;
-            if !computed_kw(id).has_kw(&Keyword::Vigilance) {
+            if !dfacts.vigilance {
                 card.tapped = true;
                 // CR 508.1f — attacking taps the creature; surface a
                 // "becomes tapped" event so Tapped triggers fire (Magda).
@@ -1626,11 +1734,11 @@ impl GameState {
             // would have no policy and a real exert is almost always taken for
             // its bonus). The creature won't untap next untap step. Its exert
             // bonus rides its normal SelfSource Attacks trigger.
-            if computed_kw(id).has_kw(&Keyword::Exert) {
+            if dfacts.exert {
                 card.skip_next_untap = true;
             }
             // CR 702.121 — Melee: +1/+1 until end of turn per opponent attacked.
-            if melee_opponents > 0 && computed_kw(id).has_kw(&Keyword::Melee) {
+            if melee_opponents > 0 && dfacts.melee {
                 card.pump(melee_opponents, melee_opponents);
             }
             // CR 702.142 — record that this creature attacked (gates Boast).
@@ -1685,13 +1793,7 @@ impl GameState {
             // `Effect::Sacrifice { who: defender, count: N, filter: Any }`.
             // The defender comes from `atk.target`; for a planeswalker
             // attack, that's the planeswalker's controller (CR 506.4a).
-            let annihilator_n = computed_kw(id).iter().find_map(|kw| {
-                if let Keyword::Annihilator(n) = kw {
-                    Some(*n)
-                } else {
-                    None
-                }
-            });
+            let annihilator_n = dfacts.annihilator;
             if let Some(n) = annihilator_n
                 && let Some(defender) = self.defender_for(atk.target)
             {
@@ -1705,21 +1807,21 @@ impl GameState {
             // Firebending N — CR 702.189a: a triggered mana ability (resolves
             // without the stack, CR 605.3b). Add N {R} now; the mana survives
             // step/phase emptying until end of combat (`firebending_kept_red`).
-            let firebend_n = computed_kw(id).iter().find_map(|kw| match kw {
-                Keyword::Firebending(n) => Some(*n),
+            // The KIND came off the fold above; the amount is still read
+            // here, because the two derived arms read board state the Melee
+            // pump a few lines up has already changed.
+            let firebend_n = dfacts.firebending.map(|k| match k {
+                FirebendKind::N(n) => n,
                 // Firebending X = this creature's power (clamped at 0).
-                Keyword::FirebendingPower => Some(
-                    self.computed_permanent(id)
-                        .map(|c| c.power.max(0) as u32)
-                        .unwrap_or(0),
-                ),
-                Keyword::FirebendingCreaturesYouControl => Some(
-                    self.battlefield
-                        .iter()
-                        .filter(|c| c.controller == p && c.definition.is_creature())
-                        .count() as u32,
-                ),
-                _ => None,
+                FirebendKind::Power => self
+                    .computed_permanent(id)
+                    .map(|c| c.power.max(0) as u32)
+                    .unwrap_or(0),
+                FirebendKind::CreaturesYouControl => self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .count() as u32,
             });
             if let Some(n) = firebend_n
                 && n > 0
