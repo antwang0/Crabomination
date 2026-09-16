@@ -3037,6 +3037,21 @@ the feature is the engine crate's default, so `--no-default-features` without
 `-p` resolves against the workspace and never reaches it. Rebuild cost: the
 feature flip is a full engine + catalog rebuild, 7m19s here.
 
+gates   **CLOSING STATE at `c1b54b3d`** (both of this session's perf experiments reverted, so
+        the only code change in the tip is the cold-path `has_keyword_tag` class fix).
+        `--bench` on `target/release/bot_ladder`: **195,806 decisions / 27.49 turns / 611.9 per
+        game / 0 stalls (cap 0 / board 0 / stuck 0 / draw 0)**, byte-identical to the committed
+        invariant, `determinism ok`, `thread_determinism ok (3 vs 1 threads identical)`,
+        `peak_rss_mib 25.3`. Suite **19,578 / 0 / 5** (`CRAB_ANSWER_LOG=strict`) — the 19,575 of
+        the session below plus three `has_keyword_tag` tests; the 12 golden traces among them
+        unmoved. Clippy **0** (`--workspace --all-targets --exclude crabomination_client`, and
+        again `--features trig-census`). `cargo check --profile release-fast -p crabomination
+        --bin bot_ladder` clean (1m12s). ⚠ `games_per_s 640.77` at `host_calib_ms 39` on an
+        Intel Xeon @ 2.10 GHz against the eleventh box's 371.09 at `host_calib_ms 46` — **the
+        same binary configuration and a 1.7x wall-clock reading**, which is the standing warning
+        made concrete: wall clock does not cross hosts and the Ir columns are the signal.
+        Cold `release` here is **7m51s**, against the eleventh box's 35m43s.
+
 **Box timings (twelfth box, 4 cores, 15 GB):** cold `profiling-fast` **7m29s**,
 the allocator-feature flip **7m19s**, **engine-only 2m13s**, workspace
 `cargo check --all-targets` 2m31s cold / 1m24s for the engine alone,
@@ -13871,6 +13886,41 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+❌ **`cg_frames.py`'S `out/call ≈ 0` IS NECESSARY BUT NOT SUFFICIENT, AND THE
+SHARPENING COST ONE BUILD. Measured 2026-09-16 on `affected_includes_gated`,
+the largest row the script has left.** It reads 190,216 calls / 5-register
+prologue / 6 body call sites / **`out/call` 0.10** / 425 insn = 1,902,160 Ir
+"in frame", 0.126 % of `cube` — textbook `(-129)`: a `match` over
+`AffectedPermanents` is a jump table, LLVM will not shrink-wrap past one, and
+only the two `CardMatch*` arms call (`requirement_matches_card`). Outlining
+both behind one `#[inline(never)]`:
+
+```text
+  fixed +0.018 / cube +0.026 / sealed +0.002 %     — reverted
+  prologue 5 -> 5 registers, body calls 6 -> 4, 425 -> 394 insn
+```
+
+**The frame was never for the calls.** The surviving hot arms — `All` and
+`AllOpponents` — are six- and seven-term `&&` chains over `controller` /
+`token` / `owned_by_controller` / `card_types` / `color` / `colorless`, with
+two `cost.symbols` loops in them, and they need the five callee-saved
+registers on their own. `(-129)`'s `event_matches_spec` paid off because its
+hot arms were *trivial* — a field compare each — so removing the one calling
+arm left nothing that wanted a register.
+
+📐 **So the column to add to the device is the hot arms' own pressure:** read
+the disassembly of the surviving arms before spending a build. A body of 394
+instructions spread over seven arms is not `event_matches_spec`'s 0x70-way
+table of one-liners, and `~Ir in frame` is an upper bound that silently
+assumes it is. ⚠ Same verdict applies by inspection to the other three rows on
+the current report — `card_type_change_unscoped` (76 insn, and its `%r14` is
+live across `ContinuousEffects::fill` on the cold path, which is what forces
+the save), `relax_cost_colors_known`, `GameEvent as Clone`. ✅ All four are
+**REAL**, not `release-fast` artifacts: `inline_check.py` reports them present
+in `target/release/bot_ladder` at 76 / 100 / 430 / 184 instructions against 76
+/ 104 / 425 / 186 in `profiling-fast`. The rows are real; the *fix* is not the
+one the column suggests.
 
 ❌❌ **`(-303)`'s DEVICE APPLIED TO THE *PER-CARD* MEMO — BUILT, MEASURED AND
 REVERTED 2026-09-16 (the twelfth box). The idea is natural, the soundness
