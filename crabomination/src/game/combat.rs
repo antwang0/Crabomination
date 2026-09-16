@@ -2041,6 +2041,36 @@ impl GameState {
                 .unwrap_or(&[])
         };
 
+        // CR 509.1b/c — the six per-attacker block requirements, folded once
+        // per attacker instead of once per requirement (PERF `(-337)`).
+        //
+        // `self.attacking` is written only by `declare_attackers`, and
+        // `computed` is an owned snapshot taken above, so neither the set
+        // folded here nor the keywords folded from it can move under the two
+        // payment/tap mutations further down — which is already what the six
+        // loops relied on by reading `kws_of` after them.
+        let atk_reqs: SmallVec<[crate::game::AttackerBlockReqs; 8]> =
+            self.attacking.iter().map(|a| crate::game::attacker_block_reqs(kws_of(a.attacker))).collect();
+        debug_assert!(
+            self.attacking.iter().zip(atk_reqs.iter()).all(|(a, r)| {
+                let k = kws_of(a.attacker);
+                r.menace == k.has_kw(&Keyword::Menace)
+                    && r.no_more_than_one == k.has_kw(&Keyword::CantBeBlockedByMoreThanOne)
+                    && r.must_be_blocked == k.has_kw(&Keyword::MustBeBlocked)
+                    && r.all_must_block == k.has_kw(&Keyword::AllMustBlock)
+                    && r.unless_all_block == k.has_kw(&Keyword::CantBeBlockedUnlessAllBlock)
+                    && r.except_by_n
+                        == k.iter()
+                            .filter_map(|kw| match kw {
+                                Keyword::CantBeBlockedExceptByN(n) => Some(*n),
+                                _ => None,
+                            })
+                            .max()
+                            .unwrap_or(0)
+            }),
+            "attacker_block_reqs disagrees with the per-keyword asks it replaced",
+        );
+
         // Validate ALL assignments before mutating any state. Each blocker's
         // controller must equal the defender of the attacker it's blocking.
         // CR 509.1b — a creature blocks one attacker unless an effect lets it
@@ -2176,9 +2206,8 @@ impl GameState {
         // not at all (CR 702.110b). Counts the merged block set (existing
         // blocks plus this batch) so incremental multi-defender submissions
         // compose, same as the CantBeBlockedExceptByN check below.
-        for atk in &self.attacking {
-            let has_menace = kws_of(atk.attacker).has_kw(&Keyword::Menace);
-            if has_menace {
+        for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
+            if reqs.menace {
                 let blocker_count = assignments
                     .iter()
                     .filter(|(_, aid)| *aid == atk.attacker)
@@ -2253,25 +2282,23 @@ impl GameState {
 
         // "Can't be blocked except by N or more creatures" (Pathrazer of
         // Ulamog). Generalized Menace: 0 or >= N blockers, never 1..N-1.
-        for atk in &self.attacking {
-            for kw in kws_of(atk.attacker) {
-                if let Keyword::CantBeBlockedExceptByN(n) = kw {
-                    let blocker_count = assignments
-                        .iter()
-                        .filter(|(_, aid)| *aid == atk.attacker)
-                        .count()
-                        + self.blocker_count_of(atk.attacker);
-                    if blocker_count > 0 && (blocker_count as u32) < *n {
-                        return Err(block_reject(line!(), GameError::MenaceRequiresTwoBlockers(atk.attacker)));
-                    }
+        for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
+            if reqs.except_by_n > 0 {
+                let blocker_count = assignments
+                    .iter()
+                    .filter(|(_, aid)| *aid == atk.attacker)
+                    .count()
+                    + self.blocker_count_of(atk.attacker);
+                if blocker_count > 0 && (blocker_count as u32) < reqs.except_by_n {
+                    return Err(block_reject(line!(), GameError::MenaceRequiresTwoBlockers(atk.attacker)));
                 }
             }
         }
 
         // CR 509.1g — "can't be blocked by more than one creature" (Charging
         // Rhino). At most one blocker may be assigned (the inverse of Menace).
-        for atk in &self.attacking {
-            if kws_of(atk.attacker).has_kw(&Keyword::CantBeBlockedByMoreThanOne) {
+        for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
+            if reqs.no_more_than_one {
                 let blocker_count = assignments
                     .iter()
                     .filter(|(_, aid)| *aid == atk.attacker)
@@ -2290,10 +2317,8 @@ impl GameState {
         // blocks plus this batch) so independent multiplayer submissions
         // compose. Single-requirement model; full CR maximization across
         // multiple simultaneous requirements is approximated.
-        for atk in &self.attacking {
-            if !kws_of(atk.attacker).has_kw(&Keyword::MustBeBlocked)
-                || !self.block_requirement_binds(atk.attacker)
-            {
+        for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
+            if !reqs.must_be_blocked || !self.block_requirement_binds(atk.attacker) {
                 continue;
             }
             let already = self.blocker_count_of(atk.attacker) > 0;
@@ -2320,10 +2345,8 @@ impl GameState {
         // CR 509.1c — true Lure ("all creatures able to block this do so").
         // Every idle defender creature that *can* legally block such an
         // attacker must be assigned to it in the merged block set.
-        for atk in &self.attacking {
-            if !kws_of(atk.attacker).has_kw(&Keyword::AllMustBlock)
-                || !self.block_requirement_binds(atk.attacker)
-            {
+        for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
+            if !reqs.all_must_block || !self.block_requirement_binds(atk.attacker) {
                 continue;
             }
             let Some(defender_idx) = self.defender_for(atk.target) else { continue };
@@ -2369,8 +2392,8 @@ impl GameState {
         // CR 509.1b — Tromokratis: once such an attacker is blocked at all,
         // *every* untapped defending creature able to block it must also be
         // assigned to it. Checked against the merged block set.
-        for atk in &self.attacking {
-            if !kws_of(atk.attacker).has_kw(&Keyword::CantBeBlockedUnlessAllBlock) {
+        for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
+            if !reqs.unless_all_block {
                 continue;
             }
             let blocked = self.blocker_count_of(atk.attacker) > 0
@@ -2403,9 +2426,10 @@ impl GameState {
         let must_block_scan: &[crate::card::CardInstance] =
             if block_requirement { &self.battlefield } else { &[] };
         for b in must_block_scan {
-            if !(kws_of(b.id).has_kw(&Keyword::MustBlock)
-                || kws_of(b.id).has_kw(&Keyword::MustAttackOrBlock))
-            {
+            // One `kws_of` for the pair: it is a linear `find` over the
+            // subset, so asking twice was two finds (PERF `(-337)`).
+            let bkw = kws_of(b.id);
+            if !(bkw.has_kw(&Keyword::MustBlock) || bkw.has_kw(&Keyword::MustAttackOrBlock)) {
                 continue;
             }
             let already = self.is_blocking(b.id)

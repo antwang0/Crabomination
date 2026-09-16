@@ -28627,6 +28627,54 @@ pub(crate) fn view_block_facts(cp: &ComputedPermanent) -> ViewBlockFacts {
     f
 }
 
+/// The six CR 509.1b/c requirements `declare_blockers` asks of **one
+/// attacker's computed keyword set**, in one pass.
+///
+/// [`ViewBlockFacts`]' shape for the engine's own declaration rather than the
+/// planner's. Each field below had its own `for atk in &self.attacking` loop
+/// and its own `kws_of(atk.attacker)` — and there `kws_of` is not just an
+/// `OverlayList::get` but a linear `find` over the gated computed subset, so
+/// six asks an attacker were six finds *and* six slice walks. PERF `(-337)`;
+/// `(-335)`'s device on the declaration path.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
+pub(crate) struct AttackerBlockReqs {
+    /// CR 702.110b — Menace.
+    pub menace: bool,
+    /// CR 509.1b — the max `CantBeBlockedExceptByN(n)`, 0 when absent. The max
+    /// rather than the first: the loop it replaces returned on the first arm
+    /// whose bound a non-zero block count missed, and with `count > 0` "any
+    /// bound unmet" and "the largest bound unmet" are the same predicate.
+    /// [`min_blockers_of_kw`] already takes a max for the same reason.
+    pub except_by_n: u32,
+    /// CR 509.1g — Charging Rhino.
+    pub no_more_than_one: bool,
+    /// CR 509.1c — Lure / Academic Dispute.
+    pub must_be_blocked: bool,
+    /// CR 509.1c — true Lure.
+    pub all_must_block: bool,
+    /// CR 509.1b — Tromokratis.
+    pub unless_all_block: bool,
+}
+
+/// [`AttackerBlockReqs`] for one computed keyword set. `#[inline]` for
+/// [`view_block_facts`]' reason: what it replaces was six inlined walks.
+#[inline]
+pub(crate) fn attacker_block_reqs(kws: &[Keyword]) -> AttackerBlockReqs {
+    let mut r = AttackerBlockReqs::default();
+    for k in kws {
+        match k {
+            Keyword::Menace => r.menace = true,
+            Keyword::CantBeBlockedExceptByN(n) => r.except_by_n = r.except_by_n.max(*n),
+            Keyword::CantBeBlockedByMoreThanOne => r.no_more_than_one = true,
+            Keyword::MustBeBlocked => r.must_be_blocked = true,
+            Keyword::AllMustBlock => r.all_must_block = true,
+            Keyword::CantBeBlockedUnlessAllBlock => r.unless_all_block = true,
+            _ => {}
+        }
+    }
+    r
+}
+
 /// Returns true if `blocker` is legally allowed to block `attacker`.
 /// Uses `blocker_kws` / `attacker_kws` as the effective keyword sets
 /// (from `ComputedPermanent`) instead of the raw definition keywords.

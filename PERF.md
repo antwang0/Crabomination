@@ -3028,6 +3028,14 @@ engine-only change **2m39s**, a three-pool callgrind **~40 s** (all three in
 parallel; the runs themselves are 6.1 / 15.7 / 16.3 s).
 
 ```text
+perf    **`(-337)`: `declare_blockers`' per-attacker requirements take one pass — fixed -0.051 /
+        cube -0.195 / sealed -0.074 %.** Six CR 509.1b/c requirements, six `for atk in
+        &self.attacking` loops, six `kws_of(atk.attacker)` — folded to one `match` pass an
+        attacker. `declare_blockers` self **-13.2 / -17.8 / -15.4 %**. ⚠ **Found by ranking the
+        dump by SELF PER CALL**, not by self: this function and `declare_attackers_banded` are
+        the two largest bodies in the program and neither was on any list. And `kws_of` is a
+        linear find over the gated subset *plus* the `OverlayList::get` — see the Log entry.
+
 perf    **`(-336)`: the block planner's spare-capacity pass goes behind a board gate — fixed
         -0.213 / cube -0.417 / sealed -0.245 %.** The pass asks every legal blocker about
         `CanBlockAnyNumber` / `CanBlockAdditional(N)` at a `battlefield_find` + a `has_keyword`
@@ -7634,6 +7642,51 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-337)` `declare_blockers`' per-attacker requirements take one pass — **fixed -0.051 / cube -0.195 / sealed -0.074 %**
+
+`(-335)`'s device on the engine's declaration rather than the planner's, and
+found by ranking the dump by **self per call** instead of by self: the two
+largest bodies in the program are `declare_blockers` (5,740 Ir a call) and
+`declare_attackers_banded` (4,381), and neither was in `(-329)`'s checklist.
+
+Six CR 509.1b/c requirements each had their own `for atk in &self.attacking`
+loop and their own `kws_of(atk.attacker)` — Menace, `CantBeBlockedExceptByN`,
+`CantBeBlockedByMoreThanOne`, `MustBeBlocked`, `AllMustBlock`,
+`CantBeBlockedUnlessAllBlock`. `crate::game::attacker_block_reqs` folds all six
+in one `match` pass, once per attacker, beside `view_block_facts`; the loops
+keep their place and their `line!()`, so the order in which two simultaneously
+violated rules reject is unchanged. The `must_block_scan` loop's two
+back-to-back `kws_of(b.id)` become one.
+
+```text
+                    base              (-337)          delta
+  fixed              582,801,030       582,502,325       -0.0513 %
+  cube             1,534,162,464     1,531,164,775       -0.1954 %
+  sealed           1,642,166,284     1,640,945,283       -0.0744 %
+
+  declare_blockers self    6,319,442 ->  5,487,600   (-13.16 %)
+                          27,026,008 -> 22,221,164   (-17.78 %)
+                          17,413,804 -> 14,728,560   (-15.42 %)
+```
+
+📐 **`kws_of` is not an `OverlayList::get`, it is a LINEAR FIND plus one**, and
+that is why this reads three to four times `(-335)`'s per-ask value on `cube`
+off a comparable collapse. `declare_blockers` computes a *gated subset* at the
+top and every keyword ask walks it (`computed.iter().find(|c| c.id == id)`)
+before it reaches `keywords()` and the slice walk. **Price an accessor by its
+body, not by its name: two functions spelled `kws_of` and `cp.keywords()` are
+an order apart.** The same subset-find is asked once per assignment in the
+validation loop as `self.battlefield.iter().find(|c| c.id == blocker_id)` —
+a raw linear battlefield scan where `battlefield_find`'s hint cache is used two
+lines below it, `(-304)`'s device. Left for its own commit; queue item (G).
+
+Behaviour-preserving: suite **19,574 / 0 / 5** with `CRAB_ANSWER_LOG=strict`
+(12 golden-trace tests among them), outcomes identical on all three pools
+(24 / 48 / 72 decided, 0 undecided) and `declare_blockers`' call count
+identical (2,940 / 4,708 / 6,922). The fold carries a `debug_assert!` against
+the six per-keyword asks it replaces, so the suite and the fresh-seed sweep are
+the ratchet — `(-333)`'s shape.
 
 ### `(-336)` The block planner's spare-capacity pass goes behind a board gate — **fixed -0.213 / cube -0.417 / sealed -0.245 %**
 
@@ -13275,6 +13328,41 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+🔎 **THE `(-336)` TIP'S RE-READ (2026-09-16, the spare-capacity session, tenth
+box): THE SHARED-LEAF POPULATION IS EXHAUSTED, AND THE LADDER MOVES TO THE
+ENGINE'S TWO DECLARATION BODIES.** `has_keyword` has left the top-45 call table
+entirely (75,608 -> 55,394 on `cube` at `(-336)`, and no dominant caller left);
+`cg_edges.py --callers` of every remaining leaf over ~40 k calls gives a top
+caller under 20 % on all of them, and `SpecFromIterNested::from_iter` (319,928
+calls, 2.20 %) and `grow_one` (154,572, the #1 allocation driver at 20 % of all
+755,905 allocations) each spread over 87 and 109 callers with a 7-8 % head.
+**Rank by SELF PER CALL instead, and the two largest bodies in the program are
+`declare_blockers` (4,708 calls, 5,740 Ir of self a call, 1.76 %) and
+`declare_attackers_banded` (6,244, 4,381, 1.78 %) — neither is in `(-329)`'s
+checklist and neither has ever been read.** `(-337)` is the first; the second is
+queue item (F) below.
+
+❌❌ **REFUTED WITH NO BUILD SPENT, AND THE CENSUS THAT REFUTES IT WAS ALREADY
+IN THIS FILE: a battlefield-keyed lane in front of the continuous-effects
+gather.** `gather_continuous_effects_inner` is **13,441,884 / 29,622,828 /
+33,861,888 self = 2.31 / 1.93 / 2.06 %**, the largest row in the program that
+has never been in a candidates list, and on `fixed` **88 % of it is its own
+body** (callees 1.6 M against 13.4 M) — an O(board) opening walk reading
+`gather_scan_bits()` + `suspected` + `attached_to` per permanent, on decks that
+contribute no statics at all. The obvious device is `LANE_TRIGGERER`'s: a lane
+holding the `def_mask` and the static-ability member list. **It is worth ~0.08 %
+and the number is already filed.** `LayerFreezeState::cross`'s own doc records
+the (-310) census: **48.04 / 49.18 / 48.85 %** of gathers found the
+*board-and-seats* half of the key unchanged, and the shipped whole-key memo
+already takes **45.7 / 44.5 / 42.1 %** off the program. So of the ~55 % that
+still reach the walk, only ~(48.5 − 45)/55 ≈ **6 % have an unchanged board** —
+**a gather that misses the cross memo misses it because the BOARD moved**, which
+is exactly what a battlefield-keyed lane cannot survive. Same argument kills a
+multi-slot `cross`: the slots would hold states the caller never returns to.
+⚠ **The transferable half: before building a memo in front of row X, look for an
+existing census of a memo keyed on a SUPERSET of X's inputs.** Its hit rate is
+an upper bound on yours, and `(-329)`'s two refutations were this same mistake.
+
 ✅✅ **STATUS AT THE `(-334)` TIP (2026-09-15, the bot-combat session, eighth
 box): FIVE ROWS TAKEN, cumulative fixed -0.505 / cube -1.230 / sealed
 -0.629 %, and every one came out of the SAME question asked of a leaf instead
@@ -13370,6 +13458,26 @@ costs a cold build.
      and `min_blockers` borrow `cp` after it (~20 k a `cube` run, ~0.04 %),
      and `legal_blockers`' `computed_permanent_hinted` is 15,876 calls at
      612 Ir — 3.62 candidate blockers a call, each paying a scope memo read.
+
+  F. **`declare_attackers_banded` — the same shape `(-337)` took out of
+     `declare_blockers`, and it is the larger of the two rows.** 6,244 calls /
+     27,353,152 self on `cube` (**1.78 %**) at **4,381 Ir a call**. Its commit
+     loop asks `computed_kw(id)` — a linear `find` over the gated subset, then
+     `keywords()`' `OverlayList::get`, then a slice walk — SIX times per
+     declared attacker (`Decayed`, `Vigilance`, `Exert`, `Melee`, then
+     `Annihilator` and `Firebend` as `find_map`s), and the must-attack loop
+     above it asks three more times per candidate (`MustAttack`,
+     `MustAttackOrBlock`, `MustAttackIfAnotherAttacks`). `computed_kw` borrows
+     a local, not `self`, so every ask hoists above the `iter_mut` with no
+     borrow work. Take it exactly as `(-337)`: one fold per attacker beside
+     `attacker_block_reqs`, loops consume the facts, order and rejection order
+     unchanged, one `debug_assert!` against the asks it replaces.
+
+  G. **`declare_blockers`' validation loop re-finds the blocker with a raw
+     linear battlefield scan** — `self.battlefield.iter().find(|c| c.id ==
+     blocker_id)`, once per assignment, two lines above a `battlefield_find`
+     on the attacker that uses the hint cache. `(-304)`'s device, and the
+     smaller half of what `(-337)` left in that function.
 
   D. the remaining keyword-ask ratio in `pick_attacks_inner` — DECLINED, ~0.017 %.
      See `(-330)`'s Log entry: the five per-blocker sites now take one
