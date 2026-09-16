@@ -6663,9 +6663,8 @@ impl GameState {
             .filter(|c| c.definition.is_aura() && !c.bestowed)
             .filter_map(|c| {
                 let host = c.attached_to?;
-                if self.battlefield.find_by_id(host).is_none() {
-                    return None; // missing host: handled by the sweep above
-                }
+                // A missing host is the sweep above's, not this pass's.
+                self.battlefield.find_by_id(host)?;
                 // CR 704.5m — protection covers "can't be Enchanted by": a
                 // host with protection from the Aura's qualities (its color,
                 // card type, "everything", …) sheds the Aura.
