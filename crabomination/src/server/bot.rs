@@ -13262,67 +13262,81 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // friends). A blocker that can block extra attackers soaks additional
     // ones for free as long as the total damage it would take stays under its
     // toughness and no extra attacker has deathtouch.
-    let extra_capacity = |id: CardId| -> usize {
-        let Some(c) = state.battlefield_find(id) else { return 0 };
-        if c.has_keyword(&Keyword::CanBlockAnyNumber) {
-            return usize::MAX;
-        }
-        state.computed_permanent(id).map_or(0, |cp| {
-            cp.keywords()
-                .iter()
-                .filter_map(|k| match k {
-                    Keyword::CanBlockAdditional(n) => Some(*n as usize),
-                    _ => None,
-                })
-                .sum()
-        })
-    };
-    // Seed from every legal blocker with spare capacity, not just the ones the
-    // scoring loop already assigned: a 0/N `CanBlockAnyNumber` wall kills
-    // nothing and isn't needed against lethal, so it never gets picked up
-    // there — but it can still soak the whole swing for free.
-    let mut multi: Vec<CardId> = Vec::new();
-    let seeds = assignments
-        .iter()
-        .map(|(b, _)| *b)
-        .chain(may_block.iter().map(|(c, _)| c.id));
-    for id in seeds {
-        if !multi.contains(&id) && extra_capacity(id) > 0 {
-            multi.push(id);
-        }
-    }
-    for b_id in multi {
-        let Some(b) = state.battlefield_find(b_id) else { continue };
-        let (b_tough, b_flying, b_reach) = (
-            b.toughness(),
-            b.has_keyword(&Keyword::Flying),
-            b.has_keyword(&Keyword::Reach),
-        );
-        let mut taken: i32 = assignments
+    //
+    // ⚠ **The whole pass is behind a board-level presence test**, because its
+    // seed loop asks every legal blocker about two keywords no ordinary board
+    // carries, at a `battlefield_find` + a `has_keyword` + a
+    // `computed_permanent` apiece: 20,214 calls of each on `cube` at the
+    // `(-335)` tip, 3.25 M Ir of callees plus an inlined board walk per ask,
+    // for 4.6 asks a call. `enforce_block_caps` below already has this shape;
+    // `board_keyword_in_scope` is authoritative on `false` and its own
+    // `debug_assert!` re-derives the computed board to prove it. PERF
+    // `(-336)`.
+    if state
+        .board_keyword_in_scope(&[Keyword::CanBlockAnyNumber, Keyword::CanBlockAdditional(0)])
+    {
+        let extra_capacity = |id: CardId| -> usize {
+            let Some(c) = state.battlefield_find(id) else { return 0 };
+            if c.has_keyword(&Keyword::CanBlockAnyNumber) {
+                return usize::MAX;
+            }
+            state.computed_permanent(id).map_or(0, |cp| {
+                cp.keywords()
+                    .iter()
+                    .filter_map(|k| match k {
+                        Keyword::CanBlockAdditional(n) => Some(*n as usize),
+                        _ => None,
+                    })
+                    .sum()
+            })
+        };
+        // Seed from every legal blocker with spare capacity, not just the ones the
+        // scoring loop already assigned: a 0/N `CanBlockAnyNumber` wall kills
+        // nothing and isn't needed against lethal, so it never gets picked up
+        // there — but it can still soak the whole swing for free.
+        let mut multi: Vec<CardId> = Vec::new();
+        let seeds = assignments
             .iter()
-            .filter(|(bid, _)| *bid == b_id)
-            .filter_map(|(_, aid)| attacker_info.iter().find(|a| a.id == *aid))
-            .map(|a| a.power)
-            .sum();
-        let mut spare = extra_capacity(b_id);
-        for atk in &attacker_info {
-            let a_id = &atk.id;
-            if spare == 0 {
-                break;
+            .map(|(b, _)| *b)
+            .chain(may_block.iter().map(|(c, _)| c.id));
+        for id in seeds {
+            if !multi.contains(&id) && extra_capacity(id) > 0 {
+                multi.push(id);
             }
-            if atk.deathtouch
-                || taken + atk.power >= b_tough
-                || assignments.iter().any(|(bid, aid)| *bid == b_id && aid == a_id)
-                || assignments.iter().any(|(_, aid)| aid == a_id)
-                || (atk.flying && !b_flying && !b_reach)
-                || atk.min_blockers > 1
-                || !state.blocker_can_block_attacker(b_id, *a_id)
-            {
-                continue;
+        }
+        for b_id in multi {
+            let Some(b) = state.battlefield_find(b_id) else { continue };
+            let (b_tough, b_flying, b_reach) = (
+                b.toughness(),
+                b.has_keyword(&Keyword::Flying),
+                b.has_keyword(&Keyword::Reach),
+            );
+            let mut taken: i32 = assignments
+                .iter()
+                .filter(|(bid, _)| *bid == b_id)
+                .filter_map(|(_, aid)| attacker_info.iter().find(|a| a.id == *aid))
+                .map(|a| a.power)
+                .sum();
+            let mut spare = extra_capacity(b_id);
+            for atk in &attacker_info {
+                let a_id = &atk.id;
+                if spare == 0 {
+                    break;
+                }
+                if atk.deathtouch
+                    || taken + atk.power >= b_tough
+                    || assignments.iter().any(|(bid, aid)| *bid == b_id && aid == a_id)
+                    || assignments.iter().any(|(_, aid)| aid == a_id)
+                    || (atk.flying && !b_flying && !b_reach)
+                    || atk.min_blockers > 1
+                    || !state.blocker_can_block_attacker(b_id, *a_id)
+                {
+                    continue;
+                }
+                assignments.push((b_id, *a_id));
+                taken += atk.power;
+                spare = spare.saturating_sub(1);
             }
-            assignments.push((b_id, *a_id));
-            taken += atk.power;
-            spare = spare.saturating_sub(1);
         }
     }
 

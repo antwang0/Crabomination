@@ -691,6 +691,9 @@ pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
                 | AllMustBlock
                 | CantBeBlockedUnlessAllBlock
                 | CantBeBlockedByMoreThanOne
+                // The block planner's spare-capacity pass (PERF `(-336)`).
+                | CanBlockAnyNumber
+                | CanBlockAdditional(_)
                 | CantBlock
                 | Flanking
                 | Bushido(_)
