@@ -409,8 +409,15 @@ impl GameState {
                     // it gets exiled). Non-battlefield zones return the
                     // printed power from `CardDefinition.power` since
                     // counters don't apply off the battlefield.
+                    // CR 613 — on the battlefield the answer is the
+                    // *computed* power. `CardInstance::power()` is base +
+                    // counters + resolved pumps and is blind to every
+                    // layer-7 static, so a 2/2 under a Glorious Anthem used
+                    // to read 2 here. `effective_power` falls back to the
+                    // instance read inside a gather, where the computed view
+                    // does not exist yet.
                     if let Some(c) = self.battlefield_find(cid) {
-                        return Some(c.power());
+                        return Some(self.effective_power(c));
                     }
                     if let Some(c) = self.exile.iter().find(|c| c.id == cid) {
                         return Some(c.definition.power);
@@ -436,8 +443,9 @@ impl GameState {
                     if let Some(snap) = self.lki_snapshot(cid) {
                         return Some(snap.toughness());
                     }
+                    // CR 613, as in `PowerOf` above.
                     if let Some(c) = self.battlefield_find(cid) {
-                        return Some(c.toughness());
+                        return Some(self.effective_toughness(c));
                     }
                     if let Some(c) = self.exile.iter().find(|c| c.id == cid) {
                         return Some(c.definition.toughness);
@@ -641,7 +649,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
-                    .map(|c| c.power())
+                    .map(|c| self.effective_power(c))
                     .collect();
                 powers.sort_unstable();
                 powers.dedup();
@@ -3120,7 +3128,7 @@ impl GameState {
     /// Powers source-power-relative filters that resolve in a death trigger.
     pub(crate) fn source_power_lki(&self, src: CardId) -> Option<i32> {
         if let Some(c) = self.battlefield_find(src) {
-            return Some(c.power());
+            return Some(self.effective_power(c));
         }
         self.leaves_bf_lki.get(&src).map(|snap| snap.power())
     }

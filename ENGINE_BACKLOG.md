@@ -82,6 +82,48 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-16 (thirty-fourth find) — `Value::PowerOf` reads the raw instance power, so a creature under an anthem is flung for its printed power
+
+The largest-blast-radius find of the walker sweep, and it is not in a walker
+at all — it is in the **value** evaluator, reached the same way: by asking
+"which of these two reads of power is the CR 613 one".
+
+```rust
+Value::PowerOf(s) => ... {
+    if let Some(snap) = self.lki_snapshot(cid) { return Some(snap.power()); }
+    if let Some(c) = self.battlefield_find(cid) { return Some(c.power()); }   // <-- raw
+```
+
+`CardInstance::power()` is base + counters + resolved pump bonuses and is
+blind to every layer-7 static. So "deals damage equal to target creature's
+power", "gain life equal to its toughness", "put X +1/+1 counters where X is
+its power" all read the **un-anthemed** number: a 2/2 under a Glorious Anthem
+is a 5/5 and dealt 2. **227 catalog cards route through `PowerOf` /
+`ToughnessOf`**, and the comment on the battlefield leg said "live `power()`
+includes counters" — true, and not the question.
+
+Fixed here and in three siblings found by the same grep:
+`Value::ToughnessOf`, `Value::DistinctPowerYouControl` (a battlefield walk
+collecting raw powers, so two creatures the anthem separates counted as one
+distinct value), and `source_power_lki`'s live-battlefield leg. All read
+`effective_power` / `effective_toughness`, which fall back to the instance
+read inside a gather (`layer_reads_are_printed`). The LKI legs keep
+`snap.power()`: a snapshot is an off-battlefield object with no computed view.
+
+⚠ **This one is not free, and the reason is worth carrying.** Callgrind
+three-pool A/B: **fixed +0.118 / cube +0.007 / sealed +0.005 %**. The dumps
+say it is **84 extra `gather_continuous_effects_inner` calls on `fixed`**
+(13,170 -> 13,254) and 84 extra `compute_permanent_pass` — not the memo read.
+`Value::PowerOf` is evaluated during *resolution*, where the state is
+unfrozen, so `computed_permanent`'s first read on a state has to gather; the
+cross memo (`(-303)`) serves the repeats, which is why 84 covers every extra
+read. **A correctness read that moves from the instance to the computed view
+costs a gather per distinct state, not a memo lookup** — price it that way.
+Accepted as the price of the rule.
+
+Test `cr_613_power_of_reads_the_anthem`: a 2/2 under a +3/+3 static, a
+`Value::PowerOf(Target(0))` rider reading 2 before and 5 after.
+
 ## FIXED 2026-09-16 (thirty-third find) — the P/T THRESHOLD filters read the computed view and the P/T COMPARISON filters beside them did not, under a comment that says they all do
 
 `evaluate_requirement_static_hinted`'s P/T block opens with

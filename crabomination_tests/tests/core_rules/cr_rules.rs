@@ -11268,3 +11268,49 @@ fn cr_613_greatest_power_is_a_computed_comparison() {
     assert!(greatest(&g, bear), "the anthem was invisible to the comparison");
     assert!(!greatest(&g, big), "a 4/4 outranked an anthemed 5/5");
 }
+
+/// CR 613 — "damage equal to target creature's power" reads the creature's
+/// *computed* power, so an anthem counts. `Value::PowerOf` / `ToughnessOf`
+/// read `CardInstance::power()` off the battlefield leg — base plus counters
+/// plus resolved pumps, blind to every layer-7 static — so a 2/2 under a
+/// Glorious Anthem flung for 2. 227 catalog cards route through these two.
+#[test]
+fn cr_613_power_of_reads_the_anthem() {
+    use crabomination::card::{
+        CardDefinition, CardType, SelectionRequirement as R, StaticAbility, Value,
+    };
+    use crabomination::effect::{Effect, Selector, StaticEffect};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Titanic Standard",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +3/+3.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                power: 3,
+                toughness: 3,
+            },
+        }],
+        ..Default::default()
+    });
+    assert_eq!(g.computed_permanent(bear).expect("computed").power, 5);
+
+    let drain = g.add_card_to_hand(0, CardDefinition {
+        name: "Power Tally",
+        card_types: vec![CardType::Instant],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::PowerOf(Box::new(Selector::Target(0))),
+        },
+        ..Default::default()
+    });
+    let before = g.players[0].life;
+    crabomination::game::cast_at(&mut g, drain, Target::Permanent(bear));
+    assert_eq!(
+        g.players[0].life - before,
+        5,
+        "`PowerOf` read the un-anthemed power",
+    );
+}
