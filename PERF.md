@@ -13642,6 +13642,79 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+❌❌ **THE `release-fast` TRAP IS WIDER THAN THIS FILE SAYS, AND
+`cg_calls.py`'S DOCSTRING IS WRONG ABOUT IT. Refuted 2026-09-16 with NO BUILD
+SPENT.** The trap was filed for "a non-generic `crabomination_base` leaf". It
+also covers **std generics whose body is a closure**, and the largest current
+example is `std::thread::local::LocalKey<T>::with`: **148,514 calls /
+10,113,099 self / 0.67 % of `cube`**, 98,962 of them from
+`computed_permanent_hinted`, with `FnOnce::call_once` (148,514 calls, 1.48 M)
+underneath it — i.e. *two* non-inlined calls per `cp_pool` access, which reads
+as a textbook "restructure the call site" row.
+
+`cg_calls.py`'s docstring says exactly the opposite of the right answer here:
+"A std generic the local inliner declined is *real*, and the fix is
+restructuring the call site, never an `#[inline]`." **It is not real in this
+case.** `objdump` on `target/release/bot_ladder` — the binary the `--bench`
+gate already built, so this costs nothing:
+
+```text
+  cp_pool::alloc, release (cgu 1 + thin LTO):  115 instructions, 0x1d9 bytes
+      calls:        2x drop_in_place<ComputedPermanent>, 5 PLT/indirect
+      LocalKey::with / FnOnce::call_once:      ABSENT
+      %fs: segment references:                 12   <- the TLS read, inlined
+  cp_pool::alloc, profiling-fast:  no symbol at all (inlined into its caller),
+      and `LocalKey::with` + `call_once` left behind as separate rows.
+```
+
+**So the whole thread-local access is inlined in the shipped binary and the
+0.67 % is an artifact of the profile.** ⚠ **The instrument is free and nobody
+had used it this way: `nm -C` the `release` binary for the symbol, `objdump -d`
+the byte range, and count `call` against `%fs:` / the arithmetic.** The
+`--bench` gate builds that binary every run anyway. Do this before ranking ANY
+row whose name is a std generic or a small leaf — it is the same device the
+`perform_action_inner` `is_cast` refutation used, applied to the other side of
+the inlining question. ⚠ And grep the disassembly with `-P '\bcall\b'`, not
+`'\tcall'`: the latter silently matches nothing and reads as "no calls".
+
+❌ **DECLINED with no build — `computed_permanent(x.id)` -> `computed_permanent_on(x)`,
+58 sites.** The `_on` form exists to skip a linear `battlefield.iter().find(id)`
+(its doc prices that at 0.68 % as of the ninety-fifth pass), and a grep finds
+58 sites spelling `computed_permanent(c.id)` while holding `c`. **But the hint
+is consulted only on a `perms` MISS** — `computed_permanent_hinted` checks
+`st.perms.iter().find(|(k,_)| *k == id)` first and returns before it reads the
+hint — and the misses are the minority (176,852 calls at 124.6 Ir average
+against a 328-Ir miss; the spare-capacity session measured the hit at 124.6).
+Each site also needs a per-site judgement that the card really is a battlefield
+permanent, because `computed_permanent_hinted`'s `debug_assert!` requires it.
+**58 manual judgements for the miss fraction of one memo is the wrong trade.**
+
+📐 **THE ALLOCATION PICTURE, censused at the `(-341)` tip so nobody re-derives
+it — and it is DIFFUSE.** 756,267 allocations on a six-game `cube` run:
+
+```text
+  finish_grow (Vec REgrowth)   150,669   top caller 10,806 = 7 %, 95 more rows hold 38 %
+  Arc::clone_from_ref_in        87,152   the CoW unshare family, (-280)..(-287)
+  Vec::from_iter                59,072
+  Vec::clone                    53,848
+  GameState::clone              48,024
+  CowBox::push                  36,724
+  make_mut_slow                 32,668
+```
+
+⚠ **The Ir beside these is the SYSTEM allocator's** (`malloc` 35.7 M + `_int_free`
+46.6 M + `free` 29.5 M + shims ≈ 8.3 % of `cube`) **and the shipped binary runs
+mimalloc**, so that share is not what ships — callgrind has to profile the
+system allocator (PERF's "How to measure"). **The COUNT is allocator-independent
+and is the number worth attacking**, but `finish_grow`'s long tail says no
+single `with_capacity` is a row: the largest single site is 7 % of regrowths.
+
+📐 **`String::write_str` 166,925 calls / 4.69 M is the `wants_converge` `{:?}`
+scan**, reached through `DebugStruct::field` (84,240) — the once-per-distinct-
+card-name cost "How to measure" already documents as **not scaling with game
+count**. It is not a row and a change that moved it would read as a win no real
+run sees. Filed here because the call count is large enough to look like one.
+
 🔎 **THE `(-336)` TIP'S RE-READ (2026-09-16, the spare-capacity session, tenth
 box): THE SHARED-LEAF POPULATION IS EXHAUSTED, AND THE LADDER MOVES TO THE
 ENGINE'S TWO DECLARATION BODIES.** `has_keyword` has left the top-45 call table
