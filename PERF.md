@@ -3065,6 +3065,16 @@ gates   **CLOSING STATE at `3a3daa5a`, all of this session's rows in.** `--bench
         check, not a measurement; wall clock does not cross hosts and the Ir columns are the
         signal. Cold `release` here is **35m43s**, against `profiling-fast`'s 11m02s.
 
+sweep   **ONE block — fresh seeds 1382..1385 at the `(-341)` tip: 12 cells / 59,200 games /
+        0 failures**, `cap 0 / board 0 / stuck 0 / draw 4` (CR 104.4), pools `cube all sealed`,
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
+        It is the **ratchet for `(-336)` and `(-340)`**, and both needed one: `(-336)` widened
+        `card_has_gate_keyword`'s union, whose `board_keyword_matching` `debug_assert!`
+        re-derives the computed board on every `false`; `(-340)` moved 50 existence checks onto
+        `find_by_id`, whose `debug_assert!` asserts no two battlefield permanents share a
+        `CardId` — neither fires on a board the suite builds. **Frontier 1386.** Cells run
+        37-100 s here; the whole block was ~14 min against the 11m03s `overflow` build.
+
 timings **NINTH BOX, 4 cores, 15 GB**: cold `profiling-fast` **11m02s**, a `crabomination_base`
         change **10m57s** — i.e. the SAME, because a base change rebuilds the catalog and the
         catalog is the whole cost. Engine-only ~3 min, three-pool callgrind 25 s in parallel,
