@@ -13625,6 +13625,33 @@ costs a cold build.
      only as tidying. And the same question is unasked for the OTHER zones'
      hand-written scans (`graveyard`, `exile`, `hand`) — grep before profiling.
 
+  H. **`(-339)`'s grep on the OTHER zones — CENSUSED, NOT TAKEN, and the census
+     cost no build.** 138 production `<zone>.iter().find(|c| c.id == x)` sites:
+     `hand` 68, `exile` 29, `graveyard` 29, `library` 12. Cross-referenced
+     against the `cube` dump by enclosing function:
+
+       73 sites  in functions with NO self row at all — never executed in a
+                 six-game run. Cold; not a perf question.
+       65 sites  in functions that do run, concentrated in four:
+                 run_effect 33 sites (8.78 M self), activate_ability_inner 13
+                 (10.88 M), cast_spell_with_convoke 2 (12.31 M),
+                 cast_candidates 1 (16.63 M). ⚠ A big `match` arm's site only
+                 pays when its arm fires, so the function's row is an upper
+                 bound on the site, not its size.
+
+     ⚠⚠ **AND THE OBVIOUS FIX IS THE WRONG ONE: `CardPile` must NOT simply get
+     `Battlefield`'s hint cache.** `FIND_HINTS` is 16 `AtomicU32` = **64 bytes
+     a pile**, and `Clone for Battlefield` copies the hints. Hand, graveyard,
+     exile and library are four piles a seat, so an eight-pile table adds
+     ~512 bytes to every `GameState` — and `GameState::clone` is already
+     **16,117,706 self (1.05 % of `cube`)** plus its memcpy, on the bot's probe
+     path. That is a certain cost against an unmeasured benefit, which is
+     exactly the shape `(-329)`'s two refutations had. **Price the clone side
+     first** (the `(-280)` family's question), or find a shape that does not
+     widen the cloned struct — the piles are 7-30 cards where the battlefield
+     is ~23 and asked constantly, so the hit rate that made `(-38)` pay may not
+     be there at all.
+
   D. the remaining keyword-ask ratio in `pick_attacks_inner` — DECLINED, ~0.017 %.
      See `(-330)`'s Log entry: the five per-blocker sites now take one
      `combat_keywords` pass each where they took one ask each, and collapsing
