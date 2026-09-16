@@ -113,6 +113,7 @@ impl ColorSet {
         self.0 == 0
     }
 
+
     /// True iff every color in `self` is also in `other`. Used by
     /// Commander color-identity: a non-commander card is legal iff
     /// `card_identity.is_subset_of(commander_identity)`.

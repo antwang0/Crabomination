@@ -82,6 +82,49 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-16 (thirty-first find) — SEVEN copies of "is this object green", and the one the layer pass uses walks `ManaSymbol::Colored(_)` alone
+
+The largest of the walker-diff finds, and the one most likely to be seen in a
+real game. CR 105.2: an object's colours are its mana cost's **coloured pips —
+hybrid and Phyrexian included** — union its **colour indicator** (CR 105.2c,
+the only colour a token or a DFC back has), and empty under Devoid
+(CR 702.114). `CardDefinition::printed_color_set` is that answer, on a
+bitmask, and was already read 114,562 times a six-game run. Not everybody
+asked it:
+
+```text
+  layers.rs  AffectedPermanents::All          `color`      Colored(_) only
+  layers.rs  AffectedPermanents::All          `colorless`  Devoid || no Colored(_)
+  layers.rs  AffectedPermanents::AllOpponents `color`      Colored(_) only
+  layers.rs  requirement_matches_card         HasColor     Colored(_) only
+  layers.rs  requirement_matches_card         Colorless    Devoid || no Colored(_)
+  eval.rs    x2 walkers   Colorless / Monocolored / Multicolored
+                                         ManaCost::distinct_colors (no indicator)
+  eval.rs    printed_requirement_impl     printed_colors() — right answer, Vec alloc
+```
+
+So **"green creatures you control get +1/+1" skipped Kitchen Finks**
+(`{1}{G/W}{G/W}`) and skipped every token whose only colour is its indicator,
+and a Devoid card with coloured pips read as monocoloured. The `All` arm is
+the one that bites: `affected_from_requirement` compiles a plain
+`HasColor(c)` filter into `AffectedPermanents::All { color: Some(c), .. }`
+rather than into `CardMatch`, so fixing `requirement_matches_card` alone did
+**not** fix the anthem — the regression test caught that and named the real
+path. Seven sites, one accessor now.
+
+⚠ **And `printed_color_set` itself had a hole**: its pip match handled
+`Hybrid(a, b)` and dropped `PhyrexianHybrid(a, b)` into `_ => {}`, where
+`ManaCost::distinct_colors` beside it handles both. No shipped card prints one
+today (grep of the catalog: zero), so it was latent — fixed with the rest.
+
+Cost, callgrind three-pool A/B: **fixed -0.050 / cube -0.004 / sealed
++0.009 %**. The `fixed` gain is `printed_requirement_impl`'s `printed_colors()`
+`Vec` allocation going away; the seven sites are all behind an
+`is_none_or`/`if` that the common board answers `None`. Test
+`cr_105_2_a_colour_filter_reads_hybrid_pips_and_the_colour_indicator`, with a
+plain-`{G}` control assertion in it because the first cut passed the control
+and failed the hybrid — which is how the `All` routing was found.
+
 ## FIXED 2026-09-16 (thirtieth find) — the block-restriction walker's five TYPE leaves read the print while its own doc comment said "computed"
 
 The fifth requirement walker: `mod.rs`'s `blocker_matches_block_filter`,

@@ -3490,7 +3490,7 @@ impl GameState {
                 }
                 Some(card.definition.subtypes.land_types.contains(lt))
             }
-            R::HasColor(c) => Some(card.definition.printed_colors().contains(c)),
+            R::HasColor(c) => Some(card.definition.printed_color_set().contains(c)),
             R::IsToken => Some(card.is_token),
             R::NotToken => Some(!card.is_token),
             R::Tapped => Some(card.tapped),
@@ -4021,7 +4021,7 @@ impl GameState {
                     // CR 105.2/202.2 — color is the union of the mana cost's
                     // colors and the color indicator (tokens, DFC backs), and
                     // empty under Devoid. `printed_colors` folds all three in.
-                    R::HasColor(c) => card.definition.printed_colors().contains(c),
+                    R::HasColor(c) => card.definition.printed_color_set().contains(c),
                     R::HasKeyword(kw) => card.has_keyword(kw),
                     R::HasToxic => card.has_toxic(),
                     R::HasModular => card.has_modular(),
@@ -4434,7 +4434,7 @@ impl GameState {
                             card.definition.card_types.contains(ct)
                         }
                     }
-                    R::Multicolored => card.definition.cost.distinct_colors() >= 2,
+                    R::Multicolored => card.definition.printed_color_set().len() >= 2,
                     R::SharesMostCommonColor => {
                         let top = self.most_common_permanent_colors();
                         card.definition.printed_colors().iter().any(|k| top.contains(k))
@@ -4455,9 +4455,8 @@ impl GameState {
                         c.controller == controller && c.definition.name == card.definition.name
                     }),
                     // CR 702.114 — Devoid CDA: colorless despite colored pips.
-                    R::Colorless => card.definition.keywords.has_kw(&crate::card::Keyword::Devoid)
-                        || card.definition.cost.distinct_colors() == 0,
-                    R::Monocolored => card.definition.cost.distinct_colors() == 1,
+                    R::Colorless => card.definition.printed_color_set().is_empty(),
+                    R::Monocolored => card.definition.printed_color_set().is_monocolored(),
                     R::HasXInCost => card.definition.cost.has_x(),
                     // OtherThanSource: enforce "different from the source"
                     // when a source CardId is threaded into this call (effect
@@ -4882,7 +4881,7 @@ impl GameState {
             // color indicator (tokens, DFC backs), and empty under Devoid.
             // `printed_colors` folds all three in — matching the battlefield
             // path (`colors_from_card`) for cards in hidden zones too.
-            R::HasColor(c) => card.definition.printed_colors().contains(c),
+            R::HasColor(c) => card.definition.printed_color_set().contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::HasToxic => card.has_toxic(),
             R::HasModular => card.has_modular(),
@@ -5143,7 +5142,7 @@ impl GameState {
                             card.definition.card_types.contains(ct)
                         }
                     }
-            R::Multicolored => card.definition.cost.distinct_colors() >= 2,
+            R::Multicolored => card.definition.printed_color_set().len() >= 2,
             R::SharesMostCommonColor => {
                 let top = self.most_common_permanent_colors();
                 card.definition.printed_colors().iter().any(|k| top.contains(k))
@@ -5164,9 +5163,8 @@ impl GameState {
                 c.controller == controller && c.definition.name == card.definition.name
             }),
             // CR 702.114 — Devoid CDA: colorless despite colored pips.
-            R::Colorless => card.definition.keywords.has_kw(&crate::card::Keyword::Devoid)
-                || card.definition.cost.distinct_colors() == 0,
-            R::Monocolored => card.definition.cost.distinct_colors() == 1,
+            R::Colorless => card.definition.printed_color_set().is_empty(),
+            R::Monocolored => card.definition.printed_color_set().is_monocolored(),
             R::HasXInCost => card.definition.cost.has_x(),
             // OtherThanSource is `applies_to`-pipeline-only — see the
             // companion arm in `evaluate_requirement_static`. For

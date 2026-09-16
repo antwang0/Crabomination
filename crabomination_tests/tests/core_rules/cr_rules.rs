@@ -11023,3 +11023,92 @@ fn cr_509_1b_a_block_restriction_reads_the_blockers_computed_types() {
         "a computed Wall was refused the block",
     );
 }
+
+/// CR 105.2 — an object's colours are its mana cost's coloured pips **union
+/// its colour indicator** (CR 105.2c, the only colour a token or a DFC back
+/// has), and empty under Devoid (CR 702.114). `printed_color_set` is that
+/// answer; the requirement walkers were not all asking it.
+/// `layers::requirement_matches_card` — the walker the layer pass runs —
+/// matched `HasColor` against `ManaSymbol::Colored(_)` alone, so a hybrid pip
+/// ({G/W}, Kitchen Finks) and a green token's colour indicator both read as
+/// *no colour* and a "green creatures you control get +1/+1" static skipped
+/// them; `Colorless` / `Monocolored` / `Multicolored` in `eval.rs` asked
+/// `ManaCost::distinct_colors`, which cannot see an indicator either.
+#[test]
+fn cr_105_2_a_colour_filter_reads_hybrid_pips_and_the_colour_indicator() {
+    use crabomination::card::{
+        CardDefinition, CardType, SelectionRequirement as R, StaticAbility,
+    };
+    use crabomination::effect::{Selector, StaticEffect};
+    use crabomination::mana::{Color, ManaCost, ManaSymbol};
+    let mut g = two_player_game();
+    // "Green creatures you control get +1/+1" — a layer-7c static whose
+    // filter routes through `requirement_is_card_only` -> the layer walker.
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Verdant Standard",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Green creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::HasColor(Color::Green)).and(R::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    });
+
+    // Control: a plain {G} pip.
+    let plain = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Plain Ox",
+        card_types: vec![CardType::Creature],
+        cost: ManaCost { symbols: vec![ManaSymbol::Colored(Color::Green)] },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    });
+    assert_eq!(
+        g.computed_permanent(plain).expect("computed").power,
+        3,
+        "control: the anthem does not fire at all",
+    );
+
+    // A hybrid pip is a coloured pip.
+    let hybrid = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Hybrid Ox",
+        card_types: vec![CardType::Creature],
+        cost: ManaCost { symbols: vec![ManaSymbol::Hybrid(Color::Green, Color::White)] },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    });
+    assert_eq!(
+        g.computed_permanent(hybrid).expect("computed").power,
+        3,
+        "a {{G/W}} creature is green and the anthem skipped it",
+    );
+
+    // CR 105.2c — a colour indicator is the only colour a token has.
+    let token = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Indicator Beast",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Green],
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    });
+    assert_eq!(
+        g.computed_permanent(token).expect("computed").power,
+        4,
+        "a colour-indicator creature is green and the anthem skipped it",
+    );
+    // …and it is not colourless, which the same walker also has to answer.
+    let c = g.battlefield_find(token).expect("alive").clone();
+    assert!(!g.evaluate_requirement_on_card(&R::Colorless, &c, 0));
+    assert!(g.evaluate_requirement_on_card(&R::Monocolored, &c, 0));
+    assert!(!g.evaluate_requirement_on_card(&R::Multicolored, &c, 0));
+    let c = g.battlefield_find(hybrid).expect("alive").clone();
+    assert!(g.evaluate_requirement_on_card(&R::Multicolored, &c, 0), "{{G/W}} is two colours");
+}

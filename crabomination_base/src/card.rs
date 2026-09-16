@@ -5521,7 +5521,10 @@ impl CardDefinition {
                 ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) | ManaSymbol::MonoHybrid(_, c) => {
                     colors.insert(*c)
                 }
-                ManaSymbol::Hybrid(a, b) => {
+                // `PhyrexianHybrid` ({G/U/P}) is a hybrid pip too — it was
+                // in `ManaCost::distinct_colors`' arm and missing from this
+                // one, so an object printing it read a colour short.
+                ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {
                     colors.insert(*a);
                     colors.insert(*b);
                 }

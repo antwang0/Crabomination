@@ -1410,16 +1410,15 @@ fn affected_includes_gated(
                     .is_none_or(|want| (card.owner == card.controller) == want)
                 && (card_types.is_empty()
                     || card_types.iter().all(|t| card.definition.card_types.contains(t)))
-                && color.is_none_or(|want| {
-                    card.definition.cost.symbols.iter().any(|s| {
-                        matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
-                    })
-                })
-                // CR 702.114 — Devoid CDA: colorless despite colored pips.
-                && (!*colorless
-                    || card.definition.keywords.has_kw(&crate::card::Keyword::Devoid)
-                    || !card.definition.cost.symbols.iter()
-                        .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_))))
+                // CR 105.2 — the coloured pips (hybrid and Phyrexian too)
+                // UNION the colour indicator, empty under Devoid. This
+                // walked `Colored(_)` alone, so a {G/W} creature and a
+                // token whose only colour is its indicator both read as
+                // colourless to a colour-filtered anthem. The set is a
+                // bitmask; `is_none_or` keeps it off the common board.
+                && color.is_none_or(|want| card.definition.printed_color_set().contains(want))
+                // CR 702.114 — Devoid is folded into `printed_color_set`.
+                && (!*colorless || card.definition.printed_color_set().is_empty())
         }
         AffectedPermanents::AllOpponents {
             source_controller,
@@ -1441,11 +1440,7 @@ fn affected_includes_gated(
                 && (card_types.is_empty()
                     || card_types.iter().all(|t| card.definition.card_types.contains(t)))
                 && counter.is_none_or(|k| card.counter_count(k) > 0)
-                && color.is_none_or(|want| {
-                    card.definition.cost.symbols.iter().any(|s| {
-                        matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
-                    })
-                })
+                && color.is_none_or(|want| card.definition.printed_color_set().contains(want))
                 && creature_type.as_ref().is_none_or(|ct| {
                     let typed = match gate_types {
                         Some(types) => types.contains(ct),
@@ -1615,19 +1610,16 @@ pub(crate) fn requirement_matches_card(
         R::HasToxic => card.has_toxic(),
         R::HasModular => card.has_modular(),
         R::HasMutate => def.mutate.is_some(),
-        R::HasColor(c) => def
-            .cost
-            .symbols
-            .iter()
-            .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(col) if col == c)),
+        // CR 105.2 — colour is the mana cost's coloured pips (hybrid and
+        // Phyrexian included) UNION the colour indicator, and empty under
+        // Devoid. This walked `Colored(_)` alone: a hybrid pip
+        // ({G/W} — Kitchen Finks) and a token's or DFC back's colour
+        // indicator both read as no colour, so a "green creatures you
+        // control get +1/+1" static skipped them.
+        R::HasColor(c) => def.printed_color_set().contains(c),
         // CR 702.114 — Devoid is a CDA: the object is colorless regardless of
         // its (possibly colored) cost pips.
-        R::Colorless => card.has_keyword(&crate::card::Keyword::Devoid)
-            || !def
-                .cost
-                .symbols
-                .iter()
-                .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_))),
+        R::Colorless => def.printed_color_set().is_empty(),
         R::And(a, b) => {
             requirement_matches_card(a, card, source_controller)
                 && requirement_matches_card(b, card, source_controller)
