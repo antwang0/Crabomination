@@ -3005,7 +3005,22 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
-### 2026-09-16 (the spare-capacity session) — a box that DOES reproduce, and a gate whose win is mostly its caller's
+### 2026-09-16 (the spare-capacity session) — a box that DOES reproduce, a gate whose win is mostly its caller's, and a cost class no profiler can see
+
+⚠⚠ **THE SESSION'S LARGEST ROW WAS FOUND BY `grep`, NOT BY A DUMP, AND THAT IS
+THE ENTRY TO READ.** `(-339)` — 53 hand-written `battlefield.iter().find(|c| c.id
+== x)` scans taking `find_by_id`'s hint cache — is **fixed -0.503 / cube -0.814 /
+sealed -0.473 %**, three times `(-337)` and `(-338)` combined, and it had been
+sitting in the tree through every pass this file records. **A hand-written
+`iter().find()` inlines into its caller and never becomes a symbol**, so the
+self table, `cg_calls.py`, `cg_edges.py` and the line profile are all
+structurally blind to it. The candidates list's whole method is "rank the
+symbols"; this is the population that method cannot reach. `(-337)`'s queue item
+(G) had sized ONE of these sites at ~0.07 % and nearly declined it. **When a
+hot-path helper exists, grep for its hand-written spelling before profiling for
+it**, and prefer the grep that finds every instance to the profile that ranks one.
+
+
 
 ✅✅ **TENTH BOX, 4 cores, 15 GB, rustc 1.95.0, valgrind 3.22.0 — and this one
 REPRODUCES the ninth box's absolutes, which breaks a three-box streak.** The
@@ -3065,6 +3080,33 @@ perf    **`(-336)`: the block planner's spare-capacity pass goes behind a board 
 gates   Outcomes identical base vs candidate on all three pools (48 / 24 / 72 decided,
         0 undecided) and `pick_blocks_inner`'s call count identical (2,686 / 4,384 / 6,374) —
         the gate only skips a pass that would find nothing.
+
+gates   **CLOSING STATE, all four rows in.** `--bench` on `target/release/bot_ladder`:
+        **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls
+        (cap 0 / board 0 / stuck 0 / draw 0)**, byte-identical to the committed invariant,
+        with `determinism ok` and `thread_determinism ok (3 vs 1 threads identical)`,
+        `peak_rss_mib 25.1`. Suite **19,574 / 0 / 5** under `CRAB_ANSWER_LOG=strict`
+        (12 golden-trace tests among them, all unmoved — every row this session is
+        behaviour-preserving by trace, not just by counter). Clippy **0**
+        (`--workspace --all-targets --exclude crabomination_client`, and again with
+        `--features trig-census`) — ⚠ it was **2** when the session started, both in
+        `crabomination_ml` from `2648ac08`, which the `(-334)` handoff had reported clean:
+        **re-check clippy at the START of a run rather than trusting the previous NEXT.**
+        `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean.
+        ⚠ `games_per_s 461.70` at `host_calib_ms 59` on an Intel Xeon @ 2.10 GHz, 4 cores.
+        Wall clock does not cross hosts (see the standing rule): the other 4-core boxes in
+        this file read 418 at calib 48 and 439.36 at calib 46, so this is in family and is a
+        sanity check, not a measurement. The Ir columns are the signal and they are the four
+        Log rows.
+
+sweep   **ONE block — fresh seeds 1378..1381 at the `(-339)` tip: 12 cells / 59,200 games /
+        0 failures**, `cap 0 / board 0 / stuck 0 / draw 0` (`draw 4`), pools `cube all sealed`,
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
+        It is the **ratchet for `(-337)`/`(-338)`'s two hand-kept keyword folds**: both carry a
+        `debug_assert!` against the per-keyword asks they replace, so 59,200 games asserted the
+        folds against the originals on boards the suite never builds. **Frontier 1382.**
+        Cells run 29-72 s here; the whole block is ~10 min against an 8m01s cold `overflow`
+        build in a second target dir.
 ```
 
 ### 2026-09-16 (the block-planner session) — the walks a keyword ask costs that are not the walk
