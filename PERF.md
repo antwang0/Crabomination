@@ -3037,20 +3037,39 @@ the feature is the engine crate's default, so `--no-default-features` without
 `-p` resolves against the workspace and never reaches it. Rebuild cost: the
 feature flip is a full engine + catalog rebuild, 7m19s here.
 
-gates   **CLOSING STATE at `c1b54b3d`** (both of this session's perf experiments reverted, so
-        the only code change in the tip is the cold-path `has_keyword_tag` class fix).
+gates   **CLOSING STATE at `a560f8b0`.** Both perf experiments were reverted, so every code
+        change in this tip is a correctness or clarity one.
         `--bench` on `target/release/bot_ladder`: **195,806 decisions / 27.49 turns / 611.9 per
         game / 0 stalls (cap 0 / board 0 / stuck 0 / draw 0)**, byte-identical to the committed
         invariant, `determinism ok`, `thread_determinism ok (3 vs 1 threads identical)`,
-        `peak_rss_mib 25.3`. Suite **19,578 / 0 / 5** (`CRAB_ANSWER_LOG=strict`) — the 19,575 of
-        the session below plus three `has_keyword_tag` tests; the 12 golden traces among them
-        unmoved. Clippy **0** (`--workspace --all-targets --exclude crabomination_client`, and
+        `peak_rss_mib 25.1`. Suite **19,579 / 0 / 5** (`CRAB_ANSWER_LOG=strict`) — the 19,575 of
+        the session below plus three `has_keyword_tag` tests and
+        `cr_613_6_a_keyword_filtered_static_reads_all_four_keyword_sources`; the 12 golden traces
+        among them unmoved. Clippy **0** (`--workspace --all-targets --exclude crabomination_client`, and
         again `--features trig-census`). `cargo check --profile release-fast -p crabomination
-        --bin bot_ladder` clean (1m12s). ⚠ `games_per_s 640.77` at `host_calib_ms 39` on an
+        --bin bot_ladder` clean (1m04s). ⚠ `games_per_s 655.94` at `host_calib_ms 39` on an
         Intel Xeon @ 2.10 GHz against the eleventh box's 371.09 at `host_calib_ms 46` — **the
         same binary configuration and a 1.7x wall-clock reading**, which is the standing warning
         made concrete: wall clock does not cross hosts and the Ir columns are the signal.
         Cold `release` here is **7m51s**, against the eleventh box's 35m43s.
+
+sweep   **ONE block — fresh seeds 1386..1389 at the `a899116a` tip: 12 cells / 59,200 games /
+        0 failures**, `cap 0 / board 0 / stuck 0 / draw 16`, pools `cube all sealed`,
+        `target-audit/overflow` with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
+        Cells run 22-68 s here and the whole block was **8m55s** against a 7m02s `overflow`
+        build. **FRONTIER 1390.** Standing audits: `audit_stubs` **0 flagged** over 21,797
+        unique cards, `audit_panics` **70 sites / 59 guarded / 11 lock-poison / 0 bare**,
+        `audit_incomplete` 858 (the documented approximations, INCOMPLETE_CARDS' content),
+        `audit_keyword_drift` 4 MISSING (each needs a primitive), `audit_dropped_may` 199.
+
+✅ **AND THE FOUR NEW `CardDefinition` PREDICATES ARE CONFIRMED ARTIFACTS, which is the
+cheapest possible close on a mechanical dedup's +0.01 %.** `inline_check.py` on the tip's
+`release` binary: `has_morph_ability` (20 insn), `has_cycling_ability` (20),
+`has_flashback_ability` (18), `has_disturb` (16) are **inlined away** in `release` and are
+bare calls in `profiling-fast`, so the A/B's fixed +0.014 / cube +0.010 / sealed +0.015 % is
+the trap and the shipped binary pays nothing. `has_keyword_tag` is **REAL** (207 insn, 6
+calls, present in both) — it is only reached from two cold evaluator arms, but rank it by the
+body if a hot caller ever appears.
 
 **Box timings (twelfth box, 4 cores, 15 GB):** cold `profiling-fast` **7m29s**,
 the allocator-feature flip **7m19s**, **engine-only 2m13s**, workspace
