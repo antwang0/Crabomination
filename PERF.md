@@ -3049,9 +3049,21 @@ bug     **The block planner's poison clock read Toxic off `definition.keywords` 
         no trace deck plays poison. **Found by reading the body of a function being optimised**,
         with every `audit_*` clean and NEXT reporting "bugs/robustness: nothing open".
 
-gates   Suite **19,575 / 0 / 5** (`CRAB_ANSWER_LOG=strict`) at `3cfdc7ac`, the 19,574 of the
-        session below plus `granted_toxic_reaches_the_block_planners_poison_clock`; the 12
-        golden traces among them unmoved.
+gates   **CLOSING STATE at `3a3daa5a`, all of this session's rows in.** `--bench` on
+        `target/release/bot_ladder`: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / board 0 / stuck 0 / draw 0)**, byte-identical to the committed
+        invariant, with `determinism ok` and `thread_determinism ok (3 vs 1 threads
+        identical)`, `peak_rss_mib 27.1`. Suite **19,575 / 0 / 5**
+        (`CRAB_ANSWER_LOG=strict`) — the 19,574 of the session below plus
+        `granted_toxic_reaches_the_block_planners_poison_clock`; the 12 golden traces among
+        them unmoved. Clippy **0** (`--workspace --all-targets --exclude
+        crabomination_client`, and again `--features trig-census`) — ⚠ it was **1** from
+        `1cfa4713` until `3a3daa5a`: `(-340)`'s conversion tripped `question_mark` and the
+        commit reported `cargo check --all-targets` clean, **which is not the same gate**.
+        `cargo check --profile release-fast -p crabomination --bin bot_ladder` clean (1m59s).
+        ⚠ `games_per_s 371.09` at `host_calib_ms 46` on an Intel Xeon @ 2.80 GHz — a sanity
+        check, not a measurement; wall clock does not cross hosts and the Ir columns are the
+        signal. Cold `release` here is **35m43s**, against `profiling-fast`'s 11m02s.
 
 timings **NINTH BOX, 4 cores, 15 GB**: cold `profiling-fast` **11m02s**, a `crabomination_base`
         change **10m57s** — i.e. the SAME, because a base change rebuilds the catalog and the
