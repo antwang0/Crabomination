@@ -11112,3 +11112,67 @@ fn cr_105_2_a_colour_filter_reads_hybrid_pips_and_the_colour_indicator() {
     let c = g.battlefield_find(hybrid).expect("alive").clone();
     assert!(g.evaluate_requirement_on_card(&R::Multicolored, &c, 0), "{{G/W}} is two colours");
 }
+
+/// A static's filter naming two creature types — "Elf Warriors you control
+/// get +1/+1" — must mean the conjunction. `affected_from_requirement`
+/// flattens an And-tree into `AffectedPermanents::All`, whose `creature_type`
+/// slot holds ONE type, and the second leaf used to overwrite the first: the
+/// anthem silently widened to "Warriors you control". No shipped card prints
+/// one, so this asserts the shape rather than a card. A conflict now routes
+/// the whole tree through `CardMatch`, which walks `And` honestly.
+#[test]
+fn a_two_creature_type_static_filter_is_a_conjunction() {
+    use crabomination::card::{
+        CardDefinition, CardType, CreatureType, SelectionRequirement as R, StaticAbility,
+        Subtypes,
+    };
+    use crabomination::effect::{Selector, StaticEffect};
+    let creature = |name: &'static str, types: Vec<CreatureType>| CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let elf_warrior = g.add_card_to_battlefield(0, creature("Elf Warrior", vec![
+        CreatureType::Elf,
+        CreatureType::Warrior,
+    ]));
+    let plain_warrior = g.add_card_to_battlefield(0, creature("Plain Warrior", vec![
+        CreatureType::Warrior,
+    ]));
+    let plain_elf = g.add_card_to_battlefield(0, creature("Plain Elf", vec![CreatureType::Elf]));
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Tribal Standard",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Elf Warriors you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::HasCreatureType(CreatureType::Elf))
+                        .and(R::HasCreatureType(CreatureType::Warrior))
+                        .and(R::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    });
+    assert_eq!(g.computed_permanent(elf_warrior).expect("computed").power, 3);
+    // Which of the two survived the overwrite depended on the And-tree's
+    // traversal order, so both halves of the conjunction are asserted.
+    assert_eq!(
+        g.computed_permanent(plain_warrior).expect("computed").power,
+        2,
+        "a Warrior that is no Elf was pumped: the conjunction collapsed to Warrior",
+    );
+    assert_eq!(
+        g.computed_permanent(plain_elf).expect("computed").power,
+        2,
+        "an Elf that is no Warrior was pumped: the conjunction collapsed to Elf",
+    );
+}

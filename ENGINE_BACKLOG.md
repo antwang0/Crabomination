@@ -82,6 +82,41 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-16 (thirty-second find) — a conjunction of two creature types flattens into ONE slot, and the second leaf silently widens the static
+
+Found while reading the routing the thirty-first find's test exposed.
+`affected_from_requirement` flattens a static's And-tree into
+`AffectedPermanents::All`, and four of its accumulators hold **one** value
+where `types` holds a list: `creature_type`, `counter_filter`, `color_filter`,
+`token_filter`. Each arm was a bare assignment, so a filter naming two of them
+kept only whichever the traversal reached last:
+
+```text
+  "Elf Warriors you control get +1/+1"
+    tree   ((Creature ∧ Elf) ∧ Warrior) ∧ ControlledByYou
+    walk   ControlledByYou, Warrior, Elf, Creature      (inline LIFO stack)
+    slot   creature_type = Warrior, then OVERWRITTEN by Elf
+    result "Elf creatures you control get +1/+1" — every Elf pumped, Warrior or not
+```
+
+⚠ **Which half survives depends on the And-tree's shape**, so a test that
+asserts only one of them passes by accident: the first cut of the regression
+test asserted "a Warrior that is no Elf is not pumped", which was already true
+because *Elf* was the survivor. It asserts both halves now.
+
+The tree is not a shape the flat decomposition can express, so a conflict
+routes the whole filter to `AffectedPermanents::CardMatch`, which walks `And`
+leaf by leaf through `requirement_matches_card`. When the tree is not
+printed-characteristic-only there is nothing to fall back to and the static is
+dropped — which is already what every other unsupported shape does.
+
+**Latent, not live**: a grep of the catalog finds no card printing a two-type,
+two-colour or two-counter static filter, so nothing shipped was wrong. Filed
+and fixed because the next such card would have been silently wrong with no
+test able to see it. Test
+`a_two_creature_type_static_filter_is_a_conjunction`, verified to fail on the
+pre-fix decomposition.
+
 ## FIXED 2026-09-16 (thirty-first find) — SEVEN copies of "is this object green", and the one the layer pass uses walks `ManaSymbol::Colored(_)` alone
 
 The largest of the walker-diff finds, and the one most likely to be seen in a

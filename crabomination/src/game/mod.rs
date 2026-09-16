@@ -28342,6 +28342,24 @@ pub(crate) fn requirement_mentions_host_of_source(req: &SelectionRequirement) ->
     }
 }
 
+/// The escape hatch for a filter tree the flat decomposition below cannot
+/// express — today, one that names two different values for one of its
+/// single-value slots (two creature types, two colours, two counter kinds,
+/// token and non-token). `CardMatch` walks the tree leaf by leaf through
+/// `requirement_matches_card`, so it gets the conjunction right; when the
+/// tree is not printed-characteristic-only there is nothing to fall back to
+/// and the static is dropped, which is what every other unsupported shape
+/// already does.
+fn card_match_fallback(
+    req: &SelectionRequirement,
+    source_controller: usize,
+) -> Option<AffectedPermanents> {
+    crate::game::layers::requirement_is_card_only(req).then(|| AffectedPermanents::CardMatch {
+        source_controller,
+        requirement: Box::new(req.clone()),
+    })
+}
+
 pub(crate) fn affected_from_requirement(
     req: &SelectionRequirement,
     source_controller: usize,
@@ -28429,12 +28447,45 @@ pub(crate) fn affected_from_requirement(
             R::Planeswalker => types.push(CardType::Planeswalker),
             R::Land => types.push(CardType::Land),
             R::HasCardType(t) => types.push(t.clone()),
-            R::HasCreatureType(ct) => creature_type = Some(*ct),
-            R::WithCounter(ct) => counter_filter = Some(*ct),
-            R::HasColor(c) => color_filter = Some(*c),
+            // ⚠ Four of the accumulators hold ONE value where `types` holds a
+            // list, so a conjunction naming two of them used to let the second
+            // leaf overwrite the first and **silently widen the static**:
+            // "Elf Warriors you control get +1/+1" would have become "Warriors
+            // you control". No shipped card prints one today, which is why
+            // this was latent rather than filed. A conflict is not a shape
+            // this decomposition can express, so hand the whole tree to the
+            // card-local matcher, which walks `And` honestly.
+            R::HasCreatureType(ct) => {
+                if creature_type.is_some_and(|prev| prev != *ct) {
+                    return card_match_fallback(req, source_controller);
+                }
+                creature_type = Some(*ct);
+            }
+            R::WithCounter(ct) => {
+                if counter_filter.is_some_and(|prev| prev != *ct) {
+                    return card_match_fallback(req, source_controller);
+                }
+                counter_filter = Some(*ct);
+            }
+            R::HasColor(c) => {
+                if color_filter.is_some_and(|prev| prev != *c) {
+                    return card_match_fallback(req, source_controller);
+                }
+                color_filter = Some(*c);
+            }
             R::Colorless => colorless_filter = true,
-            R::IsToken => token_filter = Some(true),
-            R::NotToken => token_filter = Some(false),
+            R::IsToken => {
+                if token_filter == Some(false) {
+                    return card_match_fallback(req, source_controller);
+                }
+                token_filter = Some(true);
+            }
+            R::NotToken => {
+                if token_filter == Some(true) {
+                    return card_match_fallback(req, source_controller);
+                }
+                token_filter = Some(false);
+            }
             R::OtherThanSource => other_than_source = true,
             R::OwnedByYou => owned_by_controller = Some(true),
             R::Not(inner) if matches!(**inner, R::OwnedByYou) => owned_by_controller = Some(false),
