@@ -1,0 +1,51 @@
+ladder: dflt (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 43 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #1             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #2             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #3             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #4             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #5             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #6             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #7             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #8             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #9             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #10            500    500      0     50.0%  [46.9%, 53.1%]
+sealed #11            500    500      0     50.0%  [46.9%, 53.1%]
+----------------------------------------------------------------
+TOTAL                6000   6000      0     50.0%  [49.1%, 50.9%]
+
+12000 decided, 0 undecided, in 6.1s
+
+paired: 6000 pairs — 0 A-sweeps, 0 B-sweeps, 6000 splits
+        A win%  50.0%  [50.0%, 50.0%]  (±0.00 pts)
+        within-pair rho -1.000
+verdict: inconclusive at 1000 games/archetype — the interval straddles 50%
+  menu_census 380496 picks (164896 with >= 2 finalists, 31.71/game); modal: offered 175468 mode-candidates, 127078 cut by the shortlist (72.4 %), a modal finalist on 24604 picks (6.5 %), won 14226 (1.19/game), non-default mode 8464 (59.5 % of modal wins), sibling mode also a finalist 12416 (87.3 %), an unseen mode on 7120 wins (8826 modes), an unseen mode scored higher on 282 (2.0 % of modal wins; margin 5691 units mean); resolution-time mode decisions 0, non-default 0 (0.0 %); X: a finalist on 9388 picks (2.5 %, 9666 finalists), won 5888 (0.49/game, mean X 3.37), a smaller X scored higher on 2 (0.0 % of X wins; margin 1 units mean; <= X/2 on 2), a losing X finalist's smaller X beat the winner on 0; 34592 alt sims, 0 unrewritable shapes
+  shortlist_census 117966 picks ran past the shortlist (31.0 % of picks, 9.83/game; pool 3.87 candidates mean), 198616 cut candidates priced (15688 rejected), a cut candidate scored above the winner on 27130 (23.0 % of those picks, 2.26/game; margin 1684 units mean); best cut at rank 4 / 5 / 6+ 21560 / 4282 / 1288; the winner was a lone finalist on 18402, the better line a land or ability on 482; first cut tied the third finalist's static score on 23960 (20.3 %)
+    cut_card Grave Researcher: beat the winner 2530 times (margin 1528 units mean)
+    cut_card Strife Scholar: beat the winner 1838 times (margin 236 units mean)
+    cut_card Eager Glyphmage: beat the winner 1356 times (margin 11 units mean)
+    cut_card Wildgrowth Archaic: beat the winner 1222 times (margin 12 units mean)
+    cut_card Moseo, Vein's New Dean: beat the winner 1132 times (margin 12 units mean)
+    cut_card Mindful Biomancer: beat the winner 1116 times (margin 1087 units mean)
+    cut_card Aziza, Mage Tower Captain: beat the winner 1048 times (margin 584 units mean)
+    cut_card Ascendant Dustspeaker: beat the winner 940 times (margin 882 units mean)
+    cut_card Campus Composer: beat the winner 940 times (margin 2164 units mean)
+    cut_card Stirring Hopesinger: beat the winner 850 times (margin 727 units mean)
+    cut_card Nita, Forum Conciliator: beat the winner 770 times (margin 9 units mean)
+    cut_card Environmental Scientist: beat the winner 714 times (margin 290 units mean)
+    cut_card Stone Docent: beat the winner 702 times (margin 582 units mean)
+    cut_card Emeritus of Ideation: beat the winner 558 times (margin 1466 units mean)
+    cut_card Ral Zarek, Guest Lecturer: beat the winner 548 times (margin 1479 units mean)
+    x_card Fix What's Broken: 2632 wins, mean X 3.30; smaller X higher on 2 (0.1 %; mean better X 1.00, margin 1 units mean)
+    x_card Molten Note: 1968 wins, mean X 3.18; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    x_card Traumatic Critique: 776 wins, mean X 3.93; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    x_card Vicious Rivalry: 512 wins, mean X 3.65; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    modal_card Lorehold Charm: 4258 wins, non-default 3818 (89.7 %); unseen modes priced 864, higher on 28 (0.7 % of wins, margin 7152 units mean)
+    modal_card Artistic Process: 3872 wins, non-default 1112 (28.7 %); unseen modes priced 2234, higher on 204 (5.3 % of wins, margin 6881 units mean)
+    modal_card Silverquill Charm: 3770 wins, non-default 2660 (70.6 %); unseen modes priced 1284, higher on 24 (0.6 % of wins, margin 12 units mean)
+    modal_card Prismari Charm: 1202 wins, non-default 280 (23.3 %); unseen modes priced 108, higher on 10 (0.8 % of wins, margin 2 units mean)
+    modal_card Splatter Technique: 1124 wins, non-default 594 (52.8 %); unseen modes priced 104, higher on 16 (1.4 % of wins, margin 37 units mean)

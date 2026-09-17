@@ -1,0 +1,25 @@
+ladder: mc-nocut (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 43 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             506    494      0     50.6%  [47.5%, 53.7%]
+sealed #1             543    457      0     54.3%  [51.2%, 57.4%]
+sealed #2             518    482      0     51.8%  [48.7%, 54.9%]
+sealed #3             534    466      0     53.4%  [50.3%, 56.5%]
+sealed #4             507    493      0     50.7%  [47.6%, 53.8%]
+sealed #5             506    494      0     50.6%  [47.5%, 53.7%]
+sealed #6             519    481      0     51.9%  [48.8%, 55.0%]
+sealed #7             503    497      0     50.3%  [47.2%, 53.4%]
+sealed #8             525    475      0     52.5%  [49.4%, 55.6%]
+sealed #9             539    461      0     53.9%  [50.8%, 57.0%]
+sealed #10            500    500      0     50.0%  [46.9%, 53.1%]
+sealed #11            537    463      0     53.7%  [50.6%, 56.8%]
+----------------------------------------------------------------
+TOTAL                6237   5763      0     52.0%  [51.1%, 52.9%]
+
+12000 decided, 0 undecided, in 5.1s
+
+paired: 6000 pairs — 494 A-sweeps, 257 B-sweeps, 5249 splits
+        A win%  52.0%  [51.5%, 52.4%]  (±0.44 pts)
+        within-pair rho -0.752 — variance x0.25 vs independent games, i.e. these 12000 games carry the precision of 48465
+verdict: A (mc-nocut) is stronger — the interval clears 50%

@@ -1,0 +1,4 @@
+dflt in 5.1s
+top4-nocut in 5.3s
+top4-nocut in 5.4s
+dflt in 5.1s

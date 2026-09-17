@@ -5222,3 +5222,88 @@ correctly sized), and the two threshold cards fixed by the general
 mechanism rather than a card rule. The audit shortlist's remaining item
 is the trick blind spot (nulls at incidence, r63/r64); the puzzle corpus
 still certifies one item (`save_the_removal`).
+
+## Round 77 — the shortlist census: a cut candidate beats the winner on 23 % of the picks that run past `EVAL_TOP`, two thirds of them under the magecraft spell-first rule (2026-09-17)
+
+Round 76's instrument generalised (`.ladder/run_r77_shortlist_census.sh`,
+outputs `.ladder/r77/`; `menu_census::shortlist_*`): the scored pick judges
+only the top three heuristic candidates by outcome; the census keeps the
+next five in rank order and prices each with the pick's own rule against
+the winner's score. `dflt` mirror (X by outcome on), sealed, 1 000 × 12,
+seeds 43 / 97.
+
+| | seed 43 | seed 97 |
+|---|---|---|
+| picks whose pool ran past the shortlist | 31.0 % of picks, 9.83/game | 30.4 %, 7.69/game |
+| pool size on those picks (mean) | 3.87 | 3.81 |
+| **a cut candidate scored strictly above the winner** | **23.0 %** of them, 2.26/game | **23.6 %**, 1.81/game |
+| margin (eval units, mean) | 1 684 | 3 866 |
+| best cut at rank 4 / 5 / 6+ | 79 / 16 / 5 % | 82 / 14 / 5 % |
+| … the winner was a LONE finalist | **68 %** of the beats | **67 %** |
+| the better line a land / ability | 2 % | 6 % |
+| first cut tied the third finalist's static score | 20.3 % | 18.8 % |
+
+Both pre-registered bars cleared (≥ 10 %, ≥ 5 picks/game) → a round. Two
+findings, not one:
+
+1. **The magecraft rule cuts, and the cut is most of the signal.** A
+   "lone finalist with a cut" can only come from one place: with a
+   magecraft permanent on the caster's side the ranking puts instants and
+   sorceries first and the shortlist loop **stops** at the first non-spell
+   once a finalist exists — so a creature never gets outcome-compared with
+   the spell line. 68 / 67 % of the beats are that shape (the per-card
+   table is the pool's creatures: Grave Researcher, Strife Scholar, Eager
+   Glyphmage, Campus Composer …). The rule was written as the lazy
+   equivalent of the old spells-only pool under magecraft; the census
+   says the outcome eval would rather see both.
+2. **The plain top-three cut** is the other third, ~0.7 / 0.6 beats a
+   game, 79–82 % of them at rank 4 — so the pre-registered N is 4, and
+   one in five cuts is decided by the static score's jitter (the tie
+   rate), which is a reason to widen regardless.
+
+Round 77b, pre-registered in `.ladder/run_r77b_shortlist.sh`: arms
+`top4` (`eval_top: 4`), `top5`, `mc-nocut` (the magecraft rule sorts but
+no longer truncates), `top4-nocut` (both), each paired vs the default,
+seeds 43 / 97, with the wall clock ABBA'd. Adopt at ≥ +0.5 pooled, no
+cell ≤ 49.5, wall clock ≤ +10 %; between two qualifying arms the larger
+wins only if it adds ≥ +0.3 pooled over the smaller.
+
+## Round 77b — the magecraft stop removed and the shortlist at four: 52.4 / 53.0 paired, ADOPTED on the default (2026-09-18)
+
+The four arms of `.ladder/run_r77b_shortlist.sh` (outputs `.ladder/r77/`),
+each paired vs the round-76b default, sealed, 1 000 games × 12 decks:
+
+| arm | seed 43 | seed 97 | pooled | mirror wall clock (ABBA) |
+|---|---|---|---|---|
+| `top4` (shortlist at four) | 50.3 [50.1, 50.5] | 50.0 [49.9, 50.2] | +0.15 | +1 % |
+| `top5` | 50.3 [50.1, 50.5] | 50.0 [49.8, 50.2] | +0.15 | +1 % |
+| `mc-nocut` (the magecraft stop off) | **52.0** [51.5, 52.4] | **52.7** [52.3, 53.2] | **+2.35** | +0–2 % |
+| `top4-nocut` (both) | **52.4** [52.0, 52.9] | **53.0** [52.6, 53.5] | **+2.70** | +4–6 % |
+
+The census's split reads exactly on the ladder. The plain top-three cut
+is worth +0.15 pooled — the static score's top three hold the outcome
+winner nearly always, and the 23 % "beats" outside the magecraft shape
+were the small-margin ones (the per-card margins of 11–12 units are the
+jitter). The magecraft stop is worth +2.35 on its own: with a magecraft
+permanent out the bot was never allowed to outcome-compare a creature
+against the instant/sorcery line, and the SOS pool is full of both. The
+pair adds +0.35 pooled over the stop alone, over the pre-registered +0.3
+bar for the larger arm, inside the wall-clock cap. **ADOPTED:
+`eval_top: 4, magecraft_cut: false`** in `default_const` (control
+`round77_off`, profile `r77-off`). Confirmation, the new default vs
+`r77-off`: **52.4** [52.0, 52.9] / **53.0** [52.6, 53.5] — the arm's
+numbers to the decimal, as a paired mirror of identical code must. The
+one test that pinned the stop (`bot_prefers_is_spell_when_magecraft_in_play`,
+Bolt vs Bears with a magecraft permanent out) now asserts both sides: the
+control casts the bolt, the default outcome-compares and casts the bear. The largest adopted gain since the net
+leaf under the search (r69/r74, +4.25) and the largest scored-bot gain
+since the block chain (r56); it came from a census that cost ten seconds
+of ladder time and a rule nobody had measured since it was written.
+
+Lesson for the shortlist family: a heuristic-level *ordering* rule is
+cheap and safe; a heuristic-level *stop* is a filter the outcome eval
+never gets to overrule, and every one of those is worth pricing with the
+census before anything else on the menu-hole list. The remaining stops
+in `main_phase_action_with`: the summon-sick hold (applied to the winner
+only, by design) and the `EVAL_TOP` cap itself (now four, priced +0.15
+for the next step).

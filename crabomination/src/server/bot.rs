@@ -607,6 +607,20 @@ pub struct EvalWeights {
     /// for a mana-X spell, the smaller values. Off
     /// ([`x_by_outcome_on`](Self::x_by_outcome_on), profile `xout`).
     pub x_by_outcome: bool,
+    /// Round 77b — the scored pick's shortlist size: the top `eval_top`
+    /// heuristic candidates get the outcome eval. The round-77 census
+    /// read a cut candidate scoring above the winner on 23 % of the picks
+    /// that ran past three, four in five of them at rank 4 ([`eval_top4`]
+    /// (Self::eval_top4) / [`eval_top5`](Self::eval_top5), profiles
+    /// `top4` / `top5`).
+    pub eval_top: u8,
+    /// Round 77b — with a magecraft permanent out, the shortlist puts
+    /// instants and sorceries first AND stops at the first non-spell once
+    /// it has a finalist (the lazy form of the old spells-only pool). The
+    /// census put two thirds of the shortlist's losses on that stop. Off
+    /// keeps the ordering and drops the stop ([`magecraft_no_cut`]
+    /// (Self::magecraft_no_cut), profile `mc-nocut`).
+    pub magecraft_cut: bool,
     /// Take our own graveyard's cards on an optional "choose up to N"
     /// pick. `decide_choose_cards`'s graveyard branch was written for the
     /// hostile exile (Collect Evidence): it picks opponents' cards and, with
@@ -1191,6 +1205,8 @@ impl EvalWeights {
             attack_blocker_guard: false,
             stun_x_hold: false,
             x_by_outcome: false,
+            eval_top: 3,
+            magecraft_cut: true,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -1298,6 +1314,8 @@ impl EvalWeights {
             attack_blocker_guard: false,
             stun_x_hold: false,
             x_by_outcome: false,
+            eval_top: 3,
+            magecraft_cut: true,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -1388,6 +1406,8 @@ impl EvalWeights {
             attack_blocker_guard: false,
             stun_x_hold: false,
             x_by_outcome: false,
+            eval_top: 3,
+            magecraft_cut: true,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -2510,6 +2530,14 @@ impl EvalWeights {
             // [`x_by_outcome_off`](Self::x_by_outcome_off), profile
             // `xout-off`.
             x_by_outcome: true,
+            // Round 77b (2026-09-18): the shortlist at four and the
+            // magecraft spell-first STOP removed (the ordering stays).
+            // Paired sealed vs the round-76b default: the stop alone
+            // 52.0 / 52.7, the pair 52.4 / 53.0 (seeds 43 / 97), the
+            // shortlist alone 50.3 / 50.0; wall clock +4–6 %. Control:
+            // [`round77_off`](Self::round77_off), profile `r77-off`.
+            eval_top: 4,
+            magecraft_cut: false,
             // Round 67 (2026-09-06, the same evening): hostile player slots
             // aimed at the opponent, the other player as a cast-time arm,
             // the own-graveyard pick and the X=0 no-op prune. Control:
@@ -2607,6 +2635,27 @@ impl EvalWeights {
     /// `xout-off`.
     pub const fn x_by_outcome_off() -> Self {
         Self { x_by_outcome: false, ..Self::default_const() }
+    }
+
+    /// Round 77b arms — the shortlist at four / five, the magecraft stop
+    /// off, and both.
+    pub const fn eval_top4() -> Self {
+        Self { eval_top: 4, ..Self::default_const() }
+    }
+    pub const fn eval_top5() -> Self {
+        Self { eval_top: 5, ..Self::default_const() }
+    }
+    pub const fn magecraft_no_cut() -> Self {
+        Self { magecraft_cut: false, ..Self::default_const() }
+    }
+    pub const fn eval_top4_no_cut() -> Self {
+        Self { eval_top: 4, magecraft_cut: false, ..Self::default_const() }
+    }
+
+    /// The default before round 77b — the shortlist at three with the
+    /// magecraft stop; round 77b's control, profile `r77-off`.
+    pub const fn round77_off() -> Self {
+        Self { eval_top: 3, magecraft_cut: true, ..Self::default_const() }
     }
 
     /// The default plus own-graveyard picks. The opt-in for
@@ -7807,7 +7856,8 @@ fn main_phase_action_with(
             } else {
                 ranked.sort_by_key(|&(s, _, _)| std::cmp::Reverse(s));
             }
-            const EVAL_TOP: usize = 3;
+            // Round 77b: `w.eval_top` (3 through round 77's census).
+            let eval_top = w.eval_top.max(1) as usize;
             // Round 76 census: the modal candidates the enumerator offered,
             // against the ones the shortlist lets the outcome eval see.
             let modal_pool = if menu_census::on() {
@@ -7816,11 +7866,20 @@ fn main_phase_action_with(
                 0
             };
             let mut finalists: Vec<Finalist> = Vec::new();
+            // Round 77 census: the candidates the shortlist cuts, in rank
+            // order, up to `CUT_MAX` of them — priced against the winner
+            // inside `pick_by_outcome`. Empty and free off the census.
+            let mut cut: Vec<(i32, GameAction)> = Vec::new();
+            const CUT_MAX: usize = 5;
+            let pool_len = ranked.len();
             for (s, a, ok) in ranked {
-                if finalists.len() >= EVAL_TOP {
-                    break;
-                }
-                if has_magecraft && !finalists.is_empty() && !is_is_spell(&a) {
+                if finalists.len() >= eval_top
+                    || (has_magecraft && w.magecraft_cut && !finalists.is_empty() && !is_is_spell(&a))
+                {
+                    if menu_census::on() && cut.len() < CUT_MAX {
+                        cut.push((s, a));
+                        continue;
+                    }
                     break;
                 }
                 if ok {
@@ -7839,7 +7898,10 @@ fn main_phase_action_with(
                 menu_census::add(6, modal_pool as u64);
                 menu_census::add(7, modal_pool.saturating_sub(modal_fin) as u64);
             }
-            if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
+            if !cut.is_empty() {
+                menu_census::add(25, pool_len as u64);
+            }
+            if let Some(best) = pick_by_outcome_with_cut(state, seat, finalists, cut, w) {
                 // Forge's summon-sick gate (`SpellAbilityPicker`): if the
                 // winning line's only gain this turn is a body that can't
                 // attack, it is worth exactly as much after combat — and
@@ -10762,8 +10824,20 @@ pub mod menu_census {
     /// 19 X finalists, 20 modes of the chosen modal card the shortlist never
     /// showed the outcome eval, 21 chosen modal where such an unseen mode
     /// scored strictly higher, 22 sum of that margin, 23 chosen modal with
-    /// any unseen mode]`.
-    pub static N: [AtomicU64; 24] = [const { AtomicU64::new(0) }; 24];
+    /// any unseen mode]`, then the round-77 shortlist census: `[24 picks
+    /// whose ranked pool ran past the shortlist, 25 sum of those pools'
+    /// sizes, 26 cut candidates priced, 27 picks where a cut candidate
+    /// scored strictly above the winner, 28 sum of that margin, 29..31 the
+    /// best cut's rank was 4 / 5 / 6+, 32 of the 27, the winner was a lone
+    /// finalist, 33 of the 27, the cut candidate is a land drop or an
+    /// ability rather than a cast, 34 cut candidates the engine rejected,
+    /// 35 picks with a cut candidate whose static score tied the third
+    /// finalist's]`.
+    pub static N: [AtomicU64; 36] = [const { AtomicU64::new(0) }; 36];
+
+    /// Round 77, level 2: the cut candidate's card when it beat the winner
+    /// → `[beats, margin sum]`.
+    pub static CUT_BY_CARD: Mutex<BTreeMap<&'static str, [u64; 2]>> = Mutex::new(BTreeMap::new());
 
     /// Per-card detail at level 2. X wins: `[wins, a smaller X scored
     /// higher, margin sum, chosen X sum, better X sum]`. Modal wins:
@@ -10793,8 +10867,93 @@ pub mod menu_census {
         level() > 0
     }
 
-    pub fn snapshot() -> [u64; 24] {
+    pub fn snapshot() -> [u64; 36] {
         std::array::from_fn(|i| N[i].load(Relaxed))
+    }
+
+    /// Round 77 — the candidates the `EVAL_TOP` shortlist cut, in rank
+    /// order, each priced by the pick's own rule against the winner's
+    /// score. `cut` is `(static score, action)` from rank `EVAL_TOP + 1`
+    /// on; `third_score` is the last finalist's static score (a tie means
+    /// the jitter decided the cut).
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub(super) struct ShortlistJudged {
+        pub priced: u64,
+        pub rejected: u64,
+        /// `(rank offset from the first cut, score, card)` of the best cut
+        /// candidate that strictly beats the winner.
+        pub best: Option<(usize, i32, Option<&'static str>)>,
+        pub best_is_noncast: bool,
+        pub tied_third: bool,
+    }
+
+    pub(super) fn shortlist_judge(
+        state: &GameState,
+        seat: usize,
+        winner_ev: i32,
+        cut: &[(i32, GameAction)],
+        third_score: i32,
+        baseline: i32,
+        w: &EvalWeights,
+    ) -> ShortlistJudged {
+        let mut j = ShortlistJudged::default();
+        if super::policy_ranking(w) {
+            return j;
+        }
+        j.tied_third = cut.first().is_some_and(|(s, _)| *s / 4 == third_score / 4);
+        for (i, (_, a)) in cut.iter().enumerate() {
+            if !state.would_accept(a.clone()) {
+                j.rejected += 1;
+                continue;
+            }
+            j.priced += 1;
+            let ev = price(state, seat, a, baseline, w);
+            if ev > winner_ev && j.best.is_none_or(|(_, b, _)| ev > b) {
+                j.best = Some((i, ev, action_card(state, seat, a).map(|c| c.definition.name)));
+                j.best_is_noncast = !matches!(
+                    a,
+                    GameAction::CastSpell { .. }
+                        | GameAction::CastSpellSpree { .. }
+                        | GameAction::CastPrepareSpell { .. }
+                        | GameAction::CastSpellKicked { .. }
+                        | GameAction::CastSpellConvoke { .. }
+                        | GameAction::CastSpellAlternative { .. }
+                );
+            }
+        }
+        j
+    }
+
+    pub(super) fn shortlist_tick(
+        state: &GameState,
+        seat: usize,
+        winner_ev: i32,
+        lone_winner: bool,
+        cut: &[(i32, GameAction)],
+        third_score: i32,
+        baseline: i32,
+        w: &EvalWeights,
+    ) {
+        if cut.is_empty() {
+            return;
+        }
+        let j = shortlist_judge(state, seat, winner_ev, cut, third_score, baseline, w);
+        N[24].fetch_add(1, Relaxed);
+        N[26].fetch_add(j.priced, Relaxed);
+        N[34].fetch_add(j.rejected, Relaxed);
+        N[35].fetch_add(u64::from(j.tied_third), Relaxed);
+        let Some((rank, ev, card)) = j.best else { return };
+        N[27].fetch_add(1, Relaxed);
+        N[28].fetch_add((ev - winner_ev).max(0) as u64, Relaxed);
+        N[29 + rank.min(2)].fetch_add(1, Relaxed);
+        N[32].fetch_add(u64::from(lone_winner), Relaxed);
+        N[33].fetch_add(u64::from(j.best_is_noncast), Relaxed);
+        if level() >= 2 {
+            let mut t = CUT_BY_CARD.lock().unwrap();
+            let e = t.entry(card.unwrap_or("?")).or_default();
+            e[0] += 1;
+            e[1] += (ev - winner_ev).max(0) as u64;
+        }
     }
 
     /// The card an action casts or activates, for the per-card tables.
@@ -16223,6 +16382,18 @@ fn pick_by_outcome(
     finalists: Vec<Finalist>,
     w: &EvalWeights,
 ) -> Option<Finalist> {
+    pick_by_outcome_with_cut(state, seat, finalists, Vec::new(), w)
+}
+
+/// [`pick_by_outcome`] with the candidates the shortlist cut (round 77
+/// census only; empty otherwise), priced against the winner after the pick.
+fn pick_by_outcome_with_cut(
+    state: &GameState,
+    seat: usize,
+    finalists: Vec<Finalist>,
+    cut: Vec<(i32, GameAction)>,
+    w: &EvalWeights,
+) -> Option<Finalist> {
     // Under the census a lone finalist is still a pick (an X spell alone on
     // the menu is exactly the X decision it counts), so it is scored too;
     // under X by outcome a lone X finalist has its X to decide.
@@ -16273,6 +16444,8 @@ fn pick_by_outcome(
         let i = sample_scored_index(&ws, t);
         if menu_census::on() {
             menu_census::tick(state, seat, &evd, i, w);
+            let third = evd.last().map(|(_, f)| f.score).unwrap_or(0);
+            menu_census::shortlist_tick(state, seat, evd[i].0, evd.len() == 1, &cut, third, baseline, w);
         }
         capture_decision(state, seat, &evd, i, t as i32, w);
         return evd.into_iter().nth(i).map(|(_, f)| f);
@@ -16284,6 +16457,8 @@ fn pick_by_outcome(
         .map(|(i, _)| i)?;
     if menu_census::on() {
         menu_census::tick(state, seat, &evd, best, w);
+        let third = evd.last().map(|(_, f)| f.score).unwrap_or(0);
+        menu_census::shortlist_tick(state, seat, evd[best].0, evd.len() == 1, &cut, third, baseline, w);
     }
     capture_decision(state, seat, &evd, best, 0, w);
     evd.into_iter().nth(best).map(|(_, f)| f)
@@ -20744,38 +20919,62 @@ mod tests {
         }
     }
 
-    /// Magecraft-aware spell bias: when the bot controls a magecraft
-    /// permanent and has both an IS spell and a creature spell in hand,
-    /// it should prefer the IS spell to fire the magecraft trigger.
-    /// Push (claude/modern_decks batch 202).
+    /// Magecraft-aware spell bias, as it stands after round 77b: with a
+    /// magecraft permanent out the ranking still puts the instant first,
+    /// but the shortlist no longer STOPS there — the creature is
+    /// outcome-compared too, and here the outcome eval takes the 2/2 body
+    /// over three to the face. The pre-77b default (`round77_off`) kept
+    /// the stop and cast the bolt; the round-77 census priced that stop
+    /// at two thirds of the shortlist's losses and the ladder at +2.35.
+    /// Push (claude/modern_decks batch 202); round 77b (2026-09-18).
     #[test]
     fn bot_prefers_is_spell_when_magecraft_in_play() {
-        let mut g = two_player_game();
-        // Drop Witherbloom Apprentice (a magecraft permanent) on board.
-        g.add_card_to_battlefield(0, catalog::witherbloom_apprentice());
-        // Hand has both Lightning Bolt (instant) and Grizzly Bears
-        // (creature). The bot must prefer the bolt.
-        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-        let _bear = g.add_card_to_hand(0, catalog::grizzly_bears());
-        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
-        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
-        g.players[0].mana_pool.add_colorless(1);
-        let mut bot = HeuristicBot::new();
-        // Drive the bot until it produces a CastSpell — could pass
-        // through PlayLand / mana abilities first if seeded with hand-
-        // played lands, but in this synthetic state the next non-mana
-        // action is the spell.
-        for _ in 0..16 {
-            let action = bot.next_action(&g, 0).expect("bot should act");
-            if let GameAction::CastSpell { card_id, .. } = action {
-                assert_eq!(card_id, bolt,
-                    "magecraft-bias should pick the instant over the creature");
-                return;
+        let cast_with = |w: EvalWeights| -> CardId {
+            let mut g = two_player_game();
+            // Second main: the default's summon-sick gate holds a
+            // first-main creature, which is orthogonal to the rule under
+            // test.
+            g.step = TurnStep::PostCombatMain;
+            // Drop Witherbloom Apprentice (a magecraft permanent) on board.
+            g.add_card_to_battlefield(0, catalog::witherbloom_apprentice());
+            // Hand has both Lightning Bolt (instant) and Grizzly Bears
+            // (creature).
+            g.add_card_to_hand(0, catalog::lightning_bolt());
+            g.add_card_to_hand(0, catalog::grizzly_bears());
+            g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+            g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+            g.players[0].mana_pool.add_colorless(1);
+            let mut bot = HeuristicBot::with_weights(w);
+            // Drive the bot until it produces a CastSpell — could pass
+            // through PlayLand / mana abilities first if seeded with hand-
+            // played lands, but in this synthetic state the next non-mana
+            // action is the spell.
+            for _ in 0..16 {
+                let action = bot.next_action(&g, 0).expect("bot should act");
+                if let GameAction::CastSpell { card_id, .. } = action {
+                    return card_id;
+                }
+                // Drive the engine forward so non-cast actions don't loop.
+                let _ = g.perform_action(action);
             }
-            // Drive the engine forward so non-cast actions don't loop.
-            let _ = g.perform_action(action);
-        }
-        panic!("bot never produced a CastSpell action");
+            panic!("bot never produced a CastSpell action");
+        };
+        let name = |id: CardId| {
+            let mut g = two_player_game();
+            g.add_card_to_battlefield(0, catalog::witherbloom_apprentice());
+            let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+            if id == bolt { "Lightning Bolt" } else { "Grizzly Bears" }
+        };
+        assert_eq!(
+            name(cast_with(EvalWeights::round77_off())),
+            "Lightning Bolt",
+            "the pre-77b stop forces the instant"
+        );
+        assert_eq!(
+            name(cast_with(EvalWeights::default())),
+            "Grizzly Bears",
+            "without the stop the creature is outcome-compared and wins here"
+        );
     }
 
     /// The bot casts an Adventure half (Stomp) as removal when it can afford
@@ -24393,6 +24592,48 @@ mod stack_response_tests {
             matches!(out, GameAction::CastSpell { card_id, x_value: Some(3), .. } if card_id == id),
             "Banefire keeps X = 3: {out:?}"
         );
+    }
+
+    /// Round 77 census: the cut candidates are priced by the pick's rule
+    /// against the winner's score — a legal cast beats a hopeless winner
+    /// and not an unbeatable one, an illegal one is counted rejected.
+    #[test]
+    fn menu_census_prices_the_shortlist_cut_against_the_winner() {
+        use super::menu_census::shortlist_judge;
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let id = g.add_card_to_hand(0, catalog::banefire());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        let w = EvalWeights::default();
+        let baseline = eval_material(&g, 0, &w);
+        let burn = GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(3),
+        };
+        let illegal = GameAction::CastSpell {
+            card_id: CardId(999_999),
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        let cut = vec![(40, illegal), (40, burn)];
+        let j = shortlist_judge(&g, 0, i32::MIN / 2, &cut, 40, baseline, &w);
+        assert_eq!(j.priced, 1);
+        assert_eq!(j.rejected, 1);
+        assert!(j.tied_third, "the first cut's static score ties the third finalist's");
+        let (rank, ev, card) = j.best.expect("the burn beats a hopeless winner");
+        assert_eq!((rank, card), (1, Some("Banefire")));
+        assert!(ev > i32::MIN / 2);
+        assert!(!j.best_is_noncast);
+        let j = shortlist_judge(&g, 0, i32::MAX / 2, &cut, 39, baseline, &w);
+        assert_eq!(j.best, None);
+        assert!(!j.tied_third);
     }
 
     /// Round 76 census, the static half: how many of the sealed pool's

@@ -1,0 +1,25 @@
+ladder: top4-nocut (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 43 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             508    492      0     50.8%  [47.7%, 53.9%]
+sealed #1             545    455      0     54.5%  [51.4%, 57.6%]
+sealed #2             523    477      0     52.3%  [49.2%, 55.4%]
+sealed #3             531    469      0     53.1%  [50.0%, 56.2%]
+sealed #4             503    497      0     50.3%  [47.2%, 53.4%]
+sealed #5             516    484      0     51.6%  [48.5%, 54.7%]
+sealed #6             525    475      0     52.5%  [49.4%, 55.6%]
+sealed #7             515    485      0     51.5%  [48.4%, 54.6%]
+sealed #8             538    462      0     53.8%  [50.7%, 56.9%]
+sealed #9             546    454      0     54.6%  [51.5%, 57.7%]
+sealed #10            506    494      0     50.6%  [47.5%, 53.7%]
+sealed #11            536    464      0     53.6%  [50.5%, 56.7%]
+----------------------------------------------------------------
+TOTAL                6292   5708      0     52.4%  [51.5%, 53.3%]
+
+12000 decided, 0 undecided, in 5.2s
+
+paired: 6000 pairs — 572 A-sweeps, 280 B-sweeps, 5148 splits
+        A win%  52.4%  [52.0%, 52.9%]  (±0.47 pts)
+        within-pair rho -0.720 — variance x0.28 vs independent games, i.e. these 12000 games carry the precision of 42868
+verdict: A (top4-nocut) is stronger — the interval clears 50%

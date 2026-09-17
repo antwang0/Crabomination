@@ -1,0 +1,50 @@
+ladder: dflt (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 97 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #1             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #2             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #3             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #4             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #5             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #6             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #7             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #8             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #9             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #10            500    500      0     50.0%  [46.9%, 53.1%]
+sealed #11            500    500      0     50.0%  [46.9%, 53.1%]
+----------------------------------------------------------------
+TOTAL                6000   6000      0     50.0%  [49.1%, 50.9%]
+
+12000 decided, 0 undecided, in 4.6s
+
+paired: 6000 pairs — 0 A-sweeps, 0 B-sweeps, 6000 splits
+        A win%  50.0%  [50.0%, 50.0%]  (±0.00 pts)
+        within-pair rho -1.000
+verdict: inconclusive at 1000 games/archetype — the interval straddles 50%
+  menu_census 303692 picks (141166 with >= 2 finalists, 25.31/game); modal: offered 42836 mode-candidates, 19618 cut by the shortlist (45.8 %), a modal finalist on 12892 picks (4.2 %), won 7716 (0.64/game), non-default mode 3804 (49.3 % of modal wins), sibling mode also a finalist 5702 (73.9 %), an unseen mode on 4928 wins (6888 modes), an unseen mode scored higher on 354 (4.6 % of modal wins; margin 9618 units mean); resolution-time mode decisions 0, non-default 0 (0.0 %); X: a finalist on 15348 picks (5.1 %, 16096 finalists), won 8962 (0.75/game, mean X 3.16), a smaller X scored higher on 0 (0.0 % of X wins; margin 0 units mean; <= X/2 on 0), a losing X finalist's smaller X beat the winner on 0; 54802 alt sims, 0 unrewritable shapes
+  shortlist_census 92302 picks ran past the shortlist (30.4 % of picks, 7.69/game; pool 3.81 candidates mean), 158710 cut candidates priced (9406 rejected), a cut candidate scored above the winner on 21738 (23.6 % of those picks, 1.81/game; margin 3866 units mean); best cut at rank 4 / 5 / 6+ 17782 / 2946 / 1010; the winner was a lone finalist on 14506, the better line a land or ability on 1232; first cut tied the third finalist's static score on 17344 (18.8 %)
+    cut_card Campus Composer: beat the winner 1390 times (margin 3766 units mean)
+    cut_card Emeritus of Ideation: beat the winner 1274 times (margin 1287 units mean)
+    cut_card ?: beat the winner 1232 times (margin 23702 units mean)
+    cut_card Additive Evolution: beat the winner 850 times (margin 489 units mean)
+    cut_card Garrison Excavator: beat the winner 824 times (margin 269 units mean)
+    cut_card Strife Scholar: beat the winner 702 times (margin 2011 units mean)
+    cut_card Artistic Process: beat the winner 700 times (margin 8303 units mean)
+    cut_card Environmental Scientist: beat the winner 656 times (margin 615 units mean)
+    cut_card Witherbloom, the Balancer: beat the winner 620 times (margin 375 units mean)
+    cut_card Deluge Virtuoso: beat the winner 614 times (margin 7503 units mean)
+    cut_card Eager Glyphmage: beat the winner 604 times (margin 349 units mean)
+    cut_card Grave Researcher: beat the winner 522 times (margin 4230 units mean)
+    cut_card Wildgrowth Archaic: beat the winner 462 times (margin 879 units mean)
+    cut_card Magmablood Archaic: beat the winner 454 times (margin 29 units mean)
+    cut_card Mindful Biomancer: beat the winner 432 times (margin 933 units mean)
+    x_card Slumbering Trudge: 3702 wins, mean X 2.96; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    x_card Procrastinate: 2276 wins, mean X 2.97; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    x_card Traumatic Critique: 1676 wins, mean X 3.52; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    x_card Wild Hypothesis: 1308 wins, mean X 3.62; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    modal_card Artistic Process: 4528 wins, non-default 1196 (26.4 %); unseen modes priced 3422, higher on 338 (7.5 % of wins, margin 10073 units mean)
+    modal_card Glorious Decay: 1400 wins, non-default 1400 (100.0 %); unseen modes priced 48, higher on 2 (0.1 % of wins, margin 4 units mean)
+    modal_card Lorehold Charm: 1100 wins, non-default 842 (76.5 %); unseen modes priced 40, higher on 0 (0.0 % of wins, margin 0 units mean)
+    modal_card Splatter Technique: 688 wins, non-default 366 (53.2 %); unseen modes priced 54, higher on 14 (2.0 % of wins, margin 15 units mean)

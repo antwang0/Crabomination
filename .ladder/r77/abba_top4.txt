@@ -1,0 +1,4 @@
+dflt in 5.2s
+top4 in 5.2s
+top4 in 5.2s
+dflt in 5.0s
