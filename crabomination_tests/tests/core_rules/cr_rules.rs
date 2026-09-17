@@ -11300,3 +11300,126 @@ fn cr_613_power_of_reads_the_anthem() {
         "`PowerOf` read the un-anthemed power",
     );
 }
+
+/// CR 509.1b — `blocker_matches_block_filter` is the *third* hand-written
+/// walker over `SelectionRequirement` (after the static and card walkers), and
+/// it is deliberately state-free: it reads the blocker's computed view and
+/// nothing else, because it runs inside `blocker_pair_block`'s (blocker x
+/// attacker) loop (PERF `(-333)`). Its `_` arm therefore answers `false`, and
+/// **`false` is not conservative in both directions**: under
+/// `CantBeBlockedExceptBy` an unsupported leaf makes the attacker unblockable,
+/// under `CantBeBlockedBy` it makes the restriction dead.
+///
+/// Nothing checked which leaves the catalog actually puts there, so a card
+/// could ship with half a restriction and no test would notice. This is that
+/// check: every leaf of every catalog block filter is either one the walker
+/// handles or a named, dated exception.
+#[test]
+fn audit_block_restriction_filters_use_leaves_the_block_walker_handles() {
+    use crabomination::card::SelectionRequirement as R;
+    use serde_json::Value as J;
+
+    // The walker's arm list, transcribed. A leaf it grows is a line here.
+    const HANDLED: &[&str] = &[
+        "Any", "Permanent", "Creature", "Artifact", "Enchantment", "Land", "IsToken", "NotToken",
+        "HasColor", "Colorless", "HasKeyword", "HasToxic", "HasModular", "HasMutate",
+        "HasCreatureType", "HasArtifactSubtype", "PowerAtMost", "PowerAtLeast", "ToughnessAtMost",
+        "ToughnessAtLeast", "ToughnessGreaterThanPower", "HasCardType", "And", "Or", "Not",
+    ];
+    // Known dead leaves, with the card that carries them. A fix deletes a line.
+    //
+    // `IsEnchanted` is a board fact (is an Aura attached to the blocker?) and
+    // the walker has no `&GameState` by design, so Temple Thief's "or
+    // enchanted creatures" half does not fire. Tracked in INCOMPLETE_CARDS.
+    const KNOWN_DEAD: &[(&str, &str)] = &[("Temple Thief", "IsEnchanted")];
+
+    /// Every `R::` variant name in a requirement tree, from its serde shape:
+    /// externally tagged, so a unit variant is a string and every other is a
+    /// one-key object. Only the three combinators are descended into — a
+    /// `HasKeyword`'s payload is a `Keyword`, not another requirement, and
+    /// reading it as one reports "Flying" as an unhandled leaf.
+    fn leaves(j: &J, out: &mut Vec<String>) {
+        match j {
+            J::String(s) => out.push(s.clone()),
+            J::Object(m) => {
+                for (k, v) in m {
+                    out.push(k.clone());
+                    if matches!(k.as_str(), "And" | "Or" | "Not") {
+                        leaves(v, out);
+                    }
+                }
+            }
+            J::Array(a) => {
+                for v in a {
+                    leaves(v, out);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Pull every `CantBeBlockedBy` / `CantBeBlockedExceptBy` payload out of a
+    /// serialized definition — printed keywords and granted ones alike, so a
+    /// filter that only reaches the board through a static or a trigger is
+    /// audited too.
+    fn block_filters(j: &J, out: &mut Vec<J>) {
+        if let J::Object(m) = j {
+            for (k, v) in m {
+                if k == "CantBeBlockedBy" || k == "CantBeBlockedExceptBy" {
+                    out.push(v.clone());
+                }
+                block_filters(v, out);
+            }
+        } else if let J::Array(a) = j {
+            for v in a {
+                block_filters(v, out);
+            }
+        }
+    }
+
+    let mut seen = 0usize;
+    let mut bad: Vec<String> = Vec::new();
+    let mut hit_dead: Vec<(String, String)> = Vec::new();
+    for f in crabomination::catalog::all_known_factories() {
+        let def = f();
+        let Ok(j) = serde_json::to_value(&def) else { continue };
+        let mut filters = Vec::new();
+        block_filters(&j, &mut filters);
+        for filter in filters {
+            // Only audit payloads that really are requirement trees.
+            if serde_json::from_value::<R>(filter.clone()).is_err() {
+                continue;
+            }
+            seen += 1;
+            let mut names = Vec::new();
+            leaves(&filter, &mut names);
+            for n in names {
+                if HANDLED.contains(&n.as_str()) {
+                    continue;
+                }
+                if KNOWN_DEAD.contains(&(def.name, n.as_str())) {
+                    hit_dead.push((def.name.to_string(), n));
+                    continue;
+                }
+                bad.push(format!("{}: `{}` in {}", def.name, n, filter));
+            }
+        }
+    }
+    assert!(seen > 20, "the catalog should carry many block filters, got {seen}");
+    assert!(
+        bad.is_empty(),
+        "{} catalog block-restriction leaves are answered `false` by \
+         `blocker_matches_block_filter`'s `_` arm — under `CantBeBlockedExceptBy` that \
+         makes the attacker unblockable, under `CantBeBlockedBy` it kills the \
+         restriction:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+    // And the exception list is guarded the other way: a fixed leaf deletes a line.
+    for (card, leaf) in KNOWN_DEAD {
+        assert!(
+            hit_dead.iter().any(|(c, l)| c == card && l == leaf),
+            "`{card}` no longer carries the dead leaf `{leaf}` — delete it from KNOWN_DEAD",
+        );
+    }
+}

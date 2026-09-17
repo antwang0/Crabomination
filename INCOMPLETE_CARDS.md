@@ -141,6 +141,29 @@ the duplicate was dropped at the rebase.
 new catalog entry moves `Vocab` decides whether it invalidates the trained
 nets, and that question is not answered here.
 
+### The same direction again, found 2026-09-17 — a *leaf* the engine drops
+
+`audit_variant_coverage.py` asks whether a `Keyword` variant has an engine
+arm. It cannot ask whether the arm's **argument** is one the arm can read:
+`Keyword::CantBeBlockedBy` / `CantBeBlockedExceptBy` carry a
+`SelectionRequirement`, and `blocker_matches_block_filter` (`game/mod.rs`) is
+a third hand-written walker over that enum whose `_` arm answers `false`. It
+is state-free on purpose — it runs inside `blocker_pair_block`'s
+(blocker x attacker) loop, PERF `(-333)` — so a leaf that needs the board
+silently drops. **And `false` is not conservative in both directions:** under
+`CantBeBlockedExceptBy` it makes the attacker unblockable, under
+`CantBeBlockedBy` it kills the restriction.
+
+Now a suite gate: `core_rules::cr_rules::audit_block_restriction_filters_use_
+leaves_the_block_walker_handles` walks every factory's serialized definition
+(printed keywords and granted ones alike), pulls every block filter out of it
+and asserts each leaf is one the walker handles or a named exception. **One
+exception at the 2026-09-17 tip, out of 30 filters:**
+
+| Card | Leaf | What drops | The shape a fix takes |
+|---|---|---|---|
+| Temple Thief (`thb.rs`) | `IsEnchanted` | "can't be blocked by enchanted creatures **or** enchantment creatures" — only the `Enchantment` half fires, so an Aura'd blocker still blocks | The walker has no `&GameState`; the bit costs a board walk per (blocker, attacker) pair (~0.11 % of `cube`) unless it is gated on the attacker actually carrying such a filter. Thread one `blocker_enchanted: bool` through `can_block_attacker_computed`'s signature (2 engine call sites, ~10 test ones) and compute it once per *blocker*, not per pair. |
+
 ---
 
 ## Missing-primitive buckets (the engineering view)
