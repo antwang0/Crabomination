@@ -3022,20 +3022,22 @@ CPU *model*, not about boxes**: two boxes of the same shape and toolchain
 agree to noise, and the twelfth box's own +0.196 / +0.090 / +0.089 % against
 the eleventh was a different CPU (@ 2.80 GHz).
 
-**CLOSING TIP ABSOLUTES at `d1e10986`, same recipe: fixed 580,220,836 / cube
-1,515,632,261 / sealed 1,634,886,499** — the run's whole movement is
-**+0.096 / +0.355 / +0.150 %**, all of it the CR 613 card-walker gate and all
-of it accounted for:
+**CLOSING TIP ABSOLUTES at `1c7f0414`, same recipe: fixed 579,804,110 / cube
+1,511,999,354 / sealed 1,633,720,908** — the run's whole movement is
+**+0.024 / +0.115 / +0.078 %**, i.e. a sixty-one-site rules-correctness class
+fix for about a tenth of a percent of `cube`, and every point of it is
+accounted for:
 
 ```text
   the battlefield gate on evaluate_requirement_on_card  +0.093 / +0.636 / +0.146 %
   (-343) the per-walk printed gate, hoisted 13 sites    +0.003 / -0.279 / +0.003 %
+  (-344) the loop watch settles off the digest's head   -0.072 / -0.240 / -0.071 %
 ```
 
 ⚠ **A rules fix can cost 0.6 % of a pool and `--bench` will not say so.**
-`--bench` is byte-identical across both commits (195,806 / 27.49 / 611.9 /
-0 stalls, `peak_rss 25.2`), and so are all 144 golden traces on all three
-pools — the gate changes no game any of these pools plays. The price is in
+`--bench` is byte-identical across every commit of this run (195,806 / 27.49 /
+611.9 / 0 stalls), and so are all 144 golden traces on all three pools — the
+gate changes no game any of these pools plays. The price is in
 `cube` because `fixed` carries no static that reaches the gather's count arms.
 📐 **The transferable half: when a correctness fix routes a cheap walker to an
 authoritative one, price the ROUTING separately from the walk.** Two-thirds of
@@ -3056,13 +3058,18 @@ sweep   **TWO blocks — fresh seeds 1398..1399 and 1400..1401 at the `d1e10986`
         guarded / 11 lock-poison / 0 bare**. Suite **19,589 / 0 / 5**
         (two regression tests and one audit added), clippy **0** over the
         workspace, `cargo check --profile release-fast -p crabomination --bin
-        bot_ladder` clean.
+        bot_ladder` clean. `--bench` at the closing tip: **195,806 / 27.49 /
+        611.9 / 0 stalls**, `peak_rss_mib 25.0`, `determinism ok`,
+        `thread_determinism ok (3 vs 1)`.
         ⚠ Box timings, thirteenth box (4 cores, 15 GB — the twelfth's shape):
         cold test build **5m30s**, full suite **1m47-2m03s**, cold
-        `profiling-fast` **8m21s** / engine-only **2m58s**, cold `release`
-        **9m08s**, `overflow` **7m58s**, workspace clippy ~2m, `cargo check
-        --profile release-fast` 29 s warm, three pools' callgrind in parallel
-        **~2m**, `cargo check -p crabomination` 56 s-2m04s.
+        `profiling-fast` **8m21s** / engine-only **2m38-3m02s**, cold `release`
+        **9m08-9m32s**, `overflow` **7m58s** cold / **2m01s** engine-only,
+        workspace clippy ~2m, `cargo check --profile release-fast` 27-29 s
+        warm, three pools' callgrind in parallel **~2m**, one
+        `--dump-instr=yes` callgrind on `cube` **16 s**, `cargo check -p
+        crabomination` 41 s-2m04s, a 6-cell sweep block **3m55s** (29m13s
+        when two race on four cores — do not overlap them).
 
 ### 2026-09-16 (the carried-memo session, TWELFTH box) — the absolutes reproduce, and the mimalloc trap cost a build
 
@@ -8071,6 +8078,64 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-344)` the CR 104.4b loop watch settles off the digest's scalar head — **fixed -0.072 / cube -0.240 / sealed -0.071 %**
+
+`loop_fingerprint()` ran after **every** trigger resolution and its tail is
+O(board): one `fp_mix` per battlefield permanent plus a
+`counters.values().sum()` each. 5,648 calls at 1,280 Ir, **0.48 % of `cube`,
+for a watchdog**.
+
+The digest splits at the scalar/permanent boundary (`fingerprint_head` /
+`fingerprint_tail`, with the body's nested `mix`/`pair` lifted out as
+`fp_mix`/`fp_pair`), and `resolve_top_of_stack` asks the head first.
+**`fp_mix` is injective in its accumulator** — SplitMix64's finalizer is a
+bijection and so is the add — so a moved head over an unmoved board is a
+moved digest; and the branch a moved digest takes, with an anchor set and
+`since` inside the period, is `since + 1`, **which never reads the digest**.
+That path skips the tail outright.
+
+📐 **Censused before it was built, and the census is the entry's point.** A
+debug build, an env-gated branch counter on the four paths, 6 games a pool:
+
+```text
+                anchor0  period8  match  head-differs  head-EQUAL   skippable
+  cube            2,044      164      2         2,720          70      54.4 %
+  sealed          3,952        0    304         2,578         166      36.8 %
+  fixed             376        0      0           124           0      24.8 %
+```
+
+Two numbers, not one: **how often the branch is reachable** (54.4 % on `cube`)
+and **how often the cheap key separates on it** (2,720 of 2,790 = 97.5 %).
+A memo census that only measures the first is the `(-329)` mistake; the second
+is what says the win is nearly the branch count.
+
+```text
+                  (-343) tip        (-344)            delta
+  fixed            580,220,836       579,804,110       -0.072 %
+  cube           1,515,632,261     1,511,999,354       -0.240 %
+  sealed         1,634,886,499     1,633,720,908       -0.071 %
+
+  cube, by row
+    fingerprint_as        7,227,300 -> 0 (inlined; fingerprint_head +1,122,406,
+                          resolve_top_of_stack +2,061,374)
+    GameState::clone     16,117,706 -> 16,498,448   <- the 8-byte field,
+    __memcpy_avx…        31,810,755 -> 31,959,254      529 k Ir = 0.035 %
+```
+
+⚠ **The 8 bytes are `mandatory_loop_head` on `GameState` and they are IN the
+reading** — the A/B clones the bigger state on every bot probe, so the 529 k
+above is already subtracted. `cow::tests::game_state_stays_small`'s cap goes
+1,672 -> 1,680 with that justification written at the test. **Raise it again
+only with a measurement of that shape**, which is the whole reason the guard
+is a test and not a comment.
+
+**The shortcut is audited, not argued.** A `debug_assert_ne!` on the skip path
+recomputes the full digest and asserts it does *not* match the anchor —
+`(-303)`'s point 2 — so the suite's 19,589 tests and every `debug-assertions`
+sweep cell are the ratchet. It did not fire over 59,200 swept games.
+
+All 144 golden traces byte-identical on all three pools.
 
 ### `(-343)` the per-walk printed gate, hoisted at thirteen battlefield walks — **fixed +0.003 / cube -0.279 / sealed +0.003 %**
 
@@ -14040,6 +14105,16 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+📐 **AND THE GLOBAL LINE TABLE SAYS THE PROFILE IS FLAT — read once at
+`1c7f0414`, `--dump-instr=yes` on `cube`, so nobody re-derives it.** The
+largest single source line in the program is
+`ptr/mod.rs:1917` under `Arc::clone_from_ref_in` at **0.97 %** (the CoW
+family's memcpy, `(-280)`..`(-287)`); then `perform_action_inner`'s dispatch
+at 0.80 %, `compute_permanents::{{closure}}`'s `sync/atomic.rs:3875` at
+0.56 % (the per-permanent `def: Arc` refcount, structural), `GameState::clone`
+at 0.41 %. **12,537 more lines hold 86.9 % of the run.** Nothing below the
+top four is a row by itself.
+
 🔎🔎 **REPLENISHED 2026-09-17 off a whole-profile read at the `d1e10986` tip
 (`profiling-fast --no-default-features`, `--games 6 --threads 1 --seed 1`,
 cube total 1,515,632,261). THE DEVICE WAS `cg_calls.py` RANKED BY SELF PER
@@ -14060,9 +14135,22 @@ read.**
       836   8,428   7,048,364   0.46   Battlefield::lanes_after_push       priced as a floor
 ```
 
-  **J. `resolve_combat_into` — 6,470 calls, 3,674 Ir of SELF a call, 1.57 % of
-  `cube`. The third-largest body per call in the program and the only one of
-  the top three never read.** `(-329)` refuted *one* device in it (a
+  ❌ **J. `resolve_combat_into` — LINE-PROFILED 2026-09-17 AND IT IS DIFFUSE.
+  CLOSED.** 22,885,430 Ir grouped over **276 source lines**, and the largest is
+  **`card.rs:13` (`CardId::eq`) at 1,221,990 = 0.09 % of the run**; the next
+  five are `iter/macros.rs`, `ptr/non_null.rs`, `raw_vec/mod.rs:612` (Vec
+  regrowth, 751,046) and `sync/atomic.rs` (the CoW refcounts). The largest
+  `game/combat.rs` line in the whole body is **457,974 = 0.03 %**. Same verdict
+  as `(-319)` and `(E)`: **the body IS the cost.** The id-compare family is
+  `(-309)`'s and is closed; the Vec regrowth is 7 % of one site of the
+  allocation census's long tail. ⚠ The read cost **nothing**: `cg_lines.py`
+  needs no `profiling-lines` build (`.debug_line` survives unpacked split
+  debuginfo), so it is one 16-second `--dump-instr=yes` callgrind for every
+  body in the program at once. **Line-profile a candidate before building for
+  it** — this and (K) together were two builds' worth of work avoided.
+  The original sizing, kept:
+  **6,470 calls, 3,674 Ir of SELF a call, 1.57 % of `cube` — the third-largest
+  body per call in the program and the only one of the top three never read.** `(-329)` refuted *one* device in it (a
   read-first shape over `find_card_anywhere_mut`, whose guard is true 66 % of
   the time) and the body itself has never been on a line profile.
   `(-337)`/`(-338)`'s recipe applies verbatim: read the body, classify every
@@ -14071,15 +14159,29 @@ read.**
   copies are its, and all of them are genuine per-card mutations, so the
   CoW family is not what is left here.
 
-  **K. `do_untap` — 2,650 calls, 3,032 Ir of SELF a call, 0.53 %.** Exactly one
+  ❌ **K. `do_untap` — LINE-PROFILED IN THE SAME DUMP AND ALSO DIFFUSE.
+  CLOSED.** 5,923,976 Ir over **89 lines**, top line `slice/cmp.rs:412` at
+  496,146 = **0.04 % of the run**, and the largest `game/stack.rs` line is
+  176,428 = 0.01 %. The eight static-driven walks `(-249)` gated are doing
+  their job — what is left is the untap loop itself plus five `HashSet`s, two
+  `HashMap`s and three `Vec`s built per step, none of them a row. The 3,032
+  Ir/call that put it on this list is ~130 Ir a permanent spread over the whole
+  body. The original sizing, kept:
+  **2,650 calls, 3,032 Ir of SELF a call, 0.53 %.** Exactly one
   call a real turn (2,650 against ~150 real turns means the bot's probes end
   turns on their clones — `watch_turn_progress`' own doc prices that at 3,234).
   A 3,032-Ir body for "untap this seat's permanents" is ~130 Ir a permanent,
   which is not what an untap costs; expect (a) or (b) from the checklist. 15
   PERF hits and 59 archive hits, none of them a body read.
 
-  **L. `fingerprint_as` — 5,648 calls, 1,280 Ir a call, 0.48 %, AND IT IS A
-  WATCHDOG, NOT GAME LOGIC.** `loop_fingerprint()` runs after *every* trigger
+  ✅ **L. TAKEN as `(-344)` — fixed -0.072 / cube -0.240 / sealed -0.071 %.**
+  The census the entry asked for was run first and it answered both halves
+  (54.4 % of `cube` samples reachable, the head separating on 97.5 % of them).
+  Device 2 (`battlefield.writes()` as the tail's key) is untried and now
+  redundant on the taken path; it would only reach the `head == anchor_head`
+  remainder, which is 70 samples a `cube` run. The original sizing:
+  **5,648 calls, 1,280 Ir a call, 0.48 %, AND IT IS A WATCHDOG, NOT GAME
+  LOGIC.** `loop_fingerprint()` runs after *every* trigger
   resolution (CR 104.4b) and `activation_fingerprint()` per free-activation
   check; the turn watch is already gated to every Nth turn past a threshold
   and is not in this row. The head is ~10 scalar mixes, the tail is one `mix`
