@@ -10592,6 +10592,51 @@ impl GameState {
         })
     }
 
+    /// CR 613.6 — can any continuous effect in scope **remove** a keyword
+    /// matching `pred`? The mirror of
+    /// [`keyword_grant_in_scope`](Self::keyword_grant_in_scope), and the leg
+    /// that makes a *printed* keyword safe to answer off the instance.
+    ///
+    /// [`board_keyword_matching`](Self::board_keyword_matching)'s doc already
+    /// names the shrinking half of the family: **`RemoveKeyword`,
+    /// `CantHaveKeyword` and `RemoveAllAbilities` are the only modifications
+    /// that take a keyword away**, and the two text rewrites retype
+    /// `Protection` / `Landwalk` in place. `RemoveAllAbilities` has its own
+    /// gate; the other two reach the gathered set from
+    /// `StaticEffect::LoseKeyword`, `StaticEffect::CantHaveKeyword` and an
+    /// attachment's `EquipBonus::remove_keywords`.
+    ///
+    /// `false` is authoritative; `true` only means the computed view has to be
+    /// consulted. ⚠ Asked only on the branch where the instance already HAS
+    /// the keyword — the common ask is "does this creature have flying" about
+    /// one that does not, and that branch takes `keyword_grant_in_scope`'s
+    /// lane instead. So this walks the battlefield without a lane on purpose:
+    /// the traffic is not there.
+    pub(crate) fn keyword_removal_in_scope(&self, pred: impl Fn(&Keyword) -> bool) -> bool {
+        if self.ability_strip_possible() {
+            return true;
+        }
+        if self.continuous_effects.has_family(mod_families::KEYWORD)
+            && self.continuous_effects.iter().any(|e| {
+                matches!(&e.modification,
+                    Modification::RemoveKeyword(k) | Modification::CantHaveKeyword(k) if pred(k))
+            })
+        {
+            return true;
+        }
+        self.battlefield.iter().any(|c| card_can_remove_keyword(c, &pred))
+            || self.players.iter().any(|p| {
+                p.command
+                    .iter()
+                    .any(|c| c.command_zone_abilities_active() && card_can_remove_keyword(c, &pred))
+                    || p.emblems.iter().any(|em| {
+                        em.statics
+                            .iter()
+                            .any(|sa| static_effect_removes_keyword(&sa.effect, &pred))
+                    })
+            })
+    }
+
     /// Both legs of the ability-strip presence gate in one call, for a caller
     /// that holds no [`GrantScan`] to read `strip_on_battlefield` off. Same
     /// contract: `false` is authoritative, `true` only means the gather has to
@@ -26897,6 +26942,43 @@ fn card_can_grant_keyword(
         return false;
     }
     card.definition.can_grant_keyword(pred)
+}
+
+/// [`GameState::keyword_removal_in_scope`]'s per-card half: can this object's
+/// printed shape put a `RemoveKeyword` / `CantHaveKeyword` matching `pred`
+/// into the gathered set? An attachment's `EquipBonus::remove_keywords` is the
+/// third route ("enchanted creature loses flying" — Sky Tether).
+fn card_can_remove_keyword(card: &CardInstance, pred: &impl Fn(&Keyword) -> bool) -> bool {
+    if card
+        .definition
+        .equipped_bonus
+        .as_ref()
+        .is_some_and(|b| b.remove_keywords.iter().any(pred))
+    {
+        return true;
+    }
+    card.definition
+        .static_abilities
+        .iter()
+        .any(|sa| static_effect_removes_keyword(&sa.effect, pred))
+}
+
+/// The `StaticEffect` half of [`card_can_remove_keyword`], with the same
+/// `inner`-unwrapping the grant twin does for the five conditional wrappers.
+fn static_effect_removes_keyword(
+    effect: &crate::effect::StaticEffect,
+    pred: &impl Fn(&Keyword) -> bool,
+) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        SE::LoseKeyword { keyword, .. } | SE::CantHaveKeyword { keyword, .. } => pred(keyword),
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_removes_keyword(inner, pred),
+        _ => false,
+    }
 }
 
 /// CR 702.16 — the protection keywords, and the one place the list lives.

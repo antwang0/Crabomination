@@ -3989,18 +3989,59 @@ impl GameState {
                 // `has_atype` and `has_stype`: the closure forces `computed()`
                 // at most once per invocation and the freeze scope's `perms`
                 // memo serves the repeats.
-                let has_kw = |kw: &crate::card::Keyword| match computed() {
-                    Some(cp) => cp.keywords().has_kw(kw),
-                    None => card.has_keyword(kw),
+                let has_kw = |kw: &crate::card::Keyword| {
+                    // Gated in BOTH directions, which is what makes it cheap:
+                    // the instance's four sources are the answer unless a
+                    // continuous effect can move it. A permanent that does not
+                    // have the keyword can only GAIN it (`AddKeyword` is the
+                    // only additive modification — `board_keyword_matching`'s
+                    // doc), and `keyword_grant_in_scope` is lane-backed; one
+                    // that does have it can only LOSE it, and that branch is
+                    // the rare one, which is why `keyword_removal_in_scope`
+                    // walks the board without a lane.
+                    let on_instance = card.has_keyword(kw);
+                    let can_move = if on_instance {
+                        self.keyword_removal_in_scope(|k| k == kw)
+                    } else {
+                        self.keyword_grant_in_scope(|k| k == kw)
+                    };
+                    if !can_move {
+                        // The ratchet: under `debug-assertions` the computed
+                        // view still runs and must agree. The suite and every
+                        // sweep cell audit both gates (PERF `(-303)` point 2).
+                        debug_assert!(
+                            match computed() {
+                                Some(cp) => cp.keywords().has_kw(kw) == on_instance,
+                                None => true,
+                            },
+                            "keyword gate said the layers cannot move {kw:?}, and they did",
+                        );
+                        return on_instance;
+                    }
+                    match computed() {
+                        Some(cp) => cp.keywords().has_kw(kw),
+                        None => on_instance,
+                    }
                 };
                 // The payload-carrying twins: `Toxic(n)` / `Modular(n)` match
                 // by discriminant, so they cannot go through `has_kw`.
-                let has_kw_tag = |sample: &crate::card::Keyword| match computed() {
-                    Some(cp) => {
-                        let want = std::mem::discriminant(sample);
-                        cp.keywords().iter().any(|k| std::mem::discriminant(k) == want)
+                let has_kw_tag = |sample: &crate::card::Keyword| {
+                    let want = std::mem::discriminant(sample);
+                    let on_instance = card.has_keyword_tag(sample);
+                    let can_move = if on_instance {
+                        self.keyword_removal_in_scope(|k| std::mem::discriminant(k) == want)
+                    } else {
+                        self.keyword_grant_in_scope(|k| std::mem::discriminant(k) == want)
+                    };
+                    if !can_move {
+                        return on_instance;
                     }
-                    None => card.has_keyword_tag(sample),
+                    match computed() {
+                        Some(cp) => {
+                            cp.keywords().iter().any(|k| std::mem::discriminant(k) == want)
+                        }
+                        None => on_instance,
+                    }
                 };
                 // CR 613.5 layer 5 — **the colour member, missing the same
                 // way.** `printed_color_set` is the *printed* union (coloured
@@ -4010,9 +4051,26 @@ impl GameState {
                 // black, Painter's Servant), `AddColor` and `LoseAllColors`
                 // are layer 5 and only the computed view carries them.
                 let color_set = || -> crate::mana::ColorSet {
+                    let printed = card.definition.printed_color_set();
+                    // `card_color_change_unscoped` is the sound gate for the
+                    // whole layer-5 family (`AddColor` / `SetColors` /
+                    // `LoseAllColors`), by the same two routes the type gates
+                    // use. Its doc asks a hot caller to give it its own valid
+                    // flag rather than fold it into `type_bits`; this is that
+                    // caller, and the flag is still owed.
+                    if !self.card_color_change_unscoped() {
+                        debug_assert!(
+                            match computed() {
+                                Some(cp) => cp.colors == printed,
+                                None => true,
+                            },
+                            "colour gate said layer 5 is absent, and it was not",
+                        );
+                        return printed;
+                    }
                     match computed() {
                         Some(cp) => cp.colors,
-                        None => card.definition.printed_color_set(),
+                        None => printed,
                     }
                 };
                 use crate::card::CardType as CT;
