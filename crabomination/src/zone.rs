@@ -575,6 +575,17 @@ const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 60).
 const LANE_COUNT: usize = 31;
 
+/// ⚠ **One two-bit field is left in the word** (shift 62). A thirty-third
+/// presence question after that needs a second word on `Battlefield` — which
+/// `cow::tests::game_state_stays_small` prices — or a lane it can share with
+/// an existing one. This is a build failure rather than a silent overlap.
+/// PERF `(-347)` is the measurement that says the last slot is not worth
+/// spending on `card_color_change_unscoped`.
+const _: () = assert!(
+    (LANE_COUNT as u32) * 2 <= u64::BITS,
+    "the lane word is full: a thirty-third lane needs a second word or a shared lane",
+);
+
 /// Every presence lane's predicate, indexed by lane shift / 2, so a
 /// membership write can answer a lane off the **one card it moved**
 /// (PERF `(-213)`): a push leaves an `ABSENT` lane `ABSENT` when the new

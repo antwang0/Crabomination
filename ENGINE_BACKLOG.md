@@ -82,6 +82,63 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-17 (forty-first find) — a presence gate whose fold mask named a family NONE of the modifications it looks for carries
+
+The find above was fixed by `(-345)`, which added the two closures and then
+presence-gated them. Its keyword gate shipped as
+
+```rust
+has_family(mod_families::KEYWORD)
+    && iter().any(|e| matches!(e.modification, RemoveKeyword(k) | CantHaveKeyword(k) if pred(k)))
+```
+
+and `modification_families` maps **`RemoveKeyword`, `CantHaveKeyword`,
+`ReplaceColorWord` and `ReplaceBasicLandType` to no family at all** — they fall
+through its `_ => 0`. The fold's short-circuit therefore deleted the walk on
+every board whose stored effect list held no `AddKeyword`, which is precisely
+the board the gate exists for. A resolved `Effect::LoseKeyword` at any duration
+other than `EndOfTurn` / `Permanent` (those write the instance's own removal
+lists, which `has_keyword` reads) installs that modification and nothing else,
+so **"target creature loses flying until your next turn" left every "creature
+with flying" filter in the catalog still matching the grounded creature.**
+
+🔎🔎 **THE DEVICE: WHEN A COMMIT LANDS A GATE, READ THE ENUM MAPPING ITS MASK
+IS DERIVED FROM.** `has_family(m) && any(p)` is a two-place premise — the mask
+at the call site, the mapping in `modification_families` — with nothing in the
+type system connecting the places. The gate reads correct at the call site and
+the mapping reads correct on its own; only the pair is wrong, and the pair has
+no home. The same question is **unasked** for `pt_reduction_in_scope`,
+`damage_scaling_in_scope` and the three type gates: four of the five read
+`has_family` *alone* (sound whatever the mapping says), but the fold's arms have
+never been diffed against the walks that consume them.
+
+Three further routes were missing in the same gate and they are the kind a
+walker diff does not find, because there is no second walker:
+
+* the two **layer-3 text rewrites** move the answer *both ways*.
+  `ReplaceColorWord` turns `Protection(A)` into `Protection(B)` and
+  `ReplaceBasicLandType` does the same to `Landwalk` — each takes one keyword
+  away and hands back another, naming neither. So `keyword_grant_in_scope`
+  needed the same leg, and **that half was wrong before `(-345)` too**.
+* `AllColorWordsBecomeChosen` (Swirl the Mists) is the printed source of the
+  first. It belongs in `static_effect_grants_keyword`'s "unbounded" arm — the
+  one for statics whose granted keyword carries a payload the static does not
+  fix — which is exactly its shape, and in the removal twin.
+* a CR 721.2a Station band's statics: the grant twin walks `station`, the
+  removal one did not.
+
+**The class fix is `ContinuousEffects::any_in_family(mask, pred)`** (`(-346)`):
+the helper owns both halves of the premise and `debug_assert!`s the implication
+on its `false` path, so the first board that reaches a mis-mapped modification
+fails the suite or a sweep cell instead of answering wrongly. Verified by
+deleting the new family arm and watching the new regression test fire it. The
+four edit modifications now carry `mod_families::KEYWORD_EDIT`.
+
+⚠ **Two sessions took the same PERF candidate on the same day, and this find is
+what the duplicate bought.** The second session's work was thrown away; reading
+the first session's landed commit line by line found this in ten minutes. The
+`&&` between a fold read and the walk it gates is where a reviewer looks last.
+
 ## FIXED 2026-09-17 (fortieth find, and the biggest blast radius of the run) — the requirement walker built a computed-view closure per characteristic and TWO WERE NEVER WRITTEN
 
 The battlefield walker's `_` fallthrough is a family of closures, each reading

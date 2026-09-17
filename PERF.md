@@ -3005,6 +3005,67 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-17 (the gate-soundness session, FOURTEENTH box) — the previous run's gate was gated on a family nothing carries, and the memo it was owed is refuted
+
+**BASE ABSOLUTES at `cf1f3ea0`** (`profiling-fast --no-default-features`,
+system allocator, `--a gang --b gang --games 6 --threads 1 --seed 1`):
+fixed **578,132,600** / cube **1,509,498,497** / sealed **1,630,944,930**.
+
+📐 **THE BOX PREDICTED ITSELF.** This is a Xeon @ **2.80 GHz** — the
+*eleventh* box's CPU, not the thirteenth's 2.10 GHz — so the offset this file
+already records between those two was applied to `ac1381ed`'s filed tip
+(579,232,689 / 1,510,834,067 / 1,632,366,971) *before* the base was measured,
+and the three predictions landed **within 0.003 %** on all three pools. The
+same run then reproduced the offset a second time from `77f9cf3a`
+(-0.193 / -0.089 / -0.086 % against the thirteenth box's numbers, against the
++0.196 / +0.090 / +0.089 % PERF records for the twelfth-vs-eleventh step).
+**Predict the base from the CPU before building it; a base that misses the
+prediction is a tree problem, not a box problem** — which is exactly the check
+that confirmed a binary built while the working tree was being edited was
+still the base's code.
+
+⚠ **TWO SESSIONS TOOK PERF CANDIDATE (M) ON THE SAME DAY AND THE SECOND ONE
+FOUND THE FIRST'S BUG.** The duplicate cost this run two `profiling-fast`
+builds and a measured A/B that had to be thrown away — NEXT's "fetch before you
+start" is not a formality on this branch. What made the collision worth
+something is the *review* it forced: reading the landed `(-345)` line by line
+turned up `(-346)`'s hole in its first ten minutes, and the hole was in the one
+place a reviewer looks last, the `&&` between a fold read and the walk it
+gates.
+
+```text
+  (-346) the keyword gates' stored leg          -0.007 / +0.019 / -0.001 %
+  (-347) the colour gate's lane, REFUTED        +0.006 / +0.014 / +0.012 %  reverted
+```
+
+**CLOSING TIP ABSOLUTES at `b4ebba46`, same recipe: fixed 578,092,679 / cube
+1,509,781,250 / sealed 1,630,933,303.**
+
+sweep   **1 block — fresh seeds 1412..1413 at the `b4ebba46` tip: 6 cells /
+        29,600 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 2`,
+        pools `cube all sealed`, `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
+        1414.** The block is `(-346)`'s ratchet: `any_in_family`'s
+        family/predicate assertion, the gather's new keyword-removal audit and
+        `has_kw_tag`'s new computed-view compare are all live in it and none
+        fired. Suite **19,598 / 0 / 5** (`CRAB_ANSWER_LOG=strict`, three
+        regression tests added), clippy **0** over the workspace, `cargo check
+        --profile release-fast -p crabomination --bin bot_ladder` clean.
+        `--bench`: **195,806 / 27.49 / 611.9 / 0 stalls**, byte-identical to
+        the committed invariant, `determinism ok`, `thread_determinism ok
+        (3 vs 1)`. ⚠ `peak_rss_mib` read **25.2 / 27.2 / 25.2 on three runs of
+        one binary** — it is allocator-arena variance, not a reading; do not
+        chase a 2 MiB step in it.
+        ⚠ Box timings, fourteenth box (4 cores, 15 GB): cold `profiling-fast`
+        **8m41-8m57s**, engine-only **2m46s**, cold `release` ~**10m**, cold
+        `overflow` with `-C debug-assertions=yes` **8m26s**, cold test build
+        ~**4m**, full suite **93-97 s**, three pools' callgrind in parallel
+        **~70 s** (`fixed` 5.5 s, `cube` 14.5 s, `sealed` 11 s of program
+        time), `cargo check -p crabomination` 36 s-1m45s, `cargo check
+        --profile release-fast` 1m17-1m22s, workspace clippy ~2m, a 6-cell
+        sweep block **~5m**. Disk reached 83 %; `rm -rf target/debug/incremental`
+        alone returned 9.4 GB.
+
 ### 2026-09-17 (the card-walker session, THIRTEENTH box) — a correctness fix priced, then two-thirds of it taken back
 
 **BASE ABSOLUTES at `c2aa4b34`** (`profiling-fast --no-default-features`,
@@ -8125,6 +8186,103 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-347)` the colour gate's own lane, REFUTED — **fixed +0.006 / cube +0.014 / sealed +0.012 %, reverted**
+
+`(-345)` left one thing owed and named its price: `card_color_change_unscoped`
+is `has_family(COLOR) || battlefield.iter().any(card_can_change_colors)`, a bare
+board walk over every permanent's `static_abilities`, and the CR 613.5
+`HasColor` leaf asks it once per card per filter — **101,066 Ir a `fixed`
+run**. Its own doc had asked for a valid flag since the eighty-seventh pass.
+
+It got the battlefield's **last** two-bit presence lane (shift 62), with
+`card_can_change_colors` widened to drop its `attached_to` read so the
+predicate is definition-only, as a lane's contract requires.
+
+```text
+                  (-346) tip        (-347)            delta
+  fixed            578,092,679       578,126,543       +0.0059 %
+  cube           1,509,781,250     1,509,994,910       +0.0142 %
+  sealed         1,630,933,303     1,631,130,450       +0.0121 %
+```
+
+⚠ **The whole available win was 0.0175 % of `fixed` and the lane read costs
+more than that.** A lane is not free: a word load, an epoch compare against
+`def_epoch`, two mask tests, and a store on every miss — and this caller is
+asked *rarely* relative to how often the board is written, so its lane misses
+and pays the same walk plus the overhead. **A memo is only cheaper than the
+walk it replaces when the ask rate between invalidations is high**; every lane
+that has paid off here (`(-87)`, `(-189)`, `(-197)`, `(-316)`) is asked many
+times per board write, and this one is asked once or twice.
+
+📐 **The transferable half: price the WALK before building the memo, not the
+ask count.** `(-345)` filed "101,066 Ir a `fixed` run" as a reason to memoize;
+read the other way it is the *ceiling* on the win, and it is a third of what
+the previous commit's own rounding was. Reverted; the lane slot stays free and
+`zone.rs` now carries a `const` assertion that says the word has exactly one
+field left and what to do when it runs out.
+
+### `(-346)` the keyword gates' stored leg was gated on a family no modification carries — **fixed -0.007 / cube +0.019 / sealed -0.001 %**
+
+A correctness fix, priced because it touches the hottest gate in the walker.
+`(-345)` shipped
+
+```rust
+has_family(KEYWORD) && iter().any(RemoveKeyword | CantHaveKeyword)
+```
+
+and `modification_families` maps **neither of those to any family** (`_ => 0`),
+so the fold's short-circuit deleted the walk on exactly the boards the gate
+exists for. A resolved `Effect::LoseKeyword` at any duration other than
+`EndOfTurn` / `Permanent` installs that modification and nothing else — "target
+creature loses flying until your next turn" left every `creature with flying`
+filter still matching the grounded creature. Three more routes were missing:
+the two layer-3 text rewrites (`ReplaceColorWord` on `Protection`,
+`ReplaceBasicLandType` on `Landwalk`), which move the answer **both ways** and
+so needed the same leg on the *grant* gate — that half was wrong before
+`(-345)` too — plus `AllColorWordsBecomeChosen` as their printed source and a
+CR 721.2a Station band's statics.
+
+**The class fix is `ContinuousEffects::any_in_family(mask, pred)`.**
+`has_family(m) && any(p)` is sound only while every modification `p` accepts
+carries a bit of `m`, and nothing connected the two halves — one lives in
+`modification_families`, the other at the call site. The helper owns the pair
+and `debug_assert!`s the implication on the `false` path, so a mis-mapped
+modification fails the suite or a sweep cell instead of answering wrongly.
+Verified by deleting the new family arm and watching the new regression test
+fire it.
+
+```text
+                  (-345) tip        (-346)            delta
+  fixed            578,132,600       578,092,679       -0.0069 %
+  cube           1,509,498,497     1,509,781,250       +0.0187 %
+  sealed         1,630,944,930     1,630,933,303       -0.0007 %
+```
+
+⚠⚠ **THE FIRST CUT COST +0.163 / +0.165 / +0.147 % AND EVERY POINT OF IT WAS
+`self.list.iter().any(&pred)`.** `&F: FnMut` routes each element through
+`core::ops::function::impls::call_mut`, which does not inline;
+`Battlefield::lane`'s doc has carried that warning since the lane memo was
+built and it applies to **any** helper that forwards a predicate, not just to
+`any` over a zone. `+ Copy` and pass by value is the whole fix. The
+attribution took one diff of `cg_calls.py` between the two dumps:
+
+```text
+  LocalKey::with          +2,785,693 (+41,348 calls)   <- shuffle, cancels
+  cp_pool::alloc          -2,814,745 (-41,396 calls)   <-   against this
+  computed_permanent_hinted +398,552 (     0 calls)    <- inlining, same gathers
+  FnOnce::call_once         +372,572 (+41,396 calls)   <- the &pred shim
+  any_in_family             +217,546 (+13,466 calls)   <- the out-of-line helper
+```
+
+📐 **A row with a call-count delta of ZERO and a large Ir delta is an inlining
+move, not work** — `computed_permanent_hinted` above, at the identical 13,254
+gathers on both sides. Read the call column before ranking the Ir one.
+
+All three pools' outcomes byte-identical; three regression tests cover the
+three routes into `RemoveKeyword` (stored, aura `remove_keywords`, printed
+`LoseKeyword`), each with the control assertion that the instance still carries
+the keyword.
 
 ### `(-345)` the walker's keyword and colour leaves get their presence gates — **fixed -0.242 / cube -0.121 / sealed -0.125 %**
 
@@ -14311,14 +14469,22 @@ read.**
   equal and pays the tail anyway. If the head separates on under ~half the
   calls, device 1 is worth ~0.2 % and not 0.4 %.
 
-  ✅ **M. TAKEN as `(-345)` the same day it was filed — fixed -0.242 / cube
-  -0.121 / sealed -0.125 %.** The entry's warning was the design: the split
-  that made it sound *and* cheap is "which direction can the layers move this
-  keyword", because `AddKeyword` is the only additive modification.
-  `keyword_removal_in_scope` is the new leg and covers all three printed
-  removal routes. ⏳ **One thing is still owed**: `card_color_change_unscoped`
-  is a bare board walk at 101,066 Ir a `fixed` run and its own doc asks a hot
-  caller to give it a valid flag; this is that caller. The original sizing:
+  ✅ **M. TAKEN as `(-345)`, then REPAIRED as `(-346)` and CLOSED.** The
+  split that made it cheap was right — `AddKeyword` is the only additive
+  modification, so the direction the layers can move the answer decides which
+  gate to ask — but the gate as shipped read
+  `has_family(KEYWORD) && any(RemoveKeyword | CantHaveKeyword)` and
+  `modification_families` maps **neither of those to any family**, so the
+  stored leg was dead on every board it existed for. `(-346)` gives the four
+  edit modifications a family, routes both gates through
+  `ContinuousEffects::any_in_family` (which `debug_assert!`s the mask against
+  the predicate, so the pair can never drift again), and adds the two layer-3
+  text rewrites to **both** directions. ❌ **The one thing left owed is
+  refuted**: `card_color_change_unscoped`'s valid flag is `(-347)`, and the
+  101,066 Ir the walk costs on `fixed` is the *ceiling* on that win, not the
+  win — a lane read costs more, because this caller is asked once or twice per
+  board write where every lane that has paid off is asked many times. The
+  original sizing:
   **worth `fixed` ~0.14 %, and the SOUNDNESS is the whole of the work.** The two
   closures added 2026-09-17 are ungated (the shape `has_atype` / `has_stype`
   already use), so every `HasKeyword` / `HasColor` / `Colorless` /
