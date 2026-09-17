@@ -6875,7 +6875,9 @@ impl GameState {
                     // Master Biomancer — any other creature you control enters
                     // with additional counters equal to the source's live power.
                     StaticEffect::OtherCreaturesEnterWithCountersEqualToSourcePower { kind } => {
-                        let n = src.power().max(0) as u32;
+                        // CR 613 — Master Biomancer's *live* power, so an
+                        // anthem on it makes the entering body bigger too.
+                        let n = self.effective_power_on(src).max(0) as u32;
                         if n > 0 {
                             specs.push((*kind, n));
                         }

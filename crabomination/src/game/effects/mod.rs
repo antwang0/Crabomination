@@ -14419,7 +14419,9 @@ impl GameState {
                     for ent in self.resolve_selector(what, ctx) {
                         if let Some(cid) = ent.as_permanent_id()
                             && let Some(c) = self.battlefield_find(cid) {
-                                let cur = c.power();
+                                // CR 613 — doubling reads the power the
+                                // creature HAS at resolution, anthems included.
+                                let cur = self.effective_power_on(c);
                                 let delta = cur.saturating_mul(factor.saturating_sub(1));
                                 if let Some(c) = self.battlefield_find_mut(cid) {
                                     c.pump(delta, 0);
@@ -18781,9 +18783,11 @@ impl GameState {
                         && !c.tapped
                         && !c.summoning_sick
                         && !attacking_ids.contains(&c.id))
-                    .max_by_key(|c| c.power())
-                    .filter(|c| c.power() > 0)
-                    .map(|c| (c.id, c.power()));
+                    // CR 702.151a — "add its power": the computed power, and
+                    // the pick follows the same ranking.
+                    .max_by_key(|c| self.effective_power_on(c))
+                    .filter(|c| self.effective_power_on(c) > 0)
+                    .map(|c| (c.id, self.effective_power_on(c)));
                 if let Some((helper, power)) = best {
                     if let Some(c) = self.battlefield_find_mut(helper) {
                         c.tapped = true;
@@ -20469,7 +20473,8 @@ impl GameState {
                     this.battlefield_find(id)
                         .map(|c| {
                             if by_power {
-                                c.power() as i64
+                                // CR 613 — "the greatest power" is computed.
+                                this.effective_power_on(c) as i64
                             } else {
                                 c.definition.cost.cmc() as i64
                             }

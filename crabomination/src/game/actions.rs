@@ -2013,11 +2013,13 @@ fn self_cost_reduction_from_card(
     // The six once-per-card shapes flagged above. Each is generic-only and
     // clamped by the caller via `ManaCost::reduce_generic`.
     if greatest_power {
+        // CR 613 — "the greatest power among creatures you control" is the
+        // computed power; an anthem makes the reduction bigger.
         let greatest = state
             .battlefield
             .iter()
             .filter(|c| c.controller == caster && c.definition.is_creature())
-            .map(|c| c.power().max(0) as u32)
+            .map(|c| state.effective_power_on(c).max(0) as u32)
             .max()
             .unwrap_or(0);
         reduction = reduction.saturating_add(greatest);
@@ -2029,7 +2031,7 @@ fn self_cost_reduction_from_card(
             .filter(|c| c.controller == caster && c.definition.is_creature())
             // A power saturates at `i32::MAX`, so a board of two such
             // creatures overflows a plain `sum()`.
-            .fold(0u32, |a, c| a.saturating_add(c.power().max(0) as u32));
+            .fold(0u32, |a, c| a.saturating_add(state.effective_power_on(c).max(0) as u32));
         reduction = reduction.saturating_add(total);
     }
     if per_creature_in_graveyard {
@@ -5230,11 +5232,13 @@ impl GameState {
             .find(|c| c.id == card_id)
             .and_then(|c| c.definition.casualty_cost())
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 702.153a — Casualty N asks for a creature with power N or
+        // greater, and that is the computed power.
         let sac_ok = self.battlefield.iter().any(|c| {
             c.id == sacrifice
                 && c.controller == p
                 && c.definition.is_creature()
-                && c.power().max(0) as u32 >= n
+                && self.effective_power_on(c).max(0) as u32 >= n
         });
         if !sac_ok {
             return Err(GameError::InvalidTarget);
@@ -8737,9 +8741,11 @@ impl GameState {
                             .map(|c| {
                                 (
                                     c.id,
-                                    c.power().max(0) as u32,
+                                    // CR 613 — a "for each sacrificed creature's
+                                    // power" payoff reads the computed body.
+                                    self.effective_power_on(c).max(0) as u32,
                                     c.definition.is_creature(),
-                                    c.toughness(),
+                                    self.effective_toughness_on(c),
                                     c.definition.cost.cmc(),
                                     c.definition.is_artifact(),
                                     c.definition.is_vehicle(),
@@ -9052,7 +9058,7 @@ impl GameState {
                         .battlefield
                         .iter()
                         .filter(|c| c.controller == p && c.definition.is_creature())
-                        .map(|c| c.power().max(0) as u32)
+                        .map(|c| self.effective_power_on(c).max(0) as u32)
                         .max();
                     let power = on_bf.or_else(|| {
                         self.players[p]
@@ -18100,7 +18106,8 @@ impl GameState {
             self.scratch.cost_sacrificed_batch.extend(sac_other_picks.iter().copied());
         }
         for other_cid in sac_other_picks {
-            let sac_power = self.battlefield_find(other_cid).map(|c| c.power()).unwrap_or(0);
+            let sac_power =
+                self.battlefield_find(other_cid).map(|c| self.effective_power_on(c)).unwrap_or(0);
             self.sacrificed_count += 1;
             self.sacrificed_total_power = self.sacrificed_total_power.saturating_add(sac_power);
             cost_sac_count += 1;
@@ -18350,12 +18357,15 @@ impl GameState {
         // creature you control" cost runs here. Capture its power first so a
         // Station ability (CR 702.184a) can stamp the counter count at
         // resolution via `Effect::WithTappedPower`.
+        // CR 702.184a — Station adds counters equal to the tapped creature's
+        // power, which is the computed one. Read before the `&mut`.
         let mut tap_other_power: Option<i32> = None;
-        if let Some(other_cid) = tap_other_pick
-            && let Some(c) = self.battlefield.find_by_id_mut(other_cid)
-        {
-            tap_other_power = Some(c.power());
-            c.tapped = true;
+        if let Some(other_cid) = tap_other_pick {
+            tap_other_power =
+                self.battlefield_find(other_cid).map(|c| self.effective_power_on(c));
+            if let Some(c) = self.battlefield.find_by_id_mut(other_cid) {
+                c.tapped = true;
+            }
         }
 
         // Tap-N-as-cost (CR 602.5b): with tap/mana/life paid, tap each

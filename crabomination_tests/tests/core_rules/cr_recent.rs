@@ -75,6 +75,41 @@ fn cr_702_9_affinity_reduces_cost() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Argivian Phalanx"));
 }
 
+/// CR 702.153a / CR 613 — "sacrifice a creature with power N or greater" is
+/// the **computed** power, so an anthem lets a 0/2 Ornithopter pay casualty 1.
+/// The legality check read the raw instance until 2026-09-17.
+#[test]
+fn cr_702_153a_casualty_reads_the_computed_power() {
+    let cast = |anthem: bool| {
+        let mut g = two_player_game();
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let thopter = g.add_card_to_battlefield(0, catalog::ornithopter()); // 0/2
+        if anthem {
+            g.add_card_to_battlefield(0, catalog::glorious_anthem());
+        }
+        assert_eq!(
+            g.computed_permanent(thopter).expect("on the battlefield").power,
+            if anthem { 1 } else { 0 },
+        );
+        let chat = g.add_card_to_hand(0, catalog::a_little_chat());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpellCasualty {
+            card_id: chat,
+            sacrifice: thopter,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_ok()
+    };
+    assert!(!cast(false), "a printed 0-power body cannot pay casualty 1");
+    assert!(cast(true), "under an anthem it is a 1/3 and can");
+}
+
 /// CR 702.153 — paying a Casualty cost copies the spell. A Little Chat with
 /// casualty 1 resolves twice, so the controller digs twice.
 #[test]
