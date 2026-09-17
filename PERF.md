@@ -3022,17 +3022,27 @@ CPU *model*, not about boxes**: two boxes of the same shape and toolchain
 agree to noise, and the twelfth box's own +0.196 / +0.090 / +0.089 % against
 the eleventh was a different CPU (@ 2.80 GHz).
 
-**CLOSING TIP ABSOLUTES at `1c7f0414`, same recipe: fixed 579,804,110 / cube
-1,511,999,354 / sealed 1,633,720,908** — the run's whole movement is
-**+0.024 / +0.115 / +0.078 %**, i.e. a sixty-one-site rules-correctness class
-fix for about a tenth of a percent of `cube`, and every point of it is
-accounted for:
+**CLOSING TIP ABSOLUTES at `928ccbca`, same recipe: fixed 579,810,595 / cube
+1,512,328,349 / sealed 1,633,742,099** — the run's whole movement is
+**+0.025 / +0.137 / +0.080 %**, i.e. three rules-correctness class fixes
+(sixty-one call sites, six selector arms, eleven effect/cost arms) for about a
+seventh of a percent of `cube`, and every point of it is accounted for:
 
 ```text
   the battlefield gate on evaluate_requirement_on_card  +0.093 / +0.636 / +0.146 %
   (-343) the per-walk printed gate, hoisted 13 sites    +0.003 / -0.279 / +0.003 %
   (-344) the loop watch settles off the digest's head   -0.072 / -0.240 / -0.071 %
+  the six P/T SELECTOR arms onto effective_*_on         +0.001 / +0.006 / -0.001 %
+  the eleven P/T effect + cost arms onto effective_*_on +0.001 / +0.016 / +0.002 %
 ```
+
+📐 **The last two rows are the counterweight to the `Value::PowerOf` reading
+the twelfth box filed (`fixed +0.118 %` for ONE such read), and the difference
+is the ACCESSOR, not the pool.** `effective_power_on` goes through
+`computed_permanent_on`, so a `max_by_key` over the board pays no by-id find
+per card; `effective_power` pays one per call. **Seventeen computed reads for
+a seventh of what one cost before** — use the `_on` form whenever the caller
+is already walking the battlefield.
 
 ⚠ **A rules fix can cost 0.6 % of a pool and `--bench` will not say so.**
 `--bench` is byte-identical across every commit of this run (195,806 / 27.49 /
@@ -3048,19 +3058,28 @@ walker instead of through `requirement_on_permanent` reads **+0.026 / +0.844 /
 +0.096 %** — worse on the pool that matters, so the printed-line evaluator
 earns its place in the gate.
 
-sweep   **TWO blocks — fresh seeds 1398..1399 and 1400..1401 at the `d1e10986`
-        tip: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 /
-        stuck 0 / draw 2`, pools `cube all sealed`, `target-audit/overflow`
-        with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
-        1402.** Cells run 21-55 s here, each block ~3m55s against a **7m58s**
-        `overflow` build. Standing audits at this tip: `audit_stubs` **0
-        flagged** over 21,797 unique cards, `audit_panics` **70 sites / 59
-        guarded / 11 lock-poison / 0 bare**. Suite **19,589 / 0 / 5**
-        (two regression tests and one audit added), clippy **0** over the
-        workspace, `cargo check --profile release-fast -p crabomination --bin
-        bot_ladder` clean. `--bench` at the closing tip: **195,806 / 27.49 /
-        611.9 / 0 stalls**, `peak_rss_mib 25.0`, `determinism ok`,
-        `thread_determinism ok (3 vs 1)`.
+sweep   **FOUR blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
+        1402..1403 at `1c7f0414` and 1404..1405 at `928ccbca`: 24 cells /
+        118,400 games / 0 failures**, `cap 2 / board 0 / stuck 0 / draw 18`,
+        pools `cube all sealed`, `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
+        1406.** The two caps are both `cube` 1402/1403 `MAX_BATTLEFIELD`
+        runaways on a saturated seat (768 permanents, life `i32::MAX`) — the
+        carve-out the script's header documents, not re-run. ⚠ **The 1402..1403
+        block is `(-344)`'s ratchet**: its `debug_assert_ne!` recomputes the
+        skipped digest on every shortcut and did not fire, and the block was
+        **run twice with byte-identical aggregates**, which is a determinism
+        reading as well. Cells run 21-59 s here, each block ~3m55s against a
+        **7m58s** cold / **2m03s** engine-only `overflow` build. Standing
+        audits: `audit_stubs` **0 flagged** over 21,797 unique cards,
+        `audit_panics` **70 sites / 59 guarded / 11 lock-poison / 0 bare**,
+        `audit_doc_drift` **0 BODY WRONG / 0 doc rot / 0 stale notes**. Suite
+        at the closing tip **19,592 / 0 / 5** (five regression tests and one
+        audit added), clippy **0** over the workspace, `cargo check --profile
+        release-fast -p crabomination --bin bot_ladder` clean. `--bench`:
+        **195,806 / 27.49 / 611.9 / 0 stalls**, `peak_rss_mib 25.0-25.2`,
+        `determinism ok`, `thread_determinism ok (3 vs 1)` — byte-identical to
+        the committed invariant across all six commits of the run.
         ⚠ Box timings, thirteenth box (4 cores, 15 GB — the twelfth's shape):
         cold test build **5m30s**, full suite **1m47-2m03s**, cold
         `profiling-fast` **8m21s** / engine-only **2m38-3m02s**, cold `release`

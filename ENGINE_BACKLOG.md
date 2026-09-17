@@ -82,6 +82,80 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-17 (thirty-seventh and thirty-eighth finds) — a THIRD and FOURTH place that answers "what is this creature's power", and the census that says which of the rest are not bugs
+
+The thirty-third find fixed the requirement walker's P/T *comparison* arms and
+the thirty-fourth fixed `Value::PowerOf`; both came out of "which of these two
+reads of power is the CR 613 one". **Ask it of the whole engine and the answer
+is a grep**: `\.power()` / `\.toughness()` on a `CardInstance`, outside
+`layers.rs`, not through `definition`.
+
+```text
+  121 sites, by file
+    server/bot.rs           49   a heuristic — a printed read is a wrong
+                                 ESTIMATE, not an illegal play (PERF's
+                                 `primary_target_filter` note)
+    game/effects/mod.rs     24
+    game/effects/eval.rs    14   mostly LKI snapshots + computed fallbacks
+    game/actions.rs         12
+    game/mod.rs              6
+    server/view.rs / encode.rs  10   display
+    game/stack.rs            5   computed-with-fallback already
+```
+
+**(37) `resolve_selector`'s six P/T arms.** `LeastToughnessYouControl`,
+`GreatestPowerYouControl`, `GreatestPowerControlledMatching`,
+`GreatestToughnessYouControl`, `LeastPowerAmongAll` and
+`LeastToughnessAmongAll` ranked the raw instance — which carries counters and
+`power_bonus` but no anthem, no Aura bonus, no layer-7b set. 25 catalog cards
+route through them: Drop of Honey culled a body that was not the smallest,
+Triumph of Gerrard's counter landed on one that was not the greatest, Porphyry
+Nodes picked wrong.
+
+**(38) Eleven effect and cost arms** — the greatest/total-power cost
+reductions, Casualty's "power N or greater" (CR 702.153a), the
+highest-power-reveal X, the sacrificed batch's power and toughness, a
+sac-cost's `sacrificed_total_power`, Station's "counters equal to its power"
+(CR 702.184a), Enlist's "add its power" (CR 702.151a), power doubling at
+resolution, `SacrificeGreatestMV`'s by-power metric and Master Biomancer's
+live power.
+
+⚠⚠ **AND THE CENSUS IS THE HALF WORTH CARRYING: of the ~26 remaining reads
+on a battlefield permanent, only eleven are RULES reads.** The others are
+auto-decider *orderings* — which creature to sacrifice to a cost, which to
+tap, which token to populate, where to put a Cipher — where the raw power is a
+heuristic. Changing those is a **strength change with no gate to measure it**,
+not a bug fix; two of them (`auto_pick_lowest_power` /
+`auto_pick_highest_power`) say so in their own doc comments. **One site is
+left alone for the opposite reason and it is the sharpest:** the
+counter-conversion arm reads `c.power() - (base_power + perm_power_bonus)` to
+turn a pump into +1/+1 counters, and `effective_power` there would fold in
+*other* permanents' anthems and convert those too. **A read of `c.power()` is
+not automatically a defect — the question is whose power the card is asking
+about.**
+
+📐 **The accessor is the perf half, and it re-prices the thirty-fourth find's
+row.** `Value::PowerOf`'s fix cost `fixed +0.118 %` for ONE read, because
+`effective_power` pays a by-id `battlefield_find` per call.
+`effective_power_on` / `effective_toughness_on` take the permanent the caller
+already holds and go through `computed_permanent_on`. **Seventeen computed
+reads here cost +0.001 / +0.022 / +0.001 % between them** — a seventh of what
+one cost before. Use the `_on` form whenever the caller is walking the board.
+
+Tests, all with the negative-control board and all verified to FAIL on the
+pre-fix line: `drop_of_honey_ranks_the_computed_power_not_the_printed_one`,
+`triumph_of_gerrard_ranks_the_computed_power_not_the_printed_one` (which
+asserts the computed powers first, because `max_by_key` breaks ties by
+position and a tie would pass for the wrong reason), and
+`cr_702_153a_casualty_reads_the_computed_power`.
+
+📐 **Running total for the walker-diff method: five walkers, TWELVE finds.**
+And the second move is now the productive one: **after diffing the arms, grep
+for every other place that answers the same question.** The arm diff found 33
+divergences; the caller grep found 61 sites; the `.power()` grep found two
+more families and a census that says which two dozen look like bugs and are
+not.
+
 ## FIXED 2026-09-17 (thirty-fifth find, and the largest call-site class the walker sweep has turned up) — 61 production sites filter `self.battlefield` through the walker documented as the LIBRARY-SEARCH one
 
 The twenty-ninth find left "the other 49 differing arms are still unread" and
