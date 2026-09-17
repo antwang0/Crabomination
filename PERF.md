@@ -3036,19 +3036,32 @@ gates.
 ```text
   (-346) the keyword gates' stored leg          -0.007 / +0.019 / -0.001 %
   (-347) the colour gate's lane, REFUTED        +0.006 / +0.014 / +0.012 %  reverted
+  `modification_families` made exhaustive       -0.000 / +0.001 / -0.001 %  (noise)
+  (-348) `ManaCost::cmc` memoized, candidate (A) -0.101 / -0.074 / -0.123 %
+  ─────────────────────────────────────────────────────────────────────────
+  run total                                     -0.101 / -0.077 / -0.123 %
 ```
 
-**CLOSING TIP ABSOLUTES at `b4ebba46`, same recipe: fixed 578,092,679 / cube
-1,509,781,250 / sealed 1,630,933,303.**
+📐 **The exhaustive-match row is a free codegen check worth recording.**
+Replacing `modification_families`' `_ => 0` with every variant named is
+value-identical, and the two builds read **-2,310 / +20,993 / -16,719 Ir**
+apart, i.e. ±0.001 % — which is what "no codegen change" looks like on this
+instrument, and the floor under which a row here means nothing.
 
-sweep   **1 block — fresh seeds 1412..1413 at the `b4ebba46` tip: 6 cells /
-        29,600 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 2`,
+**CLOSING TIP ABSOLUTES at `0bd3c37c`, same recipe: fixed 577,507,476 / cube
+1,508,692,832 / sealed 1,628,908,517.**
+
+sweep   **2 blocks — fresh seeds 1412..1413 at the `b4ebba46` tip and
+        1414..1415 at `0bd3c37c`: 12 cells / 59,200 games / 0 failures**,
+        `cap 0 / board 0 / stuck 0 / draw 4`,
         pools `cube all sealed`, `target-audit/overflow` with
         `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
-        1414.** The block is `(-346)`'s ratchet: `any_in_family`'s
+        1416.** The block is `(-346)`'s ratchet: `any_in_family`'s
         family/predicate assertion, the gather's new keyword-removal audit and
         `has_kw_tag`'s new computed-view compare are all live in it and none
-        fired. Suite **19,598 / 0 / 5** (`CRAB_ANSWER_LOG=strict`, three
+        fired; the second block adds `(-348)`'s printed-cmc recompute, whose
+        interesting boards are definition rewrites (copy effects, face swaps)
+        that the sweep deals and the suite mostly does not. Suite **19,598 / 0 / 5** (`CRAB_ANSWER_LOG=strict`, three
         regression tests added), clippy **0** over the workspace, `cargo check
         --profile release-fast -p crabomination --bin bot_ladder` clean.
         `--bench`: **195,806 / 27.49 / 611.9 / 0 stalls**, byte-identical to
@@ -8186,6 +8199,52 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-348)` `ManaCost::cmc` memoized on the card object — **fixed -0.101 / cube -0.074 / sealed -0.123 %**
+
+Candidate (A). `cmc()` is a 25-instruction walk of the symbol `Vec`, one
+`match` per pip, asked **147,862 times a six-game `cube` run**.
+`CardData::printed_cmc` takes the last free room on the memo's second word
+(bit 55 the flag, 56-62 a seven-bit value; a printed cost over 127 recomputes,
+as `mana_summary`'s unpackable case does), with the recompute-and-compare
+`debug_assert!` the other five families carry.
+
+Five sites hold 89 % of the calls and all five already hold a `&CardInstance`:
+`can_afford_in_state_with` 42,988, `permanent_value_with` 39,502,
+`blocker_self_block` 26,676, `event_amount_for` 13,178, `score_candidate`
+9,246.
+
+⚠ **The largest of the five reads the RELAXED cost and the two genuinely
+differ** — a monocoloured hybrid ({2/W}, mana value 2) relaxes to one generic.
+`relax_cost_colors` returns `Cow::Borrowed` on every board without a
+Lattice-style effect and a borrowed cost *is* the printed cost, so the borrowed
+arm takes the memo and the owned arm still walks.
+
+```text
+                  620202b1          (-348)            delta
+  fixed            578,090,369       577,507,476       -0.1008 %
+  cube           1,509,802,243     1,508,692,832       -0.0735 %
+  sealed         1,630,916,584     1,628,908,517       -0.1231 %
+
+  cube, ManaCost::cmc   147,862 calls / 3,656,280 Ir -> 37,770 / 986,524
+  fixed                  58,526 /  1,648,604        ->  15,794 /   431,276
+```
+
+📐 **THE MEMO READ IS 14 Ir AND THAT IS HALF THE ROW IT REPLACES.** 110,092
+avoided calls on `cube` give back 2.67 M Ir; the total moves 1.12 M. The atomic
+load, the valid test, the mask and the shift cost 14 of the 24.7 Ir a
+call-plus-body was. **A memo over a body this small is worth about half its
+face value — price the read, not just the walk**, which is the same arithmetic
+`(-347)` failed on one entry earlier in this section.
+⚠ And part of the remaining 10 Ir is the un-inlined call, which `release`
+removes; the production win is smaller than this row. The candidate entry
+warned about exactly that, and it is why this is quoted as a `release-fast`
+number.
+
+The second memo word is now **full** (0-52 gather, 53-54 cost reduction, 55-62
+mana value, 63 valid) and a module-level `const` assertion over `card.rs` says
+so: the overlap it guards would be a silently wrong answer rather than a
+compile error, because `set_gather` is a load-modify-store.
 
 ### `(-347)` the colour gate's own lane, REFUTED — **fixed +0.006 / cube +0.014 / sealed +0.012 %, reverted**
 
@@ -14372,6 +14431,21 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+❌ **AND `impls::<&mut F as FnMut>::call_mut` IS NOT A LEAD, read 2026-09-17 so
+nobody chases it again.** It is **185,450 calls / 18.6 M Ir / 1.23 % of `cube`**
+and sits fourteenth in the call table, which makes it look like a by-reference
+predicate the tree could pass by value. It is not: `--demangle=no` plus
+`cg_chain.py` puts 98.6 % of the calls under `Vec::from_iter` (152,720) and
+`SmallVec::extend` (30,698), i.e. inside **std's own `Filter`/`FilterMap`
+fold**, which invokes the adapter's predicate through `&mut P`. `release`'s thin
+LTO inlines it and `release-fast` does not, so the whole row is the
+profile artifact this file's `inline_check` entry describes. The four engine
+`any(&pred)` sites a grep finds are real but cold — none of them appears in
+`call_mut`'s caller table at all. ⚠ **The trap is real in the tree's OWN
+helpers, though**: `(-346)`'s first cut paid +0.16 % on three pools for one
+`self.list.iter().any(&pred)`. A helper that forwards a predicate takes it
+`+ Copy` and passes it by value.
+
 📐 **AND THE GLOBAL LINE TABLE SAYS THE PROFILE IS FLAT — read once at
 `1c7f0414`, `--dump-instr=yes` on `cube`, so nobody re-derives it.** The
 largest single source line in the program is
@@ -14812,6 +14886,11 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
 583,677,582 / cube 1,549,854,153 / sealed 1,647,827,842).**
 
 ```text
+  ✅ **A. TAKEN as `(-348)` — fixed -0.101 / cube -0.074 / sealed -0.123 %.**
+     The re-pricing above was right: the win is the body, and the memo read is
+     14 of the 24.7 Ir a call-plus-body was, so it came in at about half the
+     filed row. The `CardMemo` word it needed was free, as the note below
+     says. The original sizing:
   A. `ManaCost::cmc`                 58,526 / 147,862 / 171,723 calls
      1,648,604 / 3,656,280 / 5,062,452 Ir   (0.28 / 0.24 / 0.31 %)
      ✅ **AND THE FILED BLOCKER IS WRONG — it does NOT need a sixth `CardMemo`
