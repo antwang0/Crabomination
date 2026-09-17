@@ -3005,6 +3005,65 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-17 (the card-walker session, THIRTEENTH box) — a correctness fix priced, then two-thirds of it taken back
+
+**BASE ABSOLUTES at `c2aa4b34`** (`profiling-fast --no-default-features`,
+system allocator, `--a gang --b gang --games 6 --threads 1 --seed 1`):
+fixed **579,665,065** / cube **1,510,266,886** / sealed **1,632,443,635**.
+
+✅ **THE TWELFTH BOX'S CLOSING ABSOLUTES REPRODUCE TO SIX SIGNIFICANT
+FIGURES, which is the tightest cross-box agreement this file has recorded.**
+Filed at `9f7b8c29`: fixed 579,665,125 / cube 1,510,267,940 / sealed
+1,632,443,289 — a delta of **60 / 1,054 / -346 Ir**, i.e. **+0.00001 /
++0.00007 / -0.00002 %**. Same toolchain (1.95.0), same 4-core / 15 GB shape,
+Intel Xeon @ 2.10 GHz both. `c2aa4b34` is trackers-only over `9f7b8c29`, so
+this is the same code. **The "absolutes do not cross boxes" warning is about
+CPU *model*, not about boxes**: two boxes of the same shape and toolchain
+agree to noise, and the twelfth box's own +0.196 / +0.090 / +0.089 % against
+the eleventh was a different CPU (@ 2.80 GHz).
+
+**CLOSING TIP ABSOLUTES at `d1e10986`, same recipe: fixed 580,220,836 / cube
+1,515,632,261 / sealed 1,634,886,499** — the run's whole movement is
+**+0.096 / +0.355 / +0.150 %**, all of it the CR 613 card-walker gate and all
+of it accounted for:
+
+```text
+  the battlefield gate on evaluate_requirement_on_card  +0.093 / +0.636 / +0.146 %
+  (-343) the per-walk printed gate, hoisted 13 sites    +0.003 / -0.279 / +0.003 %
+```
+
+⚠ **A rules fix can cost 0.6 % of a pool and `--bench` will not say so.**
+`--bench` is byte-identical across both commits (195,806 / 27.49 / 611.9 /
+0 stalls, `peak_rss 25.2`), and so are all 144 golden traces on all three
+pools — the gate changes no game any of these pools plays. The price is in
+`cube` because `fixed` carries no static that reaches the gather's count arms.
+📐 **The transferable half: when a correctness fix routes a cheap walker to an
+authoritative one, price the ROUTING separately from the walk.** Two-thirds of
+this one's cost was the entry (`battlefield_find` per ask, `PrintedGates`
+per ask), not the evaluator, and `(-343)` took that back with thirteen
+mechanical edits and no behaviour change. Routing straight to the requirement
+walker instead of through `requirement_on_permanent` reads **+0.026 / +0.844 /
++0.096 %** — worse on the pool that matters, so the printed-line evaluator
+earns its place in the gate.
+
+sweep   **TWO blocks — fresh seeds 1398..1399 and 1400..1401 at the `d1e10986`
+        tip: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 /
+        stuck 0 / draw 2`, pools `cube all sealed`, `target-audit/overflow`
+        with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
+        1402.** Cells run 21-55 s here, each block ~3m55s against a **7m58s**
+        `overflow` build. Standing audits at this tip: `audit_stubs` **0
+        flagged** over 21,797 unique cards, `audit_panics` **70 sites / 59
+        guarded / 11 lock-poison / 0 bare**. Suite **19,589 / 0 / 5**
+        (two regression tests and one audit added), clippy **0** over the
+        workspace, `cargo check --profile release-fast -p crabomination --bin
+        bot_ladder` clean.
+        ⚠ Box timings, thirteenth box (4 cores, 15 GB — the twelfth's shape):
+        cold test build **5m30s**, full suite **1m47-2m03s**, cold
+        `profiling-fast` **8m21s** / engine-only **2m58s**, cold `release`
+        **9m08s**, `overflow` **7m58s**, workspace clippy ~2m, `cargo check
+        --profile release-fast` 29 s warm, three pools' callgrind in parallel
+        **~2m**, `cargo check -p crabomination` 56 s-2m04s.
+
 ### 2026-09-16 (the carried-memo session, TWELFTH box) — the absolutes reproduce, and the mimalloc trap cost a build
 
 **TIP ABSOLUTES at `012e0e21`** (`profiling-fast`, **system allocator**, `--a
@@ -8012,6 +8071,50 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-343)` the per-walk printed gate, hoisted at thirteen battlefield walks — **fixed +0.003 / cube -0.279 / sealed +0.003 %**
+
+`requirement_on_permanent`'s doc has carried `(-183)`'s rule since it was
+written: "`gates` is the caller's per-walk memo of the three presence gates;
+build one per requirement, never per permanent." The CR 613 card-walker gate
+(`a01ef081`) builds one per *ask*, and thirteen sites ask one requirement of
+the whole board — eleven inside `gather_continuous_effects_inner` (the
+`EquipScale` count arms, six `DynamicPt` counts, the host-conditional rider,
+`GrantKeywordWhileControllerControlsAtMost`'s two walks) and the
+cost-reduction cluster in `actions.rs` (affinity, `SpellTaxPerControllerPermanent`,
+`GrantAffinityToSpells` x2, `SelfCostReducedIfControlEach`, `SacrificeOrPay`).
+
+They now call `requirement_on_permanent` with one hoisted `PrintedGates`,
+which also drops the gate's per-element `battlefield_find` — the permanent is
+already in hand, which is what the `_on` form is for.
+
+```text
+                    gate tip          (-343)            delta
+  fixed              580,204,986       580,220,836       +0.0027 %
+  cube             1,519,867,041     1,515,632,261       -0.2786 %
+  sealed           1,634,832,658     1,634,886,499       +0.0033 %
+
+  cube, by row
+    Filter::count                 +2,626,512 -> +348,332   (vs base)
+    card_type_change_unscoped       +780,402 -> +208,572
+    self_cost_reduction_from_card  9,066 asks, 182 -> ~80 Ir each
+```
+
+`cube` only, as the pool table predicts: `fixed` carries no static that
+reaches the gather's count arms and `sealed --games 1` plays no games.
+
+📐 **The two devices in it, and the second is the one to carry.** (1) A memo
+whose lifetime is a *walk* costs its construction on every ask if the entry
+point builds it — so the entry point is where you look, not the memo.
+(2) **`evaluate_requirement_on_card(f, c, …)` where `c` came out of
+`self.battlefield.iter()` is now a grep-able anti-pattern**: the gate answers
+it correctly but pays a by-id re-find for a card the caller is holding. The
+remaining ~40 such sites are resolution-time `run_effect` arms and the combat
+legality guards — **40 and 216 asks a `cube` run between them**, so hoisting
+there is churn with no measured win, and the guards would need restructuring
+to hold a `let`. Take them only if a pool ever shows them.
+
+All 144 golden traces byte-identical on all three pools; suite 19,589 / 0 / 5.
 
 ### `(-342)` `restore_payment_state`'s per-permanent snapshot scan becomes one merge walk — **fixed +0.001 / cube -0.249 / sealed -0.046 %**
 
@@ -13936,6 +14039,73 @@ is a `--bench` reading and none of it belongs in the Baseline.
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+🔎🔎 **REPLENISHED 2026-09-17 off a whole-profile read at the `d1e10986` tip
+(`profiling-fast --no-default-features`, `--games 6 --threads 1 --seed 1`,
+cube total 1,515,632,261). THE DEVICE WAS `cg_calls.py` RANKED BY SELF PER
+CALL, WHICH `(-337)`/`(-338)` CAME OUT OF AND WHICH IS NOT EXHAUSTED: the
+top three bodies in the program are all in `combat.rs` and only two have been
+read.**
+
+```text
+  Ir/call   calls        self       %      row                            read?
+    4,403   4,708  20,730,330   1.37   declare_blockers                   (-337)
+    3,674   6,470  23,770,603   1.57   resolve_combat_into                NO   <- (J)
+    3,582   6,244  22,369,110   1.48   declare_attackers_banded           (-338)
+    3,032   2,650   8,035,166   0.53   do_untap                           NO   <- (K)
+    2,582   4,384  11,320,804   0.75   bot::pick_blocks_inner             (E) CLOSED
+    1,745   5,130   8,954,124   0.59   bot::main_phase_action_with        NO
+    1,415   3,422   4,843,276   0.32   combat::quality_band…              NO, 0 PERF hits
+    1,280   5,648   7,227,300   0.48   fingerprint_as                     NO   <- (L)
+      836   8,428   7,048,364   0.46   Battlefield::lanes_after_push       priced as a floor
+```
+
+  **J. `resolve_combat_into` — 6,470 calls, 3,674 Ir of SELF a call, 1.57 % of
+  `cube`. The third-largest body per call in the program and the only one of
+  the top three never read.** `(-329)` refuted *one* device in it (a
+  read-first shape over `find_card_anywhere_mut`, whose guard is true 66 % of
+  the time) and the body itself has never been on a line profile.
+  `(-337)`/`(-338)`'s recipe applies verbatim: read the body, classify every
+  walk it makes against `(-329)`'s (a)-(e) checklist. ⚠ Its `Arc::clone_from_ref_in`
+  half is already censused and closed — 11,682 of the 33,744 `CowBox<Vec<CardInstance>>`
+  copies are its, and all of them are genuine per-card mutations, so the
+  CoW family is not what is left here.
+
+  **K. `do_untap` — 2,650 calls, 3,032 Ir of SELF a call, 0.53 %.** Exactly one
+  call a real turn (2,650 against ~150 real turns means the bot's probes end
+  turns on their clones — `watch_turn_progress`' own doc prices that at 3,234).
+  A 3,032-Ir body for "untap this seat's permanents" is ~130 Ir a permanent,
+  which is not what an untap costs; expect (a) or (b) from the checklist. 15
+  PERF hits and 59 archive hits, none of them a body read.
+
+  **L. `fingerprint_as` — 5,648 calls, 1,280 Ir a call, 0.48 %, AND IT IS A
+  WATCHDOG, NOT GAME LOGIC.** `loop_fingerprint()` runs after *every* trigger
+  resolution (CR 104.4b) and `activation_fingerprint()` per free-activation
+  check; the turn watch is already gated to every Nth turn past a threshold
+  and is not in this row. The head is ~10 scalar mixes, the tail is one `mix`
+  per battlefield permanent plus a `c.counters.values().sum::<u32>()` each.
+  **Two devices, and the first needs no new state on the board:**
+  1. Split the digest at the scalar/permanent boundary and store **both**
+     halves in the anchor. A differing head *implies* a differing digest, and
+     `resolve_top_of_stack`'s common path on a differing digest is
+     `mandatory_loop_watch.2 = since + 1` — **which never reads the value**.
+     So a head mismatch can skip the tail outright and is exactly
+     behaviour-preserving. The only path that needs the full digest is the
+     re-anchor (`anchor == 0 || since >= MAX_PERIOD`), which is rare by
+     construction.
+  2. `(-306)`'s `battlefield.writes()` as the tail's key.
+  ⚠ **Census the head's separation rate before building either** — this file's
+  most-repeated lesson, and here it is one instrumented `overflow` build away:
+  a trigger that moves only the battlefield (a counter, a tap) leaves the head
+  equal and pays the tail anyway. If the head separates on under ~half the
+  calls, device 1 is worth ~0.2 % and not 0.4 %.
+
+  ⏳ **And the last un-hoisted hot `(-343)` site is filed rather than taken:**
+  `SpecFromIterNested::from_iter` still asks the CR 613 gate **14,558 times a
+  `cube` run at 105 Ir** (base 76), i.e. **+0.03 %**. It is one `.filter(..)
+  .collect()` over the battlefield whose enclosing function the caller table
+  does not name; `cg_chain.py` from `from_iter` upward would. Not worth a
+  build on its own — take it with the next thing in that file.
 
 ❌ **`cg_frames.py`'S `out/call ≈ 0` IS NECESSARY BUT NOT SUFFICIENT, AND THE
 SHARPENING COST ONE BUILD. Measured 2026-09-16 on `affected_includes_gated`,

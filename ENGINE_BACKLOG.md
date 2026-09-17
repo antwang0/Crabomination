@@ -82,6 +82,109 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-17 (thirty-fifth find, and the largest call-site class the walker sweep has turned up) — 61 production sites filter `self.battlefield` through the walker documented as the LIBRARY-SEARCH one
+
+The twenty-ninth find left "the other 49 differing arms are still unread" and
+a recipe. Read them (a 120-line `re` script: brace-match the two `match req`
+bodies, strip comments and whitespace, diff per `R::` arm — **165 arms in
+`evaluate_requirement_static_hinted`'s battlefield tail against 205 in
+`evaluate_requirement_on_card`, 165 shared, 92 differing, 59 of which are a
+deliberate `false`**) and 33 real divergences fall out: every card-type leaf,
+every subtype leaf, and all seven P/T leaves read the **printed** definition
+on one side and the computed view on the other.
+
+⚠ **But the arms were not the bug — the callers were, and that is the
+transferable half.** `evaluate_requirement_on_card`'s doc says
+"without requiring it to be on the battlefield. Used for library searches.
+Battlefield-only predicates (Tapped, IsAttacking, etc.) return false", and
+that contract is right. What nobody had asked is **who calls it**:
+
+```text
+  206 call sites, of which 61 iterate `self.battlefield`
+    effects/mod.rs  ExileEachMatchingThenControllerDraws, EachPlayerSacrificesDownTo,
+                    EachPlayerKeepsOneSacrificeRest, DealDamageToEachPlayerPerPermanent,
+                    DestroyAllNoRegenGainControllerLifePerManaValue, …
+    actions.rs      the cost-reduction / additional-cost / activation-cost cluster
+    mod.rs          gather_continuous_effects_inner's EquipScale + DynamicPt counts
+    combat.rs       CanAttackOnlyIfYouControl, CanAttackOnlyIfDefenderControls,
+                    CantAttackOrBlockUnlessYouControlCount, the block twins
+```
+
+So `R::Tapped => false` on the battlefield: **"destroy each tapped creature"
+found nothing.** `R::Creature => card.definition.is_creature()`: **an animated
+land survived "destroy all creatures".** `R::PowerAtMost` off the raw
+instance: **Lovestruck Beast attacked beside a 1/1 an anthem had made a
+2/2**, which is the card's own printed ruling.
+
+Fixed at the **entry, not per site** — a per-site fix leaves the class open
+for the next arm written. The public `evaluate_requirement_on_card` gates on
+`battlefield_find` and hands a live permanent to `requirement_on_permanent`;
+the zone-blind arms move to `evaluate_requirement_on_card_inner`, which the
+off-battlefield path, `definition_matches_requirement` and the static
+walker's catch-all reach directly (the last of those is load-bearing: the
+public entry routes a battlefield permanent back into the static walker, so
+the catch-all calling it would recurse forever).
+
+`cr_rules::audit_p3_requirement_walkers_agree_on_an_unlayered_permanent`
+carried **fourteen** known drifts (`Tapped`, `Untapped`,
+`HasGreatestPowerAmongAllCreatures`, `HasGreatestManaValueAmongControlled`
+and ten `And`/`Or` trees over them) under a comment reading "Fixed at the call
+sites, where the battlefield-aware `_static_on` belongs; the walkers
+themselves are both right". **All fourteen close, the allowlist is empty, and
+the test now guards the gate** rather than auditing two arm sets against each
+other.
+
+Tests `lovestruck_beast_gate_reads_the_anthem_on_its_one_one` and
+`dandan_attack_gate_reads_a_land_type_granted_by_layers` (a Mountain under
+Spreading Seas is an Island, CR 613.2), both with the negative control
+assertion the twenty-eighth find's lesson asks for, both verified to FAIL on
+the pre-fix line.
+
+Cost: fixed +0.093 / cube +0.636 / sealed +0.146 %, then `(-343)` took
+cube back to **+0.355 %**. `--bench` byte-identical and all 144 golden traces
+identical on all three pools — ⚠ **so `--bench` tested none of this**, and
+the suite plus two fresh-seed sweep blocks (12 cells / 59,200 games / 0
+failures) are the gates that reached it.
+
+📐 **Running total for the walker-diff method: five walkers, TEN finds, five
+runs' worth of `audit_*` scripts that reported nothing.** And the method has a
+second move now: **after diffing the arms, grep for who calls the weaker
+walker.** The arm diff found 33 divergences worth one commit; the caller grep
+found 61 sites and a bug class.
+
+## FIXED 2026-09-17 (thirty-sixth find) — the block-restriction walker's `_` arm is `false`, which is unblockable under one keyword and a dead restriction under the other
+
+`blocker_matches_block_filter` is the third hand-written walker over
+`SelectionRequirement` and it is state-free on purpose — it runs inside
+`blocker_pair_block`'s (blocker x attacker) loop, PERF `(-333)` — so its `_`
+arm answers `false` for every leaf that needs the board. Its doc calls that
+"conservatively excluding the blocker". **It is only conservative in one
+direction:** under `CantBeBlockedExceptBy` an unsupported leaf makes the
+attacker *unblockable*, under `CantBeBlockedBy` it kills the restriction.
+Nothing checked which leaves the catalog actually puts there —
+`audit_variant_coverage.py` asks whether a `Keyword` variant has an engine
+arm, not whether the arm can read its **argument**.
+
+Now a suite gate:
+`cr_rules::audit_block_restriction_filters_use_leaves_the_block_walker_handles`
+walks every factory's serialized `CardDefinition` (so a filter granted by a
+static or a trigger is audited too), pulls every `CantBeBlockedBy` /
+`CantBeBlockedExceptBy` payload out and asserts each requirement leaf is one
+of the walker's 25 arms or a named exception. ⚠ The leaf walk descends into
+`And`/`Or`/`Not` **only** — a `HasKeyword`'s payload is a `Keyword`, and
+reading it as a requirement reports "Flying" as an unhandled leaf (46 false
+positives on the first cut).
+
+**30 filters, one dead leaf: Temple Thief's `IsEnchanted`** (`thb.rs`) — "can't
+be blocked by enchanted creatures or enchantment creatures", of which only the
+`Enchantment` half fires. NOT fixed, and the reason is priced:
+`can_block_attacker_computed` is a free function by design, the bit is a board
+walk per (blocker, attacker) pair (~0.11 % of `cube`) unless it is computed
+once per *blocker*, and threading it means a signature change across 2 engine
+and ~10 test call sites. INCOMPLETE_CARDS carries the shape. The exception
+list is guarded both ways: a new dead leaf fails the audit, a fixed one fails
+the reverse assert until its line is deleted.
+
 ## FIXED 2026-09-16 (thirty-fourth find) — `Value::PowerOf` reads the raw instance power, so a creature under an anthem is flung for its printed power
 
 The largest-blast-radius find of the walker sweep, and it is not in a walker
@@ -4158,28 +4261,40 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   play**, where computed equals printed. Off the battlefield or under layers
   they are supposed to differ; that is what `_on_card` is for.
 
-  **Fourteen disagreements, from four root variants — and they are all
-  deliberate.** `Tapped`, `Untapped`, `HasGreatestPowerAmongAllCreatures`
-  and `HasGreatestManaValueAmongControlled` (plus the `And`/`Or` compositions
-  the catalog builds from them) have explicit `false` arms in
-  `evaluate_requirement_on_card` that say why: *"Battlefield-state predicates
-  can't be evaluated for library cards."* It is the library/hand-search path.
-  So the invariant the test enforces is not "the two agree" — it is **"they
-  differ only where a documented arm says they may"**, and the allowlist is
-  that documentation, machine-checked and self-guarding: each entry is
-  asserted to *still* differ, so a change cannot silently close one.
+  **Fourteen disagreements, from four root variants — read as deliberate for
+  three passes, and they were not. ⚠ SUPERSEDED 2026-09-17 by the thirty-fifth
+  find at the top of this file; the allowlist is EMPTY now.** `Tapped`,
+  `Untapped`, `HasGreatestPowerAmongAllCreatures` and
+  `HasGreatestManaValueAmongControlled` (plus the `And`/`Or` compositions the
+  catalog builds from them) had explicit `false` arms in
+  `evaluate_requirement_on_card` saying *"Battlefield-state predicates can't
+  be evaluated for library cards"* — a true statement about the function that
+  was read as a true statement about its callers. It is not: **61 sites filter
+  `self.battlefield` through it**, so every one of those fourteen was live on
+  the board. The public entry now gates on `battlefield_find` and agreement is
+  structural; the test guards the gate.
 
-  **The real defect the list exposed was one level up, and it is fixed.**
+  📐 **The lesson the three passes cost: an allowlist is documentation of a
+  CONTRACT, never of the CALLERS.** Each of the three readings below was
+  narrower than the truth, and each looked complete:
+
+  **(1) "these variants have no arm"** — the compiler refuted it with
+  `unreachable pattern` on arms that were already there.
+
+  **(2) "the defect is one level up, in three counting requirements."**
   `ManaValueAtMostYourCount`, `ToughnessAtMostYourCount` and
   `PowerAtMostYourCount` (both walkers' copies, six sites) walk
   `self.battlefield` and filtered it through the *zone-blind* walker, so a
   counting requirement whose inner filter is `Tapped` counted **zero** tapped
-  permanents on a board full of them. They now use
-  `evaluate_requirement_static_on`, which takes the instance and costs no
-  lookup. Pinned by
-  `a_counting_requirement_counts_tapped_permanents`, verified by putting the
-  bug back. **`--bench` is byte-identical on all five pools**, so no bench
-  deck reaches it — which is why it needed a test and not a ladder run.
+  permanents on a board full of them. They took
+  `evaluate_requirement_static_on`, pinned by
+  `a_counting_requirement_counts_tapped_permanents`. Real, fixed — and **six
+  of sixty-one**. Nobody ran the grep the six sites were an instance of.
+
+  **(3) "the walkers themselves are both right"** — which the fixed comment on
+  the test said in as many words, for the two passes before the grep.
+  **`--bench` is byte-identical on all five pools** through every one of
+  these, so no bench deck has ever reached the class.
 
   **Method note: the first reading of the list was "these variants have no
   arm", and the compiler refuted it** — the fix drew `unreachable pattern` on
