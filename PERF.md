@@ -3038,12 +3038,13 @@ explanation until the miss is a novel one.
   (-356) the payment snapshot's buffer, pooled     -0.015 / -0.016 / -0.050 %
   (-357) the protection view's two type lines      -0.026 / -0.075 / -0.002 %
   (-358) the target filter, borrowed               -0.155 / -0.049 / -0.312 %
+  (-359) the auto-tap decider, pooled              -0.041 / -0.080 / -0.051 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                        -0.568 / -0.470 / -0.630 %
+  run total                                        -0.606 / -0.546 / -0.681 %
 ```
 
-**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 571,716,921 /
-1,495,505,814 / 1,612,122,733.**
+**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 571,483,507 /
+1,494,309,746 / 1,611,303,685.**
 
 📐 **THE RUN'S OWN SHAPE, WHICH IS THE THING TO CARRY FORWARD: four of the
 five rows are ALLOCATIONS, and none of them was on the candidates list.**
@@ -8402,6 +8403,49 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-359)` the auto-tapper's scratch decider comes off a one-slot free list — **fixed -0.041 / cube -0.080 / sealed -0.051 %**
+
+Candidate (O)'s shortlist, top row. `auto_tap_for_cost_inner` boxed a fresh
+`OneColorDecider` per call to swap into `self.decider` — 6,440 on `cube`,
+7,240 on `sealed`. It is pure scratch (`rearm_script` overwrites its whole
+state, it never escapes the call) and the two loops already recycled it
+*within* a call through `scripted_slot`; the free list makes that recycling
+cross calls.
+
+```text
+                  (-358) tip        (-359)            delta
+  fixed            571,716,921       571,483,507       -0.0408 %
+  cube           1,495,505,814     1,494,309,746       -0.0800 %
+  sealed         1,612,122,733     1,611,303,685       -0.0508 %
+
+   -351,923  _int_free        768,904 -> 762,505
+   -311,813  malloc           725,181 -> 718,742   = -6,439, the 6,440 predicted
+   -292,481  _int_malloc      126,655 -> 125,090
+   -251,082  free             724,926 -> 718,488
+    -75,485  unlink_chunk     131,842 -> 128,420
+    -58,806  auto_tap_for_cost_inner's body
+   +174,157  LocalKey<T>::with      157,234 -> 163,674   (+6,440 accesses)
+   +115,928  FnOnce::call_once      182,370 -> 195,250
+```
+
+📐 **This pool keeps 80 % of the 222 Ir where `(-356)`'s kept about half, and
+the difference is instructive: 45 Ir a call against `(-356)`'s ~116.** Both pay
+the same `LocalKey` pair; `(-356)` additionally re-`reserve`s a buffer whose
+capacity it cannot assume and clears it on the way back. **A pool for a
+fixed-size object is a much better trade than a pool for a growable buffer.**
+And the ~290 k of `LocalKey::with` + `call_once` here is the same no-LTO
+artifact, so the shipped row is nearer **0.096 % of `cube`**.
+
+⚠ **The assumption reuse rests on is `rearm_script`, and it is not a new one.**
+The within-call recycling already requires that the box coming back out of
+`self.decider` is the `OneColorDecider` that went in — a foreign decider's
+default `rearm_script` is a no-op and would answer the wrong colour. Crossing
+calls widens the window, not the assumption, and **a wrong colour moves a
+trace**: the golden traces and the byte-identical `--bench` invariant are its
+gate, not the suite's assertions. `kind()` cannot distinguish
+`OneColorDecider` from `ScriptedDecider`, so there is no cheaper runtime check
+to add.
 
 ### `(-358)` the target filter is borrowed unless it names X or converge — **fixed -0.155 / cube -0.049 / sealed -0.312 %**
 

@@ -14200,6 +14200,7 @@ impl GameState {
             if let Some((id, idx)) = source {
                 let mut b = scripted_slot
                     .take()
+                    .or_else(decider_pool::take)
                     .unwrap_or_else(|| Box::new(crate::decision::OneColorDecider::default()));
                 b.rearm_script(crate::decision::DecisionAnswer::Color(color));
                 let prev_decider = std::mem::replace(&mut self.decider, b);
@@ -14312,6 +14313,7 @@ impl GameState {
                 // the AutoDecider's default White.
                 let mut b = scripted_slot
                     .take()
+                    .or_else(decider_pool::take)
                     .unwrap_or_else(|| Box::new(crate::decision::OneColorDecider::default()));
                 b.rearm_script(crate::decision::DecisionAnswer::Color(color));
                 let prev_decider = std::mem::replace(&mut self.decider, b);
@@ -14331,6 +14333,9 @@ impl GameState {
             }
         }
 
+        // Park the scratch decider for the next auto-tap. The early return
+        // above the loops never took one, so a `None` here is a no-op.
+        decider_pool::park(scripted_slot.take());
         events
     }
 
@@ -18917,6 +18922,52 @@ pub(crate) struct PaymentSnapshot {
 impl Drop for PaymentSnapshot {
     fn drop(&mut self) {
         snap_pool::park(std::mem::take(&mut self.tapped));
+    }
+}
+
+/// A one-slot free list for the scripted colour decider the auto-tapper swaps
+/// into `self.decider`.
+///
+/// It is pure scratch — `rearm_script` overwrites its whole state before every
+/// use and it never escapes the call — but `auto_tap_for_cost_inner` allocated
+/// a fresh `Box` per call: **6,440 on `cube` and 7,240 on `sealed`** a
+/// six-game run at ~222 Ir apiece (PERF `(-359)`).
+///
+/// ⚠ **One slot, not a list.** The two loops already recycle within a call
+/// through `scripted_slot`, so a second box is live only during a re-entrant
+/// call and letting that one allocate is the right trade.
+///
+/// ⚠ **The assumption reuse rests on is `rearm_script`, and it is not a new
+/// one:** the within-call recycling already requires that the box coming back
+/// out of `self.decider` is the `OneColorDecider` that went in, because a
+/// foreign decider's default `rearm_script` is a no-op and would answer the
+/// wrong colour. Crossing calls widens the window, not the assumption — and a
+/// wrong colour moves a trace, so the golden traces and the `--bench`
+/// invariant are its gate.
+mod decider_pool {
+    use std::cell::RefCell;
+
+    type Slot = Box<dyn crate::decision::Decider + Send + Sync>;
+
+    thread_local! {
+        static PARKED: RefCell<Option<Slot>> = const { RefCell::new(None) };
+    }
+
+    /// The parked box, if this thread has one.
+    pub(super) fn take() -> Option<Slot> {
+        PARKED.with(|p| p.try_borrow_mut().ok().and_then(|mut s| s.take()))
+    }
+
+    /// Park a box for the next auto-tap. A `None` is a no-op, so the early
+    /// return above the loops costs nothing.
+    pub(super) fn park(b: Option<Slot>) {
+        if let Some(b) = b {
+            PARKED.with(|p| {
+                if let Ok(mut s) = p.try_borrow_mut() {
+                    *s = Some(b);
+                }
+            });
+        }
     }
 }
 
