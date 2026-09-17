@@ -5054,7 +5054,7 @@ impl GameState {
         // inside the planner's freeze scope it is one load rather than the
         // whole-battlefield walk this used to take on every even blocker.
         // Only a board that actually plays the card reaches the seat walk.
-        if blocker.definition.cost.cmc().is_multiple_of(2)
+        if blocker.printed_cmc().is_multiple_of(2)
             && self.block_even_mv_lock_in_scope()
             && self.battlefield.iter().any(|c| {
                 c.definition.static_abilities.iter().any(|sa| {

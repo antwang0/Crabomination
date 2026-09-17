@@ -7253,8 +7253,10 @@ pub mod dispatch_bits {
 /// with its valid flag at bit 63 — 53 bits do not fit beside the first
 /// word's tenants, and a second atom is 8 bytes on a `CardData` that is
 /// already hundreds — plus, at bits 53-54,
-/// [`CardDefinition::has_self_cost_reduction`]'s flag and answer, which is
-/// why [`Self::set_gather`] is a load-modify-store. A third holds [`CardDefinition::trigger_kind_fold`]
+/// [`CardDefinition::has_self_cost_reduction`]'s flag and answer, and at
+/// bits 55-62 [`CardData::printed_cmc`]'s flag and seven-bit value, which is
+/// why [`Self::set_gather`] is a load-modify-store. **That word is now full**
+/// and a `const` assertion over this file says so. A third holds [`CardDefinition::trigger_kind_fold`]
 /// — the [`EventKind::fold`] of every printed trigger's kind, valid flag
 /// at bit 63 (a kind whose fold lands on bit 63 always passes the gate,
 /// which is the sound direction). All words are cleared together in
@@ -7266,6 +7268,26 @@ pub mod dispatch_bits {
 /// (`Arc::make_mut` clones a shared one first), so the only concurrent
 /// writers are two setters storing pure functions of the same definition and
 /// a lost update costs a recompute.
+/// ⚠ **The second memo word has four tenants and they must not overlap.** A
+/// `1 << 53` added to [`gather_spec`] would be a silently wrong cost
+/// reduction rather than a compile error — [`CardMemo::set_gather`] is a
+/// load-modify-store, so it would clear `COSTRED_VALID` and refill it from a
+/// gather bit. This is the guard; it is a module-level `const`, so a
+/// collision is a build failure.
+const _: () = assert!(
+    gather_spec::ALL
+        & (CardMemo::COSTRED_VALID
+            | CardMemo::COSTRED
+            | CardMemo::CMC_VALID
+            | CardMemo::CMC_MASK
+            | CardMemo::GATHER_VALID)
+        == 0
+        && CardMemo::CMC_MASK
+            & (CardMemo::COSTRED_VALID | CardMemo::COSTRED | CardMemo::GATHER_VALID)
+            == 0,
+    "the memo's second word has overlapping tenants",
+);
+
 #[derive(Debug, Default)]
 pub struct CardMemo(
     std::sync::atomic::AtomicU64,
@@ -7426,6 +7448,29 @@ impl CardMemo {
     /// the first word in the memo with room for a one-bit answer.
     const COSTRED_VALID: u64 = 1 << 53;
     const COSTRED: u64 = 1 << 54;
+
+    /// Bit 55 is the flag and bits 56-62 the value of
+    /// [`CardData::printed_cmc`] — seven bits, and the printed mana value of
+    /// every card in the catalog is far under 127. The last free room on the
+    /// second word; see the type doc's layout paragraph.
+    const CMC_VALID: u64 = 1 << 55;
+    const CMC_SHIFT: u32 = 56;
+    const CMC_MASK: u64 = 0x7f << Self::CMC_SHIFT;
+
+    #[inline]
+    fn get_cmc(&self) -> Option<u32> {
+        let v = self.1.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::CMC_VALID != 0).then_some(((v & Self::CMC_MASK) >> Self::CMC_SHIFT) as u32)
+    }
+
+    #[inline]
+    fn set_cmc(&self, mv: u32) {
+        let v = self.1.load(std::sync::atomic::Ordering::Relaxed);
+        self.1.store(
+            (v & !Self::CMC_MASK) | (u64::from(mv) << Self::CMC_SHIFT) | Self::CMC_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
 
     #[inline]
     fn get_costred(&self) -> Option<bool> {
@@ -8237,6 +8282,37 @@ impl CardData {
         let i = compute(&self.definition);
         self.definition.memo.set_vocab(i);
         i
+    }
+
+    /// The printed mana value of this object's definition, memoized on the
+    /// second word (PERF `(-348)`).
+    ///
+    /// `ManaCost::cmc` is a 25-instruction walk of the symbol `Vec` — one
+    /// `match` per pip — and the profile counts **147,862 calls a six-game
+    /// `cube` run**, five sites holding 89 % of them: `can_afford_in_state_with`'s
+    /// mana-value gate, `permanent_value_with`, `blocker_self_block`'s CR 702.xx
+    /// even-mana-value test, `event_amount_for` and `score_candidate`. The
+    /// answer is a pure function of the (immutable, `Arc`-shared) definition,
+    /// so it memoizes exactly like the bit families above.
+    ///
+    /// ⚠ **Seven bits, and a cost over 127 is not memoized** — it recomputes
+    /// every time, as `mana_summary`'s unpackable case does. No printed cost
+    /// in the catalog comes near it; a synthesized one could.
+    #[inline]
+    pub fn printed_cmc(&self) -> u32 {
+        if let Some(mv) = self.definition.memo.get_cmc() {
+            debug_assert_eq!(
+                mv,
+                self.definition.cost.cmc(),
+                "printed-cmc memo is stale: a definition rewrite did not clear it",
+            );
+            return mv;
+        }
+        let mv = self.definition.cost.cmc();
+        if mv <= 127 {
+            self.definition.memo.set_cmc(mv);
+        }
+        mv
     }
 
     /// [`CardDefinition::dispatch_scan_bits`] for this object, memoized on the

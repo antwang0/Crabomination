@@ -25885,16 +25885,19 @@ impl GameState {
     /// snapshot cache (tokens are already gone from every zone).
     pub(crate) fn event_amount_for(&self, ev: &GameEvent) -> u32 {
         match ev {
+            // `printed_cmc`, not `cost.cmc()`: this arm is 13,178 calls a
+            // six-game `cube` run and the answer is a pure function of the
+            // definition (PERF `(-348)`).
             GameEvent::CreatureDied { card_id } => self
                 .died_card_snapshots
                 .get(card_id)
                 .or_else(|| self.find_card_anywhere(*card_id))
-                .map(|c| c.definition.cost.cmc())
+                .map(|c| c.printed_cmc())
                 .unwrap_or(0),
             // "with lesser mana value than the creature that entered" (Clement).
             GameEvent::PermanentEntered { card_id } => self
                 .find_card_anywhere(*card_id)
-                .map(|c| c.definition.cost.cmc())
+                .map(|c| c.printed_cmc())
                 .unwrap_or(0),
             // "Where X is that spell's mana value" riders (Shark Typhoon).
             GameEvent::SpellCast { card_id, .. } => self
@@ -25902,11 +25905,11 @@ impl GameState {
                 .iter()
                 .find_map(|item| match item {
                     StackItem::Spell { card, .. } if card.id == *card_id => {
-                        Some(card.definition.cost.cmc())
+                        Some(card.printed_cmc())
                     }
                     _ => None,
                 })
-                .or_else(|| self.find_card_anywhere(*card_id).map(|c| c.definition.cost.cmc()))
+                .or_else(|| self.find_card_anywhere(*card_id).map(|c| c.printed_cmc()))
                 .unwrap_or(0),
             GameEvent::CardCycled { x, .. } => *x,
             // Heart of Bogardan — "twice the number of age counters on it".

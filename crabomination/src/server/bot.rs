@@ -4651,7 +4651,7 @@ fn permanent_value_with(
         None => state.computed_permanent(id),
     };
     let Some(c) = cp else { return 0 };
-    let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0) * w.cmc;
+    let mut v = inst.map(|c| c.printed_cmc() as i32).unwrap_or(0) * w.cmc;
     if c.card_types().contains(&CardType::Creature) {
         // Clamped for `life_value`'s reason one characteristic over: a power is
         // bounded by nothing (Exponential Growth doubles it {X} times), every
@@ -5020,7 +5020,7 @@ pub(crate) fn rank_library_search(
     let mut others: Vec<(u8, std::cmp::Reverse<u32>, crate::card::CardId)> = Vec::new();
     for (id, _) in candidates {
         let Some(card) = lib.iter().find(|c| c.id == *id) else { continue };
-        let cmc = card.definition.cost.cmc();
+        let cmc = card.printed_cmc();
         if card.definition.is_basic() && card.definition.is_land() {
             let out = land_color_output(&card.definition);
             // Best over the colors this land makes: most-wanted first, with
@@ -13874,8 +13874,19 @@ fn can_afford_in_state_with(
     // ⚠ It is the *relaxed* printed cost, not the printed one: a monocoloured
     // hybrid ({2/W}, mana value 2) relaxes to one generic, so the printed
     // value is not a lower bound on a Lattice board.
+    // The memoized printed mana value on the common path: the relaxation is
+    // inactive on every board without a Lattice-style effect, and a borrowed
+    // `Cow` IS the printed cost, so `printed_cmc` is the same number for a
+    // word load instead of a symbol walk (PERF `(-348)`). The owned side
+    // still walks — a monocoloured hybrid's mana value changes when it relaxes.
+    let relaxed_mv = |c: &crate::card::CardInstance| match state
+        .relax_cost_colors(&c.definition.cost)
+    {
+        std::borrow::Cow::Borrowed(_) => c.printed_cmc(),
+        std::borrow::Cow::Owned(relaxed) => relaxed.cmc(),
+    };
     if !w.legacy_pretap
-        && state.relax_cost_colors(&card.definition.cost).cmc() > have.get().total
+        && relaxed_mv(card) > have.get().total
         && no_cost_reduction_possible(state, seat, card, have)
     {
         debug_assert!(
