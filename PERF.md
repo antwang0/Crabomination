@@ -3022,12 +3022,10 @@ CPU *model*, not about boxes**: two boxes of the same shape and toolchain
 agree to noise, and the twelfth box's own +0.196 / +0.090 / +0.089 % against
 the eleventh was a different CPU (@ 2.80 GHz).
 
-**CLOSING TIP ABSOLUTES at `a4fc16ed`, same recipe: fixed 579,804,578 / cube
-1,512,323,627 / sealed 1,633,737,757** — the run's whole movement is
-**+0.024 / +0.136 / +0.079 %**, i.e. four rules-correctness class fixes
-(sixty-one call sites, six selector arms with both their P/T and their type
-halves, eleven effect/cost arms) for about a seventh of a percent of `cube`,
-and every point of it is accounted for:
+**CLOSING TIP ABSOLUTES at `1bceaeb9`, same recipe: fixed 580,639,840 / cube
+1,512,666,565 / sealed 1,634,413,695** — the run's whole movement is
+**+0.168 / +0.159 / +0.121 %**, i.e. five rules-correctness class fixes for
+about a sixth of a percent, and every point of it is accounted for:
 
 ```text
   the battlefield gate on evaluate_requirement_on_card  +0.093 / +0.636 / +0.146 %
@@ -3037,7 +3035,23 @@ and every point of it is accounted for:
   the eleven P/T effect + cost arms onto effective_*_on +0.001 / +0.016 / +0.002 %
   the same six arms' TYPE filters onto computed_is_creature
                                                         -0.001 / -0.000 / -0.000 %
+  the walker's KEYWORD and COLOUR leaves onto computed() +0.144 / +0.023 / +0.041 %
 ```
+
+⚠⚠ **THE LAST ROW IS THE RUN'S ONE REAL PRICE AND IT IS EXACTLY THE MECHANISM
+THIS FILE ALREADY PREDICTED — 370 EXTRA GATHERS.**
+`gather_continuous_effects_inner` goes **13,254 -> 13,624 on `fixed`**, which
+is +328,910 of the row's +835,262 Ir with the rest its allocator tail. A
+computed read on an *unfrozen* state gathers once per distinct state and
+`(-303)`'s cross memo serves the repeats; the twelfth box filed the same
+shape for `Value::PowerOf` at `fixed +0.118 %` for ONE read. 📐 **And the pool
+pattern inverts: `fixed` pays MOST because it is the pool with no keyword
+grants and no colour changes** — i.e. the pool a presence gate would serve
+entirely. That gate is queue item (M) and it is **not** a hurry job:
+`keyword_grant_in_scope` covers `AddKeyword` and `ability_strip_possible`
+covers the strip, but neither covers `StaticEffect::LoseKeyword`,
+`CantHaveKeyword` or `EquipBonus::remove_keywords`, so the obvious gate is
+unsound in the silent direction.
 
 📐 **The last row is a gated computed read reading NEGATIVE, and that is the
 shape to copy.** `computed_is_creature` answers off the printed definition
@@ -3067,13 +3081,13 @@ walker instead of through `requirement_on_permanent` reads **+0.026 / +0.844 /
 +0.096 %** — worse on the pool that matters, so the printed-line evaluator
 earns its place in the gate.
 
-sweep   **FIVE blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
-        1402..1403 at `1c7f0414`, 1404..1405 at `928ccbca` and 1406..1407 at
-        `a4fc16ed`: 30 cells / 148,000 games / 0 failures**, `cap 2 / board 0 /
-        stuck 0 / draw 24`,
+sweep   **SIX blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
+        1402..1403 at `1c7f0414`, 1404..1405 at `928ccbca`, 1406..1407 at
+        `a4fc16ed` and 1408..1409 at `1bceaeb9`: 36 cells / 177,600 games /
+        0 failures**, `cap 2 / board 0 / stuck 0 / draw 26`,
         pools `cube all sealed`, `target-audit/overflow` with
         `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
-        1408.** The two caps are both `cube` 1402/1403 `MAX_BATTLEFIELD`
+        1410.** The two caps are both `cube` 1402/1403 `MAX_BATTLEFIELD`
         runaways on a saturated seat (768 permanents, life `i32::MAX`) — the
         carve-out the script's header documents, not re-run. ⚠ **The 1402..1403
         block is `(-344)`'s ratchet**: its `debug_assert_ne!` recomputes the
@@ -3084,12 +3098,12 @@ sweep   **FIVE blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
         audits at the closing tip: `audit_stubs` **0 flagged** over 21,797
         unique cards, `audit_panics` **70 sites / 59 guarded / 11 lock-poison /
         0 bare**, `audit_doc_drift` **0 BODY WRONG / 0 doc rot / 0 stale
-        notes**. Suite **19,593 / 0 / 5** (six regression tests and one
+        notes**. Suite **19,595 / 0 / 5** (eight regression tests and one
         audit added), clippy **0** over the workspace, `cargo check --profile
         release-fast -p crabomination --bin bot_ladder` clean. `--bench`:
         **195,806 / 27.49 / 611.9 / 0 stalls**, `peak_rss_mib 25.0-25.3`,
         `determinism ok`, `thread_determinism ok (3 vs 1)` — byte-identical to
-        the committed invariant across all eight commits of the run.
+        the committed invariant across all ten commits of the run.
         ⚠ Box timings, thirteenth box (4 cores, 15 GB — the twelfth's shape):
         cold test build **5m30s**, full suite **1m47-2m03s**, cold
         `profiling-fast` **8m21s** / engine-only **2m38-3m02s**, cold `release`
@@ -14230,6 +14244,30 @@ read.**
   a trigger that moves only the battlefield (a counter, a tap) leaves the head
   equal and pays the tail anyway. If the head separates on under ~half the
   calls, device 1 is worth ~0.2 % and not 0.4 %.
+
+  **M. THE PRESENCE GATE FOR THE WALKER'S KEYWORD AND COLOUR LEAVES — worth
+  `fixed` ~0.14 %, and the SOUNDNESS is the whole of the work.** The two
+  closures added 2026-09-17 are ungated (the shape `has_atype` / `has_stype`
+  already use), so every `HasKeyword` / `HasColor` / `Colorless` /
+  `Monocolored` / `Multicolored` ask on an unfrozen state forces a gather:
+  **370 extra `gather_continuous_effects_inner` calls on `fixed`**, the whole
+  of that pool's +0.144 %. Their type siblings are gated
+  (`card_type_change_in_scope`, `creature_type_change_in_scope`,
+  `land_type_change_in_scope`) and pay nothing on a board with no source.
+  ⚠⚠ **The colour half is ready and the keyword half is NOT.**
+  `card_color_change_unscoped` is already the sound gate for colour
+  (`has_family(COLOR)` plus `card_can_change_colors` over the board) and only
+  wants a `presence_gate` slot — note its own doc says to give a hot caller
+  its own valid flag rather than folding it into `type_bits`.
+  For keywords, `keyword_grant_in_scope` covers `AddKeyword` and
+  `ability_strip_possible` covers `RemoveAllAbilities`, but **nothing covers
+  `StaticEffect::LoseKeyword`, `StaticEffect::CantHaveKeyword` or
+  `EquipBonus::remove_keywords`** — all three push
+  `Modification::RemoveKeyword` at layer 6. A gate that misses them answers
+  "printed" for a permanent that has *lost* the keyword, which is silent and
+  wrong. The work is a "can this board remove a keyword" predicate with the
+  `gather_continuous_effects` `debug_assert!` implication the other gates
+  carry, and a member lane if it needs one. **Do not ship the two-leg gate.**
 
   ⏳ **And the last un-hoisted hot `(-343)` site is filed rather than taken:**
   `SpecFromIterNested::from_iter` still asks the CR 613 gate **14,558 times a

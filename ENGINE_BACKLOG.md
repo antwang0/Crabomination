@@ -82,6 +82,68 @@ the handoff.
 
 # Bugs & robustness
 
+## FIXED 2026-09-17 (fortieth find, and the biggest blast radius of the run) — the requirement walker built a computed-view closure per characteristic and TWO WERE NEVER WRITTEN
+
+The battlefield walker's `_` fallthrough is a family of closures, each reading
+the computed view and falling back to the print: `has_type`, `has_ctype`,
+`has_atype`, `has_ltype`, `has_stype`. **The keyword and colour members do not
+exist, and the two leaves that needed them read the instance instead.** Found
+by listing the family and noticing what was missing — not by diffing walkers.
+
+```rust
+R::HasKeyword(kw) => card.has_keyword(kw),                            // four INSTANCE sources
+R::HasColor(c)    => card.definition.printed_color_set().contains(c), // PRINTED union
+R::Multicolored   => card.definition.printed_color_set().len() >= 2,
+R::Colorless      => card.definition.printed_color_set().is_empty(),
+R::Monocolored    => card.definition.printed_color_set().is_monocolored(),
+```
+
+`CardInstance::has_keyword` reads the printed list, the end-of-turn grant, the
+keyword counters and the two removal lists — **all instance fields**. A keyword
+a *static* grants lives in `continuous_effects`: Levitation's "creatures you
+control have flying", Akroma's Memorial's six, an Equipment's
+`EquipBonus::keywords`. And a layer-6 strip runs the other way
+(`RemoveAllAbilities`, `StaticEffect::LoseKeyword`, `CantHaveKeyword`) with
+the instance equally blind. **So every "creature with flying" / "creature with
+defender" filter in the catalog missed the granted case and honoured a
+stripped one.**
+
+`printed_color_set` is the printed union (coloured pips, hybrid and Phyrexian
+included, plus the colour indicator, empty under Devoid) and is the whole
+answer *off* the battlefield — the twenty-fifth find is why it is spelled that
+way. On the battlefield, `SetColors` (Sinister Strength's "enchanted creature
+is black", Painter's Servant), `AddColor` and `LoseAllColors` are layer 5 and
+only the computed view carries them.
+
+Both fixed with the family's own shape, **ungated, exactly as `has_atype` and
+`has_stype` already are** — the closure forces `computed()` at most once per
+invocation and a freeze scope's `perms` memo serves the repeats. `HasToxic` /
+`HasModular` come along through a discriminant-matching twin, because
+`Toxic(n)` / `Modular(n)` carry a payload.
+
+⚠⚠ **THE COST IS THE RUN'S ONE REAL PRICE AND IT IS THE MECHANISM PERF
+ALREADY PREDICTED: `fixed +0.144 %`, WHICH IS 370 EXTRA GATHERS**
+(`gather_continuous_effects_inner` 13,254 -> 13,624). `cube +0.023 %`,
+`sealed +0.041 %`. 📐 **And the pool pattern inverts — `fixed` pays MOST
+because it is the pool with no keyword grants and no colour changes**, i.e.
+exactly the board a presence gate would serve for free. **That gate is filed,
+not built, and the reason is soundness:** `keyword_grant_in_scope` covers
+`AddKeyword` and `ability_strip_possible` covers the strip, but nothing covers
+`LoseKeyword` / `CantHaveKeyword` / `EquipBonus::remove_keywords`, so the
+obvious two-leg gate answers "printed" for a permanent that has *lost* the
+keyword. PERF candidate (M) carries the requirement.
+
+Tests `cr_613_6_has_keyword_sees_a_statically_granted_keyword` and
+`cr_613_5_has_color_sees_a_statically_set_colour`, each with the control
+assertion that pins the gap (the first asserts the *instance* does not have
+the keyword, so it cannot pass by the instance accidentally learning it; the
+second asserts both directions — the bear is black and is no longer green).
+
+📐 **The method note: this one was not a walker diff and not a caller grep.
+It was "list the family this function already has and ask which members are
+missing".** Five closures existed, seven characteristics were being asked
+about, and the two without a closure were the two that were wrong.
+
 ## FIXED 2026-09-17 (thirty-seventh to thirty-ninth finds) — a THIRD and FOURTH place that answers "what is this creature's power", the type half beside it, and the census that says which of the rest are not bugs
 
 The thirty-third find fixed the requirement walker's P/T *comparison* arms and
