@@ -1926,15 +1926,28 @@ fn main() {
     // PERF candidate (Q): how much of a cast is paid before the cast can
     // still be rejected. Off unless `CRAB_CAST_CENSUS` is set.
     if crabomination::game::actions::cast_census::on() {
-        let [calls, took, back] = crabomination::game::actions::cast_census::snapshot();
+        let [calls, took, back, early] = crabomination::game::actions::cast_census::snapshot();
         let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
         println!(
             "  cast_census {calls} calls into cast_spell_with_convoke, {took} reached the \
              take-from-hand ({:.1} %), {back} put the card back ({:.1} % of the takes) — each \
-             of those had already unshared PlayerData, the hand Vec and the card",
+             of those had already unshared PlayerData, the hand Vec and the card; {early} \
+             rejected before the take ({:.1} % of calls), which is what a hoisted gate moves",
             pct(took, calls),
             pct(back, took),
+            pct(early, calls),
         );
+        let by_line = crabomination::game::actions::cast_census::by_line();
+        // Over `back + early`: a hoisted branch keeps its row in this table
+        // and moves from one counter to the other, so the denominator is
+        // every rejection the body makes, not just the ones that pay.
+        let rejections = back + early;
+        let top: Vec<String> = by_line
+            .iter()
+            .take(12)
+            .map(|(l, n)| format!("actions.rs:{l} {n} ({:.1} %)", pct(*n, rejections)))
+            .collect();
+        println!("  cast_census rejections by line: {}", top.join(", "));
     }
     // Round 76: the modal / X holes as the scored main-phase pick sees them.
     // Off unless `CRAB_MENU_CENSUS` is set; `=2` adds the per-card tables.

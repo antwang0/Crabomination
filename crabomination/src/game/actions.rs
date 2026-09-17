@@ -25,16 +25,61 @@ use smallvec::SmallVec;
 pub mod cast_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 
-    /// `[calls, reached the take-from-hand, put the card back]`. The third
-    /// counts the *retry* path (the suspend-and-replay at the end of the
-    /// body) as well as the rejections — it pays the same round trip.
-    pub static N: [AtomicU64; 3] = [const { AtomicU64::new(0) }; 3];
+    /// `[calls, reached the take-from-hand, put the card back, rejected
+    /// before the take]`. The third counts the *retry* path (the
+    /// suspend-and-replay at the end of the body) as well as the rejections —
+    /// it pays the same round trip. The fourth is what a hoisted gate moves
+    /// out of the third, and it is the direct measure of candidate (Q)'s
+    /// progress: `calls - took == early`.
+    pub static N: [AtomicU64; 4] = [const { AtomicU64::new(0) }; 4];
+
+    /// Rollbacks by the `actions.rs` line that made them — **the column that
+    /// decides the refactor**, because "twenty of the forty-nine look
+    /// hoistable" is not the same claim as "these three branches are the
+    /// cost". Keyed by line so it survives the edits the refactor makes.
+    pub static BY_LINE: std::sync::Mutex<Option<std::collections::BTreeMap<u32, u64>>> =
+        std::sync::Mutex::new(None);
 
     #[inline]
     pub fn add(i: usize) {
         if on() {
             N[i].fetch_add(1, Relaxed);
         }
+    }
+
+    /// One rollback, at `line`. `#[inline]` so the caller is one `line!()`.
+    #[inline]
+    pub fn rollback(line: u32) {
+        note(2, line);
+    }
+
+    /// One rejection that never took the card out of hand — a gate hoisted
+    /// above the removal. Shares the line histogram with [`rollback`], so the
+    /// two read as one table and a hoisted branch keeps its row.
+    #[inline]
+    pub fn early(line: u32) {
+        note(3, line);
+    }
+
+    fn note(i: usize, line: u32) {
+        if on() {
+            N[i].fetch_add(1, Relaxed);
+            if let Ok(mut g) = BY_LINE.lock() {
+                *g.get_or_insert_with(Default::default).entry(line).or_insert(0) += 1;
+            }
+        }
+    }
+
+    /// The rollback histogram, largest first.
+    pub fn by_line() -> Vec<(u32, u64)> {
+        let g = BY_LINE.lock().ok();
+        let mut v: Vec<(u32, u64)> = g
+            .as_ref()
+            .and_then(|g| g.as_ref())
+            .map(|m| m.iter().map(|(k, v)| (*k, *v)).collect())
+            .unwrap_or_default();
+        v.sort_by_key(|&(_, n)| std::cmp::Reverse(n));
+        v
     }
 
     pub fn on() -> bool {
@@ -45,7 +90,7 @@ pub mod cast_census {
         })
     }
 
-    pub fn snapshot() -> [u64; 3] {
+    pub fn snapshot() -> [u64; 4] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
@@ -7323,6 +7368,22 @@ impl GameState {
         // leak it onto the next cast.
         let spend_float_choice = self.pending_cast_spend_float.take();
 
+        // CR 601.2 — the timing gate, asked BEFORE the card leaves hand.
+        // Everything below this line writes the player, the hand zone and the
+        // card, so a rejection under it is three CoW unshares and a put-back
+        // for a cast that was never legal (PERF candidate (Q): this branch is
+        // 21.6 % of `cube`'s rollbacks and 48.1 % of `sealed`'s). The bestow
+        // path is excluded because `bestowed` is stamped below and rewrites
+        // the type line Sigarda's Aid reads; it asks again after the stamp,
+        // and every other path asserts the two answers agree.
+        if !bestow
+            && let Some(hand_card) = self.players[p].hand.iter().find(|c| c.id == card_id)
+            && self.sorcery_timing_bars(p, hand_card, cost_statics)
+        {
+            cast_census::early(line!());
+            return Err(GameError::SorcerySpeedOnly);
+        }
+
         let mut card =
             self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         cast_census::add(1);
@@ -7406,7 +7467,7 @@ impl GameState {
                     if self.battlefield.find_by_id(tid).is_some_and(|c| c.definition.is_creature())
             );
             if !creature_target {
-                cast_census::add(2);
+                cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(GameError::SelectionRequirementViolated);
             }
@@ -7418,7 +7479,7 @@ impl GameState {
         if self.players[p].cant_cast_noncreature_this_turn
             && !card.definition.is_creature()
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::CantCastNoncreature);
         }
@@ -7427,7 +7488,7 @@ impl GameState {
         if !self.players[p].cant_cast_matching_this_turn.is_empty() {
             let locks = self.players[p].cant_cast_matching_this_turn.clone();
             if locks.iter().any(|f| self.evaluate_requirement_on_card(f, &card, p)) {
-                cast_census::add(2);
+                cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(GameError::CantCastNoncreature);
             }
@@ -7435,21 +7496,21 @@ impl GameState {
 
         // City in a Bottle — a symmetric play-lock binds every seat.
         if self.play_locked_for_all(p, &card) {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SpellNameLocked);
         }
 
         // Llawan — an opponent's static locks a whole class of spells.
         if self.opponent_locks_cast_of(p, &card) {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::CantCastNoncreature);
         }
 
         // Codie lock — this player can't cast permanent spells.
         if card.definition.is_permanent() && self.player_cant_cast_permanent_spells(p) {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::CantCastPermanentSpells);
         }
@@ -7463,14 +7524,14 @@ impl GameState {
         if cost_statics & cast_static::NONCREATURE_LOCK != 0
             && self.noncreature_spell_cast_locked(&card.definition)
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::CantCastNoncreature);
         }
 
         // Nikya of the Old Ways — its controller can't cast noncreature spells.
         if !card.definition.is_creature() && self.player_cant_cast_noncreature_spells(p) {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::CantCastNoncreature);
         }
@@ -7479,21 +7540,21 @@ impl GameState {
         if (card.definition.is_instant() || card.definition.is_sorcery())
             && self.player_cant_cast_instants_or_sorceries(p)
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::CantCastNoncreature);
         }
 
         // Hand to Hand — nobody casts instants during combat.
         if card.definition.is_instant() && self.combat_spell_lock_active() {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::CantCastNoncreature);
         }
 
         // Grid Monitor — its controller can't cast creature spells.
         if card.definition.is_creature() && self.player_cant_cast_creature_spells(p) {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::CantCastNoncreature);
         }
@@ -7515,14 +7576,14 @@ impl GameState {
         // the waterbend sub-cost. Count is clamped to the waterbend amount below.
         let has_waterbend = waterbend.is_some();
         if !convoke_creatures.is_empty() && !has_convoke && !has_improvise && !has_waterbend {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly); // reuse: spell can't tap helpers
         }
         if let Some(amt) = waterbend
             && convoke_creatures.len() > amt as usize
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly); // reuse: too many waterbend helpers
         }
@@ -7537,7 +7598,7 @@ impl GameState {
                             && (c.definition.is_creature() || c.definition.is_artifact())))
             });
             if bad {
-                cast_census::add(2);
+                cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(GameError::CardNotOnBattlefield(*cid));
             }
@@ -7551,13 +7612,13 @@ impl GameState {
             && !card.definition.keywords.has_kw(&crate::card::Keyword::Delve)
             && !self.controller_grants_spells_delve(p)
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly); // reuse: spell doesn't have delve
         }
         for cid in delve_cards {
             if !self.players[p].graveyard.iter().any(|c| c.id == *cid) {
-                cast_census::add(2);
+                cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(GameError::CardNotInGraveyard(*cid));
             }
@@ -7573,16 +7634,21 @@ impl GameState {
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment). Serpent of the Pass — a
         // card-intrinsic `SelfFlashIf` condition on the spell being cast.
-        let flash_granted = self.flash_granted_for_with(p, &card, cost_statics);
-        let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
-            || self.player_locked_to_sorcery_timing(p);
-        if must_be_sorcery_speed
-            && !self.can_cast_sorcery_speed(p)
-            && !self.players[p].sorceries_as_flash
-        {
-            cast_census::add(2);
-            self.players[p].hand.push(card);
-            return Err(GameError::SorcerySpeedOnly);
+        if bestow {
+            if self.sorcery_timing_bars(p, &card, cost_statics) {
+                cast_census::rollback(line!());
+                self.players[p].hand.push(card);
+                return Err(GameError::SorcerySpeedOnly);
+            }
+        } else {
+            // The hoisted gate above already answered this, on the same card
+            // before its stamps. The ratchet this branch puts on every gate:
+            // the suite and every `debug-assertions` sweep re-run the
+            // predicate here and fail if the stamps moved the answer.
+            debug_assert!(
+                !self.sorcery_timing_bars(p, &card, cost_statics),
+                "the hoisted CR 601.2 timing gate and the stamped card disagree",
+            );
         }
 
         // Validate that the chosen target is legally targetable. Also
@@ -7591,7 +7657,7 @@ impl GameState {
         if let Some(ref tgt) = target
             && let Err(e) = self.check_target_legality_with_source(tgt, p, Some(card_id))
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(e);
         }
@@ -7599,7 +7665,7 @@ impl GameState {
         // shroud, protection, Leyline-of-Sanctity, CR 115.5 self-target).
         for tgt in &additional_targets {
             if let Err(e) = self.check_target_legality_with_source(tgt, p, Some(card_id)) {
-                cast_census::add(2);
+                cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(e);
             }
@@ -7621,7 +7687,7 @@ impl GameState {
                 })
                 .collect();
             if self.flagbearer_violation(p, &chosen, &slots) {
-                cast_census::add(2);
+                cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(GameError::InvalidTarget);
             }
@@ -7641,7 +7707,7 @@ impl GameState {
             for i in 0..chosen.len() {
                 for j in (i + 1)..chosen.len() {
                     if chosen[i] == chosen[j] {
-                        cast_census::add(2);
+                        cast_census::rollback(line!());
                         self.players[p].hand.push(card);
                         return Err(GameError::DuplicateTarget);
                     }
@@ -7668,7 +7734,7 @@ impl GameState {
                 if let Keyword::Protection(prot_color) = kw
                     && spell_colors.contains(prot_color)
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7676,14 +7742,14 @@ impl GameState {
                 if matches!(kw, Keyword::ProtectionFromColoredSpells)
                     && !spell_colors.is_empty()
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
                 // Protection from ALL spells (Emrakul, the World Anew), or from
                 // everything (Hexdrinker level 8+, Progenitus).
                 if matches!(kw, Keyword::ProtectionFromSpells | Keyword::ProtectionFromEverything) {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7692,7 +7758,7 @@ impl GameState {
                 if matches!(kw, Keyword::ProtectionFromInstants)
                     && card.definition.card_types.contains(&CardType::Instant)
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7703,14 +7769,14 @@ impl GameState {
                         .battlefield_find(cid)
                         .is_some_and(|c| !c.attacked_this_turn && !c.blocked_this_turn)
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
                 // "Creatures can't be the targets of spells" (Dense Foliage) —
                 // no spell may target it; abilities are unaffected.
                 if matches!(kw, Keyword::CantBeTargetedBySpells) {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7723,7 +7789,7 @@ impl GameState {
                         .enchantment_subtypes
                         .contains(&crate::card::EnchantmentSubtype::Aura)
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7732,7 +7798,7 @@ impl GameState {
                 if let Keyword::ProtectionFromSpellSubtype(sub) = kw
                     && card.definition.subtypes.spell_subtypes.contains(sub)
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7742,7 +7808,7 @@ impl GameState {
                 if let Keyword::ProtectionFromManaValueExcept(n) = kw
                     && card.definition.cost.cmc() != *n
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7752,7 +7818,7 @@ impl GameState {
                 if let Keyword::ProtectionFromManaValueParity { odd } = kw
                     && (card.definition.cost.cmc() % 2 == 1) == *odd
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7761,7 +7827,7 @@ impl GameState {
                 if matches!(kw, Keyword::ProtectionFromMulticolored)
                     && spell_colors.len() >= 2
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7770,7 +7836,7 @@ impl GameState {
                 if matches!(kw, Keyword::ProtectionFromMonocolored)
                     && spell_colors.len() == 1
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7780,7 +7846,7 @@ impl GameState {
                 if let Keyword::ProtectionFromMatching(f) = kw
                     && self.evaluate_requirement_on_card(f, &card, target_card.controller)
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7789,7 +7855,7 @@ impl GameState {
                 if let Keyword::ProtectionFromCardType(t) = kw
                     && card.definition.card_types.contains(t)
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7800,7 +7866,7 @@ impl GameState {
                     && self.battlefield_find(cid).is_some_and(|tc| tc.controller != p)
                     && !colors.iter().any(|c| spell_colors.contains(c))
                 {
-                    cast_census::add(2);
+                    cast_census::rollback(line!());
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -7849,7 +7915,7 @@ impl GameState {
             None => false,
         };
         if hexproof_violation {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
         }
@@ -7863,7 +7929,7 @@ impl GameState {
                 .iter()
                 .any(|t| card.definition.card_types.contains(t))
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::TargetHasProtection(crate::card::CardId(0)));
         }
@@ -7911,7 +7977,7 @@ impl GameState {
         };
         self.target_slots_scratch.clear();
         if filter_violation {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -7923,7 +7989,7 @@ impl GameState {
             && !additional_targets.is_empty()
             && !(self.active_player_idx == p && self.step.is_main_phase())
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -7933,14 +7999,14 @@ impl GameState {
         if card.definition.cast_only_after_blockers
             && !(self.step.is_combat_phase() && self.blockers_declared)
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
         }
 
         // "Cast this spell only during combat" (Cauldron Dance).
         if card.definition.cast_only_during_combat && !self.step.is_combat_phase() {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -7950,7 +8016,7 @@ impl GameState {
         if card.definition.cast_only_before_blockers
             && (!self.step.is_combat_phase() || self.blockers_declared)
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -7970,7 +8036,7 @@ impl GameState {
                         | crate::TurnStep::DeclareAttackers
                 ))
         {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -7979,7 +8045,7 @@ impl GameState {
         if let Some(cond) = card.definition.cast_condition.clone() {
             let ctx = crate::game::effects::EffectContext::for_trigger(card.id, p, None, 0);
             if !self.evaluate_predicate(&cond, &ctx) {
-                cast_census::add(2);
+                cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(GameError::SelectionRequirementViolated);
             }
@@ -8072,7 +8138,7 @@ impl GameState {
             }
         }
         if !additional_costs.is_empty() && !self.additional_costs_payable(p, &additional_costs) {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -8237,7 +8303,7 @@ impl GameState {
             0
         };
         if self.effective_life(p) < pay_x_life as i32 {
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             return Err(GameError::InsufficientLife);
         }
@@ -8289,7 +8355,7 @@ impl GameState {
         {
             let float_summary = self.protectable_float(p, &cost).summary();
             let name = card.definition.name;
-            cast_census::add(2);
+            cast_census::rollback(line!());
             self.players[p].hand.push(card);
             // Replay the exact cast variant (kicker / buyback / bestow survive).
             // Convoke / delve are excluded above, so they never reach here.
@@ -8323,7 +8389,7 @@ impl GameState {
         let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &spell_kind, spend_float_choice) {
             Ok(r) => r,
             Err(e) => {
-                cast_census::add(2);
+                cast_census::rollback(line!());
                 self.players[p].hand.push(card);
                 return Err(e);
             }
@@ -12929,6 +12995,32 @@ impl GameState {
     /// [`cast_cost_scan`]'s mask: the board walk is skipped when no permanent
     /// grants flash. The card-intrinsic legs (`SelfFlashIf`, the flash
     /// surcharge) and the turn-scoped one are not statics and always run.
+    /// CR 601.2 / 307.1 — does the sorcery-speed timing gate bar `p` from
+    /// casting `card` right now?
+    ///
+    /// **One expression, two call sites** (PERF candidate (Q)):
+    /// [`cast_spell_with_convoke`](Self::cast_spell_with_convoke) asks it
+    /// *before* it takes the card out of hand, which is what keeps a
+    /// mistimed cast from unsharing `PlayerData`, the hand `Vec` and the card
+    /// and then putting it all back — 21.6 % of `cube`'s rollbacks and 48.1 %
+    /// of `sealed`'s came from this one check. The bestow path asks it again
+    /// after the stamp, because `bestowed` rewrites the type line a
+    /// flash-granting static (Sigarda's Aid) reads; every other path carries a
+    /// `debug_assert!` that the two answers agree.
+    pub(crate) fn sorcery_timing_bars(
+        &self,
+        p: usize,
+        card: &crate::card::CardInstance,
+        cost_statics: u32,
+    ) -> bool {
+        let flash_granted = self.flash_granted_for_with(p, card, cost_statics);
+        let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
+            || self.player_locked_to_sorcery_timing(p);
+        must_be_sorcery_speed
+            && !self.can_cast_sorcery_speed(p)
+            && !self.players[p].sorceries_as_flash
+    }
+
     pub(crate) fn flash_granted_for_with(
         &self,
         p: usize,
