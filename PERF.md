@@ -8413,17 +8413,36 @@ allocator call inside it. It still lost on `cube`:
      +213,781   net on cube
 ```
 
-📐 **A `Vec::with_capacity(n)` + `extend` reserves once and then stores;
-`SmallVec::extend` checks capacity per item. On a ~12-item fill that is 12
-branches instead of 1 — ~24 Ir an item, 288 Ir an extend, against the 222 Ir
-an allocation costs.** So: **an inline buffer filled by `extend` can lose to
-the allocation it removes, and an inline buffer filled by a handful of
-`push`es the compiler can see through does not.** `(-165)`'s rule ("price it
-by whether it grows its owner") is necessary and not sufficient — **also ask
-how it gets FILLED.** ⚠ And `cube` spilled 1,960 of 8,724 fills at 16 slots
-where `sealed` and `fixed` barely spilled at all, which is why the three pools
-disagreed: **an inline buffer's win is a step function of the spill rate, and
-the pool whose boards are widest is the one that decides it.**
+⚠⚠ **THE MECHANISM, CORRECTED FROM THE COMMIT MESSAGE, WHICH GOT IT WRONG.**
+The commit blamed a per-item capacity check, and the call table refutes that:
+`SmallVec::reserve_one_unchecked` moved **19,626 -> 21,674, i.e. +2,048 calls
+for 8,724 extends**, so the fills are not checking per item. What actually
+happened is three things, and only two of them are real:
+
+```text
+  snapshot_payment_state's body   342.4 -> 101.1 Ir/call   -241 a call
+  SmallVec<A> as Extend           136.5 -> 150.7 Ir/call   +288 a call (the new ones)
+```
+
+**The fill did not get more expensive, it got moved OUT OF LINE.** `Vec`'s
+`extend` inlined into the body; `SmallVec`'s generic `Extend` was already an
+out-of-line row with 84,710 callers, and the 8,724 new ones pay ~47 Ir of
+call overhead apiece on top of the same work. That is the *same* `release-fast`
+no-LTO artifact the pool's `LocalKey::with` row is, so **~410 k of the inline
+version's loss is an artifact and ~453 k of the pool's cost is too — they
+roughly cancel, and the decision rests on the two real terms below.**
+
+📐 **Real term 1: `cube` spilled 1,960 of 8,724 fills at 16 slots** where
+`sealed` and `fixed` barely spilled, which is why the three pools disagreed.
+**An inline buffer's win is a step function of the spill rate, and the pool
+whose boards are widest is the one that decides it.** The pool removes
+99.96 % of the site on every pool; the inline buffer removed 77.5 % on `cube`.
+📐 **Real term 2: +393,297 of `__memcpy_avx_unaligned`** — a `PaymentSnapshot`
+with 16 inline slots is ~136 bytes and it is moved through four frames.
+**Widening a value that gets MOVED is not free even when its owner is a stack
+frame**, which is the half of `(-165)`'s rule that the "does it grow its
+owner?" phrasing hides: ask how often the owner is moved, not only where it
+lives.
 
 ⚠ **The pool's cost is mostly a `release-fast` artifact, so the shipped row is
 bigger than the measured one.** `LocalKey::with` +296,593 and
