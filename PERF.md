@@ -36,6 +36,16 @@ cargo run --release --bin bot_ladder -- --bench
 # filter 23 (`1c304384`).
 CRAB_THREAD_CHECK=1 cargo run --release --bin bot_ladder -- --bench
 
+# HOW MUCH OF A CAST IS PAID BEFORE THE CAST CAN STILL BE REJECTED.
+# `cast_spell_with_convoke` takes the card out of hand and then runs forty-nine
+# rejection checks that put it back, each having already unshared `PlayerData`,
+# the hand `Vec` and the card. Prints calls / how many reached the take / how
+# many put the card back — counted at each `hand.push(card)`, not inferred.
+# 33.3 % of `cube` casts, 19.8 % of `sealed`, 2.0 % of `fixed` (candidate (Q)).
+# Off unless set; one `OnceLock` read per cast when off.
+CRAB_CAST_CENSUS=1 target/release-fast/bot_ladder --a gang --b gang \
+  --games 6 --threads 1 --seed 1 --decks cube
+
 # WHICH ARM LEAKED A RESUME CHANNEL, AND WHETHER ANY ONE-SHOT PICK OUTLIVED ITS
 # REPLAY. Debug builds only and read on the cold side of a "the channel is not
 # empty" test, so an unset run pays nothing and the optimized profiles do not
@@ -15546,13 +15556,99 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      family and are **not** a reserve question — that row is priced by which
      group a field lives in, which is what `(-349)` moved.
 
-  💡 **P. `Player::deref_mut` under `declare_attackers_banded` — 27,312 calls
-     (exactly two a declaration) / 2.69 M inclusive / 98.6 Ir a call, UNREAD.**
-     The `(-280)` CoW family's shape on the *seat* rather than the card, and
-     nothing in the Log has looked at the attack declaration's two seat writes.
-     98.6 Ir a call is an unshare, not a store. **Read it with the family's own
-     one-dump census** (`--demangle=no`, `cg_edges.py --callers make_mut_slow`,
-     grep the caller for `PlayerCold`'s field names) before building anything.
+  💡 **Q. `cast_spell_with_convoke` TAKES THE CARD OUT OF HAND *BEFORE* ITS
+     TWENTY REJECTION CHECKS, AND EACH CHECK PUTS IT BACK.** Found off (P)'s
+     census, no build spent. `actions.rs:7281` is
+     `self.players[p].remove_from_hand(card_id)?` and **twenty-odd branches
+     below it read `self.players[p].hand.push(card); return Err(..)`** — a
+     take-and-put-back that has already unshared `PlayerData`, the hand zone's
+     `Vec` and (via the handle) the card, on a cast that was never legal.
+
+     This is why that one body is the program's largest unsharer: 22,182 of
+     103,388 `make_mut_slow` calls (21 %), 12.79 M Ir inclusive = **0.85 % of
+     `cube`**, at ~0.96 unshares of each of the three groups per call. And it
+     recurses: **1,748 of its 9,408 calls are `cast_spell_with_convoke`
+     calling itself**, which is a retry path paying the same round trip again.
+
+     ✅ **CENSUSED THE SAME DAY IT WAS FILED, and it is not marginal.**
+     `CRAB_CAST_CENSUS=1` (the instrument is in `actions.rs` beside the body,
+     `attack_census`'s shape; the rollback bump sits **at each
+     `hand.push(card)`**, so this is counted, not inferred):
+
+```text
+              calls   reached the take   put the card back
+  cube        7,660        100.0 %        2,550  = 33.3 %
+  sealed      8,574        100.0 %        1,700  = 19.8 %
+  fixed       3,566        100.0 %           72  =  2.0 %
+```
+
+     📐 **A THIRD of `cube`'s casts pay the round trip for a cast that never
+     happens** — and every call reaches the take, so the removal is not
+     guarded by anything. At the family's own prices (`PlayerData` ~780 Ir,
+     the hand `Vec` ~330, the card ~640) the ceiling is **~2,550 x ~1,750 ≈
+     4.5 M Ir ≈ 0.30 % of `cube`**, the largest single row left on this queue.
+     ⚠ It is a *ceiling*: a rollback deep in the body has usually unshared for
+     some other reason by then, and a probe the caller discards wastes the
+     unshare either way. **The takeable part is the prefix of checks that
+     could run before the removal.**
+
+     **The plan, and the prefix is already identified.** About twenty of the
+     forty-nine rollbacks sit in the first 38 % of the body
+     (`SelectionRequirementViolated`, nine `CantCastNoncreature`,
+     `SpellNameLocked`, `CantCastPermanentSpells`, two `SorcerySpeedOnly`, the
+     convoke/delve membership checks) and **every one of them reads
+     `card.definition` or the board, not the owned card** — the card is taken
+     by value only so the rollback can give it back. Look it up by reference
+     (`hand.iter().find(..)`), run that prefix, *then* remove. ⚠ Forty-nine
+     rejection branches on a core path is a rules-bug risk: **hoist one group
+     per commit with the suite between**, and `fixed`'s 2.0 % says the row
+     will read as nothing on the pool `--bench` measures — rank it on `cube`.
+     ⚠ And re-run the census after each group: it is the direct measure of
+     what is left.
+
+  💡 **P. THE WHOLE CoW UNSHARE TABLE, CENSUSED BY INSTANCE AND BY CALLER —
+     one `--demangle=no` dump, no build, and it supersedes the
+     `Player::deref_mut` lead this entry used to hold.** 103,388 `make_mut_slow`
+     calls a six-game `cube` run, eleven monomorphizations, three of them worth
+     naming (identified by their callee, CLAUDE.md's key):
+
+```text
+   calls    incl Ir     %      instance (by its clone helper)
+  33,744  21,606,836  1.43   CardData        (bare memcpy + alloc)
+  28,622  ~12,300,000 0.82   a zone's Vec<CardInstance>  (Vec::clone 9.4 M)
+  19,604  15,277,028  1.01   PlayerData      (RawTable::clone under it)
+```
+
+     **`cast_spell_with_convoke` is the program's largest unsharer and it is
+     not close: 22,182 of the 103,388 (21 %), 12.79 M Ir inclusive = 0.85 % of
+     `cube`** — 7,350 `PlayerData`, 7,478 zone-`Vec` and 7,354 `CardData`, i.e.
+     **~0.96 of each per cast over 7,660 calls.** That is the number to attack
+     or to close: one unshare of each group per cast is what the design asks
+     for, so the question is **whether the first write happens before the cast
+     can still be rejected** — the bot's `cast_candidates` probes casts that do
+     not survive, and a probe that unshares three groups and then rolls back
+     pays for all of it. ⚠ Nobody has read the ORDER of the writes in that
+     body; that is the next step, and it costs no build.
+
+     By caller, for the other two instances:
+
+```text
+  PlayerData   7,350 cast_spell_with_convoke / 3,752 Player::deref_mut /
+               2,446 adjust_life / 1,838 play_land_with_face / 798 advance_step
+  CardData    11,682 resolve_combat_into / 7,354 cast_spell_with_convoke /
+               6,120 on_left_battlefield (refuted at the `(-329)` tip — real
+               per-card writes) / 1,838 dispatch_triggers_for_events_slow
+  zone Vec     7,508 Battlefield::find_by_id_mut / 7,478 cast_spell_with_convoke /
+               3,126 Battlefield::iter_mut / 2,256 PlayerData::draw_top
+```
+
+     ❌ **AND THE STANDING BRIEF'S "AUDIT READ-ONLY `iter_mut` ON HOT PATHS" IS
+     CLOSED FOR THE BATTLEFIELD, read 2026-09-17.** `Battlefield::iter_mut` has
+     **exactly one caller in the whole dump** — `declare_attackers_banded`,
+     13,656 calls, 3,126 unshares — and it is a genuine write site (`tapped`,
+     `attacked_this_turn`, `skip_next_untap`, `pump`). 0.5 zone unshares per
+     declaration is the floor, not a leak. The CoW sharp edge is real; this
+     particular instance of it is not here.
 
   D. the remaining keyword-ask ratio in `pick_attacks_inner` — DECLINED, ~0.017 %.
      See `(-330)`'s Log entry: the five per-blocker sites now take one

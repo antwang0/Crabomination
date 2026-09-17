@@ -16356,8 +16356,8 @@ fn x_candidates(state: &GameState, seat: usize, action: &GameAction, x: u32) -> 
     }
     let cap = (state.effective_life(seat) - 1).max(0) as u32;
     let mut v: Vec<u32> = vec![0];
-    v.extend(state.battlefield.iter().map(|c| c.printed_cmc() as u32));
-    v.extend(state.players[seat].graveyard.iter().map(|c| c.printed_cmc() as u32));
+    v.extend(state.battlefield.iter().map(|c| c.printed_cmc()));
+    v.extend(state.players[seat].graveyard.iter().map(|c| c.printed_cmc()));
     v.retain(|&m| m <= cap && m != x);
     v.sort_unstable();
     v.dedup();

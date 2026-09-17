@@ -1923,6 +1923,19 @@ fn main() {
             pct(breuse, bran),
         );
     }
+    // PERF candidate (Q): how much of a cast is paid before the cast can
+    // still be rejected. Off unless `CRAB_CAST_CENSUS` is set.
+    if crabomination::game::actions::cast_census::on() {
+        let [calls, took, back] = crabomination::game::actions::cast_census::snapshot();
+        let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
+        println!(
+            "  cast_census {calls} calls into cast_spell_with_convoke, {took} reached the \
+             take-from-hand ({:.1} %), {back} put the card back ({:.1} % of the takes) — each \
+             of those had already unshared PlayerData, the hand Vec and the card",
+            pct(took, calls),
+            pct(back, took),
+        );
+    }
     // Round 76: the modal / X holes as the scored main-phase pick sees them.
     // Off unless `CRAB_MENU_CENSUS` is set; `=2` adds the per-card tables.
     if crabomination::server::bot::menu_census::on() {
