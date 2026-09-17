@@ -1958,41 +1958,47 @@ impl GameState {
             // every step. A chain that has not come back to the anchor within
             // `MANDATORY_LOOP_MAX_PERIOD` resolutions is progress and
             // re-anchors on its latest state.
-            let fp = self.loop_fingerprint();
             let (anchor, repeats, since) = self.mandatory_loop_watch;
-            if fp == anchor {
-                let repeats = repeats + 1;
-                self.mandatory_loop_watch = (anchor, repeats, 0);
-                if repeats >= Self::MANDATORY_LOOP_DRAW_REPEATS {
-                    self.game_over = Some(None);
-                    events.push(GameEvent::GameOver { winner: None });
-                }
-            } else if anchor == 0 || since >= Self::MANDATORY_LOOP_MAX_PERIOD {
-                self.mandatory_loop_watch = (fp, 0, 0);
-            } else {
+            // PERF `(-344)` — the digest's scalar head first, its O(board)
+            // tail only when the head cannot settle it. `fp_mix` is injective
+            // in its accumulator, so a moved head over an unmoved board is a
+            // moved digest; and the branch a moved digest takes here, with an
+            // anchor set and `since` inside the period, is `since + 1`, which
+            // never reads the digest. 54.4 % of `cube`'s samples take it.
+            let head = self.fingerprint_head(true, self.turn_number, false);
+            let settled_by_head =
+                anchor != 0 && since < Self::MANDATORY_LOOP_MAX_PERIOD && head != self.mandatory_loop_head;
+            if settled_by_head {
+                // The audit that keeps the shortcut honest, `(-303)`'s point 2:
+                // under `debug-assertions` the full digest still runs and must
+                // disagree with the anchor. The suite and every sweep cell are
+                // the ratchet.
+                debug_assert_ne!(
+                    self.fingerprint_tail(head, false),
+                    anchor,
+                    "loop-watch head shortcut skipped a digest that DID match the anchor",
+                );
                 self.mandatory_loop_watch.2 = since + 1;
+            } else {
+                let fp = self.fingerprint_tail(head, false);
+                if fp == anchor {
+                    let repeats = repeats + 1;
+                    self.mandatory_loop_watch = (anchor, repeats, 0);
+                    if repeats >= Self::MANDATORY_LOOP_DRAW_REPEATS {
+                        self.game_over = Some(None);
+                        events.push(GameEvent::GameOver { winner: None });
+                    }
+                } else if anchor == 0 || since >= Self::MANDATORY_LOOP_MAX_PERIOD {
+                    self.mandatory_loop_watch = (fp, 0, 0);
+                    self.mandatory_loop_head = head;
+                } else {
+                    self.mandatory_loop_watch.2 = since + 1;
+                }
             }
         } else {
             self.mandatory_loop_watch = (0, 0, 0);
         }
         Ok(events)
-    }
-
-    /// Cheap game-state digest for the CR 104.4b loop watchdog: everything a
-    /// progressing trigger chain would move (life, zone sizes, counters, the
-    /// stack's shape). Deliberately coarse — a false *negative* just means the
-    /// draw isn't detected, while a false positive would end a live game.
-    ///
-    /// Mixed with SplitMix64's finalizer rather than through a `Hasher`.
-    /// `DefaultHasher` is SipHash-1-3 at ~52 Ir a `write`, and this digest
-    /// writes ten fields plus four per battlefield permanent: **2,424 calls
-    /// cost 12,546,606 Ir, 0.78 % of a six-game `--decks sos` run** at the
-    /// fifty-ninth tip. The finalizer avalanches every input bit across all 64
-    /// output bits in ten instructions, which is the property the paragraph
-    /// above asks for. The engine's own `fxhash` is the wrong tool here — it
-    /// is a *map* hasher and its own doc says it is not collision-resistant.
-    fn loop_fingerprint(&self) -> u64 {
-        self.fingerprint(true)
     }
 
     /// The digest behind both loop watchdogs.
@@ -2010,8 +2016,28 @@ impl GameState {
         self.fingerprint_as(with_stack, self.turn_number, false)
     }
 
-    /// [`fingerprint`](Self::fingerprint) with the two things the turn-granular
-    /// watch needs and the other two must not have.
+    /// The game-state digest the three watchdogs compare: everything a
+    /// progressing chain would move (life, zone sizes, counters, the stack's
+    /// shape). Deliberately coarse — a false *negative* just means the draw
+    /// isn't detected, while a false positive would end a live game.
+    ///
+    /// Mixed with SplitMix64's finalizer ([`fp_mix`]) rather than through a
+    /// `Hasher`. `DefaultHasher` is SipHash-1-3 at ~52 Ir a `write`, and this
+    /// digest writes ten fields plus four per battlefield permanent: **2,424
+    /// calls cost 12,546,606 Ir, 0.78 % of a six-game `--decks sos` run** at
+    /// the fifty-ninth tip. The finalizer avalanches every input bit across
+    /// all 64 output bits in ten instructions, which is the property the
+    /// paragraph above asks for. The engine's own `fxhash` is the wrong tool
+    /// here — it is a *map* hasher and its own doc says it is not
+    /// collision-resistant.
+    ///
+    /// Split into [`fingerprint_head`](Self::fingerprint_head) and
+    /// [`fingerprint_tail`](Self::fingerprint_tail) for PERF `(-344)`: the
+    /// CR 104.4b watch settles 54.4 % of its `cube` samples off the head
+    /// alone and never walks the board for them.
+    ///
+    /// The two flags are the turn-granular watch's, and the other two must
+    /// not have them.
     ///
     /// `turn` is the turn number to mix (the turn watch passes `0`: a loop
     /// whose period is a whole turn moves the real one every cycle, which is
@@ -2028,23 +2054,20 @@ impl GameState {
     /// progress across one — a life total past the saturation band, and which
     /// permanents are tapped. Both are commented at their field below.
     fn fingerprint_as(&self, with_stack: bool, turn: u32, player_counters: bool) -> u64 {
-        /// SplitMix64's finalizer over `acc + v + PHI`. Chaining it makes the
-        /// digest order-sensitive, which the field stream needs.
-        #[inline]
-        fn mix(acc: u64, v: u64) -> u64 {
-            let mut z = acc.wrapping_add(v).wrapping_add(0x9E37_79B9_7F4A_7C15);
-            z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-            z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-            z ^ (z >> 31)
-        }
-        /// Two 32-bit fields in one word, exactly — every field below is a
-        /// `u32` (or an `i32` reinterpreted), so no packing truncates and two
-        /// states digest equal only when they were equal before the packing
-        /// halved the mix count (PERF `(-176)`).
-        #[inline]
-        fn pair(lo: u32, hi: u32) -> u64 {
-            u64::from(lo) | (u64::from(hi) << 32)
-        }
+        let h = self.fingerprint_head(with_stack, turn, player_counters);
+        self.fingerprint_tail(h, player_counters)
+    }
+
+    /// The scalar half of [`fingerprint_as`](Self::fingerprint_as): turn, stack
+    /// depth, the per-seat totals and the two zone lengths — everything the
+    /// digest reads that is **not** per-permanent, at ~10 mixes against the
+    /// tail's one a permanent.
+    ///
+    /// Its own value is usable as a *necessary condition* for the full digest,
+    /// because [`fp_mix`] is injective in its accumulator: two states with the
+    /// same permanent stream and different heads cannot digest equal. PERF
+    /// candidate (L) is the consumer.
+    fn fingerprint_head(&self, with_stack: bool, turn: u32, player_counters: bool) -> u64 {
         // ⚠ A LIFE TOTAL PAST THE SATURATION BAND IS NOT A NUMBER, IT IS A
         // STATE: "this seat cannot be killed". Draining 1 a turn off `i32::MAX`
         // moves the digest every sample and ends the game in two billion turns,
@@ -2062,22 +2085,27 @@ impl GameState {
             let band = crate::player::SCALE_CEILING.saturating_mul(1_000);
             if player_counters && p.life > band { band } else { p.life }
         };
-        let mut h = mix(0, pair(turn, if with_stack { self.stack.len() as u32 } else { 0 }));
+        let mut h = fp_mix(0, fp_pair(turn, if with_stack { self.stack.len() as u32 } else { 0 }));
         for p in &self.players {
-            h = mix(h, pair(life_of(p) as u32, p.hand.len() as u32));
-            h = mix(h, pair(p.library.len() as u32, p.graveyard.len() as u32));
+            h = fp_mix(h, fp_pair(life_of(p) as u32, p.hand.len() as u32));
+            h = fp_mix(h, fp_pair(p.library.len() as u32, p.graveyard.len() as u32));
             if with_stack {
-                h = mix(h, u64::from(p.poison_counters));
+                h = fp_mix(h, u64::from(p.poison_counters));
             } else {
-                h = mix(h, pair(p.poison_counters, p.mana_pool.total()));
-                h = mix(h, u64::from(p.mana_pool.colorless_amount()));
+                h = fp_mix(h, fp_pair(p.poison_counters, p.mana_pool.total()));
+                h = fp_mix(h, u64::from(p.mana_pool.colorless_amount()));
             }
             if player_counters {
-                h = mix(h, pair(p.energy, p.experience));
-                h = mix(h, u64::from(p.dungeon.as_ref().map_or(0, |(_, room)| *room as u32 + 1)));
+                h = fp_mix(h, fp_pair(p.energy, p.experience));
+                h = fp_mix(h, u64::from(p.dungeon.as_ref().map_or(0, |(_, room)| *room as u32 + 1)));
             }
         }
-        h = mix(h, pair(self.exile.len() as u32, self.battlefield.len() as u32));
+        fp_mix(h, fp_pair(self.exile.len() as u32, self.battlefield.len() as u32))
+    }
+
+    /// The per-permanent half, chained onto [`fingerprint_head`]'s value.
+    fn fingerprint_tail(&self, head: u64, player_counters: bool) -> u64 {
+        let mut h = head;
         // ⚠ WHICH PERMANENTS ARE TAPPED AT THE END OF A TURN IS BOOKKEEPING,
         // NOT PROGRESS — and it is the whole of what kept `all` 1159 running
         // to the action cap at turn 18,202. `CRAB_PROGRESS_WATCH=2000` printed
@@ -2121,10 +2149,10 @@ impl GameState {
             let counters = c.counters.values().sum::<u32>();
             let head = u64::from(c.id.0) | ((u64::from(c.tapped) & tap_bit) << 32);
             if counters == 0 && c.damage < (1 << 30) {
-                h = mix(h, head | (u64::from(c.damage) << 33));
+                h = fp_mix(h, head | (u64::from(c.damage) << 33));
             } else {
-                h = mix(h, head);
-                h = mix(h, (1 << 63) | pair(c.damage, counters));
+                h = fp_mix(h, head);
+                h = fp_mix(h, (1 << 63) | fp_pair(c.damage, counters));
             }
         }
         h
@@ -7886,3 +7914,26 @@ mod cast_mode_range {
     }
 }
 
+
+/// SplitMix64's finalizer over `acc + v + PHI`. Chaining it makes the digest
+/// order-sensitive, which the field stream needs. **Injective in `acc` for a
+/// fixed `v`** — the finalizer is a bijection and the add is one too — which
+/// is what lets [`GameState::fingerprint_head`] stand in front of the full
+/// digest: two states whose heads differ and whose permanent streams agree
+/// cannot digest equal.
+#[inline]
+fn fp_mix(acc: u64, v: u64) -> u64 {
+    let mut z = acc.wrapping_add(v).wrapping_add(0x9E37_79B9_7F4A_7C15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
+/// Two 32-bit fields in one word, exactly — every field the digest reads is a
+/// `u32` (or an `i32` reinterpreted), so no packing truncates and two states
+/// digest equal only when they were equal before the packing halved the mix
+/// count (PERF `(-176)`).
+#[inline]
+fn fp_pair(lo: u32, hi: u32) -> u64 {
+    u64::from(lo) | (u64::from(hi) << 32)
+}

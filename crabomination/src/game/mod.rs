@@ -2118,6 +2118,14 @@ pub struct GameState {
     /// that stays away longer re-anchors; a spell / player action resets it.
     #[serde(default)]
     pub mandatory_loop_watch: (u64, u32, u32),
+    /// PERF `(-344)` — [`GameState::fingerprint_head`]'s value at the moment
+    /// `mandatory_loop_watch.0` was anchored. A trigger resolution whose head
+    /// differs from this cannot be back at the anchor, and the branch it then
+    /// takes never reads the digest, so the O(board) tail is skipped
+    /// outright. Defaults to 0 for a replay saved before the field existed,
+    /// which costs at most one extra full digest on the first sample.
+    #[serde(default)]
+    pub mandatory_loop_head: u64,
     /// CR 104.4 — **no-progress watchdog, at turn granularity**: `(anchor,
     /// repeats, since)`, the same shape as `mandatory_loop_watch` one level
     /// up. `mandatory_loop_watch` only ever sees a loop that closes inside a
@@ -3694,6 +3702,7 @@ impl Clone for GameState {
             truce_until_turn: self.truce_until_turn,
             game_over: self.game_over,
             mandatory_loop_watch: self.mandatory_loop_watch,
+            mandatory_loop_head: self.mandatory_loop_head,
             no_progress_watch: self.no_progress_watch,
             free_activation_watch: self.free_activation_watch,
             next_effect_timestamp: self.next_effect_timestamp,
@@ -3890,6 +3899,7 @@ impl GameState {
             truce_until_turn: None,
             game_over: None,
             mandatory_loop_watch: (0, 0, 0),
+            mandatory_loop_head: 0,
             no_progress_watch: (0, 0, 0),
             free_activation_watch: (0, None, 0),
             priority: PriorityState::new(0),

@@ -64,10 +64,14 @@ mod tests {
     /// a shared stamp with a per-half "computed" flag; it is sound and it is
     /// written down here rather than taken, because it re-plumbs the SBA
     /// memo's store path for eight bytes.
+    /// `(-344)` raised the cap by eight for `mandatory_loop_head`, and the
+    /// raise is paid for in the same A/B that asks for it: the bigger state is
+    /// cloned on every probe in the reading, and `cube` still reads -0.2 %.
+    /// Raise it again only with a measurement of that shape.
     #[test]
     fn game_state_stays_small() {
         let n = std::mem::size_of::<crate::game::GameState>();
-        assert!(n <= 1_672, "GameState grew to {n} bytes (cap 1,672) — see PERF (-144), (-280), (-318)");
+        assert!(n <= 1_680, "GameState grew to {n} bytes (cap 1,680) — see PERF (-144), (-280), (-318), (-344)");
     }
 
     #[test]
