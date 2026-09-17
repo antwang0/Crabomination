@@ -14496,6 +14496,48 @@ builds reading them the other way would have cost.
   whole-body reads, four "the body IS the cost" verdicts, and the file's
   flat-profile claim now has eleven bodies behind it.
 
+  💡 **N. THE ONE NEW LEAD THE RE-READ PRODUCED — MEMOIZE `death_sweep_scope`
+  ON THE TWO WRITE COUNTERS.** `check_state_based_actions_into` is **2.85 % of
+  `cube` over 21,626 calls** and diffuse over 253 lines, but two *adjacent*
+  engine lines in it are the largest named pair in the body:
+
+```text
+  game/stack.rs:5448   2,211,690  0.17 %   `if c.damage == 0`
+  game/stack.rs:5449   1,546,530  0.12 %   `&& c.counters.is_empty()`
+```
+
+  Those are `card_death_possible`'s five-field early-out, run **per permanent
+  per priority pass**, and the walk around them (`is_creature`, the push, the
+  iteration) puts the whole of `death_sweep_scope` at roughly 0.4-0.5 %. Its
+  own doc records **three separate refutations of the fusion device** — folding
+  the walks together costs +0.55 %, +1.24 % and +0.255 % — so the body is not
+  the lever. **Nobody has tried memoizing the ANSWER across calls.**
+
+  The inputs are all counted: the scope is a function of the battlefield's
+  instance fields (`Battlefield::writes`, PERF `(-306)`), the resolved effect
+  list (`ContinuousEffects::writes`, which the gather memo's key already uses)
+  and one turn flag (`damaged_creatures_die_this_turn`). SBA runs after every
+  resolution *and* every priority pass, and a priority pass that does nothing
+  writes neither — so the hit rate is the census this entry needs before
+  anything is built, exactly as `(-344)`'s was.
+
+  📐 **The arithmetic is favourable and the WIDTH is the risk, not the read.**
+  The key is two word loads and a compare (~6 Ir) against a ~300 Ir walk, so
+  break-even is a 2 % hit rate — nothing like `(-347)`'s problem. But the
+  answer is a `SmallVec<[CardId; 4]>`, and 40 bytes on `GameState` costs
+  ~0.44 Ir a `CardData`-shaped copy x the probe clones: `(-344)`'s **8 bytes
+  cost 529 k Ir on `cube`**, so 40 would cost ~2.6 M and eat the win.
+  **Put it on `Battlefield`, not on `GameState`, and store a member BITMASK,
+  not a list** — `attach_fold` is the precedent for the stamp (a 31-bit
+  `writes` stamp plus its answer in one `AtomicU32`) and `trig_members` /
+  `dispatch_members` are the precedent for the `u64` index mask with its
+  `len() <= 64` guard. That is 12 bytes and ~800 k Ir of width against a
+  hit-rate-scaled share of ~6 M.
+  ⚠ Census first: an env-gated counter on the four paths in a
+  `debug-assertions` build, `--games 6` on all three pools, and **both**
+  numbers `(-344)`'s entry insists on — how often the memo is *reachable* and
+  how often the key actually *separates*.
+
   ⚠ **AND CANDIDATE (C)'s NUMBERS ARE STALE — `(-333)` ALREADY TOOK IT.**
   `blocker_pair_block` reads **17,528 calls / 2,368,718 self Ir (0.16 %)** at
   this tip against the **72,918 / 9,062,474 (0.58 %)** the entry files, and
