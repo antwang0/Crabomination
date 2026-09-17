@@ -3043,13 +3043,19 @@ be quoted against a tip measured on another.
   (-351) the layer pass, same gate             -0.121 / -0.137 / -0.096 %
   CR 303.4 the block filter's IsEnchanted      +0.139 / +0.122 / +0.079 %  (a rules fix)
   (-352) …and that fact becomes a thunk        -0.159 / -0.148 / -0.102 %
+  (-353) the CR 601.2 gate above the take      -0.077 / -0.110 / -0.176 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                    -0.354 / -0.304 / -0.243 %
+  sum of the rows                              -0.431 / -0.413 / -0.419 %
 ```
 
-**BASE 578,482,885 / 1,509,987,882 / 1,630,351,663 -> CLOSING 576,435,672 /
-1,505,398,754 / 1,626,393,502**, one rules fix among them and it ended up
-paying for itself.
+**BASE 578,482,885 / 1,509,987,882 / 1,630,351,663 at `a1ff92f3`; the first
+four rows close at 576,435,672 / 1,505,398,754 / 1,626,393,502 (-0.354 /
+-0.304 / -0.243 %) on this session's own tree, and `(-353)` is measured after
+a rebase onto the ML session's `143980a7`, so it is quoted as a row against its
+own base rather than folded into an end-to-end delta.** One rules fix among
+them and it ended up paying for itself.
+**CLOSING TIP at `4289a165` (the rebased tree): fixed 576,120,857 / cube
+1,503,966,660 / sealed 1,623,872,595.**
 
 📐 **ONE BYTE, THREE ROWS, AND THE THIRD WAS THE BIGGEST.** The candidate entry
 priced (B) at ~0.12 % of `cube` for one body. What it was actually worth was
@@ -3075,21 +3081,22 @@ must RE-TAKE the base rather than predict it from this block.** The A/B rows
 are unaffected — each was built and measured from one tree — which is the whole
 reason this file quotes rows and absolutes separately.
 
-sweep   **2 blocks — fresh seeds 1416..1417 at the `a878464f` tip and
-        1418..1419 at the rebased closing tip: 12 cells / 59,200 games / 0
-        failures**, `cap 0 / board 0 / stuck 0 / draw 8`, pools
+sweep   **3 blocks — fresh seeds 1416..1421: 18 cells / 88,800 games / 0
+        failures**, `cap 0 / board 0 / stuck 0 / draw 10`, pools
         `cube all sealed`, `target-audit/overflow` with
         `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
-        1420.** The blocks are this run's ratchet and they carry all of it:
-        `(-349)`'s `cold_written` recompute-and-compare on both cleanup
-        guards, `(-350)`'s three `debug_assert_eq!`s against the pre-gate
-        bodies, `(-351)`'s three-in-one on the layer pass, and the second
-        block additionally covers the CR 303.4 fix and `(-352)`'s thunk.
-        None fired on 59,200 games' worth of boards.
+        1422.** The blocks are this run's ratchet and each one covers the
+        gates landed before it: `(-349)`'s `cold_written` recompute-and-compare
+        on both cleanup guards, `(-350)`'s three `debug_assert_eq!`s against
+        the pre-gate bodies, `(-351)`'s three-in-one on the layer pass, the
+        CR 303.4 fix and `(-352)`'s thunk, and — the third block —
+        `(-353)`'s `debug_assert!` that the hoisted timing gate and the
+        stamped card agree. None fired on 88,800 games' worth of boards.
         Suite **19,600 / 0 / 5** (`CRAB_ANSWER_LOG=strict`, two new tests),
         golden traces unmoved, clippy **0** over the workspace, `cargo check
         --profile release-fast -p crabomination --bin bot_ladder` clean.
-        `--bench`, run at `a878464f` and again at the rebased closing tip:
+        `--bench`, run at `a878464f`, at the rebased tip and again at the
+        `4289a165` closing tip:
         **195,806 / 27.49 / 611.9 / 0 stalls** both times, byte-identical to
         the committed invariant, `determinism ok`, `thread_determinism ok
         (3 vs 1)`. 📐 **The invariant survived `143980a7` too, and that is
@@ -3097,11 +3104,12 @@ sweep   **2 blocks — fresh seeds 1416..1417 at the `a878464f` tip and
         Round 76b changed the *search* pilot's X arms, so the two do not
         meet — **the bench invariant does not cover the `dflt`/search pilot,
         and an ML change to it will read as "no change" here.** `games_per_s`
-        354.5 / 358.3 at `a878464f` and 392.5 at the tip, all inside the
-        212-407 single-run spread; **do not read the last one as this run's
-        -0.3 % arriving**, one run separates nothing. `peak_rss_mib` 27.1 /
-        27.2 — the same arena variance as last session's 25.2 / 27.2 / 25.2,
-        still not a reading.
+        354.5 / 358.3 / 392.5 / 381.2 over four runs, all inside the 212-407
+        single-run spread this file records; **do not read any of them as this
+        run's -0.4 % arriving** — `bench_ab.py` at 16 pairs is what separates
+        2 %, and one run separates nothing. `peak_rss_mib` 27.1 / 27.2 / 27.1 —
+        the same arena variance as last session's 25.2 / 27.2 / 25.2, still not
+        a reading.
         ⚠ Box timings, this session (cold `target/`, 4 cores): cold test build
         **6m04s**, full suite **153-163 s**, cold `profiling-fast` **11m21s**,
         engine+base+catalog rebuild **~10m**, three pools' callgrind in
@@ -8310,6 +8318,46 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-353)` the CR 601.2 timing gate moves above the take-from-hand — **fixed -0.077 / cube -0.110 / sealed -0.176 %**
+
+Candidate (Q)'s first group. `cast_spell_with_convoke` takes the card out of
+hand at the top and then runs forty-nine rejection checks that put it back,
+each having already unshared `PlayerData`, the hand `Vec` and the card — and
+`CRAB_CAST_CENSUS`'s line histogram says **three of the forty-nine are the
+whole table**, of which the sorcery-speed gate is 21.6 % of `cube`'s
+rejections and 48.1 % of `sealed`'s.
+
+It now runs **before** the removal, on the hand card, which skips the take and
+the ~290 lines of cast setup between it and its old position (kicker,
+waterbend, convoke, delve, the cost computation).
+
+```text
+                  (-352)+rebase      (-353)            delta
+  fixed            576,566,105       576,120,857       -0.0772 %
+  cube           1,505,623,543     1,503,966,660       -0.1100 %
+  sealed         1,626,738,070     1,623,872,595       -0.1762 %
+
+  cast_census, cube    7,660 calls, 7,108 reach the take (was 7,660), 552 early
+  cast_census, sealed  8,574 calls, 7,756 reach the take (was 8,574), 818 early
+```
+
+One predicate, `GameState::sorcery_timing_bars`, two call sites: the bestow
+path asks it again after the stamp (`bestowed` rewrites the type line Sigarda's
+Aid reads) and every other path carries the `debug_assert!` that the two
+answers agree.
+
+⚠ **THE BEHAVIOUR CHECK THIS NEEDED IS NOT THE SUITE.** The old path removed
+the card and pushed it **back**, which moves it to the end of the hand; the new
+one never takes it. A hand-order change is invisible to 19,603 tests and
+visible to every bot decision that iterates the hand — so `CRAB_DUMP_TRACES` on
+both binaries, byte-identical over all 48 `cube` pairings and all 72 `sealed`
+ones, is what licenses the row. **When a change moves a container's ORDER
+rather than its contents, the trace dump is the gate, not the suite.**
+
+📐 And the pool split is the census's, not a guess: `sealed` is the pool this
+row is about (48 % of its rejections against `cube`'s 22 %), and `fixed` — the
+pool `--bench` measures — has 2.0 % of its casts rejected at all.
 
 ### `(-352)` `blocker_enchanted` becomes a thunk — **fixed -0.159 / cube -0.148 / sealed -0.102 %**
 
@@ -15592,19 +15640,48 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      unshare either way. **The takeable part is the prefix of checks that
      could run before the removal.**
 
-     **The plan, and the prefix is already identified.** About twenty of the
-     forty-nine rollbacks sit in the first 38 % of the body
-     (`SelectionRequirementViolated`, nine `CantCastNoncreature`,
-     `SpellNameLocked`, `CantCastPermanentSpells`, two `SorcerySpeedOnly`, the
-     convoke/delve membership checks) and **every one of them reads
-     `card.definition` or the board, not the owned card** — the card is taken
-     by value only so the rollback can give it back. Look it up by reference
-     (`hand.iter().find(..)`), run that prefix, *then* remove. ⚠ Forty-nine
-     rejection branches on a core path is a rules-bug risk: **hoist one group
-     per commit with the suite between**, and `fixed`'s 2.0 % says the row
-     will read as nothing on the pool `--bench` measures — rank it on `cube`.
-     ⚠ And re-run the census after each group: it is the direct measure of
-     what is left.
+     📐 **AND THEN THE HISTOGRAM BY LINE MADE IT ONE BRANCH INSTEAD OF
+     TWENTY.** `CRAB_CAST_CENSUS` keys its rejections by `actions.rs` line, and
+     **three of the forty-nine sites are the whole table**:
+
+```text
+  cube    payment failed 1,944 = 76.2 %   sorcery speed   552 = 21.6 %   other 54
+  sealed  sorcery speed    818 = 48.1 %   payment failed  786 = 46.2 %   other 96
+```
+
+     ✅ **The sorcery-speed branch is TAKEN as `(-353)`** (fixed -0.077 / cube
+     -0.110 / sealed -0.176 %) — hoisted above the removal on the hand card,
+     one predicate (`sorcery_timing_bars`) with the bestow path asking it again
+     after the stamp and a `debug_assert!` everywhere else. **"Twenty of the
+     forty-nine look hoistable" and "these three branches are the cost" are not
+     the same claim, and only the second is worth a refactor: the line column
+     cost one 3-minute rebuild.**
+
+     🔎🔎 **WHAT IS LEFT IS NOT A HOIST AT ALL — IT IS THE PAYMENT, AND
+     `CRAB_PAY_FAILS` ALREADY CLASSIFIES IT.** The remaining big row (1,944 of
+     `cube`'s rejections) is `try_pay_after_snapshot_mode` returning `Err`, and
+     the existing census says what those are:
+
+```text
+             fails / attempts        generic   coloured   hybrid   probe/committed
+  cube     2,486 / 8,712  28.5 %        974      1,428       84     2,468 / 18
+  sealed   1,104 / 8,490  13.0 %        444        624       36     1,052 / 52
+  fixed        0 / 3,494   0.0 %          -          -        -          -
+  and 81.3 % of `cube`'s failures had already built a mana source table.
+```
+
+     ⚠⚠ **`pay_census`'s own doc says the COLOURED class — the largest, 1,428
+     on `cube` — is where a CORRECTNESS bug would live**: "the pips had
+     producers but no *assignment* covers them … or auto-tap stranded a colour
+     it could have covered, which is a correctness bug: a payable line becomes
+     invisible". **Nobody has separated those two.** `CRAB_PAY_FAILS=2` names
+     each failure with its cost and caller line; a bipartite match over the
+     source table decides the rest. **This is a bot-STRENGTH lead before it is
+     a perf one** — a refused payable cast is a lost game, not a slow one — and
+     `generic` (974) is the pure perf half the doc already calls "an estimate
+     consumed as a gate".
+     ⚠ `fixed` has **zero** payment failures, so none of this reads on the pool
+     `--bench` measures. Rank it on `cube`.
 
   💡 **P. THE WHOLE CoW UNSHARE TABLE, CENSUSED BY INSTANCE AND BY CALLER —
      one `--demangle=no` dump, no build, and it supersedes the
