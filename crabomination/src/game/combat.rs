@@ -1078,7 +1078,7 @@ impl GameState {
         // One freeze scope so the gate and the pass share a single gather.
         let (computed, attack_requirement) = self.with_frozen_layers(|g| {
             let requirement = has_legal_target
-                && (g.battlefield.iter().any(|c| !c.goaded_by.is_empty())
+                && (g.battlefield.iter().any(|c| c.cold_any(|k| !k.goaded_by.is_empty()))
                     || g.board_keyword_in_scope(&[
                         Keyword::MustAttack,
                         Keyword::MustAttackOrBlock,
@@ -1347,7 +1347,7 @@ impl GameState {
                 let must = must_attack
                     || must_either
                     || (must_if_another && attacks.iter().any(|a| a.attacker != c.id))
-                    || !c.goaded_by.is_empty();
+                    || c.cold_any(|k| !k.goaded_by.is_empty());
                 if !must {
                     continue;
                 }
@@ -2821,8 +2821,10 @@ impl GameState {
         let printed = |id: CardId| {
             self.battlefield_find(id).is_some_and(|c| {
                 c.definition.keywords.iter().any(strikes)
-                    || c.granted_keywords_eot.iter().any(strikes)
-                    || c.keyword_counters.iter().any(|(k, n)| *n > 0 && strikes(k))
+                    || c.cold_any(|k| {
+                        k.granted_keywords_eot.iter().any(strikes)
+                            || k.keyword_counters.iter().any(|(k, n)| *n > 0 && strikes(k))
+                    })
             })
         };
         let hit = self.attacking.iter().any(|atk| printed(atk.attacker))

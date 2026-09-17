@@ -8488,6 +8488,36 @@ impl CardData {
     pub fn cold_pristine(&self) -> bool {
         !self.cold_written
     }
+
+    /// Ask a yes/no question of the [`CardCold`] group. A pristine group
+    /// answers `false` without chasing the group's pointer or loading a
+    /// length.
+    ///
+    /// **The gate every whole-zone walk over a cold field opens on** — PERF
+    /// `(-354)`. `cold_pristine` alone is a byte on `CardData`; the field
+    /// behind it is a second `Arc` deref plus a `Vec`/`Option` probe, and a
+    /// walk pays both on ~23 permanents (or ~120 cards across the zones) to
+    /// find nothing. One device rather than a hand-written gate per site, so
+    /// the whole class carries one audit instead of thirty.
+    ///
+    /// ⚠ **`f` must answer `false` on a `CardCold::default()`** — every
+    /// `is_empty` / `is_some` / `contains` / `any` form does. The
+    /// `debug_assert!` recomputes `f` on the skipped path, so a predicate
+    /// that does not, and any later pass that adds a route to the group, fails
+    /// under `-C debug-assertions=yes` rather than answering stale.
+    #[inline]
+    pub fn cold_any(&self, f: impl FnOnce(&CardCold) -> bool) -> bool {
+        if self.cold_pristine() {
+            debug_assert!(
+                !f(&self.cold),
+                "cold_any: a pristine cold group answered true — the predicate reads a \
+                 non-default answer out of `CardCold::default()`, or a write reached the \
+                 group without going through `DerefMut`",
+            );
+            return false;
+        }
+        f(&self.cold)
+    }
 }
 
 impl std::ops::Deref for CardData {

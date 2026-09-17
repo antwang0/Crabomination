@@ -842,8 +842,10 @@ impl GameState {
             .hand
             .iter()
             .filter(|c| {
-                c.granted_alt_cast_cost_eot.is_some()
-                    && c.may_play_until.as_ref().is_some_and(|p| p.player == caster)
+                c.cold_any(|k| {
+                    k.granted_alt_cast_cost_eot.is_some()
+                        && k.may_play_until.as_ref().is_some_and(|p| p.player == caster)
+                })
             })
             .map(|c| c.id)
             .collect()
@@ -859,7 +861,7 @@ impl GameState {
             .hand
             .iter()
             .filter(|c| {
-                c.may_play_until.is_none()
+                !c.cold_any(|k| k.may_play_until.is_some())
                     && !c.definition.is_land()
                     && (self.player_casts_hand_spells_free(caster, c)
                         || self.player_casts_cheap_creature_free(&c.definition)
@@ -915,7 +917,7 @@ impl GameState {
             .exile
             .iter()
             .chain(self.players.iter().flat_map(|p| p.graveyard.iter()))
-            .filter(|c| c.may_play_until.is_some_and(|perm| perm.player == caster))
+            .filter(|c| c.cold_any(|k| k.may_play_until.is_some_and(|perm| perm.player == caster)))
             .map(|c| {
                 let eff = &c.definition.effect;
                 (c.id, eff.requires_target().then(|| eff.clone()))
@@ -970,7 +972,7 @@ impl GameState {
             .chain(self.players.iter().flat_map(|p| p.graveyard.iter()))
             .filter(|c| {
                 c.definition.is_land()
-                    && c.may_play_until.is_some_and(|perm| perm.player == caster)
+                    && c.cold_any(|k| k.may_play_until.is_some_and(|perm| perm.player == caster))
             })
             .map(|c| c.id)
             .collect();

@@ -10231,8 +10231,10 @@ impl GameState {
             && self.battlefield.iter().any(|c| {
                 (printed && c.definition.keywords.iter().any(&pred))
                     || (instance
-                        && (c.granted_keywords_eot.iter().any(&pred)
-                            || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))))
+                        && c.cold_any(|cold| {
+                            cold.granted_keywords_eot.iter().any(&pred)
+                                || cold.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
+                        }))
             })
             || match self.frozen_effects_memoized() {
             Some(fx) => granted(&fx),

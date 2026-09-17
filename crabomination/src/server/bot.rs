@@ -6126,7 +6126,7 @@ fn may_play_specialty(state: &GameState, seat: usize) -> u32 {
         .exile
         .iter()
         .chain(state.players.iter().flat_map(|p| p.graveyard.iter()))
-        .any(|c| c.may_play_until.is_some_and(|perm| perm.player == seat));
+        .any(|c| c.cold_any(|k| k.may_play_until.is_some_and(|perm| perm.player == seat)));
     if any { spec::MAY_PLAY } else { 0 }
 }
 
@@ -7200,7 +7200,9 @@ fn cast_candidates<'a>(
         .iter()
         .chain(state.players.iter().flat_map(|p| p.graveyard.iter()))
     {
-        if c.definition.is_land() || c.may_play_until.is_none_or(|perm| perm.player != seat) {
+        if c.definition.is_land()
+            || !c.cold_any(|k| k.may_play_until.is_some_and(|perm| perm.player == seat))
+        {
             continue;
         }
         let (target, additional_targets) = if c.definition.effect.requires_target() {
@@ -7584,8 +7586,9 @@ fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     }
     for c in state.players[seat].graveyard.iter() {
         if c.definition.activated_abilities.iter().any(|ab| ab.from_graveyard)
-            || !c.granted_activated_abilities.is_empty()
-            || !c.granted_activated_eot.is_empty()
+            || c.cold_any(|k| {
+                !k.granted_activated_abilities.is_empty() || !k.granted_activated_eot.is_empty()
+            })
             || (scavenge_grant && c.definition.is_creature())
         {
             m |= sink::GY_RECUR;
@@ -7706,7 +7709,8 @@ fn main_phase_action_with(
     // seat has a may-play grant on is played from exile before it expires.
     if can_play_land
         && let Some(land) = state.exile.iter().find(|c| {
-            c.definition.is_land() && c.may_play_until.is_some_and(|perm| perm.player == seat)
+            c.definition.is_land()
+                && c.cold_any(|k| k.may_play_until.is_some_and(|perm| perm.player == seat))
         })
     {
         let action = GameAction::PlayLand(land.id);
@@ -9933,7 +9937,7 @@ fn must_attack(
     kws.has_kw(&Keyword::MustAttack)
         || kws.has_kw(&Keyword::MustAttackOrBlock)
         || (kws.has_kw(&Keyword::MustAttackIfAnotherAttacks) && others_attacking)
-        || !c.goaded_by.is_empty()
+        || c.cold_any(|k| !k.goaded_by.is_empty())
 }
 
 /// CR 508.1d — re-add every creature the rules oblige to attack that the
@@ -9970,7 +9974,7 @@ fn restore_forced_attackers(
 /// declarations to repair pays it once.
 fn attack_requirement_present(state: &GameState) -> bool {
     use crate::card::Keyword;
-    state.battlefield.iter().any(|c| !c.goaded_by.is_empty())
+    state.battlefield.iter().any(|c| c.cold_any(|k| !k.goaded_by.is_empty()))
         || state.board_keyword_in_scope(&[
             Keyword::MustAttack,
             Keyword::MustAttackOrBlock,

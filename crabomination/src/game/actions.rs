@@ -2814,8 +2814,12 @@ impl crate::game::GameState {
         let mut out = Vec::new();
         // Instance grants first (Cursecloth Wrappings' until-EOT embalm), so
         // their indices match `granted_abilities_for`'s off-battlefield order.
-        out.extend(card.granted_activated_abilities.iter().cloned());
-        out.extend(card.granted_activated_eot.iter().cloned());
+        if card.cold_any(|k| {
+            !k.granted_activated_abilities.is_empty() || !k.granted_activated_eot.is_empty()
+        }) {
+            out.extend(card.granted_activated_abilities.iter().cloned());
+            out.extend(card.granted_activated_eot.iter().cloned());
+        }
         // Varolz — scavenge on creature cards, unless the card prints its own.
         if card.definition.is_creature()
             && !card
@@ -15052,8 +15056,9 @@ impl GameState {
     fn grants_nothing_slow(&self, me: &CardInstance, scan: &GrantScan<'_>) -> bool {
         use crate::effect::Selector;
         if !scan.graveyard.is_empty()
-            || !me.granted_activated_abilities.is_empty()
-            || !me.granted_activated_eot.is_empty()
+            || me.cold_any(|k| {
+                !k.granted_activated_abilities.is_empty() || !k.granted_activated_eot.is_empty()
+            })
             || self.deploy_creatures
         {
             return false;
@@ -15132,8 +15137,12 @@ impl GameState {
         // Instance-granted abilities first (Urza's Saga chapters) — the
         // client view lists printed + instance-granted in this order, so
         // their indices must come before the battlefield-static grants.
-        out.extend(me.granted_activated_abilities.iter());
-        out.extend(me.granted_activated_eot.iter());
+        if me.cold_any(|k| {
+            !k.granted_activated_abilities.is_empty() || !k.granted_activated_eot.is_empty()
+        }) {
+            out.extend(me.granted_activated_abilities.iter());
+            out.extend(me.granted_activated_eot.iter());
+        }
         // Myr Welder — "has all activated abilities of all cards exiled
         // with it", read live off the imprint pile.
         if welder {
@@ -16162,7 +16171,7 @@ impl GameState {
             };
             if let Some(name) = source_name
                 && self.battlefield.iter().any(|c| {
-                    c.named_card.as_deref() == Some(name)
+                    c.cold_any(|k| k.named_card.as_deref() == Some(name))
                         && c.definition.static_abilities.iter().any(|sa| {
                             matches!(
                                 sa.effect,
@@ -17677,7 +17686,7 @@ impl GameState {
             let tax: u32 = self
                 .battlefield
                 .iter()
-                .filter(|c| c.named_card.as_deref() == Some(name))
+                .filter(|c| c.cold_any(|k| k.named_card.as_deref() == Some(name)))
                 .flat_map(|c| c.definition.static_abilities.iter())
                 .map(|sa| match sa.effect {
                     crate::effect::StaticEffect::NamedSourcesActivationTax { amount } => amount,

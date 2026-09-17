@@ -3015,6 +3015,42 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-17 (the cold-class session, FIFTEENTH box) — `(-349)`'s open half taken as a class, and the box check landed for the second run running
+
+**BASE ABSOLUTES at `d1676b19`** (`profiling-fast --no-default-features`,
+system allocator, `--a gang --b gang --games 6 --threads 1 --seed 1`):
+fixed **574,982,787** / cube **1,502,592,314** / sealed **1,622,355,333**.
+
+⚠⚠ **AND THE BOX RULE PAID OFF: THE MISS IS THE SAME OFFSET, SIGN FLIPPED.**
+The tree is `(-353)`'s tip plus one markdown commit, so the base should have
+*been* 576,120,857 / 1,503,966,660 / 1,623,872,595. It reads **-0.198 /
+-0.091 / -0.093 %** below — and this file's recorded twelfth-vs-eleventh box
+step is **+0.196 / +0.090 / +0.089 %**. Three pools, three digits, opposite
+sign. 📐 **So "a base that misses its prediction by an amount this file has
+seen before is a box" now has two independent confirmations, and the offset
+has a size: ~0.19 % on `fixed`, ~0.09 % on the two big pools.** A fresh
+container is a fresh box; re-take the base and do not reach for a tree
+explanation until the miss is a novel one.
+
+```text
+  (-354) the cold class' pristine byte, 29 sites   -0.181 / -0.163 / -0.111 %
+```
+
+**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 573,939,636 /
+1,500,141,909 / 1,620,548,237.**
+
+📐 **ONE COMMIT AND IT IS 40 % OF THE PREVIOUS SESSION'S WHOLE SUM OF ROWS**
+(-0.163 vs -0.413 % of `cube` across six commits), because the previous session
+built the byte and this one spent it. **The device is worth more than the row
+that justified it — ask what else it answers before the session that built it
+ends.** `(-349)`'s entry said so and left the half undone; the cost of leaving
+it was a second base, a second candidate build and a second set of callgrind
+runs.
+
+⚠ **17.8 % of the row is `release-fast` call overhead** (two accessor-sized
+functions that went to zero calls, i.e. inlined) — see the Log entry. The
+shipped-profile figure is ~0.13 % of `cube`.
+
 ### 2026-09-17 (the cold-group session, FOURTEENTH box) — candidate (B) taken at the group's one `&mut` route instead of at its 114 write sites
 
 **BASE ABSOLUTES at `a1ff92f3`** (`profiling-fast --no-default-features`,
@@ -8318,6 +8354,75 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-354)` every whole-zone walk over a cold field opens on the pristine byte — **fixed -0.181 / cube -0.163 / sealed -0.111 %**
+
+`(-349)`'s open half, taken as the **class** rather than site by site: the
+census that entry asked for is now `scripts/cold_census.py`, and it ranked the
+readers in one command against a dump that already existed.
+
+```text
+                  base              (-354)            delta
+  fixed            574,982,787       573,939,636       -0.1814 %
+  cube           1,502,592,314     1,500,141,909       -0.1631 %
+  sealed         1,622,355,333     1,620,548,237       -0.1114 %
+```
+
+**One device, 29 call sites, one assertion.** `CardData::cold_any(f)` asks a
+yes/no question of the group and answers `false` on a pristine one without the
+second `Arc` deref or the `Vec`/`Option` probe behind it; its own
+`debug_assert!` recomputes `f` on the skipped path, so the whole class carries
+one recompute-and-compare instead of twenty-nine hand-written ones. ⚠ **The
+soundness condition is on the predicate, not the card: `f` must answer `false`
+on a `CardCold::default()`** — every `is_empty` / `is_some` / `contains` /
+`any` form does, and `may_play_until.is_none()` (which does not) is written as
+`!c.cold_any(|k| k.may_play_until.is_some())`.
+
+```text
+        delta     base self     cand self   calls  row
+     -618,416     7,950,340     7,331,924   2,650  do_untap                  (goad lift)
+     -344,550       344,550             0  18,458  grants_nothing            INLINED away
+     -253,084     3,033,956     2,780,872   2,650  end_turn                  (may_play sweep)
+     -247,682     6,598,846     6,351,164  36,034  board_keyword_in_scope
+     -241,480    10,355,312    10,113,832  36,142  advance_step              (counter walk)
+     -170,998     3,853,544     3,682,546  50,884  grants_nothing_slow
+     -112,404    22,369,110    22,256,706   6,244  declare_attackers_banded
+      -91,882        91,882             0   5,894  GrantScan::cauldron       INLINED away
+      -89,944     2,782,300     2,692,356   2,650  cleanup_wear_off
+      -89,080       828,184       739,104   4,708  board_keyword_matching
+      -62,414     8,709,174     8,646,760   4,308  bot::pick_attacks_inner
+```
+
+📐 **`do_untap` IS THE BIGGEST ROW AND IT WAS THE CHEAPEST SITE**: -7.8 % of a
+body eleven bodies' worth of line profiling had already closed as diffuse, for
+one `contains` moved behind the byte. Its walk is ~23 permanents x 2,650 calls
+= ~61 k visits at ~10 Ir apiece. **A per-card cold read in a zone walk is
+priced by the zone's length, and no line profile shows it** — the read is three
+instructions spread across an iteration row.
+
+⚠ **AND 436 k OF THE 2,450 k (17.8 %) IS CALL OVERHEAD `release` DOES NOT HAVE.**
+Two rows went to *zero calls* rather than shrinking, which by this file's own
+rule means inlined, not deleted — and both are accessor-sized (18.7 and
+15.6 Ir/call), so what vanished really was overhead. But `release-fast` is the
+no-LTO profile and `release`'s thin LTO had already inlined them, so **the
+shipped binary's share of this row is ~0.13 % of `cube`, not 0.163 %.** The
+engine-side rows above are the part that transfers.
+
+📐 **The census is the reusable half.** `scripts/cold_census.py` reads the field
+list off `CardCold` itself, attributes every read to its enclosing `fn`, and
+joins against a `cg_edges` dump — so a field added to the group appears in the
+ranking with no edit, and the "140 fns read a cold field and 54 have a self
+row" join that found `(-351)` is a command instead of ten lines of throwaway
+python. It also **closes** the entry's top-ranked row with no build spent:
+`gather_continuous_effects_inner` (29.9 M, 1.99 %) has three `named_card` sites
+and all three are cold — one command-zone walk and two behind `sa_mask` gates —
+which is the fn-attribution over-counting the entry warned about, confirmed.
+
+⚠ **What was deliberately NOT gated, so nobody re-greps it:** the four
+`cast_cost_scan` / `board_has_mana_static` name-lock walks and both
+`face_up_def` filters already short-circuit on a cheaper term, and
+`once_per_turn_used` / `exhausted_abilities` are read only when the ability
+carries the flag. **A site behind an existing presence gate is not a site.**
 
 ### `(-353)` the CR 601.2 timing gate moves above the take-from-hand — **fixed -0.077 / cube -0.110 / sealed -0.176 %**
 
@@ -15360,9 +15465,24 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      was read as a reason to reach for `Arc::ptr_eq`.
      ⚠ **The `Arc::ptr_eq` / shared-default form is still refuted and stays
      refuted** — nothing below is stale, it is just no longer the way in.
-     💡 **AND THE OPEN HALF IS THE INTERESTING ONE: `cold_pristine()` is now a
-     free byte every hot `CardCold` reader can gate on, and only three families
-     have taken it** (the cleanup guards, the keyword asks, the layer pass).
+     ✅ **THE OPEN HALF IS TAKEN as `(-354)` — fixed -0.181 / cube -0.163 /
+     sealed -0.111 %, 29 sites behind one `CardData::cold_any` and one
+     assertion**, and the census the paragraph below asked for is now
+     `scripts/cold_census.py`. 📐 **It is 40 % of the previous session's entire
+     sum of rows in one commit, which is this entry's real lesson: the device
+     was worth more than the row that justified it, and the session that built
+     it spent three sites out of twenty-nine.** What remains after it, off the
+     same census, is *single* reads rather than walks —
+     `activate_ability_inner`'s per-turn / exhaust tallies (behind the
+     ability's own flag), `resolve_top_of_stack_inner`'s `kicked_options`
+     clone, `bot::pick_blocks_inner`'s `granted_keywords_eot` chain (an
+     iterator chain, so its gate needs an `Option<Iter>` flatten rather than a
+     `bool`) — none priced above ~0.01 %. **The class is closed; the script is
+     what stays.**
+
+     💡 The open half as it was filed, kept for the site counts: `cold_pristine()`
+     is a free byte every hot `CardCold` reader can gate on, and only three
+     families had taken it (the cleanup guards, the keyword asks, the layer pass).
      Unsurveyed readers, by site count:
      `may_play_until` 49, `named_card` 39, `exiled_by` 26, `goaded_by` 22,
      `front_face` / `face_up_def` 37, `granted_activated_abilities` /

@@ -2519,7 +2519,7 @@ impl GameState {
                     if self
                         .battlefield
                         .iter()
-                        .any(|c| c.id == card_id && !c.pending_etb_counters.is_empty())
+                        .any(|c| c.id == card_id && c.cold_any(|k| !k.pending_etb_counters.is_empty()))
                         && let Some(c) = self.battlefield.find_by_id_mut(card_id)
                     {
                         for (kind, n) in std::mem::take(&mut c.pending_etb_counters) {
@@ -4163,7 +4163,7 @@ impl GameState {
         // value: each is a `DerefMut` on a CoW `CardData`, i.e. a deep copy
         // of the permanent, and on a quiet board none of these flags is set.
         for card in self.battlefield.iter_mut() {
-            if card.goaded_by.contains(&p) {
+            if card.cold_any(|k| k.goaded_by.contains(&p)) {
                 card.goaded_by.retain(|&g| g != p);
             }
             // CR 701.35 — detain lasts "until your next turn"; lift it when the
@@ -4559,7 +4559,7 @@ impl GameState {
         }
         // The eot grants are gone; the keyword counters are what is left.
         self.board_instance_keywords =
-            self.battlefield.iter().any(|c| !c.keyword_counters.is_empty());
+            self.battlefield.iter().any(|c| c.cold_any(|k| !k.keyword_counters.is_empty()));
         self.offboard_keyword_grants = self.offboard_keyword_grants_now();
         // Until-end-of-turn flashback grants (SOS "Flashback") live on
         // graveyard cards, which `clear_end_of_turn_effects` above doesn't
@@ -4575,7 +4575,9 @@ impl GameState {
         for pi in 0..self.players.len() {
             let player = &self.players[pi];
             let stale_grants = player.graveyard.iter().any(|c| {
-                c.granted_flashback_eot.is_some() || c.granted_harmonize_eot.is_some()
+                c.cold_any(|k| {
+                    k.granted_flashback_eot.is_some() || k.granted_harmonize_eot.is_some()
+                })
             });
             let stale_scalars = !player.turn_spell_discounts.is_empty()
                 || player.face_down_discount_this_turn != 0
@@ -4589,10 +4591,10 @@ impl GameState {
                 // Per card as well as per seat: one card carrying a grant
                 // must not deep-copy the fifteen beside it that do not.
                 for card in &mut player.graveyard {
-                    if card.granted_flashback_eot.is_some() {
+                    if card.cold_any(|k| k.granted_flashback_eot.is_some()) {
                         card.granted_flashback_eot = None;
                     }
-                    if card.granted_harmonize_eot.is_some() {
+                    if card.cold_any(|k| k.granted_harmonize_eot.is_some()) {
                         card.granted_harmonize_eot = None;
                     }
                 }
@@ -4874,7 +4876,8 @@ impl GameState {
         // `Player` unshares the whole `PlayerData` first — so every zone is
         // gated on actually holding a permission. Almost none ever do; the
         // libraries alone are ~35 cards a seat.
-        let pending = |c: &crate::card::CardInstance| c.may_play_until.is_some();
+        let pending =
+            |c: &crate::card::CardInstance| c.cold_any(|k| k.may_play_until.is_some());
         if self.battlefield.iter().any(pending) {
             for c in self.battlefield.iter_mut() { sweep(c); }
         }

@@ -2035,7 +2035,9 @@ impl GameState {
                 .and_then(|cid| self.battlefield.find_by_id(cid))
                 .is_some_and(|c| !c.is_token && c.cast_from_hand),
             Predicate::SourceChampionedSomething => ctx.source.is_some_and(|cid| {
-                self.exile.iter().any(|c| c.exiled_by.as_ref().is_some_and(|l| l.source == cid))
+                self.exile
+                    .iter()
+                    .any(|c| c.cold_any(|k| k.exiled_by.as_ref().is_some_and(|l| l.source == cid)))
             }),
             Predicate::TriggerBlocksSource => match (ctx.trigger_source, ctx.source) {
                 (Some(EntityRef::Permanent(blocker)), Some(src)) => {
@@ -4826,7 +4828,9 @@ impl GameState {
                             .iter()
                             .any(|c| {
                                 (c.exiled_with == Some(sid)
-                                    || c.exiled_by.as_ref().is_some_and(|l| l.source == sid))
+                                    || c.cold_any(|k| {
+                                        k.exiled_by.as_ref().is_some_and(|l| l.source == sid)
+                                    }))
                                     && c.definition.name == card.definition.name
                             })
                     }),
