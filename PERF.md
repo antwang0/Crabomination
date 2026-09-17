@@ -3056,7 +3056,10 @@ sweep   **2 blocks — fresh seeds 1412..1413 at the `b4ebba46` tip and
         `cap 0 / board 0 / stuck 0 / draw 4`,
         pools `cube all sealed`, `target-audit/overflow` with
         `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
-        1416.** The block is `(-346)`'s ratchet: `any_in_family`'s
+        1416.** Standing audits at the closing tip: `audit_stubs` **0 flagged**
+        over 21,797 unique cards, `audit_panics` **70 sites / 59 guarded /
+        11 lock-poison / 0 bare**, `audit_doc_drift` **0 BODY WRONG / 0 doc
+        rot / 0 stale notes**. The block is `(-346)`'s ratchet: `any_in_family`'s
         family/predicate assertion, the gather's new keyword-removal audit and
         `has_kw_tag`'s new computed-view compare are all live in it and none
         fired; the second block adds `(-348)`'s printed-cmc recompute, whose
@@ -14456,6 +14459,52 @@ at 0.80 %, `compute_permanents::{{closure}}`'s `sync/atomic.rs:3875` at
 at 0.41 %. **12,537 more lines hold 86.9 % of the run.** Nothing below the
 top four is a row by itself.
 
+🔎🔎 **RE-READ 2026-09-17 AT THE `(-348)` TIP (`0bd3c37c`, cube total
+1,508,692,832) AND FIVE MORE BODIES ARE CLOSED FOR THE PRICE OF ONE 16-SECOND
+DUMP.** `cg_lines.py` needs no `profiling-lines` build, so one
+`--dump-instr=yes` callgrind line-profiles every body in the program at once —
+and the four rows below are what that bought, against the ~45 minutes of
+builds reading them the other way would have cost.
+
+```text
+  Ir/call   calls        self       %    row                             verdict
+    4,403   4,708  20,730,330   1.37   declare_blockers                  (-337)
+    3,674   6,470  23,770,603   1.58   resolve_combat_into               (J) diffuse
+    3,582   6,244  22,369,110   1.48   declare_attackers_banded          (-338)
+    3,032   2,650   8,035,166   0.53   do_untap                          (K) diffuse
+    2,936   1,936   5,683,810   0.38   bot::simulate_attack_leaf         NEW, diffuse
+    2,582   4,384  11,320,804   0.75   bot::pick_blocks_inner            (E) diffuse
+    2,022   4,308   8,709,174   0.58   bot::pick_attacks_inner           NO
+    1,986  21,626  42,942,088   2.85   check_state_based_actions_into    40 PERF hits
+    1,415   3,422   4,843,276   0.32   quality_band_assigner             NEW, diffuse
+    1,024  73,736  75,514,598   5.01   dispatch_triggers_for_events_slow diffuse
+      243  29,914   7,265,958   0.48   blocker_self_block                NEW, diffuse
+```
+
+  ❌ **`blocker_self_block` — 7.2 M Ir over 43 lines, largest 931,736 =
+  0.07 %**, and that largest is `iter/macros.rs` (slice iteration). The
+  largest `game/combat.rs` line in the body is **244,238 = 0.02 %**.
+  ❌ **`bot::simulate_attack_leaf` — the bot's dry-run probe, never read
+  before: 5.2 M over 45 lines, largest 608,166 = 0.05 %**, and the top
+  `server/bot.rs` line is 469,312 = 0.04 %. The state-checkpoint cost the
+  standing brief keeps naming is **not** a row here.
+  ❌ **`quality_band_assigner` — 4.8 M over 30 lines, largest 863,424 =
+  0.07 %**, again `iter/macros.rs`; the biggest named line is `card.rs:14`
+  (`CardId::eq`, `(-309)`'s closed family) at 504,022.
+  ❌ **`dispatch_triggers_for_events_slow`, the program's largest self row at
+  5.01 %, is diffuse too: 74.3 M over 258 lines, largest 0.35 %.** Four
+  whole-body reads, four "the body IS the cost" verdicts, and the file's
+  flat-profile claim now has eleven bodies behind it.
+
+  ⚠ **AND CANDIDATE (C)'s NUMBERS ARE STALE — `(-333)` ALREADY TOOK IT.**
+  `blocker_pair_block` reads **17,528 calls / 2,368,718 self Ir (0.16 %)** at
+  this tip against the **72,918 / 9,062,474 (0.58 %)** the entry files, and
+  `pick_blocks_inner` asks it **3,490** times, not the 13.4-per-call the entry
+  reasons from. The pair-count prefilter that entry proposes is what
+  `blocker_can_block_attacker_pair_gated`'s `bars` already is. **Re-size a
+  candidate against the current dump before pulling it** — this one would have
+  been a build spent on a row three quarters of which is gone.
+
 🔎🔎 **REPLENISHED 2026-09-17 off a whole-profile read at the `d1e10986` tip
 (`profiling-fast --no-default-features`, `--games 6 --threads 1 --seed 1`,
 cube total 1,515,632,261). THE DEVICE WAS `cg_calls.py` RANKED BY SELF PER
@@ -14956,6 +15005,25 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      unshared for the rest of the game and **the gate DEGRADES over a game** —
      and the build, because this is a `crabomination_base` change and the
      catalog rebuild puts it at **~11 min a side**.
+     ⚠⚠ **AND A THIRD, READ 2026-09-17 WITH NO BUILD SPENT, WHICH Ir CANNOT
+     SEE AT ALL: ONE PROCESS-WIDE `Arc` PUTS EVERY CARD'S REFCOUNT ON ONE CACHE
+     LINE.** `CowBox<CardCold>` is cloned on every `CardData` deep copy —
+     **68,610 times a six-game `cube` run**, 48 % of every CoW copy in the
+     program — and today each card's handle is its own allocation, so those
+     atomics are spread over the heap. A shared default makes all of them one
+     `Arc`, and `bot_ladder --bench` runs 3 threads while a `selfplay_train`
+     box runs one actor per core: that is a contended cacheline on the hottest
+     copy path in the engine, and **callgrind is contention-blind, so an Ir A/B
+     would report the win and none of the cost.** The precedent is already in
+     this file and it points the same way: the `def: Arc` refcount is
+     0.56 % of `cube` as a *structural* row (PERF's line table), and that one
+     is spread over hundreds of distinct definitions rather than one object.
+     A `thread_local!` pristine handle removes the contention and is sound —
+     a card built on another thread merely misses the gate — but a
+     `LocalKey::with` is ~3-5 Ir against a ~11-Ir win, which is most of it.
+     **So this entry needs `bench_ab.py` wall clock at 3 threads, not an Ir
+     row, and it needs the actor leg too.** Do not file an Ir-only reading
+     here.
 
   C. `blocker_pair_block`            10,114 / 72,918 / 37,716 calls
      1,223,166 / 9,062,474 / 4,557,290 Ir   (0.21 / 0.58 / 0.28 %) at 121-124
