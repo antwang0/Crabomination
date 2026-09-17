@@ -8887,6 +8887,27 @@ impl CardInstance {
     /// against the 1,057,680 the row saved. The split above is what reached
     /// the frame; the attribute did not.
     pub fn has_keyword(&self, kw: &Keyword) -> bool {
+        // ⚠ **All four instance sources live in [`CardCold`]** — the EOT
+        // grant, the keyword counters and both removal lists — so a card that
+        // has never written the group is answered by its printed list alone,
+        // with no pointer chase into the group and no walk over three empty
+        // slices (PERF `(-350)`). `cold_written` false is authoritative; the
+        // recompute-and-compare below is the ratchet.
+        if !self.cold_written {
+            let printed = self.definition.keywords.has_kw(kw);
+            debug_assert_eq!(
+                printed,
+                self.has_keyword_written(kw),
+                "cold_written said pristine and a CardCold keyword source disagrees",
+            );
+            return printed;
+        }
+        self.has_keyword_written(kw)
+    }
+
+    /// [`Self::has_keyword`]'s general body — the one a card that has written
+    /// its cold group takes, and the one the pristine path is audited against.
+    fn has_keyword_written(&self, kw: &Keyword) -> bool {
         let want = std::mem::discriminant(kw);
         if !self.definition.keywords.has_kw_tag(want)
             && !self.granted_keywords_eot.has_kw_tag(want)
@@ -8915,6 +8936,27 @@ impl CardInstance {
     /// (PERF `(-330)`). Same answer as `has_keyword` for every bit, asserted
     /// over all four sources by `combat_keywords_agrees_with_has_keyword`.
     pub fn combat_keywords(&self) -> u32 {
+        // Four of this body's five passes are over [`CardCold`] members, so a
+        // pristine card is the printed pass alone — [`Self::has_keyword`]'s
+        // gate, and the pickers ask this once per combat candidate.
+        if !self.cold_written {
+            let mut m = 0u32;
+            for k in self.definition.keywords.iter() {
+                m |= combat_kw::bit_of(k);
+            }
+            debug_assert_eq!(
+                m,
+                self.combat_keywords_written(),
+                "cold_written said pristine and a CardCold keyword source disagrees",
+            );
+            return m;
+        }
+        self.combat_keywords_written()
+    }
+
+    /// [`Self::combat_keywords`]' general body — see
+    /// [`Self::has_keyword_written`].
+    fn combat_keywords_written(&self) -> u32 {
         let mut m = 0u32;
         for k in self.definition.keywords.iter() {
             m |= combat_kw::bit_of(k);
@@ -8952,6 +8994,23 @@ impl CardInstance {
     /// prefilter and same removal precedence as `has_keyword`, so the two
     /// cannot drift.
     pub fn has_keyword_tag(&self, sample: &Keyword) -> bool {
+        // [`Self::has_keyword`]'s cold gate, same premise and same ratchet.
+        if !self.cold_written {
+            let want = std::mem::discriminant(sample);
+            let printed = self.definition.keywords.has_kw_tag(want);
+            debug_assert_eq!(
+                printed,
+                self.has_keyword_tag_written(sample),
+                "cold_written said pristine and a CardCold keyword source disagrees",
+            );
+            return printed;
+        }
+        self.has_keyword_tag_written(sample)
+    }
+
+    /// [`Self::has_keyword_tag`]'s general body — see
+    /// [`Self::has_keyword_written`].
+    fn has_keyword_tag_written(&self, sample: &Keyword) -> bool {
         let want = std::mem::discriminant(sample);
         if !self.definition.keywords.has_kw_tag(want)
             && !self.granted_keywords_eot.has_kw_tag(want)
