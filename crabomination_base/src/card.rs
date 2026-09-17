@@ -8473,6 +8473,23 @@ impl CardData {
     }
 }
 
+impl CardData {
+    /// Has this object's [`CardCold`] group never been written — i.e. does
+    /// every field in it still hold its `Default`? See
+    /// [`cold_written`](Self::cold_written); `true` is authoritative and is
+    /// the answer for most permanents for most of a game, so a hot reader of
+    /// a cold field opens on this instead of chasing the group's pointer.
+    ///
+    /// ⚠ **Every caller carries a recompute-and-compare `debug_assert!` on
+    /// the path this opens**, as `(-349)`/`(-350)` do — the bit is exact by
+    /// construction, and the assertion is what keeps it exact when a later
+    /// pass adds a route to the group.
+    #[inline]
+    pub fn cold_pristine(&self) -> bool {
+        !self.cold_written
+    }
+}
+
 impl std::ops::Deref for CardData {
     type Target = CardCold;
     #[inline]

@@ -1081,6 +1081,21 @@ fn compute_permanent_pass(
     }
     let mut colors = colors_from_card(card);
     let mut keywords = PrintedList::<KeywordsOf>::new(def);
+    // Three of this body's instance inputs — the EOT keyword grants, the
+    // keyword counters and the two removal lists — are `CardCold` members, so
+    // one byte settles all three on a card that has never written the group
+    // (PERF `(-351)`). This is the program's largest engine row at 226,734
+    // calls, and each of the three guards below was a chase plus a length
+    // load. Read once; the recompute-and-compare covers all three at once.
+    let cold_pristine = card.cold_pristine();
+    debug_assert!(
+        !cold_pristine
+            || (card.granted_keywords_eot.is_empty()
+                && card.keyword_counters.is_empty()
+                && card.removed_keywords_eot.is_empty()
+                && card.removed_keywords.is_empty()),
+        "cold_written said pristine and a CardCold layer input is set",
+    );
     // EOT-granted keywords join the layer walk as synthetic L6 effects at
     // their grant timestamps (CR 613.7), so a grant resolved *after* a
     // RemoveAllAbilities / RemoveKeyword effect survives it while an
@@ -1091,7 +1106,8 @@ fn compute_permanent_pass(
     // 99,840 of them over six bench games. `collect()` on an empty iterator
     // allocates nothing but is still a `SpecFromIterNested::from_iter` call
     // with its size-hint dance; the emptiness check is two loads.
-    let eot_grants: Vec<ContinuousEffect> = if card.granted_keywords_eot.is_empty() {
+    let eot_grants: Vec<ContinuousEffect> = if cold_pristine || card.granted_keywords_eot.is_empty()
+    {
         Vec::new()
     } else {
         card.granted_keywords_eot
@@ -1111,9 +1127,11 @@ fn compute_permanent_pass(
     // CR 122.1b — keyword counters: each keyword counter type on the
     // permanent grants the named keyword while at least one counter of
     // that type is present. Applied as a layer-6 keyword addition.
-    for (kw, count) in &card.keyword_counters {
-        if *count > 0 && !keywords.contains(kw) {
-            keywords.push(kw.clone());
+    if !cold_pristine {
+        for (kw, count) in &card.keyword_counters {
+            if *count > 0 && !keywords.contains(kw) {
+                keywords.push(kw.clone());
+            }
         }
     }
 
@@ -1335,7 +1353,9 @@ fn compute_permanent_pass(
     // Both retains are gated on their input being non-empty: `retain` takes
     // `&mut`, which materializes the printed keyword list even when it
     // removes nothing, and the empty case is the overwhelming majority.
-    if !card.removed_keywords_eot.is_empty() || !card.removed_keywords.is_empty() {
+    if !cold_pristine
+        && (!card.removed_keywords_eot.is_empty() || !card.removed_keywords.is_empty())
+    {
         let removes_all_bands = card
             .removed_keywords_eot
             .iter()

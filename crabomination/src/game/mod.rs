@@ -10978,9 +10978,19 @@ impl GameState {
     /// on every activation, and on the ordinary board every leg is a word
     /// load or an empty list.
     pub(crate) fn ability_lock_possible_on(&self, c: &CardInstance, kw: &Keyword) -> bool {
+        // Both instance sources are `CardCold` members — `(-350)`'s gate, on
+        // the one keyword ask that does not go through `has_keyword`.
+        let cold_pristine = c.cold_pristine();
+        debug_assert!(
+            !cold_pristine
+                || (!c.granted_keywords_eot.has_kw(kw)
+                    && !c.keyword_counters.iter().any(|(k, n)| *n > 0 && k == kw)),
+            "cold_written said pristine and a CardCold keyword source carries the lock",
+        );
         c.definition.keywords.has_kw(kw)
-            || c.granted_keywords_eot.has_kw(kw)
-            || c.keyword_counters.iter().any(|(k, n)| *n > 0 && k == kw)
+            || (!cold_pristine
+                && (c.granted_keywords_eot.has_kw(kw)
+                    || c.keyword_counters.iter().any(|(k, n)| *n > 0 && k == kw)))
             || self.ability_lock_grant_in_scope(kw)
     }
 
