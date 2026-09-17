@@ -3022,10 +3022,11 @@ CPU *model*, not about boxes**: two boxes of the same shape and toolchain
 agree to noise, and the twelfth box's own +0.196 / +0.090 / +0.089 % against
 the eleventh was a different CPU (@ 2.80 GHz).
 
-**CLOSING TIP ABSOLUTES at `1bceaeb9`, same recipe: fixed 580,639,840 / cube
-1,512,666,565 / sealed 1,634,413,695** — the run's whole movement is
-**+0.168 / +0.159 / +0.121 %**, i.e. five rules-correctness class fixes for
-about a sixth of a percent, and every point of it is accounted for:
+**CLOSING TIP ABSOLUTES at `ac1381ed`, same recipe: fixed 579,232,689 / cube
+1,510,834,067 / sealed 1,632,366,971** — the run's whole movement is
+**-0.075 / +0.038 / -0.005 %.** ✅ **Five rules-correctness class fixes for
+NOTHING, and two of the three pools end the run faster than they started it.**
+Row by row:
 
 ```text
   the battlefield gate on evaluate_requirement_on_card  +0.093 / +0.636 / +0.146 %
@@ -3036,6 +3037,7 @@ about a sixth of a percent, and every point of it is accounted for:
   the same six arms' TYPE filters onto computed_is_creature
                                                         -0.001 / -0.000 / -0.000 %
   the walker's KEYWORD and COLOUR leaves onto computed() +0.144 / +0.023 / +0.041 %
+  (-345) both of those leaves get presence gates       -0.242 / -0.121 / -0.125 %
 ```
 
 ⚠⚠ **THE LAST ROW IS THE RUN'S ONE REAL PRICE AND IT IS EXACTLY THE MECHANISM
@@ -3081,13 +3083,15 @@ walker instead of through `requirement_on_permanent` reads **+0.026 / +0.844 /
 +0.096 %** — worse on the pool that matters, so the printed-line evaluator
 earns its place in the gate.
 
-sweep   **SIX blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
+sweep   **SEVEN blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
         1402..1403 at `1c7f0414`, 1404..1405 at `928ccbca`, 1406..1407 at
-        `a4fc16ed` and 1408..1409 at `1bceaeb9`: 36 cells / 177,600 games /
-        0 failures**, `cap 2 / board 0 / stuck 0 / draw 26`,
+        `a4fc16ed`, 1408..1409 at `1bceaeb9` and 1410..1411 at `ac1381ed`:
+        42 cells / 207,200 games / 0 failures**, `cap 2 / board 0 / stuck 0 /
+        draw 26`,
         pools `cube all sealed`, `target-audit/overflow` with
         `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
-        1410.** The two caps are both `cube` 1402/1403 `MAX_BATTLEFIELD`
+        1412.** The last block is `(-345)`'s ratchet: both presence gates
+        recompute-and-compare on the gated path, and neither fired. The two caps are both `cube` 1402/1403 `MAX_BATTLEFIELD`
         runaways on a saturated seat (768 permanents, life `i32::MAX`) — the
         carve-out the script's header documents, not re-run. ⚠ **The 1402..1403
         block is `(-344)`'s ratchet**: its `debug_assert_ne!` recomputes the
@@ -3103,7 +3107,7 @@ sweep   **SIX blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
         release-fast -p crabomination --bin bot_ladder` clean. `--bench`:
         **195,806 / 27.49 / 611.9 / 0 stalls**, `peak_rss_mib 25.0-25.3`,
         `determinism ok`, `thread_determinism ok (3 vs 1)` — byte-identical to
-        the committed invariant across all ten commits of the run.
+        the committed invariant across all eleven commits of the run.
         ⚠ Box timings, thirteenth box (4 cores, 15 GB — the twelfth's shape):
         cold test build **5m30s**, full suite **1m47-2m03s**, cold
         `profiling-fast` **8m21s** / engine-only **2m38-3m02s**, cold `release`
@@ -8121,6 +8125,68 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-345)` the walker's keyword and colour leaves get their presence gates — **fixed -0.242 / cube -0.121 / sealed -0.125 %**
+
+Candidate (M), taken the same day it was filed, and **the soundness argument
+is the whole of it.** `board_keyword_matching`'s doc already names the
+shrinking half of the layer-6 family — **`AddKeyword` is the only additive
+keyword modification; `RemoveKeyword`, `CantHaveKeyword` and
+`RemoveAllAbilities` only take away**, and the two text rewrites retype
+`Protection` / `Landwalk` in place. 📐 **That splits the question in two, and
+each half has a cheap answer:**
+
+```text
+  the instance does NOT have it -> it can only be GAINED
+      -> keyword_grant_in_scope, lane-backed (grant_bits::ANY_GRANT),
+         and this is the COMMON ask
+  the instance DOES have it     -> it can only be LOST
+      -> keyword_removal_in_scope, a board walk with no lane, on purpose,
+         because this branch is the RARE one
+```
+
+`keyword_removal_in_scope` is the new leg and it closes the hole (M) was filed
+for: `ability_strip_possible` for the strip, the resolved `RemoveKeyword` /
+`CantHaveKeyword` entries behind `has_family(KEYWORD)`, and a per-card
+`card_can_remove_keyword` for the three printed routes —
+`StaticEffect::LoseKeyword`, `StaticEffect::CantHaveKeyword` and an
+attachment's `EquipBonus::remove_keywords` (Sky Tether). Its
+`static_effect_removes_keyword` unwraps the same five conditional wrappers
+`static_effect_grants_keyword` does.
+
+The colour half takes `card_color_change_unscoped`, already sound for
+`AddColor` / `SetColors` / `LoseAllColors` by the two routes the type gates
+use. ⚠ **Its own doc asks a hot caller to give it a valid flag rather than
+fold it into `type_bits` — this is now that caller and the flag is still
+owed:** the bare board walk costs 101,066 Ir a `fixed` run.
+
+```text
+                      ungated (1bceaeb9)   (-345)            delta
+  fixed                 580,639,840         579,232,689      -0.2423 %
+  cube                1,512,666,565       1,510,834,067      -0.1211 %
+  sealed              1,634,413,695       1,632,366,971      -0.1252 %
+
+  cube/fixed by row (fixed, against the tip BEFORE the correctness fix)
+    computed_permanent_hinted   7,943,650 -> 7,545,098   -398,552
+    the 370 extra gathers                                 gone
+    card_color_change_unscoped          0 ->   101,066   the new gate's own cost
+    evaluate_requirement (the gate logic)                 +77,152
+```
+
+⚠ **Against the pre-fix tip it reads -0.099 / -0.099 / -0.084 %, and that
+number wants care: it sits inside an inlining shuffle** (`cp_pool::alloc`
+gains a symbol at +2.90 M while `LocalKey::with` loses one at -2.77 M).
+**Claim "free", not "a win"** — the defensible statement is that the gates
+recover the whole of the correctness fix's cost.
+
+📐 **Both gates carry the recompute-and-compare `debug_assert!` on the gated
+path**, so the suite's 19,595 tests and every `debug-assertions` sweep cell
+audit them — `(-303)` point 2, and `(-311)`'s lesson about a gate nobody
+re-ran. A presence gate without that ratchet is a silent wrong answer waiting
+for the board that reaches it.
+
+All 144 golden traces byte-identical against the ungated tip on all three
+pools.
 
 ### `(-344)` the CR 104.4b loop watch settles off the digest's scalar head — **fixed -0.072 / cube -0.240 / sealed -0.071 %**
 
@@ -14245,8 +14311,15 @@ read.**
   equal and pays the tail anyway. If the head separates on under ~half the
   calls, device 1 is worth ~0.2 % and not 0.4 %.
 
-  **M. THE PRESENCE GATE FOR THE WALKER'S KEYWORD AND COLOUR LEAVES — worth
-  `fixed` ~0.14 %, and the SOUNDNESS is the whole of the work.** The two
+  ✅ **M. TAKEN as `(-345)` the same day it was filed — fixed -0.242 / cube
+  -0.121 / sealed -0.125 %.** The entry's warning was the design: the split
+  that made it sound *and* cheap is "which direction can the layers move this
+  keyword", because `AddKeyword` is the only additive modification.
+  `keyword_removal_in_scope` is the new leg and covers all three printed
+  removal routes. ⏳ **One thing is still owed**: `card_color_change_unscoped`
+  is a bare board walk at 101,066 Ir a `fixed` run and its own doc asks a hot
+  caller to give it a valid flag; this is that caller. The original sizing:
+  **worth `fixed` ~0.14 %, and the SOUNDNESS is the whole of the work.** The two
   closures added 2026-09-17 are ungated (the shape `has_atype` / `has_stype`
   already use), so every `HasKeyword` / `HasColor` / `Colorless` /
   `Monocolored` / `Multicolored` ask on an unfrozen state forces a gather:

@@ -126,12 +126,19 @@ ALREADY PREDICTED: `fixed +0.144 %`, WHICH IS 370 EXTRA GATHERS**
 (`gather_continuous_effects_inner` 13,254 -> 13,624). `cube +0.023 %`,
 `sealed +0.041 %`. 📐 **And the pool pattern inverts — `fixed` pays MOST
 because it is the pool with no keyword grants and no colour changes**, i.e.
-exactly the board a presence gate would serve for free. **That gate is filed,
-not built, and the reason is soundness:** `keyword_grant_in_scope` covers
-`AddKeyword` and `ability_strip_possible` covers the strip, but nothing covers
-`LoseKeyword` / `CantHaveKeyword` / `EquipBonus::remove_keywords`, so the
-obvious two-leg gate answers "printed" for a permanent that has *lost* the
-keyword. PERF candidate (M) carries the requirement.
+exactly the board a presence gate would serve for free. **That gate is now BUILT as
+`(-345)` and it recovers the whole cost (fixed -0.242 / cube -0.121 / sealed
+-0.125 %), so the class fix ends up free.** The filed warning was the design:
+`keyword_grant_in_scope` covers `AddKeyword` and `ability_strip_possible`
+covers the strip, but nothing covered `LoseKeyword` / `CantHaveKeyword` /
+`EquipBonus::remove_keywords` — so the obvious two-leg gate would have
+answered "printed" for a permanent that had *lost* the keyword.
+📐 **What made it both sound and cheap is asking WHICH DIRECTION the layers
+can move the answer**: `AddKeyword` is the only additive modification, so a
+permanent that does not have the keyword can only gain it (the lane-backed
+gate, and the common ask) and one that does can only lose it (a board walk,
+the rare branch). Both gates carry the recompute-and-compare `debug_assert!`,
+so the suite and every sweep cell audit them.
 
 Tests `cr_613_6_has_keyword_sees_a_statically_granted_keyword` and
 `cr_613_5_has_color_sees_a_statically_set_colour`, each with the control
