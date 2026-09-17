@@ -26041,6 +26041,29 @@ impl GameState {
         self.computed_permanent(card.id).map(|cp| cp.toughness).unwrap_or_else(|| card.toughness())
     }
 
+    /// [`effective_power`](Self::effective_power) for a caller that is walking
+    /// the battlefield and already holds the permanent — the `_on` form, which
+    /// skips the linear `battlefield.iter().find(id)` every `perms` miss pays
+    /// (PERF `(-339)`, and `(-343)`'s lesson about routing). A `max_by_key`
+    /// over the board would otherwise pay one find a card.
+    ///
+    /// ⚠ `card` must BE the battlefield permanent with that id;
+    /// `computed_permanent_hinted`'s `debug_assert!` is the check.
+    pub(crate) fn effective_power_on(&self, card: &CardInstance) -> i32 {
+        if self.layer_reads_are_printed() {
+            return card.power();
+        }
+        self.computed_permanent_on(card).map(|cp| cp.power).unwrap_or_else(|| card.power())
+    }
+
+    /// Toughness twin of [`Self::effective_power_on`].
+    pub(crate) fn effective_toughness_on(&self, card: &CardInstance) -> i32 {
+        if self.layer_reads_are_printed() {
+            return card.toughness();
+        }
+        self.computed_permanent_on(card).map(|cp| cp.toughness).unwrap_or_else(|| card.toughness())
+    }
+
     /// True when a characteristic read has to answer with the *printed* value:
     /// inside a gather, with no CR 613.8 partial set installed.
     ///

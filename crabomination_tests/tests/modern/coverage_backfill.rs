@@ -1711,6 +1711,42 @@ fn triumph_of_gerrard_pumps_then_buffs_greatest_power() {
     assert!(serra.has_keyword(&crabomination::card::Keyword::Lifelink), "chapter III grants lifelink");
 }
 
+/// CR 613 — `Selector::GreatestPowerYouControl` ranks the **computed** power.
+/// A 2/2 under two Rancors is a 6/2 and outranks a printed 4/4, so Triumph of
+/// Gerrard's chapter I counter lands on the bear, not the angel. Six P/T
+/// selector arms read the raw instance until 2026-09-17; the control
+/// assertion is the same board without the Aura.
+#[test]
+fn triumph_of_gerrard_ranks_the_computed_power_not_the_printed_one() {
+    use crabomination::card::CounterType;
+    let board = |auras: usize| {
+        let mut g = two_player_game();
+        let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        for _ in 0..auras {
+            let rancor = g.add_card_to_battlefield(0, catalog::rancor());
+            g.battlefield_find_mut(rancor).expect("on the battlefield").attached_to = Some(bear);
+        }
+        // Strictly greater, never a tie: `max_by_key` breaks ties by position
+        // and a test that leaned on that would pass for the wrong reason.
+        let view = g.compute_battlefield();
+        let pw = |id| view.iter().find(|c| c.id == id).expect("present").power;
+        assert_eq!((pw(angel), pw(bear)), if auras == 0 { (4, 2) } else { (4, 6) });
+        let saga = g.add_card_to_battlefield(0, catalog::triumph_of_gerrard());
+        g.saga_advance(saga);
+        drain_stack(&mut g);
+        let counters = |id| {
+            g.battlefield.iter().find(|c| c.id == id).expect("present")
+                .counter_count(CounterType::PlusOnePlusOne)
+        };
+        (counters(angel), counters(bear))
+    };
+    // Control: the printed 4/4 is the greatest power.
+    assert_eq!(board(0), (1, 0), "no Aura — the angel is the greatest power");
+    // Two Rancors make the bear a 6/2, strictly above the angel's 4.
+    assert_eq!(board(2), (0, 1), "the +4/+0 bear is the greatest power");
+}
+
 #[test]
 fn the_eldest_reborn_chapter_three_reanimates_from_graveyard() {
     let mut g = two_player_game();

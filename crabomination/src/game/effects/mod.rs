@@ -35696,11 +35696,14 @@ impl GameState {
             }
 
             // CR 701.21 — the controller's least-toughness creature.
+            // CR 613 — ranked by the COMPUTED toughness: an anthem, an Aura's
+            // bonus or a layer-7b set makes the smallest printed body not the
+            // smallest body.
             Selector::LeastToughnessYouControl => self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
-                .min_by_key(|c| c.toughness())
+                .min_by_key(|c| self.effective_toughness_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),
@@ -35709,7 +35712,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
-                .max_by_key(|c| c.power())
+                .max_by_key(|c| self.effective_power_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),
@@ -35743,7 +35746,7 @@ impl GameState {
                     c.controller == ctx.controller
                         && self.evaluate_requirement_static_on(filter, c, ctx.controller, ctx.source)
                 })
-                .max_by_key(|c| c.power())
+                .max_by_key(|c| self.effective_power_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),
@@ -35757,7 +35760,7 @@ impl GameState {
                         && c.definition.is_creature()
                         && Some(c.id) != ctx.source
                 })
-                .max_by_key(|c| c.toughness())
+                .max_by_key(|c| self.effective_toughness_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),
@@ -35768,7 +35771,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.definition.is_creature())
-                .min_by_key(|c| c.power())
+                .min_by_key(|c| self.effective_power_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),
@@ -35776,7 +35779,7 @@ impl GameState {
                 .battlefield
                 .iter()
                 .filter(|c| c.definition.is_creature())
-                .min_by_key(|c| c.toughness())
+                .min_by_key(|c| self.effective_toughness_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),

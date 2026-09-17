@@ -587,6 +587,31 @@ fn drop_of_honey_culls_the_smallest_then_expires() {
     assert!(g.battlefield_find(drop).is_none(), "no creatures left, so it goes");
 }
 
+/// CR 613 — "the creature with the least power" is ranked by the **computed**
+/// power, so an Aura's bonus can move which creature Drop of Honey culls.
+/// `Selector::LeastPowerAmongAll` read the raw instance until 2026-09-17, one
+/// of six P/T selector arms that did; the control assertion below is the
+/// no-Aura board, where the smallest printed body really is the smallest.
+#[test]
+fn drop_of_honey_ranks_the_computed_power_not_the_printed_one() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::drop_of_honey());
+    let small = g.add_card_to_battlefield(1, catalog::flying_men()); // 1/1
+    let big = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    // Rancor on the 1/1 makes it a 3/1 — now the 2/2 is the least power.
+    let rancor = g.add_card_to_battlefield(1, catalog::rancor());
+    g.battlefield_find_mut(rancor).expect("on the battlefield").attached_to = Some(small);
+    let view = g.compute_battlefield();
+    assert_eq!(
+        view.iter().find(|c| c.id == small).expect("present").power,
+        3,
+        "control: Rancor is +2/+0, so Flying Men is the BIGGER body",
+    );
+    upkeep(&mut g);
+    assert!(g.battlefield_find(small).is_some(), "the 3/1 is not the least power");
+    assert!(g.battlefield_find(big).is_none(), "the 2/2 is");
+}
+
 #[test]
 fn cyclone_escalates_then_blows_over() {
     let mut g = main_phase();
