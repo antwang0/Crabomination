@@ -15703,6 +15703,19 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      `can_afford_in_state_with`'s two exits answers it for one rebuild. ⚠ The
      bot files are the ML sessions' hot ground — check `git log -- crabomination/src/server/bot.rs`
      before building for this.
+
+     ❌ **AND THE OBVIOUS ENGINE-SIDE ALTERNATIVE IS PRICED AND MARGINAL —
+     `(-347)`'s arithmetic, done before the build rather than after.** "Fail
+     the payment fast when the seat has no producer for a required colour"
+     lives in `actions.rs` (no ML collision) and is sound as a superset test,
+     but: the saving is 1,428 x 1,632 ≈ 2.33 M, and an unmemoized
+     producible-colour walk over ~23 permanents at ~10 Ir a memoized
+     `mana_summary` word is ~230 Ir x **8,712 payments** ≈ 2.0 M. **Net ~0.02 %
+     — the ask rate is one per payment and the walk is paid on every one.** It
+     only pays behind a `Battlefield` lane keyed on `writes`, and the lane word
+     has exactly one two-bit field left against a five-bit colour set, so it
+     needs a second word. **Take the bot-side gate first; it costs nothing per
+     payment.**
      ⚠ `fixed` has **zero** payment failures, so none of this reads on the pool
      `--bench` measures. Rank it on `cube`.
 
