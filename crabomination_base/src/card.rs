@@ -6549,21 +6549,22 @@ pub enum AttackBan {
 /// A new until-end-of-turn field goes here, in one of the three shapes:
 /// `scalar` (compared with `!=`, assigned), `empty` (`is_empty` / `clear`),
 /// `none` (`is_some` / `= None`).
-macro_rules! eot_wear_off {
+///
+/// **Split in two by the field's home group, and the split is load-bearing**
+/// — see [`CardData::cold_written`]. The `cold` half is exactly the members
+/// that live in [`CardCold`], so a card whose cold group has never been
+/// written is *provably* clear on all eleven of them and the guards skip
+/// those probes (PERF candidate (B)). `cold_membership_check` below fails to
+/// compile if a field in the cold list is not a `CardCold` member, which is
+/// what makes the skip sound; a field in the hot list is always probed, so
+/// mis-filing one costs nothing. The union is still one list, so the
+/// "a field cannot reach the clear without the guard" property is unchanged.
+macro_rules! eot_wear_off_hot {
     ($m:ident) => {
         $m!(scalar power_bonus, 0);
         $m!(scalar toughness_bonus, 0);
         $m!(scalar loyalty_uses_this_turn, 0);
         $m!(scalar loyalty_twice_this_turn, false);
-        $m!(empty once_per_turn_used);
-        $m!(empty granted_keywords_eot);
-        $m!(empty granted_keywords_eot_ts);
-        $m!(empty granted_activated_eot);
-        $m!(empty removed_keywords_eot);
-        $m!(none granted_flashback_eot);
-        $m!(none granted_harmonize_eot);
-        $m!(none granted_alt_cast_cost_eot);
-        $m!(none granted_cast_surcharge_eot);
         $m!(scalar dealt_deathtouch_damage, false);
         $m!(scalar dealt_damage_this_turn, false);
         $m!(scalar damage_dealt_to_this_turn, 0);
@@ -6578,9 +6579,53 @@ macro_rules! eot_wear_off {
         $m!(scalar damage_prevention_off_eot, false);
         // CR 702.171 — "saddled until end of turn" ends here.
         $m!(scalar saddled, false);
+    };
+}
+
+/// The [`CardCold`]-resident half of [`eot_wear_off`]. Every field here must
+/// be a `CardCold` member — `cold_membership_check` is the compiler's word
+/// for it.
+macro_rules! eot_wear_off_cold {
+    ($m:ident) => {
+        $m!(empty once_per_turn_used);
+        $m!(empty granted_keywords_eot);
+        $m!(empty granted_keywords_eot_ts);
+        $m!(empty granted_activated_eot);
+        $m!(empty removed_keywords_eot);
+        $m!(none granted_flashback_eot);
+        $m!(none granted_harmonize_eot);
+        $m!(none granted_alt_cast_cost_eot);
+        $m!(none granted_cast_surcharge_eot);
         $m!(empty saddled_by);
         $m!(empty crewed_by);
     };
+}
+
+macro_rules! eot_wear_off {
+    ($m:ident) => {
+        eot_wear_off_hot!($m);
+        eot_wear_off_cold!($m);
+    };
+}
+
+/// [`eot_wear_off_cold`]'s soundness check, and it is the compiler's: naming
+/// the fields on a `&CardCold` fails to build if one of them lives in
+/// `CardData` instead, which is the premise every `cold_written` skip rests
+/// on.
+#[allow(dead_code)]
+fn cold_membership_check(c: &CardCold) {
+    macro_rules! touch {
+        (scalar $f:ident, $v:expr) => {
+            let _ = &c.$f;
+        };
+        (empty $f:ident) => {
+            let _ = &c.$f;
+        };
+        (none $f:ident) => {
+            let _ = &c.$f;
+        };
+    }
+    eot_wear_off_cold!(touch);
 }
 
 /// The rarely-written tail of a card object: registries, cast-time riders
@@ -7705,6 +7750,24 @@ pub struct CardData {
     pub damage_by_source_name_this_turn: crate::oftenempty::OftenEmpty<(&'static str, u32)>,
     /// The rarely-written tail — see [`CardCold`].
     pub cold: crate::cow::CowBox<CardCold>,
+    /// Has anything ever taken `&mut` at [`cold`](Self::cold) on this object
+    /// or on the card it was cloned from? `false` is authoritative and means
+    /// every `CardCold` field still holds its `Default` value, so a question
+    /// about one is answered without the pointer chase into the group — the
+    /// cleanup guard skips eleven of its twenty-six probes on it.
+    ///
+    /// Set at the group's one `&mut` route, [`DerefMut for CardData`], and
+    /// never cleared: a card that writes a cold field once stays "written"
+    /// for the rest of the game even if the field is cleared back. That is
+    /// the conservative direction, and it is why the gate *degrades* over a
+    /// game rather than over the board.
+    ///
+    /// A byte, and `CardData` is deep-copied 68,610 times a six-game `cube`
+    /// run — ~0.44 Ir a copy by the width rule in [`CardCold`]'s doc, i.e.
+    /// ~30 k Ir, against the row it gates.
+    ///
+    /// [`DerefMut for CardData`]: CardData#impl-DerefMut-for-CardData
+    cold_written: bool,
     pub id: CardId,
     pub owner: usize,
     pub controller: usize,
@@ -8419,9 +8482,14 @@ impl std::ops::Deref for CardData {
 }
 
 /// Writing any cold field unshares the whole group once — see [`CardCold`].
+///
+/// The group's **only** `&mut` route, which is what lets
+/// [`CardData::cold_written`] be exact: `cold` is written nowhere by name
+/// outside this file, so every reach lands here.
 impl std::ops::DerefMut for CardData {
     #[inline]
     fn deref_mut(&mut self) -> &mut CardCold {
+        self.cold_written = true;
         &mut self.cold
     }
 }
@@ -8667,6 +8735,7 @@ impl CardInstance {
             protected_by: None,
             resolve_riders: None,
             cold: crate::cow::CowBox::default(),
+            cold_written: false,
         }
         .into();
         // The one handle flag `new` does not leave at its default: CR 302.6.
@@ -9333,7 +9402,44 @@ impl CardInstance {
                 }
             };
         }
-        eot_wear_off!(probe);
+        eot_wear_off_hot!(probe);
+        if !self.cold_written {
+            // The recompute-and-compare ratchet every gate on this branch
+            // carries: the suite and every `debug-assertions` sweep re-run
+            // the eleven skipped probes and assert the bit was telling the
+            // truth, so a cold field written through some route other than
+            // `DerefMut` fails loudly instead of surviving Cleanup.
+            debug_assert!(
+                self.cold_eot_effects_are_clear(),
+                "cold_written said pristine and a CardCold cleanup field is set",
+            );
+            return true;
+        }
+        self.cold_eot_effects_are_clear()
+    }
+
+    /// [`Self::end_of_turn_effects_are_clear`]'s [`CardCold`] half, split out
+    /// so the `cold_written` skip and its `debug_assert!` share one body.
+    #[inline]
+    fn cold_eot_effects_are_clear(&self) -> bool {
+        macro_rules! probe {
+            (scalar $f:ident, $v:expr) => {
+                if self.$f != $v {
+                    return false;
+                }
+            };
+            (empty $f:ident) => {
+                if !self.$f.is_empty() {
+                    return false;
+                }
+            };
+            (none $f:ident) => {
+                if self.$f.is_some() {
+                    return false;
+                }
+            };
+        }
+        eot_wear_off_cold!(probe);
         true
     }
 
@@ -9456,7 +9562,15 @@ impl CardInstance {
                 }
             };
         }
-        eot_wear_off!(probe);
+        eot_wear_off_hot!(probe);
+        if !self.cold_written {
+            debug_assert!(
+                self.cold_eot_effects_are_clear(),
+                "cold_written said pristine and a CardCold zone-change field is set",
+            );
+            return;
+        }
+        eot_wear_off_cold!(probe);
     }
 
     /// The write half of [`Self::clear_effects_on_zone_change`], reached
@@ -10239,5 +10353,46 @@ mod cold_group_tests {
         assert!(a.exhausted_abilities.is_empty() && a.once_per_turn_used.is_empty());
         assert!(a.pending_etb_counters.is_empty());
         assert!(a.cold.shares_with(&b.cold), "the guards' reads leave the group shared");
+    }
+
+    /// `cold_written` is the premise the cleanup guards' skip rests on: it
+    /// tracks `&mut` reaches at the group, not at the card, and it survives a
+    /// clone. The `debug_assert!` on the skip path audits the other
+    /// direction on every board the suite and the sweeps deal.
+    #[test]
+    fn cold_written_tracks_the_group_not_the_card() {
+        let mut a = card();
+        assert!(!a.cold_written, "a fresh card has never written cold");
+        a.tapped = true;
+        a.power_bonus = 3;
+        assert!(!a.cold_written, "a hot write is not a cold write");
+        assert!(a.clone().cold_written == a.cold_written, "the bit clones with the card");
+
+        a.goaded_by.push(1);
+        assert!(a.cold_written, "a cold write sets the bit");
+        assert!(a.clone().cold_written, "and the clone inherits it");
+
+        // Never cleared: a card that wrote cold once pays the full probe for
+        // the rest of the game, which is the conservative direction.
+        a.goaded_by.clear();
+        assert!(a.cold_written);
+        a.clear_end_of_turn_effects();
+        assert!(a.end_of_turn_effects_are_clear());
+    }
+
+    /// The skipped half still wears off: a cold-resident cleanup field set on
+    /// a card whose bit is live is cleared by the same sweep.
+    #[test]
+    fn cleanup_wears_off_the_cold_half_too() {
+        let mut a = card();
+        a.granted_keywords_eot.push(Keyword::Flying);
+        a.saddled_by.push(CardId(7));
+        a.crewed_by.push(CardId(8));
+        assert!(a.cold_written);
+        assert!(!a.end_of_turn_effects_are_clear());
+        a.clear_end_of_turn_effects();
+        assert!(a.granted_keywords_eot.is_empty());
+        assert!(a.saddled_by.is_empty() && a.crewed_by.is_empty());
+        assert!(a.end_of_turn_effects_are_clear());
     }
 }
