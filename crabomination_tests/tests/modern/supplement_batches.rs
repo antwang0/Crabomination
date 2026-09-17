@@ -2303,6 +2303,54 @@ fn dandan_cannot_attack_unless_defender_controls_an_island() {
     }])).is_ok(), "Dandân may attack once the defender controls an Island");
 }
 
+/// CR 613.2 (layer 4) — "defending player controls an Island" reads the
+/// **computed** land types, so a Mountain under Spreading Seas satisfies
+/// Dandân's attack gate.
+///
+/// The gate walks `self.battlefield` through `evaluate_requirement_on_card`,
+/// which answered off the printed definition until its public entry learned to
+/// route a live permanent to the battlefield walker. The control assertion
+/// below is the point: the same board without the aura must still refuse.
+#[test]
+fn dandan_attack_gate_reads_a_land_type_granted_by_layers() {
+    let mut g = two_player_game();
+    // Spreading Seas draws on ETB; an empty library would end the game first.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.add_card_to_battlefield(0, catalog::island());
+    let dd = g.add_card_to_battlefield(0, catalog::dandan());
+    g.clear_sickness(dd);
+    let mountain = g.add_card_to_battlefield(1, catalog::mountain());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+
+    // Control: a printed Mountain is not an Island.
+    g.step = TurnStep::DeclareAttackers;
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dd, target: AttackTarget::Player(1),
+    }])).is_err(), "a Mountain is not an Island");
+
+    g.step = TurnStep::PreCombatMain;
+    let seas = g.add_card_to_hand(0, catalog::spreading_seas());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: seas,
+        target: Some(Target::Permanent(mountain)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Spreading Seas on the defender's Mountain");
+    drain_stack(&mut g);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let r = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dd, target: AttackTarget::Player(1),
+    }]));
+    assert!(r.is_ok(), "the enchanted Mountain is an Island, so Dandân may attack: {r:?}");
+}
+
 #[test]
 fn turnabout_mode_four_taps_all_opponent_lands() {
     let mut g = two_player_game();

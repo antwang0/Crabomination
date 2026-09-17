@@ -4794,7 +4794,10 @@ impl GameState {
                     // flags, …) the battlefield walker doesn't special-case
                     // are evaluated against the located card. Keeps the two
                     // requirement walkers from drifting apart (TODO P3).
-                    _ => self.evaluate_requirement_on_card(req, card, controller),
+                    // The `_inner` form, not the public one: the public entry
+                    // routes a battlefield permanent back here, and this arm
+                    // is already inside that walk.
+                    _ => self.evaluate_requirement_on_card_inner(req, card, controller),
                 }
             }
         }
@@ -4814,13 +4817,52 @@ impl GameState {
         controller: usize,
     ) -> bool {
         let scratch = CardInstance::new(CardId(u32::MAX), def, controller);
-        self.evaluate_requirement_on_card(req, &scratch, controller)
+        // A bare definition is in no zone by construction, so the public
+        // entry's battlefield gate would only pay a miss.
+        self.evaluate_requirement_on_card_inner(req, &scratch, controller)
     }
 
-    /// Evaluate a `SelectionRequirement` directly against a `CardInstance`
-    /// without requiring it to be on the battlefield. Used for library searches.
-    /// Battlefield-only predicates (Tapped, IsAttacking, etc.) return false.
+    /// Evaluate a `SelectionRequirement` against a `CardInstance` in any zone.
+    ///
+    /// **CR 613 / CR 302 — a live battlefield permanent is answered by the
+    /// battlefield walker**, which reads the computed (layer-applied) view and
+    /// the combat / tap / attachment state. Forty-odd effect arms filter
+    /// `self.battlefield` through this entry ("destroy each ~", "exile each ~",
+    /// "each player sacrifices all but N ~"); without the gate every one of
+    /// them read the *printed* types, subtypes and P/T and answered `false` for
+    /// every battlefield-only leaf — so "destroy each tapped creature" found
+    /// nothing and an animated land survived "destroy all creatures".
+    ///
+    /// The off-battlefield half is [`Self::evaluate_requirement_on_card_inner`]:
+    /// library / graveyard / hand searches, where battlefield-only predicates
+    /// legitimately answer `false`.
     pub fn evaluate_requirement_on_card(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+    ) -> bool {
+        // The gate answers about the *live* permanent, not the caller's copy:
+        // several callers hold a `mem::take`n or snapshot instance, and a card
+        // that is on the battlefield is the object the rules ask about.
+        //
+        // Through `requirement_on_permanent`, not the walker directly: the
+        // printed-line evaluator answers the common shapes (a card type, a
+        // controller, a subtype) off the definition whenever no layer-4 type
+        // source is in scope, and the walker's ~150-300 Ir frame is only paid
+        // for the shapes it declines. The gates memo is per call here — these
+        // callers ask one requirement of one permanent, not of many.
+        if let Some(bf) = self.battlefield_find(card.id) {
+            let gates = PrintedGates::default();
+            return self.requirement_on_permanent(req, bf, controller, None, &gates);
+        }
+        self.evaluate_requirement_on_card_inner(req, card, controller)
+    }
+
+    /// The zone-agnostic walker behind [`Self::evaluate_requirement_on_card`].
+    /// Battlefield-only predicates (Tapped, IsAttacking, …) return false here;
+    /// the public entry is what routes a battlefield permanent past them.
+    fn evaluate_requirement_on_card_inner(
         &self,
         req: &SelectionRequirement,
         card: &CardInstance,
@@ -4840,15 +4882,18 @@ impl GameState {
             | R::YouPlayer
             | R::OpponentTallyDiffers { .. }
             | R::PlayerAttackedThisTurn => false,
+            // Combinators recurse into the inner walk: the public entry has
+            // already decided this card is not a battlefield permanent, and
+            // re-asking per leaf would pay that lookup once a leaf.
             R::And(a, b) => {
-                self.evaluate_requirement_on_card(a, card, controller)
-                    && self.evaluate_requirement_on_card(b, card, controller)
+                self.evaluate_requirement_on_card_inner(a, card, controller)
+                    && self.evaluate_requirement_on_card_inner(b, card, controller)
             }
             R::Or(a, b) => {
-                self.evaluate_requirement_on_card(a, card, controller)
-                    || self.evaluate_requirement_on_card(b, card, controller)
+                self.evaluate_requirement_on_card_inner(a, card, controller)
+                    || self.evaluate_requirement_on_card_inner(b, card, controller)
             }
-            R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
+            R::Not(inner) => !self.evaluate_requirement_on_card_inner(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
             R::ControlledByActivePlayer => card.controller == self.active_player_idx,

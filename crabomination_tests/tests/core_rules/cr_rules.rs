@@ -1779,10 +1779,10 @@ fn a_counting_requirement_counts_tapped_permanents() {
 /// any variant it *does* match explicitly can drift from the card walker's
 /// answer without anything noticing.
 ///
-/// The invariant that pins them: **on a battlefield permanent with no
-/// continuous effect in play, computed equals printed, so the two walkers
-/// must agree.** Off the battlefield, or under layers, they are supposed to
-/// differ — that is what `_on_card` is for.
+/// The invariant that pins them: **on a battlefield permanent the two walkers
+/// must agree, because `evaluate_requirement_on_card` routes one to the
+/// static walker.** Off the battlefield they are supposed to differ — that is
+/// what the zone-blind `_inner` arms are for.
 ///
 /// Requirements come from the catalog's own serde trees rather than a
 /// hand-written variant list, so a new variant reaches this test the moment a
@@ -1850,37 +1850,23 @@ fn audit_p3_requirement_walkers_agree_on_an_unlayered_permanent() {
         boards.push((g, id));
     }
 
-    // **These disagree on purpose, and the list is the machine-checked
-    // record of which ones may.** `evaluate_requirement_on_card` is the
-    // library/hand-search path; it answers `false` for every
-    // battlefield-state predicate through explicit arms that say so
-    // ("Battlefield-state predicates can't be evaluated for library cards").
-    // So the invariant this test enforces is not "the two always agree" — it
-    // is **"they differ only where a documented arm says they may"**, and a
-    // variant that starts differing without one is a failure.
+    // **The list is empty, and that is the point: agreement on a battlefield
+    // permanent is now STRUCTURAL.** `evaluate_requirement_on_card`'s public
+    // entry gates on `battlefield_find` and hands a live permanent to
+    // `evaluate_requirement_static_hinted`; only a card in another zone
+    // reaches the zone-blind arms that answer `false` for a battlefield-state
+    // predicate. So this test no longer audits two hand-written arm sets
+    // against each other — **it guards the gate**, and it fails the moment
+    // someone deletes it and the fourteen `Tapped` / `Untapped` /
+    // `HasGreatestPowerAmong…` drifts below come back.
     //
-    // Reading it as a *missing* arm cost a build: the compiler answered with
-    // `unreachable pattern` on the fix. The real defect the list exposed was
-    // one level up — the counting requirements walked `self.battlefield`
-    // through the zone-blind walker, so a `Tapped` inner filter counted zero.
-    // Fixed at the call sites, where the battlefield-aware `_static_on`
-    // belongs; the walkers themselves are both right.
-    let known: &[&str] = &[
-        "\"Tapped\"",
-        "\"Untapped\"",
-        "\"HasGreatestPowerAmongAllCreatures\"",
-        "{\"And\":[\"Creature\",\"HasGreatestPowerAmongAllCreatures\"]}",
-        "{\"And\":[\"Creature\",\"Untapped\"]}",
-        "{\"And\":[{\"And\":[\"Creature\",\"ControlledByYou\"]},\"Untapped\"]}",
-        "{\"HasGreatestManaValueAmongControlled\":{\"Or\":[\"Creature\",\"Planeswalker\"]}}",
-        "{\"And\":[\"ControlledByYou\",\"Tapped\"]}",
-        "{\"And\":[\"Creature\",\"Tapped\"]}",
-        "{\"And\":[\"Creature\",{\"Or\":[{\"Or\":[\"IsAttacking\",\"IsBlocking\"]},\"Tapped\"]}]}",
-        "{\"And\":[\"Permanent\",\"Tapped\"]}",
-        "{\"Or\":[\"Artifact\",{\"And\":[\"Creature\",\"Tapped\"]}]}",
-        "{\"Or\":[{\"Or\":[\"Artifact\",\"Enchantment\"]},{\"And\":[\"Creature\",\"Tapped\"]}]}",
-        "{\"Or\":[{\"Or\":[\"IsAttacking\",\"IsBlocking\"]},\"Tapped\"]}",
-    ];
+    // History: the drifts were first read as missing arms (the compiler
+    // answered `unreachable pattern`), then as call-site bugs — forty-odd
+    // effect arms filtering `self.battlefield` through the zone-blind walker,
+    // so a `Tapped` inner filter counted zero and an animated land survived
+    // "destroy all creatures". Fixing them one call site at a time left the
+    // class open for the next arm written; the gate closes it.
+    let known: &[&str] = &[];
     let disagrees = |req: &R| {
         boards.iter().any(|(g, id)| {
             let card = g.battlefield_find(*id).expect("on the battlefield").clone();

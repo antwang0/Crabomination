@@ -705,6 +705,52 @@ fn lovestruck_beast_cant_attack_without_a_one_one() {
         .expect("Lovestruck Beast attacks with a 1/1 in play");
 }
 
+/// CR 613 (Lovestruck Beast's own ruling: "if the 1/1 creature you control
+/// gets a bonus so it's no longer 1/1, Lovestruck Beast can't attack") — the
+/// attack gate's `PowerAtMost(1) & ToughnessAtMost(1)` filter reads the
+/// **computed** P/T, so an anthem on the only 1/1 shuts the attack off.
+///
+/// The gate walks `self.battlefield` through `evaluate_requirement_on_card`,
+/// which used to answer off the raw instance and so never saw the anthem;
+/// the public entry now routes a live permanent to the battlefield walker.
+#[test]
+fn lovestruck_beast_gate_reads_the_anthem_on_its_one_one() {
+    use crabomination::game::{Attack, AttackTarget};
+    let board = |anthem: bool| {
+        let mut g = two_player_game();
+        let beast = g.add_card_to_battlefield(0, catalog::lovestruck_beast());
+        g.clear_sickness(beast);
+        let hound = g.add_card_to_battlefield(0, catalog::goldhound());
+        if anthem {
+            g.add_card_to_battlefield(0, catalog::glorious_anthem());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        (g, beast, hound)
+    };
+
+    // Control assertion: the gate really is satisfied without the anthem, so
+    // the assert below cannot pass by accident.
+    let (mut g, beast, hound) = board(false);
+    assert_eq!(g.computed_permanent(hound).expect("on the battlefield").power, 1);
+    g.declare_attackers(vec![Attack { attacker: beast, target: AttackTarget::Player(1) }])
+        .expect("a plain 1/1 satisfies the gate");
+
+    let (mut g, beast, hound) = board(true);
+    assert_eq!(
+        g.computed_permanent(hound).expect("on the battlefield").power,
+        2,
+        "the anthem makes Goldhound a 2/2",
+    );
+    let err = g
+        .declare_attackers(vec![Attack { attacker: beast, target: AttackTarget::Player(1) }])
+        .unwrap_err();
+    assert!(
+        matches!(err, GameError::CannotAttack(id) if id == beast),
+        "a 2/2 is not the 1/1 the gate asks for, got {err:?}",
+    );
+}
+
 // ── Spellbomb cycle + utility (claude/modern_decks) ──────────────────────────
 
 #[test]
