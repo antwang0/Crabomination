@@ -3068,10 +3068,14 @@ runs.
 functions that went to zero calls, i.e. inlined) — see the Log entry. The
 shipped-profile figure is ~0.13 % of `cube`.
 
-sweep   **1 block — fresh seeds 1422..1423: 6 cells / 29,600 games / 0
-        failures**, `cap 0 / stuck 0 / draw 0`, pools `cube all sealed`,
+sweep   **2 blocks — fresh seeds 1422..1423 at the `(-354)` tip and
+        1424..1425 at the `(-358)` closing tip: 12 cells / 59,200 games / 0
+        failures**, `cap 0 / stuck 0 / draw 2` (a draw is a legal rules
+        outcome, not a stall), pools `cube all sealed`,
         `target-audit/overflow` with `-C debug-assertions=yes`. **FRONTIER
-        1424.** The block is `(-354)`'s whole ratchet and it is one
+        1426.** The second block carries `(-358)`'s
+        `names_x_or_converge` recompute-and-compare at both call sites and
+        `(-355)`..`(-357)`'s edits; the first is `(-354)`'s whole ratchet and it is one
         assertion covering twenty-nine sites: `cold_any`'s recompute-and-compare
         fires if any of the twenty-nine predicates ever answers `true` on a
         pristine group. 📐 **That is the shape to prefer — a class-wide device
@@ -3081,11 +3085,19 @@ sweep   **1 block — fresh seeds 1422..1423: 6 cells / 29,600 games / 0
         Suite **19,603 / 0 / 6** (`CRAB_ANSWER_LOG=strict`), golden traces
         unmoved, clippy **0** over the workspace, `cargo check --profile
         release-fast -p crabomination` clean.
-        `--bench` at the `(-354)` tip: **195,806 / 27.49 / 611.9 / 0 stalls**,
-        byte-identical to the committed invariant, `determinism ok`,
-        `thread_determinism ok (3 vs 1)`, `peak_rss_mib` 25.5.
-        `games_per_s` 283.59 single-run — inside the 212-407 spread this file
-        records, so not a reading.
+        `--bench` at the `(-354)` tip and again at the `(-358)` closing tip:
+        **195,806 / 27.49 / 611.9 / 0 stalls** both times, byte-identical to
+        the committed invariant, `determinism ok`, `thread_determinism ok
+        (3 vs 1)`, `peak_rss_mib` 25.5 / 25.0. **All five rows are
+        behaviour-preserving on the bench path.**
+        ⚠ `games_per_s` read **283.59** at the first tip and **487.40 /
+        491.98** at the second — and that is NOT a 72 % throughput win, it is
+        the first reading being taken while a `profiling-lines` build held
+        three of four cores. **A single-run `games_per_s` is not a reading,
+        and this run is the cleanest demonstration of it in the file:** the
+        second pair is above the 212-407 spread recorded here only because the
+        box was idle. Ir stays the signal; `bench_ab.py` is the wall-clock
+        confirmation and needs two binaries of the same profile.
 
 ### 2026-09-17 (the cold-group session, FOURTEENTH box) — candidate (B) taken at the group's one `&mut` route instead of at its 114 write sites
 
@@ -15167,6 +15179,28 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+🔎🔎 **START AT CANDIDATE (O). It is no longer "the diffuse allocation table"
+— it is a ranked, priced, two-pool shortlist of individual source lines, and
+five of its rows have already shipped** (`(-355)`..`(-358)`, -0.388 / -0.309 /
+-0.521 % over one session). The instrument is one command on a dump that costs
+one `--dump-instr` run:
+
+```text
+  cargo build --profile profiling-lines -p crabomination --bin bot_ladder --no-default-features
+  RUST_MIN_STACK=33554432 valgrind --tool=callgrind --dump-instr=yes \
+    --callgrind-out-file=cg.instr.<pool>.out target/profiling-lines/bot_ladder \
+    --a gang --b gang --games 6 --threads 1 --seed 1 --decks <pool>
+  python3 scripts/cg_alloc_sites.py cg.instr.<pool>.out \
+    target/profiling-lines/bot_ladder crabomination 75
+```
+
+📐 **The class that produced four of the five rows: "a value cloned so a
+short-lived reader could OWN it."** Three of them were *deleted* (a disjoint
+field borrow, two slices) and only the fourth had to be pooled — and the pooled
+one is the smallest. **Ask whether the owner needs to own before asking how to
+make owning cheap.** An allocation costs **222 Ir all-in**, measured by
+deleting 11,380 of them.
+
 ❌ **AND `impls::<&mut F as FnMut>::call_mut` IS NOT A LEAD, read 2026-09-17 so
 nobody chases it again.** It is **185,450 calls / 18.6 M Ir / 1.23 % of `cube`**
 and sits fourteenth in the call table, which makes it look like a by-reference
@@ -15986,6 +16020,64 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      widen the cloned struct — the piles are 7-30 cards where the battlefield
      is ~23 and asked constantly, so the hit rate that made `(-38)` pay may not
      be there at all.
+
+  🟡 **O. FOUR ROWS TAKEN — `(-355)`, `(-356)`, `(-357)`, `(-358)`, summing
+     -0.388 / -0.309 / -0.521 % — AND THE ENTRY'S AXIS WAS THE PROBLEM, NOT ITS
+     SIZE.** This entry censused the table by **caller** (`cg_growth.py`,
+     "~10,300 takeable re-growths, laborious"). Ranking the same dump by
+     **source line** — `cg_alloc_sites.py` over the whole program rather than
+     one function, which nobody had run — produced four rows in one session,
+     and **three of them are allocations that should not have existed** rather
+     than growths a `reserve` could move. 📐 **When a table has been "diffuse"
+     for eleven passes, change the axis you rank it on.**
+
+     📐📐 **AND THE PRICE OF AN ALLOCATION IS NOW MEASURED BY DELETION, NOT
+     SUMMED FROM SYMBOLS: 222 Ir ALL-IN** (`(-355)` removed exactly 11,380 and
+     saved 2,531,745 Ir; `(-357)` reads 202 on 5,596). That puts the program's
+     ~756 k allocations at **~168 M Ir = 11.2 % of `cube`**, above this entry's
+     9.9 %, because a symbol sum omits `malloc_consolidate` and the allocator's
+     own `memcpy`. **Quote 222 Ir when sizing an allocation lead.**
+
+     ⚠⚠ **AND TAKE THE `--dump-instr` DUMP ON MORE THAN ONE POOL.** `(-358)`
+     was priced at 4,948 allocations off the `cube` dump and measured
+     **-0.049 % on `cube` and -0.312 % on `sealed`** — 16,208 allocations
+     there. A line census on one pool mis-ranks a row whose pool is another.
+     Both dumps are now recorded below.
+
+     💡 **The shortlist, from both dumps, cube / sealed allocations — the next
+     pass should pull from the top of this and nothing else in this entry:**
+
+```text
+    cube   sealed  site                                        shape
+   6,440    7,240  actions.rs auto-tap `Box::new(OneColorDecider)` pool it, `(-356)`'s shape
+   6,440    7,240  actions.rs auto-tap `events` buffer           out-param, `(-243)`'s shape
+   7,752    ~7,000 DispatchScan::equip_grants                    ❌ dropck, see (-357)
+   4,638    ~4,600 GrantScan::equipment                          inline, COMPILES (checked)
+   6,688    ~6,600 card.rs TokenDefinition::clone (two lines)    unread
+   6,274    5,342  combat.rs:3924 `lethals` collect              8 callers of the split fn
+   3,684    ~3,600 mod.rs affected_from_requirement `types`       escapes into the return
+   2,642    ~2,600 mod.rs active_team_members `Vec<usize>`        one or two seats
+   ——       8,796  combat.rs:1263 declare_attackers `events`      unread, sealed-only row
+   ——       8,482  stack.rs:2194 Arc::new(ResolvingSpell)         structural
+   ——       5,852  mod.rs computed_permanent_hinted               unread
+```
+
+     ⚠ **The two auto-tap rows are ONE function and the biggest pair left**
+     (12,880 / 14,480). The `events` one needs the wrapper chain
+     (`auto_tap_for_cost{,_only,_filtered}`) to take `&mut Vec<GameEvent>`,
+     which is a five-site signature change and is why it was not taken here.
+     ⚠ **`IdSet`/`IdMap::insert` (16,906 / 21,998) and the four combat push
+     rows are NOT reserve questions** — `Vec::clone` allocates `len`, not
+     `capacity`, so on the bot's probe path every accumulating buffer restarts
+     its growth ladder and a `with_capacity` at the push site does not survive
+     the clone that precedes it. **On the probe path a reserve is only worth
+     taking where the buffer is built fresh.**
+     ⚠ **`cow.rs` / `GameState::clone` / `compute_permanents` / `PrintedList`
+     (~150 k allocations between them) are the CoW and probe-clone families**,
+     priced by which group a field lives in (`(-280)`..`(-287)`, `(-349)`),
+     not by a reserve, a borrow or a pool.
+
+     The original filing, kept for its caller census:
 
   💡 **O. THE ALLOCATION TABLE IS THE BIGGEST SINGLE THING LEFT — 755,903
      allocations ≈ 9.9 % of `cube` — AND IT IS NOW CENSUSED BY CALLER, WITH NO

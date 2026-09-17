@@ -24400,7 +24400,7 @@ mod stack_response_tests {
     /// the ladder census reads against. Prints; run with `--run-ignored
     /// all --nocapture`.
     #[test]
-    #[ignore]
+    #[ignore = "census; prints, run manually with --run-ignored all --nocapture"]
     fn menu_census_pool_counts() {
         let pool = crate::draft::sos_draft_pool_ref();
         let (mut x, mut modal, mut spree) = (Vec::new(), Vec::new(), Vec::new());
