@@ -207,6 +207,15 @@ pub mod mod_families {
 }
 
 /// The [`mod_families`] `m` belongs to.
+///
+/// ⚠ **Exhaustive on purpose, and it was a `_ => 0` until `(-346)`.** A
+/// modification that falls through to "no family" is invisible to every
+/// [`ContinuousEffects::has_family`] gate, and the failure mode is silent: the
+/// gate answers `false`, its caller skips the walk that would have found the
+/// modification, and the rules question comes back with the printed answer.
+/// That is exactly what `RemoveKeyword` and `CantHaveKeyword` did for one
+/// commit. A new variant now has to be *named* here, and the family-less ones
+/// are named with the reason they can be.
 pub fn modification_families(m: &Modification) -> u32 {
     use Modification as M;
     use mod_families as F;
@@ -222,7 +231,29 @@ pub fn modification_families(m: &Modification) -> u32 {
         M::AddKeyword(_) => F::KEYWORD,
         M::RemoveKeyword(_) | M::CantHaveKeyword(_) | M::ReplaceColorWord(..) => F::KEYWORD_EDIT,
         M::RemoveAllAbilities => F::STRIP,
-        _ => 0,
+        // Family-less, each for the same reason: **nothing gates on it**. The
+        // requirement walker's `has_stype` and `has_atype` closures read the
+        // computed view unconditionally, and controller changes are asked
+        // about through the computed view or not at all. Give one of these a
+        // family the day a gate wants it — and note that the walker closure
+        // is where such a gate would go, so the cost model is `(-345)`'s.
+        M::AddSupertype(_)
+        | M::SetArtifactSubtypes(_)
+        | M::AddArtifactSubtype(_)
+        | M::ChangeController(_) => 0,
+        // Layer 7. The toughness question is the only one anything gates on
+        // and it is answered by `modification_reduces_toughness` below, which
+        // is the shared oracle rather than a second arm list — the shape this
+        // whole function's warning is about.
+        M::SetPowerToughness(..)
+        | M::SetPowerToughnessToManaValue
+        | M::SetPower(_)
+        | M::SetToughness(_)
+        | M::ModifyPower(_)
+        | M::ModifyToughness(_)
+        | M::ModifyPowerToughness(..)
+        | M::ModifyPtPerOwnCreatureType(..)
+        | M::SwitchPowerToughness => 0,
     };
     let pt = if crate::game::modification_reduces_toughness(m) { F::TOUGHNESS_REDUCE } else { 0 };
     kind | pt
