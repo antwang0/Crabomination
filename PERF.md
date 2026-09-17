@@ -3011,14 +3011,29 @@ bump invalidates the Ir columns and has to re-take the A/B base.
 gang --b gang --games 6 --threads 1 --seed 1`): fixed **579,179,120** / cube
 **1,509,871,383** / sealed **1,631,936,758**.
 
-**CLOSING TIP ABSOLUTES at `d214cdae`, same recipe: fixed 578,978,442 / cube
-1,510,152,125 / sealed 1,632,364,300** — the run's whole cumulative movement is
-**-0.035 / +0.019 / +0.026 %**, and every point of it is accounted for: the
-mechanical keyword-set dedup's `release-fast` artifact (+0.010..0.015 %, the
-four predicates confirmed inlined away in `release`) against
-`printed_requirement_impl`'s `printed_colors()` `Vec` allocation going away
-(`fixed` -0.050 %). No perf row landed this run; both candidates were built,
-measured and reverted.
+**CLOSING TIP ABSOLUTES at `9f7b8c29`, same recipe: fixed 579,665,125 / cube
+1,510,267,940 / sealed 1,632,443,289** — the run's whole cumulative movement is
+**+0.084 / +0.026 / +0.031 %**, and every point of it is accounted for:
+
+```text
+  the keyword-set dedup's release-fast artifact   +0.014 / +0.010 / +0.015 %
+    (all four predicates confirmed inlined away in `release` — pays nothing)
+  every colour leaf onto printed_color_set        -0.050 / -0.004 / +0.009 %
+    (printed_requirement_impl's printed_colors() Vec allocation going away)
+  the seven P/T comparison arms onto effective_*  +0.001 / +0.001 / -0.000 %
+  the two greatest-power arms                     +0.000 / +0.000 / +0.000 %
+  Value::PowerOf / ToughnessOf onto effective_*   +0.118 / +0.007 / +0.005 %
+  the rest (four cold-path class fixes)            within +/-0.005 %
+```
+
+⚠ **The last row is the one to carry**: it is **84 extra
+`gather_continuous_effects_inner` calls on `fixed`** (13,170 -> 13,254), not a
+memo lookup. `Value::PowerOf` is evaluated during *resolution*, where the
+state is unfrozen, so the first computed read on a state gathers and
+`(-303)`'s cross memo serves the repeats. **A correctness read that moves
+from the instance to the computed view costs a gather per distinct state** —
+price the next one that way. No perf row landed this run; both candidates were
+built, measured and reverted.
 
 ✅ **THE TWELFTH BOX REPRODUCES THE ELEVENTH'S, second time running.** Against
 the `3c2b4e50` absolutes carried forward through `(-342)`'s filed row
@@ -3046,34 +3061,34 @@ the feature is the engine crate's default, so `--no-default-features` without
 `-p` resolves against the workspace and never reaches it. Rebuild cost: the
 feature flip is a full engine + catalog rebuild, 7m19s here.
 
-gates   **CLOSING STATE at `d214cdae`.** Both perf experiments were reverted, so every code
-        change in this tip is a correctness or clarity one — **six of them, all found by
-        diffing the requirement walkers against each other** (ENGINE_BACKLOG's twenty-seventh
-        through thirty-second finds).
+gates   **CLOSING STATE at `9f7b8c29`.** Both perf experiments were reverted, so every code
+        change in this tip is a correctness or clarity one — **nine of them, all found by
+        diffing the requirement and value walkers against each other** (ENGINE_BACKLOG's
+        twenty-seventh through thirty-fourth finds).
         `--bench` on `target/release/bot_ladder`: **195,806 decisions / 27.49 turns / 611.9 per
         game / 0 stalls (cap 0 / board 0 / stuck 0 / draw 0)**, byte-identical to the committed
         invariant, `determinism ok`, `thread_determinism ok (3 vs 1 threads identical)`,
-        `peak_rss_mib 25.1`, `bin_bytes 85,830,792`. Suite **19,583 / 0 / 5**
-        (`CRAB_ANSWER_LOG=strict`) — the 19,575 of the session below plus eight new tests; the 12
-        golden traces among them **unmoved**, and so is `--bench`, across six behaviour-touching
+        `peak_rss_mib 25.2`. Suite **19,586 / 0 / 5**
+        (`CRAB_ANSWER_LOG=strict`) — the 19,575 of the session below plus eleven new tests; the 12
+        golden traces among them **unmoved**, and so is `--bench`, across nine behaviour-touching
         rules fixes. That is a statement about the bench pool, not about the fixes: `--decks
         fixed` is mono-coloured with plain pips, no keyword grants and no keyword counters, so
         it exercises none of them. **A rules fix that leaves `--bench` byte-identical has not
         been tested by `--bench`** — the suite and the fresh-seed sweep are what covered these. Clippy **0** (`--workspace --all-targets --exclude crabomination_client`, and
         again `--features trig-census`). `cargo check --profile release-fast -p crabomination
-        --bin bot_ladder` clean (1m01s). ⚠ `games_per_s 653.38` at `host_calib_ms 39` on an
+        --bin bot_ladder` clean. ⚠ `games_per_s 639.79` at `host_calib_ms 39` on an
         Intel Xeon @ 2.10 GHz against the eleventh box's 371.09 at `host_calib_ms 46` — **the
         same binary configuration and a 1.7x wall-clock reading**, which is the standing warning
         made concrete: wall clock does not cross hosts and the Ir columns are the signal.
         Cold `release` here is **7m51s**, against the eleventh box's 35m43s.
 
-sweep   **TWO blocks — fresh seeds 1386..1389 at the `a899116a` tip and 1390..1393 at the
-        `d214cdae` tip: 24 cells / 118,400 games / 0 failures**, `cap 0 / board 0 / stuck 0 /
-        draw 18`, pools `cube all sealed`, `target-audit/overflow` with
-        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. The second block is the ratchet
-        for the six rules fixes, and it is the only gate that reaches them: `--bench` is
-        byte-identical across all six. Cells run 25-68 s here and each block is ~4m10s against a
-        ~7m00s `overflow` build. **FRONTIER 1394.** Standing audits: `audit_stubs` **0 flagged** over 21,797
+sweep   **THREE blocks — fresh seeds 1386..1389, 1390..1393 and 1394..1397, at the `a899116a`,
+        `d214cdae` and `9f7b8c29` tips: 36 cells / 177,600 games / 0 failures**, `cap 0 /
+        board 0 / stuck 0 / draw 18`, pools `cube all sealed`, `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. The later blocks are the ratchet
+        for the nine rules fixes, and they are the only gate that reaches them: `--bench` is
+        byte-identical across all nine. Cells run 23-63 s here and each block is ~4m10s against a
+        ~7m00s `overflow` build. **FRONTIER 1398.** Standing audits: `audit_stubs` **0 flagged** over 21,797
         unique cards, `audit_panics` **70 sites / 59 guarded / 11 lock-poison / 0 bare**,
         `audit_incomplete` 858 (the documented approximations, INCOMPLETE_CARDS' content),
         `audit_keyword_drift` 4 MISSING (each needs a primitive), `audit_dropped_may` 199.
