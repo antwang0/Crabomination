@@ -11423,3 +11423,61 @@ fn audit_block_restriction_filters_use_leaves_the_block_walker_handles() {
         );
     }
 }
+
+/// CR 613.6 (layer 6) — a keyword a *static* grants is part of the
+/// permanent's computed set, so `SelectionRequirement::HasKeyword` must see
+/// it. `CardInstance::has_keyword` reads the instance's four sources
+/// (printed, end-of-turn grant, keyword counters, minus the two removal
+/// lists) and knows nothing about `continuous_effects`, so the requirement
+/// walker answered `false` for a Levitation-granted flier until 2026-09-17 —
+/// every "creature with flying" filter in the catalog missed it. The middle
+/// assertion is the control: it pins the gap the fix closes, so the test
+/// cannot pass by the instance accidentally learning the keyword.
+#[test]
+fn cr_613_6_has_keyword_sees_a_statically_granted_keyword() {
+    use crabomination::card::{Keyword, SelectionRequirement as R};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::levitation());
+    let cp = g.computed_permanent(bear).expect("on the battlefield");
+    assert!(cp.keywords().contains(&Keyword::Flying), "the computed view has flying");
+    assert!(
+        !g.battlefield_find(bear).expect("present").has_keyword(&Keyword::Flying),
+        "the INSTANCE does not — that is the gap",
+    );
+    assert!(
+        g.evaluate_requirement_static(
+            &R::HasKeyword(Keyword::Flying),
+            &Target::Permanent(bear),
+            0,
+            None,
+        ),
+        "HasKeyword must read the computed set",
+    );
+}
+
+/// CR 613.5 (layer 5) — the colour twin of the test above. `SetColors` /
+/// `AddColor` / `LoseAllColors` are layer 5 and live only in the computed
+/// view; `printed_color_set` is the printed union and is the whole answer
+/// only off the battlefield. Both directions are asserted: an enchanted
+/// creature IS the Aura's colour and is NOT its printed one any more.
+#[test]
+fn cr_613_5_has_color_sees_a_statically_set_colour() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    let aura = g.add_card_to_battlefield(0, catalog::sinister_strength());
+    g.battlefield_find_mut(aura).expect("present").attached_to = Some(bear);
+    let cp = g.computed_permanent(bear).expect("on the battlefield");
+    assert!(cp.colors.contains(Color::Black), "the computed view is black: {:?}", cp.colors);
+    assert!(!cp.colors.contains(Color::Green), "and not green any more");
+    assert!(
+        g.evaluate_requirement_static(&R::HasColor(Color::Black), &Target::Permanent(bear), 0, None),
+        "HasColor(Black) must read the computed colours",
+    );
+    assert!(
+        !g.evaluate_requirement_static(&R::HasColor(Color::Green), &Target::Permanent(bear), 0, None),
+        "and HasColor(Green) must not",
+    );
+}

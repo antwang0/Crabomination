@@ -3977,6 +3977,44 @@ impl GameState {
                     Some(cp) => cp.supertypes().contains(st),
                     None => card.definition.supertypes.contains(st),
                 };
+                // CR 613.6 layer 6 — **the keyword member of this family, and
+                // it was missing.** A keyword a STATIC grants (Levitation's
+                // flying, Akroma's Memorial's six) lives in
+                // `continuous_effects` and nowhere on the instance;
+                // `CardInstance::has_keyword` reads the printed list, the
+                // end-of-turn grant, the keyword counters and the two removal
+                // lists, all of them instance fields. A layer-6 strip
+                // (`RemoveAllAbilities`, `RemoveKeyword`) runs the other way
+                // and the instance cannot see that either. Ungated, like
+                // `has_atype` and `has_stype`: the closure forces `computed()`
+                // at most once per invocation and the freeze scope's `perms`
+                // memo serves the repeats.
+                let has_kw = |kw: &crate::card::Keyword| match computed() {
+                    Some(cp) => cp.keywords().has_kw(kw),
+                    None => card.has_keyword(kw),
+                };
+                // The payload-carrying twins: `Toxic(n)` / `Modular(n)` match
+                // by discriminant, so they cannot go through `has_kw`.
+                let has_kw_tag = |sample: &crate::card::Keyword| match computed() {
+                    Some(cp) => {
+                        let want = std::mem::discriminant(sample);
+                        cp.keywords().iter().any(|k| std::mem::discriminant(k) == want)
+                    }
+                    None => card.has_keyword_tag(sample),
+                };
+                // CR 613.5 layer 5 — **the colour member, missing the same
+                // way.** `printed_color_set` is the *printed* union (coloured
+                // pips, hybrid and Phyrexian included, plus the colour
+                // indicator, empty under Devoid) and is the whole answer off
+                // the battlefield; on it, `SetColors` (Sinister Strength's
+                // black, Painter's Servant), `AddColor` and `LoseAllColors`
+                // are layer 5 and only the computed view carries them.
+                let color_set = || -> crate::mana::ColorSet {
+                    match computed() {
+                        Some(cp) => cp.colors,
+                        None => card.definition.printed_color_set(),
+                    }
+                };
                 use crate::card::CardType as CT;
                 match req {
                     // CR 604.3 — Grist is a creature everywhere but the
@@ -4029,10 +4067,10 @@ impl GameState {
                     // CR 105.2/202.2 — color is the union of the mana cost's
                     // colors and the color indicator (tokens, DFC backs), and
                     // empty under Devoid. `printed_colors` folds all three in.
-                    R::HasColor(c) => card.definition.printed_color_set().contains(c),
-                    R::HasKeyword(kw) => card.has_keyword(kw),
-                    R::HasToxic => card.has_toxic(),
-                    R::HasModular => card.has_modular(),
+                    R::HasColor(c) => color_set().contains(c),
+                    R::HasKeyword(kw) => has_kw(kw),
+                    R::HasToxic => has_kw_tag(&crate::card::Keyword::Toxic(0)),
+                    R::HasModular => has_kw_tag(&crate::card::Keyword::Modular(0)),
                     R::HasMutate => card.definition.mutate.is_some(),
                     R::HasMorphAbility => card.definition.has_morph_ability(),
                     R::HasNoAbilities => card.definition.has_no_abilities(),
@@ -4453,7 +4491,7 @@ impl GameState {
                             card.definition.card_types.contains(ct)
                         }
                     }
-                    R::Multicolored => card.definition.printed_color_set().len() >= 2,
+                    R::Multicolored => color_set().len() >= 2,
                     R::SharesMostCommonColor => {
                         let top = self.most_common_permanent_colors();
                         card.definition.printed_colors().iter().any(|k| top.contains(k))
@@ -4474,8 +4512,8 @@ impl GameState {
                         c.controller == controller && c.definition.name == card.definition.name
                     }),
                     // CR 702.114 — Devoid CDA: colorless despite colored pips.
-                    R::Colorless => card.definition.printed_color_set().is_empty(),
-                    R::Monocolored => card.definition.printed_color_set().is_monocolored(),
+                    R::Colorless => color_set().is_empty(),
+                    R::Monocolored => color_set().is_monocolored(),
                     R::HasXInCost => card.definition.cost.has_x(),
                     // OtherThanSource: enforce "different from the source"
                     // when a source CardId is threaded into this call (effect
