@@ -5167,3 +5167,55 @@ change anything). Paired sealed cells, seeds 43 (the cards present) and
 97 (no-loss), 1 000 games × 12 decks; adopt at ≥ +0.5 on seed 43 with
 seed 97 ≥ 49.5. Under the flag the census's "smaller X scored higher"
 should read ~0 by construction — the check that the mechanism fires.
+
+## Round 76b — X by outcome: 51.0 [50.8, 51.2] paired on seed 43, an exact 50.0 on seed 97, ADOPTED on the default (2026-09-17)
+
+The round the census bought (`.ladder/run_r76b_x_by_outcome.sh`, outputs
+`.ladder/r76/xout_*`). `EvalWeights::x_by_outcome` (profile `xout`,
+control `xout-off`): `pick_by_outcome` prices the X candidates of every X
+finalist with its own rule — the temporary pin, else the settled outcome
+— and swaps in the best on strict improvement only, ties keeping the sized
+X. Candidates: for a pay-X-life spell (X a mana-value threshold, CR 119.4
+lets it go to the whole life total; the bot stops at life − 1) the
+distinct mana values on the table and in the caster's graveyard plus 0;
+for a mana-X spell the smaller values (all of them below eight, a spread
+above). A lone X finalist, which the pick used to return without an
+outcome sim, goes through the pick under the flag — its X is the
+decision. The search's root menu (`main_phase_candidates_for_mcts`)
+re-sizes its X arms the same way, one sim for the sized X plus one per
+candidate, on X arms only: the rollouts already re-size through the
+scored pick, but the census's mis-sized casts were root decisions.
+
+| seed | `xout` vs `dflt`, sealed, 1 000 × 12, paired |
+|---|---|
+| 43 (Fix What's Broken and Vicious Rivalry in the decks) | **51.0** [50.8, 51.2] (±0.22) |
+| 97 (neither) | **50.0** [50.0, 50.0] (±0.03) |
+
+Seed 97 is an exact null, not a small one: the flag fires only where an X
+finalist exists and only swaps on strict improvement, so where the sizing
+rule is right the games are the same games. Seed 43's ±0.22 is the same
+mechanism — most pairs are identical and the interval is carried by the
+0.27 casts/game the flag changes. Pre-registered adopt rule (seed 43
+≥ +0.5, seed 97 ≥ 49.5) met. **The mechanism check**: the census under the
+flag (`xout` mirror, seed 43) reads "a smaller X scored higher" **2 of
+5 888 X wins (0.0 %)** against 2 360 (39.1 %) on the default; Fix What's
+Broken's mean X went 1.89 → 3.30 (it returns something now) and Vicious
+Rivalry's 3.21 → 3.65 (a bigger sweep when the board is the opponent's).
+Wall clock: sealed mirror ABBA 4.7 / 4.9 / 4.9 / 4.7 s, **+4 %**, ordered
+2 of 2 — the alternative sims land on ~0.5 X finalists a game.
+
+ADOPTED: `x_by_outcome: true` in `default_const`, so `dflt`, the actors and
+the lobby's search (`net_on_default` builds on the default) all carry it.
+Owed: the search-level transfer read, `mcts-dflt-256` (flag on) vs
+`mcts-xoutoff-256`, seed 43, 500 games × 12 — the root re-size is tested
+on the fixture but not yet measured under the search; a null there is
+expected to be the same exact-null shape as seed 97 wherever the two cards
+are not in the deck, so the read is about seed 43's decks only.
+
+Closing the round-76 ledger: **modes CLOSED** (2.1 / 4.6 % of modal wins
+had a better unseen mode; Artistic Process is the one card above 5 %),
+**the generic X branch CLOSED** (seven of nine X cards are monotone and
+correctly sized), and the two threshold cards fixed by the general
+mechanism rather than a card rule. The audit shortlist's remaining item
+is the trick blind spot (nulls at incidence, r63/r64); the puzzle corpus
+still certifies one item (`save_the_removal`).

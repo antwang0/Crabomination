@@ -1,0 +1,35 @@
+ladder: xout (A) vs xout (B) — 1000 games x 12 sealed decks on 22 threads, seed 43 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #1             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #2             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #3             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #4             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #5             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #6             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #7             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #8             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #9             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #10            500    500      0     50.0%  [46.9%, 53.1%]
+sealed #11            500    500      0     50.0%  [46.9%, 53.1%]
+----------------------------------------------------------------
+TOTAL                6000   6000      0     50.0%  [49.1%, 50.9%]
+
+12000 decided, 0 undecided, in 5.2s
+
+paired: 6000 pairs — 0 A-sweeps, 0 B-sweeps, 6000 splits
+        A win%  50.0%  [50.0%, 50.0%]  (±0.00 pts)
+        within-pair rho -1.000
+verdict: inconclusive at 1000 games/archetype — the interval straddles 50%
+  menu_census 380496 picks (164896 with >= 2 finalists, 31.71/game); modal: offered 175468 mode-candidates, 127078 cut by the shortlist (72.4 %), a modal finalist on 24604 picks (6.5 %), won 14226 (1.19/game), non-default mode 8464 (59.5 % of modal wins), sibling mode also a finalist 12416 (87.3 %), an unseen mode on 7120 wins (8826 modes), an unseen mode scored higher on 282 (2.0 % of modal wins; margin 5691 units mean); resolution-time mode decisions 0, non-default 0 (0.0 %); X: a finalist on 9388 picks (2.5 %, 9666 finalists), won 5888 (0.49/game, mean X 3.37), a smaller X scored higher on 2 (0.0 % of X wins; margin 1 units mean; <= X/2 on 2), a losing X finalist's smaller X beat the winner on 0; 34592 alt sims, 0 unrewritable shapes
+    x_card Fix What's Broken: 2632 wins, mean X 3.30; smaller X higher on 2 (0.1 %; mean better X 1.00, margin 1 units mean)
+    x_card Molten Note: 1968 wins, mean X 3.18; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    x_card Traumatic Critique: 776 wins, mean X 3.93; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    x_card Vicious Rivalry: 512 wins, mean X 3.65; smaller X higher on 0 (0.0 %; mean better X 0.00, margin 0 units mean)
+    modal_card Lorehold Charm: 4258 wins, non-default 3818 (89.7 %); unseen modes priced 864, higher on 28 (0.7 % of wins, margin 7152 units mean)
+    modal_card Artistic Process: 3872 wins, non-default 1112 (28.7 %); unseen modes priced 2234, higher on 204 (5.3 % of wins, margin 6881 units mean)
+    modal_card Silverquill Charm: 3770 wins, non-default 2660 (70.6 %); unseen modes priced 1284, higher on 24 (0.6 % of wins, margin 12 units mean)
+    modal_card Prismari Charm: 1202 wins, non-default 280 (23.3 %); unseen modes priced 108, higher on 10 (0.8 % of wins, margin 2 units mean)
+    modal_card Splatter Technique: 1124 wins, non-default 594 (52.8 %); unseen modes priced 104, higher on 16 (1.4 % of wins, margin 37 units mean)

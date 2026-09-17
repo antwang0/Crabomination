@@ -1,0 +1,25 @@
+ladder: xout (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 43 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #1             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #2             551    449      0     55.1%  [52.0%, 58.2%]
+sealed #3             499    501      0     49.9%  [46.8%, 53.0%]
+sealed #4             501    499      0     50.1%  [47.0%, 53.2%]
+sealed #5             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #6             539    461      0     53.9%  [50.8%, 57.0%]
+sealed #7             503    497      0     50.3%  [47.2%, 53.4%]
+sealed #8             527    473      0     52.7%  [49.6%, 55.8%]
+sealed #9             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #10            500    500      0     50.0%  [46.9%, 53.1%]
+sealed #11            500    500      0     50.0%  [46.9%, 53.1%]
+----------------------------------------------------------------
+TOTAL                6120   5880      0     51.0%  [50.1%, 51.9%]
+
+12000 decided, 0 undecided, in 4.8s
+
+paired: 6000 pairs — 148 A-sweeps, 28 B-sweeps, 5824 splits
+        A win%  51.0%  [50.8%, 51.2%]  (±0.22 pts)
+        within-pair rho -0.942 — variance x0.06 vs independent games, i.e. these 12000 games carry the precision of 207290
+verdict: A (xout) is stronger — the interval clears 50%

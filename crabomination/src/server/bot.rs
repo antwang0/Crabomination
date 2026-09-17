@@ -595,6 +595,18 @@ pub struct EvalWeights {
     /// ladder mirrors 50.0 (zero incidence) and 49.7 ±0.26. PARKED, off
     /// ([`stun_x_hold_on`](Self::stun_x_hold_on), profile `stun-hold`).
     pub stun_x_hold: bool,
+    /// Round 76b — X by outcome: [`pick_by_outcome`] prices the X
+    /// candidates of every X finalist with its own evaluator and swaps in
+    /// the best (strict improvement only; ties keep the sized X). The
+    /// round-76 census read the max-X rule right on seven of the pool's
+    /// nine X cards and wrong on 70 % of the casts of the two pay-X-life
+    /// cards whose X is a threshold — Fix What's Broken (mana value = X)
+    /// and Vicious Rivalry (mana value ≤ X) — which `max_affordable_x`
+    /// sizes off the mana pool. For those the candidates are the mana
+    /// values on the table and in the caster's graveyard up to life − 1;
+    /// for a mana-X spell, the smaller values. Off
+    /// ([`x_by_outcome_on`](Self::x_by_outcome_on), profile `xout`).
+    pub x_by_outcome: bool,
     /// Take our own graveyard's cards on an optional "choose up to N"
     /// pick. `decide_choose_cards`'s graveyard branch was written for the
     /// hostile exile (Collect Evidence): it picks opponents' cards and, with
@@ -1178,6 +1190,7 @@ impl EvalWeights {
             block_chain_from_menu: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
+            x_by_outcome: false,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -1284,6 +1297,7 @@ impl EvalWeights {
             block_chain_from_menu: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
+            x_by_outcome: false,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -1373,6 +1387,7 @@ impl EvalWeights {
             block_chain_from_menu: false,
             attack_blocker_guard: false,
             stun_x_hold: false,
+            x_by_outcome: false,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -2487,6 +2502,14 @@ impl EvalWeights {
             // mirror's wall clock. Control: [`sim_main_cast_off`]
             // (Self::sim_main_cast_off), profile `sim-cast-off`.
             sim_main_cast_cap: Some(1),
+            // Round 76b (2026-09-17): X by outcome — the X finalists (and
+            // the search's X root arms) re-sized by the outcome eval.
+            // Paired sealed 51.0 [50.8, 51.2] on seed 43 (the two
+            // pay-X-life threshold cards present) and an exact 50.0 on
+            // seed 97 (absent); +4 % wall clock. Control:
+            // [`x_by_outcome_off`](Self::x_by_outcome_off), profile
+            // `xout-off`.
+            x_by_outcome: true,
             // Round 67 (2026-09-06, the same evening): hostile player slots
             // aimed at the opponent, the other player as a cast-time arm,
             // the own-graveyard pick and the X=0 no-op prune. Control:
@@ -2572,6 +2595,18 @@ impl EvalWeights {
     /// [`stun_x_hold`](Self::stun_x_hold); ladder as A against the default.
     pub const fn stun_x_hold_on() -> Self {
         Self { stun_x_hold: true, ..Self::default_const() }
+    }
+
+    /// The default plus X by outcome (round 76b). The opt-in for
+    /// [`x_by_outcome`](Self::x_by_outcome); ladder as A against the default.
+    pub const fn x_by_outcome_on() -> Self {
+        Self { x_by_outcome: true, ..Self::default_const() }
+    }
+
+    /// The default without X by outcome — round 76b's control, profile
+    /// `xout-off`.
+    pub const fn x_by_outcome_off() -> Self {
+        Self { x_by_outcome: false, ..Self::default_const() }
     }
 
     /// The default plus own-graveyard picks. The opt-in for
@@ -10832,7 +10867,7 @@ pub mod menu_census {
 
     /// The smaller X values the census prices against a chosen `x`: every
     /// one below eight, a spread of eight above that.
-    fn alternatives(x: u32) -> Vec<u32> {
+    pub(super) fn alternatives(x: u32) -> Vec<u32> {
         if x <= 8 {
             return (0..x).collect();
         }
@@ -16185,13 +16220,18 @@ fn pick_by_outcome(
     w: &EvalWeights,
 ) -> Option<Finalist> {
     // Under the census a lone finalist is still a pick (an X spell alone on
-    // the menu is exactly the X decision it counts), so it is scored too.
-    if finalists.is_empty() || (finalists.len() == 1 && !menu_census::on()) {
+    // the menu is exactly the X decision it counts), so it is scored too;
+    // under X by outcome a lone X finalist has its X to decide.
+    if finalists.is_empty()
+        || (finalists.len() == 1
+            && !menu_census::on()
+            && !(w.x_by_outcome && menu_census::action_x(&finalists[0].action).is_some()))
+    {
         return finalists.into_iter().next();
     }
     let baseline = eval_material(state, seat, w);
     let by_policy = policy_ranking(w);
-    let evd: Vec<(i32, Finalist)> = finalists
+    let mut evd: Vec<(i32, Finalist)> = finalists
         .into_iter()
         .map(|f| {
             // Known-temporary casts (bounce, until-EOT stat changes) are
@@ -16215,6 +16255,12 @@ fn pick_by_outcome(
             (ev, f)
         })
         .collect();
+    // Round 76b: the X finalists re-sized by the same evaluator before the
+    // pick, so a threshold X (or an X the sequence would rather leave
+    // mana behind) competes at its best value, not the sized one.
+    if w.x_by_outcome && !by_policy {
+        resize_x_finalists(state, seat, &mut evd, baseline, w);
+    }
     // Actor-side exploration: sample finalists by outcome score. The
     // static score stays out of the softmax — it's a tiebreak, not a
     // second opinion at temperature.
@@ -16237,6 +16283,85 @@ fn pick_by_outcome(
     }
     capture_decision(state, seat, &evd, best, 0, w);
     evd.into_iter().nth(best).map(|(_, f)| f)
+}
+
+/// Round 76b — X by outcome. For every finalist that carries an X, price
+/// the other X values ([`x_candidates`]) with the pick's own rule
+/// (temporary pin, else the settled outcome) and swap in the best when it
+/// strictly beats the sized line. The `settled` snapshot was taken at the
+/// old X and is dropped with it. Not under [`policy_ranking`]: the head's
+/// logits are not the evaluator's units.
+fn resize_x_finalists(
+    state: &GameState,
+    seat: usize,
+    evd: &mut [(i32, Finalist)],
+    baseline: i32,
+    w: &EvalWeights,
+) {
+    for (ev, f) in evd.iter_mut() {
+        if let Some((alt, alt_ev)) = better_x(state, seat, &f.action, *ev, baseline, w) {
+            f.action = alt;
+            f.settled = None;
+            *ev = alt_ev;
+        }
+    }
+}
+
+/// The same action at the X that scores strictly above `ev` under the
+/// pick's rule, if any — [`resize_x_finalists`]' unit, shared with the
+/// search's root menu.
+fn better_x(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    ev: i32,
+    baseline: i32,
+    w: &EvalWeights,
+) -> Option<(GameAction, i32)> {
+    let x = menu_census::action_x(action)?;
+    let mut best: Option<(GameAction, i32)> = None;
+    for alt_x in x_candidates(state, seat, action, x) {
+        let alt = menu_census::with_x(action, alt_x)?;
+        if !state.would_accept(alt.clone()) {
+            continue;
+        }
+        let alt_ev = if action_outcome_is_temporary(state, &alt) {
+            baseline
+        } else {
+            evaluate_action_outcome(state, seat, &alt, None, w).unwrap_or(baseline)
+        };
+        if alt_ev > ev && best.as_ref().is_none_or(|(_, b)| alt_ev > *b) {
+            best = Some((alt, alt_ev));
+        }
+    }
+    best
+}
+
+/// The X values worth pricing for `action`, sized at `x`. A pay-X-life
+/// spell's X is a threshold on mana value (CR 119.4 lets it go to the
+/// whole life total; the bot stops at life − 1), so the only values that
+/// change anything are the mana values on the table and in the caster's
+/// graveyard, plus 0. A mana-X spell's are the smaller values.
+fn x_candidates(state: &GameState, seat: usize, action: &GameAction, x: u32) -> Vec<u32> {
+    let life_x = match action {
+        GameAction::CastSpell { card_id, .. } => state.players[seat]
+            .hand
+            .iter()
+            .find(|c| c.id == *card_id)
+            .is_some_and(|c| c.definition.additional_cost_pay_x_life),
+        _ => false,
+    };
+    if !life_x {
+        return if x >= 1 { menu_census::alternatives(x) } else { Vec::new() };
+    }
+    let cap = (state.effective_life(seat) - 1).max(0) as u32;
+    let mut v: Vec<u32> = vec![0];
+    v.extend(state.battlefield.iter().map(|c| c.printed_cmc() as u32));
+    v.extend(state.players[seat].graveyard.iter().map(|c| c.printed_cmc() as u32));
+    v.retain(|&m| m <= cap && m != x);
+    v.sort_unstable();
+    v.dedup();
+    v
 }
 
 /// Feed the finalist set and the pick to [`decision_capture`].
@@ -17322,6 +17447,27 @@ pub(crate) fn main_phase_candidates_for_mcts(
     // fanning every spell out over its target set. Scored a hair under
     // the arm they vary, so a tie leaves the heuristic's pick in front
     // and the sims have to earn the swap.
+    // Round 76b: an X arm is searched at its best X, not the sized one —
+    // the rollouts re-size through the scored pick, but the root arm is
+    // this list's, and the census's mis-sized casts were root decisions.
+    // One outcome sim for the sized X plus one per candidate, on the X
+    // arms only.
+    if w.x_by_outcome && !policy_ranking(w) && out.iter().any(|(a, _)| menu_census::action_x(a).is_some()) {
+        let baseline = eval_material(state, seat, w);
+        for (a, _) in out.iter_mut() {
+            if menu_census::action_x(a).is_none() {
+                continue;
+            }
+            let ev = if action_outcome_is_temporary(state, a) {
+                baseline
+            } else {
+                evaluate_action_outcome(state, seat, a, None, w).unwrap_or(baseline)
+            };
+            if let Some((alt, _)) = better_x(state, seat, a, ev, baseline, w) {
+                *a = alt;
+            }
+        }
+    }
     if w.target_arms
         && let Some((base, base_score)) = out
             .iter()
@@ -24193,6 +24339,56 @@ mod stack_response_tests {
         assert_eq!(action_modes(&spree), Some((id, vec![0, 2])));
         assert_eq!(action_x(&GameAction::PassPriority), None);
         assert!(with_x(&GameAction::PassPriority, 1).is_none());
+    }
+
+    /// Round 76b: a pay-X-life spell whose X is a threshold is sized off the
+    /// mana pool by default (X = pool − fixed cost, here 0: the census's
+    /// 70 %-mis-sized card) and by outcome under the flag — the one mana
+    /// value in the graveyard, the bear the spell can return.
+    #[test]
+    fn x_by_outcome_resizes_a_threshold_x_spell() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let id = g.add_card_to_hand(0, catalog::fix_whats_broken()); // {2}{W}{B}, pay X life
+        g.add_card_to_graveyard(0, catalog::grizzly_bears()); // mana value 2
+        g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        let off = main_phase_action_with(&g, 0, true, &EvalWeights::x_by_outcome_off()).action;
+        assert!(
+            matches!(off, GameAction::CastSpell { card_id, x_value: Some(0), .. } if card_id == id),
+            "the sizing rule alone reads X off the pool (4 − 4 = 0): {off:?}"
+        );
+        let out = main_phase_action_with(&g, 0, true, &EvalWeights::default()).action;
+        assert!(
+            matches!(out, GameAction::CastSpell { card_id, x_value: Some(2), .. } if card_id == id),
+            "by outcome (the default since round 76b) X is the bear's mana value: {out:?}"
+        );
+        // The search's root menu carries the same re-sized arm.
+        let arms = main_phase_candidates_for_mcts(&g, 0, &EvalWeights::default());
+        assert!(
+            arms.iter().any(|(a, _)| matches!(a, GameAction::CastSpell { card_id, x_value: Some(2), .. } if *card_id == id)),
+            "root arm re-sized: {arms:?}"
+        );
+        let arms = main_phase_candidates_for_mcts(&g, 0, &EvalWeights::x_by_outcome_off());
+        assert!(
+            arms.iter().any(|(a, _)| matches!(a, GameAction::CastSpell { card_id, x_value: Some(0), .. } if *card_id == id)),
+            "root arm sized: {arms:?}"
+        );
+        // A mana-X spell that is monotone in X keeps its sized X: no smaller
+        // value scores strictly higher than burn to the face at the max.
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let id = g.add_card_to_hand(0, catalog::banefire());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        let out = main_phase_action_with(&g, 0, true, &EvalWeights::default()).action;
+        assert!(
+            matches!(out, GameAction::CastSpell { card_id, x_value: Some(3), .. } if card_id == id),
+            "Banefire keeps X = 3: {out:?}"
+        );
     }
 
     /// Round 76 census, the static half: how many of the sealed pool's

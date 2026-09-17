@@ -1,0 +1,25 @@
+ladder: xout (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 97 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #1             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #2             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #3             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #4             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #5             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #6             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #7             499    501      0     49.9%  [46.8%, 53.0%]
+sealed #8             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #9             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #10            500    500      0     50.0%  [46.9%, 53.1%]
+sealed #11            500    500      0     50.0%  [46.9%, 53.1%]
+----------------------------------------------------------------
+TOTAL                5999   6001      0     50.0%  [49.1%, 50.9%]
+
+12000 decided, 0 undecided, in 3.6s
+
+paired: 6000 pairs — 1 A-sweeps, 2 B-sweeps, 5997 splits
+        A win%  50.0%  [50.0%, 50.0%]  (±0.03 pts)
+        within-pair rho -0.999 — variance x0.00 vs independent games, i.e. these 12000 games carry the precision of 12000666
+verdict: inconclusive at 1000 games/archetype — the interval straddles 50%
