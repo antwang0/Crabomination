@@ -15670,16 +15670,39 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
   and 81.3 % of `cube`'s failures had already built a mana source table.
 ```
 
-     ⚠⚠ **`pay_census`'s own doc says the COLOURED class — the largest, 1,428
-     on `cube` — is where a CORRECTNESS bug would live**: "the pips had
-     producers but no *assignment* covers them … or auto-tap stranded a colour
-     it could have covered, which is a correctness bug: a payable line becomes
-     invisible". **Nobody has separated those two.** `CRAB_PAY_FAILS=2` names
-     each failure with its cost and caller line; a bipartite match over the
-     source table decides the rest. **This is a bot-STRENGTH lead before it is
-     a perf one** — a refused payable cast is a lost game, not a slow one — and
-     `generic` (974) is the pure perf half the doc already calls "an estimate
-     consumed as a gate".
+     ❌❌ **AND THE CORRECTNESS HALF IS REFUTED, read 2026-09-17 with no build
+     spent, so nobody writes a bipartite matcher for it.** `pay_census`'s doc
+     feared the coloured class was "the pips had producers but no *assignment*
+     covers them … or auto-tap stranded a colour it could have covered, which
+     is a correctness bug: a payable line becomes invisible".
+     `CRAB_PAY_FAILS=names` settles it in one run: **all 1,428 coloured
+     failures on `cube` read `have: 0`** — the seat cannot produce that colour
+     at all. No stranding, no assignment problem, no invisible payable line.
+     (`generic`'s 974 spread over `have:` 0-6, as an over-optimistic total
+     should.)
+
+     **What is left is the perf half, and it is sized.** One failed payment is
+     `snapshot_payment_state` 342 + `auto_tap_for_cost_inner` 788 +
+     `restore_payment_state` 502 ≈ **1,632 Ir**, so 2,486 of them is **~4.06 M
+     = 0.27 % of `cube`** before the cast machinery around them. And the
+     population names the path — this is the census's `record_kind` column
+     doing the job it was written for:
+
+```text
+  creature + coloured  1,014   creature + generic  410   ability + generic 246
+  instant/sorcery + generic 232   i/s + coloured 224   other + coloured 108
+```
+
+     ⚠ **It is not `fixed`'s answer.** That pool's failures were "three
+     response paths probing without an affordability filter"; `cube`'s are
+     **41 % creature spells whose colour the seat has no producer for**, i.e.
+     the main-phase cast enumeration. `can_afford_in_state_with_full` *does*
+     call `colors_afford`, so the next question is the only one left: **which
+     probe path reaches `try_pay_after_snapshot_mode` without that gate, or
+     does `available_mana` over-count a colour?** An env-gated counter at
+     `can_afford_in_state_with`'s two exits answers it for one rebuild. ⚠ The
+     bot files are the ML sessions' hot ground — check `git log -- crabomination/src/server/bot.rs`
+     before building for this.
      ⚠ `fixed` has **zero** payment failures, so none of this reads on the pool
      `--bench` measures. Rank it on `cube`.
 
