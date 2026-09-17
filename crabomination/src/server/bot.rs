@@ -3282,9 +3282,10 @@ fn decide_pending_policy_inner(
         // AutoDecider answers every mid-resolution modal with
         // mode 0. Evaluate each mode's settled outcome instead.
         crate::decision::Decision::ChooseMode { num_modes, .. } if eval_modes => {
-            crate::decision::DecisionAnswer::Mode(decide_mode_by_outcome(
-                state, seat, *num_modes, w,
-            ))
+            let m = decide_mode_by_outcome(state, seat, *num_modes, w);
+            menu_census::add(16, 1);
+            menu_census::add(17, u64::from(m != 0));
+            crate::decision::DecisionAnswer::Mode(m)
         }
         // CR 510.1c / 510.1e — combat-damage order for a multi-blocked
         // attacker (or a creature blocking several attackers). AutoDecider
@@ -7768,6 +7769,13 @@ fn main_phase_action_with(
                 ranked.sort_by_key(|&(s, _, _)| std::cmp::Reverse(s));
             }
             const EVAL_TOP: usize = 3;
+            // Round 76 census: the modal candidates the enumerator offered,
+            // against the ones the shortlist lets the outcome eval see.
+            let modal_pool = if menu_census::on() {
+                ranked.iter().filter(|(_, a, _)| menu_census::action_modes(a).is_some()).count()
+            } else {
+                0
+            };
             let mut finalists: Vec<Finalist> = Vec::new();
             for (s, a, ok) in ranked {
                 if finalists.len() >= EVAL_TOP {
@@ -7785,6 +7793,12 @@ fn main_phase_action_with(
                         settled: Some(Box::new(g)),
                     });
                 }
+            }
+            if modal_pool > 0 {
+                let modal_fin =
+                    finalists.iter().filter(|f| menu_census::action_modes(&f.action).is_some()).count();
+                menu_census::add(6, modal_pool as u64);
+                menu_census::add(7, modal_pool.saturating_sub(modal_fin) as u64);
             }
             if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
                 // Forge's summon-sick gate (`SpellAbilityPicker`): if the
@@ -10667,6 +10681,373 @@ fn empty_greedy_gate_covers(state: &GameState, seat: usize) -> bool {
         }
     }
     ours > 0 && theirs >= ours
+}
+
+/// Round 76 census (2026-09-17): what the scored main-phase pick sees of
+/// the audit shortlist's two uncensused holes. **Modal spells** — the cast
+/// enumerator offers one candidate per mode and the resolution-time
+/// `Decision::ChooseMode` is outcome-judged, so the open question is
+/// whether the alternate modes survive the `EVAL_TOP` shortlist to the
+/// outcome eval at all. **X spells** — `x_value` is always the max
+/// affordable (capped only for creature-only damage), never a branch, so
+/// the question is how often a smaller X scores strictly better under the
+/// very evaluator that picked the line (a smaller X leaves mana for the
+/// sequence's next play, which the lookahead can see only if the
+/// candidate exists). Off unless the variable is set; one `OnceLock` read
+/// per pick. The X alternatives are extra outcome sims and run only under
+/// the census.
+///
+/// ```text
+/// CRAB_MENU_CENSUS=1 bot_ladder --a dflt --b dflt --decks sealed --games 1000 --seed 43
+/// ```
+pub mod menu_census {
+    use std::collections::BTreeMap;
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+    use std::sync::Mutex;
+
+    use super::{EvalWeights, Finalist};
+    use crate::card::CardId;
+    use crate::game::types::GameAction;
+    use crate::game::GameState;
+
+    /// `[0 picks, 1 picks with >= 2 finalists, 2 picks with a modal finalist,
+    /// 3 chosen modal, 4 chosen modal at a non-default mode, 5 chosen modal
+    /// with a sibling mode of the same card also a finalist, 6 modal
+    /// candidates in the ranked pool, 7 of those cut by the shortlist,
+    /// 8 picks with an X finalist (X >= 1), 9 chosen X cast, 10 chosen X
+    /// cast where a smaller X scored strictly higher, 11 sum of that margin
+    /// (eval units), 12 alternative-X sims run, 13 a losing X finalist whose
+    /// smaller X beats the winner, 14 of the 10, the better X was <= X/2,
+    /// 15 chosen X on a shape the census cannot rewrite, 16 resolution-time
+    /// mode decisions, 17 of those answered non-default, 18 sum of chosen X,
+    /// 19 X finalists, 20 modes of the chosen modal card the shortlist never
+    /// showed the outcome eval, 21 chosen modal where such an unseen mode
+    /// scored strictly higher, 22 sum of that margin, 23 chosen modal with
+    /// any unseen mode]`.
+    pub static N: [AtomicU64; 24] = [const { AtomicU64::new(0) }; 24];
+
+    /// Per-card detail at level 2. X wins: `[wins, a smaller X scored
+    /// higher, margin sum, chosen X sum, better X sum]`. Modal wins:
+    /// `[wins, non-default, unseen modes priced, an unseen mode scored
+    /// higher, margin sum]`.
+    pub static X_BY_CARD: Mutex<BTreeMap<&'static str, [u64; 5]>> = Mutex::new(BTreeMap::new());
+    pub static MODAL_BY_CARD: Mutex<BTreeMap<&'static str, [u64; 5]>> =
+        Mutex::new(BTreeMap::new());
+
+    pub fn add(i: usize, n: u64) {
+        if on() && n > 0 {
+            N[i].fetch_add(n, Relaxed);
+        }
+    }
+
+    /// 0 = off, 1 = count, 2 = count and keep the per-card tables.
+    pub fn level() -> u8 {
+        static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_MENU_CENSUS") {
+            Ok(v) if v == "2" => 2,
+            Ok(v) => u8::from(!v.is_empty() && v != "0"),
+            _ => 0,
+        })
+    }
+
+    pub fn on() -> bool {
+        level() > 0
+    }
+
+    pub fn snapshot() -> [u64; 24] {
+        std::array::from_fn(|i| N[i].load(Relaxed))
+    }
+
+    /// The card an action casts or activates, for the per-card tables.
+    fn action_card<'a>(
+        state: &'a GameState,
+        seat: usize,
+        a: &GameAction,
+    ) -> Option<&'a crate::card::CardInstance> {
+        match a {
+            GameAction::CastSpell { card_id, .. } | GameAction::CastSpellSpree { card_id, .. } => {
+                state.players[seat].hand.iter().find(|c| c.id == *card_id)
+            }
+            GameAction::CastPrepareSpell { creature_id: id, .. }
+            | GameAction::ActivateAbility { card_id: id, .. } => state.battlefield_find(*id),
+            _ => None,
+        }
+    }
+
+    /// The pick's own price of a line: the temporary pin, else the settled
+    /// outcome, else the baseline — exactly `pick_by_outcome`'s rule.
+    fn price(state: &GameState, seat: usize, a: &GameAction, baseline: i32, w: &EvalWeights) -> i32 {
+        if super::action_outcome_is_temporary(state, a) {
+            baseline
+        } else {
+            super::evaluate_action_outcome(state, seat, a, None, w).unwrap_or(baseline)
+        }
+    }
+
+    /// The X an action would cast with, on the shapes the enumerators size.
+    pub(super) fn action_x(a: &GameAction) -> Option<u32> {
+        match a {
+            GameAction::CastSpell { x_value, .. }
+            | GameAction::CastSpellKicked { x_value, .. }
+            | GameAction::CastSpellSpree { x_value, .. }
+            | GameAction::CastPrepareSpell { x_value, .. }
+            | GameAction::CastSpellConvoke { x_value, .. }
+            | GameAction::CastSpellAlternative { x_value, .. }
+            | GameAction::ActivateAbility { x_value, .. } => *x_value,
+            _ => None,
+        }
+    }
+
+    /// The same action at another X, for the shapes [`action_x`] reads.
+    pub(super) fn with_x(a: &GameAction, x: u32) -> Option<GameAction> {
+        let mut b = a.clone();
+        match &mut b {
+            GameAction::CastSpell { x_value, .. }
+            | GameAction::CastSpellKicked { x_value, .. }
+            | GameAction::CastSpellSpree { x_value, .. }
+            | GameAction::CastPrepareSpell { x_value, .. }
+            | GameAction::CastSpellConvoke { x_value, .. }
+            | GameAction::CastSpellAlternative { x_value, .. }
+            | GameAction::ActivateAbility { x_value, .. } => *x_value = Some(x),
+            _ => return None,
+        }
+        Some(b)
+    }
+
+    /// The modes a cast stamps on its spell, keyed by the card: `Some` only
+    /// for the enumerators' modal shapes (`mode: Some(_)` is set for modal
+    /// cards alone; the plain cast leaves it `None`).
+    pub(super) fn action_modes(a: &GameAction) -> Option<(CardId, Vec<u8>)> {
+        match a {
+            GameAction::CastSpell { card_id, mode: Some(m), .. } => Some((*card_id, vec![*m as u8])),
+            GameAction::CastSpellSpree { card_id, spree_modes, .. } => {
+                Some((*card_id, spree_modes.clone()))
+            }
+            GameAction::CastPrepareSpell { creature_id, mode: Some(m), .. } => {
+                Some((*creature_id, vec![*m as u8]))
+            }
+            _ => None,
+        }
+    }
+
+    /// The smaller X values the census prices against a chosen `x`: every
+    /// one below eight, a spread of eight above that.
+    fn alternatives(x: u32) -> Vec<u32> {
+        if x <= 8 {
+            return (0..x).collect();
+        }
+        let mut v = vec![0, 1, 2, x / 4, x / 2, 3 * x / 4, x - 2, x - 1];
+        v.sort_unstable();
+        v.dedup();
+        v
+    }
+
+    /// What one pick showed the census; [`tick`] folds it into [`N`].
+    #[derive(Debug, Default, PartialEq, Eq)]
+    pub(super) struct Judged {
+        pub modal_finalists: u64,
+        pub chosen_modal: bool,
+        pub chosen_mode_nondefault: bool,
+        pub sibling_mode_among_finalists: bool,
+        pub x_finalists: u64,
+        pub chosen_x: Option<u32>,
+        pub chosen_x_unrewritable: bool,
+        pub chosen_ev: i32,
+        pub alt_evals: u64,
+        /// The best smaller X and its score, when one strictly beats the
+        /// chosen line's score.
+        pub better_alt: Option<(u32, i32)>,
+        pub loser_x_beats_winner: bool,
+        /// Modes of the chosen modal card no finalist carried (the
+        /// shortlist cut them, or they found no target).
+        pub unseen_modes: u64,
+        pub unseen_priced: u64,
+        /// The best unseen mode and its score, when one strictly beats the
+        /// chosen line's score.
+        pub better_mode: Option<(usize, i32)>,
+        pub card: Option<&'static str>,
+    }
+
+    /// Price the smaller-X lines of `action` (chosen at `x`) with the pick's
+    /// own evaluator; the best of them, and how many sims it took.
+    fn best_smaller_x(
+        state: &GameState,
+        seat: usize,
+        action: &GameAction,
+        x: u32,
+        baseline: i32,
+        w: &EvalWeights,
+    ) -> (Option<(u32, i32)>, u64) {
+        let mut best: Option<(u32, i32)> = None;
+        let mut sims = 0;
+        for alt_x in alternatives(x) {
+            let Some(alt) = with_x(action, alt_x) else { break };
+            if !state.would_accept(alt.clone()) {
+                continue;
+            }
+            sims += 1;
+            let ev = price(state, seat, &alt, baseline, w);
+            if best.is_none_or(|(_, b)| ev > b) {
+                best = Some((alt_x, ev));
+            }
+        }
+        (best, sims)
+    }
+
+    pub(super) fn judge(
+        state: &GameState,
+        seat: usize,
+        evd: &[(i32, Finalist)],
+        chosen: usize,
+        w: &EvalWeights,
+    ) -> Judged {
+        let mut j = Judged::default();
+        let Some((chosen_ev, chosen_f)) = evd.get(chosen) else { return j };
+        j.chosen_ev = *chosen_ev;
+        j.card = action_card(state, seat, &chosen_f.action).map(|c| c.definition.name);
+        let modes: Vec<Option<(CardId, Vec<u8>)>> =
+            evd.iter().map(|(_, f)| action_modes(&f.action)).collect();
+        j.modal_finalists = modes.iter().flatten().count() as u64;
+        if let Some((card, m)) = &modes[chosen] {
+            j.chosen_modal = true;
+            j.chosen_mode_nondefault = m.as_slice() != [0];
+            j.sibling_mode_among_finalists = modes
+                .iter()
+                .enumerate()
+                .any(|(i, o)| i != chosen && o.as_ref().is_some_and(|(c, mm)| c == card && mm != m));
+        }
+        let xs: Vec<Option<u32>> =
+            evd.iter().map(|(_, f)| action_x(&f.action).filter(|x| *x >= 1)).collect();
+        j.x_finalists = xs.iter().flatten().count() as u64;
+        // Under the policy head the scores are logits, not the outcome
+        // evaluator's units — neither alternative question has a currency.
+        if super::policy_ranking(w) {
+            return j;
+        }
+        let baseline = super::eval_material(state, seat, w);
+        // The chosen modal card's modes the outcome eval never saw, priced
+        // the way the enumerator would have offered them.
+        if let GameAction::CastSpell { card_id, mode: Some(_), x_value, .. } = &chosen_f.action
+            && let Some(c) = state.players[seat].hand.iter().find(|c| c.id == *card_id)
+            && let Some(n) = super::modal_mode_count(&c.definition.effect)
+        {
+            let seen: Vec<u8> = modes
+                .iter()
+                .flatten()
+                .filter(|(id, _)| id == card_id)
+                .flat_map(|(_, mm)| mm.iter().copied())
+                .collect();
+            for m in 0..n {
+                if seen.contains(&(m as u8)) {
+                    continue;
+                }
+                j.unseen_modes += 1;
+                let eff = super::mode_branch(&c.definition.effect, Some(m));
+                let (target, additional_targets) = if eff.requires_target() {
+                    let (t, extras) = state.auto_targets_for_effect_all_slots(eff, seat, Some(m));
+                    let Some(t) = t else { continue };
+                    (Some(t), extras)
+                } else {
+                    (None, Vec::new())
+                };
+                let alt = GameAction::CastSpell {
+                    card_id: *card_id,
+                    target,
+                    additional_targets,
+                    mode: Some(m),
+                    x_value: *x_value,
+                };
+                if !state.would_accept(alt.clone()) {
+                    continue;
+                }
+                j.unseen_priced += 1;
+                j.alt_evals += 1;
+                let ev = price(state, seat, &alt, baseline, w);
+                if ev > *chosen_ev && j.better_mode.is_none_or(|(_, b)| ev > b) {
+                    j.better_mode = Some((m, ev));
+                }
+            }
+        }
+        if let Some(x) = xs[chosen] {
+            j.chosen_x = Some(x);
+            if with_x(&chosen_f.action, x).is_none() {
+                j.chosen_x_unrewritable = true;
+            } else {
+                let (best, sims) = best_smaller_x(state, seat, &chosen_f.action, x, baseline, w);
+                j.alt_evals += sims;
+                j.better_alt = best.filter(|(_, ev)| *ev > *chosen_ev);
+            }
+        }
+        for (i, x) in xs.iter().enumerate() {
+            let (Some(x), true) = (x, i != chosen) else { continue };
+            let (best, sims) = best_smaller_x(state, seat, &evd[i].1.action, *x, baseline, w);
+            j.alt_evals += sims;
+            if best.is_some_and(|(_, ev)| ev > *chosen_ev) {
+                j.loser_x_beats_winner = true;
+            }
+        }
+        j
+    }
+
+    pub(super) fn tick(
+        state: &GameState,
+        seat: usize,
+        evd: &[(i32, Finalist)],
+        chosen: usize,
+        w: &EvalWeights,
+    ) {
+        let j = judge(state, seat, evd, chosen, w);
+        N[0].fetch_add(1, Relaxed);
+        N[1].fetch_add(u64::from(evd.len() >= 2), Relaxed);
+        N[2].fetch_add(u64::from(j.modal_finalists > 0), Relaxed);
+        N[3].fetch_add(u64::from(j.chosen_modal), Relaxed);
+        N[4].fetch_add(u64::from(j.chosen_mode_nondefault), Relaxed);
+        N[5].fetch_add(u64::from(j.sibling_mode_among_finalists), Relaxed);
+        N[8].fetch_add(u64::from(j.x_finalists > 0), Relaxed);
+        N[9].fetch_add(u64::from(j.chosen_x.is_some()), Relaxed);
+        if let Some((alt_x, ev)) = j.better_alt {
+            N[10].fetch_add(1, Relaxed);
+            N[11].fetch_add((ev - j.chosen_ev).max(0) as u64, Relaxed);
+            N[14].fetch_add(u64::from(alt_x <= j.chosen_x.unwrap_or(0) / 2), Relaxed);
+        }
+        N[12].fetch_add(j.alt_evals, Relaxed);
+        N[13].fetch_add(u64::from(j.loser_x_beats_winner), Relaxed);
+        N[15].fetch_add(u64::from(j.chosen_x_unrewritable), Relaxed);
+        N[18].fetch_add(u64::from(j.chosen_x.unwrap_or(0)), Relaxed);
+        N[19].fetch_add(j.x_finalists, Relaxed);
+        N[20].fetch_add(j.unseen_modes, Relaxed);
+        if let Some((_, ev)) = j.better_mode {
+            N[21].fetch_add(1, Relaxed);
+            N[22].fetch_add((ev - j.chosen_ev).max(0) as u64, Relaxed);
+        }
+        N[23].fetch_add(u64::from(j.unseen_modes > 0), Relaxed);
+        if level() < 2 {
+            return;
+        }
+        let name = j.card.unwrap_or("?");
+        if let Some(x) = j.chosen_x {
+            let mut t = X_BY_CARD.lock().unwrap();
+            let e = t.entry(name).or_default();
+            e[0] += 1;
+            e[3] += u64::from(x);
+            if let Some((alt_x, ev)) = j.better_alt {
+                e[1] += 1;
+                e[2] += (ev - j.chosen_ev).max(0) as u64;
+                e[4] += u64::from(alt_x);
+            }
+        }
+        if j.chosen_modal {
+            let mut t = MODAL_BY_CARD.lock().unwrap();
+            let e = t.entry(name).or_default();
+            e[0] += 1;
+            e[1] += u64::from(j.chosen_mode_nondefault);
+            e[2] += j.unseen_priced;
+            if let Some((_, ev)) = j.better_mode {
+                e[3] += 1;
+                e[4] += (ev - j.chosen_ev).max(0) as u64;
+            }
+        }
+    }
 }
 
 /// `CRAB_ATTACK_CENSUS` — what the attack search decides, counted.
@@ -15803,7 +16184,9 @@ fn pick_by_outcome(
     finalists: Vec<Finalist>,
     w: &EvalWeights,
 ) -> Option<Finalist> {
-    if finalists.len() <= 1 {
+    // Under the census a lone finalist is still a pick (an X spell alone on
+    // the menu is exactly the X decision it counts), so it is scored too.
+    if finalists.is_empty() || (finalists.len() == 1 && !menu_census::on()) {
         return finalists.into_iter().next();
     }
     let baseline = eval_material(state, seat, w);
@@ -15838,6 +16221,9 @@ fn pick_by_outcome(
     if let Some(t) = sampling_temp(state.turn_number) {
         let ws: Vec<i32> = evd.iter().map(|e| e.0).collect();
         let i = sample_scored_index(&ws, t);
+        if menu_census::on() {
+            menu_census::tick(state, seat, &evd, i, w);
+        }
         capture_decision(state, seat, &evd, i, t as i32, w);
         return evd.into_iter().nth(i).map(|(_, f)| f);
     }
@@ -15846,6 +16232,9 @@ fn pick_by_outcome(
         .enumerate()
         .max_by_key(|(_, (ev, f))| (*ev, f.score))
         .map(|(i, _)| i)?;
+    if menu_census::on() {
+        menu_census::tick(state, seat, &evd, best, w);
+    }
     capture_decision(state, seat, &evd, best, 0, w);
     evd.into_iter().nth(best).map(|(_, f)| f)
 }
@@ -23762,6 +24151,142 @@ mod stack_response_tests {
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.players[0].mana_pool.add_colorless(6);
         assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 6, "Banefire keeps the full X");
+    }
+
+    /// Round 76 census: the action readers see X and modes on the shapes
+    /// the enumerators size, and rewriting X touches nothing else.
+    #[test]
+    fn menu_census_reads_and_rewrites_x_and_modes() {
+        use super::menu_census::{action_modes, action_x, with_x};
+        let id = CardId(7);
+        let cast = GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(4),
+        };
+        assert_eq!(action_x(&cast), Some(4));
+        assert_eq!(action_modes(&cast), None, "a plain cast is not modal");
+        let at2 = with_x(&cast, 2).expect("CastSpell is rewritable");
+        assert_eq!(action_x(&at2), Some(2));
+        assert!(
+            matches!(&at2, GameAction::CastSpell { card_id, target: Some(Target::Player(1)), .. } if *card_id == id),
+            "only X moved: {at2:?}"
+        );
+        let modal = GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: Some(1),
+            x_value: None,
+        };
+        assert_eq!(action_modes(&modal), Some((id, vec![1])));
+        assert_eq!(action_x(&modal), None);
+        let spree = GameAction::CastSpellSpree {
+            card_id: id,
+            spree_modes: vec![0, 2],
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+        };
+        assert_eq!(action_modes(&spree), Some((id, vec![0, 2])));
+        assert_eq!(action_x(&GameAction::PassPriority), None);
+        assert!(with_x(&GameAction::PassPriority, 1).is_none());
+    }
+
+    /// Round 76 census, the static half: how many of the sealed pool's
+    /// cards carry an X or a modal choice at all — the incidence ceiling
+    /// the ladder census reads against. Prints; run with `--run-ignored
+    /// all --nocapture`.
+    #[test]
+    #[ignore]
+    fn menu_census_pool_counts() {
+        let pool = crate::draft::sos_draft_pool_ref();
+        let (mut x, mut modal, mut spree) = (Vec::new(), Vec::new(), Vec::new());
+        for f in pool {
+            let def = crate::cube::card_def(*f);
+            if x_relevant(def) {
+                x.push(def.name);
+            }
+            if matches!(def.effect, Effect::ChooseMode(_))
+                || matches!(&def.effect, Effect::Seq(steps) if steps.iter().any(|s| matches!(s, Effect::ChooseMode(_))))
+            {
+                modal.push(def.name);
+            }
+            if matches!(
+                def.effect,
+                Effect::Spree { .. }
+                    | Effect::Tiered { .. }
+                    | Effect::ChooseModesCast { .. }
+                    | Effect::ChooseModesByPoints { .. }
+            ) {
+                spree.push(def.name);
+            }
+        }
+        println!(
+            "pool {} cards; X {}: {x:?}; modal {}: {modal:?}; spree/tiered/season {}: {spree:?}",
+            pool.len(),
+            x.len(),
+            modal.len(),
+            spree.len()
+        );
+    }
+
+    /// Round 76 census: on a real menu the judge prices every smaller X of
+    /// the chosen X line with the pick's own evaluator, and reads a
+    /// sibling-mode finalist as the modal question it is.
+    #[test]
+    fn menu_census_judges_the_smaller_x_lines_and_the_sibling_modes() {
+        use super::menu_census::judge;
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let id = g.add_card_to_hand(0, catalog::banefire()); // {X}{R}, any target
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        let w = EvalWeights::default();
+        let face = GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(3),
+        };
+        assert!(g.would_accept(face.clone()), "the fixture's X=3 cast is legal");
+        let ev = evaluate_action_outcome(&g, 0, &face, None, &w).expect("the cast settles");
+        let evd = vec![(ev, Finalist { score: 0, action: face, settled: None })];
+        let j = judge(&g, 0, &evd, 0, &w);
+        assert_eq!(j.chosen_x, Some(3));
+        assert_eq!(j.x_finalists, 1);
+        assert_eq!(j.alt_evals, 3, "X = 0, 1, 2 are all legal and all priced: {j:?}");
+        assert!(!j.chosen_x_unrewritable);
+        assert_eq!(j.chosen_ev, ev);
+        // Burn to the face at X=3 is at least as good as any smaller X by
+        // the same evaluator: no alternative beats it.
+        assert_eq!(j.better_alt, None, "{j:?}");
+        assert!(!j.chosen_modal && j.modal_finalists == 0);
+
+        // Two modes of one card on the menu, the non-default chosen.
+        let m = |mode: usize| GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: Some(mode),
+            x_value: None,
+        };
+        let evd = vec![
+            (10, Finalist { score: 0, action: m(0), settled: None }),
+            (12, Finalist { score: 0, action: m(1), settled: None }),
+        ];
+        let j = judge(&g, 0, &evd, 1, &w);
+        assert_eq!(j.modal_finalists, 2);
+        assert!(j.chosen_modal && j.chosen_mode_nondefault && j.sibling_mode_among_finalists, "{j:?}");
+        assert_eq!(j.chosen_x, None);
+        assert_eq!(j.alt_evals, 0);
+        let j = judge(&g, 0, &evd, 0, &w);
+        assert!(j.chosen_modal && !j.chosen_mode_nondefault && j.sibling_mode_among_finalists, "{j:?}");
     }
 
     /// An Unblockable attacker swings even into a bigger blocker — no opposing

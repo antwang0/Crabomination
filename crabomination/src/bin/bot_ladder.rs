@@ -1906,6 +1906,69 @@ fn main() {
             pct(breuse, bran),
         );
     }
+    // Round 76: the modal / X holes as the scored main-phase pick sees them.
+    // Off unless `CRAB_MENU_CENSUS` is set; `=2` adds the per-card tables.
+    if crabomination::server::bot::menu_census::on() {
+        use crabomination::server::bot::menu_census;
+        let [picks, multi, modal_pick, modal_won, modal_alt, modal_sib, modal_pool, modal_cut, x_pick, x_won, x_better, x_margin, x_sims, x_loser, x_half, x_norw, mode_dec, mode_alt, x_sum, x_fin, unseen, unseen_better, unseen_margin, unseen_any] =
+            menu_census::snapshot();
+        let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
+        let per = |n: u64, d: u64| if d == 0 { 0.0 } else { n as f64 / d as f64 };
+        println!(
+            "  menu_census {picks} picks ({multi} with >= 2 finalists, {:.2}/game); modal: offered \
+             {modal_pool} mode-candidates, {modal_cut} cut by the shortlist ({:.1} %), a modal \
+             finalist on {modal_pick} picks ({:.1} %), won {modal_won} ({:.2}/game), \
+             non-default mode {modal_alt} ({:.1} % of modal wins), sibling mode also a finalist \
+             {modal_sib} ({:.1} %), an unseen mode on {unseen_any} wins ({unseen} modes), an unseen \
+             mode scored higher on {unseen_better} ({:.1} % of modal wins; margin {:.0} units mean); \
+             resolution-time mode decisions {mode_dec}, non-default {mode_alt} ({:.1} %); X: a \
+             finalist on {x_pick} picks ({:.1} %, {x_fin} finalists), won {x_won} ({:.2}/game, mean \
+             X {:.2}), a smaller X scored higher on {x_better} ({:.1} % of X wins; margin {:.0} \
+             units mean; <= X/2 on {x_half}), a losing X finalist's smaller X beat the winner on \
+             {x_loser}; {x_sims} alt sims, {x_norw} unrewritable shapes",
+            per(picks, decided as u64),
+            pct(modal_cut, modal_pool),
+            pct(modal_pick, picks),
+            per(modal_won, decided as u64),
+            pct(modal_alt, modal_won),
+            pct(modal_sib, modal_won),
+            pct(unseen_better, modal_won),
+            per(unseen_margin, unseen_better),
+            pct(mode_alt, mode_dec),
+            pct(x_pick, picks),
+            per(x_won, decided as u64),
+            per(x_sum, x_won),
+            pct(x_better, x_won),
+            per(x_margin, x_better),
+        );
+        if menu_census::level() >= 2 {
+            let mut xs: Vec<(&str, [u64; 5])> =
+                menu_census::X_BY_CARD.lock().unwrap().iter().map(|(k, v)| (*k, *v)).collect();
+            xs.sort_by_key(|(_, v)| std::cmp::Reverse(v[0]));
+            for (name, [wins, better, margin, x_sum, alt_sum]) in xs {
+                println!(
+                    "    x_card {name}: {wins} wins, mean X {:.2}; smaller X higher on {better} \
+                     ({:.1} %; mean better X {:.2}, margin {:.0} units mean)",
+                    per(x_sum, wins),
+                    pct(better, wins),
+                    per(alt_sum, better),
+                    per(margin, better),
+                );
+            }
+            let mut ms: Vec<(&str, [u64; 5])> =
+                menu_census::MODAL_BY_CARD.lock().unwrap().iter().map(|(k, v)| (*k, *v)).collect();
+            ms.sort_by_key(|(_, v)| std::cmp::Reverse(v[0]));
+            for (name, [wins, nondefault, priced, better, margin]) in ms {
+                println!(
+                    "    modal_card {name}: {wins} wins, non-default {nondefault} ({:.1} %); unseen \
+                     modes priced {priced}, higher on {better} ({:.1} % of wins, margin {:.0} units mean)",
+                    pct(nondefault, wins),
+                    pct(better, wins),
+                    per(margin, better),
+                );
+            }
+        }
+    }
     // PERF (-88): how many state-based-action sweeps re-sweep a state the
     // previous sweep on the thread already saw. Off unless `CRAB_SBA_CENSUS`
     // is set.

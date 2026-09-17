@@ -5087,3 +5087,83 @@ reactive-deployment family, one item; the audit shortlist's `ChooseModes`
 have no census; the block chain's "other" board (11 sims a search for a 40 %
 win) is a cost lead, not a strength one; the trick blind spot's two sims were
 nulls at their incidence (r63/r64).
+
+## Round 76 — the modal / X census on the sealed pool: modes CLOSED, the "X branch" is two pay-X-life cards whose X is a threshold (2026-09-17)
+
+The audit shortlist's two uncensused holes, "`ChooseModes` always the card
+default" and "X always the max affordable", read on the sealed pool before
+any round was pre-registered. Instrument: `CRAB_MENU_CENSUS=1|2` (bot.rs
+`menu_census`; `.ladder/run_r76_menu_census.sh`, outputs `.ladder/r76/`),
+a per-pick counter inside `pick_by_outcome` that prices every smaller X of
+every X finalist, and every mode of the chosen modal card the shortlist
+never showed the outcome eval, with the pick's own evaluator
+(`evaluate_action_outcome`). `dflt` mirror, 1 000 games × 12 decks, seeds
+43 / 97. The static half first: the 163-card SOS pool has **9 X cards**
+and **8 modal cards** (seven `ChooseMode` Charms/Techniques, one Spree).
+
+**What the code already did, read before pricing.** The cast enumerator
+offers one candidate per mode of a `ChooseMode` spell (and per mode plus
+the every-mode set of a Spree / Tiered / Season spell), and the
+resolution-time `Decision::ChooseMode` is outcome-judged
+(`decide_mode_by_outcome`). "Always the default" was stale at the menu
+already; the live question was whether the alternate modes survive the
+`EVAL_TOP = 3` shortlist. X really is one value: `max_affordable_x`, capped
+only for creature-only damage, never a branch.
+
+| | seed 43 | seed 97 |
+|---|---|---|
+| scored picks / game | 31.7 | 25.3 |
+| modal wins / game | 1.18 | 0.64 |
+| … at a non-default mode | 59.1 % | 49.3 % |
+| … with a sibling mode also a finalist | 87.1 % | 73.9 % |
+| mode-candidates cut by the shortlist | 72.8 % | 45.8 % |
+| **an unseen mode scored strictly higher** | **2.1 %** of modal wins | **4.6 %** |
+| X wins / game (mean X) | 0.50 (2.76) | 0.75 (3.19) |
+| **a smaller X scored strictly higher** | **39.1 %** of X wins | **0.9 %** |
+| a losing X finalist's smaller X beat the winner | 162 | 40 |
+| resolution-time mode decisions | 0 | 0 |
+
+**Modes: CLOSED.** The shortlist's cut rate looks alarming (a 3-mode Charm
+offers three candidates and at most three survive, so 45–73 % "cut" is
+partly arithmetic) but the direct measure is 2.1 / 4.6 % of modal wins,
+pooled 2.9 %, under the pre-registered 3 % close line. Per card the only
+one above the line is Artistic Process (5.3 / 7.4 % of its wins, a
+graveyard-or-hand mode pair where the shortlist ranks the two the same),
+a card note, not a round. 59 % / 49 % of modal wins are already at a
+non-default mode: the enumerator's per-mode candidates work.
+
+**X: the aggregate is a split (39 % vs 0.9 %) and the per-card table
+resolves it.** Seven of the nine X cards are monotone in X (Slumbering
+Trudge, Procrastinate, Traumatic Critique, Wild Hypothesis, Fractalize,
+Molten Note at 4 %) and the max-X rule is right on them (0.3–2.5 % of
+casts have a better smaller X, margins of a few units). The whole signal
+is two cards seed 43's decks carry and seed 97's do not:
+
+| card | X wins | smaller X strictly higher | mean better X | margin (eval units) |
+|---|---|---|---|---|
+| Fix What's Broken ({2}{W}{B}, pay X life: return each creature/artifact card with mana value **= X** from your graveyard) | 2 488 (0.21/game) | **70.0 %** | 0.25 | 3 907 |
+| Vicious Rivalry ({2}{B}{G}, pay X life: destroy each artifact/creature with mana value **≤ X**) | 710 (0.06/game) | **72.7 %** | 0.77 | 11 266 |
+
+Both have `additional_cost_pay_x_life` and no X mana pip, so
+`max_affordable_x` sizes X off the *mana pool* (pool − 4), which is
+neither the life bound the engine enforces (CR 119.4, down to 0) nor
+anything to do with the card: for Fix What's Broken X is an equality
+selector — the mana value of the card you want back — and pool − 4 almost
+never equals it (70 % of casts return nothing for X life; the better X
+is 0 or the one MV in the yard); for Vicious Rivalry X is a symmetric
+sweep threshold — max X clears the caster's own board and pays the life.
+This is the r67 shape (a sizing rule right for the class, wrong for a
+subclass) rather than a search hole.
+
+**The round this buys, pre-registered as 76b.** Not "X as a branch" in
+general (seven cards say the rule is right, and the branch costs sims on
+every X cast): **X by outcome** — under a flag, `pick_by_outcome` prices
+the X candidates of every X finalist with its own evaluator and swaps in
+the best (strict improvement only, ties keep the sized X). The candidate
+set is the smaller values for a mana-X spell and, for a pay-X-life spell,
+the distinct mana values on the battlefield and in the caster's graveyard
+up to life − 1 (X is a threshold there, so those are the only values that
+change anything). Paired sealed cells, seeds 43 (the cards present) and
+97 (no-loss), 1 000 games × 12 decks; adopt at ≥ +0.5 on seed 43 with
+seed 97 ≥ 49.5. Under the flag the census's "smaller X scored higher"
+should read ~0 by construction — the check that the mechanism fires.

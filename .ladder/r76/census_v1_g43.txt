@@ -1,0 +1,26 @@
+ladder: dflt (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 43 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #1             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #2             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #3             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #4             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #5             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #6             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #7             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #8             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #9             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #10            500    500      0     50.0%  [46.9%, 53.1%]
+sealed #11            500    500      0     50.0%  [46.9%, 53.1%]
+----------------------------------------------------------------
+TOTAL                6000   6000      0     50.0%  [49.1%, 50.9%]
+
+12000 decided, 0 undecided, in 5.9s
+
+paired: 6000 pairs — 0 A-sweeps, 0 B-sweeps, 6000 splits
+        A win%  50.0%  [50.0%, 50.0%]  (±0.00 pts)
+        within-pair rho -1.000
+verdict: inconclusive at 1000 games/archetype — the interval straddles 50%
+  menu_census 380850 picks (164720 with >= 2 finalists, 31.74/game); modal: offered 176448 mode-candidates, 128412 cut by the shortlist (72.8 %), a modal finalist on 24478 picks (6.4 %), won 14208 (3.7 % of picks), non-default mode 8394 (59.1 % of modal wins), sibling mode also a finalist 12380 (87.1 %); resolution-time mode decisions 0, non-default 0 (0.0 %); X: a finalist on 11706 picks (3.1 %, 13384 finalists), won 6042 (1.6 % of picks, 0.50/game, mean X 2.76), a smaller X scored higher on 2360 (39.1 % of X wins; margin 5602 units mean; <= X/2 on 2158), a losing X finalist's smaller X beat the winner on 162; 34402 alt sims, 0 unrewritable shapes
