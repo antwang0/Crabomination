@@ -10989,6 +10989,10 @@ pub mod menu_census {
         j
     }
 
+    // Eight, and the census reads all eight: the tree's convention for a
+    // wide diagnostic entry point (36 other sites) rather than a params
+    // struct nothing else would use.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn shortlist_tick(
         state: &GameState,
         seat: usize,
