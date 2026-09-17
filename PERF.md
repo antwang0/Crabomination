@@ -3039,6 +3039,7 @@ explanation until the miss is a novel one.
   (-357) the protection view's two type lines      -0.026 / -0.075 / -0.002 %
   (-358) the target filter, borrowed               -0.155 / -0.049 / -0.312 %
   (-359) the auto-tap decider, pooled              -0.041 / -0.080 / -0.051 %
+  (-360) the scan's inline buffer   REFUTED +0.115 / +0.052 / +0.115 %, reverted
   ─────────────────────────────────────────────────────────────────────────
   run total                                        -0.606 / -0.546 / -0.681 %
 ```
@@ -8403,6 +8404,62 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-360)` REFUTED — `GrantScan::equipment` as an inline buffer costs **+0.115 / +0.052 / +0.115 %**, and the reason has nothing to do with the buffer
+
+Candidate (O)'s shortlist called this "the cheapest remaining row, compiles
+(checked)". It removes the 4,638 allocations it promised and **still loses on
+all three pools.** Reverted.
+
+```text
+                  (-359) tip        (-360)            delta
+  fixed            571,483,507       572,139,556       +0.1148 %
+  cube           1,494,309,746     1,495,079,097       +0.0515 %
+  sealed         1,611,303,685     1,613,154,930       +0.1149 %
+```
+
+🔎🔎 **THE MECHANISM, AND IT IS THE MIRROR OF A RULE THIS FILE ALREADY HAS:
+WIDENING A STRUCT UN-INLINED A FUNCTION, AND THE UN-INLINING COST MORE THAN
+TWICE THE ALLOCATIONS.**
+
+```text
+  +1,841,112   bot::usable_abilities          0 ->  30,596 calls  <- NOT INLINED ANY MORE
+    +187,900   grants_nothing family      8,010 same
+    +187,348   bot::available_mana       11,548 same
+    +109,560   grants_nothing_slow       50,884 same
+     +93,380   granted_abilities_of_inner 24,188 same
+    -184,835   malloc                   718,742 -> 714,104  = the 4,638 gone
+    -180,882   free
+    -185,520   RawVecInner::finish_grow
+    -111,312   RawVec::grow_one
+     -41,742   __rustc::__rdl_alloc
+   ──────────
+    +769,351   net
+```
+
+📐 **This file's rule is "a row that VANISHES between two dumps has usually
+been inlined, not deleted; add its Ir/call to its caller's." The mirror is now
+measured: a row that APPEARS with a large call count means something stopped
+being inlined, and a struct-width change is the usual cause.** `GrantScan`
+grew 24 -> 40 bytes and `usable_abilities` crossed LLVM's inline budget. The
++578 k across the other four bodies is the inline buffer's own read tax —
+`scan.equipment.iter()` branches on inline-vs-spilled and this buffer is read
+**per permanent** inside the grants-nothing gate.
+
+📐📐 **So `(-165)`'s inline-buffer rule now needs THREE questions, and this
+session found two of them:**
+
+```text
+  1. does it grow its owner?                              (-165), the original
+  2. how is it FILLED, and how often is the owner MOVED?  (-356)
+  3. how often is it READ, and does the widening move a
+     caller across the inline threshold?                  (-360)
+```
+
+**Question 3 cannot be answered by inspection at all** — it needs the A/B, and
+"it compiles and removes N allocations" is not a prediction. ⚠ **Two of the
+three inline-buffer attempts this session made LOST. The three rows that won
+were all deletions**: one disjoint-field borrow and two slices.
 
 ### `(-359)` the auto-tapper's scratch decider comes off a one-slot free list — **fixed -0.041 / cube -0.080 / sealed -0.051 %**
 
@@ -16096,7 +16153,7 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
    6,440    7,240  actions.rs auto-tap `Box::new(OneColorDecider)` pool it, `(-356)`'s shape
    6,440    7,240  actions.rs auto-tap `events` buffer           out-param, `(-243)`'s shape
    7,752    ~7,000 DispatchScan::equip_grants                    ❌ dropck, see (-357)
-   4,638    ~4,600 GrantScan::equipment                          inline, COMPILES (checked)
+   4,638    ~4,600 GrantScan::equipment                          ❌ REFUTED as (-360), see below
    6,688    ~6,600 card.rs TokenDefinition::clone (two lines)    unread
    6,274    5,342  combat.rs:3924 `lethals` collect              8 callers of the split fn
    3,684    ~3,600 mod.rs affected_from_requirement `types`       escapes into the return
@@ -16105,6 +16162,14 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
    ——       8,482  stack.rs:2194 Arc::new(ResolvingSpell)         structural
    ——       5,852  mod.rs computed_permanent_hinted               unread
 ```
+
+     ⚠⚠ **AND THE "inline it" COLUMN IS NOT A PREDICTION — `(-360)` REFUTED
+     THE ROW THIS ENTRY CALLED CHEAPEST.** `GrantScan::equipment` removed its
+     4,638 allocations and still cost +0.115 / +0.052 / +0.115 %, because 16
+     bytes pushed `bot::usable_abilities` across LLVM's inline budget
+     (0 -> 30,596 calls, +1.84 M) and because an inline buffer read per
+     permanent pays a branch on every read. **Only the DELETION rows on this
+     list are safe to predict; every "inline it" row needs the A/B.**
 
      ⚠ **The two auto-tap rows are ONE function and the biggest pair left**
      (12,880 / 14,480). The `events` one needs the wrapper chain
