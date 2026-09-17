@@ -1,0 +1,28 @@
+ladder: dflt (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 43 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #1             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #2             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #3             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #4             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #5             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #6             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #7             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #8             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #9             500    500      0     50.0%  [46.9%, 53.1%]
+sealed #10            500    500      0     50.0%  [46.9%, 53.1%]
+sealed #11            500    500      0     50.0%  [46.9%, 53.1%]
+----------------------------------------------------------------
+TOTAL                6000   6000      0     50.0%  [49.1%, 50.9%]
+
+12000 decided, 0 undecided, in 6.0s
+
+paired: 6000 pairs — 0 A-sweeps, 0 B-sweeps, 6000 splits
+        A win%  50.0%  [50.0%, 50.0%]  (±0.00 pts)
+        within-pair rho -1.000
+verdict: inconclusive at 1000 games/archetype — the interval straddles 50%
+  menu_census 372286 picks (225374 with >= 2 finalists, 31.02/game); modal: offered 171920 mode-candidates, 107388 cut by the shortlist (62.5 %), a modal finalist on 28578 picks (7.7 %), won 13402 (1.12/game), non-default mode 8362 (62.4 % of modal wins), sibling mode also a finalist 12476 (93.1 %), an unseen mode on 5224 wins (6096 modes), an unseen mode scored higher on 100 (0.7 % of modal wins; margin 6014 units mean); resolution-time mode decisions 0, non-default 0 (0.0 %); X: a finalist on 11608 picks (3.1 %, 12038 finalists), won 5738 (0.48/game, mean X 3.41), a smaller X scored higher on 8 (0.1 % of X wins; margin 1 units mean; <= X/2 on 4), a losing X finalist's smaller X beat the winner on 0; 39452 alt sims, 0 unrewritable shapes
+  shortlist_census 26098 picks ran past the shortlist (7.0 % of picks, 2.17/game; pool 5.89 candidates mean), 41962 cut candidates priced (2654 rejected), a cut candidate scored above the winner on 1850 (7.1 % of those picks, 0.15/game; margin 4657 units mean); best cut at rank 4 / 5 / 6+ 1338 / 358 / 154; the winner was a lone finalist on 0, the better line a land or ability on 16; first cut tied the third finalist's static score on 8208 (31.5 %)
+  holds_census the summon-sick hold passed the tick 141088 times (11.76/game), a runner-up above the baseline that improves this turn was on the menu on 25898 (18.4 %); the combat-only trick hold suppressed 84292 main-phase candidates (7.02/game); the X=0 no-op skip suppressed 0 (0.00/game)

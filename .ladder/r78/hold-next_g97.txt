@@ -1,0 +1,25 @@
+ladder: hold-next (A) vs dflt (B) — 1000 games x 12 sealed decks on 22 threads, seed 97 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             477    523      0     47.7%  [44.6%, 50.8%]
+sealed #1             482    518      0     48.2%  [45.1%, 51.3%]
+sealed #2             468    532      0     46.8%  [43.7%, 49.9%]
+sealed #3             459    541      0     45.9%  [42.8%, 49.0%]
+sealed #4             449    551      0     44.9%  [41.8%, 48.0%]
+sealed #5             467    533      0     46.7%  [43.6%, 49.8%]
+sealed #6             415    585      0     41.5%  [38.5%, 44.6%]
+sealed #7             459    541      0     45.9%  [42.8%, 49.0%]
+sealed #8             503    497      0     50.3%  [47.2%, 53.4%]
+sealed #9             487    513      0     48.7%  [45.6%, 51.8%]
+sealed #10            502    498      0     50.2%  [47.1%, 53.3%]
+sealed #11            429    571      0     42.9%  [39.9%, 46.0%]
+----------------------------------------------------------------
+TOTAL                5597   6403      0     46.6%  [45.8%, 47.5%]
+
+12000 decided, 0 undecided, in 4.1s
+
+paired: 6000 pairs — 336 A-sweeps, 739 B-sweeps, 4925 splits
+        A win%  46.6%  [46.1%, 47.2%]  (±0.53 pts)
+        within-pair rho -0.649 — variance x0.35 vs independent games, i.e. these 12000 games carry the precision of 34198
+verdict: B (dflt) is stronger — the interval is entirely below 50%

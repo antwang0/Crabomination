@@ -303,6 +303,10 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "mc-nocut" => Some(Pilot::Scored(EvalWeights::magecraft_no_cut())),
         "top4-nocut" => Some(Pilot::Scored(EvalWeights::eval_top4_no_cut())),
         "r77-off" => Some(Pilot::Scored(EvalWeights::round77_off())),
+        // Round 78: the default's main-phase holds, one changed per arm.
+        "hold-off" => Some(Pilot::Scored(EvalWeights::hold_sick_off())),
+        "hold-next" => Some(Pilot::Scored(EvalWeights::hold_sick_next_on())),
+        "x0-skip-off" => Some(Pilot::Scored(EvalWeights::skip_noop_x0_off())),
         // `gy-pick`: take our own graveyard's cards on an optional "choose
         // up to N" pick (Divergent Equation, Bind to Life).
         "gy-pick" => Some(Pilot::Scored(EvalWeights::own_graveyard_picks_on())),
@@ -561,6 +565,12 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights::x_by_outcome_on(),
             ..MctsConfig::default()
         })),
+        "mcts-r77off-256" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights::round77_off(),
+            ..MctsConfig::default()
+        })),
         "mcts-xoutoff-256" => Some(Pilot::Mcts(MctsConfig {
             iterations: 256,
             horizon_turns: 3,
@@ -792,7 +802,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, dflt58, pairs-empty, pairs-lazy, pairs-both, empty-gate, dflt-open, dflt-as3, trick-sim, removal-sim, dflt63, counter-sim, atk-guard, stun-hold, xout, xout-off, top4, top5, mc-nocut, top4-nocut, r77-off, gy-pick, conv-rarest, conv-fetch, trick-modes, trick-modes-off, sim-cast0, sim-cast1, sim-cast2, sim-cast-off, chain-skipg, chain-skipg-off, bchain-skipg, bchain-empty, bchain-seed, conv-fixes, hostile-targets, player-arms, target-fixes, x0-skip, gy-fixes, all-fixes, r67-off, targeteval, det1, det3, net, net-det1, net67, mcts-net67-256, net67-pol, net67-pols, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-dflt-128, mcts-dflt-256, mcts-dflt-256-par4, mcts-dflt-256-par8, mcts-guard-256, mcts-stunhold-256, mcts-xout-256, mcts-xoutoff-256, mcts-gypick-256, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, atk-chain, dflt, dflt55, dflt56, atk-chain-wide, blk-chain, dflt58, pairs-empty, pairs-lazy, pairs-both, empty-gate, dflt-open, dflt-as3, trick-sim, removal-sim, dflt63, counter-sim, atk-guard, stun-hold, xout, xout-off, top4, top5, mc-nocut, top4-nocut, r77-off, hold-off, hold-next, x0-skip-off, gy-pick, conv-rarest, conv-fetch, trick-modes, trick-modes-off, sim-cast0, sim-cast1, sim-cast2, sim-cast-off, chain-skipg, chain-skipg-off, bchain-skipg, bchain-empty, bchain-seed, conv-fixes, hostile-targets, player-arms, target-fixes, x0-skip, gy-fixes, all-fixes, r67-off, targeteval, det1, det3, net, net-det1, net67, mcts-net67-256, net67-pol, net67-pols, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, net-chain, net-chain-wide, net-bchain, mcts-net, mcts-net-deep, mcts-client, mcts-dflt, mcts-dflt-128, mcts-dflt-256, mcts-dflt-256-par4, mcts-dflt-256-par8, mcts-guard-256, mcts-stunhold-256, mcts-xout-256, mcts-xoutoff-256, mcts-r77off-256, mcts-gypick-256, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
@@ -1960,7 +1970,7 @@ fn main() {
     // Off unless `CRAB_MENU_CENSUS` is set; `=2` adds the per-card tables.
     if crabomination::server::bot::menu_census::on() {
         use crabomination::server::bot::menu_census;
-        let [picks, multi, modal_pick, modal_won, modal_alt, modal_sib, modal_pool, modal_cut, x_pick, x_won, x_better, x_margin, x_sims, x_loser, x_half, x_norw, mode_dec, mode_alt, x_sum, x_fin, unseen, unseen_better, unseen_margin, unseen_any, sl_picks, sl_pool, sl_priced, sl_beats, sl_margin, sl_r4, sl_r5, sl_r6, sl_lone, sl_noncast, sl_rejected, sl_tied] =
+        let [picks, multi, modal_pick, modal_won, modal_alt, modal_sib, modal_pool, modal_cut, x_pick, x_won, x_better, x_margin, x_sims, x_loser, x_half, x_norw, mode_dec, mode_alt, x_sum, x_fin, unseen, unseen_better, unseen_margin, unseen_any, sl_picks, sl_pool, sl_priced, sl_beats, sl_margin, sl_r4, sl_r5, sl_r6, sl_lone, sl_noncast, sl_rejected, sl_tied, hold_fired, hold_next, trick_held, x0_skipped] =
             menu_census::snapshot();
         let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
         let per = |n: u64, d: u64| if d == 0 { 0.0 } else { n as f64 / d as f64 };
@@ -2005,6 +2015,16 @@ fn main() {
             per(sl_beats, decided as u64),
             per(sl_margin, sl_beats),
             pct(sl_tied, sl_picks),
+        );
+        println!(
+            "  holds_census the summon-sick hold passed the tick {hold_fired} times ({:.2}/game), \
+             a runner-up above the baseline that improves this turn was on the menu on {hold_next} \
+             ({:.1} %); the combat-only trick hold suppressed {trick_held} main-phase candidates \
+             ({:.2}/game); the X=0 no-op skip suppressed {x0_skipped} ({:.2}/game)",
+            per(hold_fired, decided as u64),
+            pct(hold_next, hold_fired),
+            per(trick_held, decided as u64),
+            per(x0_skipped, decided as u64),
         );
         if menu_census::level() >= 2 {
             let mut cs: Vec<(&str, [u64; 2])> =

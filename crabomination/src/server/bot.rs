@@ -621,6 +621,14 @@ pub struct EvalWeights {
     /// keeps the ordering and drops the stop ([`magecraft_no_cut`]
     /// (Self::magecraft_no_cut), profile `mc-nocut`).
     pub magecraft_cut: bool,
+    /// Round 78 — when the summon-sick hold fires on the winner the tick
+    /// passes priority outright, even with a runner-up finalist that does
+    /// improve this turn sitting on the menu. Under the flag the hold
+    /// falls through to the best such runner-up (outcome above the
+    /// baseline, [`improves_this_turn`]) instead of passing
+    /// ([`hold_sick_next_on`](Self::hold_sick_next_on), profile
+    /// `hold-next`).
+    pub hold_sick_next: bool,
     /// Take our own graveyard's cards on an optional "choose up to N"
     /// pick. `decide_choose_cards`'s graveyard branch was written for the
     /// hostile exile (Collect Evidence): it picks opponents' cards and, with
@@ -1207,6 +1215,7 @@ impl EvalWeights {
             x_by_outcome: false,
             eval_top: 3,
             magecraft_cut: true,
+            hold_sick_next: false,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -1316,6 +1325,7 @@ impl EvalWeights {
             x_by_outcome: false,
             eval_top: 3,
             magecraft_cut: true,
+            hold_sick_next: false,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -1408,6 +1418,7 @@ impl EvalWeights {
             x_by_outcome: false,
             eval_top: 3,
             magecraft_cut: true,
+            hold_sick_next: false,
             own_graveyard_picks: false,
             converge_rarest: false,
             converge_fetch: false,
@@ -2650,6 +2661,21 @@ impl EvalWeights {
     }
     pub const fn eval_top4_no_cut() -> Self {
         Self { eval_top: 4, magecraft_cut: false, ..Self::default_const() }
+    }
+
+    /// Round 78 arms — the ablation of the default's main-phase holds, each
+    /// the default with one hold changed: the summon-sick hold off, the
+    /// hold falling through to a runner-up, the X=0 no-op skip off. (The
+    /// combat-only trick hold already has [`trick_modes_off`]
+    /// (Self::trick_modes_off).)
+    pub const fn hold_sick_off() -> Self {
+        Self { hold_sick: false, ..Self::default_const() }
+    }
+    pub const fn hold_sick_next_on() -> Self {
+        Self { hold_sick_next: true, ..Self::default_const() }
+    }
+    pub const fn skip_noop_x0_off() -> Self {
+        Self { skip_noop_x0: false, ..Self::default_const() }
     }
 
     /// The default before round 77b — the shortlist at three with the
@@ -6270,6 +6296,7 @@ fn cast_candidates<'a>(
         // `skip_noop_x0`: an X spell whose every leaf scales with X does
         // nothing at X=0 — the cast waits for a real X.
         if w.skip_noop_x0 && x_value == Some(0) && x_zero_is_noop(&c.definition.effect) {
+            menu_census::add(39, 1);
             continue;
         }
         for i in 0..modes.unwrap_or(1) {
@@ -6295,6 +6322,7 @@ fn cast_candidates<'a>(
                     TurnStep::DeclareBlockers | TurnStep::FirstStrikeDamage | TurnStep::CombatDamage
                 )
             {
+                menu_census::add(38, 1);
                 continue;
             }
             // Beneficial Auras pick their host explicitly: `Effect::Attach`
@@ -7901,7 +7929,16 @@ fn main_phase_action_with(
             if !cut.is_empty() {
                 menu_census::add(25, pool_len as u64);
             }
-            if let Some(best) = pick_by_outcome_with_cut(state, seat, finalists, cut, w) {
+            let mut rest: Vec<(i32, Finalist)> = Vec::new();
+            let want_rest = w.hold_sick_next || menu_census::on();
+            if let Some(mut best) = pick_by_outcome_with_cut(
+                state,
+                seat,
+                finalists,
+                cut,
+                want_rest.then_some(&mut rest),
+                w,
+            ) {
                 // Forge's summon-sick gate (`SpellAbilityPicker`): if the
                 // winning line's only gain this turn is a body that can't
                 // attack, it is worth exactly as much after combat — and
@@ -7935,7 +7972,31 @@ fn main_phase_action_with(
                         w,
                     )
                 {
-                    return BotStep::plain(GameAction::PassPriority);
+                    // Round 78: the hold passes the whole tick. The
+                    // runner-up that scored above the baseline and does
+                    // improve this turn is the line it passes over — counted
+                    // under the census, played under `hold_sick_next`.
+                    let next = if rest.is_empty() {
+                        None
+                    } else {
+                        let baseline = eval_material(state, seat, w);
+                        rest.into_iter().find(|(ev, f)| {
+                            *ev > baseline
+                                && improves_this_turn(
+                                    state,
+                                    seat,
+                                    &f.action,
+                                    f.settled.as_deref(),
+                                    w,
+                                )
+                        })
+                    };
+                    menu_census::add(36, 1);
+                    menu_census::add(37, u64::from(next.is_some()));
+                    match next {
+                        Some((_, f)) if w.hold_sick_next => best = f,
+                        _ => return BotStep::plain(GameAction::PassPriority),
+                    }
                 }
                 // SOS Converge: float a missing color first so the cast
                 // counts it — see `pick_converge_prefloat`. A prefloat tap
@@ -10832,8 +10893,12 @@ pub mod menu_census {
     /// finalist, 33 of the 27, the cut candidate is a land drop or an
     /// ability rather than a cast, 34 cut candidates the engine rejected,
     /// 35 picks with a cut candidate whose static score tied the third
-    /// finalist's]`.
-    pub static N: [AtomicU64; 36] = [const { AtomicU64::new(0) }; 36];
+    /// finalist's]`, then round 78's holds: `[36 the summon-sick hold fired
+    /// on the winner (the tick passed), 37 of those, a runner-up finalist
+    /// scored above the baseline and improves this turn, 38 main-phase
+    /// candidates the combat-only trick hold suppressed, 39 casts the X=0
+    /// no-op skip suppressed]`.
+    pub static N: [AtomicU64; 40] = [const { AtomicU64::new(0) }; 40];
 
     /// Round 77, level 2: the cut candidate's card when it beat the winner
     /// → `[beats, margin sum]`.
@@ -10867,7 +10932,7 @@ pub mod menu_census {
         level() > 0
     }
 
-    pub fn snapshot() -> [u64; 36] {
+    pub fn snapshot() -> [u64; 40] {
         std::array::from_fn(|i| N[i].load(Relaxed))
     }
 
@@ -16382,7 +16447,25 @@ fn pick_by_outcome(
     finalists: Vec<Finalist>,
     w: &EvalWeights,
 ) -> Option<Finalist> {
-    pick_by_outcome_with_cut(state, seat, finalists, Vec::new(), w)
+    pick_by_outcome_with_cut(state, seat, finalists, Vec::new(), None, w)
+}
+
+/// Take the winner out of the scored finalists; when asked, hand back the
+/// rest best-first (round 78: the summon-sick hold's runner-ups).
+fn split_winner(
+    mut evd: Vec<(i32, Finalist)>,
+    idx: usize,
+    rest: Option<&mut Vec<(i32, Finalist)>>,
+) -> Option<Finalist> {
+    if idx >= evd.len() {
+        return None;
+    }
+    let (_, winner) = evd.remove(idx);
+    if let Some(rest) = rest {
+        evd.sort_by_key(|(ev, f)| std::cmp::Reverse((*ev, f.score)));
+        *rest = evd;
+    }
+    Some(winner)
 }
 
 /// [`pick_by_outcome`] with the candidates the shortlist cut (round 77
@@ -16392,6 +16475,7 @@ fn pick_by_outcome_with_cut(
     seat: usize,
     finalists: Vec<Finalist>,
     cut: Vec<(i32, GameAction)>,
+    rest: Option<&mut Vec<(i32, Finalist)>>,
     w: &EvalWeights,
 ) -> Option<Finalist> {
     // Under the census a lone finalist is still a pick (an X spell alone on
@@ -16448,7 +16532,7 @@ fn pick_by_outcome_with_cut(
             menu_census::shortlist_tick(state, seat, evd[i].0, evd.len() == 1, &cut, third, baseline, w);
         }
         capture_decision(state, seat, &evd, i, t as i32, w);
-        return evd.into_iter().nth(i).map(|(_, f)| f);
+        return split_winner(evd, i, rest);
     }
     let best = evd
         .iter()
@@ -16461,7 +16545,7 @@ fn pick_by_outcome_with_cut(
         menu_census::shortlist_tick(state, seat, evd[best].0, evd.len() == 1, &cut, third, baseline, w);
     }
     capture_decision(state, seat, &evd, best, 0, w);
-    evd.into_iter().nth(best).map(|(_, f)| f)
+    split_winner(evd, best, rest)
 }
 
 /// Round 76b — X by outcome. For every finalist that carries an X, price
@@ -24591,6 +24675,40 @@ mod stack_response_tests {
         assert!(
             matches!(out, GameAction::CastSpell { card_id, x_value: Some(3), .. } if card_id == id),
             "Banefire keeps X = 3: {out:?}"
+        );
+    }
+
+    /// Round 78: when the summon-sick hold fires on the winner the default
+    /// passes the tick; `hold_sick_next` plays the runner-up that improves
+    /// this turn instead, and the hold-off arm casts the creature at once.
+    #[test]
+    fn the_summon_sick_hold_passes_the_tick_and_hold_next_plays_the_runner_up() {
+        let fixture = || {
+            let mut g = two_player_game();
+            g.step = TurnStep::PreCombatMain;
+            g.priority.player_with_priority = 0;
+            let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+            let removal = g.add_card_to_hand(0, catalog::swords_to_plowshares()); // creature-only removal
+            // Something small for the removal to take: a real gain this turn,
+            // worth less than the body, so the body wins the pick and is
+            // the line the hold defers.
+            g.add_card_to_battlefield(1, catalog::llanowar_elves());
+            g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+            g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+            (g, bear, removal)
+        };
+        let (g, bear, removal) = fixture();
+        let dflt = main_phase_action_with(&g, 0, true, &EvalWeights::default()).action;
+        let next = main_phase_action_with(&g, 0, true, &EvalWeights::hold_sick_next_on()).action;
+        let off = main_phase_action_with(&g, 0, true, &EvalWeights::hold_sick_off()).action;
+        assert!(
+            matches!(off, GameAction::CastSpell { card_id, .. } if card_id == bear),
+            "with the hold off the body is the pick: {off:?}"
+        );
+        assert!(matches!(dflt, GameAction::PassPriority), "the hold passes the tick: {dflt:?}");
+        assert!(
+            matches!(next, GameAction::CastSpell { card_id, .. } if card_id == removal),
+            "the runner-up that improves this turn is played: {next:?}"
         );
     }
 

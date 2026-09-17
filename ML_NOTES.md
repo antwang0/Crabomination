@@ -5307,3 +5307,45 @@ census before anything else on the menu-hole list. The remaining stops
 in `main_phase_action_with`: the summon-sick hold (applied to the winner
 only, by design) and the `EVAL_TOP` cap itself (now four, priced +0.15
 for the next step).
+
+## Round 78 — the default's main-phase holds, ablated: all four are right, the summon-sick hold pays +0.75 and its runner-up refinement LOSES 2.65 (2026-09-18)
+
+Round 77's lesson applied to the stops that remain in the scored
+main-phase pick (`.ladder/run_r78_holds.sh`, outputs `.ladder/r78/`). A
+temporal hold is "the same value later", which a one-tick outcome sim
+cannot price, so the instrument is the paired off-arm — five seconds a
+cell — with the census (`holds_census`) for the denominators. Each arm is
+the default with one hold changed, sealed, paired, 1 000 games × 12 decks:
+
+| arm | seed 43 | seed 97 | pooled | census, fires / game (43 / 97) |
+|---|---|---|---|---|
+| `hold-off` (no summon-sick hold) | 49.4 [48.9, 49.9] | 49.1 [48.6, 49.6] | **−0.75** | the hold passes the tick 11.8 / 9.5 |
+| `hold-next` (play the runner-up that improves this turn instead of passing) | **48.1** [47.6, 48.6] | **46.6** [46.1, 47.2] | **−2.65** | a qualifying runner-up on the menu 18.4 / 20.2 % of the time |
+| `trick-modes-off` (pump instants back on the main-phase menu) | 50.0 exact | 49.6 [49.4, 49.8] | −0.2 | 7.0 / 13.2 candidates suppressed |
+| `x0-skip-off` | 50.0 exact | 50.0 exact | 0 | fired 0 times in 24 000 games |
+
+**No hold costs; the lead is closed.** The summon-sick hold's first
+paired read on the current default is +0.75 for the hold. The refinement
+the census suggested — one tick in five has a runner-up above the baseline
+that improves this turn — is the round's informative loss: playing it
+costs 2.65, the largest paired loss the program has recorded from a
+change that looked free. The comment that has sat above the gate since
+the hold was written ("screening every candidate this way would have the
+bot pick some lesser line now and then have no mana left for the creature
+it actually wanted in the second main") is now a measurement: the pass is
+not idleness, it is the mana for the body. The combat-only trick hold is
+neutral-to-right (on seed 43 the re-offered pumps are pinned to the
+baseline by the temporary rule and never win, so the games are
+identical). The X=0 skip has zero incidence on these seeds' decks.
+
+The contrast with round 77b is the finding. The magecraft stop removed
+candidates from the *comparison* and cost 2.35; the summon-sick hold
+defers the *winner of* the comparison and pays. A stop that narrows what
+the outcome eval sees is suspect; a hold applied to what it chose is
+sequencing, and the evaluator's one-tick horizon is exactly why it needs
+the help. `hold_sick_next` stays as a flag for the record (profile
+`hold-next`), off.
+
+The round-77b search-transfer read (`mcts-dflt-256` vs `mcts-r77off-256`,
+seeds 97 then 43, 500 × 12) was launched with this round and is appended
+below when it lands.
