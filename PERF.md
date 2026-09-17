@@ -3065,23 +3065,33 @@ must RE-TAKE the base rather than predict it from this block.** The A/B rows
 are unaffected — each was built and measured from one tree — which is the whole
 reason this file quotes rows and absolutes separately.
 
-sweep   **1 block — fresh seeds 1416..1417 at the `a878464f` tip: 6 cells /
-        29,600 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 4`,
-        pools `cube all sealed`, `target-audit/overflow` with
+sweep   **2 blocks — fresh seeds 1416..1417 at the `a878464f` tip and
+        1418..1419 at the rebased closing tip: 12 cells / 59,200 games / 0
+        failures**, `cap 0 / board 0 / stuck 0 / draw 8`, pools
+        `cube all sealed`, `target-audit/overflow` with
         `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
-        1418.** The block is this run's ratchet: `(-349)`'s
-        `cold_written` recompute-and-compare on both cleanup guards and
-        `(-350)`'s three `debug_assert_eq!`s against the pre-gate bodies are
-        all live in it, on 29,600 games' worth of boards, and none fired.
+        1420.** The blocks are this run's ratchet and they carry all of it:
+        `(-349)`'s `cold_written` recompute-and-compare on both cleanup
+        guards, `(-350)`'s three `debug_assert_eq!`s against the pre-gate
+        bodies, `(-351)`'s three-in-one on the layer pass, and the second
+        block additionally covers the CR 303.4 fix and `(-352)`'s thunk.
+        None fired on 59,200 games' worth of boards.
         Suite **19,600 / 0 / 5** (`CRAB_ANSWER_LOG=strict`, two new tests),
         golden traces unmoved, clippy **0** over the workspace, `cargo check
         --profile release-fast -p crabomination --bin bot_ladder` clean.
-        `--bench` at `a878464f`: **195,806 / 27.49 / 611.9 / 0 stalls**,
-        byte-identical to the committed invariant, `determinism ok`,
-        `thread_determinism ok (3 vs 1)`; `games_per_s` 354.5 and 358.3 on two
-        runs, inside the 212-407 single-run spread this file records.
-        `peak_rss_mib` **27.1** — the same arena variance as last session's
-        25.2 / 27.2 / 25.2, still not a reading.
+        `--bench`, run at `a878464f` and again at the rebased closing tip:
+        **195,806 / 27.49 / 611.9 / 0 stalls** both times, byte-identical to
+        the committed invariant, `determinism ok`, `thread_determinism ok
+        (3 vs 1)`. 📐 **The invariant survived `143980a7` too, and that is
+        informative rather than lucky:** `--bench` is a `gang` mirror and
+        Round 76b changed the *search* pilot's X arms, so the two do not
+        meet — **the bench invariant does not cover the `dflt`/search pilot,
+        and an ML change to it will read as "no change" here.** `games_per_s`
+        354.5 / 358.3 at `a878464f` and 392.5 at the tip, all inside the
+        212-407 single-run spread; **do not read the last one as this run's
+        -0.3 % arriving**, one run separates nothing. `peak_rss_mib` 27.1 /
+        27.2 — the same arena variance as last session's 25.2 / 27.2 / 25.2,
+        still not a reading.
         ⚠ Box timings, this session (cold `target/`, 4 cores): cold test build
         **6m04s**, full suite **153-163 s**, cold `profiling-fast` **11m21s**,
         engine+base+catalog rebuild **~10m**, three pools' callgrind in
@@ -15481,19 +15491,60 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      is ~23 and asked constantly, so the hit rate that made `(-38)` pay may not
      be there at all.
 
-  💡 **O. THE ALLOCATION TABLE IS THE BIGGEST SINGLE THING LEFT AND IT IS
-     SIZED: 755,903 allocations a six-game `cube` run.** `malloc` 35,697,399 +
-     `_int_malloc` 30,518,576 + `_int_free` 46,607,108 + `free` 29,469,406 +
-     `__rdl_alloc`/`__rust_alloc`/`__rust_dealloc`/`__rdl_dealloc`'s four
-     one-Ir shim rows ≈ **149 M Ir = 9.9 % of `cube`**, before the
-     `Vec::drop` (8.2 M) and `finish_grow` (7.6 M) rows above them. `(-90)`
-     has called this "the diffuse allocation table" for eleven passes and
-     nobody has asked the one question that would rank it: **`cg_alloc_sites.py`
-     against the top callers — how many of the 755,903 are one shape?**
-     `SpecFromIterNested::from_iter` alone is 318,856 calls / 35.3 M.
-     ⚠ The recycle-list rules (`(-166)`..`(-168)`) are the precedent and they
-     are three entries deep, so the device is known to work here; what is
-     missing is the census, not the device.
+  💡 **O. THE ALLOCATION TABLE IS THE BIGGEST SINGLE THING LEFT — 755,903
+     allocations ≈ 9.9 % of `cube` — AND IT IS NOW CENSUSED BY CALLER, WITH NO
+     BUILD SPENT.** `malloc` 35,697,399 + `_int_malloc` 30,518,576 +
+     `_int_free` 46,607,108 + `free` 29,469,406 + the four one-Ir rust shim
+     rows ≈ **149 M Ir**, before `Vec::drop` (8.2 M) and `finish_grow` (7.6 M).
+     `(-90)` has called it "diffuse" for eleven passes without anyone running
+     `cg_edges.py --callers __rust_alloc`, which is one command:
+
+```text
+   150,731  RawVecInner::finish_grow          20.0 %   <- growth, see below
+    87,152  Arc::clone_from_ref_in            11.5 %   the CoW family's copies
+    58,054  SpecFromIterNested::from_iter      7.7 %
+    53,848  Vec::clone                         7.1 %
+    48,024  GameState::clone                   6.4 %
+    36,724  CowBox<Vec<T>>::push               4.9 %
+    32,668  cow::make_mut_slow                 4.3 %
+    22,116  resolve_combat_into                2.9 %
+    20,484  compute_permanents::{{closure}}    2.7 %
+    18,534  layers::PrintedList::push          2.5 %
+```
+
+     📐 **And `cg_growth.py` then divides the biggest row and says how much of
+     it is takeable: 191,277 growths over 131 callers, and only fourteen sit
+     above 1.0 growths/call.** Subtract each caller's own call count — a
+     *first* push is a growth a `reserve` only moves, a re-growth is one it
+     removes — and the whole takeable population is **~10,300 re-growths**:
+
+```text
+   growths   calls  per call  caller                        re-growths
+     6,936   4,708    1.47    declare_blockers                  2,228
+     4,250   2,080    2.04    mint_token_with_counters          2,170
+     8,600   7,362    1.17    deal_combat_damage_to_target      1,238
+     5,174   4,384    1.18    bot::pick_blocks_inner              790
+       988     330    2.99    discard_card                        658
+       944     370    2.55    bot::rank_library_search            574
+       668     234    2.85    deal_damage_to_from                 434
+       766     346    2.21    destroy_permanent                   420
+       944     540    1.75    grant_keyword_eot                   404
+       510     144    3.54    sacrifice_one                       366
+     4,846   4,498    1.08    bot::legal_blockers                 348
+     2,986   2,650    1.13    do_untap                            336
+```
+
+     ⚠ **So the ceiling is ~10,300 x (a malloc + a memcpy + a free), call it
+     0.10-0.17 % of `cube` across a dozen `with_capacity` edits, and the other
+     181,000 growths are first allocations a reserve cannot remove.** That is
+     a real row and a laborious one; `(-103)` is the precedent and it took four
+     such rows. **Take the nine engine-side callers first** (the three `bot::`
+     ones move whenever the ML sessions touch the pilot, so an A/B over them
+     is not reproducible across runs). ⚠ And `(-165)`'s rule still applies to
+     the inline-buffer *alternative*: price it by whether it grows its owner.
+     ⚠ The 87,152 `Arc::clone_from_ref_in` allocations are the `(-280)` CoW
+     family and are **not** a reserve question — that row is priced by which
+     group a field lives in, which is what `(-349)` moved.
 
   💡 **P. `Player::deref_mut` under `declare_attackers_banded` — 27,312 calls
      (exactly two a declaration) / 2.69 M inclusive / 98.6 Ir a call, UNREAD.**
