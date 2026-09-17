@@ -2057,11 +2057,11 @@ fn wanderlight_spirit_blocks_only_flying() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(
-        !crabomination::game::can_block_attacker_computed(binst, &bcomp, false, &[], crabomination::mana::ColorSet::empty(), 2),
+        !crabomination::game::can_block_attacker_computed(binst, &bcomp, || false, &[], crabomination::mana::ColorSet::empty(), 2),
         "can't block a ground attacker"
     );
     assert!(
-        crabomination::game::can_block_attacker_computed(binst, &bcomp, false, &[Keyword::Flying], crabomination::mana::ColorSet::empty(), 2),
+        crabomination::game::can_block_attacker_computed(binst, &bcomp, || false, &[Keyword::Flying], crabomination::mana::ColorSet::empty(), 2),
         "can block a flyer"
     );
 }

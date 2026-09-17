@@ -16895,15 +16895,12 @@ impl GameState {
         if !self.blocker_can_block_anything(blocker, blocker_cp) {
             return false;
         }
-        // Per *blocker*, not per pair: CR 303.4 is a board fact about this
-        // creature and the loop below varies the attacker.
-        let blocker_enchanted = self.permanent_is_enchanted(blocker.id);
         attackers.iter().any(|(atk, atk_cp)| {
             !self.blocker_matching_restriction_bars(blocker, blocker_cp.keywords(), atk.id)
                 && can_block_attacker_computed(
                     blocker,
                     blocker_cp,
-                    blocker_enchanted,
+                    || self.permanent_is_enchanted(blocker.id),
                     atk_cp.keywords(),
                     atk_cp.colors,
                     atk_cp.power,
@@ -17200,7 +17197,7 @@ impl GameState {
         if !can_block_attacker_computed(
             blocker,
             blocker_cp,
-            self.permanent_is_enchanted(blocker.id),
+            || self.permanent_is_enchanted(blocker.id),
             atk_kws,
             atk_colors,
             atk_power,
@@ -29028,13 +29025,23 @@ pub(crate) fn attacker_block_reqs(kws: &[Keyword]) -> AttackerBlockReqs {
 /// blocker — and it is a **parameter** because no computed view carries it and
 /// this function holds no `&GameState`. [`GameState::permanent_is_enchanted`]
 /// is the one oracle for it; a caller outside the engine that cannot answer it
-/// passes `false`, which is the conservative direction (the blocker is *more*
-/// able to block). It is per-*blocker*, so a caller looping attackers inside a
-/// fixed blocker answers it once.
+/// passes `|| false`, the conservative direction (the blocker is *more* able
+/// to block).
+///
+/// ⚠ **It is a THUNK, not a `bool`, and that is the whole cost model.** Two of
+/// this function's forty-odd arms can ask it and both need an attacker
+/// carrying a `CantBeBlockedBy` / `CantBeBlockedExceptBy` filter, which nearly
+/// no attacker does — while the answer costs a battlefield walk whenever
+/// anything on the board is attached. Answered eagerly at the per-pair call
+/// site it cost **+103 Ir a call on `blocker_pair_block`, +0.12 % of `cube`**;
+/// as a thunk it costs nothing on the boards that never ask. `+ Copy` and
+/// passed **by value** into the filter walker's recursion, never by reference
+/// (`&F: FnMut` goes through `call_mut`, which does not inline — PERF
+/// `(-346)`).
 pub fn can_block_attacker_computed(
     blocker: &CardInstance,
     blocker_computed: &ComputedPermanent,
-    blocker_enchanted: bool,
+    blocker_enchanted: impl Fn() -> bool + Copy,
     attacker_kws: &[Keyword],
     attacker_colors: crate::mana::ColorSet,
     attacker_power: i32,
@@ -29223,13 +29230,13 @@ pub fn can_block_attacker_computed(
 /// that "can't be blocked except by [filter]" cards actually use (type,
 /// color, keyword, power/toughness thresholds). Unsupported variants resolve
 /// to `false` (conservatively excluding the blocker).
-/// `enchanted` is CR 303.4 for this blocker, supplied by the caller because
-/// it is the one leaf here that is a *board* fact — see
-/// [`can_block_attacker_computed`].
+/// `enchanted` is CR 303.4 for this blocker, supplied by the caller as a thunk
+/// because it is the one leaf here that is a *board* fact and almost no filter
+/// asks for it — see [`can_block_attacker_computed`].
 fn blocker_matches_block_filter(
     blocker: &CardInstance,
     computed: &ComputedPermanent,
-    enchanted: bool,
+    enchanted: impl Fn() -> bool + Copy,
     req: &SelectionRequirement,
 ) -> bool {
     use SelectionRequirement as R;
@@ -29240,7 +29247,7 @@ fn blocker_matches_block_filter(
         // that fell through to `_ => false`, so Temple Thief's "can't be
         // blocked by enchanted creatures **or** enchantment creatures" only
         // ever barred the second half and an Aura'd blocker still blocked.
-        R::IsEnchanted => enchanted,
+        R::IsEnchanted => enchanted(),
         // ⚠ Every characteristic the computed view carries is read off it,
         // not off `blocker.definition` — the doc above has said "computed"
         // since this function was written, but the five type leaves read the

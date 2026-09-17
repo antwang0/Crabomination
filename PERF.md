@@ -3030,9 +3030,18 @@ be quoted against a tip measured on another.
 ```text
   (-349) the cleanup guards' cold half         -0.149 / -0.098 / -0.090 %
   (-350) the keyword asks, same gate           -0.064 / -0.042 / -0.034 %
+  (-351) the layer pass, same gate             -0.121 / -0.137 / -0.096 %
+  CR 303.4 the block filter's IsEnchanted      TIP_RULES_ROW
   ─────────────────────────────────────────────────────────────────────────
-  run total                                    -0.212 / -0.140 / -0.124 %
+  run total                                    RUN_TOTAL_ROW
 ```
+
+📐 **ONE BYTE, THREE ROWS, AND THE THIRD WAS THE BIGGEST.** The candidate entry
+priced (B) at ~0.12 % of `cube` for one body. What it was actually worth was
+**0.28 %** across the cleanup guards, the keyword family and the layer pass —
+because the thing built was not a memo for a row, it was **a fact about a
+card that every reader of that card's cold group can use**. Ask what else a
+bit like it would answer before spending it on the row that suggested it.
 
 📐 **THE INSTRUMENT'S RUN-TO-RUN JITTER IS ±330 Ir ON AN IDENTICAL BINARY**
 (-232 / -330 / +161 between two runs of `(-349)`'s candidate), i.e.
@@ -8268,6 +8277,39 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-351)` the layer pass takes the cold gate — **fixed -0.121 / cube -0.137 / sealed -0.096 %**
+
+`(-349)`'s byte on the program's largest engine row, and the largest of the
+three. `compute_permanent_pass` reads three `CardCold` groups per call — the
+EOT keyword grants, the keyword counters, the two removal lists — and each was
+its own chase-plus-length-load guard. One `cold_pristine()` read settles all
+three; one `debug_assert!` beside it audits all three.
+
+`ability_lock_possible_on` takes the same gate: it is the one keyword ask that
+does not go through `has_keyword`, and both its instance sources are `CardCold`
+members.
+
+```text
+                  (-350) tip        (-351)            delta
+  fixed            577,254,354       576,556,730       -0.1208 %
+  cube           1,507,866,096     1,505,798,052       -0.1372 %
+  sealed         1,628,320,869     1,626,759,361       -0.0959 %
+
+  compute_permanent_pass    226,734 calls  239.2 -> 231.0 Ir/call  -1,865,708
+  ability_lock_possible_on   23,526 calls  105.3 ->  96.7 Ir/call    -202,720
+```
+
+-2,068,428 Ir off the two rows against -2,068,044 off the program: `(-349)`
+already paid for the byte, so this row is all win and no width.
+
+📐 **EIGHT Ir A CALL OFF A 239-Ir BODY, AND IT IS THE BIGGEST ROW OF THE THREE.
+A flat profile does not mean there is nothing to take — it means the thing to
+take is a SHAPE that appears in many bodies, not a body.** This file's own line
+table says the largest single source line is 0.97 % and eleven bodies have been
+read by line and closed as diffuse; none of that is contradicted by a device
+worth 0.14 % that touches three of them. **When the bodies are all diffuse,
+rank the shapes instead: what does every body do that could be done once?**
 
 ### `(-350)` the keyword asks take `(-349)`'s cold gate — **fixed -0.064 / cube -0.042 / sealed -0.034 %**
 
