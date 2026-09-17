@@ -35707,7 +35707,7 @@ impl GameState {
             Selector::LeastToughnessYouControl => self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                 .min_by_key(|c| self.effective_toughness_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
@@ -35716,7 +35716,7 @@ impl GameState {
             Selector::GreatestPowerYouControl => self
                 .battlefield
                 .iter()
-                .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                .filter(|c| c.controller == ctx.controller && self.computed_is_creature(c))
                 .max_by_key(|c| self.effective_power_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
@@ -35762,7 +35762,7 @@ impl GameState {
                 .iter()
                 .filter(|c| {
                     c.controller == ctx.controller
-                        && c.definition.is_creature()
+                        && self.computed_is_creature(c)
                         && Some(c.id) != ctx.source
                 })
                 .max_by_key(|c| self.effective_toughness_on(c))
@@ -35775,7 +35775,7 @@ impl GameState {
             Selector::LeastPowerAmongAll => self
                 .battlefield
                 .iter()
-                .filter(|c| c.definition.is_creature())
+                .filter(|c| self.computed_is_creature(c))
                 .min_by_key(|c| self.effective_power_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
@@ -35783,7 +35783,7 @@ impl GameState {
             Selector::LeastToughnessAmongAll => self
                 .battlefield
                 .iter()
-                .filter(|c| c.definition.is_creature())
+                .filter(|c| self.computed_is_creature(c))
                 .min_by_key(|c| self.effective_toughness_on(c))
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()

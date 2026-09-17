@@ -26058,6 +26058,26 @@ impl GameState {
         self.computed_permanent_on(card).map(|cp| cp.power).unwrap_or_else(|| card.power())
     }
 
+    /// CR 613 layer 4 — is this battlefield permanent a creature *now*? An
+    /// animated land (Mutavault, Mishra's Factory) is; a bestowed Aura is not,
+    /// and a permanent a layer-4 effect retyped may have stopped being one.
+    ///
+    /// **Gated the same way [`printed_requirement_impl`] gates its own
+    /// `card_type` closure**: bestowed, or a layer-4 card-type source in scope.
+    /// Neither is true on almost every board (PERF `(-207)`'s lane), so the
+    /// common path is one word load and the printed read — which is why this
+    /// is usable in a `filter` over the whole battlefield.
+    pub(crate) fn computed_is_creature(&self, card: &CardInstance) -> bool {
+        if self.layer_reads_are_printed()
+            || (!card.bestowed && !self.card_type_change_in_scope())
+        {
+            return card.definition.is_creature();
+        }
+        self.computed_permanent_on(card)
+            .map(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
+            .unwrap_or_else(|| card.definition.is_creature())
+    }
+
     /// Toughness twin of [`Self::effective_power_on`].
     pub(crate) fn effective_toughness_on(&self, card: &CardInstance) -> i32 {
         if self.layer_reads_are_printed() {

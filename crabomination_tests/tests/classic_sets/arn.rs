@@ -612,6 +612,46 @@ fn drop_of_honey_ranks_the_computed_power_not_the_printed_one() {
     assert!(g.battlefield_find(big).is_none(), "the 2/2 is");
 }
 
+/// CR 613.2 (layer 4) — "each creature" on the battlefield means the
+/// **computed** card types, so an animated Mutavault is a creature Drop of
+/// Honey can cull. `Selector::LeastPowerAmongAll` filtered on the printed
+/// `is_creature()` until 2026-09-17; the control is the un-animated board,
+/// where the land is not a creature and the 4/4 angel is culled instead.
+#[test]
+fn drop_of_honey_sees_an_animated_land_as_a_creature() {
+    let cull = |animate: bool| {
+        let mut g = main_phase();
+        g.add_card_to_battlefield(0, catalog::drop_of_honey());
+        let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+        let land = g.add_card_to_battlefield(1, catalog::mutavault());
+        if animate {
+            g.players[1].mana_pool.add_colorless(1);
+            g.priority.player_with_priority = 1;
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: land,
+                ability_index: 1,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            })
+            .expect("{1}: becomes a 2/2");
+            drain_stack(&mut g);
+            let view = g.compute_battlefield();
+            let m = view.iter().find(|c| c.id == land).expect("present");
+            assert!(m.card_types().contains(&crabomination::card::CardType::Creature));
+            assert_eq!(m.power, 2);
+        }
+        g.priority.player_with_priority = 0;
+        upkeep(&mut g);
+        (g.battlefield_find(angel).is_some(), g.battlefield_find(land).is_some())
+    };
+    // Control: a plain land is not a creature, so the angel is the only one.
+    assert_eq!(cull(false), (false, true), "no creature but the angel");
+    // Animated, it is a 2/2 — the least power on the board.
+    assert_eq!(cull(true), (true, false), "the 2/2 land is the least power");
+}
+
 #[test]
 fn cyclone_escalates_then_blows_over() {
     let mut g = main_phase();
