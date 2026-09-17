@@ -3035,12 +3035,13 @@ explanation until the miss is a novel one.
 ```text
   (-354) the cold class' pristine byte, 29 sites   -0.181 / -0.163 / -0.111 %
   (-355) two definition Vecs, two lines            -0.192 / -0.169 / -0.157 %
+  (-356) the payment snapshot's buffer, pooled     -0.015 / -0.016 / -0.050 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                        -0.373 / -0.332 / -0.267 %
+  run total                                        -0.388 / -0.347 / -0.317 %
 ```
 
-**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 572,838,544 /
-1,497,610,164 / 1,618,012,845.**
+**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 572,753,228 /
+1,497,364,499 / 1,617,202,136.**
 
 📐 **ONE COMMIT AND IT IS 40 % OF THE PREVIOUS SESSION'S WHOLE SUM OF ROWS**
 (-0.163 vs -0.413 % of `cube` across six commits), because the previous session
@@ -8376,6 +8377,65 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-356)` `PaymentSnapshot`'s scratch buffer comes off a free list — **fixed -0.015 / cube -0.016 / sealed -0.050 %** — and the inline-buffer alternative is REFUTED
+
+`(-355)`'s line table, eighth row: `snapshot_payment_state` builds a
+`Vec<(CardId, bool)>` on **every payment attempt** and drops it, 8,724 a
+six-game `cube` run. The buffer never escapes the payment, so it is taken from
+and returned to a thread-local free list on `fx_pool`'s pattern; the `Drop`
+impl on `PaymentSnapshot` is what makes the *success* path return it too.
+
+```text
+                  (-355) tip        pool              inline SmallVec
+  fixed            572,838,544       -0.0149 %         -0.0543 %
+  cube           1,497,610,164       -0.0164 %         +0.0143 %   <- a LOSS
+  sealed         1,618,012,845       -0.0501 %         -0.0859 %
+
+  malloc calls, cube      742,410 -> 733,689 (pool, -99.96 % of the site)
+                          742,410 -> 735,646 (inline, -77.5 %: 1,960 spills)
+```
+
+🔎🔎 **BOTH READINGS ARE WORTH MORE THAN THE ROW, AND THE SECOND IS THE ONE
+NOBODY HAD WRITTEN DOWN: `SmallVec`'s `Extend` IS NOT `Vec`'s.** The inline
+`SmallVec<[(CardId, bool); 16]>` does everything this file's inline-buffer rule
+asks — the owner is a stack frame, so `(-165)` is satisfied, and it took
+**2,104,860 Ir off `snapshot_payment_state`'s own body (-70 %)** by deleting the
+allocator call inside it. It still lost on `cube`:
+
+```text
+   +2,512,568   SmallVec<A> as Extend      84,710 -> 93,434 calls   = 288 Ir an extend
+     +393,297   __memcpy_avx_unaligned    809,048 -> 822,522
+     +145,584   SmallVec::reserve_one_unchecked
+      -944,395   malloc / free / _int_free / __rdl_alloc  (6,764 allocations gone)
+    -2,104,860   snapshot_payment_state's body
+   ───────────
+     +213,781   net on cube
+```
+
+📐 **A `Vec::with_capacity(n)` + `extend` reserves once and then stores;
+`SmallVec::extend` checks capacity per item. On a ~12-item fill that is 12
+branches instead of 1 — ~24 Ir an item, 288 Ir an extend, against the 222 Ir
+an allocation costs.** So: **an inline buffer filled by `extend` can lose to
+the allocation it removes, and an inline buffer filled by a handful of
+`push`es the compiler can see through does not.** `(-165)`'s rule ("price it
+by whether it grows its owner") is necessary and not sufficient — **also ask
+how it gets FILLED.** ⚠ And `cube` spilled 1,960 of 8,724 fills at 16 slots
+where `sealed` and `fixed` barely spilled at all, which is why the three pools
+disagreed: **an inline buffer's win is a step function of the spill rate, and
+the pool whose boards are widest is the one that decides it.**
+
+⚠ **The pool's cost is mostly a `release-fast` artifact, so the shipped row is
+bigger than the measured one.** `LocalKey::with` +296,593 and
+`FnOnce::call_once` +157,040 (17,448 accesses, ~52 Ir a snapshot for the pair)
+are exactly the two symbols this file's `cg_calls.py` entry records `release`'s
+thin LTO inlining into `cp_pool::alloc`. Subtract them and the pool is worth
+**~0.048 % of `cube`** rather than 0.016 %. The ~545 k that stays is the
+take/park logic inlined into the four frames that call it, which is real.
+
+⚠ **This is why the entry keeps the loser's numbers.** Two devices, one
+measurement session, and the one that looked right by every rule on file is
+the one that lost.
 
 ### `(-355)` two `Vec`s cloned out of a `CardDefinition` for a short-lived owner — **fixed -0.192 / cube -0.169 / sealed -0.157 %**
 

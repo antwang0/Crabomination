@@ -12900,10 +12900,12 @@ impl GameState {
         // `collect` over a `Filter` cannot size-hint past the filter, so it
         // walks the 0->4->8->16 growth ladder: 17,838 `do_reserve_and_handle`
         // growths over 11,420 snapshots, 1.56 a call and the largest single
-        // context in `(-108)`'s table. One `with_capacity` at the board's
-        // length is one allocation — an over-allocation by the opponent's
-        // share, which is the trade (PERF `(-109)` half (a)).
-        let mut tapped = Vec::with_capacity(self.battlefield.len());
+        // context in `(-108)`'s table. `(-109)` half (a) made that one
+        // `with_capacity` at the board's length; `(-356)` makes it **none** —
+        // the buffer comes off `snap_pool`'s free list, and `reserve` is a
+        // no-op on a parked one that already has the room.
+        let mut tapped = snap_pool::take();
+        tapped.reserve(self.battlefield.len());
         tapped.extend(
             self.battlefield.iter().filter(|c| c.controller == payer).map(|c| (c.id, c.tapped)),
         );
@@ -12913,8 +12915,11 @@ impl GameState {
     /// Restore the mana pool and tapped state captured by a prior
     /// `snapshot_payment_state`. Skips cards that have since left the
     /// battlefield (the caller is responsible for any zone-change rollback).
-    pub(crate) fn restore_payment_state(&mut self, payer: usize, snapshot: PaymentSnapshot) {
-        self.players[payer].mana_pool = snapshot.pool;
+    pub(crate) fn restore_payment_state(&mut self, payer: usize, mut snapshot: PaymentSnapshot) {
+        // `mem::take` rather than a move: `PaymentSnapshot` has a `Drop` impl
+        // (it parks its buffer), so the compiler refuses a partial move out
+        // of it. Taking the pool leaves an empty one behind for the drop.
+        self.players[payer].mana_pool = std::mem::take(&mut snapshot.pool);
         // **The snapshot is taken in battlefield order, so it is an ordered
         // subsequence of the board** unless the payment moved a permanent —
         // one merge walk then answers every entry at a single `CardId`
@@ -18899,9 +18904,65 @@ impl GameState {
 
 /// Pre-payment state captured by `snapshot_payment_state` so a failed
 /// payment can revert mana pool and tap-state mutations.
+///
+/// The `tapped` buffer never escapes a payment, so it is taken from and
+/// returned to [`snap_pool`] rather than allocated per attempt — the [`Drop`]
+/// impl below is what makes the success path (which simply drops the
+/// snapshot) return it too.
 pub(crate) struct PaymentSnapshot {
     pub pool: crate::mana::ManaPool,
     pub tapped: Vec<(CardId, bool)>,
+}
+
+impl Drop for PaymentSnapshot {
+    fn drop(&mut self) {
+        snap_pool::park(std::mem::take(&mut self.tapped));
+    }
+}
+
+/// A free list of [`PaymentSnapshot`]'s `tapped` buffers, on `fx_pool`'s
+/// pattern.
+///
+/// One snapshot is built and dropped on **every** payment attempt and the
+/// buffer is pure scratch: that was **8,724 allocations a six-game `cube`
+/// run at 222 Ir apiece**, the eighth-largest allocation site in the program
+/// (PERF `(-356)`). Nothing about the answer changes — the buffer is cleared
+/// and re-extended in battlefield order, so `restore_payment_state`'s
+/// ordered-subsequence merge still holds and no trace moves.
+///
+/// ⚠ **An inline `SmallVec` was tried here first and is REFUTED**: it removes
+/// the allocation but `SmallVec`'s `Extend` costs ~24 Ir an item where
+/// `Vec`'s reserved one costs ~2, so it read +0.014 % on `cube`. PERF
+/// `(-356)` has the table.
+mod snap_pool {
+    use crabomination_base::card::CardId;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static POOL: RefCell<Vec<Vec<(CardId, bool)>>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// An empty buffer — a parked one when this thread has it.
+    pub(super) fn take() -> Vec<(CardId, bool)> {
+        POOL.with(|p| p.try_borrow_mut().ok().and_then(|mut v| v.pop())).unwrap_or_default()
+    }
+
+    /// Park a buffer for the next snapshot. A zero-capacity buffer is not
+    /// worth a slot, and the list is capped so a recursion holding several
+    /// snapshots at once does not leave every one of them parked.
+    pub(super) fn park(mut buf: Vec<(CardId, bool)>) {
+        if buf.capacity() == 0 {
+            return;
+        }
+        buf.clear();
+        POOL.with(|p| {
+            if let Ok(mut v) = p.try_borrow_mut()
+                && v.len() < 8
+            {
+                v.push(buf);
+            }
+        });
+    }
 }
 
 /// What a successful payment yields: events from auto-tapping mana sources,
