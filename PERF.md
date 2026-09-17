@@ -14496,7 +14496,41 @@ builds reading them the other way would have cost.
   whole-body reads, four "the body IS the cost" verdicts, and the file's
   flat-profile claim now has eleven bodies behind it.
 
-  💡 **N. THE ONE NEW LEAD THE RE-READ PRODUCED — MEMOIZE `death_sweep_scope`
+  ❌ **N. CENSUSED THE SAME DAY IT WAS FILED AND IT IS MARGINAL — do not
+  build it as specified.** The env-gated counter (`(-344)`'s instrument, on the
+  `overflow` build, six games a pool) gives **both** numbers this file insists
+  on, and they disagree with each other in the way that decides the entry:
+
+```text
+                calls    same key   answer = Skip   same key AND Skip
+  cube         20,000   12.0 %        80.7 %          10.7 %
+  fixed        10,000   14.3 %        85.4 %          14.0 %
+  sealed       30,000   20.7 %        87.0 %          20.3 %
+```
+
+  📐 **`Skip` is the answer on 80-87 % of calls and essentially every repeat
+  key answers it**, so the memo does not need the member list at all — a
+  one-bit "the sweep is Skip" beside a stamp is the whole device, which is
+  `attach_fold`'s shape exactly.
+  ❌ **But the key cannot fit in one 32-bit word and that is what kills it.**
+  Both counters have to be in it: a resolution can install a continuous effect
+  without touching the battlefield, so `battlefield.writes()` alone is
+  unsound, and `pt_reduction_in_scope` / `sba_board_scan` read both. Two u32
+  stamps plus the bit is 8 bytes on `Battlefield`, i.e. 8 bytes on the cloned
+  `GameState` — **~530 k Ir on `cube` by `(-344)`'s own measurement** —
+  against the 10.7 % x ~8 M = ~850 k the hit saves. **Net ~0.02 %, inside this
+  instrument's noise floor for a width change** (see the box block: a
+  value-identical refactor read ±0.001 % and a 12-byte one would read more
+  than this). `sealed`'s 20.3 % would pay; `cube`'s 10.7 % would not, and
+  `cube` is the pool a layers change is ranked on.
+  **Take it only if a later pass makes the key fit in four bytes, or moves the
+  memo off the cloned state.** The census cost one 2-minute engine-only
+  `overflow` rebuild and three 30-second runs; the build it saved is 20
+  minutes.
+
+  The original filing, kept for the numbers in it:
+
+  💡 **N. MEMOIZE `death_sweep_scope`
   ON THE TWO WRITE COUNTERS.** `check_state_based_actions_into` is **2.85 % of
   `cube` over 21,626 calls** and diffuse over 253 lines, but two *adjacent*
   engine lines in it are the largest named pair in the body:
@@ -14508,7 +14542,10 @@ builds reading them the other way would have cost.
 
   Those are `card_death_possible`'s five-field early-out, run **per permanent
   per priority pass**, and the walk around them (`is_creature`, the push, the
-  iteration) puts the whole of `death_sweep_scope` at roughly 0.4-0.5 %. Its
+  iteration) puts the whole of `death_sweep_scope` at roughly 0.4-0.5 % — its
+  own named lines (`game/stack.rs:53xx-54xx` under
+  `check_state_based_actions_into`) total **5,675,372 Ir = 0.376 % of `cube`**,
+  and the std rows it drives are attributed separately. Its
   own doc records **three separate refutations of the fusion device** — folding
   the walks together costs +0.55 %, +1.24 % and +0.255 % — so the body is not
   the lever. **Nobody has tried memoizing the ANSWER across calls.**
@@ -14536,7 +14573,8 @@ builds reading them the other way would have cost.
   ⚠ Census first: an env-gated counter on the four paths in a
   `debug-assertions` build, `--games 6` on all three pools, and **both**
   numbers `(-344)`'s entry insists on — how often the memo is *reachable* and
-  how often the key actually *separates*.
+  how often the key actually *separates*. **That census is the block above,
+  and it closed the entry.**
 
   ⚠ **AND CANDIDATE (C)'s NUMBERS ARE STALE — `(-333)` ALREADY TOOK IT.**
   `blocker_pair_block` reads **17,528 calls / 2,368,718 self Ir (0.16 %)** at
