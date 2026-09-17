@@ -5206,11 +5206,14 @@ Wall clock: sealed mirror ABBA 4.7 / 4.9 / 4.9 / 4.7 s, **+4 %**, ordered
 
 ADOPTED: `x_by_outcome: true` in `default_const`, so `dflt`, the actors and
 the lobby's search (`net_on_default` builds on the default) all carry it.
-Owed: the search-level transfer read, `mcts-dflt-256` (flag on) vs
-`mcts-xoutoff-256`, seed 43, 500 games × 12 — the root re-size is tested
-on the fixture but not yet measured under the search; a null there is
-expected to be the same exact-null shape as seed 97 wherever the two cards
-are not in the deck, so the read is about seed 43's decks only.
+The search-level transfer read (`.ladder/r76/search_transfer.sh`,
+`mcts-dflt-256` with the flag vs `mcts-xoutoff-256`, seed 43, 500 games ×
+12, paired): **50.6** [49.8, 51.5] (±0.86). No loss under the search, and
+the point sits where the scored +1.0 would land after the search's own
+sims correct part of the same mistake; a search cell cannot resolve +0.5
+at 500 games (r64: ±0.95 a side) and the round does not need it to — the
+flag is adopted on the scored read, the search inherits it, and the
+lobby's rollouts and root arms both carry the re-size.
 
 Closing the round-76 ledger: **modes CLOSED** (2.1 / 4.6 % of modal wins
 had a better unseen mode; Artistic Process is the one card above 5 %),
