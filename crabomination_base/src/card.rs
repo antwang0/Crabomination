@@ -3150,6 +3150,34 @@ impl SelectionRequirement {
     /// (`ManaValueAtMostXFromCost` → `ManaValueAtMost(x)`), recursing
     /// through And/Or/Not. Called by `Effect::Search` with the resolving
     /// spell's paid X (Chord of Calling, CR 601.2b).
+    /// Does this tree carry any leaf that [`resolve_x`](Self::resolve_x) or
+    /// [`resolve_converge`](Self::resolve_converge) would rewrite?
+    ///
+    /// Both rewriters return `Self`, so on a tree that names neither they
+    /// deep-clone the whole thing to produce an identical one — 2,474
+    /// allocations each at `targeting.rs`'s two call sites on a six-game
+    /// `cube` run, at 222 Ir apiece (PERF `(-358)`). A caller that only needs
+    /// `&SelectionRequirement` asks this first and borrows.
+    ///
+    /// ⚠ **The leaf list must match the two rewriters' own arms**, and the
+    /// callers carry a `debug_assert_eq!` recomputing the rewrite on the
+    /// borrowed path so a leaf added to one and not here fails loudly under
+    /// `-C debug-assertions=yes` rather than leaving a filter unresolved.
+    pub fn names_x_or_converge(&self) -> bool {
+        match self {
+            Self::ManaValueAtMostXFromCost
+            | Self::ManaValueExactlyXFromCost
+            | Self::PowerAtMostXFromCost
+            | Self::ToughnessAtMostXFromCost
+            | Self::ManaValueAtMostConverged => true,
+            Self::And(a, b) | Self::Or(a, b) => {
+                a.names_x_or_converge() || b.names_x_or_converge()
+            }
+            Self::Not(inner) => inner.names_x_or_converge(),
+            _ => false,
+        }
+    }
+
     pub fn resolve_x(&self, x: u32) -> Self {
         match self {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),

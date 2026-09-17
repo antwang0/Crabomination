@@ -3037,12 +3037,13 @@ explanation until the miss is a novel one.
   (-355) two definition Vecs, two lines            -0.192 / -0.169 / -0.157 %
   (-356) the payment snapshot's buffer, pooled     -0.015 / -0.016 / -0.050 %
   (-357) the protection view's two type lines      -0.026 / -0.075 / -0.002 %
+  (-358) the target filter, borrowed               -0.155 / -0.049 / -0.312 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                        -0.414 / -0.421 / -0.319 %
+  run total                                        -0.568 / -0.470 / -0.630 %
 ```
 
-**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 572,604,656 /
-1,496,236,151 / 1,617,174,591.**
+**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 571,716,921 /
+1,495,505,814 / 1,612,122,733.**
 
 📐 **THE RUN'S OWN SHAPE, WHICH IS THE THING TO CARRY FORWARD: four of the
 five rows are ALLOCATIONS, and none of them was on the candidates list.**
@@ -8389,6 +8390,62 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-358)` the target filter is borrowed unless it names X or converge — **fixed -0.155 / cube -0.049 / sealed -0.312 %**
+
+The run's largest row, and the `cube` census that found it **under-ranked it
+5.6x**. `resolve_x` and `resolve_converge` both return `Self`, so on a tree
+naming neither they deep-clone the whole thing to produce an identical one —
+and `targeting.rs`'s two call sites read the result only through
+`&SelectionRequirement`.
+
+```text
+                  (-357) tip        (-358)            delta
+  fixed            572,604,656       571,716,921       -0.1550 %
+  cube           1,496,236,151     1,495,505,814       -0.0488 %
+  sealed         1,617,174,591     1,612,122,733       -0.3124 %
+```
+
+`sealed`'s table, where the row actually lives:
+
+```text
+        delta     calls                        row
+     -993,807     947,400 ->   931,176        _int_free
+     -825,235     912,798 ->   896,590        malloc      = -16,208 allocations
+     -744,158     127,023 ->   123,164        _int_malloc
+     -632,112     911,738 ->   895,530        free
+     -250,338      10,520 ->     2,416        resolve_converge
+     -250,080      46,382 ->    31,170        SelectionRequirement::clone
+     -243,922      15,948 ->     7,844        resolve_x'2
+     -183,320      47,389 ->    31,181        drop_in_place<SelectionRequirement>
+     -157,906      10,128 ->     6,488        resolve_x
+```
+
+⚠⚠ **THE METHODOLOGICAL FINDING, AND IT IS THE ONE TO KEEP: A LINE-LEVEL
+ALLOCATION CENSUS TAKEN ON ONE POOL MIS-RANKS A ROW WHOSE POOL IS ANOTHER.**
+`cg_alloc_sites.py` ran on the `cube` dump and priced these two sites at
+2,474 + 2,474 = 4,948 allocations ≈ 0.073 % of `cube`. The measured row is
+**-0.049 % on `cube` and -0.312 % on `sealed`** — 16,208 allocations there
+against 2,912 here, because `sealed`'s pool is where the X spells and the
+targeted removal are. **Take the `--dump-instr` dump on more than one pool, or
+at least re-read the shortlist against a second one before ranking.** This
+file's "which pool a change moves" section has said the same thing about A/B
+rows for a long time; nobody had said it about a census.
+
+**The shape.** `SelectionRequirement::names_x_or_converge()` walks the tree
+without allocating and answers whether either rewriter has anything to do; the
+call sites `filter` on it and fall back to the borrowed source. ⚠ **The leaf
+list has to match the two rewriters' arms, so both call sites carry a
+`debug_assert!` that recomputes the rewrite on the borrowed path** — a leaf
+added to `resolve_x` and not to the predicate would otherwise leave a filter
+unresolved, which is a rules bug rather than a slow path. Same ratchet as
+`(-349)`/`(-354)`.
+
+📐 **And the class is now three for three: `(-355)` site 1, `(-357)`, and this
+one are all "a value cloned so a short-lived reader could OWN it", and all
+three were deleted rather than pooled or inlined.** `(-356)` is the one that
+had to be pooled, and it is also the smallest. **Ask whether the owner needs to
+own before asking how to make owning cheap.**
 
 ### `(-357)` the protection view's two type lines become slices — **fixed -0.026 / cube -0.075 / sealed -0.002 %**
 

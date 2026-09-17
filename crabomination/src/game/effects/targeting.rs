@@ -126,11 +126,19 @@ impl GameState {
         // re-check is mode-blind too — so aiming with the same call the
         // checker uses is the whole point. Mode-aware picking already happens
         // one level up, through `target_filter_for_slot_in_mode_kicked`.
-        let req_owned = eff
-            .primary_target_filter()
-            .or_else(|| eff.target_filter_for_slot(0))
+        // The filter is only ever read through `req` below, so a tree that
+        // names neither X nor converge is BORROWED rather than rewritten into
+        // an identical copy — PERF `(-358)`.
+        let req_src = eff.primary_target_filter().or_else(|| eff.target_filter_for_slot(0));
+        let req_owned = req_src
+            .filter(|f| f.names_x_or_converge())
             .map(|f| f.resolve_x(x).resolve_converge(converge));
-        let req = req_owned.as_ref().unwrap_or(&any_filter);
+        debug_assert!(
+            req_owned.is_some()
+                || req_src.is_none_or(|f| *f == f.resolve_x(x).resolve_converge(converge)),
+            "names_x_or_converge said no but the rewrite moved the filter: {req_src:?}",
+        );
+        let req = req_owned.as_ref().or(req_src).unwrap_or(&any_filter);
         // First opponent on a different team. Falls back to the next
         // seat in singleton-team / unknown-team cases so the legacy 1v1
         // pick (`(controller + 1) % n`) is preserved.
@@ -461,9 +469,17 @@ impl GameState {
         // to the SAME filter over 7,816 bodies and to "primary answers whenever
         // the slot walker does", so the picker's `or` arm is unreachable on the
         // shipped catalog. The gate is what keeps this line honest.
-        let req_owned =
-            eff.primary_target_filter().map(|f| f.resolve_x(x).resolve_converge(converge));
-        let req = req_owned.as_ref().unwrap_or(&any_filter);
+        // Borrowed unless the tree names X or converge — see the picker.
+        let req_src = eff.primary_target_filter();
+        let req_owned = req_src
+            .filter(|f| f.names_x_or_converge())
+            .map(|f| f.resolve_x(x).resolve_converge(converge));
+        debug_assert!(
+            req_owned.is_some()
+                || req_src.is_none_or(|f| *f == f.resolve_x(x).resolve_converge(converge)),
+            "names_x_or_converge said no but the rewrite moved the filter: {req_src:?}",
+        );
+        let req = req_owned.as_ref().or(req_src).unwrap_or(&any_filter);
         // Same scope gate as the auto-picker's off-board fallback, so the
         // enumerated set and the picked target can't disagree about which
         // zones the effect reaches.
