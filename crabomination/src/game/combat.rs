@@ -4758,17 +4758,25 @@ impl GameState {
                     // ⚠ `remembers` rides the scan that is already here.
                     // Asking for it with a second `find_by_id` cost more than
                     // the gate saved on `fixed` — see PERF `(-154)`.
+                    // ⚠ The type line is read through a borrow of
+                    // `self.battlefield` while `self.players` is written — the
+                    // two are disjoint FIELDS, so naming them separately is
+                    // what the borrow checker needs, and the `.clone()` that
+                    // used to end the borrow was the largest single allocation
+                    // site in the engine (PERF `(-355)`: 7,038 a six-game
+                    // `cube` run).
                     let mut remembers = false;
-                    if let Some(c) = self.battlefield.find_by_id(atk.id) {
+                    let battlefield = &self.battlefield;
+                    if let Some(c) = battlefield.find_by_id(atk.id) {
                         let ctrl = c.controller;
                         remembers = c.definition.remembers_damage_victims();
+                        let players = &mut self.players;
                         if c.definition.keywords.has_kw(&Keyword::Changeling) {
-                            self.players[ctrl].prowl_any_type_this_turn = true;
+                            players[ctrl].prowl_any_type_this_turn = true;
                         }
-                        let types = c.definition.subtypes.creature_types.clone();
-                        for t in types {
-                            if !self.players[ctrl].prowl_types_this_turn.contains(&t) {
-                                self.players[ctrl].prowl_types_this_turn.push(t);
+                        for t in &c.definition.subtypes.creature_types {
+                            if !players[ctrl].prowl_types_this_turn.contains(t) {
+                                players[ctrl].prowl_types_this_turn.push(*t);
                             }
                         }
                     }

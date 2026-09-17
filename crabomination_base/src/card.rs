@@ -6068,9 +6068,9 @@ impl CardDefinition {
             instant_or_sorcery: self.is_instant() || self.is_sorcery(),
             artifact,
             creature_types: if creature {
-                self.subtypes.creature_types.clone()
+                smallvec::SmallVec::from_slice(&self.subtypes.creature_types)
             } else {
-                Vec::new()
+                smallvec::SmallVec::new()
             },
             changeling: creature && self.keywords.has_kw(&Keyword::Changeling),
             land_ability: false,

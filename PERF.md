@@ -3034,10 +3034,13 @@ explanation until the miss is a novel one.
 
 ```text
   (-354) the cold class' pristine byte, 29 sites   -0.181 / -0.163 / -0.111 %
+  (-355) two definition Vecs, two lines            -0.192 / -0.169 / -0.157 %
+  ─────────────────────────────────────────────────────────────────────────
+  run total                                        -0.373 / -0.332 / -0.267 %
 ```
 
-**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 573,939,636 /
-1,500,141,909 / 1,620,548,237.**
+**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 572,838,544 /
+1,497,610,164 / 1,618,012,845.**
 
 📐 **ONE COMMIT AND IT IS 40 % OF THE PREVIOUS SESSION'S WHOLE SUM OF ROWS**
 (-0.163 vs -0.413 % of `cube` across six commits), because the previous session
@@ -8373,6 +8376,92 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-355)` two `Vec`s cloned out of a `CardDefinition` for a short-lived owner — **fixed -0.192 / cube -0.169 / sealed -0.157 %**
+
+Two lines, and the instrument that found them is the one this file has been
+missing: **`cg_alloc_sites.py` run over the WHOLE program rather than one
+function.** `(-90)` has called the allocation table "diffuse" for eleven
+passes and `(-O)` censused it by *caller*; ranking it by **source line** puts
+the two biggest non-structural rows on the screen at once.
+
+```text
+                  (-354) tip        (-355)            delta
+  fixed            573,939,636       572,838,544       -0.1918 %
+  cube           1,500,141,909     1,497,610,164       -0.1688 %
+  sealed         1,620,548,237     1,618,012,845       -0.1565 %
+```
+
+📐📐 **AND IT PRICES THE WHOLE ALLOCATION TABLE BY DELETION, WHICH IS THE
+NUMBER TO KEEP: 11,380 ALLOCATIONS REMOVED, 2,531,745 Ir SAVED = 222 Ir AN
+ALLOCATION, ALL-IN.** The malloc count moved 753,790 -> 742,410, i.e. exactly
+the 7,038 + 4,342 the census predicted, so the division is exact rather than
+inferred:
+
+```text
+        delta     base self     cand self   calls b   calls c  row
+     -692,906    46,491,187    45,798,281   797,658   786,173  _int_free
+     -483,085    35,582,387    35,099,302   753,790   742,410  malloc
+     -443,820    29,386,648    28,942,828   753,534   742,154  free
+     -289,970     5,285,622     4,995,652     7,362     7,362  deal_combat_damage_to_target
+     -127,968     4,979,442     4,851,474    12,642    12,130  malloc_consolidate
+     -116,539    31,921,060    31,804,521   816,239   809,048  __memcpy_avx_unaligned_erms
+     -105,428    30,427,781    30,322,353   126,674   126,315  _int_malloc
+     -104,174     1,929,910     1,825,736     7,306     7,306  CardDefinition::spell_kind
+     -102,420     6,784,029     6,681,609   753,781   742,401  __rustc::__rdl_alloc
+```
+
+⚠ **222 Ir apiece puts the program's 755,903 allocations at ~168 M Ir = 11.2 %
+of `cube`**, above `(-90)`'s 9.9 % estimate, because the symbol-sum that
+produced that figure leaves out `malloc_consolidate` and the allocator's own
+`memcpy`. **Quote 222 Ir, not the symbol table, when sizing an allocation
+lead.**
+
+**Site 1, `combat.rs`, 7,038 allocations — the largest single allocation site
+in the engine, and it is a BORROW-CHECKER clone.**
+`deal_combat_damage_to_target` read the attacker's type line through
+`self.battlefield` and wrote `self.players[ctrl].prowl_types_this_turn`, so it
+cloned the `Vec<CreatureType>` to end the borrow. **`battlefield` and `players`
+are disjoint *fields*: naming them in two `let`s is all the borrow checker
+needs**, and the clone goes away outright. -5.5 % off the body.
+
+📐 **THE RESHAPING THIS DOES TO CANDIDATE (O): a growth census says "reserve"
+and a LINE census says "this allocation should not exist."** `cg_growth.py`
+ranks the callers of `finish_grow` and its whole takeable population is
+~10,300 re-growths; the line table's top non-structural row is not a growth at
+all — it is a temporary that no `with_capacity` could have touched. **Run
+`cg_alloc_sites.py` over the whole program before spending a pass on reserves.**
+
+**Site 2, `mana.rs`/`card.rs`, 4,342 allocations — `SpellKind::creature_types`
+becomes an inline buffer.** `spell_kind()` fills it on every creature cast and
+its only readers are two `contains` calls in `SpendRestriction::allows`, which
+spend-restricted mana almost never asks. `SmallVec<[CreatureType; 4]>` covers
+the catalog's widest type line (4, checked), and `(-165)`'s rule on inline
+buffers is satisfied because **a `SpellKind`'s owner is a stack frame** —
+nothing stores one, so widening it costs no clone path anything. -5.4 % off
+`spell_kind`.
+
+⚠ **Two changes in one commit, which this file's discipline normally refuses.**
+They are kept together because the rows above attribute them separately and
+exactly (-289,970 and -104,174, each ~5 % of its own body, in different files
+and by different mechanisms), so a later bisect landing here has no ambiguity
+to resolve.
+
+⚠ **AND THE REST OF THE TOP-40 LINE TABLE IS STRUCTURAL, READ ONCE SO NOBODY
+RE-RANKS IT:** `cow.rs:48` `make_mut_slow` 28,152, `GameState::clone`'s two
+sites 43,566, `compute_permanents`' closure 20,484, `PrintedList::push`
+18,534, `CowBox<Vec<T>>::push`'s five monomorphizations ~43,000. Those are the
+CoW and probe-clone families, priced by which group a field lives in
+(`(-280)`..`(-287)`, `(-349)`), not by a reserve or a borrow.
+⚠ **A third observation, and it kills the reserve idea on the probe path:
+`Vec::clone` allocates `len`, not `capacity`.** `deal_combat_damage_to_target`'s
+other two sites (`creatures_that_damaged_me_this_turn` 4,118 and
+`prowl_types_this_turn` 4,452) are pushes into per-player `Vec`s that every
+probe clone re-allocates from zero, so **a `with_capacity` at the push site
+does not survive the clone that precedes it.** Same for `declare_blockers`'
+`IdMap::entry_or_default` (3,468) and its `events.push` (3,468). **On the
+bot's probe path a reserve is only worth taking where the buffer is built
+fresh, not where it is inherited.**
 
 ### `(-354)` every whole-zone walk over a cold field opens on the pristine byte — **fixed -0.181 / cube -0.163 / sealed -0.111 %**
 

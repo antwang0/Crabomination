@@ -469,7 +469,7 @@ fn dragon_or_omen_mana_funds_a_dragon_but_not_a_bear() {
     // "Add one mana of any color, spend only on a Dragon or Omen spell."
     let dragon_kind = SpellKind {
         creature: true,
-        creature_types: vec![CreatureType::Dragon],
+        creature_types: smallvec::smallvec![CreatureType::Dragon],
         ..Default::default()
     };
     let bear_kind = SpellKind { creature: true, ..Default::default() };

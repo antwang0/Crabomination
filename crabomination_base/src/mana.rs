@@ -723,7 +723,15 @@ pub struct SpellKind {
     /// Casting an artifact spell, or activating an ability of an artifact.
     pub artifact: bool,
     /// The creature types of a creature spell being cast (empty otherwise).
-    pub creature_types: Vec<crate::card::CreatureType>,
+    ///
+    /// **Inline, not heap.** `spell_kind` fills this on every creature cast
+    /// and two `contains` calls in `SpendRestriction::allows` are its only
+    /// readers, so the `Vec` was a malloc a cast for a question spend-restricted
+    /// mana almost never asks — 4,342 allocations a six-game `cube` run, PERF
+    /// `(-355)`. The widest type line in the catalog is 4, and `(-165)`'s rule
+    /// on inline buffers is satisfied because this value's owner is a stack
+    /// frame: nothing stores a `SpellKind`.
+    pub creature_types: smallvec::SmallVec<[crate::card::CreatureType; 4]>,
     /// The spell is a Changeling (every creature type, CR 702.73).
     pub changeling: bool,
     /// Activating an ability of a land source (Sunken Citadel).
