@@ -3005,6 +3005,72 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-17 (the cold-group session, FOURTEENTH box) — candidate (B) taken at the group's one `&mut` route instead of at its 114 write sites
+
+**BASE ABSOLUTES at `a1ff92f3`** (`profiling-fast --no-default-features`,
+system allocator, `--a gang --b gang --games 6 --threads 1 --seed 1`):
+fixed **578,482,885** / cube **1,509,987,882** / sealed **1,630,351,663**.
+
+⚠ **AND THE PREDICTION MISSED, WHICH IS WORTH MORE THAN IT LANDING WOULD HAVE
+BEEN.** Same box as the previous session by every reading — Xeon @ 2.80 GHz,
+4 cores, 15 GB — and the tree is `0bd3c37c` plus one value-identical commit,
+so the base should have *been* the filed tip. It reads **+0.169 / +0.086 /
++0.089 %** above it. That is not noise (the floor is ±0.001 %) and it is not a
+tree problem either: it is, to three digits on two pools, **the +0.196 / +0.090
+/ +0.089 % twelfth-vs-eleventh step this file already records.** So the CPU
+model is *not* the box identity — two hosts with the same Xeon string read a
+tenth of a percent apart, reproducibly, and the previous session's "the box
+predicted itself" was that offset landing the other way.
+📐 **The rule the check still gives you is the useful one: a base that misses
+its prediction by an amount this file has SEEN BEFORE is a box, and one that
+misses by a novel amount is a tree.** Either way the A/B is unaffected — both
+sides are built and measured in one session on one host — but a row must never
+be quoted against a tip measured on another.
+
+```text
+  (-349) the cleanup guards' cold half         -0.149 / -0.098 / -0.090 %
+  (-350) the keyword asks, same gate           -0.064 / -0.042 / -0.034 %
+  ─────────────────────────────────────────────────────────────────────────
+  run total                                    -0.212 / -0.140 / -0.124 %
+```
+
+📐 **THE INSTRUMENT'S RUN-TO-RUN JITTER IS ±330 Ir ON AN IDENTICAL BINARY**
+(-232 / -330 / +161 between two runs of `(-349)`'s candidate), i.e.
+±0.00002 %. The ±0.001 % floor this file quotes is the cost of a *rebuild* of
+value-identical source, not of a re-run — so a row may be re-measured for free,
+and only a rebuild needs the floor.
+
+**CLOSING TIP ABSOLUTES at `a878464f`, same recipe: fixed 577,254,354 / cube
+1,507,866,096 / sealed 1,628,320,869.**
+
+sweep   **1 block — fresh seeds 1416..1417 at the `a878464f` tip: 6 cells /
+        29,600 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 4`,
+        pools `cube all sealed`, `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
+        1418.** The block is this run's ratchet: `(-349)`'s
+        `cold_written` recompute-and-compare on both cleanup guards and
+        `(-350)`'s three `debug_assert_eq!`s against the pre-gate bodies are
+        all live in it, on 29,600 games' worth of boards, and none fired.
+        Suite **19,600 / 0 / 5** (`CRAB_ANSWER_LOG=strict`, two new tests),
+        golden traces unmoved, clippy **0** over the workspace, `cargo check
+        --profile release-fast -p crabomination --bin bot_ladder` clean.
+        `--bench` at `a878464f`: **195,806 / 27.49 / 611.9 / 0 stalls**,
+        byte-identical to the committed invariant, `determinism ok`,
+        `thread_determinism ok (3 vs 1)`; `games_per_s` 354.5 and 358.3 on two
+        runs, inside the 212-407 single-run spread this file records.
+        `peak_rss_mib` **27.1** — the same arena variance as last session's
+        25.2 / 27.2 / 25.2, still not a reading.
+        ⚠ Box timings, this session (cold `target/`, 4 cores): cold test build
+        **6m04s**, full suite **153-163 s**, cold `profiling-fast` **11m21s**,
+        engine+base+catalog rebuild **~10m**, three pools' callgrind in
+        parallel **~70 s**, cold `overflow` with `-C debug-assertions=yes`
+        **~10m**, a 6-cell sweep block **8m25s**, `cargo check --profile
+        release-fast` 1m44-1m52s. ⚠ **`cargo build --release` is NOT the ~10m
+        this file records** — cold, on a contended box, it was over 35 minutes
+        (cgu 1 + thin LTO on the engine). Start it before you need it.
+        Disk: `target/debug/incremental` reached **11 GB** after one suite run
+        and `rm -rf` returned all of it.
+
 ### 2026-09-17 (the gate-soundness session, FOURTEENTH box) — the previous run's gate was gated on a family nothing carries, and the memo it was owed is refuted
 
 **BASE ABSOLUTES at `cf1f3ea0`** (`profiling-fast --no-default-features`,
@@ -8202,6 +8268,89 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-350)` the keyword asks take `(-349)`'s cold gate — **fixed -0.064 / cube -0.042 / sealed -0.034 %**
+
+The bit generalises, which is the half of `(-349)` worth having. **All four
+*instance* keyword sources are `CardCold` members** — `granted_keywords_eot`,
+`keyword_counters`, `removed_keywords_eot`, `removed_keywords` — so a pristine
+card's keyword answer is its printed list and nothing else.
+
+```text
+                  (-349) tip        (-350)            delta
+  fixed            577,622,175       577,254,354       -0.0637 %
+  cube           1,508,502,711     1,507,866,096       -0.0422 %
+  sealed         1,628,879,611     1,628,320,869       -0.0343 %
+
+  cube, combat_keywords   49,674 calls   30.4 -> 23.7 Ir/call   -333,390
+        has_keyword                      32.1 -> 25.6 Ir/call
+```
+
+`has_keyword` drops two of its three tag walks and the chase, `has_keyword_tag`
+the same, `combat_keywords` four of its five passes. The two named rows hold
+-364 k of the -637 k; the rest is in callers that had `has_keyword_tag` and the
+small keyword helpers inlined into them, which is why the row table
+under-reports the change — **read the program total, not the row, on a gate
+that lands inside an inlined callee.**
+
+Each function keeps its old body as `*_written` and the pristine path asserts
+`debug_assert_eq!` against it, so the suite and every `debug-assertions` sweep
+compare the two answers rather than trusting the bit.
+
+📐 **THE INSTRUMENT'S RUN-TO-RUN JITTER IS ±330 Ir, MEASURED.** This A/B's base
+is `(-349)`'s candidate binary, re-run: **-232 / -330 / +161 Ir** against its
+first reading of the same file. That is ±0.00002 %, an order tighter than the
+±0.001 % a *rebuild* of value-identical source costs (`620202b1`'s row) — so
+the rebuild, not the run, is what the noise floor is about.
+
+### `(-349)` the cleanup guards skip the cold half on a pristine card — **fixed -0.149 / cube -0.098 / sealed -0.090 %**
+
+Candidate (B), taken in the shape its own entry named as the one needing no
+write-site change — but with **a byte on `CardData` where the entry proposed a
+process-wide `Arc` and an `Arc::ptr_eq`**. The entry's third objection kills
+that form and not this one: one shared handle puts every card's refcount on one
+cache line, `CowBox<CardCold>` is cloned 68,610 times a six-game `cube` run,
+and callgrind is contention-blind — so an Ir row would have reported the win
+and none of the cost. A `bool` beside the group is contention-free, needs no
+`thread_local!` and no `LocalKey::with` (~3-5 Ir of an ~11 Ir win), and its
+cost is exactly the width Ir *does* see.
+
+`CardData::cold_written` is set at `DerefMut for CardData`, the group's ONE
+`&mut` route (`cold` is named nowhere outside `card.rs`), and never cleared.
+`false` is authoritative: every `CardCold` field still holds its `Default`, so
+the eleven cleanup fields living there are provably clear and the guard skips
+their probes **and the pointer chase into the group**.
+
+```text
+                  a1ff92f3          (-349)            delta
+  fixed            578,482,885       577,622,407       -0.1488 %
+  cube           1,509,987,882     1,508,503,041       -0.0983 %
+  sealed         1,630,351,663     1,628,879,450       -0.0903 %
+
+  clear_end_of_turn_effects     51,750 calls   83.5 -> 58.4 Ir/call
+  clear_effects_on_zone_change  10,826 calls   59.4 -> 36.6 Ir/call
+```
+
+📐 **THE WIDTH RULE, MEASURED RATHER THAN PREDICTED FOR ONCE.** -1,543,072 Ir
+comes off the two rows against -1,484,841 off the program, so the byte added to
+`CardData` costs **~58 k Ir** — the ~0.44 Ir x 68,610 copies `CardCold`'s own
+doc predicts, plus the store at `deref_mut`. A `CardData` width change is
+priced at four figures; the entry's fear of it was about `FIND_HINTS`' 64 bytes
+a pile, not about a byte.
+
+Two ratchets, and the first is the compiler's: `eot_wear_off!` splits into
+`_hot!` / `_cold!` halves whose union is the old list (so "a field cannot reach
+the clear without the guard" is unchanged), and `cold_membership_check` names
+the cold list's fields on a `&CardCold` — **a field that is really a `CardData`
+member fails to COMPILE**, which is the premise the skip rests on. The second
+is the recompute-and-compare `debug_assert!` this branch requires on a gate's
+cheap path.
+
+⚠ **The gate degrades over a game and that is by design.** `CardCold` also
+holds `named_card`, `chosen_colors`, `keyword_counters`, `pending_etb_counters`
+and `exiled_by`, so a permanent that ever writes one is "written" for the rest
+of the game. The row above is what that degradation is already worth; a pass
+that wants more must move those fields, not the bit.
 
 ### `(-348)` `ManaCost::cmc` memoized on the card object — **fixed -0.101 / cube -0.074 / sealed -0.123 %**
 
@@ -15032,7 +15181,33 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      `blocker_self_block` (26,676), `event_amount_for` (13,178) and
      `score_candidate` (9,246) — call the ~90 k, not the 148 k.
 
-  B. `CardInstance::clear_end_of_turn_effects`   36,634 / 51,750 / 55,258 calls
+  ✅ **B. TAKEN as `(-349)`, and the device generalised the same day as
+     `(-350)` — fixed -0.213 / cube -0.140 / sealed -0.125 % for the pair.**
+     Not in either shape this entry priced. The dirty bit it spent two passes
+     refusing to build is 114 write sites *at `CardData`'s 26 fields*; the bit
+     that landed is at **`CardCold`'s one `&mut` route**, so it needed no write
+     site touched, no field privatised and no rules-bug risk — and it is a
+     `bool` rather than the entry's shared `Arc`, so the cacheline objection
+     below (the one Ir cannot see) does not apply to it at all.
+     📐 **The transferable half: when a "has this ever been written" bit looks
+     like N write sites, ask whether the fields share a CoW GROUP, because a
+     group has exactly one `&mut` route and the bit goes there.** The entry's
+     own "11 of the 26 live in `CardCold`" sentence was the whole answer and it
+     was read as a reason to reach for `Arc::ptr_eq`.
+     ⚠ **The `Arc::ptr_eq` / shared-default form is still refuted and stays
+     refuted** — nothing below is stale, it is just no longer the way in.
+     💡 **AND THE OPEN HALF IS THE INTERESTING ONE: `cold_written` is now a
+     free byte every hot `CardCold` reader can gate on, and only the keyword
+     family (`(-350)`) has taken it.** Unsurveyed readers, by site count:
+     `may_play_until` 49, `named_card` 39, `exiled_by` 26, `goaded_by` 22,
+     `front_face` / `face_up_def` 37, `granted_activated_abilities` /
+     `granted_activated_eot` 34. **Census them the way (H) was censused** —
+     grep the field, take the enclosing function, join against a `cube` dump —
+     rather than gating them one at a time; a site in a body with no self row
+     is not a perf question.
+
+  B. (the original filing, kept for its numbers and its refutations)
+     `CardInstance::clear_end_of_turn_effects`   36,634 / 51,750 / 55,258 calls
      2,781,234 / 4,319,838 / 4,468,588 Ir   (0.48 / 0.28 / 0.27 %)
      Already guarded by `end_of_turn_effects_are_clear`, which probes the
      **26** fields `eot_wear_off!` names, at ~3 Ir a probe — so the guard IS
