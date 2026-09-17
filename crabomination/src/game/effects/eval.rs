@@ -4034,6 +4034,19 @@ impl GameState {
                         self.keyword_grant_in_scope(|k| std::mem::discriminant(k) == want)
                     };
                     if !can_move {
+                        // The same ratchet its sibling carries — it was the
+                        // one gated path of the pair without one.
+                        debug_assert!(
+                            match computed() {
+                                Some(cp) => cp
+                                    .keywords()
+                                    .iter()
+                                    .any(|k| std::mem::discriminant(k) == want)
+                                    == on_instance,
+                                None => true,
+                            },
+                            "keyword-tag gate said the layers cannot move {sample:?}, and they did",
+                        );
                         return on_instance;
                     }
                     match computed() {

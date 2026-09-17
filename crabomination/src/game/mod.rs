@@ -10603,8 +10603,22 @@ impl GameState {
     /// that take a keyword away**, and the two text rewrites retype
     /// `Protection` / `Landwalk` in place. `RemoveAllAbilities` has its own
     /// gate; the other two reach the gathered set from
-    /// `StaticEffect::LoseKeyword`, `StaticEffect::CantHaveKeyword` and an
-    /// attachment's `EquipBonus::remove_keywords`.
+    /// `StaticEffect::LoseKeyword`, `StaticEffect::CantHaveKeyword`, a CR
+    /// 721.2a Station band's statics, an attachment's
+    /// `EquipBonus::remove_keywords`, and — the route `(-345)` missed — a
+    /// **resolved** `Effect::LoseKeyword` whose duration is neither
+    /// end-of-turn nor permanent (those two go into the instance's own
+    /// removal lists, which `has_keyword` already reads).
+    ///
+    /// ⚠ **The two text rewrites are a leg of their own and they move the
+    /// answer BOTH ways**, which is why `keyword_grant_in_scope` grew the
+    /// same leg: `ReplaceColorWord` turns `Protection(A)` into
+    /// `Protection(B)`, so it takes one keyword away and produces another,
+    /// and `ReplaceBasicLandType` does the same to `Landwalk`. Neither
+    /// carries the payload `pred` would be asked about, so the only sound
+    /// answer while one is in scope is "maybe". A printed
+    /// `AllColorWordsBecomeChosen` (Swirl the Mists) is the board route to
+    /// the first, and it rides both per-card predicates.
     ///
     /// `false` is authoritative; `true` only means the computed view has to be
     /// consulted. ⚠ Asked only on the branch where the instance already HAS
@@ -10616,12 +10630,18 @@ impl GameState {
         if self.ability_strip_possible() {
             return true;
         }
-        if self.continuous_effects.has_family(mod_families::KEYWORD)
-            && self.continuous_effects.iter().any(|e| {
-                matches!(&e.modification,
-                    Modification::RemoveKeyword(k) | Modification::CantHaveKeyword(k) if pred(k))
-            })
-        {
+        // ⚠ `any_in_family`, not `has_family(..) && any(..)`: the mask and the
+        // predicate have to agree about which families these modifications
+        // belong to, and `(-345)` shipped a version where they did not (none
+        // of the four carried a family at all). The helper's `debug_assert!`
+        // is what audits the pair from now on.
+        if self.continuous_effects.any_in_family(mod_families::KEYWORD_EDIT, |e| {
+            match &e.modification {
+                Modification::RemoveKeyword(k) | Modification::CantHaveKeyword(k) => pred(k),
+                Modification::ReplaceColorWord(..) | Modification::ReplaceBasicLandType(..) => true,
+                _ => false,
+            }
+        }) {
             return true;
         }
         self.battlefield.iter().any(|c| card_can_remove_keyword(c, &pred))
@@ -10759,12 +10779,22 @@ impl GameState {
         // is a payload-carrying enum and its `PartialEq` is not free — into a
         // branch no predicate takes unless it names one of the three.
         let synth = pred(&Keyword::Hexproof) || pred(&Keyword::CantBlock) || pred(&Keyword::Menace);
-        (self.continuous_effects.has_family(mod_families::KEYWORD)
-            && self
-                .continuous_effects
-                .iter()
-                .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k))))
-            || self.board_grants_keyword(&pred, synth)
+        // One fold read for two families, and `any_in_family` is what keeps
+        // the mask and the predicate from drifting apart (`(-346)`).
+        // ⚠ **The two layer-3 rewrites belong on this side as well as on
+        // `keyword_removal_in_scope`'s**: `ReplaceColorWord` turns
+        // `Protection(A)` into `Protection(B)`, which *produces* a keyword no
+        // instance field carries, and `ReplaceBasicLandType` does the same to
+        // `Landwalk`. Neither names the payload `pred` asks about, so a
+        // rewrite in scope is "maybe" whatever the predicate.
+        self.continuous_effects.any_in_family(
+            mod_families::KEYWORD | mod_families::KEYWORD_EDIT,
+            |e| match &e.modification {
+                Modification::AddKeyword(k) => pred(k),
+                Modification::ReplaceColorWord(..) | Modification::ReplaceBasicLandType(..) => true,
+                _ => false,
+            },
+        ) || self.board_grants_keyword(&pred, synth)
             || self.offboard_grants_keyword(&pred, synth)
     }
 
@@ -11433,6 +11463,37 @@ impl GameState {
                 || self.pt_reduction_in_scope(),
             "the layer-7 presence gate missed a toughness-lowering source",
         );
+        // The keyword-*removal* gate's audit, the mirror of the grant one
+        // below and in the same place. A new emitter of a layer-6 removal or
+        // a layer-3 keyword rewrite that neither the family fold nor
+        // `card_can_remove_keyword` knows about trips this on the first debug
+        // run that plays the card — which is the check `(-345)` did not have
+        // and `(-346)` is.
+        #[cfg(debug_assertions)]
+        {
+            let mut seen: Vec<&Keyword> = Vec::new();
+            for e in &out {
+                match &e.modification {
+                    Modification::RemoveKeyword(k) | Modification::CantHaveKeyword(k)
+                        if !seen.contains(&k) =>
+                    {
+                        seen.push(k);
+                        debug_assert!(
+                            self.keyword_removal_in_scope(|x: &Keyword| x == k),
+                            "the keyword-removal presence gate missed a source for {k:?}",
+                        );
+                    }
+                    // The rewrites name no keyword, so the gate has to answer
+                    // "maybe" for every predicate while one is in scope.
+                    Modification::ReplaceColorWord(..)
+                    | Modification::ReplaceBasicLandType(..) => debug_assert!(
+                        self.keyword_removal_in_scope(|_: &Keyword| false),
+                        "the keyword-removal presence gate missed a layer-3 keyword rewrite",
+                    ),
+                    _ => {}
+                }
+            }
+        }
         // The keyword-grant gate's audit, same direction and same place.
         // Deduplicated first: a gather can carry a dozen `AddKeyword`s and
         // each check is a battlefield walk.
@@ -26958,9 +27019,14 @@ fn card_can_remove_keyword(card: &CardInstance, pred: &impl Fn(&Keyword) -> bool
         return true;
     }
     card.definition
-        .static_abilities
+        .station
         .iter()
-        .any(|sa| static_effect_removes_keyword(&sa.effect, pred))
+        .any(|b| b.statics.iter().any(|sa| static_effect_removes_keyword(sa, pred)))
+        || card
+            .definition
+            .static_abilities
+            .iter()
+            .any(|sa| static_effect_removes_keyword(&sa.effect, pred))
 }
 
 /// The `StaticEffect` half of [`card_can_remove_keyword`], with the same
@@ -26972,6 +27038,12 @@ fn static_effect_removes_keyword(
     use crate::effect::StaticEffect as SE;
     match effect {
         SE::LoseKeyword { keyword, .. } | SE::CantHaveKeyword { keyword, .. } => pred(keyword),
+        // CR 612 — Swirl the Mists rewrites every non-chosen colour word,
+        // which retypes `Protection(A)` into `Protection(B)`: it takes one
+        // keyword away and hands back another, and it names neither. The
+        // grant twin carries it for the same reason
+        // (`static_effect_grants_keyword`'s unbounded arm).
+        SE::AllColorWordsBecomeChosen => true,
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }
         | SE::WhileNotYourTurn { inner }

@@ -189,6 +189,19 @@ pub mod mod_families {
     /// (`card::is_ability_lock_keyword`) — the [`KEYWORD`] subset the
     /// activation gates ask about, so they read one word instead of the list.
     pub const ABILITY_LOCK: u32 = 1 << 7;
+    /// A modification that **edits an existing keyword** rather than granting
+    /// one: `RemoveKeyword` / `CantHaveKeyword` (layer 6) and the two layer-3
+    /// text rewrites that move a keyword's payload without changing its shape
+    /// (`ReplaceColorWord` on `Protection`, `ReplaceBasicLandType` on
+    /// `Landwalk`). Kept out of [`KEYWORD`] because that bit means "a grant"
+    /// to the gates that already consume it, and out of [`STRIP`] because
+    /// that one means `RemoveAllAbilities` exactly.
+    ///
+    /// ⚠ **The four were mapped to NO family until `(-346)`**, and
+    /// `keyword_removal_in_scope` was gating a walk that looks for them on
+    /// [`KEYWORD`] — see [`ContinuousEffects::any_in_family`], which is the
+    /// guard that now makes that mistake a test failure.
+    pub const KEYWORD_EDIT: u32 = 1 << 8;
     /// The fold is computed; bit 31, so a zero word is "unknown".
     pub(super) const VALID: u32 = 1 << 31;
 }
@@ -199,11 +212,15 @@ pub fn modification_families(m: &Modification) -> u32 {
     use mod_families as F;
     let kind = match m {
         M::AddCardType(_) | M::RemoveCardType(_) | M::SetCardTypes(_) => F::CARD_TYPE,
-        M::AddLandType(_) | M::SetLandTypes(_) | M::ReplaceBasicLandType(..) => F::LAND_TYPE,
+        M::AddLandType(_) | M::SetLandTypes(_) => F::LAND_TYPE,
+        // Two families: a layer-4 land-type change *and* the layer-3 rewrite
+        // of a `Landwalk` payload (CR 612 / 702.15).
+        M::ReplaceBasicLandType(..) => F::LAND_TYPE | F::KEYWORD_EDIT,
         M::AddCreatureType(_) | M::SetCreatureTypes(_) => F::CREATURE_TYPE,
         M::AddColor(_) | M::SetColors(_) | M::LoseAllColors => F::COLOR,
         M::AddKeyword(k) if crate::card::is_ability_lock_keyword(k) => F::KEYWORD | F::ABILITY_LOCK,
         M::AddKeyword(_) => F::KEYWORD,
+        M::RemoveKeyword(_) | M::CantHaveKeyword(_) | M::ReplaceColorWord(..) => F::KEYWORD_EDIT,
         M::RemoveAllAbilities => F::STRIP,
         _ => 0,
     };
@@ -258,6 +275,45 @@ impl ContinuousEffects {
     #[inline]
     pub fn has_family(&self, family: u32) -> bool {
         self.families() & family != 0
+    }
+
+    /// `has_family(mask) && iter().any(pred)` — the fold used as a gate on a
+    /// per-entry walk — **with the implication that makes it sound audited.**
+    ///
+    /// ⚠ **The short-circuit is only correct when every entry `pred` accepts
+    /// carries a bit of `mask` in [`modification_families`], and that is a
+    /// premise the caller writes down in two places at once.** It shipped
+    /// wrong once: `(-345)`'s keyword-removal gate read
+    /// `has_family(KEYWORD) && any(RemoveKeyword | CantHaveKeyword)`, and
+    /// `modification_families` mapped **neither** of those to a family, so a
+    /// resolved "loses flying until your next turn" was invisible to the gate
+    /// and every "creature with flying" filter still matched the grounded
+    /// creature. Nothing in the type system connected the two halves.
+    ///
+    /// This does. Under `debug-assertions` the `false` answer re-runs `pred`
+    /// over the whole list and asserts it finds nothing, so the first board
+    /// that reaches a mis-mapped modification fails the suite or a sweep cell
+    /// instead of answering wrongly. Release pays the fold and the walk, as
+    /// before.
+    ///
+    /// ⚠ **`pred` is `Copy` and goes to `any` by value, never by reference** —
+    /// `&F: FnMut` routes every element through
+    /// `core::ops::function::impls::call_mut`, which does not inline;
+    /// `Battlefield::lane`'s doc prices the same mistake at 18.8 M Ir, and the
+    /// first cut of this helper paid **+0.16 % on all three pools** for it.
+    #[inline]
+    pub fn any_in_family(
+        &self,
+        mask: u32,
+        pred: impl Fn(&ContinuousEffect) -> bool + Copy,
+    ) -> bool {
+        let hit = self.has_family(mask) && self.list.iter().any(pred);
+        debug_assert!(
+            hit || !self.list.iter().any(pred),
+            "a modification this predicate accepts carries none of the mask's families — \
+             modification_families and the gate's mask have drifted apart",
+        );
+        hit
     }
 
     #[inline(never)]

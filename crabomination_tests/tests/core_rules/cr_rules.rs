@@ -11456,6 +11456,103 @@ fn cr_613_6_has_keyword_sees_a_statically_granted_keyword() {
     );
 }
 
+/// CR 613.6 (layer 6) — the *removal* direction through the route the first
+/// presence gate missed (`(-346)`). `Effect::LoseKeyword` writes the
+/// instance's own removal list for `EndOfTurn` / `Permanent`, but any other
+/// duration installs a **stored** `Modification::RemoveKeyword`, which no
+/// instance field carries. The gate read `has_family(KEYWORD)` before the
+/// walk that looks for it, and `modification_families` mapped `RemoveKeyword`
+/// to no family at all, so the fold short-circuited the walk away and every
+/// "creature with flying" filter still matched the grounded creature.
+#[test]
+fn cr_613_6_has_keyword_sees_a_stored_keyword_removal() {
+    use crabomination::card::{Keyword, SelectionRequirement as R};
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(0, catalog::wind_drake());
+    let ctx = EffectContext::for_ability(flyer, 0, None);
+    g.resolve_effect(
+        &Effect::LoseKeyword {
+            what: Selector::This,
+            keyword: Keyword::Flying,
+            duration: Duration::UntilNextTurn,
+        },
+        &ctx,
+    )
+    .expect("resolve");
+    assert!(
+        g.battlefield_find(flyer).expect("present").has_keyword(&Keyword::Flying),
+        "the INSTANCE still has flying — the removal is a stored modification",
+    );
+    assert!(
+        !g.computed_permanent(flyer).expect("on the battlefield").keywords().contains(&Keyword::Flying),
+        "and the computed view has lost it",
+    );
+    assert!(
+        !g.evaluate_requirement_static(
+            &R::HasKeyword(Keyword::Flying),
+            &Target::Permanent(flyer),
+            0,
+            None,
+        ),
+        "HasKeyword must see a stored RemoveKeyword",
+    );
+}
+
+/// CR 613.6 — the same direction through an attachment's
+/// `EquipBonus::remove_keywords` (Sky Tether's "enchanted creature loses
+/// flying"), which reaches `RemoveKeyword` by a different route.
+#[test]
+fn cr_613_6_has_keyword_sees_an_aura_removed_keyword() {
+    use crabomination::card::{Keyword, SelectionRequirement as R};
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(0, catalog::wind_drake());
+    let tether = g.add_card_to_battlefield(0, catalog::sky_tether());
+    g.battlefield_find_mut(tether).expect("present").attached_to = Some(flyer);
+    assert!(
+        g.battlefield_find(flyer).expect("present").has_keyword(&Keyword::Flying),
+        "the INSTANCE still has flying — that is the gap",
+    );
+    assert!(
+        !g.computed_permanent(flyer).expect("on the battlefield").keywords().contains(&Keyword::Flying),
+        "the computed view has lost it",
+    );
+    assert!(
+        !g.evaluate_requirement_static(
+            &R::HasKeyword(Keyword::Flying),
+            &Target::Permanent(flyer),
+            0,
+            None,
+        ),
+        "HasKeyword must read the computed set on the removal side too",
+    );
+}
+
+/// CR 613.6 — and through a printed `StaticEffect::LoseKeyword` (Rolling
+/// Stones' "Walls can attack as though they didn't have defender"), the third
+/// route into the same modification.
+#[test]
+fn cr_613_6_has_keyword_sees_a_statically_removed_keyword() {
+    use crabomination::card::{Keyword, SelectionRequirement as R};
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(0, catalog::wall_of_earth());
+    g.add_card_to_battlefield(0, catalog::rolling_stones());
+    assert!(
+        g.battlefield_find(wall).expect("present").has_keyword(&Keyword::Defender),
+        "the INSTANCE still has defender — that is the gap",
+    );
+    assert!(
+        !g.evaluate_requirement_static(
+            &R::HasKeyword(Keyword::Defender),
+            &Target::Permanent(wall),
+            0,
+            None,
+        ),
+        "HasKeyword must see the static's layer-6 removal",
+    );
+}
+
 /// CR 613.5 (layer 5) — the colour twin of the test above. `SetColors` /
 /// `AddColor` / `LoseAllColors` are layer 5 and live only in the computed
 /// view; `printed_color_set` is the printed union and is the whole answer

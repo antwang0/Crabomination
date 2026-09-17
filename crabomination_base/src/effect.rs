@@ -10118,11 +10118,17 @@ pub fn static_effect_grants_keyword(
         // ETB-chosen colour, a counter count), so the only sound answer while
         // the static is present is "maybe". All five are rare enough that the
         // gate still reads `false` on essentially every board.
+        // CR 612 — Swirl the Mists rewrites every non-chosen colour word, so
+        // it turns `Protection(A)` into `Protection(B)`: a keyword no field
+        // on the affected card carried, produced by a *text* change. It is
+        // unbounded in exactly the same sense as the five below, and
+        // `static_effect_removes_keyword` carries it for the other direction.
         SE::GainKeywordsFromExiledWith { .. }
         | SE::SelfHasDraftNotedKeywords
         | SE::AnnihilatorPerPlusOneCounter
         | SE::GrantProtectionFromChosenColor { .. }
         | SE::ProtectionFromExiledWithCardTypes
+        | SE::AllColorWordsBecomeChosen
         | SE::YouAndCreaturesProtectionFromChosenCardType => true,
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }
