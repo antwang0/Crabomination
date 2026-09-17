@@ -4279,9 +4279,7 @@ impl GameState {
                     // CR 303 — "enchanted" = an Aura is attached. Equipment also
                     // sets `attached_to`, so require the attachment be an
                     // enchantment to exclude it.
-                    R::IsEnchanted => self.battlefield.iter().any(|o| {
-                        o.attached_to == Some(*cid) && o.definition.is_enchantment()
-                    }),
+                    R::IsEnchanted => self.permanent_is_enchanted(*cid),
                     R::PutIntoGraveyardFromBattlefieldThisTurn => {
                         self.deaths.graveyard_from_battlefield_this_turn.contains(cid)
                     }
@@ -5454,10 +5452,7 @@ impl GameState {
             // Answerable off live state even for a card that has left the
             // battlefield: the Aura's `attached_to` still points at it during
             // the death replacement (Necromancer's Magemark).
-            R::IsEnchanted => self
-                .battlefield
-                .iter()
-                .any(|o| o.attached_to == Some(card.id) && o.definition.is_enchantment()),
+            R::IsEnchanted => self.permanent_is_enchanted(card.id),
             // CR 301.5 — same reasoning for "equipped" (Rakdos Riteknife's
             // tap-an-equipped-creature cost).
             R::IsEquipped => self.attached_equipment_count(card.id) > 0,

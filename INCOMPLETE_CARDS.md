@@ -157,12 +157,21 @@ silently drops. **And `false` is not conservative in both directions:** under
 Now a suite gate: `core_rules::cr_rules::audit_block_restriction_filters_use_
 leaves_the_block_walker_handles` walks every factory's serialized definition
 (printed keywords and granted ones alike), pulls every block filter out of it
-and asserts each leaf is one the walker handles or a named exception. **One
-exception at the 2026-09-17 tip, out of 30 filters:**
+and asserts each leaf is one the walker handles or a named exception. ✅ **ZERO
+exceptions as of 2026-09-17, out of 30 filters** — the audit's `KNOWN_DEAD`
+list is empty and the test fails if a line is added back without a card to
+carry it.
 
-| Card | Leaf | What drops | The shape a fix takes |
-|---|---|---|---|
-| Temple Thief (`thb.rs`) | `IsEnchanted` | "can't be blocked by enchanted creatures **or** enchantment creatures" — only the `Enchantment` half fires, so an Aura'd blocker still blocks | The walker has no `&GameState`; the bit costs a board walk per (blocker, attacker) pair (~0.11 % of `cube`) unless it is gated on the attacker actually carrying such a filter. Thread one `blocker_enchanted: bool` through `can_block_attacker_computed`'s signature (2 engine call sites, ~10 test ones) and compute it once per *blocker*, not per pair. |
+The one entry it held, Temple Thief's `IsEnchanted`, is fixed: CR 303.4 is a
+board fact, so it is a **parameter** (`blocker_enchanted`) threaded through
+`can_block_attacker_computed`, answered once per *blocker* rather than per
+(blocker, attacker) pair, and behind `attachment_in_scope()` so a board with
+nothing attached pays a fold read. 📐 **The useful half is the shape, not the
+card**: a state-free walker that needs one board fact takes it as an argument
+from the caller that already holds `&GameState` — and the same commit made
+`GameState::permanent_is_enchanted` the single oracle, which the requirement
+walker's two `IsEnchanted` leaves now call instead of open-coding the same
+`battlefield.iter().any(..)` a third and fourth time.
 
 ---
 

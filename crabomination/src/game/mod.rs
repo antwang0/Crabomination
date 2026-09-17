@@ -16895,11 +16895,15 @@ impl GameState {
         if !self.blocker_can_block_anything(blocker, blocker_cp) {
             return false;
         }
+        // Per *blocker*, not per pair: CR 303.4 is a board fact about this
+        // creature and the loop below varies the attacker.
+        let blocker_enchanted = self.permanent_is_enchanted(blocker.id);
         attackers.iter().any(|(atk, atk_cp)| {
             !self.blocker_matching_restriction_bars(blocker, blocker_cp.keywords(), atk.id)
                 && can_block_attacker_computed(
                     blocker,
                     blocker_cp,
+                    blocker_enchanted,
                     atk_cp.keywords(),
                     atk_cp.colors,
                     atk_cp.power,
@@ -16946,6 +16950,26 @@ impl GameState {
             blocker.controller,
             Some(blocker.id),
         )
+    }
+
+    /// CR 303.4 — is an Aura attached to `id`? **The one oracle for
+    /// "enchanted"**, shared by the requirement walker's two `IsEnchanted`
+    /// leaves and by [`can_block_attacker_computed`]'s block filter, which
+    /// had three hand-written copies of the question between them and one of
+    /// them — the block filter's — did not exist at all (it fell through to
+    /// `false`).
+    ///
+    /// An Equipment and a Fortification also set `attached_to`, so the
+    /// attachment must be an *enchantment*. Behind
+    /// [`attachment_in_scope`](Self::attachment_in_scope), so a board with
+    /// nothing attached — most of them — answers it with a fold read.
+    #[inline]
+    pub(crate) fn permanent_is_enchanted(&self, id: CardId) -> bool {
+        self.attachment_in_scope()
+            && self
+                .battlefield
+                .iter()
+                .any(|o| o.attached_to == Some(id) && o.definition.is_enchantment())
     }
 
     /// CR 509.1a/b — the whole blocker-side half of
@@ -17173,7 +17197,14 @@ impl GameState {
                 _ => {}
             }
         }
-        if !can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power) {
+        if !can_block_attacker_computed(
+            blocker,
+            blocker_cp,
+            self.permanent_is_enchanted(blocker.id),
+            atk_kws,
+            atk_colors,
+            atk_power,
+        ) {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         None
@@ -28993,9 +29024,17 @@ pub(crate) fn attacker_block_reqs(kws: &[Keyword]) -> AttackerBlockReqs {
 /// Returns true if `blocker` is legally allowed to block `attacker`.
 /// Uses `blocker_kws` / `attacker_kws` as the effective keyword sets
 /// (from `ComputedPermanent`) instead of the raw definition keywords.
+/// `blocker_enchanted` is CR 303.4's board fact — is an Aura attached to the
+/// blocker — and it is a **parameter** because no computed view carries it and
+/// this function holds no `&GameState`. [`GameState::permanent_is_enchanted`]
+/// is the one oracle for it; a caller outside the engine that cannot answer it
+/// passes `false`, which is the conservative direction (the blocker is *more*
+/// able to block). It is per-*blocker*, so a caller looping attackers inside a
+/// fixed blocker answers it once.
 pub fn can_block_attacker_computed(
     blocker: &CardInstance,
     blocker_computed: &ComputedPermanent,
+    blocker_enchanted: bool,
     attacker_kws: &[Keyword],
     attacker_colors: crate::mana::ColorSet,
     attacker_power: i32,
@@ -29145,12 +29184,22 @@ pub fn can_block_attacker_computed(
             // blocked by [filter]", against the blocker's computed
             // characteristics.
             Keyword::CantBeBlockedExceptBy(filter)
-                if !blocker_matches_block_filter(blocker, blocker_computed, filter) =>
+                if !blocker_matches_block_filter(
+                    blocker,
+                    blocker_computed,
+                    blocker_enchanted,
+                    filter,
+                ) =>
             {
                 return false;
             }
             Keyword::CantBeBlockedBy(filter)
-                if blocker_matches_block_filter(blocker, blocker_computed, filter) =>
+                if blocker_matches_block_filter(
+                    blocker,
+                    blocker_computed,
+                    blocker_enchanted,
+                    filter,
+                ) =>
             {
                 return false;
             }
@@ -29174,14 +29223,24 @@ pub fn can_block_attacker_computed(
 /// that "can't be blocked except by [filter]" cards actually use (type,
 /// color, keyword, power/toughness thresholds). Unsupported variants resolve
 /// to `false` (conservatively excluding the blocker).
+/// `enchanted` is CR 303.4 for this blocker, supplied by the caller because
+/// it is the one leaf here that is a *board* fact — see
+/// [`can_block_attacker_computed`].
 fn blocker_matches_block_filter(
     blocker: &CardInstance,
     computed: &ComputedPermanent,
+    enchanted: bool,
     req: &SelectionRequirement,
 ) -> bool {
     use SelectionRequirement as R;
     match req {
         R::Any | R::Permanent | R::Creature => true,
+        // CR 303.4 — "enchanted", i.e. an Aura is attached. The thirty-sixth
+        // find: this was the one leaf of the thirty a machine audit walks
+        // that fell through to `_ => false`, so Temple Thief's "can't be
+        // blocked by enchanted creatures **or** enchantment creatures" only
+        // ever barred the second half and an Aura'd blocker still blocked.
+        R::IsEnchanted => enchanted,
         // ⚠ Every characteristic the computed view carries is read off it,
         // not off `blocker.definition` — the doc above has said "computed"
         // since this function was written, but the five type leaves read the
@@ -29210,14 +29269,14 @@ fn blocker_matches_block_filter(
         R::ToughnessGreaterThanPower => computed.toughness > computed.power,
         R::HasCardType(ct) => computed.card_types().contains(ct),
         R::And(a, b) => {
-            blocker_matches_block_filter(blocker, computed, a)
-                && blocker_matches_block_filter(blocker, computed, b)
+            blocker_matches_block_filter(blocker, computed, enchanted, a)
+                && blocker_matches_block_filter(blocker, computed, enchanted, b)
         }
         R::Or(a, b) => {
-            blocker_matches_block_filter(blocker, computed, a)
-                || blocker_matches_block_filter(blocker, computed, b)
+            blocker_matches_block_filter(blocker, computed, enchanted, a)
+                || blocker_matches_block_filter(blocker, computed, enchanted, b)
         }
-        R::Not(inner) => !blocker_matches_block_filter(blocker, computed, inner),
+        R::Not(inner) => !blocker_matches_block_filter(blocker, computed, enchanted, inner),
         _ => false,
     }
 }

@@ -3016,7 +3016,7 @@ fn cr_702_36_fear_blockable_only_by_artifact_or_black() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, attacker_kws, crabomination::mana::ColorSet::empty(), 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, false, attacker_kws, crabomination::mana::ColorSet::empty(), 2),
             expect, "{why}"
         );
     };
@@ -3038,7 +3038,7 @@ fn cr_702_13_intimidate_blockable_only_by_artifact_or_shared_color() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, attacker_colors, 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, false, &attacker_kws, attacker_colors, 2),
             expect, "{why}"
         );
     };
@@ -3066,7 +3066,7 @@ fn cr_702_72_skulk_blocked_only_by_equal_or_lesser_power() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, crabomination::mana::ColorSet::empty(), 2),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, false, &attacker_kws, crabomination::mana::ColorSet::empty(), 2),
             expect, "{why}"
         );
     };
@@ -3094,7 +3094,7 @@ fn cr_509_1b_cant_be_blocked_by_power_at_least() {
         let inst = g.battlefield_find(blk).unwrap().clone();
         let cp = g.computed_permanent(blk).unwrap();
         assert_eq!(
-            crabomination::game::can_block_attacker_computed(&inst, &cp, &attacker_kws, crabomination::mana::ColorSet::empty(), 5),
+            crabomination::game::can_block_attacker_computed(&inst, &cp, false, &attacker_kws, crabomination::mana::ColorSet::empty(), 5),
             expect, "{why}"
         );
     };
@@ -3262,15 +3262,34 @@ fn cr_606_eidolon_taxes_opponent_loyalty() {
 
 // ── CR 509.1b — block restrictions ────────────────────────────────────────────
 
-/// Temple Thief can't be blocked by enchantment creatures (CR 509.1b).
+/// Temple Thief can't be blocked by **enchanted** creatures (CR 303.4) or
+/// enchantment creatures (CR 509.1b) — both halves of its one filter.
+///
+/// The `IsEnchanted` half was dead until 2026-09-17: the block filter is a
+/// walker of its own with no `&GameState`, so the leaf fell through to
+/// `false` and an Aura'd blocker still blocked. The control assertions are
+/// what make this fail on the old code rather than pass by accident — the
+/// same bear blocks before the Aura is attached and after an *Equipment* is
+/// attached instead.
 #[test]
-fn cr_509_1b_temple_thief_cant_be_blocked_by_enchantment_creatures() {
+fn cr_509_1b_temple_thief_cant_be_blocked_by_enchanted_or_enchantment_creatures() {
     let mut g = two_player_game();
     let thief = g.add_card_to_battlefield(0, catalog::temple_thief());
     let ench_creature = g.add_card_to_battlefield(1, catalog::skola_grovedancer()); // ench creature
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     assert!(!g.blocker_can_block_attacker(ench_creature, thief), "enchantment creature can't block");
     assert!(g.blocker_can_block_attacker(bear, thief), "plain creature can block");
+
+    // CR 303.4 — an Aura attached makes it "enchanted", the other half.
+    let aura = g.add_card_to_battlefield(1, catalog::holy_strength());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    assert!(!g.blocker_can_block_attacker(bear, thief), "an enchanted creature can't block");
+
+    // An *Equipment* also sets `attached_to` and is not an enchantment.
+    g.battlefield_find_mut(aura).unwrap().attached_to = None;
+    let axe = g.add_card_to_battlefield(1, catalog::bonesplitter());
+    g.battlefield_find_mut(axe).unwrap().attached_to = Some(bear);
+    assert!(g.blocker_can_block_attacker(bear, thief), "equipped is not enchanted");
 }
 
 /// Serpent of Yawning Depths can only be blocked by sea creatures (CR 509.1b).
@@ -3758,7 +3777,7 @@ fn cr_702_31_horsemanship_only_blocked_by_horsemanship() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(!crabomination::game::can_block_attacker_computed(
-        binst, &bcomp, acomp.keywords(), acomp.colors, acomp.power),
+        binst, &bcomp, false, acomp.keywords(), acomp.colors, acomp.power),
         "a non-horsemanship creature can't block a horsemanship attacker");
 }
 
@@ -3775,7 +3794,7 @@ fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(!crabomination::game::can_block_attacker_computed(
-        binst, &bcomp, acomp.keywords(), acomp.colors, acomp.power),
+        binst, &bcomp, false, acomp.keywords(), acomp.colors, acomp.power),
         "a shadow creature can't block a non-shadow attacker");
 }
 
@@ -5110,11 +5129,11 @@ fn cr_509_1b_can_block_only_flying_restriction() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(
-        !crabomination::game::can_block_attacker_computed(binst, &bcomp, &[], crabomination::mana::ColorSet::empty(), 3),
+        !crabomination::game::can_block_attacker_computed(binst, &bcomp, false, &[], crabomination::mana::ColorSet::empty(), 3),
         "ground attacker can't be blocked by a fly-only blocker"
     );
     assert!(
-        crabomination::game::can_block_attacker_computed(binst, &bcomp, &[Keyword::Flying], crabomination::mana::ColorSet::empty(), 3),
+        crabomination::game::can_block_attacker_computed(binst, &bcomp, false, &[Keyword::Flying], crabomination::mana::ColorSet::empty(), 3),
         "a flyer can be blocked"
     );
 }
@@ -11305,7 +11324,10 @@ fn cr_613_power_of_reads_the_anthem() {
 /// walker over `SelectionRequirement` (after the static and card walkers), and
 /// it is deliberately state-free: it reads the blocker's computed view and
 /// nothing else, because it runs inside `blocker_pair_block`'s (blocker x
-/// attacker) loop (PERF `(-333)`). Its `_` arm therefore answers `false`, and
+/// attacker) loop (PERF `(-333)`). The one board fact it needs, CR 303.4's
+/// "enchanted", is a **parameter** the caller answers once per blocker
+/// (`GameState::permanent_is_enchanted`), which is the shape any further such
+/// leaf takes. Its `_` arm answers `false`, and
 /// **`false` is not conservative in both directions**: under
 /// `CantBeBlockedExceptBy` an unsupported leaf makes the attacker unblockable,
 /// under `CantBeBlockedBy` it makes the restriction dead.
@@ -11324,14 +11346,14 @@ fn audit_block_restriction_filters_use_leaves_the_block_walker_handles() {
         "Any", "Permanent", "Creature", "Artifact", "Enchantment", "Land", "IsToken", "NotToken",
         "HasColor", "Colorless", "HasKeyword", "HasToxic", "HasModular", "HasMutate",
         "HasCreatureType", "HasArtifactSubtype", "PowerAtMost", "PowerAtLeast", "ToughnessAtMost",
-        "ToughnessAtLeast", "ToughnessGreaterThanPower", "HasCardType", "And", "Or", "Not",
+        "ToughnessAtLeast", "ToughnessGreaterThanPower", "HasCardType", "IsEnchanted", "And", "Or",
+        "Not",
     ];
-    // Known dead leaves, with the card that carries them. A fix deletes a line.
-    //
-    // `IsEnchanted` is a board fact (is an Aura attached to the blocker?) and
-    // the walker has no `&GameState` by design, so Temple Thief's "or
-    // enchanted creatures" half does not fire. Tracked in INCOMPLETE_CARDS.
-    const KNOWN_DEAD: &[(&str, &str)] = &[("Temple Thief", "IsEnchanted")];
+    // Known dead leaves, with the card that carries them. A fix deletes a
+    // line, and **the list is empty as of 2026-09-17**: `IsEnchanted` was the
+    // last one (Temple Thief's "or enchanted creatures" half), closed by
+    // threading the board fact in as a parameter.
+    const KNOWN_DEAD: &[(&str, &str)] = &[];
 
     /// Every `R::` variant name in a requirement tree, from its serde shape:
     /// externally tagged, so a unit variant is a string and every other is a
