@@ -3036,12 +3036,24 @@ explanation until the miss is a novel one.
   (-354) the cold class' pristine byte, 29 sites   -0.181 / -0.163 / -0.111 %
   (-355) two definition Vecs, two lines            -0.192 / -0.169 / -0.157 %
   (-356) the payment snapshot's buffer, pooled     -0.015 / -0.016 / -0.050 %
+  (-357) the protection view's two type lines      -0.026 / -0.075 / -0.002 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                        -0.388 / -0.347 / -0.317 %
+  run total                                        -0.414 / -0.421 / -0.319 %
 ```
 
-**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 572,753,228 /
-1,497,364,499 / 1,617,202,136.**
+**BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 572,604,656 /
+1,496,236,151 / 1,617,174,591.**
+
+📐 **THE RUN'S OWN SHAPE, WHICH IS THE THING TO CARRY FORWARD: four of the
+five rows are ALLOCATIONS, and none of them was on the candidates list.**
+`(-90)` had called the allocation table diffuse for eleven passes and
+candidate (O) censused it by *caller* and concluded "~10,300 takeable
+re-growths, laborious". Ranking the same dump by **source line** —
+`cg_alloc_sites.py` over the whole program rather than one function, which
+nobody had run — produced four rows in one session, three of them
+allocations that should not have existed at all rather than growths a
+`reserve` could move. **When a table has been "diffuse" for eleven passes,
+change the axis you rank it on.**
 
 📐 **ONE COMMIT AND IT IS 40 % OF THE PREVIOUS SESSION'S WHOLE SUM OF ROWS**
 (-0.163 vs -0.413 % of `cube` across six commits), because the previous session
@@ -8377,6 +8389,68 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-357)` the protection view's two type lines become slices — **fixed -0.026 / cube -0.075 / sealed -0.002 %**
+
+`(-355)`'s class again, found in rows 41-75 of the same line table:
+`protection_prevents_views` cloned **both** `creature_types` and `card_types`
+on every call — 2,798 + 2,798 allocations a six-game `cube` run — and only the
+`ProtectionKind::CreatureType` and `ProtectionKind::CardType` arms of its `any`
+read them. Nearly every printed protection is a colour one.
+
+```text
+                  (-356) tip        (-357)            delta
+  fixed            572,753,228       572,604,656       -0.0259 %
+  cube           1,497,364,499     1,496,236,151       -0.0754 %
+  sealed         1,617,202,136     1,617,174,591       -0.0017 %
+
+   -307,765  _int_free                777,494 -> 771,942
+   -251,082  malloc                   733,689 -> 728,093   = the 5,596 predicted
+   -231,714  protection_prevents_views  16,820 calls, body + the hoisted lookup
+   -218,244  free                     733,434 -> 727,838
+   ─────────
+ -1,128,348  = 202 Ir an allocation, against `(-355)`'s 222
+```
+
+**Both sources outlive the `any`** — the computed view and the printed
+definition behind its `Arc` — so there was nothing to own. The same edit
+hoists `battlefield_find`, which the body ran up to four times for its four
+printed fallbacks.
+📐 **`(-352)`'s thunk rule was the wrong tool here and it is worth saying why:
+a thunk is for a fact that is expensive to compute; this one was expensive to
+OWN.** When the ask rate is near zero, first check whether the answer can be
+*borrowed* — a slice needs no thunk, no gate and no lifetime gymnastics.
+⚠ `sealed` reads -0.002 %, i.e. nothing. This row is the bot's block planner
+and `cube`'s boards carry the protection; **rank an allocation row on the pool
+whose census produced it.**
+
+⚠⚠ **AND THE SIBLING IS REFUTED BY THE BORROW CHECKER, WHICH IS A REASON
+NOBODY HAD RECORDED: `Vec<&'a T>` CANNOT BECOME `SmallVec<[&'a T; N]>` IN A
+BORROW-CARRYING STRUCT.** `DispatchScan::equip_grants` (7,752 allocations, the
+seventh-largest site) is `Vec<(CardId, CardId, &'a [TriggeredAbility])>`, and
+swapping it for a `SmallVec` produced four `E0502`s: *"immutable borrow might
+be used here, when `scan` is dropped and runs the destructor for type
+`DispatchScan<'_>`"*. **`Vec`'s `Drop` is `unsafe impl<#[may_dangle] T>`, so
+dropck knows dropping a `Vec<&'a T>` never touches the `&'a T`; `SmallVec`'s
+is not**, so the borrow is forced to live to the end of the scope and every
+`&mut self` call after the scan is built becomes an error. The fix would be
+restructuring those scopes, which is not a perf change. **Check `may_dangle`
+before planning an inline buffer for a container of references.**
+
+💡 **Left ranked and priced for the next pass, all off the one
+`--dump-instr` dump:** `GrantScan::equipment` `Vec<&'a CardInstance>` **4,638**
+— compiles as a `SmallVec<[&'a CardInstance; 4]>` (checked, no dropck problem:
+`GrantScan` is not held across a `&mut self` call), so it is the cheapest
+remaining row; `actions.rs:14198`'s `Box::new(OneColorDecider::default())`
+**6,440**, one per auto-tap call, `(-356)`'s pool shape exactly;
+`actions.rs:14216`'s auto-tap `events` buffer **6,440**, same;
+`card.rs:3346/3347` `TokenDefinition::clone` **6,688**; `card.rs:3159`
+`SelectionRequirement::resolve_x` **4,948** (an `Option`-returning form that
+borrows when nothing changes would delete most of it); `mod.rs:5572`
+`active_team_members` **2,642** (a `Vec<usize>` of one or two seats).
+⚠ **The `IdSet`/`IdMap` insert rows (16,906 + 3,336) and the four combat push
+rows are NOT reserve questions** — see `(-355)`'s closing note on
+`Vec::clone` allocating `len`.
 
 ### `(-356)` `PaymentSnapshot`'s scratch buffer comes off a free list — **fixed -0.015 / cube -0.016 / sealed -0.050 %** — and the inline-buffer alternative is REFUTED
 

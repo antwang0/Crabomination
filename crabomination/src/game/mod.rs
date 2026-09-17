@@ -298,6 +298,7 @@ pub(crate) struct DispatchScan<'a> {
     /// [`GameState::trigger_grant_sources`].
     pub trigger_grants: Vec<TriggerGrant<'a>>,
     /// [`GameState::equip_granted_trigger_sources`]: `(host, source, abilities)`.
+    ///
     pub equip_grants: Vec<(CardId, CardId, &'a [crate::card::TriggeredAbility])>,
 }
 
@@ -16030,36 +16031,35 @@ impl GameState {
         if !Self::view_has_protection(tgt) {
             return false;
         }
-        let src_colors: crate::mana::ColorSet = src_cp.map(|c| c.colors).unwrap_or_else(|| {
-            self.battlefield_find(source)
-                .map(|c| c.definition.cost.color_set())
-                .unwrap_or_default()
-        });
+        // One lookup for the four printed fallbacks below: this ran
+        // `battlefield_find` up to four times a call, and `src_mv` runs it
+        // unconditionally.
+        let src_printed = self.battlefield_find(source);
+        let src_colors: crate::mana::ColorSet = src_cp
+            .map(|c| c.colors)
+            .unwrap_or_else(|| src_printed.map(|c| c.definition.cost.color_set()).unwrap_or_default());
         let src_is_creature = src_cp
             .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
-            .unwrap_or_else(|| {
-                self.battlefield_find(source)
-                    .map(|c| c.definition.is_creature())
-                    .unwrap_or(false)
-            });
+            .unwrap_or_else(|| src_printed.is_some_and(|c| c.definition.is_creature()));
         // CR 702.16e — protection from a creature type prevents damage from a
         // source of that type.
-        let src_creature_types = src_cp
-            .map(|c| c.subtypes().creature_types.clone())
-            .unwrap_or_else(|| {
-                self.battlefield_find(source)
-                    .map(|c| c.definition.subtypes.creature_types.clone())
-                    .unwrap_or_default()
-            });
-        let src_mv = self
-            .battlefield_find(source)
-            .map(|c| c.definition.cost.cmc())
-            .unwrap_or(0);
-        let src_card_types = src_cp.map(|c| c.card_types().to_vec()).unwrap_or_else(|| {
-            self.battlefield_find(source)
-                .map(|c| c.definition.card_types.clone())
-                .unwrap_or_default()
-        });
+        //
+        // ⚠ **Both type lines are SLICES, not clones.** Only the
+        // `CreatureType` and `CardType` arms of the `any` below read them and
+        // nearly every printed protection is a colour one, but the clones ran
+        // on every call: 2,798 + 2,798 allocations a six-game `cube` run at
+        // 222 Ir apiece (PERF `(-357)`). Both sources — the computed view and
+        // the printed definition behind its `Arc` — outlive the `any`, so
+        // there is nothing to own.
+        let src_creature_types: &[crate::card::CreatureType] = match src_cp {
+            Some(c) => &c.subtypes().creature_types,
+            None => src_printed.map_or(&[], |c| &c.definition.subtypes.creature_types),
+        };
+        let src_mv = src_printed.map(|c| c.definition.cost.cmc()).unwrap_or(0);
+        let src_card_types: &[crate::card::CardType] = match src_cp {
+            Some(c) => c.card_types(),
+            None => src_printed.map_or(&[], |c| &c.definition.card_types),
+        };
         tgt.keywords().iter().filter_map(ProtectionKind::of).any(|kind| match kind {
             ProtectionKind::Color(color) => src_colors.contains(color),
             // CR 702.16 — "protection from its colors" (Earnest Fellowship).
