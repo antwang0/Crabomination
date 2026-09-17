@@ -1100,9 +1100,10 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 }
             }
             crate::card::AdditionalCastCost::SacrificeOrPay { filter, pay } => {
+                let gates = crate::game::effects::PrintedGates::default();
                 let has_match = state.battlefield.iter().any(|c| {
                     c.controller == caster
-                        && state.evaluate_requirement_on_card(filter, c, caster)
+                        && state.requirement_on_permanent(filter, c, caster, None, &gates)
                 });
                 if !has_match {
                     tax += pay;
@@ -1178,12 +1179,15 @@ pub(crate) fn extra_cost_for_spell_over<'a>(
                 StaticEffect::SpellTaxPerControllerPermanent { spell_filter, count_filter }
                     if state.evaluate_requirement_on_card(spell_filter, card, caster) =>
                 {
+                    let gates = crate::game::effects::PrintedGates::default();
                     tax += state
                         .battlefield
                         .iter()
                         .filter(|c| {
                             c.controller == caster
-                                && state.evaluate_requirement_on_card(count_filter, c, caster)
+                                && state.requirement_on_permanent(
+                                    count_filter, c, caster, None, &gates,
+                                )
                         })
                         .count() as u32;
                 }
@@ -1605,10 +1609,15 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     if !card.definition.is_instant() && !card.definition.is_sorcery() {
                         continue;
                     }
+                    let gates = crate::game::effects::PrintedGates::default();
                     let count = state
                         .battlefield
                         .iter()
-                        .filter(|c| state.evaluate_requirement_on_card(permanent_filter, c, caster))
+                        .filter(|c| {
+                            state.requirement_on_permanent(
+                                permanent_filter, c, caster, None, &gates,
+                            )
+                        })
                         .count();
                     reduction = reduction.saturating_add(count as u32);
                 }
@@ -1621,10 +1630,15 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                     if !state.evaluate_requirement_on_card(spell_filter, card, caster) {
                         continue;
                     }
+                    let gates = crate::game::effects::PrintedGates::default();
                     let count = state
                         .battlefield
                         .iter()
-                        .filter(|c| state.evaluate_requirement_on_card(permanent_filter, c, caster))
+                        .filter(|c| {
+                            state.requirement_on_permanent(
+                                permanent_filter, c, caster, None, &gates,
+                            )
+                        })
                         .count();
                     reduction = reduction.saturating_add(count as u32);
                 }
@@ -1700,10 +1714,11 @@ fn self_cost_reduction_from_card(
     // `ManaCost::reduce_generic` once the caller folds this back into the
     // cost.
     if let Some(filter) = &card.definition.affinity_filter {
+        let gates = crate::game::effects::PrintedGates::default();
         let count = state
             .battlefield
             .iter()
-            .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
+            .filter(|c| state.requirement_on_permanent(filter, c, caster, None, &gates))
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
@@ -1730,10 +1745,11 @@ fn self_cost_reduction_from_card(
     // Geistlight Snare): each "{amount} less if you control a permanent
     // matching `filter`" clause applies independently.
     for (filter, amount) in &card.definition.self_cost_reduction_if_control {
+        let gates = crate::game::effects::PrintedGates::default();
         if state
             .battlefield
             .iter()
-            .any(|c| state.evaluate_requirement_on_card(filter, c, caster))
+            .any(|c| state.requirement_on_permanent(filter, c, caster, None, &gates))
         {
             reduction = reduction.saturating_add(*amount);
         }
@@ -1931,11 +1947,12 @@ fn self_cost_reduction_from_card(
             // "costs {N} less if you control a permanent matching each
             // filter" (Of One Mind).
             StaticEffect::SelfCostReducedIfControlEach { filters, amount } => {
+                let gates = crate::game::effects::PrintedGates::default();
                 let all_present = filters.iter().all(|f| {
-                    state
-                        .battlefield
-                        .iter()
-                        .any(|c| c.controller == caster && state.evaluate_requirement_on_card(f, c, caster))
+                    state.battlefield.iter().any(|c| {
+                        c.controller == caster
+                            && state.requirement_on_permanent(f, c, caster, None, &gates)
+                    })
                 });
                 if all_present {
                     reduction = reduction.saturating_add(*amount);

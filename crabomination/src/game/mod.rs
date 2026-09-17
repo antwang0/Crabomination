@@ -11730,14 +11730,17 @@ impl GameState {
                 let n = if let Some(att_filter) = &scale.count_host_attachments {
                     // "+1/+0 for each Equipment attached to it" (Golem-Skin
                     // Gauntlets) — count the host's own attachments.
+                    let gates = crate::game::effects::PrintedGates::default();
                     self.battlefield
                         .iter()
                         .filter(|c| {
                             c.attached_to == Some(target)
-                                && self.evaluate_requirement_on_card(
+                                && self.requirement_on_permanent(
                                     att_filter,
                                     c,
                                     card.controller,
+                                    None,
+                                    &gates,
                                 )
                         })
                         .count() as i32
@@ -11816,20 +11819,24 @@ impl GameState {
                             self.evaluate_requirement_on_card(all_gy_filter, c, card.controller)
                         })
                         .count() as i32,
-                    (None, None, None) => self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            (scale.count_all_controllers || c.controller == card.controller)
-                                && !(scale.exclude_host && c.id == target)
-                                && !(scale.exclude_source && c.id == card.id)
-                                && self.evaluate_requirement_on_card(
-                                    &scale.filter,
-                                    c,
-                                    card.controller,
-                                )
-                        })
-                        .count() as i32,
+                    (None, None, None) => {
+                        let gates = crate::game::effects::PrintedGates::default();
+                        self.battlefield
+                            .iter()
+                            .filter(|c| {
+                                (scale.count_all_controllers || c.controller == card.controller)
+                                    && !(scale.exclude_host && c.id == target)
+                                    && !(scale.exclude_source && c.id == card.id)
+                                    && self.requirement_on_permanent(
+                                        &scale.filter,
+                                        c,
+                                        card.controller,
+                                        None,
+                                        &gates,
+                                    )
+                            })
+                            .count() as i32
+                    }
                     }
                 };
                 bp += n * scale.per_power;
@@ -11992,11 +11999,18 @@ impl GameState {
             // green, …" — Shield of the Oversoul). Evaluated against the
             // host's pre-layer state, like `EquipScale` above.
             for cond in &bonus.conditional {
+                let gates = crate::game::effects::PrintedGates::default();
                 let host_matches = self
                     .battlefield
                     .find_by_id(target)
                     .is_some_and(|host| {
-                        self.evaluate_requirement_on_card(&cond.host_filter, host, card.controller)
+                        self.requirement_on_permanent(
+                            &cond.host_filter,
+                            host,
+                            card.controller,
+                            None,
+                            &gates,
+                        )
                     });
                 if !host_matches {
                     continue;
@@ -14088,9 +14102,12 @@ impl GameState {
                     (n, n)
                 }
                 crate::card::DynamicPt::PermanentsControlledMatching { base_p, base_t, ref filter } => {
+                    let gates = crate::game::effects::PrintedGates::default();
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller
-                            && self.evaluate_requirement_on_card(filter, c, card.controller)
+                            && self.requirement_on_permanent(
+                                filter, c, card.controller, None, &gates,
+                            )
                     }).count() as i32;
                     (base_p + n, base_t + n)
                 }
@@ -14099,9 +14116,12 @@ impl GameState {
                     base_t,
                     ref filter,
                 } => {
+                    let gates = crate::game::effects::PrintedGates::default();
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller
-                            && self.evaluate_requirement_on_card(filter, c, card.controller)
+                            && self.requirement_on_permanent(
+                                filter, c, card.controller, None, &gates,
+                            )
                     }).count() as i32;
                     (base_p, base_t + n)
                 }
@@ -14110,10 +14130,15 @@ impl GameState {
                     base_t,
                     ref filter,
                 } => {
+                    let gates = crate::game::effects::PrintedGates::default();
                     let n = self
                         .battlefield
                         .iter()
-                        .filter(|c| self.evaluate_requirement_on_card(filter, c, card.controller))
+                        .filter(|c| {
+                            self.requirement_on_permanent(
+                                filter, c, card.controller, None, &gates,
+                            )
+                        })
                         .count() as i32;
                     (base_p, base_t + n)
                 }
@@ -14122,10 +14147,15 @@ impl GameState {
                     base_t,
                     ref filter,
                 } => {
+                    let gates = crate::game::effects::PrintedGates::default();
                     let n = self
                         .battlefield
                         .iter()
-                        .filter(|c| self.evaluate_requirement_on_card(filter, c, card.controller))
+                        .filter(|c| {
+                            self.requirement_on_permanent(
+                                filter, c, card.controller, None, &gates,
+                            )
+                        })
                         .count() as i32;
                     (base_p + n, base_t)
                 }
@@ -14174,12 +14204,15 @@ impl GameState {
                     (n, base_t)
                 }
                 crate::card::DynamicPt::BasePlusOpponentsMatching { base_p, base_t, filter } => {
+                    let gates = crate::game::effects::PrintedGates::default();
                     let n = self
                         .battlefield
                         .iter()
                         .filter(|c| {
                             !self.same_team(c.controller, card.controller)
-                                && self.evaluate_requirement_on_card(&filter, c, c.controller)
+                                && self.requirement_on_permanent(
+                                    &filter, c, c.controller, None, &gates,
+                                )
                         })
                         .count() as i32;
                     (base_p + n, base_t + n)
@@ -14712,20 +14745,28 @@ impl GameState {
                 else {
                     continue;
                 };
+                let count_gates = crate::game::effects::PrintedGates::default();
                 let counts: Vec<usize> = (0..self.players.len())
                     .map(|seat| {
                         self.battlefield
                             .iter()
                             .filter(|c| c.controller == seat)
-                            .filter(|c| self.evaluate_requirement_on_card(count_filter, c, seat))
+                            .filter(|c| {
+                                self.requirement_on_permanent(
+                                    count_filter, c, seat, None, &count_gates,
+                                )
+                            })
                             .count()
                     })
                     .collect();
+                let gates = crate::game::effects::PrintedGates::default();
                 let ids: crate::game::layers::AffectedIds = self
                     .battlefield
                     .iter()
                     .filter(|c| counts.get(c.controller).is_some_and(|n| *n as u32 <= *max))
-                    .filter(|c| self.evaluate_requirement_on_card(filter, c, c.controller))
+                    .filter(|c| {
+                        self.requirement_on_permanent(filter, c, c.controller, None, &gates)
+                    })
                     .map(|c| c.id)
                     .collect();
                 if !ids.is_empty() {
