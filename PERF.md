@@ -3031,10 +3031,15 @@ be quoted against a tip measured on another.
   (-349) the cleanup guards' cold half         -0.149 / -0.098 / -0.090 %
   (-350) the keyword asks, same gate           -0.064 / -0.042 / -0.034 %
   (-351) the layer pass, same gate             -0.121 / -0.137 / -0.096 %
-  CR 303.4 the block filter's IsEnchanted      TIP_RULES_ROW
+  CR 303.4 the block filter's IsEnchanted      +0.139 / +0.122 / +0.079 %  (a rules fix)
+  (-352) …and that fact becomes a thunk        -0.159 / -0.148 / -0.102 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                    RUN_TOTAL_ROW
+  run total                                    -0.354 / -0.304 / -0.243 %
 ```
+
+**BASE 578,482,885 / 1,509,987,882 / 1,630,351,663 -> CLOSING 576,435,672 /
+1,505,398,754 / 1,626,393,502**, one rules fix among them and it ended up
+paying for itself.
 
 📐 **ONE BYTE, THREE ROWS, AND THE THIRD WAS THE BIGGEST.** The candidate entry
 priced (B) at ~0.12 % of `cube` for one body. What it was actually worth was
@@ -3049,8 +3054,16 @@ bit like it would answer before spending it on the row that suggested it.
 value-identical source, not of a re-run — so a row may be re-measured for free,
 and only a rebuild needs the floor.
 
-**CLOSING TIP ABSOLUTES at `a878464f`, same recipe: fixed 577,254,354 / cube
-1,507,866,096 / sealed 1,628,320,869.**
+**CLOSING TIP ABSOLUTES at `c44cbbd7`, same recipe: fixed 576,435,672 / cube
+1,505,398,754 / sealed 1,626,393,502.**
+⚠⚠ **AND THEY DESCRIBE A TREE THE BRANCH TIP NO LONGER IS.** A concurrent
+session landed `143980a7` (Round 76b, 731 lines of `server/bot.rs` — the search
+re-sizes X arms by the outcome eval) *after* this session's last own-tree
+measurement, so the pilot plays different games from here on: **every absolute
+above, and the `--bench` invariant, is stale at the branch tip and the next run
+must RE-TAKE the base rather than predict it from this block.** The A/B rows
+are unaffected — each was built and measured from one tree — which is the whole
+reason this file quotes rows and absolutes separately.
 
 sweep   **1 block — fresh seeds 1416..1417 at the `a878464f` tip: 6 cells /
         29,600 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 4`,
@@ -8277,6 +8290,44 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-352)` `blocker_enchanted` becomes a thunk — **fixed -0.159 / cube -0.148 / sealed -0.102 %**
+
+The rules fix one commit earlier (CR 303.4 / 509.1b, the block filter's
+`IsEnchanted` leaf) answered its board fact **eagerly at a per-pair call site**,
+because `blocker_pair_block` IS the per-pair function, and
+`permanent_is_enchanted` is a battlefield walk whenever anything on the board is
+attached:
+
+```text
+  blocker_pair_block   17,528 calls   135.1 -> 238.5 Ir/call   +0.12 % of cube
+```
+
+📐 **A GATE IN FRONT OF A WALK DOES NOT MAKE THE WALK CHEAP ENOUGH TO CALL
+UNCONDITIONALLY.** `attachment_in_scope()` is the right gate and it is a fold
+read — but these boards *do* have attachments, so the gate answers `true` and
+the walk runs. **Two of forty-odd arms can ask, and both need an attacker
+carrying a `CantBeBlockedBy` / `CantBeBlockedExceptBy` filter, which nearly no
+attacker does. When the ask rate is near zero and the answer is not free, pass
+a THUNK, not a value.** `impl Fn() -> bool + Copy`, by value into the filter
+walker's recursion — never by reference, `(-346)` paid +0.16 % for that.
+
+```text
+                  rules fix         (-352)            delta
+  fixed            577,356,334       576,435,672       -0.1595 %
+  cube           1,507,627,645     1,505,398,754       -0.1479 %
+  sealed         1,628,050,790     1,626,393,502       -0.1018 %
+```
+
+Against the `(-351)` tip — i.e. the rules fix and this together — it is
+**-0.021 / -0.027 / -0.023 %**: the fix is now cheaper than not having it. Two
+things pay for it beyond the removed walk. The requirement walker's two
+`IsEnchanted` leaves gained `attachment_in_scope()`'s gate when they moved onto
+the shared oracle; and making the function generic got it **inlined** —
+`can_block_attacker_computed`'s own 17,014-call / 88.7-Ir row disappears into
+`blocker_pair_block`, which lands at 197.2 against the ~221 the two rows summed
+to. ⚠ **A row that vanishes between two dumps has usually been inlined, not
+deleted; add its Ir/call to its caller's before calling it a win.**
 
 ### `(-351)` the layer pass takes the cold gate — **fixed -0.121 / cube -0.137 / sealed -0.096 %**
 
@@ -15224,7 +15275,10 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      `score_candidate` (9,246) — call the ~90 k, not the 148 k.
 
   ✅ **B. TAKEN as `(-349)`, and the device generalised the same day as
-     `(-350)` — fixed -0.213 / cube -0.140 / sealed -0.125 % for the pair.**
+     `(-350)` and `(-351)` — fixed -0.334 / cube -0.277 / sealed -0.220 % for
+     the three.** `(-351)`, on `compute_permanent_pass`, was the *largest* of
+     them, which is the reading to keep: the entry priced one body at ~0.12 %
+     and the bit was worth two and a half times that across three families.
      Not in either shape this entry priced. The dirty bit it spent two passes
      refusing to build is 114 write sites *at `CardData`'s 26 fields*; the bit
      that landed is at **`CardCold`'s one `&mut` route**, so it needed no write
@@ -15238,15 +15292,25 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      was read as a reason to reach for `Arc::ptr_eq`.
      ⚠ **The `Arc::ptr_eq` / shared-default form is still refuted and stays
      refuted** — nothing below is stale, it is just no longer the way in.
-     💡 **AND THE OPEN HALF IS THE INTERESTING ONE: `cold_written` is now a
-     free byte every hot `CardCold` reader can gate on, and only the keyword
-     family (`(-350)`) has taken it.** Unsurveyed readers, by site count:
+     💡 **AND THE OPEN HALF IS THE INTERESTING ONE: `cold_pristine()` is now a
+     free byte every hot `CardCold` reader can gate on, and only three families
+     have taken it** (the cleanup guards, the keyword asks, the layer pass).
+     Unsurveyed readers, by site count:
      `may_play_until` 49, `named_card` 39, `exiled_by` 26, `goaded_by` 22,
      `front_face` / `face_up_def` 37, `granted_activated_abilities` /
      `granted_activated_eot` 34. **Census them the way (H) was censused** —
      grep the field, take the enclosing function, join against a `cube` dump —
      rather than gating them one at a time; a site in a body with no self row
-     is not a perf question.
+     is not a perf question. 📐 **The census is ten lines of python and it is
+     what found `(-351)`**: walk `crabomination{,_base}/src`, attribute each
+     cold-field read to the enclosing `fn`, join the names against
+     `cg_calls.py`'s table. **140 fns read a `CardCold` field and only 54 have
+     a self row in a six-game `cube` dump**; the top four by self Ir were
+     `compute_permanent_pass` (54.2 M, 9 sites), `gather_continuous_effects_
+     inner` (29.9 M, but its only real site is one `named_card` read inside a
+     per-card static walk — the naive fn attribution over-counts, so read the
+     site before believing the row), `declare_attackers_banded` (22.4 M) and
+     `cast_candidates` (16.6 M).
 
   B. (the original filing, kept for its numbers and its refutations)
      `CardInstance::clear_end_of_turn_effects`   36,634 / 51,750 / 55,258 calls
@@ -15416,6 +15480,28 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
      widen the cloned struct — the piles are 7-30 cards where the battlefield
      is ~23 and asked constantly, so the hit rate that made `(-38)` pay may not
      be there at all.
+
+  💡 **O. THE ALLOCATION TABLE IS THE BIGGEST SINGLE THING LEFT AND IT IS
+     SIZED: 755,903 allocations a six-game `cube` run.** `malloc` 35,697,399 +
+     `_int_malloc` 30,518,576 + `_int_free` 46,607,108 + `free` 29,469,406 +
+     `__rdl_alloc`/`__rust_alloc`/`__rust_dealloc`/`__rdl_dealloc`'s four
+     one-Ir shim rows ≈ **149 M Ir = 9.9 % of `cube`**, before the
+     `Vec::drop` (8.2 M) and `finish_grow` (7.6 M) rows above them. `(-90)`
+     has called this "the diffuse allocation table" for eleven passes and
+     nobody has asked the one question that would rank it: **`cg_alloc_sites.py`
+     against the top callers — how many of the 755,903 are one shape?**
+     `SpecFromIterNested::from_iter` alone is 318,856 calls / 35.3 M.
+     ⚠ The recycle-list rules (`(-166)`..`(-168)`) are the precedent and they
+     are three entries deep, so the device is known to work here; what is
+     missing is the census, not the device.
+
+  💡 **P. `Player::deref_mut` under `declare_attackers_banded` — 27,312 calls
+     (exactly two a declaration) / 2.69 M inclusive / 98.6 Ir a call, UNREAD.**
+     The `(-280)` CoW family's shape on the *seat* rather than the card, and
+     nothing in the Log has looked at the attack declaration's two seat writes.
+     98.6 Ir a call is an unshare, not a store. **Read it with the family's own
+     one-dump census** (`--demangle=no`, `cg_edges.py --callers make_mut_slow`,
+     grep the caller for `PlayerCold`'s field names) before building anything.
 
   D. the remaining keyword-ask ratio in `pick_attacks_inner` — DECLINED, ~0.017 %.
      See `(-330)`'s Log entry: the five per-blocker sites now take one
