@@ -3051,6 +3051,25 @@ runs.
 functions that went to zero calls, i.e. inlined) — see the Log entry. The
 shipped-profile figure is ~0.13 % of `cube`.
 
+sweep   **1 block — fresh seeds 1422..1423: 6 cells / 29,600 games / 0
+        failures**, `cap 0 / stuck 0 / draw 0`, pools `cube all sealed`,
+        `target-audit/overflow` with `-C debug-assertions=yes`. **FRONTIER
+        1424.** The block is `(-354)`'s whole ratchet and it is one
+        assertion covering twenty-nine sites: `cold_any`'s recompute-and-compare
+        fires if any of the twenty-nine predicates ever answers `true` on a
+        pristine group. 📐 **That is the shape to prefer — a class-wide device
+        gets a class-wide audit for free, where twenty-nine hand-written gates
+        would have needed twenty-nine assertions and any one of them could
+        have been the one nobody wrote.**
+        Suite **19,603 / 0 / 6** (`CRAB_ANSWER_LOG=strict`), golden traces
+        unmoved, clippy **0** over the workspace, `cargo check --profile
+        release-fast -p crabomination` clean.
+        `--bench` at the `(-354)` tip: **195,806 / 27.49 / 611.9 / 0 stalls**,
+        byte-identical to the committed invariant, `determinism ok`,
+        `thread_determinism ok (3 vs 1)`, `peak_rss_mib` 25.5.
+        `games_per_s` 283.59 single-run — inside the 212-407 spread this file
+        records, so not a reading.
+
 ### 2026-09-17 (the cold-group session, FOURTEENTH box) — candidate (B) taken at the group's one `&mut` route instead of at its 114 write sites
 
 **BASE ABSOLUTES at `a1ff92f3`** (`profiling-fast --no-default-features`,
