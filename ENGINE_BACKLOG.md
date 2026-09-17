@@ -82,7 +82,7 @@ the handoff.
 
 # Bugs & robustness
 
-## FIXED 2026-09-17 (thirty-seventh and thirty-eighth finds) — a THIRD and FOURTH place that answers "what is this creature's power", and the census that says which of the rest are not bugs
+## FIXED 2026-09-17 (thirty-seventh to thirty-ninth finds) — a THIRD and FOURTH place that answers "what is this creature's power", the type half beside it, and the census that says which of the rest are not bugs
 
 The thirty-third find fixed the requirement walker's P/T *comparison* arms and
 the thirty-fourth fixed `Value::PowerOf`; both came out of "which of these two
@@ -141,6 +141,24 @@ row.** `Value::PowerOf`'s fix cost `fixed +0.118 %` for ONE read, because
 already holds and go through `computed_permanent_on`. **Seventeen computed
 reads here cost +0.001 / +0.022 / +0.001 % between them** — a seventh of what
 one cost before. Use the `_on` form whenever the caller is walking the board.
+
+**(39) And the TYPE half of the same six arms**, taken next: they filtered on
+`c.definition.is_creature()`, so an animated Mutavault was invisible to "the
+creature with the greatest power you control" and to Drop of Honey's cull, and
+a permanent a layer-4 effect had retyped out of creature-hood was still
+eligible. `GameState::computed_is_creature` carries it, **gated the way
+`printed_requirement_impl` gates its own `card_type` closure** — bestowed, or a
+layer-4 card-type source in scope — so the common path is a word load and the
+printed read. It reads **-0.001 / -0.000 / -0.000 %**: a gated computed read
+can be *cheaper* than the printed one it replaces, because the arm it replaced
+was doing a `Vec<CardType>::contains`. Test
+`drop_of_honey_sees_an_animated_land_as_a_creature`.
+
+⚠ **605 `definition.is_*()` reads remain and this is NOT a grep to run to the
+end.** The overwhelming majority are on cards in hand, graveyard, library or
+the stack, where the printed answer is the only one there is. The tractable
+question is the narrow one: a battlefield permanent, in a rules decision, on a
+board where a layer-4 source is in scope.
 
 Tests, all with the negative-control board and all verified to FAIL on the
 pre-fix line: `drop_of_honey_ranks_the_computed_power_not_the_printed_one`,

@@ -3022,11 +3022,12 @@ CPU *model*, not about boxes**: two boxes of the same shape and toolchain
 agree to noise, and the twelfth box's own +0.196 / +0.090 / +0.089 % against
 the eleventh was a different CPU (@ 2.80 GHz).
 
-**CLOSING TIP ABSOLUTES at `928ccbca`, same recipe: fixed 579,810,595 / cube
-1,512,328,349 / sealed 1,633,742,099** — the run's whole movement is
-**+0.025 / +0.137 / +0.080 %**, i.e. three rules-correctness class fixes
-(sixty-one call sites, six selector arms, eleven effect/cost arms) for about a
-seventh of a percent of `cube`, and every point of it is accounted for:
+**CLOSING TIP ABSOLUTES at `a4fc16ed`, same recipe: fixed 579,804,578 / cube
+1,512,323,627 / sealed 1,633,737,757** — the run's whole movement is
+**+0.024 / +0.136 / +0.079 %**, i.e. four rules-correctness class fixes
+(sixty-one call sites, six selector arms with both their P/T and their type
+halves, eleven effect/cost arms) for about a seventh of a percent of `cube`,
+and every point of it is accounted for:
 
 ```text
   the battlefield gate on evaluate_requirement_on_card  +0.093 / +0.636 / +0.146 %
@@ -3034,7 +3035,15 @@ seventh of a percent of `cube`, and every point of it is accounted for:
   (-344) the loop watch settles off the digest's head   -0.072 / -0.240 / -0.071 %
   the six P/T SELECTOR arms onto effective_*_on         +0.001 / +0.006 / -0.001 %
   the eleven P/T effect + cost arms onto effective_*_on +0.001 / +0.016 / +0.002 %
+  the same six arms' TYPE filters onto computed_is_creature
+                                                        -0.001 / -0.000 / -0.000 %
 ```
+
+📐 **The last row is a gated computed read reading NEGATIVE, and that is the
+shape to copy.** `computed_is_creature` answers off the printed definition
+unless the permanent is bestowed or a layer-4 card-type source is in scope —
+`printed_requirement_impl`'s own gate — so the common path is a word load,
+and the arms it replaced were doing a `Vec<CardType>::contains` each.
 
 📐 **The last two rows are the counterweight to the `Value::PowerOf` reading
 the twelfth box filed (`fixed +0.118 %` for ONE such read), and the difference
@@ -3058,12 +3067,13 @@ walker instead of through `requirement_on_permanent` reads **+0.026 / +0.844 /
 +0.096 %** — worse on the pool that matters, so the printed-line evaluator
 earns its place in the gate.
 
-sweep   **FOUR blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
-        1402..1403 at `1c7f0414` and 1404..1405 at `928ccbca`: 24 cells /
-        118,400 games / 0 failures**, `cap 2 / board 0 / stuck 0 / draw 18`,
+sweep   **FIVE blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
+        1402..1403 at `1c7f0414`, 1404..1405 at `928ccbca` and 1406..1407 at
+        `a4fc16ed`: 30 cells / 148,000 games / 0 failures**, `cap 2 / board 0 /
+        stuck 0 / draw 24`,
         pools `cube all sealed`, `target-audit/overflow` with
         `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`. **FRONTIER
-        1406.** The two caps are both `cube` 1402/1403 `MAX_BATTLEFIELD`
+        1408.** The two caps are both `cube` 1402/1403 `MAX_BATTLEFIELD`
         runaways on a saturated seat (768 permanents, life `i32::MAX`) — the
         carve-out the script's header documents, not re-run. ⚠ **The 1402..1403
         block is `(-344)`'s ratchet**: its `debug_assert_ne!` recomputes the
@@ -3071,15 +3081,15 @@ sweep   **FOUR blocks — fresh seeds 1398..1401 at the `d1e10986` tip,
         **run twice with byte-identical aggregates**, which is a determinism
         reading as well. Cells run 21-59 s here, each block ~3m55s against a
         **7m58s** cold / **2m03s** engine-only `overflow` build. Standing
-        audits: `audit_stubs` **0 flagged** over 21,797 unique cards,
-        `audit_panics` **70 sites / 59 guarded / 11 lock-poison / 0 bare**,
-        `audit_doc_drift` **0 BODY WRONG / 0 doc rot / 0 stale notes**. Suite
-        at the closing tip **19,592 / 0 / 5** (five regression tests and one
+        audits at the closing tip: `audit_stubs` **0 flagged** over 21,797
+        unique cards, `audit_panics` **70 sites / 59 guarded / 11 lock-poison /
+        0 bare**, `audit_doc_drift` **0 BODY WRONG / 0 doc rot / 0 stale
+        notes**. Suite **19,593 / 0 / 5** (six regression tests and one
         audit added), clippy **0** over the workspace, `cargo check --profile
         release-fast -p crabomination --bin bot_ladder` clean. `--bench`:
-        **195,806 / 27.49 / 611.9 / 0 stalls**, `peak_rss_mib 25.0-25.2`,
+        **195,806 / 27.49 / 611.9 / 0 stalls**, `peak_rss_mib 25.0-25.3`,
         `determinism ok`, `thread_determinism ok (3 vs 1)` — byte-identical to
-        the committed invariant across all six commits of the run.
+        the committed invariant across all eight commits of the run.
         ⚠ Box timings, thirteenth box (4 cores, 15 GB — the twelfth's shape):
         cold test build **5m30s**, full suite **1m47-2m03s**, cold
         `profiling-fast` **8m21s** / engine-only **2m38-3m02s**, cold `release`
