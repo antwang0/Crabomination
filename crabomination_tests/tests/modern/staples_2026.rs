@@ -1193,6 +1193,42 @@ fn esper_sentinel_paid_tax_denies_the_draw() {
     assert!(g.battlefield_find(mtn).unwrap().tapped, "auto-tapped the Mountain");
 }
 
+/// "An opponent casts **their** first noncreature spell each turn" is per
+/// opponent, not once per turn. `once_per_turn` (CR 603.3d) is exact at two
+/// players and silently capped the ability at one fire in a pod, which is the
+/// two-player assumption this test exists to pin: three seats, one noncreature
+/// spell each, three draws — and a second spell from the same seat draws
+/// nothing.
+#[test]
+fn esper_sentinel_taxes_each_opponents_first_noncreature_spell() {
+    let mut g = crabomination::game::multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::esper_sentinel());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let cast_bolt_from = |g: &mut GameState, seat: usize| {
+        let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+        g.players[seat].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(g);
+    };
+    let before = g.players[0].hand.len();
+    cast_bolt_from(&mut g, 1);
+    assert_eq!(g.players[0].hand.len(), before + 1, "seat 1's first");
+    cast_bolt_from(&mut g, 2);
+    assert_eq!(g.players[0].hand.len(), before + 2, "seat 2's first — a separate ability");
+    cast_bolt_from(&mut g, 1);
+    assert_eq!(g.players[0].hand.len(), before + 2, "seat 1's second is not their first");
+}
+
 /// Mystic Remora draws off every opponent noncreature spell ({4} unpaid).
 #[test]
 fn mystic_remora_draws_off_noncreature_spells() {

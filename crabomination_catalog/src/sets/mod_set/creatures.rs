@@ -9614,12 +9614,24 @@ pub fn esper_sentinel() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Noncreature,
-                })
-                .once_per_turn(),
+            // "their first noncreature spell each turn" is per OPPONENT, not
+            // once per turn: `once_per_turn` (CR 603.3d) is exact at two
+            // players and silently caps the ability at one fire in a pod.
+            // Zenith Chronicler's shape instead — the caster's own count.
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Noncreature,
+                    },
+                    Predicate::ValueEquals(
+                        Value::NoncreatureSpellsCastThisTurn(PlayerRef::ControllerOf(Box::new(
+                            Selector::TriggerSource,
+                        ))),
+                        Value::ONE,
+                    ),
+                ]),
+            ),
             effect: Effect::UnlessPlayerPays {
                 who: PlayerRef::Triggerer,
                 cost: crate::card::WardCost::GenericSourcePower,
