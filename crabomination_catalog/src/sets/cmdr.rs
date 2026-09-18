@@ -11,7 +11,10 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate};
+use crate::effect::{
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, StaticAbility,
+    StaticEffect,
+};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 use crate::game::TurnStep;
 
@@ -296,6 +299,76 @@ pub fn yuriko_the_tigers_shadow() -> CardDefinition {
                 who: PlayerRef::EachOpponent,
                 you_gain: false,
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Ur-Dragon — {4}{W}{U}{B}{R}{G} Legendary Creature — Dragon Avatar
+/// 10/10. "Eminence — As long as The Ur-Dragon is in the command zone or on
+/// the battlefield, other Dragon spells you cast cost {1} less to cast.
+/// Flying. Whenever one or more Dragons you control attack, draw that many
+/// cards, then you may put a permanent card from your hand onto the
+/// battlefield."
+///
+/// CR 113.6b — `statics_in_command_zone` is what makes the eminence half
+/// function off the battlefield; the flag is card-level and this card's only
+/// static is that one. "Other" is a name exclusion, since a cost-reduction
+/// filter is evaluated against the cast card with no source in scope.
+pub fn the_ur_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "The Ur-Dragon",
+        cost: cost(&[generic(4), w(), u(), b(), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 10,
+        toughness: 10,
+        keywords: vec![Keyword::Flying],
+        statics_in_command_zone: true,
+        static_abilities: vec![StaticAbility {
+            description: "Other Dragon spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: R::HasCreatureType(CreatureType::Dragon)
+                    .and(R::HasName("The Ur-Dragon".into()).negate()),
+                amount: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Dragon),
+                })
+                .once_per_batch(),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::count(Selector::EachPermanent(
+                        R::Creature
+                            .and(R::ControlledByYou)
+                            .and(R::HasCreatureType(CreatureType::Dragon))
+                            .and(R::IsAttacking),
+                    )),
+                },
+                Effect::MayDo {
+                    description: "Put a permanent card from your hand onto the battlefield?"
+                        .into(),
+                    body: Box::new(Effect::PutFromHandOntoBattlefield {
+                        who: PlayerRef::You,
+                        filter: R::Permanent,
+                        count: Value::ONE,
+                        tapped: false,
+                        haste: false,
+                        sacrifice_eot: false,
+                        return_eot: false,
+                        then: None,
+                    }),
+                },
+            ]),
         }],
         ..Default::default()
     }

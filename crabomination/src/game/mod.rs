@@ -4454,7 +4454,7 @@ impl GameState {
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
         if !self.command_zones_are_empty() {
             for p in &self.players {
-                for src in p.command.iter().filter(|c| c.command_zone_abilities_active()) {
+                for src in p.command.iter().filter(|c| c.command_zone_statics_active()) {
                     if src.dispatch_scan_bits() & db::GRANT_TRIGGER != 0 {
                         self.push_trigger_grants(src, &mut out);
                     }
@@ -4838,7 +4838,7 @@ impl GameState {
                 for src in p
                     .command
                     .iter()
-                    .filter(|c| c.command_zone_abilities_active())
+                    .filter(|c| c.command_zone_statics_active())
                     .filter(|c| c.dispatch_scan_bits() & db::GRANT_TRIGGER != 0)
                 {
                     for sa in &src.definition.static_abilities {
@@ -6082,7 +6082,7 @@ impl GameState {
             self.players
                 .iter()
                 .flat_map(|p| p.command.iter())
-                .find(|c| c.id == id && c.command_zone_abilities_active())
+                .find(|c| c.id == id && c.command_zone_statics_active())
         })
     }
 
@@ -6096,7 +6096,7 @@ impl GameState {
         self.battlefield
             .iter()
             .filter(move |c| c.controller == seat)
-            .chain(self.players[seat].command.iter().filter(|c| c.command_zone_abilities_active()))
+            .chain(self.players[seat].command.iter().filter(|c| c.command_zone_statics_active()))
     }
 
     /// Every object contributing controller-scoped statics to *any* seat —
@@ -6106,7 +6106,7 @@ impl GameState {
         self.battlefield.iter().chain(
             self.players
                 .iter()
-                .flat_map(|p| p.command.iter().filter(|c| c.command_zone_abilities_active())),
+                .flat_map(|p| p.command.iter().filter(|c| c.command_zone_statics_active())),
         )
     }
 
@@ -6812,7 +6812,7 @@ impl GameState {
         // cards — so a clear lane on a board with no such card leaves only
         // the turn-scoped Combine Guildmage grant (PERF `(-239)`).
         if !self.battlefield.has_etb_counter_static()
-            && !self.players.iter().any(|p| p.command.iter().any(|c| c.command_zone_abilities_active()))
+            && !self.players.iter().any(|p| p.command.iter().any(|c| c.command_zone_statics_active()))
         {
             let mut specs = vec![];
             if ec.definition.is_creature() {

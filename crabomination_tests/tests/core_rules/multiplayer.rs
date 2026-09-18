@@ -1750,6 +1750,67 @@ fn cr_702_124_commander_pair_needs_partner_or_background() {
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })));
 }
 
+/// CR 113.6b — the *static* half of eminence. The Ur-Dragon's cost reduction
+/// functions from the command zone, so a Dragon spell in hand is {1} cheaper
+/// before he has ever been cast; and "other" means he does not discount
+/// himself.
+#[test]
+fn cr_113_6b_eminence_static_functions_from_the_command_zone() {
+    use crabomination::mana::Color;
+    // Ryusei, the Falling Star is {5}{R}: six mana, or five with the discount.
+    let cast_ryusei_with = |mana: u32, seat_ur: bool| {
+        let mut g = two_player_game();
+        if seat_ur {
+            g.seat_commanders(0, vec![catalog::the_ur_dragon()]);
+        }
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        let ryusei = g.add_card_to_hand(0, catalog::ryusei_the_falling_star());
+        g.players[0].mana_pool.add(Color::Red, mana);
+        g.perform_action(GameAction::CastSpell {
+            card_id: ryusei,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_ok()
+    };
+    assert!(!cast_ryusei_with(5, false), "{{5}}{{R}} is six mana with no Ur-Dragon");
+    assert!(cast_ryusei_with(5, true), "…and five with him in the command zone");
+}
+
+/// CR 113.6b — "other Dragon spells": casting The Ur-Dragon himself out of the
+/// command zone gets no discount from his own eminence static.
+#[test]
+fn the_ur_dragon_does_not_discount_himself() {
+    use crabomination::mana::Color;
+    let cast_with = |mana: u32| {
+        let mut g = two_player_game();
+        let ur = g.seat_commanders(0, vec![catalog::the_ur_dragon()])[0];
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            g.players[0].mana_pool.add(c, 1);
+        }
+        g.players[0].mana_pool.add(Color::Red, mana);
+        g.perform_action(GameAction::CastFromCommandZone {
+            card_id: ur,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+            alternative: false,
+            pitch_card: None,
+        })
+        .is_ok()
+    };
+    assert!(!cast_with(3), "{{4}}{{W}}{{U}}{{B}}{{R}}{{G}} is not discounted to eight");
+    assert!(cast_with(4), "…and nine mana pays it");
+}
+
 // ── CR 702.49d — commander ninjutsu ───────────────────────────────────────
 
 /// A seat-0 attacker the defender left unblocked, with the game parked in the

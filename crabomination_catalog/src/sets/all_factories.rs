@@ -12935,6 +12935,7 @@ static MOD_SET: &[Factory] = &[
     super::cmdr::oloro_ageless_ascetic,
     super::cmdr::arahbo_roar_of_the_world,
     super::cmdr::yuriko_the_tigers_shadow,
+    super::cmdr::the_ur_dragon,
     super::decks::khorvath_brightflame,
     super::mod_set::reflecting_pool,
     super::mod_set::gaeas_cradle,

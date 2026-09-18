@@ -3770,6 +3770,15 @@ pub struct CardDefinition {
     /// Read by `format::validate_commander_deck`; false everywhere else.
     #[serde(default)]
     pub can_be_commander: bool,
+    /// CR 113.6b — this card's *static* abilities also function while it is in
+    /// its owner's command zone (The Ur-Dragon's eminence cost reduction).
+    /// Card-level rather than per-ability, which the trigger axis is
+    /// (`EventSpec.zone`): a `StaticAbility` is `{description, effect}` in
+    /// 2,275 catalog literals, and no printed card has one static that
+    /// functions there beside one that doesn't. Set it only on a card where
+    /// *every* static functions in the command zone.
+    #[serde(default)]
+    pub statics_in_command_zone: bool,
     /// CR 604.3 CDA — "As long as [this] isn't on the battlefield, it's a
     /// 1/1 Insect creature in addition to its other types" (Grist). Zone
     /// filters treat the card as a creature everywhere but the battlefield.
@@ -9199,6 +9208,13 @@ impl CardInstance {
         self.definition.is_vanguard()
             || self.definition.is_plane()
             || (self.definition.is_conspiracy() && !self.face_down)
+    }
+
+    /// CR 113.6b — whether this card's *static* abilities function from the
+    /// command zone: the whole-card cases above, plus a card that prints the
+    /// zone on its statics (Eminence).
+    pub fn command_zone_statics_active(&self) -> bool {
+        self.command_zone_abilities_active() || self.definition.statics_in_command_zone
     }
 
     /// `face_up_def` and swap `definition` to the vanilla 2/2 face-down

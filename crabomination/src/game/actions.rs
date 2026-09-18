@@ -1180,7 +1180,7 @@ impl<'a> CostStaticSources<'a> {
                 .players
                 .iter()
                 .flat_map(|p| p.command.iter())
-                .filter(|c| carries_cost_static(c) && c.command_zone_abilities_active()),
+                .filter(|c| carries_cost_static(c) && c.command_zone_statics_active()),
         );
         Self { cards, bf }
     }
