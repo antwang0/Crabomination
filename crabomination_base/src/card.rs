@@ -1661,8 +1661,10 @@ pub enum Keyword {
     /// (`format::validate_commander_deck`). No in-game effect.
     Partner,
     /// CR 702.124c — "Partner with [name]". Lets this and the named card be
-    /// co-commanders. (The ETB "target player may search for [name]"
-    /// trigger is a separate triggered ability on the card.)
+    /// co-commanders. The keyword itself is deck construction; the printed ETB
+    /// ("target player may put [name] into their hand from their library") is
+    /// a separate triggered ability the card carries, minted by
+    /// `effect::shortcut::partner_with_search`.
     PartnerWith(String),
     /// CR 702.124j — "Choose a Background". This commander may be paired
     /// with a legendary Background enchantment as its second commander.
