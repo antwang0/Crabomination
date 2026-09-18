@@ -1450,10 +1450,11 @@ fn kessig_wolf_run_pumps_and_grants_trample() {
     let land = g.add_card_to_battlefield(0, catalog::kessig_wolf_run());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2); // X=2
     g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: Some(2), mode: None,
-    }).expect("activate {2}{R}, {T}");
+    }).expect("activate {X}{R}{G}, {T}");
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
     assert_eq!(b.power, 4, "+2/+0 (base 2 + X=2)");

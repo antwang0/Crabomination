@@ -1321,7 +1321,7 @@ pub fn kessig_wolf_run() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     let pump = ActivatedAbility {
         tap_cost: true,
-        mana_cost: cost(&[crate::mana::x(), crate::mana::r()]),
+        mana_cost: cost(&[crate::mana::x(), crate::mana::r(), crate::mana::g()]),
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(crate::card::SelectionRequirement::Creature),

@@ -1475,10 +1475,16 @@ fn color_identity_unions_cost_colors() {
     assert!(!id.contains(Color::Red), "Atraxa has no red pip");
     assert_eq!(id.len(), 4);
 
-    // Empty identity for a colorless card. Mox Pearl ({0}) returns
-    // ColorSet::empty() since there are no colored pips in the cost.
+    // CR 903.4 counts rules-text symbols too: Mox Pearl's `{0}` cost is
+    // colorless but its "{T}: Add {W}" makes it white, and so illegal in a
+    // deck whose commander is not. (This assertion read `ColorSet::empty()`
+    // until the identity walk learned to read past the mana cost.)
     let mox = catalog::mox_pearl();
-    assert_eq!(color_identity(&mox), ColorSet::empty());
+    assert_eq!(color_identity(&mox), ColorSet::single(Color::White));
+
+    // A source that adds *any* color prints no colored symbol — Sol Ring
+    // stays colorless and fits every commander.
+    assert_eq!(color_identity(&catalog::sol_ring()), ColorSet::empty());
 }
 
 #[test]

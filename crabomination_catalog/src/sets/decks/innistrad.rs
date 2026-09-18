@@ -41,6 +41,12 @@ fn werewolf_dfc(
 ) -> CardDefinition {
     let mut back_keywords = back_kw;
     back_keywords.push(Keyword::Nightbound);
+    // CR 105.2c — a night face has no mana cost, so its color comes from a
+    // printed color indicator. Without one the transformed permanent is
+    // colorless (wrong for protection/removal) and CR 903.4's identity loses
+    // the back face. The cycle's night face matches its day face; the one MID
+    // exception (Suspicious Stowaway's green back on a blue front) overrides
+    // the indicator after this call.
     let back = CardDefinition {
         name: back_name,
         card_types: vec![CardType::Creature],
@@ -48,6 +54,7 @@ fn werewolf_dfc(
             creature_types: vec![CreatureType::Werewolf],
             ..Default::default()
         },
+        color_indicator: front_cost.colors(),
         power: back_pt.0,
         toughness: back_pt.1,
         keywords: back_keywords,
@@ -112,7 +119,7 @@ fn on_combat_damage_to_player(effect: Effect) -> TriggeredAbility {
 /// Suspicious Stowaway // Seafaring Werewolf — {1}{U} 1/1 unblockable Human
 /// Rogue Werewolf. Combat damage → loot. Back: 2/1, combat damage → draw.
 pub fn suspicious_stowaway() -> CardDefinition {
-    werewolf_dfc(
+    let mut stowaway = werewolf_dfc(
         "Suspicious Stowaway",
         cost(&[generic(1), u()]),
         vec![
@@ -140,7 +147,13 @@ pub fn suspicious_stowaway() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-    )
+    );
+    // The cycle's only off-color night face: Seafaring Werewolf is green on a
+    // blue day face, which is where the card's CR 903.4 {G} identity comes from.
+    if let Some(back) = stowaway.back_face.as_deref_mut() {
+        back.color_indicator = vec![crate::mana::Color::Green];
+    }
+    stowaway
 }
 
 /// Tireless Hauler // Dire-Strain Brawler — {4}{G} 4/5 vigilant Werewolf.

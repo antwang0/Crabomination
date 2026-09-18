@@ -137,7 +137,10 @@ pub fn rofellos_commander_main() -> &'static [CardFactory] {
         worldly_tutor,
         sol_ring,
         mox_emerald,
-        mox_pearl, // colorless — fits any commander identity
+        // CR 903.4 — Mox Pearl's "{T}: Add {W}" makes its identity white, so
+        // it is illegal under a mono-green commander. A colorless rock is
+        // what the slot wanted.
+        mind_stone,
         // Threats / utility
         tarmogoyf,
         reclamation_sage,

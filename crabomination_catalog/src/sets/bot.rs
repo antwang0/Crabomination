@@ -8,7 +8,7 @@ use crate::card::{
     Keyword, Subtypes, Supertype, TriggeredAbility,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Selector};
-use crate::mana::{ManaCost, cost, generic, r};
+use crate::mana::{Color, ManaCost, cost, generic, r};
 
 /// A Transformers front face: a legendary artifact creature Robot whose
 /// More Than Meets the Eye cost casts it converted onto its Vehicle back.
@@ -62,6 +62,9 @@ fn vehicle(name: &'static str, power: i32, toughness: i32) -> CardDefinition {
 /// connects.
 pub fn slicer_high_speed_antagonist() -> CardDefinition {
     CardDefinition {
+        // CR 105.2c — the converted face prints a red color indicator; it is a
+        // costless back face, so this is its whole color.
+        color_indicator: vec![Color::Red],
         keywords: vec![Keyword::LivingMetal, Keyword::FirstStrike, Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),

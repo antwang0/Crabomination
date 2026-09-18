@@ -8336,6 +8336,7 @@ pub fn kain_traitorous_dragoon() -> CardDefinition {
 pub fn cecil_dark_knight() -> CardDefinition {
     let paladin = CardDefinition {
         name: "Cecil, Redeemed Paladin",
+        color_indicator: vec![Color::White],
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

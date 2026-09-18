@@ -203,7 +203,7 @@ pub fn invasion_of_theros() -> CardDefinition {
         name: "Ephara, Ever-Sheltering",
         card_types: vec![CardType::Enchantment, CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        color_indicator: vec![Color::White],
+        color_indicator: vec![Color::White, Color::Blue],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::God],
             ..Default::default()

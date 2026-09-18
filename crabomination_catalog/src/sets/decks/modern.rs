@@ -2889,9 +2889,12 @@ pub fn orcish_lumberjack() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
+            // "Add three mana in any combination of {R} and/or {G}" — a
+            // per-pip choice, not three fixed {R} (which also lost the {G}
+            // from the card's CR 903.4 color identity).
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![Color::Red, Color::Red, Color::Red]),
+                pool: ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::Const(3)),
             },
             once_per_turn: false,
             sorcery_speed: false,
@@ -47789,6 +47792,8 @@ pub fn reflection_of_kiki_jiki() -> CardDefinition {
     use crate::effect::DelayedTriggerKind;
     CardDefinition {
         name: "Reflection of Kiki-Jiki",
+        // CR 105.2c — the Saga's back face prints a red color indicator.
+        color_indicator: vec![Color::Red],
         card_types: vec![CardType::Enchantment, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
@@ -53303,6 +53308,8 @@ pub fn brutal_cathar() -> CardDefinition {
     };
     let moonrage_brute = CardDefinition {
         name: "Moonrage Brute",
+        // CR 105.2c — the night face prints a red color indicator.
+        color_indicator: vec![Color::Red],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Werewolf],
@@ -53581,6 +53588,7 @@ pub fn sorin_of_house_markov() -> CardDefinition {
     use crate::game::types::TurnStep;
     let neonate = CardDefinition {
         name: "Sorin, Ravenous Neonate",
+        color_indicator: vec![Color::White, Color::Black],
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
         base_loyalty: 3,
@@ -53710,6 +53718,7 @@ pub fn tamiyo_inquisitive_student() -> CardDefinition {
     use crate::card::LoyaltyAbility;
     let scholar = CardDefinition {
         name: "Tamiyo, Seasoned Scholar",
+        color_indicator: vec![Color::Blue, Color::Green],
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
         base_loyalty: 2,
@@ -53895,6 +53904,7 @@ pub fn ral_monsoon_mage() -> CardDefinition {
         .or(SelectionRequirement::HasCardType(CardType::Sorcery));
     let prodigy = CardDefinition {
         name: "Ral, Leyline Prodigy",
+        color_indicator: vec![Color::Blue, Color::Red],
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
         base_loyalty: 2,
@@ -55452,6 +55462,7 @@ pub fn ajani_nacatl_pariah() -> CardDefinition {
     };
     let avenger = CardDefinition {
         name: "Ajani, Nacatl Avenger",
+        color_indicator: vec![Color::White, Color::Red],
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
         subtypes: Subtypes {
@@ -63870,7 +63881,10 @@ pub fn zagoth_mamba() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        mutate: Some(cost(&[generic(1), b(), g()])),
+        // No mutate ability of its own — Zagoth Mamba only carries the
+        // "whenever this creature mutates" trigger, which fires when another
+        // mutating creature merges onto it. The invented `mutate` cost gave
+        // the card a {G} it does not print (CR 903.4 identity B, not BG).
         triggered_abilities: vec![on_mutate(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),

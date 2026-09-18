@@ -326,6 +326,27 @@ Paradox Surveyor was one of the 38.
 
 ---
 
+## CR 903.4 color-identity divergences (from the Scryfall audit)
+
+`cr_903_4_computed_color_identity_matches_scryfall` (core_rules /
+`catalog_registration.rs`) compares every implemented card's computed identity
+against Scryfall's `color_identity`: **18,058 cards resolved, 15 divergences**,
+each a card gap rather than an identity-walk gap. The list in that test is the
+ratchet; this is the engineering view of it.
+
+| Card | Gap | What it needs |
+|---|---|---|
+| Mythos of Nethroi / Illuna / Vadrok / Snapdax | the "if {C}{C} was spent to cast this" half is dropped; each is modelled as its unconditional half only | wire `Predicate::ManaSpentOfColorAtLeast` into the four resolve effects (the predicate exists and the Ravnica "if {R} was spent" cards already use its sibling) |
+| Balduvian Fallen | the "+1/+0 for each {R} spent to pay cumulative upkeep" payoff is dropped | a per-color read of what paid a cumulative upkeep; no primitive |
+| Tribal Golem | the granted `{B}: Regenerate` (Zombie clause) is dropped, along with four other conditional grants | `StaticEffect` granting an *activated ability* conditionally |
+| Archangel of Wrath | `Keyword::Kicker` is a single cost; "Kicker {B} and/or {R}" keeps only one half | a multi-kicker-cost shape (also unblocks the rest of the "and/or" kicker cycle) |
+| Branch of Vitu-Ghazi | "add two mana of any one color" is modelled as a fixed `{W}{W}` — wrong mana *and* a white identity the card does not have | `AddManaKeptThisTurn` takes `Vec<Color>`; it wants a `ManaPayload` so `AnyOneColor` can flow through it |
+| Callous Sell-Sword | the Burn Together adventure half ({R}) is unimplemented | adventure wiring exists; the half was never written |
+| Cruel Somnophage | the Can't Wake Up adventure half ({1}{U}) is unimplemented | as above |
+| Augusta, Dean of Order | the Plargg, Dean of Chaos MDFC face ({1}{R}) is unimplemented | MDFC wiring exists; the face was never written |
+| Fist of Suns, Leyline of Mutation | "You may pay {W}{U}{B}{R}{G} rather than pay the mana cost for spells you cast" | no primitive for a static alternative cost granted to *other* spells |
+| Maraxus of Keld, Bounty Hunter | not card gaps — the Scryfall cache resolves the name to a different card (one Vanguard avatar, one creature) than the catalog holds | nothing; the rows document the collision |
+
 ## Highest-priority single-card gaps
 
 ### Body-only stubs — entire signature ability missing (all ✓ code-verified)

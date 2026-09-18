@@ -21,6 +21,7 @@ pub mod catalog {
 
 mod card_registry;
 pub mod audit;
+pub mod color_identity;
 
 /// `CopyVec` — a `SmallVec` whose `Clone` is a memcpy; see the module.
 pub use crabomination_base::copyvec;

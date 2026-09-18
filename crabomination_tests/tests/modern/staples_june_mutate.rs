@@ -2823,21 +2823,24 @@ fn plague_wight_shrinks_blockers() {
     assert_eq!((after.power, after.toughness), (3, 3), "blocker got -1/-1");
 }
 
-/// Zagoth Mamba's mutate trigger shrinks an opponent's creature.
+/// Zagoth Mamba's "whenever this creature mutates" trigger shrinks an
+/// opponent's creature. The Mamba has no mutate ability of its own (CR
+/// 702.140 — it only prints the trigger), so the mutation has to come from
+/// another mutate spell landing on it: Glowstone Recluse mutates onto the
+/// Mamba, and the Mamba's trigger sees it.
 #[test]
 fn zagoth_mamba_mutate_debuff() {
     let mut g = two_player_game();
-    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // non-Human host
-    let mamba = g.add_card_to_hand(0, catalog::zagoth_mamba());
+    let mamba = g.add_card_to_battlefield(0, catalog::zagoth_mamba()); // non-Human host
+    let recluse = g.add_card_to_hand(0, catalog::glowstone_recluse());
     let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
-    g.clear_sickness(host);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.clear_sickness(mamba);
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(3);
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(victim))]));
     g.perform_action(GameAction::CastMutate {
-        card_id: mamba, target: host, on_top: false, x_value: None,
-    }).expect("mutate onto host");
+        card_id: recluse, target: mamba, on_top: false, x_value: None,
+    }).expect("mutate onto the Mamba");
     drain_stack(&mut g);
     let v = g.computed_permanent(victim).unwrap();
     assert_eq!((v.power, v.toughness), (2, 2), "Serra Angel got -2/-2");

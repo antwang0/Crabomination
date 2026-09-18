@@ -3371,3 +3371,102 @@ fn every_granted_trigger_kind_reaches_a_walk_that_reads_its_bucket() {
         unread.join("\n  ")
     );
 }
+
+// ── CR 903.4 color identity vs Scryfall ───────────────────────────────────
+
+/// CR 903.4 — every implemented card's computed color identity must equal
+/// Scryfall's `color_identity`. The one table-driven data audit the suite
+/// keeps: identity is the input to Commander deck validation, it is derived
+/// from a dozen scattered places in a `CardDefinition`, and a silent
+/// divergence lets an off-color card into a legal deck.
+///
+/// Skipped: cards the cache does not hold, and the `"__not_found__"`
+/// placeholders (same filter as the keyword audit above).
+#[test]
+fn cr_903_4_computed_color_identity_matches_scryfall() {
+    use crabomination::mana::Color;
+
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let letter = |c: Color| match c {
+        Color::White => 'W',
+        Color::Blue => 'U',
+        Color::Black => 'B',
+        Color::Red => 'R',
+        Color::Green => 'G',
+    };
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    let known: std::collections::HashMap<&str, &str> = KNOWN_IDENTITY_GAPS.iter().copied().collect();
+    let mut stale: Vec<&str> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else { continue };
+        let Some(want) = entry.get("color_identity").and_then(|v| v.as_array()) else { continue };
+        let want: std::collections::BTreeSet<char> =
+            want.iter().filter_map(|v| v.as_str()).filter_map(|s| s.chars().next()).collect();
+        let got: std::collections::BTreeSet<char> =
+            crabomination::format::color_identity(&def).iter().map(letter).collect();
+        checked += 1;
+        let s = |b: &std::collections::BTreeSet<char>| {
+            if b.is_empty() { "C".to_string() } else { b.iter().collect::<String>() }
+        };
+        match (got == want, known.get(def.name)) {
+            (true, Some(_)) => stale.push(def.name),
+            (true, None) | (false, Some(_)) => {}
+            (false, None) => {
+                wrong.push(format!("{}: computed {} want {}", def.name, s(&got), s(&want)))
+            }
+        }
+    }
+    assert!(checked > 5_000, "cache resolved only {checked} cards — is it stale?");
+    assert!(
+        wrong.is_empty(),
+        "{} of {checked} cards have the wrong CR 903.4 color identity:\n  {}",
+        wrong.len(),
+        wrong.join("\n  ")
+    );
+    assert!(
+        stale.is_empty(),
+        "KNOWN_IDENTITY_GAPS lists {} card(s) that now compute correctly — drop the rows: {stale:?}",
+        stale.len(),
+    );
+}
+
+/// The cards whose computed CR 903.4 identity is still wrong, each with the
+/// reason. **Every row is a bug**, not an exemption: an approximated card that
+/// dropped a printed mana symbol, a face the catalog has not implemented, or a
+/// Scryfall name that resolves to a different card. The list is a ratchet — a
+/// card that starts computing correctly must be removed, and a card that
+/// starts computing wrongly fails the test. Mirrored in `INCOMPLETE_CARDS.md`.
+const KNOWN_IDENTITY_GAPS: &[(&str, &str)] = &[
+    // Approximated text drops a printed colored symbol.
+    ("Mythos of Nethroi", "the \"or if {G}{W} was spent\" half is not modelled"),
+    ("Mythos of Illuna", "the \"if {G}{U} was spent\" half is not modelled"),
+    ("Mythos of Vadrok", "the \"if {R}{W} was spent\" half is not modelled"),
+    ("Mythos of Snapdax", "the \"if {W}{B} was spent\" half is not modelled"),
+    ("Balduvian Fallen", "the \"+1/+0 for each {R} spent\" cumulative-upkeep payoff is dropped"),
+    ("Tribal Golem", "the granted \"{B}: Regenerate\" (Zombie clause) is dropped"),
+    ("Archangel of Wrath", "Kicker is single-cost; \"{B} and/or {R}\" keeps only one half"),
+    ("Branch of Vitu-Ghazi", "\"two mana of any one color\" is modelled as a fixed {W}{W}"),
+    // A printed face the catalog has not implemented at all.
+    ("Callous Sell-Sword", "the Burn Together adventure half ({R}) is unimplemented"),
+    ("Cruel Somnophage", "the Can't Wake Up adventure half ({1}{U}) is unimplemented"),
+    ("Augusta, Dean of Order", "the Plargg, Dean of Chaos MDFC face ({1}{R}) is unimplemented"),
+    // No primitive for "pay {W}{U}{B}{R}{G} rather than the mana cost".
+    ("Fist of Suns", "the five-color alternative cost for other spells is unimplemented"),
+    ("Leyline of Mutation", "same five-color alternative cost as Fist of Suns"),
+    // Scryfall resolves the name to a different card than the catalog's.
+    ("Maraxus of Keld", "the catalog card is the Vanguard avatar; the cache holds the creature"),
+    ("Bounty Hunter", "the cache entry is the Vanguard avatar; the catalog holds the creature"),
+];

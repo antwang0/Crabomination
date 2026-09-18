@@ -611,69 +611,13 @@ pub fn companion_restriction_met(
     Ok(())
 }
 
-// ── Commander color identity (Phase K) ────────────────────────────────────
+// ── Commander color identity (CR 903.4) ───────────────────────────────────
 
-/// Compute a card's *color identity* — the union of all colored mana
-/// symbols in its mana cost (CR 903.4). Hybrid pips contribute both
-/// halves; Phyrexian pips contribute their colored half. Generic /
-/// Colorless / Snow / X contribute nothing.
-///
-/// Phase K limitation: rules-text mana symbols and printed color
-/// indicators are not modeled. The format doesn't track rules text
-/// as parseable mana tokens, and no cards in scope rely on the
-/// distinction (cards like Cao Cao that grant identity via reminder
-/// text aren't in the catalog). When such a card is added, extend
-/// `CardDefinition` with a `printed_color_identity: Option<ColorSet>`
-/// override field that this helper unions in.
-///
-/// CR 903.4d: "The back face of a double-faced card is included when
-/// determining a card's color identity." We recursively union the
-/// back-face cost into the front-face identity so an MDFC's combined
-/// identity is correct for Commander deck-validation.
-pub fn color_identity(def: &CardDefinition) -> ColorSet {
-    let mut out = ColorSet::empty();
-    union_face_identity(&mut out, def);
-    if let Some(back) = &def.back_face {
-        union_face_identity(&mut out, back.as_ref());
-    }
-    out
-}
-
-/// CR 903.4 — a face's identity is its mana cost, its color indicator
-/// (105.2c — costless DFC back faces like werewolves), its activated-ability
-/// mana costs, and the costs of its alternate halves (adventure / split).
-fn union_face_identity(out: &mut ColorSet, def: &CardDefinition) {
-    union_cost_identity(out, &def.cost);
-    for c in &def.color_indicator {
-        out.insert(*c);
-    }
-    for ab in &def.activated_abilities {
-        union_cost_identity(out, &ab.mana_cost);
-    }
-    if let Some(adv) = &def.adventure {
-        union_cost_identity(out, &adv.cost);
-    }
-    if let Some(split) = &def.split {
-        union_cost_identity(out, &split.right.cost);
-    }
-}
-
-fn union_cost_identity(out: &mut ColorSet, cost: &crate::mana::ManaCost) {
-    for s in &cost.symbols {
-        match s {
-            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => out.insert(*c),
-            ManaSymbol::Hybrid(a, b) | ManaSymbol::PhyrexianHybrid(a, b) => {
-                out.insert(*a);
-                out.insert(*b);
-            }
-            ManaSymbol::MonoHybrid(_, c) => out.insert(*c),
-            ManaSymbol::Generic(_)
-            | ManaSymbol::Colorless(_)
-            | ManaSymbol::Snow
-            | ManaSymbol::X => {}
-        }
-    }
-}
+/// CR 903.4 — a card's color identity. Re-exported from
+/// [`crate::color_identity`], which walks the whole serialized definition:
+/// rules-text mana symbols (every dual land, every Mox), color indicators
+/// and both faces all count, not just the mana cost.
+pub use crate::color_identity::color_identity;
 
 /// Errors specific to Commander deck validation (on top of the
 /// generic [`DeckError`] checks).
