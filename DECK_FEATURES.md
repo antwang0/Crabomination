@@ -43,18 +43,19 @@ identities, built to play against each other. Each is ~37 lands (10 nonbasic),
 the colorless format staples (Sol Ring, Command Tower, Arcane Signet,
 Commander's Sphere, Mind Stone), then ramp / removal / draw / a creature curve.
 
-✅ **Path of Ancestry and Opal Palace are implemented** (`sets/cmdr.rs`), on
-CR 106.6 mana provenance — the pip carries its rider as a `SpendRestriction`
-and `PaymentSideEffects::spent_restrictions` reports what a payment spent, so
-no source id is remembered. Neither is in a deck list yet; adding them is a
-list edit, not engine work.
+✅ **The colorless staples are all in**: Sol Ring, Command Tower, Arcane
+Signet, Commander's Sphere, Mind Stone, and — since CR 106.6 mana provenance
+shipped — **Path of Ancestry** and **Opal Palace**, one of each per deck,
+swapped in for a basic apiece so the land count stays at ~37 (12 nonbasic).
 
-⏳ **Staples still missing**, each blocked on one primitive:
+⏳ **Open deck-quality work**, no engine work needed:
 - All ten **Signets** and all ten **Talismans** are implemented
   (`sets/decks/modern.rs`) and in the cube pool; the generated 99s did not
   reach for them because the picker ranks ramp by mana value and the one-mana
   dorks won the slots. Swapping each deck's guild signet + talisman in is a
-  strict improvement to the decks' fixing and costs no engine work.
+  strict improvement to the decks' fixing. It moves the committed pod outcome
+  table (`pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table`),
+  so re-bless it in the same commit.
 
 ## Modern supplement (`catalog::sets::decks::modern`)
 

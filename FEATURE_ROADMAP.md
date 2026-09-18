@@ -34,7 +34,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | CR 903.11 mana-production restriction | n/a | removed from the CR years ago; correctly absent |
 | "Any color in your commander's color identity" mana | ✅ | `ManaPayload::AnyColorInCommanderIdentity`, `GameState::commander_identity_colors`; Command Tower / Arcane Signet / Commander's Sphere |
 | Commander to hand from the command zone (Command Beacon) | ✅ | `Effect::CommanderToHand`, `game/effects/commander.rs` |
-| CR 106.6 mana provenance ("when that mana is spent to …") | ✅ | the pip carries its rider as a `SpendRestriction`; `PaymentSideEffects::spent_restrictions` reports what a payment spent, so no source id is remembered. Path of Ancestry, Opal Palace (`sets/cmdr.rs`; tests in `core_rules/commander_mana.rs`) |
+| CR 106.6 mana provenance — "when that mana is spent to …" | ✅ | `SpendRestriction::{CommanderTypeScry, CommanderCastCounters}` + `is_rider()`; `game/effects/commander.rs::{note_commander_mana_riders, push_commander_mana_scry, spell_kind_for}`; Path of Ancestry / Opal Palace. ⚠ CR 106.6a: two rider pips on one cast fire one trigger, not two (Mana Reflection) |
 | Casting a commander for an **alternative** cost from the command zone | ✅ | `actions.rs::cast_spell_alternative_from` over `AltCastZone` — one body for both zones; CR 903.8's tax is pushed ahead of the reductions. `GameAction::CastFromCommandZone { alternative, pitch_card }` |
 | "Can be your commander" on a non-creature (planeswalker commanders) | ✅ | `CardDefinition::can_be_commander`, read by `validate_commander_deck`; Freyalise, Llanowar's Fury in `sets::cmdr` (32 more such cards exist, none implemented) |
 
@@ -65,7 +65,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | Feature | State | Where |
 |---|---|---|
 | N-seat pod runner | ✅ | `pod/mod.rs` — `build_pod_template`, `play_one_pod_game`, `run_pod_games` |
-| Four legal target decks | ✅ | `pod/decks.rs` — Sigarda GW / Judith BR / Hanna UW / Tatyova GU, validated by the suite |
+| Four legal target decks | ✅ | `pod/decks.rs` — Sigarda GW / Judith BR / Hanna UW / Tatyova GU, validated by the suite. Each runs the full colorless staple set: Sol Ring, Command Tower, Arcane Signet, Commander's Sphere, Mind Stone, Path of Ancestry, Opal Palace |
 | 4-player Commander demo state | ✅ | `demo.rs::build_commander_state_seeded`, now the same four decks |
 | Commander pod mode in `bot_ladder` | ✅ | `bot_ladder --commander [--seats N]` |
 | Golden outcomes for fixed-seed Commander pods | ✅ | `pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table` — three seeds' (winner, turns, actions) committed, cross-process. The triple rather than a line-per-action trace: a pod game is ~2,000 actions, so a real trace is a 400 KB file every Commander commit re-blesses, and it moves on the same changes |

@@ -326,6 +326,18 @@ Paradox Surveyor was one of the 38.
 
 ---
 
+## Commander format staples — the provenance pair, and what they still round off
+
+Both shipped with CR 106.6 mana provenance (`SpendRestriction::is_rider`, the
+riders `CommanderTypeScry` / `CommanderCastCounters`). One approximation is
+left, shared by both and by the two riders that predate them (Boseiju, Who
+Shelters All; Generator Servant):
+
+| Card | Approximation |
+|---|---|
+| Path of Ancestry | **CR 106.6a** — `PaymentSideEffects::spent_restrictions` is a *set*, so two rider pips spent on one cast (Mana Reflection / Nyxbloom Ancient doubling the source) fire one delayed trigger where the rule makes one per mana produced. The ruling calls for scry 1 twice; the engine scries once. Fixing it means `spent_restrictions` carrying a count. |
+| Opal Palace | the same, one step further out: two doubled pips spent on a commander should give two counters per prior command-zone cast, and give one. |
+
 ## Multiplayer wording still approximated (from the N-seat audit)
 
 Every implemented card whose oracle says "each opponent" was read against its

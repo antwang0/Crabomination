@@ -360,9 +360,9 @@ mod tests {
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(3), 52, 2527),
-            (43, Some(3), 43, 1963),
-            (4242, Some(2), 44, 2126),
+            (0xC0FFEE, Some(3), 51, 2716),
+            (43, Some(3), 37, 1733),
+            (4242, Some(0), 62, 2483),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
