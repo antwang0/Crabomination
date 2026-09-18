@@ -2194,6 +2194,28 @@ pub fn afterlife(n: i32) -> TriggeredAbility {
     })
 }
 
+/// CR 702.124c — "Partner with [name]"'s printed trigger: "When this creature
+/// enters, target player may put [name] into their hand from their library,
+/// then shuffle." The keyword itself is deck construction (CR 702.124a); this
+/// is the half that does something in a game, and it is a *trigger*, so a card
+/// carries it explicitly the way [`extort`] is carried.
+///
+/// The target is a player (slot 0) and the search is theirs, which is why both
+/// `who`s are `Target(0)` rather than `You` — a Partner-with pair is usually
+/// pointed at its own controller, but the card says "target player".
+pub fn partner_with_search(name: &str) -> TriggeredAbility {
+    etb(Effect::MayDoBy {
+        who: PlayerRef::Target(0),
+        description: format!("Put {name} into your hand from your library?"),
+        body: Box::new(Effect::SearchUpToN {
+            who: PlayerRef::Target(0),
+            filter: crate::card::SelectionRequirement::HasName(name.to_string()),
+            to: ZoneDest::Hand(PlayerRef::Target(0)),
+            count: Value::ONE,
+        }),
+    })
+}
+
 /// Extort (CR 702.99): "Whenever you cast a spell, you may pay
 /// {W/B}. If you do, each opponent loses 1 life and you gain that
 /// much life." A `SpellCast / YourControl` trigger whose body is a

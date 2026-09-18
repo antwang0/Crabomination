@@ -406,6 +406,9 @@ pub fn sylvia_brightspear() -> CardDefinition {
             Keyword::DoubleStrike,
             Keyword::PartnerWith("Khorvath Brightflame".into()),
         ],
+        triggered_abilities: vec![crate::effect::shortcut::partner_with_search(
+            "Khorvath Brightflame",
+        )],
         static_abilities: vec![StaticAbility {
             description: "Dragons you control have double strike.",
             effect: StaticEffect::GrantKeyword {
@@ -415,6 +418,56 @@ pub fn sylvia_brightspear() -> CardDefinition {
                 keyword: Keyword::DoubleStrike,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Khorvath Brightflame — {5}{R} 3/4 Legendary Dragon. Flying, haste. Knights
+/// you control have flying and haste. Partner with Sylvia Brightspear
+/// (CR 702.124c), whose ETB search is the keyword's printed trigger.
+///
+/// "your team" collapses to "you" outside a team format, which is how every
+/// other team-worded static in this catalog is spelled.
+pub fn khorvath_brightflame() -> CardDefinition {
+    CardDefinition {
+        name: "Khorvath Brightflame",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Haste,
+            Keyword::PartnerWith("Sylvia Brightspear".into()),
+        ],
+        triggered_abilities: vec![crate::effect::shortcut::partner_with_search(
+            "Sylvia Brightspear",
+        )],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Knights you control have flying.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Knight).and(R::ControlledByYou),
+                    ),
+                    keyword: Keyword::Flying,
+                },
+            },
+            StaticAbility {
+                description: "Knights you control have haste.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::HasCreatureType(CreatureType::Knight).and(R::ControlledByYou),
+                    ),
+                    keyword: Keyword::Haste,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

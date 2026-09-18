@@ -12931,6 +12931,7 @@ static MOD_SET: &[Factory] = &[
     super::mod_set::command_tower,
     super::mod_set::command_beacon,
     super::cmdr::freyalise_llanowars_fury,
+    super::decks::khorvath_brightflame,
     super::mod_set::reflecting_pool,
     super::mod_set::gaeas_cradle,
     super::mod_set::karns_bastion,

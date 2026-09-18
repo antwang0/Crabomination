@@ -2913,6 +2913,17 @@ impl Effect {
                     | Selector::Target(_)
                     | Selector::TargetFiltered { .. }
             ),
+            // CR 702.124c — "target player may put [name] into their hand
+            // from their library": a targeted tutor *into the target's own
+            // hand* is a gift, so the picker should aim it at the caster, not
+            // at whichever opponent the hostile default reaches for. Without
+            // this, a Partner-with fetch legally handed the partner to an
+            // opponent every time. The `MayDoBy` wrapper already recurses
+            // into its body a few arms up, so this one arm is the whole fix.
+            Effect::SearchUpToN { who: crate::effect::PlayerRef::Target(_), to, .. } => matches!(
+                to,
+                crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Target(_))
+            ),
             // Modal: friendly when the first slot-owning mode (default
             // picks order — slot 0's owner) is friendly.
             Effect::ChooseN { picks, modes } => picks
@@ -3677,6 +3688,18 @@ impl Effect {
                 ..
             } => true,
             Effect::Search {
+                who: PlayerRef::Target(_),
+                ..
+            } => true,
+            // Same shape, the "up to N" spelling — CR 702.124c's Partner-with
+            // fetch is one ("target player may put [name] into their hand").
+            Effect::SearchUpToN {
+                who: PlayerRef::Target(_),
+                ..
+            } => true,
+            // A "may" addressed to a target player is itself a player target:
+            // the yes/no is theirs, whatever the body then does.
+            Effect::MayDoBy {
                 who: PlayerRef::Target(_),
                 ..
             } => true,

@@ -2090,6 +2090,71 @@ fn two_headed_giant_view_reports_the_shared_pool() {
     assert_eq!(v.players[2].poison_counters, 0);
 }
 
+// ── CR 702.124c — "Partner with" ──────────────────────────────────────────
+
+/// CR 702.124c — "Partner with [name]" prints a trigger, not just a
+/// deck-construction pairing: "When this creature enters, target player may
+/// put [name] into their hand from their library, then shuffle." The keyword
+/// had been modelled as the pairing alone, so the ETB half did nothing.
+/// Every seat is given a copy, so a mis-aimed pick would show up as the wrong
+/// seat rather than as "nothing happened" — which is how the auto-targeter's
+/// opponent-facing default for a "target player" slot was caught. A tutor
+/// into the *target's own* hand is a gift, so the picker aims at the caster.
+#[test]
+fn cr_702_124c_partner_with_fetches_the_named_card_from_the_library() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    for seat in 0..3 {
+        g.add_card_to_library(seat, catalog::khorvath_brightflame());
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    let sylvia = g.add_card_to_hand(0, catalog::sylvia_brightspear());
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = crabomination::game::TurnStep::PreCombatMain;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: sylvia,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Sylvia");
+    crabomination::game::drain_stack(&mut g);
+
+    let fetched: Vec<usize> = (0..3)
+        .filter(|&s| {
+            g.players[s].hand.iter().any(|c| c.definition.name == "Khorvath Brightflame")
+        })
+        .collect();
+    assert_eq!(fetched, vec![0], "the fetch is a gift, so it aims at the caster");
+    let seat = fetched[0];
+    assert_eq!(
+        g.players[seat].library.iter().filter(|c| c.definition.name == "Khorvath Brightflame").count(),
+        0,
+        "and it came out of that player's library",
+    );
+}
+
+/// CR 702.124a/c — the pairing half is unchanged: the two may lead a deck
+/// together, and a card that does not name them may not.
+#[test]
+fn cr_702_124a_partner_with_still_pairs_for_deck_construction() {
+    use crabomination::format::commanders_may_pair;
+    let sylvia = catalog::sylvia_brightspear();
+    let khorvath = catalog::khorvath_brightflame();
+    assert!(commanders_may_pair(&sylvia, &khorvath));
+    assert!(commanders_may_pair(&khorvath, &sylvia));
+    assert!(!commanders_may_pair(&sylvia, &catalog::llanowar_elves()));
+}
+
 // ── CR 903.3a — "can be your commander" on a non-creature ─────────────────
 
 /// CR 903.3a — a legendary card that prints "[this] can be your commander"
