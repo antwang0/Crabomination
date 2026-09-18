@@ -1020,6 +1020,48 @@ fn cr_800_4a_leaving_mid_combat_clears_the_departed_attackers() {
     );
 }
 
+/// CR 800.4a, closing sentence — "If the player who left the game had
+/// priority at the time they left, priority passes to the next player in turn
+/// order who's still in the game." Priority gates the table exactly as a
+/// pending decision does: every other seat's actions wait on the seat that
+/// holds it, so leaving it on a player who is no longer in the game is the
+/// same wedge the dropped-ask fix above closed.
+#[test]
+fn cr_800_4a_priority_passes_off_the_player_who_left() {
+    let mut g = multi_player_game(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 2;
+
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+
+    assert!(!g.players[2].is_alive());
+    assert_eq!(g.player_with_priority(), 0, "seat 2 → the next seat still in the game");
+}
+
+/// CR 800.4j — "If a player leaves the game during their turn, that turn
+/// continues to its completion without an active player. If the active player
+/// would receive priority, instead the next player in turn order receives
+/// priority." The turn stays seat 0's; the priority does not.
+#[test]
+fn cr_800_4j_a_departed_active_player_never_receives_priority() {
+    let mut g = multi_player_game(3);
+    g.step = TurnStep::PreCombatMain;
+    assert_eq!(g.active_player_idx, 0);
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    assert_eq!(g.active_player_idx, 0, "the turn is still seat 0's and runs to completion");
+    assert_eq!(g.player_with_priority(), 1, "priority is a live seat's");
+
+    // Every later grant of priority to "the active player" — after each
+    // resolution, and on entering each step — has to land on a seat that can
+    // act, not on the one whose turn it nominally still is.
+    g.give_priority_to_active();
+    assert_eq!(g.player_with_priority(), 1);
+}
+
 /// All seats eliminated simultaneously → draw (winner=None). Pre-existing
 /// behavior preserved through the team-aware refactor.
 #[test]

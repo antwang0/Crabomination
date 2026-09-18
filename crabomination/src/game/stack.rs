@@ -612,7 +612,8 @@ impl GameState {
                 // Upkeep. Seed the pass count so the single pass below counts
                 // as everyone passing rather than needing a phantom extra
                 // client pass.
-                self.priority.player_with_priority = self.active_player_idx;
+                self.priority.player_with_priority =
+                    self.priority_recipient(self.active_player_idx);
                 self.priority.consecutive_passes = self.alive_count().saturating_sub(1);
                 let mut upkeep_events = self.pass_priority()?;
                 events.append(&mut upkeep_events);
@@ -5088,6 +5089,15 @@ impl GameState {
         // four-player pod produced 15 % "no legal move" games.
         if self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p) {
             self.pending_decision = None;
+        }
+        // CR 800.4a — "If the player who left the game had priority at the time
+        // they left, priority passes to the next player in turn order who's
+        // still in the game." Same wedge as the ask above: every other seat's
+        // actions are gated on the seat that holds priority, so leaving it on a
+        // departed player is a table that cannot move. `give_priority_to_active`
+        // covers the *next* grant (CR 800.4j); this is the one already made.
+        if self.priority.player_with_priority == p {
+            self.priority.player_with_priority = self.next_alive_seat(p);
         }
         // CR 725.4 — if the monarch leaves the game, the active player
         // becomes the monarch; if the active player is the one leaving (or

@@ -5256,6 +5256,20 @@ impl GameState {
         self.players.iter().filter(|p| p.is_alive()).count()
     }
 
+    /// CR 800.4j — the seat that actually receives priority when `seat` would.
+    /// `seat` itself while they are still in the game; otherwise the next
+    /// player in turn order who is. A turn whose active player has left runs
+    /// to completion without an active player, so "the active player receives
+    /// priority" has to mean somebody who can act — priority parked on a
+    /// departed seat suppresses every other seat and the table wedges.
+    /// CR 800.4a's closing sentence is the same rule at the moment of leaving.
+    pub(crate) fn priority_recipient(&self, seat: usize) -> usize {
+        match self.players.get(seat) {
+            Some(p) if p.is_alive() => seat,
+            _ => self.next_alive_seat(seat),
+        }
+    }
+
     /// Next non-eliminated seat strictly after `from` (wrapping). Returns
     /// `from` if no other alive players remain.
     pub fn next_alive_seat(&self, from: usize) -> usize {
@@ -10146,8 +10160,10 @@ impl GameState {
     }
 
     /// Give priority to the active player and reset consecutive passes.
+    /// CR 800.4j — if the active player has left the game, the next player in
+    /// turn order who hasn't receives it instead ([`Self::priority_recipient`]).
     pub fn give_priority_to_active(&mut self) {
-        self.priority.player_with_priority = self.active_player_idx;
+        self.priority.player_with_priority = self.priority_recipient(self.active_player_idx);
         self.priority.consecutive_passes = 0;
     }
 
