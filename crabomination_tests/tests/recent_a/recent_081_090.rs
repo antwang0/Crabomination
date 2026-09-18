@@ -1004,20 +1004,59 @@ mod recent88 {
         assert!(g.battlefield_find(flyer).is_some(), "the flyer was spared");
     }
 
+    /// Lieutenant (CR 207.2c — an ability word with no rules meaning of its
+    /// own; the condition is the printed text) gates all three halves on
+    /// controlling your commander. With no commander on the battlefield the
+    /// Baloth is a vanilla 5/5 trampler — it used to grant the anthem
+    /// unconditionally, which made it strictly better than printed.
     #[test]
-    fn thunderfoot_baloth_pumps_and_tramples_team() {
+    fn thunderfoot_baloth_lieutenant_is_off_without_a_commander() {
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let baloth = g.add_card_to_battlefield(0, catalog::thunderfoot_baloth());
         let cp = g.compute_battlefield();
         let b = cp.iter().find(|c| c.id == bear).unwrap();
-        assert_eq!((b.power, b.toughness), (4, 4), "other creature +2/+2");
-        assert!(b.keywords().contains(&Keyword::Trample), "other creature has trample");
-        // The Baloth doesn't buff itself — but it does print its own trample,
-        // which the static's `OtherThanSource` has nothing to do with.
+        assert_eq!((b.power, b.toughness), (2, 2), "no anthem without a commander");
+        assert!(!b.keywords().contains(&Keyword::Trample), "and no granted trample");
         let self_ = cp.iter().find(|c| c.id == baloth).unwrap();
-        assert_eq!((self_.power, self_.toughness), (5, 5), "the +2/+2 excludes the source");
+        assert_eq!((self_.power, self_.toughness), (5, 5), "printed 5/5");
         assert!(self_.keywords().contains(&Keyword::Trample), "printed trample");
+    }
+
+    /// CR 903.3 — the same board with the controller's commander on the
+    /// battlefield: +2/+2 to the Baloth *and* to everything else it controls,
+    /// plus trample. A commander an opponent controls does not turn it on.
+    #[test]
+    fn thunderfoot_baloth_lieutenant_turns_on_with_your_commander() {
+        let mut g = crabomination::game::game_with_format(
+            crabomination::format::Format::Commander,
+            2,
+        );
+        let cmd = g.seat_commanders(0, vec![catalog::llanowar_elves()])[0];
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let baloth = g.add_card_to_battlefield(0, catalog::thunderfoot_baloth());
+
+        // Still off while the commander sits in the command zone.
+        let cp = g.compute_battlefield();
+        assert_eq!(cp.iter().find(|c| c.id == bear).unwrap().power, 2, "command zone is not control");
+
+        // Move it to the battlefield under seat 0.
+        let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+        let card = g.players[0].command.remove(pos);
+        g.battlefield.push(card);
+        let cp = g.compute_battlefield();
+        let b = cp.iter().find(|c| c.id == bear).unwrap();
+        assert_eq!((b.power, b.toughness), (4, 4), "the 2/2 Bears take +2/+2");
+        assert!(b.keywords().contains(&Keyword::Trample));
+        let self_ = cp.iter().find(|c| c.id == baloth).unwrap();
+        assert_eq!((self_.power, self_.toughness), (7, 7), "Lieutenant pumps the Baloth too");
+
+        // An opponent stealing it turns the ability back off.
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == cmd) {
+            c.controller = 1;
+        }
+        let cp = g.compute_battlefield();
+        assert_eq!(cp.iter().find(|c| c.id == bear).unwrap().power, 2, "a stolen commander is not yours");
     }
 }
 

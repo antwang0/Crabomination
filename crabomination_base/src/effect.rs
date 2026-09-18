@@ -1406,6 +1406,12 @@ pub enum Predicate {
     WasMonarchAtTurnStart { who: PlayerRef },
     /// CR 726 — `who` currently has the initiative.
     HasInitiative { who: PlayerRef },
+    /// CR 903 — `who` controls a commander that is theirs. The Lieutenant
+    /// ability word's condition ("as long as you control your commander",
+    /// CR 207.2c — the word itself has no rules meaning, the text does).
+    /// A commander an opponent has stolen is not one you control, and with
+    /// two commanders either one satisfies it.
+    ControlsOwnCommander { who: PlayerRef },
     /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
     /// abilities use `speed: 4`; "as long as your speed is N or higher" uses
     /// the listed threshold. Backed by `Player.speed`.

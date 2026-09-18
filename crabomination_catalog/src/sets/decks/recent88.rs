@@ -6,7 +6,7 @@ use crate::card::{
     StaticEffect, Subtypes,
 };
 use crate::effect::shortcut::{deal, target};
-use crate::effect::{Effect, Selector, Value};
+use crate::effect::{Effect, Predicate, PlayerRef, Selector, Value};
 use crate::mana::{cost, g, generic, r, x};
 
 /// Searing Wind — {8}{R} Sorcery. Deals 10 damage to any target.
@@ -92,19 +92,38 @@ pub fn thunderfoot_baloth() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Trample],
         static_abilities: vec![
+            // Lieutenant (CR 207.2c — an ability word; the condition is the
+            // printed text). All three halves are gated on controlling your
+            // commander; the anthem used to apply unconditionally, which made
+            // the card strictly better than printed.
             StaticAbility {
-                description: "Other creatures you control get +2/+2.",
-                effect: StaticEffect::PumpPT {
-                    applies_to: others(),
+                description: "Lieutenant — this creature gets +2/+2.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::ControlsOwnCommander { who: PlayerRef::You },
                     power: 2,
                     toughness: 2,
+                    keywords: vec![],
                 },
             },
             StaticAbility {
-                description: "Other creatures you control have trample.",
-                effect: StaticEffect::GrantKeyword {
-                    applies_to: others(),
-                    keyword: Keyword::Trample,
+                description: "Lieutenant — other creatures you control get +2/+2.",
+                effect: StaticEffect::WhileCondition {
+                    condition: Predicate::ControlsOwnCommander { who: PlayerRef::You },
+                    inner: Box::new(StaticEffect::PumpPT {
+                        applies_to: others(),
+                        power: 2,
+                        toughness: 2,
+                    }),
+                },
+            },
+            StaticAbility {
+                description: "Lieutenant — other creatures you control have trample.",
+                effect: StaticEffect::WhileCondition {
+                    condition: Predicate::ControlsOwnCommander { who: PlayerRef::You },
+                    inner: Box::new(StaticEffect::GrantKeyword {
+                        applies_to: others(),
+                        keyword: Keyword::Trample,
+                    }),
                 },
             },
         ],

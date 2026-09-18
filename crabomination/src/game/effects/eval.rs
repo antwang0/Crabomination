@@ -1839,6 +1839,17 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.initiative == Some(p)),
+            Predicate::ControlsOwnCommander { who } => {
+                self.resolve_players(who, ctx).into_iter().any(|p| {
+                    // `commanders` is the seat's own designation list, so the
+                    // controller test is what makes a stolen commander not
+                    // count (CR 903.3 — designation follows the card, control
+                    // does not).
+                    self.battlefield
+                        .iter()
+                        .any(|c| c.controller == p && self.players[p].commanders.contains(&c.id))
+                })
+            }
             Predicate::SpeedAtLeast { who, speed } => self
                 .resolve_players(who, ctx)
                 .into_iter()
