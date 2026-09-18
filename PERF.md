@@ -3015,6 +3015,60 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-18 (the third Commander session, tip `51551a7f`) — guardrail
+
+Five more Commander rules changes and a fifth pod deck, and the `--bench`
+**invariant is still byte-identical**:
+
+```text
+--bench at 51551a7f (release):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+  peak_rss_mib      25.4
+  games_per_s     470.65 at host_calib_ms 46, Intel Xeon @ 2.80 GHz
+```
+
+Shipped under it: CR 106.6 mana provenance (`SpendRestriction::is_rider`, the
+two riders, `SpellKind.commander`), CR 106.6a's per-mana count, CR 903.4's
+colourless-identity case, CR 702.124m Doctor's companion, and the command-zone
+cast path learning to describe what it funds. **None of it is reachable in a
+duel**: no seat has a commander, so `commander_identity_colors` takes its
+documented no-commander branch and every rider path is dead.
+
+⚠ **The rider auto-tap change was the one that could have moved it.**
+`SpendRestriction::is_rider()` made a rider's source auto-tappable, which
+changes what the bot taps — but the four rider cards (Boseiju Who Shelters
+All, Hall of the Bandit Lord, Generator Servant, and the two new lands) are
+none of them in `cube::cube_pool_all()`, so the duel pool never sees one.
+Check pool membership before assuming a mana-path change is duel-safe.
+
+**The pod, 2,100 games over six configurations at 2/3/4/5 seats:**
+
+```text
+--commander --games 400 --seed 43     400 / 0 undecided / 42.08 turns / 1,967.5 actions
+--commander --seats 3 --games 200 --seed 97    200 / 0 / 29.86 / 1,093.2
+--commander --seats 5 --games 400 --seed 5150  400 / 0 / 53.85 / 3,128.0   (Partner seat)
+--commander --seats 5 --games 300 --seed 7701  300 / 0 / 54.71 / 3,165.2   (Partner seat)
+--commander --games 600 --seed 4242   600 / 0 / 41.86 / 1,969.9
+--commander --seats 2 --games 200 --seed 4243  200 / 0 / 18.36 /   487.4
+--commander --games 400 --seed 43 --threads 1: identical in every column
+```
+
+Zero panics, zero stalls, 100 % decided at every seat count. **Five seats is
+new** and is where the Krark/Rograkh Partner deck is reached: `pod_field(4)`
+still draws the same four, which is why the committed outcome table in
+`pod::tests` did not move when the fifth deck landed.
+
+⚠ **The 4-seat aggregate did move, and it is explained, not drift**: seed 43
+read 1,967.4 actions/game before CR 106.6a and 1,967.5 after. Two Opal Palace
+pips spent on one commander cast are now two counters per prior cast rather
+than one, so a handful of pod games differ. The three committed seeds are
+unchanged, which is what the table is for — read it, not the aggregate, when
+asking whether a change moved pod play.
+
 ### 2026-09-18 (the second Commander session, tip `d6869b99`) — guardrail
 
 Same obligation, same instrument, and the `--bench` **invariant is unmoved by

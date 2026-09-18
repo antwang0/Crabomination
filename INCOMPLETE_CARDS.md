@@ -345,10 +345,29 @@ below need per-opponent **targeting**, which the fan-out cannot give them —
 each iteration would need its own target chosen as the spell is cast (CR
 601.2c), and the target machinery binds one target set per effect.
 
+**Priced 2026-09-18: eight implemented cards share the shape**, so the
+primitive is worth a run of its own. All read "for each opponent, [verb]
+target X that player controls/owns":
+
 | Card | Gap |
 |---|---|
-| Sylvan Primordial | "for each opponent, destroy target noncreature permanent that player controls" — one target, so at three seats it destroys one permanent instead of three. Needs a per-iteration target slot. |
-| Sepulchral Primordial | "for each opponent, put target creature card from that player's graveyard onto the battlefield under your control" — same shape, same gap. |
+| Sylvan Primordial | "destroy target noncreature permanent that player controls" — one target, so at three seats it destroys one permanent instead of three |
+| Sepulchral Primordial | "put target creature card from that player's graveyard onto the battlefield under your control" |
+| Diluvian Primordial | "you may cast target instant or sorcery card from that player's graveyard" |
+| Luminate Primordial | "exile target creature that player controls" |
+| Molten Primordial | "gain control of target creature that player controls" |
+| Grasp of Fate | "exile target nonland permanent that player controls" |
+| Omega, Heartless Evolution | per-opponent targeting on the same shape |
+| Tempted by the Oriq | as above |
+
+⚠ **The blocker is dynamic slot arity, not the fan-out.** A target slot is
+declared statically by `Selector::TargetFiltered { slot, filter }` in the card
+literal; "one slot per opponent" is a count only the game knows.
+`CapTargetsAt { amount }` over `ApplyToTargets` gives the right *count* and the
+wrong *distribution* (three targets, possibly all from one opponent). A correct
+version needs a per-slot "controlled by the Nth opponent" filter **and** a
+variable slot census, which touches the `requires_target` /
+`target_filter_for_slot` / `auto_target` / bot-candidate walker family.
 
 ## CR 903.4 color-identity divergences (from the Scryfall audit)
 
