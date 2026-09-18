@@ -935,7 +935,7 @@ pub fn ravos_soultender() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::Partner],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {

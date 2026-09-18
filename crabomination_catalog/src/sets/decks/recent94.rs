@@ -324,7 +324,7 @@ pub fn akiri_line_slinger() -> CardDefinition {
         },
         power: 0,
         toughness: 3,
-        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
+        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance, Keyword::Partner],
         dynamic_pt: Some(DynamicPt::ArtifactsControlledPower {
             base_p: 0,
             base_t: 3,
@@ -351,7 +351,7 @@ pub fn rograkh_son_of_rohgahh() -> CardDefinition {
         },
         power: 0,
         toughness: 1,
-        keywords: vec![Keyword::FirstStrike, Keyword::Menace, Keyword::Trample],
+        keywords: vec![Keyword::FirstStrike, Keyword::Menace, Keyword::Trample, Keyword::Partner],
         ..Default::default()
     }
 }
@@ -386,8 +386,10 @@ pub fn steelshaper_apprentice() -> CardDefinition {
 }
 
 /// Sylvia Brightspear — {2}{W} 2/2 Human Knight, double strike. Dragons you
-/// control have double strike. (Partner and the "your team" widening are
-/// dropped — the static covers creatures you control.)
+/// control have double strike. Partner with Khorvath Brightflame is the
+/// deck-construction keyword only (its ETB "search for Khorvath" trigger is
+/// dropped), and the "your team" widening is dropped — the static covers
+/// creatures you control.
 pub fn sylvia_brightspear() -> CardDefinition {
     CardDefinition {
         name: "Sylvia Brightspear",
@@ -400,7 +402,10 @@ pub fn sylvia_brightspear() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::DoubleStrike],
+        keywords: vec![
+            Keyword::DoubleStrike,
+            Keyword::PartnerWith("Khorvath Brightflame".into()),
+        ],
         static_abilities: vec![StaticAbility {
             description: "Dragons you control have double strike.",
             effect: StaticEffect::GrantKeyword {

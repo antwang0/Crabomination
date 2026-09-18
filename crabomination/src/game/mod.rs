@@ -1640,14 +1640,21 @@ pub struct ColdState {
     pub commander_cast_count: HashMap<CardId, u32>,
     /// 21-commander-damage tracker (Phase M / CR 704.5v). Keyed by
     /// `(victim_seat, commander_card_id)`; values are running totals
-    /// of combat / direct damage dealt by that commander to that
-    /// seat over the whole game. The SBA in
+    /// of combat damage dealt by that commander to that seat over the
+    /// whole game (CR 903.10a — non-combat damage never counts). The SBA in
     /// `check_state_based_actions` eliminates a player when any of
     /// their entries crosses 21.
     ///
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub commander_damage: HashMap<(usize, CardId), u32>,
+    /// CR 903.9a — commanders sitting in a graveyard or exile whose owner
+    /// already declined the move to the command zone. The SBA asks once
+    /// per arrival: an entry is dropped when its commander is found
+    /// anywhere else, so a later trip back re-asks. Written only in a
+    /// game with a commander in one of those zones.
+    #[serde(default)]
+    pub commander_return_declined: Vec<CardId>,
     /// Auras that lost their host this turn, keyed by the (now-gone) host's
     /// CardId → list of `(aura id, aura controller)`. Populated in the
     /// orphan-Aura SBA sweep before the Aura is sent to the graveyard, so
@@ -5879,25 +5886,27 @@ impl GameState {
 
     /// Place each card in `defs` into `seat`'s command zone as a new
     /// `CardInstance`, and register the Commander zone-change
-    /// replacement effect for each — CR 903.9b's "if a commander
-    /// would be put into a graveyard, exile, hand, or library from
-    /// anywhere, its owner may put it into the command zone
-    /// instead." Phase L's cast-from-CZ machinery + commander-cast
-    /// counter consult the command zone contents; this helper sets
-    /// up that initial state.
+    /// replacement effect for each — CR 903.9b's "if a commander would
+    /// be put into its owner's hand or library from anywhere, its owner
+    /// may put it into the command zone instead." Phase L's cast-from-CZ
+    /// machinery + commander-cast counter consult the command zone
+    /// contents; this helper sets up that initial state.
+    ///
+    /// Graveyard and exile are deliberately NOT in the replacement: under
+    /// CR 903.9a the commander really goes there (so "when this dies" and
+    /// "whenever a creature dies" see it), and the owner may then move it
+    /// to the command zone as a state-based action
+    /// (`commander_zone_return_sba`).
     ///
     /// Returns the `CardId`s of the seated commanders so callers
     /// can use them as `Selector::CardInZone(Command)` targets, or
     /// pass them to test helpers.
     ///
-    /// The replacement is registered with `optional: true` — CR 903.9b
-    /// says the redirect is "may", so the owner can elect to let the
-    /// commander land in the original zone (e.g. when they want to
-    /// reanimate it from the graveyard rather than re-pay tax).
-    /// `AutoDecider` defaults to "yes redirect" so tournament-style
-    /// play matches expectations; tests can script the opposite via
-    /// `ScriptedDecider` answering `DecisionAnswer::Bool(false)` to
-    /// the `Decision::CommanderRedirect` prompt.
+    /// Both moves are "may", so the owner can elect to leave the
+    /// commander where it went (e.g. to reanimate it rather than re-pay
+    /// tax). `AutoDecider` answers "yes" to the
+    /// `Decision::CommanderRedirect` prompt; tests can script the
+    /// opposite with `ScriptedDecider` answering `DecisionAnswer::Bool(false)`.
     pub fn seat_commanders(
         &mut self,
         seat: usize,
@@ -5912,17 +5921,13 @@ impl GameState {
             self.players[seat].commanders.push(id);
             self.offboard_keyword_grants = true;
 
-            // CR 903.9b replacement — graveyard / exile / hand /
-            // library from anywhere → command zone. `from: None`
-            // matches any origin; the destination set is the four
-            // zones the rule names.
+            // CR 903.9b replacement — hand / library from anywhere →
+            // command zone. `from: None` matches any origin.
             self.register_replacement(crate::replacement::ReplacementEffect {
                 id: crate::replacement::ReplacementId(0), // overwritten
                 source: crate::replacement::ReplacementSource::Card(id),
                 from: None,
                 to_zones: vec![
-                    crate::card::Zone::Graveyard,
-                    crate::card::Zone::Exile,
                     crate::card::Zone::Hand,
                     crate::card::Zone::Library,
                 ],

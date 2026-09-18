@@ -36,15 +36,20 @@ fn cr_408_1_command_zone_objects_are_not_permanents() {
     assert_eq!(g.players[0].graveyard.len(), gy, "and can't be destroyed");
 }
 
-/// CR 408.3 — a Commander variant card starts in the command zone and every
-/// zone change off the battlefield may redirect back to it (CR 903.9b).
+/// CR 408.3 — a Commander variant card starts in the command zone and may
+/// return to it: a move to hand or library is replaced (CR 903.9b); a move
+/// to the graveyard or exile happens, and the SBA then brings it back
+/// (CR 903.9a).
 #[test]
 fn cr_408_3_commanders_start_and_return_to_the_command_zone() {
     let mut g = two_player_game();
     let cmd = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
     assert_eq!(g.players[0].command.len(), 1);
-    for would_be in [Zone::Graveyard, Zone::Exile, Zone::Hand, Zone::Library] {
+    for would_be in [Zone::Hand, Zone::Library] {
         assert_eq!(g.resolve_zone_change(cmd, Zone::Battlefield, would_be), Zone::Command);
+    }
+    for zone in [Zone::Graveyard, Zone::Exile] {
+        assert_eq!(g.resolve_zone_change(cmd, Zone::Battlefield, zone), zone);
     }
 }
 

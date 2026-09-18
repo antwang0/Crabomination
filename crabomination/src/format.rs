@@ -690,6 +690,10 @@ pub enum CommanderDeckError {
     /// be added later by extending `CardDefinition` with a
     /// `can_be_commander: bool` override.
     NotLegendaryCreature { card_name: &'static str },
+    /// Two commanders that may not lead a deck together (CR 903.3c /
+    /// 702.124): neither both Partner, nor partners with each other, nor a
+    /// Choose-a-Background commander with a Background.
+    NotPartners { first: &'static str, second: &'static str },
     /// A main-deck card's color identity is not a subset of the
     /// commander's combined color identity.
     OffColorIdentity {
@@ -709,6 +713,9 @@ impl std::fmt::Display for CommanderDeckError {
             CommanderDeckError::NotLegendaryCreature { card_name } => {
                 write!(f, "{card_name} is not a legendary creature and cannot be a commander")
             }
+            CommanderDeckError::NotPartners { first, second } => {
+                write!(f, "{first} and {second} can't be commanders together (no Partner / Background pairing)")
+            }
             CommanderDeckError::OffColorIdentity {
                 card_name,
                 card_identity,
@@ -723,10 +730,43 @@ impl std::fmt::Display for CommanderDeckError {
 
 impl std::error::Error for CommanderDeckError {}
 
+/// CR 702.124 — may `a` and `b` be a deck's two commanders? Plain Partner
+/// on both (702.124a), "partner with" naming each other (702.124c), or a
+/// Choose-a-Background commander with a Background (702.124j). Friends
+/// forever / Doctor's companion aren't modelled — no catalog card has them.
+pub fn commanders_may_pair(a: &CardDefinition, b: &CardDefinition) -> bool {
+    use crate::card::{Keyword, KeywordSlice};
+    let partners_with = |x: &CardDefinition, y: &CardDefinition| {
+        x.keywords.iter().any(|k| matches!(k, Keyword::PartnerWith(n) if n == y.name))
+    };
+    (a.keywords.has_kw(&Keyword::Partner) && b.keywords.has_kw(&Keyword::Partner))
+        || (partners_with(a, b) && partners_with(b, a))
+        || is_background_pair(a, b)
+        || is_background_pair(b, a)
+}
+
+/// `commander` has Choose a Background and `other` is a legendary Background.
+fn is_background_pair(commander: &CardDefinition, other: &CardDefinition) -> bool {
+    use crate::card::{Keyword, KeywordSlice};
+    commander.is_creature()
+        && commander.keywords.has_kw(&Keyword::ChooseABackground)
+        && other.is_legendary()
+        && is_background(other)
+}
+
+fn is_background(def: &CardDefinition) -> bool {
+    def.is_enchantment()
+        && def
+            .subtypes
+            .enchantment_subtypes
+            .contains(&crate::card::EnchantmentSubtype::Background)
+}
+
 /// Validate a Commander-format deck. Runs the generic
 /// [`validate_deck`] checks first (100-card singleton main, etc.),
 /// then layers on Commander-specific rules: at least one commander,
-/// at most two, each must be a legendary creature, every main-deck
+/// at most two (and a pair must be able to partner), each must be a
+/// legendary creature, every main-deck
 /// card's color identity ⊆ commander's combined identity.
 ///
 /// Errors from the two layers are returned as a single combined
@@ -748,11 +788,25 @@ pub fn validate_commander_deck(
         });
     }
 
-    // Each commander must be a legendary creature.
+    // Each commander must be a legendary creature — except the Background
+    // half of a Choose-a-Background pair (CR 702.124j), which is a legendary
+    // enchantment.
+    let background_pair = match deck.commanders.as_slice() {
+        [a, b] => is_background_pair(a, b) || is_background_pair(b, a),
+        _ => false,
+    };
     for cmd in &deck.commanders {
-        if !(cmd.is_legendary() && cmd.is_creature()) {
+        let is_background = background_pair && is_background(cmd);
+        if !(cmd.is_legendary() && (cmd.is_creature() || is_background)) {
             cmd_errors.push(CommanderDeckError::NotLegendaryCreature { card_name: cmd.name });
         }
+    }
+
+    // CR 903.3c — a second commander needs a pairing ability.
+    if let [a, b] = deck.commanders.as_slice()
+        && !commanders_may_pair(a, b)
+    {
+        cmd_errors.push(CommanderDeckError::NotPartners { first: a.name, second: b.name });
     }
 
     // Combined color identity is the union of every commander's.

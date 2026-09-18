@@ -1654,6 +1654,17 @@ pub enum Keyword {
     /// a sideboard copy moves to hand for {3} at sorcery speed via
     /// `GameAction::CompanionToHand`.
     Companion,
+    /// CR 702.124a — Partner. Deck-construction only: two commanders that
+    /// both have it may lead one Commander deck together
+    /// (`format::validate_commander_deck`). No in-game effect.
+    Partner,
+    /// CR 702.124c — "Partner with [name]". Lets this and the named card be
+    /// co-commanders. (The ETB "target player may search for [name]"
+    /// trigger is a separate triggered ability on the card.)
+    PartnerWith(String),
+    /// CR 702.124j — "Choose a Background". This commander may be paired
+    /// with a legendary Background enchantment as its second commander.
+    ChooseABackground,
     /// CR 702.146 — Daybound. A permanent with daybound is on the battlefield
     /// only as day; on the front face of a daybound/nightbound DFC. When it
     /// becomes night, the engine transforms it to its nightbound back face.
@@ -2158,6 +2169,15 @@ pub enum Keyword {
     /// loses life. "Max speed —" abilities (modeled as `Predicate::SpeedAtLeast
     /// { speed: 4 }`) are active at speed 4.
     StartYourEngines,
+}
+
+impl Keyword {
+    /// CR 702.124 — a keyword that only matters while building a Commander
+    /// deck (Partner and its kin). It gives the card no in-game ability, so a
+    /// heuristic that counts keywords as power should skip it.
+    pub fn is_deck_construction(&self) -> bool {
+        matches!(self, Keyword::Partner | Keyword::PartnerWith(_) | Keyword::ChooseABackground)
+    }
 }
 
 /// CR 702.24 — the maintenance cost paid (once per age counter) to keep a

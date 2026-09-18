@@ -1190,10 +1190,11 @@ fn test_commander() -> crabomination::card::CardDefinition {
 }
 
 /// `seat_commanders` installs the card into the seat's command zone,
-/// records its CardId on `Player.commanders`, and registers a
-/// zone-change replacement so leaving the battlefield bounces it
-/// back to the command zone. Verifies the Phase I/J wiring as a
-/// whole.
+/// records its CardId on `Player.commanders`, and registers the CR 903.9b
+/// hand / library replacement. Graveyard and exile are NOT replaced — CR
+/// 903.9a moves those as a state-based action after the card arrives
+/// (see `cr_903_9a_commander_dies_then_returns_as_an_sba`). Verifies the
+/// Phase I/J wiring as a whole.
 #[test]
 fn seat_commanders_sets_up_command_zone_and_replacement() {
     use crabomination::card::Zone;
@@ -1212,29 +1213,24 @@ fn seat_commanders_sets_up_command_zone_and_replacement() {
     // Non-commander cards should not be flagged.
     assert!(!g.is_commander(crabomination::card::CardId(99_999)));
 
-    // Replacement effect registered: a hypothetical
-    // battlefield→graveyard move resolves to Command instead.
-    assert_eq!(
-        g.resolve_zone_change(cmd, Zone::Battlefield, Zone::Graveyard),
-        Zone::Command,
-    );
-    // Same for exile / hand / library — the four CR-903.9b zones.
-    for would_be in [Zone::Exile, Zone::Hand, Zone::Library] {
+    // CR 903.9b — hand and library are replaced by the command zone.
+    for would_be in [Zone::Hand, Zone::Library] {
         assert_eq!(
             g.resolve_zone_change(cmd, Zone::Battlefield, would_be),
             Zone::Command,
-            "{would_be:?} should also redirect to Command",
+            "{would_be:?} should redirect to Command",
         );
+    }
+    // CR 903.9a — graveyard and exile are not: the commander gets there.
+    for zone in [Zone::Graveyard, Zone::Exile] {
+        assert_eq!(g.resolve_zone_change(cmd, Zone::Battlefield, zone), zone);
     }
 }
 
-/// End-to-end Phase H + I + J: a Commander on the battlefield, when
-/// destroyed, lands in the command zone — not the graveyard. The
-/// graveyard `Effect::Destroy` / lethal-damage SBA path funnels
-/// through `remove_from_battlefield_to_graveyard_raw`, which Phase H
-/// wired through the replacement resolver, which Phase J registered
-/// the redirect for, which Phase I made land in
-/// `Player.command`. All four phases active simultaneously.
+/// CR 903.9a — a destroyed commander goes to the graveyard, and the next
+/// state-based-action check moves it to the command zone. (Until this was
+/// fixed it was replaced straight into the command zone — the pre-2020
+/// rule — so it never died.)
 #[test]
 fn destroyed_commander_returns_to_command_zone() {
     let mut g = two_player_game();
@@ -1248,10 +1244,15 @@ fn destroyed_commander_returns_to_command_zone() {
     g.battlefield.push(card);
 
     g.remove_from_battlefield_to_graveyard_raw(cmd);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == cmd),
+        "a destroyed commander really reaches the graveyard",
+    );
 
+    g.check_state_based_actions();
     assert!(
         g.players[0].command.iter().any(|c| c.id == cmd),
-        "destroyed commander must return to the command zone",
+        "the SBA returns it to the command zone",
     );
     assert!(
         g.players[0].graveyard.iter().all(|c| c.id != cmd),
@@ -1352,8 +1353,9 @@ fn commander_cast_tax_blocks_unpaid_recast() {
     // Commander should now be on the battlefield.
     assert!(g.battlefield.iter().any(|c| c.id == cmd));
 
-    // Destroy it — Phase J replacement bounces back to command zone.
+    // Destroy it — the CR 903.9a SBA brings it back to the command zone.
     g.remove_from_battlefield_to_graveyard_raw(cmd);
+    g.check_state_based_actions();
     assert!(g.players[0].command.iter().any(|c| c.id == cmd));
 
     // Reset priority/step (drain_stack may have advanced).
@@ -1525,6 +1527,73 @@ fn commander_deck_validator_requires_a_commander() {
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::MissingCommander)));
 }
 
+/// CR 903.3c / 702.124 — two commanders need a pairing ability: both with
+/// Partner, "partner with" each other, or Choose a Background plus a
+/// Background (which, alone among commanders, needn't be a creature).
+#[test]
+fn cr_702_124_commander_pair_needs_partner_or_background() {
+    use crabomination::card::{CardDefinition, CardType, EnchantmentSubtype, Subtypes, Supertype};
+    use crabomination::format::{commanders_may_pair, validate_commander_deck, CommanderDeckError, Deck};
+
+    let pair_errors = |a: CardDefinition, b: CardDefinition| {
+        let deck = Deck { commanders: vec![a, b], main: vec![], sideboard: vec![] };
+        let (_generic, cmd) = validate_commander_deck(&deck).unwrap_err();
+        cmd
+    };
+    // Akiri and Ravos both have Partner.
+    assert!(commanders_may_pair(&catalog::akiri_line_slinger(), &catalog::ravos_soultender()));
+    let cmd = pair_errors(catalog::akiri_line_slinger(), catalog::ravos_soultender());
+    assert!(!cmd.iter().any(|e| matches!(e, CommanderDeckError::NotPartners { .. })));
+
+    // Partner on one side only is not enough.
+    let cmd = pair_errors(catalog::akiri_line_slinger(), test_commander());
+    assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotPartners { .. })));
+
+    // "Partner with Khorvath" doesn't pair with a plain Partner.
+    assert!(!commanders_may_pair(&catalog::sylvia_brightspear(), &catalog::akiri_line_slinger()));
+
+    // Gut chooses a Background; the Background is a legal commander even
+    // though it isn't a creature.
+    let background = CardDefinition {
+        name: "Test Background",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Background],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let cmd = pair_errors(catalog::gut_true_soul_zealot(), background.clone());
+    assert!(cmd.is_empty(), "Gut + a Background is a legal pair: {cmd:?}");
+    // …but a Background next to a Partner commander is neither pair.
+    let cmd = pair_errors(catalog::akiri_line_slinger(), background);
+    assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotPartners { .. })));
+    assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })));
+}
+
+/// CR 903.8 — the heuristic bot casts its commander from the command zone.
+/// It had no candidate for it at all, so bot seats in a Commander game
+/// played their 99 without the commander.
+#[test]
+fn bot_casts_its_commander_from_the_command_zone() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![catalog::akiri_line_slinger()])[0];
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    // Postcombat: in the first main the bot's summon-sick hold (round 78)
+    // rightly waits with a creature that can't attack this turn.
+    g.step = TurnStep::PostCombatMain;
+    g.add_card_to_battlefield(0, catalog::mountain());
+    g.add_card_to_battlefield(0, catalog::plains());
+    let action = HeuristicBot::new().next_action(&g, 0).expect("the bot acts");
+    assert!(
+        matches!(action, GameAction::CastFromCommandZone { card_id, .. } if card_id == cmd),
+        "expected the commander cast, got {action:?}",
+    );
+}
+
 // ── Polish: cross-team triggers / optional commander redirect / 2HG mulligan ──
 
 /// CR 810.8 — in 2HG, "whenever you gain life" fires for the
@@ -1587,10 +1656,11 @@ fn two_headed_giant_lifegain_fires_partner_yourcontrol_trigger() {
     );
 }
 
-/// CR 903.9b — the commander redirect is a "may." A scripted decider
-/// answering Bool(false) to `Decision::CommanderRedirect` lets the
-/// commander land in the original zone (graveyard) instead of
-/// bouncing to the command zone. Validates the polish 2 wiring.
+/// CR 903.9a — the move to the command zone is a "may." A scripted decider
+/// answering Bool(false) to `Decision::CommanderRedirect` leaves the
+/// commander in the graveyard, and it is asked once per arrival: the next
+/// SBA check (where the script has run dry and would answer "yes") must not
+/// ask again.
 #[test]
 fn commander_redirect_can_be_declined() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -1608,15 +1678,66 @@ fn commander_redirect_can_be_declined() {
     let card = g.players[0].command.remove(pos);
     g.battlefield.push(card);
     g.remove_from_battlefield_to_graveyard_raw(cmd);
+    g.check_state_based_actions();
+    g.check_state_based_actions();
 
     assert!(
         g.players[0].graveyard.iter().any(|c| c.id == cmd),
-        "with redirect declined, commander goes to graveyard",
+        "with redirect declined, commander stays in the graveyard",
     );
     assert!(
         g.players[0].command.iter().all(|c| c.id != cmd),
         "redirected-out commander must NOT also land in the command zone",
     );
+}
+
+/// CR 903.9a — a commander that dies really is put into the graveyard: it
+/// counts as a permanent put into a graveyard this turn (Gravestorm's tally,
+/// which the pre-2020 replacement skipped because the card never got
+/// there), "whenever a creature dies" sees it (Blood Artist drains), and it
+/// still ends up in the command zone once the SBA runs.
+#[test]
+fn cr_903_9a_commander_dies_then_returns_as_an_sba() {
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.battlefield.push(card);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blade,
+        target: Some(Target::Permanent(cmd)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+
+    assert_eq!(g.permanents_to_graveyard_this_turn, 1, "it reached the graveyard");
+    assert_eq!(g.players[1].life, 19, "Blood Artist saw the commander die");
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd));
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != cmd));
+}
+
+/// CR 903.10a / 704.6c — only *combat* damage from a commander counts
+/// toward 21. Non-combat damage from it (a pinger commander's ability, a
+/// fight) is ordinary damage.
+#[test]
+fn cr_903_10a_noncombat_commander_damage_does_not_count() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(1), 3, Some(cmd), &mut evs);
+    assert_eq!(g.players[1].life, 17, "the damage is still dealt");
+    assert!(g.commander_damage.is_empty(), "but it is not commander damage");
 }
 
 /// 2HG inherits the per-seat mulligan chain from Phase A — each

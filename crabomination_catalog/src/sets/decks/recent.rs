@@ -772,6 +772,7 @@ pub fn gut_true_soul_zealot() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::ChooseABackground],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
             effect: Effect::MaySacrifice {

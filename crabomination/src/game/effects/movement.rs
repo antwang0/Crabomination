@@ -1513,15 +1513,8 @@ impl GameState {
                         events.push(GameEvent::LifeLost { player: p, amount: lost });
                     }
                 }
-                // Phase M: direct damage from a commander source also
-                // counts toward the 21-commander-damage SBA
-                // (CR 704.5v doesn't restrict the damage type — combat
-                // and non-combat both apply).
-                if let Some(src) = source
-                    && self.is_commander(src)
-                {
-                    self.record_commander_damage(p, src, amount);
-                }
+                // No commander-damage tally here: CR 903.10a / 704.6c count
+                // *combat* damage only, which `resolve_combat` records.
                 // "Whenever this deals damage" (Kiyomaro) — the non-combat,
                 // player-side half; combat fires the same kind from
                 // `resolve_combat`.

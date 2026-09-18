@@ -387,7 +387,7 @@ pub fn malcolm_keen_eyed_navigator() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::Partner],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsDamageToPlayer,

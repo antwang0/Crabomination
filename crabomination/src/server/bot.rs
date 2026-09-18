@@ -74,6 +74,15 @@ pub fn install_jitter_seed_if_unset(seed: u64) -> bool {
     })
 }
 
+/// A creature's printed keywords that do something in play — the count the
+/// threat / removal-value heuristics score. Partner and its kin are
+/// deck-construction only ([`Keyword::is_deck_construction`]).
+///
+/// [`Keyword::is_deck_construction`]: crate::card::Keyword::is_deck_construction
+fn in_game_keyword_count(def: &crate::card::CardDefinition) -> usize {
+    def.keywords.iter().filter(|k| !k.is_deck_construction()).count()
+}
+
 /// `CRAB_NO_JITTER=1` pins every tie-break draw to 0, read once.
 ///
 /// A measurement switch, not a play mode. The scored pickers draw one
@@ -3716,7 +3725,7 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
         let mut threat = def.cost.cmc() as i32 * w.unit;
         if def.card_types.contains(&crate::card::CardType::Creature) {
             threat += (def.power.max(0) + def.toughness.max(0)) * w.unit;
-            threat += (def.keywords.len() as i32).min(3) * w.unit;
+            threat += (in_game_keyword_count(def) as i32).min(3) * w.unit;
         }
         match target {
             // Aimed at one of our permanents: the spell is worth what
@@ -7034,6 +7043,36 @@ fn cast_candidates<'a>(
         castable.push((action, false));
     }
     });
+
+    // CR 903.8 — cast a commander from the command zone. Not gated: the
+    // `commanders` list is empty outside Commander, so the loop is free there.
+    // The tax (`{2}` per earlier cast) is generic, so the printed cost's
+    // colours are the exact colour pre-filter and the lazy probe at the pick
+    // site settles the rest.
+    for &id in &state.players[seat].commanders {
+        let Some(c) = state.players[seat].command.iter().find(|c| c.id == id) else {
+            continue;
+        };
+        if !colors_coverable(&c.definition.cost, have_mana.get()) {
+            continue;
+        }
+        let (target, additional_targets) = if c.definition.effect.requires_target() {
+            let (t, extras) =
+                state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        castable.push((
+            GameAction::CastFromCommandZone {
+                card_id: id, target, additional_targets, mode: None, x_value: None,
+            },
+            false,
+        ));
+    }
 
     // Aftermath (CR 702.127): cast the right half of a split card from the
     // graveyard. `would_accept` enforces the graveyard-only + timing rules.
@@ -14945,7 +14984,8 @@ fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
         | GameAction::CastHarmonize { card_id, target, additional_targets, .. }
         | GameAction::CastSpellAlternative { card_id, target, additional_targets, .. }
         | GameAction::CastAdventureCreature { card_id, target, additional_targets, .. }
-        | GameAction::CastPlotted { card_id, target, additional_targets, .. } => {
+        | GameAction::CastPlotted { card_id, target, additional_targets, .. }
+        | GameAction::CastFromCommandZone { card_id, target, additional_targets, .. } => {
             (WardedCost::Spell(*card_id), target, additional_targets.as_slice())
         }
         // Back-face casts pay the back's cost.
@@ -17400,6 +17440,11 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         | GameAction::CastSpellAlternative { card_id, target, .. } => {
             (*card_id, target.clone(), 0, 0)
         }
+        // CR 903.8 — the commander is scored as the creature it is; the tax
+        // is a cost the affordability probe has already cleared.
+        GameAction::CastFromCommandZone { card_id, target, .. } => {
+            (*card_id, target.clone(), 0, 0)
+        }
         GameAction::CastAdventureCreature { card_id, target, .. }
         | GameAction::CastPlotted { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
         GameAction::ActivateAbility { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
@@ -17427,7 +17472,14 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
     // third of recorded casts (82 of 227 cards, converge4 probe,
     // 2026-09-06); so the arm's own rule reads the slot's polarity.
     let mut slot0_wants_self = false;
-    if let Some(card) = state.find_card_anywhere(card_id) {
+    // `find_card_anywhere` doesn't walk the command zone.
+    let card = state.find_card_anywhere(card_id).or_else(|| match action {
+        GameAction::CastFromCommandZone { .. } => {
+            state.players[seat].command.iter().find(|c| c.id == card_id)
+        }
+        _ => None,
+    });
+    if let Some(card) = card {
         // Score the face actually being cast when it isn't the front:
         // MDFC backs for back-face casts, and the inset spell for
         // prepare-casts — scoring the latter by the CREATURE valued
@@ -17491,7 +17543,7 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         }
         if def.card_types.contains(&CardType::Creature) {
             score += (def.power.max(0) + def.toughness.max(0)) * w.unit;
-            score += (def.keywords.len() as i32).min(3) * w.unit;
+            score += (in_game_keyword_count(def) as i32).min(3) * w.unit;
         }
         damage = first_damage_amount(&def.effect, extra_mana);
     }

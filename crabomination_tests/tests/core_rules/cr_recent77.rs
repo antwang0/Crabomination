@@ -234,6 +234,8 @@ fn cr_903_8_commander_tax_is_two_generic_per_prior_cast() {
     assert_eq!(cast(&mut g), 2, "printed cost only");
     let mut events = Vec::new();
     g.destroy_permanent(cmd, false, &mut events);
+    // CR 903.9a — the graveyard → command zone move is a state-based action.
+    g.check_state_based_actions();
     assert_eq!(cast(&mut g), 4, "printed cost plus the tax");
 }
 

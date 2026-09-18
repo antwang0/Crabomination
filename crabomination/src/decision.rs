@@ -385,9 +385,10 @@ pub enum Decision {
         sides: u8,
     },
 
-    /// CR 903.9b — the commander would land in `would_be` from
-    /// somewhere; its owner *may* redirect to the command zone
-    /// instead. Answered with `DecisionAnswer::Bool` (true = redirect,
+    /// CR 903.9a / 903.9b — the commander would land in (903.9b: hand,
+    /// library) or has just landed in (903.9a: graveyard, exile, asked
+    /// by the SBA) `would_be`; its owner *may* put it into the command
+    /// zone instead. Answered with `DecisionAnswer::Bool` (true = redirect,
     /// false = let it go to `would_be`). `AutoDecider` defaults to
     /// `true` since the safest play is almost always to save the
     /// commander; scripted scenarios (countering an opponent's

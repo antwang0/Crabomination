@@ -249,8 +249,9 @@ pub struct PlayerData {
     /// The command zone — Commander commanders, Conspiracies, etc.
     /// (Phase I.) Cards arrive here either at game start (initial
     /// commander seating via `seat_commanders`) or via a zone-change
-    /// replacement effect when they would otherwise leave the
-    /// battlefield (CR 903.9b).
+    /// replacement effect when they would go to hand or library
+    /// (CR 903.9b), or via the SBA after reaching a graveyard or exile
+    /// (CR 903.9a).
     ///
     /// `#[serde(default)]` so snapshots written before the field
     /// existed deserialize cleanly as empty.

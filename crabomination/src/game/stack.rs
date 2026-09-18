@@ -5537,6 +5537,55 @@ impl GameState {
     /// the server's read paths). Engine callers that already hold an events
     /// buffer call [`Self::check_state_based_actions_into`] and skip the
     /// per-sweep `Vec` — see PERF's `(-75)`.
+    /// CR 903.9a — "If a commander is in a graveyard or in exile and that
+    /// object was put into that zone since the last time state-based actions
+    /// were checked, its owner may put it into the command zone." The owner
+    /// is asked through `Decision::CommanderRedirect` (`would_be` is the zone
+    /// it stays in on a "no"); a declined commander is remembered in
+    /// `commander_return_declined` until it turns up in some other zone.
+    fn commander_zone_return_sba(&mut self) {
+        use crate::card::Zone;
+        for owner in 0..self.players.len() {
+            for i in 0..self.players[owner].commanders.len() {
+                let id = self.players[owner].commanders[i];
+                let zone = if self.players[owner].graveyard.iter().any(|c| c.id == id) {
+                    Zone::Graveyard
+                } else if self.exile.iter().any(|c| c.id == id) {
+                    Zone::Exile
+                } else {
+                    if self.commander_return_declined.contains(&id) {
+                        self.commander_return_declined.retain(|d| *d != id);
+                    }
+                    continue;
+                };
+                if self.commander_return_declined.contains(&id) {
+                    continue;
+                }
+                let answer = self.decider.decide(&crate::decision::Decision::CommanderRedirect {
+                    commander: id,
+                    would_be: zone,
+                });
+                if !matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
+                    self.commander_return_declined.push(id);
+                    continue;
+                }
+                let card = if zone == Zone::Graveyard {
+                    Self::take_card(&mut self.players[owner].graveyard, id)
+                } else {
+                    Self::take_card(&mut self.exile, id)
+                };
+                if let Some(mut card) = card {
+                    // CR 400.7 — a new object in the command zone.
+                    card.counters.clear();
+                    card.keyword_counters.clear();
+                    card.exiled_with = None;
+                    self.players[owner].command.push(card);
+                    self.offboard_keyword_grants = true;
+                }
+            }
+        }
+    }
+
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
         self.check_state_based_actions_into(&mut events);
@@ -5556,6 +5605,14 @@ impl GameState {
         // CR 704.6f — a face-up phenomenon whose encounter trigger has left the
         // stack makes its controller planeswalk.
         self.sweep_finished_phenomena();
+        // CR 903.9a — a commander that reached a graveyard or exile may go
+        // to the command zone. Checked first, so a commander that dies in
+        // this sweep sits in the graveyard until the next one, as the rule
+        // has it ("put into that zone since the last time state-based
+        // actions were checked").
+        if self.players.iter().any(|p| !p.commanders.is_empty()) {
+            self.commander_zone_return_sba();
+        }
 
         // One pass answering "which of the rare SBAs can fire on this board".
         // Retaken below wherever the sweep can change the answer (a flip swaps
