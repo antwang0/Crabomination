@@ -526,7 +526,21 @@ impl GameState {
     pub fn may_declare_blocks(&self, seat: usize) -> bool {
         match self.block_chooser() {
             Some(chooser) => chooser == seat,
-            None => seat != self.active_player_idx,
+            // CR 509.1a — blocks are declared by the *defending* players. In a
+            // duel that is exactly "not the active player", which is what this
+            // used to say; at three or more seats it is only the players being
+            // attacked (or their teammates), and every other seat was being
+            // offered a declaration the per-assignment check would reject.
+            // With nothing attacking there is nothing to declare either way,
+            // so the duel's answer is unchanged in both branches.
+            None => {
+                seat != self.active_player_idx
+                    && (self.attacking.is_empty()
+                        || self.attacking.iter().any(|a| {
+                            self.defender_for(a.target)
+                                .is_some_and(|d| self.same_team(seat, d))
+                        }))
+            }
         }
     }
 

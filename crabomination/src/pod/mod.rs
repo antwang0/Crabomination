@@ -228,6 +228,12 @@ pub fn play_one_pod_game(
     }
     crate::server::bot::set_jitter_seed(None);
     let stop = stop_reason(&g, actions, max_actions, stale).unwrap_or(StopReason::NoLegalMove);
+    // `CRAB_CAP_DIAG` is the two-player loop's knob and it says the same thing
+    // here: what was an undecided game actually doing. One `OnceLock` read a
+    // game, on the undecided ones only.
+    if crate::recommend::cap_diag_floor().is_some() && !matches!(stop, StopReason::GameOver) {
+        eprintln!("pod {stop:?} seed {seed}: {}", crate::recommend::cap_diagnosis(&g, actions));
+    }
     PodOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
 }
 

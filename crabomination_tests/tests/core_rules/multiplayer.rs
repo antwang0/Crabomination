@@ -833,6 +833,50 @@ fn three_player_ffa_ends_with_last_player_standing() {
     assert!(events.iter().any(|e| matches!(e, GameEvent::GameOver { winner: Some(1) })));
 }
 
+/// CR 509.1a — blocks are declared by the *defending* player. In a pod, a
+/// seat nobody is attacking is not one of them; the gate used to answer
+/// "anyone but the active player", which is only the same thing in a duel.
+#[test]
+fn cr_509_1a_only_the_attacked_seat_may_declare_blocks() {
+    let mut g = multi_player_game(3);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("seat 0 attacks seat 1");
+
+    assert!(!g.may_declare_blocks(0), "the attacking player never blocks");
+    assert!(g.may_declare_blocks(1), "the attacked seat does");
+    assert!(!g.may_declare_blocks(2), "a seat nobody attacked does not");
+}
+
+/// The same gate in a duel is unchanged — which is what keeps the two-player
+/// golden traces byte-identical across the CR 509.1a tightening.
+#[test]
+fn cr_509_1a_duel_gate_is_unchanged() {
+    let mut g = two_player_game();
+    // Nothing attacking: the non-active seat may still be asked.
+    assert!(!g.may_declare_blocks(0));
+    assert!(g.may_declare_blocks(1));
+
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    assert!(!g.may_declare_blocks(0));
+    assert!(g.may_declare_blocks(1));
+}
+
 /// CR 800.4a — when a player leaves the game, the cards/tokens they own
 /// leave with them, and permanents they controlled but didn't own revert to
 /// their owners' control.

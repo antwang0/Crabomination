@@ -2384,7 +2384,7 @@ fn max_actions_override() -> Option<usize> {
     })
 }
 
-fn cap_diag_floor() -> Option<Option<usize>> {
+pub(crate) fn cap_diag_floor() -> Option<Option<usize>> {
     static FLOOR: std::sync::OnceLock<Option<Option<usize>>> = std::sync::OnceLock::new();
     *FLOOR.get_or_init(|| {
         let v = std::env::var_os("CRAB_CAP_DIAG")?;
@@ -2461,7 +2461,7 @@ fn progress_watch_line(g: &GameState) -> String {
     s
 }
 
-fn cap_diagnosis(g: &GameState, actions: usize) -> String {
+pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     use crate::game::StackItem;
     use std::fmt::Write;
 

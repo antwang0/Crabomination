@@ -1154,6 +1154,19 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
     const MAX_ACTIONS: usize = 50_000;
 
     let seats = args.seats.clamp(2, 8);
+    // The net observation encoder is fixed at two seats — `encode_state_inner`
+    // reads the opponent as `1 - seat` — so an MCTS/net pilot in a 4-seat pod
+    // would index out of bounds rather than play badly. Refusing here is the
+    // whole guard: changing the encoder invalidates every trained net, which
+    // is not a thing a Commander run gets to do as a side effect.
+    if seats > 2 && matches!(args.a, crabomination::recommend::Pilot::Mcts(_)) {
+        eprintln!(
+            "error: --a {} is a search/net pilot and the observation encoder is two-seat only;\n\
+             run Commander pods with a scored or uniform profile, or --seats 2.",
+            args.a_name,
+        );
+        return 2;
+    }
     let field = pod_field(seats);
     let games = args.games as u32;
     println!(
