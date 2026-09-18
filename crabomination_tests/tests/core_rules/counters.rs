@@ -917,7 +917,7 @@ fn a_token_created_with_counters_has_them_before_it_enters() {
     let eff = Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: Box::new(
+        definition: std::sync::Arc::new(
             crabomination_base::tokens::fractal_token()
                 .entering_with(CounterType::PlusOnePlusOne, Value::Const(3)),
         ),

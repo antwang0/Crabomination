@@ -236,7 +236,7 @@ pub fn shark_typhoon() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(shark_token()),
+            definition: std::sync::Arc::new(shark_token()),
         },
     };
     CardDefinition {
@@ -251,7 +251,7 @@ pub fn shark_typhoon() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(shark_token()),
+                    definition: std::sync::Arc::new(shark_token()),
                 },
             },
         ],
@@ -465,7 +465,7 @@ pub fn arasta_of_the_endless_web() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Spider".into(),
                     power: 1,
                     toughness: 2,
@@ -555,7 +555,7 @@ pub fn tymaret_calls_the_dead() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Zombie".into(),
                             power: 2,
                             toughness: 2,
@@ -761,7 +761,7 @@ pub fn aphemia_the_cacophony() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Zombie".into(),
                             power: 2,
                             toughness: 2,
@@ -1421,7 +1421,7 @@ pub fn discordant_piper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Goat".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::White],
@@ -1909,7 +1909,7 @@ pub fn reverent_hoplite() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::DevotionTo(vec![Color::White]),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Human Soldier".into(),
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::White],
@@ -2110,7 +2110,7 @@ pub fn omen_of_the_sun() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(human_soldier_token()),
+                definition: std::sync::Arc::new(human_soldier_token()),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -3213,7 +3213,7 @@ pub fn satyrs_cunning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Satyr".into(),
                 power: 1,
                 toughness: 1,
@@ -3861,7 +3861,7 @@ pub fn commanding_presence() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(human_soldier_token()),
+                definition: std::sync::Arc::new(human_soldier_token()),
             },
         }],
         ..Default::default()
@@ -3959,7 +3959,7 @@ pub fn mantle_of_the_wolf() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Wolf".into(),
                 power: 2,
                 toughness: 2,
@@ -4144,7 +4144,7 @@ pub fn nadir_kraken() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Tentacle".into(),
                             power: 1,
                             toughness: 1,
@@ -4423,7 +4423,7 @@ pub fn hero_of_the_nyxborn() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(human_soldier_token()),
+                definition: std::sync::Arc::new(human_soldier_token()),
             }),
             heroic_team_pump(),
         ],
@@ -4448,7 +4448,7 @@ pub fn heroes_of_the_revel() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(satyr_cant_block_token()),
+                definition: std::sync::Arc::new(satyr_cant_block_token()),
             }),
             heroic_team_pump(),
         ],
@@ -4783,7 +4783,7 @@ pub fn archon_of_suns_grace() -> CardDefinition {
         triggered_abilities: vec![constellation(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(pegasus_token()),
+            definition: std::sync::Arc::new(pegasus_token()),
         })],
         ..Default::default()
     }
@@ -4888,7 +4888,7 @@ pub fn alirios_enraptured() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Reflection".into(),
                     power: 3,
                     toughness: 2,
@@ -5118,7 +5118,7 @@ pub fn wolfwillow_haven() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Wolf".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Green],
@@ -5506,7 +5506,7 @@ pub fn the_first_iroan_games() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(human_soldier_token()),
+                    definition: std::sync::Arc::new(human_soldier_token()),
                 },
             ),
             (
@@ -5542,7 +5542,7 @@ pub fn the_first_iroan_games() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(gold_token()),
+                    definition: std::sync::Arc::new(gold_token()),
                 },
             ),
         ],
@@ -5643,7 +5643,7 @@ pub fn kiora_bests_the_sea_god() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(kraken),
+                    definition: std::sync::Arc::new(kraken),
                 },
             ),
             (
@@ -5967,7 +5967,7 @@ pub fn purphoross_intervention() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(elemental),
+                definition: std::sync::Arc::new(elemental),
             },
             Effect::DealDamage {
                 to: target_filtered(
@@ -6160,7 +6160,7 @@ pub fn elspeth_suns_nemesis() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(soldier_token()),
+                    definition: std::sync::Arc::new(soldier_token()),
                 },
                 ..Default::default()
             },
@@ -6330,7 +6330,7 @@ pub fn ashiok_nightmare_muse() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(ashiok_nightmare_token()),
+                    definition: std::sync::Arc::new(ashiok_nightmare_token()),
                 },
                 ..Default::default()
             },
@@ -6912,7 +6912,7 @@ pub fn siona_captain_of_the_pyleas() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(human_soldier_token()),
+                    definition: std::sync::Arc::new(human_soldier_token()),
                 },
             },
         ],

@@ -116,7 +116,7 @@ pub fn pollenbright_wings() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PowerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
-                definition: Box::new(saproling()),
+                definition: std::sync::Arc::new(saproling()),
             },
         }],
         ..Default::default()

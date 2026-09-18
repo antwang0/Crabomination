@@ -104,7 +104,7 @@ pub fn murder_investigation() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PowerOf(Box::new(Selector::TriggerSource)),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Soldier".into(),
                     power: 1,
                     toughness: 1,

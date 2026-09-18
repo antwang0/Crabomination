@@ -142,7 +142,7 @@ pub fn elephant_guide() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(elephant),
+                definition: std::sync::Arc::new(elephant),
             },
         }],
         ..Default::default()

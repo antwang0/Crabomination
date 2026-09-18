@@ -8424,6 +8424,41 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-364)` an `Effect`'s token definition is an `Arc`, not a `Box` — **fixed -0.073 / cube -0.530 / sealed -0.272 %**
+
+`Effect::CreateToken` and sixteen sibling variants carried
+`Box<TokenDefinition>`, so **every `Effect::clone` that touched one deep-copied
+a `String` and six `Vec`s** — and after `(-361)` the trigger pipeline still
+clones ~28,000 effects a `cube` run. The definitions are immutable once the
+catalog builds them (nothing in the tree takes `&mut` through the field; the
+workspace compiles with the type swapped and no `Arc::make_mut` anywhere), so
+the `Box` was buying nothing the `Arc` does not.
+
+```text
+                  (-362) tip        (-364)            delta
+  fixed            568,924,883       568,508,598       -0.0732 %
+  cube           1,485,887,871     1,478,019,562       -0.5295 %
+  sealed         1,602,707,560     1,598,344,730       -0.2722 %
+
+  TokenDefinition::clone   3,005 -> 20 calls
+  allocations (cube)     688,811 -> 673,365   -15,446
+```
+
+📐 **509 Ir PER DELETED ALLOCATION, the highest this file has measured** —
+against 222 for a plain buffer and `(-362)`'s 278 for one `GameState::clone`
+copies. The extra is the `String` and the six `Vec` payloads: a deleted deep
+copy takes its `memcpy` and its drop with it, where a deleted *empty* buffer
+takes only the allocator round trip. **Rank a clone row by the bytes it
+copies, not only by the allocations it makes.**
+
+⚠ **The change is 395 files and 1,925 lines and every one of them is
+`Box::new` -> `std::sync::Arc::new` at a `definition:` or `token:` field.**
+Three type errors survived the sed (a `ChooseMode` closure in `mh3d`,
+`TokenDefinition::boxed_clone`, `grist_insect_token`) and `cargo check
+--workspace --all-targets` found all three. ⚠ **No encoding change**: `Box<T>`
+and `Arc<T>` serialize identically under serde's `rc` feature, `Effect`'s
+variant shape is untouched, and nets do **not** need a retrain.
+
 ### `(-363)` REFUTED — `players` as a two-slot inline seat list removes **exactly** the 22,034 allocations it promised and costs **+0.754 / +0.652 / +0.722 %**
 
 `(-362)`'s entry named this as the other half of `GameState::clone`'s two

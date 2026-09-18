@@ -262,7 +262,7 @@ pub fn flamewright() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Construct".into(),
                         power: 1,
                         toughness: 1,
@@ -329,7 +329,7 @@ pub fn grenzos_rebuttal() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Ogre".into(),
                     power: 4,
                     toughness: 4,
@@ -544,7 +544,7 @@ pub fn reign_of_the_pit() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Demon".into(),
                     colors: vec![Color::Black],
                     card_types: vec![CardType::Creature],

@@ -790,7 +790,7 @@ pub fn rotlung_reanimator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(zombie),
+                definition: std::sync::Arc::new(zombie),
             },
         }],
         ..creature(
@@ -1159,7 +1159,7 @@ pub fn dragon_roost() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(dragon),
+                definition: std::sync::Arc::new(dragon),
             },
             ..Default::default()
         }],
@@ -2480,7 +2480,7 @@ pub fn broodhatch_nantuko() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::TriggerEventAmount,
-                    definition: Box::new(insect),
+                    definition: std::sync::Arc::new(insect),
                 }),
             },
         }],
@@ -3122,7 +3122,7 @@ pub fn vitality_charm() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(insect),
+                definition: std::sync::Arc::new(insect),
             },
             Effect::Seq(vec![
                 Effect::PumpPT {
@@ -3199,7 +3199,7 @@ pub fn words_of_wilding() -> CardDefinition {
     words(
         "Words of Wilding",
         cost(&[generic(2), g()]),
-        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Box::new(bear) },
+        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: std::sync::Arc::new(bear) },
     )
 }
 

@@ -136,7 +136,7 @@ pub fn research_development() -> CardDefinition {
                 cost: cost(&[generic(3), u(), r()]),
                 card_types: vec![CardType::Instant],
                 effect: Effect::TokenUnlessOpponentLetsYouDraw {
-                    token: Box::new(TokenDefinition {
+                    token: std::sync::Arc::new(TokenDefinition {
                         name: "Elemental".into(),
                         power: 3,
                         toughness: 1,

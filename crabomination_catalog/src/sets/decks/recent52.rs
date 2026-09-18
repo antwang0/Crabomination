@@ -298,7 +298,7 @@ pub fn defiled_crypt_cadaver_lab() -> CardDefinition {
                     effect: Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Horror".to_string(),
                             power: 2,
                             toughness: 2,
@@ -394,7 +394,7 @@ pub fn zimone_all_questioning() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Primo, the Indivisible".to_string(),
                         power: 0,
                         toughness: 0,
@@ -459,7 +459,7 @@ pub fn ghostly_dancers() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(spirit_token()),
+                    definition: std::sync::Arc::new(spirit_token()),
                 },
             },
         ],
@@ -582,7 +582,7 @@ pub fn brimstone_roundup() -> CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::flurry(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(mercenary()),
+            definition: std::sync::Arc::new(mercenary()),
         })],
         ..Default::default()
     }
@@ -658,7 +658,7 @@ pub fn trail_of_crumbs() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(food_token()),
+                    definition: std::sync::Arc::new(food_token()),
                 },
             },
             TriggeredAbility {

@@ -66,7 +66,7 @@ pub fn living_history() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(spirit_token()),
+                    definition: std::sync::Arc::new(spirit_token()),
                 },
             },
             // On any attack you control: if a card left your graveyard
@@ -238,7 +238,7 @@ pub fn additive_evolution() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(3))),
+                        definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(3))),
                     },
                 ]),
             },

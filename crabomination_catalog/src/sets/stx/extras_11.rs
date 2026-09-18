@@ -120,7 +120,7 @@ pub fn quandrix_aetherist_b103() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(2))),
+                definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(2))),
             },
         ]))],
         ..Default::default()
@@ -509,7 +509,7 @@ pub fn quandrix_lecturer() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, count(each_your_creature()))),
+                definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, count(each_your_creature()))),
             },
         ]),
         ..Default::default()
@@ -1146,7 +1146,7 @@ pub fn quandrix_mathematician_b104() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(2))),
+                definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(2))),
             },
         ]))],
         ..Default::default()
@@ -1173,7 +1173,7 @@ pub fn fractal_bloom_b104() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(fractal_token()),
+                definition: std::sync::Arc::new(fractal_token()),
             },
             Effect::DistributeCountersAmongLastCreated {
                 total: Value::Const(3),

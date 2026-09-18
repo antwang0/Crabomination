@@ -481,7 +481,7 @@ pub fn unfathomable_truths() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::eldrazi_spawn_token()),
+                definition: std::sync::Arc::new(crate::game::effects::eldrazi_spawn_token()),
             },
         ]),
         ..Default::default()
@@ -524,7 +524,7 @@ pub fn phyrexian_ironworks() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(phyrexian_golem_token()),
+                definition: std::sync::Arc::new(phyrexian_golem_token()),
             },
             ..Default::default()
         }],
@@ -682,7 +682,7 @@ pub fn skittering_precursor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::eldrazi_spawn_token()),
+                definition: std::sync::Arc::new(crate::game::effects::eldrazi_spawn_token()),
             },
         }],
         ..Default::default()
@@ -856,7 +856,7 @@ pub fn inspired_inventor() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(servo_token()),
+                definition: std::sync::Arc::new(servo_token()),
             },
         ]))],
         ..Default::default()

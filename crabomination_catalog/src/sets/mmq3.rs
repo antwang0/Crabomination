@@ -500,7 +500,7 @@ pub fn security_detail() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Soldier".into(),
                     power: 1,
                     toughness: 1,
@@ -572,7 +572,7 @@ pub fn midnight_ritual() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Zombie".into(),
                     power: 2,
                     toughness: 2,

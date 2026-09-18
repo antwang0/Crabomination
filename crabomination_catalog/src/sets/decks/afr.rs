@@ -787,7 +787,7 @@ pub fn plundering_barbarian() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crabomination_base::tokens::treasure_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
             },
         ]))],
         ..Default::default()

@@ -134,7 +134,7 @@ pub fn daxos_the_returned() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(daxos_spirit_token()),
+                definition: std::sync::Arc::new(daxos_spirit_token()),
             },
             ..Default::default()
         }],

@@ -95,7 +95,7 @@ pub fn sentinel_dispatch() -> CardDefinition {
         triggered_abilities: vec![first_upkeep(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 card_types: vec![CardType::Artifact, CardType::Creature],
                 keywords: vec![Keyword::Defender],
                 ..token("Construct", 1, 1, CreatureType::Construct, vec![])
@@ -113,7 +113,7 @@ pub fn hold_the_perimeter() -> CardDefinition {
             first_upkeep(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     keywords: vec![Keyword::Defender],
                     ..token("Soldier", 1, 2, CreatureType::Soldier, vec![Color::White])
                 }),
@@ -121,7 +121,7 @@ pub fn hold_the_perimeter() -> CardDefinition {
             first_upkeep(Effect::CreateToken {
                 who: PlayerRef::EachOpponent,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     keywords: vec![Keyword::CantBlock],
                     ..token("Goblin", 1, 1, CreatureType::Goblin, vec![Color::Red])
                 }),
@@ -327,7 +327,7 @@ pub fn assemble_the_rank_and_vile() -> CardDefinition {
                             Effect::CreateToken {
                                 who: PlayerRef::You,
                                 count: Value::ONE,
-                                definition: Box::new(token(
+                                definition: std::sync::Arc::new(token(
                                     "Zombie",
                                     2,
                                     2,
@@ -640,7 +640,7 @@ pub fn rousing_of_souls() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CardsRevealedThisEffect,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     keywords: vec![Keyword::Flying],
                     ..token("Spirit", 1, 1, CreatureType::Spirit, vec![Color::White])
                 }),
@@ -660,7 +660,7 @@ pub fn selvalas_charge() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CardsRevealedThisEffect,
-                definition: Box::new(token("Elephant", 3, 3, CreatureType::Elephant, vec![Color::Green])),
+                definition: std::sync::Arc::new(token("Elephant", 3, 3, CreatureType::Elephant, vec![Color::Green])),
             }),
         },
         ..Default::default()
@@ -942,7 +942,7 @@ pub fn lieutenants_of_the_guard() -> CardDefinition {
                         Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: Box::new(token(
+                            definition: std::sync::Arc::new(token(
                                 "Soldier",
                                 1,
                                 1,

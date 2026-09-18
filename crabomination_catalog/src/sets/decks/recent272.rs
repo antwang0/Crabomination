@@ -76,7 +76,7 @@ pub fn revenge_of_the_drowned() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(zombie),
+                definition: std::sync::Arc::new(zombie),
             },
         ]),
         ..Default::default()

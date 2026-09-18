@@ -179,7 +179,7 @@ pub fn jasmine_dragon_tea_shop() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(ally_token()),
+                    definition: std::sync::Arc::new(ally_token()),
                 },
                 ..Default::default()
             },
@@ -314,7 +314,7 @@ pub fn firebender_ascension() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(firebending_soldier()),
+            definition: std::sync::Arc::new(firebending_soldier()),
         })],
         ..Default::default()
     }
@@ -597,7 +597,7 @@ pub fn basri_tomorrows_champion() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(cat()),
+                definition: std::sync::Arc::new(cat()),
             },
             ..Default::default()
         }],
@@ -931,7 +931,7 @@ pub fn aatchik_emerald_radian() -> CardDefinition {
                     filter: R::HasCardType(CardType::Creature)
                         .or(R::HasCardType(CardType::Artifact)),
                 }),
-                definition: Box::new(insect_token()),
+                definition: std::sync::Arc::new(insect_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
@@ -1140,7 +1140,7 @@ pub fn country_roads() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(pilot_token()),
+                    definition: std::sync::Arc::new(pilot_token()),
                 },
                 ..Default::default()
             },

@@ -61,7 +61,7 @@ pub fn roadside_assistance() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(boosted_pilot_token()),
+            definition: std::sync::Arc::new(boosted_pilot_token()),
         })],
         ..Default::default()
     }
@@ -91,7 +91,7 @@ pub fn cloudspire_coordinator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::MountsVehiclesEnteredThisTurn(PlayerRef::You),
-                definition: Box::new(boosted_pilot_token()),
+                definition: std::sync::Arc::new(boosted_pilot_token()),
             },
             ..Default::default()
         }],

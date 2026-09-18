@@ -559,7 +559,7 @@ pub fn haunted_angel() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::ONE,
-                    definition: Box::new(crate::card::TokenDefinition {
+                    definition: std::sync::Arc::new(crate::card::TokenDefinition {
                         name: "Angel".to_string(),
                         power: 3,
                         toughness: 3,
@@ -917,7 +917,7 @@ fn penumbra(
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: token_name.to_string(),
                     power: p,
                     toughness: t,
@@ -1430,7 +1430,7 @@ pub fn aether_mutation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ManaValueOf(Box::new(Selector::Target(0))),
-                definition: Box::new(saproling()),
+                definition: std::sync::Arc::new(saproling()),
             },
         ]),
     )
@@ -1448,7 +1448,7 @@ pub fn death_mutation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ManaValueOf(Box::new(Selector::Target(0))),
-                definition: Box::new(saproling()),
+                definition: std::sync::Arc::new(saproling()),
             },
         ]),
     )
@@ -1619,7 +1619,7 @@ pub fn goblin_trenches() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Goblin Soldier".to_string(),
                     power: 1,
                     toughness: 1,

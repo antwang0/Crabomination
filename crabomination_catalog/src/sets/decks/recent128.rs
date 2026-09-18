@@ -189,7 +189,7 @@ pub fn cut_in() -> CardDefinition {
                     slot: 1,
                     filter: R::Creature.and(R::ControlledByYou),
                 },
-                definition: Box::new(young_hero_role()),
+                definition: std::sync::Arc::new(young_hero_role()),
             },
         ]),
         ..Default::default()
@@ -211,7 +211,7 @@ pub fn become_brutes() -> CardDefinition {
             },
             Effect::CreateTokenAttachedTo {
                 target: Selector::Target(0),
-                definition: Box::new(monster_role()),
+                definition: std::sync::Arc::new(monster_role()),
             },
         ]),
         ..Default::default()
@@ -237,7 +237,7 @@ pub fn diminisher_witch() -> CardDefinition {
                 .with_filter(Predicate::SpellWasBargained),
             effect: Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByOpponent)),
-                definition: Box::new(cursed_role()),
+                definition: std::sync::Arc::new(cursed_role()),
             },
         }],
         ..Default::default()

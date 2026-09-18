@@ -721,7 +721,7 @@ pub fn boris_devilboon() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Minor Demon".into(),
                     power: 1,
                     toughness: 1,

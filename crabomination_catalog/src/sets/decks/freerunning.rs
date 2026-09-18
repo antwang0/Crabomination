@@ -129,7 +129,7 @@ pub fn distract_the_guards() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Human Rogue".into(),
                 power: 1,
                 toughness: 1,

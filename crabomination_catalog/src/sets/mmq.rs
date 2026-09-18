@@ -1686,7 +1686,7 @@ pub fn spontaneous_generation() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::HandSizeOf(PlayerRef::You),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Saproling".into(),
                 power: 1,
                 toughness: 1,

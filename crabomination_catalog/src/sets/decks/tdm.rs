@@ -505,7 +505,7 @@ pub fn war_effort() -> CardDefinition {
             effect: Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Warrior".into(),
                     power: 1,
                     toughness: 1,
@@ -569,7 +569,7 @@ pub fn rally_the_monastery() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(white_monk_prowess_token()),
+                definition: std::sync::Arc::new(white_monk_prowess_token()),
             },
             Effect::ApplyToTargets {
                 max_targets: 2,
@@ -622,7 +622,7 @@ pub fn salt_road_skirmish() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(warrior_haste_token()),
+                definition: std::sync::Arc::new(warrior_haste_token()),
             },
             Effect::SacrificeLastCreatedTokensAtNextEndStep,
         ]),
@@ -693,7 +693,7 @@ pub fn essence_anchor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Zombie Druid".into(),
                     power: 2,
                     toughness: 2,
@@ -848,7 +848,7 @@ pub fn kheru_goldkeeper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -1073,7 +1073,7 @@ pub fn sarkhan_dragon_ascendant() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::game::effects::treasure_token()),
+                    definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             }),
@@ -1231,7 +1231,7 @@ pub fn dragonbroods_relic() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(reliquary_dragon),
+                    definition: std::sync::Arc::new(reliquary_dragon),
                 },
                 ..Default::default()
             },
@@ -1489,7 +1489,7 @@ pub fn abzan_monument() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Spirit".into(),
                     power: 0,
                     toughness: 0,
@@ -1837,7 +1837,7 @@ pub fn revival_of_the_ancestors() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: Box::new(spirit_token()),
+                    definition: std::sync::Arc::new(spirit_token()),
                 },
             ),
             (
@@ -2085,7 +2085,7 @@ pub fn great_arashin_city() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(spirit_token()),
+                    definition: std::sync::Arc::new(spirit_token()),
                 },
                 ..Default::default()
             },
@@ -2171,7 +2171,7 @@ pub fn roar_of_endless_song() -> CardDefinition {
     let make_elephant = Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: Box::new(elephant),
+        definition: std::sync::Arc::new(elephant),
     };
     CardDefinition {
         name: "Roar of Endless Song",
@@ -2271,7 +2271,7 @@ pub fn windcrag_siege() -> CardDefinition {
                         count: Value::ONE,
                         // lifelink/haste are printed "until end of turn"; baked on
                         // the token (negligible for a 1/1 that rarely survives).
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Goblin".into(),
                             power: 1,
                             toughness: 1,
@@ -2325,7 +2325,7 @@ pub fn the_sibsig_ceremony() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Zombie Druid".into(),
                         power: 2,
                         toughness: 2,
@@ -2532,7 +2532,7 @@ pub fn jeskai_revelation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(white_monk_prowess_token()),
+                definition: std::sync::Arc::new(white_monk_prowess_token()),
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::GainLife { who: Selector::You, amount: Value::Const(4) },

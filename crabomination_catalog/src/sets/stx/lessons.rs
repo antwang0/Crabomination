@@ -262,7 +262,7 @@ pub fn pest_inheritance() -> CardDefinition {
             count: Value::CountOf(Box::new(Selector::EachPermanent(
                 SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
             ))),
-            definition: Box::new(pest),
+            definition: std::sync::Arc::new(pest),
         },
         ..Default::default()
     }
@@ -437,7 +437,7 @@ pub fn pest_studies() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(pest),
+            definition: std::sync::Arc::new(pest),
         },
         ..Default::default()
     }
@@ -551,7 +551,7 @@ pub fn inkling_lesson() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(inkling_token()),
+            definition: std::sync::Arc::new(inkling_token()),
         },
         ..Default::default()
     }
@@ -597,7 +597,7 @@ pub fn fractal_studies() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::CountOf(Box::new(Selector::EachPermanent(
+                definition: std::sync::Arc::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ))))),
             },
@@ -626,7 +626,7 @@ pub fn spirit_lesson() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(lorehold_spirit_token()),
+            definition: std::sync::Arc::new(lorehold_spirit_token()),
         },
         ..Default::default()
     }
@@ -701,7 +701,7 @@ pub fn mascot_lesson_b32() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(inkling),
+            definition: std::sync::Arc::new(inkling),
         },
         ..Default::default()
     }

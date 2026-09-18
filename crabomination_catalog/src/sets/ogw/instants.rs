@@ -160,7 +160,7 @@ pub fn allied_reinforcements() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(knight),
+            definition: std::sync::Arc::new(knight),
         },
         ..Default::default()
     }
@@ -300,7 +300,7 @@ pub fn warping_wail() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(eldrazi_scion_token()),
+                definition: std::sync::Arc::new(eldrazi_scion_token()),
             },
         ]),
         ..Default::default()
@@ -475,7 +475,7 @@ pub fn call_the_scions() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(eldrazi_scion_token()),
+            definition: std::sync::Arc::new(eldrazi_scion_token()),
         },
         ..Default::default()
     }

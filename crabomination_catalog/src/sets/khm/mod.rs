@@ -30,7 +30,7 @@ pub fn dragonkin_berserker() -> CardDefinition {
             Effect::CreateToken {
                 who: crate::effect::PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Dragon".into(),
                     power: 5,
                     toughness: 5,

@@ -96,7 +96,7 @@ fn living_weapon() -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Phyrexian Germ".into(),
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::Black],
@@ -428,7 +428,7 @@ pub fn shrine_of_loyal_legions() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
-                definition: Box::new(phyrexian_myr()),
+                definition: std::sync::Arc::new(phyrexian_myr()),
             },
             ..Default::default()
         },
@@ -1313,7 +1313,7 @@ pub fn fresh_meat() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ControllerCreaturesDiedThisTurn,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Beast".into(),
                 power: 3,
                 toughness: 3,
@@ -1422,7 +1422,7 @@ pub fn vital_splicer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(phyrexian_golem()),
+            definition: std::sync::Arc::new(phyrexian_golem()),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
@@ -1858,7 +1858,7 @@ pub fn phyrexian_swarmlord() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PoisonCountersOf(PlayerRef::EachOpponent),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Phyrexian Insect".into(),
                     power: 1,
                     toughness: 1,
@@ -1980,7 +1980,7 @@ pub fn conversion_chamber() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(phyrexian_golem()),
+                    definition: std::sync::Arc::new(phyrexian_golem()),
                 },
                 ..Default::default()
             },
@@ -2138,7 +2138,7 @@ pub fn parasitic_implant() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(phyrexian_myr()),
+                    definition: std::sync::Arc::new(phyrexian_myr()),
                 },
             ]),
         }],
@@ -2219,12 +2219,12 @@ pub fn chancellor_of_the_forge() -> CardDefinition {
         opening_hand: Some(chancellor_reveal(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(goblin.clone()),
+            definition: std::sync::Arc::new(goblin.clone()),
         })),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::PermanentCountControlledByMatching(PlayerRef::You, R::Creature),
-            definition: Box::new(goblin),
+            definition: std::sync::Arc::new(goblin),
         })],
         ..creature(
             "Chancellor of the Forge",

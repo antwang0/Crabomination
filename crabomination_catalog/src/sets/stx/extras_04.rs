@@ -311,7 +311,7 @@ pub fn strixhaven_spawner() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: Box::new(fractal_def),
+                definition: std::sync::Arc::new(fractal_def),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -1815,7 +1815,7 @@ pub fn inkling_studies() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(inkling_token()),
+            definition: std::sync::Arc::new(inkling_token()),
         },
         ..Default::default()
     }
@@ -1899,7 +1899,7 @@ pub fn quandrix_doubling_tutor() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(fractal_token()),
+                definition: std::sync::Arc::new(fractal_token()),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -2025,7 +2025,7 @@ pub fn inkling_reinforcement() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(inkling_token()),
+            definition: std::sync::Arc::new(inkling_token()),
         },
         ..Default::default()
     }

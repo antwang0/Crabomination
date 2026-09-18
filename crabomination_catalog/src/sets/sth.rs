@@ -532,7 +532,7 @@ pub fn spike_breeder() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Spike".into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],
@@ -598,7 +598,7 @@ pub fn sliver_queen() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Sliver".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -1093,7 +1093,7 @@ pub fn lab_rats() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Rat".into(),
                 colors: vec![Color::Black],
                 card_types: vec![CardType::Creature],
@@ -1273,7 +1273,7 @@ pub fn mogg_infestation() -> CardDefinition {
                     Box::new(Value::CreaturesDiedThisTurn(PlayerRef::Target(0))),
                     Box::new(Value::Const(2)),
                 ),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Goblin".into(),
                     colors: vec![Color::Red],
                     card_types: vec![CardType::Creature],
@@ -1663,7 +1663,7 @@ pub fn hornet_cannon() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Hornet".into(),
                         card_types: vec![CardType::Artifact, CardType::Creature],
                         subtypes: Subtypes {

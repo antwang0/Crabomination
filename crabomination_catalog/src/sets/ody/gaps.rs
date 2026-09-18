@@ -766,7 +766,7 @@ pub fn chatter_of_the_squirrel() -> CardDefinition {
         ..sorcery(
             "Chatter of the Squirrel",
             cost(&[g()]),
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: Box::new(squirrel()) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: std::sync::Arc::new(squirrel()) },
         )
     }
 }
@@ -1062,7 +1062,7 @@ pub fn zombie_infestation() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Zombie".into(),
                     power: 2,
                     toughness: 2,

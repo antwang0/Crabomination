@@ -239,7 +239,7 @@ pub fn skyline_despot() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(dragon()),
+                        definition: std::sync::Arc::new(dragon()),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -455,17 +455,17 @@ pub fn old_rutstein() -> CardDefinition {
         land: Box::new(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
         }),
         creature: Box::new(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(insect()),
+            definition: std::sync::Arc::new(insect()),
         }),
         noncreature: Box::new(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(blood_token()),
+            definition: std::sync::Arc::new(blood_token()),
         }),
     };
     CardDefinition {
@@ -554,7 +554,7 @@ pub fn angelic_accord() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(angel),
+                    definition: std::sync::Arc::new(angel),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -674,7 +674,7 @@ pub fn assemble_the_legion() -> CardDefinition {
                     count: Value::TotalCountersOn {
                         what: Box::new(Selector::This),
                     },
-                    definition: Box::new(soldier),
+                    definition: std::sync::Arc::new(soldier),
                 },
             ]),
         }],
@@ -780,7 +780,7 @@ pub fn kinsbaile_borderguard() -> CardDefinition {
             count: Value::TotalCountersOn {
                 what: Box::new(Selector::This),
             },
-            definition: Box::new(kithkin()),
+            definition: std::sync::Arc::new(kithkin()),
         })],
         ..Default::default()
     }
@@ -872,7 +872,7 @@ pub fn tuktuk_the_explorer() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(returned),
+            definition: std::sync::Arc::new(returned),
         })],
         ..Default::default()
     }
@@ -1056,7 +1056,7 @@ pub fn gallant_cavalry() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(knight),
+            definition: std::sync::Arc::new(knight),
         })],
         ..Default::default()
     }

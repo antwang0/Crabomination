@@ -211,7 +211,7 @@ pub fn ajani_caller_of_the_pride() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::LifeOf(PlayerRef::You),
-                    definition: Box::new(cat),
+                    definition: std::sync::Arc::new(cat),
                 },
                 ..Default::default()
             },

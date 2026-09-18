@@ -89,7 +89,7 @@ pub fn deranged_hermit() -> CardDefinition {
         Some(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: Box::new(squirrel),
+            definition: std::sync::Arc::new(squirrel),
         }),
     );
     def.static_abilities = vec![crate::card::StaticAbility {

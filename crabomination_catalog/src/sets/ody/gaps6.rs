@@ -122,7 +122,7 @@ pub fn nantuko_shrine() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::TriggerEventPlayer,
             count: shrine_count(),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Squirrel".into(),
                 power: 1,
                 toughness: 1,
@@ -424,7 +424,7 @@ pub fn kirtars_wrath() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Spirit".into(),
                         power: 1,
                         toughness: 1,

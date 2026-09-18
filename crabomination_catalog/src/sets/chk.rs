@@ -1533,7 +1533,7 @@ pub fn meloku_the_clouded_mirror() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Illusion".into(),
                     power: 1,
                     toughness: 1,
@@ -1742,7 +1742,7 @@ pub fn honden_of_lifes_web() -> CardDefinition {
         triggered_abilities: vec![honden_upkeep(Effect::CreateToken {
             who: PlayerRef::You,
             count: shrines_you_control(),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Spirit".into(),
                 power: 1,
                 toughness: 1,
@@ -2813,7 +2813,7 @@ pub fn dripping_tongue_zubera() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ZuberasDiedThisTurnTotal,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Spirit".into(),
                 power: 1,
                 toughness: 1,
@@ -4313,7 +4313,7 @@ pub fn spiritual_visit() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Spirit".into(),
                 power: 1,
                 toughness: 1,
@@ -4341,7 +4341,7 @@ pub fn promise_of_bunrei() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Spirit".into(),
                         power: 1,
                         toughness: 1,
@@ -4645,7 +4645,7 @@ pub fn orochi_eggwatcher() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(snake),
+                    definition: std::sync::Arc::new(snake),
                 },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(
@@ -5229,7 +5229,7 @@ pub fn marrow_gnawer() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Rat),
                 })),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Rat".into(),
                     power: 1,
                     toughness: 1,
@@ -5926,7 +5926,7 @@ pub fn budoka_gardener() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Elemental".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Green],

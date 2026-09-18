@@ -241,7 +241,7 @@ pub fn vraska_the_unseen() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: Box::new(assassin),
+                    definition: std::sync::Arc::new(assassin),
                 },
                 ..Default::default()
             },

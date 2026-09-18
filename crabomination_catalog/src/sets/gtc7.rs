@@ -265,7 +265,7 @@ pub fn miming_slime() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Ooze".into(),
                 power: 0,
                 toughness: 0,

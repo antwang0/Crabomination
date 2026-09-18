@@ -52,7 +52,7 @@ pub fn call_of_the_nightwing() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Horror".into(),
                     power: 1,
                     toughness: 1,

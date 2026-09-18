@@ -57,7 +57,7 @@ pub fn mascot_exhibition() -> CardDefinition {
     let mint = |t: TokenDefinition| Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(t),
+        definition: std::sync::Arc::new(t),
     };
     CardDefinition {
         name: "Mascot Exhibition",
@@ -230,7 +230,7 @@ pub fn body_of_research() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::LibrarySizeOf(PlayerRef::You))),
+                definition: std::sync::Arc::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::LibrarySizeOf(PlayerRef::You))),
             },
         ]),
         ..Default::default()
@@ -420,7 +420,7 @@ pub fn multiple_choice() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(elemental),
+                    definition: std::sync::Arc::new(elemental),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -601,7 +601,7 @@ pub fn elemental_expressionism() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Elemental".into(),
                     power: 4,
                     toughness: 4,
@@ -818,7 +818,7 @@ pub fn excavation_technique() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(2),
-                definition: Box::new(crabomination_base::tokens::treasure_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
             },
             Effect::Destroy {
                 what: target_filtered(

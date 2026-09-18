@@ -72,7 +72,7 @@ pub fn chitterspitter() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(squirrel_token()),
+                definition: std::sync::Arc::new(squirrel_token()),
             },
             ..Default::default()
         }],

@@ -34,7 +34,7 @@ pub fn ferocious_werefox() -> CardDefinition {
             card_types: vec![CardType::Instant],
             effect: Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: Box::new(monster_role()),
+                definition: std::sync::Arc::new(monster_role()),
             },
         })),
         ..Default::default()
@@ -164,7 +164,7 @@ pub fn gumdrop_poisoner() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(food_token()),
+                definition: std::sync::Arc::new(food_token()),
             },
         })),
         ..Default::default()
@@ -194,7 +194,7 @@ pub fn vantress_transmuter() -> CardDefinition {
                 },
                 Effect::CreateTokenAttachedTo {
                     target: Selector::Target(0),
-                    definition: Box::new(cursed_role()),
+                    definition: std::sync::Arc::new(cursed_role()),
                 },
             ]),
         })),

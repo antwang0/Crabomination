@@ -55,7 +55,7 @@ pub fn greta_sweettooth_scourge() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(food_token()),
+            definition: std::sync::Arc::new(food_token()),
         })],
         activated_abilities: vec![
             ActivatedAbility {
@@ -109,7 +109,7 @@ pub fn totentanz_swarm_piper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(rat_token()),
+                definition: std::sync::Arc::new(rat_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -193,7 +193,7 @@ pub fn syr_armont_the_redeemer() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
             target: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
-            definition: Box::new(super::woe_roles::monster_role()),
+            definition: std::sync::Arc::new(super::woe_roles::monster_role()),
         })],
         static_abilities: vec![StaticAbility {
             description: "Enchanted creatures you control get +1/+1.",

@@ -85,7 +85,7 @@ pub fn combine_chrysalis() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(beast),
+                definition: std::sync::Arc::new(beast),
             },
             ..Default::default()
         }],
@@ -141,7 +141,7 @@ pub fn fae_offering() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crabomination_base::tokens::food_token()),
+                    definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
                 },
                 mint_treasures(1),
             ]),
@@ -424,7 +424,7 @@ pub fn magus_of_the_bridge() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(zombie),
+                    definition: std::sync::Arc::new(zombie),
                 },
             },
             TriggeredAbility {
@@ -758,7 +758,7 @@ pub fn scour_the_desert() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ToughnessOf(Box::new(Selector::Target(0))),
-                definition: Box::new(bird),
+                definition: std::sync::Arc::new(bird),
             },
             Effect::Move {
                 what: target_filtered(R::Creature),
@@ -794,7 +794,7 @@ pub fn scuttletide() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crab),
+                definition: std::sync::Arc::new(crab),
             },
             ..Default::default()
         }],
@@ -926,12 +926,12 @@ pub fn specimen_collector() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(squirrel),
+                    definition: std::sync::Arc::new(squirrel),
                 },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crab),
+                    definition: std::sync::Arc::new(crab),
                 },
             ])),
             crate::effect::shortcut::on_dies(Effect::CreateTokenCopyOf {
@@ -1002,7 +1002,7 @@ pub fn sweep_the_skies() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ConvergedValue,
-            definition: Box::new(thopter),
+            definition: std::sync::Arc::new(thopter),
         },
         ..Default::default()
     }

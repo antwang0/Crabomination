@@ -236,7 +236,7 @@ pub fn krovod_haunch() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(dog_token()),
+                    definition: std::sync::Arc::new(dog_token()),
                 }),
                 else_: None,
             },

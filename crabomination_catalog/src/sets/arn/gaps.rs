@@ -550,7 +550,7 @@ pub fn bottle_of_suleiman() -> CardDefinition {
                 on_heads: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crate::card::TokenDefinition {
+                    definition: std::sync::Arc::new(crate::card::TokenDefinition {
                         name: "Djinn".into(),
                         power: 5,
                         toughness: 5,

@@ -112,7 +112,7 @@ pub fn lindblum_industrial_regency() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(wizard),
+                definition: std::sync::Arc::new(wizard),
             },
         },
     )
@@ -153,7 +153,7 @@ pub fn zanarkand_ancient_metropolis() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Hero".into(),
                         power: 1,
                         toughness: 1,
@@ -298,7 +298,7 @@ pub fn sidequest_catch_a_fish() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(crabomination_base::tokens::food_token()),
+                        definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
                     },
                     Effect::Transform { what: Selector::This },
                 ]))),
@@ -359,7 +359,7 @@ pub fn sidequest_hunt_the_mark() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(crabomination_base::tokens::treasure_token()),
+                        definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
                     },
                     Effect::If {
                         cond: treasures_at_least_three,
@@ -486,7 +486,7 @@ pub fn sidequest_raise_a_chocobo() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(bird),
+                definition: std::sync::Arc::new(bird),
             }),
             transform_when(
                 TurnStep::PreCombatMain,
@@ -706,7 +706,7 @@ pub fn kuja_genome_sorcerer() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(wizard),
+                    definition: std::sync::Arc::new(wizard),
                 },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(
@@ -1074,7 +1074,7 @@ pub fn dion_bahamuts_dominant() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Knight".into(),
                 power: 2,
                 toughness: 2,

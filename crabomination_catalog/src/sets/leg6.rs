@@ -232,7 +232,7 @@ pub fn hazezon_tamar() -> CardDefinition {
                 effect: Effect::AtYourNextUpkeep {
                     body: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
-                        definition: Box::new(sand_warrior()),
+                        definition: std::sync::Arc::new(sand_warrior()),
                         count: Value::CountMatching {
                             sel: Box::new(Selector::EachMatching {
                                 zone: ZoneRef::Battlefield,

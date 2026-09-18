@@ -204,7 +204,7 @@ pub fn funeral_pyre() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Spirit".into(),
                     power: 1,
                     toughness: 1,
@@ -491,7 +491,7 @@ pub fn firecat_blitz() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::XFromCost,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Elemental Cat".into(),
                         power: 1,
                         toughness: 1,
@@ -676,7 +676,7 @@ pub fn crush_of_wurms() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Wurm".into(),
                     power: 6,
                     toughness: 6,
@@ -745,7 +745,7 @@ pub fn grizzly_fate() -> CardDefinition {
     let bears = |n: i32| Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(n),
-        definition: Box::new(TokenDefinition {
+        definition: std::sync::Arc::new(TokenDefinition {
             name: "Bear".into(),
             power: 2,
             toughness: 2,
@@ -1859,7 +1859,7 @@ pub fn spirit_cairn() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Spirit".into(),
                         power: 1,
                         toughness: 1,

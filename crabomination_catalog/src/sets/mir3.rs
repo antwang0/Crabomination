@@ -685,7 +685,7 @@ pub fn jungle_patrol() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Wood".into(),
                         power: 0,
                         toughness: 1,

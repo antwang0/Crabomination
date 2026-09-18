@@ -587,7 +587,7 @@ pub fn ordered_migration() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: domain(),
-            definition: Box::new(crate::card::TokenDefinition {
+            definition: std::sync::Arc::new(crate::card::TokenDefinition {
                 name: "Bird".into(),
                 power: 1,
                 toughness: 1,

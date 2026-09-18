@@ -35,7 +35,7 @@ pub fn eager_glyphmage() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(inkling_token()),
+                definition: std::sync::Arc::new(inkling_token()),
             },
         }],
         ..Default::default()
@@ -132,7 +132,7 @@ pub fn informed_inkwright() -> CardDefinition {
         triggered_abilities: vec![repartee(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(inkling_token()),
+            definition: std::sync::Arc::new(inkling_token()),
         })],
         ..Default::default()
     }
@@ -1215,7 +1215,7 @@ pub fn pestbrood_sloth() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(pest_token()),
+                definition: std::sync::Arc::new(pest_token()),
             },
         }],
         ..Default::default()
@@ -1921,7 +1921,7 @@ pub fn fractal_tender() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(
+                    definition: std::sync::Arc::new(
                         fractal_token()
                             .entering_with(crate::card::CounterType::PlusOnePlusOne, Value::Const(3)),
                     ),
@@ -2373,7 +2373,7 @@ pub fn eternal_student() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(inkling_token()),
+                definition: std::sync::Arc::new(inkling_token()),
             },
             once_per_turn: false,
             sorcery_speed: false,
@@ -2642,7 +2642,7 @@ pub fn garrison_excavator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(spirit_token()),
+                definition: std::sync::Arc::new(spirit_token()),
             },
         }],
         ..Default::default()
@@ -3037,7 +3037,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(
+                definition: std::sync::Arc::new(fractal_token().entering_with(
                     CounterType::PlusOnePlusOne,
                     Value::DistinctNamesControlledMatching(SelectionRequirement::Land),
                 )),
@@ -4041,7 +4041,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
+                    definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
                 },
             ]),
             once_per_turn: false,
@@ -4274,7 +4274,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(fractal_token()),
+                    definition: std::sync::Arc::new(fractal_token()),
                 },
                 Effect::MoveAllCounters {
                     from: Selector::This,
@@ -4702,7 +4702,7 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(pest_token()),
+                    definition: std::sync::Arc::new(pest_token()),
                 },
             },
             // Infusion end-step: if you gained life this turn, return up
@@ -4911,7 +4911,7 @@ pub fn essenceknit_scholar() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(pest_token()),
+                    definition: std::sync::Arc::new(pest_token()),
                 },
             },
             // Your end step: if a creature died under your control this

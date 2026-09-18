@@ -230,7 +230,7 @@ pub fn silverquill_aerie() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(inkling_token()),
+                definition: std::sync::Arc::new(inkling_token()),
             },
         }],
         ..Default::default()
@@ -523,7 +523,7 @@ pub fn lorehold_beacon() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(spirit_token()),
+            definition: std::sync::Arc::new(spirit_token()),
         },
         ..Default::default()
     }
@@ -620,7 +620,7 @@ pub fn witherbloom_druid_in_training() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(pest_token()),
+                definition: std::sync::Arc::new(pest_token()),
             },
         }],
         ..Default::default()
@@ -724,7 +724,7 @@ pub fn quandrix_aviator() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(2))),
+                    definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(2))),
                 },
             ]),
         }],
@@ -886,7 +886,7 @@ pub fn prismari_architect() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(treasure_token()),
+                    definition: std::sync::Arc::new(treasure_token()),
                 },
             },
             magecraft_self_pump(1, 0),
@@ -1517,7 +1517,7 @@ pub fn prismari_painter() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
         }],
         ..Default::default()
@@ -1791,7 +1791,7 @@ pub fn silverquill_verse() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(inkling_token()),
+                    definition: std::sync::Arc::new(inkling_token()),
                 },
             ],
         },
@@ -1887,7 +1887,7 @@ pub fn prismari_glitterbomb() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
         ]),
         ..Default::default()

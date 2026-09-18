@@ -193,7 +193,7 @@ pub fn patagia_viper() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Snake".into(),
                     colors: vec![Color::Green, Color::Blue],
                     card_types: vec![CardType::Creature],

@@ -374,7 +374,7 @@ pub fn pact_of_the_titan() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Giant".into(),
                     power: 4,
                     toughness: 4,
@@ -466,7 +466,7 @@ pub fn swan_song() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Bird".into(),
                     power: 2,
                     toughness: 2,
@@ -705,7 +705,7 @@ pub fn deadly_dispute() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
         ]),
         ..Default::default()
@@ -1093,7 +1093,7 @@ pub fn pongify() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: Box::new(ape),
+                definition: std::sync::Arc::new(ape),
             },
             Effect::DestroyNoRegen {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -1875,7 +1875,7 @@ pub fn flash_foliage() -> CardDefinition {
         cast_only_after_blockers: true,
         effect: Effect::Seq(vec![
             Effect::CreateTokenBlocking {
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Saproling".into(),
                     power: 1,
                     toughness: 1,

@@ -724,7 +724,7 @@ pub fn goblin_offensive() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: Box::new(crate::card::TokenDefinition {
+            definition: std::sync::Arc::new(crate::card::TokenDefinition {
                 name: "Goblin".into(),
                 power: 1,
                 toughness: 1,

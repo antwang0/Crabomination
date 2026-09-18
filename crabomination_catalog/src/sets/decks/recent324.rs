@@ -208,7 +208,7 @@ pub fn bringer_of_the_green_dawn() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Beast".into(),
                 colors: vec![crate::mana::Color::Green],
                 card_types: vec![CardType::Creature],
@@ -544,7 +544,7 @@ pub fn summoning_station() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Pincher".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {

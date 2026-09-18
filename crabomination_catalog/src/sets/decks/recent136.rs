@@ -32,7 +32,7 @@ pub fn royal_treatment() -> CardDefinition {
             },
             Effect::CreateTokenAttachedTo {
                 target: Selector::Target(0),
-                definition: Box::new(royal_role()),
+                definition: std::sync::Arc::new(royal_role()),
             },
         ]),
         ..Default::default()
@@ -127,7 +127,7 @@ pub fn living_lectern() -> CardDefinition {
                     target: target_filtered(
                         R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
                     ),
-                    definition: Box::new(sorcerer_role()),
+                    definition: std::sync::Arc::new(sorcerer_role()),
                 },
             ]),
             ..Default::default()
@@ -181,7 +181,7 @@ pub fn lord_skitters_butcher() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(rat_token()),
+                definition: std::sync::Arc::new(rat_token()),
             },
             Effect::MaySacrifice {
                 description: "Sacrifice another creature to scry 2 and draw?".into(),
@@ -229,7 +229,7 @@ pub fn provisions_merchant() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(food_token()),
+                definition: std::sync::Arc::new(food_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),

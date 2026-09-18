@@ -1874,7 +1874,7 @@ fn voldaren_bloodcaster_transforms_at_five_blood() {
             &crabomination::card::Effect::CreateToken {
                 who: crabomination::effect::PlayerRef::You,
                 count: crabomination::card::Value::Const(1),
-                definition: Box::new(crabomination_base::tokens::blood_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::blood_token()),
             },
             &ctx0(&g),
         )

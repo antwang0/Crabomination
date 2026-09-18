@@ -113,7 +113,7 @@ pub fn crib_swap() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: Box::new(shapeshifter),
+                definition: std::sync::Arc::new(shapeshifter),
             },
             Effect::Exile {
                 what: target_filtered(R::Creature),

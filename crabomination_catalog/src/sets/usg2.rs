@@ -1531,7 +1531,7 @@ pub fn midsummer_revel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: verses(),
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Beast".into(),
                     power: 3,
                     toughness: 3,
@@ -2697,7 +2697,7 @@ pub fn metrognome() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(4),
-                definition: Box::new(gnome()),
+                definition: std::sync::Arc::new(gnome()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -2706,7 +2706,7 @@ pub fn metrognome() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(gnome()),
+                definition: std::sync::Arc::new(gnome()),
             },
             ..Default::default()
         }],

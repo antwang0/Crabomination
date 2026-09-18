@@ -79,7 +79,7 @@ pub fn city_pigeon() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crabomination_base::tokens::food_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
             },
         }],
         ..Default::default()
@@ -129,7 +129,7 @@ pub fn common_crook() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(crate::game::effects::treasure_token()),
+            definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
         })],
         ..Default::default()
     }
@@ -667,7 +667,7 @@ pub fn spider_girl_legacy_hero() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Human Citizen".into(),
                     power: 1,
                     toughness: 1,
@@ -702,7 +702,7 @@ pub fn spider_ham_peter_porker() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(crabomination_base::tokens::food_token()),
+            definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
         })],
         ..Default::default()
     }
@@ -1038,7 +1038,7 @@ pub fn news_helicopter() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(human_citizen_token()),
+            definition: std::sync::Arc::new(human_citizen_token()),
         })],
         ..Default::default()
     }

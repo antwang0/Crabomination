@@ -210,7 +210,7 @@ pub fn glimmer_seeker() -> CardDefinition {
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(glimmer_token()),
+                definition: std::sync::Arc::new(glimmer_token()),
             }),
         },
     )

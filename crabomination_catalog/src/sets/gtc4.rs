@@ -126,7 +126,7 @@ pub fn ogre_slumlord() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Rat".into(),
                         power: 1,
                         toughness: 1,

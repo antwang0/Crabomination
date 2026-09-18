@@ -79,7 +79,7 @@ pub fn elvish_warmaster() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(elf_token),
+                definition: std::sync::Arc::new(elf_token),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

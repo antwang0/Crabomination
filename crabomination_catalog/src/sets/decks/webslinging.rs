@@ -106,7 +106,7 @@ pub fn silk_web_weaver() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: crate::effect::PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Human Citizen".into(),
                     power: 1,
                     toughness: 1,

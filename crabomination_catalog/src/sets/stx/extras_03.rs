@@ -394,7 +394,7 @@ pub fn witherbloom_skillchaser() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(super::shared::stx_pest_token()),
+                definition: std::sync::Arc::new(super::shared::stx_pest_token()),
             },
         }],
         ..Default::default()
@@ -423,7 +423,7 @@ pub fn quandrix_pop_quiz() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::CountOf(Box::new(Selector::EachPermanent(
+                definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                 ))))),
             },
@@ -1052,7 +1052,7 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(pest),
+                definition: std::sync::Arc::new(pest),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -1197,7 +1197,7 @@ pub fn sequence_engine() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crabomination_base::tokens::fractal_token()),
+                    definition: std::sync::Arc::new(crabomination_base::tokens::fractal_token()),
                 },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
@@ -1550,7 +1550,7 @@ pub fn grim_bounty() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -2074,7 +2074,7 @@ pub fn mascot_summoning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Cat".to_string(),
                 power: 2,
                 toughness: 2,

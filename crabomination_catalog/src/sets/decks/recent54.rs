@@ -142,7 +142,7 @@ pub fn herd_baloth() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(beast),
+                    definition: std::sync::Arc::new(beast),
                 }),
             },
         }],
@@ -250,7 +250,7 @@ pub fn old_gnawbone() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::TriggerEventAmount,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -322,7 +322,7 @@ pub fn nissa_voice_of_zendikar() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(plant),
+                    definition: std::sync::Arc::new(plant),
                 },
                 ..Default::default()
             },

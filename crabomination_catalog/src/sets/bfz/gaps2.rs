@@ -69,7 +69,7 @@ pub fn retreat_to_emeria() -> CardDefinition {
         "Retreat to Emeria",
         cost(&[generic(3), w()]),
         vec![landfall(Effect::ChooseMode(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: Box::new(kor) },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: std::sync::Arc::new(kor) },
             Effect::PumpPT {
                 what: each_your_creature(),
                 power: Value::Const(1),
@@ -434,7 +434,7 @@ pub fn adverse_conditions() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(eldrazi_scion_token()),
+                definition: std::sync::Arc::new(eldrazi_scion_token()),
             },
         ]),
         ..Default::default()
@@ -536,7 +536,7 @@ pub fn gideon_ally_of_zendikar() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(knight),
+                    definition: std::sync::Arc::new(knight),
                 },
                 ..Default::default()
             },
@@ -766,7 +766,7 @@ pub fn kiora_master_of_the_depths() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(3),
-                        definition: Box::new(octopus),
+                        definition: std::sync::Arc::new(octopus),
                     },
                 ]),
                 ..Default::default()

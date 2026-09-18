@@ -112,7 +112,7 @@ pub fn kyoshi_warriors() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(ally_token()),
+            definition: std::sync::Arc::new(ally_token()),
         })],
         ..Default::default()
     }
@@ -296,7 +296,7 @@ pub fn united_front() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: Box::new(ally_token()),
+                definition: std::sync::Arc::new(ally_token()),
             },
             Effect::AddCounter {
                 what: Selector::EachPermanent(
@@ -947,7 +947,7 @@ pub fn gather_the_white_lotus() -> CardDefinition {
                     )),
                     filter: SelectionRequirement::HasLandType(LandType::Plains),
                 },
-                definition: Box::new(ally_token()),
+                definition: std::sync::Arc::new(ally_token()),
             },
             Effect::Scry {
                 who: PlayerRef::You,
@@ -982,7 +982,7 @@ pub fn momo_playful_pet() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(food_token()),
+                        definition: std::sync::Arc::new(food_token()),
                     },
                     Effect::AddCounter {
                         what: target_filtered(
@@ -1223,7 +1223,7 @@ pub fn canyon_crawler() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(food_token()),
+            definition: std::sync::Arc::new(food_token()),
         })],
         ..Default::default()
     }
@@ -1578,7 +1578,7 @@ pub fn fire_navy_trebuchet() -> CardDefinition {
             effect: Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Ballistic Boulder".into(),
                     power: 2,
                     toughness: 1,
@@ -1791,7 +1791,7 @@ pub fn foggy_swamp_spirit_keeper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Spirit".into(),
                     power: 1,
                     toughness: 1,
@@ -2328,7 +2328,7 @@ pub fn cruel_administrator() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(firebending_soldier_token()),
+            definition: std::sync::Arc::new(firebending_soldier_token()),
         })],
         ..Default::default()
     }
@@ -2467,7 +2467,7 @@ pub fn jets_brainwashing() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crabomination_base::tokens::clue_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
             },
         ]),
         ..Default::default()
@@ -2522,7 +2522,7 @@ pub fn kyoshi_battle_fan() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(ally_token()),
+                definition: std::sync::Arc::new(ally_token()),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -2666,7 +2666,7 @@ pub fn path_to_redemption() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(ally_token()),
+                    definition: std::sync::Arc::new(ally_token()),
                 },
             ]),
             ..Default::default()
@@ -2897,7 +2897,7 @@ pub fn iroh_tea_master() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(food_token()),
+            definition: std::sync::Arc::new(food_token()),
         })],
         ..Default::default()
     }
@@ -2989,7 +2989,7 @@ pub fn the_earth_king() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(bear),
+                definition: std::sync::Arc::new(bear),
             }),
             // "Whenever one or more creatures you control with power 4 or
             // greater attack, search your library for up to that many basic
@@ -3100,7 +3100,7 @@ pub fn suki_courageous_rescuer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Ally".into(),
                     power: 1,
                     toughness: 1,
@@ -3317,7 +3317,7 @@ pub fn tolls_of_war() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(ally_token()),
+                    definition: std::sync::Arc::new(ally_token()),
                 },
             },
         ],
@@ -3715,7 +3715,7 @@ pub fn sokka_tenacious_tactician() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(ally_token()),
+                definition: std::sync::Arc::new(ally_token()),
             },
         }],
         ..Default::default()
@@ -3856,7 +3856,7 @@ pub fn fire_nation_attacks() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(firebending_soldier_token()),
+            definition: std::sync::Arc::new(firebending_soldier_token()),
         },
         ..Default::default()
     }
@@ -4010,12 +4010,12 @@ pub fn crescent_island_temple() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: shrines_you_control(),
-                definition: Box::new(monk_prowess_token()),
+                definition: std::sync::Arc::new(monk_prowess_token()),
             }),
             on_another_shrine_enters(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(monk_prowess_token()),
+                definition: std::sync::Arc::new(monk_prowess_token()),
             }),
         ],
         ..Default::default()
@@ -4301,7 +4301,7 @@ pub fn suki_kyoshi_warrior() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(ally_token()),
+            definition: std::sync::Arc::new(ally_token()),
             cleanup: Default::default(),
         })],
         ..Default::default()
@@ -4375,7 +4375,7 @@ pub fn zukos_exile() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::ONE,
-                definition: Box::new(clue_token()),
+                definition: std::sync::Arc::new(clue_token()),
             },
             Effect::Exile {
                 what: Selector::TargetFiltered {
@@ -4459,7 +4459,7 @@ pub fn sun_warriors() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(ally_token()),
+                definition: std::sync::Arc::new(ally_token()),
             },
             ..Default::default()
         }],
@@ -5111,7 +5111,7 @@ pub fn realm_of_koh() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(realm_of_koh_spirit()),
+                    definition: std::sync::Arc::new(realm_of_koh_spirit()),
                 },
                 ..Default::default()
             },
@@ -5173,7 +5173,7 @@ pub fn leaves_from_the_vine() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(food_token()),
+                        definition: std::sync::Arc::new(food_token()),
                     },
                 ]),
             ),
@@ -5850,7 +5850,7 @@ pub fn the_cave_of_two_lovers() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(ally_token()),
+                    definition: std::sync::Arc::new(ally_token()),
                 },
             ),
             (
@@ -5936,7 +5936,7 @@ pub fn appa_steadfast_guardian() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(ally_token()),
+                    definition: std::sync::Arc::new(ally_token()),
                 },
             },
         ],

@@ -57,7 +57,7 @@ pub fn kykar_winds_fury() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(white_spirit_token()),
+                definition: std::sync::Arc::new(white_spirit_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -112,7 +112,7 @@ pub fn the_locust_god() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(insect_token()),
+                    definition: std::sync::Arc::new(insect_token()),
                 },
             },
             // "When The Locust God dies, return it to its owner's hand at the

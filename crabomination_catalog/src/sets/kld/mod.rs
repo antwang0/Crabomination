@@ -333,7 +333,7 @@ pub fn aether_swooper() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(thopter),
+                    definition: std::sync::Arc::new(thopter),
                 }),
             }),
         ],
@@ -554,7 +554,7 @@ pub fn aether_poisoner() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(servo_token()),
+                    definition: std::sync::Arc::new(servo_token()),
                 }),
             }),
         ],

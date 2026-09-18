@@ -432,7 +432,7 @@ pub fn biomathematician() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token()),
+                definition: std::sync::Arc::new(fractal_token()),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(

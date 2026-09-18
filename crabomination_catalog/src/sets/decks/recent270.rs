@@ -46,7 +46,7 @@ pub fn black_market_tycoon() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
             ..Default::default()
         }],

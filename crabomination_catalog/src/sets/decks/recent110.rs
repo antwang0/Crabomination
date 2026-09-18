@@ -306,7 +306,7 @@ pub fn worldspine_wurm() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Wurm".into(),
                         power: 5,
                         toughness: 5,
@@ -478,7 +478,7 @@ pub fn genesis_chamber() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Myr".into(),
                     power: 1,
                     toughness: 1,
@@ -517,7 +517,7 @@ pub fn entreat_the_angels() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Angel".into(),
                 power: 4,
                 toughness: 4,

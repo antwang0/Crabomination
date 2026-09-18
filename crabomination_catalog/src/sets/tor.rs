@@ -115,7 +115,7 @@ pub fn acorn_harvest() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Squirrel".into(),
                     power: 1,
                     toughness: 1,

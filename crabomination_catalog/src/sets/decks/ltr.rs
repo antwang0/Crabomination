@@ -112,7 +112,7 @@ pub fn bilbo_retired_burglar() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::game::effects::treasure_token()),
+                    definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
                 },
             },
         ],
@@ -397,7 +397,7 @@ pub fn prince_imrahil_the_fair() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(soldier),
+                definition: std::sync::Arc::new(soldier),
             },
         }],
         ..Default::default()
@@ -457,7 +457,7 @@ pub fn rally_at_the_hornburg() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(soldier),
+                definition: std::sync::Arc::new(soldier),
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
@@ -828,7 +828,7 @@ pub fn lossarnach_captain() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(soldier),
+                    definition: std::sync::Arc::new(soldier),
                 },
             },
         ],
@@ -907,7 +907,7 @@ pub fn many_partings() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::food_token()),
+                definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
         ]),
         ..Default::default()
@@ -1047,7 +1047,7 @@ pub fn anduril_flame_of_the_west() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(spirit),
+                    definition: std::sync::Arc::new(spirit),
                 },
             }],
             ..Default::default()
@@ -1106,7 +1106,7 @@ pub fn protector_of_gondor() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(soldier),
+            definition: std::sync::Arc::new(soldier),
         })],
         ..Default::default()
     }
@@ -1171,7 +1171,7 @@ pub fn eastfarthing_farmer() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::food_token()),
+                definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
             Effect::PumpPT {
                 what: target_filtered(
@@ -1434,7 +1434,7 @@ pub fn samwise_gamgee() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::food_token()),
+                definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -1537,7 +1537,7 @@ pub fn stew_the_coneys() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::food_token()),
+                definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
         ]),
         ..Default::default()
@@ -1570,7 +1570,7 @@ pub fn gloin_dwarf_emissary() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -1699,7 +1699,7 @@ pub fn voracious_fell_beast() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::food_token()),
+                definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
         ]))],
         ..Default::default()
@@ -1730,7 +1730,7 @@ pub fn meriadoc_brandybuck() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::food_token()),
+                definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
         }],
         ..Default::default()
@@ -1867,7 +1867,7 @@ pub fn quarrels_end() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(soldier),
+                definition: std::sync::Arc::new(soldier),
             },
         ]),
         ..Default::default()
@@ -1916,7 +1916,7 @@ pub fn shelobs_ambush() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::food_token()),
+                definition: std::sync::Arc::new(crate::game::effects::food_token()),
             },
         ]),
         ..Default::default()

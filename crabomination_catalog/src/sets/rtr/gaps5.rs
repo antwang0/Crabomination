@@ -330,7 +330,7 @@ pub fn knightly_valor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Knight".into(),
                     power: 2,
                     toughness: 2,

@@ -330,7 +330,7 @@ pub fn tolsimir_wolfblood() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(voja_token()),
+                definition: std::sync::Arc::new(voja_token()),
             },
             ..Default::default()
         }],
@@ -382,7 +382,7 @@ pub fn transluminant() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(white_spirit_flyer()),
+                    definition: std::sync::Arc::new(white_spirit_flyer()),
                 }),
             },
             ..Default::default()
@@ -505,7 +505,7 @@ pub fn vitu_ghazi_the_city_tree() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(saproling_token()),
+                    definition: std::sync::Arc::new(saproling_token()),
                 },
                 ..Default::default()
             },
@@ -600,7 +600,7 @@ pub fn twilight_drover() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(white_spirit_flyer()),
+                definition: std::sync::Arc::new(white_spirit_flyer()),
             },
             ..Default::default()
         }],

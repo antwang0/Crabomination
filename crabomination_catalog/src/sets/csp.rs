@@ -545,7 +545,7 @@ pub fn jotun_owl_keeper() -> CardDefinition {
                     what: Box::new(Selector::This),
                     kind: CounterType::Age,
                 },
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Bird".to_string(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::White],

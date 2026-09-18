@@ -33,7 +33,7 @@ pub fn insidious_roots() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Plant".into(),
                         colors: vec![Color::Green],
                         card_types: vec![CardType::Creature],

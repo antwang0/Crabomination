@@ -601,7 +601,7 @@ pub fn monument_to_endurance() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(crabomination_base::tokens::treasure_token()),
+                        definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
                     },
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::EachOpponent),
@@ -786,7 +786,7 @@ pub fn hangarback_walker() -> CardDefinition {
                     what: Box::new(Selector::This),
                     kind: CounterType::PlusOnePlusOne,
                 },
-                definition: Box::new(thopter),
+                definition: std::sync::Arc::new(thopter),
             },
         }],
         ..Default::default()

@@ -70,7 +70,7 @@ pub fn case_of_the_stashed_skeleton() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Skeleton".into(),
                     colors: vec![crate::mana::Color::Black],
                     card_types: vec![CardType::Creature],

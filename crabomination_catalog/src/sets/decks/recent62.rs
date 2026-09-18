@@ -28,7 +28,7 @@ fn make_servo() -> Effect {
     Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: Box::new(servo()),
+        definition: std::sync::Arc::new(servo()),
     }
 }
 

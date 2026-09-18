@@ -76,7 +76,7 @@ pub fn balloon_stand() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(balloon_token()),
+                definition: std::sync::Arc::new(balloon_token()),
             },
             Effect::MaySacrifice {
                 description: "Sacrifice a Balloon?".into(),
@@ -130,7 +130,7 @@ pub fn clown_extruder() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(clown_robot_token()),
+            definition: std::sync::Arc::new(clown_robot_token()),
         },
     )
 }
@@ -143,7 +143,7 @@ pub fn concession_stand() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(crabomination_base::tokens::food_token()),
+            definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
         },
     )
 }

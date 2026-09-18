@@ -168,7 +168,7 @@ pub fn diamond_kaleidoscope() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Prism".into(),
                         power: 0,
                         toughness: 1,
@@ -434,7 +434,7 @@ pub fn ovinomancer() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Sheep".into(),
                         power: 0,
                         toughness: 1,

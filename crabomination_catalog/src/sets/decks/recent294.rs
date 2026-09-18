@@ -155,7 +155,7 @@ pub fn skeletal_vampire() -> CardDefinition {
     let make_bats = Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: Box::new(bat_token()),
+        definition: std::sync::Arc::new(bat_token()),
     };
     CardDefinition {
         name: "Skeletal Vampire",

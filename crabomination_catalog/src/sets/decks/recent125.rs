@@ -42,7 +42,7 @@ pub fn bridled_bighorn() -> CardDefinition {
         triggered_abilities: vec![attacks_while_saddled(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(sheep_token()),
+            definition: std::sync::Arc::new(sheep_token()),
         })],
         ..Default::default()
     }

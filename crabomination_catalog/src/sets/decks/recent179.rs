@@ -101,7 +101,7 @@ pub fn midnight_snack() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crabomination_base::tokens::food_token()),
+                    definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -202,7 +202,7 @@ pub fn sylvan_scavenging() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(raccoon.clone()),
+                        definition: std::sync::Arc::new(raccoon.clone()),
                     }),
                     else_: Box::new(Effect::Noop),
                 },

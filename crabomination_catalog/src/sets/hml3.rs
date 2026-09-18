@@ -59,7 +59,7 @@ pub fn broken_visage() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Spirit".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Black],

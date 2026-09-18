@@ -233,7 +233,7 @@ pub fn day_of_the_dragons() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::ExileYourCreaturesForDragons {
-                    token: Box::new(TokenDefinition {
+                    token: std::sync::Arc::new(TokenDefinition {
                         name: "Dragon".into(),
                         power: 5,
                         toughness: 5,

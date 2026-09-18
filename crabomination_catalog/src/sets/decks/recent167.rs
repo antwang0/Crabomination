@@ -218,7 +218,7 @@ pub fn hour_of_victory() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Zombie".into(),
                 power: 2,
                 toughness: 2,
@@ -536,7 +536,7 @@ pub fn howlsquad_heavy() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(goblin()),
+                definition: std::sync::Arc::new(goblin()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -762,7 +762,7 @@ pub fn haunt_the_network() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(thopter),
+                definition: std::sync::Arc::new(thopter),
             },
             Effect::Drain {
                 from: Selector::Player(PlayerRef::Target(0)),

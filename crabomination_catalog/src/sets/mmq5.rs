@@ -644,7 +644,7 @@ pub fn monkey_cage() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
-                    definition: Box::new(crate::card::TokenDefinition {
+                    definition: std::sync::Arc::new(crate::card::TokenDefinition {
                         name: "Monkey".into(),
                         power: 2,
                         toughness: 2,

@@ -64,7 +64,7 @@ pub fn abhorrent_overlord() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::DevotionTo(vec![Color::Black]),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Harpy".into(),
                     power: 1,
                     toughness: 1,
@@ -104,7 +104,7 @@ pub fn akroan_horse() -> CardDefinition {
         triggered_abilities: vec![upkeep(Effect::CreateToken {
             who: PlayerRef::EachOpponent,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Soldier".into(),
                 power: 1,
                 toughness: 1,

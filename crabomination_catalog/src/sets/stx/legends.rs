@@ -47,7 +47,7 @@ pub fn galazeth_prismari() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
         }],
         // "Artifacts you control have '{T}: Add one mana of any color.
@@ -104,7 +104,7 @@ pub fn beledros_witherbloom() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(super::shared::stx_pest_token()),
+                definition: std::sync::Arc::new(super::shared::stx_pest_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -349,7 +349,7 @@ pub fn shadrix_silverquill() -> CardDefinition {
                         Effect::CreateToken {
                             who: PlayerRef::Target(0),
                             count: Value::Const(1),
-                            definition: Box::new(stx_inkling),
+                            definition: std::sync::Arc::new(stx_inkling),
                         },
                         // Mode 1: "Target player draws a card and loses 1
                         // life." Each picked mode owns its own player slot

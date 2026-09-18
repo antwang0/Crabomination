@@ -304,7 +304,7 @@ pub fn waylay() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Knight".into(),
                     power: 2,
                     toughness: 2,
@@ -404,7 +404,7 @@ pub fn greener_pastures() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::ActivePlayer,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Saproling".into(),
                     power: 1,
                     toughness: 1,
@@ -858,7 +858,7 @@ pub fn phyrexian_processor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Phyrexian Minion".into(),
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Black],
@@ -956,7 +956,7 @@ pub fn sporogenesis() -> CardDefinition {
                         what: Box::new(Selector::TriggerSource),
                         kind: CounterType::Fungus,
                     },
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Saproling".into(),
                         power: 1,
                         toughness: 1,

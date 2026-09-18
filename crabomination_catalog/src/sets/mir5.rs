@@ -707,7 +707,7 @@ pub fn basalt_golem() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::DefendingPlayer,
                         count: Value::ONE,
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Wall".into(),
                             power: 0,
                             toughness: 2,

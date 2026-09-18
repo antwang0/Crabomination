@@ -257,7 +257,7 @@ pub fn zektar_shrine_expedition() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Elemental".into(),
                     power: 7,
                     toughness: 1,
@@ -325,7 +325,7 @@ pub fn turntimber_ranger() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Wolf".into(),
                         power: 2,
                         toughness: 2,
@@ -645,7 +645,7 @@ pub fn summoners_bane() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Illusion".into(),
                     power: 2,
                     toughness: 2,
@@ -753,7 +753,7 @@ pub fn cobra_trap() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Snake".into(),
                 power: 1,
                 toughness: 1,
@@ -876,7 +876,7 @@ pub fn kalitas_bloodchief_of_ghet() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Vampire".into(),
                             power: 0,
                             toughness: 0,
@@ -919,7 +919,7 @@ pub fn lullmage_mentor() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Merfolk".into(),
                         power: 1,
                         toughness: 1,

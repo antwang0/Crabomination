@@ -150,7 +150,7 @@ pub fn curse_of_the_swine() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                         count: Value::ONE,
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Boar".into(),
                             power: 2,
                             toughness: 2,
@@ -593,7 +593,7 @@ pub fn xenagos_the_reveler() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Satyr".into(),
                         power: 2,
                         toughness: 2,

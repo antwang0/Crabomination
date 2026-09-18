@@ -427,7 +427,7 @@ pub fn smothering_tithe() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::game::effects::treasure_token()),
+                    definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
                 }),
                 if_paid: None,
             },
@@ -546,7 +546,7 @@ pub fn luminarch_ascension() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: V::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Angel".into(),
                     power: 4,
                     toughness: 4,

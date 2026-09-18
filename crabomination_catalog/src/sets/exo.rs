@@ -256,7 +256,7 @@ pub fn pegasus_stampede() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Pegasus".to_string(),
                 power: 1,
                 toughness: 1,
@@ -850,7 +850,7 @@ pub fn keeper_of_the_beasts() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Beast".to_string(),
                 power: 2,
                 toughness: 2,

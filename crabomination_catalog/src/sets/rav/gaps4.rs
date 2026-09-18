@@ -49,7 +49,7 @@ pub fn hunted_horror() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(2),
-            definition: Box::new(token(
+            definition: std::sync::Arc::new(token(
                 "Centaur",
                 3,
                 3,
@@ -79,7 +79,7 @@ pub fn hunted_phantasm() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(5),
-            definition: Box::new(token(
+            definition: std::sync::Arc::new(token(
                 "Goblin",
                 1,
                 1,
@@ -109,7 +109,7 @@ pub fn hunted_dragon() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(3),
-            definition: Box::new(token(
+            definition: std::sync::Arc::new(token(
                 "Knight",
                 2,
                 2,
@@ -139,7 +139,7 @@ pub fn hunted_lammasu() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::ONE,
-            definition: Box::new(token(
+            definition: std::sync::Arc::new(token(
                 "Horror",
                 4,
                 4,
@@ -168,7 +168,7 @@ pub fn hunted_troll() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(4),
-            definition: Box::new(token(
+            definition: std::sync::Arc::new(token(
                 "Faerie",
                 1,
                 1,

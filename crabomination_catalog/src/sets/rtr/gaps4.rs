@@ -690,7 +690,7 @@ pub fn vitu_ghazi_guildmage() -> CardDefinition {
                 effect: E::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(token(
+                    definition: std::sync::Arc::new(token(
                         "Centaur",
                         3,
                         3,
@@ -801,7 +801,7 @@ pub fn korozda_guildmage() -> CardDefinition {
                     E::CreateToken {
                         who: PlayerRef::You,
                         count: Value::SacrificedToughness,
-                        definition: Box::new(token(
+                        definition: std::sync::Arc::new(token(
                             "Saproling",
                             1,
                             1,
@@ -852,7 +852,7 @@ pub fn eyes_in_the_skies() -> CardDefinition {
             E::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(token(
+                definition: std::sync::Arc::new(token(
                     "Bird",
                     1,
                     1,
@@ -880,7 +880,7 @@ pub fn coursers_accord() -> CardDefinition {
             E::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(token(
+                definition: std::sync::Arc::new(token(
                     "Centaur",
                     3,
                     3,
@@ -908,7 +908,7 @@ pub fn horncallers_chant() -> CardDefinition {
             E::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(token(
+                definition: std::sync::Arc::new(token(
                     "Rhino",
                     4,
                     4,

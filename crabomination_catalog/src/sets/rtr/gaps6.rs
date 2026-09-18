@@ -121,7 +121,7 @@ pub fn survey_the_wreckage() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Goblin".into(),
                     power: 1,
                     toughness: 1,

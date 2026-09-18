@@ -65,7 +65,7 @@ pub fn hour_of_promise() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(zombie),
+                    definition: std::sync::Arc::new(zombie),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -279,7 +279,7 @@ pub fn hunted_witness() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(soldier),
+                definition: std::sync::Arc::new(soldier),
             },
         }],
         ..Default::default()
@@ -315,7 +315,7 @@ pub fn brindle_shoat() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(boar),
+                definition: std::sync::Arc::new(boar),
             },
         }],
         ..Default::default()
@@ -339,7 +339,7 @@ pub fn goblin_assault() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(hasty),
+                definition: std::sync::Arc::new(hasty),
             },
         }],
         static_abilities: vec![StaticAbility {
@@ -364,7 +364,7 @@ pub fn goblin_rally() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: Box::new(red_goblin_token()),
+            definition: std::sync::Arc::new(red_goblin_token()),
         },
         ..Default::default()
     }

@@ -461,7 +461,7 @@ pub fn geralf_the_fleshwright() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Zombie Rogue".into(),
                         power: 2,
                         toughness: 2,
@@ -514,7 +514,7 @@ pub fn selvala_eager_trailblazer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(mercenary_token()),
+                definition: std::sync::Arc::new(mercenary_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -548,7 +548,7 @@ pub fn ertha_jo_frontier_mentor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(mercenary_token()),
+                definition: std::sync::Arc::new(mercenary_token()),
             },
         }],
         ..legend(
@@ -573,7 +573,7 @@ pub fn bonny_pall_clearcutter() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Beau".into(),
                         power: 0,
                         toughness: 0,
@@ -881,7 +881,7 @@ pub fn great_train_heist() -> CardDefinition {
                         body: Box::new(Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: Box::new(crabomination_base::tokens::treasure_token()),
+                            definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
                         }),
                     },
                 ),
@@ -1323,7 +1323,7 @@ pub fn oko_the_ringleader() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Elk".into(),
                         power: 3,
                         toughness: 3,

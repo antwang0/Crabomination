@@ -161,7 +161,7 @@ pub fn emeritus_of_truce() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(1),
-            definition: Box::new(inkling_token()),
+            definition: std::sync::Arc::new(inkling_token()),
         },
         Effect::If {
             cond: Predicate::AnOpponentControlsMoreCreatures,
@@ -1153,7 +1153,7 @@ pub fn jadzi_steward_of_fate() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: Box::new(
+            definition: std::sync::Arc::new(
                 crabomination_base::tokens::fractal_token()
                     .entering_with(CounterType::PlusOnePlusOne, Value::XFromCost),
             ),
@@ -1393,7 +1393,7 @@ pub fn lluwen_exchange_student() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(pest_token()),
+            definition: std::sync::Arc::new(pest_token()),
         },
     );
     let mut front = enters_prepared(vanilla_front(
@@ -1433,7 +1433,7 @@ pub fn campus_composer() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(elemental_token()),
+            definition: std::sync::Arc::new(elemental_token()),
         },
     );
     enters_prepared(vanilla_front(
@@ -1594,7 +1594,7 @@ pub fn strife_scholar() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(spirit),
+            definition: std::sync::Arc::new(spirit),
         },
     );
     enters_prepared(vanilla_front(

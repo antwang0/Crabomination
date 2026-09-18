@@ -1285,7 +1285,7 @@ pub fn leafdrake_roost() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(drake),
+                    definition: std::sync::Arc::new(drake),
                 },
                 ..Default::default()
             }],

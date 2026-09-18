@@ -47,7 +47,7 @@ pub fn parting_gust() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::EachOpponent,
                     count: Value::ONE,
-                    definition: Box::new(tapped_fish_token()),
+                    definition: std::sync::Arc::new(tapped_fish_token()),
                 },
                 Effect::Move {
                     what: target_filtered(R::Creature.and(R::NotToken)),

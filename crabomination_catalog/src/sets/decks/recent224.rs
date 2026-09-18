@@ -154,7 +154,7 @@ pub fn mu_yanling_wind_rider() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(vehicle_3_2_crew1()),
+                definition: std::sync::Arc::new(vehicle_3_2_crew1()),
             }),
             // "One or more … deal combat damage": one fire a damage batch.
             TriggeredAbility {

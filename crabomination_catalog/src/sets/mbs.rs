@@ -105,7 +105,7 @@ fn living_weapon() -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Phyrexian Germ".into(),
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::Black],
@@ -239,7 +239,7 @@ pub fn masters_call() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(myr_token()),
+            definition: std::sync::Arc::new(myr_token()),
         },
     )
 }
@@ -254,7 +254,7 @@ pub fn phyrexian_rebirth() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Phyrexian Horror".into(),
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
@@ -697,7 +697,7 @@ pub fn nested_ghoul() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Phyrexian Zombie".into(),
                     power: 2,
                     toughness: 2,
@@ -1506,7 +1506,7 @@ pub fn myr_sire() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Phyrexian Myr".into(),
                     subtypes: Subtypes {
                         creature_types: vec![CreatureType::Phyrexian, CreatureType::Myr],
@@ -1535,7 +1535,7 @@ pub fn myr_turbine() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(myr_token()),
+                    definition: std::sync::Arc::new(myr_token()),
                 },
                 ..Default::default()
             },
@@ -1788,7 +1788,7 @@ pub fn titan_forge() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Golem".into(),
                         power: 9,
                         toughness: 9,

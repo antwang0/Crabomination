@@ -150,7 +150,7 @@ pub fn deduce() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(clue_token()),
+                definition: std::sync::Arc::new(clue_token()),
             },
         ]),
         ..Default::default()
@@ -172,7 +172,7 @@ pub fn novice_inspector() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(clue_token()),
+            definition: std::sync::Arc::new(clue_token()),
         })],
         ..Default::default()
     }
@@ -201,7 +201,7 @@ pub fn izoni_center_of_the_web() -> CardDefinition {
         then: Box::new(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(spider()),
+            definition: std::sync::Arc::new(spider()),
         }),
     };
     CardDefinition {
@@ -269,7 +269,7 @@ pub fn cold_case_cracker() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(clue_token()),
+            definition: std::sync::Arc::new(clue_token()),
         })],
         ..Default::default()
     }
@@ -311,7 +311,7 @@ pub fn person_of_interest() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(detective_token()),
+                definition: std::sync::Arc::new(detective_token()),
             },
         ]))],
         ..Default::default()
@@ -361,7 +361,7 @@ pub fn inside_source() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(detective_token()),
+            definition: std::sync::Arc::new(detective_token()),
         })],
         // "{3}, {T}: Target Detective you control gets +2/+0 and gains
         // vigilance until end of turn. Activate only as a sorcery."
@@ -483,7 +483,7 @@ pub fn teysa_opulent_oligarch() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::OpponentsWhoLostLifeThisTurn,
-                    definition: Box::new(clue_token()),
+                    definition: std::sync::Arc::new(clue_token()),
                 },
             },
             TriggeredAbility {
@@ -496,7 +496,7 @@ pub fn teysa_opulent_oligarch() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(spirit_token()),
+                    definition: std::sync::Arc::new(spirit_token()),
                 },
             },
         ],
@@ -550,7 +550,7 @@ pub fn soul_search() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(spirit_token()),
+                    definition: std::sync::Arc::new(spirit_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -567,7 +567,7 @@ pub fn tolsimir_midnights_light() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Voja Fenstalker".to_string(),
                 power: 5,
                 toughness: 5,
@@ -965,7 +965,7 @@ pub fn officious_interrogation() -> CardDefinition {
                 }),
                 filter: SelectionRequirement::Any,
             },
-            definition: Box::new(clue_token()),
+            definition: std::sync::Arc::new(clue_token()),
         },
         ..Default::default()
     }
@@ -995,7 +995,7 @@ pub fn intrude_on_the_mind() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Thopter".to_string(),
                     power: 0,
                     toughness: 0,
@@ -1071,7 +1071,7 @@ pub fn unyielding_gatekeeper() -> CardDefinition {
                 theirs: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crate::game::effects::detective_token()),
+                    definition: std::sync::Arc::new(crate::game::effects::detective_token()),
                 }),
             },
         }],

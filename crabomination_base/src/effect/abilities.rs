@@ -2181,7 +2181,7 @@ pub enum StaticEffect {
     /// counters actually present.
     PreventDamageToSelfTradingCounters {
         counter: crate::card::CounterType,
-        token: Box<crate::card::TokenDefinition>,
+        token: std::sync::Arc<crate::card::TokenDefinition>,
     },
     /// CR 614 — "If this creature would deal combat damage to a player,
     /// instead put that many +1/+1 counters on it and that player mills that

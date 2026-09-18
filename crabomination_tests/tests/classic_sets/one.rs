@@ -483,7 +483,7 @@ fn mondrak_doubles_tokens() {
     resolve_for(&mut g, 0, Effect::CreateToken {
         who: crabomination::effect::PlayerRef::You,
         count: Value::ONE,
-        definition: Box::new(token),
+        definition: std::sync::Arc::new(token),
     });
     let minted = g.battlefield.iter().filter(|c| c.definition.name == "Test Goblin").count();
     assert_eq!(minted, 2, "one token doubled to two");
@@ -2577,7 +2577,7 @@ fn mite_overseer_turn_gated_token_anthem() {
     resolve_for(&mut g, 0, crabomination::effect::Effect::CreateToken {
         who: crabomination::effect::PlayerRef::You,
         count: crabomination::effect::Value::ONE,
-        definition: Box::new(crabomination::card::TokenDefinition {
+        definition: std::sync::Arc::new(crabomination::card::TokenDefinition {
             name: "Soldier".into(),
             power: 1,
             toughness: 1,

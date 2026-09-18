@@ -118,7 +118,7 @@ pub fn argivian_cavalier() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Soldier".into(),
                     power: 1,
                     toughness: 1,

@@ -128,7 +128,7 @@ pub fn form_a_posse() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: Box::new(mercenary_token()),
+            definition: std::sync::Arc::new(mercenary_token()),
         },
         ..Default::default()
     }
@@ -159,7 +159,7 @@ pub fn otterball_antics() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(otter),
+                definition: std::sync::Arc::new(otter),
             },
             Effect::If {
                 cond: Predicate::Not(Box::new(Predicate::CastFromHand)),

@@ -3457,8 +3457,12 @@ impl TokenDefinition {
     /// "run_effect's frame"). Never inline: the point is where the temporary
     /// lives.
     #[inline(never)]
-    pub fn boxed_clone(&self) -> Box<TokenDefinition> {
-        Box::new(self.clone())
+    /// A shared handle to a copy of this definition. `Arc`, not `Box`: an
+    /// `Effect` carrying a token definition is cloned all over the trigger
+    /// pipeline and a deep copy of the definition was 0.22 % of `cube`
+    /// (PERF `(-364)`).
+    pub fn boxed_clone(&self) -> std::sync::Arc<TokenDefinition> {
+        std::sync::Arc::new(self.clone())
     }
 
     /// Builder for `enters_with_counters`: "create this token with `amount`

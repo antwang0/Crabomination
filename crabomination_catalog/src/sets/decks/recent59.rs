@@ -49,7 +49,7 @@ pub fn talrands_invocation() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(drake),
+            definition: std::sync::Arc::new(drake),
         },
         ..Default::default()
     }
@@ -173,7 +173,7 @@ pub fn metallurgic_summonings() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(construct.entering_with(CounterType::PlusOnePlusOne, Value::ManaValueOf(Box::new(Selector::TriggerSource)))),
+                    definition: std::sync::Arc::new(construct.entering_with(CounterType::PlusOnePlusOne, Value::ManaValueOf(Box::new(Selector::TriggerSource)))),
                 },
             ]),
         }],

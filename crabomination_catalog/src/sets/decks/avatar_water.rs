@@ -513,7 +513,7 @@ pub fn katara_water_tribes_hope() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::CreateToken {
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Ally".into(),
                 power: 1,
                 toughness: 1,

@@ -94,7 +94,7 @@ pub fn dragon_trainer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(dragon),
+            definition: std::sync::Arc::new(dragon),
         })],
         ..Default::default()
     }
@@ -326,7 +326,7 @@ pub fn battle_screech() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(bird),
+            definition: std::sync::Arc::new(bird),
         },
         ..Default::default()
     }

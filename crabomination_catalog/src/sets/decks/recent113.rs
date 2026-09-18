@@ -282,7 +282,7 @@ pub fn irregular_cohort() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Shapeshifter".into(),
                 power: 2,
                 toughness: 2,
@@ -527,7 +527,7 @@ pub fn mother_bear() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(bear),
+                definition: std::sync::Arc::new(bear),
             },
             ..Default::default()
         }],
@@ -801,7 +801,7 @@ pub fn recruit_the_worthy() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Soldier".into(),
                 power: 1,
                 toughness: 1,
@@ -897,7 +897,7 @@ pub fn goblin_war_party() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Goblin".into(),
                     power: 1,
                     toughness: 1,
@@ -1195,7 +1195,7 @@ pub fn rank_officer() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Zombie".into(),
                     power: 2,
                     toughness: 2,

@@ -30,7 +30,7 @@ fn living_weapon() -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(germ()),
+            definition: std::sync::Arc::new(germ()),
         },
         Effect::Attach {
             what: Selector::This,
@@ -112,7 +112,7 @@ pub fn drownyard_lurker() -> CardDefinition {
     let make_spawn = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: Box::new(crate::game::effects::eldrazi_spawn_token()),
+        definition: std::sync::Arc::new(crate::game::effects::eldrazi_spawn_token()),
     };
     CardDefinition {
         name: "Drownyard Lurker",
@@ -167,7 +167,7 @@ pub fn emrakuls_messenger() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crate::game::effects::eldrazi_spawn_token()),
+                definition: std::sync::Arc::new(crate::game::effects::eldrazi_spawn_token()),
             },
         }],
         ..Default::default()
@@ -367,7 +367,7 @@ pub fn scurry_of_gremlins() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(gremlin),
+                definition: std::sync::Arc::new(gremlin),
             },
             Effect::AddEnergy(Value::CreatureCountControlledBy(PlayerRef::You)),
         ]))],
@@ -402,7 +402,7 @@ pub fn warped_tusker() -> CardDefinition {
     let spawn = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: Box::new(crate::game::effects::eldrazi_spawn_token()),
+        definition: std::sync::Arc::new(crate::game::effects::eldrazi_spawn_token()),
     };
     CardDefinition {
         name: "Warped Tusker",
@@ -538,7 +538,7 @@ pub fn strix_serenade() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::ONE,
-                definition: Box::new(bird),
+                definition: std::sync::Arc::new(bird),
             },
             Effect::CounterSpell {
                 what: target_filtered(
@@ -1562,7 +1562,7 @@ pub fn gravedig() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(zombie),
+                definition: std::sync::Arc::new(zombie),
             },
             Effect::Move {
                 what: Selector::TargetFiltered {
@@ -1639,7 +1639,7 @@ pub fn muster_the_departed() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(spirit_flyer()),
+                definition: std::sync::Arc::new(spirit_flyer()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::SelfSource)
@@ -1747,7 +1747,7 @@ pub fn kozileks_unsealing() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(crate::game::effects::eldrazi_spawn_token()),
+                    definition: std::sync::Arc::new(crate::game::effects::eldrazi_spawn_token()),
                 },
             ),
             cast_creature_mv(
@@ -1972,7 +1972,7 @@ pub fn not_forgotten() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(spirit_flyer()),
+                definition: std::sync::Arc::new(spirit_flyer()),
             },
         ]),
         ..Default::default()

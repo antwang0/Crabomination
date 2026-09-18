@@ -126,7 +126,7 @@ pub fn invasion_reinforcements() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(ally),
+            definition: std::sync::Arc::new(ally),
         })],
         ..Default::default()
     }
@@ -175,7 +175,7 @@ pub fn aang_airbending_master() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ControllerExperience,
-                    definition: Box::new(crate::card::TokenDefinition {
+                    definition: std::sync::Arc::new(crate::card::TokenDefinition {
                         name: "Ally".into(),
                         power: 1,
                         toughness: 1,
@@ -287,7 +287,7 @@ pub fn sourbread_auntie() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(goblin),
+                    definition: std::sync::Arc::new(goblin),
                 },
             ])),
         })],
@@ -364,7 +364,7 @@ pub fn knowledge_seeker() -> CardDefinition {
             on_dies(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crabomination_base::tokens::clue_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
             }),
         ],
         ..Default::default()
@@ -453,7 +453,7 @@ pub fn unlucky_cabbage_merchant() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(food_token()),
+                definition: std::sync::Arc::new(food_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)

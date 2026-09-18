@@ -75,7 +75,7 @@ pub fn besotted_knight() -> CardDefinition {
             card_types: vec![CardType::Sorcery],
             effect: Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: Box::new(royal_role()),
+                definition: std::sync::Arc::new(royal_role()),
             },
         })),
         ..Default::default()
@@ -98,7 +98,7 @@ pub fn charmed_clothier() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
             target: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
-            definition: Box::new(royal_role()),
+            definition: std::sync::Arc::new(royal_role()),
         })],
         ..Default::default()
     }
@@ -195,7 +195,7 @@ pub fn grabby_giant() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         })),
         ..Default::default()
@@ -237,7 +237,7 @@ pub fn hollow_scavenger() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(food_token()),
+                definition: std::sync::Arc::new(food_token()),
             },
         })),
         ..Default::default()
@@ -259,7 +259,7 @@ pub fn redtooth_genealogist() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
             target: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
-            definition: Box::new(royal_role()),
+            definition: std::sync::Arc::new(royal_role()),
         })],
         ..Default::default()
     }
@@ -289,7 +289,7 @@ pub fn skybeast_tracker() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(food_token()),
+                definition: std::sync::Arc::new(food_token()),
             },
         }],
         ..Default::default()

@@ -233,7 +233,7 @@ pub fn mobilization() -> CardDefinition {
             mana_cost: cost(&[generic(2), w()]),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Soldier".into(),
                     colors: vec![Color::White],
                     subtypes: Subtypes {
@@ -728,7 +728,7 @@ pub fn centaur_glade() -> CardDefinition {
             mana_cost: cost(&[generic(2), g(), g()]),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Centaur".into(),
                     colors: vec![Color::Green],
                     subtypes: Subtypes {
@@ -872,7 +872,7 @@ pub fn symbiotic_beast() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(insect_token()),
+                definition: std::sync::Arc::new(insect_token()),
                 count: Value::Const(4),
             },
         }],
@@ -893,7 +893,7 @@ pub fn symbiotic_wurm() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(insect_token()),
+                definition: std::sync::Arc::new(insect_token()),
                 count: Value::Const(7),
             },
         }],

@@ -203,7 +203,7 @@ pub fn infestation_sage() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Insect".into(),
                 power: 1,
                 toughness: 1,
@@ -238,7 +238,7 @@ pub fn prideful_parent() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Cat".into(),
                 power: 1,
                 toughness: 1,
@@ -303,7 +303,7 @@ pub fn guarded_heir() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Knight".into(),
                 power: 3,
                 toughness: 3,

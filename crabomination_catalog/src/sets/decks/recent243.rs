@@ -173,7 +173,7 @@ pub fn leering_onlooker() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Bat".into(),
                     power: 1,
                     toughness: 1,

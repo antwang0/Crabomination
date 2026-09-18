@@ -361,7 +361,7 @@ pub fn join_the_ranks() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(soldier),
+            definition: std::sync::Arc::new(soldier),
         },
     )
 }
@@ -498,7 +498,7 @@ pub fn khalni_garden() -> CardDefinition {
     tapped_etb_land(
         "Khalni Garden",
         Color::Green,
-        Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: Box::new(plant) },
+        Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: std::sync::Arc::new(plant) },
     )
 }
 

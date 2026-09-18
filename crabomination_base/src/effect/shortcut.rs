@@ -1224,7 +1224,7 @@ pub fn create_token_with_keyword(
         Effect::CreateToken {
             who,
             count: Value::Const(count),
-            definition: Box::new(token),
+            definition: std::sync::Arc::new(token),
         },
         Effect::GrantKeyword {
             what: Selector::LastCreatedToken,
@@ -1250,7 +1250,7 @@ pub fn create_token_with_counter(
     Effect::CreateToken {
         who,
         count: Value::Const(count),
-        definition: Box::new(token.entering_with(counter, Value::Const(counter_n))),
+        definition: std::sync::Arc::new(token.entering_with(counter, Value::Const(counter_n))),
     }
 }
 
@@ -1349,7 +1349,7 @@ pub fn etb_mint_token(
 ) -> TriggeredAbility {
     etb(Effect::CreateToken {
         who: PlayerRef::You,
-        definition: Box::new(definition),
+        definition: std::sync::Arc::new(definition),
         count: Value::Const(count),
     })
 }
@@ -1379,7 +1379,7 @@ pub fn investigate(n: u32) -> Effect {
     Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(n as i32),
-        definition: Box::new(crate::tokens::clue_token()),
+        definition: std::sync::Arc::new(crate::tokens::clue_token()),
     }
 }
 
@@ -1479,7 +1479,7 @@ pub fn magecraft_mint_token(
 ) -> TriggeredAbility {
     magecraft(Effect::CreateToken {
         who: PlayerRef::You,
-        definition: Box::new(definition),
+        definition: std::sync::Arc::new(definition),
         count: Value::Const(count),
     })
 }
@@ -1500,7 +1500,7 @@ pub fn magecraft_mint_and_drain(
     magecraft(Effect::Seq(vec![
         Effect::CreateToken {
             who: PlayerRef::You,
-            definition: Box::new(definition),
+            definition: std::sync::Arc::new(definition),
             count: Value::Const(count),
         },
         Effect::Drain {
@@ -1668,7 +1668,7 @@ pub fn on_attack_create_token(token: crate::card::TokenDefinition) -> TriggeredA
     on_attack(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(token),
+        definition: std::sync::Arc::new(token),
     })
 }
 
@@ -1685,7 +1685,7 @@ pub fn mint_token(token: crate::card::TokenDefinition, count: i32) -> Effect {
     Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(count),
-        definition: Box::new(token),
+        definition: std::sync::Arc::new(token),
     }
 }
 
@@ -1911,7 +1911,7 @@ pub fn dies_mint_token(
     on_dies(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(count),
-        definition: Box::new(definition),
+        definition: std::sync::Arc::new(definition),
     })
 }
 
@@ -1945,7 +1945,7 @@ pub fn on_other_dies_mint_token(
     on_other_dies(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(count),
-        definition: Box::new(definition),
+        definition: std::sync::Arc::new(definition),
     })
 }
 
@@ -1963,7 +1963,7 @@ pub fn magecraft_mint_spirit() -> TriggeredAbility {
     magecraft(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(crate::tokens::lorehold_spirit_token()),
+        definition: std::sync::Arc::new(crate::tokens::lorehold_spirit_token()),
     })
 }
 
@@ -1994,7 +1994,7 @@ pub fn magecraft_treasure() -> TriggeredAbility {
     magecraft(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(crate::tokens::treasure_token()),
+        definition: std::sync::Arc::new(crate::tokens::treasure_token()),
     })
 }
 
@@ -2151,7 +2151,7 @@ pub fn mobilize_value(count: Value) -> TriggeredAbility {
     on_attack(Effect::CreateTokenAttacking {
         who: PlayerRef::You,
         count,
-        definition: Box::new(crate::card::TokenDefinition {
+        definition: std::sync::Arc::new(crate::card::TokenDefinition {
             name: "Warrior".into(),
             power: 1,
             toughness: 1,
@@ -2175,7 +2175,7 @@ pub fn afterlife(n: i32) -> TriggeredAbility {
     on_dies(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(n),
-        definition: Box::new(crate::card::TokenDefinition {
+        definition: std::sync::Arc::new(crate::card::TokenDefinition {
             name: "Spirit".into(),
             power: 1,
             toughness: 1,
@@ -2571,7 +2571,7 @@ pub fn fabricate(n: i32) -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(n),
-            definition: Box::new(servo),
+            definition: std::sync::Arc::new(servo),
         },
     ]))
 }
@@ -2597,7 +2597,7 @@ pub fn etb_mint_token_with_counters(
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(count),
-            definition: Box::new(definition),
+            definition: std::sync::Arc::new(definition),
         },
         Effect::AddCounter {
             what: Selector::LastCreatedToken,
@@ -2624,7 +2624,7 @@ pub fn etb_mint_token_and_drain(
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(definition),
+            definition: std::sync::Arc::new(definition),
         },
         Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
@@ -2651,7 +2651,7 @@ pub fn etb_mint_token_and_gain_life(
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(definition),
+            definition: std::sync::Arc::new(definition),
         },
         Effect::GainLife {
             who: Selector::You,
@@ -2749,7 +2749,7 @@ pub fn dies_mint_token_and_drain(
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(definition),
+            definition: std::sync::Arc::new(definition),
         },
         Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
@@ -2814,7 +2814,7 @@ pub fn magecraft_mint_pest() -> TriggeredAbility {
     magecraft(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(crate::tokens::stx_pest_token()),
+        definition: std::sync::Arc::new(crate::tokens::stx_pest_token()),
     })
 }
 
@@ -2827,7 +2827,7 @@ pub fn magecraft_mint_inkling() -> TriggeredAbility {
     magecraft(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(crate::tokens::inkling_token()),
+        definition: std::sync::Arc::new(crate::tokens::inkling_token()),
     })
 }
 
@@ -2844,7 +2844,7 @@ pub fn magecraft_mint_fractal(counters: i32) -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(crate::tokens::fractal_token()),
+            definition: std::sync::Arc::new(crate::tokens::fractal_token()),
         },
         Effect::AddCounter {
             what: Selector::LastCreatedToken,
@@ -2864,7 +2864,7 @@ pub fn dies_mint_pest() -> TriggeredAbility {
     on_dies(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(crate::tokens::stx_pest_token()),
+        definition: std::sync::Arc::new(crate::tokens::stx_pest_token()),
     })
 }
 
@@ -2877,7 +2877,7 @@ pub fn on_attack_mint_lorehold_spirit() -> TriggeredAbility {
     on_attack(Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(crate::tokens::lorehold_spirit_token()),
+        definition: std::sync::Arc::new(crate::tokens::lorehold_spirit_token()),
     })
 }
 

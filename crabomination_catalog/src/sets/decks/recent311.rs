@@ -399,7 +399,7 @@ pub fn infested_roothold() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Insect".into(),
                         colors: vec![Color::Green],
                         card_types: vec![CardType::Creature],
@@ -864,7 +864,7 @@ pub fn myr_matrix() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Myr".into(),
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
@@ -905,7 +905,7 @@ pub fn spawning_pit() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Spawn".into(),
                         card_types: vec![CardType::Artifact, CardType::Creature],
                         subtypes: Subtypes {

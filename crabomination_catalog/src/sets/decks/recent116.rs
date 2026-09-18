@@ -86,7 +86,7 @@ pub fn manaform_hellkite() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(illusion),
+                definition: std::sync::Arc::new(illusion),
             },
         }],
         ..Default::default()

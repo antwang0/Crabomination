@@ -277,7 +277,7 @@ pub fn field_of_souls() -> CardDefinition {
             ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Spirit".to_string(),
                     power: 1,
                     toughness: 1,
@@ -367,7 +367,7 @@ pub fn pegasus_refuge() -> CardDefinition {
             discard_cost: Some((R::Any, 1)),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Pegasus".to_string(),
                     power: 1,
                     toughness: 1,
@@ -520,7 +520,7 @@ pub fn sarcomancy() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Zombie".to_string(),
                     power: 2,
                     toughness: 2,
@@ -574,7 +574,7 @@ pub fn tooth_and_claw() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Carnivore".to_string(),
                     power: 3,
                     toughness: 1,
@@ -751,7 +751,7 @@ pub fn spirit_mirror() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Reflection".to_string(),
                     power: 2,
                     toughness: 2,

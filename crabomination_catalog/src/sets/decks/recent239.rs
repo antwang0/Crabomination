@@ -201,7 +201,7 @@ pub fn outlaw_stitcher() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Zombie Rogue".into(),
                         power: 2,
                         toughness: 2,
@@ -363,7 +363,7 @@ pub fn tumbleweed_rising() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Elemental".into(),
                 power: 0,
                 toughness: 0,

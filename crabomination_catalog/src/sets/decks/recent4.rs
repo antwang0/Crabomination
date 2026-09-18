@@ -331,7 +331,7 @@ pub fn roar_of_the_wurm() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Wurm".into(),
                 power: 6,
                 toughness: 6,
@@ -923,7 +923,7 @@ pub fn llanowar_mentor() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(elf),
+                definition: std::sync::Arc::new(elf),
             },
             ..Default::default()
         }],

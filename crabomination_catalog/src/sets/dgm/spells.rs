@@ -440,7 +440,7 @@ pub fn advent_of_the_wurm() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(wurm),
+            definition: std::sync::Arc::new(wurm),
         },
         ..Default::default()
     }

@@ -170,7 +170,7 @@ pub fn errand_of_duty() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Knight".into(),
                 power: 1,
                 toughness: 1,
@@ -198,7 +198,7 @@ pub fn feast_or_famine() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Zombie".into(),
                     power: 2,
                     toughness: 2,

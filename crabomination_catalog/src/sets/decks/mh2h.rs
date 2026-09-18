@@ -169,7 +169,7 @@ pub fn verdant_command() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::Target(0),
                     count: Value::Const(2),
-                    definition: Box::new(tapped_squirrel()),
+                    definition: std::sync::Arc::new(tapped_squirrel()),
                 },
                 Effect::CounterAbility {
                     what: target_filtered(R::Planeswalker),

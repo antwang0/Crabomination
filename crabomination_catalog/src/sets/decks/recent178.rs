@@ -27,7 +27,7 @@ pub fn marching_duodrone() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::CreateToken {
             who: PlayerRef::EachPlayer,
             count: Value::ONE,
-            definition: Box::new(crabomination_base::tokens::treasure_token()),
+            definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
         })],
         ..Default::default()
     }

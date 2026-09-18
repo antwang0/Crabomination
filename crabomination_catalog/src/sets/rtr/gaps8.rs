@@ -254,7 +254,7 @@ pub fn grove_of_the_guardian() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crate::card::TokenDefinition {
+                    definition: std::sync::Arc::new(crate::card::TokenDefinition {
                         name: "Elemental".into(),
                         power: 8,
                         toughness: 8,

@@ -50,7 +50,7 @@ pub fn jolrael_mwonvuli_recluse() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(cat),
+                definition: std::sync::Arc::new(cat),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -162,7 +162,7 @@ pub fn custodi_soulbinders() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(spirit),
+                definition: std::sync::Arc::new(spirit),
             },
             ..Default::default()
         }],

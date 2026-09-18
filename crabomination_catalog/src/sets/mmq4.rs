@@ -118,7 +118,7 @@ pub fn saber_ants() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::TriggerEventAmount,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Insect".into(),
                         power: 1,
                         toughness: 1,

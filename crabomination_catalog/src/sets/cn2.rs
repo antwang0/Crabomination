@@ -198,7 +198,7 @@ pub fn queen_marchesa() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Assassin".to_string(),
                         power: 1,
                         toughness: 1,
@@ -866,7 +866,7 @@ pub fn daretti_ingenious_iconoclast() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Construct".to_string(),
                         power: 1,
                         toughness: 1,

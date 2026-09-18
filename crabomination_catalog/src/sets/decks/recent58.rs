@@ -45,7 +45,7 @@ pub fn squad_commander() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PartyCount,
-                definition: Box::new(kor_warrior()),
+                definition: std::sync::Arc::new(kor_warrior()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(

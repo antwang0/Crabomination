@@ -161,7 +161,7 @@ pub fn thopter_assembly() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(5),
-                    definition: Box::new(thopter_token()),
+                    definition: std::sync::Arc::new(thopter_token()),
                 },
             ]),
         }],

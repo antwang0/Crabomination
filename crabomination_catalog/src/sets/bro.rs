@@ -565,7 +565,7 @@ pub fn phyrexian_warhorse() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Soldier".into(),
                         power: 1,
                         toughness: 1,

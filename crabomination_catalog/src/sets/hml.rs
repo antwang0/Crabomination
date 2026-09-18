@@ -579,7 +579,7 @@ pub fn wall_of_kelp() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Kelp".into(),
                     power: 0,
                     toughness: 1,

@@ -39,7 +39,7 @@ pub fn abstruse_interference() -> CardDefinition {
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(eldrazi_scion_token()),
+                definition: std::sync::Arc::new(eldrazi_scion_token()),
                 count: Value::Const(1),
             },
         ]),
@@ -168,7 +168,7 @@ pub fn vile_redeemer() -> CardDefinition {
                 mana_cost: cost(&[colorless(1)]),
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
-                    definition: Box::new(eldrazi_scion_token()),
+                    definition: std::sync::Arc::new(eldrazi_scion_token()),
                     count: Value::CreaturesDiedThisTurn(PlayerRef::You),
                 }),
                 else_: None,
@@ -259,7 +259,7 @@ pub fn null_caller() -> CardDefinition {
             exile_other_filter: Some((R::Creature.and(R::InYourGraveyard), 1)),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Zombie".into(),
                     power: 2,
                     toughness: 2,
@@ -327,7 +327,7 @@ pub fn seed_guardian() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: Box::new(token),
+            definition: std::sync::Arc::new(token),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -448,7 +448,7 @@ pub fn oath_of_gideon() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: Box::new(crate::card::TokenDefinition {
+            definition: std::sync::Arc::new(crate::card::TokenDefinition {
                 name: "Kor Ally".into(),
                 power: 1,
                 toughness: 1,

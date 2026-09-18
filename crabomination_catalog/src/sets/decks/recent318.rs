@@ -257,7 +257,7 @@ pub fn one_dozen_eyes() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(count),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: name.into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],

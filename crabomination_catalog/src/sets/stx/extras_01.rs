@@ -1167,7 +1167,7 @@ pub fn inscription_of_insight() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(crate::card::TokenDefinition {
+                        definition: std::sync::Arc::new(crate::card::TokenDefinition {
                             name: "Illusion".into(),
                             power: 0,
                             toughness: 0,
@@ -1290,7 +1290,7 @@ pub fn leyline_invocation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Fractal".to_string(),
                     colors: vec![Color::Green, Color::Blue],
                     card_types: vec![CardType::Creature],
@@ -2089,7 +2089,7 @@ pub fn witherbloom_pest_eater() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(stx_pest_token()),
+                    definition: std::sync::Arc::new(stx_pest_token()),
                 },
             },
             TriggeredAbility {

@@ -1207,7 +1207,7 @@ pub fn hunting_pack() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Beast".into(),
                     power: 4,
                     toughness: 4,

@@ -132,7 +132,7 @@ pub fn imperial_oath() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: Box::new(samurai_token()),
+                definition: std::sync::Arc::new(samurai_token()),
             },
             Effect::Scry {
                 who: PlayerRef::You,

@@ -707,7 +707,7 @@ pub fn lorehold_spiritbringer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(lorehold_spirit_token()),
+                definition: std::sync::Arc::new(lorehold_spirit_token()),
             },
         }],
         ..Default::default()
@@ -850,7 +850,7 @@ pub fn pestpod_lurker() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(stx_pest_token()),
+                    definition: std::sync::Arc::new(stx_pest_token()),
                 },
             },
             TriggeredAbility {

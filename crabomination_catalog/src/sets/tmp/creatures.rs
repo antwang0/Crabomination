@@ -1162,7 +1162,7 @@ pub fn verdant_force() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Saproling".to_string(),
                     power: 1,
                     toughness: 1,
@@ -1192,7 +1192,7 @@ pub fn mongrel_pack() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: Box::new(crate::card::TokenDefinition {
+            definition: std::sync::Arc::new(crate::card::TokenDefinition {
                 name: "Dog".to_string(),
                 power: 1,
                 toughness: 1,

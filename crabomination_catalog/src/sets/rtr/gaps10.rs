@@ -338,7 +338,7 @@ pub fn security_blockade() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(knight),
+            definition: std::sync::Arc::new(knight),
         })],
         static_abilities: vec![StaticAbility {
             description: "Enchanted land has \"{T}: Prevent the next 1 damage that would be dealt to you this turn.\"",

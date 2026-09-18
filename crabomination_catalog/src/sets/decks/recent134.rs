@@ -223,7 +223,7 @@ pub fn stroke_of_midnight() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::ONE,
-                definition: Box::new(white_human_token()),
+                definition: std::sync::Arc::new(white_human_token()),
             },
             Effect::Destroy {
                 what: target_filtered(R::Nonland),
@@ -255,7 +255,7 @@ pub fn return_triumphant() -> CardDefinition {
             },
             Effect::CreateTokenAttachedTo {
                 target: Selector::LastMoved,
-                definition: Box::new(young_hero_role()),
+                definition: std::sync::Arc::new(young_hero_role()),
             },
         ]),
         ..Default::default()
@@ -285,7 +285,7 @@ pub fn conceited_witch() -> CardDefinition {
             card_types: vec![CardType::Sorcery],
             effect: Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: Box::new(wicked_role()),
+                definition: std::sync::Arc::new(wicked_role()),
             },
         })),
         ..Default::default()

@@ -1594,7 +1594,7 @@ pub fn goblin_marshal() -> CardDefinition {
     let goblins = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: Box::new(crate::card::TokenDefinition {
+        definition: std::sync::Arc::new(crate::card::TokenDefinition {
             name: "Goblin".into(),
             power: 1,
             toughness: 1,

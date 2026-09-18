@@ -72,7 +72,7 @@ pub fn stormchasers_talent() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(otter_prowess_token()),
+                    definition: std::sync::Arc::new(otter_prowess_token()),
                 },
             },
             TriggeredAbility {
@@ -97,7 +97,7 @@ pub fn stormchasers_talent() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(otter_prowess_token()),
+                    definition: std::sync::Arc::new(otter_prowess_token()),
                 },
             },
         ],
@@ -258,7 +258,7 @@ pub fn scavengers_talent() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crabomination_base::tokens::food_token()),
+                    definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
                 },
             },
             TriggeredAbility {
@@ -563,7 +563,7 @@ pub fn blacksmiths_talent() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(sword_token()),
+                    definition: std::sync::Arc::new(sword_token()),
                 },
             },
             TriggeredAbility {
@@ -634,7 +634,7 @@ pub fn builders_talent() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(wall_token()),
+                    definition: std::sync::Arc::new(wall_token()),
                 },
             },
             TriggeredAbility {

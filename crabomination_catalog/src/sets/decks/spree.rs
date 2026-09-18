@@ -226,7 +226,7 @@ pub fn phantom_interference() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Spirit".into(),
                         power: 2,
                         toughness: 2,
@@ -332,7 +332,7 @@ pub fn dance_of_the_tumbleweeds() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Elemental".into(),
                         power: 0,
                         toughness: 0,

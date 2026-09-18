@@ -34,7 +34,7 @@ pub fn gold_pan() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
         })],
         ..Default::default()
     }
@@ -114,7 +114,7 @@ pub fn baron_bertram_graywater() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(vampire),
+                definition: std::sync::Arc::new(vampire),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

@@ -1095,7 +1095,7 @@ pub fn tidal_wave() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Wall".into(),
                     power: 5,
                     toughness: 5,
@@ -1122,7 +1122,7 @@ pub fn goblin_scouts() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Goblin Scout".into(),
                 power: 1,
                 toughness: 1,

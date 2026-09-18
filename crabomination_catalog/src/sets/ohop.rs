@@ -226,7 +226,7 @@ pub fn the_fourth_sphere() -> CardDefinition {
             chaos(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(token(
+                definition: std::sync::Arc::new(token(
                     "Zombie",
                     2,
                     2,
@@ -280,7 +280,7 @@ pub fn goldmeadow() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                     count: Value::Const(3),
-                    definition: Box::new(token(
+                    definition: std::sync::Arc::new(token(
                         "Goat",
                         0,
                         1,
@@ -293,7 +293,7 @@ pub fn goldmeadow() -> CardDefinition {
             chaos(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(token(
+                definition: std::sync::Arc::new(token(
                     "Goat",
                     0,
                     1,
@@ -330,7 +330,7 @@ pub fn shiv() -> CardDefinition {
         vec![chaos(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(token(
+            definition: std::sync::Arc::new(token(
                 "Dragon",
                 5,
                 5,

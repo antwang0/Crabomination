@@ -170,7 +170,7 @@ pub fn rally_the_horde() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::NonlandCardsExiledThisEffect,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Warrior".into(),
                     power: 1,
                     toughness: 1,
@@ -196,7 +196,7 @@ pub fn sekki_seasons_guide() -> CardDefinition {
             description: "Damage to this is prevented; trade that many +1/+1 counters for Spirits.",
             effect: StaticEffect::PreventDamageToSelfTradingCounters {
                 counter: CounterType::PlusOnePlusOne,
-                token: Box::new(spirit_token()),
+                token: std::sync::Arc::new(spirit_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

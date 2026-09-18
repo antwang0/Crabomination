@@ -429,7 +429,7 @@ pub fn knight_watch() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(knight),
+            definition: std::sync::Arc::new(knight),
         },
         ..Default::default()
     }

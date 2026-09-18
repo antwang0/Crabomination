@@ -66,7 +66,7 @@ pub fn elspeth_suns_champion() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: Box::new(soldier_token()),
+                    definition: std::sync::Arc::new(soldier_token()),
                 },
                 ..Default::default()
             },
@@ -191,12 +191,12 @@ pub fn increasing_devotion() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(10),
-                definition: Box::new(human_token()),
+                definition: std::sync::Arc::new(human_token()),
             }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(5),
-                definition: Box::new(human_token()),
+                definition: std::sync::Arc::new(human_token()),
             }),
         },
         keywords: vec![Keyword::Flashback(cost(&[generic(7), w(), w()]))],
@@ -255,7 +255,7 @@ pub fn talrand_sky_summoner() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Drake".to_string(),
                 card_types: vec![CardType::Creature],
                 subtypes: Subtypes {
@@ -400,7 +400,7 @@ pub fn malcolm_keen_eyed_navigator() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -493,7 +493,7 @@ pub fn shambling_ghast() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]))],
         ..Default::default()

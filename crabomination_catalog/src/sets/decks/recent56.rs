@@ -86,7 +86,7 @@ pub fn bishop_of_wings() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(spirit),
+                    definition: std::sync::Arc::new(spirit),
                 },
             },
         ],
@@ -409,7 +409,7 @@ pub fn griffin_aerie() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(griffin),
+                    definition: std::sync::Arc::new(griffin),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -488,7 +488,7 @@ pub fn crested_sunmare() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(horse),
+                    definition: std::sync::Arc::new(horse),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -650,7 +650,7 @@ pub fn valkyrie_harbinger() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(angel_token(true)),
+                    definition: std::sync::Arc::new(angel_token(true)),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -696,7 +696,7 @@ pub fn regal_bloodlord() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(bat),
+                    definition: std::sync::Arc::new(bat),
                 }),
                 else_: Box::new(Effect::Noop),
             },

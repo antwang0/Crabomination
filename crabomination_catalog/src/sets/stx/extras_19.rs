@@ -278,7 +278,7 @@ pub fn kianne_dean_of_substance() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::DistinctManaValuesInExileWithCounter {
+                        definition: std::sync::Arc::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::DistinctManaValuesInExileWithCounter {
                             counter: CounterType::Study,
                         })),
                     },
@@ -528,7 +528,7 @@ pub fn valentin_dean_of_the_vein() -> CardDefinition {
                     body: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(valentin_pest_token()),
+                        definition: std::sync::Arc::new(valentin_pest_token()),
                     }),
                     else_: None,
                 })),
@@ -844,7 +844,7 @@ fn awaken_the_blood_avatar() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(avatar),
+                definition: std::sync::Arc::new(avatar),
             },
         ]),
         ..Default::default()

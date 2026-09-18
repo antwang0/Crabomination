@@ -104,7 +104,7 @@ fn inspired_pay_for_tokens(mana: ManaCost, token: TokenDefinition, count: i32) -
         body: Box::new(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(count),
-            definition: Box::new(token),
+            definition: std::sync::Arc::new(token),
         }),
         else_: None,
     })
@@ -186,7 +186,7 @@ pub fn vanguard_of_brimaz() -> CardDefinition {
         triggered_abilities: vec![heroic(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Cat Soldier".into(),
                 power: 1,
                 toughness: 1,
@@ -854,7 +854,7 @@ pub fn gild() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(super::thb::gold_token()),
+                definition: std::sync::Arc::new(super::thb::gold_token()),
             },
         ]),
     )
@@ -1151,7 +1151,7 @@ pub fn raised_by_wolves() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Wolf".into(),
                 power: 2,
                 toughness: 2,

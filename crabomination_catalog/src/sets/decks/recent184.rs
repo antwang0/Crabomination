@@ -98,7 +98,7 @@ pub fn hellspur_posse_boss() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(mercenary_token()),
+            definition: std::sync::Arc::new(mercenary_token()),
         })],
         ..Default::default()
     }
@@ -162,7 +162,7 @@ pub fn at_knifepoint() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(mercenary_token()),
+                definition: std::sync::Arc::new(mercenary_token()),
             },
         }],
         ..Default::default()

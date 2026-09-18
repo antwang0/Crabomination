@@ -856,7 +856,7 @@ pub fn watchful_giant() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(token(
+            definition: std::sync::Arc::new(token(
                 "Human",
                 vec![Color::White],
                 1,
@@ -1016,7 +1016,7 @@ pub fn sprouting_renewal() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(token(
+                    definition: std::sync::Arc::new(token(
                         "Elf Knight",
                         vec![Color::Green, Color::White],
                         2,
@@ -2529,7 +2529,7 @@ pub fn biogenic_ooze() -> CardDefinition {
     let make_ooze = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: Box::new(token(
+        definition: std::sync::Arc::new(token(
             "Ooze",
             vec![Color::Green],
             2,
@@ -2786,7 +2786,7 @@ pub fn knight_of_the_last_breath() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(wb_spirit()),
+                definition: std::sync::Arc::new(wb_spirit()),
             },
             ..Default::default()
         }],
@@ -3008,7 +3008,7 @@ pub fn rampage_of_the_clans() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                     count: Value::Const(1),
-                    definition: Box::new(token(
+                    definition: std::sync::Arc::new(token(
                         "Centaur",
                         vec![Color::Green],
                         3,
@@ -3109,7 +3109,7 @@ pub fn goblin_gathering() -> CardDefinition {
                     filter: R::HasName("Goblin Gathering".into()),
                 }),
             ]),
-            definition: Box::new(token(
+            definition: std::sync::Arc::new(token(
                 "Goblin",
                 vec![Color::Red],
                 1,
@@ -3253,7 +3253,7 @@ pub fn depose_deploy() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(2),
-                        definition: Box::new(token(
+                        definition: std::sync::Arc::new(token(
                             "Thopter",
                             vec![],
                             1,
@@ -3338,7 +3338,7 @@ pub fn warrant_warden() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(token(
+                    definition: std::sync::Arc::new(token(
                         "Sphinx",
                         vec![Color::White, Color::Blue],
                         4,
@@ -3383,7 +3383,7 @@ pub fn thrash_threat() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(token(
+                    definition: std::sync::Arc::new(token(
                         "Beast",
                         vec![Color::Red, Color::Green],
                         4,
@@ -3740,7 +3740,7 @@ pub fn incubation_incongruity() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                         count: Value::Const(1),
-                        definition: Box::new(token(
+                        definition: std::sync::Arc::new(token(
                             "Frog Lizard",
                             vec![Color::Green],
                             3,
@@ -4197,7 +4197,7 @@ pub fn ethereal_absolution() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Spirit".into(),
                             power: 1,
                             toughness: 1,
@@ -4399,12 +4399,12 @@ pub fn mesmerizing_benthid() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(illusion()),
+                definition: std::sync::Arc::new(illusion()),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(illusion()),
+                definition: std::sync::Arc::new(illusion()),
             },
         ]))],
         static_abilities: vec![StaticAbility {
@@ -4837,7 +4837,7 @@ pub fn awaken_the_erstwhile() -> CardDefinition {
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::EachPlayerDiscardsHandMakeTokens {
-            token: Box::new(token(
+            token: std::sync::Arc::new(token(
                 "Zombie",
                 vec![Color::Black],
                 2,

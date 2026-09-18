@@ -186,7 +186,7 @@ pub fn ratcatcher_trainee() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(rat_token()),
+                definition: std::sync::Arc::new(rat_token()),
             },
         })),
         ..Default::default()
@@ -246,7 +246,7 @@ pub fn twisted_fealty() -> CardDefinition {
                     slot: 1,
                     filter: R::Creature,
                 },
-                definition: Box::new(wicked_role),
+                definition: std::sync::Arc::new(wicked_role),
             },
         ]),
         ..Default::default()

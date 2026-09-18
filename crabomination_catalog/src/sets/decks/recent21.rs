@@ -57,7 +57,7 @@ pub fn skyknight_vanguard() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Soldier".into(),
                 power: 1,
                 toughness: 1,
@@ -218,7 +218,7 @@ pub fn wanted_griffin() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(mercenary_token()),
+            definition: std::sync::Arc::new(mercenary_token()),
         })],
         ..Default::default()
     }

@@ -70,7 +70,7 @@ pub fn season_of_the_burrow() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(token("Rabbit", 1, 1, Color::White, CreatureType::Rabbit)),
+                    definition: std::sync::Arc::new(token("Rabbit", 1, 1, Color::White, CreatureType::Rabbit)),
                 },
                 Effect::Seq(vec![
                     Effect::Move {
@@ -182,7 +182,7 @@ pub fn season_of_the_bold() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         tapped: true,
                         ..crabomination_base::tokens::treasure_token()
                     }),
@@ -306,7 +306,7 @@ fn wick_snail() -> Effect {
         else_: Box::new(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(token("Snail", 1, 1, Color::Black, CreatureType::Snail)),
+            definition: std::sync::Arc::new(token("Snail", 1, 1, Color::Black, CreatureType::Snail)),
         }),
     }
 }

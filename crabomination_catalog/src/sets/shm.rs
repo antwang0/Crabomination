@@ -201,7 +201,7 @@ pub fn giantbaiting() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(giant),
+                definition: std::sync::Arc::new(giant),
             },
             Effect::DelayUntil {
                 kind: DelayedTriggerKind::NextEndStep,

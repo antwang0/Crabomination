@@ -177,7 +177,7 @@ pub fn wurmweaver_coil() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(wurm_token()),
+                definition: std::sync::Arc::new(wurm_token()),
             },
             ..Default::default()
         }],

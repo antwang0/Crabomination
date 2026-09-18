@@ -721,7 +721,7 @@ pub fn elephant_resurgence() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::EachPlayer,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Elephant".to_string(),
                 card_types: vec![CardType::Creature],
                 subtypes: Subtypes {

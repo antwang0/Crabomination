@@ -382,7 +382,7 @@ pub fn camellia_the_seedmiser() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(squirrel_token()),
+                definition: std::sync::Arc::new(squirrel_token()),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -541,7 +541,7 @@ pub fn dalkovan_encampment() -> CardDefinition {
                 effect: Effect::CreateTokenAttacking {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(warrior_token()),
+                    definition: std::sync::Arc::new(warrior_token()),
                     cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
                 },
                 ..Default::default()

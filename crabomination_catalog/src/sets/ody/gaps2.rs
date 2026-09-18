@@ -198,7 +198,7 @@ pub fn squirrel_nest() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(squirrel()),
+                    definition: std::sync::Arc::new(squirrel()),
                 },
                 ..Default::default()
             }],
@@ -222,7 +222,7 @@ pub fn druids_call() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::TriggerEventAmount,
-                    definition: Box::new(squirrel()),
+                    definition: std::sync::Arc::new(squirrel()),
                 },
             }],
             ..Default::default()
@@ -457,7 +457,7 @@ pub fn elephant_ambush() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Elephant".into(),
                     power: 3,
                     toughness: 3,
@@ -656,7 +656,7 @@ pub fn bearscape() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Bear".into(),
                     power: 2,
                     toughness: 2,

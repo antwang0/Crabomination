@@ -359,7 +359,7 @@ pub fn nuisance_engine() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Pest".into(),
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
@@ -524,7 +524,7 @@ pub fn luminous_angel() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Spirit".into(),
                         colors: vec![Color::White],
                         card_types: vec![CardType::Creature],

@@ -280,7 +280,7 @@ pub fn urbis_protector() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Angel".into(),
                 power: 4,
                 toughness: 4,

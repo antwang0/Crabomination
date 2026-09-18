@@ -136,7 +136,7 @@ pub fn reduce_to_memory() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: Box::new(crabomination_base::tokens::lorehold_spirit_3_2_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::lorehold_spirit_3_2_token()),
             },
         ]),
         ..Default::default()
@@ -542,7 +542,7 @@ pub fn resculpt() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: Box::new(elemental),
+                definition: std::sync::Arc::new(elemental),
             },
         ]),
         ..Default::default()
@@ -1246,7 +1246,7 @@ pub fn manifestation_sage() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::HandSizeOf(PlayerRef::You))),
+                    definition: std::sync::Arc::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::HandSizeOf(PlayerRef::You))),
                 },
             ]),
         }],
@@ -1357,7 +1357,7 @@ pub fn quintorius_field_historian() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crabomination_base::tokens::lorehold_spirit_3_2_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::lorehold_spirit_3_2_token()),
             },
         }],
         static_abilities: vec![StaticAbility {
@@ -1525,7 +1525,7 @@ pub fn magma_opus() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(elemental),
+                definition: std::sync::Arc::new(elemental),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -1537,7 +1537,7 @@ pub fn magma_opus() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
         })),
         ..Default::default()
@@ -2073,7 +2073,7 @@ pub fn make_your_mark() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crabomination_base::tokens::lorehold_spirit_3_2_token()),
+                    definition: std::sync::Arc::new(crabomination_base::tokens::lorehold_spirit_3_2_token()),
                 }),
             },
         ]),
@@ -2110,7 +2110,7 @@ pub fn containment_breach() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crabomination_base::tokens::stx_pest_token()),
+                    definition: std::sync::Arc::new(crabomination_base::tokens::stx_pest_token()),
                 },
             ])),
             else_: Box::new(Effect::Destroy {
@@ -2524,7 +2524,7 @@ pub fn illuminate_history() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(lorehold_spirit_3_2_token()),
+                    definition: std::sync::Arc::new(lorehold_spirit_3_2_token()),
                 }),
                 else_: Box::new(Effect::Noop),
             },

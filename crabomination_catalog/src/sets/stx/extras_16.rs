@@ -136,7 +136,7 @@ pub fn blot_out_the_sky() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                definition: Box::new(inkling_2_1_token()),
+                definition: std::sync::Arc::new(inkling_2_1_token()),
             },
             Effect::Tap {
                 what: Selector::LastCreatedTokens,
@@ -171,7 +171,7 @@ pub fn serpentine_curve() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Sum(vec![
+                definition: std::sync::Arc::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Sum(vec![
                     Value::Const(1),
                     Value::CountOf(Box::new(Selector::CardsInZone {
                         who: PlayerRef::You,
@@ -388,7 +388,7 @@ pub fn burn_down_the_house() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(3),
-                    definition: Box::new(devil_1_1_token()),
+                    definition: std::sync::Arc::new(devil_1_1_token()),
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedTokens,
@@ -433,7 +433,7 @@ pub fn geometric_nexus() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, charge_on_self())),
+                    definition: std::sync::Arc::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, charge_on_self())),
                 },
                 Effect::RemoveCounter {
                     what: Selector::This,
@@ -469,7 +469,7 @@ pub fn culmination_of_studies() -> CardDefinition {
                     sel: last(),
                     filter: SelectionRequirement::HasCardType(CardType::Land),
                 },
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -699,7 +699,7 @@ pub fn elemental_masterpiece() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(elemental_4_4),
+            definition: std::sync::Arc::new(elemental_4_4),
         },
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[
@@ -709,7 +709,7 @@ pub fn elemental_masterpiece() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
             from_hand: true,
             discard_self_cost: true,
@@ -790,7 +790,7 @@ pub fn sticky_fingers() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::game::effects::treasure_token()),
+                    definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
                 },
             }],
             ..Default::default()
@@ -1010,7 +1010,7 @@ pub fn illustrious_historian() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(spirit_3_2_token()),
+                    definition: std::sync::Arc::new(spirit_3_2_token()),
                 },
                 Effect::Tap {
                     what: Selector::LastCreatedToken,
@@ -1169,7 +1169,7 @@ pub fn dramatic_finale() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(inkling_2_1_token()),
+                definition: std::sync::Arc::new(inkling_2_1_token()),
             },
         }],
         ..Default::default()
@@ -1229,7 +1229,7 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
+                        definition: std::sync::Arc::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
                     },
                 ]),
                 ..Default::default()

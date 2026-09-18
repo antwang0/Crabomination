@@ -186,7 +186,7 @@ pub fn surveillance_monitor() -> CardDefinition {
                 event: EventSpec::new(EventKind::EvidenceCollected, EventScope::YourControl),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
-                    definition: Box::new(thopter_token()),
+                    definition: std::sync::Arc::new(thopter_token()),
                     count: Value::ONE,
                 },
             },

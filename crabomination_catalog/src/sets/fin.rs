@@ -169,7 +169,7 @@ pub fn chocobo_racetrack() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(bird),
+                definition: std::sync::Arc::new(bird),
             },
         }],
         ..Default::default()
@@ -567,7 +567,7 @@ pub fn white_mages_staff() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(hero),
+                definition: std::sync::Arc::new(hero),
             },
             Effect::Attach {
                 what: Selector::This,
@@ -1184,7 +1184,7 @@ pub fn barret_avalanche_leader() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(rebel),
+                    definition: std::sync::Arc::new(rebel),
                 },
             },
             // "Up to one target Equipment": both slots are picked when the
@@ -1371,7 +1371,7 @@ pub fn gysahl_greens() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(racetrack_bird_token()),
+            definition: std::sync::Arc::new(racetrack_bird_token()),
         },
         ..Default::default()
     }
@@ -1400,7 +1400,7 @@ pub fn battle_menu() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(knight),
+                definition: std::sync::Arc::new(knight),
             },
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -3723,7 +3723,7 @@ pub fn prompto_argentum() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crabomination_base::tokens::treasure_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
             },
         }],
         ..Default::default()
@@ -3815,7 +3815,7 @@ pub fn rufus_shinra() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(darkstar),
+                definition: std::sync::Arc::new(darkstar),
             },
         }],
         ..Default::default()
@@ -4199,7 +4199,7 @@ pub fn moogles_valor() -> CardDefinition {
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou),
                 },
-                definition: Box::new(moogle),
+                definition: std::sync::Arc::new(moogle),
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
@@ -4275,7 +4275,7 @@ pub fn retrieve_the_esper() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(robot),
+                definition: std::sync::Arc::new(robot),
             },
             Effect::If {
                 cond: Predicate::CastFromGraveyard,
@@ -4338,7 +4338,7 @@ pub fn circle_of_power() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(wizard),
+                definition: std::sync::Arc::new(wizard),
             },
             Effect::PumpPT {
                 what: wizards(),
@@ -4498,7 +4498,7 @@ pub fn rinoa_heartilly() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(angelo),
+                definition: std::sync::Arc::new(angelo),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -5037,7 +5037,7 @@ pub fn aerith_rescue_mission() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: Box::new(hero),
+                definition: std::sync::Arc::new(hero),
             },
             Effect::Seq(vec![
                 Effect::ApplyToTargets {
@@ -5120,12 +5120,12 @@ pub fn the_final_days() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Creature,
                 },
-                definition: Box::new(horror.clone()),
+                definition: std::sync::Arc::new(horror.clone()),
             }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(horror),
+                definition: std::sync::Arc::new(horror),
             }),
         },
         ..Default::default()
@@ -5201,7 +5201,7 @@ pub fn call_the_mountain_chocobo() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(bird),
+                definition: std::sync::Arc::new(bird),
             },
         ]),
         ..Default::default()
@@ -5512,7 +5512,7 @@ fn job_select_etb() -> TriggeredAbility {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(hero_token()),
+            definition: std::sync::Arc::new(hero_token()),
         },
         Effect::Attach {
             what: Selector::This,
@@ -6567,7 +6567,7 @@ pub fn summon_fat_chocobo() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(bird),
+                    definition: std::sync::Arc::new(bird),
                 },
             ),
             (2, trample()),
@@ -7794,7 +7794,7 @@ pub fn the_wandering_minstrel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(elemental),
+                definition: std::sync::Arc::new(elemental),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -7890,7 +7890,7 @@ pub fn ignis_scientia() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(crabomination_base::tokens::food_token()),
+                        definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
@@ -7974,7 +7974,7 @@ pub fn summon_knights_of_round() -> CardDefinition {
     let make_three = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(3),
-        definition: Box::new(knight()),
+        definition: std::sync::Arc::new(knight()),
     };
     let others = || {
         Selector::EachPermanent(
@@ -8068,7 +8068,7 @@ pub fn tellah_great_sage() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(hero_token()),
+                    definition: std::sync::Arc::new(hero_token()),
                 },
                 Effect::If {
                     cond: Predicate::CastSpellManaSpentAtLeast(4),
@@ -8314,7 +8314,7 @@ pub fn kain_traitorous_dragoon() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::TriggerEventAmount,
-                    definition: Box::new(treasure()),
+                    definition: std::sync::Arc::new(treasure()),
                 },
                 Effect::LoseLife {
                     who: Selector::You,

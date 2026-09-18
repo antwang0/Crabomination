@@ -137,7 +137,7 @@ pub fn thrumming_hivepool() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Sliver".into(),
                     power: 1,
                     toughness: 1,
@@ -162,7 +162,7 @@ pub fn bill_the_pony() -> CardDefinition {
     let food = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: Box::new(crabomination_base::tokens::food_token()),
+        definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
     };
     CardDefinition {
         name: "Bill the Pony",

@@ -240,7 +240,7 @@ pub fn stone_idol_trap() -> crate::card::CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Construct".into(),
                     power: 6,
                     toughness: 12,
@@ -860,7 +860,7 @@ pub fn terastodon() -> crate::card::CardDefinition {
                 filter: R::Permanent.and(R::Noncreature),
                 effect: Box::new(Effect::DestroyThenVictimControllersMakeToken {
                     what: Selector::Target(0),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Elephant".into(),
                         power: 3,
                         toughness: 3,
@@ -982,7 +982,7 @@ pub fn kazuul_tyrant_of_the_cliffs() -> crate::card::CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Ogre".into(),
                         power: 3,
                         toughness: 3,

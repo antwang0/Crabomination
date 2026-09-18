@@ -132,7 +132,7 @@ pub fn judith_carnage_connoisseur() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(imp_token()),
+                    definition: std::sync::Arc::new(imp_token()),
                 },
             ]),
         }],
@@ -1290,17 +1290,17 @@ pub fn a_killer_among_us() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(suspect_token("Human", vec![Color::White], CreatureType::Human)),
+                definition: std::sync::Arc::new(suspect_token("Human", vec![Color::White], CreatureType::Human)),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(suspect_token("Merfolk", vec![Color::Blue], CreatureType::Merfolk)),
+                definition: std::sync::Arc::new(suspect_token("Merfolk", vec![Color::Blue], CreatureType::Merfolk)),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(suspect_token("Goblin", vec![Color::Red], CreatureType::Goblin)),
+                definition: std::sync::Arc::new(suspect_token("Goblin", vec![Color::Red], CreatureType::Goblin)),
             },
             Effect::NameCreatureTypeAmong {
                 what: Selector::This,
@@ -1406,7 +1406,7 @@ pub fn kaya_spirits_justice() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Spirit".into(),
                         colors: vec![Color::White, Color::Black],
                         card_types: vec![CardType::Creature],

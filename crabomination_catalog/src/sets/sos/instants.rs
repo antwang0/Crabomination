@@ -58,7 +58,7 @@ pub fn harsh_annotation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: Box::new(inkling_token()),
+                definition: std::sync::Arc::new(inkling_token()),
             },
         ]),
         ..Default::default()
@@ -973,7 +973,7 @@ pub fn fractal_anomaly() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::CardsDrawnThisTurn(PlayerRef::You))),
+                definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::CardsDrawnThisTurn(PlayerRef::You))),
             },
         ]),
         ..Default::default()
@@ -1554,7 +1554,7 @@ pub fn muses_encouragement() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(elemental_token()),
+                definition: std::sync::Arc::new(elemental_token()),
             },
             Effect::Surveil {
                 who: PlayerRef::You,

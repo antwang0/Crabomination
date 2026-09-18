@@ -150,7 +150,7 @@ pub fn sunhome_guildmage() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(soldier_token()),
+                    definition: std::sync::Arc::new(soldier_token()),
                 },
                 ..Default::default()
             },

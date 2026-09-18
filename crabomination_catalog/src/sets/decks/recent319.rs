@@ -640,7 +640,7 @@ pub fn living_hive() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PowerOf(Box::new(Selector::This)),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Insect".into(),
                     colors: vec![Color::Green],
                     card_types: vec![CardType::Creature],
@@ -851,7 +851,7 @@ pub fn pentavus() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(pentavite),
+                    definition: std::sync::Arc::new(pentavite),
                 },
                 ..Default::default()
             },
@@ -886,7 +886,7 @@ pub fn myr_incubator() -> CardDefinition {
             sac_cost: true,
             effect: Effect::SearchExileThenTokensPerCard {
                 filter: R::Artifact,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Myr".into(),
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes {
@@ -1017,7 +1017,7 @@ pub fn lightning_coils() -> CardDefinition {
                             what: Box::new(Selector::This),
                             kind: CounterType::Charge,
                         },
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Elemental".into(),
                             colors: vec![Color::Red],
                             card_types: vec![CardType::Creature],

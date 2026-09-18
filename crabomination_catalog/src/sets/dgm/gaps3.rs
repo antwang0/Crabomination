@@ -45,7 +45,7 @@ pub fn blaze_commando() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(boros_soldier()),
+                definition: std::sync::Arc::new(boros_soldier()),
             },
         }],
         ..Default::default()
@@ -121,7 +121,7 @@ pub fn teysa_envoy_of_ghosts() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(spirit),
+                    definition: std::sync::Arc::new(spirit),
                 },
             ]),
         }],
@@ -221,7 +221,7 @@ pub fn beck_call() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(4),
-                    definition: Box::new(bird),
+                    definition: std::sync::Arc::new(bird),
                 },
             },
             fuse: true,

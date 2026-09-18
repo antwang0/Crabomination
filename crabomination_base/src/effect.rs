@@ -4296,7 +4296,7 @@ pub enum Effect {
     /// attacking creature in target slot 0 (`filter` should require an
     /// attacker — Flash Foliage). No-op if the target isn't attacking; the
     /// token joins the block map and marks the attacker blocked.
-    CreateTokenBlocking { definition: Box<crate::card::TokenDefinition>, filter: SelectionRequirement },
+    CreateTokenBlocking { definition: std::sync::Arc<crate::card::TokenDefinition>, filter: SelectionRequirement },
     /// CR 701.49 — Venture into the dungeon: enter the first room of a
     /// chosen dungeon (auto: Lost Mine of Phandelver) or advance to the
     /// next room; room abilities resolve inline (`base::dungeons`).
@@ -4780,7 +4780,7 @@ pub enum Effect {
     /// owner's control when that token dies." Tatsumasa, the Dragon's Fang —
     /// pairs with an `exile_self_cost` activation, so the source is in exile
     /// while the token lives.
-    CreateTokenReturnSelfWhenItDies { definition: Box<crate::card::TokenDefinition> },
+    CreateTokenReturnSelfWhenItDies { definition: std::sync::Arc<crate::card::TokenDefinition> },
     /// Firion — reduce the generic portion of each resolved permanent's
     /// printed Equip cost by `amount` (stamped onto the minted token copy).
     ReduceEquipCost { what: Selector, amount: u32 },
@@ -5049,7 +5049,7 @@ pub enum Effect {
     /// Incubator.) The auto-picker takes every match.
     SearchExileThenTokensPerCard {
         filter: SelectionRequirement,
-        definition: Box<crate::card::TokenDefinition>,
+        definition: std::sync::Arc<crate::card::TokenDefinition>,
     },
     /// CR 701.52 — `who` seeks `count` cards matching `filter`: the engine
     /// randomly chooses among the matching cards in their library (no
@@ -5545,7 +5545,7 @@ pub enum Effect {
     ExileLibraryCardsNamedLikeExiledThisResolution { who: PlayerRef },
     /// Development — "create a 3/1 red Elemental token unless any opponent has
     /// you draw a card", `times` times. Each iteration asks an opponent.
-    TokenUnlessOpponentLetsYouDraw { token: Box<TokenDefinition>, times: u32 },
+    TokenUnlessOpponentLetsYouDraw { token: std::sync::Arc<TokenDefinition>, times: u32 },
     /// Sunforger — search the controller's library for a card matching
     /// `filter`, cast it without paying its mana cost, then shuffle.
     /// With `include_hand`, the hand is searched too and only a library
@@ -6281,7 +6281,7 @@ pub enum Effect {
     CoinFlipEachCreatureDestroyOnTails { exclude_types: Vec<crate::card::CreatureType> },
     /// Awaken the Erstwhile — "each player discards all the cards in their
     /// hand, then creates that many `token` tokens." Resolved in turn order.
-    EachPlayerDiscardsHandMakeTokens { token: Box<crate::card::TokenDefinition> },
+    EachPlayerDiscardsHandMakeTokens { token: std::sync::Arc<crate::card::TokenDefinition> },
     /// Memory Jar — "each player exiles all cards from their hand face down and
     /// draws seven cards. At the beginning of the next end step, each player
     /// discards their hand and returns to their hand each card they exiled this
@@ -6501,20 +6501,20 @@ pub enum Effect {
     /// battlefield. The graveyard half is auto-picked (highest mana value).
     WeldArtifacts { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
-    CreateToken { who: PlayerRef, count: Value, definition: Box<TokenDefinition> },
+    CreateToken { who: PlayerRef, count: Value, definition: std::sync::Arc<TokenDefinition> },
     /// "Each player creates a `definition` token for each [`filter`] they
     /// control" (Waiting in the Weeds). Unlike [`Effect::CreateToken`] with
     /// `PlayerRef::EachPlayer`, the count is evaluated per receiving player
     /// rather than once in the resolving controller's context.
     EachPlayerCreatesTokenPerControlled {
         filter: SelectionRequirement,
-        definition: Box<TokenDefinition>,
+        definition: std::sync::Arc<TokenDefinition>,
     },
     /// "You may remove any number of `kind` counters from this. If you do,
     /// create that many `definition` tokens." The tokens are stamped
     /// `created_by = source`, so `ExileTokensCreatedBySourceForCounters` can
     /// trade them back (Tetravus).
-    RemoveCountersToCreateTokens { kind: CounterType, definition: Box<TokenDefinition> },
+    RemoveCountersToCreateTokens { kind: CounterType, definition: std::sync::Arc<TokenDefinition> },
     /// The mirror: "you may exile any number of tokens created with this. If
     /// you do, put that many `kind` counters on it" (Tetravus).
     ExileTokensCreatedBySourceForCounters { kind: CounterType },
@@ -6548,7 +6548,7 @@ pub enum Effect {
     CreateTokenAttacking {
         who: PlayerRef,
         count: Value,
-        definition: Box<TokenDefinition>,
+        definition: std::sync::Arc<TokenDefinition>,
         #[serde(default)]
         cleanup: AttackingTokenCleanup,
     },
@@ -7390,7 +7390,7 @@ pub enum Effect {
     /// Otherwise, you may play it until the end of your next turn (paying its
     /// own cost)." The exiled land stays exiled. Bruse Tarl, Roving Rancher.
     ExileTopLandTokenElseMayPlay {
-        token: Box<TokenDefinition>,
+        token: std::sync::Arc<TokenDefinition>,
     },
 
     /// "Look at the top card of `library`'s library and exile it face down.
@@ -7562,7 +7562,7 @@ pub enum Effect {
 
     /// Kamahl's Summons — each player may reveal any number of creature cards
     /// from their hand, then creates `token` once per card revealed this way.
-    EachPlayerRevealsCreaturesForTokens { token: Box<crate::card::TokenDefinition> },
+    EachPlayerRevealsCreaturesForTokens { token: std::sync::Arc<crate::card::TokenDefinition> },
 
     /// False Cure — "until end of turn, whenever a player gains life, that
     /// player loses `per` life for each 1 life gained." A turn-scoped watcher
@@ -7819,7 +7819,7 @@ pub enum Effect {
 
     /// Day of the Dragons — exile all creatures you control, then create that
     /// many `token` tokens. The exiled cards come back when the source leaves.
-    ExileYourCreaturesForDragons { token: Box<crate::card::TokenDefinition> },
+    ExileYourCreaturesForDragons { token: std::sync::Arc<crate::card::TokenDefinition> },
 
     /// Parallel Thoughts — search your library for `count` cards, exile them
     /// in a face-down pile stamped to the source, and shuffle both piles.
@@ -7850,7 +7850,7 @@ pub enum Effect {
     /// Ugin, the Ineffable's +1: exile the top card of your library face down,
     /// create `token`, and when that token leaves the battlefield put the
     /// exiled card into its owner's hand.
-    ExileTopFaceDownTokenReturns { token: Box<crate::card::TokenDefinition> },
+    ExileTopFaceDownTokenReturns { token: std::sync::Arc<crate::card::TokenDefinition> },
 
     /// "You may put a creature card from your hand onto the battlefield tapped
     /// and attacking [the defender the source is attacking]. Return that
@@ -7884,12 +7884,12 @@ pub enum Effect {
     /// Create a token and attach it to the resolved permanent (Role tokens
     /// — Wicked Role; CR 111.10). The token must be an Aura-style
     /// attachment; it enters attached.
-    CreateTokenAttachedTo { target: Selector, definition: Box<crate::card::TokenDefinition> },
+    CreateTokenAttachedTo { target: Selector, definition: std::sync::Arc<crate::card::TokenDefinition> },
     /// Like `CreateTokenAttachedTo`, but mints one token per permanent the
     /// selector resolves to (CR 111.10) — "for each creature your opponents
     /// control, create a Cursed Role token attached to that creature"
     /// (Asinine Antics).
-    CreateTokenAttachedToEach { target: Selector, definition: Box<crate::card::TokenDefinition> },
+    CreateTokenAttachedToEach { target: Selector, definition: std::sync::Arc<crate::card::TokenDefinition> },
     /// Indomitable Creativity: destroy up to X chosen permanent targets
     /// matching `filter` (slots `0..X` from the cast's target list); for
     /// each destroyed this way its controller reveals from the top until an
@@ -7921,7 +7921,7 @@ pub enum Effect {
     /// Choose a color, exile the top `amount` cards of `who`'s library, and
     /// create one `token` per exiled card of the chosen color (Oona, Queen
     /// of the Fae).
-    ExileTopMintPerChosenColor { who: Selector, amount: Value, token: Box<crate::card::TokenDefinition> },
+    ExileTopMintPerChosenColor { who: Selector, amount: Value, token: std::sync::Arc<crate::card::TokenDefinition> },
     /// Spells cast by opponents of the effect's controller that match
     /// `filter` cost `{amount}` more until the controller's next turn
     /// (Elspeth Conquers Death chapter II). Cleared at the controller's
@@ -9183,7 +9183,7 @@ pub enum Effect {
     /// destroy (indestructible, a replacement) pay nothing.
     DestroyThenVictimControllersMakeToken {
         what: Selector,
-        definition: Box<crate::card::TokenDefinition>,
+        definition: std::sync::Arc<crate::card::TokenDefinition>,
         /// "They can't be regenerated" (March of Souls). Defaults to false
         /// (Terastodon lets its victims regenerate).
         #[serde(default)]

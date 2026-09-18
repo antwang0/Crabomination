@@ -410,7 +410,7 @@ pub fn squirrel_wrangler() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Squirrel".to_string(),
                 power: 1,
                 toughness: 1,
@@ -857,7 +857,7 @@ pub fn infernal_genesis() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::ActivePlayer,
                     count: Value::ManaValueOf(Box::new(Selector::LastMoved)),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Minion".to_string(),
                         power: 1,
                         toughness: 1,

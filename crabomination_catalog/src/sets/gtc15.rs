@@ -320,7 +320,7 @@ pub fn ooze_flux() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Ooze".into(),
                     power: 0,
                     toughness: 0,
@@ -413,7 +413,7 @@ pub fn mystic_genesis() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Ooze".into(),
                     power: 0,
                     toughness: 0,

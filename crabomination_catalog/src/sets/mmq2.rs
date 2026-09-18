@@ -593,7 +593,7 @@ pub fn snake_pit() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Snake".into(),
                         power: 1,
                         toughness: 1,

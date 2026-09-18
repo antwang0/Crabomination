@@ -216,7 +216,7 @@ pub fn subterranean_tremors() -> CardDefinition {
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Lizard".to_string(),
                         power: 8,
                         toughness: 8,
@@ -246,7 +246,7 @@ pub fn awaken_the_woods() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Forest Dryad".to_string(),
                 power: 1,
                 toughness: 1,

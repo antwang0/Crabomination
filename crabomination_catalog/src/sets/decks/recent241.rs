@@ -223,7 +223,7 @@ pub fn dog_walker() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Dog".into(),
                     power: 1,
                     toughness: 1,
@@ -385,7 +385,7 @@ pub fn drag_the_canal() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Detective".into(),
                     power: 2,
                     toughness: 2,
@@ -443,7 +443,7 @@ pub fn harried_dronesmith() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(crate::card::TokenDefinition {
+                    definition: std::sync::Arc::new(crate::card::TokenDefinition {
                         name: "Thopter".into(),
                         power: 1,
                         toughness: 1,
@@ -635,7 +635,7 @@ pub fn gadget_technician() -> CardDefinition {
     let thopter = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::ONE,
-        definition: Box::new(crate::card::TokenDefinition {
+        definition: std::sync::Arc::new(crate::card::TokenDefinition {
             name: "Thopter".into(),
             power: 1,
             toughness: 1,

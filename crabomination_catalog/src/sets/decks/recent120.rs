@@ -79,7 +79,7 @@ pub fn elfsworn_giant() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(elf_warrior_token()),
+                definition: std::sync::Arc::new(elf_warrior_token()),
             },
         }],
         ..Default::default()
@@ -166,7 +166,7 @@ pub fn eager_trufflesnout() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crabomination_base::tokens::food_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
             },
         }],
         ..Default::default()
@@ -206,7 +206,7 @@ pub fn cat_collector() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(crabomination_base::tokens::food_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl)
@@ -215,7 +215,7 @@ pub fn cat_collector() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(cat_token()),
+                    definition: std::sync::Arc::new(cat_token()),
                 },
             },
         ],

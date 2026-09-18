@@ -280,7 +280,7 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(spirit_token()),
+                definition: std::sync::Arc::new(spirit_token()),
             },
             Effect::If {
                 cond: Predicate::CastFromGraveyard,
@@ -319,7 +319,7 @@ pub fn group_project() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(spirit_token()),
+            definition: std::sync::Arc::new(spirit_token()),
         },
         ..Default::default()
     }
@@ -431,7 +431,7 @@ pub fn send_in_the_pest() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(pest_token()),
+                definition: std::sync::Arc::new(pest_token()),
             },
         ]),
         ..Default::default()
@@ -969,7 +969,7 @@ pub fn visionarys_dance() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(elemental_token()),
+            definition: std::sync::Arc::new(elemental_token()),
         },
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
@@ -1570,12 +1570,12 @@ pub fn snarl_song() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, x())),
+                definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, x())),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, x())),
+                definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, x())),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -1606,7 +1606,7 @@ pub fn wild_hypothesis() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
+                definition: std::sync::Arc::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
             },
             Effect::Surveil {
                 who: PlayerRef::You,
@@ -1657,7 +1657,7 @@ pub fn artistic_process() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(elemental_token()),
+                    definition: std::sync::Arc::new(elemental_token()),
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,

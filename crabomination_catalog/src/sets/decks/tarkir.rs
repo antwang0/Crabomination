@@ -531,7 +531,7 @@ pub fn twin_silk_spider() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Spider".into(),
                 power: 1,
                 toughness: 2,
@@ -689,7 +689,7 @@ pub fn frontline_rush() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Goblin".into(),
                     power: 1,
                     toughness: 1,
@@ -982,7 +982,7 @@ pub fn mammoth_bellow() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Elephant".into(),
                 power: 5,
                 toughness: 5,
@@ -1353,7 +1353,7 @@ pub fn wingblade_disciple() -> CardDefinition {
         triggered_abilities: vec![flurry(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Bird".into(),
                 power: 1,
                 toughness: 1,
@@ -2106,7 +2106,7 @@ pub fn underfoot_underdogs() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Goblin".into(),
                 card_types: vec![CardType::Creature],
                 subtypes: Subtypes {
@@ -2674,7 +2674,7 @@ pub fn jeskai_monument() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Bird".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -2712,7 +2712,7 @@ pub fn mardu_monument() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: Box::new(warrior_token()),
+                definition: std::sync::Arc::new(warrior_token()),
             },
         )],
         ..Default::default()
@@ -2737,7 +2737,7 @@ pub fn sultai_monument() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Zombie Druid".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {
@@ -2773,7 +2773,7 @@ pub fn temur_monument() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Elephant".into(),
                     card_types: vec![CardType::Creature],
                     subtypes: Subtypes {

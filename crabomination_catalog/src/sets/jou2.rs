@@ -355,7 +355,7 @@ pub fn hour_of_need() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Sphinx".into(),
                     power: 4,
                     toughness: 4,
@@ -444,7 +444,7 @@ pub fn launch_the_fleet() -> CardDefinition {
                 effect: Effect::CreateTokenAttacking {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(soldier_token()),
+                    definition: std::sync::Arc::new(soldier_token()),
                     cleanup: AttackingTokenCleanup::None,
                 },
             }),
@@ -1165,7 +1165,7 @@ pub fn renowned_weaver() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Spider".into(),
                     power: 1,
                     toughness: 3,
@@ -1340,7 +1340,7 @@ pub fn revel_of_the_fallen_god() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(4),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Satyr".into(),
                 power: 2,
                 toughness: 2,
@@ -1368,7 +1368,7 @@ pub fn rise_of_eagles() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Bird".into(),
                     power: 2,
                     toughness: 2,
@@ -1469,7 +1469,7 @@ pub fn ritual_of_the_returned() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Zombie".into(),
                     colors: vec![Color::Black],
                     card_types: vec![CardType::Creature],

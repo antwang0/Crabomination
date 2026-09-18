@@ -115,7 +115,7 @@ pub fn fated_intervention() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Centaur".into(),
                 power: 3,
                 toughness: 3,
@@ -175,7 +175,7 @@ pub fn ornitharch() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Bird".into(),
                     power: 1,
                     toughness: 1,
@@ -921,7 +921,7 @@ pub fn kiora_the_crashing_wave() -> CardDefinition {
                         effect: Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: Box::new(TokenDefinition {
+                            definition: std::sync::Arc::new(TokenDefinition {
                                 name: "Kraken".into(),
                                 power: 9,
                                 toughness: 9,

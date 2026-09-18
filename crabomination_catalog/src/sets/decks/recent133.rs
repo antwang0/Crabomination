@@ -54,7 +54,7 @@ pub fn rat_out() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(rat_token()),
+                definition: std::sync::Arc::new(rat_token()),
             },
         ]),
         ..Default::default()
@@ -76,7 +76,7 @@ pub fn eriettes_whisper() -> CardDefinition {
             },
             Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: Box::new(wicked_role()),
+                definition: std::sync::Arc::new(wicked_role()),
             },
         ]),
         ..Default::default()
@@ -104,7 +104,7 @@ pub fn witchs_mark() -> CardDefinition {
             },
             Effect::CreateTokenAttachedTo {
                 target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                definition: Box::new(wicked_role()),
+                definition: std::sync::Arc::new(wicked_role()),
             },
         ]),
         ..Default::default()
@@ -127,7 +127,7 @@ pub fn edgewall_pack() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(rat_token()),
+            definition: std::sync::Arc::new(rat_token()),
         })],
         ..Default::default()
     }
@@ -195,7 +195,7 @@ pub fn spider_food() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(food_token()),
+                definition: std::sync::Arc::new(food_token()),
             },
         ]),
         ..Default::default()
@@ -220,7 +220,7 @@ pub fn cursed_courtier() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
             target: Selector::This,
-            definition: Box::new(cursed_role()),
+            definition: std::sync::Arc::new(cursed_role()),
         })],
         ..Default::default()
     }

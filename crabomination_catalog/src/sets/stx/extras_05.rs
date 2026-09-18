@@ -197,7 +197,7 @@ pub fn inkling_squad() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: Box::new(inkling_token()),
+            definition: std::sync::Arc::new(inkling_token()),
         },
         ..Default::default()
     }
@@ -557,7 +557,7 @@ pub fn lorehold_lookback() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(lorehold_spirit_token()),
+                definition: std::sync::Arc::new(lorehold_spirit_token()),
             },
         ]),
         ..Default::default()
@@ -960,7 +960,7 @@ pub fn tezzerets_inkling_forge() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(inkling_token()),
+                definition: std::sync::Arc::new(inkling_token()),
             },
         }],
         ..Default::default()
@@ -1453,7 +1453,7 @@ pub fn witherbloom_bramble() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(pest),
+                definition: std::sync::Arc::new(pest),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(

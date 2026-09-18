@@ -79,7 +79,7 @@ pub fn delight_in_the_hunt() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(token(
+                definition: std::sync::Arc::new(token(
                     "Horror",
                     3,
                     3,
@@ -108,7 +108,7 @@ pub fn evil_comes_to_fruition() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(7),
-                definition: Box::new(token(
+                definition: std::sync::Arc::new(token(
                     "Elemental",
                     3,
                     3,
@@ -120,7 +120,7 @@ pub fn evil_comes_to_fruition() -> CardDefinition {
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(7),
-                definition: Box::new(token(
+                definition: std::sync::Arc::new(token(
                     "Plant",
                     0,
                     1,
@@ -141,7 +141,7 @@ pub fn kneel_before_my_legions() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Scarecrow".into(),
                     power: 4,
                     toughness: 4,

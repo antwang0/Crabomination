@@ -409,7 +409,7 @@ pub fn wand_of_the_elements() -> CardDefinition {
         |power: i32, toughness: i32, color: Color, keywords: Vec<Keyword>| Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Elemental".into(),
                 colors: vec![color],
                 card_types: vec![CardType::Creature],
@@ -454,7 +454,7 @@ pub fn wirefly_hive() -> CardDefinition {
                 on_heads: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Wirefly".into(),
                         card_types: vec![CardType::Artifact, CardType::Creature],
                         subtypes: Subtypes {
@@ -567,7 +567,7 @@ pub fn gemini_engine() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::ONE,
             cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Twin".into(),
                 card_types: vec![CardType::Artifact, CardType::Creature],
                 subtypes: Subtypes {
@@ -709,7 +709,7 @@ pub fn pulse_of_the_tangle() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Beast".into(),
                     colors: vec![Color::Green],
                     card_types: vec![CardType::Creature],

@@ -472,7 +472,7 @@ pub fn sentinel_of_the_nameless_city() -> CardDefinition {
     let make_map = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(map_token()),
+        definition: std::sync::Arc::new(map_token()),
     };
     CardDefinition {
         name: "Sentinel of the Nameless City",
@@ -655,7 +655,7 @@ pub fn voldaren_epicure() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(blood_token()),
+                    definition: std::sync::Arc::new(blood_token()),
                 },
                 Effect::ForEach {
                     selector: Selector::Player(PlayerRef::EachOpponent),
@@ -688,7 +688,7 @@ pub fn goldspan_dragon() -> CardDefinition {
     let make_treasure = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(treasure_token()),
+        definition: std::sync::Arc::new(treasure_token()),
     };
     CardDefinition {
         name: "Goldspan Dragon",
@@ -769,7 +769,7 @@ pub fn tireless_tracker() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(clue_token()),
+                    definition: std::sync::Arc::new(clue_token()),
                 },
             },
             TriggeredAbility {
@@ -846,7 +846,7 @@ pub fn bloodtithe_harvester() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(blood_token()),
+                definition: std::sync::Arc::new(blood_token()),
             },
         }],
         ..Default::default()
@@ -1814,7 +1814,7 @@ pub fn attended_knight() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Soldier".into(),
                     power: 1,
                     toughness: 1,
@@ -2003,7 +2003,7 @@ pub fn ambassador_oak() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Elf Warrior".into(),
                     power: 1,
                     toughness: 1,
@@ -2375,7 +2375,7 @@ pub fn siege_gang_commander() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                definition: Box::new(goblin),
+                definition: std::sync::Arc::new(goblin),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -3300,7 +3300,7 @@ pub fn sporemound() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::card::TokenDefinition {
+                definition: std::sync::Arc::new(crate::card::TokenDefinition {
                     name: "Saproling".to_string(),
                     power: 1,
                     toughness: 1,
@@ -3368,7 +3368,7 @@ pub fn avenger_of_zendikar() -> CardDefinition {
                     count: Value::count(Selector::EachPermanent(
                         SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                     )),
-                    definition: Box::new(plant),
+                    definition: std::sync::Arc::new(plant),
                 },
             },
             // Landfall: +1/+1 counter on each Plant you control.
@@ -3647,7 +3647,7 @@ pub fn penumbra_spider() -> CardDefinition {
         triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(crate::card::TokenDefinition {
+            definition: std::sync::Arc::new(crate::card::TokenDefinition {
                 name: "Spider".to_string(),
                 power: 2,
                 toughness: 4,
@@ -3991,7 +3991,7 @@ pub fn bitterbloom_bearer() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Faerie".into(),
                         power: 1,
                         toughness: 1,
@@ -4150,7 +4150,7 @@ pub fn blade_splicer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crabomination_base::tokens::golem_3_3_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::golem_3_3_token()),
             },
         }],
         ..Default::default()
@@ -4289,7 +4289,7 @@ pub fn grave_titan() -> CardDefinition {
     let make_zombies = Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(2),
-        definition: Box::new(zombie),
+        definition: std::sync::Arc::new(zombie),
     };
     CardDefinition {
         name: "Grave Titan",
@@ -4574,7 +4574,7 @@ pub fn thragtusk() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Beast".into(),
                         power: 3,
                         toughness: 3,
@@ -4705,12 +4705,12 @@ pub fn wurmcoil_engine() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(wurm_deathtouch),
+                    definition: std::sync::Arc::new(wurm_deathtouch),
                 },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(wurm_lifelink),
+                    definition: std::sync::Arc::new(wurm_lifelink),
                 },
             ]),
         }],
@@ -4987,7 +4987,7 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(coil),
+                definition: std::sync::Arc::new(coil),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -5280,7 +5280,7 @@ pub fn basking_broodscale() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(spawn),
+                    definition: std::sync::Arc::new(spawn),
                 }),
             },
         }],
@@ -5674,7 +5674,7 @@ pub fn elder_gargaroth() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(token),
+                        definition: std::sync::Arc::new(token),
                     },
                     // Mode 1: You gain 3 life.
                     Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
@@ -5948,7 +5948,7 @@ pub fn doomed_traveler() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Spirit".into(),
                 power: 1,
                 toughness: 1,
@@ -6573,7 +6573,7 @@ pub fn bitterblossom() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Faerie Rogue".into(),
                         power: 1,
                         toughness: 1,
@@ -7065,7 +7065,7 @@ pub fn lotus_cobra() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
         }],
         ..Default::default()
@@ -7770,7 +7770,7 @@ pub fn hero_of_bladehold() -> CardDefinition {
             crate::effect::shortcut::on_attack(Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(white_soldier_token()),
+                definition: std::sync::Arc::new(white_soldier_token()),
                 cleanup: Default::default(),
             }),
         ],
@@ -7890,7 +7890,7 @@ pub fn wingmate_roc() -> CardDefinition {
             crate::effect::shortcut::raid_etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(white_token(
+                definition: std::sync::Arc::new(white_token(
                     "Bird",
                     3,
                     4,
@@ -7953,7 +7953,7 @@ pub fn brimaz_king_of_oreskos() -> CardDefinition {
             crate::effect::shortcut::on_attack(Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(white_token(
+                definition: std::sync::Arc::new(white_token(
                     "Cat Soldier",
                     1,
                     1,
@@ -7968,7 +7968,7 @@ pub fn brimaz_king_of_oreskos() -> CardDefinition {
             // 2026-09-10). The token blocks an attacking creature; with one
             // attacker blocked that is the one Brimaz blocks.
             crate::effect::shortcut::blocks(Effect::CreateTokenBlocking {
-                definition: Box::new(white_token(
+                definition: std::sync::Arc::new(white_token(
                     "Cat Soldier",
                     1,
                     1,
@@ -8010,7 +8010,7 @@ pub fn adeline_resplendent_cathar() -> CardDefinition {
             Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(white_token("Human", 1, 1, vec![CreatureType::Human], vec![])),
+                definition: std::sync::Arc::new(white_token("Human", 1, 1, vec![CreatureType::Human], vec![])),
                 cleanup: Default::default(),
             },
         )],
@@ -8366,7 +8366,7 @@ pub fn usher_of_the_fallen() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(white_soldier_token()),
+                definition: std::sync::Arc::new(white_soldier_token()),
             },
         )],
         ..Default::default()
@@ -8875,7 +8875,7 @@ pub fn ragavan_nimble_pilferer() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::game::effects::treasure_token()),
+                    definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
                 },
                 // Exile the top of the *damaged* player's library; you may
                 // cast it until end of turn.
@@ -9157,7 +9157,7 @@ pub fn generous_ent() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(crabomination_base::tokens::food_token()),
+            definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
         })],
         ..Default::default()
     }
@@ -9910,7 +9910,7 @@ pub fn wolfbriar_elemental() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::TimesKicked,
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Wolf".into(),
                     power: 2,
                     toughness: 2,
@@ -10108,7 +10108,7 @@ pub fn chasm_skulker() -> CardDefinition {
                         what: Box::new(Selector::This),
                         kind: CounterType::PlusOnePlusOne,
                     },
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Squid".into(),
                         power: 1,
                         toughness: 1,
@@ -10390,7 +10390,7 @@ pub fn cryptbreaker() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Zombie".into(),
                         power: 2,
                         toughness: 2,

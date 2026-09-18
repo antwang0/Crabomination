@@ -299,7 +299,7 @@ pub fn oyobi_who_split_the_heavens() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![spiritcraft(Effect::CreateToken {
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Spirit".into(),
                 power: 3,
                 toughness: 3,
@@ -761,7 +761,7 @@ pub fn sosukes_summons() -> CardDefinition {
             "Sosuke's Summons",
             cost(&[generic(2), g()]),
             Effect::CreateToken {
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Snake".into(),
                     power: 1,
                     toughness: 1,
@@ -879,7 +879,7 @@ pub fn gods_eye_gate_to_the_reikai() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
-                definition: Box::new(spirit_token()),
+                definition: std::sync::Arc::new(spirit_token()),
                 count: Value::ONE,
                 who: PlayerRef::You,
             },
@@ -1527,7 +1527,7 @@ pub fn baku_altar() -> CardDefinition {
             tap_cost: true,
             remove_counter_cost: Some((CounterType::Ki, 1)),
             effect: Effect::CreateToken {
-                definition: Box::new(spirit_token()),
+                definition: std::sync::Arc::new(spirit_token()),
                 count: Value::ONE,
                 who: PlayerRef::You,
             },

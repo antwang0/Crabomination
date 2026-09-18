@@ -1167,7 +1167,7 @@ pub fn warbreak_trumpeter() -> CardDefinition {
         triggered_abilities: vec![on_turn_up(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::XFromCost,
-            definition: Box::new(goblin_token()),
+            definition: std::sync::Arc::new(goblin_token()),
         })],
         ..creature("Warbreak Trumpeter", cost(&[r()]), vec![CreatureType::Goblin], 1, 1)
     }
@@ -1631,7 +1631,7 @@ pub fn brood_sliver() -> CardDefinition {
                         body: Box::new(Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: Box::new(sliver_token()),
+                            definition: std::sync::Arc::new(sliver_token()),
                         }),
                     },
                 }),
@@ -2168,7 +2168,7 @@ pub fn caller_of_the_claw() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::CreaturesDiedThisTurn(PlayerRef::You),
-            definition: Box::new(bear_token()),
+            definition: std::sync::Arc::new(bear_token()),
         })],
         ..creature("Caller of the Claw", cost(&[generic(2), g()]), vec![CreatureType::Elf], 2, 2)
     }

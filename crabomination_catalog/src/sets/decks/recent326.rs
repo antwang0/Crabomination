@@ -613,7 +613,7 @@ pub fn valors_flagship() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::TriggerEventAmount,
-                definition: Box::new(pilot_token()),
+                definition: std::sync::Arc::new(pilot_token()),
             },
         }],
         ..vehicle("Valor's Flagship", cost(&[generic(4), w(), w(), w()]), 7, 7)
@@ -701,7 +701,7 @@ pub fn chandra_spark_hunter() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(spark_hunter_vehicle_token()),
+                    definition: std::sync::Arc::new(spark_hunter_vehicle_token()),
                 },
                 ..Default::default()
             },
@@ -958,7 +958,7 @@ pub fn gonti_night_minister() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::Triggerer,
                     count: Value::ONE,
-                    definition: Box::new(crabomination_base::tokens::treasure_token()),
+                    definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
                 },
             },
             TriggeredAbility {

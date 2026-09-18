@@ -148,7 +148,7 @@ pub fn audience_with_trostani() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(plant_0_1_token()),
+                definition: std::sync::Arc::new(plant_0_1_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -202,7 +202,7 @@ pub fn krenko_baron_of_tin_street() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(hasty_goblin_token()),
+                    definition: std::sync::Arc::new(hasty_goblin_token()),
                 }),
                 else_: None,
             },
@@ -280,7 +280,7 @@ pub fn detectives_satchel() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(thopter_token()),
+                definition: std::sync::Arc::new(thopter_token()),
             },
             ..Default::default()
         }],
@@ -508,7 +508,7 @@ pub fn slime_against_humanity() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(ooze.entering_with(CounterType::PlusOnePlusOne, Value::Sum(vec![Value::Const(2), Value::OozesInExileAndGraveyard]))),
+                definition: std::sync::Arc::new(ooze.entering_with(CounterType::PlusOnePlusOne, Value::Sum(vec![Value::Const(2), Value::OozesInExileAndGraveyard]))),
             },
         ]),
         ..Default::default()

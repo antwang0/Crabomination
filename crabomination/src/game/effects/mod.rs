@@ -411,9 +411,9 @@ impl EntityRef {
 /// `TokenDefinition` literal inline was a slot of `run_effect`'s frame for
 /// every call (PERF "run_effect's frame"). Never inline.
 #[inline(never)]
-fn grist_insect_token() -> Box<crate::card::TokenDefinition> {
+fn grist_insect_token() -> std::sync::Arc<crate::card::TokenDefinition> {
     use crate::card::{CardType, CreatureType, Subtypes, TokenDefinition};
-    Box::new(TokenDefinition {
+    std::sync::Arc::new(TokenDefinition {
         name: "Insect".into(),
         power: 1,
         toughness: 1,
@@ -2695,7 +2695,7 @@ impl GameState {
             &Effect::CreateToken {
                 who: PlayerRef::You,
                 count: crate::effect::Value::Const(picks.len() as i32),
-                definition: Box::new(definition.clone()),
+                definition: std::sync::Arc::new(definition.clone()),
             },
             ctx,
             events,
@@ -15693,7 +15693,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: crate::effect::PlayerRef::You,
                             count: crate::effect::Value::Const(1),
-                            definition: Box::new(token),
+                            definition: std::sync::Arc::new(token),
                         },
                         ctx,
                         events,
@@ -23801,7 +23801,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: PlayerRef::Seat(caster),
                             count: crate::effect::Value::Const(mv as i32),
-                            definition: Box::new(token),
+                            definition: std::sync::Arc::new(token),
                         },
                         ctx,
                     )?;
@@ -23896,7 +23896,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: crate::effect::PlayerRef::You,
                             count: crate::effect::Value::Const(total),
-                            definition: Box::new(token),
+                            definition: std::sync::Arc::new(token),
                         },
                         ctx,
                     )
@@ -25257,7 +25257,7 @@ impl GameState {
                     &Effect::CreateToken {
                         who: PlayerRef::You,
                         count: crate::effect::Value::ONE,
-                        definition: Box::new(token),
+                        definition: std::sync::Arc::new(token),
                     },
                     ctx,
                     events,
@@ -27578,7 +27578,7 @@ impl GameState {
                         &Effect::CreateToken {
                             who: PlayerRef::Seat(p),
                             count: crate::effect::Value::Const(n as i32),
-                            definition: Box::new((**token).clone()),
+                            definition: std::sync::Arc::new((**token).clone()),
                         },
                         &EffectContext { controller: p, ..ctx.clone() },
                         events,
@@ -37173,7 +37173,7 @@ impl GameState {
                 &Effect::CreateToken {
                     who: crate::effect::PlayerRef::You,
                     count: crate::effect::Value::Const(matches),
-                    definition: Box::new(token.clone()),
+                    definition: std::sync::Arc::new(token.clone()),
                 },
                 ctx,
                 events,

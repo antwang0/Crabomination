@@ -248,7 +248,7 @@ pub fn prismari_command() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::Target(0),
                     count: Value::Const(1),
-                    definition: Box::new(treasure_token()),
+                    definition: std::sync::Arc::new(treasure_token()),
                 },
                 // Mode 3: destroy target artifact.
                 Effect::Destroy {
@@ -296,7 +296,7 @@ pub fn creative_outburst() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
             ..Default::default()
         }],
@@ -347,7 +347,7 @@ pub fn elemental_summoning() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(prismari_elemental_token()),
+            definition: std::sync::Arc::new(prismari_elemental_token()),
         },
         ..Default::default()
     }
@@ -505,7 +505,7 @@ pub fn prismari_chromaticist() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -574,7 +574,7 @@ pub fn prismari_spellsmith() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -796,7 +796,7 @@ pub fn prismari_alchemist() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
         })],
         ..Default::default()
     }
@@ -856,7 +856,7 @@ pub fn elemental_expressionist() -> CardDefinition {
                     effect: Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(prismari_elemental_token()),
+                        definition: std::sync::Arc::new(prismari_elemental_token()),
                     },
                 }),
                 duration: Duration::EndOfTurn,
@@ -1066,7 +1066,7 @@ pub fn prismari_treasurer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -1138,7 +1138,7 @@ pub fn prismari_sparkforge() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -1307,7 +1307,7 @@ pub fn prismari_volleyfire() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -1470,7 +1470,7 @@ pub fn prismari_treasurer_surge() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),
-                    definition: Box::new(treasure_token()),
+                    definition: std::sync::Arc::new(treasure_token()),
                 },
             },
             magecraft_self_pump(1, 0),
@@ -1652,7 +1652,7 @@ pub fn prismari_hotburst() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -1746,7 +1746,7 @@ pub fn prismari_embergem() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -1936,7 +1936,7 @@ pub fn prismari_drakeforge() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(treasure_token()),
+                    definition: std::sync::Arc::new(treasure_token()),
                 },
             },
             magecraft_self_pump(1, 0),
@@ -1997,7 +1997,7 @@ pub fn prismari_lavalifter() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -2130,7 +2130,7 @@ pub fn prismari_embershaper_wizard() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(treasure_token()),
+                    definition: std::sync::Arc::new(treasure_token()),
                 },
                 Effect::Discard {
                     who: Selector::You,
@@ -2168,7 +2168,7 @@ pub fn prismari_magmaboon() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -2330,7 +2330,7 @@ pub fn prismari_treasurewright_b30() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(treasure_token()),
+                    definition: std::sync::Arc::new(treasure_token()),
                 },
             },
             magecraft(Effect::Scry {
@@ -2391,7 +2391,7 @@ pub fn prismari_splashcaster() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -2438,7 +2438,7 @@ pub fn prismari_treasurewright_b32() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -3275,7 +3275,7 @@ pub fn prismari_treasurer_v2() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
             count: Value::Const(2),
         })],
         ..Default::default()
@@ -3584,7 +3584,7 @@ pub fn prismari_glassforge() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -3793,7 +3793,7 @@ pub fn prismari_treasurespark() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -3845,7 +3845,7 @@ pub fn prismari_treasurespell() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
             Effect::Draw {
                 who: Selector::You,
@@ -4106,7 +4106,7 @@ pub fn prismari_sparkforge_v2() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -4329,7 +4329,7 @@ pub fn prismari_coinforger() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -5106,7 +5106,7 @@ pub fn prismari_artificer() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
             Effect::Scry {
                 who: PlayerRef::You,
@@ -5178,7 +5178,7 @@ pub fn prismari_glassblower() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
+                definition: std::sync::Arc::new(crate::game::effects::treasure_token()),
             },
             Effect::DealDamage {
                 to: target_filtered(
@@ -5256,7 +5256,7 @@ pub fn prismari_emberforge() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
@@ -5327,7 +5327,7 @@ pub fn prismari_smiteforge() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
             Effect::DealDamage {
                 to: target_filtered(
@@ -5406,7 +5406,7 @@ pub fn prismari_goldcaster() -> CardDefinition {
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -5481,7 +5481,7 @@ pub fn prismari_stormcaller_b63() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
                 count: Value::Const(1),
             },
             Effect::DealDamage {
@@ -5537,7 +5537,7 @@ pub fn prismari_sparkforger() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -5573,7 +5573,7 @@ pub fn prismari_tidefurnace() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
                 count: Value::Const(1),
             },
             Effect::DealDamage {
@@ -5697,7 +5697,7 @@ pub fn prismari_magmaforge() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
                 count: Value::Const(2),
             },
             Effect::DealDamage {
@@ -5771,7 +5771,7 @@ pub fn prismari_sparkbearer() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -5836,7 +5836,7 @@ pub fn prismari_brewbinder() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
                 count: Value::Const(1),
             },
             Effect::Surveil {
@@ -6444,7 +6444,7 @@ pub fn prismari_artistic_burst_b131() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -6811,7 +6811,7 @@ pub fn prismari_treasure_pyro_b136() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -6839,7 +6839,7 @@ pub fn prismari_sparkforge_b138() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -6922,7 +6922,7 @@ pub fn prismari_stormhand_b138() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -6969,7 +6969,7 @@ pub fn prismari_shocksinger_b139() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         ]),
         ..Default::default()
@@ -8419,7 +8419,7 @@ pub fn prismari_treasure_spawner_b155() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(treasure_token()),
+            definition: std::sync::Arc::new(treasure_token()),
         })],
         ..Default::default()
     }
@@ -9082,7 +9082,7 @@ pub fn prismari_treasureforge_b160() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
             Effect::DealDamage {
                 amount: Value::Const(2),
@@ -9554,7 +9554,7 @@ pub fn prismari_smithy_b166() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(treasure_token()),
+                    definition: std::sync::Arc::new(treasure_token()),
                 },
             },
             magecraft_loot(),
@@ -9774,7 +9774,7 @@ pub fn prismari_treasurehunter_b167() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()
@@ -10255,7 +10255,7 @@ pub fn prismari_stormwave_b191() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
             Effect::Draw {
                 who: Selector::You,

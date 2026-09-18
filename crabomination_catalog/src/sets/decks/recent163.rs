@@ -109,7 +109,7 @@ pub fn revenge_of_the_rats() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: R::Creature,
             },
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Rat".into(),
                 power: 1,
                 toughness: 1,

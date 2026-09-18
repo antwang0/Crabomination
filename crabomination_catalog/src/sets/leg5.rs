@@ -348,7 +348,7 @@ pub fn stangg() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Stangg Twin".into(),
                         power: 3,
                         toughness: 4,

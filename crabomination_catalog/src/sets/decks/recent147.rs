@@ -59,14 +59,14 @@ pub fn the_witchs_vanity() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(food_token()),
+                    definition: std::sync::Arc::new(food_token()),
                 },
             ),
             (
                 3,
                 Effect::CreateTokenAttachedTo {
                     target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                    definition: Box::new(wicked_role()),
+                    definition: std::sync::Arc::new(wicked_role()),
                 },
             ),
         ],
@@ -107,7 +107,7 @@ pub fn imodanes_recruiter() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(knight_vigilance_token()),
+                definition: std::sync::Arc::new(knight_vigilance_token()),
             },
         })),
         ..Default::default()
@@ -146,7 +146,7 @@ pub fn gingerbread_cabin() -> CardDefinition {
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(food_token()),
+                definition: std::sync::Arc::new(food_token()),
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -255,7 +255,7 @@ pub fn hoard_robber() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(treasure_token()),
+                definition: std::sync::Arc::new(treasure_token()),
             },
         }],
         ..Default::default()

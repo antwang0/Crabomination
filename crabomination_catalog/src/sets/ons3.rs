@@ -1217,7 +1217,7 @@ pub fn kamahls_summons() -> CardDefinition {
         "Kamahl's Summons",
         cost(&[generic(3), g()]),
         Effect::EachPlayerRevealsCreaturesForTokens {
-            token: Box::new(crate::card::TokenDefinition {
+            token: std::sync::Arc::new(crate::card::TokenDefinition {
                 name: "Bear".into(),
                 power: 2,
                 toughness: 2,

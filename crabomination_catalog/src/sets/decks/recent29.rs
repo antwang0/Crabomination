@@ -570,7 +570,7 @@ pub fn teeming_dragonstorm() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(soldier),
+                definition: std::sync::Arc::new(soldier),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)

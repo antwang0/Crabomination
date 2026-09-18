@@ -69,7 +69,7 @@ pub fn dovin_grand_arbiter() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
-                        definition: Box::new(token(
+                        definition: std::sync::Arc::new(token(
                             "Thopter",
                             vec![],
                             1,
@@ -384,7 +384,7 @@ pub fn captive_audience() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::EachOpponent,
                         count: Value::Const(5),
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Zombie".into(),
                             power: 2,
                             toughness: 2,

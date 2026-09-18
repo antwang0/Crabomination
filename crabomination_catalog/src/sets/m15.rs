@@ -120,7 +120,7 @@ pub fn triplicate_spirits() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: Box::new(spirit_token()),
+            definition: std::sync::Arc::new(spirit_token()),
         },
     )
 }
@@ -254,7 +254,7 @@ pub fn feral_incarnation() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
-            definition: Box::new(beast_token()),
+            definition: std::sync::Arc::new(beast_token()),
         },
     )
 }
@@ -572,7 +572,7 @@ pub fn soul_of_zendikar() -> CardDefinition {
         Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(beast_token()),
+            definition: std::sync::Arc::new(beast_token()),
         },
     )
 }
@@ -841,7 +841,7 @@ pub fn kalonian_twingrove() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(TokenDefinition {
+            definition: std::sync::Arc::new(TokenDefinition {
                 name: "Treefolk Warrior".into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],
@@ -1834,7 +1834,7 @@ pub fn sliver_hive() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Sliver".into(),
                         power: 1,
                         toughness: 1,
@@ -1930,7 +1930,7 @@ pub fn brood_keeper() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Dragon".into(),
                     power: 2,
                     toughness: 2,
@@ -1986,7 +1986,7 @@ pub fn necromancers_stockpile() -> CardDefinition {
                     then: Box::new(Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(TokenDefinition {
+                        definition: std::sync::Arc::new(TokenDefinition {
                             name: "Zombie".into(),
                             power: 2,
                             toughness: 2,
@@ -2033,7 +2033,7 @@ pub fn first_response() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
+                definition: std::sync::Arc::new(TokenDefinition {
                     name: "Soldier".into(),
                     power: 1,
                     toughness: 1,
@@ -2146,7 +2146,7 @@ pub fn spirit_bonds() -> CardDefinition {
                 body: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(spirit_token()),
+                    definition: std::sync::Arc::new(spirit_token()),
                 }),
                 else_: None,
             },
@@ -2423,7 +2423,7 @@ pub fn garruk_apex_predator() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Beast".into(),
                         power: 3,
                         toughness: 3,
@@ -2539,7 +2539,7 @@ pub fn goblin_kaboomist() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Land Mine".into(),
                         card_types: vec![CardType::Artifact],
                         activated_abilities: vec![ActivatedAbility {
@@ -2995,7 +2995,7 @@ pub fn waste_not() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(TokenDefinition {
+                    definition: std::sync::Arc::new(TokenDefinition {
                         name: "Zombie".into(),
                         power: 2,
                         toughness: 2,

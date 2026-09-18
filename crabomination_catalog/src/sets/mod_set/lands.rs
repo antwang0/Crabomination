@@ -487,7 +487,7 @@ pub fn urzas_saga() -> CardDefinition {
                         effect: Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::Const(1),
-                            definition: Box::new(construct),
+                            definition: std::sync::Arc::new(construct),
                         },
                         ..Default::default()
                     }),

@@ -241,7 +241,7 @@ pub fn searchlight_companion() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(crabomination_base::tokens::spirit_token()),
+            definition: std::sync::Arc::new(crabomination_base::tokens::spirit_token()),
         })],
         ..Default::default()
     }
@@ -276,7 +276,7 @@ pub fn resolute_reinforcements() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(soldier),
+            definition: std::sync::Arc::new(soldier),
         })],
         ..Default::default()
     }
@@ -299,7 +299,7 @@ pub fn jewel_thief() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(crabomination_base::tokens::treasure_token()),
+            definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
         })],
         ..Default::default()
     }
@@ -322,7 +322,7 @@ pub fn sweettooth_witch() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: Box::new(crabomination_base::tokens::food_token()),
+            definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
@@ -449,7 +449,7 @@ pub fn vinereap_mentor() -> CardDefinition {
     let food = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(crabomination_base::tokens::food_token()),
+        definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
     };
     CardDefinition {
         name: "Vinereap Mentor",
@@ -556,7 +556,7 @@ pub fn charforger() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(goblin.clone()),
+                definition: std::sync::Arc::new(goblin.clone()),
             }),
             TriggeredAbility {
                 event: EventSpec::new(
@@ -575,7 +575,7 @@ pub fn charforger() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(goblin),
+                definition: std::sync::Arc::new(goblin),
             },
             ..Default::default()
         }],
@@ -613,7 +613,7 @@ pub fn voracious_vermin() -> CardDefinition {
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(rat),
+                definition: std::sync::Arc::new(rat),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
@@ -725,7 +725,7 @@ pub fn heroic_reinforcements() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                definition: Box::new(soldier),
+                definition: std::sync::Arc::new(soldier),
             },
             Effect::PumpPT {
                 what: your_creatures(),
@@ -971,7 +971,7 @@ pub fn lord_skitter_sewer_king() -> CardDefinition {
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(rat),
+                    definition: std::sync::Arc::new(rat),
                 },
             },
         ],
@@ -1215,7 +1215,7 @@ pub fn charming_scoundrel() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crabomination_base::tokens::treasure_token()),
+                definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
             },
             Effect::CreateTokenAttachedTo {
                 target: Selector::TargetFiltered {
@@ -1223,7 +1223,7 @@ pub fn charming_scoundrel() -> CardDefinition {
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou),
                 },
-                definition: Box::new(wicked_role),
+                definition: std::sync::Arc::new(wicked_role),
             },
         ]))],
         ..Default::default()
@@ -1356,7 +1356,7 @@ pub fn splashy_spellcaster() -> CardDefinition {
                     .and(SelectionRequirement::ControlledByYou)
                     .and(SelectionRequirement::OtherThanSource),
             },
-            definition: Box::new(sorcerer_role),
+            definition: std::sync::Arc::new(sorcerer_role),
         })],
         ..Default::default()
     }
@@ -1498,7 +1498,7 @@ pub fn experimental_synthesizer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(samurai),
+                definition: std::sync::Arc::new(samurai),
             },
             ..Default::default()
         }],
