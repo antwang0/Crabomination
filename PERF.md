@@ -3072,21 +3072,31 @@ A buffer a caller builds and reads is 222; one `GameState::clone` copies is
 `Vec`s is 509 (the `memcpy` goes too). **Size an allocation lead by the bytes
 it copies, not only by the count.**
 
-sweep   **2 blocks — fresh seeds 1428..1429 and 1430..1431 at the `(-364)`
-        tip: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 /
-        stuck 0 / draw 22` (a draw is a legal rules outcome; 20 of the 22 are
-        seed 1430's `cube`/`all` cells, 10 apiece — the same pairing seen
-        from two pools, which is what a *deck* draw looks like), pools
-        `cube all sealed`, `target-audit/overflow` with
-        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
-        **FRONTIER 1432.**
-        Suite **19,610 / 0 / 6** (`CRAB_ANSWER_LOG=strict`), golden traces
+sweep   **4 blocks — fresh seeds 1428..1431 at the `(-364)` tip and
+        1432..1435 at the closing tip: 24 cells / 118,400 games / 0
+        failures**, `cap 0 / board 0 / stuck 0 / draw 26` (a draw is a legal
+        rules outcome; 20 of the 26 are seed 1430's `cube`/`all` cells, 10
+        apiece — the same pairing seen from two pools, which is what a *deck*
+        draw looks like), pools `cube all sealed`, `target-audit/overflow`
+        with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
+        **FRONTIER 1436.**
+        Suite **19,620 / 0 / 6** (`CRAB_ANSWER_LOG=strict`), golden traces
         unmoved, clippy **0** over the workspace, `cargo check --profile
         release-fast -p crabomination --bin bot_ladder` clean.
-        `--bench` at the `(-364)` tip: **195,806 / 27.49 / 611.9 / 0 stalls**,
-        byte-identical to the committed invariant, `determinism ok`,
-        `thread_determinism ok (3 vs 1)`, `peak_rss_mib` 26.9. **All three
-        rows are behaviour-preserving on the bench path.**
+        `--bench` at the `(-364)` tip and again at the closing tip:
+        **195,806 / 27.49 / 611.9 / 0 stalls** both times, byte-identical to
+        the committed invariant, `determinism ok`, `thread_determinism ok
+        (3 vs 1)`, `peak_rss_mib` 26.9 / 25.5. **All six rows are
+        behaviour-preserving on the bench path.**
+        **CLOSING ABSOLUTES at `1e21fa73`** (which carries four concurrent
+        Commander commits on top of `(-367)`): fixed **567,018,948** / cube
+        **1,473,886,815** / sealed **1,594,388,820** — i.e. **-0.882 /
+        -1.214 / -1.030 %** against this run's second base, all-in.
+        ⚠ Those four commits plus the clippy fix are **+0.016 / +0.003 /
+        -0.009 %** against `(-367)`'s own closing, so the difference between
+        the all-in figure and the **-0.892 / -1.419 / -1.129 %** sum of rows
+        is `(-361)`'s base, not drift: `(-361)` is measured against the
+        FIRST base and the rest against the second.
         ⚠ Box timings, SIXTEENTH box (4 cores, 15 GB, Xeon @ 2.80 GHz): cold
         `profiling-fast` **~9 m**, engine-only **3m27-3m51s** (**10m37s** when
         a concurrent base-crate commit lands under it), cold `release`
