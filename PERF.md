@@ -3045,12 +3045,13 @@ quotes rows and absolutes separately.
   (-364) the token definition is an Arc       -0.073 / -0.530 / -0.272 %
   (-365) the combat lethals list is inline    -0.070 / -0.077 / -0.072 %
   (-366) the short-lived seat/id lists inline -0.100 / -0.081 / -0.056 %
+  (-367) the mana source table, pooled        -0.111 / -0.127 / -0.114 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                   -0.781 / -1.292 / -1.015 %
+  run total                                   -0.892 / -1.419 / -1.129 %
 ```
 
-**BASE 572,061,894 / 1,492,003,099 / 1,610,978,327 -> CLOSING 567,557,898 /
-1,475,719,510 / 1,596,356,563** at `(-366)` (the second base; `(-361)` sits
+**BASE 572,061,894 / 1,492,003,099 / 1,610,978,327 -> CLOSING 566,930,976 /
+1,473,845,679 / 1,594,537,383** at `(-367)` (the second base; `(-361)` sits
 above it, measured against the first).
 
 📐📐 **THE SHAPE OF THE RUN: THE THREE BIG ROWS ARE THE SAME QUESTION ASKED
@@ -8507,6 +8508,38 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-367)` the auto-tapper's mana source table comes off a free list — **fixed -0.111 / cube -0.127 / sealed -0.114 %**
+
+The third pooled buffer in `auto_tap_for_cost_inner` (`(-356)`, `(-359)`).
+The table is rebuilt on every auto-tap that reaches the selection loops and
+dropped at the end of the same call — 7,610 `cube` allocations a six-game
+run — and `ManaSourceInfo` is plain data, so `clear` costs nothing and the
+whole capacity survives into the next payment.
+
+```text
+                  (-366) tip        (-367)            delta
+  fixed            567,557,898       566,930,976       -0.1105 %
+  cube           1,475,719,510     1,473,845,679       -0.1270 %
+  sealed         1,596,356,563     1,594,537,383       -0.1140 %
+
+  allocations (cube)   654,155 -> 646,492   -7,663   (7,610 predicted)
+  245 Ir apiece.
+```
+
+📐 **The device here is a `Drop` GUARD, not a park at the end of the scope,
+and that is the reusable half.** `mana_source_table` returns a
+`PooledSources` newtype that `Deref`s to `&[ManaSourceInfo]` — so every
+consumer, including `s.redundancy(&sources)`, is unchanged — and parks its
+buffer in `Drop`. **That makes the early return above the selection loops
+free and makes a future early return safe**, which a hand-written park at the
+end of the function does not. `(-356)`'s and `(-359)`'s pools both park by
+hand because their scratch never escapes a straight-line path; this one is a
+*returned* buffer and the guard is what the shape needs.
+⚠ **The obstacle it hit is a visibility one, worth 30 seconds next time**:
+`ManaSourceInfo` is private to `actions.rs`, so the guard has to be private
+too — `pub(crate) struct PooledSources` is `E0446`, "private type in public
+interface", on the `Deref::Target`.
 
 ### `(-366)` the short-lived seat and id lists go inline — **fixed -0.100 / cube -0.081 / sealed -0.056 %**
 
@@ -15629,7 +15662,7 @@ the clone census**, which is where the 2026-09-18 session's whole -1.134 % of
 `cube` came from; (O)'s line shortlist is still live and still the instrument that
 feeds it. **Their relationship is the method: (O) names the `Clone` impl that
 allocates, (R) asks who wanted the copy.** Eight rows have now shipped off
-the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`..`(-366)`).
+the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`..`(-367)`).
 
   💡 **R. THE CLONE CENSUS — three rows in one session, -0.194 / -0.410 /
      -0.530 % of `cube`, and every one of them came from ONE question asked

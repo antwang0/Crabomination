@@ -13894,8 +13894,10 @@ impl GameState {
         player: usize,
         creature_only: bool,
         only: Option<&crate::fxhash::HashSet<CardId>>,
-    ) -> Vec<ManaSourceInfo> {
-        self.with_frozen_layers(|g| g.mana_source_table_inner(player, creature_only, only))
+    ) -> PooledSources {
+        PooledSources(
+            self.with_frozen_layers(|g| g.mana_source_table_inner(player, creature_only, only)),
+        )
     }
 
     fn mana_source_table_inner(
@@ -13916,7 +13918,9 @@ impl GameState {
         // four `&mut F::call_mut` forwards per permanent, two of them
         // capturing `self` — PERF's `call_mut` census, ranked by captures.
         // The loop is the same walk, same order, with none.
-        let mut out = Vec::new();
+        // Off the free list: the `reserve(16)` below was 7,610 `cube`
+        // allocations a six-game run (PERF `(-367)`).
+        let mut out = source_pool::take();
         // With no land-type rewriter in scope the computed type line is the
         // printed one (`effective_mana_abilities_into`'s gate), and with
         // nothing granted to a permanent (`grants_nothing`) its mana
@@ -18987,6 +18991,66 @@ mod decider_pool {
 /// the allocation but `SmallVec`'s `Extend` costs ~24 Ir an item where
 /// `Vec`'s reserved one costs ~2, so it read +0.014 % on `cube`. PERF
 /// `(-356)` has the table.
+/// A free list of [`GameState::mana_source_table`]'s buffer, on `snap_pool`'s
+/// pattern.
+///
+/// The table is rebuilt on **every** auto-tap that reaches the selection
+/// loops and dropped at the end of the same call: its `reserve(16)` was
+/// **7,610 allocations a six-game `cube` run** (PERF `(-367)`).
+/// `ManaSourceInfo` is plain data, so `clear` costs nothing and the whole
+/// capacity survives into the next payment.
+mod source_pool {
+    use super::ManaSourceInfo;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static POOL: RefCell<Vec<Vec<ManaSourceInfo>>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// An empty buffer — a parked one when this thread has it.
+    pub(super) fn take() -> Vec<ManaSourceInfo> {
+        POOL.with(|p| p.try_borrow_mut().ok().and_then(|mut v| v.pop())).unwrap_or_default()
+    }
+
+    /// Park a buffer for the next table. A zero-capacity buffer is not worth
+    /// a slot, and the list is capped so a re-entrant payment does not leave
+    /// every one of its tables parked.
+    pub(super) fn park(mut buf: Vec<ManaSourceInfo>) {
+        if buf.capacity() == 0 {
+            return;
+        }
+        buf.clear();
+        POOL.with(|p| {
+            if let Ok(mut v) = p.try_borrow_mut()
+                && v.len() < 4
+            {
+                v.push(buf);
+            }
+        });
+    }
+}
+
+/// [`GameState::mana_source_table`]'s answer, holding a pooled buffer.
+///
+/// Reads as `&[ManaSourceInfo]` through `Deref`, so every consumer is
+/// unchanged; the buffer goes back on the free list when the scope ends,
+/// which is what makes the early return above the selection loops free.
+struct PooledSources(Vec<ManaSourceInfo>);
+
+impl std::ops::Deref for PooledSources {
+    type Target = [ManaSourceInfo];
+    #[inline]
+    fn deref(&self) -> &[ManaSourceInfo] {
+        &self.0
+    }
+}
+
+impl Drop for PooledSources {
+    fn drop(&mut self) {
+        source_pool::park(std::mem::take(&mut self.0));
+    }
+}
+
 mod snap_pool {
     use crabomination_base::card::CardId;
     use std::cell::RefCell;
