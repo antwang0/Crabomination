@@ -3047,6 +3047,7 @@ quotes rows and absolutes separately.
   (-366) the short-lived seat/id lists inline -0.100 / -0.081 / -0.056 %
   (-367) the mana source table, pooled        -0.111 / -0.127 / -0.114 %
   (-368) cast_candidates' two accumulators  REFUTED +0.180 / +0.126 / +0.152 %, reverted
+  (-369) the computed-view list, pooled     REFUTED -0.084 / +0.037 / +0.096 %, reverted
   ─────────────────────────────────────────────────────────────────────────
   run total                                   -0.892 / -1.419 / -1.129 %
 ```
@@ -8519,6 +8520,49 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-369)` REFUTED — the computed-view list, pooled behind a `Drop` guard: **fixed -0.084 / cube +0.037 / sealed +0.096 %**, and the reason is where the guard TRAVELS
+
+`(-367)`'s device on the biggest remaining ratio: `compute_permanents` is
+**22,354 calls / 20,484 allocations = 0.92 a call**, exactly the regime
+`(-368)` said a pool needs. A `ComputedList` guard `Deref`s to
+`&[ComputedPermanent]`, takes its buffer off a free list and parks it on
+drop; `compute_battlefield_creatures` returns one too so the death sweep's
+`match` arms agree. It removes **18,079** allocations — more than predicted —
+and `fixed` wins. The two big pools lose. Reverted.
+
+```text
+                  closing tip       (-369)            delta
+  fixed            567,018,948       566,544,020       -0.0838 %
+  cube           1,473,886,815     1,474,438,702       +0.0374 %
+  sealed         1,594,388,820     1,595,925,086       +0.0964 %
+
+  allocations (cube)   646,506 -> 628,427   -18,079
+  new self cost:  +891 k alloc/src/vec   +764 k perform_action_inner
+                  +553 k core/option     (the park, the drop flags)
+```
+
+📐📐 **THE RULE, AND IT COMPLETES THE POOL TRILOGY: a `Drop` guard is cheap
+while it stays in ONE frame and costs drop-flag bookkeeping at every frame it
+is RETURNED through.** `(-367)`'s `PooledSources` is built and read inside
+`auto_tap_for_cost_inner` and never leaves it. `ComputedList` is returned
+from `compute_permanents`, out of a `with_frozen_layers` closure, out of
+`combat_damage_computed`, and out of the death sweep's `match` — and
+`perform_action_inner` alone picks up **+764 k** of bookkeeping for a value
+it only passes along. **Ask how many frames the guard crosses before
+reaching for it.**
+
+```text
+  (-367) one buffer, one frame,   0.96 alloc/call     WINS  -0.127 %
+  (-368) two buffers, one frame,  0.55 alloc/call     LOSES +0.126 %
+  (-369) one buffer, four frames, 0.92 alloc/call     LOSES +0.037 %
+```
+
+⚠ **The narrower variant is NOT priced**: a guard that parks only the buffer
+it took (a `pooled` flag, so the wrapped `compute_battlefield_creatures`
+answer drops normally) halves the park count but leaves every drop-flag site
+in place, which the row above says is the larger half. **Price the drop glue
+before building it.**
 
 ### `(-368)` REFUTED — `cast_candidates`' two accumulators, pooled: **+0.180 / +0.126 / +0.152 %**, and the number that decides it is allocations PER CALL
 
