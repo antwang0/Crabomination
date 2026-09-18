@@ -726,6 +726,7 @@ fn create_token_attacking_joins_combat_tapped() {
         count: Value::Const(2),
         definition: std::sync::Arc::new(soldier),
         cleanup: crabomination::effect::AttackingTokenCleanup::None,
+        defender: None,
     });
     let mut g = two_player_game();
     let atk = g.add_card_to_battlefield(0, body("Warcaller", 2, 2, vec![trig]));

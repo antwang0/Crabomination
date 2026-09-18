@@ -2164,6 +2164,7 @@ pub fn mobilize_value(count: Value) -> TriggeredAbility {
             ..Default::default()
         }),
         cleanup: AttackingTokenCleanup::SacrificeAtEndOfCombat,
+        defender: None,
     })
 }
 

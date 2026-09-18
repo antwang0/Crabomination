@@ -446,6 +446,7 @@ pub fn launch_the_fleet() -> CardDefinition {
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(soldier_token()),
                     cleanup: AttackingTokenCleanup::None,
+                    defender: None,
                 },
             }),
             duration: Duration::EndOfTurn,

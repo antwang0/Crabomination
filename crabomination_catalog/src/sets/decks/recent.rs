@@ -786,6 +786,7 @@ pub fn gut_true_soul_zealot() -> CardDefinition {
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(skeleton),
                     cleanup: crate::effect::AttackingTokenCleanup::None,
+                    defender: None,
                 }),
                 else_: None,
             },
@@ -10705,6 +10706,7 @@ pub fn squee_dubious_monarch() -> CardDefinition {
                 count: Value::Const(1),
                 definition: std::sync::Arc::new(goblin),
                 cleanup: crate::effect::AttackingTokenCleanup::None,
+                defender: None,
             },
         }],
         ..Default::default()

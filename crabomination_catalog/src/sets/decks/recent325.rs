@@ -543,6 +543,7 @@ pub fn dalkovan_encampment() -> CardDefinition {
                     count: Value::Const(2),
                     definition: std::sync::Arc::new(warrior_token()),
                     cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                    defender: None,
                 },
                 ..Default::default()
             },

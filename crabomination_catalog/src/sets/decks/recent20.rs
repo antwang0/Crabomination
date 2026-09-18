@@ -122,6 +122,7 @@ pub fn battle_cry_goblin() -> CardDefinition {
                     ..Default::default()
                 }),
                 cleanup: Default::default(),
+                defender: None,
             },
         }],
         ..Default::default()

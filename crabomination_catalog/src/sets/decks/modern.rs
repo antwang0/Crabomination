@@ -23988,6 +23988,7 @@ pub fn hanweir_garrison() -> CardDefinition {
                 count: Value::Const(2),
                 definition: std::sync::Arc::new(human),
                 cleanup: crate::effect::AttackingTokenCleanup::None,
+                defender: None,
             },
         }],
         ..Default::default()
@@ -36566,6 +36567,7 @@ pub fn geist_of_saint_traft() -> CardDefinition {
                 ..Default::default()
             }),
             cleanup: crate::effect::AttackingTokenCleanup::ExileAtEndOfCombat,
+            defender: None,
         })],
         ..Default::default()
     }
@@ -43160,6 +43162,7 @@ pub fn leonin_warleader() -> CardDefinition {
                 ..Default::default()
             }),
             cleanup: crate::effect::AttackingTokenCleanup::None,
+            defender: None,
         })],
         ..Default::default()
     }
@@ -51800,6 +51803,7 @@ pub fn den_of_the_bugbear() -> CardDefinition {
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(goblin_token()),
                     cleanup: AttackingTokenCleanup::None,
+                    defender: None,
                 },
             },
         ],

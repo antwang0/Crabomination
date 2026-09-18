@@ -260,6 +260,7 @@ pub fn captains_claws() -> CardDefinition {
                 count: Value::ONE,
                 definition: std::sync::Arc::new(ally),
                 cleanup: Default::default(),
+                defender: None,
             })],
             ..Default::default()
         }),

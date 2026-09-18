@@ -371,6 +371,7 @@ impl Effect {
             | Effect::MayPayRepeatedly { body, .. }
             | Effect::Reflexive { body, .. }
             | Effect::TemptingOffer { body, .. }
+            | Effect::ForEachOpponent { body, .. }
             | Effect::JoinForces { body, .. }
             | Effect::ReplaceYourNextDrawThisTurn { body, .. }
             | Effect::AtNextEndStep { body, .. }
@@ -1126,6 +1127,7 @@ impl Effect {
             Effect::ChooseTwoColorsForSource | Effect::GainLifePerChosenColorOfCast => false,
             Effect::GraveBetrayalRegister | Effect::GraveBetrayalReanimate => false,
             Effect::TemptingOffer { body } => body.requires_target(),
+            Effect::ForEachOpponent { body } => body.requires_target(),
             Effect::JoinForces { body, .. } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only
             // `otherwise` can demand a cast-time target (Browbeat's drawer).
@@ -2670,6 +2672,7 @@ impl Effect {
             }
             Effect::Tribute { otherwise, .. } => otherwise.primary_target_filter(),
             Effect::TemptingOffer { body } => body.primary_target_filter(),
+            Effect::ForEachOpponent { body } => body.primary_target_filter(),
             Effect::JoinForces { body, .. } => body.primary_target_filter(),
             Effect::PlayersMayAccept { otherwise, .. } => otherwise.primary_target_filter(),
             Effect::Punisher {
@@ -4699,6 +4702,7 @@ impl Effect {
                 }
                 Effect::Tribute { otherwise, .. } => eff_find(otherwise, slot, mode, kicked),
                 Effect::TemptingOffer { body } => eff_find(body, slot, mode, kicked),
+                Effect::ForEachOpponent { body } => eff_find(body, slot, mode, kicked),
                 Effect::JoinForces { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::PlayersMayAccept { otherwise, .. } => {
                     eff_find(otherwise, slot, mode, kicked)

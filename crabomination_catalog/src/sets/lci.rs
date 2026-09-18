@@ -6023,6 +6023,7 @@ pub fn anim_pakal_thousandth_moon() -> CardDefinition {
                 },
                 definition: std::sync::Arc::new(gnome),
                 cleanup: crate::effect::AttackingTokenCleanup::None,
+                defender: None,
             },
         ]))],
         ..Default::default()

@@ -1613,6 +1613,43 @@ fn adeline_power_scales_with_creatures() {
     assert_eq!(g.computed_permanent(adeline).unwrap().power, 3, "power = 3 creatures you control");
 }
 
+/// CR 101.4 — "Whenever you attack, **for each opponent**, create a 1/1 white
+/// Human creature token that's tapped and attacking **that player**." One
+/// token per opponent, each aimed at its own opponent: a single
+/// `CreateTokenAttacking` is exact at two players and made one token aimed at
+/// one seat in a pod.
+#[test]
+fn adeline_makes_one_token_per_opponent_each_attacking_that_player() {
+    use crabomination::game::{Attack, AttackTarget};
+    let mut g = crabomination::game::multi_player_game(4);
+    let adeline = g.add_card_to_battlefield(0, catalog::adeline_resplendent_cathar());
+    g.clear_sickness(adeline);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: adeline,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Adeline attacks seat 1");
+    drain_stack(&mut g);
+
+    let humans: Vec<_> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Human").map(|c| c.id).collect();
+    assert_eq!(humans.len(), 3, "one token per opponent, not one token");
+    let mut aimed: Vec<usize> = humans
+        .iter()
+        .filter_map(|&id| {
+            g.attacking.iter().find(|a| a.attacker == id).and_then(|a| match a.target {
+                AttackTarget::Player(p) => Some(p),
+                _ => None,
+            })
+        })
+        .collect();
+    aimed.sort_unstable();
+    assert_eq!(aimed, vec![1, 2, 3], "each token attacks its own opponent");
+}
+
 #[test]
 fn pia_and_kiran_make_two_thopters_and_sac_for_damage() {
     let mut g = two_player_game();

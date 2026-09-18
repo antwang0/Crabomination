@@ -18674,24 +18674,28 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CreateTokenAttacking { who, count, definition, cleanup } => {
+            Effect::CreateTokenAttacking { who, count, definition, cleanup, defender } => {
                 use crate::game::types::{Attack, AttackTarget};
                 // Only meaningful while a combat is in progress.
                 if self.attacking.is_empty() {
                     return Ok(());
                 }
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                // Attack the same defender the source is attacking; else the
+                // "attacking that player" names its own defender; otherwise
+                // the same defender the source is attacking, else the
                 // controller's first opponent.
-                let target = ctx
-                    .source
-                    .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
-                    .map(|a| a.target)
-                    .or_else(|| {
-                        (0..self.players.len())
-                            .find(|&q| !self.same_team(q, p))
-                            .map(AttackTarget::Player)
-                    });
+                let target = match defender {
+                    Some(d) => self.resolve_player(d, ctx).map(AttackTarget::Player),
+                    None => ctx
+                        .source
+                        .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+                        .map(|a| a.target)
+                        .or_else(|| {
+                            (0..self.players.len())
+                                .find(|&q| !self.same_team(q, p))
+                                .map(AttackTarget::Player)
+                        }),
+                };
                 let Some(target) = target else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 // Mint-time dynamic P/T, resolved in the minting effect's
@@ -22541,6 +22545,22 @@ impl GameState {
                 }
                 let paid_ctx = EffectContext { event_amount: total, ..ctx.clone() };
                 self.run_effect(body, &paid_ctx, events)
+            }
+
+            Effect::ForEachOpponent { body } => {
+                // CR 101.4 — APNAP order, and the opponent is bound as the
+                // body's `Triggerer` so "that player" reads it. The seats are
+                // resolved up front: the body may kill one, and the printed
+                // "for each opponent" is fixed as the effect starts.
+                let seats = self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx);
+                for opp in seats {
+                    let opp_ctx = EffectContext {
+                        trigger_source: Some(crate::game::effects::EntityRef::Player(opp)),
+                        ..ctx.clone()
+                    };
+                    self.run_effect(body, &opp_ctx, events)?;
+                }
+                Ok(())
             }
 
             Effect::TemptingOffer { body } => {

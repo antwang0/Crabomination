@@ -518,6 +518,7 @@ pub fn war_effort() -> CardDefinition {
                     ..Default::default()
                 }),
                 cleanup: AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                defender: None,
             },
         }],
         ..Default::default()

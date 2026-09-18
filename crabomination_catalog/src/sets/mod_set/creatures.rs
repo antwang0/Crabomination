@@ -7772,6 +7772,7 @@ pub fn hero_of_bladehold() -> CardDefinition {
                 count: Value::Const(2),
                 definition: std::sync::Arc::new(white_soldier_token()),
                 cleanup: Default::default(),
+                defender: None,
             }),
         ],
         ..Default::default()
@@ -7961,6 +7962,7 @@ pub fn brimaz_king_of_oreskos() -> CardDefinition {
                     vec![Keyword::Vigilance],
                 )),
                 cleanup: Default::default(),
+                defender: None,
             }),
             // "Whenever Brimaz blocks a creature, create a 1/1 white Cat
             // Soldier creature token with vigilance that's blocking that
@@ -8006,12 +8008,26 @@ pub fn adeline_resplendent_cathar() -> CardDefinition {
                 per_toughness: 0,
             },
         }],
+        // "Whenever you attack, **for each opponent**, create a 1/1 white
+        // Human creature token that's tapped and attacking that player." One
+        // token per opponent, each at its own opponent — a single
+        // `CreateTokenAttacking` is exact at two players and makes one token
+        // aimed at one seat in a pod.
         triggered_abilities: vec![crate::effect::shortcut::on_attack(
-            Effect::CreateTokenAttacking {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: std::sync::Arc::new(white_token("Human", 1, 1, vec![CreatureType::Human], vec![])),
-                cleanup: Default::default(),
+            Effect::ForEachOpponent {
+                body: Box::new(Effect::CreateTokenAttacking {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: std::sync::Arc::new(white_token(
+                        "Human",
+                        1,
+                        1,
+                        vec![CreatureType::Human],
+                        vec![],
+                    )),
+                    cleanup: Default::default(),
+                    defender: Some(PlayerRef::Triggerer),
+                }),
             },
         )],
         ..Default::default()

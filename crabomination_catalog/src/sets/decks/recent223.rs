@@ -45,6 +45,7 @@ pub fn warren_warleader() -> CardDefinition {
                 count: Value::ONE,
                 definition: std::sync::Arc::new(rabbit_1_1()),
                 cleanup: Default::default(),
+                defender: None,
             },
             Effect::PumpPT {
                 what: Selector::EachMatching {

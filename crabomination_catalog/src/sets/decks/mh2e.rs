@@ -231,6 +231,7 @@ pub fn goblin_traprunner() -> CardDefinition {
                 count: Value::ONE,
                 definition: std::sync::Arc::new(goblin),
                 cleanup: crate::effect::AttackingTokenCleanup::None,
+                defender: None,
             }),
             on_tails: Box::new(Effect::Noop),
         })],

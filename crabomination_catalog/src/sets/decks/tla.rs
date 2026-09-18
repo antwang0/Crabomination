@@ -1591,6 +1591,7 @@ pub fn fire_navy_trebuchet() -> CardDefinition {
                     ..Default::default()
                 }),
                 cleanup: Default::default(),
+                defender: None,
             },
         }],
         ..Default::default()
@@ -4303,6 +4304,7 @@ pub fn suki_kyoshi_warrior() -> CardDefinition {
             count: Value::ONE,
             definition: std::sync::Arc::new(ally_token()),
             cleanup: Default::default(),
+            defender: None,
         })],
         ..Default::default()
     }

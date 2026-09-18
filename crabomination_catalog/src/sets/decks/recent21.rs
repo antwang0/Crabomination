@@ -70,6 +70,7 @@ pub fn skyknight_vanguard() -> CardDefinition {
                 ..Default::default()
             }),
             cleanup: Default::default(),
+            defender: None,
         })],
         ..Default::default()
     }

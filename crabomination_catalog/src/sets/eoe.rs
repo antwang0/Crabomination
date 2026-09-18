@@ -2901,6 +2901,7 @@ pub fn kavaron_harrier() -> CardDefinition {
                     count: Value::Const(1),
                     definition: std::sync::Arc::new(robot),
                     cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                    defender: None,
                 }),
                 else_: None,
             },

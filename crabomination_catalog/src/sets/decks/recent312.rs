@@ -582,6 +582,7 @@ pub fn gemini_engine() -> CardDefinition {
                 )),
                 ..Default::default()
             }),
+            defender: None,
         }]))],
         ..artifact("Gemini Engine", cost(&[generic(6)]))
     }

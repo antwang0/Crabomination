@@ -4880,6 +4880,7 @@ pub fn parhelion_ii() -> CardDefinition {
                 ..Default::default()
             }),
             cleanup: crate::effect::AttackingTokenCleanup::None,
+            defender: None,
         })],
         ..Default::default()
     }

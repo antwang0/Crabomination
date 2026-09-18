@@ -4529,6 +4529,15 @@ pub enum Effect {
     /// Bunnies.
     TemptingOffer { body: Box<Effect> },
 
+    /// CR 101.4 — "for each opponent, [body]": run `body` once per opponent of
+    /// the controller, in APNAP order, with that opponent bound as the body's
+    /// `PlayerRef::Triggerer` / `Selector::TriggerSource`. The fan-out
+    /// `PlayerRef::EachOpponent` cannot express, because the body has to name
+    /// *that* opponent rather than the whole set — Adeline's "for each
+    /// opponent, create a token attacking that player". At two players it is
+    /// one run of `body`, which is what the singular forms already did.
+    ForEachOpponent { body: Box<Effect> },
+
     /// CR 207.2c "join forces" — "Starting with you, each player may pay any
     /// amount of mana. [body], where X is the total amount of mana paid this
     /// way." Every seat is asked, in turn order from the controller, before
@@ -6626,6 +6635,13 @@ pub enum Effect {
         definition: std::sync::Arc<TokenDefinition>,
         #[serde(default)]
         cleanup: AttackingTokenCleanup,
+        /// Who the tokens attack. `None` keeps the default — the defender the
+        /// effect's source is attacking, else the controller's first opponent
+        /// — which is right for a token that joins the source's own attack.
+        /// `Some` is for "attacking that player" (Adeline, under
+        /// `ForEachOpponent`), where the defender is the fan-out's opponent.
+        #[serde(default)]
+        defender: Option<PlayerRef>,
     },
     /// CR 508.3a — put the resolved permanent(s) into the current combat
     /// tapped and attacking, bypassing the declare-attackers timing/sickness
