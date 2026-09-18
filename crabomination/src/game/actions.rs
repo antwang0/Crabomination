@@ -13873,7 +13873,7 @@ impl GameState {
     /// this module have no use for them.
     pub fn untapped_mana_colors(&self, player: usize) -> Vec<[bool; 5]> {
         self.mana_source_table(player, false, None)
-            .into_iter()
+            .iter()
             .map(|s| {
                 let mut mask = [false; 5];
                 for col in s.colors {
