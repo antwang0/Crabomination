@@ -101,8 +101,8 @@ impl GameState {
         kind
     }
 
-    /// Apply the cast-time half of the commander mana riders and report
-    /// whether Path of Ancestry's trigger still has to go on the stack.
+    /// Apply the cast-time half of the commander mana riders and report how
+    /// many Path of Ancestry triggers still have to go on the stack.
     ///
     /// Opal Palace's counters are stamped on the cast card's own
     /// `pending_etb_counters` rather than the caster's shared
@@ -114,21 +114,29 @@ impl GameState {
     #[must_use]
     pub(crate) fn note_commander_mana_riders(
         &mut self,
-        spent: &[SpendRestriction],
+        spent: &crate::mana::PaymentSideEffects,
         kind: &SpellKind,
         card: &mut CardInstance,
-    ) -> bool {
-        if spent.is_empty() {
-            return false;
+    ) -> u32 {
+        if spent.spent_restrictions.is_empty() {
+            return 0;
         }
-        if kind.commander && spent.contains(&SpendRestriction::CommanderCastCounters) {
-            let n = self.commander_cast_count.get(&card.id).copied().unwrap_or(0);
+        // CR 106.6a — "a separate effect … once for each mana produced", so
+        // two doubled Opal Palace pips are two counters per prior cast.
+        let pips = spent.spent_count(SpendRestriction::CommanderCastCounters);
+        if kind.commander && pips > 0 {
+            let casts = self.commander_cast_count.get(&card.id).copied().unwrap_or(0);
+            let n = casts.saturating_mul(pips);
             if n > 0 {
                 card.pending_etb_counters
                     .push((crate::card::CounterType::PlusOnePlusOne, n));
             }
         }
-        kind.creature && spent.contains(&SpendRestriction::CommanderTypeScry)
+        if kind.creature {
+            spent.spent_count(SpendRestriction::CommanderTypeScry)
+        } else {
+            0
+        }
     }
 
     /// CR 603.3 — Path of Ancestry's trigger, put on the stack once the spell
@@ -137,21 +145,24 @@ impl GameState {
     /// The shared-type check reads the commander's types *now* (2023-07-28
     /// ruling: they're checked immediately after the cast, not at activation),
     /// layer-aware while it's on the battlefield.
-    pub(crate) fn push_commander_mana_scry(&mut self, seat: usize, kind: &SpellKind) {
-        if !self.commander_shares_creature_type(seat, kind) {
+    /// CR 106.6a — one trigger per rider pip spent, not one per cast.
+    pub(crate) fn push_commander_mana_scry(&mut self, seat: usize, kind: &SpellKind, pips: u32) {
+        if pips == 0 || !self.commander_shares_creature_type(seat, kind) {
             return;
         }
         let source = self
             .restricted_mana_source(seat, SpendRestriction::CommanderTypeScry)
             .unwrap_or(CardId(0));
-        self.stack.push(
-            TriggerPush::new(
-                source,
-                seat,
-                Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
-            )
-            .build(),
-        );
+        for _ in 0..pips {
+            self.stack.push(
+                TriggerPush::new(
+                    source,
+                    seat,
+                    Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                )
+                .build(),
+            );
+        }
     }
 
     /// True iff a creature spell with `kind`'s types shares one with any of

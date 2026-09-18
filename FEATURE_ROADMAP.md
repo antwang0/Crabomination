@@ -34,7 +34,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | CR 903.11 mana-production restriction | n/a | removed from the CR years ago; correctly absent |
 | "Any color in your commander's color identity" mana | ✅ | `ManaPayload::AnyColorInCommanderIdentity`, `GameState::commander_identity_colors`; Command Tower / Arcane Signet / Commander's Sphere |
 | Commander to hand from the command zone (Command Beacon) | ✅ | `Effect::CommanderToHand`, `game/effects/commander.rs` |
-| CR 106.6 mana provenance — "when that mana is spent to …" | ✅ | `SpendRestriction::{CommanderTypeScry, CommanderCastCounters}` + `is_rider()`; `game/effects/commander.rs::{note_commander_mana_riders, push_commander_mana_scry, spell_kind_for}`; Path of Ancestry / Opal Palace. ⚠ CR 106.6a: two rider pips on one cast fire one trigger, not two (Mana Reflection) |
+| CR 106.6 mana provenance — "when that mana is spent to …" | ✅ | `SpendRestriction::{CommanderTypeScry, CommanderCastCounters}` + `is_rider()`; `game/effects/commander.rs::{note_commander_mana_riders, push_commander_mana_scry, spell_kind_for}`; Path of Ancestry / Opal Palace. CR 106.6a's per-mana count included — `spent_restrictions` carries `(restriction, pips)` |
 | Casting a commander for an **alternative** cost from the command zone | ✅ | `actions.rs::cast_spell_alternative_from` over `AltCastZone` — one body for both zones; CR 903.8's tax is pushed ahead of the reductions. `GameAction::CastFromCommandZone { alternative, pitch_card }` |
 | "Can be your commander" on a non-creature (planeswalker commanders) | ✅ | `CardDefinition::can_be_commander`, read by `validate_commander_deck`; Freyalise, Llanowar's Fury in `sets::cmdr` (32 more such cards exist, none implemented) |
 

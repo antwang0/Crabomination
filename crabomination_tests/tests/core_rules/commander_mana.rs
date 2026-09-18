@@ -51,11 +51,14 @@ fn commander_game() -> (GameState, crabomination::card::CardId) {
 #[test]
 fn path_of_ancestry_triggers_on_a_shared_type_creature() {
     let (mut g, _cmd) = commander_game();
-    // Grizzly Bears is a Bear, like the commander. {1}{G}.
+    // Grizzly Bears is a Bear, like the commander. {1}{G}: one rider pip pays
+    // the {G} (restricted drains first), plain mana pays the {1}, so exactly
+    // one pip is spent and CR 106.6a's count is one.
     let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
     g.players[0]
         .mana_pool
-        .add_restricted(Color::Green, 2, SpendRestriction::CommanderTypeScry);
+        .add_restricted(Color::Green, 1, SpendRestriction::CommanderTypeScry);
+    g.players[0].mana_pool.add_colorless(1);
     g.add_card_to_library(0, catalog::forest());
     g.perform_action(GameAction::CastSpell {
         card_id: bears,
@@ -149,6 +152,33 @@ fn path_of_ancestry_enters_tapped_and_taps_for_identity_mana() {
     );
 }
 
+/// CR 106.6a — "a separate delayed triggered ability is created for each mana
+/// produced". Two Path of Ancestry pips on one creature spell (Mana Reflection
+/// doubling the source) scry twice, and the ruling is explicit that this is
+/// two scry-1 triggers rather than one scry 2.
+#[test]
+fn cr_106_6a_two_rider_pips_fire_two_triggers() {
+    let (mut g, _cmd) = commander_game();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    // Two rider pips and nothing else: both are spent on {1}{G}.
+    g.players[0]
+        .mana_pool
+        .add_restricted(Color::Green, 2, SpendRestriction::CommanderTypeScry);
+    g.add_card_to_library(0, catalog::forest());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    assert_eq!(g.stack.len(), 3, "the spell and one trigger per rider pip");
+    assert!(matches!(g.stack[0], StackItem::Spell { .. }));
+    assert!(matches!(g.stack[1], StackItem::Trigger { .. }));
+    assert!(matches!(g.stack[2], StackItem::Trigger { .. }));
+}
+
 // ── Opal Palace ───────────────────────────────────────────────────────────
 
 /// Opal Palace: mana spent to cast your commander gives it one additional
@@ -184,10 +214,13 @@ fn opal_palace_counters_include_the_cast_in_progress() {
 fn opal_palace_counters_scale_with_the_cast_count() {
     let (mut g, cmd) = commander_game();
     g.commander_cast_count.insert(cmd, 2);
-    // {G} printed + {4} tax (CR 903.8: {2} per prior cast).
+    // {G} printed + {4} tax (CR 903.8: {2} per prior cast). One rider pip for
+    // the {G}, plain mana for the tax, so the CR 106.6a count is one and the
+    // counters are purely the cast count.
     g.players[0]
         .mana_pool
-        .add_restricted(Color::Green, 5, SpendRestriction::CommanderCastCounters);
+        .add_restricted(Color::Green, 1, SpendRestriction::CommanderCastCounters);
+    g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::CastFromCommandZone {
         card_id: cmd,
         target: None,
@@ -202,6 +235,34 @@ fn opal_palace_counters_scale_with_the_cast_count() {
     assert_eq!(
         g.battlefield_find(cmd).expect("commander resolved").counter_count(CounterType::PlusOnePlusOne),
         3,
+    );
+}
+
+/// CR 106.6a for the other rider: two doubled Opal Palace pips spent on the
+/// commander are two counters for each prior command-zone cast, not one.
+#[test]
+fn cr_106_6a_two_opal_pips_double_the_counters() {
+    let (mut g, cmd) = commander_game();
+    g.commander_cast_count.insert(cmd, 1);
+    // {G} printed + {2} tax, paid entirely from three rider pips.
+    g.players[0]
+        .mana_pool
+        .add_restricted(Color::Green, 3, SpendRestriction::CommanderCastCounters);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("second cast");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(cmd).expect("resolved").counter_count(CounterType::PlusOnePlusOne),
+        6,
+        "3 pips x 2 command-zone casts",
     );
 }
 
@@ -234,6 +295,7 @@ fn opal_palace_counters_only_the_commander_and_only_its_own_mana() {
     g.players[0]
         .mana_pool
         .add_restricted(Color::Green, 2, SpendRestriction::CommanderCastCounters);
+    g.add_card_to_library(0, catalog::forest());
     g.perform_action(GameAction::CastSpell {
         card_id: bears,
         target: None,

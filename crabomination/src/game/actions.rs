@@ -2942,7 +2942,8 @@ impl crate::game::GameState {
         kind: &crate::mana::SpellKind,
     ) {
         use crate::mana::SpendRestriction;
-        if receipt.side_effects.spent_restrictions.iter().any(|r| match r {
+        // Both riders here are idempotent, so the CR 106.6a count is not read.
+        if receipt.side_effects.spent_restrictions.iter().any(|(r, _)| match r {
             SpendRestriction::CreatureOfTypeUncounterable(_) => true,
             // Boseiju — only an instant/sorcery funded this way is stamped.
             SpendRestriction::InstantSorceryUncounterable => kind.instant_or_sorcery,
@@ -2951,9 +2952,7 @@ impl crate::game::GameState {
             self.cast_paid_uncounterable = true;
         }
         // Generator Servant — mana spent on a creature spell grants it haste.
-        if kind.creature
-            && receipt.side_effects.spent_restrictions.contains(&SpendRestriction::CreatureHaste)
-        {
+        if kind.creature && receipt.side_effects.spent(SpendRestriction::CreatureHaste) {
             let p = self.priority.player_with_priority;
             self.players[p].pending_creature_etb_keywords.push(crate::card::Keyword::Haste);
         }
@@ -8630,7 +8629,7 @@ impl GameState {
         // Mana provenance (Opal Palace's counters ride the card; Path of
         // Ancestry's trigger waits until the spell is on the stack).
         let provenance_scry = self.note_commander_mana_riders(
-            &receipt.side_effects.spent_restrictions,
+            &receipt.side_effects,
             &spell_kind,
             &mut card,
         );
@@ -8645,9 +8644,7 @@ impl GameState {
             mana_spent,
             true,
         );
-        if provenance_scry {
-            self.push_commander_mana_scry(p, &spell_kind);
-        }
+        self.push_commander_mana_scry(p, &spell_kind, provenance_scry);
 
         Ok(events)
     }
@@ -11279,7 +11276,7 @@ impl GameState {
         *self.commander_cast_count.entry(card_id).or_insert(0) += 1;
         let mut card = card;
         let provenance_scry = self.note_commander_mana_riders(
-            &receipt.side_effects.spent_restrictions,
+            &receipt.side_effects,
             &spell_kind,
             &mut card,
         );
@@ -11303,9 +11300,7 @@ impl GameState {
             mana_spent,
             false,
         );
-        if provenance_scry {
-            self.push_commander_mana_scry(p, &spell_kind);
-        }
+        self.push_commander_mana_scry(p, &spell_kind, provenance_scry);
 
         Ok(events)
     }
@@ -11957,7 +11952,7 @@ impl GameState {
         let events = auto_events;
         let mut card = card;
         let provenance_scry = self.note_commander_mana_riders(
-            &receipt.side_effects.spent_restrictions,
+            &receipt.side_effects,
             &spell_kind,
             &mut card,
         );
@@ -11972,9 +11967,7 @@ impl GameState {
             alt_mana_spent,
             true,
         );
-        if provenance_scry {
-            self.push_commander_mana_scry(p, &spell_kind);
-        }
+        self.push_commander_mana_scry(p, &spell_kind, provenance_scry);
         Ok(events)
     }
 

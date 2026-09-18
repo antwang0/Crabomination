@@ -886,9 +886,39 @@ const fn prov_index(c: Option<Color>) -> usize {
 pub struct PaymentSideEffects {
     pub life_lost: u32,
     /// Restrictions of the spend-restricted mana that actually funded the
-    /// payment — lets the cast path apply spend-triggered riders (Cavern
-    /// of Souls' "and that spell can't be countered").
-    pub spent_restrictions: Vec<SpendRestriction>,
+    /// payment, **with how many pips of each** — lets the cast path apply
+    /// spend-triggered riders (Cavern of Souls' "and that spell can't be
+    /// countered").
+    ///
+    /// CR 106.6a makes the count load-bearing: a source whose mana was
+    /// doubled creates "a separate delayed triggered ability … for each mana
+    /// produced", so two Path of Ancestry pips spent on one creature spell
+    /// scry twice. Riders that are idempotent (uncounterable, haste) just
+    /// ignore it. Read through [`Self::spent`] / [`Self::spent_count`] rather
+    /// than by indexing.
+    pub spent_restrictions: Vec<(SpendRestriction, u32)>,
+}
+
+impl PaymentSideEffects {
+    /// Record `n` more pips spent under `r`, merging into the existing entry.
+    fn note_spent(&mut self, r: SpendRestriction, n: u32) {
+        match self.spent_restrictions.iter_mut().find(|(k, _)| *k == r) {
+            Some(e) => e.1 = e.1.saturating_add(n),
+            None => self.spent_restrictions.push((r, n)),
+        }
+    }
+
+    /// True iff any mana under `r` funded the payment — the question every
+    /// idempotent rider asks.
+    pub fn spent(&self, r: SpendRestriction) -> bool {
+        self.spent_count(r) > 0
+    }
+
+    /// How many pips under `r` funded the payment. CR 106.6a's "for each mana
+    /// produced" counts this, not the restriction.
+    pub fn spent_count(&self, r: SpendRestriction) -> u32 {
+        self.spent_restrictions.iter().find(|(k, _)| *k == r).map_or(0, |(_, n)| *n)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1499,8 +1529,8 @@ impl ManaPool {
                     let d = rem.min(entry.0);
                     entry.0 -= d;
                     rem -= d;
-                    if d > 0 && !side_effects.spent_restrictions.contains(&entry.1) {
-                        side_effects.spent_restrictions.push(entry.1);
+                    if d > 0 {
+                        side_effects.note_spent(entry.1, d);
                     }
                 }
             }
@@ -1525,8 +1555,8 @@ impl ManaPool {
                     let d = rem.min(entry.1);
                     entry.1 -= d;
                     rem -= d;
-                    if d > 0 && !side_effects.spent_restrictions.contains(&entry.2) {
-                        side_effects.spent_restrictions.push(entry.2);
+                    if d > 0 {
+                        side_effects.note_spent(entry.2, d);
                     }
                 }
             }
