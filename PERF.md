@@ -8424,6 +8424,56 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-362)` the player-control table stays EMPTY when nobody is controlling anybody — **fixed -0.548 / cube -0.410 / sealed -0.513 %**
+
+**The largest single row this file has taken in twelve passes, and it is four
+lines.** `apply_pending_player_control` ran at every turn-begin and did
+
+```rust
+    self.controlled_by.resize(self.players.len(), None);
+    for slot in self.controlled_by.iter_mut() { *slot = None; }
+```
+
+before asking whether anything was pending. So from turn one on, every game
+carried a materialized `Vec<Option<usize>>` — `[None, None]` in every game
+without a Mindslaver — and `GameState::clone` copied it. That is **one
+allocation on 21,532 of `cube`'s 22,034 probe clones**, i.e. 97.7 % of them,
+for a table nothing ever reads a `Some` out of. The fix is to ask first and
+drop the buffer when the answer is "nobody": the one reader
+(`acting_seat_for`) goes through `get`, so **the empty table already answers
+exactly what the filled one did.**
+
+```text
+                  (-361) tip        (-362)            delta
+  fixed            572,061,894       568,924,883       -0.5484 %
+  cube           1,492,003,099     1,485,887,871       -0.4099 %
+  sealed         1,610,978,327     1,602,707,560       -0.5134 %
+
+  allocations     fixed  284,846 ->  273,396   -11,450
+                  cube   710,391 ->  688,811   -21,580
+                  sealed 884,184 ->  854,396   -29,788
+  and `GameState::clone` (48,024) leaves the alloc table's top six entirely.
+```
+
+📐📐 **AN ALLOCATION ON THE PROBE-CLONE PATH IS 278 Ir, NOT 222** — 274 /
+283 / 278 across the three pools, measured by deletion on three different
+counts. `(-355)`'s 222 was a deletion too, so the gap is not method: this one
+also deletes the `resize`-and-fill loop and the `Vec::drop` that ended the
+clone, where `(-355)`'s buffers were built once and read. **Quote 222 for a
+buffer a caller builds; quote ~278 for one `GameState::clone` copies.**
+
+🔎🔎 **AND THE LEAD THIS OPENS IS A QUESTION, NOT A TABLE: "which of
+`GameState`'s fields is materialized eagerly and empty in every real game?"**
+Nothing in the allocation census pointed here — `GameState::clone` had sat at
+48,024 for eleven passes as "the probe-clone family, priced by which group a
+field lives in". Ranking that row **by its own source line** (the
+`profiling-lines` dump, `cg_alloc_sites.py`) splits it into exactly two
+lines, `players` (22,034) and `controlled_by` (21,532), and the second one
+should not have existed. ⚠ `resize(self.players.len(), …)` has **one** call
+site in the tree, so this particular shape is closed — but "eager default
+table" is not. `players` is the remaining half and needs an inline buffer,
+not a deletion.
+
 ### `(-361)` the trigger-doubler loops hand their effect to the last fire instead of cloning it — **fixed +0.010 / cube -0.194 / sealed -0.102 %**
 
 Six `for _ in 0..fires { … effect.clone() … }` loops, one device. `fires` is

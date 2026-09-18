@@ -59,6 +59,22 @@ fn cr_723_1_control_expires_after_that_turn() {
     assert_eq!(g.acting_seat_for(1), 0);
     end_turn(&mut g);
     assert_eq!(g.acting_seat_for(1), 1, "back to playing themselves");
+    // PERF `(-362)`: an expired control drops the table rather than filling
+    // it with `None`, so every reader must go through `get`, never an index.
+    assert!(g.controlled_by.is_empty(), "the cleared table is the empty one");
+}
+
+/// PERF `(-362)` — an ordinary turn never materializes `controlled_by`: it is
+/// one allocation per `GameState::clone` (21,532 of a six-game `cube` run) and
+/// the empty table answers every read the filled one does.
+#[test]
+fn an_uncontrolled_turn_leaves_the_control_table_empty() {
+    let mut g = main_phase();
+    end_turn(&mut g);
+    assert!(g.controlled_by.is_empty());
+    for seat in 0..g.players.len() {
+        assert_eq!(g.acting_seat_for(seat), seat);
+    }
 }
 
 /// CR 723.1a — the most recently created control effect is the one that works.

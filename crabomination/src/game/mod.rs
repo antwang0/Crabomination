@@ -2918,6 +2918,13 @@ pub struct GameState {
     /// CR 723.1 — who is making `seat`'s decisions this turn, if anyone.
     /// Indexed by seat; set as that player's turn begins and cleared when the
     /// next turn begins.
+    ///
+    /// ⚠ **EMPTY IS THE CLEARED STATE, and a read must use `get`, never an
+    /// index.** `apply_pending_player_control` drops the buffer instead of
+    /// refilling it with `None`, because a materialized table is one
+    /// allocation on every `GameState::clone` — 21,532 of a six-game `cube`
+    /// run, for a value no game without a Mindslaver ever reads (PERF
+    /// `(-362)`).
     #[serde(default)]
     pub controlled_by: Vec<Option<usize>>,
     /// Monotonic counter handing out `ReplacementId`s. Defaults to 0
@@ -8696,20 +8703,27 @@ impl GameState {
     /// starting, and drop any control that expired with the previous turn.
     /// Called from the turn-begin path.
     pub fn apply_pending_player_control(&mut self, seat: usize) {
-        self.controlled_by.resize(self.players.len(), None);
-        for slot in self.controlled_by.iter_mut() {
-            *slot = None;
-        }
         // CR 723.1a — the most recently created effect wins.
-        if let Some(pos) = self.pending_player_control.iter().rposition(|(c, _)| *c == seat) {
-            let (_, controller) = self.pending_player_control.remove(pos);
-            retain_cold!(self.pending_player_control, |(c, _)| *c != seat);
-            self.controlled_by[seat] = Some(controller);
-            // CR 723.4 — the controller sees everything the controlled player
-            // can see, starting with their hand.
-            if !self.hands_revealed_to.contains(&(controller, seat)) {
-                self.hands_revealed_to.push((controller, seat));
-            }
+        let Some(pos) = self.pending_player_control.iter().rposition(|(c, _)| *c == seat) else {
+            // Nobody takes control this turn, so every slot clears — and the
+            // EMPTY table *is* the cleared table, because the one reader
+            // (`acting_seat_for`) goes through `get`. Dropping the buffer
+            // instead of filling it with `None` keeps it out of
+            // `GameState::clone`, where it was **21,532 of `cube`'s
+            // allocations** — one per probe clone, for a table no game
+            // without a Mindslaver ever reads (PERF `(-362)`).
+            self.controlled_by = Vec::new();
+            return;
+        };
+        self.controlled_by.clear();
+        self.controlled_by.resize(self.players.len(), None);
+        let (_, controller) = self.pending_player_control.remove(pos);
+        retain_cold!(self.pending_player_control, |(c, _)| *c != seat);
+        self.controlled_by[seat] = Some(controller);
+        // CR 723.4 — the controller sees everything the controlled player
+        // can see, starting with their hand.
+        if !self.hands_revealed_to.contains(&(controller, seat)) {
+            self.hands_revealed_to.push((controller, seat));
         }
     }
 
