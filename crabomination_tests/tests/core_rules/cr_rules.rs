@@ -11627,3 +11627,82 @@ fn cr_613_5_has_color_sees_a_statically_set_colour() {
         "and HasColor(Green) must not",
     );
 }
+
+/// CR 602.2b / 601.2h — activating an ability means paying its costs, and a
+/// cost you can't pay stops the activation. An ability with *two* costs (a
+/// mana cost and a sacrifice) has to check both: Haywire Mite is
+/// "{G}, Sacrifice this creature: Exile target noncreature artifact", and with
+/// no green mana anywhere it is not activatable however sacrificeable the Mite
+/// is.
+///
+/// Found by the four-seat Commander demo, through the bot's `sink_facts` gate
+/// audit: the gate skipped the ability (no green coverable — correct) and the
+/// engine's dry run accepted it anyway, which is the direction that is a bug.
+#[test]
+fn cr_602_2b_a_sac_ability_still_needs_its_mana() {
+    let mut g = two_player_game();
+    let mite = g.add_card_to_battlefield(0, catalog::haywire_mite());
+    let signet = g.add_card_to_battlefield(1, catalog::azorius_signet());
+    g.clear_sickness(mite);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no mana anywhere");
+
+    let activate = GameAction::ActivateAbility {
+        card_id: mite,
+        ability_index: 0,
+        target: Some(crabomination::game::types::Target::Permanent(signet)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    assert!(
+        g.perform_action(activate.clone()).is_err(),
+        "the {{G}} is unpayable, so the activation is illegal",
+    );
+    assert!(g.battlefield_find(mite).is_some(), "and the Mite was not sacrificed");
+    assert!(g.battlefield_find(signet).is_some(), "and nothing was exiled");
+
+    // With the mana it is legal, which is what makes the rejection above about
+    // the cost rather than about the ability.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(activate).expect("{G} in the pool pays for it");
+    assert!(g.battlefield_find(mite).is_none(), "the Mite is sacrificed as a cost");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the ability");
+    }
+    assert!(g.battlefield_find(signet).is_none(), "and the Signet is exiled");
+}
+
+/// The same rule on a `wants_ui` seat, which is what a Commander pod runs:
+/// an unpayable cost must still be a rejection, not a suspend the caller can
+/// mistake for success. `GameState::accept` — the bot's dry run — reads "no
+/// error" as "this action is legal", so an activation that parks a decision
+/// instead of failing tells the bot it can do something it cannot.
+#[test]
+fn cr_602_2b_an_unpayable_activation_does_not_suspend_for_a_ui_seat() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mite = g.add_card_to_battlefield(0, catalog::haywire_mite());
+    let signet = g.add_card_to_battlefield(1, catalog::azorius_signet());
+    g.clear_sickness(mite);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+
+    let activate = GameAction::ActivateAbility {
+        card_id: mite,
+        ability_index: 0,
+        target: Some(crabomination::game::types::Target::Permanent(signet)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    };
+    let outcome = g.perform_action(activate);
+    assert!(
+        outcome.is_err(),
+        "no green anywhere, so the activation is illegal for a UI seat too; got {outcome:?} \
+         with pending {:?}",
+        g.pending_decision.as_ref().map(|d| d.acting_player()),
+    );
+    assert!(g.battlefield_find(mite).is_some(), "and the Mite was not sacrificed");
+}

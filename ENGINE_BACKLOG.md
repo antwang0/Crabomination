@@ -82,6 +82,56 @@ the handoff.
 
 # Bugs & robustness
 
+## OPEN 2026-09-18 (the forty-second find, and it is HALF-DIAGNOSED ON PURPOSE) — an activated ability with a `{G}` cost completed with NO mana anywhere, on one board
+
+The bot's own gate audit found it, which is what that audit is for. `sink_facts`
+refuses to light a sink bit for an ability whose *coloured* pips
+`available_mana` cannot cover, and the `gated_pick!` audit asserts that
+`would_accept` — the authority — agrees. On one board it does not:
+
+```text
+main_phase gate sink::AB_SAC skipped a real action: Haywire Mite ability 0 in
+battlefield, printed cost [Colored(Green)] gy=false hand=false exile=false,
+available total 0 by_color [0, 0, 0, 0, 0]; pool total 0 w0 u0 b0 r0 g0 c0;
+reaccept true pending=None mite_on_bf=false manual_mana=false wants_ui=true
+prio=0 ctrl=0 pools=[0, 0, 0, 0] stack=3;
+board [Plains (T), Forest (T), Plains (T), Plains (T), Haywire Mite,
+Mana Vault (T), Sol Ring (T), Plains (T), Sigarda, Host of Herons (T),
+Path of Ancestry (T), Greater Sandwurm, Daru Warchief]
+```
+
+Haywire Mite is `{G}, Sacrifice this creature: Exile target noncreature
+artifact`. Read the probe columns: `pending=None` (it did not suspend into a
+cost modal), `mite_on_bf=false` (the **sacrifice half of the cost was paid**),
+the ability is on the stack, no land of the seat's was tapped by the probe,
+every seat's pool is empty, and `prio == ctrl`, so it is not a wrong-actor bug
+either. The engine completed an activation whose `{G}` it never paid.
+
+**What is ruled out, measured not guessed.** Two regression tests in
+`core_rules/cr_rules.rs` (`cr_602_2b_a_sac_ability_still_needs_its_mana` and
+`cr_602_2b_an_unpayable_activation_does_not_suspend_for_a_ui_seat`) put the
+same card, cost and target in a two-player game with an empty stack and assert
+the rejection — **both pass**. So the engine rejects this activation in the
+simple case, and the defect is state-dependent. The differences measured
+between the two states are: a Commander game at four seats, and **`stack=3`**
+— the failing board already had two items on the stack when the bot activated.
+That is the first thing to try.
+
+**Release impact: none.** The gate is clear, so `gated_pick!` discards the pick
+and the bot never submits it. The assertion is debug-only. It is filed as a
+bug and not as a nit because the *engine* half is real: a cost that was not
+paid is a cost that was not paid.
+
+**How to reach the board again.** It is not reachable from the tree as it
+stands. Wire `targeting.rs`'s `opp` to `default_hostile_opponent` instead of
+`first_alive_opponent_of` (one line, the ranked pick rather than the positional
+one) and run
+`cargo nextest run -p crabomination -E 'test(bot_vs_bot_commander_demo_terminates)'`
+— seed `0xC0FFEE`. That wiring was reverted in the commit that added
+`default_hostile_opponent` precisely so this stayed a filed bug rather than a
+shipped red suite; the ranked pick is a *policy* improvement for the
+auto-targeter and is worth taking once this is closed.
+
 ## FIXED 2026-09-17 (forty-first find) — a presence gate whose fold mask named a family NONE of the modifications it looks for carries
 
 The find above was fixed by `(-345)`, which added the two closures and then
