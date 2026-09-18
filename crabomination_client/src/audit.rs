@@ -111,7 +111,8 @@ pub enum AuditPool {
     Stx,
     BrgDemo,
     GoryoDemo,
-    RofellosCommander,
+    /// The four Commander pod target decks (`crabomination::pod::decks`).
+    CommanderPods,
 }
 
 impl AuditPool {
@@ -121,7 +122,7 @@ impl AuditPool {
         AuditPool::Stx,
         AuditPool::BrgDemo,
         AuditPool::GoryoDemo,
-        AuditPool::RofellosCommander,
+        AuditPool::CommanderPods,
     ];
 
     pub fn label(self) -> &'static str {
@@ -131,7 +132,7 @@ impl AuditPool {
             AuditPool::Stx => "STX",
             AuditPool::BrgDemo => "BRG Demo",
             AuditPool::GoryoDemo => "Goryo Demo",
-            AuditPool::RofellosCommander => "Rofellos",
+            AuditPool::CommanderPods => "Commander",
         }
     }
 }
@@ -203,10 +204,10 @@ pub fn catalog() -> Vec<CatalogEntry> {
         }
         tag(crabomination::demo::brg_combo_deck(), AuditPool::BrgDemo);
         tag(crabomination::demo::goryos_vengeance_deck(), AuditPool::GoryoDemo);
-        tag(
-            crabomination::demo::rofellos_commander_main(),
-            AuditPool::RofellosCommander,
-        );
+        for deck in crabomination::pod::target_decks() {
+            tag(deck.commanders, AuditPool::CommanderPods);
+            tag(deck.main, AuditPool::CommanderPods);
+        }
 
         let mut entries: Vec<CatalogEntry> = order
             .into_iter()

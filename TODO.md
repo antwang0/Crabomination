@@ -49,6 +49,18 @@ sixty-seventh pass, so don't re-take that.
 14. **Build times are CLOSED as a lever** (PERF's three build-time sections). The one thing to keep doing: `cargo check -p crabomination --no-default-features` while iterating, the affected test binary only, full suite at the end.
 15. **Cards & rules, leftover only:** `audit_dropped_may` 199; `audit_keyword_drift`'s last 4 (bestow / escalate / flashback / kicker) each need a PRIMITIVE; card skips `nocolors` 950 / `noback` 60 / `nosubtypes` 43 / `nokeywords` 29; `audit_incomplete` 858 documented approximations. `audit_panics` clean (70 sites off the bin/test paths: 59 guarded, 11 lock-poison, **0 bare**). ⚠ 605 `definition.is_*()` reads remain and **that is NOT a grep to run to the end**.
 
+## NEXT — Commander. The other 3-hour handoff; <= 15 lines. Rewritten each Commander run.
+
+1. **Where it stands:** CR 903 core is ✅ (format flag, tax, 903.9a SBA vs 903.9b replacement, 21 damage, identity, validation). The **map is FEATURE_ROADMAP's "Commander status"** — read it, don't re-audit. Per-deck completion is **DECK_FEATURES' "Commander target decks"**.
+2. **The runner:** `crabomination::pod` (own module) + `bot_ladder --commander [--seats N] [--games N] [--seed N]`. Four legal 100-card decks in `pod/decks.rs` (Sigarda GW / Judith BR / Hanna UW / Tatyova GU); `pod::tests` validates each through `validate_commander_deck` every run, so an illegal list cannot land.
+3. **The instrument that pays:** the pod run is where four bugs came from in one sitting. Run it before and after anything Commander-shaped; a stall rate that moves is a bug, not noise.
+4. 🔎 **The method that found them all: a *pending decision* suppresses every other seat's actions.** So anything that leaves one un-answerable wedges the whole table and reports as "no legal move". CR 800.4a was leaving one pointed at a player who had left the game — 15 % of four-seat games. Look there first when the stall rate moves.
+5. **Still ⏳, roughly in value order:** Eminence and commander ninjutsu (abilities that function from the command zone — no card implemented yet, so a primitive without a consumer); "can be your commander" on non-creatures (needs a `CardDefinition` flag; `Ransack, the Lab` and `Gather, the Townsfolk` are implemented and print it); Lieutenant / "if you control your commander" (`Thunderfoot Baloth` is implemented; `is_commander` is the hook); the "Partner with" search trigger; join forces; Friends forever / Doctor's companion (no card).
+6. **Casting a commander for an alternative cost from the command zone is missing** — `cast_from_command_zone` has no alt-cost path. The tax is an additional cost and must still apply.
+7. **Cards:** Path of Ancestry and Opal Palace are the two staples left, both blocked on the *same* primitive — mana provenance ("when that mana is spent to …"). Building it unblocks both. All ten Signets and Talismans are implemented and would improve the four decks' fixing for free.
+8. **The color-identity audit is a ratchet** (`cr_903_4_computed_color_identity_matches_scryfall`, core_rules). 18,058 cards, 15 known gaps listed with reasons in `KNOWN_IDENTITY_GAPS`. A card that starts computing correctly must be dropped from that list or the test fails.
+9. ⚠ **Golden traces are the Commander guardrail too**: with no commander seated, every Commander change must be byte-identical in two-player games. `AnyColorInCommanderIdentity` keeps the old any-color behaviour when the identity set is empty *for exactly this reason*; don't "fix" it without re-reading that arm's comment.
+
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
