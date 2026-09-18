@@ -66,12 +66,21 @@ neither cycle, and that is the interesting half rather than an omission: both
 are two-colour in CR 903.4 identity (the pips are in the rules text, not the
 mana cost), so `validate_commander_deck` rejects either in a mono-red list.
 
-⏳ **Open deck-quality work**, no engine work needed:
+⏳ **Open deck-quality work**, no engine work needed — and the pod now has a
+number that says which to do first:
+
+- ⚠ **Judith is not competitive.** At seed 43, 400 four-seat games:
+  Sigarda **45.5 %** / Tatyova 26.8 % / Hanna 22.2 % / **Judith 5.5 %**. A
+  four-way field should sit near 25 % each; 5.5 % means the aristocrats list
+  does not assemble. That is the deck to look at, and `bot_ladder --commander
+  --games 400 --seed 43` prints the table.
 - **Board wipes are one seat's**: Blasphemous Act and Mizzium Mortars are both
   Krark's, and the other four lists have none at all. A stalled four-seat board
-  therefore has one seat that can break it. Cheap next step if the pod's
-  turns/game starts drifting up — and it moves the committed outcome table, so
-  re-bless in the same commit.
+  therefore has one seat that can break it.
+
+Both move the committed outcome table
+(`pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table`), so
+re-bless in the same commit.
 
 ## Modern supplement (`catalog::sets::decks::modern`)
 

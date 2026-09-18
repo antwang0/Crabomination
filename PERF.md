@@ -3015,6 +3015,68 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-18 (the fourth Commander session, tip `06d60b26`) — guardrail
+
+Six Commander rules changes, a bot heuristic and an engine targeting change,
+and the `--bench` **invariant is still byte-identical**:
+
+```text
+--bench at 06d60b26 (release, CRAB_THREAD_CHECK=1):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+  thread_determinism ok (3 vs 1 threads identical)
+  peak_rss_mib      27.4
+  games_per_s     519.16 at host_calib_ms 47, Intel Xeon @ 2.10 GHz
+```
+
+⚠ **A different host from the last block** (2.10 GHz, calib 47, against 2.80 GHz
+and calib 46), so `games_per_s` is not comparable across the two and is not
+being compared. The invariant columns are, and they did not move. `peak_rss_mib`
+reads 27.4 against 25.4 — the five-seat Partner deck and the wider catalog are
+both under it, and it is a high-water mark rather than a throughput number.
+
+Shipped under it: CR 800.4a-closing/800.4j (priority), CR 800.4d (triggers),
+CR 800.4m (durations), CR 800.4a/b's player-control half, CR 903.3 Vehicle and
+Spacecraft commanders, and `default_hostile_opponent` / `first_alive_opponent_of`.
+**None of it is reachable in a duel, and each for a stated reason**: the four
+CR 800.4 changes are all gated on "somebody has left the game", which is false
+on every turn of a two-player game (one elimination ends it); CR 903.3 is deck
+validation, which `--bench` does not run; and both opponent helpers short-circuit
+to the single candidate before any ranking when there is one opponent. That
+short-circuit is the design, not an accident — see their doc comments.
+
+**The pod, 1,700 games over six configurations at 2/3/4/5 seats:**
+
+```text
+--commander --games 400 --seed 43              400 / 0 undecided / 39.65 turns / 1,783.5 actions
+--commander --seats 3 --games 200 --seed 97    200 / 0 / 29.00 / 1,038.6
+--commander --seats 5 --games 300 --seed 5150  300 / 0 / 49.95 / 2,745.3   (Partner seat)
+--commander --seats 5 --games 300 --seed 7701  300 / 0 / 52.05 / 2,824.9   (Partner seat)
+--commander --games 300 --seed 4242            300 / 0 / 39.48 / 1,777.4
+--commander --seats 2 --games 200 --seed 4243  200 / 0 / 18.14 /   482.6
+--commander --games 400 --seed 43 --threads 1: identical in every column
+```
+
+Zero panics, zero stalls, 100 % decided at every seat count.
+
+🔎 **AND THE AGGREGATE CONTRADICTED THE THREE GOLDEN SEEDS, WHICH IS WHY THE
+AGGREGATE IS THE NUMBER.** `default_hostile_opponent` sends every seat at the
+weakest opponent instead of at its left neighbour, and the committed
+outcome table's three games got **longer** for it (67→92 and 46→79 turns) —
+which read as the obvious consequence: a ring of one-way attacks kills everyone
+at once, focus-fire kills one and leaves three at full life. Over 1,400 games
+every configuration got **shorter** instead: 42.08→39.65 and 41.86→39.48 at
+four seats, 53.85→49.95 and 54.71→52.05 at five, 29.86→29.00 at three,
+18.36→18.14 at two. Three games are three games.
+
+⚠ **Deck balance is the one number that looks wrong**, and it is a deck
+question, not an engine one: at seed 43 the four-seat field is Sigarda 45.5 % /
+Tatyova 26.8 % / Hanna 22.2 % / **Judith 5.5 %**. DECK_FEATURES' open
+deck-quality row is where to take that.
+
 ### 2026-09-18 (the third Commander session, tip `51551a7f`) — guardrail
 
 Five more Commander rules changes and a fifth pod deck, and the `--bench`
