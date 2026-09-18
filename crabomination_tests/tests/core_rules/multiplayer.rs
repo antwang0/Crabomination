@@ -694,12 +694,17 @@ fn apnap_orders_simultaneous_triggers_active_pushed_first() {
     );
 }
 
-/// Same APNAP guarantee with an eliminated seat in the middle of the
-/// cycle: the eliminated player is skipped. Active=0, seat 2 dead, so
-/// the alive cycle is 0 → 1 → 3, and any trigger on seat 2 is filtered
-/// out before reaching the stack (battlefield permanents controlled
-/// by an eliminated player still exist physically, but they shouldn't
-/// re-order the live ones).
+/// CR 101.4 / 800.4d — the same APNAP guarantee with an eliminated seat in
+/// the middle of the cycle. Active=0, seat 2 dead, so the alive cycle is
+/// 0 → 1 → 3 and the live triggers keep that order.
+///
+/// Seat 2's trigger does not reach the stack at all: CR 800.4d, "if a
+/// triggered ability that would be controlled by a player who has left the
+/// game would be put onto the stack, it isn't put on the stack." Its
+/// permanent is still there because this fixture sets `eliminated` directly
+/// rather than running CR 800.4a's departure, which would have removed it —
+/// that is what makes this a test of the *dispatch* filter rather than of
+/// the board.
 #[test]
 fn apnap_skips_eliminated_seat_in_cycle() {
     use crabomination::card::{CardDefinition, CardId, CardType, TriggeredAbility};
@@ -722,17 +727,12 @@ fn apnap_skips_eliminated_seat_in_cycle() {
     g.active_player_idx = 0;
     let seat0 = g.add_card_to_battlefield(0, pinger("Pinger-0"));
     let seat1 = g.add_card_to_battlefield(1, pinger("Pinger-1"));
-    // Seat 2's permanent is still on the battlefield, but the player
-    // is eliminated. With singleton-team semantics there's no special
-    // filter that drops their triggers — they will still appear, but
-    // sorted to the back of APNAP (rank == n_players) since the
-    // alive cycle skips them.
     let seat2 = g.add_card_to_battlefield(2, pinger("Pinger-2"));
     let seat3 = g.add_card_to_battlefield(3, pinger("Pinger-3"));
     g.players[2].eliminated = true;
 
     g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 1 }]);
-    assert_eq!(g.stack.len(), 4);
+    assert_eq!(g.stack.len(), 3, "CR 800.4d — the dead seat's trigger is not put on the stack");
 
     let sources: Vec<CardId> = g
         .stack
@@ -742,10 +742,13 @@ fn apnap_skips_eliminated_seat_in_cycle() {
             other => panic!("expected only Trigger stack items, got {other:?}"),
         })
         .collect();
-    // APNAP-rank for active=0 (seat 2 dead): seat 0 → 0, seat 1 → 1,
-    // seat 3 → 2, seat 2 → n_players (fall-through). Push order
-    // therefore: 0, 1, 3, 2.
-    assert_eq!(sources, vec![seat0, seat1, seat3, seat2]);
+    // APNAP rank for active=0 with seat 2 out of the game: 0 → 0, 1 → 1,
+    // 3 → 2. Seat 2 has no rank because it has no trigger.
+    assert_eq!(sources, vec![seat0, seat1, seat3]);
+    assert!(
+        g.battlefield_find(seat2).is_some(),
+        "the permanent is untouched — CR 800.4d filters the trigger, not the board",
+    );
 }
 
 // ── Phase G-lite — game ends on last team standing ────────────────────────
