@@ -3015,6 +3015,54 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-18 (the second Commander session, tip `d6869b99`) — guardrail
+
+Same obligation, same instrument, and the `--bench` **invariant is unmoved by
+four more Commander rules features** (CR 601.2f alt-cost casting from the
+command zone, CR 113.6b's trigger and static zones, CR 702.49d commander
+ninjutsu with a bot candidate for it, CR 207.2c join forces):
+
+```text
+--bench at d6869b99 (release):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+  peak_rss_mib      25.7
+  games_per_s     481.82 at host_calib_ms 44, Intel Xeon @ 2.80 GHz
+```
+
+**The pod run caught the one thing that did move, and it was a rules bug.**
+The commander-ninjutsu commit taught `move_card_to` to scan command zones;
+that is too general (a card there is a new object, CR 400.7, so an effect
+holding its id must not reach in), and the pod read **41.74 turns/game against
+the committed 41.83** — different games, not fewer pointless actions, which is
+the distinction this file's own note says to read. Narrowing the extraction to
+`ninjutsu`'s own caller put every column back:
+
+```text
+--commander --games 400 --seed 43    400 games, 0 undecided
+  41.83 turns/game, 1,969.0 actions/game   — every column matches the reference
+  --threads 1: identical in every column   — the N-seat determinism proof
+--commander --seats 3 --games 200 --seed 97   200 / 0 / 30.06 / 1,096.5  (matches)
+--commander --games 600 --seed 4242           600 / 0 / 42.12 / 1,977.7  (fresh seed)
+--commander --seats 2 --games 200 --seed 4243 200 / 0 / 18.10 /   481.4  (fresh seed)
+```
+
+1,400 pod games over three seeds and 2/3/4 seats: **zero panics, zero stalls,
+100 % decided.**
+
+📐 **One Commander-path perf row, taken because it was a panic first.**
+`ManaPayload::AnyColorInCommanderIdentity` asked `color_identity` for the
+seat's identity on *every* Command Tower / Arcane Signet / Commander's Sphere
+tap, and that walk serializes a whole `CardDefinition` through
+`serde_json::to_value` — behind an `expect` that was the engine's only bare
+panic off the bin/test paths. CR 903.4a fixes identity before the game, so
+`Player.commander_identity` caches it at seating. Same box, same session, the
+4-seat pod: **326.26 → 348.44 games/s (+6.8 %)**, and `--bench` unmoved
+because a duel never asks. ⚠ Not comparable to the 2.10 GHz readings above it.
+
 ### 2026-09-18 (the Commander session) — the guardrail, not a perf pass
 
 No perf work. The Commander run's only obligation to this file is that the
