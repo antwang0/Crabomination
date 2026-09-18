@@ -15979,7 +15979,39 @@ the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`..`(-367)`, `(-370)`).
      (`mod.rs:1029`) is the working implementation of this exact device and
      reads a 68-82 % hit rate one level out.
 
-     ⚠⚠ **AND THE OBVIOUS PARK POINT IS THE ONE THAT MUST NOT BE USED —
+     ✅✅ **THE ONE STRUCTURAL UNKNOWN IS NOW MEASURED, AND IT IS FREE — an
+     EMPTY `impl Drop for CowBox<T>` costs +0.004 / +0.001 / +0.00004 %.**
+     Run 2026-09-18 as a null experiment (two builds, no pool), because the
+     release-site park below needs a `Drop` and this file had just refuted
+     two changes on drop-glue grounds:
+
+```text
+                  tip               empty `Drop`      delta
+  fixed            567,672,195       567,693,423       +0.0037 %
+  cube           1,477,715,171     1,477,728,431       +0.0009 %
+  sealed         1,598,603,849     1,598,604,518       +0.00004 %
+```
+
+     📐📐 **SO `(-369)`'s RULE IS ABOUT A LOCAL, NOT ABOUT `Drop`: drop FLAGS
+     on a value moved through returns cost; a FIELD's drop glue is a direct
+     call in the owner's existing glue and costs nothing.** `ComputedList`
+     was returned through four frames and `perform_action_inner` alone paid
+     +764 k; `CowBox` is a field of `GameState` and `PlayerData`, dropped
+     22,034 times a run across twelve `CowBox<Vec<_>>` fields, and the whole
+     workspace pays 13,260 Ir for it. **Ask whether the guard is a LOCAL or a
+     FIELD before pricing its `Drop`.**
+     ⚠ The one edit the `Drop` forces is `into_inner(self) -> T`, which can no
+     longer move `self.0` out (E0509): `ManuallyDrop` + `ptr::read`, five
+     lines, already written once and reverted with the experiment.
+
+     📐 **What that leaves to price, and both are small**: a uniqueness check
+     per drop (`Arc::get_mut(..).is_some()`, an atomic load — ~110 k of them
+     a run against twelve fields) and a TLS park on the handles that ARE
+     unique, which is bounded by the 18,362 unshares. Against ~36,724
+     allocations recovered that is roughly **-0.4 % of `cube`**, and the
+     estimate's remaining unknown is the pool's hit rate, not its cost.
+
+     ⚠⚠ **AND THE OBVIOUS PARK POINT IS STILL THE ONE THAT MUST NOT BE USED —
      worked through 2026-09-18, no build spent, and it is the whole reason
      this entry is filed rather than taken.** The natural move is
      `std::mem::replace` the old handle inside `push` and park *that*. It is
