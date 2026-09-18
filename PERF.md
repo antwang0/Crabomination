@@ -3062,6 +3062,15 @@ short-circuit is the design, not an accident — see their doc comments.
 
 Zero panics, zero stalls, 100 % decided at every seat count.
 
+⚠ **One more catalog commit landed after those readings and was re-gated rather
+than assumed**: the Commander free-spell cycle gaining its
+`ControlsOwnCommander` alternative cost. Two of the four cards are in
+`cube::cube_pool_all()`, so "the condition is false in a duel" was a claim to
+check, not a reason to skip the bench. `--bench` came back byte-identical
+(195,806 / 27.49 / 611.9 / 0 stalls, `determinism ok`, `thread_determinism ok`,
+`peak_rss_mib` 25.6, `games_per_s` 530.90 at calib 46) and the four-seat pod at
+seed 43 unchanged at 39.65 turns.
+
 🔎 **AND THE AGGREGATE CONTRADICTED THE THREE GOLDEN SEEDS, WHICH IS WHY THE
 AGGREGATE IS THE NUMBER.** `default_hostile_opponent` sends every seat at the
 weakest opponent instead of at its left neighbour, and the committed

@@ -158,11 +158,23 @@ pub fn misdirection() -> CardDefinition {
 }
 
 /// Flawless Maneuver — {2}{W} Instant. Creatures you control gain
-/// indestructible until end of turn. (The free-if-you-control-a-commander
-/// alternative cost is dropped.)
+/// indestructible until end of turn. If you control a commander, you may cast
+/// it without paying its mana cost.
 pub fn flawless_maneuver() -> CardDefinition {
     CardDefinition {
         name: "Flawless Maneuver",
+        // CR 118.9 / 903 — "If you control a commander, you may cast this
+        // spell without paying its mana cost": an alternative cost of nothing,
+        // gated at cast time on `ControlsOwnCommander`. The predicate reads the
+        // caster's *own* designation list, so a stolen commander does not
+        // switch it on (CR 903.3 — the designation follows the card, control
+        // does not), and it is false for every seat in a non-Commander game.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            condition: Some(crate::effect::Predicate::ControlsOwnCommander {
+                who: crate::effect::PlayerRef::You,
+            }),
+            ..Default::default()
+        }),
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::GrantKeyword {

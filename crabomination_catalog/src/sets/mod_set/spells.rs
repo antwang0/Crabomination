@@ -451,11 +451,24 @@ pub fn mana_drain() -> CardDefinition {
     }
 }
 
-/// Fierce Guardianship — {2}{U} Instant. "Counter target noncreature spell."
-/// (The "if you control your commander, this costs {0}" alt-cost is omitted.)
+/// Fierce Guardianship — {2}{U} Instant. "Counter target noncreature spell.
+/// If you control a commander, you may cast this spell without paying its mana
+/// cost."
 pub fn fierce_guardianship() -> CardDefinition {
     CardDefinition {
         name: "Fierce Guardianship",
+        // CR 118.9 / 903 — "If you control a commander, you may cast this
+        // spell without paying its mana cost": an alternative cost of nothing,
+        // gated at cast time on `ControlsOwnCommander`. The predicate reads the
+        // caster's *own* designation list, so a stolen commander does not
+        // switch it on (CR 903.3 — the designation follows the card, control
+        // does not), and it is false for every seat in a non-Commander game.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            condition: Some(crate::effect::Predicate::ControlsOwnCommander {
+                who: crate::effect::PlayerRef::You,
+            }),
+            ..Default::default()
+        }),
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::CounterSpell {
@@ -465,12 +478,26 @@ pub fn fierce_guardianship() -> CardDefinition {
     }
 }
 
-/// Deflecting Swat — {2}{R} Instant. "Counter target spell." (Printed: counter
-/// target spell or ability and you may choose new targets; the new-targets
-/// rider and the free-with-commander alt-cost are omitted.)
+/// Deflecting Swat — {2}{R} Instant. "Counter target spell. If you control a
+/// commander, you may cast this spell without paying its mana cost." (Printed:
+/// counter target spell **or ability** and you may choose new targets; the
+/// ability half and the new-targets rider stay omitted — see
+/// INCOMPLETE_CARDS.)
 pub fn deflecting_swat() -> CardDefinition {
     CardDefinition {
         name: "Deflecting Swat",
+        // CR 118.9 / 903 — "If you control a commander, you may cast this
+        // spell without paying its mana cost": an alternative cost of nothing,
+        // gated at cast time on `ControlsOwnCommander`. The predicate reads the
+        // caster's *own* designation list, so a stolen commander does not
+        // switch it on (CR 903.3 — the designation follows the card, control
+        // does not), and it is false for every seat in a non-Commander game.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            condition: Some(crate::effect::Predicate::ControlsOwnCommander {
+                who: crate::effect::PlayerRef::You,
+            }),
+            ..Default::default()
+        }),
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::CounterSpell {

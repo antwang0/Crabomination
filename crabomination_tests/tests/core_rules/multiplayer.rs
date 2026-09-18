@@ -3510,3 +3510,74 @@ fn command_beacon_moves_the_commander_from_the_command_zone_to_hand() {
     // card, not of the zone (CR 903.3).
     assert!(g.is_commander(cmd));
 }
+
+// ── CR 118.9 / 903 — "if you control a commander, cast it for free" ────────
+
+/// The Commander free-spell cycle (Fierce Guardianship, Deflecting Swat,
+/// Deadly Rollick, Flawless Maneuver) prints "If you control a commander, you
+/// may cast this spell without paying its mana cost". All four shipped without
+/// it — three of the four doc comments even said so — so the defining line of
+/// the cycle did nothing.
+///
+/// It is an alternative cost of nothing gated on `ControlsOwnCommander`, and
+/// the gate is the whole point: with no commander on the battlefield the free
+/// cast must be refused, which is also why adding it cannot move a duel.
+#[test]
+fn cr_118_9_the_free_spell_cycle_needs_a_commander_on_the_battlefield() {
+    use crabomination::game::types::Target;
+
+    let cycle: [fn() -> crabomination::card::CardDefinition; 4] = [
+        catalog::fierce_guardianship,
+        catalog::deflecting_swat,
+        catalog::deadly_rollick,
+        catalog::flawless_maneuver,
+    ];
+    for make in cycle {
+        let def = make();
+        let name = def.name;
+        let alt = def
+            .alternative_cost
+            .as_ref()
+            .unwrap_or_else(|| panic!("{name} prints an alternative cost"));
+        assert!(alt.mana_cost.symbols.is_empty(), "{name}: the alt cost is nothing");
+        assert!(alt.condition.is_some(), "{name}: and it is gated");
+    }
+
+    // Deadly Rollick is the one of the four whose target is an ordinary
+    // creature, so it is the one that can be cast end to end here.
+    let mut g = game_with_format(Format::Commander, 4);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rollick = g.add_card_to_hand(0, catalog::deadly_rollick());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let free_cast = |target| GameAction::CastSpellAlternative {
+        card_id: rollick,
+        pitch_card: None,
+        target: Some(target),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+
+    // No commander on the battlefield — the seat has one seated in the command
+    // zone, which is not the same thing (CR 903.3d).
+    let cmd = g.seat_commanders(0, vec![catalog::sigarda_host_of_herons()])[0];
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    assert!(
+        g.perform_action(free_cast(Target::Permanent(victim))).is_err(),
+        "a commander in the command zone is not a commander you control",
+    );
+
+    // Now it is on the battlefield and the free cast is legal.
+    g.players[0].command.clear();
+    let on_bf = g.add_card_to_battlefield(0, catalog::sigarda_host_of_herons());
+    g.players[0].commanders = vec![on_bf];
+    let _ = cmd;
+    g.perform_action(free_cast(Target::Permanent(victim))).expect("free with a commander out");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert!(g.battlefield_find(victim).is_none(), "the Bears are exiled");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "and nothing was paid");
+}

@@ -66172,11 +66172,23 @@ pub fn feed_the_swarm() -> CardDefinition {
     }
 }
 
-/// Deadly Rollick — {3}{B} Instant. Exile target creature. (The free-cast-with-
-/// commander alt-cost is dropped.)
+/// Deadly Rollick — {3}{B} Instant. Exile target creature. If you control a
+/// commander, you may cast it without paying its mana cost.
 pub fn deadly_rollick() -> CardDefinition {
     CardDefinition {
         name: "Deadly Rollick",
+        // CR 118.9 / 903 — "If you control a commander, you may cast this
+        // spell without paying its mana cost": an alternative cost of nothing,
+        // gated at cast time on `ControlsOwnCommander`. The predicate reads the
+        // caster's *own* designation list, so a stolen commander does not
+        // switch it on (CR 903.3 — the designation follows the card, control
+        // does not), and it is false for every seat in a non-Commander game.
+        alternative_cost: Some(crate::card::AlternativeCost {
+            condition: Some(crate::effect::Predicate::ControlsOwnCommander {
+                who: crate::effect::PlayerRef::You,
+            }),
+            ..Default::default()
+        }),
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Exile {

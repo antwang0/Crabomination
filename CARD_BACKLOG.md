@@ -129,6 +129,25 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 # Open
 
+
+## Commander free-spell cycle (CR 118.9 + "if you control a commander")
+
+Four of the five now carry the alternative cost that is the cycle's whole
+point — an alt cost of nothing gated on `Predicate::ControlsOwnCommander`:
+Fierce Guardianship, Deflecting Swat, Deadly Rollick, Flawless Maneuver. All
+four had shipped without it, and three of the four doc comments said so.
+
+⏳ **Obscuring Haze** ({2}{G}, the green member) is the one still missing, and
+its blocker is named: "prevent all damage that would be dealt this turn by
+creatures your opponents control" wants an **all-damage** fog filtered by
+*source*. The engine has `PreventAllCombatDamageByMatchingThisTurn` (combat
+only) and `PreventAllDamageByTargetThisTurn` (one target), and neither is it —
+shipping the combat-only one would silently drop ability damage from
+opponents' creatures, which in a Commander pod is Judith pinging.
+
+🟡 **Deflecting Swat** still counters only a *spell*; printed is "spell or
+ability", plus "you may choose new targets for it". Unchanged by this pass.
+
 ## The printed-clause ratchet family — one body, and where its needles break
 
 `core_rules/catalog_registration.rs` now holds a family of ratchets that all
