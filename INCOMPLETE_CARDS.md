@@ -333,6 +333,20 @@ Paradox Surveyor was one of the 38.
 | Path of Ancestry | mana *provenance* — "when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1". The identity-mana half is ready (`tap_add_commander_identity`); the engine does not track which source a floated pip came from. |
 | Opal Palace | the same provenance read, plus "enters with +1/+1 counters equal to the number of times it's been cast from the command zone" (`commander_cast_count` already holds that number). |
 
+## Multiplayer wording still approximated (from the N-seat audit)
+
+Every implemented card whose oracle says "each opponent" was read against its
+body for a fan-out ref. Adeline, Resplendent Cathar was fixed with
+`Effect::ForEachOpponent` and Esper Sentinel with a per-caster count; the two
+below need per-opponent **targeting**, which the fan-out cannot give them —
+each iteration would need its own target chosen as the spell is cast (CR
+601.2c), and the target machinery binds one target set per effect.
+
+| Card | Gap |
+|---|---|
+| Sylvan Primordial | "for each opponent, destroy target noncreature permanent that player controls" — one target, so at three seats it destroys one permanent instead of three. Needs a per-iteration target slot. |
+| Sepulchral Primordial | "for each opponent, put target creature card from that player's graveyard onto the battlefield under your control" — same shape, same gap. |
+
 ## CR 903.4 color-identity divergences (from the Scryfall audit)
 
 `cr_903_4_computed_color_identity_matches_scryfall` (core_rules /
