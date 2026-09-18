@@ -3069,6 +3069,29 @@ than one, so a handful of pod games differ. The three committed seeds are
 unchanged, which is what the table is for — read it, not the aggregate, when
 asking whether a change moved pod play.
 
+**Re-taken at `8ba03e94`, after CR 601.2c per-opponent targeting** — the one
+change this session that touched the *targeting core* (a new transparent
+wrapper in the walker family, a constraint in the auto-target picker, a
+cross-target check on the cast path):
+
+```text
+--bench          195,806 / 27.49 / 611.9 / 0 stalls, determinism ok, peak_rss 25.3
+                 games_per_s 496.65 at host_calib_ms 45
+pod, seven configs, 2,300 games: every column identical to the readings above,
+  plus a fresh seed 31337 (4 seats, 500 games) 100 % decided at 41.65 / 1,948.7
+  --threads 1 on seed 43: identical
+```
+
+Identical pod columns are the right answer and worth saying why: none of the
+eight cards the wrapper rewired is in a pod deck, so the change is invisible
+to the field it runs. The picker's new work is also free where it does not
+apply — `distinct_controllers` is a `bool` off the peel loop and the `claimed`
+`Vec` is empty (and so unallocated) unless the wrapper set it. ⚠ The one cost
+that *would* have been on a hot path was caught by reading rather than
+measuring: `per_opponent_targets` first fell through to `for_each_inner`,
+making it a whole-effect-tree walk **on every cast** for a question eight
+cards ask. It walks the transparent wrappers only now.
+
 ### 2026-09-18 (the second Commander session, tip `d6869b99`) — guardrail
 
 Same obligation, same instrument, and the `--bench` **invariant is unmoved by
