@@ -15684,22 +15684,63 @@ the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`..`(-366)`).
      (`mod.rs:1029`) is the working implementation of this exact device and
      reads a 68-82 % hit rate one level out.
 
-     ⚠ **THE OBSTACLE IS GENERICITY, NOT THE DEVICE.** `CowBox<Vec<T>>` is
-     generic and a `thread_local!` inside a generic body is **one** static
-     shared by every instantiation — a type confusion, not a slow path. The
-     shape that works is a `CowPool` trait with a concrete `thread_local!`
-     per impl, implemented for the two hot `T` only (the dump separates two
-     monomorphizations, 11,572 and 6,790 shared-path pushes).
-     ⚠ **And the park point must NOT be `impl Drop for CowBox`**:
-     `into_inner(self) -> T` moves out of `self`, which a `Drop` type
-     forbids. Park inside `push` itself — `std::mem::replace` the old handle
-     and hand it to the pool — which needs no `Drop` at all.
+     ⚠⚠ **AND THE OBVIOUS PARK POINT IS THE ONE THAT MUST NOT BE USED —
+     worked through 2026-09-18, no build spent, and it is the whole reason
+     this entry is filed rather than taken.** The natural move is
+     `std::mem::replace` the old handle inside `push` and park *that*. It is
+     wrong: the old handle is shared **right now** (that is why we are on
+     this path), so a pool reference keeps `Arc::strong_count` at 2 after the
+     other holder is alone — and `unique_mut` then tells **that** holder it
+     is shared, so its next write deep-copies where it would have written in
+     place. **The pool would manufacture the very unshares it exists to
+     serve.** `fx_pool` gets away with the same move only because its
+     `Arc<Vec<ContinuousEffect>>` is never `make_mut`'d by anyone.
+     📐 **So the park must happen at a RELEASE site where the handle is
+     already unique** — check `Arc::get_mut(&mut self.0).is_some()` and park
+     only then; a unique handle is about to be freed, so nobody is deprived.
+     ⚠ And that release site cannot be `impl Drop for CowBox<Vec<T>>`:
+     `Drop` must be implemented for the struct's own generics, so it cannot
+     be specialized to `Vec<T>`, and a `Drop` on `CowBox<T>` also forbids
+     `into_inner(self) -> T`'s move out of `self` (a `ManuallyDrop` +
+     `ptr::read` would be needed). **The two shapes left are a `CowVec<T>`
+     newtype over the zone fields, or an explicit park where each zone
+     dies.**
+     ⚠ **A second obstacle, independent of the first: genericity.**
+     `CowBox<Vec<T>>` is generic and a `thread_local!` inside a generic body
+     is **one** static shared by every instantiation — a type confusion, not
+     a slow path. The shape that works is a `CowPooled` trait with a concrete
+     `thread_local!` per impl (a macro), and the tree needs only three:
+     `CardInstance` (14 fields), `StackItem`, `ContinuousEffect`. The dump
+     separates two monomorphizations on the hot path, 11,572 and 6,790
+     shared-path pushes.
+     📐 **Budget the win honestly**: at `(-166)`'s 68-82 % hit rate and this
+     file's ~200 Ir a plain allocation, the recoverable part is ~5.1 M minus
+     ~1.9 M of `LocalKey::with` + `FnOnce::call_once` (two pool touches per
+     unshare at `(-359)`'s measured ~52 Ir a snapshot), i.e. **~0.22 % of
+     `cube` on this profile and ~3x that shipped**, where `release`'s thin
+     LTO inlines both pool symbols.
      ⚠ A cheaper, unrelated half-row sits beside it: the unshare materializes
      at **exactly** `len + 1`, so the very next push on the now-unique box
      reallocates. Those are the 6,910 at `cow.rs:104`. Headroom there is a
      one-line change worth up to 0.13 %, and it is a *separate* A/B — the
      `reserve` caveat in (O) does not apply, because `CowBox::clone` is an
      `Arc` bump and capacity survives it.
+
+  ❌ **T. `layers::PrintedList::push` — CENSUSED 2026-09-18 AND DECLINED, no
+     build spent.** 18,534 allocations / 3.52 M inclusive (0.24 % of `cube`),
+     **every one of them from `compute_permanent_pass`** and one allocation
+     per call: the override is a `Box<[T]>`, so each appended keyword
+     materializes the whole list again. The obvious fix — hold a `Vec`
+     while building and convert at `into_overlay` — **does not work as
+     written**: `Vec::into_boxed_slice` shrinks to fit, so a buffer with
+     spare capacity pays a realloc at the conversion and the win cancels.
+     Keeping the `Vec` all the way into `OverlayList` instead puts **+8
+     bytes on `ComputedPermanent`**, which is constructed 226,734 times a
+     `cube` run — and this file already records that widening that struct by
+     208 bytes read **+1.755 %**. The rate is against it too: **0.082 pushes
+     per pass**, so most passes push nothing and the amortization a `Vec`
+     buys has almost no runs to amortize over. Take it only with a measured
+     pushes-per-list distribution in hand.
 
   💡 **O. THE LINE CENSUS.** The instrument is one command on a dump that
      costs one `--dump-instr` run:
