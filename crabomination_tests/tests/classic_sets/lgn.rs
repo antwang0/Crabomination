@@ -644,6 +644,36 @@ fn phage_only_survives_a_hand_cast() {
     assert!(!g.players[0].is_alive(), "she wasn't cast from hand");
 }
 
+/// Phage's third ability — "Whenever Phage the Untouchable deals combat
+/// damage to a player, that player loses the game" — was dead. Its
+/// `PlayerRef::Triggerer` resolved against the trigger's subject, and the
+/// combat-damage path bound no subject at all for a dealer-side wording,
+/// where the event dispatcher binds the damaged player. The hit landed and
+/// nobody lost.
+#[test]
+fn phage_combat_damage_makes_that_player_lose() {
+    let mut g = main_phase();
+    let phage = g.add_card_to_hand(0, catalog::phage_the_untouchable());
+    cast(&mut g, 0, phage, None);
+    assert!(g.players[0].is_alive(), "a hand cast is safe");
+    g.clear_sickness(phage);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: phage,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("declare the attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+
+    assert!(!g.players[1].is_alive(), "that player — the damaged one — loses");
+    assert!(g.players[0].is_alive(), "and not Phage's controller");
+}
+
 /// Mistform Seaswift can pass for any tribe until end of turn.
 #[test]
 fn mistform_seaswift_becomes_the_chosen_type() {

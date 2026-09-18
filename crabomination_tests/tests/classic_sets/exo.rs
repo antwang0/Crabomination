@@ -1003,6 +1003,39 @@ fn entropic_specter_reads_the_chosen_hand() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
 }
 
+/// Entropic Specter's "whenever this deals damage to a player, that player
+/// discards a card" worked off a ping and not off its own attack: the same
+/// `PlayerRef::Triggerer` binding the combat-damage path left unset. Its
+/// `DealsDamageToPlayer` trigger fires on both halves of the same wording.
+#[test]
+fn entropic_specter_combat_damage_makes_them_discard() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    // Cast it: the P/T reads the opponent it remembers as it enters, so a
+    // Specter placed straight onto the battlefield is a 0/0 that deals no
+    // damage at all.
+    let specter = g.add_card_to_hand(0, catalog::entropic_specter());
+    g.players[0].mana_pool.add(Color::Black, 5);
+    cast(&mut g, specter, None).expect("cast it");
+    drain_stack(&mut g);
+    g.clear_sickness(specter);
+    assert_eq!(g.computed_permanent(specter).unwrap().power, 3);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: specter,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 2, "the damaged player discarded one");
+    assert_eq!(g.players[0].hand.len(), 0, "and the attacker's controller did not");
+}
+
 /// Monstrous Hound needs a land lead to attack at all.
 #[test]
 fn monstrous_hound_needs_a_land_lead() {

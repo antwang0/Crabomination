@@ -6310,8 +6310,28 @@ impl GameState {
             } else {
                 Some(default_target.clone())
             };
-            let dealer = bind_dealer
-                .then_some(crate::game::effects::EntityRef::Permanent(source));
+            // The trigger's subject. `bind_dealer` is the Phase-1.5 listener
+            // pattern ("whenever a creature deals combat damage to you" —
+            // the *dealer* is what "it" means there); everything else is a
+            // dealer-side wording, where "that player" is the damaged one.
+            //
+            // That second half was `None`, and the event dispatcher's own
+            // rule for the same wording is not — `damage_event_subject` binds
+            // `EntityRef::Player(p)` for a `DamageDealt { to_player }`, with
+            // the comment "the dealer-side kinds keep binding the damaged
+            // player, which is what 'that player' means there". Two
+            // hand-written walkers over one question, disagreeing: a
+            // `PlayerRef::Triggerer` body on a combat-damage trigger resolved
+            // to nobody and did nothing at all, which is how Phage the
+            // Untouchable's "that player loses the game" was dead.
+            let dealer = if bind_dealer {
+                Some(crate::game::effects::EntityRef::Permanent(source))
+            } else {
+                match default_target {
+                    Target::Player(p) => Some(crate::game::effects::EntityRef::Player(p)),
+                    _ => None,
+                }
+            };
             self.stack.push(
                 TriggerPush::new(trig_source, controller, effect)
                     .target(target)
