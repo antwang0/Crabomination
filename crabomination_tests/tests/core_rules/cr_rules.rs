@@ -6923,6 +6923,33 @@ fn cr_702_49_ninjutsu_entrant_gets_its_enter_counter() {
     );
 }
 
+/// CR 602.2b — mana abilities may be activated while paying a cost, so a
+/// ninjutsu cost auto-taps like every other one. It used to be paid out of
+/// the floating pool alone, which made the ability unreachable for any seat
+/// that doesn't pre-float mana — every bot seat, and so every self-play game.
+#[test]
+fn cr_602_2b_ninjutsu_cost_auto_taps_lands() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let kappa = g.add_card_to_hand(0, catalog::kappa_tech_wrecker());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    // No floating mana at all — the two untapped lands are the whole payment.
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    g.perform_action(GameAction::Ninjutsu { ninja: kappa, returning: bear })
+        .expect("the {1}{G} ninjutsu cost taps the lands itself");
+    assert!(g.battlefield.iter().any(|c| c.id == kappa), "the ninja is in play");
+    assert!(
+        [forest, island].iter().any(|&l| g.battlefield_find(l).is_some_and(|c| c.tapped)),
+        "a land was tapped for it",
+    );
+}
+
 // ── CR 509.1b — Menace requires two or more blockers ─────────────────────────
 
 /// CR 509.1b / 702.111 — a creature with menace (here granted by Nezumi

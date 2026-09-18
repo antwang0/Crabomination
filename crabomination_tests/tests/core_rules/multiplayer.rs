@@ -1750,6 +1750,45 @@ fn cr_702_124_commander_pair_needs_partner_or_background() {
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })));
 }
 
+// ── CR 702.49d — commander ninjutsu ───────────────────────────────────────
+
+/// A seat-0 attacker the defender left unblocked, with the game parked in the
+/// declare-blockers step — the ninjutsu window.
+fn unblocked_attack(g: &mut GameState) -> crabomination::card::CardId {
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    bear
+}
+
+/// CR 702.49a vs 702.49d — plain ninjutsu functions only from the hand, so a
+/// commander carrying the ordinary keyword can't be revealed from the command
+/// zone. The variant keyword is the whole difference.
+#[test]
+fn cr_702_49a_plain_ninjutsu_does_not_reach_the_command_zone() {
+    use crabomination::card::{CardDefinition, CardType, Keyword, Supertype};
+    let sneak = CardDefinition {
+        name: "Plain Ninjutsu Commander",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Ninjutsu(crabomination::mana::ManaCost::default())],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![sneak])[0];
+    let bear = unblocked_attack(&mut g);
+    assert!(
+        g.perform_action(GameAction::Ninjutsu { ninja: cmd, returning: bear }).is_err(),
+        "the ordinary keyword functions only in the hand",
+    );
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd), "and nothing moved");
+}
+
 // ── CR 113.6b — abilities that function from the command zone (Eminence) ──
 
 /// A commander whose upkeep trigger functions in the zone `zone` names.

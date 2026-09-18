@@ -269,6 +269,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Unleash => "Unleash",
         Keyword::Bargain => "Bargain",
         Keyword::Ninjutsu(_) => "Ninjutsu",
+        Keyword::CommanderNinjutsu(_) => "Commander ninjutsu",
         Keyword::Suspend(..) => "Suspend",
         Keyword::SuspendAccelerant => "Suspend accelerant",
     };

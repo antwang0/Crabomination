@@ -3086,10 +3086,14 @@ impl HeuristicBot {
                 }
             }
             // Active side of the same window: blocks are in, stack is
-            // empty — the classic trick timing for a blocked attacker.
+            // empty — the classic trick timing for a blocked attacker, and
+            // CR 702.49's ninjutsu window.
             TurnStep::DeclareBlockers
                 if is_active && state.blockers_declared() && state.stack.is_empty() =>
             {
+                if let Some(a) = pick_ninjutsu(state, seat) {
+                    return Some(BotStep::plain(a));
+                }
                 Some(
                     pick_combat_trick_any(state, seat, &self.weights)
                         .map(Picked::into_step)
@@ -17240,6 +17244,76 @@ fn pick_defensive_removal_scored(state: &GameState, seat: usize, w: &EvalWeights
 /// the sim-priced one by flag, counted either way. Sims call the rule
 /// directly (`sim_spell_action`), which is what keeps the sim-priced one
 /// from recursing.
+/// CR 702.49 / 702.49d — ninjutsu as a bot candidate. The engine has had the
+/// special action since Fallen Shinobi shipped, but nothing ever produced a
+/// `GameAction::Ninjutsu`, so no bot seat could take it in any format.
+///
+/// Deterministic and cheap: give up the *least* valuable unblocked attacker
+/// (lowest power, `CardId` tie-break) for the best ninja that `would_accept`
+/// validates — highest power first, id tie-break. The swap is only offered
+/// when it gains something: the ninja hits at least as hard as the creature
+/// it replaces, or it carries a trigger keyed on attacking or on combat
+/// damage, which is the whole reason a ninja costs what it does.
+fn pick_ninjutsu(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::Keyword;
+    use crate::effect::EventKind;
+    if state.step != TurnStep::DeclareBlockers {
+        return None;
+    }
+    // Presence first: the keyword scan is a `Vec` walk over a hand, where the
+    // attacker walk below reads a computed permanent per attacker. Hand
+    // ninjas, plus command-zone ones under CR 702.49d — the command zone is
+    // empty outside Commander, so that half costs a length check there.
+    let carriers: Vec<&crate::card::CardInstance> = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.keywords.iter().any(|k| matches!(k, Keyword::Ninjutsu(_))))
+        .chain(state.players[seat].command.iter().filter(|c| {
+            c.definition.keywords.iter().any(|k| matches!(k, Keyword::CommanderNinjutsu(_)))
+        }))
+        .collect();
+    if carriers.is_empty() {
+        return None;
+    }
+    let power_of = |id: CardId| state.computed_permanent(id).map_or(0, |cp| cp.power);
+    let returning = state
+        .attacking()
+        .iter()
+        .map(|a| a.attacker)
+        .filter(|&id| {
+            state.battlefield_find(id).is_some_and(|c| c.controller == seat)
+                && state.blocker_count_of(id) == 0
+                && !state.blocked_attackers.contains(&id)
+        })
+        .min_by_key(|&id| (power_of(id), id))?;
+    let give_up = power_of(returning);
+    let pays_off = |c: &crate::card::CardInstance| {
+        c.definition.power >= give_up
+            || c.definition.triggered_abilities.iter().any(|t| {
+                matches!(
+                    t.event.kind,
+                    EventKind::Attacks
+                        | EventKind::YouAttack
+                        | EventKind::DealsCombatDamageToPlayer
+                        | EventKind::DealsCombatDamage
+                )
+            })
+    };
+    let mut ninjas: Vec<(i32, CardId)> = carriers
+        .into_iter()
+        .filter(|c| pays_off(c))
+        .map(|c| (-c.definition.power, c.id))
+        .collect();
+    if ninjas.is_empty() {
+        return None;
+    }
+    ninjas.sort_unstable();
+    ninjas
+        .into_iter()
+        .map(|(_, ninja)| GameAction::Ninjutsu { ninja, returning })
+        .find(|a| state.would_accept(a.clone()))
+}
+
 fn pick_combat_trick_any(state: &GameState, seat: usize, w: &EvalWeights) -> Option<Picked> {
     response_census::add(0, 1);
     if response_census::on() {
@@ -24238,6 +24312,33 @@ mod stack_response_tests {
         };
         assert!(!has_arm(&EvalWeights::default()), "flag off: the class is invisible");
         assert!(has_arm(&EvalWeights::ability_arms_on()), "flag on: the activation is a candidate");
+    }
+
+    /// CR 702.49 — the ninjutsu window was unreachable for a bot seat: the
+    /// engine has had the special action for as long as Fallen Shinobi has
+    /// shipped, and nothing ever built a `GameAction::Ninjutsu`.
+    #[test]
+    fn bot_takes_the_ninjutsu_window() {
+        use crate::game::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let kappa = g.add_card_to_hand(0, catalog::kappa_tech_wrecker());
+        g.add_card_to_battlefield(0, catalog::forest());
+        g.add_card_to_battlefield(0, catalog::island());
+        g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+        g.step = TurnStep::DeclareBlockers;
+        g.active_player_idx = 0;
+        // The defender declares (none), which opens the attacker's window.
+        g.priority.player_with_priority = 1;
+        g.declare_blockers(vec![]).expect("no blocks");
+        g.priority.player_with_priority = 0;
+        let action = HeuristicBot::new().next_action(&g, 0).expect("the bot acts");
+        assert!(
+            matches!(action, GameAction::Ninjutsu { ninja, returning }
+                if ninja == kappa && returning == bear),
+            "expected the ninjutsu swap, got {action:?}",
+        );
     }
 
     /// CR 601.2f — a commander with an alternative cost gets both casts as

@@ -2173,6 +2173,12 @@ pub enum Keyword {
     /// loses life. "Max speed —" abilities (modeled as `Predicate::SpeedAtLeast
     /// { speed: 4 }`) are active at speed 4.
     StartYourEngines,
+    /// CR 702.49d — Commander ninjutsu [cost]. Ninjutsu that also functions
+    /// while the card is in the command zone (CR 113.6b), so its controller
+    /// may reveal it from hand *or* from the command zone. No commander tax:
+    /// CR 903.8 taxes *casting* from the command zone, and this puts the card
+    /// onto the battlefield without casting it. Yuriko, the Tiger's Shadow.
+    CommanderNinjutsu(crate::mana::ManaCost),
 }
 
 impl Keyword {

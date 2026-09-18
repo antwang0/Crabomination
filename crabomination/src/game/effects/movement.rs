@@ -2189,6 +2189,18 @@ impl GameState {
                 return;
             }
         }
+        // CR 408 — command zones. A card here moves out under commander
+        // ninjutsu (CR 702.49d); without this arm the hop was a silent no-op,
+        // since every other zone scan above misses it. Outside Commander
+        // every command zone is empty, so the scan is a length check.
+        for p in 0..self.players.len() {
+            if let Some(pos) = self.players[p].command.iter().position(|c| c.id == cid) {
+                let card = self.players[p].command.remove(pos);
+                self.offboard_keyword_grants = true;
+                self.place_card_in_dest(card, p, &resolved_dest, events);
+                return;
+            }
+        }
         // Libraries. Used by `Selector::TopOfLibrary` → `ZoneDest::Exile`
         // / `Hand` / etc. (Suspend Aggression's exile-top-of-library half,
         // Daydream's exile-then-return flicker pattern in passing).

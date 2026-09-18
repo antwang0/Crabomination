@@ -20037,6 +20037,9 @@ impl GameState {
     /// player returns an unblocked attacker (`returning`) to hand and puts
     /// `ninja` from hand onto the battlefield tapped and attacking the same
     /// defender, paying the ninjutsu cost.
+    ///
+    /// CR 702.49d — commander ninjutsu reads the command zone as well, and
+    /// pays no commander tax: CR 903.8 taxes casting, and this is not a cast.
     fn ninjutsu(
         &mut self,
         ninja: crate::card::CardId,
@@ -20065,21 +20068,36 @@ impl GameState {
         {
             return Err(GameError::InvalidTarget); // blocked — illegal
         }
-        // The ninja must be in `p`'s hand and carry Ninjutsu; clone its cost.
+        // The ninja must carry Ninjutsu and be in `p`'s hand — or, for CR
+        // 702.49d's commander ninjutsu, in their command zone. Clone the cost.
+        let ninjutsu_cost = |c: &crate::card::CardInstance, from_command: bool| {
+            c.definition.keywords.iter().find_map(|kw| match kw {
+                Keyword::Ninjutsu(mc) if !from_command => Some(mc.clone()),
+                Keyword::CommanderNinjutsu(mc) => Some(mc.clone()),
+                _ => None,
+            })
+        };
         let cost = self.players[p]
             .hand
             .iter()
             .find(|c| c.id == ninja)
-            .and_then(|c| {
-                c.definition.keywords.iter().find_map(|kw| match kw {
-                    Keyword::Ninjutsu(mc) => Some(mc.clone()),
-                    _ => None,
-                })
+            .and_then(|c| ninjutsu_cost(c, false))
+            .or_else(|| {
+                self.players[p]
+                    .command
+                    .iter()
+                    .find(|c| c.id == ninja)
+                    .and_then(|c| ninjutsu_cost(c, true))
             })
             .ok_or(GameError::CardNotInHand(ninja))?;
-        self.players[p].mana_pool.pay(&cost).map_err(GameError::Mana)?;
+        // CR 602.2b — mana abilities may be activated while paying, so the
+        // cost auto-taps like every other one. Paying out of the pool alone
+        // made the ability unreachable for a seat that doesn't pre-float.
+        let forced_only = self.players[p].manual_mana;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
 
-        let mut events = vec![];
+        let mut events = receipt.auto_events;
         // Return the unblocked attacker to its owner's hand (this prunes it
         // from `attacking` via `remove_from_combat` inside `move_card_to`).
         let owner = self.find_card_owner(returning).unwrap_or(p);
