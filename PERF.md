@@ -3046,6 +3046,7 @@ quotes rows and absolutes separately.
   (-365) the combat lethals list is inline    -0.070 / -0.077 / -0.072 %
   (-366) the short-lived seat/id lists inline -0.100 / -0.081 / -0.056 %
   (-367) the mana source table, pooled        -0.111 / -0.127 / -0.114 %
+  (-368) cast_candidates' two accumulators  REFUTED +0.180 / +0.126 / +0.152 %, reverted
   ─────────────────────────────────────────────────────────────────────────
   run total                                   -0.892 / -1.419 / -1.129 %
 ```
@@ -8508,6 +8509,44 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-368)` REFUTED — `cast_candidates`' two accumulators, pooled: **+0.180 / +0.126 / +0.152 %**, and the number that decides it is allocations PER CALL
+
+The same device as `(-367)`, one function over. It removes the 6,426
+allocations it promised and still loses on all three pools. Reverted.
+
+```text
+                  (-367) tip        (-368)            delta
+  fixed            567,013,527       568,031,867       +0.1796 %
+  cube           1,474,085,262     1,475,946,896       +0.1263 %
+  sealed         1,594,780,600     1,597,198,608       +0.1516 %
+
+  allocations (cube)   646,492 -> 640,066   -6,426, as predicted
+  and the cost, by self row:
+    +607,100  std/src/thread/local.rs   (the TLS touches)
+    +478,662  alloc/src/vec/…           (`drain` and the park bookkeeping)
+    +272,946  core/src/option.rs
+    -837,832  malloc / _int_free / free
+```
+
+📐📐 **THE RULE, AND IT IS THE ONE THIS FILE WAS MISSING FOR THE POOL DEVICE:
+price a pool by the allocations it recovers PER CALL, against ~2 TLS touches
+per buffer — not by the allocations it recovers in total.**
+
+```text
+  (-367) mana_source_table   8,010 calls / 7,663 allocations = 0.96 per call
+         one buffer  ->  2 TLS touches a call        WINS  -0.127 %
+  (-368) cast_candidates    11,642 calls / 6,426 allocations = 0.55 per call
+         two buffers ->  4 TLS touches a call        LOSES +0.126 %
+```
+
+**`cast_candidates` allocates on barely half its calls** — a tick whose
+accumulators stay empty never allocated anything, and a pool `take` on that
+call is pure overhead. `(-359)`'s measured ~52 Ir a `LocalKey::with` +
+`FnOnce::call_once` pair is the constant to multiply; **below ~1 recovered
+allocation per buffer per call the pool cannot pay for itself on this
+profile.** ⚠ A lazy take (pool only on the first push) would close the gap
+and needs a wrapper type; nobody has priced one.
 
 ### `(-367)` the auto-tapper's mana source table comes off a free list — **fixed -0.111 / cube -0.127 / sealed -0.114 %**
 
