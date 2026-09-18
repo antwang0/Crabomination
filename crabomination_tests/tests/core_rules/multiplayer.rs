@@ -1764,6 +1764,35 @@ fn unblocked_attack(g: &mut GameState) -> crabomination::card::CardId {
     bear
 }
 
+/// CR 702.49d — commander ninjutsu reveals the card "from your hand or from
+/// the command zone". Yuriko comes off the command zone tapped and attacking,
+/// and CR 903.8's tax does not apply: the tax is on *casting*, and this puts
+/// her onto the battlefield without casting her.
+#[test]
+fn cr_702_49d_commander_ninjutsu_comes_off_the_command_zone() {
+    let mut g = two_player_game();
+    let yuriko = g.seat_commanders(0, vec![catalog::yuriko_the_tigers_shadow()])[0];
+    let bear = unblocked_attack(&mut g);
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::swamp());
+
+    g.perform_action(GameAction::Ninjutsu { ninja: yuriko, returning: bear })
+        .expect("commander ninjutsu off the command zone");
+    assert!(g.players[0].command.iter().all(|c| c.id != yuriko), "she left the command zone");
+    let on_board = g.battlefield.iter().find(|c| c.id == yuriko).expect("Yuriko is in play");
+    assert!(on_board.tapped, "CR 702.49d — she enters tapped");
+    assert!(
+        g.attacking.iter().any(|a| a.attacker == yuriko),
+        "…and attacking the same defender",
+    );
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "the attacker went back to hand");
+    assert_eq!(
+        g.commander_cast_count.get(&yuriko).copied(),
+        None,
+        "CR 903.8 taxes a cast; ninjutsu is not one",
+    );
+}
+
 /// CR 702.49a vs 702.49d — plain ninjutsu functions only from the hand, so a
 /// commander carrying the ordinary keyword can't be revealed from the command
 /// zone. The variant keyword is the whole difference.
@@ -1787,6 +1816,35 @@ fn cr_702_49a_plain_ninjutsu_does_not_reach_the_command_zone() {
         "the ordinary keyword functions only in the hand",
     );
     assert!(g.players[0].command.iter().any(|c| c.id == cmd), "and nothing moved");
+}
+
+/// Yuriko's payoff: a Ninja connecting reveals the top card, puts it in hand,
+/// and drains *each* opponent for its mana value — the multiplayer half, so
+/// the pod reads it once per seat.
+#[test]
+fn yuriko_drains_each_opponent_for_the_revealed_mana_value() {
+    let mut g = multi_player_game(3);
+    let yuriko = g.move_card_to_battlefield_for_test(0, catalog::yuriko_the_tigers_shadow());
+    g.clear_sickness(yuriko);
+    // Grizzly Bears is {1}{G} — mana value 2.
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::grizzly_bears());
+    let lives: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: yuriko,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack seat 1");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == top), "the revealed card went to hand");
+    assert_eq!(g.players[0].life, lives[0], "the controller loses nothing");
+    assert_eq!(g.players[1].life, lives[1] - 1 - 2, "one combat damage plus the drain");
+    assert_eq!(g.players[2].life, lives[2] - 2, "the untouched opponent drains too");
 }
 
 // ── CR 113.6b — abilities that function from the command zone (Eminence) ──

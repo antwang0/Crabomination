@@ -266,6 +266,41 @@ pub fn arahbo_roar_of_the_world() -> CardDefinition {
     }
 }
 
+/// Yuriko, the Tiger's Shadow — {1}{U}{B} Legendary Creature — Human Ninja
+/// 1/3. "Commander ninjutsu {U}{B}. Whenever a Ninja you control deals combat
+/// damage to a player, reveal the top card of your library and put that card
+/// into your hand. Each opponent loses life equal to that card's mana value."
+///
+/// CR 702.49d — the commander-ninjutsu keyword is what makes the command zone
+/// a legal source; putting her onto the battlefield that way is not a cast, so
+/// CR 903.8's tax never applies.
+pub fn yuriko_the_tigers_shadow() -> CardDefinition {
+    CardDefinition {
+        name: "Yuriko, the Tiger's Shadow",
+        cost: cost(&[generic(1), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Ninja],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::CommanderNinjutsu(cost(&[u(), b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            // `dealt_by` is the dealer gate; at resolution `TriggerSource`
+            // binds the damaged player, which this body doesn't read.
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .dealt_by(R::HasCreatureType(CreatureType::Ninja)),
+            effect: Effect::RevealTopToHandLoseMv {
+                who: PlayerRef::EachOpponent,
+                you_gain: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
