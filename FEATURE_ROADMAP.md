@@ -16,7 +16,8 @@ Moved to `SHIPPED.md` (size trigger). Check it before proposing anything.
 
 ## Commander status (CR 903 + the 800-series it rests on)
 
-The map for the next Commander run — **audited 2026-09-18 against the tree, not
+The map for the next Commander run — **audited 2026-09-18 against the tree and
+against the shipped CR text (`crabomination/MagicCompRules_20260417.txt`), not
 against this file's history**. Don't re-audit; update rows as they move.
 Per-deck card completion lives in `DECK_FEATURES.md`.
 
@@ -53,6 +54,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | CR 800.4d a departed player's triggered abilities aren't put on the stack | ✅ | `mod.rs::push_pending_trigger` (the one funnel for step / event / delayed pushes); `objects_leave_with_player` drops the `delayed_triggers` behind it |
 | CR 800.4m "until that player's next turn" ends when that turn *would* have begun | ✅ | `mod.rs::departed_seats_skipped_into_this_turn` → the Untap arm's expiry in `stack.rs`. Covers `UntilYourNextTurn`, `UntilYourNextUpkeep` (no upkeep of theirs is left) and CR 615's damage locks |
 | CR 800.4f/g/h a choice owed by a departed player | ⚠ approximated | the ask is **dropped** (`objects_leave_with_player`), where 800.4g hands it to another player chosen by the object's controller. Dropping is what keeps the table from wedging; reassigning needs a decision-retargeting path that does not exist |
+| Which opponent an open choice aims at, at N > 2 | ✅ | `mod.rs::default_hostile_opponent` — one ranked answer, shared by `bot.rs::attack_target_player` (the defender) and `targeting.rs` (an auto-filled "target opponent"). CR 903.10a commander race, then lowest effective life, then fewest untapped blockers; ties by seat index, so a fixed seed reproduces the run. One candidate in a duel, so the 1v1 answer and the golden traces are unchanged. The two positional picks it replaces both named seats that had already left the game, and the bot's named a *teammate* at 2HG |
 | Free-for-all last-player-standing, simultaneous-loss draw | ✅ | `team.rs`, `stack.rs` |
 | Multiplayer mulligan, no first-turn draw skip at 3+ | ✅ | `core_rules/multiplayer.rs` |
 
@@ -74,7 +76,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 |---|---|---|
 | N-seat pod runner | ✅ | `pod/mod.rs` — `build_pod_template`, `play_one_pod_game`, `run_pod_games` |
 | Five legal target decks | ✅ | `pod/decks.rs` — Sigarda GW / Judith BR / Hanna UW / Tatyova GU / Krark+Rograkh R (the Partner seat, last so `pod_field(4)` never draws it), validated by the suite. Each runs the full colorless staple set: Sol Ring, Command Tower, Arcane Signet, Commander's Sphere, Mind Stone, Path of Ancestry, Opal Palace — and each two-color seat its guild Signet + Talisman (mono-red Krark takes neither: both cycles are two-color in CR 903.4 identity) |
-| 4-player Commander demo state | ✅ | `demo.rs::build_commander_state_seeded`, now the same four decks |
+| 4-player Commander demo state | ✅ | `demo.rs::build_commander_state_seeded`, the first four of the same five decks |
 | Commander pod mode in `bot_ladder` | ✅ | `bot_ladder --commander [--seats N]` |
 | Golden outcomes for fixed-seed Commander pods | ✅ | `pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table` — three seeds' (winner, turns, actions) committed, cross-process. The triple rather than a line-per-action trace: a pod game is ~2,000 actions, so a real trace is a 400 KB file every Commander commit re-blesses, and it moves on the same changes |
 | A net / MCTS pilot in a pod | ⛔ by design | the observation encoder is two-seat (`encode_state_inner`'s `1 - seat`, `sources: &[_; 2]`); `bot_ladder --commander` refuses one above two seats rather than index out of bounds. Design notes for an N-seat encoding are in `ML_NOTES.md`; widening it retrains every net |

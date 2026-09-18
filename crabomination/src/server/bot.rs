@@ -9708,14 +9708,25 @@ fn turns_to_lethal(life: i32, clock: i32) -> i32 {
     life / clock + i32::from(life % clock != 0)
 }
 
-/// The player an attack is aimed at by default: an opposing monarch (CR
-/// 724 — stealing the crown denies their end-step card and hands it to
-/// us), otherwise the next alive opponent.
+/// The player an attack is aimed at by default: an opposing monarch first
+/// whatever else is true (CR 724 — stealing the crown denies their end-step
+/// card and hands it to us), otherwise
+/// [`GameState::default_hostile_opponent`], which is the same question the
+/// engine's auto-targeter asks and now the same answer.
+///
+/// It used to be "the next alive seat", which made every pod a ring of one-way
+/// attacks — seat 0 was only ever hit by the last seat, whatever the board said
+/// — and which named a *teammate* in a 2HG game, because seat order is not team
+/// order and every attack it declared was then rejected.
 fn attack_target_player(state: &GameState, seat: usize) -> usize {
-    match state.monarch {
-        Some(m) if m != seat && state.players.get(m).map(|p| p.is_alive()).unwrap_or(false) => m,
-        _ => state.next_alive_seat(seat),
+    if let Some(m) = state.monarch
+        && m != seat
+        && state.players.get(m).is_some_and(|p| p.is_alive())
+        && !state.same_team(seat, m)
+    {
+        return m;
     }
+    state.default_hostile_opponent(seat).unwrap_or_else(|| state.next_alive_seat(seat))
 }
 
 fn pick_attacks_inner(state: &GameState, seat: usize, guard: bool) -> Vec<Attack> {
@@ -23946,6 +23957,57 @@ mod monarch_tests {
             }
             other => panic!("expected DeclareAttackers, got {other:?}"),
         }
+    }
+
+    /// CR 903.10a — 21 combat damage from one commander is a second life
+    /// total, and only that commander can spend it. A seat it is already
+    /// part-way through is worth finishing, so the defender choice reads the
+    /// tally rather than the seat order.
+    #[test]
+    fn the_defender_choice_follows_the_commander_damage_race() {
+        let players = (0..4).map(|i| Player::new(i, format!("Seat {i}"))).collect();
+        let mut g = GameState::new(players);
+        let cmd = g.seat_commanders(0, vec![catalog::sigarda_host_of_herons()])[0];
+        // The commander is on the battlefield, so this combat can add to the
+        // tally; every seat is on the same life total, so only the tally
+        // separates them.
+        g.players[0].command.clear();
+        let on_bf = g.add_card_to_battlefield(0, catalog::sigarda_host_of_herons());
+        g.players[0].commanders = vec![on_bf];
+        g.record_commander_damage(2, on_bf, 15);
+        let _ = cmd;
+
+        assert_eq!(attack_target_player(&g, 0), 2, "seat 2 is six damage from dead");
+
+        // Progress on a commander this seat does not control is not a reason
+        // to pick a defender — that tally cannot grow this combat.
+        g.players[0].commanders = vec![cmd];
+        assert_ne!(attack_target_player(&g, 0), 2, "a commander in the zone does not race");
+    }
+
+    /// Life is the tiebreak under the commander race, and the seat order is
+    /// not a tiebreak at all until everything else ties.
+    #[test]
+    fn the_defender_choice_prefers_the_lowest_life_seat() {
+        let players = (0..4).map(|i| Player::new(i, format!("Seat {i}"))).collect();
+        let mut g = GameState::new(players);
+        assert_eq!(attack_target_player(&g, 0), 1, "all equal → the first opponent");
+        g.players[3].life = 4;
+        assert_eq!(attack_target_player(&g, 0), 3);
+    }
+
+    /// CR 810 — seat order is not team order, so "the next alive seat" named a
+    /// *teammate* in a Two-Headed Giant game and every attack it declared was
+    /// rejected.
+    #[test]
+    fn the_defender_choice_never_names_a_teammate() {
+        use crate::team::TeamId;
+        let players = (0..4).map(|i| Player::new(i, format!("Seat {i}"))).collect();
+        let mut g = GameState::new(players);
+        g.assign_teams(vec![vec![0, 1], vec![2, 3]]).expect("2v2");
+        let t = attack_target_player(&g, 0);
+        assert!(t == 2 || t == 3, "seat 0 attacks the other team, got {t}");
+        assert_ne!(g.team_of(0), TeamId(1));
     }
 }
 

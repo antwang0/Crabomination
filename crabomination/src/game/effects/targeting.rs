@@ -139,11 +139,18 @@ impl GameState {
             "names_x_or_converge said no but the rewrite moved the filter: {req_src:?}",
         );
         let req = req_owned.as_ref().or(req_src).unwrap_or(&any_filter);
-        // First opponent on a different team. Falls back to the next
-        // seat in singleton-team / unknown-team cases so the legacy 1v1
-        // pick (`(controller + 1) % n`) is preserved.
+        // First opponent on a different team **who is still in the game**.
+        // `first_opponent_of` alone does not filter the eliminated, so after
+        // the first elimination in a pod every auto-filled "target opponent"
+        // slot named a player who had left and then failed its own legality
+        // check. Identical to the old pick while everyone is alive, which is
+        // every turn of a duel — the ranked `default_hostile_opponent` is the
+        // bot's policy question and deliberately not this one, because the
+        // auto-targeter runs on every cast. Falls back to the next seat in
+        // singleton-team / unknown-team cases, as before.
         let opp = self
-            .first_opponent_of(controller)
+            .first_alive_opponent_of(controller)
+            .or_else(|| self.first_opponent_of(controller))
             .unwrap_or((controller + 1) % self.players.len());
         let prefer_friendly = eff.prefers_friendly_target();
         // `prefers_graveyard_target` is the broader classifier — it covers

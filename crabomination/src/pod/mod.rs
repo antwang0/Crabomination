@@ -392,10 +392,17 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
+        // Re-blessed for `default_hostile_opponent`: every seat's defender
+        // moved off the seat order, so two of the three seeded games diverge
+        // from the first combat on. ⚠ They also get **longer** — 67/46 turns
+        // to 92/79 — which is the heuristic working: a ring of one-way attacks
+        // kills every seat at once, and focusing the weakest seat kills one
+        // and leaves three at full life. Watch turns/game in the smoke test,
+        // not here.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(3), 67, 3122),
-            (43, Some(2), 40, 1835),
-            (4242, Some(0), 46, 2193),
+            (0xC0FFEE, Some(3), 92, 3812),
+            (43, Some(2), 38, 1668),
+            (4242, Some(0), 79, 3260),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

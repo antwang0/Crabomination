@@ -5256,6 +5256,78 @@ impl GameState {
         self.players.iter().filter(|p| p.is_alive()).count()
     }
 
+    /// [`first_opponent_of`](Self::first_opponent_of) restricted to seats
+    /// still in the game. The unfiltered form keeps naming a player who has
+    /// left, which every caller then has to reject; identical to it while
+    /// nobody has been eliminated, which is every turn of a duel.
+    pub(crate) fn first_alive_opponent_of(&self, seat: usize) -> Option<usize> {
+        (0..self.players.len())
+            .find(|&q| q != seat && self.players[q].is_alive() && !self.same_team(seat, q))
+    }
+
+    /// The opponent to aim at when the rules leave the choice open and nobody
+    /// is there to make it — the bot's default defender. `None` when `seat`
+    /// has no opponent still in the game.
+    ///
+    /// In a duel there is one candidate and this is a walk of two seats: the
+    /// scoring below never runs. At three seats and up it is the decision that
+    /// shapes the game, and the positional answer it replaces ("the next alive
+    /// seat") made every pod a ring of one-way attacks — seat 0 was only ever
+    /// hit by the last seat, whatever the board said.
+    ///
+    /// Ranked, ties broken by seat index so a fixed seed reproduces the run:
+    /// * **the commander-damage race** (CR 903.10a) — 21 from one commander is
+    ///   a second life total that only `seat`'s commander can spend, so a seat
+    ///   it has already hit is the seat worth hitting again;
+    /// * **the lowest effective life** — nearest to dying outright;
+    /// * **the fewest untapped creatures** — least able to block, and least
+    ///   able to punish the crack-back.
+    pub fn default_hostile_opponent(&self, seat: usize) -> Option<usize> {
+        let mut only = None;
+        let mut count = 0usize;
+        for q in 0..self.players.len() {
+            if q == seat || !self.players[q].is_alive() || self.same_team(seat, q) {
+                continue;
+            }
+            count += 1;
+            if count == 1 {
+                only = Some(q);
+            }
+        }
+        if count <= 1 {
+            return only;
+        }
+        let mut best: Option<(i64, usize)> = None;
+        for q in 0..self.players.len() {
+            if q == seat || !self.players[q].is_alive() || self.same_team(seat, q) {
+                continue;
+            }
+            // Only a commander `seat` controls can add to the tally; one in
+            // the command zone is a reason to cast it, not to pick a defender.
+            let race = self.players[seat]
+                .commanders
+                .iter()
+                .filter(|&&cmd| {
+                    self.battlefield.iter().any(|c| c.id == cmd && c.controller == seat)
+                })
+                .map(|&cmd| self.commander_damage.get(&(q, cmd)).copied().unwrap_or(0))
+                .max()
+                .unwrap_or(0);
+            let untapped = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == q && !c.tapped && c.definition.is_creature())
+                .count();
+            let score = i64::from(race) * 3
+                + i64::from(100 - self.effective_life(q).clamp(0, 100)) * 2
+                + (10 - untapped.min(10)) as i64;
+            if best.is_none_or(|(b, _)| score > b) {
+                best = Some((score, q));
+            }
+        }
+        best.map(|(_, q)| q)
+    }
+
     /// CR 800.4j — the seat that actually receives priority when `seat` would.
     /// `seat` itself while they are still in the game; otherwise the next
     /// player in turn order who is. A turn whose active player has left runs
