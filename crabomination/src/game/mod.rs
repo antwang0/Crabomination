@@ -22760,10 +22760,18 @@ impl GameState {
         // Terastodon and Voyager Drake fan out like a bare `ApplyToTargets`.
         let mut eff = eff;
         let mut cap = usize::MAX;
+        // CR 601.2c — set by `ForEachOpponentTarget`: no two picks may share a
+        // controller, and the cap is the picker's own opponent count.
+        let mut distinct_controllers = false;
         loop {
             eff = match eff {
                 Effect::MayDo { body, .. } | Effect::OptionalTargets { body, .. } => body,
                 Effect::TargetsExactlyX { body } => body,
+                Effect::ForEachOpponentTarget { body } => {
+                    distinct_controllers = true;
+                    cap = cap.min(self.opponents_of(controller).len());
+                    body
+                }
                 Effect::CapTargetsAt { amount, body } => {
                     let ctx = crate::game::effects::EffectContext::for_trigger(
                         source,
@@ -22808,10 +22816,27 @@ impl GameState {
         if let Some(Target::Permanent(c)) = primary {
             avoid.push(c);
         }
+        // CR 601.2c — the controllers slot 0 and each pick have already claimed.
+        let mut claimed: Vec<usize> = Vec::new();
+        if distinct_controllers && let Some(t) = primary.as_ref()
+            && let Some(k) = self.target_controller_key(t)
+        {
+            claimed.push(k);
+        }
         while chosen.len() + 1 < max {
             match self.auto_target_for_effect_avoiding_set(eff, controller, &avoid) {
                 Some(t @ Target::Permanent(cid)) if !avoid.contains(&cid) => {
+                    // Rejected picks still join `avoid`, so the next round asks
+                    // for a different permanent and the loop terminates when the
+                    // candidate pool runs out.
                     avoid.push(cid);
+                    if distinct_controllers {
+                        let Some(k) = self.target_controller_key(&t) else { continue };
+                        if claimed.contains(&k) {
+                            continue;
+                        }
+                        claimed.push(k);
+                    }
                     chosen.push(t);
                 }
                 _ => break,

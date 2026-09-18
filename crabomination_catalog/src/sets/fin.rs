@@ -8168,19 +8168,27 @@ pub fn omega_heartless_evolution() -> CardDefinition {
         },
         power: 8,
         toughness: 8,
+        // CR 601.2c — "for each opponent, tap up to one target nonland
+        // permanent that opponent controls. Put X stun counters on each of
+        // those permanents and you gain X life." The life is once, not once
+        // per target, so it sits outside the per-target body.
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Tap {
-                what: Selector::TargetFiltered {
-                    slot: 0,
+            Effect::ForEachOpponentTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 5,
+                    min_targets: 0,
                     filter: SelectionRequirement::Permanent
                         .and(SelectionRequirement::Nonland)
                         .and(SelectionRequirement::ControlledByOpponent),
-                },
-            },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: x(),
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: Selector::Target(0) },
+                        Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::Stun,
+                            amount: x(),
+                        },
+                    ])),
+                }),
             },
             Effect::GainLife {
                 who: Selector::You,

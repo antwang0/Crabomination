@@ -217,3 +217,33 @@ impl GameState {
             .map(|c| c.id)
     }
 }
+
+// ---------------------------------------------------------------------------
+// CR 601.2c — per-opponent targeting. "For each opponent, [verb] up to one
+// target X that player controls" is a target *per opponent*, and a target slot
+// is declared statically by the card literal, so the arity a pod needs is not
+// expressible as slots. `Effect::ForEachOpponentTarget` says it as a
+// constraint on the chosen set instead: at most one target per controller, at
+// most one per opponent.
+// ---------------------------------------------------------------------------
+
+impl GameState {
+    /// The seat a target "belongs to" for the per-opponent constraint: the
+    /// controller of a permanent, the owner of a card in a non-battlefield
+    /// zone (Sepulchral and Diluvian Primordial target graveyard cards), or a
+    /// player target itself. `None` when the target can't be located, which
+    /// drops it from the set rather than letting it collide with everything.
+    pub(crate) fn target_controller_key(
+        &self,
+        t: &crate::game::types::Target,
+    ) -> Option<usize> {
+        use crate::game::types::Target;
+        match t {
+            Target::Player(p) => (*p < self.players.len()).then_some(*p),
+            Target::Permanent(id) => self
+                .battlefield_find(*id)
+                .map(|c| c.controller)
+                .or_else(|| self.find_card_anywhere(*id).map(|c| c.owner)),
+        }
+    }
+}

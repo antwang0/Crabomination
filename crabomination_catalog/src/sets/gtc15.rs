@@ -137,19 +137,25 @@ pub fn diluvian_primordial() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::ApplyToTargets {
-            max_targets: 1,
-            min_targets: 0,
-            filter: R::HasCardType(CardType::Instant)
-                .or(R::HasCardType(CardType::Sorcery))
-                .and(R::InOpponentGraveyard),
-            effect: Box::new(Effect::CastWithoutPayingImmediate {
-                reduce_generic: 0,
-                                pay_own_cost: false,
-                what: Selector::Target(0),
-                source_zone: crate::card::Zone::Graveyard,
-                exile_after: true,
-                copy: false,
+        // CR 601.2c — "for each opponent, you may cast up to one target
+        // instant or sorcery card from *that player's* graveyard":
+        // `ForEachOpponentTarget` keys a graveyard card by its owner, so one
+        // card per opponent's graveyard.
+        triggered_abilities: vec![etb(Effect::ForEachOpponentTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 5,
+                min_targets: 0,
+                filter: R::HasCardType(CardType::Instant)
+                    .or(R::HasCardType(CardType::Sorcery))
+                    .and(R::InOpponentGraveyard),
+                effect: Box::new(Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
+                    pay_own_cost: false,
+                    what: Selector::Target(0),
+                    source_zone: crate::card::Zone::Graveyard,
+                    exile_after: true,
+                    copy: false,
+                }),
             }),
         })],
         ..Default::default()

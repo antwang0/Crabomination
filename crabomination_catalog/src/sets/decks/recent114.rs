@@ -292,11 +292,19 @@ pub fn grasp_of_fate() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ExileUntilSourceLeaves {
-                what: target_filtered(
-                    SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
-                ),
-                return_to: ExileReturnZone::Battlefield,
+            // CR 601.2c — "for each opponent, exile up to one target nonland
+            // permanent that player controls until this leaves".
+            effect: Effect::ForEachOpponentTarget {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 5,
+                    min_targets: 0,
+                    filter: SelectionRequirement::Nonland
+                        .and(SelectionRequirement::ControlledByOpponent),
+                    effect: Box::new(Effect::ExileUntilSourceLeaves {
+                        what: Selector::Target(0),
+                        return_to: ExileReturnZone::Battlefield,
+                    }),
+                }),
             },
         }],
         ..Default::default()

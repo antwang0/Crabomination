@@ -43,6 +43,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 |---|---|---|
 | N seats (2..N), turn rotation, APNAP ordering | ✅ | `game/mod.rs`, `multi_player_game`; tests in `core_rules/multiplayer.rs` (76) and `cr_801.rs` |
 | Attack any opponent / their planeswalkers, per-attacker defender | ✅ | `game/combat.rs` |
+| CR 601.2c "for each opponent, … target X *that player* controls" | ✅ | `Effect::ForEachOpponentTarget` — a constraint on the chosen set (one target per controller, capped at the opponent count), enforced by the auto-target picker, the cast path and resolution. The five Primordials, Grasp of Fate, Omega, Tempted by the Oriq; tests in `core_rules/per_opponent_targets.rs` |
 | CR 509.1a — only a defending player declares blocks | ✅ | `combat.rs::may_declare_blocks` |
 | CR 800.4a a player leaving: objects, stack items, control effects, the command zone, combat, a pending ask | ✅ | `stack.rs::objects_leave_with_player` |
 | Free-for-all last-player-standing, simultaneous-loss draw | ✅ | `team.rs`, `stack.rs` |

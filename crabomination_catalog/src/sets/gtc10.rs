@@ -1,8 +1,9 @@
 //! Gatecrash (GTC) wave 10: the five Primordial ETB Avatars, a Bloodrush
 //! beater, a spell-count evasion creature, and two combat-payoff rares. The
-//! Primordials' "for each opponent" clauses collapse to a single opponent in a
-//! two-player game (the multiplayer per-opponent fan-out is the tracked
-//! "target each" gap). Tests in `classic_sets/gtc`.
+//! Primordials' "for each opponent, … up to one target X that player controls"
+//! is `Effect::ForEachOpponentTarget` (CR 601.2c) — one target per opponent,
+//! none of them sharing a controller. Tests in `classic_sets/gtc`, and the
+//! pod-only assertions in `core_rules/per_opponent_targets`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
@@ -95,13 +96,19 @@ pub fn incursion_specialist() -> CardDefinition {
     }
 }
 
-/// Up-to-one-target ETB body, filtered to a single opponent's objects.
+/// CR 601.2c — the Primordial cycle's "for each opponent, … up to one target
+/// X that player controls". `ForEachOpponentTarget` caps the picks at the
+/// controller's opponent count and forbids two of them sharing a controller,
+/// which is the printed clause; the ceiling below is only the static slot
+/// ceiling the cast/trigger walk enumerates (five, for a five-seat pod).
 fn primordial_etb(filter: R, effect: Effect) -> TriggeredAbility {
-    etb(Effect::ApplyToTargets {
-        max_targets: 1,
-        min_targets: 0,
-        filter,
-        effect: Box::new(effect),
+    etb(Effect::ForEachOpponentTarget {
+        body: Box::new(Effect::ApplyToTargets {
+            max_targets: 5,
+            min_targets: 0,
+            filter,
+            effect: Box::new(effect),
+        }),
     })
 }
 
@@ -207,23 +214,26 @@ pub fn sylvan_primordial() -> CardDefinition {
         power: 6,
         toughness: 8,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Destroy {
-                what: target_filtered(
-                    R::Permanent
-                        .and(R::Not(Box::new(R::Creature)))
-                        .and(R::ControlledByOpponent),
-                ),
-            },
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: R::HasLandType(LandType::Forest),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
+        // "For each opponent, destroy target noncreature permanent that player
+        // controls. For each permanent destroyed this way, search your library
+        // for a Forest card and put that card onto the battlefield tapped."
+        // The search rides inside the per-target body, so it fires once per
+        // target — the printed "per permanent destroyed" differs only for a
+        // target that survives its own Destroy (indestructible, regenerated).
+        triggered_abilities: vec![primordial_etb(
+            R::Permanent.and(R::Not(Box::new(R::Creature))).and(R::ControlledByOpponent),
+            Effect::Seq(vec![
+                Effect::Destroy { what: Selector::Target(0) },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasLandType(LandType::Forest),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
-            },
-        ]))],
+            ]),
+        )],
         ..Default::default()
     }
 }

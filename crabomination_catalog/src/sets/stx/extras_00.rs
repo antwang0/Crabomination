@@ -884,11 +884,11 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
         name: "Tempted by the Oriq",
         cost: cost(&[generic(1), u(), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        // Permanently gain control of up to one creature/PW (MV 3 or less)
-        // an opponent controls. Printed text is per-opponent; with the
-        // engine's targeting this grabs one such permanent (exact in 1v1).
-        effect: Effect::ApplyToTargets {
-            max_targets: 1,
+        // CR 601.2c — "for each opponent, gain control of up to one target
+        // creature or planeswalker that player controls with mana value 3 or
+        // less": one per opponent, none of them sharing a controller.
+        effect: Effect::ForEachOpponentTarget { body: Box::new(Effect::ApplyToTargets {
+            max_targets: 5,
             min_targets: 0,
             filter: SelectionRequirement::ControlledByOpponent
                 .and(SelectionRequirement::ManaValueAtMost(3))
@@ -898,7 +898,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
                 to: None,
                 duration: Duration::Permanent,
             }),
-        },
+        })},
         ..Default::default()
     }
 }

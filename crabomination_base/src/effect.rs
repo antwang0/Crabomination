@@ -6716,6 +6716,23 @@ pub enum Effect {
     /// creatures", where the cap is computed at resolution rather than paid as
     /// {X} (Mogis's Marauder's devotion-to-black cap).
     CapTargetsAt { amount: Value, body: Box<Effect> },
+    /// CR 601.2c — "**for each opponent**, [verb] up to one target X *that
+    /// player* controls". A transparent wrapper over an `ApplyToTargets`: it
+    /// caps the chosen targets at the controller's opponent count *and*
+    /// forbids two of them from sharing a controller, which together are
+    /// exactly the printed clause — one target per opponent, each chosen as
+    /// the spell or ability goes on the stack.
+    ///
+    /// It is a wrapper rather than one target slot per opponent because a slot
+    /// is declared statically by the card literal (`Selector::TargetFiltered
+    /// { slot, .. }`) and "one per opponent" is a count only the game knows.
+    /// The five Primordials, Grasp of Fate, Omega and Tempted by the Oriq.
+    ///
+    /// ⚠ The permissiveness this leaves is "up to": a printed *mandatory*
+    /// per-opponent target (only Sylvan Primordial) could be declined here.
+    /// Every other card in the family prints "up to one", and for all eight
+    /// the targets are pure upside, so no real seat declines one.
+    ForEachOpponentTarget { body: Box<Effect> },
     /// Transparent wrapper declaring that target slots `>= min` are optional
     /// ("up to one target …") for an otherwise-conventional `body` whose slots
     /// come from *distinct* effects — the case `ApplyToTargets` can't express

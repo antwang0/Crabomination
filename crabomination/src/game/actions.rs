@@ -7803,6 +7803,24 @@ impl GameState {
             }
         }
 
+        // CR 601.2c — "for each opponent, … target X that player controls"
+        // (`Effect::ForEachOpponentTarget`): the same cross-target shape one
+        // step stricter, on the target's *controller* rather than the target.
+        // Tempted by the Oriq is the family's only spell; the rest are ETB
+        // triggers, whose targets the picker chooses.
+        if card.definition.effect.per_opponent_targets(mode) {
+            let mut seen: Vec<usize> = Vec::new();
+            for t in target.iter().chain(additional_targets.iter()) {
+                let Some(k) = self.target_controller_key(t) else { continue };
+                if seen.contains(&k) {
+                    cast_census::rollback(line!());
+                    self.players[p].hand.push(card);
+                    return Err(GameError::DuplicateTarget);
+                }
+                seen.push(k);
+            }
+        }
+
         // CR 702.16: Protection from [color] prevents targeting by spells
         // of that color. Check the spell's colors against the target's
         // protection keywords.

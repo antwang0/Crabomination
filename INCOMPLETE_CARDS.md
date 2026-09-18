@@ -336,38 +336,29 @@ rider pips on one cast are two scry triggers and two counters-per-cast, which
 is what the 2020-11-10 Mana Reflection rulings on both cards say. Nothing is
 rounded off; no row here.
 
-## Multiplayer wording still approximated (from the N-seat audit)
+## Multiplayer wording — the N-seat audit, and what it still misses
 
 Every implemented card whose oracle says "each opponent" was read against its
 body for a fan-out ref. Adeline, Resplendent Cathar was fixed with
-`Effect::ForEachOpponent` and Esper Sentinel with a per-caster count; the two
-below need per-opponent **targeting**, which the fan-out cannot give them —
-each iteration would need its own target chosen as the spell is cast (CR
-601.2c), and the target machinery binds one target set per effect.
+`Effect::ForEachOpponent` and Esper Sentinel with a per-caster count.
 
-**Priced 2026-09-18: eight implemented cards share the shape**, so the
-primitive is worth a run of its own. All read "for each opponent, [verb]
-target X that player controls/owns":
+✅ **Per-opponent *targeting* is closed.** The eight cards that read "for each
+opponent, [verb] up to one target X that player controls" — the five
+Primordials, Grasp of Fate, Omega Heartless Evolution and Tempted by the Oriq
+— now carry `Effect::ForEachOpponentTarget` (CR 601.2c): at most one target
+per controller, at most one per opponent, chosen as the spell or ability goes
+on the stack. It is a constraint on the chosen set rather than one target slot
+per opponent, because a slot is declared statically by the card literal and
+"one per opponent" is a count only the game knows.
 
-| Card | Gap |
-|---|---|
-| Sylvan Primordial | "destroy target noncreature permanent that player controls" — one target, so at three seats it destroys one permanent instead of three |
-| Sepulchral Primordial | "put target creature card from that player's graveyard onto the battlefield under your control" |
-| Diluvian Primordial | "you may cast target instant or sorcery card from that player's graveyard" |
-| Luminate Primordial | "exile target creature that player controls" |
-| Molten Primordial | "gain control of target creature that player controls" |
-| Grasp of Fate | "exile target nonland permanent that player controls" |
-| Omega, Heartless Evolution | per-opponent targeting on the same shape |
-| Tempted by the Oriq | as above |
-
-⚠ **The blocker is dynamic slot arity, not the fan-out.** A target slot is
-declared statically by `Selector::TargetFiltered { slot, filter }` in the card
-literal; "one slot per opponent" is a count only the game knows.
-`CapTargetsAt { amount }` over `ApplyToTargets` gives the right *count* and the
-wrong *distribution* (three targets, possibly all from one opponent). A correct
-version needs a per-slot "controlled by the Nth opponent" filter **and** a
-variable slot census, which touches the `requires_target` /
-`target_filter_for_slot` / `auto_target` / bot-candidate walker family.
+⚠ **What it rounds off**, both minor and both documented at the variant:
+- "Up to one" is what seven of the eight print, so the optional slot is
+  faithful. Sylvan Primordial's clause is *mandatory* per opponent and could
+  in principle be declined here; its targets are pure upside, so no real seat
+  does.
+- Sylvan's "for each permanent destroyed this way, search your library for a
+  Forest" fires once per *target* rather than once per permanent that actually
+  died, so an indestructible or regenerated target still fetches.
 
 ## CR 903.4 color-identity divergences (from the Scryfall audit)
 

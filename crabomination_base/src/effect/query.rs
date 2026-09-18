@@ -387,6 +387,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body, .. }
             | Effect::TargetsExactlyX { body, .. }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::OptionalTargets { body, .. }
             | Effect::OathCatchUp { body, .. }
             | Effect::OnAttackedUntilYourNextTurn { body, .. }
@@ -1333,7 +1334,8 @@ impl Effect {
             Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
-            | Effect::CapTargetsAt { body, .. } => body.requires_target(),
+            | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body } => body.requires_target(),
             Effect::MayPayX { body, .. } => body.requires_target(),
             Effect::OptionalTargets { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
@@ -2599,7 +2601,8 @@ impl Effect {
             | Effect::MayPayX { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
-            | Effect::CapTargetsAt { body, .. } => body.primary_target_filter(),
+            | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body } => body.primary_target_filter(),
             // "**Target player** may draw a card" (Questing Phelddagrif's
             // `{U}`) — the chooser is a slot of its own, and the body's is
             // still the fallback, so this cannot shadow it.
@@ -2791,6 +2794,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::MayPayX { body, .. }
             | Effect::Repeat { body, .. } => body.slot_owner(slot, mode),
             other => other
@@ -2838,6 +2842,7 @@ impl Effect {
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
+                | Effect::ForEachOpponentTarget { body }
                 | Effect::MayPayX { body, .. }
                 | Effect::Repeat { body, .. } => hostile(body),
                 _ => false,
@@ -2906,6 +2911,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::MayPayX { body, .. } => body.prefers_friendly_target(),
             // "TARGET player draws a card" is a gift — aim slot 0 at the
             // caster (Shadrix Silverquill's draw mode is the mode you take
@@ -3004,6 +3010,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -3095,6 +3102,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -3533,6 +3541,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -3858,6 +3867,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::OptionalTargets { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
@@ -4123,6 +4133,7 @@ impl Effect {
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
+                | Effect::ForEachOpponentTarget { body }
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MaySacrifice { then: body, .. }
@@ -4838,6 +4849,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -4866,6 +4878,7 @@ impl Effect {
             Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
@@ -4896,6 +4909,27 @@ impl Effect {
     /// clauses are separate instances (a `Seq` of single-target effects), where
     /// the same object may legally fill each clause. Walks modal wrappers so a
     /// chosen mode's multi-target effect is found.
+    /// CR 601.2c — true when this effect's targets are "one per opponent"
+    /// (`Effect::ForEachOpponentTarget`), so no two of them may share a
+    /// controller. The stricter sibling of [`Self::distinct_target_count`],
+    /// walking the same modal and transparent wrappers.
+    pub fn per_opponent_targets(&self, mode: Option<usize>) -> bool {
+        match self {
+            Effect::ForEachOpponentTarget { .. } => true,
+            Effect::ChooseMode(modes) => match mode {
+                Some(m) => modes.get(m).is_some_and(|e| e.per_opponent_targets(None)),
+                None => modes.iter().any(|e| e.per_opponent_targets(None)),
+            },
+            _ => {
+                let mut found = false;
+                self.for_each_inner(&mut |e| {
+                    found |= e.per_opponent_targets(mode);
+                });
+                found
+            }
+        }
+    }
+
     pub fn distinct_target_count(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::DealDamageDivided { max_targets, .. }
@@ -4914,6 +4948,7 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
+            | Effect::ForEachOpponentTarget { body }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }

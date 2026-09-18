@@ -25,6 +25,7 @@ mod jewel;
 mod lci_craft;
 mod misconceptions;
 mod commander_mana;
+mod per_opponent_targets;
 mod multiplayer;
 mod quests;
 mod spree;
