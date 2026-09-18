@@ -1,0 +1,26 @@
+ladder: mcts-dflt-256 (A) vs mcts-r77off-256 (B) — 500 games x 12 sealed decks on 22 threads, seed 97 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             248    252      0     49.6%  [45.2%, 54.0%]
+sealed #1             244    256      0     48.8%  [44.4%, 53.2%]
+sealed #2             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #3             244    256      0     48.8%  [44.4%, 53.2%]
+sealed #4             254    246      0     50.8%  [46.4%, 55.2%]
+sealed #5             238    262      0     47.6%  [43.3%, 52.0%]
+sealed #6             254    246      0     50.8%  [46.4%, 55.2%]
+sealed #7             250    250      0     50.0%  [45.6%, 54.4%]
+sealed #8             248    252      0     49.6%  [45.2%, 54.0%]
+sealed #9             245    255      0     49.0%  [44.6%, 53.4%]
+sealed #10            245    255      0     49.0%  [44.6%, 53.4%]
+sealed #11            254    246      0     50.8%  [46.4%, 55.2%]
+----------------------------------------------------------------
+TOTAL                2974   3026      0     49.6%  [48.3%, 50.8%]
+
+6000 decided, 0 undecided, in 2174.2s
+
+paired: 3000 pairs — 351 A-sweeps, 377 B-sweeps, 2272 splits
+        A win%  49.6%  [48.7%, 50.4%]  (±0.88 pts)
+        within-pair rho -0.515 — variance x0.49 vs independent games, i.e. these 6000 games carry the precision of 12366
+verdict: inconclusive at 500 games/archetype — the interval straddles 50%
+exit: 0

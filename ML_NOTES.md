@@ -5346,6 +5346,20 @@ sequencing, and the evaluator's one-tick horizon is exactly why it needs
 the help. `hold_sick_next` stays as a flag for the record (profile
 `hold-next`), off.
 
-The round-77b search-transfer read (`mcts-dflt-256` vs `mcts-r77off-256`,
-seeds 97 then 43, 500 × 12) was launched with this round and is appended
-below when it lands.
+**The round-77b search-transfer read** (`mcts-dflt-256` on the adopted
+default vs `mcts-r77off-256`, paired, 500 × 12): seed 97 **49.6**
+[48.7, 50.4], seed 43 **50.0** [49.2, 50.9]. The scored +2.7 does not
+transfer to the search and costs nothing there. The mechanism is where
+the stop lived: the search's root menu (`main_phase_candidates_for_mcts`)
+never applied the magecraft stop — it takes the six best-scored
+candidates and lets the rollouts judge — so the root decision the scored
+bot got wrong was one the search was already making by simulation. What
+77b changed under the search is only the rollouts' greedy pick on both
+seats, and a rollout policy improved symmetrically reads as a null (the
+r75 shape in the other direction). So the ledger reads: the actors and
+the scored `dflt` carry 77b's +2.7; the lobby and the client, which
+search, carry it in the rollouts and gain nothing measurable. The same
+split as r76b's search read (50.6 [49.8, 51.5]) and a standing rule for
+the menu-hole track: **a scored-pick fix pays under the search only when
+the search's root menu had the same hole** — check the root enumerator
+before pre-registering a transfer read.
