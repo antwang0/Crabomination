@@ -3015,6 +3015,88 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-18 (the clone-family session, SIXTEENTH box) — three rows, and two of them are the largest this file has taken in a year of passes
+
+**BASE ABSOLUTES at `e6b5c46a`** (`profiling-fast --no-default-features`,
+system allocator, `--a gang --b gang --games 6 --threads 1 --seed 1`):
+fixed **571,580,293** / cube **1,494,466,607** / sealed **1,611,561,623**.
+
+📐 **AND THE BOX WAS A NON-EVENT THIS TIME, WHICH IS ITSELF THE READING.**
+`(-359)`'s closing was 571,483,507 / 1,494,309,746 / 1,611,303,685 at a tip
+one Round-77/78 pilot change behind this one, so the base missed its
+prediction by **+0.017 / +0.010 / +0.016 %** — an order of magnitude under
+the twelfth-vs-eleventh and fifteenth-box steps this file has recorded.
+**A fresh container is a fresh box, but "fresh box" does not mean "offset":
+re-take the base and read what it says, rather than expecting the last
+offset.**
+
+⚠ **A concurrent session landed three commits mid-run** (four Commander rules
+bugs in `mod.rs`/`stack.rs`/`bot.rs`/`card.rs`, Round 77b and Round 79), so
+`(-362)` onward is measured against a **second** base at `f177de67`: fixed
+**572,061,894** / cube **1,492,003,099** / sealed **1,610,978,327**. Those
+commits are +0.074 / +0.029 / +0.066 % over the `(-361)` candidate. Each row
+below is still one tree on both sides, which is the whole reason this file
+quotes rows and absolutes separately.
+
+```text
+  (-361) the trigger doublers' last fire      +0.010 / -0.194 / -0.102 %
+  (-362) the player-control table stays empty -0.548 / -0.410 / -0.513 %
+  (-363) players as an inline seat list  REFUTED +0.754 / +0.652 / +0.722 %, reverted
+  (-364) the token definition is an Arc       -0.073 / -0.530 / -0.272 %
+  ─────────────────────────────────────────────────────────────────────────
+  run total                                   -0.611 / -1.134 / -0.887 %
+```
+
+**BASE 572,061,894 / 1,492,003,099 / 1,610,978,327 -> CLOSING 568,508,598 /
+1,478,019,562 / 1,598,344,730** at `(-364)` (the second base; `(-361)` sits
+above it).
+
+📐📐 **THE SHAPE OF THE RUN: ALL THREE ROWS ARE THE SAME QUESTION ASKED OF A
+CLONE — "does this copy have to exist?" — AND NONE OF THEM IS A BUFFER.**
+`(-361)` is a clone in a loop that runs once. `(-362)` is a table
+materialized before anyone asked whether it was needed. `(-364)` is a `Box`
+where an `Arc` does. **The previous session's lesson was "rank the allocation
+table by source line"; this one's is "rank a CLONE by whether its owner needs
+to own", and the two `Arc`/deletion answers beat every inline buffer either
+session tried.** Four of the five inline-buffer attempts across the two
+sessions lost.
+
+📐 **AND THE PRICE OF AN ALLOCATION NOW HAS A RANGE, NOT A NUMBER: 222 /
+278 / 509 Ir**, measured by deletion at `(-355)` / `(-362)` / `(-364)`.
+A buffer a caller builds and reads is 222; one `GameState::clone` copies is
+278 (the fill loop and the drop go too); one that carries a `String` and six
+`Vec`s is 509 (the `memcpy` goes too). **Size an allocation lead by the bytes
+it copies, not only by the count.**
+
+sweep   **2 blocks — fresh seeds 1428..1429 and 1430..1431 at the `(-364)`
+        tip: 12 cells / 59,200 games / 0 failures**, `cap 0 / board 0 /
+        stuck 0 / draw 22` (a draw is a legal rules outcome; 20 of the 22 are
+        seed 1430's `cube`/`all` cells, 10 apiece — the same pairing seen
+        from two pools, which is what a *deck* draw looks like), pools
+        `cube all sealed`, `target-audit/overflow` with
+        `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
+        **FRONTIER 1432.**
+        Suite **19,610 / 0 / 6** (`CRAB_ANSWER_LOG=strict`), golden traces
+        unmoved, clippy **0** over the workspace, `cargo check --profile
+        release-fast -p crabomination --bin bot_ladder` clean.
+        `--bench` at the `(-364)` tip: **195,806 / 27.49 / 611.9 / 0 stalls**,
+        byte-identical to the committed invariant, `determinism ok`,
+        `thread_determinism ok (3 vs 1)`, `peak_rss_mib` 26.9. **All three
+        rows are behaviour-preserving on the bench path.**
+        ⚠ Box timings, SIXTEENTH box (4 cores, 15 GB, Xeon @ 2.80 GHz): cold
+        `profiling-fast` **~9 m**, engine-only **3m27-3m51s** (**10m37s** when
+        a concurrent base-crate commit lands under it), cold `release`
+        **31m32s**, cold `overflow` with `-C debug-assertions=yes` **11 m**,
+        cold `profiling-lines` **~10 m**, three pools' callgrind in parallel
+        **~60 s**, full suite **119-127 s**, workspace clippy ~4 m, a 6-cell
+        sweep block **~7 m**, `cargo check -p crabomination` 2m24s,
+        `cargo check --profile release-fast` 1m46s.
+        ⚠⚠ **DISK: this container started with 30 GB free and hit `No space
+        left on device` mid-run**, which fails a build as a *compile error*
+        (`couldn't create a temp dir`). `rm -rf target/debug/incremental` plus
+        a stale `target/profiling-lines` returned **11 GB** with nothing to
+        rebuild. Budget for it *before* the release build, not after.
+
 ### 2026-09-17 (the cold-class session, FIFTEENTH box) — `(-349)`'s open half taken as a class, and the box check landed for the second run running
 
 **BASE ABSOLUTES at `d1676b19`** (`profiling-fast --no-default-features`,
@@ -8458,6 +8540,16 @@ Three type errors survived the sed (a `ChooseMode` closure in `mh3d`,
 --workspace --all-targets` found all three. ⚠ **No encoding change**: `Box<T>`
 and `Arc<T>` serialize identically under serde's `rc` feature, `Effect`'s
 variant shape is untouched, and nets do **not** need a retrain.
+
+⚠ **AND AN `Arc` SWAP OWES ONE CHECK Ir CANNOT GIVE: the atomic.** A
+refcount bump is one instruction to callgrind and a `lock xadd` to the
+machine, and a definition shared between actor threads would pay cache-line
+ping-pong on top. It does not happen here, and the reason is structural:
+`simulate_match_pairs_piloted` takes `&[CardFactory]`, so **every thread
+builds its own `CardDefinition`s and no `Arc<TokenDefinition>` is ever shared
+across threads.** `bench_ab.py` over 32 pairs agrees — **-0.19 % median /
+-0.26 % mean, sd 2.74**, i.e. nothing, where the instrument's floor is ~1 %.
+**Check the sharing before worrying about the refcount.**
 
 ### `(-363)` REFUTED — `players` as a two-slot inline seat list removes **exactly** the 22,034 allocations it promised and costs **+0.754 / +0.652 / +0.722 %**
 
@@ -15470,11 +15562,43 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-🔎🔎 **START AT CANDIDATE (O). It is no longer "the diffuse allocation table"
-— it is a ranked, priced, two-pool shortlist of individual source lines, and
-five of its rows have already shipped** (`(-355)`..`(-358)`, -0.388 / -0.309 /
--0.521 % over one session). The instrument is one command on a dump that costs
-one `--dump-instr` run:
+🔎🔎 **START AT CANDIDATE (R) — THE CLONE CENSUS — AND FALL BACK TO (O).**
+(R) is new and it is where the 2026-09-18 session's whole -1.134 % of `cube`
+came from; (O)'s line shortlist is still live and still the instrument that
+feeds it. **Their relationship is the method: (O) names the `Clone` impl that
+allocates, (R) asks who wanted the copy.** Eight rows have now shipped off
+the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`).
+
+  💡 **R. THE CLONE CENSUS — three rows in one session, -0.194 / -0.410 /
+     -0.530 % of `cube`, and every one of them came from ONE question asked
+     of a `Clone`: "does this copy have to exist?"** The three answers so far
+     are the three shapes to look for, in this order:
+
+```text
+   1. a clone inside a loop whose trip count is "1 + something nobody has"
+      -> `std::iter::repeat_n`, which yields the ORIGINAL last.   (-361)
+   2. a table materialized before anyone asked whether it was needed
+      -> ask first; an EMPTY table is the cleared table.          (-362)
+   3. a `Box<T>` in a type the engine clones, where T is immutable
+      -> `Arc<T>`; the clone becomes a refcount bump.             (-364)
+```
+
+     **Shape 3 is the one with stock left.** `Effect` still carries
+     `Box<Effect>` (3,354 `Box::clone` calls / 1.24 M inclusive on `cube`),
+     `Box<SelectionRequirement>` (~5,900) and `Box<Selector>`/`Box<Value>`.
+     ⚠ **`Box<Effect>` is NOT the same safety case as `(-364)`'s**: a nested
+     effect is rewritten in places (X substitution, mode selection), so the
+     swap needs `Arc::make_mut` at each write site and the write sites have
+     to be found first — `(-364)`'s whole argument was that `cargo check
+     --workspace --all-targets` found *none* for the token field. Price the
+     write sites before the read win.
+     ⚠ **And shape 3 has a floor `(-363)` established**: this is about a
+     `Box` behind ONE pointer hop, not about inlining. An inline buffer in a
+     field the engine indexes constantly lost by 2.5:1 even with an exact
+     allocation prediction.
+
+  💡 **O. THE LINE CENSUS.** The instrument is one command on a dump that
+     costs one `--dump-instr` run:
 
 ```text
   cargo build --profile profiling-lines -p crabomination --bin bot_ladder --no-default-features
@@ -16340,18 +16464,42 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
 
 ```text
     cube   sealed  site                                        shape
-   6,440    7,240  actions.rs auto-tap `Box::new(OneColorDecider)` pool it, `(-356)`'s shape
-   6,440    7,240  actions.rs auto-tap `events` buffer           out-param, `(-243)`'s shape
+   6,440    7,240  actions.rs auto-tap `Box::new(OneColorDecider)` ✅ TAKEN as (-356)/(-359)
+   6,440    7,240  actions.rs auto-tap `events` buffer           ❌ CENSUSED, DECLINED — see below
    7,752    ~7,000 DispatchScan::equip_grants                    ❌ dropck, see (-357)
    4,638    ~4,600 GrantScan::equipment                          ❌ REFUTED as (-360), see below
-   6,688    ~6,600 card.rs TokenDefinition::clone (two lines)    unread
+   6,688    ~6,600 card.rs TokenDefinition::clone (two lines)    ✅ TAKEN as (-364) — ONE LEVEL UP
+  22,034   ~22,000 mod.rs:3654 GameState::clone `players`        ❌ REFUTED as (-363)
+  21,532   ~29,000 mod.rs:3687 GameState::clone `controlled_by`  ✅ TAKEN as (-362)
    6,274    5,342  combat.rs:3924 `lethals` collect              8 callers of the split fn
    3,684    ~3,600 mod.rs affected_from_requirement `types`       escapes into the return
-   2,642    ~2,600 mod.rs active_team_members `Vec<usize>`        one or two seats
-   ——       8,796  combat.rs:1263 declare_attackers `events`      unread, sealed-only row
+   2,642    ~2,600 mod.rs active_team_members `Vec<usize>`        one or two seats, ONE caller
+   ——       8,796  combat.rs:1263 declare_attackers `events`      ❌ a deliberate `with_capacity`, returned
    ——       8,482  stack.rs:2194 Arc::new(ResolvingSpell)         structural
    ——       5,852  mod.rs computed_permanent_hinted               unread
 ```
+
+     📐📐 **AND THE `TokenDefinition::clone` ROW IS THE ENTRY'S OWN LESSON
+     APPLIED TWICE: THE FIX WAS NOT AT THE LINE THE CENSUS NAMED.** The two
+     `card.rs` lines are inside the *derived* `Clone`, and there is nothing to
+     do there. `cg_edges.py --callers` put 98 % of the 3,005 calls under
+     `Box<TokenDefinition>::clone` — i.e. inside `Effect::clone` — and the
+     whole row went to 20 calls by changing the **field type** one level up
+     (`(-364)`, `Box` -> `Arc`, -0.530 % of `cube`). **An allocation-site row
+     names a `Clone` impl; walk up to whoever asked for the copy before
+     reaching for the line.**
+
+     ❌ **THE AUTO-TAP `events` BUFFER IS DECLINED, CENSUSED BY CONSUMER, NO
+     BUILD SPENT.** The row is real — `auto_tap_for_cost_inner`'s
+     `Vec::new()` allocates 6,440 times on `cube` — but it is **a move, not a
+     waste**: of the 21 consumers, **15 do `let mut events = receipt
+     .auto_events;` and then push into it**, so the buffer becomes the
+     caller's own event accumulator and deleting it only moves the allocation
+     to the caller's first push. Only the six `events.extend(receipt
+     .auto_events)` / `append` sites throw it away. An out-param through
+     `auto_tap_for_cost{,_only,_filtered}` would therefore buy at most ~29 %
+     of the row for a five-site signature change. **Ask what the caller does
+     with a returned buffer before filing it as scratch.**
 
      ⚠⚠ **AND THE "inline it" COLUMN IS NOT A PREDICTION — `(-360)` REFUTED
      THE ROW THIS ENTRY CALLED CHEAPEST.** `GrantScan::equipment` removed its
