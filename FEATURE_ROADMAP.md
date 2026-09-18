@@ -51,10 +51,10 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 ### Commander-variant mechanics
 | Feature | State | Where |
 |---|---|---|
-| Partner, "Partner with", Choose a Background | ✅ deck-construction | `Keyword::{Partner, PartnerWith, ChooseABackground}`, `format::commanders_may_pair` |
+| Partner, "Partner with", Choose a Background | ✅ | `Keyword::{Partner, PartnerWith, ChooseABackground}`, `format::commanders_may_pair`. CR 702.124b/d in play too: both commanders seated, tax per commander (`commander_cast_count` keyed by `CardId`) and damage per (commander, player) — tested, and run by the pod's Krark/Rograkh seat |
 | "Partner with" search trigger | ✅ | `shortcut::partner_with_search` (CR 702.124c); Sylvia Brightspear + Khorvath Brightflame |
 | Partner—[text] (Friends forever, Survivors, Character select, Father & son) | ✅ | `Keyword::PartnerLabel(label)` + `commanders_may_pair`'s label equality (CR 702.124i) — one keyword for all four labels; Elmar + Sophina are the implemented Friends forever pair |
-| Doctor's companion | ⏳ | CR 702.124m needs a legendary Time Lord Doctor on the other side, and no Doctor is implemented — a card, not a rule, is the blocker |
+| Doctor's companion | ✅ | `Keyword::DoctorsCompanion` + `format::is_doctor_pair` (CR 702.124m's "no other creature types" is the teeth); `CreatureType::TimeLord`; The Third Doctor + Graham O'Brien in `sets/cmdr.rs` |
 | Monarch, the initiative, goad, myriad, melee, voting / council's dilemma, tempting offer | ✅ | `effect.rs` (`IsMonarch`, `HasInitiative`, `Goad`, `Myriad`, `MeleeOpponentCount`, `VoteTally`, `TemptingOffer`), `dungeons.rs` |
 | Join forces | ✅ | `Effect::JoinForces` (CR 207.2c) over `ask_seat_amount` — turn order from the controller, every ask before every payment; Minds Aglow / Collective Voyage / Mana-Charged Dragon |
 | Eminence (abilities that function from the command zone) | ✅ | CR 113.6b on two axes: triggers via `EventSpec.zone: TriggerZone::{Printed, CommandZoneToo, CommandZoneOnly}` (step gather in `stack.rs`, SpellCast dispatch in `actions.rs`, event dispatcher in `mod.rs`), statics via `CardDefinition.statics_in_command_zone` + `CardInstance::command_zone_statics_active` (six walks). Edgar Markov / Arahbo / Oloro / The Ur-Dragon in `sets/cmdr.rs` |
@@ -65,7 +65,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | Feature | State | Where |
 |---|---|---|
 | N-seat pod runner | ✅ | `pod/mod.rs` — `build_pod_template`, `play_one_pod_game`, `run_pod_games` |
-| Four legal target decks | ✅ | `pod/decks.rs` — Sigarda GW / Judith BR / Hanna UW / Tatyova GU, validated by the suite. Each runs the full colorless staple set: Sol Ring, Command Tower, Arcane Signet, Commander's Sphere, Mind Stone, Path of Ancestry, Opal Palace |
+| Five legal target decks | ✅ | `pod/decks.rs` — Sigarda GW / Judith BR / Hanna UW / Tatyova GU / Krark+Rograkh R (the Partner seat, last so `pod_field(4)` never draws it), validated by the suite. Each runs the full colorless staple set: Sol Ring, Command Tower, Arcane Signet, Commander's Sphere, Mind Stone, Path of Ancestry, Opal Palace |
 | 4-player Commander demo state | ✅ | `demo.rs::build_commander_state_seeded`, now the same four decks |
 | Commander pod mode in `bot_ladder` | ✅ | `bot_ladder --commander [--seats N]` |
 | Golden outcomes for fixed-seed Commander pods | ✅ | `pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table` — three seeds' (winner, turns, actions) committed, cross-process. The triple rather than a line-per-action trace: a pod game is ~2,000 actions, so a real trace is a 400 KB file every Commander commit re-blesses, and it moves on the same changes |

@@ -34,6 +34,15 @@ lists were picked.
 | Judith BR | Judith, the Scourge Diva | BR | 100 | ✅ complete |
 | Hanna UW | Hanna, Ship's Navigator | UW | 100 | ✅ complete |
 | Tatyova GU | Tatyova, Benthic Druid | GU | 100 | ✅ complete |
+| Krark/Rograkh R | Krark, the Thumbless **+** Rograkh, Son of Rohgahh (Partner) | R | 98 + 2 | ✅ complete |
+
+The fifth is the pod's only **two-commander** seat (CR 702.124b/d): both start
+in the command zone, their CR 903.8 tax and 21-damage tallies are separate,
+and Rograkh's {0} cost makes every recast pure tax. It is **last** in
+`pod::target_decks`, so `pod_field(4)` never draws it and the committed
+outcome table is untouched by its existence; `--commander --seats 5` and
+`pod::tests::cr_702_124b_a_two_commander_seat_plays_a_pod_game` are what run
+it.
 
 Not official preconstructed lists: a precon's partition into four decks is not
 derivable from the offline Scryfall cache this repo carries, and a list nobody

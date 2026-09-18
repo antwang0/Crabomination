@@ -121,3 +121,36 @@ pub const TATYOVA_MAIN: &[CardFactory] = &[
     forest, forest, forest, island, island, island, island, island, island, island,
     island, island, island, island, island, island,
 ];
+
+/// Krark + Rograkh — mono-red, and the pod's only seat with **two**
+/// commanders. CR 702.124b puts both in the command zone at the start, CR
+/// 702.124d keeps their CR 903.8 tax and their 21-damage tallies separate,
+/// and Rograkh's {0} cost makes every recast of him pure tax — which is the
+/// point of running the pair here rather than only in a fixture.
+pub const KRARK_COMMANDERS: &[CardFactory] = &[krark_the_thumbless, rograkh_son_of_rohgahh];
+
+/// Krark/Rograkh goblins R: 73 nonbasic cards + 25 basics = 98, plus the two
+/// commanders.
+pub const KRARK_MAIN: &[CardFactory] = &[
+    abrade, ancient_tomb, arc_trail, arcane_signet, balefire_dragon, beetleback_chief,
+    blasphemous_act, blast_zone, bloodrage_brawler, buried_ruin, burnished_hart, cathodion,
+    chain_lightning, chandra_torch_of_defiance, chaos_warp, command_tower,
+    commanders_sphere, crush, crystalline_crawler, den_of_the_bugbear, desperate_ritual,
+    dragon_fodder, etali_primal_storm, everflowing_chalice, evolving_wilds,
+    faithless_looting, fanatical_firebrand, flame_slash, flametongue_kavu,
+    goblin_bushwhacker, goblin_chieftain, goblin_matron, goblin_rabblemaster,
+    goblin_warchief, goblin_welder, guardian_idol, hedron_archive, hellrider,
+    impact_tremors, inferno_titan, inventors_fair, krenko_mob_boss, krenkos_command,
+    light_up_the_stage, lightning_bolt, lightning_mauler, mana_vault, mind_stone,
+    mizzium_mortars, opal_palace, palladium_myr, path_of_ancestry, pyretic_ritual,
+    ramunap_ruins, reckless_bushwhacker, reckless_wurm, rogues_passage, shivan_dragon,
+    shock, skirk_prospector, sneak_attack, sol_ring, solemn_simulacrum,
+    terramorphic_expanse, terror_of_the_peaks, torbran_thane_of_red_fell, tormenting_voice,
+    vandalblast, walking_ballista, warstorm_surge, wayfarers_bauble, wheel_of_fortune,
+    zealous_conscripts,
+    // Basics: 25 mountain
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

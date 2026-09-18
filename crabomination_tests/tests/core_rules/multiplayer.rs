@@ -1777,6 +1777,74 @@ fn cr_702_124i_partner_label_pairs_only_with_the_same_label() {
     );
 }
 
+/// CR 702.124b/d — both commanders start in the command zone, and "when
+/// casting a commander with partner, ignore how many times your *other*
+/// commander has been cast": the CR 903.8 tax is per commander, not per seat.
+#[test]
+fn cr_702_124d_each_commander_carries_its_own_tax() {
+    let mut g = game_with_format(Format::Commander, 2);
+    let ids = g.seat_commanders(
+        0,
+        vec![catalog::akiri_line_slinger(), catalog::ravos_soultender()],
+    );
+    assert_eq!(ids.len(), 2);
+    // CR 702.124b — both begin in the command zone.
+    assert_eq!(g.players[0].command.len(), 2);
+    assert!(ids.iter().all(|id| g.players[0].commanders.contains(id)));
+
+    let (akiri, ravos) = (ids[0], ids[1]);
+    // Two prior casts of one of them: its tax is {4}, the other's is still {0}.
+    g.commander_cast_count.insert(akiri, 2);
+    assert_eq!(g.commander_cast_count.get(&ravos).copied(), None);
+
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Ravos is {3}{W}{B}; the untaxed cast needs exactly that and no more.
+    g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: ravos,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("Ravos pays his own printed cost — Akiri's two casts are not his");
+    assert_eq!(g.commander_cast_count.get(&ravos).copied(), Some(1));
+    assert_eq!(g.commander_cast_count.get(&akiri).copied(), Some(2), "untouched");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "and not a pip more");
+}
+
+/// CR 702.124d — "when determining whether a player has been dealt 21 or more
+/// combat damage by the same commander, consider damage from each of your two
+/// commanders separately." 20 from each is 40 and is not a loss.
+#[test]
+fn cr_702_124d_commander_damage_is_tracked_per_commander() {
+    let mut g = game_with_format(Format::Commander, 2);
+    let ids = g.seat_commanders(
+        0,
+        vec![catalog::akiri_line_slinger(), catalog::ravos_soultender()],
+    );
+    let (akiri, ravos) = (ids[0], ids[1]);
+    for _ in 0..20 {
+        g.record_commander_damage(1, akiri, 1);
+        g.record_commander_damage(1, ravos, 1);
+    }
+    assert_eq!(g.commander_damage.get(&(1, akiri)).copied(), Some(20));
+    assert_eq!(g.commander_damage.get(&(1, ravos)).copied(), Some(20));
+    g.check_state_based_actions();
+    assert!(g.players[1].is_alive(), "40 damage from two commanders is not 21 from one");
+
+    // One more from either one crosses that one's own 21 (CR 903.10a).
+    g.record_commander_damage(1, akiri, 1);
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive(), "21 from a single commander loses the game");
+}
+
 /// CR 702.124m — "Doctor's companion" pairs only with "a legendary Time Lord
 /// Doctor creature card that has no other creature types". The last clause is
 /// the whole rule: a Time Lord Scientist, a Human Doctor and a Doctor with a

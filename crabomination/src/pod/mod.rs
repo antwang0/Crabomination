@@ -127,6 +127,7 @@ pub fn target_decks() -> Vec<PodDeck> {
         PodDeck { name: "Judith (BR)", commanders: decks::JUDITH_COMMANDERS, main: decks::JUDITH_MAIN },
         PodDeck { name: "Hanna (UW)", commanders: decks::HANNA_COMMANDERS, main: decks::HANNA_MAIN },
         PodDeck { name: "Tatyova (GU)", commanders: decks::TATYOVA_COMMANDERS, main: decks::TATYOVA_MAIN },
+        PodDeck { name: "Krark/Rograkh (R)", commanders: decks::KRARK_COMMANDERS, main: decks::KRARK_MAIN },
     ]
 }
 
@@ -327,6 +328,38 @@ mod tests {
             assert_eq!(p.command.len(), 1);
             assert_eq!(p.commanders.len(), 1);
             assert_eq!(p.library.len(), 99);
+        }
+    }
+
+    /// CR 702.124b/d — the partner seat is the pod's only two-commander deck,
+    /// and it is here so the pair is exercised by real games rather than only
+    /// by a fixture: both commanders start in the command zone, its 99 is 98
+    /// (CR 702.124b counts both toward the 100), and the games finish.
+    ///
+    /// Krark/Rograkh is last in `target_decks`, so `pod_field(4)` never draws
+    /// it and the committed outcome table is untouched by its existence; this
+    /// test names the field explicitly.
+    #[test]
+    fn cr_702_124b_a_two_commander_seat_plays_a_pod_game() {
+        let field = target_decks();
+        let partner = *field.last().expect("the partner deck is last");
+        assert_eq!(partner.commanders.len(), 2);
+        assert_eq!(partner.card_count(), 100, "CR 702.124b counts both commanders");
+
+        let decks = vec![partner, field[0], field[1], field[2]];
+        let t = build_pod_template(&decks);
+        assert_eq!(t.players[0].command.len(), 2, "both begin in the command zone");
+        assert_eq!(t.players[0].commanders.len(), 2);
+        assert_eq!(t.players[0].library.len(), 98);
+        for p in &t.players {
+            assert_eq!(p.life, 40);
+        }
+
+        let pilots = vec![Pilot::default(); 4];
+        for seed in [0xC0FFEE_u64, 43, 4242] {
+            let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+            assert!(o.winner.is_some(), "seed {seed} left the pod undecided");
+            assert!(o.turns > 0);
         }
     }
 
