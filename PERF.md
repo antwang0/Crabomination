@@ -3092,6 +3092,34 @@ measuring: `per_opponent_targets` first fell through to `for_each_inner`,
 making it a whole-effect-tree walk **on every cast** for a question eight
 cards ask. It walks the transparent wrappers only now.
 
+**Closing tip `9c6d5204`** — the guild Signets and Talismans in the four
+two-colour decks, on top of everything above:
+
+```text
+--bench          195,806 / 27.49 / 611.9 / 0 stalls, determinism ok, peak_rss 25.6
+                 games_per_s 484.80 at host_calib_ms 45
+pod, six configs, 2,300 games, 2/3/4/5 seats: 100 % decided, 0 undecided, 0 panics
+  --games 400 --seed 43              42.18 turns / 1,972.3 actions
+  --seats 3 --games 200 --seed 97    29.88 / 1,094.3
+  --seats 5 --games 400 --seed 5150  53.78 / 3,128.3   (Partner seat wins 11.0 %)
+  --games 600 --seed 4242            42.20 / 1,985.6
+  --seats 2 --games 200 --seed 4243  18.14 /   482.6
+  --seats 4 --games 500 --seed 31337 41.99 / 1,969.8
+  --threads 1 on seed 43: identical in every column
+```
+
+**The invariant held through every commit of this session** — six Commander
+rules changes, a targeting-core change, two deck edits and two card bug fixes
+— and that is the whole point of it: none of this is reachable in a duel of
+cube decks, and the 195,806 says so in one number rather than in an argument.
+
+📐 **A deck-share reading worth keeping, because it did not move:** Judith
+(BR) wins **4-5 %** of four-seat pods and did so before and after the fixing
+upgrade. Four Signets and Talismans across four decks moved every other
+column and left that one where it was, so the deck's problem is its *plan*,
+not its mana. Whoever tunes the pod field next should start there rather than
+adding more fixing.
+
 ### 2026-09-18 (the second Commander session, tip `d6869b99`) — guardrail
 
 Same obligation, same instrument, and the `--bench` **invariant is unmoved by
