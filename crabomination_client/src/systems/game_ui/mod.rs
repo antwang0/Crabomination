@@ -4660,6 +4660,10 @@ pub fn handle_game_input(
                         additional_targets: vec![],
                         mode: None,
                         x_value: None,
+                        // The alt-cost commander cast (CR 601.2f) has no
+                        // click path yet; the regular cost is the default.
+                        alternative: false,
+                        pitch_card: None,
                     });
                 }
             }

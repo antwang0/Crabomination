@@ -6214,6 +6214,20 @@ fn may_play_specialty(state: &GameState, seat: usize) -> u32 {
     if any { spec::MAY_PLAY } else { 0 }
 }
 
+/// True for an alternative cost the bot can pay with mana alone — no pitch,
+/// no sacrifice, no graveyard exile, no life (Dash CR 702.110, Blitz 702.152,
+/// Spectacle 702.111). Offering (CR 702.48) sacrifices one of the bot's own
+/// creatures for a tempo cut it rarely wants, so it casts normally instead.
+/// One predicate for both the hand and the command-zone candidate blocks.
+fn mana_only_alt_cost(a: &crate::card::AlternativeCost) -> bool {
+    a.exile_filter.is_none()
+        && a.sacrifice_permanents.is_none()
+        && a.exile_from_graveyard_count == 0
+        && a.life_cost == 0
+        && !a.evoke_sacrifice
+        && a.offering.is_none()
+}
+
 // `SweepMana<'a>` is invariant over `'a` (its `OnceCell` holds borrows of the
 // board), so the shared handle's lifetime has to be named rather than elided.
 fn cast_candidates<'a>(
@@ -7053,7 +7067,12 @@ fn cast_candidates<'a>(
         let Some(c) = state.players[seat].command.iter().find(|c| c.id == id) else {
             continue;
         };
-        if !colors_coverable(&c.definition.cost, have_mana.get()) {
+        // The printed cost's colours pre-filter the regular cast; a mana-only
+        // alternative cost (dash) gets its own, since the two can differ.
+        let alt = c.definition.alternative_cost.as_ref().filter(|a| mana_only_alt_cost(a));
+        let regular_ok = colors_coverable(&c.definition.cost, have_mana.get());
+        let alt_ok = alt.is_some_and(|a| colors_coverable(&a.mana_cost, have_mana.get()));
+        if !regular_ok && !alt_ok {
             continue;
         }
         let (target, additional_targets) = if c.definition.effect.requires_target() {
@@ -7066,12 +7085,37 @@ fn cast_candidates<'a>(
         } else {
             (None, vec![])
         };
-        castable.push((
-            GameAction::CastFromCommandZone {
-                card_id: id, target, additional_targets, mode: None, x_value: None,
-            },
-            false,
-        ));
+        // CR 601.2f — the same commander for its alternative cost (dash on
+        // Zurgo Bellstriker). Offered alongside the regular cast so the
+        // valuation picks; CR 903.8's tax rides on both.
+        if alt_ok {
+            castable.push((
+                GameAction::CastFromCommandZone {
+                    card_id: id,
+                    target: target.clone(),
+                    additional_targets: additional_targets.clone(),
+                    mode: None,
+                    x_value: None,
+                    alternative: true,
+                    pitch_card: None,
+                },
+                false,
+            ));
+        }
+        if regular_ok {
+            castable.push((
+                GameAction::CastFromCommandZone {
+                    card_id: id,
+                    target,
+                    additional_targets,
+                    mode: None,
+                    x_value: None,
+                    alternative: false,
+                    pitch_card: None,
+                },
+                false,
+            ));
+        }
     }
 
     // Aftermath (CR 702.127): cast the right half of a split card from the
@@ -7345,18 +7389,11 @@ fn cast_candidates<'a>(
     // and its `condition` gate (e.g. Spectacle's opponent-lost-life), so a
     // Skewer the Critics is only offered for {R} once an opponent has bled.
     gated_block!(mask, spec::ALT_COST, castable, {
-    for c in state.players[seat].hand.iter().filter(|c| {
-        c.definition.alternative_cost.as_ref().is_some_and(|a| {
-            a.exile_filter.is_none()
-                && a.sacrifice_permanents.is_none()
-                && a.exile_from_graveyard_count == 0
-                && a.life_cost == 0
-                && !a.evoke_sacrifice
-                // Offering (CR 702.48) sacrifices one of the bot's own
-                // creatures for a tempo cut it rarely wants — cast normally.
-                && a.offering.is_none()
-        })
-    }) {
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.alternative_cost.as_ref().is_some_and(mana_only_alt_cost))
+    {
         let effect = c
             .definition
             .alternative_cost
@@ -24201,6 +24238,31 @@ mod stack_response_tests {
         };
         assert!(!has_arm(&EvalWeights::default()), "flag off: the class is invisible");
         assert!(has_arm(&EvalWeights::ability_arms_on()), "flag on: the activation is a candidate");
+    }
+
+    /// CR 601.2f — a commander with an alternative cost gets both casts as
+    /// candidates. Without the alt arm the bot could only ever pay Alesha's
+    /// printed {2}{R}, so a dash it could afford was unreachable.
+    #[test]
+    fn commander_alt_cost_is_a_cast_candidate() {
+        let mut g = two_player_game();
+        let cmd = g.seat_commanders(0, vec![catalog::alesha_who_smiles_at_death()])[0];
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.add_card_to_battlefield(0, catalog::mountain());
+        g.add_card_to_battlefield(0, catalog::mountain());
+        let w = EvalWeights::default();
+        let offered = |alt: bool| {
+            cast_candidates(&g, 0, &w, None).iter().any(|(a, _)| {
+                matches!(
+                    a,
+                    GameAction::CastFromCommandZone { card_id, alternative, .. }
+                        if *card_id == cmd && *alternative == alt
+                )
+            })
+        };
+        assert!(offered(true), "the dash cast is a candidate");
+        assert!(offered(false), "so is the printed-cost cast");
     }
 
     /// `Effect::GrantMayPlay` used to be a human-only class of card. The

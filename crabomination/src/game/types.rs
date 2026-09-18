@@ -1113,6 +1113,15 @@ pub enum GameAction {
         additional_targets: Vec<Target>,
         mode: Option<usize>,
         x_value: Option<u32>,
+        /// CR 601.2f — pay the commander's `alternative_cost` (dash,
+        /// offering, Fist of Suns) instead of its mana cost. The tax is an
+        /// *additional* cost, so it still applies on top.
+        #[serde(default)]
+        alternative: bool,
+        /// The hand card an exile-filter alternative cost pitches; `None`
+        /// for every other alt cost, and ignored unless `alternative`.
+        #[serde(default)]
+        pitch_card: Option<CardId>,
     },
     PassPriority,
     SubmitDecision(DecisionAnswer),

@@ -316,7 +316,50 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
     }
 }
 
+/// Which zone an alternative-cost cast pulls its card from. The hand is the
+/// ordinary case; `Command` is a commander cast for its alternative cost
+/// (CR 903.8 + 601.2f — the commander tax rides on top).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum AltCastZone {
+    Hand,
+    Command,
+}
+
 impl GameState {
+    /// The zone an `AltCastZone` names, for `p`.
+    pub(crate) fn alt_cast_source(&self, p: usize, zone: AltCastZone) -> &[CardInstance] {
+        match zone {
+            AltCastZone::Hand => &self.players[p].hand,
+            AltCastZone::Command => &self.players[p].command,
+        }
+    }
+
+    /// Take `card_id` out of the zone an alt cast sources from.
+    fn take_for_alt_cast(
+        &mut self,
+        p: usize,
+        zone: AltCastZone,
+        card_id: CardId,
+    ) -> Option<CardInstance> {
+        match zone {
+            AltCastZone::Hand => self.players[p].remove_from_hand(card_id),
+            AltCastZone::Command => Self::take_card(&mut self.players[p].command, card_id),
+        }
+    }
+
+    /// Put a card back where an aborted alt cast took it from. The command
+    /// zone re-arms the off-board keyword scan, exactly as
+    /// `cast_from_command_zone`'s own bail-outs do.
+    fn return_from_alt_cast(&mut self, p: usize, zone: AltCastZone, card: CardInstance) {
+        match zone {
+            AltCastZone::Hand => self.players[p].hand.push(card),
+            AltCastZone::Command => {
+                self.players[p].command.push(card);
+                self.offboard_keyword_grants = true;
+            }
+        }
+    }
+
     /// The alternative cost `p` may use to cast the hand card `card_id`: the
     /// printed one, or the CR 118.9 WUBRG cost Fist of Suns grants to every
     /// spell its controller casts.
@@ -325,8 +368,25 @@ impl GameState {
         p: usize,
         card_id: CardId,
     ) -> Option<crate::card::AlternativeCost> {
-        let printed =
-            self.players[p].hand.iter().find(|c| c.id == card_id)?.definition.alternative_cost.clone();
+        self.effective_alternative_cost_in(p, AltCastZone::Hand, card_id)
+    }
+
+    /// `effective_alternative_cost` over an explicit source zone — the
+    /// grant-from-the-battlefield arms apply to any spell their controller
+    /// casts, a commander cast from the command zone included (CR 903.8).
+    pub(crate) fn effective_alternative_cost_in(
+        &self,
+        p: usize,
+        zone: AltCastZone,
+        card_id: CardId,
+    ) -> Option<crate::card::AlternativeCost> {
+        let printed = self
+            .alt_cast_source(p, zone)
+            .iter()
+            .find(|c| c.id == card_id)?
+            .definition
+            .alternative_cost
+            .clone();
         if printed.is_some() {
             return printed;
         }
@@ -353,7 +413,7 @@ impl GameState {
         }
         // Kentaro, the Smiling Cat — "pay {X} rather than the mana cost for
         // [filter] spells you cast, where X is that spell's mana value."
-        let card = self.players[p].hand.iter().find(|c| c.id == card_id)?;
+        let card = self.alt_cast_source(p, zone).iter().find(|c| c.id == card_id)?;
         let generic_alt = self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
@@ -11063,9 +11123,6 @@ impl GameState {
         Ok(events)
     }
 
-    /// Cast a spell using its `alternative_cost` (a "pitch" cost) instead of
-    /// its regular mana cost. Pays the alt cost's mana, deducts life, and
-    /// exiles the chosen `pitch_card` from hand if the alt cost requires
     /// Cast a commander from your command zone (Phase L).
     ///
     /// Differences vs. `cast_spell`:
@@ -11209,10 +11266,19 @@ impl GameState {
         Ok(events)
     }
 
-    /// one. The spell otherwise behaves identically to a normal cast (goes
-    /// onto the stack, resolves later, etc.).
-    pub(crate) fn cast_spell_alternative(
+    /// Cast a spell using its `alternative_cost` (a "pitch" cost) instead of
+    /// its regular mana cost. Pays the alt cost's mana, deducts life, and
+    /// exiles the chosen `pitch_card` from hand if the alt cost requires one.
+    /// The spell otherwise behaves identically to a normal cast (goes onto
+    /// the stack, resolves later, etc.).
+    ///
+    /// `zone` picks the source: `Hand` is the ordinary case, `Command` is a
+    /// commander cast for its alternative cost (CR 903.8's tax is an
+    /// *additional* cost, so it rides on top of the alt cost — CR 601.2f).
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn cast_spell_alternative_from(
         &mut self,
+        zone: AltCastZone,
         card_id: CardId,
         pitch_card: Option<CardId>,
         target: Option<Target>,
@@ -11224,12 +11290,14 @@ impl GameState {
         // CR 601.2g float-spend choice (None until answered).
         let spend_float = self.pending_cast_spend_float.take();
 
-        if !self.players[p].has_in_hand(card_id) {
+        if self.alt_cast_source(p, zone).iter().all(|c| c.id != card_id) {
             return Err(GameError::CardNotInHand(card_id));
         }
         // Validate the spell actually has an alternative cost; clone it before
         // any mutation so we don't borrow the card twice.
-        let alt = self.effective_alternative_cost(p, card_id).ok_or(GameError::NoAlternativeCost)?;
+        let alt = self
+            .effective_alternative_cost_in(p, zone, card_id)
+            .ok_or(GameError::NoAlternativeCost)?;
 
         // Force of Negation–style "you may pay this alt cost only if it's
         // not your turn." Reject the alt cast on the caster's own turn —
@@ -11495,12 +11563,15 @@ impl GameState {
             }
         }
 
-        // Remove the spell card from hand now (so the pitch card doesn't
+        // Remove the spell card from its zone now (so the pitch card doesn't
         // accidentally collide with it during validation).
-        let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
-        card.cast_from_hand = true;
+        let mut card = self
+            .take_for_alt_cast(p, zone, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let from_hand = zone == AltCastZone::Hand;
+        card.cast_from_hand = from_hand;
         card.cast_from_exile = false;
-        card.cast_from_library = self.casting_from_library_top == Some(card_id);
+        card.cast_from_library = from_hand && self.casting_from_library_top == Some(card_id);
         if alt.evoke_sacrifice {
             card.evoked = true;
         }
@@ -11536,15 +11607,20 @@ impl GameState {
         let must_be_sorcery_speed = (!card.definition.is_instant_speed() && !alt.flash)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
-            self.players[p].hand.push(card);
+            self.return_from_alt_cast(p, zone, card);
             return Err(GameError::SorcerySpeedOnly);
         }
 
-        // Validate target legality.
+        // Validate target legality. A commander cast names its own source so
+        // protection/ward read the spell, matching `cast_from_command_zone`.
         if let Some(ref tgt) = target
-            && let Err(e) = self.check_target_legality(tgt, p)
+            && let Err(e) = if from_hand {
+                self.check_target_legality(tgt, p)
+            } else {
+                self.check_target_legality_with_source(tgt, p, Some(card_id))
+            }
         {
-            self.players[p].hand.push(card);
+            self.return_from_alt_cast(p, zone, card);
             return Err(e);
         }
         // When the alt cost carries an effect_override, use its target
@@ -11559,7 +11635,7 @@ impl GameState {
                     .target_filter_for_slot_in_mode(0, mode)
                 && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
             {
-                self.players[p].hand.push(card);
+                self.return_from_alt_cast(p, zone, card);
                 return Err(GameError::SelectionRequirementViolated);
             }
         }
@@ -11570,7 +11646,7 @@ impl GameState {
             && let Some(ref alt_filter) = alt.target_filter
             && !self.evaluate_requirement_static(alt_filter, tgt, p, Some(card.id))
         {
-            self.players[p].hand.push(card);
+            self.return_from_alt_cast(p, zone, card);
             return Err(GameError::SelectionRequirementViolated);
         }
 
@@ -11580,6 +11656,17 @@ impl GameState {
         } else {
             alt.mana_cost.clone()
         };
+        // CR 903.8 — the commander tax is an additional cost, so a commander
+        // cast for an alternative cost still pays {2} per prior cast from the
+        // command zone. Pushed ahead of the reductions and the floor, as on
+        // the regular command-zone path.
+        if !from_hand {
+            let prior = self.commander_cast_count.get(&card_id).copied().unwrap_or(0);
+            let commander_tax = prior.saturating_mul(2);
+            if commander_tax > 0 {
+                mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(commander_tax));
+            }
+        }
         let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
@@ -11612,8 +11699,8 @@ impl GameState {
         }
         apply_spell_cost_floor(self, &mut mana_cost);
         let spell_kind = card.definition.spell_kind();
-        // CR 601.2g — float-spend confirmation. The spell card is back-in-hand
-        // safe to restore (nothing else is committed yet — pitch/gy-exile/
+        // CR 601.2g — float-spend confirmation. The spell card is safe to put
+        // back in its zone (nothing else is committed yet — pitch/gy-exile/
         // return happen after payment), so suspend and replay the alt cast.
         // CR 601.2g float-spend confirmation is a *mana payment* question,
         // so it keys on `manual_mana` — the flag that exists for exactly this
@@ -11630,7 +11717,7 @@ impl GameState {
         {
             let float_summary = self.protectable_float(p, &mana_cost).summary();
             let name = card.definition.name;
-            self.players[p].hand.push(card);
+            self.return_from_alt_cast(p, zone, card);
             self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
@@ -11641,13 +11728,25 @@ impl GameState {
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
                     actor: p,
-                    action: Box::new(GameAction::CastSpellAlternative {
-                        card_id,
-                        pitch_card,
-                        target,
-                        additional_targets,
-                        mode,
-                        x_value,
+                    action: Box::new(if from_hand {
+                        GameAction::CastSpellAlternative {
+                            card_id,
+                            pitch_card,
+                            target,
+                            additional_targets,
+                            mode,
+                            x_value,
+                        }
+                    } else {
+                        GameAction::CastFromCommandZone {
+                            card_id,
+                            target,
+                            additional_targets,
+                            mode,
+                            x_value,
+                            alternative: true,
+                            pitch_card,
+                        }
                     }),
                 },
             }));
@@ -11660,7 +11759,7 @@ impl GameState {
         ) {
             Ok(r) => r,
             Err(e) => {
-                self.players[p].hand.push(card);
+                self.return_from_alt_cast(p, zone, card);
                 return Err(e);
             }
         };
@@ -11798,6 +11897,12 @@ impl GameState {
         // instead of "target" semantics (or whatever the override says).
         if let Some(override_effect) = alt.effect_override {
             card.definition_make_mut().effect = override_effect;
+        }
+
+        // CR 903.8 — a successful command-zone cast bumps the tax counter,
+        // whichever cost paid for it.
+        if !from_hand {
+            *self.commander_cast_count.entry(card_id).or_insert(0) += 1;
         }
 
         auto_events.push(GameEvent::SpellCast {

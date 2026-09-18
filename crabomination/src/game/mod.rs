@@ -17881,7 +17881,9 @@ impl GameState {
                 additional_targets,
                 mode,
                 x_value,
-            } => self.cast_spell_alternative(card_id, pitch_card, target, additional_targets, mode, x_value),
+            } => self.cast_spell_alternative_from(
+                crate::game::actions::AltCastZone::Hand, card_id, pitch_card, target, additional_targets, mode, x_value,
+            ),
             GameAction::CastFlashback {
                 card_id,
                 target,
@@ -17939,12 +17941,26 @@ impl GameState {
             } => self.cast_from_zone_without_paying(
                 card_id, target, additional_targets, mode, x_value,
             ),
+            // CR 601.2f — the alternative-cost branch runs the same body as a
+            // hand alt-cast, sourced from the command zone and taxed.
             GameAction::CastFromCommandZone {
                 card_id,
                 target,
                 additional_targets,
                 mode,
                 x_value,
+                alternative: true,
+                pitch_card,
+            } => self.cast_spell_alternative_from(
+                crate::game::actions::AltCastZone::Command, card_id, pitch_card, target, additional_targets, mode, x_value,
+            ),
+            GameAction::CastFromCommandZone {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+                ..
             } => self.cast_from_command_zone(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellBack {
                 card_id,

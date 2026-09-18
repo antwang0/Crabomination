@@ -226,6 +226,8 @@ fn cr_903_8_commander_tax_is_two_generic_per_prior_cast() {
         let before = g.players[0].mana_pool.total();
         g.perform_action(GameAction::CastFromCommandZone {
             card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None,
+            alternative: false,
+            pitch_card: None,
         })
         .expect("cast");
         drain_stack(g);

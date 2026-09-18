@@ -34,7 +34,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | CR 903.11 mana-production restriction | n/a | removed from the CR years ago; correctly absent |
 | "Any color in your commander's color identity" mana | ✅ | `ManaPayload::AnyColorInCommanderIdentity`, `GameState::commander_identity_colors`; Command Tower / Arcane Signet / Commander's Sphere |
 | Commander to hand from the command zone (Command Beacon) | ✅ | `Effect::CommanderToHand`, `game/effects/commander.rs` |
-| Casting a commander for an **alternative** cost from the command zone | ⏳ | `cast_from_command_zone` has no alt-cost path (`cast_with_alternative_cost` reads the hand) |
+| Casting a commander for an **alternative** cost from the command zone | ✅ | `actions.rs::cast_spell_alternative_from` over `AltCastZone` — one body for both zones; CR 903.8's tax is pushed ahead of the reductions. `GameAction::CastFromCommandZone { alternative, pitch_card }` |
 | "Can be your commander" on a non-creature (planeswalker commanders) | ✅ | `CardDefinition::can_be_commander`, read by `validate_commander_deck`; Freyalise, Llanowar's Fury in `sets::cmdr` (32 more such cards exist, none implemented) |
 
 ### Multiplayer foundation (CR 800-series)

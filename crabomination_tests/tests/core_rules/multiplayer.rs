@@ -1441,6 +1441,8 @@ fn commander_cast_tax_accrues_per_recast() {
         additional_targets: vec![],
         mode: None,
         x_value: None,
+        alternative: false,
+        pitch_card: None,
     })
     .expect("first cast from CZ should succeed with no mana required");
     assert_eq!(g.commander_cast_count.get(&cmd).copied(), Some(1));
@@ -1472,6 +1474,8 @@ fn view_projects_commander_cast_tally() {
         additional_targets: vec![],
         mode: None,
         x_value: None,
+        alternative: false,
+        pitch_card: None,
     })
     .unwrap();
     crabomination::game::drain_stack(&mut g);
@@ -1509,6 +1513,8 @@ fn commander_cast_tax_blocks_unpaid_recast() {
         additional_targets: vec![],
         mode: None,
         x_value: None,
+        alternative: false,
+        pitch_card: None,
     })
     .unwrap();
     crabomination::game::drain_stack(&mut g);
@@ -1532,6 +1538,8 @@ fn commander_cast_tax_blocks_unpaid_recast() {
         additional_targets: vec![],
         mode: None,
         x_value: None,
+        alternative: false,
+        pitch_card: None,
     });
     assert!(res.is_err(), "second cast with no mana should fail tax payment");
     // Tax wasn't paid → count stays at 1, commander returns to CZ.
@@ -1549,6 +1557,8 @@ fn commander_cast_tax_blocks_unpaid_recast() {
         additional_targets: vec![],
         mode: None,
         x_value: None,
+        alternative: false,
+        pitch_card: None,
     })
     .expect("second cast pays {2} tax via 2 white mana");
     assert_eq!(g.commander_cast_count.get(&cmd).copied(), Some(2));
@@ -1738,6 +1748,129 @@ fn cr_702_124_commander_pair_needs_partner_or_background() {
     let cmd = pair_errors(catalog::akiri_line_slinger(), background);
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotPartners { .. })));
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })));
+}
+
+/// CR 601.2f + CR 903.8 — a commander cast for an *alternative* cost still
+/// pays the commander tax: the tax is an additional cost, and additional
+/// costs ride on whichever cost the spell is being cast for. Zurgo
+/// Bellstriker's printed cost is {R} and its dash cost is {1}{R}, so the
+/// mana left in the pool says which one was charged.
+#[test]
+fn cr_601_2f_command_zone_alt_cost_still_pays_the_tax() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![catalog::zurgo_bellstriker()])[0];
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    // Dash {1}{R} with no tax yet: two red pays {R} and the {1}.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: true,
+        pitch_card: None,
+    })
+    .expect("dashing the commander out of the command zone is legal");
+    assert_eq!(
+        g.players[0].mana_pool.total(),
+        0,
+        "the dash cost {{1}}{{R}} was charged, not the printed {{R}}",
+    );
+    assert_eq!(
+        g.commander_cast_count.get(&cmd).copied(),
+        Some(1),
+        "an alt-cost command-zone cast bumps the tax counter like any other",
+    );
+    drain_stack(&mut g);
+
+    // Back to the command zone, then dash again: {1}{R} + {2} of tax.
+    g.remove_from_battlefield_to_graveyard_raw(cmd);
+    g.check_state_based_actions();
+    assert!(g.players[0].command.iter().any(|c| c.id == cmd));
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let res = g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: true,
+        pitch_card: None,
+    });
+    assert!(res.is_err(), "three mana is a mana short of {{1}}{{R}} plus the {{2}} tax");
+    assert_eq!(g.commander_cast_count.get(&cmd).copied(), Some(1));
+    assert!(
+        g.players[0].command.iter().any(|c| c.id == cmd),
+        "the failed alt cast puts the commander back in the command zone",
+    );
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: true,
+        pitch_card: None,
+    })
+    .expect("four mana pays the dash cost plus the {2} tax");
+    assert_eq!(g.commander_cast_count.get(&cmd).copied(), Some(2));
+}
+
+/// CR 903.9b — dash's end-step bounce would put the commander in its
+/// owner's *hand*, which is exactly the event the commander replacement
+/// covers: the owner may put it into the command zone instead. The two
+/// rules meet on the one card, so the dashed commander comes home rather
+/// than sitting in hand.
+#[test]
+fn cr_903_9b_dashed_commander_returns_to_the_command_zone() {
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![catalog::zurgo_bellstriker()])[0];
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: true,
+        pitch_card: None,
+    })
+    .expect("dash from the command zone");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield
+            .iter()
+            .find(|c| c.id == cmd)
+            .is_some_and(|c| c.granted_keywords_eot.contains(&crabomination::card::Keyword::Haste)),
+        "CR 702.110 — a dashed commander still gains haste",
+    );
+
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == cmd), "the dash bounce happened");
+    assert!(
+        g.players[0].hand.iter().all(|c| c.id != cmd),
+        "CR 903.9b replaces the move to hand",
+    );
+    assert!(
+        g.players[0].command.iter().any(|c| c.id == cmd),
+        "the dashed commander goes to the command zone instead",
+    );
 }
 
 /// CR 903.8 — the heuristic bot casts its commander from the command zone.
@@ -2205,6 +2338,8 @@ fn cr_903_8_a_planeswalker_commander_casts_from_the_command_zone() {
         additional_targets: vec![],
         mode: None,
         x_value: None,
+        alternative: false,
+        pitch_card: None,
     })
     .expect("cast Freyalise from the command zone");
     crabomination::game::drain_stack(&mut g);
