@@ -5092,13 +5092,16 @@ impl GameState {
             Effect::GristPlusOne => {
                 use crate::card::{CounterType, CreatureType};
                 let p = ctx.controller;
+                // One shape, a hundred mints: the definition is an `Arc`
+                // since PERF `(-364)`, so each iteration is a refcount bump
+                // rather than the deep copy `boxed_clone` used to make.
                 let insect = grist_insect_token();
                 for _ in 0..100 {
                     self.run_effect(
                         &Effect::CreateToken {
                             who: crate::effect::PlayerRef::You,
                             count: crate::effect::Value::ONE,
-                            definition: insect.boxed_clone(),
+                            definition: insect.clone(),
                         },
                         ctx,
                         events,

@@ -3043,16 +3043,17 @@ quotes rows and absolutes separately.
   (-362) the player-control table stays empty -0.548 / -0.410 / -0.513 %
   (-363) players as an inline seat list  REFUTED +0.754 / +0.652 / +0.722 %, reverted
   (-364) the token definition is an Arc       -0.073 / -0.530 / -0.272 %
+  (-365) the combat lethals list is inline    -0.070 / -0.077 / -0.072 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                   -0.611 / -1.134 / -0.887 %
+  run total                                   -0.681 / -1.211 / -0.959 %
 ```
 
-**BASE 572,061,894 / 1,492,003,099 / 1,610,978,327 -> CLOSING 568,508,598 /
-1,478,019,562 / 1,598,344,730** at `(-364)` (the second base; `(-361)` sits
-above it).
+**BASE 572,061,894 / 1,492,003,099 / 1,610,978,327 -> CLOSING 568,110,056 /
+1,476,879,051 / 1,597,193,864** at `(-365)` (the second base; `(-361)` sits
+above it, measured against the first).
 
-📐📐 **THE SHAPE OF THE RUN: ALL THREE ROWS ARE THE SAME QUESTION ASKED OF A
-CLONE — "does this copy have to exist?" — AND NONE OF THEM IS A BUFFER.**
+📐📐 **THE SHAPE OF THE RUN: THE THREE BIG ROWS ARE THE SAME QUESTION ASKED
+OF A CLONE — "does this copy have to exist?" — AND NONE OF THEM IS A BUFFER.**
 `(-361)` is a clone in a loop that runs once. `(-362)` is a table
 materialized before anyone asked whether it was needed. `(-364)` is a `Box`
 where an `Arc` does. **The previous session's lesson was "rank the allocation
@@ -15588,12 +15589,14 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-🔎🔎 **START AT CANDIDATE (R) — THE CLONE CENSUS — AND FALL BACK TO (O).**
-(R) is new and it is where the 2026-09-18 session's whole -1.134 % of `cube`
-came from; (O)'s line shortlist is still live and still the instrument that
+🔎🔎 **START AT CANDIDATE (S) — IT IS THE BIGGEST SINGLE NAMED ROW LEFT
+(36,724 allocations, 0.69 % of `cube`), CENSUSED AND PRICED, AND THE DEVICE
+IT NEEDS ALREADY EXISTS IN THE TREE** (`fx_pool::alloc_with`). Then **(R),
+the clone census**, which is where the 2026-09-18 session's whole -1.134 % of
+`cube` came from; (O)'s line shortlist is still live and still the instrument that
 feeds it. **Their relationship is the method: (O) names the `Clone` impl that
 allocates, (R) asks who wanted the copy.** Eight rows have now shipped off
-the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`).
+the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`, `(-365)`).
 
   💡 **R. THE CLONE CENSUS — three rows in one session, -0.194 / -0.410 /
      -0.530 % of `cube`, and every one of them came from ONE question asked
@@ -15622,6 +15625,48 @@ the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`).
      `Box` behind ONE pointer hop, not about inlining. An inline buffer in a
      field the engine indexes constantly lost by 2.5:1 even with an exact
      allocation prediction.
+
+  💡💡 **S. `CowBox<Vec<T>>::push`'s UNSHARE PATH COSTS TWO ALLOCATIONS AND
+     IT IS THE BIGGEST SINGLE NAMED ROW LEFT — 36,724 of `cube`'s 664,995
+     (5.5 %), ~10.2 M Ir, 0.69 %.** Censused 2026-09-18 at the `(-365)` tip,
+     no build spent. The slow path is three lines:
+
+```text
+     cow.rs:107   Vec::with_capacity(self.0.len() + 1)   18,362   the buffer
+     cow.rs:110   self.0 = Arc::new(v)                   18,362   the BOX
+     cow.rs:104   v.push(value) on the unique path        6,910   ordinary growth
+     43,328 calls, 18,362 of them on the shared path (42 %).
+     Top callers: send_to_graveyard 12,888 / finalize_cast 5,358 /
+     resolve_top_of_stack_inner 4,068 / draw_top 3,964 /
+     push_pending_trigger 3,578.
+```
+
+     📐 **Both allocations are inherent to `Arc<Vec<T>>` and neither is
+     inherent to the PROGRAM**: the old `Arc` is shared *right now* (that is
+     why we are on this path) but the snapshot that shares it dies soon
+     after, so it is `(-166)`'s question exactly — **"is this handle still
+     shared" is answered by WHEN it is asked.** Park the replaced `Arc` in a
+     free list, and on a later unshare take one back whose refcount has since
+     dropped to 1, steal its `Vec`, refill it: `fx_pool::alloc_with`
+     (`mod.rs:1029`) is the working implementation of this exact device and
+     reads a 68-82 % hit rate one level out.
+
+     ⚠ **THE OBSTACLE IS GENERICITY, NOT THE DEVICE.** `CowBox<Vec<T>>` is
+     generic and a `thread_local!` inside a generic body is **one** static
+     shared by every instantiation — a type confusion, not a slow path. The
+     shape that works is a `CowPool` trait with a concrete `thread_local!`
+     per impl, implemented for the two hot `T` only (the dump separates two
+     monomorphizations, 11,572 and 6,790 shared-path pushes).
+     ⚠ **And the park point must NOT be `impl Drop for CowBox`**:
+     `into_inner(self) -> T` moves out of `self`, which a `Drop` type
+     forbids. Park inside `push` itself — `std::mem::replace` the old handle
+     and hand it to the pool — which needs no `Drop` at all.
+     ⚠ A cheaper, unrelated half-row sits beside it: the unshare materializes
+     at **exactly** `len + 1`, so the very next push on the now-unique box
+     reallocates. Those are the 6,910 at `cow.rs:104`. Headroom there is a
+     one-line change worth up to 0.13 %, and it is a *separate* A/B — the
+     `reserve` caveat in (O) does not apply, because `CowBox::clone` is an
+     `Arc` bump and capacity survives it.
 
   💡 **O. THE LINE CENSUS.** The instrument is one command on a dump that
      costs one `--dump-instr` run:
@@ -16497,7 +16542,7 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
    6,688    ~6,600 card.rs TokenDefinition::clone (two lines)    ✅ TAKEN as (-364) — ONE LEVEL UP
   22,034   ~22,000 mod.rs:3654 GameState::clone `players`        ❌ REFUTED as (-363)
   21,532   ~29,000 mod.rs:3687 GameState::clone `controlled_by`  ✅ TAKEN as (-362)
-   6,274    5,342  combat.rs:3924 `lethals` collect              8 callers of the split fn
+   6,274    5,342  combat.rs:3924 `lethals` collect              ✅ TAKEN as (-365)
    3,684    ~3,600 mod.rs affected_from_requirement `types`       escapes into the return
    2,642    ~2,600 mod.rs active_team_members `Vec<usize>`        one or two seats, ONE caller
    ——       8,796  combat.rs:1263 declare_attackers `events`      ❌ a deliberate `with_capacity`, returned

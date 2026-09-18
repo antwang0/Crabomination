@@ -3457,14 +3457,6 @@ impl TokenDefinition {
     /// "run_effect's frame"). Never inline: the point is where the temporary
     /// lives.
     #[inline(never)]
-    /// A shared handle to a copy of this definition. `Arc`, not `Box`: an
-    /// `Effect` carrying a token definition is cloned all over the trigger
-    /// pipeline and a deep copy of the definition was 0.22 % of `cube`
-    /// (PERF `(-364)`).
-    pub fn boxed_clone(&self) -> std::sync::Arc<TokenDefinition> {
-        std::sync::Arc::new(self.clone())
-    }
-
     /// Builder for `enters_with_counters`: "create this token with `amount`
     /// `kind` counters on it".
     pub fn entering_with(mut self, kind: CounterType, amount: crate::effect::Value) -> Self {
@@ -5450,10 +5442,9 @@ pub(crate) mod debug_flag {
 }
 
 impl CardDefinition {
-    /// `Arc::new(self.clone())` in its own frame — see
-    /// [`TokenDefinition::boxed_clone`]: a `CardDefinition` is 8,232 bytes,
-    /// and four of them cloned inline were a third of `run_effect`'s 97 KB
-    /// frame. Never inline.
+    /// `Arc::new(self.clone())` in its own frame: a `CardDefinition` is
+    /// 8,232 bytes, and four of them cloned inline were a third of
+    /// `run_effect`'s 97 KB frame. Never inline.
     #[inline(never)]
     pub fn clone_arc(&self) -> Arc<CardDefinition> {
         Arc::new(self.clone())
