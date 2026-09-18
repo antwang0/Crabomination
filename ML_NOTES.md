@@ -5363,3 +5363,32 @@ split as r76b's search read (50.6 [49.8, 51.5]) and a standing rule for
 the menu-hole track: **a scored-pick fix pays under the search only when
 the search's root menu had the same hole** — check the root enumerator
 before pre-registering a transfer read.
+
+## Round 79 — the search's depth curve on the net leaf: 512 vs 256 reads 50.2 / 51.0, flattening as on the material leaf; recorded, NOT adopted (2026-09-18)
+
+`.ladder/run_r79_depth_net.sh` (outputs `.ladder/r79/`): the lobby's and
+the client's search (`mcts-net67-256`, r74) against the same search at
+512 iterations, sealed, paired, 500 games × 12 decks.
+
+| seed | `mcts-net67-512` vs `mcts-net67-256` | wall clock |
+|---|---|---|
+| 43 | **50.2** [49.4, 51.1] (±0.82) | 5 373 s |
+| 97 | **51.0** [50.2, 51.8] (±0.83) | ~5 400 s |
+
+Pooled **+0.6**, the pre-registered middle band: the net leaf's curve
+flattens where the material leaf's did (r64: 128 → 256 = +0.5, here
+256 → 512 = +0.6) — doubling the budget buys half a point at twice the
+latency. The search at horizon 3 is judgement-limited, not budget-limited,
+on both leaves. Not adopted: the lobby's ~0.5 s a searched decision would
+become ~1 s for a gain a human cannot feel. The iteration count stays a
+ladder profile, not a client setting; 1024 is not worth reading.
+
+Where that leaves the client-facing bot after rounds 74–79: its search
+gains came from the leaf (r74, +4.25) and its root menu is not a hole
+(r77 census by proxy); the scored-pick rounds (76b, 77b) improved the
+actors and the rollouts without moving the search. The next lever for
+what the human faces is the leaf's judgement — the value net's
+representation (the r45 capacity closure and r69's retrain null stand,
+so it is the *inputs*, not the training, that would have to change) —
+or the horizon (3 turns; a horizon read at fixed budget has not been
+taken on the net leaf either).

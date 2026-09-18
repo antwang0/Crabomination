@@ -1,0 +1,27 @@
+loaded value net from nets/champion.safetensors
+ladder: mcts-net67-512 (A) vs mcts-net67-256 (B) — 500 games x 12 sealed decks on 22 threads, seed 97 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             265    235      0     53.0%  [48.6%, 57.3%]
+sealed #1             256    244      0     51.2%  [46.8%, 55.6%]
+sealed #2             256    244      0     51.2%  [46.8%, 55.6%]
+sealed #3             253    247      0     50.6%  [46.2%, 55.0%]
+sealed #4             261    239      0     52.2%  [47.8%, 56.5%]
+sealed #5             257    243      0     51.4%  [47.0%, 55.8%]
+sealed #6             259    241      0     51.8%  [47.4%, 56.1%]
+sealed #7             242    258      0     48.4%  [44.0%, 52.8%]
+sealed #8             252    248      0     50.4%  [46.0%, 54.8%]
+sealed #9             255    245      0     51.0%  [46.6%, 55.4%]
+sealed #10            254    246      0     50.8%  [46.4%, 55.2%]
+sealed #11            249    251      0     49.8%  [45.4%, 54.2%]
+----------------------------------------------------------------
+TOTAL                3059   2941      0     51.0%  [49.7%, 52.2%]
+
+6000 decided, 0 undecided, in 4197.6s
+
+paired: 3000 pairs — 351 A-sweeps, 292 B-sweeps, 2357 splits
+        A win%  51.0%  [50.2%, 51.8%]  (±0.83 pts)
+        within-pair rho -0.572 — variance x0.43 vs independent games, i.e. these 6000 games carry the precision of 14017
+verdict: marginal — A (mcts-net67-512) leads by 1.0 points, but an edge this small needs several times 6000 games before it can be trusted; re-run with a different --seed to see whether it holds
+exit: 0
