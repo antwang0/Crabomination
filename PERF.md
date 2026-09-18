@@ -3015,6 +3015,43 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-18 (the Commander session) — the guardrail, not a perf pass
+
+No perf work. The Commander run's only obligation to this file is that the
+two-player simulator did not pay for it, and the reading is the `--bench`
+**invariant**, which is exact:
+
+```text
+--bench at efb4ca76 (release):
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split)
+  peak_rss_mib      25.6       (baseline 26.9; an allocator distribution)
+  games_per_s     561.21 at host_calib_ms 46, Intel Xeon @ 2.10 GHz
+```
+
+⚠ **The games/s row does not cross to the committed baseline and is not read
+as one** — that box is a 2.80 GHz Xeon, and this file's own rule says wall
+clock does not cross hosts. It is in family with the same-calib readings
+already here (546.28 at calib 46). What carries the verdict is the invariant:
+every Commander change this run is behaviour-preserving in a duel.
+
+The one row that could plausibly have cost something is `find_card_anywhere`
+and its three siblings learning to scan the **command zone** — a hot function
+gaining one `iter().find()` per player per call. The command zone is empty in
+every non-Commander game, so the added work is an empty-slice iteration, and
+the invariant above is unmoved. **Perf candidate if it ever shows up**: a
+`GameState` "any command zone non-empty" bit would skip the walk entirely, and
+the same bit would serve `duplicate_zone_id`.
+
+**The Commander pod's own numbers** (not comparable to anything in this file;
+`bot_ladder --commander --games 400 --seed 43`, four target decks, 4 seats):
+400 games, **0 undecided**, 41.83 turns/game, 2,096.6 actions/game, 315.77
+games/s on 3 threads. It read **15 % "no legal move"** before the CR 800.4a
+pending-decision fix, which is what that fix is measured by.
+
 ### 2026-09-18 (the clone-family session, SIXTEENTH box) — three rows, and two of them are the largest this file has taken in a year of passes
 
 **BASE ABSOLUTES at `e6b5c46a`** (`profiling-fast --no-default-features`,

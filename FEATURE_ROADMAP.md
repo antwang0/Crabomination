@@ -35,14 +35,15 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | "Any color in your commander's color identity" mana | ✅ | `ManaPayload::AnyColorInCommanderIdentity`, `GameState::commander_identity_colors`; Command Tower / Arcane Signet / Commander's Sphere |
 | Commander to hand from the command zone (Command Beacon) | ✅ | `Effect::CommanderToHand`, `game/effects/commander.rs` |
 | Casting a commander for an **alternative** cost from the command zone | ⏳ | `cast_from_command_zone` has no alt-cost path (`cast_with_alternative_cost` reads the hand) |
-| "Can be your commander" on a non-creature (planeswalker commanders) | ⏳ | `CommanderDeckError::NotLegendaryCreature` has no override; needs a `can_be_commander` flag on `CardDefinition` |
+| "Can be your commander" on a non-creature (planeswalker commanders) | ✅ | `CardDefinition::can_be_commander`, read by `validate_commander_deck`; Freyalise, Llanowar's Fury in `sets::cmdr` (32 more such cards exist, none implemented) |
 
 ### Multiplayer foundation (CR 800-series)
 | Feature | State | Where |
 |---|---|---|
 | N seats (2..N), turn rotation, APNAP ordering | ✅ | `game/mod.rs`, `multi_player_game`; tests in `core_rules/multiplayer.rs` (76) and `cr_801.rs` |
 | Attack any opponent / their planeswalkers, per-attacker defender | ✅ | `game/combat.rs` |
-| CR 800.4a a player leaving: objects, stack items, control effects | ✅ | `stack.rs` (the 800.4a leg), `game/mod.rs::concede` |
+| CR 509.1a — only a defending player declares blocks | ✅ | `combat.rs::may_declare_blocks` |
+| CR 800.4a a player leaving: objects, stack items, control effects, the command zone, combat, a pending ask | ✅ | `stack.rs::objects_leave_with_player` |
 | Free-for-all last-player-standing, simultaneous-loss draw | ✅ | `team.rs`, `stack.rs` |
 | Multiplayer mulligan, no first-turn draw skip at 3+ | ✅ | `core_rules/multiplayer.rs` |
 
@@ -50,13 +51,13 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | Feature | State | Where |
 |---|---|---|
 | Partner, "Partner with", Choose a Background | ✅ deck-construction | `Keyword::{Partner, PartnerWith, ChooseABackground}`, `format::commanders_may_pair` |
-| "Partner with" search trigger | 🟡 | the keyword pairs the commanders; the ETB "search for the named card" half is not wired |
+| "Partner with" search trigger | ✅ | `shortcut::partner_with_search` (CR 702.124c); Sylvia Brightspear + Khorvath Brightflame |
 | Friends forever, Doctor's companion | ⏳ | no catalog card has them (`format.rs:736`) |
 | Monarch, the initiative, goad, myriad, melee, voting / council's dilemma, tempting offer | ✅ | `effect.rs` (`IsMonarch`, `HasInitiative`, `Goad`, `Myriad`, `MeleeOpponentCount`, `VoteTally`, `TemptingOffer`), `dungeons.rs` |
 | Join forces | ⏳ | no primitive, no card |
 | Eminence (abilities that function from the command zone) | ⏳ | nothing reads an ability off a card in `command` |
 | Commander ninjutsu | ⏳ | `Keyword::Ninjutsu` is hand-only |
-| Lieutenant / "if you control your commander" | ⏳ | no predicate; `is_commander` exists to build one on |
+| Lieutenant / "if you control your commander" | ✅ | `Predicate::ControlsOwnCommander`; Thunderfoot Baloth |
 
 ### Simulation & tooling
 | Feature | State | Where |
@@ -66,6 +67,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | 4-player Commander demo state | ✅ | `demo.rs::build_commander_state_seeded`, now the same four decks |
 | Commander pod mode in `bot_ladder` | ✅ | `bot_ladder --commander [--seats N]` |
 | Golden traces for a fixed-seed Commander pod | ⏳ | the format is young enough that a trace would churn; revisit once the variant mechanics land |
+| A net / MCTS pilot in a pod | ⛔ by design | the observation encoder is two-seat (`encode_state_inner`'s `1 - seat`, `sources: &[_; 2]`); `bot_ladder --commander` refuses one above two seats rather than index out of bounds. Design notes for an N-seat encoding are in `ML_NOTES.md`; widening it retrains every net |
 
 ## Tier 1 — High-leverage engine primitives
 

@@ -5392,3 +5392,49 @@ representation (the r45 capacity closure and r69's retrain null stand,
 so it is the *inputs*, not the training, that would have to change) —
 or the horizon (3 turns; a horizon read at fixed budget has not been
 taken on the net leaf either).
+
+## Commander — what an N-seat observation encoding would have to change (2026-09-18, design note only, nothing built)
+
+Written because the Commander run kept bumping into the encoder and the right
+answer every time was "don't touch it". Recorded so the next run doesn't
+re-derive it, and so nobody widens it by accident.
+
+**The encoder is two-seat by type, not by convention.** `encode_state_inner`
+opens with `let opp = 1 - seat;` and takes `sources: &[Vec<[bool; 5]>; 2]`, so
+a four-seat state does not produce a bad encoding — it indexes out of bounds.
+`bot_ladder --commander` refuses a search/net pilot above two seats for exactly
+that reason; the refusal is the fix, not a workaround.
+
+**Widening it retrains everything.** `Vocab`, `TrainRow` and `EncodedState`'s
+layout are what a checkpoint's first layer is shaped by, so any of the changes
+below invalidates every committed net and every in-flight comparison. That is
+the cost to weigh against "the bot plays pods better", and it is not a cost a
+Commander run should pay as a side effect.
+
+**What Commander state a net would actually want, in rough value order:**
+
+1. **Per-opponent blocks instead of one.** Everything the encoder says about
+   "the opponent" — board, life, hand size, mana sources — becomes a set. The
+   cheap version is a *pooled* opponent block (sum/max over opponents) plus
+   one block for the single opponent closest to losing; the faithful version
+   is three blocks with a seat-order rotation so the encoding is
+   permutation-equivariant. The pooled version costs one layout change and
+   keeps the duel encoding as its N=2 special case, which is the only version
+   worth trying first.
+2. **Commander damage, per (commander, victim).** A 21-point clock the board
+   does not otherwise show. In a pod this is the single most decision-relevant
+   number the current encoder cannot see at all.
+3. **The command zone as a zone.** Whether each seat's commander is castable
+   and at what tax — `commander_cast_count` is one small integer per commander
+   and is the difference between "can rebuild" and "cannot".
+4. **Threat asymmetry.** Who is being attacked, who is ahead on board; a duel
+   encoder gets this for free from the two-seat difference and a pod does not.
+
+**The order to do it in, if it is ever done:** an additive, versioned block
+appended after the current layout, so an old checkpoint still reads its own
+prefix; then a retrain; then the pooled-opponent change, which is the one that
+moves existing fields. Batch them — two layout changes are two retrains.
+
+**What is already true and needs nothing:** the scored (heuristic) pilots run
+pods today with no encoder involvement, which is what `bot_ladder --commander`
+uses, and what the 400-game smoke test measures.
