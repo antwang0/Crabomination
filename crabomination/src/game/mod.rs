@@ -5582,11 +5582,14 @@ impl GameState {
 
     /// CR 805.4a — the seats on the active team, in seat order. Just the
     /// active player outside the shared-team-turns option.
-    pub fn active_team_members(&self) -> Vec<usize> {
+    pub fn active_team_members(&self) -> SmallVec<[usize; 4]> {
+        // Inline: one seat outside a team format, and the one caller walks
+        // the list and drops it. PERF `(-366)`.
+        let mut seats = SmallVec::new();
+        seats.push(self.active_player_idx);
         if !self.shared_team_turns {
-            return vec![self.active_player_idx];
+            return seats;
         }
-        let mut seats = vec![self.active_player_idx];
         seats.extend(self.teammates(self.active_player_idx));
         seats.sort_unstable();
         seats
@@ -22440,7 +22443,8 @@ impl GameState {
             // plain "target creature" trigger reads better picking a different
             // permanent (a self-target trigger uses `Selector::This`, not a
             // target slot). Falls back to the source if it's the only legal pick.
-            let mut avoid = vec![pending.source];
+            let mut avoid: SmallVec<[CardId; 8]> = SmallVec::new();
+            avoid.push(pending.source);
             avoid.extend(
                 picked_this_batch
                     .iter()

@@ -3044,12 +3044,13 @@ quotes rows and absolutes separately.
   (-363) players as an inline seat list  REFUTED +0.754 / +0.652 / +0.722 %, reverted
   (-364) the token definition is an Arc       -0.073 / -0.530 / -0.272 %
   (-365) the combat lethals list is inline    -0.070 / -0.077 / -0.072 %
+  (-366) the short-lived seat/id lists inline -0.100 / -0.081 / -0.056 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                   -0.681 / -1.211 / -0.959 %
+  run total                                   -0.781 / -1.292 / -1.015 %
 ```
 
-**BASE 572,061,894 / 1,492,003,099 / 1,610,978,327 -> CLOSING 568,110,056 /
-1,476,879,051 / 1,597,193,864** at `(-365)` (the second base; `(-361)` sits
+**BASE 572,061,894 / 1,492,003,099 / 1,610,978,327 -> CLOSING 567,557,898 /
+1,475,719,510 / 1,596,356,563** at `(-366)` (the second base; `(-361)` sits
 above it, measured against the first).
 
 📐📐 **THE SHAPE OF THE RUN: THE THREE BIG ROWS ARE THE SAME QUESTION ASKED
@@ -8506,6 +8507,38 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-366)` the short-lived seat and id lists go inline — **fixed -0.100 / cube -0.081 / sealed -0.056 %**
+
+One shape, four sites, from the `--dump-instr` line census: **a local `Vec`
+whose length is bounded by the seat count or by one combat declaration,
+built, walked, and dropped inside one function.**
+
+```text
+  mod.rs   active_team_members `Vec<usize>`        SmallVec<[usize; 4]>   2,642
+  mod.rs   drain_trigger_queue `avoid`             SmallVec<[CardId; 8]>  3,292
+  stack.rs do_untap `untappers`                    SmallVec<[usize; 4]>   2,650
+  bot.rs   trim_blocks_to_payable_tax `distinct`   SmallVec<[CardId; 8]>  3,272
+```
+
+```text
+                  cleanup tip       (-366)            delta
+  fixed            568,127,468       567,557,898       -0.1003 %
+  cube           1,476,919,088     1,475,719,510       -0.0812 %
+  sealed         1,597,244,698     1,596,356,563       -0.0556 %
+
+  allocations (cube)   664,995 -> 654,155   -10,840
+```
+
+📐 **111 Ir per deleted allocation, the lowest reading in this file's range**,
+and the same reason as `(-365)`: each owner is a frame that gets moved, so
+part of the allocator saving comes back as `memcpy`. ⚠ **These are the rows
+where the A/B is not optional.** `(-363)` is the same edit on a field the
+engine indexes and it cost 8x what it saved; the difference is not the size
+of the buffer, it is **how many times the widened thing is READ**.
+📐 The base here is the `boxed_clone` cleanup tip, which reads **+0.003 %**
+against `(-365)` on all three pools — i.e. nothing, as a dead-code deletion
+on a cold arm should.
 
 ### `(-365)` the combat damage-assignment lethals list is inline — **fixed -0.070 / cube -0.077 / sealed -0.072 %**
 
@@ -15596,7 +15629,7 @@ the clone census**, which is where the 2026-09-18 session's whole -1.134 % of
 `cube` came from; (O)'s line shortlist is still live and still the instrument that
 feeds it. **Their relationship is the method: (O) names the `Clone` impl that
 allocates, (R) asks who wanted the copy.** Eight rows have now shipped off
-the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`, `(-365)`).
+the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`..`(-366)`).
 
   💡 **R. THE CLONE CENSUS — three rows in one session, -0.194 / -0.410 /
      -0.530 % of `cube`, and every one of them came from ONE question asked
@@ -16544,7 +16577,7 @@ costs. `profiling-lto` separates the two as well but costs a cold build;
   21,532   ~29,000 mod.rs:3687 GameState::clone `controlled_by`  ✅ TAKEN as (-362)
    6,274    5,342  combat.rs:3924 `lethals` collect              ✅ TAKEN as (-365)
    3,684    ~3,600 mod.rs affected_from_requirement `types`       escapes into the return
-   2,642    ~2,600 mod.rs active_team_members `Vec<usize>`        one or two seats, ONE caller
+   2,642    ~2,600 mod.rs active_team_members `Vec<usize>`        ✅ TAKEN as (-366), with 3 siblings
    ——       8,796  combat.rs:1263 declare_attackers `events`      ❌ a deliberate `with_capacity`, returned
    ——       8,482  stack.rs:2194 Arc::new(ResolvingSpell)         structural
    ——       5,852  mod.rs computed_permanent_hinted               unread

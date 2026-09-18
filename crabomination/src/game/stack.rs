@@ -3606,8 +3606,12 @@ impl GameState {
             }
             return;
         }
-        let untappers: Vec<usize> = {
-            let mut u = if active_skips_untap { vec![] } else { vec![p] };
+        // Inline: seats, and the list dies with the untap step. PERF `(-366)`.
+        let untappers: SmallVec<[usize; 4]> = {
+            let mut u: SmallVec<[usize; 4]> = SmallVec::new();
+            if !active_skips_untap {
+                u.push(p);
+            }
             // `any_static` was the first term of the per-permanent condition,
             // so a static-free board walked the whole battlefield to answer
             // "no" 23 times. It is a board-level answer: ask it once.

@@ -13186,7 +13186,8 @@ fn trim_blocks_to_payable_tax(
     };
     // A blocker declared twice (Guardian of the Gateless) is charged once,
     // the way the engine charges it: the tax is per declared blocker.
-    let mut distinct: Vec<CardId> = Vec::new();
+    // Inline: a declaration is a handful of blockers. PERF `(-366)`.
+    let mut distinct: smallvec::SmallVec<[CardId; 8]> = smallvec::SmallVec::new();
     for (b, _) in blocks.iter() {
         if !distinct.contains(b) {
             distinct.push(*b);
