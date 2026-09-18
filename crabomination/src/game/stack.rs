@@ -5082,6 +5082,11 @@ impl GameState {
             }
             crate::game::types::StackItem::Trigger { controller, .. } => *controller != p,
         });
+        // CR 800.4d — a delayed triggered ability the departed player controls
+        // can never be put onto the stack (`push_pending_trigger` refuses it),
+        // so it is dropped rather than left as a watcher that matches for ever.
+        // 800.4a's retain above is the stack; this is the registry behind it.
+        self.delayed_triggers.retain(|dt| dt.controller != p);
         // A choice the departed player was being asked to make is not made:
         // they are no longer in the game (CR 800.4). Leaving it pending
         // wedges every other seat, because a pending decision suppresses

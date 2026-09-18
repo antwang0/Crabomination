@@ -1062,6 +1062,74 @@ fn cr_800_4j_a_departed_active_player_never_receives_priority() {
     assert_eq!(g.player_with_priority(), 1);
 }
 
+/// CR 800.4d — "If a triggered ability that would be controlled by a player
+/// who has left the game would be put onto the stack, it isn't put on the
+/// stack." CR 800.4a removes what is already *on* the stack; a delayed
+/// triggered ability is a registration that fires later, so it needs this
+/// rule instead.
+///
+/// Puffer Extract's "destroy it at the beginning of the next end step" is
+/// registered by seat 0 against a creature seat 0 controls but seat 2 owns.
+/// Seat 0 leaves: the creature reverts to seat 2 (CR 800.4a) and survives the
+/// end step. Seat 1's identical registration is the control — the end step
+/// did fire.
+#[test]
+fn cr_800_4d_a_departed_players_delayed_trigger_is_not_put_on_the_stack() {
+    use crabomination::game::types::Target;
+    let mut g = multi_player_game(3);
+    let arm = |g: &mut GameState, seat: usize, victim: crabomination::card::CardId| {
+        let extract = g.add_card_to_battlefield(seat, catalog::puffer_extract());
+        g.players[seat].mana_pool.add_colorless(2);
+        g.priority.player_with_priority = seat;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: extract,
+            ability_index: 0,
+            target: Some(Target::Permanent(victim)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(1),
+        })
+        .expect("activate Puffer Extract");
+        while !g.stack.is_empty() {
+            g.resolve_top_of_stack().expect("resolve");
+        }
+    };
+
+    // Seat 0 controls a creature seat 2 owns, and points its own Extract at it.
+    let stolen = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.battlefield_find_mut(stolen).unwrap().controller = 0;
+    arm(&mut g, 0, stolen);
+    // Seat 1 arms the same ability against its own creature.
+    let control = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    arm(&mut g, 1, control);
+    assert_eq!(g.delayed_triggers.len(), 2, "both destructions are registered");
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+    assert_eq!(
+        g.battlefield_find(stolen).unwrap().controller,
+        2,
+        "control reverts to the owner (CR 800.4a)",
+    );
+    assert!(
+        !g.delayed_triggers.iter().any(|dt| dt.controller == 0),
+        "the departed player's registration is gone, not left firing for ever",
+    );
+
+    g.active_player_idx = 1;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+
+    assert!(
+        g.battlefield_find(stolen).is_some(),
+        "seat 0 left, so its delayed destroy never went on the stack",
+    );
+    assert!(g.battlefield_find(control).is_none(), "seat 1's did — the end step fired");
+}
+
 /// All seats eliminated simultaneously → draw (winner=None). Pre-existing
 /// behavior preserved through the team-aware refactor.
 #[test]

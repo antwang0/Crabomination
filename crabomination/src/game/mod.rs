@@ -22644,6 +22644,15 @@ impl GameState {
             converged_value,
             mana_spent,
         } = pending;
+        // CR 800.4d — "If a triggered ability that would be controlled by a
+        // player who has left the game would be put onto the stack, it isn't
+        // put on the stack." The single funnel for every trigger push, so the
+        // delayed ones (a Pact's upkeep, "at the beginning of the next end
+        // step, return it") take the same guard as the step and event ones.
+        // CR 800.4a only removes what was *already* on the stack.
+        if !self.players.get(controller).is_some_and(|p| p.is_alive()) {
+            return;
+        }
         // CR 603.10 — if this trigger's source just left the battlefield
         // (it's in the die-snapshot cache), stash its last-known instance
         // so a "deals damage equal to its power" body reads the
