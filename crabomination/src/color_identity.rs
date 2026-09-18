@@ -5,9 +5,17 @@
 //! can be in a deck with a certain commander. The color identity of a card is
 //! the color or colors of any mana symbols in that card's mana cost or rules
 //! text, plus any colors defined by its characteristic-defining ability or
-//! color indicator." 903.4b excludes reminder text; 903.4c says a land card
-//! with a basic land type has the corresponding mana symbol in its rules text;
-//! 903.4d includes the back face of a double-faced card.
+//! color indicator." 903.4c excludes reminder text; 903.4d includes the back
+//! face of a double-faced card; 903.4e includes an adventurer's alternative
+//! characteristics.
+//!
+//! A land card's *basic land types* are folded in here too. The current CR does
+//! not put them in 903.4 at all — 903.5d is a separate deck-construction
+//! restriction ("a card with a basic land type may be included only if each
+//! color of mana it could produce is in the commander's color identity") — but
+//! the only consumer is that same subset check, and folding is what makes this
+//! agree with Scryfall's `color_identity`, which the whole-catalog audit
+//! ratchets against. See `basic_land_identity`.
 //!
 //! **Rules text, not just the mana cost.** Every nonbasic dual land, every Mox
 //! and Cabal Coffers carries its whole identity in an ability, so a walk of
@@ -45,10 +53,12 @@ pub fn color_identity(def: &CardDefinition) -> ColorSet {
     out
 }
 
-/// CR 903.4c — "a card with a basic land type has the corresponding mana
-/// symbol in its rules text", reminder text or not: Gingerbread Cabin is a
-/// Forest and green even though the engine gives a typed land its mana
-/// ability from the type rather than from a printed activated ability.
+/// CR 903.5d — "a card with a basic land type may be included in a Commander
+/// deck only if each color of mana it could produce is included in the
+/// commander's color identity". Folded into identity rather than checked
+/// separately (see the module header), so Gingerbread Cabin is green even
+/// though the engine gives a typed land its mana ability from the type rather
+/// than from a printed activated ability.
 ///
 /// Typed rather than part of the serde walk on purpose: only the *card's own*
 /// land types count. "Search your library for a Forest card" and a token that
@@ -83,7 +93,7 @@ fn basic_land_identity(def: &CardDefinition, out: &mut ColorSet) {
 fn walk(v: &Value, out: &mut ColorSet) {
     match v {
         Value::Object(m) => {
-            // CR 903.4b / 702.99 — Extort's `{W/B}` lives in reminder text, so
+            // CR 903.4c / 702.99 — Extort's `{W/B}` lives in reminder text, so
             // a Crypt Ghast is mono-black. The engine expands the keyword into
             // a real `MayPay` with a real hybrid cost; that cost is the one
             // printed cost on a card that is not printed on the card.
@@ -127,7 +137,7 @@ fn walk(v: &Value, out: &mut ColorSet) {
                     // CR 903.4 — the color indicator, and a characteristic-
                     // defining color (the Kobolds' red, Transguild Courier).
                     "color_indicator" | "color_override" => each_color(p, out),
-                    // CR 903.4a names Transguild Courier: a characteristic-
+                    // CR 903.4 / 604.3 — Transguild Courier: a characteristic-
                     // defining ability that makes the card all colors puts
                     // all five in its identity. Only when it points at
                     // itself — a card that makes *other* permanents all
@@ -157,7 +167,7 @@ fn walk(v: &Value, out: &mut ColorSet) {
     }
 }
 
-/// CR 903.4b — costs the engine models structurally but the card only prints
+/// CR 903.4c — costs the engine models structurally but the card only prints
 /// in reminder text. Keyed on the shortcut's own description so the list is
 /// exactly the shortcuts that mint them; extend it if another keyword joins.
 fn is_reminder_only_cost(description: &str) -> bool {
@@ -188,12 +198,12 @@ mod tests {
     use super::*;
     use crate::catalog;
 
-    /// CR 903.4c — a land with a basic land type has that mana symbol in its
-    /// rules text, so a dual land's identity is both its colors even though
-    /// its mana cost is empty. The pre-2026-09 walk read `def.cost` only and
-    /// called Tundra colorless.
+    /// CR 903.5d — a land with a basic land type is bounded by the colors of
+    /// mana it can produce, so a dual land's identity is both its colors even
+    /// though its mana cost is empty. The pre-2026-09 walk read `def.cost`
+    /// only and called Tundra colorless.
     #[test]
-    fn cr_903_4c_dual_land_identity_comes_from_its_mana_abilities() {
+    fn cr_903_5d_dual_land_identity_comes_from_its_mana_abilities() {
         let id = color_identity(&catalog::tundra());
         assert!(id.contains(Color::White) && id.contains(Color::Blue), "Tundra is WU");
         assert_eq!(id.len(), 2);

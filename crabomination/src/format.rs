@@ -655,12 +655,12 @@ pub enum CommanderDeckError {
     /// More than two commanders were supplied (Partner / Background
     /// caps at two — anything beyond is illegal).
     TooManyCommanders { found: u32 },
-    /// CR 903.3a — a commander card is neither a legendary creature nor a
-    /// legendary card printing "[this] can be your commander"
-    /// (`CardDefinition::can_be_commander`).
-    NotLegendaryCreature { card_name: &'static str },
-    /// Two commanders that may not lead a deck together (CR 903.3c /
-    /// 702.124): neither both Partner, nor partners with each other, nor a
+    /// CR 903.3 / 903.3a — the card is none of the kinds a commander may be
+    /// (see [`is_legal_commander`]), nor the Background half of a CR 702.124j
+    /// pair.
+    IllegalCommander { card_name: &'static str },
+    /// Two commanders that may not lead a deck together (CR 702.124): neither
+    /// both Partner, nor partners with each other, nor a
     /// Choose-a-Background commander with a Background.
     NotPartners { first: &'static str, second: &'static str },
     /// A main-deck card's color identity is not a subset of the
@@ -679,9 +679,11 @@ impl std::fmt::Display for CommanderDeckError {
             CommanderDeckError::TooManyCommanders { found } => {
                 write!(f, "Too many commanders ({found}); maximum is 2 (Partner / Background)")
             }
-            CommanderDeckError::NotLegendaryCreature { card_name } => {
-                write!(f, "{card_name} is not a legendary creature and cannot be a commander")
-            }
+            CommanderDeckError::IllegalCommander { card_name } => write!(
+                f,
+                "{card_name} is not a legendary creature, Vehicle or Spacecraft with a \
+                 power/toughness box, and does not say it can be your commander (CR 903.3)",
+            ),
             CommanderDeckError::NotPartners { first, second } => {
                 write!(f, "{first} and {second} can't be commanders together (no Partner / Background pairing)")
             }
@@ -699,10 +701,10 @@ impl std::fmt::Display for CommanderDeckError {
 
 impl std::error::Error for CommanderDeckError {}
 
-/// CR 702.124 — may `a` and `b` be a deck's two commanders? Plain Partner
-/// on both (702.124a), "partner with" naming each other (702.124c), or a
-/// Choose-a-Background commander with a Background (702.124j). Friends
-/// forever / Doctor's companion aren't modelled — no catalog card has them.
+/// CR 702.124 — may `a` and `b` be a deck's two commanders? Plain Partner on
+/// both (702.124a), "partner with" naming each other (702.124c), a
+/// partner—[text] label shared (702.124i), a Choose-a-Background commander with
+/// a Background (702.124j), or a Doctor's companion with a Doctor (702.124m).
 pub fn commanders_may_pair(a: &CardDefinition, b: &CardDefinition) -> bool {
     use crate::card::{Keyword, KeywordSlice};
     let partners_with = |x: &CardDefinition, y: &CardDefinition| {
@@ -763,11 +765,39 @@ fn is_background(def: &CardDefinition) -> bool {
             .contains(&crate::card::EnchantmentSubtype::Background)
 }
 
+/// CR 903.3 — may `def` be designated a deck's commander on its own? The card
+/// must be legendary and either **(a)** a creature card, **(b)** a Vehicle
+/// card, or **(c)** a Spacecraft card with one or more power/toughness boxes;
+/// CR 903.3a's printed "[this] can be your commander" (CR 113.6n) is the other
+/// way in. The Background half of a CR 702.124j pair is not covered here — it
+/// is legal only *with* its partner, which `validate_commander_deck` knows and
+/// a lone card does not.
+///
+/// (b) and (c) are not hypothetical: Shorikai, Genesis Engine and Parhelion II
+/// are legendary Vehicles, and The Seriema is a legendary Spacecraft. They used
+/// to be rejected as "not a legendary creature".
+pub fn is_legal_commander(def: &CardDefinition) -> bool {
+    def.is_legendary()
+        && (def.is_creature()
+            || def.can_be_commander
+            || def.is_vehicle()
+            || is_spacecraft_with_pt(def))
+}
+
+/// CR 903.3(c)'s qualifier — a Spacecraft "with one or more power/toughness
+/// boxes". A station card's printed box is its band's `pt` (CR 721.2b), so The
+/// Seriema (5/5 at its 7+ band) qualifies and The Eternity Elevator, whose only
+/// band adds a mana ability, does not.
+fn is_spacecraft_with_pt(def: &CardDefinition) -> bool {
+    def.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Spacecraft)
+        && def.station.iter().any(|b| b.pt.is_some())
+}
+
 /// Validate a Commander-format deck. Runs the generic
 /// [`validate_deck`] checks first (100-card singleton main, etc.),
 /// then layers on Commander-specific rules: at least one commander,
-/// at most two (and a pair must be able to partner), each must be a
-/// legendary creature, every main-deck
+/// at most two (and a pair must be able to partner), each a card
+/// [`is_legal_commander`] accepts (CR 903.3), every main-deck
 /// card's color identity ⊆ commander's combined identity.
 ///
 /// Errors from the two layers are returned as a single combined
@@ -794,24 +824,22 @@ pub fn validate_commander_deck(
         });
     }
 
-    // Each commander must be a legendary creature — except the Background
-    // half of a Choose-a-Background pair (CR 702.124j), which is a legendary
-    // enchantment.
+    // CR 903.3 / 903.3a — each commander must be one of the card kinds
+    // `is_legal_commander` lists, except the Background half of a
+    // Choose-a-Background pair (CR 702.124j), which is a legendary enchantment
+    // and legal only alongside its partner.
     let background_pair = match deck.commanders.as_slice() {
         [a, b] => is_background_pair(a, b) || is_background_pair(b, a),
         _ => false,
     };
     for cmd in &deck.commanders {
-        let is_background = background_pair && is_background(cmd);
-        // CR 903.3a — a legendary creature, or a card that prints "[this] can
-        // be your commander" (the planeswalker commanders, Freyalise and
-        // friends), or the Background half of a 702.124j pair.
-        if !(cmd.is_legendary() && (cmd.is_creature() || cmd.can_be_commander || is_background)) {
-            cmd_errors.push(CommanderDeckError::NotLegendaryCreature { card_name: cmd.name });
+        let as_background = background_pair && is_background(cmd) && cmd.is_legendary();
+        if !(is_legal_commander(cmd) || as_background) {
+            cmd_errors.push(CommanderDeckError::IllegalCommander { card_name: cmd.name });
         }
     }
 
-    // CR 903.3c — a second commander needs a pairing ability.
+    // CR 702.124 — a second commander needs a pairing ability.
     if let [a, b] = deck.commanders.as_slice()
         && !commanders_may_pair(a, b)
     {

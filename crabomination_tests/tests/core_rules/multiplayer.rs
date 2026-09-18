@@ -1842,10 +1842,11 @@ fn commander_deck_validator_catches_off_color_card() {
 }
 
 #[test]
-fn commander_deck_validator_requires_legendary_creature() {
+fn commander_deck_validator_rejects_a_card_that_cannot_be_a_commander() {
     use crabomination::format::{validate_commander_deck, CommanderDeckError, Deck};
 
-    // Lightning Bolt is an Instant — not a legendary creature.
+    // CR 903.3 — Lightning Bolt is an Instant: none of the kinds of card a
+    // deck may designate as its commander.
     let deck = Deck {
         commanders: vec![catalog::lightning_bolt()],
         main: vec![],
@@ -1854,7 +1855,7 @@ fn commander_deck_validator_requires_legendary_creature() {
     let err = validate_commander_deck(&deck).unwrap_err();
     let (_generic, cmd) = err;
     assert!(
-        cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })),
+        cmd.iter().any(|e| matches!(e, CommanderDeckError::IllegalCommander { .. })),
     );
 }
 
@@ -1867,7 +1868,7 @@ fn commander_deck_validator_requires_a_commander() {
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::MissingCommander)));
 }
 
-/// CR 903.3c / 702.124 — two commanders need a pairing ability: both with
+/// CR 702.124 — two commanders need a pairing ability: both with
 /// Partner, "partner with" each other, or Choose a Background plus a
 /// Background (which, alone among commanders, needn't be a creature).
 #[test]
@@ -1909,7 +1910,7 @@ fn cr_702_124_commander_pair_needs_partner_or_background() {
     // …but a Background next to a Partner commander is neither pair.
     let cmd = pair_errors(catalog::akiri_line_slinger(), background);
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotPartners { .. })));
-    assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })));
+    assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::IllegalCommander { .. })));
 }
 
 /// CR 702.124i — "Partner—[text]" pairs on label equality and nothing else:
@@ -3288,7 +3289,7 @@ fn cr_702_124a_partner_with_still_pairs_for_deck_construction() {
 /// CR 903.3a — a legendary card that prints "[this] can be your commander"
 /// may lead a deck even though it is not a legendary *creature*. Freyalise,
 /// Llanowar's Fury is the implemented one; the validator used to reject every
-/// planeswalker commander as `NotLegendaryCreature`.
+/// planeswalker commander as `IllegalCommander`.
 #[test]
 fn cr_903_3a_a_planeswalker_that_says_so_can_be_your_commander() {
     use crabomination::format::{CommanderDeckError, Deck, validate_commander_deck};
@@ -3310,9 +3311,55 @@ fn cr_903_3a_a_planeswalker_that_says_so_can_be_your_commander() {
     };
     let (_, cmd) = validate_commander_deck(&deck).unwrap_err();
     assert!(
-        cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })),
+        cmd.iter().any(|e| matches!(e, CommanderDeckError::IllegalCommander { .. })),
         "Sol Ring prints no such line: {cmd:?}",
     );
+}
+
+// ── CR 903.3 — Vehicle and Spacecraft commanders ──────────────────────────
+
+/// CR 903.3 — "That card must be either (a) a creature card, (b) a Vehicle
+/// card, or (c) a Spacecraft card with one or more power/toughness boxes."
+/// (b) and (c) were rejected as "not a legendary creature"; (c)'s qualifier is
+/// the whole distinction between The Seriema (5/5 at its 7+ band) and The
+/// Eternity Elevator (a station card whose bands only add mana).
+#[test]
+fn cr_903_3_a_vehicle_or_a_spacecraft_with_a_pt_box_can_be_a_commander() {
+    use crabomination::format::is_legal_commander;
+
+    for (def, want, why) in [
+        (catalog::shorikai_genesis_engine(), true, "legendary Vehicle"),
+        (catalog::parhelion_ii(), true, "legendary Vehicle"),
+        (catalog::the_seriema(), true, "legendary Spacecraft with a 5/5 box"),
+        (catalog::the_eternity_elevator(), false, "legendary Spacecraft, no P/T box"),
+        (catalog::sol_ring(), false, "not even legendary"),
+        (catalog::sigarda_host_of_herons(), true, "the ordinary case"),
+    ] {
+        assert_eq!(is_legal_commander(&def), want, "{} — {why}", def.name);
+    }
+}
+
+/// CR 903.3(b) end to end: a legendary Vehicle leads a legal 100-card deck and
+/// starts in the command zone like any other commander. Shorikai, Genesis
+/// Engine is {2}{W}{U}, so the 99 is on a UW identity.
+#[test]
+fn cr_903_3b_a_vehicle_leads_a_legal_deck_and_is_seated() {
+    use crabomination::format::{Deck, validate_commander_deck};
+
+    let deck = Deck {
+        main: std::iter::repeat_with(catalog::island)
+            .take(50)
+            .chain(std::iter::repeat_with(catalog::plains).take(49))
+            .collect(),
+        commanders: vec![catalog::shorikai_genesis_engine()],
+        ..Default::default()
+    };
+    validate_commander_deck(&deck).expect("a legendary Vehicle is a legal commander");
+
+    let mut g = game_with_format(Format::Commander, 4);
+    let cmd = g.seat_commanders(0, vec![catalog::shorikai_genesis_engine()])[0];
+    assert_eq!(g.players[0].command.len(), 1);
+    assert!(g.is_commander(cmd), "and the designation is on the card, not on its types");
 }
 
 /// CR 903.8 — a planeswalker commander is cast from the command zone like any

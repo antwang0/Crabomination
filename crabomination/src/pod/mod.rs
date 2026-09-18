@@ -26,7 +26,7 @@ use crate::server::bot::Bot;
 #[derive(Clone, Copy)]
 pub struct PodDeck {
     pub name: &'static str,
-    /// One commander, or two under Partner / Background (CR 903.3c).
+    /// One commander, or two under Partner / Background (CR 702.124).
     pub commanders: &'static [CardFactory],
     /// The rest of the deck — `commanders.len() + main.len()` must be 100.
     pub main: &'static [CardFactory],
