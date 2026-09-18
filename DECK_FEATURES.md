@@ -57,14 +57,11 @@ Signet, Commander's Sphere, Mind Stone, and — since CR 106.6 mana provenance
 shipped — **Path of Ancestry** and **Opal Palace**, one of each per deck,
 swapped in for a basic apiece so the land count stays at ~37 (12 nonbasic).
 
-⏳ **Open deck-quality work**, no engine work needed:
-- All ten **Signets** and all ten **Talismans** are implemented
-  (`sets/decks/modern.rs`) and in the cube pool; the generated 99s did not
-  reach for them because the picker ranks ramp by mana value and the one-mana
-  dorks won the slots. Swapping each deck's guild signet + talisman in is a
-  strict improvement to the decks' fixing. It moves the committed pod outcome
-  table (`pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table`),
-  so re-bless it in the same commit.
+✅ **Each two-colour deck now runs its guild Signet and Talisman** too
+(Selesnya / Rakdos / Azorius / Simic + Unity / Indulgence / Progress /
+Curiosity), swapped in for the two weakest vanilla creatures apiece. The
+generated 99s had passed them over because the picker ranks ramp by mana
+value and the one-mana dorks won the slots.
 
 ## Modern supplement (`catalog::sets::decks::modern`)
 

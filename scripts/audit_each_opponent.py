@@ -29,6 +29,7 @@ for p in root.rglob('*.rs'):
             nm = m.group(1).replace('\\"', '"').replace("\\'", "'")
             bodies.setdefault(nm, (ident, str(p), body))
 
+SHORTCUT = pathlib.Path('crabomination_base/src/effect/shortcut.rs').read_text()
 sc = json.load(open('scripts/.scryfall_cache.json'))
 # A clause that is per-opponent and therefore needs a fan-out.
 CLAUSE = re.compile(r'each opponent|each other player|each of your opponents', re.I)
@@ -46,7 +47,13 @@ FANOUT = re.compile(
     r'|OpponentCount|AllOpponents|Opponents\b'
     # the lowercase `effect::shortcut` helpers that mint the same refs
     r'|each_opponent|each_other_player|all_opponents|opponents\(|opponent_count'
-    r'|EachPlayerMatching|EachOther|OpponentsLoseLife|Extort|extort')
+    r'|EachPlayerMatching|EachOther|OpponentsLoseLife|Extort|extort'
+    # Verified-correct spellings found by the first sweep: a per-opponent
+    # *count*, a fan-out that names everyone but one seat, the opponents-only
+    # flag on a mass effect, and the multi-seat ask arms.
+    r'|OpponentsWhoLostLifeThisTurn|EachPlayerExceptControllerOf|opponents_only'
+    r'|TemptingOffer|OpponentPlayer|OpponentsSorceryTimingOnly|PlayersMayAccept'
+    r'|JoinForces|VoteTally|Monarch|Goad')
 rows = []
 for nm, (ident, path, body) in bodies.items():
     e = sc.get(nm)
@@ -59,13 +66,17 @@ for nm, (ident, path, body) in bodies.items():
         continue
     # Inline every same-file helper the body calls (one level is enough —
     # the helpers are leaves).
-    src = file_src[path]
+    # …and the `effect::shortcut` helpers, which live in another crate and are
+    # where most of these clauses actually say `EachOpponent` (`drain`,
+    # `etb_drain`, `dies_drain`, `magecraft`, `extort`, …).
+    srcs = [file_src[path], SHORTCUT]
     reach = body
     for callee in set(re.findall(r'\b([a-z_][a-z0-9_]*)\(', body)):
-        m = re.search(r'^(?:pub )?fn ' + callee + r'\b', src, re.M)
-        if m:
-            nxt = re.search(r'^(?:pub )?fn ', src[m.end():], re.M)
-            reach += src[m.start(): m.end() + (nxt.start() if nxt else len(src))]
+        for src in srcs:
+            m = re.search(r'^(?:pub )?fn ' + callee + r'\b', src, re.M)
+            if m:
+                nxt = re.search(r'^(?:pub )?fn ', src[m.end():], re.M)
+                reach += src[m.start(): m.end() + (nxt.start() if nxt else len(src))]
     if FANOUT.search(reach):
         continue
     rows.append((nm, ident, path.split('/')[-1], clauses[0].strip()))

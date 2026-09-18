@@ -360,6 +360,26 @@ per opponent, because a slot is declared statically by the card literal and
   Forest" fires once per *target* rather than once per permanent that actually
   died, so an indestructible or regenerated target still fetches.
 
+### The `each_opponent` audit's standing residuals
+
+`scripts/audit_each_opponent.py` is the sweep in a script: every implemented
+card's printed text read for a clause that names opponents as the *recipients*
+of an effect, its factory body (plus the same-file helpers and
+`effect::shortcut`) read for a fan-out reference. Trigger *timing* ("at the
+beginning of each opponent's upkeep") is excluded — the event system already
+fires once per such step. **Seven survivors as of 2026-09-18**, none of them a
+plain missing fan-out:
+
+| Card | Residual |
+|---|---|
+| Malcolm, Keen-Eyed Navigator | "Whenever **one or more** Pirates you control deal damage to your opponents, create a Treasure **for each opponent dealt damage**" is a *batched* damage trigger, and the engine has no batched damage event: it fires per damage event, so three Pirates hitting one player make three Treasures where the card makes one. Wrong at two seats too. Needs a `DealsDamageToPlayer` batch kind. |
+| Kaya, Spirits' Justice | the −2's "for each other player, exile up to one target creature that player controls" can't take `ForEachOpponentTarget`: slot 0 is a fixed own-creature target and `ApplyToTargets` rebinds every supplied target to slot 0. |
+| Absolute Virtue | "you have protection from each of your opponents" is modelled as `ControllerHasHexproof` — the can't-be-targeted half only, not the damage or aura halves. |
+| Damping Engine | the whole "controls more permanents than each other player" lock, plus its sacrifice-to-ignore rider. |
+| Lavinia, Azorius Renegade | "each opponent can't cast noncreature spells with mana value greater than the number of lands **that player** controls" — a per-opponent threshold. |
+| Spikeshell Harrier | the speed-comparison clause is dropped (the bounce half is complete). |
+| Grim Reminder | not a gap — `Effect::SearchRevealPunishSameNameCasters` is the per-opponent walk, under a name the regex can't see. |
+
 ## CR 903.4 color-identity divergences (from the Scryfall audit)
 
 `cr_903_4_computed_color_identity_matches_scryfall` (core_rules /
