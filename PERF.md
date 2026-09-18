@@ -3133,26 +3133,30 @@ A buffer a caller builds and reads is 222; one `GameState::clone` copies is
 `Vec`s is 509 (the `memcpy` goes too). **Size an allocation lead by the bytes
 it copies, not only by the count.**
 
-sweep   **4 blocks — fresh seeds 1428..1431 at the `(-364)` tip and
-        1432..1435 at the closing tip: 24 cells / 118,400 games / 0
-        failures**, `cap 0 / board 0 / stuck 0 / draw 26` (a draw is a legal
+sweep   **5 blocks — fresh seeds 1428..1431 at the `(-364)` tip, 1432..1435
+        at the `(-367)` tip and 1436..1437 at the `(-370)` tip: 30 cells /
+        148,000 games / 0 failures**, `cap 0 / board 0 / stuck 0 / draw 26` (a draw is a legal
         rules outcome; 20 of the 26 are seed 1430's `cube`/`all` cells, 10
         apiece — the same pairing seen from two pools, which is what a *deck*
         draw looks like), pools `cube all sealed`, `target-audit/overflow`
         with `-C debug-assertions=yes` and `CRAB_ANSWER_LOG=strict`.
-        **FRONTIER 1436.**
-        Suite **19,620 / 0 / 6** (`CRAB_ANSWER_LOG=strict`), golden traces
-        unmoved, clippy **0** over the workspace, `cargo check --profile
-        release-fast -p crabomination --bin bot_ladder` clean.
-        `--bench` at the `(-364)` tip and again at the closing tip:
-        **195,806 / 27.49 / 611.9 / 0 stalls** both times, byte-identical to
-        the committed invariant, `determinism ok`, `thread_determinism ok
-        (3 vs 1)`, `peak_rss_mib` 26.9 / 25.5. **All six rows are
+        **FRONTIER 1438.**
+        Suite **19,620 / 0 / 6** at the `(-367)` tip and **19,632 / 0 / 6**
+        at the `(-370)` one (`CRAB_ANSWER_LOG=strict`), golden traces
+        unmoved, clippy **0** over the workspace both times, `cargo check
+        --profile release-fast -p crabomination --bin bot_ladder` clean.
+        `--bench` at the `(-364)`, `(-367)` and `(-370)` tips: **195,806 /
+        27.49 / 611.9 / 0 stalls** all three times, byte-identical to the
+        committed invariant, `determinism ok`, `thread_determinism ok
+        (3 vs 1)`, `peak_rss_mib` 26.9 / 25.5 / 25.4. **All seven rows are
         behaviour-preserving on the bench path.**
-        **CLOSING ABSOLUTES at `1e21fa73`** (which carries four concurrent
-        Commander commits on top of `(-367)`): fixed **567,018,948** / cube
-        **1,473,886,815** / sealed **1,594,388,820** — i.e. **-0.882 /
-        -1.214 / -1.030 %** against this run's second base, all-in.
+        **CLOSING ABSOLUTES at `dd3fd7fc`** (which carries seven concurrent
+        Commander / multiplayer commits on top of `(-367)`): fixed
+        **567,182,951** / cube **1,475,488,276** / sealed **1,596,484,155**.
+        ⚠ The all-in figure against this run's second base is **-0.853 /
+        -1.107 / -0.900 %** and the sum of rows is **-0.915 / -1.469 /
+        -1.155 %**; the gap is the concurrent sessions' work, not drift, and
+        `(-361)` is measured against the FIRST base besides.
         ⚠ Those four commits plus the clippy fix are **+0.016 / +0.003 /
         -0.009 %** against `(-367)`'s own closing, so the difference between
         the all-in figure and the **-0.892 / -1.419 / -1.129 %** sum of rows
