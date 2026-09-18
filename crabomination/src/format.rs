@@ -105,12 +105,31 @@ const VINTAGE_RESTRICTED: &[&str] = &[
     "Necropotence", "Sol Ring", "Time Vault", "Trinisphere",
     "Mystic Forge", "Karn, the Great Creator",
 ];
+/// CR 903.5 — the Commander ban list, fetched from Scryfall (`banned:commander`)
+/// on 2026-09-18 and stored by *front-face* name, which is what a
+/// `CardDefinition` carries. The list this replaced was described in its own
+/// comment as "representative": it banned Biorhythm and Timetwister, which are
+/// legal, and missed Rofellos, Llanowar Emissary — the commander the engine's
+/// own Commander demo was built around.
 const COMMANDER_BANNED: &[&str] = &[
-    "Black Lotus", "Ancestral Recall", "Time Walk", "Timetwister",
-    "Mox Pearl", "Mox Sapphire", "Mox Jet", "Mox Ruby", "Mox Emerald",
-    "Emrakul, the Aeons Torn", "Griselbrand", "Flash", "Hullbreacher",
-    "Paradox Engine", "Prophet of Kruphix", "Channel", "Upheaval",
-    "Biorhythm", "Limited Resources", "Sundering Titan", "Karakas",
+    "Adriana's Valor", "Advantageous Proclamation", "Amulet of Quoz", "Ancestral Recall",
+    "Assemble the Rank and Vile", "Backup Plan", "Balance", "Black Lotus", "Brago's Favor",
+    "Bronze Tablet", "Channel", "Chaos Orb", "Cleanse", "Contract from Below", "Crusade",
+    "Darkpact", "Demonic Attorney", "Dockside Extortionist", "Double Stroke", "Echoing Boon",
+    "Emissary's Ploy", "Emrakul, the Aeons Torn", "Erayo, Soratami Ascendant", "Falling Star",
+    "Fastbond", "Flash", "Golos, Tireless Pilgrim", "Griselbrand", "Hired Heist",
+    "Hold the Perimeter", "Hullbreacher", "Hymn of the Wilds", "Immediate Action", "Imprison",
+    "Incendiary Dissent", "Invoke Prejudice", "Iona, Shield of Emeria", "Iterative Analysis",
+    "Jeweled Bird", "Jeweled Lotus", "Jihad", "Karakas", "Leovold, Emissary of Trest",
+    "Library of Alexandria", "Limited Resources", "Mana Crypt", "Mox Emerald", "Mox Jet",
+    "Mox Pearl", "Mox Ruby", "Mox Sapphire", "Muzzio's Preparations", "Nadu, Winged Wisdom",
+    "Natural Unity", "Paradox Engine", "Power Play", "Pradesh Gypsies", "Primeval Titan",
+    "Prophet of Kruphix", "Rebirth", "Recurring Nightmare", "Rofellos, Llanowar Emissary",
+    "Secret Summoning", "Secrets of Paradise", "Sentinel Dispatch", "Shahrazad",
+    "Sovereign's Realm", "Stone-Throwing Devils", "Summoner's Bond", "Sundering Titan",
+    "Sylvan Primordial", "Tempest Efreet", "Time Vault", "Time Walk", "Timmerian Fiends",
+    "Tinker", "Tolarian Academy", "Trade Secrets", "Unexpected Potential", "Upheaval",
+    "Weight Advantage", "Worldknit", "Yawgmoth's Bargain",
 ];
 
 impl Format {
@@ -340,6 +359,14 @@ fn is_basic_land(def: &CardDefinition) -> bool {
 ///
 /// Returns `Ok(())` if the deck is legal or a list of errors otherwise.
 pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<DeckError>> {
+    let refs: Vec<&CardDefinition> = deck.iter().collect();
+    validate_deck_refs(&refs, format)
+}
+
+/// [`validate_deck`] over borrowed cards, so a caller can validate a deck it
+/// holds in two pieces without cloning it. CR 903.5a's "100 cards including
+/// its commander" is exactly that caller.
+pub fn validate_deck_refs(deck: &[&CardDefinition], format: Format) -> Result<(), Vec<DeckError>> {
     let rules = format.rules();
     let mut errors = Vec::new();
 
@@ -718,8 +745,13 @@ fn is_background(def: &CardDefinition) -> bool {
 pub fn validate_commander_deck(
     deck: &Deck,
 ) -> Result<(), (Vec<DeckError>, Vec<CommanderDeckError>)> {
+    // CR 903.5a — "A Commander deck must contain exactly 100 cards, including
+    // its commander", and 903.5b's singleton rule counts the commander too
+    // (a second copy of it in the 99 is illegal). Validating `main` alone
+    // rejected every legal 99 + 1 list as `TooFewCards { 99, 100 }`.
     let mut generic = Vec::new();
-    if let Err(es) = validate_deck(&deck.main, Format::Commander) {
+    let all: Vec<&CardDefinition> = deck.commanders.iter().chain(deck.main.iter()).collect();
+    if let Err(es) = validate_deck_refs(&all, Format::Commander) {
         generic = es;
     }
 
