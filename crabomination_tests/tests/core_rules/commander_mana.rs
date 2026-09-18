@@ -507,3 +507,29 @@ fn cr_903_4_no_commander_keeps_the_any_color_fallback() {
     .expect("tap");
     assert_eq!(g.players[0].mana_pool.total(), 1);
 }
+
+// ── CR 903.5e — Commander games do not use sideboards ─────────────────────
+
+/// CR 903.5e. `validate_deck_refs` takes a flat card list — which is what lets
+/// CR 903.5a count the commander with the 99 — so it never sees a sideboard,
+/// and a Commander deck could carry one past validation.
+#[test]
+fn cr_903_5e_a_commander_deck_may_not_have_a_sideboard() {
+    use crabomination::format::{Deck, DeckError, validate_commander_deck};
+    let mut main: Vec<CardDefinition> = vec![catalog::forest(); 99];
+    main[0] = catalog::llanowar_elves();
+    let legal = Deck {
+        commanders: vec![bear_commander()],
+        main: main.clone(),
+        ..Default::default()
+    };
+    assert!(validate_commander_deck(&legal).is_ok(), "the 99 + 1 is legal to start with");
+
+    let with_side = Deck { sideboard: vec![catalog::forest()], ..legal };
+    let (generic, cmd) = validate_commander_deck(&with_side).expect_err("a sideboard is illegal");
+    assert!(cmd.is_empty(), "nothing Commander-specific is wrong with the list");
+    assert!(
+        generic.contains(&DeckError::SideboardNotAllowed { found: 1 }),
+        "CR 903.5e, got {generic:?}",
+    );
+}

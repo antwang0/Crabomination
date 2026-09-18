@@ -814,6 +814,13 @@ pub fn validate_commander_deck(
     if let Err(es) = validate_deck_refs(&all, Format::Commander) {
         generic = es;
     }
+    // CR 903.5e — "Commander games do not use sideboards." `validate_deck_refs`
+    // takes a flat card list, which is what lets CR 903.5a count the commander
+    // with the 99; the price is that it never sees this deck's sideboard, so
+    // the rule is checked here instead of falling out of `FormatRules`.
+    if !deck.sideboard.is_empty() {
+        generic.push(DeckError::SideboardNotAllowed { found: deck.sideboard.len() as u32 });
+    }
 
     let mut cmd_errors = Vec::new();
     if deck.commanders.is_empty() {
