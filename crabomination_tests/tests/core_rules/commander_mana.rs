@@ -441,3 +441,69 @@ fn auto_tap_still_skips_a_real_restriction() {
         "a restricted source is not auto-tapped",
     );
 }
+
+// ── CR 903.4 — an identity with no colours in it ──────────────────────────
+
+/// CR 903.4 / rulings 2020-11-10 on Command Tower, Path of Ancestry and Opal
+/// Palace: "If your commander is a card that has no colors in its color
+/// identity, the ability produces no mana. It doesn't produce {C}."
+#[test]
+fn cr_903_4_a_colorless_commander_adds_no_mana_and_not_colorless() {
+    use crabomination::card::{CardDefinition, CardType, Supertype};
+    let colorless_commander = CardDefinition {
+        name: "Test Colorless Commander",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    };
+    let mut g = game_with_format(Format::Commander, 2);
+    g.seat_commanders(0, vec![colorless_commander]);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    assert!(g.commander_identity_colors(0).is_empty(), "no colours in the identity");
+
+    for land in [catalog::command_tower(), catalog::path_of_ancestry()] {
+        let mut g = g.clone();
+        let id = g.add_card_to_battlefield(0, land);
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("the ability still activates");
+        assert_eq!(g.players[0].mana_pool.total(), 0);
+        assert_eq!(g.players[0].mana_pool.restricted_total(), 0);
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 0, "and not {{C}}");
+    }
+}
+
+/// The other half of the same ruling is the one place the engine answers
+/// against the rules, deliberately: a seat with *no* commander keeps the
+/// pre-Commander "any color", because Command Tower / Arcane Signet /
+/// Commander's Sphere are fixing in the two-player cube pool and a dead land
+/// there is a worse approximation than a permissive one.
+#[test]
+fn cr_903_4_no_commander_keeps_the_any_color_fallback() {
+    let mut g = two_player_game();
+    assert_eq!(g.commander_identity_colors(0).len(), 5);
+    let id = g.add_card_to_battlefield(0, catalog::command_tower());
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}

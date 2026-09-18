@@ -11145,6 +11145,13 @@ impl GameState {
                         // restricted `ChooseColor`, one pip.
                         let source = ctx.source.unwrap_or(CardId(0));
                         let legal = self.commander_identity_colors(p);
+                        // A colourless commander's identity has no colour in
+                        // it, so the ability adds nothing — and explicitly not
+                        // {C} (rulings 2020-11-10). `legal[0]` below also made
+                        // this the arm's one panic.
+                        if legal.is_empty() {
+                            return Ok(());
+                        }
                         if self.players[p].wants_ui {
                             self.suspend_signal = Some(Box::new((
                                 crate::decision::Decision::ChooseColor { source, legal },

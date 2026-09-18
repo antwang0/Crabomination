@@ -5863,28 +5863,34 @@ impl GameState {
     /// command zone, the battlefield, a graveyard): its identity is a property
     /// of the card, not of the zone.
     ///
-    /// Empty identity → all five colors, which is the approximation these
-    /// cards carried before the payload existed. See
-    /// `ManaPayload::AnyColorInCommanderIdentity` for why the fallback is
-    /// there and not "produces nothing".
+    /// **Empty is a real answer**: a seat whose commanders' combined identity
+    /// is colourless (Kozilek) has no colour to add, and the 2020-11-10
+    /// rulings on Command Tower, Path of Ancestry and Opal Palace are
+    /// explicit that such an ability produces *no mana* — not {C}.
+    ///
+    /// A seat with **no commander** is the other half of the same ruling, and
+    /// is the one place this answers against the rules: it returns all five.
+    /// Command Tower / Arcane Signet / Commander's Sphere are fixing in the
+    /// two-player cube pool, where no seat ever has a commander, and a dead
+    /// land there is a worse approximation than a permissive one. It is also
+    /// what keeps the two-player golden traces byte-identical.
     pub fn commander_identity_colors(&self, seat: usize) -> Vec<crate::mana::Color> {
-        let mut set = crate::mana::ColorSet::empty();
-        if let Some(p) = self.players.get(seat) {
-            set = p.commander_identity;
-            // Empty is either "colourless commander" or "snapshot from a build
-            // without the cache"; both are answered by the walk, and the
-            // colourless case falls through to the five-colour default below
-            // either way.
-            if set == crate::mana::ColorSet::empty() {
-                for &id in &p.commanders {
-                    if let Some(c) = self.find_card_anywhere(id) {
-                        set = set.union(crate::format::color_identity(&c.definition));
-                    }
+        let Some(p) = self.players.get(seat) else {
+            return crate::mana::Color::ALL.to_vec();
+        };
+        if p.commanders.is_empty() {
+            return crate::mana::Color::ALL.to_vec();
+        }
+        let mut set = p.commander_identity;
+        // An empty cache is either a colourless commander or a snapshot from a
+        // build without it; the walk answers both, and costs nothing on the
+        // ordinary path because the cache is only empty in those two cases.
+        if set == crate::mana::ColorSet::empty() {
+            for &id in &p.commanders {
+                if let Some(c) = self.find_card_anywhere(id) {
+                    set = set.union(crate::format::color_identity(&c.definition));
                 }
             }
-        }
-        if set == crate::mana::ColorSet::empty() {
-            return crate::mana::Color::ALL.to_vec();
         }
         crate::mana::Color::ALL.into_iter().filter(|c| set.contains(*c)).collect()
     }
