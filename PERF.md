@@ -3045,7 +3045,17 @@ explanation until the miss is a novel one.
 ```
 
 **BASE 574,982,787 / 1,502,592,314 / 1,622,355,333 -> CLOSING 571,483,507 /
-1,494,309,746 / 1,611,303,685.**
+1,494,309,746 / 1,611,303,685** at `(-359)`.
+
+⚠⚠ **AND THOSE ABSOLUTES DESCRIBE A TREE THE BRANCH TIP NO LONGER IS.** A
+concurrent ML session landed **Round 77/78** (the default's shortlist re-sized
+and its main-phase holds ablated, `server/bot.rs`) after this session's last
+measurement, so **the pilot plays different games from here on: every absolute
+in this block is stale at the tip and the next run must RE-TAKE the base
+rather than predict it.** The A/B rows are unaffected — each was built and
+measured from one tree — which is the whole reason this file quotes rows and
+absolutes separately. The `--bench` invariant survived it again, for the
+reason recorded in the sweep block below.
 
 📐 **THE RUN'S OWN SHAPE, WHICH IS THE THING TO CARRY FORWARD: four of the
 five rows are ALLOCATIONS, and none of them was on the candidates list.**
@@ -3070,12 +3080,14 @@ runs.
 functions that went to zero calls, i.e. inlined) — see the Log entry. The
 shipped-profile figure is ~0.13 % of `cube`.
 
-sweep   **2 blocks — fresh seeds 1422..1423 at the `(-354)` tip and
-        1424..1425 at the `(-358)` closing tip: 12 cells / 59,200 games / 0
-        failures**, `cap 0 / stuck 0 / draw 2` (a draw is a legal rules
-        outcome, not a stall), pools `cube all sealed`,
+sweep   **3 blocks — fresh seeds 1422..1423 at the `(-354)` tip, 1424..1425
+        at the `(-358)` tip and 1426..1427 at the rebased closing tip: 18
+        cells / 88,800 games / 0 failures**, `cap 0 / stuck 0 / draw 2` (a
+        draw is a legal rules outcome, not a stall), pools `cube all sealed`,
         `target-audit/overflow` with `-C debug-assertions=yes`. **FRONTIER
-        1426.** The second block carries `(-358)`'s
+        1428.** The third block carries `(-359)`'s cross-call decider reuse
+        and a concurrent ML session's Round 77/78 pilot change; the second
+        carries `(-358)`'s
         `names_x_or_converge` recompute-and-compare at both call sites and
         `(-355)`..`(-357)`'s edits; the first is `(-354)`'s whole ratchet and it is one
         assertion covering twenty-nine sites: `cold_any`'s recompute-and-compare
@@ -3087,11 +3099,18 @@ sweep   **2 blocks — fresh seeds 1422..1423 at the `(-354)` tip and
         Suite **19,603 / 0 / 6** (`CRAB_ANSWER_LOG=strict`), golden traces
         unmoved, clippy **0** over the workspace, `cargo check --profile
         release-fast -p crabomination` clean.
-        `--bench` at the `(-354)` tip and again at the `(-358)` closing tip:
-        **195,806 / 27.49 / 611.9 / 0 stalls** both times, byte-identical to
-        the committed invariant, `determinism ok`, `thread_determinism ok
-        (3 vs 1)`, `peak_rss_mib` 25.5 / 25.0. **All five rows are
-        behaviour-preserving on the bench path.**
+        Suite **19,605 / 0 / 6** at the rebased tip, clippy **0** (Round 77's
+        `shortlist_tick` needed the tree's standing
+        `#[allow(clippy::too_many_arguments)]`).
+        `--bench` at the `(-354)` tip, the `(-358)` tip and the rebased
+        closing tip: **195,806 / 27.49 / 611.9 / 0 stalls** all three times,
+        byte-identical to the committed invariant, `determinism ok`,
+        `thread_determinism ok (3 vs 1)`, `peak_rss_mib` 25.5 / 25.0 / 25.4.
+        **All six rows and the `(-360)` revert are behaviour-preserving on the
+        bench path** — and so is Round 77/78, which is the previous run's
+        reading confirmed again: **`--bench` is a `gang` mirror and does not
+        cover the `dflt`/search pilots, so an ML change to them reads as "no
+        change" here.**
         ⚠ `games_per_s` read **283.59** at the first tip and **487.40 /
         491.98** at the second — and that is NOT a 72 % throughput win, it is
         the first reading being taken while a `profiling-lines` build held
