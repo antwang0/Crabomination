@@ -3022,14 +3022,15 @@ two-player simulator did not pay for it, and the reading is the `--bench`
 **invariant**, which is exact:
 
 ```text
---bench at efb4ca76 (release):
+--bench at 11b64318 (release), the run's closing tip:
   decisions          195,806   byte-identical to the committed invariant
   turns_per_game       27.49   "
   decisions_per_game   611.9   "
   stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
   determinism     ok (all pairs split)
-  peak_rss_mib      25.6       (baseline 26.9; an allocator distribution)
-  games_per_s     561.21 at host_calib_ms 46, Intel Xeon @ 2.10 GHz
+  peak_rss_mib      25.5       (baseline 26.9; an allocator distribution)
+  games_per_s     540.73 at host_calib_ms 46, Intel Xeon @ 2.10 GHz
+                  (561.21 at the same calib mid-run, one commit behind)
 ```
 
 ⚠ **The games/s row does not cross to the committed baseline and is not read
@@ -3046,11 +3047,32 @@ the invariant above is unmoved. **Perf candidate if it ever shows up**: a
 `GameState` "any command zone non-empty" bit would skip the walk entirely, and
 the same bit would serve `duplicate_zone_id`.
 
-**The Commander pod's own numbers** (not comparable to anything in this file;
-`bot_ladder --commander --games 400 --seed 43`, four target decks, 4 seats):
-400 games, **0 undecided**, 41.83 turns/game, 2,096.6 actions/game, 315.77
-games/s on 3 threads. It read **15 % "no legal move"** before the CR 800.4a
-pending-decision fix, which is what that fix is measured by.
+**The Commander pod's own numbers** (not comparable to anything in this file):
+
+```text
+bot_ladder --commander --games 400 --seed 43   (4 seats, the four target decks)
+  400 games, 0 undecided (draw 0 / cap 0 / board 0 / no legal move 0)
+  41.83 turns/game, 1,969.0 actions/game, 321.53 games/s on 3 threads
+  --threads 1: 110.61 games/s and EVERY OTHER COLUMN IDENTICAL —
+               same wins per deck, same turns, same actions
+bot_ladder --commander --seats 3 --games 200 --seed 97
+  200 games, 0 undecided, 30.06 turns/game, 1,096.5 actions/game
+```
+
+📐 **The thread-count row is the pod's determinism proof and it is free.**
+`run_pod_games` keys each game's seed to its *index*, not to the worker, so
+the split cannot change the result — and the 3-vs-1 comparison above says so
+in every column rather than only in a digest. `--bench`'s own
+`thread_determinism` check is the two-player equivalent; this is the N-seat
+one and it costs one extra run.
+
+⚠ **The actions/game row moved 2,096.6 → 1,969.0 across the run and that is a
+FEATURE, not drift**: CR 509.1a's block gate stopped offering a declaration to
+every seat nobody was attacking. Turns/game is unchanged at 41.83, which is
+how you tell "fewer pointless actions" from "different games".
+
+It read **15 % "no legal move"** before the CR 800.4a pending-decision fix,
+which is what that fix is measured by.
 
 ### 2026-09-18 (the clone-family session, SIXTEENTH box) — three rows, and two of them are the largest this file has taken in a year of passes
 
