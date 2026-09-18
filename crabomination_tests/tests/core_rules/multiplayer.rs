@@ -1777,6 +1777,148 @@ fn cr_702_124i_partner_label_pairs_only_with_the_same_label() {
     );
 }
 
+/// CR 702.124m — "Doctor's companion" pairs only with "a legendary Time Lord
+/// Doctor creature card that has no other creature types". The last clause is
+/// the whole rule: a Time Lord Scientist, a Human Doctor and a Doctor with a
+/// third type are each one type away and each illegal.
+#[test]
+fn cr_702_124m_doctors_companion_needs_a_pure_time_lord_doctor() {
+    use crabomination::card::{CardDefinition, CreatureType, Subtypes};
+    use crabomination::format::commanders_may_pair;
+    let graham = catalog::graham_obrien();
+    let doctor = catalog::the_third_doctor();
+    assert!(commanders_may_pair(&graham, &doctor), "the printed pair");
+    assert!(commanders_may_pair(&doctor, &graham), "and in either order");
+
+    let with_a_third_type = CardDefinition {
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::TimeLord,
+                CreatureType::Doctor,
+                CreatureType::Scientist,
+            ],
+            ..Default::default()
+        },
+        ..catalog::the_third_doctor()
+    };
+    assert!(
+        !commanders_may_pair(&graham, &with_a_third_type),
+        "\"no other creature types\" — Romana II is a Time Lord Scientist",
+    );
+    let human_doctor = CardDefinition {
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Doctor],
+            ..Default::default()
+        },
+        ..catalog::the_third_doctor()
+    };
+    assert!(
+        !commanders_may_pair(&graham, &human_doctor),
+        "a Doctor that isn't a Time Lord isn't the Doctor",
+    );
+    // CR 702.124f — the partner abilities don't combine with each other.
+    assert!(
+        !commanders_may_pair(&graham, &catalog::akiri_line_slinger()),
+        "Doctor's companion is not plain Partner",
+    );
+    assert!(
+        !commanders_may_pair(&graham, &catalog::elmar_ulvenwald_informant()),
+        "nor a labelled partner",
+    );
+    // Two companions are not a pair either: neither is a Doctor.
+    assert!(!commanders_may_pair(&graham, &graham.clone()));
+}
+
+/// A 100-card list led by the pair validates, and the combined identity is
+/// both commanders' (CR 702.124c): Graham is mono-green, the Third Doctor is
+/// GU, so a blue card in the 99 is legal.
+#[test]
+fn cr_702_124c_doctor_pair_shares_a_combined_identity() {
+    use crabomination::format::{validate_commander_deck, Deck};
+    let mut main: Vec<crabomination::card::CardDefinition> = vec![catalog::island()];
+    while main.len() < 97 {
+        main.push(catalog::forest());
+    }
+    main.push(catalog::brainstorm());
+    let deck = Deck {
+        commanders: vec![catalog::graham_obrien(), catalog::the_third_doctor()],
+        main,
+        ..Default::default()
+    };
+    assert!(
+        validate_commander_deck(&deck).is_ok(),
+        "a blue card is inside the pair's combined GU identity: {:?}",
+        validate_commander_deck(&deck),
+    );
+}
+
+/// The two cards themselves: the Third Doctor grows with the noncreature
+/// tokens his own ETB makes, and Graham's Paradox trigger reads the cast's
+/// zone rather than the spell.
+#[test]
+fn the_doctor_pair_play_their_printed_abilities() {
+    let pt = |g: &GameState, id| {
+        let v = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+        (v.power, v.toughness)
+    };
+    let mut g = two_player_game();
+    let doc = g.add_card_to_battlefield(0, catalog::the_third_doctor());
+    assert_eq!(pt(&g, doc), (2, 2), "printed 2/2 with no tokens out");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(pt(&g, doc), (2, 2), "a nontoken creature is not a noncreature token");
+    g.add_token_to_battlefield(0, &crabomination::card::TokenDefinition {
+        name: "Bear".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![crabomination::card::CardType::Creature],
+        ..Default::default()
+    });
+    assert_eq!(pt(&g, doc), (2, 2), "a creature token is not a noncreature token");
+    g.add_token_to_battlefield(0, &crabomination_base::tokens::clue_token());
+    assert_eq!(pt(&g, doc), (3, 3), "a Clue token is one");
+    g.add_token_to_battlefield(1, &crabomination_base::tokens::treasure_token());
+    assert_eq!(pt(&g, doc), (3, 3), "…that *you* control");
+
+    // Graham's Paradox trigger reads the cast's *zone*, not the spell. The
+    // command zone is the Commander-native "anywhere other than your hand",
+    // so his own co-commander's cast is a Paradox; a cast from hand is not.
+    let foods = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.definition.name == "Food").count()
+    };
+    let mut g = game_with_format(Format::Commander, 2);
+    g.add_card_to_battlefield(0, catalog::graham_obrien());
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast from hand");
+    drain_stack(&mut g);
+    assert_eq!(foods(&g), 0, "a cast from hand is not a Paradox");
+
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast from the command zone");
+    drain_stack(&mut g);
+    assert_eq!(foods(&g), 1, "the command zone is not your hand");
+}
+
 /// The two cards themselves: Elmar's second-spell trigger untaps and
 /// investigates, Sophina's attack trigger counts the *nontoken* attackers.
 #[test]

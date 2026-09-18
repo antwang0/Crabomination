@@ -2199,6 +2199,10 @@ fn every_creature_carries_its_printed_subtypes() {
 
     // The cache holds the Vanguard avatar under this name, not the creature.
     const HOMONYMS: &[&str] = &["Maraxus of Keld"];
+    // CR 205.3m — "Time Lord" is the one creature type printed as two words,
+    // so the whitespace split below would read it as two types it has never
+    // heard of. Glue it back into the enum's spelling first.
+    const MULTI_WORD: &[(&str, &str)] = &[("Time Lord", "TimeLord")];
     let normalize = |w: &str| w.replace(['-', '\'', '\u{2019}'], "");
 
     let mut checked = 0usize;
@@ -2226,6 +2230,10 @@ fn every_creature_carries_its_printed_subtypes() {
             continue;
         }
         checked += 1;
+        let mut sub = sub.to_string();
+        for (printed_as, ours) in MULTI_WORD {
+            sub = sub.replace(printed_as, ours);
+        }
         let printed: HashSet<String> = sub.split_whitespace().map(normalize).collect();
         let ours: HashSet<String> =
             def.subtypes.creature_types.iter().map(|t| format!("{t:?}")).collect();

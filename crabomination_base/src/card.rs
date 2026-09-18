@@ -180,7 +180,7 @@ pub enum CreatureType {
     Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek, Nomad,
     Balloon,
     Mystic,
-    Doctor,
+    Doctor, TimeLord,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph, Demigod,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
@@ -1675,6 +1675,11 @@ pub enum Keyword {
     /// CR 702.124j — "Choose a Background". This commander may be paired
     /// with a legendary Background enchantment as its second commander.
     ChooseABackground,
+    /// CR 702.124m — "Doctor's companion". This commander may be paired with
+    /// a legendary Time Lord Doctor creature card *that has no other creature
+    /// types*; the type check is `format::commanders_may_pair`'s, because the
+    /// requirement is on the other card, not this one. Deck construction only.
+    DoctorsCompanion,
     /// CR 702.146 — Daybound. A permanent with daybound is on the battlefield
     /// only as day; on the front face of a daybound/nightbound DFC. When it
     /// becomes night, the engine transforms it to its nightbound back face.
@@ -2198,6 +2203,7 @@ impl Keyword {
                 | Keyword::PartnerWith(_)
                 | Keyword::PartnerLabel(_)
                 | Keyword::ChooseABackground
+                | Keyword::DoctorsCompanion
         )
     }
 }

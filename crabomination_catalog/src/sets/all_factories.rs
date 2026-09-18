@@ -12943,6 +12943,8 @@ static MOD_SET: &[Factory] = &[
     super::cmdr::sophina_spearsage_deserter,
     super::cmdr::path_of_ancestry,
     super::cmdr::opal_palace,
+    super::cmdr::the_third_doctor,
+    super::cmdr::graham_obrien,
     super::decks::khorvath_brightflame,
     super::mod_set::reflecting_pool,
     super::mod_set::gaeas_cradle,

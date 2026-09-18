@@ -721,6 +721,29 @@ pub fn commanders_may_pair(a: &CardDefinition, b: &CardDefinition) -> bool {
         || label(a).is_some_and(|x| label(b).is_some_and(|y| x == y))
         || is_background_pair(a, b)
         || is_background_pair(b, a)
+        || is_doctor_pair(a, b)
+        || is_doctor_pair(b, a)
+}
+
+/// CR 702.124m — `companion` has Doctor's companion and `doctor` is "a
+/// legendary Time Lord Doctor creature card that has no other creature types".
+/// The "no other creature types" clause is the whole rule's teeth: Romana II
+/// is a Time Lord Scientist and is not a Doctor for this, and a Doctor that a
+/// type-adding effect has widened still isn't — this reads the printed card,
+/// which is what deck construction sees.
+fn is_doctor_pair(companion: &CardDefinition, doctor: &CardDefinition) -> bool {
+    use crate::card::{CreatureType, Keyword, KeywordSlice};
+    companion.is_legendary()
+        && companion.is_creature()
+        && companion.keywords.has_kw(&Keyword::DoctorsCompanion)
+        && doctor.is_legendary()
+        && doctor.is_creature()
+        && {
+            let t = &doctor.subtypes.creature_types;
+            t.len() == 2
+                && t.contains(&CreatureType::TimeLord)
+                && t.contains(&CreatureType::Doctor)
+        }
 }
 
 /// `commander` has Choose a Background and `other` is a legendary Background.

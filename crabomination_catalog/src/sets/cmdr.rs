@@ -515,6 +515,94 @@ pub fn sophina_spearsage_deserter() -> CardDefinition {
     }
 }
 
+// ── CR 702.124m — Doctor's companion ──────────────────────────────────────
+
+/// The Third Doctor — {2}{G}{U} 2/2 Legendary Creature — Time Lord Doctor.
+/// "Trample. The Third Doctor gets +1/+1 for each noncreature token you
+/// control. When The Third Doctor enters, create your choice of a Clue token,
+/// a Food token, or a Treasure token."
+///
+/// CR 702.124m's other half: a Doctor's companion may only pair with a
+/// legendary Time Lord Doctor *with no other creature types*, which is what
+/// this type line is.
+pub fn the_third_doctor() -> CardDefinition {
+    CardDefinition {
+        name: "The Third Doctor",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::TimeLord, CreatureType::Doctor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+1 for each noncreature token you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: R::IsToken.and(R::Creature.negate()),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(crabomination_base::tokens::clue_token()),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Graham O'Brien — {1}{G} 2/2 Legendary Creature — Human Pilot.
+/// "Paradox — Whenever you cast a spell from anywhere other than your hand,
+/// create a Food token. Doctor's companion."
+pub fn graham_obrien() -> CardDefinition {
+    CardDefinition {
+        name: "Graham O'Brien",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::DoctorsCompanion],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::SpellNotCastFromHand,
+                },
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Mana provenance lands (CR 903.4 identity mana with a "when that mana is
 //    spent to …" rider) ──────────────────────────────────────────────────────
 
