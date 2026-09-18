@@ -1750,6 +1750,130 @@ fn cr_702_124_commander_pair_needs_partner_or_background() {
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })));
 }
 
+// ── CR 113.6b — abilities that function from the command zone (Eminence) ──
+
+/// A commander whose upkeep trigger functions in the zone `zone` names.
+fn upkeep_gain_commander(
+    name: &'static str,
+    zone: crabomination::effect::TriggerZone,
+) -> crabomination::card::CardDefinition {
+    use crabomination::card::{CardDefinition, CardType, Supertype, TriggeredAbility};
+    use crabomination::effect::{EventKind, EventScope, EventSpec, Value};
+    CardDefinition {
+        name,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                zone,
+                ..EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
+            },
+            effect: crabomination::effect::Effect::GainLife {
+                who: crabomination::card::Selector::Player(PlayerRef::You),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// CR 113.6b — "an ability that states which zones it functions in functions
+/// only from those zones". Eminence (CR 207.2c) states the command zone *or*
+/// the battlefield, so the trigger fires from the command zone; an ordinary
+/// trigger on a commander sitting in the command zone does not.
+#[test]
+fn cr_113_6b_eminence_trigger_fires_from_the_command_zone() {
+    use crabomination::effect::TriggerZone;
+    for (zone, expected) in [(TriggerZone::Printed, 0), (TriggerZone::CommandZoneToo, 2)] {
+        let mut g = two_player_game();
+        g.seat_commanders(0, vec![upkeep_gain_commander("Eminence Test", zone)]);
+        g.active_player_idx = 0;
+        let before = g.players[0].life;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert_eq!(
+            g.players[0].life - before,
+            expected,
+            "{zone:?} from the command zone",
+        );
+    }
+}
+
+/// CR 113.6b — the exclusive spelling. Oloro, Ageless Ascetic's second upkeep
+/// trigger reads "if Oloro is in the command zone", with no "or on the
+/// battlefield", so it must *not* fire once the commander has been cast.
+#[test]
+fn cr_113_6b_command_zone_only_trigger_is_silent_on_the_battlefield() {
+    use crabomination::effect::TriggerZone;
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(
+        0,
+        vec![upkeep_gain_commander("Command Zone Only", TriggerZone::CommandZoneOnly)],
+    )[0];
+    g.active_player_idx = 0;
+
+    let before = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life - before, 2, "it fires from the command zone");
+
+    // Move it to the battlefield — the same trigger is now silent.
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let mut card = g.players[0].command.remove(pos);
+    card.controller = 0;
+    g.battlefield.push(card);
+    let before = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life - before, 0, "…and nowhere else");
+}
+
+/// CR 113.6b — the same for an *event* trigger rather than a step one:
+/// Edgar Markov's "whenever you cast another Vampire spell" reaches the
+/// dispatcher from the command zone, which is a different walk.
+#[test]
+fn cr_113_6b_eminence_event_trigger_fires_from_the_command_zone() {
+    use crabomination::card::{CardDefinition, CardType, Supertype, TriggeredAbility};
+    use crabomination::effect::{Effect, EventKind, EventScope, EventSpec, Value};
+    let watcher = CardDefinition {
+        name: "Eminence Watcher",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .in_command_zone(),
+            effect: Effect::GainLife {
+                who: crabomination::card::Selector::Player(PlayerRef::You),
+                amount: Value::Const(3),
+            },
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    g.seat_commanders(0, vec![watcher]);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
+
+    let before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the bears");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life - before, 3, "the command-zone trigger saw the cast");
+}
+
 /// CR 601.2f + CR 903.8 — a commander cast for an *alternative* cost still
 /// pays the commander tax: the tax is an additional cost, and additional
 /// costs ride on whichever cost the spell is being cast for. Zurgo

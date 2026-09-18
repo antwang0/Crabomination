@@ -18686,8 +18686,6 @@ pub fn helix_pinnacle() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
-                kind: EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
-                scope: EventScope::SelfSource,
                 filter: Some(Predicate::ValueAtLeast(
                     Value::CountersOn {
                         what: Box::new(Selector::This),
@@ -18695,14 +18693,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                     },
                     Value::Const(100),
                 )),
-                once_per_turn: false,
-                once_per_batch: false,
-                per_subject_cap: None,
-                actor_is_opponent: false,
-                exclude_attacker_taps: false,
-                exclude_tap_cost_abilities: false,
-                dealer_filter: None,
-                causer_filter: None,
+                ..EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::SelfSource)
             },
             effect: Effect::WinGame {
                 who: PlayerRef::You,
@@ -55108,17 +55099,8 @@ pub fn the_ozolith() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
-                kind: EventKind::StepBegins(TurnStep::BeginCombat),
-                scope: EventScope::YourControl,
                 filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
-                once_per_turn: false,
-                once_per_batch: false,
-                per_subject_cap: None,
-                actor_is_opponent: false,
-                exclude_attacker_taps: false,
-                exclude_tap_cost_abilities: false,
-                dealer_filter: None,
-                causer_filter: None,
+                ..EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl)
             },
             effect: Effect::MayDo {
                 description: "Move all counters onto target creature?".into(),
@@ -55151,17 +55133,8 @@ pub fn nadu_winged_wisdom() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
-                kind: EventKind::BecameTarget,
-                scope: EventScope::YourCreatureTargeted,
-                filter: None,
-                once_per_turn: false,
-                once_per_batch: false,
                 per_subject_cap: Some(2),
-                actor_is_opponent: false,
-                exclude_attacker_taps: false,
-                exclude_tap_cost_abilities: false,
-                dealer_filter: None,
-                causer_filter: None,
+                ..EventSpec::new(EventKind::BecameTarget, EventScope::YourCreatureTargeted)
             },
             effect: Effect::RevealTopLandToBattlefieldElseHand {
                 who: PlayerRef::You,

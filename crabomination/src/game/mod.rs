@@ -21143,6 +21143,12 @@ impl GameState {
                 if ta.event.scope.from_graveyard() {
                     continue;
                 }
+                // CR 113.6b — likewise a trigger that states it functions in
+                // the command zone *only* (Oloro's second upkeep ability);
+                // the command-zone walk below gathers it.
+                if ta.event.zone.command_zone_only() {
+                    continue;
+                }
                 // CR 603.3d — "triggers only once each turn": skip if it has
                 // already fired this turn or earlier in this same batch.
                 let once_key = (card.id, trig_idx);
@@ -21642,13 +21648,22 @@ impl GameState {
         // tip — on a pool with no Planechase cards in it at all.
         let mut planar_controller: Option<usize> = None;
         for player in &self.players {
-            for card in player.command.iter().filter(|c| c.command_zone_abilities_active()) {
+            for card in player.command.iter().filter(|c| {
+                c.command_zone_abilities_active() || c.definition.has_command_zone_trigger()
+            }) {
                 let controller = if card.definition.is_plane() {
                     *planar_controller.get_or_insert_with(|| self.planar_controller())
                 } else {
                     card.owner
                 };
+                // CR 113.6b — a Vanguard avatar's or a face-up plane's whole
+                // card functions here; every other card brings only the
+                // triggers that say they do (Eminence).
+                let all_active = card.command_zone_abilities_active();
                 for ta in &card.definition.triggered_abilities {
+                    if !all_active && !ta.event.zone.in_command_zone() {
+                        continue;
+                    }
                     for ev in events {
                         if is_event_hardcoded(ev, &ta.event) {
                             continue;

@@ -3131,6 +3131,38 @@ pub struct EventSpec {
     /// `filter`. Only meaningful for `EventKind::BecameTarget`.
     #[serde(default)]
     pub causer_filter: Option<crate::card::SelectionRequirement>,
+    /// CR 113.6b — where this trigger functions, when that isn't just the
+    /// zone its card's abilities ordinarily work from. Eminence.
+    #[serde(default)]
+    pub zone: TriggerZone,
+}
+
+/// CR 113.6b — "an ability that states which zones it functions in functions
+/// only from those zones". The command-zone axis: Eminence (CR 207.2c — an
+/// ability word, so the condition is the printed text) reads "in the command
+/// zone or on the battlefield", and Oloro's second upkeep trigger reads "in
+/// the command zone" alone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum TriggerZone {
+    /// Wherever the ability would ordinarily function — the battlefield for a
+    /// permanent card, a graveyard for a `FromYourGraveyard` scope.
+    #[default]
+    Printed,
+    /// …and also from its owner's command zone (Eminence).
+    CommandZoneToo,
+    /// From its owner's command zone and nowhere else.
+    CommandZoneOnly,
+}
+
+impl TriggerZone {
+    /// True if the trigger functions while its card is in the command zone.
+    pub fn in_command_zone(self) -> bool {
+        !matches!(self, Self::Printed)
+    }
+    /// True if the command zone is the *only* place it functions.
+    pub fn command_zone_only(self) -> bool {
+        matches!(self, Self::CommandZoneOnly)
+    }
 }
 
 impl EventSpec {
@@ -3138,6 +3170,7 @@ impl EventSpec {
         Self {
             kind,
             scope,
+            zone: TriggerZone::Printed,
             filter: None,
             once_per_turn: false,
             once_per_batch: false,
@@ -3161,6 +3194,17 @@ impl EventSpec {
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
         self.filter = Some(p);
+        self
+    }
+    /// Eminence (CR 113.6b) — also functions from its owner's command zone.
+    pub fn in_command_zone(mut self) -> Self {
+        self.zone = TriggerZone::CommandZoneToo;
+        self
+    }
+    /// CR 113.6b — functions from the command zone and nowhere else
+    /// (Oloro, Ageless Ascetic's second upkeep trigger).
+    pub fn command_zone_only(mut self) -> Self {
+        self.zone = TriggerZone::CommandZoneOnly;
         self
     }
     /// "Whenever a [filter] deals damage …" — gate on the damage's dealer.

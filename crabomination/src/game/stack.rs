@@ -1030,7 +1030,14 @@ impl GameState {
         // tree plus the event's filter predicate.
         let visit = |c: &crate::card::CardInstance| {
             for t in c.definition.triggered_abilities.iter() {
-                if t.event.kind == kind && scope_matches(&t.event.scope, c.controller) {
+                // CR 113.6b — a command-zone-only trigger (Oloro's second
+                // upkeep ability) doesn't function from the battlefield; the
+                // command-zone walk below gathers it. Last in the `&&` so
+                // only a kind match pays for the compare.
+                if t.event.kind == kind
+                    && scope_matches(&t.event.scope, c.controller)
+                    && !t.event.zone.command_zone_only()
+                {
                     candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
                 }
             }
@@ -1124,16 +1131,24 @@ impl GameState {
         // machinery (PERF `(-329)`).
         if !self.command_zones_are_empty() {
             for (seat, player) in self.players.iter().enumerate() {
-                for c in player
-                    .command
-                    .iter()
-                    .filter(|c| c.command_zone_abilities_active() || c.definition.is_scheme())
-                {
+                for c in player.command.iter().filter(|c| {
+                    c.command_zone_abilities_active()
+                        || c.definition.is_scheme()
+                        || c.definition.has_command_zone_trigger()
+                }) {
                     // CR 901.6 — a plane's controller is the planar controller,
                     // normally the active player, so its "your" triggers fire on
                     // every turn regardless of who owns the planar deck.
                     let plane = c.definition.is_plane();
+                    // A Vanguard / plane / scheme card's abilities all function
+                    // here; everything else brings only the triggers that say
+                    // they do (CR 113.6b — Eminence).
+                    let all_active =
+                        c.command_zone_abilities_active() || c.definition.is_scheme();
                     for t in &c.definition.triggered_abilities {
+                        if !all_active && !t.event.zone.in_command_zone() {
+                            continue;
+                        }
                         let scoped_to_owner = matches!(
                             t.event.scope,
                             EventScope::YourControl

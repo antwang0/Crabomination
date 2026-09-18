@@ -232,17 +232,9 @@ pub fn kishla_skimmer() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
-                kind: EventKind::CardLeftGraveyard,
-                scope: EventScope::YourControl,
                 filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
                 once_per_turn: true,
-                once_per_batch: false,
-                per_subject_cap: None,
-                actor_is_opponent: false,
-                exclude_attacker_taps: false,
-                exclude_tap_cost_abilities: false,
-                dealer_filter: None,
-                causer_filter: None,
+                ..EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
             },
             effect: Effect::Draw {
                 who: Selector::You,

@@ -12828,7 +12828,13 @@ impl GameState {
             }
             let (cid, c_controller) = (c.id, c.controller);
             for (idx, t) in c.definition.triggered_abilities.iter().enumerate() {
-                if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
+                // CR 113.6b — a command-zone-only cast trigger doesn't
+                // function from the battlefield; the command-zone walk below
+                // gathers it.
+                if t.event.kind == EventKind::SpellCast
+                    && scope_matches(t.event.scope, c_controller)
+                    && !t.event.zone.command_zone_only()
+                {
                     candidates.push((cid, c_controller, t.effect.clone(), t.event.filter.clone(), idx, t.event.once_per_turn));
                 }
             }
@@ -12877,8 +12883,16 @@ impl GameState {
         // CR 902.5 — a Vanguard avatar's cast trigger fires from the command
         // zone (Serra Angel Avatar's "whenever you cast a spell, gain 2 life").
         for (seat, pl) in self.players.iter().enumerate() {
-            for c in pl.command.iter().filter(|c| c.command_zone_abilities_active()) {
+            for c in pl.command.iter().filter(|c| {
+                c.command_zone_abilities_active() || c.definition.has_command_zone_trigger()
+            }) {
+                // CR 113.6b — Eminence: only the triggers that say they
+                // function here do, unless the whole card does (Vanguard).
+                let all_active = c.command_zone_abilities_active();
                 for t in &c.definition.triggered_abilities {
+                    if !all_active && !t.event.zone.in_command_zone() {
+                        continue;
+                    }
                     if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, seat) {
                         candidates.push((
                             c.id,

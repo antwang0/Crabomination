@@ -5490,6 +5490,13 @@ impl CardDefinition {
     pub fn is_scheme(&self) -> bool { self.card_types.contains(&CardType::Scheme) }
     /// CR 311.1 — a plane card.
     pub fn is_plane(&self) -> bool { self.card_types.contains(&CardType::Plane) }
+    /// CR 113.6b — true if any printed trigger states it functions from the
+    /// command zone (Eminence). Read by the two command-zone trigger walks,
+    /// both of which are already behind an "is any command zone occupied"
+    /// gate, so the scan costs nothing outside Commander.
+    pub fn has_command_zone_trigger(&self) -> bool {
+        self.triggered_abilities.iter().any(|t| t.event.zone.in_command_zone())
+    }
     /// CR 312.1 — a phenomenon card.
     pub fn is_phenomenon(&self) -> bool { self.card_types.contains(&CardType::Phenomenon) }
     /// CR 904.11 — an "Ongoing Scheme", exempt from the 904.10 sweep.
