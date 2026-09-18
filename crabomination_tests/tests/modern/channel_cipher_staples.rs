@@ -4,7 +4,7 @@ use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::*;
 use crabomination::TurnStep;
-use crabomination::game::{drain_stack, two_player_game};
+use crabomination::game::{drain_stack, multi_player_game, two_player_game};
 use crabomination::mana::Color;
 #[allow(unused)]
 use crate::Factory;
@@ -1080,19 +1080,24 @@ fn niv_mizzet_parun_draw_ping_loop() {
     assert_eq!(g.players[1].life, life - 4, "Bolt 3 + Niv draw-trigger ping 1");
 }
 
-/// Aria of Flame gains 10 life and escalates damage with verse counters.
+/// Aria of Flame's ETB gives **each opponent** 10 life — the card's drawback —
+/// and its verse counters escalate the damage. The gain was written as *your*
+/// 10 life, which turned the drawback into an upside; the assert below is the
+/// bug fix, so it stays.
 #[test]
 fn aria_of_flame_gains_life_and_scales_damage() {
     let mut g = two_player_game();
     let aria = g.add_card_to_hand(0, catalog::aria_of_flame());
     let life0 = g.players[0].life;
+    let opp0 = g.players[1].life;
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: aria, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Aria of Flame");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life0 + 10, "ETB gains 10 life");
+    assert_eq!(g.players[0].life, life0, "the controller gains nothing");
+    assert_eq!(g.players[1].life, opp0 + 10, "each opponent gains 10 life");
     // First instant cast: verse counter → 1 → 1 damage.
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.decider = Box::new(ScriptedDecider::new([
@@ -1106,6 +1111,20 @@ fn aria_of_flame_gains_life_and_scales_damage() {
     }).expect("cast bolt");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1 - 3 - 1, "Bolt 3 + Aria 1 (one verse counter)");
+}
+
+/// …and "each opponent" is each of them: at three seats it is 20 life given
+/// away, not 10.
+#[test]
+fn aria_of_flame_pays_every_opponent() {
+    let mut g = multi_player_game(3);
+    let before: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    let aria = g.add_card_to_battlefield(0, catalog::aria_of_flame());
+    g.fire_self_etb_triggers(aria, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before[0]);
+    assert_eq!(g.players[1].life, before[1] + 10);
+    assert_eq!(g.players[2].life, before[2] + 10);
 }
 
 /// Baral makes instants and sorceries cost {1} less.

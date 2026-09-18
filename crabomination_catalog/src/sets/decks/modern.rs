@@ -44005,8 +44005,11 @@ pub fn aria_of_flame() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
+            // "each opponent gains 10 life" — the card's drawback, and it was
+            // written as *you* gaining it, which turned the drawback upside
+            // down.
             etb(Effect::GainLife {
-                who: Selector::You,
+                who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(10),
             }),
             magecraft(Effect::Seq(vec![

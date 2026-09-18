@@ -2516,6 +2516,21 @@ pub fn pharikas_spawn() -> CardDefinition {
                 else_: Box::new(Value::ZERO),
             },
         )),
+        // "When it enters **this way**, each opponent sacrifices a non-Gorgon
+        // creature of their choice" — the escape half of the card, and it was
+        // missing entirely. The ETB fires on every entry; the escape gate is
+        // the same predicate the counters read.
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::If {
+            cond: Predicate::SourceCastFromEscape,
+            then: Box::new(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: SelectionRequirement::Creature.and(
+                    SelectionRequirement::HasCreatureType(CreatureType::Gorgon).negate(),
+                ),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
         ..Default::default()
     }
 }

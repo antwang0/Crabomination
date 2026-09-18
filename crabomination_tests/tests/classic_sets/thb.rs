@@ -4,7 +4,7 @@
 use crabomination::card::CounterType;
 use crabomination::catalog;
 use crabomination::game::*;
-use crabomination::game::{drain_stack, two_player_game};
+use crabomination::game::{drain_stack, multi_player_game, two_player_game};
 use crabomination::mana::Color;
 use crabomination::TurnStep;
 
@@ -4344,4 +4344,42 @@ fn bronzehide_lion_returns_as_aura() {
     }).expect("activate the Aura");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible));
+}
+
+/// Pharika's Spawn — "This creature escapes with two +1/+1 counters on it.
+/// **When it enters this way, each opponent sacrifices a non-Gorgon creature
+/// of their choice.**" The second sentence was missing entirely; the counters
+/// were there, the edict was not.
+#[test]
+fn pharikas_spawn_escape_etb_edicts_each_opponent() {
+    let mut g = multi_player_game(3);
+    // Each opponent gets a Gorgon (immune) and a Bear (the only legal choice).
+    let mut gorgons = Vec::new();
+    let mut bears = Vec::new();
+    for seat in 1..3 {
+        gorgons.push(g.add_card_to_battlefield(seat, catalog::pharikas_spawn()));
+        bears.push(g.add_card_to_battlefield(seat, catalog::grizzly_bears()));
+    }
+    let spawn = g.add_card_to_battlefield(0, catalog::pharikas_spawn());
+    g.battlefield_find_mut(spawn).unwrap().cast_from_escape = true;
+    g.fire_self_etb_triggers(spawn, 0);
+    drain_stack(&mut g);
+    for b in &bears {
+        assert!(g.battlefield_find(*b).is_none(), "each opponent sacrificed one");
+    }
+    for gor in &gorgons {
+        assert!(g.battlefield_find(*gor).is_some(), "a Gorgon is not a legal choice");
+    }
+    assert!(g.battlefield_find(spawn).is_some(), "and the controller sacrifices nothing");
+}
+
+/// Without escape the ETB does nothing — "when it enters **this way**".
+#[test]
+fn pharikas_spawn_without_escape_edicts_nobody() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spawn = g.add_card_to_battlefield(0, catalog::pharikas_spawn());
+    g.fire_self_etb_triggers(spawn, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "a hard-cast Spawn edicts nothing");
 }
