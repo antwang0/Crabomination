@@ -5079,6 +5079,29 @@ impl GameState {
         for (id, owner) in reverts {
             self.change_control(id, owner); // control-changing effects end
         }
+        // CR 800.4a — "any effects which give that player control of any
+        // objects **or players** end"; the reverts above are the object half,
+        // this is the player half (CR 723, Mindslaver). CR 800.4b closes the
+        // other direction — "if a player would be controlled by a player who
+        // has left the game, they aren't" — so a pending grant naming the
+        // departed seat on either side never lands. A live seat left pointing
+        // at a departed controller routes its whole turn through
+        // `acting_seat_for` to a seat that cannot act.
+        if !self.controlled_by.is_empty() {
+            for slot in self.controlled_by.iter_mut() {
+                if *slot == Some(p) {
+                    *slot = None;
+                }
+            }
+            if let Some(slot) = self.controlled_by.get_mut(p) {
+                *slot = None;
+            }
+        }
+        retain_cold!(self.pending_player_control, |(c, ctrl)| *c != p && *ctrl != p);
+        // CR 723.4's reveal and CR 701.19's peeks both name a player; neither
+        // half means anything once one of them has left (and their hand has
+        // left with them).
+        retain_cold!(self.hands_revealed_to, |(a, b)| *a != p && *b != p);
         self.exile.retain(|c| c.owner != p);
         self.players[p].hand.clear();
         self.players[p].library.clear();

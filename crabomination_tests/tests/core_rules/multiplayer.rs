@@ -1182,6 +1182,31 @@ fn cr_800_4m_a_departed_players_until_your_next_turn_ends_when_that_turn_would_h
     assert_eq!(power(&g), 2, "and it does not last indefinitely either");
 }
 
+/// CR 800.4a — "any effects which give that player control of any objects or
+/// players end" covers control of *players* (CR 723, Mindslaver), not only of
+/// objects; CR 800.4b covers the other direction, "if a player would be
+/// controlled by a player who has left the game, they aren't". A live seat
+/// still pointed at a departed controller routes its whole turn through
+/// `acting_seat_for` to a seat that cannot act.
+#[test]
+fn cr_800_4a_player_control_ends_when_either_side_leaves() {
+    let mut g = multi_player_game(3);
+    // Seat 0 takes control of seat 1's next turn, and of seat 2's after that.
+    g.pending_player_control.push((1, 0));
+    g.pending_player_control.push((2, 0));
+    g.apply_pending_player_control(1);
+    assert_eq!(g.acting_seat_for(1), 0, "seat 0 is playing seat 1's turn");
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    assert_eq!(g.acting_seat_for(1), 1, "seat 1 acts for itself again (CR 800.4a)");
+    assert!(
+        g.pending_player_control.is_empty(),
+        "and the grant queued against seat 2 never lands (CR 800.4b)",
+    );
+}
+
 /// All seats eliminated simultaneously → draw (winner=None). Pre-existing
 /// behavior preserved through the team-aware refactor.
 #[test]
