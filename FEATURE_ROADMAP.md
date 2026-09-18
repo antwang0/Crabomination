@@ -67,7 +67,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | Four legal target decks | ✅ | `pod/decks.rs` — Sigarda GW / Judith BR / Hanna UW / Tatyova GU, validated by the suite |
 | 4-player Commander demo state | ✅ | `demo.rs::build_commander_state_seeded`, now the same four decks |
 | Commander pod mode in `bot_ladder` | ✅ | `bot_ladder --commander [--seats N]` |
-| Golden traces for a fixed-seed Commander pod | ⏳ | the format is young enough that a trace would churn; revisit once the variant mechanics land |
+| Golden outcomes for fixed-seed Commander pods | ✅ | `pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table` — three seeds' (winner, turns, actions) committed, cross-process. The triple rather than a line-per-action trace: a pod game is ~2,000 actions, so a real trace is a 400 KB file every Commander commit re-blesses, and it moves on the same changes |
 | A net / MCTS pilot in a pod | ⛔ by design | the observation encoder is two-seat (`encode_state_inner`'s `1 - seat`, `sources: &[_; 2]`); `bot_ladder --commander` refuses one above two seats rather than index out of bounds. Design notes for an N-seat encoding are in `ML_NOTES.md`; widening it retrains every net |
 
 ## Tier 1 — High-leverage engine primitives

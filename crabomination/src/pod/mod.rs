@@ -342,6 +342,41 @@ mod tests {
         assert_eq!((a.winner, a.actions, a.turns), (b.winner, b.actions, b.turns));
     }
 
+    /// The Commander guardrail the two-player golden traces are, at pod
+    /// scale: a committed outcome per fixed seed, so a change that moves pod
+    /// play shows up here as a diff rather than as a number in a smoke-test
+    /// log a reviewer has to remember. The committed values were produced by
+    /// a different process on a different day, which makes this a
+    /// cross-process determinism check too.
+    ///
+    /// The triple, not a line-per-action trace: a pod game is ~2,000 actions,
+    /// so a real trace would be a 400 KB file that every Commander commit
+    /// re-blesses, and the winner/turns/actions triple moves on exactly the
+    /// changes a trace would move on.
+    ///
+    /// When a rules change legitimately moves one, re-bless it in the same
+    /// commit and say why in the message.
+    #[test]
+    fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
+        // (seed, winner, turns, actions)
+        const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
+            (0xC0FFEE, Some(3), 52, 2527),
+            (43, Some(3), 43, 1963),
+            (4242, Some(2), 44, 2126),
+        ];
+        let decks = rofellos_pod(4);
+        let t = build_pod_template(&decks);
+        let pilots = vec![Pilot::default(); 4];
+        let got: Vec<(u64, Option<usize>, u32, usize)> = GOLDEN
+            .iter()
+            .map(|&(seed, ..)| {
+                let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+                (seed, o.winner, o.turns, o.actions)
+            })
+            .collect();
+        assert_eq!(got.as_slice(), GOLDEN.as_slice(), "pod outcomes moved");
+    }
+
     /// A four-seat pod plays to a finish without panicking — the whole point
     /// of the module.
     #[test]
