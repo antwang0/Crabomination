@@ -34,7 +34,13 @@ use crate::mana::{Color, ColorSet};
 pub fn color_identity(def: &CardDefinition) -> ColorSet {
     let mut out = ColorSet::empty();
     basic_land_identity(def, &mut out);
-    let v = serde_json::to_value(def).expect("CardDefinition serializes");
+    // `to_value` fails only on a map with non-string keys or a non-finite
+    // float, neither of which a `CardDefinition` holds — but this runs on a
+    // mana-tap path in a Commander game (`AnyColorInCommanderIdentity`), and a
+    // definition-shape bug is not a reason to abort a self-play game. Fall
+    // back to the basic-land half; `debug_assert` keeps it loud in a test run.
+    let v = serde_json::to_value(def).unwrap_or(Value::Null);
+    debug_assert!(!v.is_null(), "CardDefinition serializes: {}", def.name);
     walk(&v, &mut out);
     out
 }

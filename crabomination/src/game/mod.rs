@@ -5870,9 +5870,16 @@ impl GameState {
     pub fn commander_identity_colors(&self, seat: usize) -> Vec<crate::mana::Color> {
         let mut set = crate::mana::ColorSet::empty();
         if let Some(p) = self.players.get(seat) {
-            for &id in &p.commanders {
-                if let Some(c) = self.find_card_anywhere(id) {
-                    set = set.union(crate::format::color_identity(&c.definition));
+            set = p.commander_identity;
+            // Empty is either "colourless commander" or "snapshot from a build
+            // without the cache"; both are answered by the walk, and the
+            // colourless case falls through to the five-colour default below
+            // either way.
+            if set == crate::mana::ColorSet::empty() {
+                for &id in &p.commanders {
+                    if let Some(c) = self.find_card_anywhere(id) {
+                        set = set.union(crate::format::color_identity(&c.definition));
+                    }
                 }
             }
         }
@@ -5953,6 +5960,15 @@ impl GameState {
             let card = crate::card::CardInstance::new(id, def, seat);
             self.players[seat].command.push(card);
             self.players[seat].commanders.push(id);
+            // CR 903.4a — established before the game, so it is computed here
+            // rather than on every mana tap that asks for it.
+            let identity = self.players[seat]
+                .command
+                .last()
+                .map(|c| crate::format::color_identity(&c.definition))
+                .unwrap_or_else(crate::mana::ColorSet::empty);
+            self.players[seat].commander_identity =
+                self.players[seat].commander_identity.union(identity);
             self.offboard_keyword_grants = true;
 
             // CR 903.9b replacement — hand / library from anywhere →
@@ -16631,6 +16647,7 @@ impl GameState {
                 pl.starting_life = old.starting_life;
                 pl.life = old.starting_life;
                 pl.commanders = old.commanders.clone();
+                pl.commander_identity = old.commander_identity;
                 pl.sideboard = old.sideboard.clone();
                 pl
             })
@@ -20109,16 +20126,24 @@ impl GameState {
             &mut events,
         );
         // Put the ninja onto the battlefield tapped (ETB fires here).
-        let ninja_ctx = crate::game::effects::EffectContext::for_trigger(ninja, p, None, 0);
-        self.move_card_to(
-            ninja,
-            &crate::effect::ZoneDest::Battlefield {
-                controller: crate::effect::PlayerRef::Seat(p),
-                tapped: true,
-            },
-            &ninja_ctx,
-            &mut events,
-        );
+        let dest = crate::effect::ZoneDest::Battlefield {
+            controller: crate::effect::PlayerRef::Seat(p),
+            tapped: true,
+        };
+        // CR 702.49d — a commander-ninjutsu ninja comes out of the command
+        // zone, which `move_card_to` deliberately does not scan: a card there
+        // is a new object (CR 400.7), so an effect that named it on the
+        // battlefield — a linked exile's return, a delayed bounce — must not
+        // reach in and pull it back out. This caller *means* to, so it takes
+        // the card itself and hands it to the same placer the hand arm uses.
+        if let Some(pos) = self.players[p].command.iter().position(|c| c.id == ninja) {
+            let card = self.players[p].command.remove(pos);
+            self.offboard_keyword_grants = true;
+            self.place_card_in_dest(card, p, &dest, &mut events);
+        } else {
+            let ninja_ctx = crate::game::effects::EffectContext::for_trigger(ninja, p, None, 0);
+            self.move_card_to(ninja, &dest, &ninja_ctx, &mut events);
+        }
         // It enters attacking the same defender the returned creature was
         // attacking — bypassing the declare-attackers timing/sickness gates.
         if self.battlefield.find_by_id(ninja).is_some() {

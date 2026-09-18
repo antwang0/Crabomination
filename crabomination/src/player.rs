@@ -148,6 +148,16 @@ pub struct PlayerCold {
     /// still a commander, so the entry survives zone changes.
     #[serde(default)]
     pub commanders: Vec<CardId>,
+    /// CR 903.4a — this seat's combined commander colour identity, computed
+    /// once as the commanders are seated because identity is established
+    /// before the game and never changes. Cached because the walk behind it
+    /// serializes a whole `CardDefinition`, and
+    /// `ManaPayload::AnyColorInCommanderIdentity` asks for it on every Command
+    /// Tower / Arcane Signet / Commander's Sphere tap. Empty means "not
+    /// computed or genuinely colourless"; `commander_identity_colors` falls
+    /// back to the walk in that case, so an old snapshot still answers right.
+    #[serde(default)]
+    pub commander_identity: crate::mana::ColorSet,
     /// CR 603.7e — pending "your next creature spell this turn enters with these
     /// keywords" riders (Summon: Brynhildr's "Gestalt Mode" haste). Applied to
     /// the next creature spell's permanent as it enters and cleared at cleanup.

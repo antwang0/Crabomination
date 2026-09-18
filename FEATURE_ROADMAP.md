@@ -54,7 +54,7 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | "Partner with" search trigger | ✅ | `shortcut::partner_with_search` (CR 702.124c); Sylvia Brightspear + Khorvath Brightflame |
 | Friends forever, Doctor's companion | ⏳ | no catalog card has them (`format.rs:736`) |
 | Monarch, the initiative, goad, myriad, melee, voting / council's dilemma, tempting offer | ✅ | `effect.rs` (`IsMonarch`, `HasInitiative`, `Goad`, `Myriad`, `MeleeOpponentCount`, `VoteTally`, `TemptingOffer`), `dungeons.rs` |
-| Join forces | ⏳ | no primitive, no card |
+| Join forces | ✅ | `Effect::JoinForces` (CR 207.2c) over `ask_seat_amount` — turn order from the controller, every ask before every payment; Minds Aglow / Collective Voyage / Mana-Charged Dragon |
 | Eminence (abilities that function from the command zone) | ✅ | CR 113.6b on two axes: triggers via `EventSpec.zone: TriggerZone::{Printed, CommandZoneToo, CommandZoneOnly}` (step gather in `stack.rs`, SpellCast dispatch in `actions.rs`, event dispatcher in `mod.rs`), statics via `CardDefinition.statics_in_command_zone` + `CardInstance::command_zone_statics_active` (six walks). Edgar Markov / Arahbo / Oloro / The Ur-Dragon in `sets/cmdr.rs` |
 | Commander ninjutsu | ✅ | `Keyword::CommanderNinjutsu` (CR 702.49d) + `move_card_to`'s CR 408 command-zone arm; Yuriko, the Tiger's Shadow. The cost auto-taps (CR 602.2b) and the bot has a `pick_ninjutsu` candidate |
 | Lieutenant / "if you control your commander" | ✅ | `Predicate::ControlsOwnCommander`; Thunderfoot Baloth |
