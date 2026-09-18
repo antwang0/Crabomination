@@ -4920,13 +4920,28 @@ impl Effect {
                 Some(m) => modes.get(m).is_some_and(|e| e.per_opponent_targets(None)),
                 None => modes.iter().any(|e| e.per_opponent_targets(None)),
             },
-            _ => {
-                let mut found = false;
-                self.for_each_inner(&mut |e| {
-                    found |= e.per_opponent_targets(mode);
-                });
-                found
-            }
+            // The same transparent wrappers `distinct_target_count` walks, and
+            // a `Seq` because Omega's clause sits beside a once-only life gain.
+            // Deliberately **not** `for_each_inner`: the cast path asks this of
+            // every spell, and a whole-tree walk per cast is a hot-path cost
+            // for a question eight cards ask.
+            Effect::Seq(parts) => parts.iter().any(|e| e.per_opponent_targets(mode)),
+            Effect::MayDo { body, .. }
+            | Effect::MayDoBy { body, .. }
+            | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
+            | Effect::CapTargetsAt { body, .. }
+            | Effect::OptionalTargets { body, .. }
+            | Effect::MayPayX { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
+            | Effect::MayPayLife { body, .. } => body.per_opponent_targets(mode),
+            _ => false,
         }
     }
 
