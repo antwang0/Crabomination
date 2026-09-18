@@ -1750,6 +1750,86 @@ fn cr_702_124_commander_pair_needs_partner_or_background() {
     assert!(cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })));
 }
 
+/// CR 702.124i — "Partner—[text]" pairs on label equality and nothing else:
+/// two Friends forever commanders lead one deck, a Friends forever commander
+/// and a plain Partner one do not, and neither does a different label.
+#[test]
+fn cr_702_124i_partner_label_pairs_only_with_the_same_label() {
+    use crabomination::card::{CardDefinition, Keyword};
+    use crabomination::format::commanders_may_pair;
+    let elmar = catalog::elmar_ulvenwald_informant();
+    let sophina = catalog::sophina_spearsage_deserter();
+    assert!(
+        commanders_may_pair(&elmar, &sophina),
+        "two Friends forever commanders are a legal pair",
+    );
+    assert!(
+        !commanders_may_pair(&elmar, &catalog::akiri_line_slinger()),
+        "CR 702.124f — a labelled partner does not combine with plain Partner",
+    );
+    let survivor = CardDefinition {
+        keywords: vec![Keyword::PartnerLabel("Survivors".into())],
+        ..catalog::sophina_spearsage_deserter()
+    };
+    assert!(
+        !commanders_may_pair(&elmar, &survivor),
+        "a different label is a different ability",
+    );
+}
+
+/// The two cards themselves: Elmar's second-spell trigger untaps and
+/// investigates, Sophina's attack trigger counts the *nontoken* attackers.
+#[test]
+fn friends_forever_pair_play_their_printed_triggers() {
+    use crabomination::mana::Color;
+    let clues = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.definition.name == "Clue").count()
+    };
+
+    // Elmar: the first spell does nothing, the second untaps and investigates.
+    let mut g = two_player_game();
+    let elmar = g.move_card_to_battlefield_for_test(0, catalog::elmar_ulvenwald_informant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..2 {
+        let spell = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+    }
+    assert_eq!(clues(&g), 1, "one Clue, off the second spell only");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "…and the untap happened");
+    assert!(g.battlefield_find(elmar).is_some());
+
+    // Sophina: two nontoken attackers and a token one make two Clues.
+    let mut g = two_player_game();
+    let sophina = g.move_card_to_battlefield_for_test(0, catalog::sophina_spearsage_deserter());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [sophina, ally] {
+        g.clear_sickness(id);
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: sophina, target: AttackTarget::Player(1) },
+        Attack { attacker: ally, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(clues(&g), 2, "one Clue per nontoken attacking creature");
+}
+
 /// CR 113.6b — the *static* half of eminence. The Ur-Dragon's cost reduction
 /// functions from the command zone, so a Dragon spell in hand is {1} cheaper
 /// before he has ever been cast; and "other" means he does not discount

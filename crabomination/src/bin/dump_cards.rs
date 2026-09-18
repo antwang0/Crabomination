@@ -91,6 +91,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Companion => "Companion",
         Keyword::Partner => "Partner",
         Keyword::PartnerWith(_) => "Partner with",
+        Keyword::PartnerLabel(_) => "Partner—[text]",
         Keyword::ChooseABackground => "Choose a Background",
         Keyword::Daybound => "Daybound",
         Keyword::Nightbound => "Nightbound",

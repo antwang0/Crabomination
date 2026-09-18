@@ -12939,6 +12939,8 @@ static MOD_SET: &[Factory] = &[
     super::cmdr::minds_aglow,
     super::cmdr::collective_voyage,
     super::cmdr::mana_charged_dragon,
+    super::cmdr::elmar_ulvenwald_informant,
+    super::cmdr::sophina_spearsage_deserter,
     super::decks::khorvath_brightflame,
     super::mod_set::reflecting_pool,
     super::mod_set::gaeas_cradle,

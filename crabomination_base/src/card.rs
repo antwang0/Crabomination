@@ -1660,12 +1660,18 @@ pub enum Keyword {
     /// both have it may lead one Commander deck together
     /// (`format::validate_commander_deck`). No in-game effect.
     Partner,
-    /// CR 702.124c — "Partner with [name]". Lets this and the named card be
+    /// CR 702.124j — "Partner with [name]". Lets this and the named card be
     /// co-commanders. The keyword itself is deck construction; the printed ETB
     /// ("target player may put [name] into their hand from their library") is
     /// a separate triggered ability the card carries, minted by
     /// `effect::shortcut::partner_with_search`.
     PartnerWith(String),
+    /// CR 702.124i — "Partner—[text]": two commanders if each has the *same*
+    /// labelled partner ability. The labels are "Character select", "Father &
+    /// son", "Friends forever" and "Survivors"; one keyword rather than four,
+    /// because the rule is the label equality and nothing else. Deck
+    /// construction only, like the rest of the family.
+    PartnerLabel(String),
     /// CR 702.124j — "Choose a Background". This commander may be paired
     /// with a legendary Background enchantment as its second commander.
     ChooseABackground,
@@ -2186,7 +2192,13 @@ impl Keyword {
     /// deck (Partner and its kin). It gives the card no in-game ability, so a
     /// heuristic that counts keywords as power should skip it.
     pub fn is_deck_construction(&self) -> bool {
-        matches!(self, Keyword::Partner | Keyword::PartnerWith(_) | Keyword::ChooseABackground)
+        matches!(
+            self,
+            Keyword::Partner
+                | Keyword::PartnerWith(_)
+                | Keyword::PartnerLabel(_)
+                | Keyword::ChooseABackground
+        )
     }
 }
 

@@ -453,6 +453,68 @@ pub fn mana_charged_dragon() -> CardDefinition {
     }
 }
 
+/// Elmar, Ulvenwald Informant — {1}{R}{G} Legendary Creature — Human 3/2.
+/// "Haste. Whenever you cast your second spell each turn, untap target
+/// creature, then investigate. Partner—Friends forever."
+///
+/// CR 702.124i — the label is the whole pairing rule, so Elmar and Sophina
+/// lead one deck together and neither pairs with a plain `Partner`.
+pub fn elmar_ulvenwald_informant() -> CardDefinition {
+    CardDefinition {
+        name: "Elmar, Ulvenwald Informant",
+        cost: cost(&[generic(1), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::PartnerLabel("Friends forever".into())],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+                crate::effect::shortcut::investigate(1),
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sophina, Spearsage Deserter — {2}{R}{W} Legendary Creature — Human Soldier
+/// 4/4. "Menace. Whenever Sophina attacks, investigate once for each nontoken
+/// attacking creature. Partner—Friends forever."
+pub fn sophina_spearsage_deserter() -> CardDefinition {
+    CardDefinition {
+        name: "Sophina, Spearsage Deserter",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Menace, Keyword::PartnerLabel("Friends forever".into())],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::count(Selector::EachPermanent(
+                R::Creature.and(R::IsAttacking).and(R::IsToken.negate()),
+            )),
+            definition: std::sync::Arc::new(crate::game::effects::clue_token()),
+        })],
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

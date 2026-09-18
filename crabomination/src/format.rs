@@ -708,8 +708,17 @@ pub fn commanders_may_pair(a: &CardDefinition, b: &CardDefinition) -> bool {
     let partners_with = |x: &CardDefinition, y: &CardDefinition| {
         x.keywords.iter().any(|k| matches!(k, Keyword::PartnerWith(n) if n == y.name))
     };
+    // CR 702.124i — "partner—[text]" pairs on label equality, and only with
+    // the same label: "Friends forever" does not pair with "Survivors".
+    let label = |x: &CardDefinition| {
+        x.keywords.iter().find_map(|k| match k {
+            Keyword::PartnerLabel(t) => Some(t.clone()),
+            _ => None,
+        })
+    };
     (a.keywords.has_kw(&Keyword::Partner) && b.keywords.has_kw(&Keyword::Partner))
         || (partners_with(a, b) && partners_with(b, a))
+        || label(a).is_some_and(|x| label(b).is_some_and(|y| x == y))
         || is_background_pair(a, b)
         || is_background_pair(b, a)
 }
