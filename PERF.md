@@ -8964,6 +8964,22 @@ noise — while the two trigger-heavy pools pay 0.19 / 0.10 %. A row whose
 three pools split like this is a *workload* row, and `fixed` is the pool to
 check it against.
 
+❌ **AND THE CLASS IS NOW EXHAUSTED, censused 2026-09-18 so nobody re-greps
+it.** All 49 `for _ in 0..n { … .clone() … }` loops in `crabomination/src`
+were read. The six above are the whole of the hot, takeable set; of the rest,
+the `mint_token_onto_battlefield(def.clone(), …)` family is already an `Arc`
+refcount bump (`(-364)`), the `bot.rs` loops are test bodies, and the two
+that look like this shape are **declined with a reason**:
+
+```text
+  actions.rs:4326  fire_self_etb_triggers' `0..multiplier`  — `effect`,
+      `auto_target` and `additional` are all READ AFTER the loop (the CR 603
+      "became the target" block), so the last fire cannot take them. Moving
+      that block above the loop would reorder the stack pushes against the
+      events. Below `declare_attackers_banded` in the clone table anyway.
+  effects/mod.rs:19783  `Effect::CopyAbility`'s `0..n` — cold, one card.
+```
+
 📐 **THE CLASS, AND IT IS WORTH A GREP EACH RUN: a `clone` inside a loop whose
 trip count is "1 + something nobody has".** The tree has five such counters
 (`ally_trigger_extra_fires`, `attack_trigger_extra_fires`,
