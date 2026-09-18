@@ -3666,3 +3666,38 @@ fn cr_800_4f_a_departed_seats_cost_is_not_paid_and_the_rider_resolves() {
     assert!(g.pending_decision.is_none(), "nobody is asked (CR 800.4f)");
     assert_eq!(g.players[1].mana_pool.total(), 5, "and nothing of theirs was spent");
 }
+
+/// CR 800.4a — "When a player leaves the game, all objects owned by that
+/// player leave the game …" — however they came to leave.
+///
+/// The loss SBA did this for the seats *it* eliminated and skipped every
+/// other one: an effect that ends a player's game (Phage the Untouchable's
+/// combat trigger, an unpaid Pact, a win-the-game effect eliminating everyone
+/// else) set `eliminated` and nothing more, and the sweep's first line is
+/// `if eliminated { continue }`. Their permanents stayed on the battlefield
+/// for the rest of the game, their stack items stayed on the stack, and an
+/// ask addressed to them stayed pending. `Player::left_game` is what says the
+/// pass is still owed.
+#[test]
+fn cr_800_4a_a_seat_an_effect_eliminates_still_leaves_the_game() {
+    let mut g = multi_player_game(4);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let stolen = g.add_card_to_battlefield(2, catalog::llanowar_elves());
+    g.battlefield_find_mut(stolen).unwrap().controller = 1;
+
+    // What every `Effect::LoseGame`-shaped arm does, and all it did.
+    g.players[1].eliminated = true;
+    assert!(!g.players[1].left_game, "the leave pass has not run");
+    g.check_state_based_actions();
+
+    assert!(g.players[1].left_game, "the sweep owed it and ran it");
+    assert!(g.battlefield_find(theirs).is_none(), "their own permanent left with them");
+    assert_eq!(
+        g.battlefield_find(stolen).unwrap().controller,
+        2,
+        "and a permanent they controlled but did not own reverts to its owner",
+    );
+    // Idempotent: a second sweep must not re-run the pass.
+    g.check_state_based_actions();
+    assert!(g.players[1].left_game);
+}

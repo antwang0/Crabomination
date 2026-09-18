@@ -5050,6 +5050,10 @@ impl GameState {
     /// departing player's objects "cease to exist" rather than being
     /// destroyed or sacrificed.
     pub(crate) fn objects_leave_with_player(&mut self, p: usize) {
+        // The one place CR 800.4a is applied, and the flag that says so —
+        // `check_state_based_actions` drives it off this for every seat, no
+        // matter which rule or effect put them out.
+        self.players[p].left_game = true;
         // CR 506.4 / 800.4a — a creature that leaves the battlefield is removed
         // from combat, and so is an attacker whose defending player left the
         // game. Doing the `retain` alone left `attacking` and `block_map`
@@ -7049,6 +7053,17 @@ impl GameState {
         let mut newly_eliminated: Vec<usize> = Vec::new();
         for i in 0..self.players.len() {
             if self.players[i].eliminated {
+                // CR 800.4a — an *effect* that ends a player's game (an unpaid
+                // Pact, `Effect::LoseGame`, a win-the-game effect eliminating
+                // everyone else) sets `eliminated` and nothing else, and this
+                // skip meant the leave pass never ran for one: their
+                // permanents stayed on the battlefield, their stack items
+                // stayed on the stack, and an ask addressed to them stayed
+                // pending. The flag, not the sweep's own `newly_eliminated`
+                // list, is what says the pass is owed.
+                if !self.players[i].left_game {
+                    newly_eliminated.push(i);
+                }
                 continue;
             }
             // Phase M: 21-commander-damage SBA (CR 704.5v). Any

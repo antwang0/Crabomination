@@ -833,6 +833,21 @@ pub struct PlayerData {
     /// drew from an empty library). Eliminated players are skipped by turn
     /// and priority rotation; the game ends when ≤ 1 player remains.
     pub eliminated: bool,
+    /// True once CR 800.4a has been applied for this seat — their objects
+    /// have left the game, their stack items have ceased to exist and the
+    /// control effects they granted have ended.
+    ///
+    /// Separate from [`eliminated`](Self::eliminated) because the two are set
+    /// in different places: the loss SBA does both at once, but an *effect*
+    /// that ends a player's game (an unpaid Pact, `Effect::LoseGame`, a
+    /// win-the-game effect eliminating everyone else) only ever set the first
+    /// — and the SBA sweep skips a seat that is already `eliminated`, so the
+    /// leave pass never ran for one. Their permanents stayed on the
+    /// battlefield and their asks stayed pending. The sweep now drives the
+    /// pass off this flag instead, so there is one place CR 800.4a happens
+    /// however a seat came to be out.
+    #[serde(default)]
+    pub left_game: bool,
     /// CR 104.3c — this player has attempted to draw from an empty library
     /// and loses the game *the next time a player would receive priority*,
     /// i.e. at the next state-based-action check — not inside the draw.
@@ -1325,6 +1340,7 @@ impl Player {
             city_blessing: false,
             max_hand_size: default_max_hand_size(),
             eliminated: false,
+            left_game: false,
             pending_deck_loss: false,
             last_drawn_card: None,
             range_of_influence: None,
