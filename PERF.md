@@ -3023,15 +3023,18 @@ command zone, CR 113.6b's trigger and static zones, CR 702.49d commander
 ninjutsu with a bot candidate for it, CR 207.2c join forces):
 
 ```text
---bench at 8a4d78b1 (release), the run's closing tip:
+--bench at 04742c60 (release), the run's closing tip — which carries a
+concurrent session's CR 106.6 mana-provenance commit on the payment path:
   decisions          195,806   byte-identical to the committed invariant
   turns_per_game       27.49   "
   decisions_per_game   611.9   "
   stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
   determinism     ok (all pairs split)
   peak_rss_mib      25.5
-  games_per_s     488.09 at host_calib_ms 44, Intel Xeon @ 2.80 GHz
-                  (481.82 at d6869b99, 505.05 mid-run — same box, same calib)
+  games_per_s     474.09 at host_calib_ms 44, Intel Xeon @ 2.80 GHz
+                  (488.09 at 8a4d78b1, 481.82 at d6869b99, 505.05 mid-run —
+                   same box, same calib; the spread is this box's noise floor,
+                   which is why the *invariant* is what carries the verdict)
 ```
 
 **The pod run caught the one thing that did move, and it was a rules bug.**
