@@ -533,3 +533,141 @@ fn cr_903_5e_a_commander_deck_may_not_have_a_sideboard() {
         "CR 903.5e, got {generic:?}",
     );
 }
+
+// ── CR 106.6 — a rider narrows nothing, and the estimate has to agree ──────
+
+/// CR 106.6b/c. Path of Ancestry's "when that mana is spent…" is an ability
+/// the mana *triggers*, not a restriction on what it may pay for, so the
+/// floating green funds an activated ability's `{G}` like any other green.
+///
+/// The engine already did this; what did not was the bot's own estimate —
+/// `ManaPool::total`/`amount` exclude the restricted bucket wholesale, so a
+/// seat holding only this green read `by_color [0,0,0,0,0]`. On a four-seat
+/// pod board that cleared `sink::AB_SAC` for Haywire Mite's `{G}, Sacrifice
+/// this creature` while `pick_sacrifice_value` went on to build the
+/// activation the engine then accepted and paid for — the gate audit's
+/// forty-second find, which read as "an activation completed with no mana
+/// anywhere" because the dump printed `total`.
+#[test]
+fn cr_106_6_a_rider_pays_an_activated_ability() {
+    let (mut g, _cmd) = commander_game();
+    let mite = g.add_card_to_battlefield(0, catalog::haywire_mite());
+    g.clear_sickness(mite);
+    let prey = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].mana_pool.add_restricted(Color::Green, 1, SpendRestriction::CommanderTypeScry);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mite,
+        ability_index: 0,
+        target: Some(Target::Permanent(prey)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("the rider green pays {G}");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 0, "the rider pip was spent");
+    assert!(g.battlefield_find(mite).is_none(), "and the sacrifice half was paid");
+}
+
+/// The control: a *real* restriction does not pay for this. Ancient
+/// Ziggurat's green funds creature spells only, so the same activation is
+/// rejected with the pool untouched — which is why the estimate is right to
+/// keep ignoring non-rider restricted mana.
+#[test]
+fn cr_106_6_a_real_restriction_does_not_pay_an_activated_ability() {
+    let (mut g, _cmd) = commander_game();
+    let mite = g.add_card_to_battlefield(0, catalog::haywire_mite());
+    g.clear_sickness(mite);
+    let prey = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].mana_pool.add_restricted(Color::Green, 1, SpendRestriction::CreatureOnly);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mite,
+        ability_index: 0,
+        target: Some(Target::Permanent(prey)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect_err("creature-only mana can't fund an ability");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "nothing was spent");
+    assert!(g.battlefield_find(mite).is_some(), "and nothing was sacrificed");
+}
+
+/// The invariant the two halves above rest on, asserted over every variant:
+/// `is_rider()` — which is `label().is_none()`, the player-facing "there is
+/// nothing to explain here" — must mean `allows()` is true for *every* kind.
+/// `allows` now answers the rider half once by short-circuiting on the
+/// predicate, so this is what stops a future variant being given a label and
+/// a bare `=> true` arm, which is the shape that hid this bug.
+///
+/// The match is exhaustive on purpose: a new variant breaks this test's
+/// compile, which is the point.
+#[test]
+fn cr_106_6_every_rider_allows_every_payment() {
+    use crabomination::card::{CardDefinition, CreatureType};
+    let all = {
+        // Exhaustive by construction — the match forces a new variant to be
+        // added to `all` below.
+        fn _exhaustive(r: SpendRestriction) {
+            use SpendRestriction::*;
+            match r {
+                InstantSorceryOnly | ArtifactOnly | CreatureOfTypeUncounterable(_)
+                | CreatureOfType(_) | LandAbilitiesOnly | CreatureOnly
+                | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
+                | LessonSpellsOnly | DevoidSpellsOnly | InstantSorceryUncounterable
+                | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
+                | EnchantmentSpell | MulticoloredSpell | PlaneswalkerSpellsOnly
+                | LegendarySpell | NoncreatureSpellsOnly | RoomSpellsOrDoors
+                | FaceDownSpellsOrTurnFaceUp | CreatureHaste | CommanderTypeScry
+                | CommanderCastCounters => {}
+            }
+        }
+        use SpendRestriction::*;
+        vec![
+            InstantSorceryOnly,
+            ArtifactOnly,
+            CreatureOfTypeUncounterable(CreatureType::Bear),
+            CreatureOfType(CreatureType::Bear),
+            LandAbilitiesOnly,
+            CreatureOnly,
+            CreatureSpellsOrAbilities,
+            NoNonartifactSpells,
+            AbilitiesOnly,
+            LessonSpellsOnly,
+            DevoidSpellsOnly,
+            InstantSorceryUncounterable,
+            EquipmentOnly,
+            ColorlessSpellsOrAbilities,
+            HighMvOrX,
+            DragonOrOmenSpell,
+            EnchantmentSpell,
+            MulticoloredSpell,
+            PlaneswalkerSpellsOnly,
+            LegendarySpell,
+            NoncreatureSpellsOnly,
+            RoomSpellsOrDoors,
+            FaceDownSpellsOrTurnFaceUp,
+            CreatureHaste,
+            CommanderTypeScry,
+            CommanderCastCounters,
+        ]
+    };
+    // A spanning-enough set of payments: a creature spell, a noncreature
+    // spell, and an activated ability of a land.
+    let kinds = [
+        catalog::grizzly_bears().spell_kind(),
+        catalog::sol_ring().spell_kind(),
+        CardDefinition::default().ability_spend_kind(),
+        catalog::forest().ability_spend_kind(),
+    ];
+    for r in all {
+        let permits_all = kinds.iter().all(|k| r.allows(k));
+        assert_eq!(
+            r.is_rider(),
+            permits_all,
+            "{r:?}: is_rider() and 'allows every payment' must agree — a rider \
+             that reports a label is mana `available_mana` will not count",
+        );
+    }
+}

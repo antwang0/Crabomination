@@ -684,7 +684,16 @@ impl SpendRestriction {
     }
 
     /// True iff mana under this restriction may fund a payment of `kind`.
+    ///
+    /// A rider permits every payment by definition ([`Self::is_rider`]), so
+    /// that half is answered once here rather than by one `=> true` arm per
+    /// rider variant. Four arms said it separately and a fifth rider would
+    /// have had to remember to; the estimate side (`server::bot`'s
+    /// `available_mana`) reads the same predicate, so the two cannot drift.
     pub fn allows(self, kind: &SpellKind) -> bool {
+        if self.is_rider() {
+            return true;
+        }
         match self {
             SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
             SpendRestriction::ArtifactOnly => kind.artifact,
@@ -704,8 +713,6 @@ impl SpendRestriction {
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
             SpendRestriction::LessonSpellsOnly => kind.lesson,
             SpendRestriction::DevoidSpellsOnly => kind.devoid,
-            // Not a restriction — a rider that stamps I/S casts uncounterable.
-            SpendRestriction::InstantSorceryUncounterable => true,
             SpendRestriction::EquipmentOnly => kind.equipment,
             SpendRestriction::ColorlessSpellsOrAbilities => {
                 kind.colorless || kind.activating_ability
@@ -724,12 +731,19 @@ impl SpendRestriction {
             SpendRestriction::FaceDownSpellsOrTurnFaceUp => {
                 kind.face_down || kind.turning_face_up
             }
-            SpendRestriction::CreatureHaste => true,
-            // CR 106.6 names three shapes for a mana source's rider; these
-            // two are the "additional effect" and "delayed triggered ability"
-            // shapes, neither of which narrows what the mana may pay for.
-            SpendRestriction::CommanderTypeScry
-            | SpendRestriction::CommanderCastCounters => true,
+            // CR 106.6 names three shapes for a mana source's rider — an
+            // additional effect, a delayed triggered ability, and a
+            // restriction. Only the third narrows what the mana may pay for,
+            // and the first two are what `is_rider` answers above: Boseiju's
+            // uncounterable, Generator Servant's haste, Path of Ancestry's
+            // scry, Opal Palace's counters.
+            SpendRestriction::InstantSorceryUncounterable
+            | SpendRestriction::CreatureHaste
+            | SpendRestriction::CommanderTypeScry
+            | SpendRestriction::CommanderCastCounters => {
+                debug_assert!(self.is_rider(), "rider arm reached through the match");
+                true
+            }
         }
     }
 }
@@ -1098,6 +1112,30 @@ impl ManaPool {
 
     pub fn amount(&self, color: Color) -> u32 {
         *self.slot(color)
+    }
+
+    /// Floating *rider* mana of `color` — parked in the restricted bucket
+    /// but spendable on anything ([`SpendRestriction::is_rider`]), so it is
+    /// as good as `amount(color)` for any payment.
+    ///
+    /// `total`/`amount` deliberately exclude the whole restricted bucket
+    /// because most of it isn't freely spendable; a rider is, and an
+    /// estimate that ignores it is wrong in the *upward* direction —
+    /// it hides a play the seat can actually make. One four-seat pod board
+    /// had a green Path of Ancestry rider floating and read `by_color
+    /// [0,0,0,0,0]`, which cleared the bot's `sink::AB_SAC` gate on an
+    /// activation the engine then accepted and paid for.
+    pub fn rider_amount(&self, color: Color) -> u32 {
+        self.restricted
+            .iter()
+            .filter(|(c, _, r)| *c == color && r.is_rider())
+            .map(|(_, n, _)| *n)
+            .sum()
+    }
+
+    /// The colorless half of [`Self::rider_amount`].
+    pub fn rider_colorless_amount(&self) -> u32 {
+        self.restricted_colorless.iter().filter(|(_, r)| r.is_rider()).map(|(n, _)| *n).sum()
     }
 
     pub fn colorless_amount(&self) -> u32 {

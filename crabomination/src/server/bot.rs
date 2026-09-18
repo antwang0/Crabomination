@@ -14307,16 +14307,29 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     use crate::mana::{Color, ColorSet};
     let pool = &state.players[seat].mana_pool;
     use crate::game::actions::color_index;
+    // Floating mana, plus the *rider* half of the restricted bucket:
+    // `ManaPool::total`/`amount` leave the whole restricted bucket out, but a
+    // rider permits every payment (`SpendRestriction::is_rider`, the same
+    // predicate `pay_for_spell` folds in), so leaving it out under-reports
+    // mana the seat can spend right now. That is the one bias here that is
+    // *upward* on the bot's behalf and it hid a play: a four-seat pod board
+    // with a green Path of Ancestry rider floating read `by_color
+    // [0,0,0,0,0]`, cleared `sink::AB_SAC` for Haywire Mite's `{G},
+    // Sacrifice this`, and the engine then accepted and paid for the
+    // activation the gate had called unaffordable.
+    let rider_colorless = pool.rider_colorless_amount();
     let mut out = AvailableMana {
-        total: pool.total(),
+        total: pool.total() + rider_colorless,
         colors: ColorSet::empty(),
         by_color: [0; 5],
-        colorless: pool.colorless_amount() > 0,
+        colorless: pool.colorless_amount() + rider_colorless > 0,
     };
     for c in Color::ALL {
-        if pool.amount(c) > 0 {
+        let have = pool.amount(c) + pool.rider_amount(c);
+        if have > 0 {
             out.colors.insert(c);
-            out.by_color[color_index(c)] += pool.amount(c);
+            out.by_color[color_index(c)] += have;
+            out.total += pool.rider_amount(c);
         }
     }
     // One board-level grant scan for the whole sweep instead of one per
@@ -21853,6 +21866,51 @@ mod tests {
         g.clear_sickness(elf);
         g.battlefield_find_mut(elf).unwrap().tapped = true;
         assert_eq!(available_mana(&g, 0).total, 0, "a tapped Elves makes nothing");
+    }
+
+    /// CR 106.6 — a *rider* on floating mana ("when that mana is spent…")
+    /// narrows nothing, so it is spendable like any other mana and the
+    /// estimate has to see it. It didn't: the restricted bucket is excluded
+    /// from `ManaPool::total`/`amount` wholesale, so a seat holding Path of
+    /// Ancestry's green read `by_color [0,0,0,0,0]`. That cleared the
+    /// `sink::AB_SAC` gate for Haywire Mite's `{G}, Sacrifice this` on a
+    /// four-seat pod board and `pick_sacrifice_value` then produced an
+    /// activation the engine accepted and paid for — the gate audit's
+    /// forty-second find. A *real* restriction stays invisible here, which is
+    /// the sound direction.
+    #[test]
+    fn available_mana_counts_floating_rider_mana_and_not_restricted_mana() {
+        use crate::game::actions::color_index;
+        use crate::mana::{Color, SpendRestriction};
+        let mut g = two_player_game();
+        g.players[0]
+            .mana_pool
+            .add_restricted(Color::Green, 1, SpendRestriction::CommanderTypeScry);
+        let have = available_mana(&g, 0);
+        assert_eq!(have.total, 1, "Path of Ancestry's rider green is spare mana");
+        assert_eq!(have.by_color[color_index(Color::Green)], 1);
+        assert!(have.colors.contains(Color::Green));
+        assert!(
+            colors_coverable(&crate::mana::cost(&[crate::mana::g()]), &have),
+            "{{G}} is coverable off a floating rider green",
+        );
+        // Generator Servant's colorless haste rider is the `{C}` half.
+        let mut g = two_player_game();
+        g.players[0]
+            .mana_pool
+            .add_restricted_colorless(2, SpendRestriction::CreatureHaste);
+        let have = available_mana(&g, 0);
+        assert_eq!(have.total, 2);
+        assert!(have.colorless);
+        // A real restriction is not freely spendable, so it stays out: the
+        // bias there is downward and deliberate.
+        let mut g = two_player_game();
+        g.players[0]
+            .mana_pool
+            .add_restricted(Color::Green, 1, SpendRestriction::CreatureOnly);
+        let have = available_mana(&g, 0);
+        assert_eq!(have.total, 0, "Ancient Ziggurat green funds only creature spells");
+        assert_eq!(have.by_color, [0; 5]);
     }
 
     /// Wall of Roots' "put a -0/-1 counter: add {G}" is a `Seq` around its
