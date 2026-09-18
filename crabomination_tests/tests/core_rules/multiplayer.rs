@@ -2090,6 +2090,68 @@ fn two_headed_giant_view_reports_the_shared_pool() {
     assert_eq!(v.players[2].poison_counters, 0);
 }
 
+// ── CR 903.3a — "can be your commander" on a non-creature ─────────────────
+
+/// CR 903.3a — a legendary card that prints "[this] can be your commander"
+/// may lead a deck even though it is not a legendary *creature*. Freyalise,
+/// Llanowar's Fury is the implemented one; the validator used to reject every
+/// planeswalker commander as `NotLegendaryCreature`.
+#[test]
+fn cr_903_3a_a_planeswalker_that_says_so_can_be_your_commander() {
+    use crabomination::format::{CommanderDeckError, Deck, validate_commander_deck};
+
+    let freyalise = catalog::freyalise_llanowars_fury();
+    assert!(freyalise.can_be_commander);
+    let deck = Deck {
+        main: std::iter::repeat_with(catalog::forest).take(99).collect(),
+        commanders: vec![freyalise],
+        ..Default::default()
+    };
+    assert!(validate_commander_deck(&deck).is_ok(), "a planeswalker commander is legal");
+
+    // A legendary non-creature *without* the line is still rejected.
+    let deck = Deck {
+        main: std::iter::repeat_with(catalog::forest).take(99).collect(),
+        commanders: vec![catalog::sol_ring()],
+        ..Default::default()
+    };
+    let (_, cmd) = validate_commander_deck(&deck).unwrap_err();
+    assert!(
+        cmd.iter().any(|e| matches!(e, CommanderDeckError::NotLegendaryCreature { .. })),
+        "Sol Ring prints no such line: {cmd:?}",
+    );
+}
+
+/// CR 903.8 — a planeswalker commander is cast from the command zone like any
+/// other, tax included, and enters with its printed loyalty.
+#[test]
+fn cr_903_8_a_planeswalker_commander_casts_from_the_command_zone() {
+    use crabomination::mana::Color;
+    let mut g = game_with_format(Format::Commander, 4);
+    let cmd = g.seat_commanders(0, vec![catalog::freyalise_llanowars_fury()])[0];
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = crabomination::game::TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(crabomination::game::GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Freyalise from the command zone");
+    crabomination::game::drain_stack(&mut g);
+    let pw = g.battlefield_find(cmd).expect("Freyalise is on the battlefield");
+    assert_eq!(
+        pw.counter_count(crabomination::card::CounterType::Loyalty),
+        3,
+        "printed loyalty 3",
+    );
+    assert_eq!(g.commander_cast_count.get(&cmd).copied(), Some(1), "the tax counter moved");
+}
+
 // ── CR 903.4 — mana in the commander's color identity ─────────────────────
 
 /// CR 903.4 — "one mana of any color in your commander's color identity".

@@ -358,6 +358,7 @@ pub mod apc2;
 pub mod bot;
 pub mod bro;
 pub mod c21;
+pub mod cmdr;
 pub mod bok;
 pub mod bok2;
 pub mod sok;

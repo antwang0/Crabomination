@@ -655,11 +655,9 @@ pub enum CommanderDeckError {
     /// More than two commanders were supplied (Partner / Background
     /// caps at two — anything beyond is illegal).
     TooManyCommanders { found: u32 },
-    /// A commander card is not a legendary creature (CR 903.3a).
-    /// Phase K accepts Planeswalkers that printed text grants
-    /// commander-eligibility via a different path; that nuance can
-    /// be added later by extending `CardDefinition` with a
-    /// `can_be_commander: bool` override.
+    /// CR 903.3a — a commander card is neither a legendary creature nor a
+    /// legendary card printing "[this] can be your commander"
+    /// (`CardDefinition::can_be_commander`).
     NotLegendaryCreature { card_name: &'static str },
     /// Two commanders that may not lead a deck together (CR 903.3c /
     /// 702.124): neither both Partner, nor partners with each other, nor a
@@ -773,7 +771,10 @@ pub fn validate_commander_deck(
     };
     for cmd in &deck.commanders {
         let is_background = background_pair && is_background(cmd);
-        if !(cmd.is_legendary() && (cmd.is_creature() || is_background)) {
+        // CR 903.3a — a legendary creature, or a card that prints "[this] can
+        // be your commander" (the planeswalker commanders, Freyalise and
+        // friends), or the Background half of a 702.124j pair.
+        if !(cmd.is_legendary() && (cmd.is_creature() || cmd.can_be_commander || is_background)) {
             cmd_errors.push(CommanderDeckError::NotLegendaryCreature { card_name: cmd.name });
         }
     }

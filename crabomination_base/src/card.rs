@@ -459,6 +459,8 @@ pub enum PlaneswalkerSubtype {
     // WAR planeswalkers.
     Tibalt, Teyo, Wanderer, Nixilis, Jaya, Angrath, Huatli, Kiora, Samut, Dovin,
     Davriel, Arlinn, Sarkhan, Yanggu,
+    // C14 planeswalker commander (CR 903.3a).
+    Freyalise,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -3754,6 +3756,12 @@ pub struct CardDefinition {
     /// (Ancestral Vision, Living End, Gaea's Will, Lotus Bloom).
     #[serde(default, alias = "suspend_only")]
     pub no_mana_cost: bool,
+    /// CR 903.3a — "[this card] can be your commander." A legendary card that
+    /// is not a legendary *creature* may still lead a deck when it prints this
+    /// (the planeswalker commanders, and the odd legendary sorcery/artifact).
+    /// Read by `format::validate_commander_deck`; false everywhere else.
+    #[serde(default)]
+    pub can_be_commander: bool,
     /// CR 604.3 CDA — "As long as [this] isn't on the battlefield, it's a
     /// 1/1 Insect creature in addition to its other types" (Grist). Zone
     /// filters treat the card as a creature everywhere but the battlefield.

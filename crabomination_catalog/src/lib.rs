@@ -58,6 +58,7 @@ pub use sets::pls2::*;
 pub use sets::bot::*;
 pub use sets::bro::*;
 pub use sets::c21::*;
+pub use sets::cmdr::*;
 pub use sets::chk::*;
 pub use sets::chk2::*;
 pub use sets::bok::*;
