@@ -1781,6 +1781,69 @@ fn cr_113_6b_eminence_static_functions_from_the_command_zone() {
     assert!(cast_ryusei_with(5, true), "…and five with him in the command zone");
 }
 
+/// Says yes to a "you may" and defers every other ask to the `AutoDecider` —
+/// what a scripted queue can't do, since it answers in ask order and the
+/// engine's ask order is not the test's business.
+struct SayYesToOptional;
+impl crabomination::decision::Decider for SayYesToOptional {
+    fn decide(
+        &mut self,
+        decision: &crabomination::decision::Decision,
+    ) -> DecisionAnswer {
+        match decision {
+            crabomination::decision::Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+            other => crabomination::decision::AutoDecider.decide(other),
+        }
+    }
+}
+
+/// The Ur-Dragon's battlefield half: "whenever one or more Dragons you control
+/// attack, draw that many cards, then you may put a permanent card from your
+/// hand onto the battlefield" — one trigger for the batch (CR 603.2c), and the
+/// count is the attacking Dragons, not every Dragon.
+#[test]
+fn the_ur_dragon_draws_one_card_per_attacking_dragon() {
+    let mut g = two_player_game();
+    let ur = g.move_card_to_battlefield_for_test(0, catalog::the_ur_dragon());
+    let ryusei = g.move_card_to_battlefield_for_test(0, catalog::ryusei_the_falling_star());
+    // A third Dragon that stays home, so "that many" can't mean "all of them".
+    g.move_card_to_battlefield_for_test(0, catalog::keiga_the_tide_star());
+    for id in [ur, ryusei] {
+        g.clear_sickness(id);
+    }
+    g.players[0].library.clear();
+    for _ in 0..5 {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, catalog::grizzly_bears());
+    }
+    let hand = g.players[0].hand.len();
+
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    // The "you may put a permanent" is the controller's ask, and the
+    // `AutoDecider` declines every `OptionalTrigger`. A one-question decider
+    // says yes to that and leaves every other ask (which permanent) alone —
+    // a scripted queue would answer them in the wrong order.
+    g.decider = Box::new(SayYesToOptional);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: ur, target: AttackTarget::Player(1) },
+        Attack { attacker: ryusei, target: AttackTarget::Player(1) },
+    ]))
+    .expect("two Dragons attack");
+    drain_stack(&mut g);
+        assert_eq!(
+        g.players[0].hand.len(),
+        hand + 1,
+        "two cards drawn for the two attacking Dragons, one of them put into play",
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0).count(),
+        4,
+        "three Dragons plus the free permanent",
+    );
+}
+
 /// CR 113.6b — "other Dragon spells": casting The Ur-Dragon himself out of the
 /// command zone gets no discount from his own eminence static.
 #[test]
