@@ -4,6 +4,13 @@ use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 use smallvec::SmallVec;
 
+/// `(blocker, lethal)` for one attacker's damage assignment. Four inline
+/// slots: the list is one entry per blocker in the damage order, it is built
+/// fresh per attacker per combat step, and every consumer reads it as a
+/// slice — 6,274 `cube` allocations a six-game run went to zero for 16 bytes
+/// of a stack frame nothing clones. PERF `(-365)`.
+type Lethals = SmallVec<[(CardId, u32); 4]>;
+
 /// What a `battlefield.writes()`-keyed gate in front of
 /// `fire_combat_damage_triggers`' opening fold would actually buy, priced
 /// before anyone builds it — PERF's candidates head names the row (fourth
@@ -3559,7 +3566,7 @@ impl GameState {
         free_divider: bool,
         order: &[CardId],
         computed: &[ComputedPermanent],
-    ) -> (Vec<(CardId, u32)>, bool) {
+    ) -> (Lethals, bool) {
         let free = self.free_division_targets(attacker, free_divider, computed);
         if free.is_empty() {
             (self.combat_lethals(attacker_deathtouch, order, computed), has_trample)
@@ -3573,7 +3580,7 @@ impl GameState {
         attacker_deathtouch: bool,
         order: &[CardId],
         computed: &[ComputedPermanent],
-    ) -> Vec<(CardId, u32)> {
+    ) -> Lethals {
         order
             .iter()
             .map(|&bid| {
@@ -3925,7 +3932,7 @@ impl GameState {
                                 .unwrap_or(0);
                             (bid, if atk.has_deathtouch { 1 } else { tough.saturating_sub(marked) })
                         })
-                        .collect::<Vec<_>>();
+                        .collect::<Lethals>();
                     (lethals, atk.has_trample)
                 } else {
                     (free_targets.iter().map(|&id| (id, 0)).collect(), true)

@@ -8506,6 +8506,32 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-365)` the combat damage-assignment lethals list is inline — **fixed -0.070 / cube -0.077 / sealed -0.072 %**
+
+(O)'s shortlist, `combat.rs:3924`. `(blocker, lethal)` is one entry per
+blocker in the damage order — one on almost every board — built fresh per
+attacker per combat step and read by three consumers that all take `&[..]`.
+`SmallVec<[(CardId, u32); 4]>` behind a `type Lethals`, threaded through
+`combat_lethals` and `combat_assignment_plan`; no consumer signature moved.
+
+```text
+                  (-364) tip        (-365)            delta
+  fixed            568,508,598       568,110,056       -0.0701 %
+  cube           1,478,019,562     1,476,879,051       -0.0772 %
+  sealed         1,602,707,560*    1,597,193,864       -0.0720 %
+  (* sealed base is 1,598,344,730; the row is -1,150,866 Ir)
+
+  allocations (cube)   673,365 -> 664,995   -8,370
+```
+
+📐 **136 Ir per deleted allocation — the LOW end of this file's range, and the
+reason is the rule `(-165)` already carries: the owner is RETURNED.** 24 -> 40
+bytes of `memcpy` out of `combat_lethals` and `combat_assignment_plan` eats
+half the allocator saving. It still wins because the list is built once per
+attacker and read three times, not indexed in a loop — which is the line
+between this and `(-363)`. **An inline buffer on a returned local is a
+half-price win; one in a field the engine indexes is a loss.**
+
 ### `(-364)` an `Effect`'s token definition is an `Arc`, not a `Box` — **fixed -0.073 / cube -0.530 / sealed -0.272 %**
 
 `Effect::CreateToken` and sixteen sibling variants carried
