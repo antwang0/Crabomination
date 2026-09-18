@@ -3581,3 +3581,88 @@ fn cr_118_9_the_free_spell_cycle_needs_a_commander_on_the_battlefield() {
     assert!(g.battlefield_find(victim).is_none(), "the Bears are exiled");
     assert_eq!(g.players[0].mana_pool.total(), 0, "and nothing was paid");
 }
+
+// ── CR 800.4f/g — an ask whose seat has left the game ──────────────────────
+
+/// CR 800.4g — "If an object requires a player who has left the game to make
+/// a choice other than whether to pay a cost, the controller of the object
+/// chooses another player to make that choice. If the original choice was to
+/// be made by an opponent of the controller of the object, that player
+/// chooses another opponent if possible."
+///
+/// Tribute (CR 702.104) asks *an opponent*, and the arm took the first one
+/// `opponents_of` named — which is a seat index, alive or not. Four-seat pods
+/// over the target decks posed a tribute question to a seat that had left in
+/// 4.4 % of games, and the bot for that dead seat answered it.
+#[test]
+fn cr_800_4g_a_departed_seats_tribute_choice_moves_to_a_live_opponent() {
+    let mut g = multi_player_game(4);
+    // Only a `wants_ui` seat suspends, which is what makes the chooser
+    // observable: whoever the ask lands on is who the pending decision names.
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive(), "seat 1 — the first opponent of seat 0 — has left");
+
+    let demolok = g.add_card_to_battlefield(0, catalog::nessian_demolok());
+    g.fire_self_etb_triggers(demolok, 0);
+    while g.pending_decision.is_none() && !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the tribute trigger");
+    }
+    let asked = g.pending_decision.as_ref().expect("the tribute ask is posed").acting_player();
+    assert_ne!(asked, 1, "not the seat that left");
+    assert_ne!(asked, 0, "and not the controller: 800.4g wants another opponent");
+    assert!(g.players[asked].is_alive(), "seat {asked} is still in the game");
+}
+
+/// The control for the test above: with every seat alive the tribute ask goes
+/// where it always did, so the re-seating is 800.4g and not a policy change.
+#[test]
+fn cr_702_104_tribute_still_asks_the_first_opponent_while_everyone_is_alive() {
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let demolok = g.add_card_to_battlefield(0, catalog::nessian_demolok());
+    g.fire_self_etb_triggers(demolok, 0);
+    while g.pending_decision.is_none() && !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the tribute trigger");
+    }
+    assert_eq!(
+        g.pending_decision.as_ref().expect("the tribute ask is posed").acting_player(),
+        1,
+    );
+}
+
+/// CR 800.4f — "If an object requires a player who has left the game to pay a
+/// cost or choose whether to pay a cost, that cost is not paid."
+///
+/// The rhystic shape (`Effect::UnlessPlayerPays`, Smothering Tithe's tax) with
+/// the payer gone: nobody is asked, nothing of theirs is spent, and the
+/// rider's unpaid half resolves. The distinction from 800.4g above is the
+/// whole point — a cost is dropped where a choice is re-seated.
+#[test]
+fn cr_800_4f_a_departed_seats_cost_is_not_paid_and_the_rider_resolves() {
+    let mut g = multi_player_game(4);
+    for p in g.players.iter_mut() {
+        p.wants_ui = true;
+    }
+    let tithe = g.add_card_to_battlefield(0, catalog::smothering_tithe());
+    assert!(g.battlefield_find(tithe).is_some());
+    // Enough mana that a live seat 1 could have paid the {2}.
+    g.players[1].mana_pool.add_colorless(5);
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+
+    g.add_card_to_library(1, catalog::forest());
+    let mut events = vec![];
+    assert!(g.draw_one(1, &mut events), "the departed seat still draws a card");
+    g.dispatch_triggers_for_events(&events);
+    while g.pending_decision.is_none() && !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the tithe trigger");
+    }
+    assert!(g.pending_decision.is_none(), "nobody is asked (CR 800.4f)");
+    assert_eq!(g.players[1].mana_pool.total(), 5, "and nothing of theirs was spent");
+}

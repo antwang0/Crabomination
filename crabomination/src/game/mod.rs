@@ -120,6 +120,8 @@ pub mod actions;
 pub mod affordances;
 #[doc(hidden)]
 pub mod combat;
+/// CR 800.4f/g — routing an ask whose seat has left the game.
+pub(crate) mod departed;
 #[doc(hidden)]
 pub mod effects;
 pub mod layers;
@@ -7324,7 +7326,7 @@ impl GameState {
             // A wants_ui controller gets a real pay-or-sacrifice trigger for
             // mana/life cumulative upkeeps (coin-flip and sacrifice kinds have
             // no meaningful decline and stay synchronous).
-            if self.players.get(active).is_some_and(|p| p.wants_ui)
+            if self.seat_prompts(active)
                 && matches!(cost, CumulativeUpkeepCost::Mana(_) | CumulativeUpkeepCost::Life(_))
             {
                 self.push_pending_trigger(
@@ -7597,7 +7599,7 @@ impl GameState {
             })
             .collect();
         for (id, cost) in affected {
-            if self.players.get(active).is_some_and(|p| p.wants_ui) {
+            if self.seat_prompts(active) {
                 self.push_pending_trigger(
                     PendingTriggerPush {
                         from_mana_ability: false,
@@ -7803,7 +7805,7 @@ impl GameState {
             if candidates.is_empty() {
                 continue;
             }
-            let pick = if self.players[p].wants_ui {
+            let pick = if self.seat_prompts(p) {
                 match self.decider.decide(&crate::decision::Decision::ChooseCards {
                     source: src,
                     prompt: "Sacrifice a land (Land Equilibrium)".to_string(),
@@ -18719,7 +18721,7 @@ impl GameState {
         // card to fetch. Suspend before any cost is paid; the resume replays
         // this action with the pick stashed.
         let stashed_pick = self.pending_landcycle_pick.take();
-        if stashed_pick.is_none() && self.players[seat].wants_ui && matches.len() > 1 {
+        if stashed_pick.is_none() && self.seat_prompts(seat) && matches.len() > 1 {
             let eligible: Vec<crate::card::CardId> = matches.iter().map(|(id, _)| *id).collect();
             self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::SearchLibrary {
@@ -19367,7 +19369,7 @@ impl GameState {
     /// when nothing applies; the canonical order stands for a headless seat.
     fn choose_draw_replacement(&mut self, p: usize, applicable: &[DrawDig]) -> Option<DrawDig> {
         let first = *applicable.first()?;
-        if applicable.len() < 2 || !self.players[p].wants_ui {
+        if applicable.len() < 2 || !self.seat_prompts(p) {
             return Some(first);
         }
         let decision = crate::decision::Decision::ChooseMode {
@@ -22412,7 +22414,7 @@ impl GameState {
             // nowhere to park this batch — keep the default order, matching
             // `drain_trigger_queue`'s behavior.
             if run.len() < 2
-                || !self.players.get(ctrl).is_some_and(|p| p.wants_ui)
+                || !self.seat_prompts(ctrl)
                 || self.pending_decision.is_some()
             {
                 ordered.extend_from_slice(run);
@@ -22503,12 +22505,7 @@ impl GameState {
                 _ => None,
             };
             let needs = pending.effect.requires_target();
-            let wants_ui = !force_auto
-                && self
-                    .players
-                    .get(pending.controller)
-                    .map(|p| p.wants_ui)
-                    .unwrap_or(false);
+            let wants_ui = !force_auto && self.seat_prompts(pending.controller);
             if needs && wants_ui {
                 let legal = self.enumerate_legal_targets_xc(
                     &pending.effect,
@@ -23174,7 +23171,7 @@ impl GameState {
         // slot 0 via a `ChooseCards` modal (suspend + clean replay — the
         // loyalty cost hasn't been paid yet).
         if target.is_none()
-            && self.players[p].wants_ui
+            && self.seat_prompts(p)
             && let Some(filter) = ability
                 .effect
                 .target_filter_for_slot(0)
@@ -24509,7 +24506,7 @@ impl GameState {
                 // topped up. Mandatory picks (and the AutoDecider harness,
                 // whose empty answer means "no preference") keep the
                 // top-down fill.
-                let answer_is_final = optional && self.players[player].wants_ui;
+                let answer_is_final = optional && self.seat_prompts(player);
                 if !answer_is_final {
                     for id in revealed.iter().copied() {
                         if picks.len() >= take {

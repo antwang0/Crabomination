@@ -4782,7 +4782,7 @@ impl GameState {
         // with no target — gather the pick here via a `ChooseCards` modal.
         {
             let p = self.priority.player_with_priority;
-            let slot0 = if target.is_none() && self.players[p].wants_ui {
+            let slot0 = if target.is_none() && self.seat_prompts(p) {
                 self.find_card_anywhere(card_id).and_then(|card| {
                     card.definition
                         .effect
@@ -4866,7 +4866,7 @@ impl GameState {
                     && d.target == target
                     && d.additional_targets == additional_targets
             });
-            let slot_info = if !suppressed && target.is_some() && self.players[p].wants_ui {
+            let slot_info = if !suppressed && target.is_some() && self.seat_prompts(p) {
                 self.find_card_anywhere(card_id).and_then(|card| {
                     // "Extra target only on your main phase" spells (Return
                     // to Dust) genuinely cast single-target off-main — don't
@@ -14407,6 +14407,8 @@ impl GameState {
                 // inline (otherwise the cast aborts mid-payment with a
                 // pending decision). The scripted decider already supplies
                 // the right answer.
+                // The raw field, not `seat_prompts`: this saves and restores it around
+                // a forced-synchronous auto-tap, so it must round-trip exactly.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
                 // One allocation for the batch instead of the 0->4->8->16
@@ -14515,6 +14517,8 @@ impl GameState {
                     .unwrap_or_else(|| Box::new(crate::decision::OneColorDecider::default()));
                 b.rearm_script(crate::decision::DecisionAnswer::Color(color));
                 let prev_decider = std::mem::replace(&mut self.decider, b);
+                // The raw field, not `seat_prompts`: this saves and restores it around
+                // a forced-synchronous auto-tap, so it must round-trip exactly.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
                 let r = self.activate_ability_into(id, idx, None, Vec::new(), None, None, &mut events);
@@ -16671,7 +16675,7 @@ impl GameState {
         // ability resolved targetless and did nothing, so it could not be
         // used at all.
         if target.is_none()
-            && self.players[p].wants_ui
+            && self.seat_prompts(p)
             && let Some(filter) = ability
                 .effect
                 .target_filter_for_slot_in_mode(0, chosen_mode)
@@ -16824,7 +16828,7 @@ impl GameState {
             if candidates.is_empty() {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            if candidates.len() > 1 && self.players[p].wants_ui {
+            if candidates.len() > 1 && self.seat_prompts(p) {
                 let source_name = self
                     .find_card_anywhere(card_id)
                     .map(|c| c.definition.name.to_string())

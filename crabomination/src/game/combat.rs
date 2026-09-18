@@ -3351,7 +3351,7 @@ impl GameState {
                 _ => None,
             };
             let assigner = banding_assigner.or(defender_assigner).unwrap_or(active);
-            let assigner_ui = self.players[assigner].wants_ui;
+            let assigner_ui = self.seat_prompts(assigner);
 
             // 1) Blocker order (CR 510.1c) — a free divider has no order to
             // announce, so it goes straight to the assignment.
@@ -3451,7 +3451,7 @@ impl GameState {
                     .any(|c| c.id == *aid && c.keywords().has_kw(&Keyword::Banding))
             }) || self.quality_band_assigner(&blocked, computed).is_some();
             let assigner = if banded { self.active_player_idx } else { bcp.controller };
-            let assigner_ui = self.players[assigner].wants_ui;
+            let assigner_ui = self.seat_prompts(assigner);
             let deathtouch = bcp.keywords().has_kw(&Keyword::Deathtouch);
             let total_power = combat_damage_value(bcp).max(0) as u32;
 

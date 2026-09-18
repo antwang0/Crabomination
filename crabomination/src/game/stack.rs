@@ -236,7 +236,7 @@ impl GameState {
             // Nested: every seat defers, because the wrapper it is buried in
             // must run first — the payment only ever happens when accepted,
             // and the mode is not read until the wrappers do.
-            if !top_level || self.players.get(controller).is_some_and(|p| p.wants_ui) {
+            if !top_level || self.seat_prompts(controller) {
                 return Some(crate::game::types::MODE_PICK_DEFERRED);
             }
         }
@@ -4513,7 +4513,7 @@ impl GameState {
         if let Some(max) = self.effective_max_hand_size(active)
             && self.players[active].hand.len() > max
         {
-            if self.players[active].wants_ui {
+            if self.seat_prompts(active) {
                 let excess = (self.players[active].hand.len() - max) as u32;
                 self.set_cleanup_discard_decision(active, excess);
                 return CleanupOutcome::Suspended;

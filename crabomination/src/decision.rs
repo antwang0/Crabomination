@@ -196,6 +196,36 @@ pub enum OptionalKind {
     RevealTopLoseLife,
 }
 
+impl OptionalKind {
+    /// CR 800.4f's test: is "yes" paying a cost, or choosing whether to pay
+    /// one? A departed seat's cost is simply not paid, where any other choice
+    /// of theirs is re-seated on another player under CR 800.4g
+    /// (`GameState::route_ask`).
+    ///
+    /// Anything that spends a resource of the asked seat's counts, whatever
+    /// the payoff on the other side: mana, life, a permanent, a card, the
+    /// graveyard. `CastFree` and `FreeUpside` cost nothing by construction,
+    /// `TemptingOffer` is CR 701's offer rather than a cost the object
+    /// demands, and the rest are plain choices.
+    pub fn is_cost(&self) -> bool {
+        match self {
+            OptionalKind::PayMana { .. }
+            | OptionalKind::PayLife { .. }
+            | OptionalKind::SacrificeForPayoff
+            | OptionalKind::DiscardForPayoff { .. }
+            | OptionalKind::KeepByGivingUp
+            | OptionalKind::ExileGraveyard { .. }
+            | OptionalKind::SelfCost
+            | OptionalKind::RevealTopLoseLife => true,
+            OptionalKind::MayBody
+            | OptionalKind::CastFree
+            | OptionalKind::FreeUpside
+            | OptionalKind::Neutral
+            | OptionalKind::TemptingOffer => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Decision {
     /// Pick a target satisfying the ability's selector.

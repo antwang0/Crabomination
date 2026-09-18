@@ -788,8 +788,20 @@ impl GameState {
             *cursor += 1;
             return Some(matches!(a, DecisionAnswer::Bool(true)));
         }
+        // CR 800.4f/g — the seat may have left the game since the arm derived
+        // it (tribute asks an opponent, and in a pod that opponent is often
+        // long dead). A cost of theirs is not paid and nobody is asked; any
+        // other choice is re-seated. See `game::departed`.
+        let seat = match self.route_ask(seat, source, kind.is_cost()) {
+            crate::game::departed::AskRoute::Seat(q) => q,
+            crate::game::departed::AskRoute::CostNotPaid => {
+                self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(false));
+                *cursor += 1;
+                return Some(false);
+            }
+        };
         let decision = Decision::OptionalTrigger { source, description, kind };
-        if self.players.get(seat).is_some_and(|p| p.wants_ui) {
+        if self.seat_prompts(seat) {
             self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatBoolAnswerPending { player: seat },
@@ -858,6 +870,9 @@ impl GameState {
             *cursor += 1;
             return Some(t);
         }
+        // CR 800.4g — a pick owed by a seat that has left is re-seated on
+        // another player (never a cost, so 800.4f cannot apply here).
+        let seat = self.route_ask_choice(seat, source);
         let decision = Decision::ChooseTarget {
             optional: false,
             extra_cast_slot: false,
@@ -1090,6 +1105,8 @@ impl GameState {
             *cursor += 1;
             return Some(n);
         }
+        // CR 800.4g — as for the other asks; a number is never a cost here.
+        let seat = self.route_ask_choice(seat, source);
         let decision = Decision::ChooseAmount { source, prompt, max, kind };
         if self.seat_suspends(seat) {
             self.suspend_signal = Some(Box::new((
@@ -1129,6 +1146,8 @@ impl GameState {
             *cursor += 1;
             return Some(n);
         }
+        // CR 800.4g — a ballot a departed seat owed is cast by another player.
+        let seat = self.route_ask_choice(seat, source);
         let decision = Decision::ChooseOption { source, prompt, options };
         if self.seat_suspends(seat) {
             self.suspend_signal = Some(Box::new((
@@ -1168,6 +1187,9 @@ impl GameState {
         effect: &Effect,
     ) -> Option<Vec<CardId>> {
         use crate::decision::{Decision, DecisionAnswer};
+        // CR 800.4g — a departed seat's pick is made by another player; the
+        // candidate list the caller built is unchanged, only the chooser is.
+        let seat = self.route_ask_choice(seat, source);
         let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
             Some(a) => a,
             None => {
@@ -1180,7 +1202,7 @@ impl GameState {
                 // Scripted deciders answer synchronously even for wants_ui
                 // seats — tests script UI players' picks without a suspend
                 // round-trip. Only live (Auto) games suspend.
-                if self.players.get(seat).is_some_and(|p| p.wants_ui)
+                if self.seat_prompts(seat)
                     && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
                 {
                     self.suspend_signal = Some(Box::new((
@@ -1210,7 +1232,7 @@ impl GameState {
     /// the live-game `AutoDecider`. Scripted deciders (tests) answer
     /// synchronously even for wants_ui seats.
     pub(crate) fn seat_suspends(&self, seat: usize) -> bool {
-        self.players.get(seat).is_some_and(|p| p.wants_ui)
+        self.seat_prompts(seat)
             && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
     }
 
@@ -1231,7 +1253,7 @@ impl GameState {
         effect: &Effect,
         auto_default: Vec<CardId>,
     ) -> Option<Vec<CardId>> {
-        if self.players.get(seat).is_some_and(|p| p.wants_ui)
+        if self.seat_prompts(seat)
             || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
         {
             self.ask_seat_cards(seat, prompt, source, candidates, 0, max, value, effect)
@@ -1274,6 +1296,8 @@ impl GameState {
             *cursor += 1;
             return Some(v);
         }
+        // CR 800.4g — as for `ask_seat_cards`.
+        let seat = self.route_ask_choice(seat, source);
         let decision = Decision::ChooseCards { source, prompt, candidates: candidates.clone(), min, max, eligible: None, value };
         if self.seat_suspends(seat) {
             self.suspend_signal = Some(Box::new((
@@ -3940,7 +3964,7 @@ impl GameState {
                         };
                         let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                             Some(a) => a,
-                            None if self.players[ctx.controller].wants_ui => {
+                            None if self.seat_prompts(ctx.controller) => {
                                 self.suspend_signal = Some(Box::new((
                                     decision,
                                     PendingEffectState::MayDoAnswerPending,
@@ -5239,7 +5263,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[me].wants_ui => {
+                    None if self.seat_prompts(me) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: *max },
@@ -5606,7 +5630,7 @@ impl GameState {
                     match take_opt_scratch!(self.stashed_resolution_answer) {
                         Some(DecisionAnswer::Mode(i)) => i.min(modes.len().saturating_sub(1)),
                         Some(_) => 0,
-                        None if self.players[ctx.controller].wants_ui => {
+                        None if self.seat_prompts(ctx.controller) => {
                             self.suspend_signal = Some(Box::new((
                                 decision,
                                 PendingEffectState::ModeAnswerPending { num_modes: modes.len() },
@@ -5675,7 +5699,7 @@ impl GameState {
                 // with the sanitised answer stashed.
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
@@ -5764,7 +5788,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
@@ -5814,7 +5838,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
@@ -6059,7 +6083,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::MayDoAnswerPending,
@@ -6304,7 +6328,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: pool_max },
@@ -6842,7 +6866,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::DivisionAnswerPending,
@@ -6922,7 +6946,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::DivisionAnswerPending,
@@ -7107,7 +7131,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::DivisionAnswerPending,
@@ -8495,7 +8519,7 @@ impl GameState {
                 // UI players answer asynchronously: suspend resolution and
                 // surface the decision; `apply_pending_effect_answer` resumes
                 // via `PendingEffectState::LearnPending`.
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((
                         decision,
                         crate::game::types::PendingEffectState::LearnPending { player: p },
@@ -8564,7 +8588,7 @@ impl GameState {
                         hand: candidates,
                     };
                     let pending = PendingEffectState::DiscardChosenPending { target_player: p, max: None };
-                    if self.players[p].wants_ui {
+                    if self.seat_prompts(p) {
                         // Suspend for this seat; the continuation re-runs
                         // the discard for every seat not yet processed so a
                         // symmetric discard doesn't stop at the first human.
@@ -9970,7 +9994,7 @@ impl GameState {
                     let cap = max
                         .as_ref()
                         .map(|v| self.evaluate_value(v, ctx).max(0) as u32);
-                    let count = if self.players[p].wants_ui {
+                    let count = if self.seat_prompts(p) {
                         cap.unwrap_or(u32::MAX).min(candidates.len() as u32)
                     } else {
                         0
@@ -9982,7 +10006,7 @@ impl GameState {
                     };
                     let pending =
                         PendingEffectState::DiscardChosenPending { target_player: p, max: cap };
-                    if self.players[p].wants_ui {
+                    if self.seat_prompts(p) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::DiscardAnyNumber {
                                 who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
@@ -10130,7 +10154,7 @@ impl GameState {
                 // resolver will convert `suspend_signal` into `pending_decision`
                 // and `submit_decision` will apply the answer + run any
                 // remaining Seq effects.
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending_state, Effect::Noop)));
                     return Ok(());
                 }
@@ -11138,7 +11162,7 @@ impl GameState {
                         let legal = vec![
                             Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                         ];
-                        if self.players[p].wants_ui {
+                        if self.seat_prompts(p) {
                             // Surface a `ChooseColor` decision to the UI.
                             // After the player answers, `apply_pending_effect_answer`
                             // adds `n` mana of the chosen color.
@@ -11180,7 +11204,7 @@ impl GameState {
                         if legal.is_empty() {
                             return Ok(());
                         }
-                        if self.players[p].wants_ui {
+                        if self.seat_prompts(p) {
                             self.suspend_signal = Some(Box::new((
                                 crate::decision::Decision::ChooseColor { source, legal },
                                 PendingEffectState::AnyOneColorPending {
@@ -11218,7 +11242,7 @@ impl GameState {
                         if legal.is_empty() {
                             return Ok(()); // no imprint / colorless → no mana
                         }
-                        if self.players[p].wants_ui {
+                        if self.seat_prompts(p) {
                             // Surface the color choice to the UI (mirrors the
                             // AnyOneColor arm); resume adds 1 of the chosen color.
                             self.suspend_signal = Some(Box::new((
@@ -11245,7 +11269,7 @@ impl GameState {
                         let legal = vec![
                             Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                         ];
-                        if self.players[p].wants_ui {
+                        if self.seat_prompts(p) {
                             self.suspend_signal = Some(Box::new((
                                 crate::decision::Decision::ChooseColor { source, legal },
                                 PendingEffectState::DevotionColorPending { player: p },
@@ -13963,7 +13987,7 @@ impl GameState {
                 if candidates.is_empty() {
                     return Ok(());
                 }
-                let chosen = if self.players[p].wants_ui {
+                let chosen = if self.seat_prompts(p) {
                     self.ask_seat_cards(
                         p,
                         "Put a card from a graveyard onto the battlefield".to_string(),
@@ -14015,7 +14039,7 @@ impl GameState {
                 // wants_ui seats get a real suspended pick — the old
                 // synchronous ask reintroduced the whiff for exactly the
                 // seats the bot branch was built to protect.
-                let chosen: Vec<CardId> = if self.players[p].wants_ui {
+                let chosen: Vec<CardId> = if self.seat_prompts(p) {
                     let Some(ids) = self.ask_seat_cards(
                         p,
                         format!("Return up to {n} cards to your hand"),
@@ -14071,7 +14095,7 @@ impl GameState {
                     // highest-mana-value matches rather than whiffing at 0.
                     // wants_ui seats suspend for a real pick (the old
                     // synchronous ask whiffed for them).
-                    let chosen: Vec<CardId> = if self.players[p].wants_ui {
+                    let chosen: Vec<CardId> = if self.seat_prompts(p) {
                         let Some(ids) = self.ask_seat_cards_logged(
                             &mut cursor,
                             p,
@@ -15447,7 +15471,7 @@ impl GameState {
                     excluded: vec![crate::card::CreatureType::Wall],
                 };
                 let pending = PendingEffectState::ReplaceCreatureTypeTextPending { target_id };
-                if self.players[ctx.controller].wants_ui {
+                if self.seat_prompts(ctx.controller) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -16001,7 +16025,7 @@ impl GameState {
                 if cap == 0 { return Ok(()); }
                 // "Up to" is pure upside, so a non-interactive seat takes the
                 // maximum rather than the AutoDecider's conservative zero.
-                let n = if self.players[ctx.controller].wants_ui {
+                let n = if self.seat_prompts(ctx.controller) {
                     let source = ctx.source.unwrap_or(CardId(0));
                     let Some(n) = self.ask_seat_amount(
                         &mut 0,
@@ -19574,7 +19598,7 @@ impl GameState {
                 // their targeted removal be countered.
                 if picks.is_none()
                     && discards.is_none()
-                    && self.players.get(affected_controller).is_some_and(|p| p.wants_ui)
+                    && self.seat_prompts(affected_controller)
                     && self.ward_cost_is_payable(affected_controller, cost, ctx)
                 {
                     let prompt = format!(
@@ -20051,7 +20075,7 @@ impl GameState {
                     if candidates.is_empty() {
                         continue;
                     }
-                    if candidates.len() > n && self.players[p].wants_ui {
+                    if candidates.len() > n && self.seat_prompts(p) {
                         let source = source_id.unwrap_or(crate::card::CardId(0));
                         let decision = if n == 1 {
                             crate::decision::Decision::ChooseTarget {
@@ -20195,7 +20219,7 @@ impl GameState {
                     // seat still takes the first N, which is what the
                     // maximizing default has always done.
                     let auto_default: Vec<CardId> = ids.iter().copied().take(cap).collect();
-                    if self.players.get(ctx.controller).is_some_and(|p| p.wants_ui)
+                    if self.seat_prompts(ctx.controller)
                         || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
                     {
                         let Some(v) = self.ask_seat_cards(
@@ -20270,7 +20294,7 @@ impl GameState {
                         answers.push(Vec::new());
                         continue;
                     }
-                    let picked = if self.players[p].wants_ui {
+                    let picked = if self.seat_prompts(p) {
                         // Real suspended pick, routed to the affected player.
                         // (The old synchronous ask hit AutoDecider: `up_to`
                         // choosers bounced nothing, forced ones bounced the
@@ -20568,7 +20592,7 @@ impl GameState {
                     if candidates.is_empty() {
                         continue;
                     }
-                    if n == 1 && self.players[p].wants_ui && deferred_ui.is_none() {
+                    if n == 1 && self.seat_prompts(p) && deferred_ui.is_none() {
                         let best = candidates.iter().map(|id| metric(self, *id)).max();
                         if let Some(best) = best {
                             let tied: Vec<CardId> = candidates
@@ -21563,7 +21587,7 @@ impl GameState {
                     source: ctx.source,
                 };
 
-                if self.players[picker].wants_ui {
+                if self.seat_prompts(picker) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -22236,7 +22260,7 @@ impl GameState {
                     battlefield_haste: *battlefield_haste,
                     source: ctx.source,
                 };
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -22306,7 +22330,7 @@ impl GameState {
                     battlefield_haste: false,
                     source: ctx.source,
                 };
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -22359,7 +22383,7 @@ impl GameState {
                     battlefield_haste: false,
                     source: ctx.source,
                 };
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -22693,7 +22717,7 @@ impl GameState {
                 }
                 let decision = Decision::SearchLibrary { player: p, candidates: candidates.clone(), eligible: None };
                 let pending = PendingEffectState::PutFromZonesPending { player: p };
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -22996,7 +23020,7 @@ impl GameState {
                     restriction: None,
                 };
                 let pending = PendingEffectState::NameDiscardMatchingPending { who };
-                if self.players[ctx.controller].wants_ui {
+                if self.seat_prompts(ctx.controller) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -23117,7 +23141,7 @@ impl GameState {
                     restriction: None,
                 };
                 let pending = PendingEffectState::NameExileAllZonesPending { who };
-                if self.players[ctx.controller].wants_ui {
+                if self.seat_prompts(ctx.controller) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -23154,7 +23178,7 @@ impl GameState {
                     who,
                     namer: ctx.controller,
                 };
-                if self.players[ctx.controller].wants_ui {
+                if self.seat_prompts(ctx.controller) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -23219,7 +23243,7 @@ impl GameState {
                         restriction: None,
                     };
                     let pending = PendingEffectState::StashNamePending { player: p };
-                    if self.players[p].wants_ui {
+                    if self.seat_prompts(p) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::EachPlayerNamesCard { who: PlayerRef::Seat(q) }
                         });
@@ -23287,7 +23311,7 @@ impl GameState {
                     restriction: None,
                 };
                 let pending = PendingEffectState::NameRevealTopPending { player: p, count: n };
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -23605,7 +23629,7 @@ impl GameState {
                     value: PickValue::Gain,
                 };
                 let pending = PendingEffectState::TakeOnePerTypePending { player: p, revealed: revealed.clone() };
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -24095,7 +24119,7 @@ impl GameState {
                 };
                 // One prompt for the whole partition; the per-type cap is
                 // enforced below by claiming a fresh type for each pick.
-                let picks: Vec<CardId> = if self.players[p].wants_ui {
+                let picks: Vec<CardId> = if self.seat_prompts(p) {
                     let candidates: Vec<(CardId, String)> = revealed
                         .iter()
                         .filter_map(|id| {
@@ -24390,7 +24414,7 @@ impl GameState {
                     };
                     let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                         Some(a) => a,
-                        None if self.players[p].wants_ui => {
+                        None if self.seat_prompts(p) => {
                             self.suspend_signal = Some(Box::new((
                                 decision,
                                 PendingEffectState::MayDoAnswerPending,
@@ -25612,7 +25636,7 @@ impl GameState {
                         target_player,
                         extra_cost: *extra_cost,
                     };
-                    if self.players[picker].wants_ui {
+                    if self.seat_prompts(picker) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::ExileFromHandTaxed {
                                 from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
@@ -25706,7 +25730,7 @@ impl GameState {
                 // "You may" — count 0..=1; the auto-decider may decline.
                 let decision = Decision::Discard { player: p, count: 1, hand: candidates };
                 let pending = PendingEffectState::HoneFromHandPending { target_player: p, count: n };
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -26543,7 +26567,7 @@ impl GameState {
                 let decision = Decision::PutOnLibrary { player: p, count: actual, hand: hand_snapshot.clone() };
                 let pending = PendingEffectState::PutOnLibraryPending { player: p, count: actual };
 
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -26575,7 +26599,7 @@ impl GameState {
                         .collect();
                     let decision = Decision::PutOnLibrary { player: p, count: 1, hand };
                     let pending = PendingEffectState::PutOnLibraryPending { player: p, count: 1 };
-                    if self.players[p].wants_ui {
+                    if self.seat_prompts(p) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::EachPlayerPutsHandCardOnTop {
                                 who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
@@ -26924,7 +26948,7 @@ impl GameState {
                     };
                     let pending = PendingEffectState::DiscardChosenPending { target_player, max: None };
 
-                    if self.players[picker].wants_ui {
+                    if self.seat_prompts(picker) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::DiscardChosen {
                             from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                             count: crate::effect::Value::Const(n as i32),
@@ -26972,7 +26996,7 @@ impl GameState {
                     }
                     let decision = Decision::Discard { player: picker, count: 1, hand: candidates };
                     let pending = PendingEffectState::DiscardChosenPending { target_player, max: None };
-                    if self.players[picker].wants_ui {
+                    if self.seat_prompts(picker) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::DiscardChosenFromRevealed {
                                 from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
@@ -27020,7 +27044,7 @@ impl GameState {
                         hand: candidates,
                     };
                     let pending = PendingEffectState::BottomChosenFromHandAndDrawPending { target_player };
-                    if self.players[picker].wants_ui {
+                    if self.seat_prompts(picker) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::BottomChosenFromHandAndDraw {
                             from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                             count: crate::effect::Value::Const(n as i32),
@@ -27066,7 +27090,7 @@ impl GameState {
                         hand: candidates,
                     };
                     let pending = PendingEffectState::TopChosenFromHandPending { target_player };
-                    if self.players[picker].wants_ui {
+                    if self.seat_prompts(picker) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::TopChosenFromHand {
                             from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                             count: crate::effect::Value::Const(n as i32),
@@ -27118,7 +27142,7 @@ impl GameState {
                         source,
                         return_to: *return_to,
                     };
-                    if self.players[picker].wants_ui {
+                    if self.seat_prompts(picker) {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::ExileChosenUntilSourceLeaves {
                             from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                             count: crate::effect::Value::Const(n as i32),
@@ -27172,7 +27196,7 @@ impl GameState {
                         link_source: if *link_to_source { ctx.source } else { None },
                         face_down: *face_down,
                     };
-                    if self.players[picker].wants_ui {
+                    if self.seat_prompts(picker) {
                         let (lts, fd) = (*link_to_source, *face_down);
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::ExileChosenFromHand {
                             from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
@@ -27315,7 +27339,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[p].wants_ui => {
+                    None if self.seat_prompts(p) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max },
@@ -27364,7 +27388,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[p].wants_ui => {
+                    None if self.seat_prompts(p) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: life },
@@ -27794,7 +27818,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[chooser].wants_ui => {
+                    None if self.seat_prompts(chooser) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::CreatureTypeAnswerPending,
@@ -27856,7 +27880,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[p].wants_ui => {
+                    None if self.seat_prompts(p) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: life },
@@ -27885,7 +27909,7 @@ impl GameState {
                 }).collect();
                 let decision = Decision::SearchLibrary { player: p, candidates, eligible: None };
                 let pending = PendingEffectState::PayLifeLookPending { player: p, revealed };
-                if self.players[p].wants_ui {
+                if self.seat_prompts(p) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -27910,7 +27934,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[payer].wants_ui => {
+                    None if self.seat_prompts(payer) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: life },
@@ -27961,7 +27985,7 @@ impl GameState {
                     opp: opp_seat,
                     revealed,
                 };
-                if self.players[payer].wants_ui {
+                if self.seat_prompts(payer) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -29998,7 +30022,7 @@ impl GameState {
                 };
                 let pending =
                     PendingEffectState::ChooseCreatureTypePending { target_id, options };
-                if self.players[chooser].wants_ui {
+                if self.seat_prompts(chooser) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -30086,7 +30110,7 @@ impl GameState {
                     restrict_to: restrict_to.clone(),
                 };
                 let chooser = ctx.controller;
-                if self.players[chooser].wants_ui {
+                if self.seat_prompts(chooser) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -30442,7 +30466,7 @@ impl GameState {
                     restriction: None,
                 };
                 let pending = PendingEffectState::OpponentNameLockPending { caster };
-                if self.players[caster].wants_ui {
+                if self.seat_prompts(caster) {
                     self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
@@ -31084,7 +31108,7 @@ impl GameState {
                     // Revealing is pure upside, so the bot policy is "reveal
                     // everything"; only a live seat is offered the choice.
                     let max = candidates.len() as u32;
-                    let min = if self.players[p].wants_ui { 0 } else { max };
+                    let min = if self.seat_prompts(p) { 0 } else { max };
                     let Some(v) = self.ask_seat_cards(
                         p,
                         "Reveal any number of cards".to_string(),
@@ -32435,7 +32459,7 @@ impl GameState {
                 };
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::CreatureTypeAnswerPending,
@@ -32483,7 +32507,7 @@ impl GameState {
                 if recipients.is_empty() {
                     return Ok(());
                 }
-                if self.players[ctx.controller].wants_ui {
+                if self.seat_prompts(ctx.controller) {
                     self.suspend_signal = Some(Box::new((
                         decision,
                         PendingEffectState::PreventFromChosenColorPending { targets: recipients },
@@ -33430,7 +33454,7 @@ impl GameState {
                     return Ok(());
                 }
                 cands.sort_by_key(|(_, mv, _)| std::cmp::Reverse(*mv));
-                let pick = if self.players[p].wants_ui || cands.len() > 1 {
+                let pick = if self.seat_prompts(p) || cands.len() > 1 {
                     let answer = self.decider.decide(&Decision::ChooseCards {
                         source,
                         prompt: "Exchange with which Aura?".into(),
@@ -34027,7 +34051,7 @@ impl GameState {
                     return Ok(()); // can't collect enough evidence
                 }
                 let src = ctx.source.unwrap_or(CardId(0));
-                let to_exile: Vec<CardId> = if self.players[p].wants_ui {
+                let to_exile: Vec<CardId> = if self.seat_prompts(p) {
                     // A human picks exactly which cards to exile via a real
                     // suspended pick (the old synchronous ask hit AutoDecider
                     // → empty set → decline, so collect evidence never
@@ -34141,7 +34165,7 @@ impl GameState {
                 if self.players[p].graveyard.is_empty() {
                     return Ok(());
                 }
-                let to_exile: Vec<CardId> = if self.players[p].wants_ui {
+                let to_exile: Vec<CardId> = if self.seat_prompts(p) {
                     // Real suspended pick (the old synchronous ask whiffed at
                     // AutoDecider's empty set — X was never collected).
                     let candidates: Vec<(CardId, String)> = self.players[p]
@@ -34426,7 +34450,7 @@ impl GameState {
                 if *reduce_generic > 0 || *pay_own_cost {
                     let mut discounted = card_def.cost.clone();
                     discounted.reduce_generic(*reduce_generic);
-                    let forced_only = self.players[ctx.controller].wants_ui;
+                    let forced_only = self.seat_prompts(ctx.controller);
                     match self.try_pay_with_auto_tap_mode(ctx.controller, &discounted, forced_only) {
                         Ok(receipt) => {
                             mana_spent = receipt
@@ -34608,7 +34632,7 @@ impl GameState {
                 // candidate (free cast of your biggest spell — the blanket
                 // empty pick made the effect a no-op). Scripted deciders
                 // steer via the ChooseCards ask.
-                let picked: Vec<CardId> = if self.players[p].wants_ui {
+                let picked: Vec<CardId> = if self.seat_prompts(p) {
                     let Some(ids) = self.ask_seat_cards(
                         p,
                         "Cast which spell without paying its mana cost?".to_string(),
@@ -34764,7 +34788,7 @@ impl GameState {
                 };
                 let take = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => matches!(a, DecisionAnswer::Bool(true)),
-                    None if self.players[ctx.controller].wants_ui => {
+                    None if self.seat_prompts(ctx.controller) => {
                         self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::MayDoAnswerPending,
@@ -37424,7 +37448,7 @@ impl GameState {
                         .map(|c| (c.id, false)),
                 );
                 let Some(&(first, _)) = candidates.first() else { return Ok(()) };
-                let chosen = if candidates.len() > 1 && self.players[p].wants_ui {
+                let chosen = if candidates.len() > 1 && self.seat_prompts(p) {
                     let cands = candidates
                         .iter()
                         .filter_map(|&(id, sb)| {
@@ -37514,7 +37538,7 @@ impl GameState {
         let Some((filter, n)) = Self::ward_discard_choice(cost) else {
             return Some(None);
         };
-        if n == 0 || !self.players.get(payer).is_some_and(|p| p.wants_ui) {
+        if n == 0 || !self.seat_prompts(payer) {
             return Some(None);
         }
         let eligible: Vec<(CardId, String)> = self.players[payer]
