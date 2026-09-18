@@ -5457,19 +5457,31 @@ impl GameState {
         Vec::new()
     }
 
-    /// Seats on every team other than `seat`'s. Includes eliminated
-    /// players; callers that need a live-only list should filter on
-    /// `players[s].is_alive()` themselves.
+    /// Seats on every team other than `seat`'s that are **still in the game**.
+    ///
+    /// CR 102.1 / 800.4a — a player who has left the game is not a player in
+    /// it, so they are not an opponent. This used to hand back every other
+    /// seat, alive or not, with a doc line telling forty-six callers to
+    /// filter it themselves; none of them did. `Value::OpponentCount` read
+    /// the unfiltered length, so "draw a card for each opponent" in a
+    /// four-seat pod with two seats out drew **three**, and every "each
+    /// opponent" loop ran a body against players whose objects had already
+    /// left the game.
+    ///
+    /// Identical to the unfiltered form while nobody has been eliminated,
+    /// which is every turn of a duel: one elimination there ends the game.
     pub fn opponents_of(&self, seat: usize) -> Vec<usize> {
         if self.teams.is_empty() {
-            // No teams declared — treat every other seat as an opponent.
-            return (0..self.players.len()).filter(|&s| s != seat).collect();
+            // No teams declared — treat every other live seat as an opponent.
+            return (0..self.players.len())
+                .filter(|&s| s != seat && self.players[s].is_alive())
+                .collect();
         }
         let my_team = self.team_of(seat);
         let mut out = Vec::new();
         for t in &self.teams {
             if t.id != my_team {
-                out.extend(t.members.iter().copied());
+                out.extend(t.members.iter().copied().filter(|&s| self.players[s].is_alive()));
             }
         }
         out
@@ -5480,14 +5492,15 @@ impl GameState {
     /// slot and threw the allocation away; the `debug_assert!` ties the two
     /// orders together (`scripts/robustness_grid.sh`'s debug-assertions leg).
     pub(crate) fn first_opponent_of(&self, seat: usize) -> Option<usize> {
+        let alive = |&s: &usize| self.players.get(s).is_some_and(|p| p.is_alive());
         let first = if self.teams.is_empty() {
-            (0..self.players.len()).find(|&s| s != seat)
+            (0..self.players.len()).find(|&s| s != seat && alive(&s))
         } else {
             let my_team = self.team_of(seat);
             self.teams
                 .iter()
                 .filter(|t| t.id != my_team)
-                .find_map(|t| t.members.first().copied())
+                .find_map(|t| t.members.iter().copied().find(|s| alive(s)))
         };
         debug_assert_eq!(
             first,

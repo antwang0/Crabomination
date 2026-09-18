@@ -3701,3 +3701,55 @@ fn cr_800_4a_a_seat_an_effect_eliminates_still_leaves_the_game() {
     g.check_state_based_actions();
     assert!(g.players[1].left_game);
 }
+
+/// CR 102.1 / 800.4a — a player who has left the game is not a player in it,
+/// so they are not an opponent.
+///
+/// `opponents_of` handed back every other seat, alive or not, with a doc line
+/// telling its forty-six callers to filter it themselves. None of them did,
+/// and `Value::OpponentCount` read the length.
+#[test]
+fn cr_800_4a_a_seat_that_has_left_is_not_an_opponent() {
+    let mut g = multi_player_game(4);
+    assert_eq!(g.opponents_of(0), vec![1, 2, 3]);
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert_eq!(g.opponents_of(0), vec![2, 3], "seat 1 is out of the game");
+    assert_eq!(g.opponents_of(2), vec![0, 3], "and out of everyone else's list too");
+}
+
+/// The same rule where it is visible on a card. Refurbished Familiar is
+/// "each opponent discards a card; for each opponent who can't, you draw a
+/// card" — the count and the loop are the same question asked twice, and one
+/// of them counted the dead. At four seats with one out, two opponents
+/// discard and the count said three, so the caster drew a card off a player
+/// who was not in the game.
+#[test]
+fn cr_800_4a_for_each_opponent_does_not_count_the_departed() {
+    let mut g = multi_player_game(4);
+    for seat in 1..4 {
+        g.add_card_to_hand(seat, catalog::forest());
+    }
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(g.players[1].hand.is_empty(), "their hand left with them (CR 800.4a)");
+
+    // A library to draw from, or the "you draw a card" half cannot happen
+    // whatever the count says and the test stops discriminating.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let familiar = g.add_card_to_battlefield(0, catalog::refurbished_familiar());
+    g.fire_self_etb_triggers(familiar, 0);
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the ETB");
+    }
+    assert_eq!(g.players[2].hand.len(), 0, "the two live opponents discarded");
+    assert_eq!(g.players[3].hand.len(), 0);
+    assert_eq!(
+        g.players[0].hand.len(),
+        0,
+        "both opponents could discard, so nothing is drawn — the departed seat \
+         is not an opponent who 'can't'",
+    );
+}
