@@ -3023,14 +3023,15 @@ command zone, CR 113.6b's trigger and static zones, CR 702.49d commander
 ninjutsu with a bot candidate for it, CR 207.2c join forces):
 
 ```text
---bench at d6869b99 (release):
+--bench at 8a4d78b1 (release), the run's closing tip:
   decisions          195,806   byte-identical to the committed invariant
   turns_per_game       27.49   "
   decisions_per_game   611.9   "
   stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
   determinism     ok (all pairs split)
-  peak_rss_mib      25.7
-  games_per_s     481.82 at host_calib_ms 44, Intel Xeon @ 2.80 GHz
+  peak_rss_mib      25.5
+  games_per_s     488.09 at host_calib_ms 44, Intel Xeon @ 2.80 GHz
+                  (481.82 at d6869b99, 505.05 mid-run — same box, same calib)
 ```
 
 **The pod run caught the one thing that did move, and it was a rules bug.**
@@ -3047,11 +3048,15 @@ the distinction this file's own note says to read. Narrowing the extraction to
   --threads 1: identical in every column   — the N-seat determinism proof
 --commander --seats 3 --games 200 --seed 97   200 / 0 / 30.06 / 1,096.5  (matches)
 --commander --games 600 --seed 4242           600 / 0 / 42.12 / 1,977.7  (fresh seed)
+--commander --games 500 --seed 9091           500 / 0 / 41.73 / 1,963.0  (fresh seed)
 --commander --seats 2 --games 200 --seed 4243 200 / 0 / 18.10 /   481.4  (fresh seed)
 ```
 
-1,400 pod games over three seeds and 2/3/4 seats: **zero panics, zero stalls,
-100 % decided.**
+1,900 pod games over four seeds and 2/3/4 seats: **zero panics, zero stalls,
+100 % decided.** The two multiplayer card fixes that closed the run (Esper
+Sentinel, Adeline) left every fixed-seed column untouched, which is the right
+answer: both are corner cases the pod's decks reach rarely, and the committed
+outcome table in `pod::tests` now says so in the suite rather than here.
 
 📐 **One Commander-path perf row, taken because it was a panic first.**
 `ManaPayload::AnyColorInCommanderIdentity` asked `color_identity` for the
