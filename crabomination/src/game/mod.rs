@@ -5270,6 +5270,35 @@ impl GameState {
         }
     }
 
+    /// CR 800.4m — the seats this turn boundary skipped because they have left
+    /// the game, as a seat bitmask. That boundary is the moment the rule calls
+    /// "when that turn would have begun": a duration keyed to a departed
+    /// player's next turn ends there, neither immediately nor never.
+    ///
+    /// Zero whenever every seat is still in the game — which is every turn of
+    /// every duel, so the `all` walk is the whole cost on the bench — and zero
+    /// on an extra turn, where the rotation passed nobody.
+    pub(crate) fn departed_seats_skipped_into_this_turn(&self) -> u64 {
+        let n = self.players.len();
+        let active = self.active_player_idx;
+        let Some(prev) = self.previous_turn_active else { return 0 };
+        if n == 0 || prev == active || self.players.iter().all(|p| p.is_alive()) {
+            return 0;
+        }
+        let mut mask = 0u64;
+        let mut seat = (prev + 1) % n;
+        for _ in 0..n {
+            if seat == active {
+                break;
+            }
+            if !self.players[seat].is_alive() {
+                mask |= 1u64 << (seat & 63);
+            }
+            seat = (seat + 1) % n;
+        }
+        mask
+    }
+
     /// Next non-eliminated seat strictly after `from` (wrapping). Returns
     /// `from` if no other alive players remain.
     pub fn next_alive_seat(&self, from: usize) -> usize {

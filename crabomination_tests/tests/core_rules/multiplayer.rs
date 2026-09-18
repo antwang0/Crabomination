@@ -1130,6 +1130,58 @@ fn cr_800_4d_a_departed_players_delayed_trigger_is_not_put_on_the_stack() {
     assert!(g.battlefield_find(control).is_none(), "seat 1's did — the end step fired");
 }
 
+/// CR 800.4m — "When a player leaves the game, any continuous effects with
+/// durations that last until that player's next turn or until a specific point
+/// in that turn will last until that turn would have begun. They neither
+/// expire immediately nor last indefinitely."
+///
+/// Mouth of the Storm gives every creature its controller's opponents control
+/// -3/-0 until that controller's next turn. Seat 2 resolves it and then leaves:
+/// the rotation never reaches seat 2 again, so without this rule seat 0's
+/// creatures stay shrunk for the rest of the game.
+#[test]
+fn cr_800_4m_a_departed_players_until_your_next_turn_ends_when_that_turn_would_have() {
+    let mut g = multi_player_game(3);
+    for seat in 0..3 {
+        for _ in 0..40 {
+            g.add_card_to_library(seat, catalog::forest());
+        }
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let power = |g: &GameState| g.computed_permanent(bear).unwrap().power;
+
+    g.active_player_idx = 2;
+    g.priority.player_with_priority = 2;
+    g.move_card_to_battlefield_for_test(2, catalog::mouth_of_the_storm());
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the ETB");
+    }
+    assert_eq!(power(&g), -1, "-3/-0 while it lasts");
+
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+    assert_eq!(power(&g), -1, "leaving does not end it early");
+
+    // Seat 0's turn, then seat 1's: seat 2's next turn has not come round yet.
+    let to_turn_of = |g: &mut GameState, seat: usize| {
+        for _ in 0..400 {
+            if g.active_player_idx == seat && g.step == TurnStep::PreCombatMain {
+                return;
+            }
+            let _ = g.advance_step(Vec::new());
+        }
+        panic!("never reached seat {seat}'s main phase");
+    };
+    to_turn_of(&mut g, 0);
+    assert_eq!(power(&g), -1, "seat 0's turn is not seat 2's");
+    to_turn_of(&mut g, 1);
+    assert_eq!(power(&g), -1, "nor is seat 1's");
+
+    // The next boundary skips seat 2 — the turn that would have begun.
+    to_turn_of(&mut g, 0);
+    assert_eq!(power(&g), 2, "and it does not last indefinitely either");
+}
+
 /// All seats eliminated simultaneously → draw (winner=None). Pre-existing
 /// behavior preserved through the team-aware refactor.
 #[test]

@@ -552,11 +552,19 @@ impl GameState {
                 // CR 615 — "until your next turn" damage locks (Kiora's +1)
                 // end as the granting player's turn begins.
                 let ap = self.active_player_idx;
+                // CR 800.4m — "any continuous effects with durations that last
+                // until that player's next turn or until a specific point in
+                // that turn will last until that turn would have begun. They
+                // neither expire immediately nor last indefinitely." The turn
+                // that would have begun is the boundary that skipped the seat,
+                // which is this one. Zero on a table nobody has left.
+                let departed = self.departed_seats_skipped_into_this_turn();
+                let ends_for = |seat: usize| seat == ap || departed & (1u64 << (seat & 63)) != 0;
                 // Both fields are `ColdState` and both are empty on almost
                 // every untap step; `retain` and `iter_mut` each deep-copy the
                 // whole cold group, so ask with `&self` first.
-                if self.damage_locked_until_turn_of.iter().any(|(_, seat)| *seat == ap) {
-                    retain_cold!(self.damage_locked_until_turn_of, |(_, seat)| *seat != ap);
+                if self.damage_locked_until_turn_of.iter().any(|(_, seat)| ends_for(*seat)) {
+                    retain_cold!(self.damage_locked_until_turn_of, |(_, seat)| !ends_for(*seat));
                 }
                 // Oracle en-Vec's mandate arms as its victim's turn begins.
                 if self.attack_mandates.iter().any(|m| m.seat == ap && !m.armed) {
@@ -587,13 +595,21 @@ impl GameState {
                 }
                 // CR 611.2b — "until the next turn" / "until your next turn"
                 // continuous effects end as the relevant turn begins.
-                let (active, turn) = (self.active_player_idx, self.turn_number);
+                // CR 800.4m rides along in `ends_for`: a departed player's
+                // upkeep would have been inside the turn that would have begun,
+                // and there is no Upkeep step of theirs left to end it at, so
+                // `UntilYourNextUpkeep` ends here too rather than never.
+                let turn = self.turn_number;
                 let ends_now = |d: &crate::game::layers::EffectDuration| match *d {
                     crate::game::layers::EffectDuration::UntilNextTurn => true,
                     crate::game::layers::EffectDuration::UntilYourNextTurn {
                         player,
                         installed_turn,
-                    } => player == active && turn > installed_turn,
+                    } => ends_for(player) && turn > installed_turn,
+                    crate::game::layers::EffectDuration::UntilYourNextUpkeep {
+                        player,
+                        installed_turn,
+                    } => departed & (1u64 << (player & 63)) != 0 && turn > installed_turn,
                     _ => false,
                 };
                 self.continuous_effects.retain(|e| !ends_now(&e.duration));
