@@ -618,6 +618,17 @@ pub enum SpendRestriction {
     /// turn." (Generator Servant.) Unrestricted spend; funding a creature
     /// stamps the pending-haste rider like `InstantSorceryUncounterable`.
     CreatureHaste,
+    /// "When that mana is spent to cast a creature spell that shares a
+    /// creature type with your commander, scry 1." (Path of Ancestry.)
+    /// Unrestricted spend; the shared-type check and the trigger live in
+    /// `GameState::note_commander_mana_riders`.
+    CommanderTypeScry,
+    /// "If you spend this mana to cast your commander, it enters with a
+    /// number of additional +1/+1 counters on it equal to the number of
+    /// times it's been cast from the command zone this game." (Opal Palace.)
+    /// Unrestricted spend; the counters ride the cast card's
+    /// `pending_etb_counters`.
+    CommanderCastCounters,
 }
 
 impl SpendRestriction {
@@ -652,10 +663,24 @@ impl SpendRestriction {
                 "only face-down casts or turning face up"
             }
             // Riders, not restrictions — the mana spends freely.
-            SpendRestriction::InstantSorceryUncounterable | SpendRestriction::CreatureHaste => {
+            SpendRestriction::InstantSorceryUncounterable
+            | SpendRestriction::CreatureHaste
+            | SpendRestriction::CommanderTypeScry
+            | SpendRestriction::CommanderCastCounters => {
                 return None;
             }
         })
+    }
+
+    /// True for a *rider* — a "restriction" that permits every payment and
+    /// only observes what it funded (Boseiju's uncounterable, Generator
+    /// Servant's haste, Path of Ancestry's scry, Opal Palace's counters).
+    /// Rider mana is freely spendable, so the auto-tapper may reach for its
+    /// source like any other; a real restriction is left for the controller
+    /// to tap deliberately. One source of truth with [`Self::label`], which
+    /// has nothing to show a player for exactly these.
+    pub fn is_rider(self) -> bool {
+        self.label().is_none()
     }
 
     /// True iff mana under this restriction may fund a payment of `kind`.
@@ -700,6 +725,11 @@ impl SpendRestriction {
                 kind.face_down || kind.turning_face_up
             }
             SpendRestriction::CreatureHaste => true,
+            // CR 106.6 names three shapes for a mana source's rider; these
+            // two are the "additional effect" and "delayed triggered ability"
+            // shapes, neither of which narrows what the mana may pay for.
+            SpendRestriction::CommanderTypeScry
+            | SpendRestriction::CommanderCastCounters => true,
         }
     }
 }
@@ -792,6 +822,11 @@ pub struct SpellKind {
     /// CR 708.5 — paying to turn a face-down permanent face up (Tin Street
     /// Gossip's second half).
     pub turning_face_up: bool,
+    /// CR 903.3 — the spell being cast is the payer's own commander, from
+    /// whichever zone. `CardDefinition::spell_kind` can't see this (it is a
+    /// property of the game, not of the card), so the cast paths set it via
+    /// `GameState::spell_kind_for`. Read by Opal Palace's provenance rider.
+    pub commander: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

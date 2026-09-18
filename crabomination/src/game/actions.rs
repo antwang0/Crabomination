@@ -3692,56 +3692,72 @@ pub(crate) fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
 pub(crate) fn effect_produced_colors(effect: &Effect) -> crate::mana::ColorSet {
     use crate::mana::ColorSet;
     match effect {
-        Effect::AddMana { pool, .. } => match pool {
-            ManaPayload::Colors(cs) => cs.iter().collect(),
-            // `AnyColorInCommanderIdentity` promises all five at the
-            // definition level, where the commander is not known. That over-
-            // promises in a Commander game, but harmlessly: every card in a
-            // legal deck is inside the commander's identity (CR 903.5c), so
-            // every pip auto-tap asks this source for is a color it can
-            // actually make. A stolen off-identity spell is the exception,
-            // and it fails the payment rather than producing a wrong color.
-            ManaPayload::AnyOneColor(_)
-            | ManaPayload::AnyColorInCommanderIdentity
-            | ManaPayload::AnyColors(_)
-            | ManaPayload::AnyColorOpponentCouldProduce
-            | ManaPayload::AnyColorYouCouldProduce => ColorSet::all(),
-            // Color set depends on live board state — not auto-tapped.
-            ManaPayload::AnyColorAmongLegendaries
-            | ManaPayload::AnyColorAmongExiledWithSource
-            | ManaPayload::AnyColorAmongYourPermanents
-            | ManaPayload::AnyTypeTriggerSourceProduces
-            | ManaPayload::AnyTypeSacrificedLandProduces => ColorSet::empty(),
-            // Devotion-scaled: it can make `color`, but only the controller
-            // should choose to tap it (devotion may be 0). Not auto-tapped.
-            ManaPayload::DevotionOfChosenColor => ColorSet::empty(),
-            ManaPayload::OfColor(c, _) => ColorSet::single(*c),
-            ManaPayload::OfColors(cs, _) => cs.iter().collect(),
-            ManaPayload::Colorless(_) => ColorSet::empty(),
-            // Spend-restricted sources are not auto-tapped: their mana can
-            // only fund some spells, so tapping one to "cover" a colored
-            // pip could strand an otherwise-payable cast. The controller
-            // activates them deliberately (or they float via a trigger),
-            // and `pay_for_spell` consumes the floated mana.
-            ManaPayload::Restricted(_, _)
-            | ManaPayload::RestrictedToChosenType(_)
-            | ManaPayload::RestrictedToChosenTypePlain(_) => ColorSet::empty(),
-            // Instance-dependent (the chosen color isn't known at the
-            // definition level), so it's not part of the static auto-tap
-            // signature; the controller taps it deliberately.
-            ManaPayload::ChosenColorOfSource => ColorSet::empty(),
-            // Same for a draft-noted palette (Paliano) — it depends on the
-            // seat's note table, not the printed card.
-            ManaPayload::DraftNotedColorOfSource => ColorSet::empty(),
-            // Imprinted-card colors aren't known statically (depend on the
-            // exiled card), so not auto-tapped; tapped deliberately.
-            ManaPayload::ImprintedCardColor => ColorSet::empty(),
-        },
+        Effect::AddMana { pool, .. } => payload_produced_colors(pool),
         // The two recursive arms are this function's only `call` sites and
         // they fire on 20 % of asks; out of line the other 80 % pay no frame.
         // See `(-136)`.
         Effect::Seq(_) | Effect::If { .. } => effect_produced_colors_nested(effect),
         _ => ColorSet::empty(),
+    }
+}
+
+/// Every colour an `AddMana` payload can produce for the auto-tapper. Split
+/// out of [`effect_produced_colors`] so the rider arm can recurse into its
+/// wrapped payload without rebuilding an `Effect` around it.
+pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorSet {
+    use crate::mana::ColorSet;
+    match pool {
+        ManaPayload::Colors(cs) => cs.iter().collect(),
+        // `AnyColorInCommanderIdentity` promises all five at the
+        // definition level, where the commander is not known. That over-
+        // promises in a Commander game, but harmlessly: every card in a
+        // legal deck is inside the commander's identity (CR 903.5c), so
+        // every pip auto-tap asks this source for is a color it can
+        // actually make. A stolen off-identity spell is the exception,
+        // and it fails the payment rather than producing a wrong color.
+        ManaPayload::AnyOneColor(_)
+        | ManaPayload::AnyColorInCommanderIdentity
+        | ManaPayload::AnyColors(_)
+        | ManaPayload::AnyColorOpponentCouldProduce
+        | ManaPayload::AnyColorYouCouldProduce => ColorSet::all(),
+        // Color set depends on live board state — not auto-tapped.
+        ManaPayload::AnyColorAmongLegendaries
+        | ManaPayload::AnyColorAmongExiledWithSource
+        | ManaPayload::AnyColorAmongYourPermanents
+        | ManaPayload::AnyTypeTriggerSourceProduces
+        | ManaPayload::AnyTypeSacrificedLandProduces => ColorSet::empty(),
+        // Devotion-scaled: it can make `color`, but only the controller
+        // should choose to tap it (devotion may be 0). Not auto-tapped.
+        ManaPayload::DevotionOfChosenColor => ColorSet::empty(),
+        ManaPayload::OfColor(c, _) => ColorSet::single(*c),
+        ManaPayload::OfColors(cs, _) => cs.iter().collect(),
+        ManaPayload::Colorless(_) => ColorSet::empty(),
+        // Spend-restricted sources are not auto-tapped: their mana can
+        // only fund some spells, so tapping one to "cover" a colored
+        // pip could strand an otherwise-payable cast. The controller
+        // activates them deliberately (or they float via a trigger),
+        // and `pay_for_spell` consumes the floated mana.
+        // A rider is spendable on anything, so its source auto-taps like
+        // an unrestricted one (Path of Ancestry is a land with no other
+        // ability — leaving it out made it produce nothing for a bot).
+        // A real restriction stays opaque: the auto-tapper can't know
+        // whether what it is funding is allowed.
+        ManaPayload::Restricted(inner, r) if r.is_rider() => {
+            payload_produced_colors(inner)
+        }
+        ManaPayload::Restricted(_, _)
+        | ManaPayload::RestrictedToChosenType(_)
+        | ManaPayload::RestrictedToChosenTypePlain(_) => ColorSet::empty(),
+        // Instance-dependent (the chosen color isn't known at the
+        // definition level), so it's not part of the static auto-tap
+        // signature; the controller taps it deliberately.
+        ManaPayload::ChosenColorOfSource => ColorSet::empty(),
+        // Same for a draft-noted palette (Paliano) — it depends on the
+        // seat's note table, not the printed card.
+        ManaPayload::DraftNotedColorOfSource => ColorSet::empty(),
+        // Imprinted-card colors aren't known statically (depend on the
+        // exiled card), so not auto-tapped; tapped deliberately.
+        ManaPayload::ImprintedCardColor => ColorSet::empty(),
     }
 }
 
@@ -8412,7 +8428,7 @@ impl GameState {
         let forced_only = self.players[p].manual_mana;
         // Spell kind gates spend-restricted mana ("spend only to cast …")
         // by the cast card's types — see `CardDefinition::spell_kind`.
-        let spell_kind = card.definition.spell_kind();
+        let spell_kind = self.spell_kind_for(p, &card);
         // CR 601.2g — float-spend confirmation. If the caster has pre-existing
         // floating mana that the cost could *either* spend *or* avoid (untapped
         // sources can cover it), ask before auto-spending it instead of silently
@@ -8611,6 +8627,13 @@ impl GameState {
         if waterbend.is_some_and(|a| a > 0) {
             card.cast_via_waterbend = true;
         }
+        // Mana provenance (Opal Palace's counters ride the card; Path of
+        // Ancestry's trigger waits until the spell is on the stack).
+        let provenance_scry = self.note_commander_mana_riders(
+            &receipt.side_effects.spent_restrictions,
+            &spell_kind,
+            &mut card,
+        );
         self.finalize_cast(
             p,
             card,
@@ -8622,6 +8645,9 @@ impl GameState {
             mana_spent,
             true,
         );
+        if provenance_scry {
+            self.push_commander_mana_scry(p, &spell_kind);
+        }
 
         Ok(events)
     }
@@ -11224,8 +11250,15 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
 
         // Pay. On failure put the card back in the command zone.
+        //
+        // The payment describes what it is funding (`SpellKind`), exactly as
+        // every other cast path does: a commander cast is a spell like any
+        // other, so spend-restricted mana that permits it (Cavern of Souls
+        // on a matching type, Ancient Ziggurat) may pay, and the riders that
+        // ride on spending it (uncounterable, haste) still stamp the cast.
         let forced_only = self.players[p].manual_mana;
-        let receipt = match self.try_pay_with_auto_tap_mode(p, &cost, forced_only) {
+        let spell_kind = self.spell_kind_for(p, &card);
+        let receipt = match self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &spell_kind) {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].command.push(card);
@@ -11234,14 +11267,22 @@ impl GameState {
             }
         };
         self.pay_life_cost(p, receipt.side_effects.life_lost);
+        self.note_cast_payment_riders(&receipt, &spell_kind);
         let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
         let mana_spent = receipt
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
 
-        // Bump the cast counter on success.
+        // Bump the cast counter on success. Opal Palace's rider reads it
+        // *after* this line: the 2020-11-10 ruling counts the cast in progress.
         *self.commander_cast_count.entry(card_id).or_insert(0) += 1;
+        let mut card = card;
+        let provenance_scry = self.note_commander_mana_riders(
+            &receipt.side_effects.spent_restrictions,
+            &spell_kind,
+            &mut card,
+        );
 
         let mut auto_events = receipt.auto_events;
         auto_events.push(GameEvent::SpellCast {
@@ -11262,6 +11303,9 @@ impl GameState {
             mana_spent,
             false,
         );
+        if provenance_scry {
+            self.push_commander_mana_scry(p, &spell_kind);
+        }
 
         Ok(events)
     }
@@ -11698,7 +11742,7 @@ impl GameState {
             mana_cost.reduce_by_cost(sac_cost);
         }
         apply_spell_cost_floor(self, &mut mana_cost);
-        let spell_kind = card.definition.spell_kind();
+        let spell_kind = self.spell_kind_for(p, &card);
         // CR 601.2g — float-spend confirmation. The spell card is safe to put
         // back in its zone (nothing else is committed yet — pitch/gy-exile/
         // return happen after payment), so suspend and replay the alt cast.
@@ -11911,6 +11955,12 @@ impl GameState {
             face: CastFace::Front,
         });
         let events = auto_events;
+        let mut card = card;
+        let provenance_scry = self.note_commander_mana_riders(
+            &receipt.side_effects.spent_restrictions,
+            &spell_kind,
+            &mut card,
+        );
         self.finalize_cast(
             p,
             card,
@@ -11922,6 +11972,9 @@ impl GameState {
             alt_mana_spent,
             true,
         );
+        if provenance_scry {
+            self.push_commander_mana_scry(p, &spell_kind);
+        }
         Ok(events)
     }
 

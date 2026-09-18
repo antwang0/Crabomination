@@ -6181,6 +6181,9 @@ impl CardDefinition {
             name: Some(self.name),
             face_down: false,
             turning_face_up: false,
+            // A property of the game, not the card — `GameState::spell_kind_for`
+            // sets it.
+            commander: false,
         }
     }
 

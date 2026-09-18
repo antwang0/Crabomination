@@ -24,6 +24,7 @@ mod structural_audit;
 mod jewel;
 mod lci_craft;
 mod misconceptions;
+mod commander_mana;
 mod multiplayer;
 mod quests;
 mod spree;

@@ -12941,6 +12941,8 @@ static MOD_SET: &[Factory] = &[
     super::cmdr::mana_charged_dragon,
     super::cmdr::elmar_ulvenwald_informant,
     super::cmdr::sophina_spearsage_deserter,
+    super::cmdr::path_of_ancestry,
+    super::cmdr::opal_palace,
     super::decks::khorvath_brightflame,
     super::mod_set::reflecting_pool,
     super::mod_set::gaeas_cradle,

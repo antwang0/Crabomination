@@ -515,6 +515,69 @@ pub fn sophina_spearsage_deserter() -> CardDefinition {
     }
 }
 
+// ── Mana provenance lands (CR 903.4 identity mana with a "when that mana is
+//    spent to …" rider) ──────────────────────────────────────────────────────
+
+/// Path of Ancestry — Land. "This land enters tapped. {T}: Add one mana of any
+/// color in your commander's color identity. When that mana is spent to cast a
+/// creature spell that shares a creature type with your commander, scry 1."
+///
+/// The rider is a `SpendRestriction` that permits everything — see
+/// `GameState::note_commander_mana_riders`, which puts the scry trigger on the
+/// stack above the spell it funded (CR 603.3).
+pub fn path_of_ancestry() -> CardDefinition {
+    CardDefinition {
+        name: "Path of Ancestry",
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::Restricted(
+                    Box::new(crate::effect::ManaPayload::AnyColorInCommanderIdentity),
+                    crate::mana::SpendRestriction::CommanderTypeScry,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Opal Palace — Land. "{T}: Add {C}. {1}, {T}: Add one mana of any color in
+/// your commander's color identity. If you spend this mana to cast your
+/// commander, it enters with a number of additional +1/+1 counters on it equal
+/// to the number of times it's been cast from the command zone this game."
+///
+/// The count includes the cast in progress (ruling 2020-11-10), which is why
+/// the rider is read after the command-zone cast counter is bumped.
+pub fn opal_palace() -> CardDefinition {
+    CardDefinition {
+        name: "Opal Palace",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            crate::card::ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Restricted(
+                        Box::new(crate::effect::ManaPayload::AnyColorInCommanderIdentity),
+                        crate::mana::SpendRestriction::CommanderCastCounters,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
