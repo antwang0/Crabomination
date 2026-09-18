@@ -392,17 +392,20 @@ mod tests {
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
-        // Re-blessed for `default_hostile_opponent`: every seat's defender
-        // moved off the seat order, so two of the three seeded games diverge
-        // from the first combat on. ⚠ They also get **longer** — 67/46 turns
-        // to 92/79 — which is the heuristic working: a ring of one-way attacks
-        // kills every seat at once, and focusing the weakest seat kills one
-        // and leaves three at full life. Watch turns/game in the smoke test,
-        // not here.
+        // Re-blessed for the auto-targeter's ranked "target opponent": the
+        // same `default_hostile_opponent` the defender already used now fills
+        // an open opponent slot on every cast too, so the two seeded games
+        // that were already off the seat order diverge again (92→63, 79→69
+        // turns; same winners). ⚠ Three games is a re-bless gate, not a
+        // measurement — the aggregate is 32,000 pod games a side, 2/3/4/5
+        // seats at two seeds, and it reads **identical** at two seats (the
+        // control: a duel has one candidate and the ranking never runs),
+        // -0.06/0.00 turns at three, -0.24/-0.17 at four and -0.37/-0.43 at
+        // five, 100 % decided with zero stalls on both sides.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(3), 92, 3812),
+            (0xC0FFEE, Some(3), 63, 3005),
             (43, Some(2), 38, 1668),
-            (4242, Some(0), 79, 3260),
+            (4242, Some(0), 69, 2882),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

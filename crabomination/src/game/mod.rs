@@ -5256,18 +5256,15 @@ impl GameState {
         self.players.iter().filter(|p| p.is_alive()).count()
     }
 
-    /// [`first_opponent_of`](Self::first_opponent_of) restricted to seats
-    /// still in the game. The unfiltered form keeps naming a player who has
-    /// left, which every caller then has to reject; identical to it while
-    /// nobody has been eliminated, which is every turn of a duel.
-    pub(crate) fn first_alive_opponent_of(&self, seat: usize) -> Option<usize> {
-        (0..self.players.len())
-            .find(|&q| q != seat && self.players[q].is_alive() && !self.same_team(seat, q))
-    }
-
     /// The opponent to aim at when the rules leave the choice open and nobody
-    /// is there to make it — the bot's default defender. `None` when `seat`
-    /// has no opponent still in the game.
+    /// is there to make it — the bot's default defender and the auto-
+    /// targeter's "target opponent". `None` when `seat` has no opponent still
+    /// in the game.
+    ///
+    /// Both of those callers used to take a *positional* answer of their own,
+    /// and both needed the alive filter this one carries: the unfiltered
+    /// [`first_opponent_of`](Self::first_opponent_of) keeps naming a player
+    /// who has left, which every caller then has to reject.
     ///
     /// In a duel there is one candidate and this is a walk of two seats: the
     /// scoring below never runs. At three seats and up it is the decision that
