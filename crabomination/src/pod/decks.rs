@@ -131,6 +131,14 @@ pub const KRARK_COMMANDERS: &[CardFactory] = &[krark_the_thumbless, rograkh_son_
 
 /// Krark/Rograkh goblins R: 73 nonbasic cards + 25 basics = 98, plus the two
 /// commanders.
+///
+/// ⚠ **No unbounded doubler.** Krenko, Mob Boss ("{T}: create X Goblins, where
+/// X is the number of Goblins you control") was in the first draft and one
+/// five-seat game reached **1,486 Goblins** before the board cap ended it
+/// undecided — the run's only stall. A smoke-test deck wants boards a pod can
+/// finish: an engine that doubles every turn makes one game dominate the run's
+/// wall clock and decide by cap rather than by play. Goblin King is the linear
+/// lord in its slot.
 pub const KRARK_MAIN: &[CardFactory] = &[
     abrade, ancient_tomb, arc_trail, arcane_signet, balefire_dragon, beetleback_chief,
     blasphemous_act, blast_zone, bloodrage_brawler, buried_ruin, burnished_hart, cathodion,
@@ -140,7 +148,7 @@ pub const KRARK_MAIN: &[CardFactory] = &[
     faithless_looting, fanatical_firebrand, flame_slash, flametongue_kavu,
     goblin_bushwhacker, goblin_chieftain, goblin_matron, goblin_rabblemaster,
     goblin_warchief, goblin_welder, guardian_idol, hedron_archive, hellrider,
-    impact_tremors, inferno_titan, inventors_fair, krenko_mob_boss, krenkos_command,
+    impact_tremors, inferno_titan, inventors_fair, goblin_king, krenkos_command,
     light_up_the_stage, lightning_bolt, lightning_mauler, mana_vault, mind_stone,
     mizzium_mortars, opal_palace, palladium_myr, path_of_ancestry, pyretic_ritual,
     ramunap_ruins, reckless_bushwhacker, reckless_wurm, rogues_passage, shivan_dragon,

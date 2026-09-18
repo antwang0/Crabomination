@@ -3113,6 +3113,18 @@ rules changes, a targeting-core change, two deck edits and two card bug fixes
 — and that is the whole point of it: none of this is reachable in a duel of
 cube decks, and the 195,806 says so in one number rather than in an argument.
 
+🔎 **The run's only stall, and the pod named its cause in one line.** A fresh
+5-seat seed (8888, 300 games) read **1 undecided / 0.3 %, board cap 1**, and
+`CRAB_CAP_DIAG=1` printed the board: seat 1 held **1,504 permanents, 1,486 of
+them Goblins**. Krenko, Mob Boss — "{T}: create X 1/1 Goblins, where X is the
+number of Goblins you control" — doubles every activation, so ten turns of it
+is 2^10. The fix was the deck, not the cap: Goblin King, a linear lord, took
+the slot, and the same seed plus three more (2024, 777, 5150 — 1,600 five-seat
+games) read 100 % decided. **A smoke-test deck wants boards a pod can finish;
+an unbounded doubler makes one game dominate the wall clock and decide by cap
+rather than by play.** The note is on `KRARK_MAIN` so the next list-writer
+sees it.
+
 📐 **A deck-share reading worth keeping, because it did not move:** Judith
 (BR) wins **4-5 %** of four-seat pods and did so before and after the fixing
 upgrade. Four Signets and Talismans across four decks moved every other
