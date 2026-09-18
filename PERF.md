@@ -3048,8 +3048,9 @@ quotes rows and absolutes separately.
   (-367) the mana source table, pooled        -0.111 / -0.127 / -0.114 %
   (-368) cast_candidates' two accumulators  REFUTED +0.180 / +0.126 / +0.152 %, reverted
   (-369) the computed-view list, pooled     REFUTED -0.084 / +0.037 / +0.096 %, reverted
+  (-370) the CoW unshare's headroom           -0.023 / -0.050 / -0.026 %
   ─────────────────────────────────────────────────────────────────────────
-  run total                                   -0.892 / -1.419 / -1.129 %
+  run total                                   -0.915 / -1.469 / -1.155 %
 ```
 
 **BASE 572,061,894 / 1,492,003,099 / 1,610,978,327 -> CLOSING 566,930,976 /
@@ -8520,6 +8521,42 @@ short to say so.
 ## Log
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
+
+### `(-370)` the CoW unshare materializes with headroom — **fixed -0.023 / cube -0.050 / sealed -0.026 %**
+
+Candidate (S)'s cheap half, one line. `CowBox<Vec<T>>::push`'s unshare path
+built the new buffer at **exactly** `len + 1`, so the next push on the
+now-unique box reallocated. `next_power_of_two()` is at most 2x of a buffer
+this code is already copying in full, and `CowBox::clone` is an `Arc` bump,
+so the capacity survives every clone that follows.
+
+```text
+                  closing tip       (-370)            delta
+  fixed            567,314,194       567,182,951       -0.0231 %
+  cube           1,476,232,188     1,475,488,276       -0.0504 %
+  sealed         1,596,898,726     1,596,484,155       -0.0260 %
+
+  __rust_alloc    648,908 -> 648,908   unchanged — this row is REALLOC
+  realloc          46,622 ->  45,586   -1,036
+  grow_one        151,067 -> 150,031   -1,036
+  peak_rss_mib       22.1 ->    22.5   (the band is ±2 MiB on one binary)
+  `--bench` counters identical: 195,806 / 27.49 / 0 stalls
+```
+
+⚠ **THE CENSUS OVER-PREDICTED THIS ROW BY 6.7x AND THE REASON IS WORTH
+KEEPING.** `cow.rs:104`'s 6,910 allocations are the *unique*-path
+`v.push(value)`, and most of them are a zone's **first** push, which no
+headroom at the unshare can remove — only a push that follows an
+unshare-push on the same handle can. That is 1,036 of 18,362 unshares,
+**5.6 %**. 📐 **An allocation-site count is an upper bound on what a
+capacity change can reach; ask what fraction of it is a FIRST allocation
+before sizing the row** — `(-158)`'s malloc-vs-realloc split is the same
+rule, and `--separate-callers=2` answers it without a build.
+
+📐 **718 Ir per removed `realloc`, the highest per-allocation reading in this
+file** — a `realloc` that cannot extend in place is a `malloc` plus a
+whole-buffer `memcpy` plus a `free`, and these buffers are zone-sized.
+**A realloc is not an allocation; price it by the bytes it moves.**
 
 ### `(-369)` REFUTED — the computed-view list, pooled behind a `Drop` guard: **fixed -0.084 / cube +0.037 / sealed +0.096 %**, and the reason is where the guard TRAVELS
 
@@ -15755,7 +15792,7 @@ the clone census**, which is where the 2026-09-18 session's whole -1.134 % of
 `cube` came from; (O)'s line shortlist is still live and still the instrument that
 feeds it. **Their relationship is the method: (O) names the `Clone` impl that
 allocates, (R) asks who wanted the copy.** Eight rows have now shipped off
-the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`..`(-367)`).
+the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`..`(-367)`, `(-370)`).
 
   💡 **R. THE CLONE CENSUS — three rows in one session, -0.194 / -0.410 /
      -0.530 % of `cube`, and every one of them came from ONE question asked
@@ -15845,12 +15882,12 @@ the pair (`(-355)`..`(-358)`, `(-361)`, `(-362)`, `(-364)`..`(-367)`).
      unshare at `(-359)`'s measured ~52 Ir a snapshot), i.e. **~0.22 % of
      `cube` on this profile and ~3x that shipped**, where `release`'s thin
      LTO inlines both pool symbols.
-     ⚠ A cheaper, unrelated half-row sits beside it: the unshare materializes
-     at **exactly** `len + 1`, so the very next push on the now-unique box
-     reallocates. Those are the 6,910 at `cow.rs:104`. Headroom there is a
-     one-line change worth up to 0.13 %, and it is a *separate* A/B — the
-     `reserve` caveat in (O) does not apply, because `CowBox::clone` is an
-     `Arc` bump and capacity survives it.
+     ✅ **The cheap half beside it is TAKEN as `(-370)`** — the unshare
+     materializes at `next_power_of_two()` instead of exactly `len + 1`,
+     **-0.023 / -0.050 / -0.026 %**. It reached only **1,036 of the 18,362
+     unshares (5.6 %)**, because most of `cow.rs:104`'s 6,910 are a zone's
+     FIRST push, which no headroom can remove. What is left in (S) is the
+     two allocations the unshare path makes, which need the pool above.
 
   ❌ **T. `layers::PrintedList::push` — CENSUSED 2026-09-18 AND DECLINED, no
      build spent.** 18,534 allocations / 3.52 M inclusive (0.24 % of `cube`),

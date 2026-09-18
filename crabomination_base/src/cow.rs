@@ -104,7 +104,12 @@ impl<T: Clone> CowBox<Vec<T>> {
             v.push(value);
             return;
         }
-        let mut v = Vec::with_capacity(self.0.len() + 1);
+        // `next_power_of_two`, not `len + 1`: materializing at exactly the
+        // new length means the *next* push on the now-unique box reallocates,
+        // and the growth census reads 6,910 such reallocations a six-game
+        // `cube` run against 18,362 unshares. The headroom is at most 2x of
+        // a buffer this code is already copying in full. PERF `(-370)`.
+        let mut v = Vec::with_capacity((self.0.len() + 1).next_power_of_two());
         v.extend_from_slice(&self.0);
         v.push(value);
         self.0 = Arc::new(v);
