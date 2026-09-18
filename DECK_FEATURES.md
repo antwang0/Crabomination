@@ -47,8 +47,8 @@ it.
 Not official preconstructed lists: a precon's partition into four decks is not
 derivable from the offline Scryfall cache this repo carries, and a list nobody
 can verify is worse than one the suite checks every run. What they keep from
-the precon idea is what the pod needs — fixed, legal, four different color
-identities, built to play against each other. Each is ~37 lands (10 nonbasic),
+the precon idea is what the pod needs — fixed, legal, five different color
+identities, built to play against each other. Each is ~37 lands (12 nonbasic),
 the colorless format staples (Sol Ring, Command Tower, Arcane Signet,
 Commander's Sphere, Mind Stone), then ramp / removal / draw / a creature curve.
 
@@ -61,7 +61,17 @@ swapped in for a basic apiece so the land count stays at ~37 (12 nonbasic).
 (Selesnya / Rakdos / Azorius / Simic + Unity / Indulgence / Progress /
 Curiosity), swapped in for the two weakest vanilla creatures apiece. The
 generated 99s had passed them over because the picker ranks ramp by mana
-value and the one-mana dorks won the slots.
+value and the one-mana dorks won the slots. Mono-red Krark/Rograkh takes
+neither cycle, and that is the interesting half rather than an omission: both
+are two-colour in CR 903.4 identity (the pips are in the rules text, not the
+mana cost), so `validate_commander_deck` rejects either in a mono-red list.
+
+⏳ **Open deck-quality work**, no engine work needed:
+- **Board wipes are one seat's**: Blasphemous Act and Mizzium Mortars are both
+  Krark's, and the other four lists have none at all. A stalled four-seat board
+  therefore has one seat that can break it. Cheap next step if the pod's
+  turns/game starts drifting up — and it moves the committed outcome table, so
+  re-bless in the same commit.
 
 ## Modern supplement (`catalog::sets::decks::modern`)
 
