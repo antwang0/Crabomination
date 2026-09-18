@@ -326,6 +326,13 @@ Paradox Surveyor was one of the 38.
 
 ---
 
+## Commander format staples still missing a primitive
+
+| Card | Blocker |
+|---|---|
+| Path of Ancestry | mana *provenance* — "when that mana is spent to cast a creature spell that shares a creature type with your commander, scry 1". The identity-mana half is ready (`tap_add_commander_identity`); the engine does not track which source a floated pip came from. |
+| Opal Palace | the same provenance read, plus "enters with +1/+1 counters equal to the number of times it's been cast from the command zone" (`commander_cast_count` already holds that number). |
+
 ## CR 903.4 color-identity divergences (from the Scryfall audit)
 
 `cr_903_4_computed_color_identity_matches_scryfall` (core_rules /

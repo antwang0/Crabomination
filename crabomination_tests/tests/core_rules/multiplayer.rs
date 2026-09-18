@@ -858,6 +858,124 @@ fn cr_800_4a_departed_players_objects_leave_and_control_reverts() {
     assert!(g.players[0].hand.is_empty(), "the departed player's hand leaves");
 }
 
+/// CR 800.4a — "all spells and abilities on the stack controlled by that
+/// player cease to exist". They are dropped, not countered: nothing resolves
+/// and no "whenever a spell is countered" trigger fires.
+#[test]
+fn cr_800_4a_departed_players_stack_items_cease_to_exist() {
+    let mut g = multi_player_game(3);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(crabomination::game::GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the bolt");
+    assert_eq!(g.stack.len(), 1);
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    assert!(g.stack.is_empty(), "the departed player's spell is gone");
+    assert_eq!(g.players[1].life, 20, "the bolt never resolved");
+}
+
+/// CR 800.4a, the ability half: a triggered ability the departed player
+/// controls ceases to exist along with their spells. Kokusho's death trigger
+/// is on the stack when its controller leaves, so nobody loses 5 life.
+#[test]
+fn cr_800_4a_departed_players_trigger_ceases_to_exist() {
+    use crabomination::game::types::StackItem;
+    let mut g = multi_player_game(3);
+    let kokusho = g.add_card_to_battlefield(0, catalog::kokusho_the_evening_star());
+    g.destroy_permanent(kokusho, false, &mut Vec::new());
+    g.check_state_based_actions();
+    assert!(
+        g.stack.iter().any(|i| matches!(i, StackItem::Trigger { controller: 0, .. })),
+        "the death trigger is on the stack under seat 0's control",
+    );
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    assert!(
+        !g.stack.iter().any(|i| matches!(i, StackItem::Trigger { controller: 0, .. })),
+        "the departed player's trigger is gone",
+    );
+    assert_eq!(g.players[1].life, 20, "and nobody lost 5 life to it");
+}
+
+/// CR 800.4a — the command zone is a zone like any other: a departed
+/// Commander player's commander leaves the game with them rather than
+/// sitting in the command zone for the rest of the game.
+#[test]
+fn cr_800_4a_departed_players_command_zone_leaves_too() {
+    let mut g = game_with_format(Format::Commander, 4);
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    assert_eq!(g.players[0].command.len(), 1);
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    assert!(g.players[0].command.is_empty(), "the command zone leaves with the player");
+    assert!(g.find_card_anywhere(cmd).is_none(), "the commander is nowhere");
+}
+
+/// CR 800.4 — a decision the departed player was being asked to make is
+/// dropped. A pending decision suppresses every *other* seat's actions until
+/// it is answered, so leaving one addressed to a player who is no longer in
+/// the game deadlocks the table — which is what a four-player bot pod hit as
+/// a 15 % "no legal move" rate.
+#[test]
+fn cr_800_4_a_pending_decision_for_a_departed_player_is_dropped() {
+    use crabomination::decision::Decision;
+    use crabomination::game::types::{PendingDecision, ResumeContext};
+    let mut g = multi_player_game(3);
+    g.pending_decision = Some(Box::new(PendingDecision {
+        decision: Decision::ChooseColor {
+            source: crabomination::card::CardId(0),
+            legal: crabomination::mana::Color::ALL.to_vec(),
+        },
+        resume: ResumeContext::Mulligan { player: 0, mulligans_taken: 0, next_player: None },
+    }));
+    // The resume context owns seat 0 by default; make the ask seat 0's.
+    assert_eq!(g.pending_decision.as_ref().unwrap().acting_player(), 0);
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    assert!(g.pending_decision.is_none(), "the departed player's ask is dropped");
+}
+
+/// CR 800.4a during combat: a departed attacker's creatures leave, and the
+/// combat they were in does not hold references to them.
+#[test]
+fn cr_800_4a_leaving_mid_combat_clears_the_departed_attackers() {
+    let mut g = multi_player_game(3);
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.step = crabomination::game::TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(crabomination::game::GameAction::DeclareAttackers(vec![
+        Attack { attacker: atk, target: AttackTarget::Player(1) },
+    ]))
+    .expect("declare an attack");
+    assert!(!g.attacking.is_empty());
+
+    g.players[0].life = 0;
+    g.check_state_based_actions();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == atk), "the attacker left the game");
+    assert!(
+        !g.attacking.iter().any(|a| a.attacker == atk),
+        "combat does not still name a creature that left",
+    );
+}
+
 /// All seats eliminated simultaneously → draw (winner=None). Pre-existing
 /// behavior preserved through the team-aware refactor.
 #[test]

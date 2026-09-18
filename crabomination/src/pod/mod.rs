@@ -197,11 +197,11 @@ pub fn play_one_pod_game(
     while stop_reason(&g, actions, max_actions, stale).is_none() {
         let mut any = false;
         for (seat, bot) in bots.iter_mut().enumerate() {
-            // An eliminated seat has left the game (CR 800.4a); polling it
-            // would ask a bot to move objects that no longer exist.
-            if g.players[seat].eliminated {
-                continue;
-            }
+            // Eliminated seats are polled like any other: the bot answers
+            // `None` for a seat without priority, and CR 800.4a has already
+            // taken their objects and any decision addressed to them. Skipping
+            // them here instead was a deadlock — a pending decision the loop
+            // never polled suppressed every other seat's actions.
             let Some(step) = bot.next_action_settled(&g, seat) else { continue };
             let crate::server::bot::BotStep { action, settled } = step;
             let ok = if let Some(settled) = settled {

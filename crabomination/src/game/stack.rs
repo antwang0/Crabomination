@@ -5018,6 +5018,25 @@ impl GameState {
     /// departing player's objects "cease to exist" rather than being
     /// destroyed or sacrificed.
     pub(crate) fn objects_leave_with_player(&mut self, p: usize) {
+        // CR 506.4 / 800.4a — a creature that leaves the battlefield is removed
+        // from combat, and so is an attacker whose defending player left the
+        // game. Doing the `retain` alone left `attacking` and `block_map`
+        // naming `CardId`s that no longer exist anywhere, which combat damage
+        // then looked up.
+        let gone: Vec<CardId> =
+            self.battlefield.iter().filter(|c| c.owner == p).map(|c| c.id).collect();
+        for id in gone {
+            self.remove_permanent_from_combat(id);
+        }
+        let orphaned: Vec<CardId> = self
+            .attacking
+            .iter()
+            .filter(|a| matches!(a.target, crate::game::types::AttackTarget::Player(q) if q == p))
+            .map(|a| a.attacker)
+            .collect();
+        for id in orphaned {
+            self.remove_permanent_from_combat(id);
+        }
         self.battlefield.retain(|c| c.owner != p);
         let reverts: Vec<(CardId, usize)> = self
             .battlefield
@@ -5032,6 +5051,29 @@ impl GameState {
         self.players[p].hand.clear();
         self.players[p].library.clear();
         self.players[p].graveyard.clear();
+        // CR 800.4a — *every* zone, which includes the command zone (a
+        // departed Commander player's commander does not sit there for the
+        // rest of the game) and the outside-the-game sideboard.
+        self.players[p].command.clear();
+        self.players[p].sideboard.clear();
+        // CR 800.4a — "all spells and abilities on the stack controlled by
+        // that player cease to exist", and so does a spell they own that
+        // someone else is casting. Nothing resolves them, so nothing runs:
+        // the items are dropped, not countered.
+        self.stack.retain(|item| match item {
+            crate::game::types::StackItem::Spell { card, caster, .. } => {
+                *caster != p && card.owner != p
+            }
+            crate::game::types::StackItem::Trigger { controller, .. } => *controller != p,
+        });
+        // A choice the departed player was being asked to make is not made:
+        // they are no longer in the game (CR 800.4). Leaving it pending
+        // wedges every other seat, because a pending decision suppresses
+        // every other player's actions until it is answered — which is how a
+        // four-player pod produced 15 % "no legal move" games.
+        if self.pending_decision.as_ref().is_some_and(|d| d.acting_player() == p) {
+            self.pending_decision = None;
+        }
         // CR 725.4 — if the monarch leaves the game, the active player
         // becomes the monarch; if the active player is the one leaving (or
         // there is no active player), the next player in turn order who can
@@ -7007,10 +7049,9 @@ impl GameState {
         // out with them and leave under the same CR 800.4a rules.
         newly_eliminated.extend(self.apply_emperor_losses());
         // CR 800.4a — when a player leaves the game, every card and token
-        // they own leaves with them, and permanents they controlled but
-        // didn't own revert to their owners' control. (Stack items the
-        // departed player controlled ceasing to exist is a remaining gap;
-        // tracked in TODO.md.)
+        // they own leaves with them, the spells and abilities they control
+        // cease to exist, and permanents they controlled but didn't own
+        // revert to their owners' control.
         for &p in &newly_eliminated {
             self.objects_leave_with_player(p);
         }

@@ -19,6 +19,40 @@ listed. Full per-card history is in git.
 
 All ✅ and elided.
 
+## Commander target decks (`crabomination::pod::decks`)
+
+The pod runner's fixed field. Every card is implemented; legality is asserted
+by `pod::tests::cr_903_5a_target_decks_are_legal_commander_decks`, which runs
+each list through `format::validate_commander_deck` (100 cards including the
+commander, singleton outside basics, CR 903.4 identity subset, ban list).
+Every card was also checked against Scryfall's `legalities.commander` when the
+lists were picked.
+
+| Deck | Commander | Identity | Cards | State |
+|---|---|---|---|---|
+| Sigarda GW | Sigarda, Host of Herons | GW | 100 | ✅ complete |
+| Judith BR | Judith, the Scourge Diva | BR | 100 | ✅ complete |
+| Hanna UW | Hanna, Ship's Navigator | UW | 100 | ✅ complete |
+| Tatyova GU | Tatyova, Benthic Druid | GU | 100 | ✅ complete |
+
+Not official preconstructed lists: a precon's partition into four decks is not
+derivable from the offline Scryfall cache this repo carries, and a list nobody
+can verify is worse than one the suite checks every run. What they keep from
+the precon idea is what the pod needs — fixed, legal, four different color
+identities, built to play against each other. Each is ~37 lands (10 nonbasic),
+the colorless format staples (Sol Ring, Command Tower, Arcane Signet,
+Commander's Sphere, Mind Stone), then ramp / removal / draw / a creature curve.
+
+⏳ **Staples still missing**, each blocked on one primitive:
+- **Path of Ancestry**, **Opal Palace** — both need mana *provenance* ("when
+  that mana is spent to cast …"), which the engine does not track. The
+  identity-mana half is ready (`tap_add_commander_identity`).
+- All ten **Signets** and all ten **Talismans** are implemented
+  (`sets/decks/modern.rs`) and in the cube pool; the generated 99s did not
+  reach for them because the picker ranks ramp by mana value and the one-mana
+  dorks won the slots. Swapping each deck's guild signet + talisman in is a
+  strict improvement to the decks' fixing and costs no engine work.
+
 ## Modern supplement (`catalog::sets::decks::modern`)
 
 Extra Modern- and cube-playable cards. Most ride existing engine primitives;

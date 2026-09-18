@@ -29,9 +29,11 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 | CR 903.9a graveyard/exile return as an SBA (dies triggers fire first) | ✅ | `stack.rs::commander_zone_return_sba`, `commander_return_declined` |
 | CR 903.9b hand/library return as a *replacement* | ✅ | `replacement.rs`, registered per commander by `seat_commanders`; `Decision::CommanderRedirect` |
 | Commander damage, 21 from one commander, per (commander, player) | ✅ | `game/mod.rs::commander_damage` + `record_commander_damage`; combat damage only (CR 903.10a) |
-| CR 903.4 color identity: cost, rules text, indicator, back faces | ✅ | `color_identity.rs`; audited against Scryfall for all 18,058 implemented cards |
-| Deck validation: singleton, identity subset, legal commander | ✅ | `format.rs::validate_commander_deck`, `commanders_may_pair` |
+| CR 903.4 color identity: cost, rules text, indicator, back faces | ✅ | `color_identity.rs`; audited against Scryfall for all 18,058 implemented cards (15 known card gaps listed in the audit's `KNOWN_IDENTITY_GAPS`) |
+| Deck validation: singleton, identity subset, legal commander, ban list | ✅ | `format.rs::validate_commander_deck` (CR 903.5a counts the commander), `commanders_may_pair`, `COMMANDER_BANNED` (Scryfall's list, 2026-09-18) |
 | CR 903.11 mana-production restriction | n/a | removed from the CR years ago; correctly absent |
+| "Any color in your commander's color identity" mana | ✅ | `ManaPayload::AnyColorInCommanderIdentity`, `GameState::commander_identity_colors`; Command Tower / Arcane Signet / Commander's Sphere |
+| Commander to hand from the command zone (Command Beacon) | ✅ | `Effect::CommanderToHand`, `game/effects/commander.rs` |
 | Casting a commander for an **alternative** cost from the command zone | ⏳ | `cast_from_command_zone` has no alt-cost path (`cast_with_alternative_cost` reads the hand) |
 | "Can be your commander" on a non-creature (planeswalker commanders) | ⏳ | `CommanderDeckError::NotLegendaryCreature` has no override; needs a `can_be_commander` flag on `CardDefinition` |
 
@@ -59,9 +61,11 @@ Per-deck card completion lives in `DECK_FEATURES.md`.
 ### Simulation & tooling
 | Feature | State | Where |
 |---|---|---|
-| 4-player Commander demo state | 🟡 | `demo.rs::build_commander_state_seeded` — one mono-green Rofellos list, all four seats the same |
-| Commander pod mode in `bot_ladder` | ⏳ | `bot_ladder` is two-seat throughout; `recommend.rs`'s play loop takes `[Pilot; 2]` |
-| Golden traces for a fixed-seed Commander pod | ⏳ | blocked on the pod runner |
+| N-seat pod runner | ✅ | `pod/mod.rs` — `build_pod_template`, `play_one_pod_game`, `run_pod_games` |
+| Four legal target decks | ✅ | `pod/decks.rs` — Sigarda GW / Judith BR / Hanna UW / Tatyova GU, validated by the suite |
+| 4-player Commander demo state | ✅ | `demo.rs::build_commander_state_seeded`, now the same four decks |
+| Commander pod mode in `bot_ladder` | ✅ | `bot_ladder --commander [--seats N]` |
+| Golden traces for a fixed-seed Commander pod | ⏳ | the format is young enough that a trace would churn; revisit once the variant mechanics land |
 
 ## Tier 1 — High-leverage engine primitives
 
