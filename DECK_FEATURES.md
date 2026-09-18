@@ -43,10 +43,13 @@ identities, built to play against each other. Each is ~37 lands (10 nonbasic),
 the colorless format staples (Sol Ring, Command Tower, Arcane Signet,
 Commander's Sphere, Mind Stone), then ramp / removal / draw / a creature curve.
 
+✅ **Path of Ancestry and Opal Palace are implemented** (`sets/cmdr.rs`), on
+CR 106.6 mana provenance — the pip carries its rider as a `SpendRestriction`
+and `PaymentSideEffects::spent_restrictions` reports what a payment spent, so
+no source id is remembered. Neither is in a deck list yet; adding them is a
+list edit, not engine work.
+
 ⏳ **Staples still missing**, each blocked on one primitive:
-- **Path of Ancestry**, **Opal Palace** — both need mana *provenance* ("when
-  that mana is spent to cast …"), which the engine does not track. The
-  identity-mana half is ready (`tap_add_commander_identity`).
 - All ten **Signets** and all ten **Talismans** are implemented
   (`sets/decks/modern.rs`) and in the cube pool; the generated 99s did not
   reach for them because the picker ranks ramp by mana value and the one-mana
