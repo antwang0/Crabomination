@@ -172,19 +172,19 @@ pub fn play_one_pod_game(
     crate::server::bot::set_jitter_seed(Some(seed));
     let mut g = template.clone();
     let mut shuffle = StdRng::seed_from_u64(seed);
-    for (seat, pilot) in pilots.iter().enumerate() {
+    // `zip`, not `players[seat]`: a caller that hands over more pilots than
+    // the template has seats gets the extras ignored rather than a panic.
+    for (player, pilot) in g.players.iter_mut().zip(pilots) {
         if let Some(w) = pilot.weights() {
-            g.players[seat].smart_tap = w.smart_tap;
-            g.players[seat].converge_rarest = w.converge_rarest;
+            player.smart_tap = w.smart_tap;
+            player.converge_rarest = w.converge_rarest;
         }
-        g.players[seat].hostile_player_targets = match pilot {
+        player.hostile_player_targets = match pilot {
             Pilot::Scored(w) => w.hostile_player_targets,
             Pilot::Mcts(cfg) => cfg.weights.hostile_player_targets,
             Pilot::Uniform => false,
         };
-    }
-    for seat in 0..g.players.len() {
-        g.players[seat].library.shuffle(&mut shuffle);
+        player.library.shuffle(&mut shuffle);
     }
     // A seeded deal implies a seeded game — mulligan reshuffles and every
     // other in-game roll come off the state's own stream (see
@@ -192,7 +192,8 @@ pub fn play_one_pod_game(
     g.rng.reseed(shuffle.random());
     g.start_mulligan_phase();
 
-    let mut bots: Vec<Box<dyn Bot>> = pilots.iter().map(|p| p.build()).collect();
+    let mut bots: Vec<Box<dyn Bot>> =
+        pilots.iter().take(g.players.len()).map(|p| p.build()).collect();
     let (mut actions, mut stale) = (0usize, 0usize);
     while stop_reason(&g, actions, max_actions, stale).is_none() {
         let mut any = false;
