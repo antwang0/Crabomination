@@ -22618,6 +22618,25 @@ impl GameState {
                         ..ctx.clone()
                     };
                     self.run_effect(body, &opp_ctx, events)?;
+                    // A body that suspends carries only its OWN effect as the
+                    // parked continuation, so iterations after this one are
+                    // abandoned silently — the defect `MayDoRepeatedly` had
+                    // and fixed by splicing (see the `tail_after` idiom in
+                    // that arm, and `SearchUpToN`). Splicing here needs each
+                    // remaining iteration to pin a *different* opponent, and
+                    // `trigger_source` is a context field that no `Effect`
+                    // carries, so the splice needs a wrapper variant.
+                    //
+                    // Not built, because the catalog's one `ForEachOpponent`
+                    // body (Adeline's attacking-token) cannot suspend. This
+                    // assertion is the price of that judgement: the first card
+                    // whose body *can* fails loudly here instead of quietly
+                    // skipping every opponent after the first.
+                    debug_assert!(
+                        self.suspend_signal.is_none(),
+                        "ForEachOpponent body suspended — the remaining opponents \
+                         are being dropped; splice the tail as MayDoRepeatedly does",
+                    );
                 }
                 Ok(())
             }
@@ -22648,13 +22667,27 @@ impl GameState {
                     }
                 }
                 self.clear_answer_log();
+                // Same shape, same judgement, same guard as `ForEachOpponent`
+                // above: three body runs follow each other here, so a suspend
+                // in any of them drops the rest. All four catalog Tempt cards
+                // make tokens or add counters and cannot suspend.
+                let no_suspend = |g: &Self| {
+                    debug_assert!(
+                        g.suspend_signal.is_none(),
+                        "TemptingOffer body suspended — the runs after it are \
+                         being dropped; splice the tail as MayDoRepeatedly does",
+                    );
+                };
                 self.run_effect(body, ctx, events)?;
+                no_suspend(self);
                 for &opp in &acceptors {
                     let opp_ctx = EffectContext { controller: opp, ..ctx.clone() };
                     self.run_effect(body, &opp_ctx, events)?;
+                    no_suspend(self);
                 }
                 for _ in 0..acceptors.len() {
                     self.run_effect(body, ctx, events)?;
+                    no_suspend(self);
                 }
                 Ok(())
             }
