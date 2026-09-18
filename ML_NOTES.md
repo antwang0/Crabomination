@@ -5373,7 +5373,7 @@ the client's search (`mcts-net67-256`, r74) against the same search at
 | seed | `mcts-net67-512` vs `mcts-net67-256` | wall clock |
 |---|---|---|
 | 43 | **50.2** [49.4, 51.1] (±0.82) | 5 373 s |
-| 97 | **51.0** [50.2, 51.8] (±0.83) | ~5 400 s |
+| 97 | **51.0** [50.2, 51.8] (±0.83) | 4 198 s |
 
 Pooled **+0.6**, the pre-registered middle band: the net leaf's curve
 flattens where the material leaf's did (r64: 128 → 256 = +0.5, here
