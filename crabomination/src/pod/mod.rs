@@ -226,6 +226,19 @@ pub fn play_one_pod_game(
                 }
             }
         }
+        // CR 800.4f/g/h — no ask may be owed by a seat that has left the game.
+        // `seat_prompts` and `route_ask` are what keep it so, and this is the
+        // audit over real boards rather than against a re-derived list: the
+        // whole class was found by a run of this check as an env-var probe
+        // (88 of 2,000 four-seat games), and a new ask site that forgets the
+        // rule reintroduces it silently. Debug-only, one `Option` test a round.
+        debug_assert!(
+            g.pending_decision
+                .as_ref()
+                .is_none_or(|pd| g.players[pd.acting_player()].is_alive()),
+            "seed {seed}: seat {} has left the game and still owes an ask",
+            g.pending_decision.as_ref().map(|pd| pd.acting_player()).unwrap_or(usize::MAX),
+        );
         if any { stale = 0 } else { stale += 1 }
     }
     crate::server::bot::set_jitter_seed(None);
