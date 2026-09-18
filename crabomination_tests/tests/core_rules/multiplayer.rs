@@ -1874,6 +1874,104 @@ fn the_ur_dragon_does_not_discount_himself() {
     assert!(cast_with(4), "…and nine mana pays it");
 }
 
+// ── CR 207.2c — join forces ───────────────────────────────────────────────
+
+/// Answers every `ChooseAmount` with `n`, everything else through the
+/// `AutoDecider` — the join-forces ask is a number, and the `AutoDecider`
+/// answers 0 to all of them.
+struct PayAmount(u32);
+impl crabomination::decision::Decider for PayAmount {
+    fn decide(
+        &mut self,
+        decision: &crabomination::decision::Decision,
+    ) -> DecisionAnswer {
+        match decision {
+            crabomination::decision::Decision::ChooseAmount { max, .. } => {
+                DecisionAnswer::Amount(self.0.min(*max))
+            }
+            other => crabomination::decision::AutoDecider.decide(other),
+        }
+    }
+}
+
+/// CR 207.2c — "Join forces — Starting with you, each player may pay any
+/// amount of mana. Each player draws X cards, where X is the *total* amount
+/// paid this way." Every seat contributes, the mana actually leaves their
+/// pools, and the body runs once off the sum.
+#[test]
+fn cr_207_2c_join_forces_sums_every_seat_and_draws_that_many() {
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(3);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let aglow = g.add_card_to_hand(0, catalog::minds_aglow());
+    for seat in 0..3 {
+        g.players[seat].mana_pool.add(Color::Blue, 3);
+        g.players[seat].library.clear();
+        for _ in 0..10 {
+            let id = g.next_id();
+            g.players[seat].add_to_library_top(id, catalog::grizzly_bears());
+        }
+    }
+    let hands: Vec<usize> = g.players.iter().map(|p| p.hand.len()).collect();
+
+    // Each seat pledges 2; one {U} of seat 0's three pays for the spell.
+    g.decider = Box::new(PayAmount(2));
+    g.perform_action(GameAction::CastSpell {
+        card_id: aglow,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Minds Aglow for {U}");
+    drain_stack(&mut g);
+
+    // Seat 0 paid the {U} and the spell left hand, so its net is 6 - 1.
+    assert_eq!(g.players[0].hand.len(), hands[0] - 1 + 6, "the caster draws six too");
+    for (seat, before) in hands.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].hand.len(), before + 6, "2 + 2 + 2 = X");
+    }
+    // Every pledge actually left a pool: seat 0 spent one on the spell and
+    // pledged its last two; the others pledged two of three.
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+    for seat in 1..3 {
+        assert_eq!(g.players[seat].mana_pool.total(), 1, "two of the three were paid");
+    }
+}
+
+/// CR 207.2c — the `AutoDecider` answers 0 to a `ChooseAmount`, so a bot pod
+/// resolves join forces as a no-op rather than stalling on the ask. The point
+/// of the test is that it *resolves*: nothing is left pending.
+#[test]
+fn join_forces_resolves_with_the_auto_decider_declining_every_seat() {
+    use crabomination::mana::Color;
+    let mut g = multi_player_game(4);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let aglow = g.add_card_to_hand(0, catalog::minds_aglow());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hands: Vec<usize> = g.players.iter().map(|p| p.hand.len()).collect();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: aglow,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Minds Aglow");
+    drain_stack(&mut g);
+    assert!(g.pending_decision.is_none(), "no seat is left holding an ask");
+    assert!(g.stack.is_empty(), "the spell resolved");
+    assert_eq!(g.players[0].hand.len(), hands[0] - 1, "X was 0, so nobody drew");
+    for (seat, before) in hands.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].hand.len(), *before);
+    }
+}
+
 // ── CR 702.49d — commander ninjutsu ───────────────────────────────────────
 
 /// A seat-0 attacker the defender left unblocked, with the game parked in the

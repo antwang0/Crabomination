@@ -4528,6 +4528,15 @@ pub enum Effect {
     /// controller re-runs it once per opponent who accepted. Tempt with
     /// Bunnies.
     TemptingOffer { body: Box<Effect> },
+
+    /// CR 207.2c "join forces" — "Starting with you, each player may pay any
+    /// amount of mana. [body], where X is the total amount of mana paid this
+    /// way." Every seat is asked, in turn order from the controller, before
+    /// any mana is paid, so a suspend-and-replay is idempotent; `body` then
+    /// runs once with the total in `EffectContext::event_amount`
+    /// (`Value::TriggerEventAmount`). Minds Aglow, Collective Voyage,
+    /// Mana-Charged Dragon.
+    JoinForces { description: String, body: Box<Effect> },
     /// "[who] may [accept]. If a player does, run `on_accept` (that player
     /// bound to slot 0) and stop; if no one does, run `otherwise`." Asked in
     /// APNAP order via the synchronous decider (same wants_ui gap as

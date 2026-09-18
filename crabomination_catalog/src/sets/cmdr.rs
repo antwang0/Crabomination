@@ -13,7 +13,7 @@ use crate::card::{
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, StaticAbility,
-    StaticEffect,
+    StaticEffect, ZoneDest,
 };
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 use crate::game::TurnStep;
@@ -370,6 +370,85 @@ pub fn the_ur_dragon() -> CardDefinition {
                 },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Minds Aglow — {U} Sorcery. "Join forces — Starting with you, each player
+/// may pay any amount of mana. Each player draws X cards, where X is the total
+/// amount of mana paid this way."
+pub fn minds_aglow() -> CardDefinition {
+    CardDefinition {
+        name: "Minds Aglow",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::JoinForces {
+            description: "Join forces — pay any amount of mana; each player draws that many"
+                .into(),
+            body: Box::new(Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::TriggerEventAmount,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Collective Voyage — {G} Sorcery. "Join forces — Starting with you, each
+/// player may pay any amount of mana. Each player searches their library for
+/// up to X basic land cards, puts them onto the battlefield tapped, then
+/// shuffles."
+pub fn collective_voyage() -> CardDefinition {
+    CardDefinition {
+        name: "Collective Voyage",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::JoinForces {
+            description: "Join forces — pay any amount of mana; each player ramps that many"
+                .into(),
+            body: Box::new(Effect::SearchUpToN {
+                who: PlayerRef::EachPlayer,
+                filter: R::Land.and(R::HasSupertype(Supertype::Basic)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                count: Value::TriggerEventAmount,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Mana-Charged Dragon — {4}{R}{R} Creature — Dragon 5/5. "Flying, trample.
+/// Join forces — Whenever this creature attacks or blocks, each player
+/// starting with you may pay any amount of mana. This creature gets +X/+0
+/// until end of turn, where X is the total amount of mana paid this way."
+pub fn mana_charged_dragon() -> CardDefinition {
+    let join = |what: &'static str| Effect::JoinForces {
+        description: format!("Join forces — pay any amount of mana; the Dragon gets +X/+0 ({what})"),
+        body: Box::new(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::TriggerEventAmount,
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        }),
+    };
+    CardDefinition {
+        name: "Mana-Charged Dragon",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![
+            crate::effect::shortcut::on_attack(join("attacks")),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: join("blocks"),
+            },
+        ],
         ..Default::default()
     }
 }

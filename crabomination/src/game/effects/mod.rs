@@ -22480,6 +22480,69 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::JoinForces { description, body } => {
+                // CR 207.2c — "starting with you, each player may pay any
+                // amount of mana", so the order is turn order from the
+                // CONTROLLER, not APNAP from the active player.
+                //
+                // Every ask precedes every payment, the contract
+                // `TemptingOffer` keeps for the same reason: `ask_seat_amount`
+                // suspends a `wants_ui` seat and the effect is replayed from
+                // the answer log, so a payment taken mid-ask would be taken
+                // twice.
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                let mut seats = vec![ctx.controller];
+                let mut s = ctx.controller;
+                loop {
+                    s = self.next_alive_seat(s);
+                    if s == ctx.controller || seats.contains(&s) {
+                        break;
+                    }
+                    seats.push(s);
+                }
+                let mut cursor = 0;
+                let mut pledges: Vec<(usize, u32)> = Vec::new();
+                for seat in seats {
+                    // The bound is what that seat could actually spend: the
+                    // floating pool plus its untapped mana sources.
+                    let max = self.players[seat]
+                        .mana_pool
+                        .total()
+                        .saturating_add(self.untapped_mana_colors(seat).len() as u32);
+                    if max == 0 {
+                        continue;
+                    }
+                    let Some(n) = self.ask_seat_amount(
+                        &mut cursor,
+                        seat,
+                        description.clone(),
+                        source,
+                        max,
+                        crate::decision::AmountKind::Mana,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    if n > 0 {
+                        pledges.push((seat, n));
+                    }
+                }
+                self.clear_answer_log();
+                let mut total = 0u32;
+                for (seat, n) in pledges {
+                    let cost = crate::mana::cost(&[crate::mana::generic(n)]);
+                    let forced_only = self.players[seat].manual_mana;
+                    // A pledge the seat turns out not to be able to pay adds
+                    // nothing; CR 601.2h's "can't pay" is the same shape.
+                    if let Ok(receipt) = self.try_pay_with_auto_tap_mode(seat, &cost, forced_only) {
+                        events.extend(receipt.auto_events);
+                        total = total.saturating_add(n);
+                    }
+                }
+                let paid_ctx = EffectContext { event_amount: total, ..ctx.clone() };
+                self.run_effect(body, &paid_ctx, events)
+            }
+
             Effect::TemptingOffer { body } => {
                 // Offer each opponent a copy (seat-routed yes/no, so a
                 // networked human actually chooses), then run the body for
