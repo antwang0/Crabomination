@@ -1874,6 +1874,106 @@ fn cr_113_6b_eminence_event_trigger_fires_from_the_command_zone() {
     assert_eq!(g.players[0].life - before, 3, "the command-zone trigger saw the cast");
 }
 
+/// CR 113.6b — Edgar Markov's eminence trigger mints a Vampire while he sits
+/// in the command zone, and only for a Vampire spell.
+#[test]
+fn edgar_markov_eminence_mints_a_vampire_from_the_command_zone() {
+    use crabomination::card::CreatureType;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    g.seat_commanders(0, vec![catalog::edgar_markov()]);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    // A non-Vampire spell is not the trigger's business.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the bears");
+    drain_stack(&mut g);
+    let vampires = |g: &GameState| {
+        g.battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == 0
+                    && c.definition.subtypes.creature_types.contains(&CreatureType::Vampire)
+            })
+            .count()
+    };
+    assert_eq!(vampires(&g), 0, "a Bear is not a Vampire spell");
+
+    let duelist = g.add_card_to_hand(0, catalog::dusk_legion_duelist());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: duelist,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Vampire");
+    drain_stack(&mut g);
+    assert_eq!(
+        vampires(&g),
+        2,
+        "the Vampire spell itself plus the eminence token",
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.is_token && c.definition.power == 1),
+        "the token is the 1/1",
+    );
+}
+
+/// CR 113.6b — Oloro's third ability names the command zone alone, so the
+/// upkeep gains 2 from the command zone and 2 (not 4) from the battlefield.
+#[test]
+fn oloro_gains_two_from_either_zone_but_never_both() {
+    let mut g = two_player_game();
+    let cmd = g.seat_commanders(0, vec![catalog::oloro_ageless_ascetic()])[0];
+    g.active_player_idx = 0;
+
+    let before = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life - before, 2, "the command-zone-only trigger");
+
+    let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+    let mut card = g.players[0].command.remove(pos);
+    card.controller = 0;
+    g.battlefield.push(card);
+    let before = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.players[0].life - before,
+        2,
+        "on the battlefield only the printed upkeep ability fires",
+    );
+}
+
+/// CR 113.6b — Arahbo's eminence pump reaches a Cat from the command zone.
+/// "Another target Cat" excludes Arahbo himself, which matters only once he
+/// is on the battlefield; from the command zone he is no legal target anyway.
+#[test]
+fn arahbo_eminence_pumps_a_cat_from_the_command_zone() {
+    let mut g = two_player_game();
+    g.seat_commanders(0, vec![catalog::arahbo_roar_of_the_world()]);
+    g.active_player_idx = 0;
+    let cat = g.add_card_to_battlefield(0, catalog::malamet_brawler());
+
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(cat).expect("the Cat is on the battlefield");
+    assert_eq!((cp.power, cp.toughness), (5, 5), "a 2/2 Cat gets +3/+3");
+}
+
 /// CR 601.2f + CR 903.8 — a commander cast for an *alternative* cost still
 /// pays the commander tax: the tax is an additional cost, and additional
 /// costs ride on whichever cost the spell is being cast for. Zurgo

@@ -6,12 +6,14 @@
 //! they exercise, not the set they were printed in.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, LoyaltyAbility, PlaneswalkerSubtype,
-    SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Keyword, LoyaltyAbility,
+    PlaneswalkerSubtype, SelectionRequirement as R, Selector, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Effect, PlayerRef};
-use crate::mana::{Color, cost, g, generic};
+use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
+use crate::game::TurnStep;
 
 /// Freyalise, Llanowar's Fury — {3}{G}{G} Legendary Planeswalker, loyalty 3.
 /// "+2: Create a 1/1 green Elf Druid creature token with '{T}: Add {G}.'
@@ -73,6 +75,191 @@ pub fn freyalise_llanowars_fury() -> CardDefinition {
                     )),
                 },
                 ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Edgar Markov — {3}{R}{W}{B} Legendary Creature — Vampire Knight 4/4.
+/// "Eminence — Whenever you cast another Vampire spell, if Edgar Markov is in
+/// the command zone or on the battlefield, create a 1/1 black Vampire creature
+/// token. First strike, haste. Whenever Edgar Markov attacks, put a +1/+1
+/// counter on each Vampire you control."
+///
+/// CR 113.6b — the eminence trigger carries `TriggerZone::CommandZoneToo`, so
+/// it functions from the command zone. "Another" needs no filter: while Edgar
+/// himself is being cast he is on the stack, which is neither of the two zones
+/// the ability names, so his own cast can never see it.
+pub fn edgar_markov() -> CardDefinition {
+    let vampire = TokenDefinition {
+        name: "Vampire".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Edgar Markov",
+        cost: cost(&[generic(3), r(), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellMatches(R::HasCreatureType(
+                        CreatureType::Vampire,
+                    )))
+                    .in_command_zone(),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(vampire),
+                },
+            },
+            crate::effect::shortcut::on_attack(Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::HasCreatureType(CreatureType::Vampire)),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Oloro, Ageless Ascetic — {3}{W}{U}{B} Legendary Creature — Giant Soldier
+/// 4/5. "At the beginning of your upkeep, you gain 2 life. Whenever you gain
+/// life, you may pay {1}. If you do, draw a card and each opponent loses 1
+/// life. At the beginning of your upkeep, if Oloro, Ageless Ascetic is in the
+/// command zone, you gain 2 life."
+///
+/// CR 113.6b — the third ability names the command zone and *not* the
+/// battlefield, so it is `TriggerZone::CommandZoneOnly`: the two upkeep
+/// triggers never both fire. The first two function only on the battlefield,
+/// which is why the zone is a property of each ability rather than of the card.
+pub fn oloro_ageless_ascetic() -> CardDefinition {
+    let gain_two = |zone_only: bool| TriggeredAbility {
+        event: {
+            let e = EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl);
+            if zone_only { e.command_zone_only() } else { e }
+        },
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+    };
+    CardDefinition {
+        name: "Oloro, Ageless Ascetic",
+        cost: cost(&[generic(3), w(), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![
+            gain_two(false),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::MayPay {
+                    description: "Pay {1} to draw a card and drain each opponent for 1?".into(),
+                    mana_cost: cost(&[generic(1)]),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::LoseLife {
+                            who: Selector::Player(PlayerRef::EachOpponent),
+                            amount: Value::ONE,
+                        },
+                    ])),
+                    else_: None,
+                },
+            },
+            gain_two(true),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Arahbo, Roar of the World — {3}{G}{W} Legendary Creature — Cat Avatar 5/5.
+/// "Eminence — At the beginning of combat on your turn, if Arahbo is in the
+/// command zone or on the battlefield, another target Cat you control gets
+/// +3/+3 until end of turn. Whenever another Cat you control attacks, you may
+/// pay {1}{G}{W}. If you do, it gains trample and gets +X/+X until end of
+/// turn, where X is its power."
+pub fn arahbo_roar_of_the_world() -> CardDefinition {
+    CardDefinition {
+        name: "Arahbo, Roar of the World",
+        cost: cost(&[generic(3), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                )
+                .in_command_zone(),
+                effect: Effect::PumpPT {
+                    what: target_filtered(
+                        R::Creature
+                            .and(R::ControlledByYou)
+                            .and(R::HasCreatureType(CreatureType::Cat))
+                            .and(R::OtherThanSource),
+                    ),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasCreatureType(CreatureType::Cat).and(R::OtherThanSource),
+                    },
+                ),
+                effect: Effect::MayPay {
+                    description: "Pay {1}{G}{W} for trample and +X/+X?".into(),
+                    mana_cost: cost(&[generic(1), g(), w()]),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::GrantKeyword {
+                            what: Selector::TriggerSource,
+                            keyword: Keyword::Trample,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::PumpPT {
+                            what: Selector::TriggerSource,
+                            power: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                            toughness: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                    else_: None,
+                },
             },
         ],
         ..Default::default()
