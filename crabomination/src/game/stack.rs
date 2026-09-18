@@ -7783,11 +7783,15 @@ impl GameState {
             } else {
                 0
             };
-            for _ in 0..fires {
+            // `repeat_n` yields the original last, so the ordinary board — no
+            // Drivnod, `fires == 1` — pays no clone at all (PERF `(-361)`).
+            // The target is still picked per fire: the stack grows between
+            // them, so the two pushes need not agree.
+            for effect in std::iter::repeat_n(effect, fires) {
                 let auto_target =
                     self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
                 self.stack.push(
-                    TriggerPush::new(source, controller, effect.clone())
+                    TriggerPush::new(source, controller, effect)
                         .target(auto_target)
                         .trigger_source(Some(crate::game::effects::EntityRef::Permanent(id)))
                         .build(),

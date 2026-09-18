@@ -12862,10 +12862,12 @@ impl GameState {
             // (Magecraft) trigger of a matching-subtype permanent fires an
             // additional time per doubler the controller controls.
             let fires = 1 + ally_trigger_extra_fires(self, listener_controller, source);
-            for _ in 0..fires {
+            // `repeat_n` yields the original last, so the ordinary board — no
+            // doubler, `fires == 1` — pays no clone at all (PERF `(-361)`).
+            for (effect, auto_target) in std::iter::repeat_n((effect, auto_target), fires) {
                 self.stack.push(
-                    TriggerPush::new(source, listener_controller, effect.clone())
-                        .target(auto_target.clone())
+                    TriggerPush::new(source, listener_controller, effect)
+                        .target(auto_target)
                         .mode(mode)
                         // The cast spell's converge count, so per-cast
                         // `Value::ConvergedValue` reads the iterated spell

@@ -8424,6 +8424,51 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-361)` the trigger-doubler loops hand their effect to the last fire instead of cloning it — **fixed +0.010 / cube -0.194 / sealed -0.102 %**
+
+Six `for _ in 0..fires { … effect.clone() … }` loops, one device. `fires` is
+`1 + <doublers on the board>` (Isshin, Katara, Drivnod, Harmonic Prodigy, a
+Yarok ETB multiplier), so on an ordinary board the loop runs **once** and the
+clone it made was of a value nobody else kept. `std::iter::repeat_n(v, n)`
+clones `n - 1` times and yields the original last, which is exactly the
+wanted shape and needs no `Option` dance:
+
+```text
+  crabomination/src/game/combat.rs   2001  attack triggers   (effect, target, additional)
+  crabomination/src/game/combat.rs   2073  "whenever you attack"
+  crabomination/src/game/actions.rs 12865  magecraft / SpellCast listeners
+  crabomination/src/game/stack.rs    7729  death triggers    (target still picked per fire)
+  crabomination/src/game/mod.rs     22057  the ETB multiplier arm
+  crabomination/src/game/mod.rs     22111  the ally/death/attack arm
+```
+
+```text
+                  (-360) revert tip   (-361)            delta
+  fixed            571,580,293        571,636,890       +0.0099 %
+  cube           1,494,466,607      1,491,565,902       -0.1941 %
+  sealed         1,611,561,623      1,609,916,036       -0.1021 %
+
+  Effect::clone   34,873 -> 28,153 calls  (-6,720, -19.3 %)
+  and the two loops that were entirely this shape leave the caller table:
+    push_ordered_trigger_candidates  2,160 -> 0
+    declare_attackers_banded         2,158 -> 0 at the fires site
+```
+
+📐 **`fixed` is the control and it says the row is triggers, not codegen**:
+that pool fires almost none, so it reads +0.010 % — the restructuring's own
+noise — while the two trigger-heavy pools pay 0.19 / 0.10 %. A row whose
+three pools split like this is a *workload* row, and `fixed` is the pool to
+check it against.
+
+📐 **THE CLASS, AND IT IS WORTH A GREP EACH RUN: a `clone` inside a loop whose
+trip count is "1 + something nobody has".** The tree has five such counters
+(`ally_trigger_extra_fires`, `attack_trigger_extra_fires`,
+`etb_trigger_multiplier`, the Drivnod count, the Katara count) and every one
+of them was written as `for _ in 0..n { … .clone() }`. `repeat_n` is the
+whole fix and it is behaviour-identical, including the `break` arm — the ETB
+tax can still halt the remaining fires, and the element it drops unfired is
+the clone that arm already made.
+
 ### `(-360)` REFUTED — `GrantScan::equipment` as an inline buffer costs **+0.115 / +0.052 / +0.115 %**, and the reason has nothing to do with the buffer
 
 Candidate (O)'s shortlist called this "the cheapest remaining row, compiles

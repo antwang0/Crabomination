@@ -22059,7 +22059,10 @@ impl GameState {
                 } else {
                     etb_mult + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
                 };
-                for _ in 0..mult {
+                // `repeat_n` clones `mult - 1` times and yields the original
+                // last, so the ordinary board — no doubler, `mult == 1` —
+                // pays no clone at all (PERF `(-361)`).
+                for effect in std::iter::repeat_n(effect, mult) {
                     // Strict Proctor's CR 614 tax applies once per fire; a
                     // declined / unpayable tax sacrifices the source and
                     // halts the remaining fires.
@@ -22070,7 +22073,7 @@ impl GameState {
                         actor,
                         source,
                         controller,
-                        effect: effect.clone(),
+                        effect,
                         subject,
                         event_amount,
                         mode,
@@ -22113,12 +22116,12 @@ impl GameState {
                     + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
                     + death_extra
                     + attack_extra;
-                for _ in 0..fires {
+                for effect in std::iter::repeat_n(effect, fires) {
                     queue.push(PendingTriggerPush {
                         actor,
                         source,
                         controller,
-                        effect: effect.clone(),
+                        effect,
                         subject,
                         event_amount,
                         mode,

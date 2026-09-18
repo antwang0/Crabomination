@@ -1998,11 +1998,16 @@ impl GameState {
             let fires = 1
                 + self.attack_trigger_extra_fires(controller)
                 + crate::game::actions::ally_trigger_extra_fires(self, controller, source);
-            for _ in 0..fires {
+            // `repeat_n` clones `fires - 1` times and yields the original
+            // last, so the ordinary board — no doubler, `fires == 1` — pays
+            // no clone at all (PERF `(-361)`).
+            for (effect, auto_target, additional) in
+                std::iter::repeat_n((effect, auto_target, additional), fires)
+            {
                 self.stack.push(
-                    TriggerPush::new(source, controller, effect.clone())
-                        .target(auto_target.clone())
-                        .additional_targets(additional.clone())
+                    TriggerPush::new(source, controller, effect)
+                        .target(auto_target)
+                        .additional_targets(additional)
                         .build(),
                 );
             }
@@ -2070,12 +2075,11 @@ impl GameState {
                 let fires = 1
                     + self.attack_trigger_extra_fires(ctrl)
                     + crate::game::actions::ally_trigger_extra_fires(self, ctrl, src);
-                for _ in 0..fires {
-                    self.stack.push(
-                        TriggerPush::new(src, ctrl, effect.clone())
-                            .target(auto_target.clone())
-                            .build(),
-                    );
+                for (effect, auto_target) in
+                    std::iter::repeat_n((effect, auto_target), fires)
+                {
+                    self.stack
+                        .push(TriggerPush::new(src, ctrl, effect).target(auto_target).build());
                 }
             }
         }
