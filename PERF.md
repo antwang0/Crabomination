@@ -8424,6 +8424,47 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### `(-363)` REFUTED — `players` as a two-slot inline seat list removes **exactly** the 22,034 allocations it promised and costs **+0.754 / +0.652 / +0.722 %**
+
+`(-362)`'s entry named this as the other half of `GameState::clone`'s two
+allocation lines, and it is the textbook inline-buffer shape: `Player` is
+16 bytes, a duel has two seats, `SmallVec<[Player; 2]>` is +16 bytes of
+`GameState` against 22,034 spine allocations a `cube` run. It compiles with
+**two** type errors in the whole workspace. It is still the worst row this
+file has measured. Reverted.
+
+```text
+                  (-362) tip        (-363)            delta
+  fixed            568,924,883       573,216,560       +0.7543 %
+  cube           1,485,887,871     1,495,569,413       +0.6516 %
+  sealed         1,602,707,560     1,614,271,401       +0.7215 %
+
+  allocations     cube 688,811 -> 666,777   -22,034, exactly as predicted
+  and the cost, by self row (cube):
+    +10,200,000  smallvec-1.15.1/src/lib.rs      (eight rows, the deref)
+       +614,034  CardInstance::has_keyword       moved, not added
+       +555,920  core/src/slice/index.rs
+       +467,622  GameState::perform_action_inner
+     -4,000,000  malloc / _int_malloc / _int_free / free / Vec::clone
+```
+
+📐📐 **THIS IS `(-360)`'s QUESTION ③ WITH A THREE-DIGIT ANSWER: `self.players`
+IS THE MOST-READ FIELD IN THE ENGINE, AND A `SmallVec` READ IS A BRANCH WHERE
+A `Vec` READ IS A LOAD.** `Vec::as_slice` is an unconditional pointer load;
+`SmallVec::as_slice` tests `capacity` against the inline size first, and the
+engine asks `self.players[…]` tens of thousands of times a game. The
+allocator recovered 4.0 M and the deref spent 10.2 M — **a 2.5:1 loss on a
+change whose allocation prediction was exact to the unit.**
+
+📐 **So the inline-buffer rule's three questions now have a ranking**: ③ (how
+often is it READ) dominates ① (does it grow its owner) whenever the owner is
+`GameState` and the field is a *table the whole engine indexes*. Sixteen
+bytes of `GameState` was never the risk here — 22,034 allocations at this
+file's own 278 Ir apiece is 6.1 M, and the row still lost by 9.7 M.
+⚠ **`GameState::clone`'s remaining single allocation line is therefore
+CLOSED**: the spine is the price of `Vec`'s cheap read, and `(-362)` already
+took the half that was free.
+
 ### `(-362)` the player-control table stays EMPTY when nobody is controlling anybody — **fixed -0.548 / cube -0.410 / sealed -0.513 %**
 
 **The largest single row this file has taken in twelve passes, and it is four
