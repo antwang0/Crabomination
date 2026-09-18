@@ -1559,3 +1559,40 @@ fn every_wrapper_the_census_recurses_into_surfaces_its_slot_filter() {
         );
     }
 }
+
+/// CR 613.5 layer 5 — the *fourth* parallel walk in this family: the printed
+/// fast path in front of the requirement walker (`printed_requirement` vs
+/// `evaluate_requirement_static_on`). Its creature-type and land-type arms
+/// defer to the walker when a layer change is in scope; its colour arm did
+/// not, and answered off the printed line unconditionally.
+///
+/// Darkest Hour makes every creature black. The walker says a Grizzly Bears
+/// is black; the fast path said it was green only, so a "destroy target black
+/// creature" enumerated no target at all — caught by the `debug_assert_eq!`
+/// that ties the two, on a four-seat pod board with a Sram, Senior Edificer
+/// something had turned red.
+#[test]
+fn a_layer_5_colour_change_reaches_the_printed_fast_path() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::{Effect, shortcut::target_filtered};
+    use crabomination::game::{Target, two_player_game};
+    use crabomination::mana::Color;
+
+    let black_creature = || Effect::DestroyNoRegen {
+        what: target_filtered(R::Creature.and(R::HasColor(Color::Black))),
+    };
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(
+        g.auto_target_for_effect(&black_creature(), 0),
+        None,
+        "a green Bears is not a legal target for a black-only removal",
+    );
+
+    g.add_card_to_battlefield(0, catalog::darkest_hour());
+    assert_eq!(
+        g.auto_target_for_effect(&black_creature(), 0),
+        Some(Target::Permanent(bears)),
+        "Darkest Hour makes it black, and the enumerator has to see that",
+    );
+}

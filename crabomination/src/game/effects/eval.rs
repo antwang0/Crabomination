@@ -28,6 +28,7 @@ pub(crate) struct PrintedGates {
     card: std::cell::Cell<Option<bool>>,
     creature: std::cell::Cell<Option<bool>>,
     land: std::cell::Cell<Option<bool>>,
+    color: std::cell::Cell<Option<bool>>,
 }
 
 impl PrintedGates {
@@ -58,6 +59,22 @@ impl PrintedGates {
         }
         let v = g.land_type_change_in_scope();
         self.land.set(Some(v));
+        v
+    }
+    /// CR 613.5 layer 5 — `AddColor` / `SetColors` / `LoseAllColors`.
+    ///
+    /// `card_color_change_unscoped` is deliberately unmemoized and its doc
+    /// asks a hot caller to carry its own valid flag rather than widen the
+    /// `CardMemo` word; this is that caller and this is that flag. One walk
+    /// per *filter*, in front of a walk that asks the filter of every
+    /// permanent on the board.
+    #[inline]
+    fn color(&self, g: &GameState) -> bool {
+        if let Some(v) = self.color.get() {
+            return v;
+        }
+        let v = g.card_color_change_unscoped();
+        self.color.set(Some(v));
         v
     }
 }
@@ -3323,10 +3340,17 @@ impl GameState {
     ) -> bool {
         match self.printed_requirement(req, card, controller, source, gates) {
             Some(p) => {
+                // Naming the requirement and the card is the difference
+                // between a rebuild and a fix: the bare message costs a
+                // `profiling`/`overflow` build every time it fires, which is
+                // the argument `gate_blame` and `CRAB_CAP_DIAG` are built on.
                 debug_assert_eq!(
                     p,
                     self.evaluate_requirement_static_on(req, card, controller, source),
-                    "printed_requirement disagrees with the requirement walker"
+                    "printed_requirement disagrees with the requirement walker: \
+                     req {req:?} on {} (controller {}, asked by {controller}) source {source:?}",
+                    card.definition.name,
+                    card.controller,
                 );
                 p
             }
@@ -3511,7 +3535,23 @@ impl GameState {
                 }
                 Some(card.definition.subtypes.land_types.contains(lt))
             }
-            R::HasColor(c) => Some(card.definition.printed_color_set().contains(c)),
+            // CR 613.5 layer 5 — the colour arm needs the same gate its
+            // creature-type and land-type neighbours have, and did not have
+            // it: `printed_color_set` is the whole answer off the
+            // battlefield, but on it `SetColors` (Painter's Servant, Sinister
+            // Strength), `AddColor` and `LoseAllColors` only reach the
+            // computed view. The walker already reads it through
+            // `color_set()`, so the fast path answered `false` where the
+            // walker answered `true` and the targeting enumerator dropped a
+            // legal target — the `debug_assert_eq!` below fired on a
+            // four-seat pod board asking `And(Permanent, HasColor(Red))` of a
+            // Sram, Senior Edificer something had turned red.
+            R::HasColor(c) => {
+                if on_bf && gates.color(self) {
+                    return None;
+                }
+                Some(card.definition.printed_color_set().contains(c))
+            }
             R::IsToken => Some(card.is_token),
             R::NotToken => Some(!card.is_token),
             R::Tapped => Some(card.tapped),
