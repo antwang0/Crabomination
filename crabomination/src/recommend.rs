@@ -1497,14 +1497,14 @@ impl Pilot {
     /// The evaluation profile this pilot plays, when it has one. Used to
     /// push profile settings that the *engine* reads (rather than the
     /// bot) onto the seat before the game starts.
-    fn weights(self) -> Option<EvalWeights> {
+    pub(crate) fn weights(self) -> Option<EvalWeights> {
         match self {
             Pilot::Scored(w) => Some(w),
             Pilot::Uniform | Pilot::Mcts(_) => None,
         }
     }
 
-    fn build(self) -> Box<dyn Bot> {
+    pub(crate) fn build(self) -> Box<dyn Bot> {
         match self {
             Pilot::Scored(w) => Box::new(HeuristicBot::with_weights(w)),
             Pilot::Uniform => Box::new(HeuristicBot::uniform_baseline()),

@@ -954,19 +954,27 @@ struct Args {
     vs: Option<String>,
     /// `--peer`: this process is the far end of somebody's `--vs`.
     peer: bool,
+    /// `--commander`: run N-seat Commander pods instead of the 2-player
+    /// ladder. The format's smoke test.
+    commander: bool,
+    /// `--seats N`: pod size for `--commander` (CR 903 pods are 2..N).
+    seats: usize,
 }
 
 fn parse_args() -> Result<Args, String> {
     let bench = std::env::args().any(|a| a == "--bench");
     let mut a_name = if bench { BENCH_PROFILE.to_string() } else { "baseline".to_string() };
     let mut b_name = if bench { BENCH_PROFILE.to_string() } else { "v2".to_string() };
-    let mut games = if bench { BENCH_GAMES } else { 200usize };
+    let games = if bench { BENCH_GAMES } else { 200usize };
     let mut seed = if bench { BENCH_SEED } else { 0u64 };
     let mut threads = 0usize;
     let mut deck_set = "fixed".to_string();
     let mut paired = true;
     let mut vs: Option<String> = None;
     let mut peer = false;
+    let commander = std::env::args().any(|a| a == "--commander");
+    let mut seats = 4usize;
+    let mut games = if commander { 300 } else { games };
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < argv.len() {
@@ -998,6 +1006,8 @@ fn parse_args() -> Result<Args, String> {
                 step = 1;
             }
             "--bench" => step = 1,
+            "--commander" => step = 1,
+            "--seats" => seats = need(i)?.parse().map_err(|_| "--seats must be a number")?,
             "-h" | "--help" => {
                 println!(
                     "bot_ladder [--a PROFILE] [--b PROFILE] [--games N] [--seed N] [--threads N]\n\
@@ -1019,7 +1029,11 @@ fn parse_args() -> Result<Args, String> {
                      reports the win rate. Both builds play the same seeded games; a\n\
                      state divergence aborts the run rather than being averaged in.\n\
                      Run it against a copy of itself first: the null is every pair\n\
-                     split at 50.0%. --peer is the far end and is not run by hand."
+                     split at 50.0%. --peer is the far end and is not run by hand.\n\
+                     --commander runs N-seat Commander pods over the target decks\n\
+                     (--seats N, default 4; --games total, default 300; --seed fixes\n\
+                     the run) and reports completed games, the undecided breakdown,\n\
+                     turns/game and wins by deck. Zero panics is the pass condition."
                 );
                 std::process::exit(0);
             }
@@ -1118,7 +1132,79 @@ fn parse_args() -> Result<Args, String> {
         bench,
         vs,
         peer,
+        commander,
+        seats,
     })
+}
+
+/// `--commander`: the Commander pod smoke test. N-seat pods over
+/// [`crabomination::pod::target_decks`] on fixed seeds, split across the
+/// worker pool by game index so the split cannot change the result.
+///
+/// It reports what a format smoke test is for: how many games finished, how
+/// the undecided ones ended, and how long they ran. A panic aborts the
+/// process (optimized profiles abort), so "it printed a report" is itself
+/// part of the pass condition.
+fn run_commander_pods(args: &Args, threads: usize) -> i32 {
+    use crabomination::pod::{PodTally, pod_field, run_pod_games};
+
+    /// The per-game action budget the 2-player ladder uses. A pod runs
+    /// longer than a duel, so this is the number the stall rate is read
+    /// against rather than a number to raise when games cap out.
+    const MAX_ACTIONS: usize = 50_000;
+
+    let seats = args.seats.clamp(2, 8);
+    let field = pod_field(seats);
+    let games = args.games as u32;
+    println!(
+        "commander: {seats}-seat pods, {games} games on {threads} threads, seed {}, decks: {}",
+        args.seed,
+        field.iter().map(|d| d.name).collect::<Vec<_>>().join(" | "),
+    );
+    let started = std::time::Instant::now();
+    let chunk = games.div_ceil(threads.max(1) as u32).max(1);
+    let mut tally = PodTally { wins: vec![0; seats], ..Default::default() };
+    std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        let mut first = 0u32;
+        while first < games {
+            let count = chunk.min(games - first);
+            let field = field.clone();
+            let (seed, pilot) = (args.seed, args.a);
+            handles.push(scope.spawn(move || {
+                run_pod_games(&field, first, count, seed, MAX_ACTIONS, pilot)
+            }));
+            first += count;
+        }
+        for h in handles {
+            tally.merge(&h.join().expect("pod worker"));
+        }
+    });
+    let elapsed = started.elapsed().as_secs_f64();
+    let pct = |n: u32| 100.0 * f64::from(n) / f64::from(tally.games.max(1));
+    println!(
+        "  games {} in {elapsed:.1}s ({:.2}/s) — decided {} ({:.1} %), undecided {} ({:.1} %)",
+        tally.games,
+        f64::from(tally.games) / elapsed.max(1e-9),
+        tally.games - tally.undecided(),
+        pct(tally.games - tally.undecided()),
+        tally.undecided(),
+        pct(tally.undecided()),
+    );
+    println!(
+        "  undecided_by  draw {} / action cap {} / board cap {} / no legal move {}",
+        tally.draws, tally.action_capped, tally.board_capped, tally.no_legal_move,
+    );
+    println!(
+        "  turns/game {:.2}   actions/game {:.1}",
+        tally.mean_turns(),
+        tally.total_actions as f64 / f64::from(tally.games.max(1)),
+    );
+    for (i, d) in field.iter().enumerate() {
+        println!("  deck {i}  {:<28} wins {:>5} ({:.1} %)", d.name, tally.wins[i], pct(tally.wins[i]));
+    }
+    // A pod that never decides is a broken pod, not a slow one.
+    i32::from(tally.games == 0)
 }
 
 /// One archetype's result.
@@ -1559,6 +1645,19 @@ fn main() {
         if !off.is_empty() {
             eprintln!("encoder ablation via CRAB_ABLATE: {} switched off", off.join(", "));
         }
+    }
+
+    // `--commander` is its own run: it plays pods, not archetype pairs, so
+    // it exits before the two-player field is built.
+    if args.commander {
+        let threads = if args.threads > 0 {
+            args.threads
+        } else {
+            std::thread::available_parallelism()
+                .map(|n| n.get().saturating_sub(1).max(1))
+                .unwrap_or(1)
+        };
+        std::process::exit(run_commander_pods(&args, threads));
     }
 
     const CUBE_PAIRS: usize = 8;

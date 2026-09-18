@@ -14,6 +14,55 @@ re-verify before picking up an item.
 
 Moved to `SHIPPED.md` (size trigger). Check it before proposing anything.
 
+## Commander status (CR 903 + the 800-series it rests on)
+
+The map for the next Commander run — **audited 2026-09-18 against the tree, not
+against this file's history**. Don't re-audit; update rows as they move.
+Per-deck card completion lives in `DECK_FEATURES.md`.
+
+### Format core (CR 903)
+| Feature | State | Where |
+|---|---|---|
+| `Format::Commander`: 40 life, 100-card, singleton, command zone at start | ✅ | `format.rs` (`FormatRules`, `validate_commander_deck`), `game/mod.rs::apply_format`, `seat_commanders` |
+| Commander designation persists across zones; a copy is not a commander | ✅ | `player.rs::Player::commanders` (`CardId`s, zone-independent); `GameState::is_commander`. A token/copy has its own `CardId`, so exclusion is by construction |
+| Commander tax {2} per prior cast, as an additional cost | ✅ | `actions.rs::cast_from_command_zone` — added before `cost_reduction_for_spell` / `reduce_by_cost`, so reductions and the floor see it |
+| CR 903.9a graveyard/exile return as an SBA (dies triggers fire first) | ✅ | `stack.rs::commander_zone_return_sba`, `commander_return_declined` |
+| CR 903.9b hand/library return as a *replacement* | ✅ | `replacement.rs`, registered per commander by `seat_commanders`; `Decision::CommanderRedirect` |
+| Commander damage, 21 from one commander, per (commander, player) | ✅ | `game/mod.rs::commander_damage` + `record_commander_damage`; combat damage only (CR 903.10a) |
+| CR 903.4 color identity: cost, rules text, indicator, back faces | ✅ | `color_identity.rs`; audited against Scryfall for all 18,058 implemented cards |
+| Deck validation: singleton, identity subset, legal commander | ✅ | `format.rs::validate_commander_deck`, `commanders_may_pair` |
+| CR 903.11 mana-production restriction | n/a | removed from the CR years ago; correctly absent |
+| Casting a commander for an **alternative** cost from the command zone | ⏳ | `cast_from_command_zone` has no alt-cost path (`cast_with_alternative_cost` reads the hand) |
+| "Can be your commander" on a non-creature (planeswalker commanders) | ⏳ | `CommanderDeckError::NotLegendaryCreature` has no override; needs a `can_be_commander` flag on `CardDefinition` |
+
+### Multiplayer foundation (CR 800-series)
+| Feature | State | Where |
+|---|---|---|
+| N seats (2..N), turn rotation, APNAP ordering | ✅ | `game/mod.rs`, `multi_player_game`; tests in `core_rules/multiplayer.rs` (76) and `cr_801.rs` |
+| Attack any opponent / their planeswalkers, per-attacker defender | ✅ | `game/combat.rs` |
+| CR 800.4a a player leaving: objects, stack items, control effects | ✅ | `stack.rs` (the 800.4a leg), `game/mod.rs::concede` |
+| Free-for-all last-player-standing, simultaneous-loss draw | ✅ | `team.rs`, `stack.rs` |
+| Multiplayer mulligan, no first-turn draw skip at 3+ | ✅ | `core_rules/multiplayer.rs` |
+
+### Commander-variant mechanics
+| Feature | State | Where |
+|---|---|---|
+| Partner, "Partner with", Choose a Background | ✅ deck-construction | `Keyword::{Partner, PartnerWith, ChooseABackground}`, `format::commanders_may_pair` |
+| "Partner with" search trigger | 🟡 | the keyword pairs the commanders; the ETB "search for the named card" half is not wired |
+| Friends forever, Doctor's companion | ⏳ | no catalog card has them (`format.rs:736`) |
+| Monarch, the initiative, goad, myriad, melee, voting / council's dilemma, tempting offer | ✅ | `effect.rs` (`IsMonarch`, `HasInitiative`, `Goad`, `Myriad`, `MeleeOpponentCount`, `VoteTally`, `TemptingOffer`), `dungeons.rs` |
+| Join forces | ⏳ | no primitive, no card |
+| Eminence (abilities that function from the command zone) | ⏳ | nothing reads an ability off a card in `command` |
+| Commander ninjutsu | ⏳ | `Keyword::Ninjutsu` is hand-only |
+| Lieutenant / "if you control your commander" | ⏳ | no predicate; `is_commander` exists to build one on |
+
+### Simulation & tooling
+| Feature | State | Where |
+|---|---|---|
+| 4-player Commander demo state | 🟡 | `demo.rs::build_commander_state_seeded` — one mono-green Rofellos list, all four seats the same |
+| Commander pod mode in `bot_ladder` | ⏳ | `bot_ladder` is two-seat throughout; `recommend.rs`'s play loop takes `[Pilot; 2]` |
+| Golden traces for a fixed-seed Commander pod | ⏳ | blocked on the pod runner |
+
 ## Tier 1 — High-leverage engine primitives
 
 Each unblocks a large swath of cards.

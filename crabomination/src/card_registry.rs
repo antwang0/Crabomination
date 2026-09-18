@@ -26,17 +26,16 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     for &f in crate::demo::goryos_vengeance_deck() {
         all.push(f);
     }
-    // Commander demo deck (`build_commander_state` / `--play commander`).
-    // Its unique non-cube cards — Crop Rotation, Sylvan Scrying, Kodama's
-    // Reach, Worldly Tutor, the Moxen, Biorhythm, Greater Good, … — aren't
-    // in the cube/SoS/STX pools, so without this they'd render with the
-    // missing-art placeholder (the client image prefetch walks this list)
-    // and a mid-game Commander snapshot couldn't round-trip through the
-    // name→factory lookup. Include the commander itself for the same reasons.
-    for &f in crate::demo::rofellos_commander_main() {
-        all.push(f);
+    // The Commander pod's target decks (`build_commander_state` /
+    // `--play commander` / `bot_ladder --commander`). Their commanders and the
+    // format staples are outside the cube/SoS/STX pools, so without this they
+    // would render with the missing-art placeholder (the client image prefetch
+    // walks this list) and a mid-game Commander snapshot could not round-trip
+    // through the name→factory lookup.
+    for deck in crate::pod::target_decks() {
+        all.extend_from_slice(deck.commanders);
+        all.extend_from_slice(deck.main);
     }
-    all.push(sets::decks::rofellos_llanowar_emissary as CardFactory);
     // Urza, Planeswalker — only ever created by melding (CR 701.37), so it's
     // in no deck/cube pool; registered so melded snapshots round-trip.
     all.push(sets::decks::urza_planeswalker as CardFactory);

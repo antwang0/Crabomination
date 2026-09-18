@@ -82,16 +82,11 @@ pub fn brg_combo_deck() -> &'static [CardFactory] {
 
 // ── Commander demo ─────────────────────────────────────────────────────────
 
-/// Build a 4-player Commander free-for-all. All four seats run the
-/// Rofellos mono-green demo deck (the engine instantiates fresh
-/// `CardInstance`s per seat). Sets life to 40 via `apply_format`,
-/// seats the commander in each player's command zone (Phase J), and
-/// applies the 100-card / singleton format rules.
-///
-/// Each deck is singleton-compliant (CR 903.5b): exactly one of each
-/// non-basic, padded out to 100 cards with basic Forests. Color
-/// identity matches Rofellos's mono-green identity so every
-/// non-basic passes the Phase K validator.
+/// Build a 4-player Commander free-for-all over the four
+/// [`crate::pod::target_decks`] — one deck per seat, so the demo is the same
+/// pod the smoke test plays. `apply_format` sets 40 life and the 100-card /
+/// singleton rules; `seat_commanders` puts each commander in its command zone
+/// with the CR 903.9b replacement registered.
 pub fn build_commander_state() -> GameState {
     use rand::RngExt;
     build_commander_state_seeded(rand::rng().random())
@@ -101,67 +96,14 @@ pub fn build_commander_state() -> GameState {
 /// [`build_demo_state_seeded`] for why the shuffle moved onto the state's own
 /// stream.
 pub fn build_commander_state_seeded(seed: u64) -> GameState {
-    let players = (0..4)
-        .map(|i| Player::new(i, format!("Player {i}")))
-        .collect();
-    let mut state = GameState::new(players);
-    state.apply_format(crate::format::Format::Commander);
+    let decks = crate::pod::pod_field(4);
+    let mut state = crate::pod::build_pod_template(&decks);
     state.rng.reseed(seed);
-
-    for seat in 0..4 {
-        for &f in rofellos_commander_main() {
-            state.add_card_to_library(seat, crate::cube::card_arc(f));
-        }
+    for seat in 0..state.players.len() {
+        state.players[seat].name = format!("Player {seat}");
         state.players[seat].library.shuffle(&mut state.rng.draw());
-        state.seat_commanders(seat, vec![rofellos_llanowar_emissary()]);
-        state.players[seat].wants_ui = true;
     }
     state
-}
-
-/// 99-card mono-green main deck designed for Rofellos, Llanowar
-/// Emissary as commander. Singleton (each non-basic appears once);
-/// padded with Forests for mana stability. Total = 99, plus the
-/// commander = 100.
-pub fn rofellos_commander_main() -> &'static [CardFactory] {
-    // 16 unique non-basic spells + artifacts + 83 Forests = 99.
-    &[
-        // Ramp / fixing
-        llanowar_elves,
-        elvish_spirit_guide,
-        fanatic_of_rhonas,
-        satyr_wayfinder,
-        crop_rotation,
-        sylvan_scrying,
-        kodamas_reach,
-        worldly_tutor,
-        sol_ring,
-        mox_emerald,
-        // CR 903.4 — Mox Pearl's "{T}: Add {W}" makes its identity white, so
-        // it is illegal under a mono-green commander. A colorless rock is
-        // what the slot wanted.
-        mind_stone,
-        // Threats / utility
-        tarmogoyf,
-        reclamation_sage,
-        greater_good,
-        biorhythm,
-        giant_growth,
-        // 83 basic Forests fill the rest. (Basics are exempt from
-        // singleton — CR 903.5b — and a heavy basic count keeps the
-        // bot's mana progression smooth.)
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest, forest, forest, forest, forest, forest,
-        forest, forest, forest,
-    ]
 }
 
 /// 60-card Goryo's Vengeance reanimator deck. Player 1's deck.

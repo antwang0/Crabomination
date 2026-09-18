@@ -39,6 +39,7 @@ pub mod fxhash;
 pub mod game;
 pub mod net;
 pub mod player;
+pub mod pod;
 pub mod replacement;
 pub mod selfplay;
 pub mod server;
