@@ -2358,6 +2358,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
     use crate::effect::ManaPayload;
     match pool {
         ManaPayload::AnyOneColor(_)
+        | ManaPayload::AnyColorInCommanderIdentity
         | ManaPayload::AnyColors(_)
         | ManaPayload::DevotionOfChosenColor
         | ManaPayload::ImprintedCardColor
@@ -3633,7 +3634,15 @@ pub(crate) fn effect_produced_colors(effect: &Effect) -> crate::mana::ColorSet {
     match effect {
         Effect::AddMana { pool, .. } => match pool {
             ManaPayload::Colors(cs) => cs.iter().collect(),
+            // `AnyColorInCommanderIdentity` promises all five at the
+            // definition level, where the commander is not known. That over-
+            // promises in a Commander game, but harmlessly: every card in a
+            // legal deck is inside the commander's identity (CR 903.5c), so
+            // every pip auto-tap asks this source for is a color it can
+            // actually make. A stolen off-identity spell is the exception,
+            // and it fails the payment rather than producing a wrong color.
             ManaPayload::AnyOneColor(_)
+            | ManaPayload::AnyColorInCommanderIdentity
             | ManaPayload::AnyColors(_)
             | ManaPayload::AnyColorOpponentCouldProduce
             | ManaPayload::AnyColorYouCouldProduce => ColorSet::all(),

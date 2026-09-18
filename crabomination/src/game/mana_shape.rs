@@ -48,6 +48,7 @@ pub(crate) fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::man
         }
         ManaPayload::OfColor(c, _) => set.insert(*c),
         ManaPayload::AnyOneColor(_)
+        | ManaPayload::AnyColorInCommanderIdentity
         | ManaPayload::AnyColors(_)
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce

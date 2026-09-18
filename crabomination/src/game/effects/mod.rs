@@ -6,6 +6,7 @@
 //! `ChooseMode`) recurse; leaf mutations perform game-state changes and emit
 //! [`GameEvent`]s.
 
+mod commander;
 mod delayed;
 mod eval;
 pub(crate) use eval::PrintedGates;
@@ -10888,6 +10889,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CommanderToHand { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.commander_to_hand_from_command_zone(p, ctx.source);
+                }
+                Ok(())
+            }
+
             Effect::AddMana { who, pool } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 // Unwrap a spend-restriction wrapper. The inner payload
@@ -11130,6 +11138,37 @@ impl GameState {
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
+                    }
+                    ManaPayload::AnyColorInCommanderIdentity => {
+                        // CR 903.4 — "any color in your commander's color
+                        // identity". Same shape as `ImprintedCardColor`: a
+                        // restricted `ChooseColor`, one pip.
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        let legal = self.commander_identity_colors(p);
+                        if self.players[p].wants_ui {
+                            self.suspend_signal = Some(Box::new((
+                                crate::decision::Decision::ChooseColor { source, legal },
+                                PendingEffectState::AnyOneColorPending {
+                                    player: p,
+                                    count: 1,
+                                    restriction,
+                                },
+                                Effect::Noop,
+                            )));
+                            return Ok(());
+                        }
+                        let answer = self.decider.decide(
+                            &crate::decision::Decision::ChooseColor {
+                                source,
+                                legal: legal.clone(),
+                            },
+                        );
+                        let color = match answer {
+                            crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
+                            _ => legal[0],
+                        };
+                        add_one(self, p, color);
+                        events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                     }
                     ManaPayload::ImprintedCardColor => {
                         // Chrome Mox — add one mana of a color of the card

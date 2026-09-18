@@ -2356,6 +2356,17 @@ pub enum ManaPayload {
     /// permanent destroyed this way". Falls back to the first listed
     /// color when the decider can't choose.
     OfColors(Vec<Color>, Value),
+    /// CR 903.4 — "Add one mana of any color in your commander's color
+    /// identity" (Command Tower, Arcane Signet, Commander's Sphere, Path of
+    /// Ancestry, Opal Palace). The legal-color set is the union of the
+    /// controller's commanders' color identities.
+    ///
+    /// With no commander the set is empty. Rather than produce nothing, the
+    /// engine keeps its pre-Commander approximation there — any color — so
+    /// these cards behave in a cube or constructed game exactly as they did
+    /// before this variant existed and no non-Commander trace moves. In a
+    /// Commander game, where the rule has something to say, it is faithful.
+    AnyColorInCommanderIdentity,
     /// Add one mana of any color a controller's opponent's land could
     /// produce. The pool of legal colors is the union of basic-land
     /// types under any opponent's control (`Plains` → White, `Island`
@@ -5228,6 +5239,11 @@ pub enum Effect {
     /// "Exile [this spell]" as part of its own resolution (Revel in
     /// Silence). Same flag pattern as `ShuffleSelfIntoLibrary`.
     ExileResolvingSpell,
+
+    /// CR 903 — "Put your commander into your hand from the command zone"
+    /// (Command Beacon). With two commanders the controller chooses one.
+    /// Does nothing when no commander of `who`'s is in the command zone.
+    CommanderToHand { who: PlayerRef },
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },

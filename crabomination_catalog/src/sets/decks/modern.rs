@@ -28320,34 +28320,20 @@ pub fn arcane_signet() -> CardDefinition {
         name: "Arcane Signet",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
-            },
-            ..Default::default()
-        }],
+        activated_abilities: vec![crate::sets::tap_add_commander_identity()],
         ..Default::default()
     }
 }
 
-/// Commander's Sphere — {3} Artifact. {T}: Add one mana of any color (commander
-/// identity approximated as any color). Sacrifice this artifact: Draw a card.
+/// Commander's Sphere — {3} Artifact. {T}: Add one mana of any color in your
+/// commander's color identity. Sacrifice this artifact: Draw a card.
 pub fn commanders_sphere() -> CardDefinition {
     CardDefinition {
         name: "Commander's Sphere",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![
-            ActivatedAbility {
-                tap_cost: true,
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
-                },
-                ..Default::default()
-            },
+            crate::sets::tap_add_commander_identity(),
             ActivatedAbility {
                 sac_cost: true,
                 effect: Effect::Draw {

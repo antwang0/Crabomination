@@ -1542,7 +1542,8 @@ impl Effect {
             | Effect::ExchangeControlWithSharedType { what }
             | Effect::GainAllActivatedAbilitiesOf { what, .. } => sel_has_target(what),
             Effect::AddManaKeptThisTurn { who, .. }
-            | Effect::AddManaKeptThisTurnCount { who, .. } => player_has_target(who),
+            | Effect::AddManaKeptThisTurnCount { who, .. }
+            | Effect::CommanderToHand { who } => player_has_target(who),
             Effect::AddManaEqualToPermanentCost { .. } => false,
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {
@@ -1571,6 +1572,7 @@ impl Effect {
                     | ManaPayload::AnyColorOpponentCouldProduce
                     | ManaPayload::AnyColorYouCouldProduce
                     | ManaPayload::AnyColorAmongLegendaries
+                    | ManaPayload::AnyColorInCommanderIdentity
                     | ManaPayload::DraftNotedColorOfSource => false,
                 }
             }

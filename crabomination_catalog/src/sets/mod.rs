@@ -37,6 +37,22 @@ pub fn tap_add_any_color() -> ActivatedAbility {
     }
 }
 
+/// CR 903.4 mana shorthand: `{T}: Add one mana of any color in your
+/// commander's color identity.` — Command Tower, Arcane Signet, Commander's
+/// Sphere, Path of Ancestry. Outside a Commander game the controller has no
+/// commander and the ability behaves as plain "any color"; see
+/// `ManaPayload::AnyColorInCommanderIdentity`.
+pub fn tap_add_commander_identity() -> ActivatedAbility {
+    ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::AnyColorInCommanderIdentity,
+        },
+        ..Default::default()
+    }
+}
+
 /// Mana ability shorthand: `{T}: Add {C}.` (one true colorless pip, not
 /// generic). Used by colorless-only lands (Wastes, Petrified Hamlet) and
 /// Eldrazi-aligned utility lands.

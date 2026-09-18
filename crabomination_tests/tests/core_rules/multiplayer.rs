@@ -1927,3 +1927,92 @@ fn two_headed_giant_view_reports_the_shared_pool() {
     assert_eq!(v.players[2].life, 30, "the other team is untouched");
     assert_eq!(v.players[2].poison_counters, 0);
 }
+
+// ── CR 903.4 — mana in the commander's color identity ─────────────────────
+
+/// CR 903.4 — "one mana of any color in your commander's color identity".
+/// Command Tower under a mono-green commander makes {G}, and the legal set it
+/// offers the decider is that one color, not all five. Before
+/// `ManaPayload::AnyColorInCommanderIdentity` these cards were plain
+/// any-one-color, so a mono-green deck could tap Command Tower for {U}.
+#[test]
+fn cr_903_4_command_tower_is_limited_to_the_commander_identity() {
+    use crabomination::mana::Color;
+    let mut g = game_with_format(Format::Commander, 4);
+    g.seat_commanders(0, vec![catalog::llanowar_elves()]); // mono-green identity
+    assert_eq!(g.commander_identity_colors(0), vec![Color::Green]);
+
+    let tower = g.add_card_to_battlefield(0, catalog::command_tower());
+    g.clear_sickness(tower);
+    g.priority.player_with_priority = 0;
+    g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: tower,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap Command Tower");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "made {{G}}");
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red] {
+        assert_eq!(g.players[0].mana_pool.amount(c), 0, "no off-identity mana");
+    }
+}
+
+/// CR 903.4 — two commanders combine their identities (Partner), and a
+/// commander's identity is read wherever the card currently is, not only from
+/// the command zone.
+#[test]
+fn cr_903_4_identity_combines_commanders_and_survives_a_zone_change() {
+    use crabomination::mana::Color;
+    let mut g = game_with_format(Format::Commander, 4);
+    let ids = g.seat_commanders(0, vec![catalog::llanowar_elves(), catalog::savannah_lions()]);
+    assert_eq!(g.commander_identity_colors(0), vec![Color::White, Color::Green]);
+
+    // Move one commander to the battlefield: the identity is unchanged.
+    let pos = g.players[0].command.iter().position(|c| c.id == ids[0]).unwrap();
+    let card = g.players[0].command.remove(pos);
+    g.battlefield.push(card);
+    assert_eq!(g.commander_identity_colors(0), vec![Color::White, Color::Green]);
+}
+
+/// Outside a Commander game nobody has a commander, so the identity set is
+/// empty and these cards keep the engine's pre-Commander behaviour: any
+/// color. This is what keeps two-player traces byte-identical.
+#[test]
+fn cr_903_4_no_commander_leaves_the_any_color_behaviour_alone() {
+    use crabomination::mana::Color;
+    let g = two_player_game();
+    assert_eq!(g.commander_identity_colors(0), Color::ALL.to_vec());
+}
+
+/// CR 903 / Command Beacon — "{T}, Sacrifice this land: Put your commander
+/// into your hand from the command zone." The commander leaves the command
+/// zone for the hand, and the CR 903.9b replacement does *not* bounce it
+/// straight back (which would make the ability do nothing).
+#[test]
+fn command_beacon_moves_the_commander_from_the_command_zone_to_hand() {
+    let mut g = game_with_format(Format::Commander, 4);
+    let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+    let beacon = g.add_card_to_battlefield(0, catalog::command_beacon());
+    g.clear_sickness(beacon);
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(crabomination::game::GameAction::ActivateAbility {
+        card_id: beacon,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("sacrifice Command Beacon");
+    crabomination::game::drain_stack(&mut g);
+    assert!(g.players[0].command.is_empty(), "command zone emptied");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert!(g.players[0].hand.iter().any(|c| c.id == cmd), "the commander is in hand");
+    // It is still this seat's commander — designation is a property of the
+    // card, not of the zone (CR 903.3).
+    assert!(g.is_commander(cmd));
+}

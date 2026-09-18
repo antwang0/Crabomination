@@ -5858,6 +5858,30 @@ impl GameState {
 
     // ── Commander identity & damage (Phase J / M) ──────────────────────────
 
+    /// CR 903.4 — the colors in `seat`'s commanders' combined color identity,
+    /// in WUBRG order. A commander is found wherever it currently is (the
+    /// command zone, the battlefield, a graveyard): its identity is a property
+    /// of the card, not of the zone.
+    ///
+    /// Empty identity → all five colors, which is the approximation these
+    /// cards carried before the payload existed. See
+    /// `ManaPayload::AnyColorInCommanderIdentity` for why the fallback is
+    /// there and not "produces nothing".
+    pub fn commander_identity_colors(&self, seat: usize) -> Vec<crate::mana::Color> {
+        let mut set = crate::mana::ColorSet::empty();
+        if let Some(p) = self.players.get(seat) {
+            for &id in &p.commanders {
+                if let Some(c) = self.find_card_anywhere(id) {
+                    set = set.union(crate::format::color_identity(&c.definition));
+                }
+            }
+        }
+        if set == crate::mana::ColorSet::empty() {
+            return crate::mana::Color::ALL.to_vec();
+        }
+        crate::mana::Color::ALL.into_iter().filter(|c| set.contains(*c)).collect()
+    }
+
     /// True if `card_id` is a commander for any player. Used by the
     /// Phase M 21-damage accumulator and by Phase L's cast-from-CZ
     /// (a non-commander has no business hitting that path).
@@ -26313,6 +26337,13 @@ impl GameState {
             if let Some(c) = p.ante.iter().find(|c| c.id == id) {
                 return Some(c);
             }
+            // CR 408 — so is the command zone. A commander sitting there was
+            // invisible to every caller of this function until 2026-09-18,
+            // which is how "read the commander's color identity" came back
+            // empty for a commander that had never left it.
+            if let Some(c) = p.command.iter().find(|c| c.id == id) {
+                return Some(c);
+            }
         }
         if let Some(c) = self.exile.iter().rev().find(|c| c.id == id) {
             return Some(c);
@@ -26340,7 +26371,7 @@ impl GameState {
             _ => None,
         }));
         for p in &self.players {
-            for z in [&*p.graveyard, &*p.hand, &*p.ante, &*p.library] {
+            for z in [&*p.graveyard, &*p.hand, &*p.ante, &*p.command, &*p.library] {
                 ids.extend(z.iter().map(|c| c.id));
             }
         }
@@ -26379,13 +26410,15 @@ impl GameState {
                     p.graveyard.iter().rposition(|c| c.id == id).map(|i| (pi, 1, i))
                 })
                 .or_else(|| p.ante.iter().position(|c| c.id == id).map(|i| (pi, 2, i)))
+                .or_else(|| p.command.iter().position(|c| c.id == id).map(|i| (pi, 3, i)))
         });
         if let Some((pi, z, i)) = found {
             let p = &mut self.players[pi];
             return Some(match z {
                 0 => &mut p.hand[i],
                 1 => &mut p.graveyard[i],
-                _ => &mut p.ante[i],
+                2 => &mut p.ante[i],
+                _ => &mut p.command[i],
             });
         }
         // Exile and the stack are located the same way, for the same reason:
@@ -26448,6 +26481,9 @@ impl GameState {
             if p.ante.iter().any(|c| c.id == id) {
                 return Some(Zone::Ante);
             }
+            if p.command.iter().any(|c| c.id == id) {
+                return Some(Zone::Command);
+            }
         }
         if self.exile.iter().rev().any(|c| c.id == id) {
             return Some(Zone::Exile);
@@ -26490,7 +26526,10 @@ impl GameState {
             }
         }
         for (i, p) in self.players.iter().enumerate() {
-            if p.graveyard.iter().rev().any(|c| c.id == id) || p.hand.iter().any(|c| c.id == id) {
+            if p.graveyard.iter().rev().any(|c| c.id == id)
+                || p.hand.iter().any(|c| c.id == id)
+                || p.command.iter().any(|c| c.id == id)
+            {
                 return Some(i);
             }
         }

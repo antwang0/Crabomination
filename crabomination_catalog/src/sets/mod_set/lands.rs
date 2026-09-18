@@ -266,14 +266,34 @@ pub fn exotic_orchard() -> CardDefinition {
 // ── Commander mana lands ─────────────────────────────────────────────────────
 
 /// Command Tower — Land. "{T}: Add one mana of any color in your commander's
-/// color identity." Approximated as unrestricted any-one-color (no commander
-/// identity gate), matching the Exotic Orchard / Arcane Signet convention.
+/// color identity" (CR 903.4), via `ManaPayload::AnyColorInCommanderIdentity`.
 pub fn command_tower() -> CardDefinition {
-    use super::super::tap_add_any_color;
     CardDefinition {
         name: "Command Tower",
         card_types: vec![CardType::Land],
-        activated_abilities: vec![tap_add_any_color()],
+        activated_abilities: vec![super::super::tap_add_commander_identity()],
+        ..Default::default()
+    }
+}
+
+/// Command Beacon — Land. "{T}: Add {C}." and "{T}, Sacrifice this land: Put
+/// your commander into your hand from the command zone." The sacrifice is an
+/// activation cost, so the commander reaches hand even though the land is
+/// already gone; the CR 903.9b hand replacement is declined (see
+/// `GameState::commander_to_hand_from_command_zone`).
+pub fn command_beacon() -> CardDefinition {
+    CardDefinition {
+        name: "Command Beacon",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            crate::card::ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: crate::effect::Effect::CommanderToHand { who: PlayerRef::You },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
