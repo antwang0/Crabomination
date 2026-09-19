@@ -64,13 +64,8 @@ pub fn uncharted_haven() -> CardDefinition {
     CardDefinition {
         name: "Uncharted Haven",
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap {
-                    what: Selector::This,
-                },
-            },
             etb(Effect::ChooseColorForSelf),
         ],
         activated_abilities: vec![ActivatedAbility {

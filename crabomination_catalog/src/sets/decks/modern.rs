@@ -2269,9 +2269,6 @@ pub fn bojuka_bog() -> CardDefinition {
     let etb = TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
         effect: Effect::Seq(vec![
-            Effect::Tap {
-                what: Selector::This,
-            },
             // "Exile **target player's** graveyard" — the dedicated primitive
             // rather than a `Move` over a zone, because a `Move`'s player slot
             // reads as friendly to the auto-target walk and this one is hate.
@@ -2285,6 +2282,7 @@ pub fn bojuka_bog() -> CardDefinition {
         name: "Bojuka Bog",
         // ⚠ Printed "Land" — it taps for {B} without being a Swamp.
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -6215,9 +6213,6 @@ pub fn lotus_field() -> CardDefinition {
     let etb = TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
         effect: Effect::Seq(vec![
-            Effect::Tap {
-                what: Selector::This,
-            },
             Effect::Sacrifice {
                 who: Selector::You,
                 count: Value::Const(2),
@@ -6228,6 +6223,7 @@ pub fn lotus_field() -> CardDefinition {
     CardDefinition {
         name: "Lotus Field",
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
         keywords: vec![Keyword::Hexproof],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
@@ -10363,14 +10359,8 @@ pub fn mortuary_mire() -> CardDefinition {
         name: "Mortuary Mire",
         // ⚠ Printed "Land" — it taps for {B} without being a Swamp.
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
         triggered_abilities: vec![
-            // ETB tapped.
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap {
-                    what: Selector::This,
-                },
-            },
             // ETB optional graveyard recursion of a creature card.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -13632,6 +13622,7 @@ pub fn alley_assailant() -> CardDefinition {
         name: "Alley Assailant",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
+        static_abilities: vec![crate::sets::enters_tapped()],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
             ..Default::default()
@@ -13640,9 +13631,6 @@ pub fn alley_assailant() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Disguise(cost(&[generic(4), b(), b()]))],
         triggered_abilities: vec![
-            etb(Effect::Tap {
-                what: Selector::This,
-            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
                 effect: Effect::Drain {
@@ -37699,6 +37687,7 @@ pub fn geralfs_messenger() -> CardDefinition {
         name: "Geralf's Messenger",
         cost: cost(&[b(), b(), b()]),
         card_types: vec![CardType::Creature],
+        static_abilities: vec![crate::sets::enters_tapped()],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie],
             ..Default::default()
@@ -37707,9 +37696,6 @@ pub fn geralfs_messenger() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Undying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Tap {
-                what: Selector::This,
-            },
             Effect::LoseLife {
                 who: target_filtered(SelectionRequirement::OpponentPlayer),
                 amount: Value::Const(2),
@@ -56151,17 +56137,14 @@ pub fn castle_garenbrig() -> CardDefinition {
     CardDefinition {
         name: "Castle Garenbrig",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorExists(Selector::EachPermanent(
-                    SelectionRequirement::HasLandType(LandType::Forest)
-                        .and(SelectionRequirement::ControlledByYou),
-                )),
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This land enters tapped unless you control a Forest.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                            SelectionRequirement::HasLandType(LandType::Forest)
+                                .and(SelectionRequirement::ControlledByYou),
+                        )),
             },
         }],
         activated_abilities: vec![
@@ -60727,6 +60710,20 @@ pub fn dwarven_mine() -> CardDefinition {
     CardDefinition {
         name: "Dwarven Mine",
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This land enters tapped unless you control three or more other Mountains.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::HasLandType(LandType::Mountain)
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::OtherThanSource),
+                        ),
+                        n: Value::Const(3),
+                    },
+            },
+        }],
         subtypes: Subtypes {
             land_types: vec![LandType::Mountain],
             ..Default::default()
@@ -60757,9 +60754,7 @@ pub fn dwarven_mine() -> CardDefinition {
                     ..Default::default()
                 }),
             }),
-            else_: Box::new(Effect::Tap {
-                what: Selector::This,
-            }),
+            else_: Box::new(Effect::Noop),
         })],
         ..Default::default()
     }

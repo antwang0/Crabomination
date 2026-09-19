@@ -282,6 +282,7 @@ pub fn field_of_the_dead() -> CardDefinition {
         power: 2,
         toughness: 2,
         card_types: vec![CardType::Creature],
+        static_abilities: vec![crate::sets::enters_tapped()],
         colors: vec![Color::Black],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie],
@@ -294,12 +295,6 @@ pub fn field_of_the_dead() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_for_colorless(1)],
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap {
-                    what: Selector::This,
-                },
-            },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(Predicate::All(vec![

@@ -84,13 +84,8 @@ pub fn sphere_of_the_suns() -> CardDefinition {
         name: "Sphere of the Suns",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
+        static_abilities: vec![crate::sets::enters_tapped()],
         enters_with_counters: Some((CounterType::Charge, Value::Const(3))),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap {
-                what: Selector::This,
-            },
-        }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             remove_counter_cost: Some((CounterType::Charge, 1)),

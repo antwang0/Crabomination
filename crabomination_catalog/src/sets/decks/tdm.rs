@@ -1868,21 +1868,18 @@ pub fn kishla_village() -> CardDefinition {
     CardDefinition {
         name: "Kishla Village",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        R::HasLandType(LandType::Island)
-                            .or(R::HasLandType(LandType::Swamp))
-                            .and(R::ControlledByYou),
-                    ),
-                    n: Value::ONE,
-                },
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This land enters tapped unless you control an Island or a Swamp.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorCountAtLeast {
+                            sel: Selector::EachPermanent(
+                                R::HasLandType(LandType::Island)
+                                    .or(R::HasLandType(LandType::Swamp))
+                                    .and(R::ControlledByYou),
+                            ),
+                            n: Value::ONE,
+                        },
             },
         }],
         activated_abilities: vec![
@@ -2045,21 +2042,18 @@ pub fn great_arashin_city() -> CardDefinition {
     CardDefinition {
         name: "Great Arashin City",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorCountAtLeast {
-                    sel: Selector::EachPermanent(
-                        R::HasLandType(LandType::Forest)
-                            .or(R::HasLandType(LandType::Plains))
-                            .and(R::ControlledByYou),
-                    ),
-                    n: Value::ONE,
-                },
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This land enters tapped unless you control a Forest or a Plains.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorCountAtLeast {
+                            sel: Selector::EachPermanent(
+                                R::HasLandType(LandType::Forest)
+                                    .or(R::HasLandType(LandType::Plains))
+                                    .and(R::ControlledByYou),
+                            ),
+                            n: Value::ONE,
+                        },
             },
         }],
         activated_abilities: vec![

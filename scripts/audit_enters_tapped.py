@@ -33,8 +33,10 @@ Columns:
   shared `etb_tap()` helper, so this column is one helper and its call sites
   rather than N hand-written bodies.
 
-`--gate` fails if either cycle this run put on the replacement (the ten slow
-lands, the ten battle lands) comes back as a trigger.
+**The class is CLOSED: this census read 83 when it was written and reads 0.**
+`--gate` therefore fails on ANY row, not only on a regression of the two
+cycles it names — a new card that prints "enters tapped" and ships a trigger
+is a defect, not a backlog item.
 
 ⚠ Reader limitation, shared with every name-keyed script here: a card whose
 body delegates to a private helper in another module is read through the
@@ -78,6 +80,8 @@ REPLACEMENT = re.compile(
     r"|enters_tapped_unless\(|reveal_or_tapped_land\(|land_type_reveal_land\("
     r"|battle_land\(|triome\(|tri_land\(|tapland_typed\(|tapland_untyped\("
     r"|cycling_dual\(|enters_tapped\(|modern_etb_tap\(|fastland_enters_tapped\("
+    # Helpers whose own body carries the replacement.
+    r"|znr_mdfc_land\(|restless_land\(|slow_land\(|afr_land\("
 )
 
 # The two cycles put on the replacement 2026-09-19. `--gate` fails on a
@@ -177,7 +181,11 @@ def main():
         print(f"REGRESSED: {name} is back on a trigger", file=sys.stderr)
     for name in missing:
         print(f"MISSING: {name} left the catalog", file=sys.stderr)
-    return 1 if regressed or missing else 0
+    # The class closed 2026-09-19, so the gate is the whole census: any new
+    # card that prints "enters tapped" and ships a trigger fails here.
+    if total:
+        print(f"{total} cards are back on the trigger", file=sys.stderr)
+    return 1 if regressed or missing or total else 0
 
 
 if __name__ == "__main__":

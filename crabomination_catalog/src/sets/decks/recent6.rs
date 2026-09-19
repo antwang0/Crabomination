@@ -927,6 +927,19 @@ pub fn mystic_sanctuary() -> CardDefinition {
     CardDefinition {
         name: "Mystic Sanctuary",
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This land enters tapped unless you control three or more other Islands.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorCountAtLeast {
+                            sel: Selector::EachPermanent(
+                                SelectionRequirement::HasLandType(LandType::Island)
+                                    .and(SelectionRequirement::ControlledByYou),
+                            ),
+                            n: Value::Const(4),
+                        },
+            },
+        }],
         subtypes: Subtypes {
             land_types: vec![LandType::Island],
             ..Default::default()
@@ -966,9 +979,7 @@ pub fn mystic_sanctuary() -> CardDefinition {
                         },
                     }),
                 }),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
+                else_: Box::new(Effect::Noop),
             },
         }],
         ..Default::default()

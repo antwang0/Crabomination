@@ -8512,18 +8512,13 @@ pub fn diregraf_ghoul() -> CardDefinition {
         name: "Diregraf Ghoul",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
+        static_abilities: vec![crate::sets::enters_tapped()],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap {
-                what: Selector::This,
-            },
-        }],
         ..Default::default()
     }
 }

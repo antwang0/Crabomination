@@ -858,16 +858,13 @@ pub fn monumental_henge() -> CardDefinition {
     CardDefinition {
         name: "Monumental Henge",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![crate::card::TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorExists(Selector::EachPermanent(
-                    R::HasLandType(LandType::Plains).and(R::ControlledByYou),
-                )),
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This land enters tapped unless you control a Plains.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                            R::HasLandType(LandType::Plains).and(R::ControlledByYou),
+                        )),
             },
         }],
         activated_abilities: vec![
@@ -905,16 +902,13 @@ pub fn spymasters_vault() -> CardDefinition {
     CardDefinition {
         name: "Spymaster's Vault",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![crate::card::TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::If {
-                cond: Predicate::SelectorExists(Selector::EachPermanent(
-                    R::HasLandType(LandType::Swamp).and(R::ControlledByYou),
-                )),
-                then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap {
-                    what: Selector::This,
-                }),
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "This land enters tapped unless you control a Swamp.",
+            effect: crate::effect::StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                            R::HasLandType(LandType::Swamp).and(R::ControlledByYou),
+                        )),
             },
         }],
         activated_abilities: vec![

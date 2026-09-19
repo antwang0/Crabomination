@@ -287,17 +287,12 @@ pub fn mirage_mesa() -> CardDefinition {
     CardDefinition {
         name: "Mirage Mesa",
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
         subtypes: Subtypes {
             land_types: vec![LandType::Desert],
             ..Default::default()
         },
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap {
-                    what: Selector::This,
-                },
-            },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::ChooseColorForSelf,
@@ -383,14 +378,9 @@ pub fn valgavoths_lair() -> CardDefinition {
     CardDefinition {
         name: "Valgavoth's Lair",
         card_types: vec![CardType::Enchantment, CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
         keywords: vec![Keyword::Hexproof],
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap {
-                    what: Selector::This,
-                },
-            },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::ChooseColorForSelf,

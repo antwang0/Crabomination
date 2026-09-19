@@ -841,16 +841,11 @@ pub fn tolaria_west() -> CardDefinition {
     CardDefinition {
         name: "Tolaria West",
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
         activated_abilities: vec![
             tap_add(Color::Blue),
             transmute(cost(&[generic(1), u(), u()]), 0),
         ],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap {
-                what: Selector::This,
-            },
-        }],
         ..Default::default()
     }
 }

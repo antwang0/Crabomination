@@ -7222,7 +7222,11 @@ pub fn cori_mountain_monastery() -> CardDefinition {
     CardDefinition {
         name: "Cori Mountain Monastery",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![land_tapped_unless(LandType::Plains, LandType::Island)],
+        static_abilities: vec![land_tapped_unless(
+            "This land enters tapped unless you control a Plains or an Island.",
+            LandType::Plains,
+            LandType::Island,
+        )],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
@@ -7260,7 +7264,11 @@ pub fn mistrise_village() -> CardDefinition {
     CardDefinition {
         name: "Mistrise Village",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![land_tapped_unless(LandType::Mountain, LandType::Forest)],
+        static_abilities: vec![land_tapped_unless(
+            "This land enters tapped unless you control a Mountain or a Forest.",
+            LandType::Mountain,
+            LandType::Forest,
+        )],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
@@ -7283,25 +7291,23 @@ pub fn mistrise_village() -> CardDefinition {
 
 /// "Enters tapped unless you control a land of `type_a` or `type_b`" — the
 /// check-land ETB conditional reused by recent dual-color utility lands.
+/// "This land enters tapped unless you control a [type A] or a [type B]" — CR
+/// 614.1c, so a `StaticEffect::EntersTappedUnless` rather than the ETB trigger
+/// it used to be. See `sets::enters_tapped`.
 fn land_tapped_unless(
+    description: &'static str,
     type_a: crate::card::LandType,
     type_b: crate::card::LandType,
-) -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::HasLandType(type_a)
-                        .or(SelectionRequirement::HasLandType(type_b))
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                n: Value::Const(1),
-            },
-            then: Box::new(Effect::Noop),
-            else_: Box::new(Effect::Tap {
-                what: Selector::This,
-            }),
+) -> crate::effect::StaticAbility {
+    crate::effect::StaticAbility {
+        description,
+        effect: crate::effect::StaticEffect::EntersTappedUnless {
+            applies_to: Selector::This,
+            condition: Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::HasLandType(type_a)
+                    .or(SelectionRequirement::HasLandType(type_b))
+                    .and(SelectionRequirement::ControlledByYou),
+            )),
         },
     }
 }

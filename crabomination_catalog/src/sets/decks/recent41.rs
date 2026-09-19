@@ -127,12 +127,7 @@ pub fn spawning_pool() -> CardDefinition {
     CardDefinition {
         name: "Spawning Pool",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap {
-                what: Selector::This,
-            },
-        }],
+        static_abilities: vec![crate::sets::enters_tapped()],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,

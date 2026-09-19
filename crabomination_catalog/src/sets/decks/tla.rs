@@ -4533,9 +4533,7 @@ pub fn white_lotus_tile() -> CardDefinition {
         cost: cost(&[generic(4)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(Effect::Tap {
-            what: Selector::This,
-        })],
+        static_abilities: vec![crate::sets::enters_tapped()],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {

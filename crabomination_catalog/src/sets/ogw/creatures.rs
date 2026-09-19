@@ -2454,8 +2454,8 @@ pub fn spawning_bed() -> CardDefinition {
 
 /// Cinder Barrens — Land. Enters tapped; {T}: Add {B} or {R}.
 pub fn cinder_barrens() -> CardDefinition {
-    use crate::card::{ActivatedAbility, EventKind, EventScope, EventSpec, TriggeredAbility};
-    use crate::effect::{ManaPayload, PlayerRef, Selector, Value};
+    use crate::card::ActivatedAbility;
+    use crate::effect::{ManaPayload, PlayerRef, Value};
     let tap_for = |color| ActivatedAbility {
         tap_cost: true,
         effect: Effect::AddMana {
@@ -2468,12 +2468,7 @@ pub fn cinder_barrens() -> CardDefinition {
         name: "Cinder Barrens",
         cost: crate::mana::ManaCost::default(),
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap {
-                what: Selector::This,
-            },
-        }],
+        static_abilities: vec![crate::sets::enters_tapped()],
         activated_abilities: vec![
             tap_for(crate::mana::Color::Black),
             tap_for(crate::mana::Color::Red),
@@ -2486,22 +2481,18 @@ pub fn cinder_barrens() -> CardDefinition {
 /// {T}: Add {C}.
 pub fn crumbling_vestige() -> CardDefinition {
     use crate::card::{ActivatedAbility, EventKind, EventScope, EventSpec, TriggeredAbility};
-    use crate::effect::{ManaPayload, PlayerRef, Selector, Value};
+    use crate::effect::{ManaPayload, PlayerRef, Value};
     CardDefinition {
         name: "Crumbling Vestige",
         cost: crate::mana::ManaCost::default(),
         card_types: vec![CardType::Land],
+        static_abilities: vec![crate::sets::enters_tapped()],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Tap {
-                    what: Selector::This,
-                },
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::AnyColors(Value::Const(1)),
-                },
-            ]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyColors(Value::Const(1)),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

@@ -82,7 +82,7 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
-| Bugs & robustness | [OPEN 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards ship it as a trigger in a clause the 614.12 audit does not match](#open-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-ship-it-as-a-trigger-in-a-clause-the-61412-audit-does-not-match) | 83 → 51 |
+| Bugs & robustness | [OPEN 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards ship it as a trigger in a clause the 614.12 audit does not match](#fixed-2026-09-19-the-forty-ninth-find--enters-tapped-is-a-replacement-too-and-83-cards-shipped-it-as-a-trigger-in-a-clause-the-61412-audit-cannot-match) | 83 → 0 |
 | Bugs & robustness | [OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER](#open-2026-09-19-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-model-it-as-an-etb-trigger) | 89 → 57 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
@@ -90,7 +90,7 @@ the handoff.
 
 # Bugs & robustness
 
-## OPEN 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards ship it as a trigger in a clause the 614.12 audit does not match
+## FIXED 2026-09-19 (the forty-ninth find) — "enters tapped" is a REPLACEMENT too, and 83 cards shipped it as a trigger in a clause the 614.12 audit cannot match
 
 The forty-eighth find's census keys on the printed words **"As … enters"**.
 That is the right needle for CR 614.12 and the wrong one for the class:
@@ -133,8 +133,25 @@ including the shared `tri_land` and `cycling_dual` builders and
 into `enters_tapped()` plus `etb_{scry,gain,surveil}_one()` behind two
 builders, `tapland_untyped` and `tapland_typed` (26 cards).
 
-⚠ **What is left — 19 conditional, 32 unconditional — is hand-written bodies,
-not helpers**, so the next pass is per-card rather than per-helper.
+✅✅ **And then the hand-written remainder, so the class is CLOSED: 83 → 0.**
+Two more helper cycles turned up in it once the helper-shaped part was gone —
+`fastland_etb_conditional_tap` (17 call sites) and `land_tapped_unless` (2) —
+and the last 26 were per-card: eight `Effect::If { cond, then: Noop, else_:
+Tap(This) }` bodies that are an `EntersTappedUnless` with the same
+predicate, and eighteen unconditional ones. Two of those eight keep their
+trigger, because the card really does have one: Dwarven Mine's "when this
+land enters **untapped**, create a Dwarf" and Mystic Sanctuary's recursion
+are the `then` branch, which now sits beside the replacement instead of
+inside it. `--gate` fails on **any** row now, not only a regression of the
+named cycles.
+
+⚠ **Three of the rows were reader misses, and finding them is the script's
+other job.** `tri_land(` and `dual_land_with(` sat in the TRIGGER needle after
+`tri_land` became a replacement (and `dual_land_with` never tapped anything —
+it takes its triggers as an argument), which inflated the count from 36 to
+51. Skyclave Cleric and Restless Vents delegate to helpers (`znr_mdfc_land`,
+`restless_land`) that were already correct. **An audit's needles age with the
+tree, and a stale needle inflates the number it exists to ratchet.**
 
 📐 **And the re-bless was on the middle commit only, which is the reading.**
 `etb_tap()`'s conversion moved the seeded pod table hard — one game 47 → 97
