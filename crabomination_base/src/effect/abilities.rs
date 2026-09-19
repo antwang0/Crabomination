@@ -2134,6 +2134,11 @@ pub enum StaticEffect {
     /// battlefield sibling of `HasActivatedAbilitiesOfGraveyardCreatures`;
     /// also surfaced by `granted_abilities_for`.
     HasActivatedAbilitiesOfOtherNamedControlledCreatures,
+    /// Drana and Linvala — "has all activated abilities of all creatures your
+    /// opponents control." The opponents' sibling of
+    /// `HasActivatedAbilitiesOfOtherNamedControlledCreatures`; also surfaced
+    /// by `granted_abilities_for`. A self-only grant.
+    HasActivatedAbilitiesOfOpponentCreatures,
     /// CR 700.5 / Theros gods — "As long as your devotion to [colors] is
     /// less than `threshold`, this isn't a creature." Resolved at
     /// `gather_continuous_effects` time (which can read devotion via the
@@ -2434,6 +2439,11 @@ pub enum StaticEffect {
     /// checked in `activate_ability` (sibling of
     /// `ArtifactActivatedAbilitiesLocked`).
     CreatureActivatedAbilitiesLocked,
+    /// Drana and Linvala — "activated abilities of creatures your opponents
+    /// control can't be activated" (mana abilities included). The one-sided
+    /// sibling of `CreatureActivatedAbilitiesLocked`, checked in
+    /// `activate_ability` against the creature's controller's opponents.
+    OpponentsCreatureAbilitiesLocked,
     /// "You may activate abilities of creatures you control as though those
     /// creatures had haste." Exempts the controller's creatures from the
     /// CR 602.5g summoning-sickness gate on {T}/{Q} costs (Tyvar, Jubilant

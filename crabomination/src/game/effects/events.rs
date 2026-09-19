@@ -66,6 +66,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::MonarchChanged { .. } => bits!(K::BecameMonarch),
         E::CardDrawn { .. } => bits!(K::CardDrawn),
         E::FirstCardDrawnThisTurn { .. } => bits!(K::FirstCardDrawnThisTurn),
+        E::SecondCardDrawnThisTurn { .. } => bits!(K::SecondCardDrawnThisTurn),
         E::CardDiscarded { .. } => bits!(K::CardDiscarded),
         E::LandPlayed { .. } => bits!(K::LandPlayed),
         E::SpellCast { .. } => bits!(K::SpellCast),
@@ -264,6 +265,7 @@ fn reference_event_kind_matches(
         (EventKind::BecameMonarch, GameEvent::MonarchChanged { .. }) => true,
         (EventKind::CardDrawn, GameEvent::CardDrawn { .. }) => true,
         (EventKind::FirstCardDrawnThisTurn, GameEvent::FirstCardDrawnThisTurn { .. }) => true,
+        (EventKind::SecondCardDrawnThisTurn, GameEvent::SecondCardDrawnThisTurn { .. }) => true,
         (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
         (EventKind::LandPlayed, GameEvent::LandPlayed { .. }) => true,
         (EventKind::SpellCast, GameEvent::SpellCast { .. }) => true,
@@ -1237,6 +1239,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
     match event {
         GameEvent::CardDrawn { player, .. }
         | GameEvent::FirstCardDrawnThisTurn { player, .. }
+        | GameEvent::SecondCardDrawnThisTurn { player, .. }
         | GameEvent::CardDiscarded { player, .. }
         | GameEvent::DiscardedBatch { player, .. }
         | GameEvent::LandPlayed { player, .. }
@@ -1399,6 +1402,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Lorehold the Historian's miracle grant relies on this.
         GameEvent::CardDrawn { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::FirstCardDrawnThisTurn { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::SecondCardDrawnThisTurn { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardDiscarded { card_id, .. } => Some(EntityRef::Card(*card_id)),
         // Bind TriggerSource to the milled card (now in a graveyard) so filter
         // predicates can introspect it ("a creature card put into a graveyard
@@ -1483,6 +1487,7 @@ pub(crate) fn emblem_event_matches(
             | (EventKind::LifeLost, GameEvent::LifeLost { .. })
             | (EventKind::CardDrawn, GameEvent::CardDrawn { .. })
             | (EventKind::FirstCardDrawnThisTurn, GameEvent::FirstCardDrawnThisTurn { .. })
+            | (EventKind::SecondCardDrawnThisTurn, GameEvent::SecondCardDrawnThisTurn { .. })
             | (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. })
             | (EventKind::SpellCast, GameEvent::SpellCast { .. })
             | (EventKind::LandPlayed, GameEvent::LandPlayed { .. })
@@ -1654,6 +1659,7 @@ mod tests {
             E::TurnStarted { player: 0, turn: 3 },
             E::CardDrawn { player: 0, card_id: c },
             E::FirstCardDrawnThisTurn { player: 0, card_id: c },
+            E::SecondCardDrawnThisTurn { player: 0, card_id: c },
             E::CardDiscarded { player: 0, card_id: c },
             E::OpponentCausedYouToDiscard { player: 0, card_id: c },
             E::DiscardedBatch { player: 0, count: 2 },
@@ -1831,6 +1837,7 @@ mod tests {
             K::CreatureLeavesBattlefieldNotDying,
             K::CardDrawn,
             K::FirstCardDrawnThisTurn,
+            K::SecondCardDrawnThisTurn,
             K::CardDiscarded,
             K::OpponentCausedYouToDiscard,
             K::LandPlayed,

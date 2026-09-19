@@ -19269,6 +19269,8 @@ impl GameState {
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
                 if self.players[p].cards_drawn_this_turn == 1 {
                     events.push(GameEvent::FirstCardDrawnThisTurn { player: p, card_id: id });
+                } else if self.players[p].cards_drawn_this_turn == 2 {
+                    events.push(GameEvent::SecondCardDrawnThisTurn { player: p, card_id: id });
                 }
                 self.maybe_grant_miracle(p, id);
                 true
@@ -28291,6 +28293,7 @@ fn static_effect_to_effects(
             // Necrotic Ooze — surfaced via `granted_abilities_for`, not a layer.
             | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
             | StaticEffect::HasActivatedAbilitiesOfOtherNamedControlledCreatures
+            | StaticEffect::HasActivatedAbilitiesOfOpponentCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
             | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
             | StaticEffect::CostReductionPerCounterOnSource { .. }
@@ -28471,6 +28474,7 @@ fn static_effect_to_effects(
             // CreatureActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Cursed Totem); no layer effect.
             | StaticEffect::CreatureActivatedAbilitiesLocked
+            | StaticEffect::OpponentsCreatureAbilitiesLocked
             // CountersCantBePlaced (Solemnity) — consulted at every
             // counter-placement site via `counters_locked`; no layer effect.
             | StaticEffect::CountersCantBePlaced

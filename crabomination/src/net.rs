@@ -2665,6 +2665,9 @@ pub enum GameEventWire {
     /// Internal "turn's first draw" trigger signal — the concrete `CardDrawn`
     /// row already narrates it, so this renders blank.
     FirstCardDrawnThisTurn { player: usize },
+    /// Internal "turn's second draw" trigger signal; renders blank like
+    /// `FirstCardDrawnThisTurn`.
+    SecondCardDrawnThisTurn { player: usize },
     CardDiscarded { player: usize, card_id: CardId },
     /// Wire mirror of `GameEvent::OpponentCausedYouToDiscard`.
     OpponentCausedYouToDiscard { player: usize, card_id: CardId },
@@ -3233,6 +3236,9 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::FirstCardDrawnThisTurn { player, .. } => {
                 GameEventWire::FirstCardDrawnThisTurn { player: *player }
             }
+            GameEvent::SecondCardDrawnThisTurn { player, .. } => {
+                GameEventWire::SecondCardDrawnThisTurn { player: *player }
+            }
         }
     }
 }
@@ -3304,6 +3310,7 @@ impl GameEventWire {
             // The paired `CardDiscarded` row already narrates it.
             E::OpponentCausedYouToDiscard { .. } => String::new(),
             E::FirstCardDrawnThisTurn { .. } => String::new(),
+            E::SecondCardDrawnThisTurn { .. } => String::new(),
             E::Proliferated { player } => format!("{} proliferates", pn(*player)),
             E::Foraged { player } => format!("{} forages", pn(*player)),
             E::EvidenceCollected { player } => format!("{} collects evidence", pn(*player)),

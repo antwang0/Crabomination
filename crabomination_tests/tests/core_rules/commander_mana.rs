@@ -613,7 +613,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             use SpendRestriction::*;
             match r {
                 InstantSorceryOnly | ArtifactOnly | CreatureOfTypeUncounterable(_)
-                | CreatureOfType(_) | LandAbilitiesOnly | CreatureOnly
+                | CreatureOfType(_) | CreatureOfAnyTypes(_) | LandAbilitiesOnly | CreatureOnly
                 | CreatureSpellsOrAbilities | NoNonartifactSpells | AbilitiesOnly
                 | LessonSpellsOnly | DevoidSpellsOnly | InstantSorceryUncounterable
                 | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | DragonOrOmenSpell
@@ -629,6 +629,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             ArtifactOnly,
             CreatureOfTypeUncounterable(CreatureType::Bear),
             CreatureOfType(CreatureType::Bear),
+            CreatureOfAnyTypes([CreatureType::Bear, CreatureType::Elf, CreatureType::Elf]),
             LandAbilitiesOnly,
             CreatureOnly,
             CreatureSpellsOrAbilities,

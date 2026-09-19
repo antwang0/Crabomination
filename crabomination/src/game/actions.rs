@@ -803,6 +803,7 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
             SE::HasActivatedAbilitiesOfExiledWithSelf
             | SE::HasActivatedAbilitiesOfGraveyardCreatures
             | SE::HasActivatedAbilitiesOfOtherNamedControlledCreatures
+            | SE::HasActivatedAbilitiesOfOpponentCreatures
             | SE::HasActivatedAbilitiesOfCounteredCreatures
             | SE::HasActivatedAbilitiesOfGraveyardLands
             | SE::HasActivatedAbilitiesOfLibraryTop { .. } => flags |= mana_summary::SELF_GRANT,
@@ -15331,6 +15332,7 @@ impl GameState {
         // one pass per block below.
         let (mut welder, mut ooze, mut marvin, mut kraj, mut safehouse, mut snoop) =
             (false, false, false, false, false, false);
+        let mut drana = false;
         for sa in &me.definition.static_abilities {
             match sa.effect {
                 StaticEffect::HasActivatedAbilitiesOfExiledWithSelf => welder = true,
@@ -15339,6 +15341,7 @@ impl GameState {
                     marvin = true
                 }
                 StaticEffect::HasActivatedAbilitiesOfCounteredCreatures => kraj = true,
+                StaticEffect::HasActivatedAbilitiesOfOpponentCreatures => drana = true,
                 StaticEffect::HasActivatedAbilitiesOfGraveyardLands => safehouse = true,
                 // Conspicuous Snoop, read below off the same list — this pass
                 // is the one that already has it in cache.
@@ -15465,6 +15468,20 @@ impl GameState {
                 if other.controller != seat
                     || other.definition.name == name
                     || !other.definition.is_creature()
+                {
+                    continue;
+                }
+                out.extend(other.definition.activated_abilities.iter());
+            }
+        }
+        // Drana and Linvala — every activated ability of each creature an
+        // opponent of this permanent's controller controls.
+        if drana {
+            let seat = me.controller;
+            for other in &self.battlefield {
+                if other.id == card_id
+                    || !other.definition.is_creature()
+                    || self.same_team(other.controller, seat)
                 {
                     continue;
                 }
@@ -16492,6 +16509,23 @@ impl GameState {
             && bf_src!().is_some_and(|c| c.detained_by.is_some())
         {
             return Err(GameError::AbilitySuppressedByNamedCard);
+        }
+
+        // Drana and Linvala — "activated abilities of creatures your opponents
+        // control can't be activated", mana abilities included. Keyed to the
+        // creature's controller: the lock holds when one of *their* opponents
+        // controls the static.
+        if !source_in_gy && !source_in_hand {
+            let locked_ctrl = bf_src!()
+                .filter(|c| c.definition.is_creature())
+                .map(|c| c.controller);
+            if let Some(ctrl) = locked_ctrl
+                && self.opponent_has_static(ctrl, |e| {
+                    matches!(e, crate::effect::StaticEffect::OpponentsCreatureAbilitiesLocked)
+                })
+            {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
         }
 
         // Cursed Totem / Damping Matrix lock: non-mana activated abilities of

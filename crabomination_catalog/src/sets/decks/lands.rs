@@ -2398,7 +2398,7 @@ pub fn strangled_cemetery() -> CardDefinition {
 /// you control two or more other lands. {T}: Add {A} or {B}." Counted
 /// against the post-ETB battlefield (which already contains this land),
 /// so the untapped threshold is "≥ 3 lands you control".
-fn slow_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
+pub(crate) fn slow_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
     use crate::effect::Predicate;
     CardDefinition {
         name,
