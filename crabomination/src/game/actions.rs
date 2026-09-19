@@ -13786,7 +13786,84 @@ impl GameState {
     /// `forced_only` is false for bots, scripted tests, and engine-driven
     /// auto-pays (Counter-unless-paid, "pay X or sacrifice"), which keep
     /// the original full auto-tap behavior.
+    ///
+    /// CR 119.4 / 107.4f — a Phyrexian pip paid with 2 life needs the life:
+    /// a player can pay life only while their life total is at least the
+    /// amount. The pool pays a Phyrexian pip with life whenever its colour is
+    /// missing and cannot see the life total, so when the payment it made
+    /// would take more life than the payer has, it is undone and retried with
+    /// one more Phyrexian pip (then two, …) demanded as mana. Only a cost with
+    /// a Phyrexian pip whose payment overdrew the life total pays for the retry.
     pub(crate) fn try_pay_after_snapshot_mode(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        snapshot: PaymentSnapshot,
+        forced_only: bool,
+        kind: &crate::mana::SpellKind,
+        spend_float: Option<bool>,
+    ) -> Result<PaymentReceipt, GameError> {
+        use crate::mana::ManaSymbol as S;
+        let phyrexian = cost
+            .symbols
+            .iter()
+            .filter(|s| matches!(s, S::Phyrexian(_) | S::PhyrexianHybrid(_, _)))
+            .count();
+        if phyrexian == 0 {
+            return self.try_pay_after_snapshot_mode_any_life(
+                payer, cost, snapshot, forced_only, kind, spend_float,
+            );
+        }
+        let original = snapshot.clone();
+        let pre = self.snapshot_payment_state(payer);
+        // Converting pips to mana only makes the cost harder, so a first
+        // attempt that fails outright is the answer as it stands.
+        let first = self.try_pay_after_snapshot_mode_any_life(
+            payer, cost, snapshot, forced_only, kind, spend_float,
+        )?;
+        if self.effective_life(payer) >= first.side_effects.life_lost as i32 {
+            return Ok(first);
+        }
+        self.restore_payment_state(payer, pre.clone());
+        let mut last_err = None;
+        for as_mana in 1..=phyrexian {
+            let mut left = as_mana;
+            let attempt = crate::mana::ManaCost {
+                symbols: cost
+                    .symbols
+                    .iter()
+                    .map(|s| match *s {
+                        S::Phyrexian(c) if left > 0 => {
+                            left -= 1;
+                            S::Colored(c)
+                        }
+                        S::PhyrexianHybrid(a, b) if left > 0 => {
+                            left -= 1;
+                            S::Hybrid(a, b)
+                        }
+                        other => other,
+                    })
+                    .collect(),
+            };
+            match self.try_pay_after_snapshot_mode_any_life(
+                payer, &attempt, pre.clone(), forced_only, kind, spend_float,
+            ) {
+                Ok(r) if self.effective_life(payer) >= r.side_effects.life_lost as i32 => {
+                    return Ok(r);
+                }
+                Ok(_) => self.restore_payment_state(payer, pre.clone()),
+                Err(e) => last_err = Some(e),
+            }
+        }
+        self.restore_payment_state(payer, original);
+        // The all-mana attempt pays no life, so it either succeeded above or
+        // left its error here.
+        Err(last_err.unwrap_or(GameError::InsufficientLife))
+    }
+
+    /// [`Self::try_pay_after_snapshot_mode`] without the CR 119.4 life check
+    /// on Phyrexian pips.
+    fn try_pay_after_snapshot_mode_any_life(
         &mut self,
         payer: usize,
         cost: &crate::mana::ManaCost,
@@ -19558,6 +19635,14 @@ impl GameState {
 pub(crate) struct PaymentSnapshot {
     pub pool: crate::mana::ManaPool,
     pub tapped: Vec<(CardId, bool)>,
+}
+
+/// A plain copy with its own `tapped` buffer — only the Phyrexian life
+/// retry in `try_pay_after_snapshot_mode` takes one.
+impl Clone for PaymentSnapshot {
+    fn clone(&self) -> Self {
+        PaymentSnapshot { pool: self.pool.clone(), tapped: self.tapped.clone() }
+    }
 }
 
 impl Drop for PaymentSnapshot {

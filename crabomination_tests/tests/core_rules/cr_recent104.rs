@@ -210,3 +210,70 @@ fn cr_602_2b_a_fetch_lands_life_and_sacrifice_are_paid_on_activation() {
     });
     assert!(r.is_err(), "can't pay 1 life at 0");
 }
+
+/// CR 119.4 / 107.4f — a Phyrexian pip is paid with 2 life only while the life
+/// total is at least 2. The pool paid it with life regardless, so a player at
+/// 1 life cast Mutagenic Growth for free. Short of the life, the pip is paid
+/// with its colour instead, and with neither the spell can't be cast.
+#[test]
+fn cr_119_4_a_phyrexian_pip_needs_the_life_to_pay_it() {
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    let setup = |life: i32| {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].life = life;
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let growth = g.add_card_to_hand(0, catalog::mutagenic_growth());
+        (g, bears, growth)
+    };
+    let cast = |g: &mut GameState, growth, bears| {
+        g.perform_action(GameAction::CastSpell {
+            card_id: growth,
+            target: Some(Target::Permanent(bears)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+
+    // 1 life, no green: unpayable, and nothing was spent.
+    let (mut g, bears, growth) = setup(1);
+    assert!(cast(&mut g, growth, bears).is_err(), "2 life can't be paid from 1");
+    assert_eq!(g.players[0].life, 1);
+    assert!(g.players[0].hand.iter().any(|c| c.id == growth));
+
+    // 1 life and a Forest: the pip is paid with {G}.
+    let (mut g, bears, growth) = setup(1);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    cast(&mut g, growth, bears).expect("paid with the Forest");
+    assert_eq!(g.players[0].life, 1, "no life paid");
+    assert!(g.battlefield_find(forest).unwrap().tapped);
+
+    // 2 life, no green: exactly enough (paying down to 0 is legal).
+    let (mut g, bears, growth) = setup(2);
+    cast(&mut g, growth, bears).expect("2 life from 2");
+    assert_eq!(g.players[0].life, 0);
+
+    // Two pips at 3 life: one is paid with life, the other with {B}
+    // (Dismember, {1}{B/P}{B/P}, off a Swamp and an Island).
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].life = 3;
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::island());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dismember = g.add_card_to_hand(0, catalog::dismember());
+    g.perform_action(GameAction::CastSpell {
+        card_id: dismember,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("one pip with life, one with the Swamp");
+    assert_eq!(g.players[0].life, 1);
+}

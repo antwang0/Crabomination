@@ -1362,11 +1362,33 @@ impl ManaPool {
             }
         }
 
-        // Pass 4: phyrexian pips (pay color if available, else 2 life)
+        // Pass 4: phyrexian pips (pay color if available, else 2 life). A pip
+        // takes its colour only while the pool keeps enough mana for the
+        // generic and snow pips still to be paid: the auto-tapper taps for
+        // those and counts on Phyrexian pips going to life, so a greedy {B}
+        // for a {B/P} left Dismember's {1} unpaid off a Swamp and an Island.
+        // Summed on the first Phyrexian pip only: most payments have none.
+        let later_mana_pips = || -> u32 {
+            cost.symbols
+                .iter()
+                .map(|s| match s {
+                    ManaSymbol::Generic(n) => *n,
+                    ManaSymbol::Snow => 1,
+                    _ => 0,
+                })
+                .sum()
+        };
+        let mut reserve: Option<u32> = None;
         for sym in &cost.symbols {
+            if matches!(sym, ManaSymbol::Phyrexian(_) | ManaSymbol::PhyrexianHybrid(_, _))
+                && reserve.is_none()
+            {
+                reserve = Some(later_mana_pips());
+            }
+            let reserve = reserve.unwrap_or(0);
             match sym {
                 ManaSymbol::Phyrexian(c) => {
-                    if tmp.amount(*c) > 0 {
+                    if tmp.amount(*c) > 0 && tmp.total() > reserve {
                         *tmp.slot_mut(*c) -= 1;
                     } else {
                         side_effects.life_lost += 2;
@@ -1374,9 +1396,9 @@ impl ManaPool {
                 }
                 // {A/B/P}: either color, else 2 life (CR 107.4f).
                 ManaSymbol::PhyrexianHybrid(a, b) => {
-                    if tmp.amount(*a) > 0 {
+                    if tmp.amount(*a) > 0 && tmp.total() > reserve {
                         *tmp.slot_mut(*a) -= 1;
-                    } else if tmp.amount(*b) > 0 {
+                    } else if tmp.amount(*b) > 0 && tmp.total() > reserve {
                         *tmp.slot_mut(*b) -= 1;
                     } else {
                         side_effects.life_lost += 2;
@@ -1385,6 +1407,7 @@ impl ManaPool {
                 _ => {}
             }
         }
+
 
         // Pass 5: snow pips
         let snow_needed: u32 = cost
