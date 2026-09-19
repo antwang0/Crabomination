@@ -551,9 +551,9 @@ pub(crate) struct MenuFields {
     focused: FocusedField,
     format: MatchFormat,
     /// Commander only: seats in the local pod, human included (2-4).
-    pod_size: usize,
+    pub(crate) pod_size: usize,
     /// Commander only: which stock decks the bots play.
-    pod_opponents: PodOpponents,
+    pub(crate) pod_opponents: PodOpponents,
 }
 
 /// The Commander pod sizes the menu offers, human seat included.
@@ -1783,7 +1783,7 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// pilot — `net_eval_det1` at 64 iterations without the combat chains —
 /// and forty September replays showed its attack judgment two generations
 /// behind the lobby's (ML_NOTES "Round 65").
-fn local_bot() -> Box<dyn crabomination::server::Bot> {
+pub(crate) fn local_bot() -> Box<dyn crabomination::server::Bot> {
     load_champion_once();
     Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
         iterations: 256,
@@ -1864,42 +1864,15 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     let (pod_size, pod_opponents) = world
         .get_resource::<MenuFields>()
         .map_or((4, PodOpponents::Random), |f| (f.pod_size, f.pod_opponents));
-    // Commander seats the human's deck — imported, or the first stock pod
-    // deck for "Play vs Bot" — in seat 0 of a 2-4 player pod.
-    let commander_deck = match (&imported, format) {
-        (Some(deck), _) if !deck.commanders.is_empty() => {
-            Some((deck.commanders.clone(), deck.main.clone()))
-        }
-        (None, MatchFormat::Commander) if drafted.is_none() && audit_card.is_none() => {
-            let stock = crabomination::pod::target_decks()[0];
-            Some((stock.commanders.to_vec(), stock.main.to_vec()))
-        }
-        _ => None,
-    };
-    let state = if let Some((commanders, main)) = commander_deck {
-        commander_pod_state(&commanders, &main, pod_size, pod_opponents, &human_name)
-    } else if let Some(deck) = imported {
-        // Imported decklist vs. an opponent chosen by the selected
-        // format: Sealed rolls a fresh random sealed build (the same
-        // generator the recommender's gauntlet uses — this is "how does
-        // my deck do against the field", played by hand); everything
-        // else keeps the stock Modern bot deck. Before the Sealed
-        // branch, the deck-file field and the random-sealed opponent
-        // could never meet: the field always fought `brg_combo_deck`.
-        let (opp_deck, opp_label) = if format == MatchFormat::Sealed {
-            use rand::RngExt;
-            let seed: u64 = rand::rng().random();
-            crabomination::selfplay::random_sealed_opponent(seed)
-        } else {
-            (crabomination::demo::brg_combo_deck().to_vec(), "Bot".to_string())
-        };
-        crabomination::draft::build_draft_match_state(
-            deck.main,
-            opp_deck,
-            human_name.clone(),
-            opp_label,
-        )
+    // An imported deck outranks a draft and an audit, which outrank the
+    // format's stock decks.
+    let state = if imported.is_some() || (drafted.is_none() && audit_card.is_none()) {
+        // Remembered so the game-over "New Game" deals this deck again
+        // rather than the format's stock one.
+        world.insert_resource(RematchDeck(imported.clone()));
+        build_local_match_state(format, imported, pod_size, pod_opponents, &human_name)
     } else if let Some(decks) = drafted {
+        world.insert_resource(RematchDeck(None));
         let mut state = crabomination::draft::build_draft_match_state(
             decks.player_deck,
             decks.opponent_deck,
@@ -1911,28 +1884,89 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
         }
         state
     } else {
-        let mut state = match audit_card.as_deref() {
-            Some(name) => crate::audit::build_audit_state(name).unwrap_or_else(|| {
-                eprintln!("audit: unknown card '{name}', falling back to {:?}", format);
-                format.build_state()
-            }),
-            None => format.build_state(),
-        };
+        world.insert_resource(RematchDeck(None));
+        let name = audit_card.as_deref().unwrap_or_default();
+        let mut state = crate::audit::build_audit_state(name).unwrap_or_else(|| {
+            eprintln!("audit: unknown card '{name}', falling back to {:?}", format);
+            format.build_state()
+        });
         name_seats(&mut state, &human_name, "Bot");
         state
     };
-    let n_seats = state.players.len();
-    let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(n_seats);
-    occupants.push(SeatOccupant::Human(server_seat));
-    for _ in 1..n_seats {
-        occupants.push(SeatOccupant::Bot(local_bot()));
-    }
+    let occupants = local_occupants(server_seat, state.players.len());
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![], Some(sink_for_match));
     });
     world.insert_resource(NetOutbox::new(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));
     world.insert_resource(LatestSnapshot(sink));
+}
+
+/// The human's seat 0 plus one local bot for every other seat of the state.
+pub(crate) fn local_occupants(
+    human: crabomination::server::SeatChannel,
+    n_seats: usize,
+) -> Vec<SeatOccupant> {
+    std::iter::once(SeatOccupant::Human(human))
+        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot())))
+        .collect()
+}
+
+/// The deck the running human-vs-bot match was started with (`None` for the
+/// format's stock decks), kept so the game-over "New Game" deals it again.
+/// Drafted and audit matches don't set it: their rematch is the format's.
+#[derive(Resource, Clone, Default)]
+pub struct RematchDeck(pub Option<ImportedDeck>);
+
+/// A human-vs-bots state for `format`: an imported deck (a Commander list
+/// seats a 2-4 player pod; any other list meets the format's stock
+/// opponent), or the format's stock decks. Shared by the menu and the
+/// game-over "New Game", so both deal the same kind of game.
+pub(crate) fn build_local_match_state(
+    format: MatchFormat,
+    imported: Option<ImportedDeck>,
+    pod_size: usize,
+    pod_opponents: PodOpponents,
+    human_name: &str,
+) -> GameState {
+    // Commander seats the human's deck — imported, or the first stock pod
+    // deck for "Play vs Bot" — in seat 0 of a 2-4 player pod.
+    let commander_deck = match (&imported, format) {
+        (Some(deck), _) if !deck.commanders.is_empty() => {
+            Some((deck.commanders.clone(), deck.main.clone()))
+        }
+        (None, MatchFormat::Commander) => {
+            let stock = crabomination::pod::target_decks()[0];
+            Some((stock.commanders.to_vec(), stock.main.to_vec()))
+        }
+        _ => None,
+    };
+    if let Some((commanders, main)) = commander_deck {
+        return commander_pod_state(&commanders, &main, pod_size, pod_opponents, human_name);
+    }
+    if let Some(deck) = imported {
+        // Imported decklist vs. an opponent chosen by the selected
+        // format: Sealed rolls a fresh random sealed build (the same
+        // generator the recommender's gauntlet uses — this is "how does
+        // my deck do against the field", played by hand); everything
+        // else keeps the stock Modern bot deck.
+        let (opp_deck, opp_label) = if format == MatchFormat::Sealed {
+            use rand::RngExt;
+            let seed: u64 = rand::rng().random();
+            crabomination::selfplay::random_sealed_opponent(seed)
+        } else {
+            (crabomination::demo::brg_combo_deck().to_vec(), "Bot".to_string())
+        };
+        return crabomination::draft::build_draft_match_state(
+            deck.main,
+            opp_deck,
+            human_name.to_string(),
+            opp_label,
+        );
+    }
+    let mut state = format.build_state();
+    name_seats(&mut state, human_name, "Bot");
+    state
 }
 
 /// A local Commander pod: `commanders` + `main` in the human's seat 0 and
@@ -2341,6 +2375,25 @@ mod tests {
 
     /// The human sits in seat 0 with their own commander, the bots are named
     /// after their decks, and the pod size is honoured.
+    #[test]
+    /// The game-over "New Game" rebuilds through `build_local_match_state`
+    /// with the remembered deck: an imported Commander list comes back in
+    /// seat 0 of a pod of the chosen size, and every seat gets an occupant.
+    /// Before, a rematch dealt the stock pod and seated only two occupants.
+    fn rematch_state_redeals_the_imported_commander_deck() {
+        let stock = crabomination::pod::target_decks()[4];
+        let deck = ImportedDeck { main: stock.main.to_vec(), commanders: stock.commanders.to_vec() };
+        let state = build_local_match_state(MatchFormat::Commander, Some(deck), 3, PodOpponents::Random, "Ann");
+        assert_eq!(state.players.len(), 3);
+        assert_eq!(state.players[0].name, "Ann");
+        assert_eq!(state.players[0].command.len(), 2, "Krark + Rograkh come back");
+        let (seat, _client) = crabomination::server::seat_pair();
+        assert_eq!(local_occupants(seat, state.players.len()).len(), 3);
+        // No deck: the stock Commander pod, still sized by the menu option.
+        let stock_pod = build_local_match_state(MatchFormat::Commander, None, 2, PodOpponents::Random, "Ann");
+        assert_eq!(stock_pod.players.len(), 2);
+    }
+
     #[test]
     fn commander_pod_state_seats_the_human_first() {
         let stock = crabomination::pod::target_decks()[4];

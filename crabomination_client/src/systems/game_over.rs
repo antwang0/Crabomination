@@ -499,12 +499,15 @@ pub fn handle_rematch_button(
     kind: Res<ActiveMatchKind>,
     audit: Res<crate::audit::AuditTarget>,
     menu_fields: Option<Res<crate::menu::MenuFields>>,
+    rematch_deck: Option<Res<crate::menu::RematchDeck>>,
     commands: Commands,
 ) {
     if !button_q.iter().any(|i| *i == Interaction::Pressed) {
         return;
     }
-    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind, audit, menu_fields);
+    rematch_in_place(
+        commands, modal_q, cards_q, view, ended, log, *format, *kind, audit, menu_fields, rematch_deck,
+    );
 }
 
 /// When a game ends and `auto_rematch.remaining > 0`, fire a rematch
@@ -520,6 +523,7 @@ pub fn apply_auto_rematch_on_game_over(
     kind: Res<ActiveMatchKind>,
     audit: Res<crate::audit::AuditTarget>,
     menu_fields: Option<Res<crate::menu::MenuFields>>,
+    rematch_deck: Option<Res<crate::menu::RematchDeck>>,
     mut auto: ResMut<AutoRematchState>,
     commands: Commands,
 ) {
@@ -531,7 +535,9 @@ pub fn apply_auto_rematch_on_game_over(
     if !matches!(*kind, ActiveMatchKind::SpectateBotVsBot) { return; }
     if auto.remaining == 0 { return; }
     auto.remaining -= 1;
-    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind, audit, menu_fields);
+    rematch_in_place(
+        commands, modal_q, cards_q, view, ended, log, *format, *kind, audit, menu_fields, rematch_deck,
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -546,6 +552,7 @@ fn rematch_in_place(
     kind: ActiveMatchKind,
     audit: Res<crate::audit::AuditTarget>,
     menu_fields: Option<Res<crate::menu::MenuFields>>,
+    rematch_deck: Option<Res<crate::menu::RematchDeck>>,
 ) {
     for e in &modal_q {
         commands.entity(e).despawn();
@@ -567,49 +574,51 @@ fn rematch_in_place(
     // Audit-mode rematch reuses the same target card so the user
     // can re-attempt the same setup without re-picking from the
     // catalog.
-    let mut state = audit.0
-        .as_deref()
-        .and_then(crate::audit::build_audit_state)
-        .unwrap_or_else(|| chosen.build_state_for_restart());
-    // Re-stamp display names — a freshly built state reverts to "P0"/"P1".
     let human_name = menu_fields
+        .as_ref()
         .map(|f| f.player_name.trim().to_string())
         .filter(|n| !n.is_empty())
         .unwrap_or_else(|| "Player".to_string());
-    match kind {
-        ActiveMatchKind::HumanVsBot => crate::menu::name_seats(&mut state, &human_name, "Bot"),
-        ActiveMatchKind::SpectateBotVsBot => {
-            for (i, p) in state.players.iter_mut().enumerate() {
-                p.name = format!("Bot {}", i + 1);
-            }
-        }
-    }
-
+    let (pod_size, pod_opponents) = menu_fields
+        .as_ref()
+        .map_or((4, Default::default()), |f| (f.pod_size, f.pod_opponents));
+    // Audit-mode rematch reuses the same target card so the user
+    // can re-attempt the same setup without re-picking from the
+    // catalog. Otherwise the rematch deals the deck the match started
+    // with — an imported list, a Commander pod of the chosen size — the
+    // same way the menu did.
+    let audit_state = audit.0.as_deref().and_then(crate::audit::build_audit_state);
     match kind {
         ActiveMatchKind::HumanVsBot => {
+            let state = match audit_state {
+                Some(mut state) => {
+                    crate::menu::name_seats(&mut state, &human_name, "Bot");
+                    state
+                }
+                None => crate::menu::build_local_match_state(
+                    chosen,
+                    rematch_deck.and_then(|d| d.0.clone()),
+                    pod_size,
+                    pod_opponents,
+                    &human_name,
+                ),
+            };
+            // One occupant per seat: a Commander pod brings up to four.
+            let occupants = crate::menu::local_occupants(server_seat, state.players.len());
             std::thread::spawn(move || {
-                run_match_full(
-                    state,
-                    vec![
-                        SeatOccupant::Human(server_seat),
-                        SeatOccupant::Bot(Box::new(HeuristicBot::new())),
-                    ],
-                    vec![],
-                    Some(sink_for_match),
-                );
+                run_match_full(state, occupants, vec![], Some(sink_for_match));
             });
         }
         ActiveMatchKind::SpectateBotVsBot => {
+            let mut state = audit_state.unwrap_or_else(|| chosen.build_state_for_restart());
+            for (i, p) in state.players.iter_mut().enumerate() {
+                p.name = format!("Bot {}", i + 1);
+            }
+            let occupants: Vec<SeatOccupant> = (0..state.players.len())
+                .map(|_| SeatOccupant::Bot(Box::new(HeuristicBot::new())))
+                .collect();
             std::thread::spawn(move || {
-                run_match_full(
-                    state,
-                    vec![
-                        SeatOccupant::Bot(Box::new(HeuristicBot::new())),
-                        SeatOccupant::Bot(Box::new(HeuristicBot::new())),
-                    ],
-                    vec![server_seat],
-                    Some(sink_for_match),
-                );
+                run_match_full(state, occupants, vec![server_seat], Some(sink_for_match));
             });
         }
     }
