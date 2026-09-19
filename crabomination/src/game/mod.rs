@@ -8651,6 +8651,10 @@ impl GameState {
         let mut amount = amount;
         let mut d = self.damage_doublers();
         let mut h = self.damage_halvers();
+        // Non-power-of-two multipliers (Fiery Emancipation, City on Fire — ×3).
+        // `d`/`h` are counts of doublings and halvings; a triple has no
+        // exponent, so it rides its own accumulator and multiplies in below.
+        let mut mul: u32 = 1;
         // Sulfuric Vapors — "if a [color] SPELL would deal damage to a
         // permanent or player". Recipient-agnostic, so it sits outside the
         // player-only block below; the source must be a resolving spell
@@ -8855,6 +8859,18 @@ impl GameState {
                 })
                 .count() as u32;
         }
+        // Fiery Emancipation / City on Fire — any source you control deals
+        // `factor` times damage (CR 614.2). The ungated twin of the Hellbent
+        // block below, except that its factor is not a power of two.
+        if let Some((src_ctrl, _)) = &source_info {
+            for c in self.battlefield.iter().filter(|c| c.controller == *src_ctrl) {
+                for sa in &c.definition.static_abilities {
+                    if let StaticEffect::MultiplyDamageFromYourSources { factor } = sa.effect {
+                        mul = mul.saturating_mul(factor);
+                    }
+                }
+            }
+        }
         // Anthem of Rakdos (Hellbent) — while the static's controller has an
         // empty hand, any source they control deals double damage (CR 614.5).
         if let Some((src_ctrl, _)) = &source_info
@@ -8885,7 +8901,7 @@ impl GameState {
                 }
             }
         }
-        let amount = amount.saturating_mul(1 << d.min(16)) >> h.min(16);
+        let amount = amount.saturating_mul(1 << d.min(16)).saturating_mul(mul) >> h.min(16);
         // CR 615 — Equal Treatment: "if any source would deal 1 or more
         // damage this turn, it deals 2 damage instead."
         let amount = match self.damage_becomes_this_turn {
@@ -19709,6 +19725,19 @@ impl GameState {
                     c.controller == p
                         && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
                             crate::effect::StaticEffect::ControllerDrawsDoubled => true,
+                            // Alhammarret's Archive / Teferi's Ageless
+                            // Insight: the same doubling, minus the first draw
+                            // of the drawer's OWN draw step. The draw has
+                            // already happened here, so "this was the first" is
+                            // `cards_drawn_this_step == 1`. A draw taken in
+                            // someone else's draw step is not in *your* draw
+                            // step and is doubled like any other.
+                            crate::effect::StaticEffect::
+                                ControllerDrawsDoubledExceptFirstEachDrawStep => {
+                                !(self.step == crate::game::TurnStep::Draw
+                                    && self.active_player_idx == p
+                                    && self.players[p].cards_drawn_this_step == 1)
+                            }
                             crate::effect::StaticEffect::ControllerDrawsDoubledIf { condition } => {
                                 let ctx = crate::game::effects::EffectContext::for_ability(
                                     c.id,
@@ -27749,6 +27778,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::DoubleDamageFromControlledCreatures
         | SE::DoubleDamageFromControlledMatching { .. }
         | SE::DoubleYourSourcesDamageWhileHellbent
+        | SE::MultiplyDamageFromYourSources { .. }
         | SE::ControlledCreatureTypesDealExtraDamage { .. }
         // Applied last, over the doubled/halved result.
         | SE::CapLargeDamage { .. } => true,
@@ -28605,6 +28635,8 @@ fn static_effect_to_effects(
             | StaticEffect::LandwalkIgnored(_)
             // Consulted directly at the turn advance, not a layer effect.
             | StaticEffect::OpponentsSkipExtraTurns
+            // Read by the damage funnels (`scale_damage_to`), not a layer effect.
+            | StaticEffect::MultiplyDamageFromYourSources { .. }
             // Consulted directly by the cast gate, not a layer effect.
             | StaticEffect::OpponentsOneSpellPerTurn
             | StaticEffect::GrantActivatedAbilityFromGraveyard { .. }
@@ -29180,6 +29212,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantMakeYouSacrifice
             | StaticEffect::OpponentsCantMakeYouDiscard
             | StaticEffect::ControllerDrawsDoubled
+            | StaticEffect::ControllerDrawsDoubledExceptFirstEachDrawStep
             | StaticEffect::ControllerDrawsDoubledIf { .. }
             // Consulted directly in `draw_one`; no continuous-layer effect.
             | StaticEffect::EmptyHandDrawBonus { .. }

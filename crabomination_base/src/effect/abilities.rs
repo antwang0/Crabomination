@@ -864,10 +864,28 @@ pub enum StaticEffect {
     LifeGainMultiplier { target: PlayerStaticTarget, factor: i32 },
     /// CR 121.2a / 614 — draw replacement: while active, when the source's
     /// controller would draw a card, they draw two instead (Thought
-    /// Reflection, Alhammarret's Archive). Consulted per draw event in
-    /// `draw_one`; the extra draw is not itself re-doubled by the same
-    /// pass (CR 614.5), though stacked doublers each apply once.
+    /// Reflection). Consulted per draw event in `draw_one`; the extra draw is
+    /// not itself re-doubled by the same pass (CR 614.5), though stacked
+    /// doublers each apply once.
+    ///
+    /// ⚠ **Not Alhammarret's Archive**, which this doc used to name: that card
+    /// and Teferi's Ageless Insight print an exception for the first draw of
+    /// your draw step, which is
+    /// [`Self::ControllerDrawsDoubledExceptFirstEachDrawStep`].
     ControllerDrawsDoubled,
+
+    /// CR 121.2a / 614 — "If you would draw a card **except the first one you
+    /// draw in each of your draw steps**, draw two cards instead"
+    /// (Alhammarret's Archive, Teferi's Ageless Insight). The exception is the
+    /// whole difference from [`Self::ControllerDrawsDoubled`]: under Thought
+    /// Reflection the turn's draw-step draw is doubled and under these two it
+    /// is not, so the two cannot share a variant.
+    ///
+    /// "The first one you draw in each of **your** draw steps" is read as
+    /// `step == Draw && active player == the drawer && this was their first
+    /// draw of the step`, off `Player::cards_drawn_this_step`. A draw taken in
+    /// another player's draw step is not in *your* draw step and is doubled.
+    ControllerDrawsDoubledExceptFirstEachDrawStep,
     /// Like `ControllerDrawsDoubled` but only while `condition` holds for the
     /// source's controller ("Max speed — if you would draw a card, draw two
     /// cards instead" — Vnwxt, Verbose Host).
@@ -1200,7 +1218,7 @@ pub enum StaticEffect {
     EnergyGainBonus { amount: u32 },
     /// CR 614.2 — "If a source would deal damage … it deals double that
     /// damage instead." A *global* damage-replacement (Furnace of Rath,
-    /// Gratuitous Violence-class, Fiery Emancipation as ×2 stacking): read
+    /// Gratuitous Violence-class): read
     /// off the battlefield by `GameState::damage_doublers`, every active
     /// instance doubles the dealt amount (2 → 4×, …). Applied on both damage
     /// funnels — the noncombat `deal_damage_to_from` and combat's
@@ -1310,6 +1328,17 @@ pub enum StaticEffect {
     /// damage instead." (Anthem of Rakdos.) Any source (not just creatures),
     /// gated on the static's controller having an empty hand; `scale_damage_to`.
     DoubleYourSourcesDamageWhileHellbent,
+    /// CR 614.2 — "If a source you control would deal damage to a permanent or
+    /// player, it deals **`factor` times** that damage instead" (Fiery
+    /// Emancipation, City on Fire — both ×3).
+    ///
+    /// ⚠ Its own field rather than a count of doublings, because the rest of
+    /// the damage-scaling funnel accumulates *powers of two*
+    /// (`amount << doublers >> halvers`) and 3 is not one. Two of these
+    /// multiply (×9), and they compose with the doublers by multiplication,
+    /// which is what CR 614's "instead" chain does whatever order the affected
+    /// player picks.
+    MultiplyDamageFromYourSources { factor: u32 },
     /// CR 614.5 — "If a source you control would deal *noncombat* damage to an
     /// opponent or a permanent an opponent controls, it deals double that
     /// damage instead." (Solphim, Mayhem Dominus.) Noncombat-only and also

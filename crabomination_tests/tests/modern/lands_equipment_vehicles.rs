@@ -2115,3 +2115,158 @@ fn cr_506_2_trouble_in_pairs_does_not_count_an_attack_on_your_planeswalker() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 1, "two at the player draws one card");
 }
+
+// ── The doubling / tripling replacements ───────────────────────────────────
+
+/// Alhammarret's Archive doubles life gain and doubles draws — **except** the
+/// first draw of your own draw step, which is the clause that separates it
+/// from Thought Reflection.
+#[test]
+fn cr_121_2a_alhammarrets_archive_doubles_draws_but_not_the_draw_step_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::alhammarrets_archive());
+    g.players[0].hand.clear();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+
+    // The first draw of your own draw step: one card.
+    g.step = TurnStep::Draw;
+    g.active_player_idx = 0;
+    g.players[0].cards_drawn_this_step = 0;
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    assert_eq!(g.players[0].hand.len(), 1, "the draw-step draw is not doubled");
+
+    // A second draw in the same step is doubled.
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    assert_eq!(g.players[0].hand.len(), 3, "the second draw of the step draws two");
+
+    // And a draw outside the draw step is doubled.
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].cards_drawn_this_step = 0;
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    assert_eq!(g.players[0].hand.len(), 5, "a main-phase draw draws two");
+}
+
+/// ⚠ "the first one you draw in each of **your** draw steps" — a draw taken
+/// during someone *else's* draw step is not in your draw step, and is doubled.
+#[test]
+fn cr_121_2a_the_archives_exception_is_your_own_draw_step_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::alhammarrets_archive());
+    g.players[0].hand.clear();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    g.step = TurnStep::Draw;
+    g.active_player_idx = 1;
+    g.players[0].cards_drawn_this_step = 0;
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    assert_eq!(g.players[0].hand.len(), 2, "not your draw step, so it doubles");
+}
+
+/// The Archive's other half, and the control that it is the Archive doing it.
+#[test]
+fn alhammarrets_archive_doubles_life_gain() {
+    let mut g = two_player_game();
+    let before = g.players[0].life;
+    g.adjust_life(0, 3);
+    assert_eq!(g.players[0].life, before + 3, "no Archive, no doubling");
+
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::alhammarrets_archive());
+    let before = g.players[0].life;
+    g.adjust_life(0, 3);
+    assert_eq!(g.players[0].life, before + 6, "twice that much life instead");
+}
+
+/// Teferi's Ageless Insight is the Archive's draw half and nothing else — so
+/// it must *not* double life gain.
+#[test]
+fn teferis_ageless_insight_doubles_draws_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teferis_ageless_insight());
+    g.players[0].hand.clear();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let before = g.players[0].life;
+    g.adjust_life(0, 3);
+    assert_eq!(g.players[0].life, before + 3, "no life clause on this one");
+
+    g.step = TurnStep::PreCombatMain;
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    assert_eq!(g.players[0].hand.len(), 2, "but the draws still double");
+}
+
+/// CR 614.2 — "triple that damage", and it has to be **three**, not a second
+/// doubling. Lightning Bolt's 3 becomes 9.
+#[test]
+fn cr_614_2_fiery_emancipation_triples_your_sources_damage() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::fiery_emancipation());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 9, "3 tripled is 9, not 6 and not 12");
+}
+
+/// City on Fire is the same multiplier, and two of them compose to ×9 rather
+/// than to ×6 — the reason the factor is a multiplier and not a count.
+#[test]
+fn cr_614_2_two_triplers_compose_to_nine() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::fiery_emancipation());
+    g.add_card_to_battlefield(0, catalog::city_on_fire());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 27, "3 x 3 x 3");
+}
+
+/// …and it is *your* sources: an opponent's Bolt is unaffected.
+#[test]
+fn fiery_emancipation_does_not_triple_an_opponents_damage() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::fiery_emancipation());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before - 3, "their source, their damage");
+}

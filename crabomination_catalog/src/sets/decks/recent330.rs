@@ -14,9 +14,10 @@ use crate::card::{
     EquipScale, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes,
     Supertype, TriggeredAbility, Value,
 };
+use crate::effect::PlayerStaticTarget;
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, StaticEffect};
-use crate::mana::{ManaCost, cost, g, generic, r, w};
+use crate::mana::{ManaCost, cost, g, generic, r, u, w};
 
 /// Parallel Lives — {3}{G} Enchantment. "If an effect would create one or
 /// more tokens under your control, it creates twice that many of those tokens
@@ -390,6 +391,105 @@ pub fn trouble_in_pairs() -> CardDefinition {
                 effect: draw(),
             },
         ],
+        ..Default::default()
+    }
+}
+
+// ── The doubling / tripling replacements ───────────────────────────────────
+//
+// CR 614 replacement effects that multiply something. Two printed clauses and
+// four cards: the draw doubler with the draw-step exception, and the ×3 damage
+// multiplier.
+
+/// The clause Alhammarret's Archive and Teferi's Ageless Insight share: "If
+/// you would draw a card except the first one you draw in each of your draw
+/// steps, draw two cards instead."
+///
+/// ⚠ Not `ControllerDrawsDoubled` (Thought Reflection). The exception is the
+/// difference: under Thought Reflection your draw-step draw is doubled and
+/// under these two it is not, which at one card a turn is the whole gap
+/// between a four-mana enchantment and a seven-mana one.
+fn draws_doubled_except_the_draw_step() -> StaticAbility {
+    StaticAbility {
+        description: "If you would draw a card except the first one you draw in each of \
+                      your draw steps, draw two cards instead.",
+        effect: StaticEffect::ControllerDrawsDoubledExceptFirstEachDrawStep,
+    }
+}
+
+/// Alhammarret's Archive — {5} Legendary Artifact. "If you would gain life,
+/// you gain twice that much life instead. If you would draw a card except the
+/// first one you draw in each of your draw steps, draw two cards instead."
+/// (EDHREC 975.)
+pub fn alhammarrets_archive() -> CardDefinition {
+    CardDefinition {
+        name: "Alhammarret's Archive",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If you would gain life, you gain twice that much life instead.",
+                effect: StaticEffect::LifeGainMultiplier {
+                    target: PlayerStaticTarget::Controller,
+                    factor: 2,
+                },
+            },
+            draws_doubled_except_the_draw_step(),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Teferi's Ageless Insight — {2}{U}{U} Legendary Enchantment. The Archive's
+/// draw half on its own. (EDHREC 590.)
+pub fn teferis_ageless_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Teferi's Ageless Insight",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![draws_doubled_except_the_draw_step()],
+        ..Default::default()
+    }
+}
+
+/// The clause Fiery Emancipation and City on Fire share: "If a source you
+/// control would deal damage to a permanent or player, it deals triple that
+/// damage instead."
+fn your_sources_deal_triple() -> StaticAbility {
+    StaticAbility {
+        description: "If a source you control would deal damage to a permanent or player, \
+                      it deals triple that damage instead.",
+        effect: StaticEffect::MultiplyDamageFromYourSources { factor: 3 },
+    }
+}
+
+/// Fiery Emancipation — {3}{R}{R}{R} Enchantment. (EDHREC 855.)
+///
+/// ⚠ **Triple, not two doublings.** The damage funnel accumulates *doublings*
+/// (`amount << doublers`), so a ×3 has no exponent to add — and ×2 is not an
+/// acceptable stand-in on a six-mana enchantment whose whole text is the
+/// multiplier. `MultiplyDamageFromYourSources` rides its own accumulator.
+pub fn fiery_emancipation() -> CardDefinition {
+    CardDefinition {
+        name: "Fiery Emancipation",
+        cost: cost(&[generic(3), r(), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![your_sources_deal_triple()],
+        ..Default::default()
+    }
+}
+
+/// City on Fire — {5}{R}{R}{R} Enchantment with Convoke. The same multiplier
+/// two mana later, with the creatures to pay for it. (EDHREC 874.)
+pub fn city_on_fire() -> CardDefinition {
+    CardDefinition {
+        name: "City on Fire",
+        cost: cost(&[generic(5), r(), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Convoke],
+        static_abilities: vec![your_sources_deal_triple()],
         ..Default::default()
     }
 }
