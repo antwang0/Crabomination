@@ -125,9 +125,24 @@ pub fn build_state(format: LobbyFormat) -> GameState {
 /// when seated) or a bot.
 #[derive(Clone)]
 enum Slot {
-    Human { conn: ConnId, name: String },
+    /// `deck`: the Commander list this player submitted
+    /// (`ClientMsg::SetLobbyDeck`); `None` plays the seat's stock pod deck.
+    Human { conn: ConnId, name: String, deck: Option<LobbyDeck> },
     Bot,
 }
+
+/// A validated Commander list submitted for one lobby seat.
+#[derive(Clone)]
+struct LobbyDeck {
+    commanders: Vec<crate::cube::CardFactory>,
+    main: Vec<crate::cube::CardFactory>,
+    /// The commander name(s), " + "-joined — what the lobby shows.
+    label: String,
+}
+
+/// Longest decklist `SetLobbyDeck` accepts. A 100-card list with set codes
+/// and export tags is a few kilobytes; this only bounds a hostile message.
+const MAX_DECKLIST_BYTES: usize = 64 * 1024;
 
 /// One open lobby. Holds the pre-built state that will become the match.
 struct Lobby {
@@ -184,7 +199,38 @@ impl Lobby {
             players: self.human_count(),
             bots: self.bot_count(),
             capacity: self.capacity(),
+            member_decks: self
+                .seats
+                .iter()
+                .filter_map(|s| match s {
+                    Slot::Human { deck, .. } => Some(deck.as_ref().map(|d| d.label.clone())),
+                    Slot::Bot => None,
+                })
+                .collect(),
         }
+    }
+
+    /// The state the match starts from. A pod where nobody submitted a list
+    /// keeps the state built at creation; otherwise every seat is re-dealt
+    /// from its submitted deck or, failing one, its stock pod deck.
+    fn take_state(self) -> GameState {
+        if !self.seats.iter().any(|s| matches!(s, Slot::Human { deck: Some(_), .. })) {
+            return self.state;
+        }
+        let stock = crate::pod::pod_field(self.capacity());
+        let seats: Vec<crate::pod::SeatDeck<'_>> = self
+            .seats
+            .iter()
+            .zip(&stock)
+            .map(|(slot, stock)| match slot {
+                Slot::Human { deck: Some(d), .. } => {
+                    crate::pod::SeatDeck { commanders: &d.commanders, main: &d.main }
+                }
+                _ => crate::pod::SeatDeck { commanders: stock.commanders, main: stock.main },
+            })
+            .collect();
+        use rand::RngExt;
+        crate::demo::build_commander_pod_seeded(&seats, rand::rng().random())
     }
 }
 
@@ -290,6 +336,7 @@ impl LobbyManager {
             ClientMsg::RemoveBotFromLobby => self.remove_bot(conn),
             ClientMsg::StartLobby => self.start_lobby(conn),
             ClientMsg::LeaveLobby => self.leave(conn),
+            ClientMsg::SetLobbyDeck { decklist } => self.set_deck(conn, &decklist),
             // `Resume` / spectate commands are handled by the driver (they need
             // the channel + running-match registry, not lobby state); they
             // never reach the manager. Game traffic from a browsing connection
@@ -343,7 +390,7 @@ impl LobbyManager {
             id,
             name,
             format,
-            seats: vec![Slot::Human { conn, name: self.name_of(conn) }],
+            seats: vec![Slot::Human { conn, name: self.name_of(conn), deck: None }],
             state: build_state(format),
         };
         self.lobbies.push(lobby);
@@ -406,7 +453,7 @@ impl LobbyManager {
         let Some(text) = super::sanitize_chat(text) else { return out };
         let Some(lobby) = self.lobbies.iter().find(|l| l.id == lobby_id) else { return out };
         let Some((seat, name)) = lobby.seats.iter().enumerate().find_map(|(i, s)| match s {
-            Slot::Human { conn: c, name } if *c == conn => Some((i, name.clone())),
+            Slot::Human { conn: c, name, .. } if *c == conn => Some((i, name.clone())),
             _ => None,
         }) else {
             return out;
@@ -450,6 +497,68 @@ impl LobbyManager {
     /// *current* seat index, so each client's view of who's in the lobby — and
     /// whether it is the host (slot 0) — stays accurate across joins, leaves,
     /// and bot add/remove (any of which can shift seat indices).
+    /// `SetLobbyDeck`: validate `text` as a Commander list and seat it in
+    /// `conn`'s slot (an empty text clears it back to the stock deck).
+    fn set_deck(&mut self, conn: ConnId, text: &str) -> LobbyOutcome {
+        let mut out = LobbyOutcome::default();
+        let error = |out: &mut LobbyOutcome, message: String| {
+            out.send(conn, ServerMsg::LobbyError { message });
+        };
+        let Some(&lobby_id) = self.conn_lobby.get(&conn) else {
+            error(&mut out, "not in a lobby".into());
+            return out;
+        };
+        let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == lobby_id) else {
+            return out;
+        };
+        if lobby.format != LobbyFormat::Commander {
+            error(&mut out, "only a Commander lobby takes your own deck".into());
+            return out;
+        }
+        if text.len() > MAX_DECKLIST_BYTES {
+            error(&mut out, "decklist is too long".into());
+            return out;
+        }
+        let deck = if text.trim().is_empty() {
+            None
+        } else {
+            let parsed = crate::decklist::parse_decklist(text);
+            if !parsed.unknown.is_empty() {
+                let shown: Vec<&str> = parsed.unknown.iter().take(4).map(String::as_str).collect();
+                error(
+                    &mut out,
+                    format!("{} card(s) not in the catalog: {}", parsed.unknown.len(), shown.join(", ")),
+                );
+                return out;
+            }
+            match parsed.commander_list() {
+                Ok(list) => {
+                    let label = list
+                        .commanders
+                        .iter()
+                        .map(|f| f().name.to_string())
+                        .collect::<Vec<_>>()
+                        .join(" + ");
+                    Some(LobbyDeck { commanders: list.commanders, main: list.main, label })
+                }
+                Err(errs) => {
+                    error(&mut out, errs.into_iter().take(3).collect::<Vec<_>>().join("; "));
+                    return out;
+                }
+            }
+        };
+        for slot in &mut lobby.seats {
+            if let Slot::Human { conn: c, deck: d, .. } = slot
+                && *c == conn
+            {
+                *d = deck;
+                break;
+            }
+        }
+        self.notify_members(lobby_id, &mut out);
+        out
+    }
+
     fn notify_members(&self, lobby_id: u64, out: &mut LobbyOutcome) {
         let Some(lobby) = self.lobbies.iter().find(|l| l.id == lobby_id) else { return };
         let info = lobby.info();
@@ -480,7 +589,7 @@ impl LobbyManager {
         }
         let name = self.name_of(conn);
         let lobby = self.lobbies.iter_mut().find(|l| l.id == lobby_id).unwrap();
-        lobby.seats.push(Slot::Human { conn, name });
+        lobby.seats.push(Slot::Human { conn, name, deck: None });
         self.conn_lobby.insert(conn, lobby_id);
         // Tell the new member and everyone already waiting their current slot.
         self.notify_members(lobby_id, &mut out);
@@ -531,7 +640,7 @@ impl LobbyManager {
             })
             .collect();
         out.start =
-            Some(StartMatch { format: lobby.format, state: lobby.state, seats, seat_labels });
+            Some(StartMatch { format: lobby.format, state: lobby.take_state(), seats, seat_labels });
     }
 
     /// Remove `conn` from whatever lobby it's in. Notifies the remaining human
@@ -1179,6 +1288,67 @@ mod tests {
             _ => None,
         });
         assert_eq!(updated, Some((1, 0)), "remaining member becomes the host at slot 0");
+    }
+
+    /// A decklist text for a stock pod deck, in the `Commander` / `Deck`
+    /// export shape.
+    fn pod_decklist(deck: &crate::pod::PodDeck) -> String {
+        let line = |f: &crate::cube::CardFactory| format!("1 {}", f().name);
+        let mut text = String::from("Commander\n");
+        text.extend(deck.commanders.iter().map(|f| line(f) + "\n"));
+        text.push_str("\nDeck\n");
+        text.extend(deck.main.iter().map(|f| line(f) + "\n"));
+        text
+    }
+
+    fn lobby_error(out: &LobbyOutcome) -> Option<String> {
+        out.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyError { message } => Some(message.clone()),
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn commander_lobby_seats_a_submitted_deck_and_rejects_a_bad_one() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        m.handle(ConnId(1), ClientMsg::CreateLobby { name: "edh".into(), format: LobbyFormat::Commander });
+
+        // An illegal list is refused with the reason, and the seat stays stock.
+        let bad = m.handle(ConnId(1), ClientMsg::SetLobbyDeck { decklist: "Commander\n1 Grizzly Bears\n".into() });
+        assert!(lobby_error(&bad).is_some(), "a non-legendary commander is rejected");
+        let unknown = m.handle(ConnId(1), ClientMsg::SetLobbyDeck { decklist: "1 Not A Real Card\n".into() });
+        assert!(lobby_error(&unknown).unwrap().contains("not in the catalog"));
+
+        // A legal list is accepted and shown to the lobby by commander.
+        let krark = crate::pod::target_decks()[4];
+        let ok = m.handle(ConnId(1), ClientMsg::SetLobbyDeck { decklist: pod_decklist(&krark) });
+        assert_eq!(lobby_error(&ok), None);
+        let info = ok.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.clone()),
+            _ => None,
+        }).expect("members are re-notified");
+        let label = info.member_decks[0].clone().expect("seat 0 shows its deck");
+        assert!(label.contains(" + "), "a partner pair names both: {label}");
+
+        // The match deals it: seat 0's command zone holds the submitted pair.
+        let start = m.handle(ConnId(1), ClientMsg::StartLobby).start.expect("host start");
+        let names: Vec<&str> = start.state.players[0].command.iter().map(|c| c.definition.name).collect();
+        let want: Vec<&str> = krark.commanders.iter().map(|f| f().name).collect();
+        assert_eq!(names, want);
+        assert_eq!(start.state.players.len(), 4);
+        assert!(start.state.players.iter().all(|p| p.life == 40 && p.library.len() >= 97));
+    }
+
+    #[test]
+    fn only_a_commander_lobby_takes_a_submitted_deck() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        let out = m.handle(ConnId(1), ClientMsg::SetLobbyDeck { decklist: "1 Island".into() });
+        assert_eq!(lobby_error(&out).as_deref(), Some("not in a lobby"));
+        m.handle(ConnId(1), ClientMsg::CreateLobby { name: "m".into(), format: LobbyFormat::Modern });
+        let out = m.handle(ConnId(1), ClientMsg::SetLobbyDeck { decklist: "1 Island".into() });
+        assert!(lobby_error(&out).unwrap().contains("Commander"));
     }
 
     #[test]

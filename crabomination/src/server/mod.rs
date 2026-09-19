@@ -973,6 +973,7 @@ fn run_match_inner(
             | ClientMsg::StartLobby
             | ClientMsg::Resume { .. }
             | ClientMsg::LeaveLobby
+            | ClientMsg::SetLobbyDeck { .. }
             | ClientMsg::ListSpectatable
             | ClientMsg::SpectateMatch { .. } => {}
         }

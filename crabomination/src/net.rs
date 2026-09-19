@@ -76,6 +76,13 @@ pub enum ClientMsg {
     /// server routes it to whichever seat owns the originating channel.
     /// Intended for local single-player debugging only.
     Debug(DebugAction),
+    /// Lobby, Commander only: play this decklist (any export shape
+    /// [`crate::decklist::parse_decklist`] reads, with a commander section)
+    /// in your seat instead of a stock pod deck. The server validates it as
+    /// a Commander deck and answers with a `LobbyError` naming the problems,
+    /// or an updated `LobbyJoined` whose `member_decks` shows it. An empty
+    /// list goes back to a stock deck.
+    SetLobbyDeck { decklist: String },
 }
 
 /// Gamemode a lobby is built around. Mirrors the deck-pool choices the client
@@ -128,6 +135,11 @@ pub struct LobbyInfo {
     pub bots: usize,
     /// Seats required to start the match.
     pub capacity: usize,
+    /// Per human member (parallel to `member_names`): the commander(s) of the
+    /// deck they submitted with [`ClientMsg::SetLobbyDeck`], or `None` for a
+    /// stock deck.
+    #[serde(default)]
+    pub member_decks: Vec<Option<String>>,
 }
 
 /// A running match as advertised to spectators: enough to render a "watch a

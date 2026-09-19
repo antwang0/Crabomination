@@ -547,7 +547,8 @@ pub(crate) struct MenuFields {
     join_addr: String,
     /// Path to a plain-text decklist (Arena / MTGO format) for the
     /// "Play Deck vs Bot" import flow.
-    deck_path: String,
+    /// The deck-file field; a hosted Commander lobby submits this list too.
+    pub(crate) deck_path: String,
     focused: FocusedField,
     format: MatchFormat,
     /// Commander only: seats in the local pod, human included (2-4).

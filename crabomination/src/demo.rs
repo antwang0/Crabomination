@@ -118,6 +118,12 @@ pub fn build_custom_commander_state_seeded(
     deal_pod(crate::pod::build_pod_template_from(&seats), seed)
 }
 
+/// A pod of any decks, one per seat, dealt off `seed` — the hosted lobby's
+/// builder once a player has submitted their own list.
+pub fn build_commander_pod_seeded(seats: &[crate::pod::SeatDeck<'_>], seed: u64) -> GameState {
+    deal_pod(crate::pod::build_pod_template_from(seats), seed)
+}
+
 /// Pin a pod template's stream to `seed` and shuffle every library off it.
 fn deal_pod(mut state: GameState, seed: u64) -> GameState {
     state.rng.reseed(seed);

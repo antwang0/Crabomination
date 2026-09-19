@@ -37,7 +37,9 @@ impl Plugin for LobbyUiPlugin {
                     update_lobby_chat,
                     update_format_label,
                     update_bot_controls_visibility,
+                    update_deck_controls_visibility,
                     handle_lobby_buttons,
+                    handle_lobby_deck_buttons,
                     watch_match_start,
                 )
                     .run_if(in_state(AppState::Lobby)),
@@ -110,6 +112,15 @@ struct LobbyAddBotButton;
 struct LobbyRemoveBotButton;
 #[derive(Component)]
 struct LobbyStartButton;
+/// Row holding the deck controls; shown to every member of a Commander lobby.
+#[derive(Component)]
+struct LobbyDeckControls;
+/// Submits the menu's deck file as this seat's Commander list.
+#[derive(Component)]
+struct LobbyUseDeckButton;
+/// Goes back to the seat's stock pod deck.
+#[derive(Component)]
+struct LobbyStockDeckButton;
 
 /// The gamemode the Create button will use; cycled by the format button.
 #[derive(Resource, Default)]
@@ -323,6 +334,27 @@ fn spawn_lobby_browser(
                         .with_children(|b| {
                             b.spawn((Text::new("Start (fill w/ bots)"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
                         });
+                });
+
+                // Deck controls — any member of a Commander lobby can play
+                // their own list (toggled by `update_deck_controls_visibility`).
+                p.spawn((
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        column_gap: Val::Px(10.0),
+                        align_items: AlignItems::Center,
+                        display: Display::None,
+                        ..default()
+                    },
+                    LobbyDeckControls,
+                ))
+                .with_children(|row| {
+                    button(row, &tf, theme::BUTTON_INFO_BG, LobbyUseDeckButton).with_children(|b| {
+                        b.spawn((Text::new("Use My Deck File"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
+                    });
+                    button(row, &tf, theme::BUTTON_NEUTRAL_BG, LobbyStockDeckButton).with_children(|b| {
+                        b.spawn((Text::new("Stock Deck"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
+                    });
                 });
 
                 // Footer: [Refresh] [Back].
@@ -550,7 +582,7 @@ fn update_lobby_status(lobby: Res<LobbyState>, mut q: Query<&mut Text, With<Lobb
         let who = if info.member_names.is_empty() {
             String::new()
         } else {
-            format!(" — {}", info.member_names.join(", "))
+            format!(" — {}", member_list(&info.member_names, &info.member_decks))
         };
         format!(
             "In lobby [{}] — waiting ({}/{}{}){}…",
@@ -564,6 +596,20 @@ fn update_lobby_status(lobby: Res<LobbyState>, mut q: Query<&mut Text, With<Lobb
         format!("{} open lobb{}", lobby.lobbies.len(), if lobby.lobbies.len() == 1 { "y" } else { "ies" })
     };
     text.0 = msg;
+}
+
+/// "Ann (Krark + Rograkh), Bob": each member, with the commander(s) of the
+/// deck they submitted. Pure helper.
+fn member_list(names: &[String], decks: &[Option<String>]) -> String {
+    names
+        .iter()
+        .enumerate()
+        .map(|(i, name)| match decks.get(i).and_then(Option::as_ref) {
+            Some(deck) => format!("{name} ({deck})"),
+            None => name.clone(),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Drain relayed chat into the lobby panel (last six lines) and hint at the
@@ -621,6 +667,49 @@ fn update_bot_controls_visibility(
     let is_host = lobby.joined.as_ref().map(|(_, slot)| *slot == 0).unwrap_or(false);
     if let Ok(mut node) = q.single_mut() {
         node.display = if is_host { Display::Flex } else { Display::None };
+    }
+}
+
+fn update_deck_controls_visibility(
+    lobby: Res<LobbyState>,
+    mut q: Query<&mut Node, With<LobbyDeckControls>>,
+) {
+    if !lobby.is_changed() {
+        return;
+    }
+    let commander = lobby
+        .joined
+        .as_ref()
+        .is_some_and(|(info, _)| info.format == crabomination::net::LobbyFormat::Commander);
+    if let Ok(mut node) = q.single_mut() {
+        node.display = if commander { Display::Flex } else { Display::None };
+    }
+}
+
+/// "Use My Deck File" sends the menu's deck file as this seat's Commander
+/// list (the server validates it and names any problem); "Stock Deck" sends
+/// an empty list, which goes back to the seat's stock pod deck.
+fn handle_lobby_deck_buttons(
+    use_q: Query<&Interaction, (Changed<Interaction>, With<LobbyUseDeckButton>)>,
+    stock_q: Query<&Interaction, (Changed<Interaction>, With<LobbyStockDeckButton>)>,
+    outbox: Option<Res<NetOutbox>>,
+    fields: Option<Res<crate::menu::MenuFields>>,
+    mut lobby: ResMut<LobbyState>,
+) {
+    let Some(o) = outbox else { return };
+    if stock_q.iter().any(|i| *i == Interaction::Pressed) {
+        o.submit_msg(ClientMsg::SetLobbyDeck { decklist: String::new() });
+    }
+    if use_q.iter().any(|i| *i == Interaction::Pressed) {
+        let path = fields.map(|f| f.deck_path.trim().to_string()).unwrap_or_default();
+        if path.is_empty() {
+            lobby.last_error = Some("set a deck file in the menu first".into());
+            return;
+        }
+        match std::fs::read_to_string(&path) {
+            Ok(decklist) => o.submit_msg(ClientMsg::SetLobbyDeck { decklist }),
+            Err(e) => lobby.last_error = Some(format!("can't read {path}: {e}")),
+        }
     }
 }
 
@@ -717,5 +806,18 @@ fn handle_lobby_buttons(
 fn watch_match_start(lobby: Res<LobbyState>, mut next_state: ResMut<NextState<AppState>>) {
     if lobby.match_started {
         next_state.set(AppState::InGame);
+    }
+}
+
+#[cfg(test)]
+mod lobby_deck_tests {
+    use super::member_list;
+
+    #[test]
+    fn member_list_names_each_submitted_deck() {
+        let names = vec!["Ann".to_string(), "Bob".to_string()];
+        assert_eq!(member_list(&names, &[Some("Krark + Rograkh".into()), None]), "Ann (Krark + Rograkh), Bob");
+        // An older server sends no decks at all.
+        assert_eq!(member_list(&names, &[]), "Ann, Bob");
     }
 }
