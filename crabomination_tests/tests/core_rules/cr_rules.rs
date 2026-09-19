@@ -11873,3 +11873,42 @@ fn cr_306_5b_a_copy_of_a_planeswalker_enters_with_its_loyalty() {
         "and entered with the copied printed loyalty",
     );
 }
+
+/// CR 712 — Delver of Secrets' own upkeep trigger, which nothing tested: the
+/// transform *machinery* was covered (CR 712.4 above) and the card's use of it
+/// was not.
+///
+/// The card's printed "look at the top card of your library; you may reveal
+/// it" is modelled as an intervening-`if` on the transform, and that is a
+/// deliberate simplification rather than a gap: the only rational answer to
+/// the "may" is yes exactly when the top card *is* an instant or sorcery, so
+/// the modelled card plays the optimal line and reveals strictly less than a
+/// seat that always says yes. Both directions are asserted here.
+#[test]
+fn cr_712_delver_transforms_on_an_instant_but_not_on_a_land() {
+    let mut g = two_player_game();
+    let delver = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    g.active_player_idx = 0;
+
+    // A land on top: it stays a 1/1 Human Wizard.
+    g.add_card_to_library(0, catalog::forest());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the upkeep trigger");
+    }
+    assert!(!g.battlefield_find(delver).unwrap().transformed, "a land does not flip it");
+
+    // An instant on top: it transforms into the 3/2 flier.
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve the upkeep trigger");
+    }
+    let flipped = g.battlefield_find(delver).unwrap();
+    assert!(flipped.transformed, "an instant flips it");
+    assert_eq!(flipped.definition.name, "Insectile Aberration");
+    let cp = g.computed_permanent(delver).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
+}

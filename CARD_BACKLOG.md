@@ -256,7 +256,7 @@ every one of them is in the `cube` pool**, which is the finding:
 | ~~Obstinate Baloth~~ | Tatyova | ✅ **fixed 2026-09-19** — no primitive was needed: `CardDefinition::opponent_discard_deploys` is Dodecapod's replacement and `add_counters` is a no-op at zero, so the same field carries a counterless deploy. `--bench` byte-identical, fourth in a row |
 | ~~Spark Double~~ | Tatyova | ✅ **fixed 2026-09-19** — all three exceptions had shipped missing, not just one: the filter was creature-only, the extra counter was always `+1/+1`, and `non_legendary` (CR 707.2e, the whole reason the card is a legend-rule dodge) was unset. The planeswalker half needed one engine fix — a copy of a planeswalker was entering with **no** loyalty counters and dying to the first SBA sweep, because the entering counters are seeded off the printed line before the copy rewrites it (`reseed_entering_counters_after_copy`, its own commit) |
 | ~~Wall of Roots~~ | Tatyova | ✅ **fixed 2026-09-19** — `CounterType::MinusZeroMinusOne` already existed and `p_t_delta` already summed it; the card just wasn't using it. The stand-in was invisible to everything that reads, moves, removes or proliferates counters, and applied in layer 7c where a counter applies in 7d. `--bench` byte-identical, third in a row |
-| Delver of Secrets | Tatyova | the transform half is approximated |
+| ~~Delver of Secrets~~ | Tatyova | ✅ **the row was mis-filed** — the transform half is complete (`back_face`, the upkeep trigger, the instant/sorcery test, `Effect::Transform`). What is simplified is the printed "you may reveal", modelled as an intervening-`if`, and that is the **optimal** line rather than a gap: the only rational yes is exactly when the top card is an instant or sorcery, so the modelled card reveals strictly less than a seat that always says yes. The card's own trigger had no test and now has one |
 
 ⚠⚠ **THE "BLOCKED ON A BENCH RE-BLESS" PREMISE IS FALSE, AND TWO SESSIONS
 FOUND IT INDEPENDENTLY.** All eight are cards the `cube` deck builder can draw,
@@ -269,13 +269,16 @@ Pool *membership* is not pool *reach* — the bench plays `--decks fixed` and th
 traces are fixed-seed games, and a card has to actually be drawn and played in
 one of them to move a number. **Take the rest one or two at a time with a
 `--bench` reading in hand**, and re-bless only if the reading actually moves.
-⚠ **Not "Ghost Vacuum first" any more** — five of the eight are done, **four
+⚠ **Ghost Vacuum is the only one left.** Five of the eight are done, **four
 of the five needed no engine change at all** (the counter type, the
 discard-replacement field and the `non_legendary` flag all already existed and
 the card was not using them; one was a single word), and the sizing above says
-Ghost Vacuum is the one that does. Delver of Secrets' transform is the other
-survivor and it is the known transform-DFC gap rather than a card oversight.
-`--bench` came back byte-identical after every one of the five.
+Ghost Vacuum is the one that does. `--bench` came back byte-identical after
+every one of the five. ⚠⚠ **And THREE of the eight rows were wrong about the
+code** — Simian Spirit Guide and Arcane Signet had already shipped, and Delver
+of Secrets' "transform half is approximated" was about an optional *reveal*
+the engine answers optimally, not about the transform. **Read the definition
+before believing the row** is now a three-for-eight rate on one table.
 
 Arcane Signet, which the same walk flagged in all five decks, was a **stale doc
 comment** and nothing else — `tap_add_commander_identity()` has shipped for a

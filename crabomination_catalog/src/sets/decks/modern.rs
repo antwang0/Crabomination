@@ -33410,8 +33410,12 @@ pub fn concealing_curtains() -> CardDefinition {
 /// Delver of Secrets // Insectile Aberration — {U} Creature — Human Wizard.
 /// Front: 1/1. At the beginning of your upkeep, look at the top card of your
 /// library; you may reveal it. If an instant or sorcery card is revealed this
-/// way, transform Delver of Secrets. (Approximated: it transforms if the top
-/// card is an instant or sorcery, via an intervening-`if` on `Transform`.)
+/// way, transform Delver of Secrets. (The "you may reveal" is an
+/// intervening-`if` on `Transform`, and that is the optimal line rather than
+/// an approximation: the only rational yes is exactly when the top card *is*
+/// an instant or sorcery, so the modelled card reveals strictly less than a
+/// seat that always says yes. `cr_712_delver_transforms_on_an_instant_but_
+/// not_on_a_land` asserts both directions.)
 /// Back: Insectile Aberration, 3/2 Flying.
 pub fn delver_of_secrets() -> CardDefinition {
     use crate::effect::Predicate;
