@@ -69,14 +69,29 @@ mana cost), so `validate_commander_deck` rejects either in a mono-red list.
 ⏳ **Open deck-quality work**, no engine work needed — and the pod now has a
 number that says which to do first:
 
-- ⚠ **Judith is not competitive.** At seed 43, 400 four-seat games:
-  Sigarda **45.5 %** / Tatyova 26.8 % / Hanna 22.2 % / **Judith 5.5 %**. A
-  four-way field should sit near 25 % each; 5.5 % means the aristocrats list
-  does not assemble. That is the deck to look at, and `bot_ladder --commander
-  --games 400 --seed 43` prints the table.
-- **Board wipes are one seat's**: Blasphemous Act and Mizzium Mortars are both
-  Krark's, and the other four lists have none at all. A stalled four-seat board
-  therefore has one seat that can break it.
+- ✅ **Judith was not competitive and now is nearer.** Retuned 2026-09-19;
+  seed 43, 3,000 games a configuration: Judith 6.2 → **14.6 %** at four seats
+  (field 43.5/6.2/22.2/28.0 → **40.8/14.6/20.3/24.3**), 16.0 → 26.2 at three,
+  23.2 → **33.6 %** head to head against Sigarda. `bot_ladder --commander
+  --seats N --games N --seed 43` prints the table.
+  ⚠⚠ **And the experiment that got there is the reusable part: the obvious
+  repair made it worse.** A real aristocrats engine — free sacrifice outlets,
+  drain payoffs, recursive fodder, 35 of 72 nonbasics — measured **6.3 %** at
+  four seats and **16.8 %** head to head, *below the filler list it replaced*.
+  `pick_sacrifice_value` takes a sacrifice only when `eval_material` improves,
+  and a one-ply material evaluator cannot see a value engine: a body for a
+  scry, or for one life off each opponent at 40, is material-negative every
+  time it is asked. The evaluator is **not** two-player-shaped — it already
+  sums over every live hostile seat — so this is a horizon limit, not a
+  seat-count bug. **Build pod lists out of what a greedy evaluator can price:
+  removal, card advantage, fat, and per-opponent effects that resolve in one
+  shot** (Gray Merchant, Massacre Wurm, Sepulchral Primordial).
+- ⚠ **Krark/Rograkh is the number now**: 8.1 % of five-seat games (seed 43,
+  3,000 games; field 35.5/12.8/19.8/23.7/8.1). Mono-red, and the only list the
+  two-colour Signet/Talisman cycles cannot legally carry.
+- **Board wipes are thin**: Judith now runs Blasphemous Act and Toxic Deluge
+  and Krark has Blasphemous Act and Mizzium Mortars, but Sigarda, Hanna and
+  Tatyova have none at all. A stalled board has two seats that can break it.
 
 Both move the committed outcome table
 (`pod::tests::cr_903_seeded_pod_outcomes_match_the_committed_table`), so

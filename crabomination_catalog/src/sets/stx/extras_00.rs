@@ -1353,7 +1353,10 @@ pub fn quintorius_field_historian() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .once_per_batch(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),

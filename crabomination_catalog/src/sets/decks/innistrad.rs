@@ -2084,7 +2084,10 @@ pub fn willow_geist() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+                // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+                // one fire per batch, however many left at once.
+                event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                    .once_per_batch(),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,

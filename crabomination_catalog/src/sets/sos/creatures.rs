@@ -168,11 +168,14 @@ pub fn owlin_historian() -> CardDefinition {
                 },
             },
             // Whenever one or more cards leave your graveyard, this
-            // creature gets +1/+1 EOT (trigger dispatch batches the
-            // per-card `CardLeftGraveyard` emissions — one fire per
-            // simultaneous batch, matching the printed "one or more").
+            // creature gets +1/+1 EOT. ⚠ The comment here used to claim the
+            // dispatcher batched the per-card `CardLeftGraveyard` emissions
+            // on its own; it does not — `once_per_batch` is what asks it to.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+                // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+                // one fire per batch, however many left at once.
+                event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                    .once_per_batch(),
                 effect: Effect::PumpPT {
                     what: Selector::This,
                     power: Value::Const(1),
@@ -1536,7 +1539,10 @@ pub fn hardened_academic() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .once_per_batch(),
             effect: Effect::AddCounter {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -2483,7 +2489,10 @@ pub fn spirit_mascot() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .once_per_batch(),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -2638,7 +2647,10 @@ pub fn garrison_excavator() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .once_per_batch(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),

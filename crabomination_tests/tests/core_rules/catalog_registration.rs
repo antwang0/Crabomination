@@ -1934,6 +1934,34 @@ fn every_batched_damage_trigger_fires_once_a_batch() {
     );
 }
 
+/// **A card that prints "whenever one or more cards leave your graveyard"
+/// fires once per batch, not once per card.**
+///
+/// CR 603.2c, the sibling of the damage ratchet above. The engine emits one
+/// `CardLeftGraveyard` per card, so a five-card graveyard exiled at once paid
+/// a card-leaves trigger five times — Quintorius made five 3/2 Spirits where
+/// the printed card makes one. `once_per_batch` is the whole fix and Attuned
+/// Hunter has carried it since the flag existed; the other thirteen had not.
+#[test]
+fn every_graveyard_leave_trigger_fires_once_a_batch() {
+    clause_ratchet(
+        "whenever one or more … leave your graveyard",
+        10,
+        |t, _| {
+            t.lines().map(str::trim).filter_map(|l| l.split_once("whenever one or more")).any(
+                // "leave", not "your graveyard": "one or more land cards are
+                // put INTO your graveyard from your library" (Hedge Shredder)
+                // and "creature cards in your graveyard are put into exile"
+                // (Kaya) are different events with different batching.
+                |(_, rest)| {
+                    rest.split(',').next().is_some_and(|cond| cond.contains("leave your graveyard"))
+                },
+            )
+        },
+        |_, body| body.contains("once_per_batch: true") || body.contains("once_per_turn: true"),
+    );
+}
+
 // ── The printed *keyword* ratchet — the MISSING direction, restricted ───────
 
 /// The keywords this ratchet checks, as `(scryfall name, does the definition

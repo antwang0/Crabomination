@@ -20,7 +20,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | Set / topic | Status | Lines |
 | --- | --- | --- |
 | [Target-deck card defects, and why they are all blocked on one thing](#target-deck-card-defects-and-why-they-are-all-blocked-on-one-thing) | open | 33 |
-| [CR 603.2c batches — the damage half is closed, the graveyard half is filed](#cr-6032c-batches--the-damage-half-is-closed-the-graveyard-half-is-filed) | open | 36 |
+| [CR 603.2c batches — both halves closed, and the ratchets that hold them](#cr-6032c-batches--both-halves-closed-and-the-ratchets-that-hold-them) | closed — residuals only | 33 |
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
 | [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
@@ -151,37 +151,39 @@ which in a Commander pod is Judith pinging.
 🟡 **Deflecting Swat** still counters only a *spell*; printed is "spell or
 ability", plus "you may choose new targets for it". Unchanged by this pass.
 
-## CR 603.2c batches — the damage half is closed, the graveyard half is filed
+## CR 603.2c batches — both halves closed, and the ratchets that hold them
 
-`catalog_registration::every_batched_damage_trigger_fires_once_a_batch` ratchets
-the **damage** clause and it is green: Elegy Acolyte, Haliya, Kaito, Kastral,
-Kutzil, Malcolm, Nature's Will and Prosperous Thief took `once_per_batch`
-2026-09-19; Killian's Confidence and Pyrewild Shaman need no flag (a
-`FromYourGraveyard` trigger is deduped by the graveyard walk itself); Quartzwood
-Crasher and Magmatic Galleon are the two signed-off names, both in
-INCOMPLETE_CARDS.
+Two `clause_ratchet` clauses in `core_rules/catalog_registration.rs`, both
+green, both keyed off the **trigger condition** rather than the effect (an
+"…leave your graveyard, this deals 1 damage to each opponent" line belongs to
+the graveyard ratchet, not the damage one):
 
-⏳ **The same defect in the `CardLeftGraveyard` clause is unfixed, and it is 12
-cards.** "Whenever one or more cards leave your graveyard" fires per card today,
-so exiling a five-card graveyard pays five times. `once_per_batch` is the whole
-fix (Attuned Hunter carries it and `cr_603_2c_once_per_batch_fires_once_a_batch_
-and_again_next_batch` proves the mechanism), and the reason it was not taken is
-**pool membership, not difficulty**:
+| ratchet | checked | fixed 2026-09-19 |
+| --- | --- | --- |
+| `every_batched_damage_trigger_fires_once_a_batch` | 20 | 8 |
+| `every_graveyard_leave_trigger_fires_once_a_batch` | 23 | 14 |
 
-| Card | Pool |
-| --- | --- |
-| Ark of Hunger, Garrison Excavator, Spirit Mascot | SOS |
-| Hardened Academic | cube **and** SOS |
-| Owlin Historian | cube |
-| Chalk Outline, Dredger's Insight, Fuming Effigy, Insidious Roots, Quintorius Field Historian, Rot Farm Mortipede, Soul Enervation, Stonebound Mentor, Willow Geist, Kheru Goldkeeper | none |
+**Damage half.** Elegy Acolyte, Haliya, Kaito, Kastral, Kutzil, Malcolm,
+Nature's Will and Prosperous Thief took `once_per_batch`; the engine's batch
+key gained the damaged subject, so the collapse is one fire **per damaged
+player**. Killian's Confidence and Pyrewild Shaman need no flag — a
+`FromYourGraveyard` trigger is deduped by the graveyard walk itself, which is
+the third spelling the ratchet accepts.
 
-Five of them are in the 2-player pools, so fixing the class moves the committed
-bench invariant and the golden traces — a re-bless the perf work owns, and none
-of the twelve is in a pod deck, so there is no Commander reason to force it now.
-Take the ten pool-free ones any time; take the five with a bench run in hand.
-⚠ A *partial* fix is worse than none here: the ratchet has to go green in one
-step or it acquires five signed-off names that mean "deferred", which is how a
-ratchet stops being read.
+**Graveyard half.** Fourteen cards fired once *per card leaving*, so a
+five-card graveyard exiled at once paid five times (Quintorius made five 3/2
+Spirits where the card makes one). ⚠ Five of the fourteen are in the `cube` /
+SOS pools, which is why the previous pass deferred them — **and the deferral
+was wrong on the facts**: `--bench` reads **195,806 / 27.49 / 611.9 / 0
+stalls**, byte-identical to the committed invariant, because several cards
+leaving one graveyard at once is rare in those pools. *Measure the pool
+question, do not assume it.*
+
+⚠ Two names each ratchet signs off, both in INCOMPLETE_CARDS: **Quartzwood
+Crasher** (wants the batch's summed damage for its X) and **Magmatic Galleon**
+(the clause is not modelled at all). Hedge Shredder and Kaya, Spirits' Justice
+are neither — "put INTO your graveyard from your library" and "put into exile"
+are different events, which is why the graveyard predicate anchors on *leave*.
 
 ## Target-deck card defects, and why they are all blocked on one thing
 
@@ -202,15 +204,16 @@ every one of them is in the `cube` pool**, which is the finding:
 | Wall of Roots | Tatyova | the -0/-1 counter is a permanent `PumpPT` stand-in |
 | Delver of Secrets | Tatyova | the transform half is approximated |
 
-⚠ **The blocker is pool membership, not difficulty.** Each of the eight is a
-card the `cube` deck builder can draw, so changing any of their behavior moves
-the committed bench aggregate and can move a golden trace — a re-bless that
-belongs with a `--release --bench` run in hand, not scattered across eight card
-commits. **Take them as one batch with one bench reading**, in roughly the order
-above (Ghost Vacuum first: three decks, and the primitive exists). Arcane
-Signet, which the same walk flagged in all five decks, was a **stale doc
-comment** and nothing else — `tap_add_commander_identity()` has shipped for a
-while; the comment is corrected.
+⚠ **Every one of the eight is a card the `cube` deck builder can draw**, so a
+behavior change to any of them *can* move the committed bench aggregate and a
+golden trace. **That is a measurement, not a veto** — the CR 603.2c graveyard
+batch above changed five pool cards and `--bench` came back byte-identical.
+**Take them as one batch with one `--bench` reading in hand**, in roughly the
+order above (Ghost Vacuum first: three decks, and the link primitive exists),
+and re-bless only if the reading actually moves. Arcane Signet, which the same
+walk flagged in all five decks, was a **stale doc comment** and nothing else —
+`tap_add_commander_identity()` has shipped for a while; the comment is
+corrected.
 
 ## Judith (BR), the pod's losing seat — what it is NOT
 

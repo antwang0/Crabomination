@@ -175,11 +175,14 @@ pub fn rot_farm_mortipede() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
+            // CR 603.2c — "whenever ONE OR MORE cards leave your graveyard":
+            // one fire per batch, however many left at once.
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature,
-                }),
+                })
+                .once_per_batch(),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::This,
