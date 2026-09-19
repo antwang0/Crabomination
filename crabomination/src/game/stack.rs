@@ -2469,12 +2469,13 @@ impl GameState {
                     if let Some(door) = room_door {
                         self.set_room_door_unlocked(card_id, door == 1, &mut events);
                     }
-                    // CR 614 — "As this permanent enters, [effect]" (Ixidron).
+                    // CR 614.12 — the as-enters replacements, through the one
+                    // funnel every entry path shares (`game::as_enters`).
                     // Before the first SBA sweep so a `*/*` body sized off the
                     // effect never dies as a 0/0, and before the counter specs
                     // below so an enters-with count can read what it did
                     // (Mimeoplasm's three counters per card it exiled).
-                    self.apply_as_enters_effect(card_id);
+                    self.apply_as_enters_replacements(card_id);
                     // Collect the printed `enters_with_counters` spec and
                     // any active `ExtraEtbCountersForCreatureCasts` static
                     // effects controlled by the caster. The static fires
@@ -2631,14 +2632,6 @@ impl GameState {
                     // cost enters with N time counters (and isn't a creature
                     // until they tick off).
                     self.apply_impending_etb(card_id, &mut events);
-                    // CR 614 — "As this enters, it becomes your choice of …"
-                    // (Corrupted Shapeshifter). Applied before SBA so a
-                    // printed */* body never dies as a 0/0.
-                    self.apply_enters_as_choice(card_id);
-                    // CR 614 — "As this enters, choose [mode A] or [mode B]"
-                    // (the Tarkir Siege cycle). Bakes the chosen mode's
-                    // abilities onto the permanent as it enters.
-                    self.apply_enters_mode_choice(card_id);
                     // CR 707 — "enters as a copy of [filter]" replacement.
                     // Applied here, before the first SBA sweep, so a 0/0
                     // copier (Clone, Phantasmal Image) never dies as a 0/0.

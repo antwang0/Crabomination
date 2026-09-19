@@ -118,6 +118,9 @@ macro_rules! clear_opt_scratch {
 pub mod actions;
 #[doc(hidden)]
 pub mod affordances;
+/// CR 614.12 — the one funnel every battlefield entry applies the
+/// "as this permanent enters" replacements through.
+pub(crate) mod as_enters;
 #[doc(hidden)]
 pub mod combat;
 /// CR 800.4f/g — routing an ask whose seat has left the game.
@@ -9426,6 +9429,13 @@ impl GameState {
             }
             c.set_definition(std::sync::Arc::new(def));
         }
+        // CR 614.12 — a mint is a battlefield entry, so the as-enters
+        // replacements run on it too. *After* `apply_enters_as_copy`, because
+        // a token copy's copiable values are what the mint establishes and
+        // the choice belongs to the copied line: CR 614.12's own worked
+        // example is a token copy of Voice of All choosing its colour as the
+        // token is created.
+        self.apply_as_enters_replacements(id);
         // CR 614.1c — the token's own printed "enters with N counters". Read
         // *after* `apply_enters_as_copy` so a copy token uses the copied
         // card's spec, which is the whole point: a token copy of a permanent

@@ -4143,6 +4143,11 @@ impl GameState {
             card.enter_as_new_object();
         }
         self.battlefield.push(card);
+        // CR 614.12 — a land drop is a battlefield entry like any other, so
+        // the as-enters replacements run here too, before the counters and
+        // before the ETB triggers. Cavern of Souls names its creature type
+        // as it is *played*, which is the only way it ever enters.
+        self.apply_as_enters_replacements(card_id);
         // CR 614.1c — a printed "enters with N counters" land (the MMQ
         // depletion cycle) gets them off the land drop too, and as part of
         // the entry: before its ETB triggers, like every other entry path.
