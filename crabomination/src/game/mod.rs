@@ -16937,6 +16937,23 @@ impl GameState {
         id
     }
 
+    /// `add_card_to_battlefield` plus the CR 614.12 **as-enters** replacements
+    /// (test fixture), the sibling of `add_card_to_battlefield_with_counters`.
+    /// The plain constructor skips every entry replacement, so a card whose
+    /// whole body is an as-enters choice (Story Circle's colour, Cavern of
+    /// Souls' creature type) lands with nothing chosen and its choice-keyed
+    /// statics reading an unset value. Script the decider *before* calling
+    /// this: the choice is made inside it.
+    pub fn add_card_to_battlefield_entering(
+        &mut self,
+        player_idx: usize,
+        def: CardDefinition,
+    ) -> CardId {
+        let id = self.add_card_to_battlefield(player_idx, def);
+        self.apply_as_enters_replacements(id);
+        id
+    }
+
     /// Drop a token onto the battlefield directly (test fixture). Mirrors
     /// `add_card_to_battlefield` but uses `CardInstance::new_token` so the
     /// `is_token` flag is set — required for SBA path 704.5d (tokens not on

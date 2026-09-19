@@ -1912,7 +1912,7 @@ pub fn whispering_specter() -> CardDefinition {
 /// Caged Sun — an anthem and a mana doubler for the chosen colour.
 pub fn caged_sun() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![
             StaticAbility {
                 description: "Creatures you control of the chosen color get +1/+1.",

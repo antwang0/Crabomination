@@ -1636,10 +1636,10 @@ pub fn volraths_laboratory() -> CardDefinition {
         name: "Volrath's Laboratory",
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+        as_enters_effect: Some(Effect::Seq(vec![
             Effect::ChooseColorForSelf,
             Effect::NameCreatureType { what: Selector::This },
-        ]))],
+        ])),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5)]),
             tap_cost: true,

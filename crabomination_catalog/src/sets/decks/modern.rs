@@ -3011,15 +3011,12 @@ pub fn coldsteel_heart() -> CardDefinition {
         name: "Coldsteel Heart",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::ChooseColorForSelf,
-                Effect::Tap {
-                    what: Selector::This,
-                },
-            ]),
-        }],
+        as_enters_effect: Some(Effect::Seq(vec![
+            Effect::ChooseColorForSelf,
+            Effect::Tap {
+                what: Selector::This,
+            },
+        ])),
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -58904,11 +58901,11 @@ pub fn opaline_sliver() -> CardDefinition {
     }
 }
 
-/// Ward Sliver — {4}{W} 2/2. ETB: choose a color; all Slivers have
+/// Ward Sliver — {4}{W} 2/2. As it enters, choose a color; all Slivers have
 /// protection from the chosen color.
 pub fn ward_sliver() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "All Slivers have protection from the chosen color.",
             effect: StaticEffect::GrantProtectionFromChosenColor {
@@ -59295,7 +59292,7 @@ pub fn utopia_sprawl() -> CardDefinition {
                 filter: SelectionRequirement::HasLandType(LandType::Forest),
             },
         },
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "Enchanted Forest tapped for mana adds the chosen color.",
             effect: StaticEffect::ExtraManaOnLandTap {

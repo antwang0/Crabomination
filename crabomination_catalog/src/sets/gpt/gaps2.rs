@@ -148,10 +148,7 @@ pub fn order_of_the_stars() -> CardDefinition {
         power: 0,
         toughness: 1,
         keywords: vec![Keyword::Defender],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseColorForSelf,
-        }],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "This creature has protection from the chosen color.",
             effect: StaticEffect::GrantProtectionFromChosenColor {

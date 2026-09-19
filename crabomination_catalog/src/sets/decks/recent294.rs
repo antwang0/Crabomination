@@ -95,7 +95,7 @@ pub fn silhana_starfletcher() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {

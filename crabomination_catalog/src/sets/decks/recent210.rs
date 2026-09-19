@@ -67,7 +67,7 @@ pub fn heraldic_banner() -> CardDefinition {
         name: "Heraldic Banner",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen color get +1/+0.",
             effect: StaticEffect::AnthemForChosenColor {

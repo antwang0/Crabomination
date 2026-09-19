@@ -7,7 +7,7 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, Selector,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, u, w};
 
@@ -149,7 +149,7 @@ pub fn quirion_elves() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,

@@ -8,7 +8,7 @@ Handles the two shapes the catalog writes:
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
         effect: <E>,
     }],
-    triggered_abilities: vec![etb(<E>)],
+    triggered_abilities: vec![etb(<E>)],          (also `shortcut::etb`)
 
 and rewrites both to `as_enters_effect: Some(<E>),`. Refuses anything else,
 including a `triggered_abilities` vec with more than the one entry --
@@ -72,7 +72,7 @@ def convert_body(body):
             return None, "trigger carries fields beyond event+effect"
         effect = rest[m2.end() :].strip().rstrip(",").strip()
         dedent = 4  # the literal sat one brace deeper inside `TriggeredAbility`
-    elif inner.startswith("etb("):
+    elif re.match(r"(crate::effect::shortcut::)?etb\(", inner):
         end = find_balanced(inner, inner.index("("), "(", ")")
         if end != len(inner):
             return None, "more than one trigger"

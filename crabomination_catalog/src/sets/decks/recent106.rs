@@ -115,10 +115,7 @@ pub fn iona_shield_of_emeria() -> CardDefinition {
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseColorForSelf,
-        }],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "Your opponents can't cast spells of the chosen color.",
             effect: StaticEffect::OpponentsCantCastChosenColor,

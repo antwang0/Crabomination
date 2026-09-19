@@ -910,11 +910,8 @@ pub fn diplomatic_escort() -> CardDefinition {
 /// Jeweled Torque — {2}. Names a colour and sells you 2 life per spell of it.
 pub fn jeweled_torque() -> CardDefinition {
     CardDefinition {
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::ChooseColorForSelf,
-            },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
                     .with_filter(Predicate::CastSpellSharesChosenColorOfSource),
@@ -955,10 +952,7 @@ pub fn ley_line() -> CardDefinition {
 /// Story Circle — {1}{W}{W}. Names a colour and buys off its damage all day.
 pub fn story_circle() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseColorForSelf,
-        }],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             effect: Effect::PreventNextDamageFromChosenSource {
@@ -980,10 +974,7 @@ pub fn story_circle() -> CardDefinition {
 pub fn chameleon_spirit() -> CardDefinition {
     CardDefinition {
         dynamic_pt: Some(DynamicPt::PermanentsOfChosenColorOpponentsControl),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseColorForSelf,
-        }],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         ..creature(
             "Chameleon Spirit",
             cost(&[generic(3), u()]),

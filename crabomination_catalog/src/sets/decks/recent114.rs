@@ -817,10 +817,7 @@ pub fn cho_mannos_blessing() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(SelectionRequirement::Creature),
         },
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseColorForSelf,
-        }],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature has protection from the chosen color.",
             effect: StaticEffect::GrantProtectionFromChosenColor {
@@ -846,10 +843,7 @@ pub fn flickering_ward() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(SelectionRequirement::Creature),
         },
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ChooseColorForSelf,
-        }],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature has protection from the chosen color.",
             effect: StaticEffect::GrantProtectionFromChosenColor {

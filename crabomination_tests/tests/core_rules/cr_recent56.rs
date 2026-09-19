@@ -26,12 +26,11 @@ fn mana(g: &mut GameState, seat: usize) {
 #[test]
 fn cr_109_5_trigger_you_is_the_abilitys_controller() {
     let mut g = two_player_game();
-    let torque = g.add_card_to_battlefield(0, catalog::jeweled_torque());
     g.decider = Box::new(ScriptedDecider::new(vec![
         DecisionAnswer::Color(Color::Red),
         DecisionAnswer::Bool(true),
     ]));
-    g.fire_self_etb_triggers(torque, 0);
+    g.add_card_to_battlefield_entering(0, catalog::jeweled_torque());
     drain_stack(&mut g);
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     mana(&mut g, 0);

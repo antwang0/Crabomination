@@ -10480,9 +10480,8 @@ mod recent7 {
     #[test]
     fn quirion_elves_chosen_color_mana() {
         let mut g = two_player_game();
-        let elf = g.add_card_to_battlefield(0, catalog::quirion_elves());
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
-        g.fire_self_etb_triggers(elf, 0);
+        let elf = g.add_card_to_battlefield_entering(0, catalog::quirion_elves());
         drain_stack(&mut g);
         g.clear_sickness(elf);
         g.perform_action(GameAction::ActivateAbility {

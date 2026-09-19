@@ -246,3 +246,99 @@ fn cr_614_12a_a_named_sources_ability_is_locked_with_no_window() {
          holds priority"
     );
 }
+
+// ── The choose-a-colour class (CR 614.12) ──────────────────────────────────
+
+/// The twenty "As this ~ enters, choose a color" cards, as one table. Same
+/// window argument as the choose-a-name class: until 2026-09-19 each shipped
+/// an `EntersBattlefield` trigger, so a colour-keyed static (Caged Sun's
+/// "+1/+1 to creatures of the chosen color", Story Circle's prevention) was
+/// live against an *unchosen* colour for at least one SBA check.
+///
+/// Auras are excluded: they need an attach target to enter at all, and their
+/// own entry is covered by `cho_mannos_blessing_chooses_as_it_enters` below.
+#[test]
+fn cr_614_12a_the_choose_a_colour_class_chooses_as_it_enters() {
+    let namers: [(&str, fn() -> CardDefinition); 14] = [
+        ("Caged Sun", catalog::caged_sun),
+        ("Chameleon Spirit", catalog::chameleon_spirit),
+        ("Coldsteel Heart", catalog::coldsteel_heart),
+        ("Diamond Mare", catalog::diamond_mare),
+        ("Hall of Triumph", catalog::hall_of_triumph),
+        ("Heraldic Banner", catalog::heraldic_banner),
+        ("Iona, Shield of Emeria", catalog::iona_shield_of_emeria),
+        ("Jeweled Torque", catalog::jeweled_torque),
+        ("Order of the Stars", catalog::order_of_the_stars),
+        ("Quirion Elves", catalog::quirion_elves),
+        ("Silhana Starfletcher", catalog::silhana_starfletcher),
+        ("Story Circle", catalog::story_circle),
+        ("Volrath's Laboratory", catalog::volraths_laboratory),
+        ("Ward Sliver", catalog::ward_sliver),
+    ];
+    for (name, factory) in namers {
+        let mut g = two_player_game();
+        let id = g.move_card_to_battlefield_for_test(0, factory());
+        let inst = g.battlefield_find(id).unwrap_or_else(|| panic!("{name} entered"));
+        assert!(
+            inst.chosen_color.is_some(),
+            "CR 614.12a — {name} chooses its colour as it enters"
+        );
+        assert!(
+            g.stack.is_empty(),
+            "CR 614.12 — {name} leaves no trigger on the stack to carry the choice"
+        );
+    }
+}
+
+/// Caged Sun's colour-keyed anthem is the consequence: before the conversion
+/// the Sun was on the battlefield with the anthem live and no colour chosen,
+/// so a creature it should have been pumping read its printed body across at
+/// least one state-based-action check.
+#[test]
+fn cr_614_12a_a_colour_keyed_anthem_is_live_with_the_colour_already_chosen() {
+    use crabomination::decision::OneColorDecider;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(OneColorDecider::new(Color::Green));
+    let sun = g.move_card_to_battlefield_for_test(0, catalog::caged_sun());
+    assert_eq!(
+        g.battlefield_find(sun).and_then(|c| c.chosen_color),
+        Some(Color::Green),
+        "the colour is chosen as the Sun enters"
+    );
+    assert!(g.stack.is_empty(), "nothing is waiting to resolve");
+    let cp = g.computed_permanent(bears).expect("the Bears are still there");
+    assert_eq!(
+        (cp.power, cp.toughness),
+        (3, 3),
+        "CR 614.12a — the anthem reads the chosen colour with no window before it"
+    );
+}
+
+/// An Aura's as-enters colour choice happens on the *cast* path, where it
+/// always did — the conversion must not have cost it.
+#[test]
+fn cho_mannos_blessing_chooses_as_it_enters() {
+    use crabomination::decision::OneColorDecider;
+    use crabomination::mana::Color;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::cho_mannos_blessing());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.decider = Box::new(OneColorDecider::new(Color::Red));
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the Aura is castable");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(aura).and_then(|c| c.chosen_color),
+        Some(Color::Red),
+        "CR 614.12a — the Aura's colour is chosen as it enters"
+    );
+}

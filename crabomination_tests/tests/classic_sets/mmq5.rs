@@ -790,9 +790,8 @@ fn diplomatic_escort_counters_a_creature_targeting_spell() {
 #[test]
 fn jeweled_torque_pays_for_the_named_color() {
     let mut g = two_player_game();
-    let torque = g.add_card_to_battlefield(0, catalog::jeweled_torque());
     script(&mut g, vec![DecisionAnswer::Color(Color::Red), DecisionAnswer::Bool(true)]);
-    g.fire_self_etb_triggers(torque, 0);
+    g.add_card_to_battlefield_entering(0, catalog::jeweled_torque());
     drain_stack(&mut g);
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt()); // red
     mana(&mut g, 0);
@@ -818,9 +817,10 @@ fn ley_line_grows_a_creature_each_upkeep() {
 #[test]
 fn story_circle_shields_the_named_color() {
     let mut g = two_player_game();
-    let circle = g.add_card_to_battlefield(0, catalog::story_circle());
+    // CR 614.12 — the colour is an as-enters replacement, so script the
+    // answer before the entry and enter through the fixture that applies it.
     script(&mut g, vec![DecisionAnswer::Color(Color::Red)]);
-    g.fire_self_etb_triggers(circle, 0);
+    let circle = g.add_card_to_battlefield_entering(0, catalog::story_circle());
     drain_stack(&mut g);
     // The shield names a source, so the Bolt has to be on the stack first.
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt()); // red
@@ -855,9 +855,8 @@ fn chameleon_spirit_counts_opposing_permanents_of_the_color() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
     g.add_card_to_battlefield(0, catalog::grizzly_bears()); // yours — no count
-    let spirit = g.add_card_to_battlefield(0, catalog::chameleon_spirit());
     script(&mut g, vec![DecisionAnswer::Color(Color::Green)]);
-    g.fire_self_etb_triggers(spirit, 0);
+    let spirit = g.add_card_to_battlefield_entering(0, catalog::chameleon_spirit());
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(spirit).unwrap().power, 1);
     g.add_card_to_battlefield(1, catalog::grizzly_bears());

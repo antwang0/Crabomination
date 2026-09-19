@@ -780,7 +780,7 @@ pub fn hall_of_triumph() -> CardDefinition {
         cost: cost(&[generic(3)]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen color get +1/+1.",
             effect: StaticEffect::AnthemForChosenColor {

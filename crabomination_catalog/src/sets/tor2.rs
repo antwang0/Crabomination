@@ -967,7 +967,7 @@ pub fn shades_form() -> CardDefinition {
 /// one-shot save for anyone.
 pub fn floating_shield() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature has protection from the chosen color.",
             effect: StaticEffect::GrantProtectionFromChosenColor {

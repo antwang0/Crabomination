@@ -435,10 +435,9 @@ fn intruder_alarm_locks_both_seats() {
 #[test]
 fn volraths_laboratory_prints_the_chosen_type() {
     let mut g = two_player_game();
-    let lab = g.add_card_to_battlefield(0, catalog::volraths_laboratory());
-    let ctx = EffectContext::for_ability(lab, 0, None);
-    g.resolve_effect(&catalog::volraths_laboratory().triggered_abilities[0].effect, &ctx)
-        .expect("etb");
+    // CR 614.12 — the colour and the type are one as-enters replacement now,
+    // applied by the entry rather than reachable as a trigger's effect.
+    let lab = g.add_card_to_battlefield_entering(0, catalog::volraths_laboratory());
     let chosen = g.battlefield_find(lab).unwrap().chosen_creature_type;
     assert!(chosen.is_some(), "a creature type was named");
 

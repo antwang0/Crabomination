@@ -434,7 +434,7 @@ pub fn benevolent_unicorn() -> CardDefinition {
 pub fn prismatic_circle() -> CardDefinition {
     CardDefinition {
         keywords: vec![cumulative_upkeep_1()],
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             effect: Effect::PreventNextDamageFromChosenSource {
@@ -765,7 +765,7 @@ pub fn spatial_binding() -> CardDefinition {
 pub fn ward_of_lights() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ChooseColorForSelf)],
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature has protection from the chosen color.",
             effect: StaticEffect::GrantProtectionFromChosenColor {

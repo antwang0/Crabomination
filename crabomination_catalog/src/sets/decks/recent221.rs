@@ -2,7 +2,6 @@
 //! Aetherdrift vanilla "Tyrant" legends. Tests in `tests/recent221.rs`.
 
 use crate::card::{CardDefinition, CardType, CreatureType, Subtypes, Supertype, TriggeredAbility};
-use crate::effect::shortcut::etb;
 use crate::effect::{Effect, EventKind, EventScope, EventSpec, Predicate, Selector, Value};
 use crate::mana::{b, cost, g, generic, r, w};
 
@@ -19,8 +18,8 @@ pub fn diamond_mare() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
         triggered_abilities: vec![
-            etb(Effect::ChooseColorForSelf),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                     .with_filter(Predicate::CastSpellSharesChosenColorOfSource),

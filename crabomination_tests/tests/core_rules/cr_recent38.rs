@@ -120,9 +120,8 @@ fn cr_607_2a_linked_exile_returns_only_its_own_card() {
 fn cr_607_2d_each_source_reads_its_own_chosen_color() {
     let mut g = main_phase();
     for (seat, color) in [(0usize, Color::Green), (1usize, Color::White)] {
-        let hall = g.add_card_to_battlefield(seat, catalog::hall_of_triumph());
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(color)]));
-        g.fire_self_etb_triggers(hall, seat);
+        g.add_card_to_battlefield_entering(seat, catalog::hall_of_triumph());
         drain_stack(&mut g);
     }
     let mine_green = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 green

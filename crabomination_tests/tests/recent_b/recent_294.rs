@@ -55,10 +55,10 @@ fn sporeback_troll_regenerates_a_counter_bearer() {
 #[test]
 fn silhana_starfletcher_taps_for_the_chosen_color() {
     let mut g = two_player_game();
-    let fletcher = g.add_card_to_battlefield(0, catalog::silhana_starfletcher());
-    // Choose blue as it enters.
+    // CR 614.12 — choose blue as it enters; the answer has to be scripted
+    // before the entry, which is what applies the replacement.
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
-    g.fire_self_etb_triggers(fletcher, 0);
+    let fletcher = g.add_card_to_battlefield_entering(0, catalog::silhana_starfletcher());
     drain_stack(&mut g);
     g.clear_sickness(fletcher);
     g.perform_action(GameAction::ActivateAbility {
