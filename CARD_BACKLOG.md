@@ -228,7 +228,7 @@ every one of them is in the `cube` pool**, which is the finding:
 
 | Card | Decks | Residual |
 | --- | --- | --- |
-| Ghost Vacuum | Hanna, Sigarda, Tatyova | 🟡 the `{6}, {T}, Sacrifice:` half — "put each creature card exiled **with this artifact** onto the battlefield with a flying counter, each a 1/1 Spirit in addition to its other types" — is unmodelled. `ExileLink` / `ExileUntilSourceLeaves` is the link primitive; what is *also* missing is a mass return from a linked exile set that stamps a counter and a type/PT override, which is the real size of it |
+| Ghost Vacuum | Hanna, Sigarda, Tatyova | 🟡 the `{6}, {T}, Sacrifice:` half is unmodelled, and **it is the one on this table that is a real build — sized 2026-09-19 so nobody re-sizes it.** The link half exists (`ZoneDest::ExileWithSourceStamp` + `exiled_with`), and **three pieces do not**: ① `Selector::CardExiledWithSource` is documented *singular* ("resolves to that single card", Hideaway's shape) and this wants the whole set; ② there is no **flying counter** — `KeywordCounters` exists on `CardInstance` but no `CounterType` routes into it, so "with a flying counter on it" needs the bridge; ③ "each of them is a 1/1 Spirit **in addition to** its other types" is a layer effect (7b base P/T + a type add) applied to a set the return just produced. ⚠ Weigh it against what it buys: a 7-mana sacrifice ability on a card whose *first* half already works, in three decks |
 | ~~Simian Spirit Guide~~ | Judith | ✅ **the row was stale** — `from_hand: true, exile_self_cost: true, add_mana([Red])` has shipped, with `modern::coverage_backfill::simian_spirit_guide_pitches_from_hand_for_red` on it. The bot's `available_mana` does not *count* a Spirit Guide in hand, which is a deliberate downward bias, not a missing card |
 | ~~Sowing Mycospawn~~ | Sigarda | ✅ **fixed 2026-09-19** — the tutored land enters untapped, and the assertion is now in the card's own test |
 | ~~Delighted Halfling~~ | Sigarda, Tatyova | ✅ **fixed 2026-09-19** — `SpendRestriction::LegendarySpellUncounterable` (a real restriction *plus* the Cavern-shaped stamp), tested both ways |
@@ -247,9 +247,12 @@ the same result (195,806 / 27.49 / 611.9 / 0 stalls, every golden trace held).
 Pool *membership* is not pool *reach* — the bench plays `--decks fixed` and the
 traces are fixed-seed games, and a card has to actually be drawn and played in
 one of them to move a number. **Take the rest one or two at a time with a
-`--bench` reading in hand**, in roughly the order above (Ghost Vacuum first:
-three decks, and the link primitive exists), and re-bless only if the reading
-actually moves.
+`--bench` reading in hand**, and re-bless only if the reading actually moves.
+⚠ **Not "Ghost Vacuum first" any more** — four of the eight are done, three of
+them needed no primitive at all, and the sizing above says Ghost Vacuum is the
+one that does. Spark Double's planeswalker-copy half and Delver of Secrets'
+transform are the remaining two, and both are a known engine gap (the
+transform-DFC pattern) rather than a card oversight.
 
 Arcane Signet, which the same walk flagged in all five decks, was a **stale doc
 comment** and nothing else — `tap_add_commander_identity()` has shipped for a
