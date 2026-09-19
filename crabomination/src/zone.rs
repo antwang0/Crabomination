@@ -734,7 +734,8 @@ pub(crate) fn card_is_triggerer(c: &CardInstance) -> bool {
 /// `active_static` gates inside those helpers only narrow it.
 /// Does this permanent's definition carry a static that changes how a
 /// permanent enters the battlefield — the ETB-trigger suppressors and
-/// doublers `etb_trigger_multiplier` counts, the cross-permanent
+/// doublers `etb_trigger_multiplier` counts, the ETB-trigger copier
+/// `entering_trigger_copiers` looks for (Aboleth Spawn), the cross-permanent
 /// `EntersTapped` statics and the `LandsEnterUntapped` override
 /// `apply_enters_tapped_replacement` walks for? The [`LANE_ETB_STATIC`]
 /// predicate; definition-only.
@@ -746,6 +747,7 @@ fn card_has_etb_static(c: &CardInstance) -> bool {
             S::SuppressCreatureEtbTriggers { .. }
                 | S::EtbTriggerSpotlight
                 | S::DoubleControllerEtbTriggers
+                | S::CopyOpponentsEnteringCreatureTriggers
                 | S::EntersTapped { .. }
                 | S::LandsEnterUntapped
         )
@@ -923,7 +925,8 @@ fn static_effect_touches_untap(e: &crate::effect::StaticEffect) -> bool {
 /// Does this permanent's definition carry a static that changes a life
 /// total's arithmetic — one of the seven `adjust_life`'s helpers walk for
 /// (the gain-to-loss / gain-to-draw replacements, the gain bonus and
-/// multiplier, the cannot-gain / cannot-lose locks, the loss doubler), under
+/// multiplier, the cannot-gain / cannot-lose locks, the loss doubler) or
+/// replaces a life *payment* (Ashiok, Wicked Manipulator), under
 /// any of the `While*` wrappers `active_static` peels (peeled unconditionally
 /// here, the sound direction)? The [`LANE_LIFE_STATIC`] predicate;
 /// definition-only.
@@ -945,7 +948,8 @@ fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
         | S::LifeGainMultiplier { .. }
         | S::PlayerCannotGainLife { .. }
         | S::PlayerCannotLoseLife { .. }
-        | S::OpponentLifeLossDoubledDuringYourTurn => true,
+        | S::OpponentLifeLossDoubledDuringYourTurn
+        | S::PayLifeExilesLibraryTopInstead => true,
         _ => false,
     }
 }

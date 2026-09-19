@@ -2544,6 +2544,60 @@ pub fn etb_trigger_multiplier(
     }
 }
 
+/// Aboleth Spawn's Probing Telepathy — the seats that copy each fire of a
+/// triggered ability of `entering` that its own entry caused, one entry per
+/// `CopyOpponentsEnteringCreatureTriggers` static an opponent of
+/// `controller` (the entering creature's controller) has on the battlefield.
+/// Empty — and a single lane read — on any board without one: the static is
+/// in the `LANE_ETB_STATIC` predicate, the lane every entering permanent
+/// already reads for `etb_trigger_multiplier`.
+///
+/// Callers push one `probing_telepathy_copy` per seat per fire, controlled
+/// by that seat (CR 707.10: "you" in the copy is its controller) with
+/// targets picked for that seat (the "may choose new targets").
+pub(crate) fn entering_trigger_copiers(
+    state: &crate::game::GameState,
+    controller: usize,
+    entering: CardId,
+) -> Vec<usize> {
+    use crate::effect::StaticEffect;
+    if !state.battlefield.has_etb_static() {
+        return Vec::new();
+    }
+    if !state
+        .battlefield
+        .find_by_id(entering)
+        .is_some_and(|c| c.definition.is_creature())
+    {
+        return Vec::new();
+    }
+    let mut seats = Vec::new();
+    for c in &state.battlefield {
+        if c.controller == controller || state.same_team(c.controller, controller) {
+            continue;
+        }
+        for sa in &c.definition.static_abilities {
+            if matches!(
+                state.active_static(&sa.effect, c),
+                Some(StaticEffect::CopyOpponentsEnteringCreatureTriggers)
+            ) {
+                seats.push(c.controller);
+            }
+        }
+    }
+    seats
+}
+
+/// The copy Probing Telepathy puts on the stack: the entering creature's
+/// triggered ability, with the copier's "you may copy that ability" as a
+/// yes/no asked of the copy's controller when it resolves.
+pub(crate) fn probing_telepathy_copy(effect: &Effect) -> Effect {
+    Effect::MayDo {
+        description: "Probing Telepathy — copy that triggered ability?".into(),
+        body: Box::new(effect.clone()),
+    }
+}
+
 /// True when any battlefield permanent carries a
 /// `SuppressCreatureEtbTriggers` static (Torpor Orb, Tocatli Honor Guard,
 /// Hushbringer). Applies globally — both players' creature ETB triggers.
@@ -4399,6 +4453,45 @@ impl GameState {
                         .x_value(cast_x)
                         .build(),
                 );
+            }
+            // Aboleth Spawn — each fire can be copied by an opponent's
+            // Probing Telepathy, the copy controlled by (and targeted for)
+            // that opponent. A copy keeps the original's mode (CR 707.10).
+            if multiplier > 0 {
+                for copier in entering_trigger_copiers(self, controller, card_id) {
+                    let copy = probing_telepathy_copy(&effect);
+                    let copy_target =
+                        self.auto_target_for_effect_avoiding_set_x(&copy, copier, &[card_id], cast_x);
+                    let copy_additional =
+                        self.auto_extra_targets_for(&copy, card_id, copier, copy_target.clone());
+                    for _ in 0..multiplier {
+                        self.stack.push(
+                            TriggerPush::new(card_id, copier, copy.clone())
+                                .target(copy_target.clone())
+                                .additional_targets(copy_additional.clone())
+                                .mode(mode)
+                                .x_value(cast_x)
+                                .build(),
+                        );
+                    }
+                    if copy.requires_target() {
+                        let mut became =
+                            vec![GameEvent::ChoseTargets { chooser: copier, object: card_id }];
+                        became.extend(copy_target.iter().chain(copy_additional.iter()).filter_map(
+                            |t| match t {
+                                Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
+                                    Some(GameEvent::BecameTarget {
+                                        target: *id,
+                                        caster: copier,
+                                        by: Some(card_id),
+                                    })
+                                }
+                                _ => None,
+                            },
+                        ));
+                        self.dispatch_triggers_for_events(&became);
+                    }
+                }
             }
             // CR 603 — a triggered ability choosing targets fires
             // "becomes the target" listeners (Tenured Concocter), same as
@@ -9316,9 +9409,11 @@ impl GameState {
                     }
                 }
                 A::PayLife { amount } => {
-                    let applied = self.adjust_life_applied(p, -(*amount as i32));
-                    if applied < 0 {
-                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    if !self.replace_life_payment(p, *amount, &mut events) {
+                        let applied = self.adjust_life_applied(p, -(*amount as i32));
+                        if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
                     }
                 }
                 A::ExilePermanent { filter, count } => {
@@ -11899,7 +11994,7 @@ impl GameState {
 
         // Pay the life portion of the alt cost (CR 119.4; applied
         // amount honors cannot-lose replacements).
-        if alt.life_cost > 0 {
+        if alt.life_cost > 0 && !self.replace_life_payment(p, alt.life_cost, &mut auto_events) {
             let applied = self.adjust_life_applied(p, -(alt.life_cost as i32));
             if applied < 0 {
                 auto_events.push(GameEvent::LifeLost {
@@ -18193,7 +18288,9 @@ impl GameState {
         // payment is now safe (the pre-flight gate above guaranteed
         // sufficient life). Emits a LifeLost event so trigger / replay
         // observers see the cost.
-        if ability.life_cost > 0 {
+        if ability.life_cost > 0
+            && !self.replace_life_payment(p, ability.life_cost, &mut auto_mana_events)
+        {
             let applied = self.adjust_life_applied(p, -(ability.life_cost as i32));
             if applied < 0 {
                 auto_mana_events.push(GameEvent::LifeLost {
@@ -18204,13 +18301,17 @@ impl GameState {
         }
         if ability.half_life_cost {
             let half = self.players[p].life.div_euclid(2) + self.players[p].life.rem_euclid(2);
-            let applied = self.adjust_life_applied(p, -half);
-            if applied < 0 {
-                auto_mana_events
-                    .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+            if !self.replace_life_payment(p, half.max(0) as u32, &mut auto_mana_events) {
+                let applied = self.adjust_life_applied(p, -half);
+                if applied < 0 {
+                    auto_mana_events
+                        .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                }
             }
         }
-        if ability.x_life_cost {
+        if ability.x_life_cost
+            && !self.replace_life_payment(p, x_value.unwrap_or(0), &mut auto_mana_events)
+        {
             let paid = x_value.unwrap_or(0) as i32;
             let applied = self.adjust_life_applied(p, -paid);
             if applied < 0 {
@@ -19402,6 +19503,15 @@ impl GameState {
         if life == 0 {
             return;
         }
+        // Ashiok, Wicked Manipulator — the payment becomes a library exile;
+        // no life was paid, so no `PaidLife` / `LifeLost` follows.
+        if self.battlefield.has_life_static() {
+            let mut evs = Vec::new();
+            if self.replace_life_payment(p, life, &mut evs) {
+                self.scratch.pending_cost_events.extend(evs);
+                return;
+            }
+        }
         // CR 118.8 — "whenever you pay life" (Font of Agonies) sees the amount
         // paid, whether or not the life reduction was itself replaced.
         self.scratch.pending_cost_events
@@ -19411,6 +19521,54 @@ impl GameState {
             self.scratch.pending_cost_events
                 .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
         }
+    }
+
+    /// Ashiok, Wicked Manipulator (CR 614.1a) — "If you would pay life while
+    /// your library has at least that many cards in it, exile that many cards
+    /// from the top of your library instead." Returns true (and has exiled
+    /// the cards, their events in `events`) when `p` controls such a static
+    /// and their library holds at least `life` cards; false leaves the caller
+    /// to pay the life as usual. A replacement on *paying* life only — a life
+    /// loss never comes here.
+    ///
+    /// Affordability is not this function's business: CR 119.4 lets a player
+    /// pay life only when their life total is at least the amount, and a
+    /// replacement of the payment doesn't change whether it can be paid, so
+    /// every cost gate keeps reading the life total. One lane read on a board
+    /// without a life static (the static is in `LANE_LIFE_STATIC`).
+    pub(crate) fn replace_life_payment(
+        &mut self,
+        p: usize,
+        life: u32,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        if life == 0
+            || !self.battlefield.has_life_static()
+            || self.players[p].library.len() < life as usize
+        {
+            return false;
+        }
+        let replaced = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(StaticEffect::PayLifeExilesLibraryTopInstead)
+                    )
+                })
+        });
+        if !replaced {
+            return false;
+        }
+        for _ in 0..life {
+            if self.players[p].library.is_empty() {
+                break;
+            }
+            let card = self.players[p].library.remove(0);
+            self.place_card_in_dest(card, p, &crate::effect::ZoneDest::Exile, events);
+        }
+        true
     }
 
     /// `WardCost::RemoveCounterFromPermanent` — take one counter off a

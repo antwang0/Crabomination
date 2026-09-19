@@ -6719,7 +6719,7 @@ impl GameState {
                 self.clear_answer_log();
                 let payable = amt == 0 || self.players[ctx.controller].life >= amt as i32;
                 if yes && payable {
-                    if amt > 0 {
+                    if amt > 0 && !self.replace_life_payment(ctx.controller, amt, events) {
                         let applied = self.adjust_life_applied(ctx.controller, -(amt as i32));
                         if applied < 0 {
                             events.push(GameEvent::LifeLost {

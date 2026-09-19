@@ -22446,9 +22446,26 @@ impl GameState {
                         + crate::game::actions::ally_trigger_extra_fires(self, controller, source)
                         + land_extra
                 };
+                // Aboleth Spawn — the entering creature's *own* ETB-caused
+                // trigger ("whenever a creature enters" on the entrant itself)
+                // is copied per fire by each opponent's Probing Telepathy.
+                // Another permanent's trigger is not the entrant's, so only
+                // `source == subject` asks; the lane read inside makes the
+                // ask free on a board without an Aboleth.
+                let copiers = match subject {
+                    Some(crate::game::effects::EntityRef::Permanent(id))
+                        if id == source && mult > 0 =>
+                    {
+                        crate::game::actions::entering_trigger_copiers(self, controller, id)
+                    }
+                    _ => Vec::new(),
+                };
+                let copy = (!copiers.is_empty())
+                    .then(|| crate::game::actions::probing_telepathy_copy(&effect));
                 // `repeat_n` clones `mult - 1` times and yields the original
                 // last, so the ordinary board — no doubler, `mult == 1` —
                 // pays no clone at all (PERF `(-361)`).
+                let mut fired = 0usize;
                 for effect in std::iter::repeat_n(effect, mult) {
                     // Strict Proctor's CR 614 tax applies once per fire; a
                     // declined / unpayable tax sacrifices the source and
@@ -22456,6 +22473,7 @@ impl GameState {
                     if !crate::game::actions::apply_etb_trigger_tax(self, source, controller) {
                         break;
                     }
+                    fired += 1;
                     queue.push(PendingTriggerPush {
                         actor,
                         source,
@@ -22470,6 +22488,26 @@ impl GameState {
                         converged_value: 0,
                         mana_spent: 0,
                     });
+                }
+                if let Some(copy) = copy {
+                    for &copier in &copiers {
+                        for _ in 0..fired {
+                            queue.push(PendingTriggerPush {
+                                actor,
+                                source,
+                                controller: copier,
+                                effect: copy.clone(),
+                                subject,
+                                event_amount,
+                                mode,
+                                intervening_if: None,
+                                from_mana_ability,
+                                x_value: 0,
+                                converged_value: 0,
+                                mana_spent: 0,
+                            });
+                        }
+                    }
                 }
             } else {
                 // Katara, the Fearless: a non-ETB Ally trigger fires an
@@ -28309,6 +28347,12 @@ fn static_effect_to_effects(
             // trigger dispatch via `etb_trigger_multiplier`; no layer effect.
             | StaticEffect::EtbTriggerSpotlight
             | StaticEffect::DoubleControllerEtbTriggers
+            // Aboleth Spawn — read at the ETB-trigger push sites via
+            // `entering_trigger_copiers`; no layer effect.
+            | StaticEffect::CopyOpponentsEnteringCreatureTriggers
+            // Ashiok, Wicked Manipulator — read at the life-payment funnel
+            // (`replace_life_payment`); no layer effect.
+            | StaticEffect::PayLifeExilesLibraryTopInstead
             // Katara / Harmonic Prodigy — read at trigger dispatch via
             // `ally_trigger_extra_fires`; no layer effect.
             | StaticEffect::DoubleControllerAllyTriggers

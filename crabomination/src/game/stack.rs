@@ -2957,6 +2957,34 @@ impl GameState {
                                 mana_spent,
                             });
                         }
+                        // Aboleth Spawn — an opponent's Probing Telepathy
+                        // copies each fire; the copy is theirs, so the drain
+                        // picks its targets for them. Mode is kept (CR 707.10).
+                        if etb_multiplier > 0 {
+                            for copier in crate::game::actions::entering_trigger_copiers(
+                                self, caster, card_id,
+                            ) {
+                                let copy = crate::game::actions::probing_telepathy_copy(&effect);
+                                for _ in 0..etb_multiplier {
+                                    etb_queue.push(crate::game::types::PendingTriggerPush {
+                                        from_mana_ability: false,
+                                        actor: None,
+                                        source: card_id,
+                                        controller: copier,
+                                        effect: copy.clone(),
+                                        subject: Some(
+                                            crate::game::effects::EntityRef::Permanent(card_id),
+                                        ),
+                                        event_amount: 0,
+                                        mode,
+                                        intervening_if: None,
+                                        x_value,
+                                        converged_value,
+                                        mana_spent,
+                                    });
+                                }
+                            }
+                        }
                     }
                     if !etb_queue.is_empty() {
                         self.drain_trigger_queue(etb_queue);

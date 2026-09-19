@@ -45,7 +45,11 @@
 //!   not "as this enters".
 //! * Rogue Class — cards exiled before level 3 don't become playable when it
 //!   reaches level 3 (only exiles made at level 3 are playable).
-//! * Ashiok, Wicked Manipulator — the life-payment replacement is omitted.
+//! * Ashiok, Wicked Manipulator — the life-payment replacement covers the
+//!   engine's cost funnels (Phyrexian mana, "pay N life" activation / alt /
+//!   additional costs, "you may pay N life"); fetchlands model their life as a
+//!   resolution-time life loss rather than a cost, so Ashiok doesn't see them,
+//!   nor the "pay any amount of life" choosers (Toxic Deluge-style X life).
 //! * Scavenger Grounds — "Sacrifice a Desert" sacrifices Scavenger Grounds itself.
 //! * Witch's Clinic — "target commander" is "target legendary creature".
 //! * The Black Gate — the creature can't be blocked at all this turn, gated on an
@@ -1190,7 +1194,11 @@ pub fn rogue_class() -> CardDefinition {
 /// cards of their library, where X is the total mana value of cards you own in
 /// exile.
 ///
-/// Approximation: the life-payment replacement is omitted.
+/// The replacement is `StaticEffect::PayLifeExilesLibraryTopInstead`, read at
+/// the life-payment funnel. Reading (CR 119.4): it replaces a payment, it
+/// doesn't make one affordable — you still need life ≥ the amount to pay it.
+/// Approximation: fetchlands (whose "pay 1 life" is modelled as a resolution-
+/// time life loss) and the "pay any amount of life" choosers aren't replaced.
 pub fn ashiok_wicked_manipulator() -> CardDefinition {
     let nightmare = TokenDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -1220,6 +1228,11 @@ pub fn ashiok_wicked_manipulator() -> CardDefinition {
             ..Default::default()
         },
         base_loyalty: 5,
+        static_abilities: vec![StaticAbility {
+            description: "If you would pay life while your library has at least that many \
+                cards in it, exile that many cards from the top of your library instead.",
+            effect: StaticEffect::PayLifeExilesLibraryTopInstead,
+        }],
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
