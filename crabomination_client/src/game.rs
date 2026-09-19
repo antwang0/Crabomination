@@ -243,6 +243,9 @@ pub enum HandCastVariant {
     Prototype,
     /// CR 702.170d — cast a card plotted on an earlier turn, from exile.
     Plotted,
+    /// CR 903.8 — a targeted commander cast from the command zone (commander
+    /// tax included). Armed by the command-zone click, not the hand menu.
+    CommandZone,
 }
 
 impl HandCastVariant {
@@ -255,6 +258,7 @@ impl HandCastVariant {
             Self::Bargain => "Cast with Bargain",
             Self::Prototype => "Cast as Prototype",
             Self::Plotted => "Cast (plotted)",
+            Self::CommandZone => "Cast from the command zone",
         }
     }
 
@@ -289,6 +293,15 @@ impl HandCastVariant {
                 A::CastPrototype { card_id, target, additional_targets, mode, x_value }
             }
             Self::Plotted => A::CastPlotted { card_id, target, additional_targets, mode, x_value },
+            Self::CommandZone => A::CastFromCommandZone {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+                alternative: false,
+                pitch_card: None,
+            },
         }
     }
 }

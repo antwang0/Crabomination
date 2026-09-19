@@ -633,6 +633,13 @@ pub struct ClientView {
     /// Empty outside combat and whenever nothing banded.
     #[serde(default)]
     pub attack_bands: Vec<Vec<CardId>>,
+    /// CR 903.8 — the viewer's commanders castable from the command zone
+    /// right now (tax included). Drives the command-zone card's "castable"
+    /// border and keeps auto-pass from skipping a flash commander's window.
+    /// Empty outside Commander and off-priority. `#[serde(default)]` for
+    /// back-compat.
+    #[serde(default)]
+    pub castable_command: Vec<CardId>,
 }
 
 impl ClientView {
@@ -1213,6 +1220,12 @@ pub struct CommanderDamageEntry {
     pub source_seat: usize,
     /// Combat damage this commander has dealt the player so far.
     pub amount: u32,
+    /// The source commander's `CardId`, so the client can match a tally to
+    /// the commander permanent / command-zone card it hovers (partners share
+    /// an owner, so `source_seat` alone can't). `None` only in snapshots from
+    /// before the field existed.
+    #[serde(default)]
+    pub source_id: Option<CardId>,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

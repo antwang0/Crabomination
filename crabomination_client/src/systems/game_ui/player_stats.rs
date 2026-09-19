@@ -563,6 +563,9 @@ fn spawn_commander_damage_chip(
             },
             BackgroundColor(bg),
             Pickable::IGNORE,
+            // Lets `commander_ui::pulse_commander_damage_chips` flash the chip
+            // whose tally just rose.
+            crate::systems::commander_ui::CommanderDamageChip::new(entry, bg),
         ))
         .with_children(|chip| {
             chip.spawn((

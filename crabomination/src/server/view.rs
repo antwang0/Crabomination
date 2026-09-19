@@ -208,6 +208,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         // CR 702.22h — the bands, so a defender sees which attackers a single
         // block would drag in.
         attack_bands: state.attack_bands_view(),
+        castable_command: affordances.castable_command,
     }
 }
 
@@ -556,6 +557,7 @@ fn commander_damage_taken(
                     .unwrap_or_else(|| "Commander".to_string()),
                 source_seat: source.map(|c| c.owner).unwrap_or(0),
                 amount: *amount,
+                source_id: Some(*source_id),
             }
         })
         .collect();

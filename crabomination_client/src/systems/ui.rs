@@ -1160,6 +1160,15 @@ pub fn hover_card_preview(
             &pv.colors,
         ));
     }
+    // CR 903.10a — a hovered commander (battlefield or command zone) lists
+    // the commander damage it has dealt each other player.
+    if let (Some(id), Some(cv)) = (card_id, view.0.as_ref()) {
+        info.extend(crate::systems::commander_ui::commander_hover_lines(
+            cv,
+            id,
+            &card_names.get(id),
+        ));
+    }
     // Estimated panel height so the anchor keeps the whole column on screen
     // (reminder lines wrap to ~2 rows at this width).
     let info_height: f32 = if info.is_empty() {

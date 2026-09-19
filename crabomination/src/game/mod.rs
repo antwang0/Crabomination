@@ -1213,6 +1213,9 @@ pub struct HandAffordances {
     /// whose splice cost is payable on top. Lets the client offer the
     /// "splice which cards onto this?" picker before the cast.
     pub spliceable: Vec<(CardId, Vec<CardId>)>,
+    /// CR 903.8 — the seat's commanders castable from the command zone right
+    /// now (`CastFromCommandZone`, tax included). Empty outside Commander.
+    pub castable_command: Vec<CardId>,
 }
 
 /// CR 802 / 803 — the multiplayer attack option in force.

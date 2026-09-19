@@ -1848,7 +1848,51 @@ impl GameState {
             back_castable: self.back_castable_hand_cards_on(&template, seat),
             prototypable: self.prototypable_hand_cards_on(&template, seat),
             spliceable: self.spliceable_hand_cards_on(&template, seat),
+            castable_command: self.castable_command_on(&template, seat),
         }
+    }
+
+    /// CR 903.8 — `seat`'s commanders that `CastFromCommandZone` (regular
+    /// cost plus the {2}-per-prior-cast tax) would accept right now, with
+    /// targets auto-picked the way [`castable_hand_cards_on`] does. Only
+    /// the seat's own `commanders` are probed, so a conspiracy or Vanguard
+    /// sharing the command zone never reads as castable, and the sweep is
+    /// free outside Commander (the list is empty there).
+    ///
+    /// [`castable_hand_cards_on`]: Self::castable_hand_cards_on
+    fn castable_command_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
+        let player = &self.players[seat];
+        if player.commanders.is_empty() {
+            return Vec::new();
+        }
+        let candidates: Vec<(CardId, Option<Effect>)> = player
+            .command
+            .iter()
+            .filter(|c| player.commanders.contains(&c.id))
+            .map(|c| {
+                let eff = &c.definition.effect;
+                (c.id, eff.requires_target().then(|| eff.clone()))
+            })
+            .collect();
+        candidates
+            .into_iter()
+            .filter(|(id, targeted)| {
+                let (target, additional_targets) = match targeted {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, seat, None),
+                    None => (None, Vec::new()),
+                };
+                Self::would_accept_on(template, GameAction::CastFromCommandZone {
+                    card_id: *id,
+                    target,
+                    additional_targets,
+                    mode: None,
+                    x_value: None,
+                    alternative: false,
+                    pitch_card: None,
+                })
+            })
+            .map(|(id, _)| id)
+            .collect()
     }
 
     /// CR 702.47 — for each castable Arcane spell in hand, the Splice cards in

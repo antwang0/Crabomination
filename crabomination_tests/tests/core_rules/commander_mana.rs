@@ -689,3 +689,52 @@ fn colored_spell_without_x_restriction() {
     assert!(!r.allows(&catalog::forest().ability_spend_kind()), "an ability");
     assert!(!r.allows(&crabomination::mana::SpellKind::default()), "not a cast");
 }
+
+// ── Client view: command-zone affordances ─────────────────────────────────
+
+/// CR 903.8 — `ClientView::castable_command` lists a commander exactly when
+/// `CastFromCommandZone` (tax included) would be accepted: not with an empty
+/// pool, yes with its {G}, and no again with only {G} once one earlier cast
+/// has raised the price to {2}{G}. Drives the client's castable ring.
+#[test]
+fn view_castable_command_tracks_mana_and_commander_tax() {
+    let (mut g, cmd) = commander_game();
+    let view = crabomination::server::view::project(&g, 0);
+    assert!(view.castable_command.is_empty(), "nothing to pay with");
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let view = crabomination::server::view::project(&g, 0);
+    assert_eq!(view.castable_command, vec![cmd]);
+    // Another seat's view never lists the commander.
+    assert!(crabomination::server::view::project(&g, 1).castable_command.is_empty());
+
+    g.commander_cast_count.insert(cmd, 1);
+    let view = crabomination::server::view::project(&g, 0);
+    assert!(view.castable_command.is_empty(), "{{G}} can't pay {{2}}{{G}}");
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let view = crabomination::server::view::project(&g, 0);
+    assert_eq!(view.castable_command, vec![cmd]);
+}
+
+/// CR 903.10a — each commander-damage tally names its source commander's
+/// id, and an attacking permanent names the player it attacks, so the client
+/// can pair a hovered / attacking commander with its running totals.
+#[test]
+fn view_commander_damage_carries_source_id_and_attacked_player() {
+    let (mut g, _cmd) = commander_game();
+    let on_board = g.add_card_to_battlefield(0, bear_commander());
+    g.players[0].commanders.push(on_board);
+    g.commander_damage.insert((1, on_board), 12);
+    g.attacking.push(Attack { attacker: on_board, target: AttackTarget::Player(1) });
+
+    let view = crabomination::server::view::project(&g, 1);
+    let entry = &view.players[1].commander_damage_taken[0];
+    assert_eq!((entry.source_id, entry.amount), (Some(on_board), 12));
+    let perm = view.battlefield.iter().find(|p| p.id == on_board).unwrap();
+    assert!(perm.attacking);
+    assert_eq!(perm.attack_target, Some(AttackTarget::Player(1)));
+    // A non-attacker names no one.
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let view = crabomination::server::view::project(&g, 1);
+    assert_eq!(view.battlefield.iter().find(|p| p.id == bears).unwrap().attack_target, None);
+}

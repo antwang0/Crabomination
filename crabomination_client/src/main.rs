@@ -404,6 +404,7 @@ fn main() {
         .insert_resource(audit::load_audited_cards())
         .insert_resource(DecisionUiState::default())
         .init_resource::<systems::decision_ui::AutoOptionalAnswers>()
+        .init_resource::<systems::commander_ui::CommanderDamageFlash>()
         .insert_resource(systems::debug_console::DebugConsoleState::default())
         .init_resource::<game::AbilityMenuState>()
         .init_resource::<HandMenuState>()
@@ -719,6 +720,19 @@ fn main() {
         .add_systems(
             Update,
             crate::systems::agenda_badge::sync_agenda_badges
+                .run_if(in_state(AppState::InGame)),
+        )
+        // CR 903 — command-zone cost/tax chips, the castable ring on the
+        // viewer's commander, lethal commander-damage warnings, and the HUD
+        // commander-damage chip pulse.
+        .add_systems(
+            Update,
+            (
+                crate::systems::commander_ui::sync_command_zone_cost_badges,
+                crate::systems::commander_ui::update_command_zone_castable_highlights,
+                crate::systems::commander_ui::sync_lethal_commander_warnings,
+                crate::systems::commander_ui::pulse_commander_damage_chips,
+            )
                 .run_if(in_state(AppState::InGame)),
         )
         // "FREE" chip over hand cards a standing static casts for nothing.
