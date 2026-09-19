@@ -184,7 +184,7 @@ pub fn hush() -> CardDefinition {
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
-        effect: Effect::DestroyNoRegen {
+        effect: Effect::Destroy {
             what: Selector::EachPermanent(SelectionRequirement::Enchantment),
         },
         ..Default::default()

@@ -3541,39 +3541,69 @@ fn sleeper_dart_draws_and_locks_untap() {
     assert!(g.battlefield_find(dart).is_none(), "Sleeper Dart sacrificed");
 }
 
-/// Ominous Seas accrues a tide counter on the first draw each turn (only the
-/// first), and at four counters mints an 8/8 Kraken, clearing the counters.
+/// Ominous Seas — "whenever you draw a card, put a foreshadow counter on this
+/// enchantment" (EVERY draw) and "remove eight foreshadow counters from this
+/// enchantment: create an 8/8 blue Kraken" (an ACTIVATED ability, at eight).
+/// It shipped on a different clock in all three respects — the trigger was
+/// `once_per_turn`, the payoff was automatic, and it came at four. Found by
+/// `scripts/audit_invented_rider.py`. 🟡 `CounterType::Tide` stands in for
+/// the printed foreshadow counter; nothing else reads the name.
 #[test]
-fn ominous_seas_tide_counters_then_kraken() {
+fn ominous_seas_counts_every_draw_and_pays_out_at_eight() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let seas = g.add_card_to_battlefield(0, catalog::ominous_seas());
-    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..12 { g.add_card_to_library(0, catalog::island()); }
     let tide = |g: &GameState| g.battlefield_find(seas).unwrap()
         .counters.get(&CounterType::Tide).copied().unwrap_or(0);
     let kraken_count = |g: &GameState| g.battlefield.iter()
         .filter(|c| c.definition.name == "Kraken").count();
 
-    for turn in 1..=3 {
-        g.triggered_once_per_turn_used.clear();
-        // Two draws this turn — only the first adds a counter.
-        for _ in 0..2 {
-            let mut ev = Vec::new();
-            g.draw_one(0, &mut ev);
-            g.dispatch_triggers_for_events(&ev);
-            drain_stack(&mut g);
-        }
-        assert_eq!(tide(&g), turn, "one tide counter per turn (first draw only)");
+    // Two draws in one turn are two counters, not one.
+    for _ in 0..2 {
+        let mut ev = Vec::new();
+        g.draw_one(0, &mut ev);
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
     }
-    assert_eq!(kraken_count(&g), 0, "no Kraken below four counters");
-    // Fourth turn's first draw hits four → Kraken, counters cleared.
-    g.triggered_once_per_turn_used.clear();
-    let mut ev = Vec::new();
-    g.draw_one(0, &mut ev);
-    g.dispatch_triggers_for_events(&ev);
+    assert_eq!(tide(&g), 2, "every draw adds a counter, not the first each turn");
+
+    // Nothing fires on its own, at four or at eight.
+    for _ in 0..6 {
+        let mut ev = Vec::new();
+        g.draw_one(0, &mut ev);
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+    }
+    assert_eq!(tide(&g), 8);
+    assert_eq!(kraken_count(&g), 0, "the payoff is an activated ability, not a trigger");
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seas, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    }).expect("eight counters pays for the Kraken");
     drain_stack(&mut g);
-    assert_eq!(kraken_count(&g), 1, "four tide counters mint an 8/8 Kraken");
-    assert_eq!(tide(&g), 0, "tide counters removed when the Kraken is made");
+    assert_eq!(kraken_count(&g), 1, "8/8 blue Kraken");
+    assert_eq!(tide(&g), 0, "exactly eight counters removed");
+}
+
+/// …and the activation is unavailable below eight counters.
+#[test]
+fn ominous_seas_kraken_needs_eight_counters() {
+    let mut g = two_player_game();
+    let seas = g.add_card_to_battlefield(0, catalog::ominous_seas());
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..7 {
+        let mut ev = Vec::new();
+        g.draw_one(0, &mut ev);
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+    }
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: seas, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    });
+    assert!(res.is_err(), "seven counters is not eight");
 }
 
 /// Extinction Event (default odd) exiles every creature with odd mana value,

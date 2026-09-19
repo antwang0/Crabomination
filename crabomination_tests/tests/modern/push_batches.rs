@@ -3240,61 +3240,81 @@ fn detectives_phoenix_stays_in_graveyard_without_a_detective() {
     assert!(!g.players[0].hand.iter().any(|c| c.id == phoenix));
 }
 
+/// Lonis, Genetics Expert — "whenever one or more +1/+1 counters are put on
+/// Lonis, investigate that many times". The body carried **Lonis,
+/// Cryptozoologist's** abilities instead: a Clue on every creature's entry
+/// and that card's "{T}, Sacrifice X Clues: target opponent reveals the top
+/// X…". Found by `scripts/audit_invented_rider.py` off the invented
+/// sorcery-speed flag on the activation.
 #[test]
-fn lonis_genetics_expert_creates_clue_when_other_creature_enters() {
-    use crabomination::card::ArtifactSubtype;
+fn lonis_investigates_per_counter_not_per_creature() {
+    use crabomination::card::{ArtifactSubtype, CounterType};
+    let clues = |g: &GameState| g.battlefield.iter()
+        .filter(|c| c.is_token
+            && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Clue))
+        .count();
     let mut g = two_player_game();
     let lonis = g.add_card_to_battlefield(0, catalog::lonis_genetics_expert());
     g.clear_sickness(lonis);
+
+    // A 2/2 entering is bigger than the 1/2, so evolve puts a counter on and
+    // the counters trigger investigates once. A creature entering is NOT by
+    // itself a Clue any more — that was the Cryptozoologist's ability.
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, bear);
-    let clues: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Clue))
-        .collect();
-    assert_eq!(clues.len(), 1, "Lonis mints a Clue when another creature enters");
+    assert_eq!(g.battlefield_find(lonis).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "evolve: a 2/2 has greater power than the 1/2");
+    assert_eq!(clues(&g), 1, "one counter, one Clue");
+
+    // A second 2/2 is no longer bigger than the now-2/3 Lonis: no counter,
+    // and therefore no Clue — which is exactly the difference between the
+    // printed ability and the one it shipped with.
+    let bear2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bear2);
+    assert_eq!(clues(&g), 1, "no counter this time, so no second Clue");
+
+    // Three counters at once are three Clues (`Value::TriggerEventAmount`).
+    let add = crabomination::card::Effect::AddCounter {
+        what: crabomination::card::Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: crabomination::card::Value::Const(3),
+    };
+    let ctx = crabomination::game::effects::EffectContext::for_ability(lonis, 0, None);
+    let ev = g.resolve_effect(&add, &ctx).expect("counters land");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(clues(&g), 4, "investigate that many times");
 }
 
+/// The Clue-sacrifice half is the card's own and stays.
 #[test]
-fn lonis_sacrifices_x_clues_to_steal_a_permanent() {
+fn lonis_clue_sacrifice_grows_another_creature() {
+    use crabomination::card::CounterType;
     use crabomination::game::effects::clue_token;
     let mut g = two_player_game();
     let lonis = g.add_card_to_battlefield(0, catalog::lonis_genetics_expert());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let clue = g.add_token_to_battlefield(0, &clue_token());
     g.clear_sickness(lonis);
-    let _c1 = g.add_token_to_battlefield(0, &clue_token());
-    let _c2 = g.add_token_to_battlefield(0, &clue_token());
-    // P1's top two cards: a MV-2 artifact (steal target) and a land.
-    let stone = g.next_id();
-    g.players[1].add_to_library_top(stone, catalog::mind_stone());
-
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: lonis, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(2), mode: None,
-    })
-    .expect("{T}, Sacrifice 2 Clues activates");
+    let before = g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    let sac = crabomination::card::Effect::Sacrifice {
+        who: crabomination::card::Selector::You,
+        count: crabomination::card::Value::Const(1),
+        filter: crabomination::card::SelectionRequirement::HasArtifactSubtype(
+            crabomination::card::ArtifactSubtype::Clue,
+        ),
+    };
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&sac, &ctx).expect("Clue sacrificed");
+    g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-
-    assert!(g.battlefield_find(lonis).unwrap().tapped, "Lonis tapped as a cost");
-    assert!(
-        !g.battlefield.iter().any(|c| c.is_token),
-        "both Clues sacrificed as a cost"
-    );
-    let stolen = g.battlefield_find(stone).expect("Mind Stone put onto the battlefield");
-    assert_eq!(stolen.controller, 0, "stolen permanent enters under Lonis's controller");
-}
-
-#[test]
-fn lonis_x_exceeding_clues_is_rejected() {
-    let mut g = two_player_game();
-    let lonis = g.add_card_to_battlefield(0, catalog::lonis_genetics_expert());
-    g.clear_sickness(lonis);
-    assert!(
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: lonis, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(1), mode: None,
-        })
-        .is_err(),
-        "can't sacrifice more Clues than you control"
-    );
+    let _ = clue;
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        before + 1, "sacrificing a Clue grows another creature you control");
 }
 
 /// Loot, the Pathfinder's three Exhaust abilities (CR 702.177 — once per game

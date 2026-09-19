@@ -67,7 +67,7 @@ pub fn starfall_invocation() -> CardDefinition {
         name: "Starfall Invocation",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DestroyNoRegen {
+        effect: Effect::Destroy {
             what: Selector::EachPermanent(R::Creature),
         },
         gift: Some(Box::new(Gift {
@@ -77,7 +77,7 @@ pub fn starfall_invocation() -> CardDefinition {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::ONE,
                 },
-                Effect::DestroyNoRegen {
+                Effect::Destroy {
                     what: Selector::EachPermanent(R::Creature),
                 },
                 Effect::Move {

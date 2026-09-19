@@ -1243,8 +1243,13 @@ fn mortify_destroys_creature() {
         "Bear should be destroyed");
 }
 
+/// CR 701.15 — Mortify prints "Destroy target creature or enchantment" and
+/// **nothing else**, so a regeneration shield saves the creature. It shipped
+/// as `Effect::DestroyNoRegen` with a test asserting the opposite; found by
+/// `scripts/audit_invented_rider.py`, which reads a no-regen rider against
+/// the printed word "regenerate".
 #[test]
-fn mortify_ignores_regeneration_shield() {
+fn mortify_is_stopped_by_a_regeneration_shield() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().regeneration_shields = 1;
@@ -1257,8 +1262,10 @@ fn mortify_ignores_regeneration_shield() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Mortify castable");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Mortify destroys through a regeneration shield");
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "the shield regenerates the bear — Mortify does not blank it");
+    assert_eq!(g.battlefield_find(bear).unwrap().regeneration_shields, 0,
+        "…and the shield is spent");
 }
 
 #[test]

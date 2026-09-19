@@ -7224,7 +7224,7 @@ pub fn mortify() -> CardDefinition {
         name: "Mortify",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DestroyNoRegen {
+        effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
             ),
@@ -16206,10 +16206,17 @@ pub fn spell_queller() -> CardDefinition {
     }
 }
 
-/// Lonis, Genetics Expert — {1}{G}{U} Legendary 1/2 Otter Detective.
-/// Whenever a creature you control enters, investigate. {T}, Sacrifice X
-/// Clues: target opponent reveals top X; put a nonland permanent MV ≤ X
-/// among them onto the battlefield under your control; they shuffle.
+/// Lonis, Genetics Expert — {1}{G/U}{G/U} Legendary 1/2 Snake Elf Detective.
+/// Evolve; "whenever one or more +1/+1 counters are put on Lonis, investigate
+/// that many times"; "whenever you sacrifice a Clue, put a +1/+1 counter on
+/// another target creature you control."
+///
+/// ⚠ The middle ability was **Lonis, Cryptozoologist's** — a Clue on every
+/// creature's entry, plus that card's "{T}, Sacrifice X Clues: target
+/// opponent reveals the top X…" activation, neither of which this card
+/// prints. Found by `scripts/audit_invented_rider.py` off the invented
+/// sorcery-speed flag on the activation. The evolve trigger is what feeds
+/// the counters ability, so the two are one engine now rather than two.
 pub fn lonis_genetics_expert() -> CardDefinition {
     use crate::card::Supertype;
     use crate::effect::Predicate;
@@ -16253,32 +16260,22 @@ pub fn lonis_genetics_expert() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             },
+            // "Whenever one or more +1/+1 counters are put on Lonis,
+            // investigate that many times." `Value::TriggerEventAmount` is
+            // the event's own `count`, so a Doubling Season'd evolve makes two
+            // Clues from one event.
             TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Creature,
-                }),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: std::sync::Arc::new(clue_token()),
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::TriggerEventAmount,
+                    definition: std::sync::Arc::new(clue_token()),
+                },
             },
-        }],
-        activated_abilities: vec![crate::card::ActivatedAbility {
-            tap_cost: true,
-            sorcery_speed: true,
-            sac_other_filter: Some((
-                SelectionRequirement::HasArtifactSubtype(crate::card::ArtifactSubtype::Clue),
-                0,
-            )),
-            sac_other_x: true,
-            effect: Effect::RevealOpponentTopPutOntoBattlefield {
-                count: Value::XFromCost,
-                filter: SelectionRequirement::Nonland.and(SelectionRequirement::Permanent),
-            },
-            ..Default::default()
-        }],
+        ],
         ..Default::default()
     }
 }
@@ -65082,8 +65079,20 @@ pub fn patagia_tiger() -> CardDefinition {
 
 // ── Ikoria batch 3 ───────────────────────────────────────────────────────────
 
-/// Ominous Seas — {1}{U} Enchantment. On your first draw each turn, add a tide
-/// counter; at four or more, remove them and create an 8/8 blue Kraken.
+/// Ominous Seas — {1}{U} Enchantment. "Whenever you draw a card, put a
+/// foreshadow counter on this enchantment. / Remove eight foreshadow counters
+/// from this enchantment: Create an 8/8 blue Kraken creature token. /
+/// Cycling {2}."
+///
+/// ⚠ It shipped on a different clock in three ways at once, all of them in
+/// the card's favour: the trigger was `once_per_turn` (the *first* draw each
+/// turn, not every draw), the payoff fired at **four** counters rather than
+/// eight, and it fired **automatically** rather than as an activated ability
+/// the controller has to choose to use. Found by
+/// `scripts/audit_invented_rider.py`.
+///
+/// 🟡 `CounterType::Foreshadow` does not exist; `Tide` stands in. The name is
+/// only ever read by this card, so the substitution is cosmetic.
 pub fn ominous_seas() -> CardDefinition {
     CardDefinition {
         name: "Ominous Seas",
@@ -65091,54 +65100,48 @@ pub fn ominous_seas() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec {
-                once_per_turn: true,
-                once_per_batch: false,
-                ..EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Tide,
+                amount: Value::Const(1),
             },
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            // "Remove eight foreshadow counters from this enchantment:" — the
+            // removal is the cost, so the condition gates on having them, the
+            // way Spike Feeder's counter-removal activations do.
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Tide,
+                },
+                Value::Const(8),
+            )),
             effect: Effect::Seq(vec![
-                Effect::AddCounter {
+                Effect::RemoveCounter {
                     what: Selector::This,
                     kind: CounterType::Tide,
-                    amount: Value::Const(1),
+                    amount: Value::Const(8),
                 },
-                Effect::If {
-                    cond: Predicate::ValueAtLeast(
-                        Value::CountersOn {
-                            what: Box::new(Selector::This),
-                            kind: CounterType::Tide,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: std::sync::Arc::new(TokenDefinition {
+                        name: "Kraken".into(),
+                        power: 8,
+                        toughness: 8,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Blue],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Kraken],
+                            ..Default::default()
                         },
-                        Value::Const(4),
-                    ),
-                    then: Box::new(Effect::Seq(vec![
-                        Effect::RemoveCounter {
-                            what: Selector::This,
-                            kind: CounterType::Tide,
-                            amount: Value::CountersOn {
-                                what: Box::new(Selector::This),
-                                kind: CounterType::Tide,
-                            },
-                        },
-                        Effect::CreateToken {
-                            who: PlayerRef::You,
-                            count: Value::Const(1),
-                            definition: std::sync::Arc::new(TokenDefinition {
-                                name: "Kraken".into(),
-                                power: 8,
-                                toughness: 8,
-                                card_types: vec![CardType::Creature],
-                                colors: vec![Color::Blue],
-                                subtypes: Subtypes {
-                                    creature_types: vec![CreatureType::Kraken],
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            }),
-                        },
-                    ])),
-                    else_: Box::new(Effect::Noop),
+                        ..Default::default()
+                    }),
                 },
             ]),
+            ..Default::default()
         }],
         ..Default::default()
     }

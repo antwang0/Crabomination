@@ -1417,6 +1417,31 @@ fn fumigate_destroys_creatures_and_gains_life_per_creature() {
     assert_eq!(g.players[0].life, life + 3, "gained 1 per destroyed creature (3)");
 }
 
+/// CR 701.15 — the mass-destroy path honours a regeneration shield too.
+/// Fumigate prints "Destroy all creatures. You gain 1 life for each creature
+/// destroyed this way" and no regeneration clause, and it shipped as
+/// `DestroyNoRegen` like seven other sweepers; found by
+/// `scripts/audit_invented_rider.py`. ⚠ The lifegain still counts the
+/// regenerated creature: Fumigate counts what it destroys *this way*, and the
+/// engine reads the count before the destroy (see the factory's comment).
+#[test]
+fn fumigate_does_not_blank_a_regeneration_shield() {
+    let mut g = two_player_game();
+    let shielded = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(shielded).unwrap().regeneration_shields = 1;
+    let doomed = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::fumigate());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(shielded).is_some(), "the shielded bear regenerates");
+    assert_eq!(g.battlefield_find(shielded).unwrap().regeneration_shields, 0, "shield spent");
+    assert!(g.battlefield_find(doomed).is_none(), "the unshielded angel still dies");
+}
+
 #[test]
 fn gerrards_wisdom_gains_two_life_per_card_in_hand() {
     let mut g = two_player_game();

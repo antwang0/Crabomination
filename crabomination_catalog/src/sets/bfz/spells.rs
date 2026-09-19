@@ -543,7 +543,7 @@ pub fn scatter_to_the_winds() -> CardDefinition {
 /// Planar Outburst — {3}{W}{W} Sorcery. Destroy all nonland creatures.
 /// Awaken 4—{5}{W}{W}{W}.
 pub fn planar_outburst() -> CardDefinition {
-    let body = Effect::DestroyNoRegen {
+    let body = Effect::Destroy {
         what: Selector::EachPermanent(R::Creature.and(R::Nonland)),
     };
     CardDefinition {

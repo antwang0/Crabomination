@@ -1172,7 +1172,7 @@ pub fn planar_cleansing() -> CardDefinition {
         name: "Planar Cleansing",
         cost: cost(&[generic(3), w(), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DestroyNoRegen {
+        effect: Effect::Destroy {
             what: Selector::EachPermanent(SelectionRequirement::Not(Box::new(
                 SelectionRequirement::Land,
             ))),
@@ -1190,7 +1190,7 @@ pub fn akromas_vengeance() -> CardDefinition {
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Cycling(cost(&[generic(3)]))],
-        effect: Effect::DestroyNoRegen {
+        effect: Effect::Destroy {
             what: Selector::EachPermanent(
                 SelectionRequirement::Artifact
                     .or(SelectionRequirement::Creature)
@@ -1214,7 +1214,7 @@ pub fn fumigate() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::count(Selector::EachPermanent(SelectionRequirement::Creature)),
             },
-            Effect::DestroyNoRegen {
+            Effect::Destroy {
                 what: Selector::EachPermanent(SelectionRequirement::Creature),
             },
         ]),

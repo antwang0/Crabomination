@@ -419,9 +419,27 @@ Both auditors read **0** at the closing tip:
 ```
 python3 scripts/audit_invented_may.py      # 0 / 948 bodies with a needle
 python3 scripts/audit_invented_trigger.py  # 0 / 4,103 claims, 20 allowed, 0 stale
+python3 scripts/audit_invented_rider.py    # 0 / 392 bodies with a needle, 3 rule-implied
 ```
 
-Three of the eleven kept a documented residual rather than shipping whole:
+The **rider** column is a table — one line per rider — and opened with four
+rows: `DestroyNoRegen`, `CantBeRegeneratedThisTurn`, `once_per_turn: true` and
+`sorcery_speed: true`. It read 14 and closed at 0: eight sweepers and spot
+removal carried a "can't be regenerated" rider nothing printed (Akroma's
+Vengeance, Fumigate, Hush, **Mortify**, Planar Cleansing, Planar Outburst,
+Pure Reflection, Starfall Invocation — Mortify's own test asserted the wrong
+rule and was rewritten), Ominous Seas ran on a different clock in three ways
+at once, and Lonis, Genetics Expert carried **Lonis, Cryptozoologist's**
+abilities. One residual and two rule-implied allowances:
+
+| Card | Residual | Why |
+|---|---|---|
+| Phyrexian Battleflies | "{B}: …  Activate **no more than twice** each turn" ships as `once_per_turn: true`, i.e. once | `ActivatedAbility::once_per_turn` is a `bool`, and `CardCold::once_per_turn_used` is a `Vec<usize>` of ability indices with no count beside it. A per-turn *limit* wants both widened, plus the wire and serde forms — a primitive, not a card job |
+| Arcanum Wings | `sorcery_speed: true` with no printed clause | CR 702.64a — aura swap **is** "Activate only as a sorcery" by rule |
+| Squee, the Immortal | same | CR 307.1/302.1 — casting a creature is sorcery-speed; the graveyard/exile permission is not a second one |
+| Roadkill Rodney | same, reported in the audit's token bucket | the flag is on the **Mutagen token**, whose own printed text says "Activate only as a sorcery"; a factory holds its tokens' rules text and the card's oracle does not |
+
+Three of the first eleven kept a documented residual rather than shipping whole:
 
 | Card | Residual | Why |
 |---|---|---|

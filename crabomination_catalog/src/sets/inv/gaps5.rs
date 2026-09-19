@@ -357,7 +357,7 @@ pub fn pure_reflection() -> CardDefinition {
                 Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
             ),
             effect: Effect::Seq(vec![
-                Effect::DestroyNoRegen {
+                Effect::Destroy {
                     what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Reflection)),
                 },
                 Effect::CreateToken {

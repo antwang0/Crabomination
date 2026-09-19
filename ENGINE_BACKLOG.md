@@ -115,6 +115,20 @@ global table — a different reader, not a flag on this one."
   **45 → 8 → 0** over 4,103 claims on 3,815 bodies, with 20 rows allowed as
   documented implementation devices and a staleness half that fails an ALLOW
   row whose site is gone.
+- **`scripts/audit_invented_rider.py`** — a clause bolted onto an effect the
+  card *does* print. It is a **table**, one line per rider, which is the point:
+  the first row (`DestroyNoRegen`) was written for one card and named eight.
+  **14 → 0** over 392 bodies with a needle. Rows so far: `DestroyNoRegen`,
+  `CantBeRegeneratedThisTurn`, `once_per_turn: true`, `sorcery_speed: true`.
+
+**⚠ And the rider column found the shape the other two could not: a card
+whose VERB is right.** Mortify prints "destroy target creature or
+enchantment", and it shipped with a "can't be regenerated" rider — with a
+**test asserting the wrong rule** beside it, which is why no amount of
+re-reading the card list would have found it. Seven more sweepers had the same
+rider. A rider is the cheapest thing in the catalog to add by accident,
+because the card still does the right thing in every game where nobody
+regenerates.
 
 **The eleven cards, and what each was.** Coalition Relic's mandatory
 charge→mana burst wrapped in a `MayDo`, which `AutoDecider` declines, so the
