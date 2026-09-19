@@ -51,3 +51,4 @@ mod nph;
 mod pip;
 mod cmdr_homer;
 mod cmdr_edgar;
+mod cmdr_etali;

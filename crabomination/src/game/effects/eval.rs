@@ -631,6 +631,20 @@ impl GameState {
                 .map(|&p| (self.players[p].spells_cast_this_turn as i32 - 1).max(0))
                 .max()
                 .unwrap_or(0),
+            Value::InstantsOrSorceriesCastThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].instants_or_sorceries_cast_this_turn as i32)
+                .max()
+                .unwrap_or(0),
+            Value::TotalManaValueOfOtherSpellsCastThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .flat_map(|&p| self.players[p].spell_ids_cast_this_turn.iter())
+                .filter(|&&id| Some(id) != ctx.source)
+                .filter_map(|&id| self.find_card_anywhere(id))
+                .map(|c| c.definition.cost.cmc() as i32)
+                .sum(),
             Value::OpponentsAttackedThisCombat => {
                 use crate::game::types::AttackTarget;
                 let mut seats = crate::fxhash::HashSet::default();
