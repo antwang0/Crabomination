@@ -21,6 +21,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 | Set / topic | Status | Lines |
 | --- | --- | --- |
+| [The LAND-CYCLE class — one body a cycle, and the one that was a rules bug](#the-land-cycle-class--one-body-a-cycle-and-the-one-that-was-a-rules-bug) | open — 5 cycles closed, 12 lands still missing | 55 |
 | [The fan-out family's third ratchet — "each player" is not "each opponent"](#the-fan-out-familys-third-ratchet--each-player-is-not-each-opponent) | closed — 1 residual | 22 |
 | [The synthesised-name class — CLOSED 2026-09-19, and the reading it leaves](#the-synthesised-name-class--closed-2026-09-19-and-the-reading-it-leaves) | closed — 19 cards fixed over four columns | 38 |
 | [The TARGET-clause class — 126 cards printed "target opponent" and hit the whole table](#the-target-clause-class--126-cards-printed-target-opponent-and-hit-the-whole-table) | closed — 1 residual | 60 |
@@ -136,6 +137,58 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 # Open
 
+
+## The LAND-CYCLE class — one body a cycle, and the one that was a rules bug
+
+Five land cycles this run, and the reason they are one item rather than five:
+a ten-card cycle written ten times is ten places for the tenth card to be
+different, and three of the five had already drifted.
+
+| Cycle | Body | Before | After |
+| --- | --- | --- | --- |
+| Hybrid filter (Shadowmoor / Eventide) | `sets::hybrid_filter_land` | 3 cards, **2 different shapes** | 10/10 |
+| Pay-one filter (Odyssey / modern) | `sets::pay_one_filter_land` | 5 cards, 1 private helper | 10/10 |
+| Reveal-or-tapped (SOI / Snarl / Lorwyn) | `sets::reveal_or_tapped_land` | 10 cards, **3 different shapes** | 15/15 |
+| Shards tri-lands | `sets::tri_land` (already shared) | 5 of 10 | 10/10 |
+| Bond lands ("two or more opponents") | `sets::cmdr::crowd_land` | 7 cards, 3 shapes | 10/10 |
+
+**Two of the drifts were defects, not style.**
+
+⚠ **The reveal cycle was a rules bug.** "As this land enters, you may reveal
+a [X] card from your hand. If you don't, this land enters tapped" is CR
+614.12 — a replacement. Thirteen of the fifteen shipped as an
+`EntersBattlefield` trigger, which puts the land on the battlefield untapped
+with the trigger on the stack: its controller can hold priority and tap it
+for mana it should never have made. Choked Estuary was the one card already
+modelled as the replacement, and it is now the shape all fifteen share. The
+wider class — 89 cards that print "As … enters" and ship a trigger — is
+ENGINE_BACKLOG's forty-eighth find, with `scripts/audit_as_enters.py` as its
+census and ratchet.
+
+📐 **The hybrid filter's drift was a modelling choice worth writing down.**
+"{A/B}, {T}: Add {A}{A}, {A}{B}, or {B}{B}" is ONE mana ability whose payout
+is chosen as it resolves. Sunken Ruins and Fetid Heath shipped it as three
+abilities, one per payout: the same set of outcomes, out of a land with four
+activated abilities instead of two, with the choice forced at activation
+time. `ManaPayload::OfColors(pair, 2)` is two pips each drawn from the pair,
+whose three outcomes are exactly the three printed options — which is what
+Fire-Lit Thicket already did, so the third copy was the right one.
+
+📐 **And the pay-one filter's `Seq` of two single-colour `OfColors` adds** was
+a *choice* routed through `chosen_mana_color` over a one-element palette.
+Both pips are printed, so `ManaPayload::Colors(vec![a, b])` says it and asks
+nobody.
+
+**Still open on the land side** (top-1000 Commander gaps, all same-shape or
+near it): the four missing SNC triomes, Spire of Industry, Plaza of Heroes,
+Nesting Grounds, Treasure Vault, The World Tree, Hall of Heliod's Generosity,
+Cabal Stronghold, Archway of Innovation, Witch's Cottage, Gavony Township,
+Mines of Moria. ⚠ **Cabaretti Courtyard is NOT a triome** — it sits in
+the same top-1000 slice, in the same set, over the same three colours, and
+its oracle is "when this land enters, sacrifice it … search for a basic
+Mountain, Forest, or Plains". Jetmir's Garden is the Naya triome. The whole
+batch was sized off a type line before the oracle was read, and that is the
+one row it got wrong: **query the oracle, not the cycle's shape.**
 
 ## Commander free-spell cycle (CR 118.9 + "if you control a commander")
 

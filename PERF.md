@@ -3015,6 +3015,39 @@ The toolchain is pinned by `rust-toolchain.toml` (**1.95.0**), so every reading
 in this file is on that compiler unless its own block says otherwise; a pin
 bump invalidates the Ir columns and has to re-take the A/B base.
 
+### 2026-09-19 (the ninth Commander session, tip `05246e24`) — guardrail, no perf work
+
+Five land cycles consolidated onto one body each (32 cards re-pointed, 19
+added), the CR 614.12 reveal-land fix, three commander-matters cards, and one
+engine field. **The engine change is the only row that could have moved a
+number**, and it did not:
+
+```text
+--bench (release-fast), CRAB_THREAD_CHECK=1, after the whole run:
+  decisions          195,806   byte-identical to the committed invariant
+  turns_per_game       27.49   "
+  decisions_per_game   611.9   "
+  stalls          0 (cap 0 / board 0 / stuck 0 / draw 0)
+  determinism     ok (all pairs split); thread_determinism ok (3 vs 1)
+  peak_rss_mib     29.3
+```
+
+📐 **The pre-check, again, and this time it covers an engine edit rather than
+a card.** `ActivatedAbility::life_cost_value` is an `Option<Value>` read in
+`activate_ability_inner`'s pre-flight gate; every ability in the tree but War
+Room's leaves it `None`, so the added work on the bench's ~196 k decisions is
+one null discriminant check per activation that takes the life-cost branch at
+all. The reading above says the same thing from the other side.
+
+⚠ **And the cards could not reach it either**: none of the 51 lands or three
+commander-matters cards is in `bot_ladder::archetypes()` or either
+`golden_trace.rs` deck, and the seeded pod table
+(`cr_903_seeded_pod_outcomes_match_the_committed_table`) is unmoved across
+all of it — although three of the fifteen reveal lands ARE in pod target
+decks, which is the interesting half: the trigger-to-replacement change
+alters *when* the land is tapped, not whether, and no seeded game spent an
+action in the window it closed.
+
 ### 2026-09-19 (the eighth Commander session, tip `794d0f3f`) — guardrail, no perf work
 
 Six correctness commits and two new catalog ratchets. The engine changes are
