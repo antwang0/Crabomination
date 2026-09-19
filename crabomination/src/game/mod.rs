@@ -9289,7 +9289,14 @@ impl GameState {
                 vec![]
             }
         };
-        if self.apply_enters_as_copy(id, ctrl, events) && !minted_extra_types.is_empty()
+        let copied = self.apply_enters_as_copy(id, ctrl, events);
+        if copied {
+            // CR 306.5b / 310.7 — a token or moved permanent that entered as a
+            // copy of a planeswalker or battle needs its entering counters
+            // seeded off the *copied* line; see the cast path in `stack.rs`.
+            self.reseed_entering_counters_after_copy(id);
+        }
+        if copied && !minted_extra_types.is_empty()
             && let Some(c) = self.battlefield.find_by_id_mut(id)
         {
             let mut def = (**c.definition).clone();

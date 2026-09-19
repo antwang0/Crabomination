@@ -11820,3 +11820,56 @@ fn cr_615_a_filtered_shield_ends_at_cleanup() {
     g.do_cleanup(&mut vec![]);
     assert!(!g.combat_damage_prevented_from(theirs), "one turn only");
 }
+
+/// CR 306.5b with CR 707 — a permanent that *enters as a copy* of a
+/// planeswalker enters with the copied printed loyalty.
+///
+/// The entering counters are seeded from the printed line on the way in, and
+/// the copy replacement rewrites that line afterwards: a copier is a creature,
+/// so the seeding pass saw `base_loyalty == 0` and skipped, the rewrite made
+/// it a planeswalker with no loyalty counters, and the first SBA sweep killed
+/// it. Exactly the argument `reapply_enters_tapped_after_copy` already makes
+/// for tappedness — re-decide against the copied characteristics — and now the
+/// same place.
+#[test]
+fn cr_306_5b_a_copy_of_a_planeswalker_enters_with_its_loyalty() {
+    use crabomination::card::{CardDefinition, CardType, CounterType, EntersAsCopy,
+        SelectionRequirement as R};
+    let mut g = two_player_game();
+    let walker = g.add_card_to_battlefield(0, catalog::jace_arcane_strategist());
+    let printed = g.battlefield_find(walker).unwrap().counter_count(CounterType::Loyalty);
+    assert!(printed > 0, "the source has loyalty to copy");
+
+    // A bare 0/0 that enters as a copy of a planeswalker — no card needed, so
+    // this tests the engine rule and not one card's fields.
+    let copier = CardDefinition {
+        name: "Test Copier",
+        cost: crabomination::mana::cost(&[crabomination::mana::generic(1)]),
+        card_types: vec![CardType::Creature],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Planeswalker.and(R::ControlledByYou),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, copier);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("castable");
+    while !g.stack.is_empty() {
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    g.check_state_based_actions();
+
+    let copy = g.battlefield_find(id).expect("it did not die as a 0-loyalty walker");
+    assert!(copy.definition.is_planeswalker(), "it copied the walker");
+    assert_eq!(
+        copy.counter_count(CounterType::Loyalty),
+        printed,
+        "and entered with the copied printed loyalty",
+    );
+}
