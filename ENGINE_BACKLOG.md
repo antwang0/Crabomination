@@ -82,7 +82,7 @@ the handoff.
 | Engine mechanics & primitives | [Suggested next-up tasks](#suggested-next-up-tasks) | 1053 |
 | Rules coverage | [MagicCompRules coverage audit](#magiccomprules-coverage-audit) | 312 |
 | Tooling | [Recommender: two builder defects fixed, one lesson recorded](#recommender-two-builder-defects-fixed-one-lesson-recorded) | 17 |
-| Bugs & robustness | [OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER](#open-2026-09-19-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-model-it-as-an-etb-trigger) | 89 |
+| Bugs & robustness | [OPEN 2026-09-19 (the forty-eighth find) — "As this ~ enters" is a REPLACEMENT and 89 shipped cards model it as an ETB TRIGGER](#open-2026-09-19-the-forty-eighth-find--as-this--enters-is-a-replacement-and-89-shipped-cards-model-it-as-an-etb-trigger) | 89 → 57 |
 | Bugs & robustness | [FIXED 2026-09-19 (the forty-seventh find) — six hand-written SEAT-INDEX walks, and the two that let a player who had left the game vote and be voted for](#fixed-2026-09-19-the-forty-seventh-find--six-hand-written-seat-index-walks-and-the-two-that-let-a-player-who-had-left-the-game-vote-and-be-voted-for) | 60 |
 | Bugs & robustness | [The 2026-09-12/13 handoff detail, moved verbatim from TODO's NEXT](#the-2026-09-1213-handoff-detail-moved-verbatim-from-todos-next) | 182 |
 
@@ -111,8 +111,9 @@ reachable:
 3. **A copy has no trigger to fire.** CR 614.12's own example is a token copy
    of Voice of All choosing its colour *as the token is created*.
 
-`scripts/audit_as_enters.py` is the census and the ratchet. **89 cards**, in
-five buckets:
+`scripts/audit_as_enters.py` is the census and the ratchet. **89 cards** when
+it was written, **57** by the end of the same day; the table below is the
+opening census, and the script is the live number:
 
 | Bucket | Cards | What it prints |
 | --- | --- | --- |
@@ -122,21 +123,45 @@ five buckets:
 | other | 14 | Cursed Mirror, Devouring Hellion, Grifter's Blade, Molten Sentry |
 | choose-a-name | 9 | Pithing Needle, Meddling Mage, Phyrexian Revoker, Nevermore |
 
-**The one missing primitive, and it is why this is OPEN rather than a batch
-of card edits.** `GameState::apply_enters_tapped_replacement`
-(`actions.rs:4209`) is where a replacement of this shape is applied, and it
-reads a `Predicate`: it can test the game state but **cannot put a question
-to a player**. Every bucket above needs an as-enters replacement that can
-ask.
+⚠⚠ **CORRECTED THE SAME DAY, AND THE CORRECTION IS THE LESSON: THE ASKING
+REPLACEMENT ALREADY SHIPPED, AND THIS ENTRY MISSED IT.** The paragraph that
+stood here said the class needed a new primitive because
+`GameState::apply_enters_tapped_replacement` (`actions.rs:4209`) reads a
+`Predicate` and cannot ask. That is true of *that* applier and false of the
+engine: `CardDefinition::as_enters_effect` is resolved inside the battlefield
+hop by `apply_as_enters_effect` over **`resolve_effect_driven`**, which
+suspends, and forty shipped cards already ask through it. The census was
+built by asking "which cards ship the wrong shape" and never by asking
+"which shapes does the engine already have" — **a class audit needs the
+second question too, or it prices the fix off the wrong denominator.**
 
-⚠ **The synchronous shortcut is a REGRESSION, not a shortcut.** The tree has
-precedent for resolving a choice through `self.decider` without a pending
-state (`ManaPayload::AnyColors`, `chosen_mana_color`), and it would work for
-self-play. But a shockland's choice is a real `Decision::ChooseMode` prompt
-in the client **today**; routing it through the decider synchronously would
-take the choice away from a human seat. The fix is a suspendable replacement
-application, and `apply_enters_tapped_replacement` returns `()` from three
-call sites inside `move_card_to`-shaped paths, so that is the work.
+A concurrent session then funnelled the three as-enters appliers
+(`as_enters_effect`, `enters_as_choice`, `enter_modes`) through **all four**
+battlefield-entry paths in `game::as_enters`, so converting a card in the
+choose-a-* buckets is now a catalog edit with no engine work behind it. The
+count moved **89 → 57** the same day (choose-a-name 9 and choose-a-colour 20
+closed, choose-a-type 27 → 23).
+
+**What is actually still blocked is one bucket.**
+`pay-life-or-tapped` (19 cards, the ten shocklands among them) is a choice
+about a *cost*, not about the board, and `apply_enters_tapped_replacement`'s
+`Predicate` cannot express it. 💡 **The lead, not yet taken:** it may not
+need a new primitive either — `as_enters_effect` can ask, and
+`Effect::MayDoElse { body: LoseLife 2, else_: Tap(This) }` under an
+`Effect::If` on the life total is the printed line (CR 119.4 — paying life
+*is* losing that much, and a player below the amount cannot pay). What has
+to be checked before writing it is **where the funnel runs relative to
+`apply_enters_tapped_replacement` and to the ETB trigger gather**: the
+permanent must never be on the battlefield untapped with a priority window
+open, which is the whole point of the class.
+
+⚠ **And the synchronous shortcut is still a REGRESSION, whichever applier is
+used.** The tree has precedent for resolving a choice through `self.decider`
+with no pending state (`ManaPayload::AnyColors`, `chosen_mana_color`), and it
+would work for self-play — but a shockland's choice is a real
+`Decision::ChooseMode` prompt in the client **today**, and routing it through
+the decider takes that choice away from a human seat. `resolve_effect_driven`
+is the path that keeps it.
 
 **The sub-class that IS closed** is the fifteen "As this land enters, you may
 reveal a [X] card from your hand. If you don't, this land enters tapped"
