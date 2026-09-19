@@ -1061,3 +1061,107 @@ fn eldrazi_confluence_chooses_scion_mode_three_times() {
     assert_eq!(scions, 3, "choose-three repeats the Scion mode for three tokens");
 }
 
+
+// ── The filter-land cycle, all ten in one table ──────────────────────────────
+
+/// The ten Shadowmoor/Eventide filter lands share one body
+/// (`sets::filter_land`), and that body is **two** activated abilities: the
+/// printed card is `{T}: Add {C}.` plus a single `{A/B}, {T}: Add {A}{A},
+/// {A}{B}, or {B}{B}` whose payout is chosen as it resolves. Three of the ten
+/// used to ship as three abilities, one per payout — the same set of outcomes
+/// out of a land with four abilities instead of two.
+#[test]
+fn every_filter_land_is_two_abilities_over_its_own_hybrid_pair() {
+    use crabomination::mana::ManaSymbol;
+    let cycle: [(Factory, &str, Color, Color); 10] = [
+        (catalog::mystic_gate, "Mystic Gate", Color::White, Color::Blue),
+        (catalog::sunken_ruins, "Sunken Ruins", Color::Blue, Color::Black),
+        (catalog::graven_cairns, "Graven Cairns", Color::Black, Color::Red),
+        (catalog::fire_lit_thicket, "Fire-Lit Thicket", Color::Red, Color::Green),
+        (catalog::wooded_bastion, "Wooded Bastion", Color::Green, Color::White),
+        (catalog::fetid_heath, "Fetid Heath", Color::White, Color::Black),
+        (catalog::cascade_bluffs, "Cascade Bluffs", Color::Blue, Color::Red),
+        (catalog::twilight_mire, "Twilight Mire", Color::Black, Color::Green),
+        (catalog::rugged_prairie, "Rugged Prairie", Color::Red, Color::White),
+        (catalog::flooded_grove, "Flooded Grove", Color::Green, Color::Blue),
+    ];
+    for (factory, name, a, b) in cycle {
+        let def = factory();
+        assert_eq!(def.name, name);
+        assert!(def.card_types.contains(&CardType::Land), "{name} is a land");
+        assert!(def.subtypes.land_types.is_empty(), "{name} has no basic land type");
+        assert!(def.triggered_abilities.is_empty(), "{name} enters untapped");
+        assert_eq!(def.activated_abilities.len(), 2, "{name}: {{C}} plus one filter");
+        let filter = &def.activated_abilities[1];
+        assert!(filter.tap_cost, "{name}'s filter taps");
+        assert_eq!(
+            filter.mana_cost.symbols,
+            vec![ManaSymbol::Hybrid(a, b)],
+            "{name} costs one hybrid of its own pair",
+        );
+    }
+}
+
+/// And the filter itself: one hybrid in, two mana of the pair out. Which two
+/// is the decider's call — the three printed payouts are exactly the three
+/// ways two pips can be drawn from the pair, so the assertion is the count.
+#[test]
+fn a_filter_land_turns_one_hybrid_pip_into_two_of_its_pair() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let id = g.add_card_to_battlefield(0, catalog::twilight_mire());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    })
+    .expect("{B/G}, {T}: add two of B/G");
+    drain_stack(&mut g);
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(
+        pool.amount(Color::Black) + pool.amount(Color::Green),
+        2,
+        "one pip in, two pips of the pair out",
+    );
+    assert!(g.battlefield_find(id).unwrap().tapped);
+}
+
+/// The Shards tri-lands are the other half of the cycle the Khans wedges
+/// already shipped: enters tapped, three single-colour mana abilities in the
+/// printed order.
+#[test]
+fn every_shard_tri_land_enters_tapped_and_taps_for_its_three() {
+    let cycle: [(Factory, &str, [Color; 3]); 5] = [
+        (catalog::arcane_sanctum, "Arcane Sanctum", [Color::White, Color::Blue, Color::Black]),
+        (catalog::crumbling_necropolis, "Crumbling Necropolis", [Color::Blue, Color::Black, Color::Red]),
+        (catalog::savage_lands, "Savage Lands", [Color::Black, Color::Red, Color::Green]),
+        (catalog::jungle_shrine, "Jungle Shrine", [Color::Red, Color::Green, Color::White]),
+        (catalog::seaside_citadel, "Seaside Citadel", [Color::Green, Color::White, Color::Blue]),
+    ];
+    for (factory, name, colors) in cycle {
+        let def = factory();
+        assert_eq!(def.name, name);
+        assert!(def.card_types.contains(&CardType::Land), "{name} is a land");
+        assert!(def.subtypes.land_types.is_empty(), "{name} has no basic land type");
+        assert_eq!(def.activated_abilities.len(), 3, "{name} taps for three colours");
+        assert_eq!(def.triggered_abilities.len(), 1, "{name} enters tapped");
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        let id = g.add_card_to_hand(0, factory());
+        g.perform_action(GameAction::PlayLand(id)).unwrap();
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(id).unwrap().tapped, "{name} enters tapped");
+        for (i, color) in colors.iter().enumerate() {
+            let mut g = two_player_game();
+            g.step = TurnStep::PreCombatMain;
+            let id = g.add_card_to_battlefield(0, factory());
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: id, ability_index: i, target: None, additional_targets: Vec::new(),
+                x_value: None, mode: None,
+            })
+            .unwrap_or_else(|e| panic!("{name} ability {i}: {e:?}"));
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].mana_pool.amount(*color), 1, "{name} ability {i}");
+        }
+    }
+}

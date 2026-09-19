@@ -8,8 +8,8 @@
 
 use super::super::{
     dual_land_untyped, dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
-    fastland_etb_conditional_tap, painland, shockland_pay_two_or_tap, tap_add, tap_add_colorless,
-    tri_land,
+    fastland_etb_conditional_tap, filter_land, painland, shockland_pay_two_or_tap, tap_add,
+    tap_add_colorless, tri_land,
 };
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
@@ -1677,6 +1677,72 @@ pub fn nomad_outpost() -> CardDefinition {
 
 pub fn frontier_bivouac() -> CardDefinition {
     tri_land("Frontier Bivouac", Color::Green, Color::Blue, Color::Red)
+}
+
+// ── Shards shard tri-lands (enters tapped, taps for three colors) ───────────
+//
+// The other half of the same cycle as the Khans wedges above, and the same
+// body: `{T}: Add {A}, {B}, or {C}` over an enters-tapped trigger. The colour
+// order is the printed one.
+
+pub fn arcane_sanctum() -> CardDefinition {
+    tri_land("Arcane Sanctum", Color::White, Color::Blue, Color::Black)
+}
+
+pub fn crumbling_necropolis() -> CardDefinition {
+    tri_land(
+        "Crumbling Necropolis",
+        Color::Blue,
+        Color::Black,
+        Color::Red,
+    )
+}
+
+pub fn savage_lands() -> CardDefinition {
+    tri_land("Savage Lands", Color::Black, Color::Red, Color::Green)
+}
+
+pub fn jungle_shrine() -> CardDefinition {
+    tri_land("Jungle Shrine", Color::Red, Color::Green, Color::White)
+}
+
+pub fn seaside_citadel() -> CardDefinition {
+    tri_land("Seaside Citadel", Color::Green, Color::White, Color::Blue)
+}
+
+// ── Filter lands, the seven the catalog was missing ─────────────────────────
+//
+// `{T}: Add {C}.` plus `{A/B}, {T}: Add {A}{A}, {A}{B}, or {B}{B}.` The other
+// three of the ten (Sunken Ruins, Fetid Heath, Fire-Lit Thicket) live in the
+// Commander deck files that first needed them and share this same body via
+// `sets::filter_land`.
+
+pub fn mystic_gate() -> CardDefinition {
+    filter_land("Mystic Gate", Color::White, Color::Blue)
+}
+
+pub fn graven_cairns() -> CardDefinition {
+    filter_land("Graven Cairns", Color::Black, Color::Red)
+}
+
+pub fn wooded_bastion() -> CardDefinition {
+    filter_land("Wooded Bastion", Color::Green, Color::White)
+}
+
+pub fn cascade_bluffs() -> CardDefinition {
+    filter_land("Cascade Bluffs", Color::Blue, Color::Red)
+}
+
+pub fn twilight_mire() -> CardDefinition {
+    filter_land("Twilight Mire", Color::Black, Color::Green)
+}
+
+pub fn rugged_prairie() -> CardDefinition {
+    filter_land("Rugged Prairie", Color::Red, Color::White)
+}
+
+pub fn flooded_grove() -> CardDefinition {
+    filter_land("Flooded Grove", Color::Green, Color::Blue)
 }
 
 /// Restless Anchorage — W/U. `{1}{W}{U}`: 2/3 flying Bird. Whenever it

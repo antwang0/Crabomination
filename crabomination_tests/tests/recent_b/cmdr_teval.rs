@@ -1031,10 +1031,13 @@ fn cmdr_teval_dimir_mana_lands() {
     g.add_card_to_battlefield(0, catalog::swamp());
     tap(&mut g, lair, 1).expect("with a basic");
 
-    // Sunken Ruins: {U/B}, {T} → two mana.
+    // Sunken Ruins: {U/B}, {T} → two mana of the pair. One filter ability,
+    // not three, so the payout is the decider's call and the count is what
+    // the card promises.
     let mut g = main_phase();
     let ruins = g.add_card_to_battlefield(0, catalog::sunken_ruins());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    tap(&mut g, ruins, 3).expect("filter");
-    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 2);
+    tap(&mut g, ruins, 1).expect("filter");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.amount(Color::Blue) + pool.amount(Color::Black), 2);
 }

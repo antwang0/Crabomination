@@ -1568,23 +1568,11 @@ pub fn shipwreck_marsh() -> CardDefinition {
     }
 }
 
-/// Sunken Ruins — Land. {T}: Add {C}. {U/B}, {T}: Add {U}{U}, {U}{B}, or {B}{B}.
+/// Sunken Ruins — Land. {T}: Add {C}. {U/B}, {T}: Add {U}{U}, {U}{B}, or
+/// {B}{B}. The Shadowmoor allied filter land; body shared with the other nine
+/// by `sets::filter_land`.
 pub fn sunken_ruins() -> CardDefinition {
-    let filter = |colors: Vec<Color>| ActivatedAbility {
-        mana_cost: cost(&[hybrid(Color::Blue, Color::Black)]),
-        tap_cost: true,
-        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(colors) },
-        ..Default::default()
-    };
-    land(
-        "Sunken Ruins",
-        vec![
-            tap_add_colorless(),
-            filter(vec![Color::Blue, Color::Blue]),
-            filter(vec![Color::Blue, Color::Black]),
-            filter(vec![Color::Black, Color::Black]),
-        ],
-    )
+    crate::sets::filter_land("Sunken Ruins", Color::Blue, Color::Black)
 }
 
 /// River of Tears — Land. {T}: Add {U}. If you played a land this turn, add {B}

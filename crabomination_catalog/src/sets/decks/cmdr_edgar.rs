@@ -49,9 +49,7 @@ use crate::effect::{
     PlayerRef, Predicate, StaticAbility, StaticEffect, ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{
-    Color, ManaCost, ManaSymbol, SpendRestriction, b, cost, generic, r, w, x,
-};
+use crate::mana::{Color, ManaCost, SpendRestriction, b, cost, generic, r, w, x};
 use crabomination_base::tokens::{blood_token, treasure_token};
 use std::sync::Arc;
 
@@ -215,13 +213,6 @@ fn tapper(mana: ManaCost, effect: Effect) -> ActivatedAbility {
         tap_cost: true,
         effect,
         ..Default::default()
-    }
-}
-
-fn add_colors(colors: Vec<Color>) -> Effect {
-    Effect::AddMana {
-        who: PlayerRef::You,
-        pool: ManaPayload::Colors(colors),
     }
 }
 
@@ -1920,25 +1911,10 @@ pub fn foreboding_ruins() -> CardDefinition {
 }
 
 /// Fetid Heath — Land. "{T}: Add {C}. {W/B}, {T}: Add {W}{W}, {W}{B}, or
-/// {B}{B}." (The Shadowmoor filter land: one activation per output.)
+/// {B}{B}." The Eventide enemy filter land; body shared with the other nine
+/// by `sets::filter_land`.
 pub fn fetid_heath() -> CardDefinition {
-    let filter = |out: Vec<Color>| ActivatedAbility {
-        mana_cost: ManaCost {
-            symbols: vec![ManaSymbol::Hybrid(Color::White, Color::Black)],
-        },
-        tap_cost: true,
-        effect: add_colors(out),
-        ..Default::default()
-    };
-    CardDefinition {
-        activated_abilities: vec![
-            super::super::tap_add_colorless(),
-            filter(vec![Color::White, Color::White]),
-            filter(vec![Color::White, Color::Black]),
-            filter(vec![Color::Black, Color::Black]),
-        ],
-        ..land("Fetid Heath")
-    }
+    super::super::filter_land("Fetid Heath", Color::White, Color::Black)
 }
 
 /// Vault of the Archangel — Land. "{T}: Add {C}. {2}{W}{B}, {T}: Creatures you

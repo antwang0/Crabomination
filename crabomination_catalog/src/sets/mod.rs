@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate};
-use crate::mana::Color;
+use crate::mana::{Color, cost, hybrid};
 
 pub fn tap_add(color: Color) -> ActivatedAbility {
     ActivatedAbility {
@@ -95,6 +95,37 @@ pub fn painland(name: &'static str, color_a: Color, color_b: Color) -> CardDefin
         name,
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add_colorless(), colored(color_a), colored(color_b)],
+        ..Default::default()
+    }
+}
+
+/// Filter land (the Shadowmoor allied / Eventide enemy cycle, ten cards):
+/// `{T}: Add {C}.` plus `{A/B}, {T}: Add {A}{A}, {A}{B}, or {B}{B}.`
+///
+/// **One** activated ability for the filter, not three. The printed card is a
+/// single mana ability whose payout is chosen as it resolves, and
+/// `ManaPayload::OfColors` is exactly that — two pips, each chosen from the
+/// pair, whose three outcomes are the three printed options. Modelling it as
+/// three abilities (one per payout) gives the same *set* of outcomes but a
+/// land with four activated abilities instead of two, and forces the choice at
+/// activation time rather than at resolution. No basic land types; enters
+/// untapped.
+pub fn filter_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[hybrid(a, b)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColors(vec![a, b], Value::Const(2)),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

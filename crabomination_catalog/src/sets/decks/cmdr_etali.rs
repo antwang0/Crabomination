@@ -1815,26 +1815,12 @@ pub fn game_trail() -> CardDefinition {
     }
 }
 
-/// Fire-Lit Thicket — Land (Shadowmoor/Eventide filter land). `{T}: Add
-/// {C}.` `{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.` The second ability is
-/// two pips each chosen from {R, G} (`ManaPayload::OfColors`), which is
-/// exactly the three printed options.
+/// Fire-Lit Thicket — Land (Shadowmoor allied filter land). `{T}: Add {C}.`
+/// `{R/G}, {T}: Add {R}{R}, {R}{G}, or {G}{G}.` The second ability is two pips
+/// each chosen from {R, G} (`ManaPayload::OfColors`), which is exactly the
+/// three printed options — the shape `sets::filter_land` now gives all ten.
 pub fn fire_lit_thicket() -> CardDefinition {
-    CardDefinition {
-        activated_abilities: vec![
-            ActivatedAbility { tap_cost: true, effect: add_colorless(1), ..Default::default() },
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: cost(&[hybrid(Color::Red, Color::Green)]),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::Const(2)),
-                },
-                ..Default::default()
-            },
-        ],
-        ..c_land("Fire-Lit Thicket")
-    }
+    crate::sets::filter_land("Fire-Lit Thicket", Color::Red, Color::Green)
 }
 
 /// Wooded Ridgeline — Land — Mountain Forest. ({T}: Add {R} or {G}.) This

@@ -1043,24 +1043,28 @@ fn minas_tirith_draws_after_a_wide_attack() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
 
-/// Fetid Heath filters one hybrid into two of W/B.
+/// Fetid Heath filters one hybrid into two of W/B. One ability, not three —
+/// the payout is chosen as it resolves, so the assertion is the count of
+/// pips drawn from the pair (the cycle's table test is in
+/// `modern::lands_equipment_vehicles`).
 #[test]
 fn fetid_heath_filters_into_two() {
     let mut g = main_phase();
     let heath = g.add_card_to_battlefield(0, catalog::fetid_heath());
+    assert_eq!(g.battlefield_find(heath).unwrap().definition.activated_abilities.len(), 2);
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: heath,
-        ability_index: 3,
+        ability_index: 1,
         target: None,
         additional_targets: vec![],
         x_value: None,
         mode: None,
     })
-    .expect("{W/B}, {T}: add {B}{B}");
+    .expect("{W/B}, {T}: add two of W/B");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 2);
-    assert_eq!(g.players[0].mana_pool.amount(Color::White), 0);
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.amount(Color::White) + pool.amount(Color::Black), 2, "one pip in, two out");
 }
 
 /// Vault of the Archangel grants deathtouch and lifelink to the team.
